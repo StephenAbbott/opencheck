@@ -405,3 +405,64 @@ def test_docs_knowability_md_is_in_sync_with_the_data() -> None:
     assert mod._strip_dates(current) == mod._strip_dates(mod.render()), (
         "docs/knowability.md is stale — run python3 backend/scripts/generate_knowability_doc.py"
     )
+
+
+# ----------------------------------------------------------------------
+# Phase 224 — the ``knowability`` lookup event and its fold
+# ----------------------------------------------------------------------
+def test_knowability_event_payload_is_the_statement_plus_as_of() -> None:
+    from opencheck.routers.lookup import _knowability_payload
+
+    day = date(2026, 9, 18)
+    payload = _knowability_payload("GB", day)
+    assert payload["as_of"] == "2026-09-18"
+    assert payload["code"] == "GB"
+    # Round-trips through the JSON a saved report stores, and validates
+    # back into the model (``as_of`` is an extra the event adds).
+    again = json.loads(json.dumps(payload))
+    again.pop("as_of")
+    assert KnowabilityStatement.model_validate(again).sentence == payload["sentence"]
+
+
+def test_knowability_event_falls_back_from_a_us_state_to_the_country() -> None:
+    from opencheck.routers.lookup import _knowability_payload
+
+    assert _knowability_payload("US-DE", _TODAY)["code"] == "US"
+
+
+def test_fold_carries_the_knowability_event_as_recorded(monkeypatch) -> None:
+    """A saved report replays the sentence that was true on the day it ran:
+    the fold copies the event payload and never re-renders it from today's
+    table or today's clock (Phase 218's no-clock rule)."""
+    from opencheck.routers import lookup as lookup_mod
+
+    frozen = lookup_mod._knowability_payload("EE", date(2026, 1, 1))
+    frozen["sentence"] = "Frozen sentence from the day of the run."
+
+    def _boom(*_a, **_k):  # pragma: no cover - the assertion is that it is not called
+        raise AssertionError("fold must not re-render the knowability statement")
+
+    monkeypatch.setattr(lookup_mod, "knowability_statement_for", _boom)
+    events = [
+        ("gleif_done", {"lei": "X", "legal_name": "Co", "jurisdiction": "EE", "derived_identifiers": {}}),
+        ("knowability", frozen),
+        ("risk_signals", {"signals": [], "degraded_sources": [], "verdict": None}),
+        ("done", {"bods_issues": [], "license_notices": [], "run_completed_at": "2026-01-01T00:00:00Z"}),
+    ]
+    folded = lookup_mod.fold_lookup_events("X", events)
+    assert folded.knowability == frozen
+    assert folded.knowability["sentence"] == "Frozen sentence from the day of the run."
+
+
+def test_fold_without_the_event_leaves_the_field_none() -> None:
+    """Payloads recorded before Phase 224 still validate, with no statement."""
+    from opencheck.routers.lookup import fold_lookup_events
+
+    folded = fold_lookup_events(
+        "X",
+        [
+            ("gleif_done", {"lei": "X", "legal_name": None, "jurisdiction": None, "derived_identifiers": {}}),
+            ("done", {"bods_issues": [], "license_notices": []}),
+        ],
+    )
+    assert folded.knowability is None

@@ -29,6 +29,7 @@ import {
   type RiskSignal,
   type SourceHit,
   type SubjectProfile,
+  type KnowabilityStatement,
 } from "./lib/api";
 import {
   searchByNationalId,
@@ -177,6 +178,7 @@ export default function App() {
   // What the registers say the subject *is* (Phase 154) — its own event,
   // arriving once the deepened bundles are in. Identity, not the answer.
   const [subjectProfile, setSubjectProfile] = useState<SubjectProfile | null>(null);
+  const [knowability, setKnowability] = useState<KnowabilityStatement | null>(null);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   // Derived checks that did not fully run (issue #50) — rendered as a
   // warning above the risk panel; empty signals + non-empty degraded is
@@ -588,6 +590,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setCrossSourceLinks([]);
     setPossiblySame([]);
     setSubjectProfile(null);
+    setKnowability(null);
     setRiskSignals([]);
     setDegradedSources([]);
     setVerdict(null);
@@ -672,6 +675,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
       onPossiblySame: (e) => setPossiblySame(e.pairs),
       onSubjectProfile: (e) => setSubjectProfile(e.profile),
+      onKnowability: (e) => setKnowability(e),
       onRiskSignals: (e) => {
         setRiskSignals(e.signals);
         setDegradedSources(e.degraded_sources ?? []);
@@ -1509,6 +1513,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setCrossSourceLinks([]);
     setPossiblySame([]);
     setSubjectProfile(null);
+    setKnowability(null);
     setRiskSignals([]);
     setDegradedSources([]);
     setVerdict(null);
@@ -2369,6 +2374,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             sourcesApplicable={applicableSources.length}
             registryTotal={sourcesQuery.data?.sources.length ?? null}
             jurisdiction={subjectJurisdiction}
+            knowability={knowability}
             graphShape={graphShape}
             onOpenNetwork={() => selectMode("full")}
             screening={streaming}

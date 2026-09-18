@@ -189,9 +189,48 @@ export interface LookupResponse {
   /** What the registers say the subject *is* (Phase 154) — see
    *  `SubjectProfile`. Absent on payloads recorded before this field existed. */
   subject_profile?: SubjectProfile | null;
+  /** What is knowable about a company in the subject's jurisdiction
+   *  (Phase 224) — see `KnowabilityStatement`. Absent on payloads recorded
+   *  before this field existed, and null when the jurisdiction is unknown. */
+  knowability?: KnowabilityStatement | null;
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
+}
+
+/** One adapter reading the subject's jurisdiction, as `opencheck_reads`
+ *  derives it from the REGISTRY — never typed by hand. */
+export interface KnowabilitySourceRead {
+  source_id: string;
+  name: string;
+  requires_api_key: boolean;
+  reads_beneficial_owners: boolean;
+}
+
+/** The per-jurisdiction "what is knowable here" statement (Phase 223/224):
+ *  who may see beneficial owners there, what the register records and what
+ *  OpenCheck reads of it. `sentence` is server-built and dated, so the page,
+ *  the PDF and the MCP summary cannot disagree; `fields` is the per-field
+ *  list behind it, `sources` the URLs Stephen recorded, `last_verified` the
+ *  day he checked the row (null = unverified draft). Describes, never judges:
+ *  nothing here is a signal and it must never be rendered in a risk tone.
+ *  `as_of` is the day the sentence was rendered — on a saved report, the day
+ *  of the run, not today. */
+export interface KnowabilityStatement {
+  code: string;
+  name: string;
+  sentence: string;
+  sentences: string[];
+  stated_absence: boolean;
+  review_status: "verified" | "unverified" | "absent";
+  last_verified?: string | null;
+  access?: string | null;
+  access_since?: string | null;
+  next_change_expected?: string | null;
+  fields: Record<string, unknown>;
+  opencheck_reads: KnowabilitySourceRead[];
+  sources: { url: string; title?: string | null }[];
+  as_of?: string;
 }
 
 /** One profile fact and who states it. `sources` are the adapter ids whose
@@ -1471,6 +1510,7 @@ export type LookupStreamHandlers = {
   onRiskSignals?: (e: RiskSignalsEvent) => void;
   onBodsCounts?: (e: BodsCountsEvent) => void;
   onSubjectProfile?: (e: SubjectProfileEvent) => void;
+  onKnowability?: (e: KnowabilityStatement) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
   /** Called on both backend "error" events and EventSource network errors. */
   onError?: (detail: string) => void;
@@ -1503,6 +1543,7 @@ export const LOOKUP_EVENT_HANDLERS = {
   risk_signals: "onRiskSignals",
   bods_counts: "onBodsCounts",
   subject_profile: "onSubjectProfile",
+  knowability: "onKnowability",
 } as const satisfies Record<string, keyof LookupStreamHandlers>;
 
 type LookupDataHandlerKey = (typeof LOOKUP_EVENT_HANDLERS)[keyof typeof LOOKUP_EVENT_HANDLERS];

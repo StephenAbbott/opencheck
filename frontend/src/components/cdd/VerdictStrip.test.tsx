@@ -18,7 +18,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { VerdictStrip } from "./VerdictStrip";
-import type { RiskSignal } from "../../lib/api";
+import type { KnowabilityStatement, RiskSignal } from "../../lib/api";
 
 const VERDICT =
   "A politically exposed person among the parties named, and ownership that runs through three or more layers.";
@@ -57,6 +57,68 @@ function renderStrip(props: Partial<Parameters<typeof VerdictStrip>[0]> = {}) {
     />,
   );
 }
+
+const KNOWABILITY: KnowabilityStatement = {
+  code: "KY",
+  name: "Cayman Islands",
+  sentence:
+    "Cayman Islands General Registry is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Feb 2025. OpenCheck reads no Cayman Islands register, so an owner absent from this report says nothing about what Cayman Islands holds.",
+  sentences: [],
+  stated_absence: false,
+  review_status: "unverified",
+  last_verified: null,
+  access: "legitimate_interest",
+  access_since: "2025-02-01",
+  next_change_expected: null,
+  fields: { register: "Cayman Islands General Registry", threshold_wording: "25 % or more" },
+  opencheck_reads: [],
+  sources: [{ url: "https://www.ciregistry.ky/beneficial-ownership", title: null }],
+  as_of: "2026-09-18",
+};
+
+describe("VerdictStrip — what can be known (Phase 224)", () => {
+  it("renders nothing for the band until the statement lands", () => {
+    renderStrip();
+    expect(screen.queryByTestId("knowability-band")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "What can be known" })).toBeNull();
+  });
+
+  it("carries the server sentence verbatim, once, under its own heading inside the region", () => {
+    renderStrip({ knowability: KNOWABILITY });
+    const region = screen.getByRole("region", { name: "What this check found" });
+    expect(within(region).getByRole("heading", { name: "What can be known" })).toBeInTheDocument();
+    expect(screen.getAllByText(KNOWABILITY.sentence)).toHaveLength(1);
+    // The three column headings are untouched.
+    expect(within(region).getByRole("heading", { name: "Coverage" })).toBeInTheDocument();
+    expect(screen.getByText("Unverified draft")).toBeInTheDocument();
+  });
+
+  it("opens the per-field list and the sources behind the ⓘ", async () => {
+    const user = userEvent.setup();
+    renderStrip({ knowability: KNOWABILITY });
+    const button = screen.getByRole("button", {
+      name: "Show the register facts behind this statement for Cayman Islands",
+    });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Threshold wording")).toBeNull();
+    await user.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Threshold wording")).toBeInTheDocument();
+    expect(screen.getByText("25 % or more")).toBeInTheDocument();
+    expect(screen.getByText("no Cayman Islands register")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "www.ciregistry.ky/beneficial-ownership" })).toHaveAttribute(
+      "href",
+      "https://www.ciregistry.ky/beneficial-ownership",
+    );
+    expect(screen.getByText(/Rendered as of 18 Sept 2026/)).toBeInTheDocument();
+  });
+
+  it("is never a signal: the statement adds nothing to the What we found count", () => {
+    renderStrip({ knowability: KNOWABILITY, riskSignals: [], contextSignals: [] });
+    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getByText("No risk signals surfaced across the sources that answered.")).toBeInTheDocument();
+  });
+});
 
 describe("VerdictStrip", () => {
   it("states the verdict exactly once", () => {

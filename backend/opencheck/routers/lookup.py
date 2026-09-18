@@ -8,7 +8,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass, field as dc_field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Literal, AsyncIterator, Iterable, NamedTuple
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -46,6 +46,7 @@ from ..icij_check import assess_icij_names
 from ..names import normalise_name
 from ..openaleph_check import assess_openaleph_names
 from ..subject_profile import build_subject_profile
+from ..knowability import statement_for as knowability_statement_for
 from ..verdict import build_verdict
 from ..ra_codes import RA_BY_COUNTRY, ra_code_for
 from ..reconcile import possibly_same_entities, reconcile
@@ -242,6 +243,15 @@ class ReportResponse(BaseModel):
     #: Facts, never findings. None for a name search or before any source
     #: has been deepened.
     subject_profile: dict[str, Any] | None = None
+    #: What is knowable about a company in the subject's jurisdiction
+    #: (Phase 224): the dated statement from ``opencheck.knowability`` —
+    #: who may see beneficial owners there, what the register records, and
+    #: what OpenCheck reads of it — as the ``knowability`` stream event
+    #: carried it, plus ``as_of``. Describes, never judges; nothing here is
+    #: a signal. Frozen at run time so a saved report replays the sentence
+    #: that was true that day. None for a name search, for a payload recorded
+    #: before this field existed, or when the subject's jurisdiction is unknown.
+    knowability: dict[str, Any] | None = None
 
 
 class LookupResponse(ReportResponse):
@@ -1204,6 +1214,16 @@ async def _lookup_pipeline(
         "derived_identifiers": ctx.derived,
     })
 
+    # Phase 224: what is knowable about a company *here*, as soon as "here" is
+    # known. Pure (reads data/jurisdictions.json, never a source), so it costs
+    # nothing to emit before the fan-out; frozen into the event so a saved
+    # report replays the sentence that was true on the day it ran — the
+    # sentence is dated (``next_change_expected``) and a saved render reads
+    # no clock (Phase 218). No jurisdiction → no event: there is nothing to
+    # make a statement about, and the strip says nothing rather than guessing.
+    if ctx.jurisdiction:
+        yield ("knowability", _knowability_payload(ctx.jurisdiction))
+
     gleif_hit = _build_gleif_hit(ctx, gleif_bundle)
     _stamp(gleif_hit, ctx.provenance)
     hits: list[SourceHit] = [gleif_hit]
@@ -1733,6 +1753,20 @@ async def _lookup_impl(
     return fold_lookup_events(norm_lei, events)
 
 
+def _knowability_payload(jurisdiction: str, today: date | None = None) -> dict[str, Any]:
+    """The ``knowability`` event: the subject-jurisdiction statement as JSON.
+
+    ``as_of`` records the day the sentence was rendered, so a reader of a
+    saved report can see the date the "a change is announced for …" clause
+    was judged against. Region-suffixed codes (``US-DE``) fall back to the
+    country inside ``statement_for``."""
+    today = today or date.today()
+    st = knowability_statement_for(jurisdiction, today)
+    payload = st.model_dump(mode="json")
+    payload["as_of"] = today.isoformat()
+    return payload
+
+
 def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupResponse:
     """Collect a lookup's event stream into one ``LookupResponse``.
 
@@ -1752,6 +1786,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     graph_shape: dict[str, Any] = {}
     verdict: str | None = None
     subject_profile: dict[str, Any] | None = None
+    knowability: dict[str, Any] | None = None
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
@@ -1793,6 +1828,8 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             same_pairs = payload["pairs"]
         elif event == "subject_profile":
             subject_profile = payload.get("profile")
+        elif event == "knowability":
+            knowability = payload
         elif event == "risk_signals":
             signals = payload["signals"]
             degraded_sources = payload.get("degraded_sources") or []
@@ -1822,6 +1859,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         graph_shape=graph_shape,
         verdict=verdict,
         subject_profile=subject_profile,
+        knowability=knowability,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,
