@@ -178,6 +178,15 @@ def test_sync_and_stream_agree_on_offline_bundle(
     pure = client.get("/knowability", params={"jurisdictions": "GB"}).json()["statements"][0]
     assert know["sentence"] == pure["sentence"]
 
+    # The chain (Phase 226) needs the deepened graph, so it rides after
+    # subject_profile; it folds to the same field and starts with the subject.
+    assert names.index("knowability_chain") > names.index("subject_profile")
+    chain = by_name["knowability_chain"][0]
+    assert chain == sync["knowability_chain"]
+    assert chain["subject"] == "GB" and chain["codes"][0] == "GB"
+    assert chain["statements"][0]["sentence"] == know["sentence"]
+    assert chain["as_of"] == know["as_of"]
+
 
 def test_meip_is_a_source_when_the_register_lists_the_lei(
     client: TestClient, tmp_path: Path, monkeypatch

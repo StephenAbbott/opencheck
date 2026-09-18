@@ -20,6 +20,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..bods.refs import statement_index
+from ..knowability import report_statements
 from .diagram import source_diagram
 from .html_report import (
     _CHECKS_CLEAR,
@@ -366,6 +367,29 @@ def _sources_found(report: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _knowability(report: dict[str, Any]) -> list[str]:
+    """Phase 226 — the text twin of ``html_report._knowability``: read from the
+    frozen payloads, never re-rendered, empty for older payloads."""
+    ks = report_statements(report)
+    subject, chain = ks["subject"], ks["chain"]
+    if subject is None and not chain:
+        return []
+    lines = ["## What can be known", ""]
+    for st in ([subject] if subject else []) + chain:
+        badge = (
+            f"checked {st['last_verified']}" if st.get("last_verified")
+            else ("no register notes held" if st.get("stated_absence") else "unverified draft")
+        )
+        lines += [f"**{st.get('name') or st.get('code') or ''}** ({badge}) — {st.get('sentence') or ''}", ""]
+    as_of = f" as of {ks['as_of']}" if ks.get("as_of") else ""
+    lines += [
+        "_These sentences describe each register, not this company, and are dated: they are the "
+        f"facts OpenCheck held{as_of}. An owner absent from this report is read against them._",
+        "",
+    ]
+    return lines
+
+
 def _relationships(report: dict[str, Any]) -> list[str]:
     """Per-source relationship tables — the text equivalent of the PDF diagrams."""
     bods = report.get("bods") or []
@@ -470,6 +494,7 @@ def build_report_markdown(
     sections += _summary(narrative, dispositions)
     sections += _risk(report)
     sections += _sources_found(report)
+    sections += _knowability(report)
     sections += _relationships(report)
     sections += _licensing(report, saved)
     sections += [

@@ -30,6 +30,7 @@ import {
   type SourceHit,
   type SubjectProfile,
   type KnowabilityStatement,
+  type KnowabilityChain,
 } from "./lib/api";
 import {
   searchByNationalId,
@@ -179,6 +180,7 @@ export default function App() {
   // arriving once the deepened bundles are in. Identity, not the answer.
   const [subjectProfile, setSubjectProfile] = useState<SubjectProfile | null>(null);
   const [knowability, setKnowability] = useState<KnowabilityStatement | null>(null);
+  const [knowabilityChain, setKnowabilityChain] = useState<KnowabilityChain | null>(null);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   // Derived checks that did not fully run (issue #50) — rendered as a
   // warning above the risk panel; empty signals + non-empty degraded is
@@ -591,6 +593,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setPossiblySame([]);
     setSubjectProfile(null);
     setKnowability(null);
+    setKnowabilityChain(null);
     setRiskSignals([]);
     setDegradedSources([]);
     setVerdict(null);
@@ -676,6 +679,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       onPossiblySame: (e) => setPossiblySame(e.pairs),
       onSubjectProfile: (e) => setSubjectProfile(e.profile),
       onKnowability: (e) => setKnowability(e),
+      onKnowabilityChain: (e) => setKnowabilityChain(e),
       onRiskSignals: (e) => {
         setRiskSignals(e.signals);
         setDegradedSources(e.degraded_sources ?? []);
@@ -1514,6 +1518,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setPossiblySame([]);
     setSubjectProfile(null);
     setKnowability(null);
+    setKnowabilityChain(null);
     setRiskSignals([]);
     setDegradedSources([]);
     setVerdict(null);
@@ -2556,6 +2561,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   signals={riskSignals}
                   focusStatementId={focusStatementId}
                   savedStatements={savedNetwork}
+                  knowabilityChain={knowabilityChain}
                   onOpenSubsidiaries={() => selectMode("subsidiaries")}
                   onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
                   onPanelRecovered={(panel) =>

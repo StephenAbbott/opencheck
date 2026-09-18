@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 225** — Washington DC's DLCP register joins as the forty-ninth source, carrying the owners and controllers filed on the biennial report under D.C. Code § 29-102.11(a)(6).
+**Latest: Phase 226** — What can be known along the ownership path: the per-jurisdiction statements now follow the chain in FullCheck, appear in the PDF and Markdown exports, and ride the MCP lookup result, all frozen with the run for saved reports.
 
 → [Full development history](docs/status.md)
 

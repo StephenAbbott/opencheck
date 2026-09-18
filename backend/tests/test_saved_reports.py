@@ -70,6 +70,21 @@ def client() -> TestClient:
     return TestClient(app, headers={"User-Agent": BROWSER_UA})
 
 
+FROZEN_KNOWABILITY: dict = {
+    "code": "GB", "name": "United Kingdom",
+    "sentence": "PSC register frozen sentence from the day of the run.",
+    "sentences": ["PSC register frozen sentence from the day of the run."],
+    "stated_absence": False, "review_status": "verified", "last_verified": "2026-09-16",
+    "access": "public", "fields": {}, "opencheck_reads": [], "sources": [],
+}
+FROZEN_KY: dict = {
+    **FROZEN_KNOWABILITY, "code": "KY", "name": "Cayman Islands",
+    "sentence": "Cayman frozen sentence from the day of the run.",
+    "sentences": ["Cayman frozen sentence from the day of the run."],
+    "review_status": "unverified", "last_verified": None, "access": "legitimate_interest",
+}
+
+
 def _events(run_at: str = RUN_AT, code: str = RETIRED) -> list[tuple[str, object]]:
     hit = SourceHit(
         source_id="gleif", hit_id=LEI, kind=SearchKind.ENTITY, name="BP P.L.C.", summary="GB · LEI",
@@ -88,6 +103,12 @@ def _events(run_at: str = RUN_AT, code: str = RETIRED) -> list[tuple[str, object
         ("source_completed", {"source_id": "gleif"}),
         ("hit", os_hit),
         ("deepen_result", {"source_id": "gleif", "bods": [{"statementId": "s1", "recordType": "entity"}]}),
+        # Phases 224/226: the dated statements, frozen with the run.
+        ("knowability", {**FROZEN_KNOWABILITY, "as_of": "2026-09-16"}),
+        ("knowability_chain", {
+            "subject": "GB", "codes": ["GB", "KY"], "as_of": "2026-09-16",
+            "statements": [FROZEN_KNOWABILITY, FROZEN_KY],
+        }),
         ("risk_signals", {
             "signals": [{"code": code, "kind": "risk", "confidence": "high", "summary": "retired",
                          "source_id": "gleif", "hit_id": LEI, "evidence": {}}],

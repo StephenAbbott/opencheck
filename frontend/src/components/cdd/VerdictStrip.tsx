@@ -276,7 +276,10 @@ export function VerdictStrip({
           {/* Label on the left, statement on the right when the strip is wide
               enough for both (the shape of a definition), stacked when it is
               not — the sentence keeps its 76ch measure either way. */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* min-w-0, not shrink-0: at phone width the label, the country and
+              the badge must wrap onto two lines, not push the badge off the
+              right edge of the screen (seen on TAQA Bratani, 18 Sept 2026). */}
+          <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
             <SectionLabel as="h2">{knowable.heading}</SectionLabel>
             <span className="text-oo-meta text-oo-muted">{knowable.subheading}</span>
             <Chip tone={knowable.badge.tone} size="sm">

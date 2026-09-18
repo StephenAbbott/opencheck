@@ -46,6 +46,7 @@ from ..icij_check import assess_icij_names
 from ..names import normalise_name
 from ..openaleph_check import assess_openaleph_names
 from ..subject_profile import build_subject_profile
+from ..knowability import chain_for_lei as knowability_chain_for_lei
 from ..knowability import statement_for as knowability_statement_for
 from ..verdict import build_verdict
 from ..ra_codes import RA_BY_COUNTRY, ra_code_for
@@ -253,6 +254,15 @@ class ReportResponse(BaseModel):
     #: that was true that day. None for a name search, for a payload recorded
     #: before this field existed, or when the subject's jurisdiction is unknown.
     knowability: dict[str, Any] | None = None
+    #: What is knowable along the ownership path (Phase 226): ``subject``
+    #: (the subject's code), ``codes`` (every jurisdiction on the upward walk
+    #: from the subject, subject first then path order, ended links included)
+    #: and one ``statements[]`` entry per code, plus ``as_of`` — as the
+    #: ``knowability_chain`` stream event carried it, frozen at run time. The
+    #: chain is the run's own depth (the deepened sources); FullCheck extends
+    #: it client-side as it expands. Describes, never judges. None for a
+    #: payload recorded before this field existed.
+    knowability_chain: dict[str, Any] | None = None
 
 
 class LookupResponse(ReportResponse):
@@ -1535,6 +1545,16 @@ async def _lookup_pipeline(
     # identity, and the verdict event is the answer.
     yield ("subject_profile", {"profile": build_subject_profile(ctx.lei, bods_all)})
 
+    # Phase 226: what is knowable along the ownership path — one statement
+    # per jurisdiction on the upward walk from the subject's own statements,
+    # in path order. The subject's statement already rode the `knowability`
+    # event right after gleif_done; this one needs the deepened graph, so it
+    # comes here. Pure (reads jurisdictions.json), frozen into the event so a
+    # saved report replays the chain that was true on the day it ran. The
+    # FullCheck view extends it client-side after each /expand-layer through
+    # GET /knowability; a saved report shows this, the run's own depth.
+    yield ("knowability_chain", knowability_chain_for_lei(ctx.lei, bods_all))
+
     yield (
         "possibly_same_entities",
         {"pairs": [p.to_dict() for p in possibly_same_entities(bods_all)]},
@@ -1788,6 +1808,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     verdict: str | None = None
     subject_profile: dict[str, Any] | None = None
     knowability: dict[str, Any] | None = None
+    knowability_chain: dict[str, Any] | None = None
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
@@ -1831,6 +1852,8 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             subject_profile = payload.get("profile")
         elif event == "knowability":
             knowability = payload
+        elif event == "knowability_chain":
+            knowability_chain = payload
         elif event == "risk_signals":
             signals = payload["signals"]
             degraded_sources = payload.get("degraded_sources") or []
@@ -1861,6 +1884,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         verdict=verdict,
         subject_profile=subject_profile,
         knowability=knowability,
+        knowability_chain=knowability_chain,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,

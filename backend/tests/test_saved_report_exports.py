@@ -336,3 +336,52 @@ async def test_the_mcp_save_tool_says_when_saving_is_off(monkeypatch: pytest.Mon
     monkeypatch.setattr(sr, "get_store", lambda: None)
     out = await mcp_server.opencheck_save_report(LEI)
     assert out["status"] == 503
+
+
+# ----------------------------------------------------------------------
+# Phase 226 — "What can be known" in the exports, from the frozen payload
+# ----------------------------------------------------------------------
+def test_markdown_carries_the_frozen_knowability_paragraphs(client: TestClient, no_new_runs, monkeypatch) -> None:
+    """The section is read from the saved ``knowability`` / ``knowability_chain``
+    events — the sentences true on the day of the run — never re-rendered
+    from today's table: ``statement_for`` is made to explode."""
+    import opencheck.knowability as know
+
+    monkeypatch.setattr(know, "statement_for", lambda *a, **k: (_ for _ in ()).throw(AssertionError("re-rendered")))
+    meta = _saved(client)
+    md = client.post("/export/markdown", json={"lei": LEI, "saved_report_id": meta["report_id"]}).text
+    assert "## What can be known" in md
+    assert "**United Kingdom** (checked 2026-09-16) — PSC register frozen sentence from the day of the run." in md
+    assert "**Cayman Islands** (unverified draft) — Cayman frozen sentence from the day of the run." in md
+    assert "facts OpenCheck held as of 2026-09-16" in md
+    # Subject first, chain after; the subject is not repeated from the chain.
+    assert md.count("frozen sentence from the day of the run") == 2
+    assert md.index("United Kingdom** (checked") < md.index("Cayman Islands** (unverified")
+
+
+def test_pdf_html_carries_the_same_section(client: TestClient, no_new_runs, monkeypatch) -> None:
+    from opencheck.reporting import html_report
+
+    import asyncio
+
+    from opencheck.routers.saved_reports import open_for_export
+
+    meta = _saved(client)
+    saved = asyncio.run(open_for_export(meta["report_id"]))
+    html = html_report.build_report_html(saved.response.model_dump(), saved=saved.saved)
+    assert '<h2 id="know">What can be known</h2>' in html
+    assert "PSC register frozen sentence from the day of the run." in html
+    assert "Cayman frozen sentence from the day of the run." in html
+    # It sits between "What each source found" and the diagrams/licensing.
+    assert html.index('id="src"') < html.index('id="know"') < html.index("Licensing")
+
+
+def test_a_payload_without_the_knowability_events_has_no_section() -> None:
+    from opencheck.reporting.html_report import build_report_html
+    from opencheck.reporting.markdown_report import build_report_markdown
+
+    report = {"lei": LEI, "legal_name": "Old Co", "hits": [], "bods": [], "risk_signals": [],
+              "errors": {}, "license_notices": [], "cross_source_links": [], "bods_issues": []}
+    assert "What can be known" not in build_report_markdown(report)
+    assert "What can be known" not in build_report_html(report)
+

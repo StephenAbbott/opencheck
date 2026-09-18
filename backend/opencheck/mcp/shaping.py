@@ -151,6 +151,47 @@ def _licensing(sources: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
+def _compact_statement(st: dict[str, Any]) -> dict[str, Any]:
+    """The agent-facing slice of a knowability statement: the sentence and
+    the provenance a reader needs to weigh it, not the full field list."""
+    return {
+        "code": st.get("code"),
+        "name": st.get("name"),
+        "sentence": st.get("sentence"),
+        "access": st.get("access"),
+        "stated_absence": bool(st.get("stated_absence")),
+        "review_status": st.get("review_status"),
+        "last_verified": st.get("last_verified"),
+        "opencheck_reads": [r.get("source_id") for r in st.get("opencheck_reads") or []],
+    }
+
+
+def _knowability(payload: Any) -> dict[str, Any] | None:
+    """``knowability: {subject, chain[], as_of, hint}`` from the frozen
+    ``knowability`` / ``knowability_chain`` fields, or None for an older
+    payload. ``chain`` is every other jurisdiction on the upward ownership
+    path, in path order — the run's own depth."""
+    from ..knowability import report_statements
+
+    report = {
+        "knowability": getattr(payload, "knowability", None),
+        "knowability_chain": getattr(payload, "knowability_chain", None),
+    }
+    ks = report_statements(report)
+    if ks["subject"] is None and not ks["chain"]:
+        return None
+    return {
+        "subject": _compact_statement(ks["subject"]) if ks["subject"] else None,
+        "chain": [_compact_statement(st) for st in ks["chain"]],
+        "as_of": ks["as_of"],
+        "hint": (
+            "Dated facts about each register — who may see beneficial owners there and "
+            "what OpenCheck reads of it. Describes, never judges: an absent owner is read "
+            "against these, and none of them is a risk signal."
+        ),
+    }
+
+
 def shape_lookup(payload: Any) -> dict[str, Any]:
     """Flatten a ``LookupResponse`` into a compact MCP tool result."""
     bods = payload.bods or []
@@ -183,13 +224,23 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
     licence_note = (
         f" Licensing: {licensing['headline']}" if licensing else ""
     )
+    # Phase 226: what the subject's jurisdiction publishes, and who may see
+    # it — so "no beneficial owner found" for a Cayman entity is read as an
+    # artefact of the register, not as a finding. Read from the payload's
+    # frozen fields, never re-rendered.
+    knowability = _knowability(payload)
+    knowability_note = (
+        f" What can be known ({knowability['subject']['code']}): {knowability['subject']['sentence']}"
+        if knowability and knowability.get("subject")
+        else ""
+    )
     summary = (
         f"{payload.legal_name or 'Entity'} (LEI {payload.lei}"
         f"{', ' + payload.jurisdiction if payload.jurisdiction else ''}). "
         f"Risk signals: {risk_codes}.{context_note} "
         f"{found} of {len(sources)} sources returned data; "
         f"{len(bods)} BODS statements ({relationships} ownership/control relationships)."
-        f"{degraded_note}{licence_note}"
+        f"{degraded_note}{licence_note}{knowability_note}"
     )
 
     return {
@@ -204,6 +255,10 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         # status, founding date, registered address — with the sources that
         # state each (Phase 154). Facts, never findings.
         "profile": getattr(payload, "subject_profile", None),
+        # What is knowable in the subject's jurisdiction and along the
+        # ownership path (Phase 226): dated register facts, never findings.
+        # Null on a payload recorded before the fields existed.
+        "knowability": knowability,
         "identifiers": _subject_identifiers(bods, payload.lei),
         "derived_identifiers": payload.derived_identifiers or {},
         "risk_signals": risk,
