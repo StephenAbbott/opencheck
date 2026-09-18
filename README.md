@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 224** — "What can be known" on the QuickCheck verdict strip: the per-jurisdiction knowability statement now rides the lookup stream, is frozen into saved reports, and is shown under the coverage columns with its register facts and sources one ⓘ away.
+**Latest: Phase 225** — Washington DC's DLCP register joins as the forty-ninth source, carrying the owners and controllers filed on the biennial report under D.C. Code § 29-102.11(a)(6).
 
 → [Full development history](docs/status.md)
 
