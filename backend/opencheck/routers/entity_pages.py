@@ -20,6 +20,7 @@ import hashlib
 import html
 import math
 import re
+from datetime import date
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -27,6 +28,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
 from .. import entity_pages as ep
 from .. import identifiers
+from .. import knowability
 from ..config import get_settings
 
 router = APIRouter(tags=["entity-pages"])
@@ -128,7 +130,18 @@ async def entity_page(request: Request, token: str) -> Response:
             headers={"Cache-Control": "public, max-age=86400"},
         )
 
-    etag = _etag("entity", lei, row.last_updated or "", ep.TEMPLATE_VERSION)
+    # Phase 227: the knowability sentence is dated and comes from a synced
+    # table, so the day and the table's generation stamp are part of the tag —
+    # a re-synced table or a passed "change announced" date re-fetches the page.
+    today = date.today()
+    etag = _etag(
+        "entity",
+        lei,
+        row.last_updated or "",
+        ep.TEMPLATE_VERSION,
+        knowability.GENERATED_AT or "",
+        today.isoformat(),
+    )
     if _conditional(request, etag):
         return Response(status_code=304, headers={"ETag": etag, "Cache-Control": _CACHE})
 
@@ -144,6 +157,7 @@ async def entity_page(request: Request, token: str) -> Response:
         children=children,
         children_total=children_total,
         built=_publish_date(store) or None,
+        today=today,
     )
     return HTMLResponse(page, headers={"ETag": etag, "Cache-Control": _CACHE})
 

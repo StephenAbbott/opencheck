@@ -14,6 +14,13 @@ Companies House / OpenSanctions / OpenCorporates rate limits. Live checks
 happen only when a human clicks the page's "Run the full OpenCheck" CTA
 (which deep-links to the SPA's ``/?lei=`` auto-run flow).
 
+Phase 227 added one non-GLEIF paragraph: the per-jurisdiction "What can be
+known" statement (``opencheck.knowability``, Stephen's Notion table synced
+to ``data/jurisdictions.json``). It is a local table read, not a fetch, and it
+is keyed on the jurisdiction, so it is the same sentence on every page for
+that country. The day's date and the table's ``generated_at`` are part of the
+page ETag, because the sentence is dated.
+
 Layout of this module:
 
 * :func:`slugify_name` — shared by the DB builder and the router so the
@@ -71,7 +78,7 @@ import unicodedata
 import zlib
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -79,7 +86,8 @@ log = logging.getLogger(__name__)
 
 # Bump when the rendered HTML changes materially — part of the ETag, so
 # crawlers re-fetch pages after a template change even when the row didn't.
-TEMPLATE_VERSION = "1"
+# "2": Phase 227 added the per-jurisdiction "What can be known" section.
+TEMPLATE_VERSION = "2"
 
 #: Max slug length. Cut at a word boundary; URLs stay readable and stable.
 _SLUG_MAX = 60
@@ -1303,6 +1311,38 @@ def _entity_link(row: EntityRow) -> str:
     return f'<a href="{html.escape(row.path)}">{html.escape(row.name)}</a>'
 
 
+def knowability_section(jurisdiction: str | None, today: date | None = None) -> str:
+    """Phase 227: what can be known about a company in *this* jurisdiction —
+    the Phase 223 statement, rendered per jurisdiction (never per entity), so
+    3.4 M pages cost one sentence each. Reads ``data/jurisdictions.json``
+    only; no adapter, no clock beyond the day (the sentence is dated on
+    ``next_change_expected``). Empty when the row has no jurisdiction.
+
+    Describes and dates; it must never read as a finding about the company —
+    the note under it says so, and the words come from a table with a
+    banned-vocabulary guard. A stated absence ("OpenCheck holds no register
+    notes for X") is rendered too: silence would read as "nothing to see"."""
+    if not jurisdiction:
+        return ""
+    from .knowability import statement_for
+
+    st = statement_for(jurisdiction, today)
+    if st.stated_absence:
+        badge = "no register notes held"
+    elif st.last_verified:
+        badge = f"checked {st.last_verified}"
+    else:
+        badge = "unverified draft"
+    return (
+        '<section id="knowability"><h2>What can be known</h2>'
+        f'<p><strong>{html.escape(st.name)}</strong> <small>({html.escape(badge)})</small></p>'
+        f"<p>{html.escape(st.sentence)}</p>"
+        "<p><small>A statement about the register, not about this company: what it publishes "
+        "about beneficial owners, who may see it, and what OpenCheck reads of it. "
+        f"Rendered as of {(today or date.today()).isoformat()}.</small></p></section>"
+    )
+
+
 def render_entity_page(
     row: EntityRow,
     *,
@@ -1312,8 +1352,10 @@ def render_entity_page(
     children: list[EntityRow],
     children_total: int,
     built: str | None,
+    today: date | None = None,
 ) -> str:
-    """The full entity page HTML (GLEIF reference data only — see module doc)."""
+    """The full entity page HTML (GLEIF reference data, plus the per-jurisdiction
+    knowability statement from the local table — see module doc)."""
     canonical = f"{frontend}{row.path}"
     title = entity_title(row.name)
     description = entity_description(row.name)
@@ -1426,6 +1468,7 @@ Standard (BODS).</p>
 <a class="cta" href="{html.escape(cta_href)}" rel="nofollow"{cta_onclick}>Run the full OpenCheck</a>
 <p class="cta-note">Free, no sign-up. Live lookups run only when you start them.</p>
 <dl>{dl}</dl>
+{knowability_section(row.jurisdiction, today)}
 {children_html}
 <section><h2>Explore</h2><p>{browse_link} ·
 <a href="https://search.gleif.org/#/record/{row.lei}">This record at GLEIF</a></p></section>
