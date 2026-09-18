@@ -10,14 +10,27 @@ that the *beneficial ownership* slice of a national register may be restricted �
 while the company registration and GLEIF ownership data OpenCheck shows are
 unaffected.
 
-Single source of truth: ``data/eu_bo_access.json``, one entry per ISO 3166-1
-alpha-2 country code. Edit that file to update the list — this module validates
-it at import (fail-fast on a bad date, URL, or a country that isn't EU/EEA) and
-computes the user-facing message from ``restricted_from`` and today's date, so
-the "currently public but soon…" message flips to "not public" on the day the
-restriction takes effect without any code change.
+**Since Phase 223 this module is a view, not a store.** The facts live in
+``data/jurisdictions.json`` — generated from Stephen's Notion table
+"Beneficial ownership access status" by ``scripts/sync_jurisdictions.py`` and
+read by ``opencheck.knowability`` — so there is one copy of every date. The
+old ``data/eu_bo_access.json`` is gone. This module keeps its public names
+(``BO_ACCESS``, ``BoAccessEntry``, ``BoAccessNotice``, ``notice_for``) so the
+``/sources`` endpoint and the source-card footnote are unchanged.
 
-``restricted_from`` semantics:
+Mapping from the jurisdiction's access enum to the footnote:
+
+* ``legitimate_interest``, ``restricted_no_lia_route_yet``,
+  ``authorities_and_obliged_entities_only`` → **restricted now**;
+  ``restricted_from`` is the ``access_since`` date when one is recorded.
+* ``public`` / ``public_with_registration_or_justification`` with a
+  ``next_change_expected`` in the future → **becoming restricted** on that
+  date (the only announced changes to a public register are restrictions).
+* ``public`` with no announced change, ``no_register``, ``in_progress`` or
+  an unrecorded status → no notice (the register is not restricted, or there
+  is nothing to restrict).
+
+``restricted_from`` semantics are unchanged from before:
 
 * a **future** date  → still public; show the "becoming restricted" message with
   the date.
@@ -27,14 +40,12 @@ restriction takes effect without any code change.
 
 from __future__ import annotations
 
-import json
 from datetime import date
-from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-_DATA_PATH = Path(__file__).parent / "data" / "eu_bo_access.json"
+from .knowability import JURISDICTIONS, Jurisdiction
 
 # EU-27 + EEA (Iceland, Liechtenstein, Norway). Norway et al. implement the AML
 # directives via the EEA agreement, so they belong here even though they are not
@@ -72,9 +83,18 @@ EU_EEA_COUNTRY_NAMES: dict[str, str] = {
     "NO": "Norway",
 }
 
+_RESTRICTED_NOW: frozenset[str] = frozenset(
+    {
+        "legitimate_interest",
+        "restricted_no_lia_route_yet",
+        "authorities_and_obliged_entities_only",
+    }
+)
+_PUBLIC: frozenset[str] = frozenset({"public", "public_with_registration_or_justification"})
+
 
 class BoAccessEntry(BaseModel):
-    """One country's raw beneficial-ownership access record (as stored)."""
+    """One country's beneficial-ownership access record, as the footnote reads it."""
 
     restricted_from: date | None = Field(
         default=None,
@@ -119,21 +139,37 @@ class BoAccessNotice(BaseModel):
     access_url: str | None = None
 
 
-def _load(path: Path = _DATA_PATH) -> dict[str, BoAccessEntry]:
-    raw = json.loads(path.read_text(encoding="utf-8"))
+def _entry_for(j: Jurisdiction) -> BoAccessEntry | None:
+    r = j.bo_register
+    if r.access in _RESTRICTED_NOW:
+        return BoAccessEntry(
+            restricted_from=r.access_since,
+            access_url=r.access_url,
+            note=f"knowability: {r.access}",
+        )
+    if r.access in _PUBLIC and r.next_change_expected is not None:
+        return BoAccessEntry(
+            restricted_from=r.next_change_expected,
+            access_url=r.access_url,
+            note=f"knowability: {r.access}, change announced",
+        )
+    return None
+
+
+def _build() -> dict[str, BoAccessEntry]:
     out: dict[str, BoAccessEntry] = {}
-    for code, payload in raw.items():
-        cc = code.strip().upper()
-        if cc not in EU_EEA_COUNTRY_NAMES:
-            raise ValueError(
-                f"eu_bo_access.json: {code!r} is not an EU/EEA country code"
-            )
-        out[cc] = BoAccessEntry.model_validate(payload)
+    for code, j in JURISDICTIONS.items():
+        if code not in EU_EEA_COUNTRY_NAMES:
+            continue
+        entry = _entry_for(j)
+        if entry is not None:
+            out[code] = entry
     return out
 
 
-# Validated at import — a malformed entry fails the process (and CI) loudly.
-BO_ACCESS: dict[str, BoAccessEntry] = _load()
+# Derived at import from the jurisdictions table — a malformed row already
+# failed the process in ``knowability``.
+BO_ACCESS: dict[str, BoAccessEntry] = _build()
 
 
 def notice_for(
@@ -141,8 +177,9 @@ def notice_for(
 ) -> BoAccessNotice | None:
     """The access notice for a national register in ``country``, or ``None``.
 
-    ``None`` when the country has no entry (i.e. its beneficial ownership data
-    is still public and unrestricted, e.g. Latvia — deliberately omitted)."""
+    ``None`` when the country has no entry — its beneficial ownership data is
+    public and unrestricted (Latvia, Estonia while its restriction stays
+    postponed), or it is outside the EU/EEA."""
     if not country:
         return None
     cc = country.strip().upper()
