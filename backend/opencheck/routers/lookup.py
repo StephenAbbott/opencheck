@@ -88,6 +88,7 @@ from .hit_builders import (  # noqa: F401
     _bh_cr_hongkong,
     _bh_cro,
     _bh_cvr_denmark,
+    _bh_dlcp_dc,
     _bh_eiti,
     _bh_eiti_bo,
     _bh_eiti_soe,

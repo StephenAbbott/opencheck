@@ -22,6 +22,7 @@ from .cac_nigeria import CacNigeriaAdapter
 from .cnpj_brazil import CnpjBrazilAdapter
 from .acra_singapore import AcraSingaporeAdapter
 from .cvr_denmark import CvrDenmarkAdapter
+from .dlcp_dc import DlcpDcAdapter
 from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
 from .corporations_canada import CorporationsCanadaAdapter
@@ -77,6 +78,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "companies_house": CompaniesHouseAdapter(),
     "cro": CroAdapter(),
     "cvr_denmark": CvrDenmarkAdapter(),
+    "dlcp_dc": DlcpDcAdapter(),
     "eiti": EitiAdapter(),
     "eiti_assessment": EitiAssessmentAdapter(),
     "eiti_bo": EitiBoAdapter(),

@@ -627,6 +627,7 @@ SOURCE_NAMES: dict[str, str] = {
     "ted_eu": "TED — Tenders Electronic Daily (EU procurement notices)",
     "eiti": "EITI — Extractive Industries Transparency Initiative",
     "eiti_bo": "EITI countries — national beneficial ownership registers (pooled: ITIE-RDC, Armenia State Register, Nigeria CAC/NEITI subset)",
+    "dlcp_dc": "DLCP — Department of Licensing and Consumer Protection Corporations Division (Washington, DC)",
     "eiti_assessment": "EITI Company Assessment",
     "eiti_soe": "EITI State-Owned Enterprises Database",
     "meip": "OECD-UNSD Multinational Enterprise Information Platform (MEIP)",
@@ -661,6 +662,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "cr_hongkong",
         "cro",
         "cvr_denmark",
+        "dlcp_dc",
         "eiti_bo",
         "firmenbuch",
         "gemi_greece",
@@ -834,6 +836,7 @@ _BO_ASSERTING_SOURCES: frozenset[str] = frozenset({
     "ur_latvia",        # Latvian BO register records
     "cac_nigeria",      # CAC Persons with Significant Control register
     "ariregister",      # Estonian register files BO alongside shareholders
+    "dlcp_dc",          # DC biennial-report owner/controller disclosure (§ 29-102.11(a)(6))
 })
 
 
