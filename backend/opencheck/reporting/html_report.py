@@ -21,6 +21,7 @@ from html import escape
 from typing import Any
 
 from ..bods.refs import statement_index
+from ..knowability import report_statements
 from .diagram import source_diagram
 
 LIVE_BASE = "opencheck.world"
@@ -633,6 +634,39 @@ def _sources_found(report: dict[str, Any]) -> str:
     )
 
 
+def _knowability(report: dict[str, Any]) -> str:
+    """Phase 226: what can be known — the subject's jurisdiction, then every
+    other jurisdiction on the ownership path. Read from the frozen payloads
+    (``knowability`` / ``knowability_chain``), never re-rendered: a saved
+    report says what was true on the day it ran. Empty for a payload recorded
+    before the fields existed."""
+    ks = report_statements(report)
+    subject, chain = ks["subject"], ks["chain"]
+    if subject is None and not chain:
+        return ""
+    paras = []
+    for st in ([subject] if subject else []) + chain:
+        badge = (
+            f"checked {escape(st['last_verified'])}" if st.get("last_verified")
+            else ("no register notes held" if st.get("stated_absence") else "unverified draft")
+        )
+        paras.append(
+            f'<p><strong>{escape(st.get("name") or st.get("code") or "")}</strong> '
+            f'<span class="lic ok">{badge}</span><br/>{escape(st.get("sentence") or "")}</p>'
+        )
+    note = (
+        "These sentences describe each register, not this company, and are dated: they are the "
+        "facts OpenCheck held"
+        + (f" as of {escape(ks['as_of'])}" if ks.get("as_of") else "")
+        + ". An owner absent from this report is read against them."
+    )
+    return (
+        '<section aria-labelledby="know"><h2 id="know">What can be known</h2>'
+        + "".join(paras)
+        + f'<p style="font-size:8pt;color:#595959">{note}</p></section>'
+    )
+
+
 def _diagrams(report: dict[str, Any]) -> str:
     bods = report.get("bods") or []
     # Keyed by statementId *and* recordId — a v0.4 relationship references the
@@ -792,6 +826,7 @@ def build_report_html(
         + _summary(narrative, dispositions)
         + _risk(report)
         + _sources_found(report)
+        + _knowability(report)
         + _diagrams(report)
         + _licensing(report, saved)
         + "<footer><p style=\"font-size:8pt;color:#595959\">OpenCheck aggregates open corporate and "

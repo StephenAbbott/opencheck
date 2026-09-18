@@ -111,6 +111,18 @@ fetch `/batch-export` directly.
   a bundle holding CC-BY-NC OpenSanctions statements shipped
   `license_notices: []` to agents while the panel said "NOT for commercial
   use". The `summary` line ends with the licensing headline.
+- **`knowability`** (Phase 226) — what is knowable where the company sits:
+  `subject` is the dated statement for the subject's jurisdiction (`code`,
+  `name`, `sentence`, `access`, `review_status`, `last_verified`,
+  `opencheck_reads`) and `chain[]` is one such statement per *other*
+  jurisdiction on the upward ownership path, in path order, to the depth the
+  lookup itself reached; `as_of` is the day the sentences were rendered — on a
+  saved report, the day of the run. The `summary` line ends with the subject
+  sentence, because it is the clause an agent most needs before it quotes "no
+  beneficial owner found" for a company in a jurisdiction whose register is
+  open to authorities and obliged entities only, or that OpenCheck reads no
+  register of. Describes and dates; never a finding. Null for payloads recorded
+  before the fields existed.
 
 ## resolve_national_id
 

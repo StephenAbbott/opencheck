@@ -586,25 +586,116 @@ def _country_name(code: str) -> str:
 # ----------------------------------------------------------------------
 def chain_jurisdictions(bods: list[dict[str, Any]], subject_id: str | None) -> list[str]:
     """The jurisdictions of every *entity* on the upward ownership path from
-    the subject, subject first — ended relationships included (Stephen,
-    18 Sept 2026: a former owner's jurisdiction still shaped what was
-    knowable). Persons carry no jurisdiction and are skipped.
+    the subject, subject first and then in **path order** (each rank of
+    owners before the rank above it) — ended relationships included
+    (Stephen, 18 Sept 2026: a former owner's jurisdiction still shaped what
+    was knowable). Persons carry no jurisdiction and are skipped.
+
+    Path order rather than statement-id order (Phase 226) so the FullCheck
+    list reads the way the chain is drawn: subject, its owners, their owners.
     """
+    return chain_jurisdictions_from(bods, [subject_id] if subject_id else [])
+
+
+def chain_jurisdictions_from(bods: list[dict[str, Any]], subject_ids: list[str]) -> list[str]:
+    """``chain_jurisdictions`` for a subject described by several statements
+    (one per source before reconciliation): the walk starts from all of them
+    and the subject's own jurisdiction comes first."""
     from .reconcile import _entity_jurisdiction
-    from .risk import _statement_id, _stmt_kind, _upstream_entity_ids
+    from .risk import _refs_resolver, _relationship_endpoints, _statement_id, _stmt_kind
 
     by_id = {_statement_id(s): s for s in bods if _stmt_kind(s) == "entity"}
-    if not subject_id or subject_id not in by_id:
+    starts = [sid for sid in subject_ids if sid in by_id]
+    if not starts:
         return []
+    owners: dict[str, list[str]] = {}
+    resolve = _refs_resolver(bods)
+    for stmt in bods:
+        if _stmt_kind(stmt) != "relationship":
+            continue
+        subj, ip, _ = _relationship_endpoints(stmt, resolve)
+        if subj and ip and ip not in owners.setdefault(subj, []):
+            owners[subj].append(ip)
+
     ordered: list[str] = []
 
-    def _add(stmt: dict[str, Any]) -> None:
+    def _add(sid: str) -> None:
+        stmt = by_id.get(sid)
+        if stmt is None:
+            return
         code = _entity_jurisdiction(stmt.get("recordDetails") or {})
         if code and code not in ordered:
             ordered.append(code)
 
-    _add(by_id[subject_id])
-    for sid in sorted(_upstream_entity_ids(subject_id, bods)):
-        if sid in by_id:
-            _add(by_id[sid])
+    seen = set(starts)
+    rank = list(starts)
+    for sid in rank:
+        _add(sid)
+    while rank:
+        nxt: list[str] = []
+        for node in rank:
+            for ip in owners.get(node, ()):
+                if ip not in seen:
+                    seen.add(ip)
+                    nxt.append(ip)
+        for sid in nxt:
+            _add(sid)
+        rank = nxt
     return ordered
+
+
+def chain_for_lei(lei: str, bods: list[dict[str, Any]], today: date | None = None) -> dict[str, Any]:
+    """The ``knowability_chain`` payload for a looked-up LEI (Phase 226): the
+    jurisdictions on the upward path from the subject's own statements, and
+    one statement per jurisdiction, as JSON — frozen into the lookup stream
+    so a saved report replays the chain that was true on the day it ran.
+
+    ``subject`` is the first code (the subject's jurisdiction) or None when
+    the subject has no entity statement in *bods* yet."""
+    from .subject_profile import subject_statements
+
+    today = today or date.today()
+    ids = [s.get("statementId") for s in subject_statements(lei, bods)]
+    codes = chain_jurisdictions_from(bods, [i for i in ids if isinstance(i, str)])
+    return {
+        "subject": codes[0] if codes else None,
+        "codes": codes,
+        "statements": [st.model_dump(mode="json") for st in statements_for(codes, today)],
+        "as_of": today.isoformat(),
+    }
+
+
+# ----------------------------------------------------------------------
+# Reading the frozen payloads back (exports, MCP) — Phase 226
+# ----------------------------------------------------------------------
+def report_statements(report: dict[str, Any]) -> dict[str, Any]:
+    """The statements a report carries, read from its **frozen** fields only.
+
+    ``report`` is a ``LookupResponse`` dump (live or a saved report's fold).
+    Returns ``{"subject": stmt | None, "chain": [stmt, ...], "as_of": str | None}``
+    where ``chain`` is every jurisdiction on the path *other than* the
+    subject's, in path order. Nothing here calls ``statement_for`` or reads a
+    clock: an export of a saved report must say what was true on the day of
+    the run (Phase 218), and the two payloads already hold that. A payload
+    recorded before Phase 224/226 simply yields ``None`` / ``[]``.
+    """
+    subject = report.get("knowability") or None
+    chain_payload = report.get("knowability_chain") or {}
+    subject_code = (subject or {}).get("code") or chain_payload.get("subject")
+    chain: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for st in chain_payload.get("statements") or []:
+        code = st.get("code")
+        if not code or code == subject_code or code in seen:
+            continue
+        seen.add(code)
+        chain.append(st)
+    if subject is None and chain_payload.get("statements"):
+        # A chain payload without the subject event (should not happen on a
+        # single run, but the fold tolerates any event subset): the chain's
+        # first statement is the subject's.
+        first = chain_payload["statements"][0]
+        if first.get("code") == subject_code:
+            subject = dict(first, as_of=chain_payload.get("as_of"))
+    as_of = (subject or {}).get("as_of") or chain_payload.get("as_of")
+    return {"subject": subject, "chain": chain, "as_of": as_of}

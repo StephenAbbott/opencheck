@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 224** — "What can be known" on the QuickCheck verdict strip: the per-jurisdiction knowability statement now rides the lookup stream, is frozen into saved reports, and is shown under the coverage columns with its register facts and sources one ⓘ away.
+**Latest: Phase 226** — What can be known along the ownership path: the per-jurisdiction statements now follow the chain in FullCheck, appear in the PDF and Markdown exports, and ride the MCP lookup result, all frozen with the run for saved reports.
 
 → [Full development history](docs/status.md)
 

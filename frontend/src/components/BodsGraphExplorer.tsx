@@ -43,6 +43,7 @@ import {
   mergeStatements,
   mergeSignals,
   signalsBeyond,
+  type EdgeLite,
   type ExpandDirection,
 } from "../lib/expand";
 import {
@@ -82,6 +83,7 @@ export default function BodsGraphExplorer({
   fullCheck = false,
   focusStatementId = null,
   readOnly = false,
+  onNetworkChange,
 }: {
   statements: unknown[];
   signals?: RiskSignal[];
@@ -104,6 +106,11 @@ export default function BodsGraphExplorer({
    *  FullCheck, Go deeper, Add next layer — call `/expand` for today's
    *  records, so they are not offered; the graph draws what was saved. */
   readOnly?: boolean;
+  /** Phase 226: the network as currently drawn — the base statements plus
+   *  every expanded layer, and the raw ownership edges — whenever it changes.
+   *  The FullCheck panel reads the jurisdictions on the upward path from it;
+   *  this component composes nothing about them. */
+  onNetworkChange?: (statements: Stmt[], edges: EdgeLite[], expanding: boolean) => void;
 }) {
   // Layers revealed via progressive discovery, merged onto the base statement set.
   const [extra, setExtra] = useState<Stmt[]>([]);
@@ -183,6 +190,13 @@ export default function BodsGraphExplorer({
     () => (recon ? bodsToGraph(allStatements).edges : model.edges),
     [recon, allStatements, model]
   );
+
+  // Phase 226: tell the panel what is drawn, so the "What can be known along
+  // the path" list follows every expansion.
+  const busy = expanding || running;
+  useEffect(() => {
+    onNetworkChange?.(allStatements, rawEdges, busy);
+  }, [allStatements, rawEdges, busy, onNetworkChange]);
 
   const [collapsed, setCollapsed] = useState<Set<string>>(() => autoCollapse(baseModel));
   const [selectedId, setSelectedId] = useState<string | null>(null);

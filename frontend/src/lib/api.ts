@@ -193,6 +193,9 @@ export interface LookupResponse {
    *  (Phase 224) — see `KnowabilityStatement`. Absent on payloads recorded
    *  before this field existed, and null when the jurisdiction is unknown. */
   knowability?: KnowabilityStatement | null;
+  /** What is knowable along the ownership path (Phase 226) — see
+   *  `KnowabilityChain`. Absent on payloads recorded before this field existed. */
+  knowability_chain?: KnowabilityChain | null;
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
@@ -216,6 +219,26 @@ export interface KnowabilitySourceRead {
  *  nothing here is a signal and it must never be rendered in a risk tone.
  *  `as_of` is the day the sentence was rendered — on a saved report, the day
  *  of the run, not today. */
+/** The `knowability_chain` event (Phase 226): every jurisdiction on the
+ *  upward ownership path from the subject — subject first, then path order,
+ *  ended links included — with one statement per code, frozen with the run.
+ *  It is the run's own depth; FullCheck extends it client-side as it expands,
+ *  through `fetchKnowability`, and a saved report shows exactly this. */
+export interface KnowabilityChain {
+  subject: string | null;
+  codes: string[];
+  statements: KnowabilityStatement[];
+  as_of: string;
+}
+
+/** `GET /knowability?jurisdictions=…` — pure, cached an hour on the server. */
+export interface KnowabilityResponse {
+  statements: KnowabilityStatement[];
+  known_codes: string[];
+  generated_at: string | null;
+  as_of: string;
+}
+
 export interface KnowabilityStatement {
   code: string;
   name: string;
@@ -489,6 +512,17 @@ async function getJson<T>(path: string): Promise<T> {
     throw new Error(`${r.status} ${r.statusText} — ${path}`);
   }
   return (await r.json()) as T;
+}
+
+/** The dated statements for `codes` (Phase 226). Server-built sentences —
+ *  the FullCheck chain list must never compose its own. Codes are deduped and
+ *  upper-cased here so the URL, and therefore the server cache, is stable. */
+export function fetchKnowability(codes: string[]): Promise<KnowabilityResponse> {
+  const unique = Array.from(new Set(codes.map((c) => c.trim().toUpperCase()).filter(Boolean)));
+  if (unique.length === 0) {
+    return Promise.resolve({ statements: [], known_codes: [], generated_at: null, as_of: "" });
+  }
+  return getJson(`/knowability?jurisdictions=${encodeURIComponent(unique.join(","))}`);
 }
 
 export function fetchSources(): Promise<{ sources: SourceInfo[] }> {
@@ -1511,6 +1545,7 @@ export type LookupStreamHandlers = {
   onBodsCounts?: (e: BodsCountsEvent) => void;
   onSubjectProfile?: (e: SubjectProfileEvent) => void;
   onKnowability?: (e: KnowabilityStatement) => void;
+  onKnowabilityChain?: (e: KnowabilityChain) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
   /** Called on both backend "error" events and EventSource network errors. */
   onError?: (detail: string) => void;
@@ -1544,6 +1579,7 @@ export const LOOKUP_EVENT_HANDLERS = {
   bods_counts: "onBodsCounts",
   subject_profile: "onSubjectProfile",
   knowability: "onKnowability",
+  knowability_chain: "onKnowabilityChain",
 } as const satisfies Record<string, keyof LookupStreamHandlers>;
 
 type LookupDataHandlerKey = (typeof LOOKUP_EVENT_HANDLERS)[keyof typeof LOOKUP_EVENT_HANDLERS];

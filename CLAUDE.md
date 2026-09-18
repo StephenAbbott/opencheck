@@ -1613,7 +1613,7 @@ Things that will be re-derived otherwise:
 
 ---
 
-## What is knowable, per jurisdiction — the data is Stephen's Notion table (Phases 223–224)
+## What is knowable, per jurisdiction — the data is Stephen's Notion table (Phases 223–226)
 
 `opencheck/knowability.py` + `data/jurisdictions.json`; the review page is
 `docs/knowability.md`. One statement per jurisdiction of what its registers
@@ -1681,6 +1681,24 @@ otherwise:
   verbatim with the per-field list behind `ui/Explain`. It is a fourth band
   under the three columns, not a chip in "What we found": the statement is
   never a signal and never counts.
+- **The chain (Phase 226) is a second event, `knowability_chain`,** yielded
+  after `subject_profile` because it needs the deepened graph:
+  `chain_for_lei(lei, bods_all)` walks *up* from every statement carrying
+  the LEI (`subject_statements`), in **path order** (each rank of owners
+  before the rank above — `chain_jurisdictions_from`), ended links included,
+  and carries one statement per code plus `as_of`. Folded as recorded into
+  `LookupResponse.knowability_chain`. The exports (`html_report._knowability`
+  → PDF, `markdown_report._knowability`, a "What can be known" section after
+  "What each source found") and the MCP `knowability: {subject, chain[],
+  as_of}` field all read the two frozen payloads through
+  `knowability.report_statements()` — **never `statement_for` at render
+  time** — so a saved report says what was true on the day of the run. The
+  FullCheck panel's "What can be known along the path" list
+  (`KnowabilityChainList`) starts from the frozen chain and, as the network
+  expands (`BodsGraphExplorer.onNetworkChange` → `lib/knowabilityChain.ts
+  chainCodes`), fetches statements for new codes through `GET /knowability`
+  only; a frozen sentence is never replaced by a fetched one (`mergeChain`),
+  and a saved report fetches nothing.
 - Running the scripts locally: `cd backend && uv run python
   scripts/sync_jurisdictions.py --notion` — the system `python3` has neither
   pydantic nor pytest. The script reads `NOTION_API_KEY` from `backend/.env`

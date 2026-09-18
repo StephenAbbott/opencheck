@@ -24,10 +24,13 @@
  * not claim it and no URL could reach it. One line here says where it went.
  */
 
-import { useEffect, useState } from "react";
-import { lookup, type RiskSignal } from "../../lib/api";
+import { useCallback, useEffect, useState } from "react";
+import { lookup, type KnowabilityChain, type RiskSignal } from "../../lib/api";
+import type { EdgeLite } from "../../lib/expand";
+import { chainCodes } from "../../lib/knowabilityChain";
 import { subsidiaryHref } from "../../lib/subsidiariesMode";
 import BodsGraphExplorer from "../BodsGraphExplorer";
+import { KnowabilityChainList } from "./KnowabilityChainList";
 import PanelSection from "../ui/PanelSection";
 import type { PanelError, PanelId } from "../../lib/panelErrors";
 
@@ -40,6 +43,7 @@ export default function FullCheckPanel({
   onOpenSubsidiaries,
   focusStatementId = null,
   savedStatements = null,
+  knowabilityChain = null,
 }: {
   lei: string;
   legalName: string | null;
@@ -60,8 +64,23 @@ export default function FullCheckPanel({
   /** Phase 217: a saved report's statements. When given, nothing is fetched —
    *  the network is drawn from what was saved and cannot be expanded. */
   savedStatements?: Stmt[] | null;
+  /** Phase 226: the run's `knowability_chain` event — the jurisdictions on
+   *  the ownership path to the depth the lookup reached, with their dated
+   *  statements, frozen with the run. The list below extends it as the
+   *  network is expanded; on a saved report it is shown as saved. */
+  knowabilityChain?: KnowabilityChain | null;
 }) {
   const [statements, setStatements] = useState<Stmt[] | null>(null);
+  // Phase 226: the jurisdictions on the upward path of the network as drawn.
+  const [graphCodes, setGraphCodes] = useState<string[]>([]);
+  const [expanding, setExpanding] = useState(false);
+  const onNetworkChange = useCallback(
+    (all: Stmt[], edges: EdgeLite[], busy: boolean) => {
+      setGraphCodes(chainCodes(all, edges, lei));
+      setExpanding(busy);
+    },
+    [lei],
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -127,10 +146,25 @@ export default function FullCheckPanel({
               fullCheck
               readOnly={Boolean(savedStatements)}
               focusStatementId={focusStatementId}
+              onNetworkChange={onNetworkChange}
             />
           </>
         )}
       </PanelSection>
+
+      {(knowabilityChain || graphCodes.length > 0) && (
+        <PanelSection
+          title="What can be known along the path"
+          aside="Dated facts about each register, not findings about this company"
+        >
+          <KnowabilityChainList
+            frozen={knowabilityChain}
+            graphCodes={graphCodes}
+            expanding={expanding}
+            readOnly={Boolean(savedStatements)}
+          />
+        </PanelSection>
+      )}
 
       <PanelSection title="Subsidiaries">
         <p className="text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
