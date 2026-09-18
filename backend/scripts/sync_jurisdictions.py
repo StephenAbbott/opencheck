@@ -9,15 +9,22 @@ writes the JSON that ``opencheck/knowability.py`` validates at import.
 
 Three ways in, one transform:
 
-    # 1. The Notion API (an internal integration shared with the database)
-    NOTION_API_KEY=secret_… python3 scripts/sync_jurisdictions.py --notion
+    # 1. The Notion API — an *internal* integration (Notion → Settings →
+    #    Connections → Develop or manage integrations → New, type "Internal",
+    #    capability "Read content" only), then on the database page
+    #    … → Connections → add it. Put the token in backend/.env as
+    #    NOTION_API_KEY=ntn_… (or the repo-root .env); this script loads it.
+    uv run python scripts/sync_jurisdictions.py --notion
 
     # 2. A CSV exported from Notion (… → Export → Markdown & CSV)
-    python3 scripts/sync_jurisdictions.py --csv ~/Downloads/Beneficial\\ ownership\\ access\\ status.csv
+    uv run python scripts/sync_jurisdictions.py --csv ~/Downloads/Beneficial\\ ownership\\ access\\ status.csv
 
     # 3. A JSON dump of rows in the Notion SQL-query shape (what a Cowork
     #    session gets back from the Notion MCP query tool)
-    python3 scripts/sync_jurisdictions.py --rows-json rows.json
+    uv run python scripts/sync_jurisdictions.py --rows-json rows.json
+
+Run everything through ``uv run`` from ``backend/`` — the system ``python3``
+has neither pydantic nor pytest, so a bare ``python3`` fails on import.
 
 Add ``--check`` to fail (exit 1) when the committed file differs from what
 the source would produce — the same shape as ``generate_okf.py --check``.
@@ -41,6 +48,33 @@ from pathlib import Path
 from typing import Any
 
 DATA_SOURCE_ID = "b6be86df-6d76-422b-93bd-f1ece5a99781"
+#: Same two places ``opencheck.config`` looks: ``backend/.env`` and the repo root.
+ENV_PATHS: tuple[Path, ...] = (
+    Path(__file__).resolve().parents[1] / ".env",
+    Path(__file__).resolve().parents[2] / ".env",
+)
+
+
+def _load_env(paths: tuple[Path, ...] = ENV_PATHS) -> None:
+    """Read the ``.env`` files so ``NOTION_API_KEY`` set there is seen — the
+    app gets that from pydantic-settings, but this script runs outside the
+    app. Never overrides a variable already in the environment."""
+    for path in paths:
+        if not path.exists():
+            continue
+        try:
+            from dotenv import load_dotenv
+
+            load_dotenv(path, override=False)
+            continue
+        except ImportError:
+            pass
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            os.environ.setdefault(k.strip().removeprefix("export "), v.strip().strip("'\""))
 NOTION_VERSION = "2025-09-03"
 OUT_PATH = Path(__file__).resolve().parents[1] / "opencheck" / "data" / "jurisdictions.json"
 
@@ -109,11 +143,17 @@ def _read_csv(path: Path) -> list[dict[str, Any]]:
 
 
 def _read_notion_api(data_source_id: str) -> list[dict[str, Any]]:
+    import urllib.error
     import urllib.request
 
+    _load_env()
     key = os.environ.get("NOTION_API_KEY")
     if not key:
-        sys.exit("NOTION_API_KEY is not set — create an internal integration and share the database with it")
+        sys.exit(
+            "NOTION_API_KEY is not set (looked in the environment, backend/.env and the "
+            "repo-root .env) — create an internal integration, share the database with "
+            "it, and put the token in backend/.env"
+        )
     url = f"https://api.notion.com/v1/data_sources/{data_source_id}/query"
     rows: list[dict[str, Any]] = []
     cursor: str | None = None
@@ -131,8 +171,17 @@ def _read_notion_api(data_source_id: str) -> list[dict[str, Any]]:
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310
-            payload = json.load(resp)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310
+                payload = json.load(resp)
+        except urllib.error.HTTPError as e:
+            hint = {
+                401: "the token is wrong or revoked — copy the 'Internal Integration Secret' again",
+                403: "the integration lacks the 'Read content' capability",
+                404: "the database is not shared with the integration — on the database page, "
+                "… → Connections → add it (Notion answers 404, not 403, for an unshared page)",
+            }.get(e.code, e.read().decode(errors="replace")[:300])
+            sys.exit(f"Notion API {e.code} for data source {data_source_id}: {hint}")
         for page in payload.get("results", []):
             flat = {"_page_id": page.get("id")}
             for prop, value in (page.get("properties") or {}).items():
