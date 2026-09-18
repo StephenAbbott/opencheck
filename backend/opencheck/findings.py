@@ -1626,3 +1626,83 @@ def finding_apr_serbia(bundle: dict[str, Any]) -> str | None:
     if sentence and len(sentence) > MAX_FINDING_CHARS:
         sentence = clauses_to_sentence([lead])
     return sentence
+
+
+def finding_dlcp_dc(bundle: dict[str, Any]) -> str | None:
+    """What DC's Corporations Division register says: status, form, owners.
+
+    The owner count leads with **"owners and controllers"**, never "beneficial
+    owners": what § 29-102.11(a)(6) collects is a combined ownership-and-
+    control list in which a governance interest qualifies on its own, so a
+    nonprofit's whole board appears. Calling that "beneficial owners" in a
+    one-line finding would be the register's own wording repeating a claim the
+    data does not support.
+
+    * **Not found** says the file number is not in the register as published.
+    * **A name mismatch** is its own sentence, because it is the reason the
+      record was dropped and the user would otherwise see silence.
+    * **A name match** is disclosed: the record was reached from the company's
+      name, not from the identifier GLEIF filed, and a reader is entitled to
+      know the identifier did not resolve.
+    * A terminal status leads — it changes a decision — otherwise the count of
+      owners does.
+    """
+    from .sources.dlcp_dc import clean_field, is_live_status
+
+    if not bundle:
+        return None
+    if bundle.get("not_in_register"):
+        return (
+            "No such file number in DC's published Corporations Division register."
+        )
+    if bundle.get("name_mismatch"):
+        return (
+            "The DC file number on the LEI record reaches a different company, "
+            "so no DLCP record is attached."
+        )
+    if bundle.get("is_stub"):
+        return None
+    company = bundle.get("company")
+    if not isinstance(company, dict):
+        return None
+
+    status = clean_field(company.get("ENTITY_STATUS"))
+    model_type = clean_field(company.get("MODELTYPE")).lower()
+    owners = bundle.get("owners") or []
+    count = len(owners)
+
+    if status and not is_live_status(status):
+        lead = status
+    elif count:
+        lead = (
+            f"{count} owner or controller filed"
+            if count == 1
+            else f"{count} owners and controllers filed"
+        )
+    elif status:
+        lead = status
+    else:
+        lead = "On the DC Corporations Division register"
+
+    clauses: list[str | None] = [lead]
+    if lead != status and status and count:
+        clauses.append(status.lower())
+    if count and lead == status:
+        clauses.append(
+            f"{count} owner or controller filed"
+            if count == 1
+            else f"{count} owners and controllers filed"
+        )
+    if not count:
+        clauses.append("no owners or controllers on the biennial report")
+    # Ahead of the legal form: a record reached by name rather than by the
+    # filed identifier is a caveat on everything else in the sentence, and
+    # ``clauses_to_sentence`` drops from the end to fit the cap.
+    if bundle.get("matched_by") == "name":
+        clauses.append("matched by name, not by the file number on the LEI record")
+    clauses.append(model_type or None)
+
+    sentence = clauses_to_sentence(clauses)
+    if sentence and len(sentence) > MAX_FINDING_CHARS:
+        sentence = clauses_to_sentence(clauses[:2])
+    return sentence

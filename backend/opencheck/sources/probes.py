@@ -277,6 +277,27 @@ PROBES: dict[str, SourceProbe] = {
             "shares that keyless budget, not that the data moved."
         ),
     ),
+    "dlcp_dc": _p(
+        tier="live",
+        subject="American Chemical Society (Washington, DC)",
+        args=("000347",),
+        kwargs={"legal_name": "AMERICAN CHEMICAL SOCIETY"},
+        expect_fields=("company", "owners"),
+        anchor_lei="8FL3W96L346X3ZZXY355",
+        bods_mapper="map_dlcp_dc",
+        notes=(
+            "A bare six-digit file number, exactly as GLEIF files it under "
+            "RA000601, on a company that files a long owner list (16 rows on "
+            "2026-09-18). ``expect_fields`` asserts BOTH ``company`` and "
+            "``owners``: without the second, DLCP dropping Table 2 or renaming "
+            "INITIALFILENUMBER would show up as a quietly thinner record "
+            "rather than a failure. Keyless, no documented rate limit; the "
+            "FeatureServer answers a file-number query in about 0.35 s. An "
+            "ArcGIS error arrives inside an HTTP 200 body, which the adapter "
+            "reads as a degradation — a green probe here means the query was "
+            "actually accepted."
+        ),
+    ),
     "anaf_romania": _p(
         tier="live",
         subject="Dante International S.A. (eMAG)",

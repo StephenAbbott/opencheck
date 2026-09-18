@@ -114,7 +114,11 @@ _IDENTIFIER_KEYED = {
     # onrc_romania: the same. Its name search is a LIKE over the SQLite index,
     # so with no index file there is nothing to return and nothing to stub.
     # apr_serbia: the same — name search reads the local register index.
-    "apr_serbia",
+    # dlcp_dc: entered via the LEI flow only. DC company names are not
+    # searched — the register is reached from the file number GLEIF files
+    # under RA000601 (see the adapter docstring); its one name query is an
+    # internal recovery path behind a failed identifier, not a search.
+    "apr_serbia", "dlcp_dc",
     "asp_moldova", "onrc_romania",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",

@@ -46,6 +46,15 @@ class RegisterHop:
     pass_legal_name: bool
 
 
+#: Schemes that must never stand in for their whole country in the
+#: ``REG-<country>`` alias below. ``US-DC`` is one of fifty-odd US company
+#: registers, so "a number on the US register" cannot be taken to mean the
+#: District of Columbia's: a Delaware or New York file number carried as
+#: ``REG-US`` would otherwise be looked up in DC, where it either misses or —
+#: worse — reaches an unrelated company that happens to share the number.
+_NO_COUNTRY_ALIAS: frozenset[str] = frozenset({"US-DC"})
+
+
 def _ch_normalise(value: str) -> str:
     number = normalise_ch_company_number(value)
     if number is None:
@@ -85,6 +94,8 @@ def hop_schemes() -> dict[str, RegisterHop]:
     # Where a country has exactly one register hop, that is the register.
     by_country: dict[str, list[RegisterHop]] = {}
     for scheme, hop in hops.items():
+        if scheme in _NO_COUNTRY_ALIAS:
+            continue
         by_country.setdefault(scheme.split("-", 1)[0], []).append(hop)
     for country, country_hops in by_country.items():
         alias = f"REG-{country}"

@@ -515,6 +515,64 @@ _add(BORegime(
 ))
 
 _add(BORegime(
+    source_id="dlcp_dc",
+    jurisdiction="United States — District of Columbia",
+    jurisdiction_code="US-DC",
+    register_name="DC Corporations Division biennial-report owner and controller disclosure (DLCP, opendata.dc.gov)",
+    regime_kind="bo_register",
+    legal_basis=(
+        "D.C. Code § 29-102.11(a)(6) (domestic entities; reports filed on or after 1 January 2020)",
+        "D.C. Code § 29-102.11(a)(7) (the same test applied one level up, to each foreign entity identified under (a)(6))",
+        "D.C. Code § 29-102.11(a)(8) (administrative dissolution / termination of registration for non-compliance)",
+        "Form BRA-25, Item 6 (Two-Year Report for Domestic & Foreign Filing Entity)",
+    ),
+    bo_definition=(
+        "Each person whose aggregate share of direct or indirect, legal or "
+        "beneficial ownership of a GOVERNANCE or total DISTRIBUTIONAL interest "
+        "exceeds 10 %; or does not exceed 10 % provided the person controls the "
+        "entity's financial or operational decisions, or has the ability to "
+        "direct its day-to-day operations. BRA-25 collects it as one list of "
+        "'each person (member, manager, officer, director, shareholder, "
+        "partner, trustee, etc.)'."
+    ),
+    threshold_wording="exceeds 10 %",
+    threshold_operator=">",
+    threshold_value=10.0,
+    reporting_basis=(
+        "A COMBINED OWNERSHIP-AND-CONTROL LIST, not a FATF-style beneficial "
+        "ownership list. Because a GOVERNANCE interest qualifies on its own, "
+        "nonprofit boards are filed wholesale (American University files 27 "
+        "trustees, Children's National 18 — measured 2026-09-18). DLCP "
+        "publishes a name and an address per row and NO role, NO percentage "
+        "and NO owner type, so every interest maps to unknownInterest with "
+        "directOrIndirect 'unknown' and no share. The filing is self-declared: "
+        "the register performs no verification and collects no identifier."
+    ),
+    natural_person_only=False,
+    fallback=None,
+    record_kinds={
+        # The owner type is not published; the adapter classifies each row from
+        # the legal form in the name (sources/dlcp_dc.classify_owner).
+        "bo_person": "assert_true",
+        "bo_entity": "assert_false",
+    },
+    notes=(
+        "Separate from, and predating, the federal Corporate Transparency Act "
+        "regime — DC's disclosure is public in full, including residence addresses",
+        "Filed biennially by 1 April; § 29-102.11(a)(5) separately requires the "
+        "name of at least one governor, which the open dataset does not isolate",
+        "Roughly 4.5 % of published owner rows are legal entities, not natural "
+        "persons (178 of a random 4,000 rows, 2026-09-18)",
+    ),
+    sources=(
+        "https://code.dccouncil.gov/us/dc/council/code/sections/29-102.11",
+        "https://catalog.data.gov/dataset/beneficial-owners",
+        "https://opendata.dc.gov/datasets/DCGIS::beneficial-owners/about",
+    ),
+    last_verified="2026-09-18",
+))
+
+_add(BORegime(
     source_id="bods_gleif",
     jurisdiction="Global (GLEIF)",
     jurisdiction_code=None,
