@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 222** — Serbia joins: the Business Registers Agency's company register, downloaded and indexed from its monthly open data, with every Serbian LEI holder's status, legal form and founding date.
+**Latest: Phase 223** — What is knowable, per jurisdiction: one dated statement of what each jurisdiction's registers publish about beneficial owners, who may see it and what OpenCheck reads of it, generated from Stephen's maintained access-status table.
 
 → [Full development history](docs/status.md)
 
