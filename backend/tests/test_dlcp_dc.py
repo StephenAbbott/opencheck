@@ -31,7 +31,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from opencheck import degradation
+from opencheck import degradation, outbound_rate
+from opencheck.cache import Cache
 from opencheck.bods import liveness
 from opencheck.bods.bo_regimes import REGIMES, boc_policy
 from opencheck.bods.mapper import _GLEIF_RA_TO_ORG_ID, map_dlcp_dc
@@ -712,3 +713,136 @@ class TestSchema:
 def test_clean_field_collapses_whitespace():
     assert clean_field("  a   b  ") == "a b"
     assert clean_field(None) == ""
+
+
+# ----------------------------------------------------------------------
+# The cache key and the call budget — Phase 228
+# ----------------------------------------------------------------------
+
+
+def _live_adapter(tmp_path: Path, *payloads: dict[str, Any]):
+    """An adapter with a real (temporary) cache and canned responses.
+
+    Unlike ``_run_fetch`` the cache is **not** patched out: these two tests are
+    about what the cache does, so a stubbed one would assert nothing. It is
+    pointed at ``tmp_path`` so it is still isolated from the repo's own.
+    """
+    adapter = DlcpDcAdapter()
+    adapter._cache = Cache(root=tmp_path)
+    get = AsyncMock(side_effect=[_response(p, 200) for p in payloads])
+    return adapter, get
+
+
+class TestCallBudget:
+    def test_the_pipelines_second_pass_spends_no_further_calls(self, tmp_path):
+        """A lookup fetches each DC entity from DLCP exactly once.
+
+        ``routers/lookup.py`` fetches a dispatched source twice: once in the
+        dispatch loop, with the GLEIF legal name, and again in ``_count_only``
+        / ``_safe_deepen`` **without** it, on the stated assumption that the
+        first call warmed the cache. Phase 225 keyed this adapter's cache on
+        the legal name as well as the file number, which made that assumption
+        false for DC alone: three ArcGIS calls became six, and the sixth was
+        refused by the call budget.
+
+        Only three responses are canned, so a fourth call raises rather than
+        quietly passing.
+        """
+        adapter, get = _live_adapter(
+            tmp_path,
+            _FIXTURES["acs_company"],
+            _FIXTURES["acs_trade_names"],
+            _FIXTURES["acs_owners"],
+        )
+        settings = MagicMock(allow_live=True)
+        with patch("opencheck.sources.dlcp_dc.get_settings", return_value=settings), \
+             patch("opencheck.sources.dlcp_dc.build_client") as client:
+            client.return_value.__aenter__.return_value.get = get
+            with outbound_rate.budget_scope() as budgets:
+                dispatched = asyncio.run(
+                    adapter.fetch("000347", legal_name="AMERICAN CHEMICAL SOCIETY")
+                )
+                second_pass = asyncio.run(adapter.fetch("000347"))
+
+        assert get.await_count == 3
+        assert budgets["dlcp_dc"].spent == 3
+        # The second pass is the same record, served from the cache.
+        assert second_pass["company"] == dispatched["company"]
+        assert len(second_pass["owners"]) == 16
+        assert second_pass["trade_names"] == ["ACS"]
+
+    def test_the_collision_recovery_fits_inside_the_call_budget(self, tmp_path):
+        """AFPC's record survives the six calls its recovery costs.
+
+        The budget is the whole lookup's, so a path that needs one more call
+        than it allows does not degrade gracefully: ``_related`` returns None,
+        the fetch returns nothing, and the card disappears. Phase 225 shipped a
+        budget of 5 against a six-call path, which is exactly what production
+        did with this LEI.
+        """
+        adapter, get = _live_adapter(
+            tmp_path,
+            _FIXTURES["collision_company"],
+            _FIXTURES["afpc_trade_names"],
+            _FIXTURES["afpc_owners"],
+            _FIXTURES["afpc_by_name"],
+            _FIXTURES["afpc_trade_names"],
+            _FIXTURES["afpc_owners"],
+        )
+        settings = MagicMock(allow_live=True)
+        with patch("opencheck.sources.dlcp_dc.get_settings", return_value=settings), \
+             patch("opencheck.sources.dlcp_dc.build_client") as client:
+            client.return_value.__aenter__.return_value.get = get
+            with degradation.recording() as recorded, outbound_rate.budget_scope() as budgets:
+                bundle = asyncio.run(
+                    adapter.fetch("L21249", legal_name="American Foreign Policy Council")
+                )
+
+        assert [d.detail for d in recorded] == []
+        assert bundle["matched_by"] == "name"
+        assert bundle["company"]["FILE_NUMBER"] == "825027"
+        assert len(bundle["owners"]) > 0
+        assert get.await_count == 6
+        assert budgets["dlcp_dc"].spent == 6
+        assert not budgets["dlcp_dc"].exhausted
+
+    def test_the_budget_covers_one_recovery_and_leaves_room_for_a_second_entity(self):
+        """The constant is the arithmetic, not a round number.
+
+        One entity's worst case is seven calls; a lookup can reach a second DC
+        entity through the deepen path. A budget below seven truncates the
+        recovery path mid-way, which is the Phase 225 defect.
+        """
+        assert dlcp._LOOKUP_CALL_BUDGET >= 7
+
+    def test_the_cache_key_is_the_register_fact_not_the_callers_name(self, tmp_path):
+        """Two callers with different names share one cached register read.
+
+        The second caller's name does not match the cached rows, so it goes on
+        to the name fallback — one query, not a fourth read of the file number.
+        The gate runs over the cache rather than behind it.
+        """
+        adapter, get = _live_adapter(
+            tmp_path,
+            _FIXTURES["acs_company"],
+            _FIXTURES["acs_trade_names"],
+            _FIXTURES["acs_owners"],
+            _FIXTURES["empty_result"],  # the name fallback, which finds nothing
+        )
+        settings = MagicMock(allow_live=True)
+        with patch("opencheck.sources.dlcp_dc.get_settings", return_value=settings), \
+             patch("opencheck.sources.dlcp_dc.build_client") as client:
+            client.return_value.__aenter__.return_value.get = get
+            asyncio.run(adapter.fetch("000347", legal_name="AMERICAN CHEMICAL SOCIETY"))
+            # A different legal name reads the same rows and re-runs the gate
+            # over them — no second trip to the register.
+            mismatched = asyncio.run(
+                adapter.fetch("000347", legal_name="SOMEONE ELSE ENTIRELY LLC")
+            )
+
+        # Four, not six: the three register reads for 000347 happened once.
+        assert get.await_count == 4
+        assert (tmp_path / "cache" / "live" / "dlcp_dc" / "entity" / "000347.json").is_file()
+        # The gate still bites: the cached rows are not this company's.
+        assert mismatched["company"] is None
+        assert mismatched["name_mismatch"] is True
