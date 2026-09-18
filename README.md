@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 223** — What is knowable, per jurisdiction: one dated statement of what each jurisdiction's registers publish about beneficial owners, who may see it and what OpenCheck reads of it, generated from Stephen's maintained access-status table.
+**Latest: Phase 224** — "What can be known" on the QuickCheck verdict strip: the per-jurisdiction knowability statement now rides the lookup stream, is frozen into saved reports, and is shown under the coverage columns with its register facts and sources one ⓘ away.
 
 → [Full development history](docs/status.md)
 
