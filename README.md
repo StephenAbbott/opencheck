@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 226** — What can be known along the ownership path: the per-jurisdiction statements now follow the chain in FullCheck, appear in the PDF and Markdown exports, and ride the MCP lookup result, all frozen with the run for saved reports.
+**Latest: Phase 228** — Washington DC entities are now fetched from DLCP once per lookup rather than twice, and the per-lookup call budget is large enough for the name-collision recovery to finish, so a company reached by name keeps its record.
 
 → [Full development history](docs/status.md)
 
