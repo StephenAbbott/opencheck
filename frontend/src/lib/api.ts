@@ -1875,7 +1875,24 @@ export async function fetchBatchExport(
 // Watchlist — /watch (Phase 215)
 // ---------------------------------------------------------------------
 
-async function watchError(res: Response, fallback: string): Promise<Error> {
+/** A watch route's refusal, with the status so callers can tell a dead
+ *  token (404: the list was pruned, or minted by another instance) from a
+ *  network or server fault. */
+export class WatchError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "WatchError";
+    this.status = status;
+  }
+}
+
+/** True when the error says the token names no list on this instance. */
+export function isUnknownWatchlist(err: unknown): boolean {
+  return err instanceof WatchError && err.status === 404;
+}
+
+async function watchError(res: Response, fallback: string): Promise<WatchError> {
   let detail = fallback;
   try {
     const body = (await res.json()) as { detail?: unknown };
@@ -1884,7 +1901,7 @@ async function watchError(res: Response, fallback: string): Promise<Error> {
     /* keep the fallback */
   }
   if (res.status === 429) detail = `${detail} Re-checks are limited to a few a minute — try again shortly.`;
-  return new Error(detail);
+  return new WatchError(detail, res.status);
 }
 
 /** Watch an LEI. Without a token the backend mints a list and returns its

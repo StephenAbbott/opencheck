@@ -12,7 +12,9 @@
  *
  * The token comes from `?token=` (a shared or bookmarked link) or from this
  * browser's storage; a URL token is kept for next time. It is a capability:
- * the page says so beside the feed address.
+ * the page says so beside the feed address. A held token the instance no
+ * longer knows is forgotten and the page says so; a URL token it does not
+ * know is an error with a retry, since the link may simply be wrong.
  *
  * Three surfaces: the watched companies (baseline, last check, re-check
  * now, remove); the log, newest first, each entry opening with the tier
@@ -22,7 +24,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getWatchlist, recheckWatch, removeWatch } from "../lib/api";
+import { getWatchlist, isUnknownWatchlist, recheckWatch, removeWatch } from "../lib/api";
 import { trackEvent } from "../lib/analytics";
 import { sourceLabel } from "../lib/vocab";
 import {
@@ -30,12 +32,14 @@ import {
   describeChange,
   entryHeadline,
   feedHelp,
+  forgetToken,
   readToken,
   sortEntries,
   storeToken,
   tierSentence,
   tokenFromLocation,
   triggerSentence,
+  UNKNOWN_LIST_PAGE_NOTICE,
   type Watch,
   type WatchEntry,
   type WatchlistPayload,
@@ -81,6 +85,15 @@ export default function WatchlistPage({
       })
       .catch((err) => {
         if (cancelled) return;
+        const fromUrl = new URLSearchParams(window.location.search).get("token")?.trim() === token;
+        if (!fromUrl && readToken() === token && isUnknownWatchlist(err)) {
+          // The browser's own token names no list here: drop it rather
+          // than carry a dead capability, and say so.
+          forgetToken();
+          setError(UNKNOWN_LIST_PAGE_NOTICE);
+          setPhase("none");
+          return;
+        }
         setError(err instanceof Error ? err.message : "Could not open the watchlist.");
         setPhase(readToken() === token ? "error" : "none");
       });

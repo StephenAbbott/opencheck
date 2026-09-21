@@ -122,4 +122,37 @@ describe("WatchlistPage", () => {
     await waitFor(() => expect(screen.getByTestId("log-empty")).toBeInTheDocument());
     expect(screen.getByTestId("log-empty")).toHaveTextContent("Nothing yet");
   });
+
+  it("forgets a held token the instance does not know, and says so in the empty state", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "stale");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 404, json: async () => ({ detail: "No watchlist with that token." }) }) as Response),
+    );
+    render(<WatchlistPage />);
+    await waitFor(() => expect(screen.getByTestId("watchlist-empty")).toBeInTheDocument());
+    expect(screen.getByTestId("watchlist-empty")).toHaveTextContent("no longer available");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(window.localStorage.getItem(TOKEN_KEY)).toBeNull();
+  });
+
+  it("keeps a held token, with the error and a retry, when the list could not be reached", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 503, json: async () => ({ detail: "down" }) }) as Response));
+    render(<WatchlistPage />);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("down"));
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(window.localStorage.getItem(TOKEN_KEY)).toBe("tok");
+  });
+
+  it("treats an unknown URL token as an error, not as this browser's list gone", async () => {
+    window.history.replaceState({}, "", "/watchlist?token=wrong");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 404, json: async () => ({ detail: "No watchlist with that token." }) }) as Response),
+    );
+    render(<WatchlistPage />);
+    await waitFor(() => expect(screen.getByTestId("watchlist-empty")).toHaveTextContent("No watchlist with that token."));
+    expect(window.localStorage.getItem(TOKEN_KEY)).toBeNull();
+  });
 });

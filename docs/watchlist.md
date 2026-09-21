@@ -89,6 +89,18 @@ A list is a **capability token**: random, shown once, kept by the browser
 file never yields a feed URL. No accounts, no credentials, no personal data:
 LEIs, the legal names GLEIF publishes for them, digests, diffs.
 
+A held token the instance does not know — the list was pruned, or the token
+was minted against another instance (a dev server, a rebuilt disk) — is
+dropped the moment the backend answers 404 to it. On a report, *Watch for
+changes* then mints a fresh list in the same click and says the old one is
+gone; on `/watchlist` the page forgets it and says so in the empty state. A
+`?token=` from a link is different: an unknown one is shown as an error with
+a retry, since the link may simply be wrong. Only a 404 does this — a
+network or server fault keeps the token, because the list may still exist.
+Before this (three days after Phase 215 shipped) a browser carrying a dead
+token failed every Watch with "No watchlist with that token." and could not
+recover without clearing storage by hand.
+
 Tables: `lists`, `watches` (per list and LEI: the baseline GLEIF facts and
 their digest, the mirror watermark they were read at, the lookup snapshot,
 last checked), `entries` (the log), `pending` (queued re-runs, one row per
