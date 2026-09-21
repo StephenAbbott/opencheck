@@ -1714,3 +1714,54 @@ otherwise:
   or the repo-root `.env` itself (the app's pydantic-settings does not run
   for scripts); the integration is *internal*, read-only, shared with that
   one database, and a Notion 404 means "not shared", not "wrong id".
+
+---
+
+## Provenance is checked behaviourally, not by grepping (Phases 229–230)
+
+Liveness is declared in **two** places and an adapter can do one without the
+other: `SourceHit.liveness` (the field on the hit) and `provenance.record_*()`
+(the recorder, which is what the pipeline resolves and the UI renders, and
+which defaults to `stub`). `onrc_romania` set the first and never the second,
+so every ONRC card badged real Trade Register rows "Placeholder data — no live
+source was contacted" (PR #275); `ariregister` was the same bug in Phase 45.
+Both were found by reading live production output.
+
+- **`opencheck/sources/provenance_audit.py` is the guard.** It runs each
+  adapter's own probe read path inside a `provenance.recording()` scope with
+  the network blocked and counted, and reads the **recorder** — never
+  `SourceHit.liveness`, which is the field that made a static check pass for
+  the wrong reason. `tests/test_provenance_audit.py` runs the whole registry in
+  ~3 s on every PR, and proves it can fail by reintroducing both bugs.
+- **A request that leaves an adapter while the recorder is empty is a defect**,
+  whatever the upstream would have said: `build_client()` records `live` when
+  the client is *constructed*, and an adapter building its own client records
+  one explicitly **before** the request (see the comment at
+  `ariregister.py`'s call site). Keep that order when writing an adapter.
+- **`OFFLINE_COMPARED` is pinned by id**, not counted. A skip and a blocked
+  request both read as "no news", so coverage can shrink with nothing going
+  red; removing a source from that set is a statement and belongs in the commit
+  that made it true. `MIN_REQUEST_TIME_CHECKS` does the same for the block.
+- **`BULK_ARTIFACT_FETCHERS` is one table**, read by the AST guard in
+  `tests/test_source_probes.py` *and* by the request-time rule. A bulk artifact
+  download (ClimateTRACE's GEM CSVs) is a request with no provenance claim to
+  make; two lists would mean an exemption true of one check and not the other.
+- **`is_stub_bundle()` is the pipeline's rule in one place.**
+  `Recorder.resolve(is_stub=True)` short-circuits to stub whatever was
+  recorded, so anything grading provenance must pass the same `is_stub` the
+  pipeline does — the sweep did not, and an adapter recording `live` and
+  returning a stub bundle read "live" there and "Placeholder data" to the
+  reader. `check_provenance` separates a stub bundle, nothing recorded at all,
+  and the wrong thing recorded; one line used to collapse all three.
+- **`probes.skip_reason()` is shared** by the sweep and the audit, and returns
+  *which kind* — `credential` or `artifact`. Both mean untested and they are
+  fixed in different places.
+- **The index tier is warmed before the weekly sweep.**
+  `scripts/warm_bulk_stores.py` calls `warm_index()` / `warm_meip_db()` — the
+  functions production calls at boot — so the download lands where
+  `requires_files` looks. The step is `continue-on-error` and `requires_files`
+  stays as the fallback: a failed download skips the probe, and the report's
+  "Not exercised for want of a local artifact" section names the
+  `expect_liveness` that skip left unevaluated. Before this, `onrc_romania` and
+  `meip` skipped every week carrying the one assertion the sweep exists for.
+- Design and decisions: `docs/source-health-plan.md`.

@@ -392,3 +392,94 @@ Two mitigations, neither of which the sweep can provide on its own:
 and decided against: up to seven days of silent breakage is acceptable for these sources, and a
 daily job on upstreams that publish weekly or monthly is noise for its own sake. Revisit only if a
 real incident goes unnoticed for a week.
+
+## The guard that existed and never fired — Phases 229 and 230 (2026-09-21)
+
+Ticket: [Source health: run the index-tier probes weekly, and sweep every adapter for the
+provenance gap](https://app.notion.com/p/3dd7f3dc292881f48602f2c21dbbd6fc). Two pieces of work,
+one failure class: **a source that is functional and still produces misleading output**, and a
+guard that exists but never fires. Both Romanian instances were found by reading live production
+output, not by any test.
+
+### Phase 229 — a behavioural audit, offline, on every PR
+
+`tests/test_source_probes.py` reads the adapters' *source code*: an httpx client built without a
+`record_` call nearby. That check is worth keeping and it is not enough, for a specific reason —
+**`onrc_romania` would have passed it**. The module did call a provenance helper and the adapter
+did set `SourceHit.liveness`, but the read path the lookup takes recorded nothing, so every ONRC
+card badged real Trade Register rows "Placeholder data — no live source was contacted" (PR #275).
+Grepping every adapter for `provenance.record_`, an HTTP helper or a cache helper reports 0 of 47
+missing a path. The check has to run the read path.
+
+`opencheck/sources/provenance_audit.py` does. For each registered adapter it runs that adapter's
+own probe read path inside a `provenance.recording()` scope, with the network blocked and counted,
+and reads the recorder — never `SourceHit.liveness`, which is the field that made the static check
+pass for the wrong reason. About three seconds for the whole registry, so it gates every PR rather
+than waiting for Monday.
+
+What an offline run can and cannot conclude, stated precisely:
+
+| Situation | Verdict |
+|---|---|
+| A request left the adapter while the recorder was empty | **Defect**, regardless of upstream. `build_client()` records `live` when the client is *constructed*, and the adapters that build their own record one explicitly before the request — so this needs no network to decide |
+| A local store or committed fixture answered | **Fully graded** — resolved liveness vs `expect_liveness` |
+| A real answer with nothing recorded at all | **Defect** — the ONRC shape |
+| The adapter returned a stub bundle, or a blocked request sent it down its failure path | **Not comparable** — the weekly sweep grades it for real |
+
+A liveness that *matches* while the network was blocked still counts, and that is not a loophole:
+resolution takes the **worst** liveness across a fetch and `live` is recorded at construction, so
+a source that resolves to what its probe expects having been refused the network resolves the same
+way when the network answers. A *mismatch* under a block may describe the block, so it is reported
+rather than failed — and `OFFLINE_COMPARED` pins, by id, the eight sources that must stay fully
+graded, because a source sliding from graded to ungraded is exactly the kind of quiet coverage loss
+this whole area is about. `MIN_REQUEST_TIME_CHECKS` does the same for the request-time rule: 26
+adapters issue a request under the block today, and a guard nobody reaches is a guard that passes.
+
+Two traps the ticket named, both real:
+
+- `Recorder.resolve(is_stub=True)` short-circuits to stub whatever was recorded, so a harness
+  passing the wrong `is_stub` reports a false clean. `is_stub_bundle()` is now the pipeline's own
+  rule in one place, read by the audit and by the sweep.
+- The bulk-artifact exemption (ClimateTRACE's GEM download is a request with no provenance claim
+  to make) is **one table**, `BULK_ARTIFACT_FETCHERS`, read by the AST guard and by the
+  request-time rule. Two lists would mean an exemption true of one check and not the other.
+
+The harness is proved to fail, twice, by reintroducing each bug as it happened: dropping
+`cac_nigeria`'s `record_curated` (the ONRC shape) and dropping `record_live` under `ariregister`
+(the Estonia shape).
+
+### Phase 230 — the index tier is exercised, and a skip says what it left unevaluated
+
+`onrc_romania` and `meip` both declare `expect_liveness={"snapshot"}` and both skipped **every
+week** since they shipped: each answers from a SQLite store that is a build artifact, not a repo
+file. The report said "not tested", which was honest and easy to read past — the one assertion
+this job exists to make was being evaluated by nobody.
+
+Both stores are now GitHub release assets and the sweep runs on a GitHub runner, so
+`scripts/warm_bulk_stores.py` fetches them in one step (1.3 MB gzipped + 29 MB). It calls
+`warm_index()` and `warm_meip_db()` — **the functions production calls at boot** — rather than a
+`curl`, so the destination resolves through each module's own `db_path()`, which is what
+`requires_files` looks for. One path, not a second opinion; `test_source_health_provenance.py`
+pins that they agree.
+
+Decisions, and why:
+
+- **A failed download does not red the run** (Stephen, 21 Sept 2026). `requires_files` stays as
+  the fallback, the step is `continue-on-error`, and the probe skips as before. The workflow's own
+  header says a transient upstream blip must never block a merge, and a monitor that is
+  permanently red for a CDN hiccup stops being read. What changes is that the skip is now
+  **named**: a "Not exercised for want of a local artifact" section, separate from the credential
+  one because the two are fixed in different places, each row stating the `expect_liveness` that
+  went unevaluated.
+- **The sweep resolves provenance exactly as the pipeline does**, `is_stub` included. It did not,
+  and the gap ran the wrong way: an adapter that records a live observation and then returns a stub
+  bundle read "live" to the sweep and "Placeholder data" to the reader — the sweep being the last
+  place that would notice. The verdict now separates three things one line collapsed into
+  "resolved 'stub'": a stub bundle, nothing recorded at all, and the wrong thing recorded, with a
+  distinct `::error::` for each of the first two.
+
+First run of the two index probes, 21 Sept 2026: `onrc_romania` **ok / snapshot**, `meip`
+**degraded / snapshot — "snapshot is 629 days old (limit 480), refresh due"**. That second one is
+the age check doing its job, not a regression: MEIP's reference date is 31 Dec 2024 and the next
+annual edition is overdue. Widening the threshold to make it green would be the silent-green
+failure this whole file exists to prevent.

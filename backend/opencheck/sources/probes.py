@@ -140,6 +140,15 @@ class SourceProbe:
 
     ``data/gem/`` is gitignored, so ClimateTRACE's ownership artifacts are
     absent from a fresh CI checkout — that is a skip, not a failure.
+
+    Since Phase 230 the sweep's workflow warms the two index-tier stores
+    (``onrc_romania.sqlite``, ``meip.sqlite``) from their release assets before
+    running, using the adapters' own ``db_path()`` — which is what these paths
+    resolve to, so the two mechanisms cannot disagree. The declaration stays as
+    the **fallback**: a failed download skips the probe exactly as before,
+    rather than reporting a red source because a CDN blipped. The report then
+    names the assertion the skip left unevaluated, which is the part that was
+    missing while both of these skipped every week.
     """
 
     snapshot_max_age_days: int | None = None
@@ -742,7 +751,10 @@ PROBES: dict[str, SourceProbe] = {
             "13-character prefix join exists for, and the one that silently "
             "failed for 38.6% of J-number-keyed Romanian LEIs until the prefix "
             "was stored on the new-format side (Phase 211). A probe on a number "
-            "that matches exactly would pass either way and prove nothing."
+            "that matches exactly would pass either way and prove nothing. "
+            "Phase 230: the index is a release asset the workflow now downloads "
+            "before the sweep, so the snapshot assertion above is evaluated "
+            "weekly rather than skipped weekly."
         ),
     ),
     "eiti_soe": _p(
@@ -787,8 +799,8 @@ PROBES: dict[str, SourceProbe] = {
         bods_mapper="map_meip",
         notes=(
             "Phase 208. The OECD's own BODS v0.4 release of the Global Register, packed into "
-            "data/meip.sqlite (the meip-bods-2024 release asset, gitignored — this skips on a "
-            "fresh checkout until warm-up downloads it). Snapshot dated by the register's "
+            "data/meip.sqlite (the meip-bods-2024 release asset, gitignored — the sweep's "
+            "workflow warms it from that asset before running, Phase 230). Snapshot dated by the register's "
             "reference date (31 Dec 2024), so the age check fires when the next annual edition "
             "is due; the freshness URL is the OECD's zip, which sits behind a Cloudflare "
             "bot check and may answer 403 to a runner — a HEAD failure is not a source failure. "
