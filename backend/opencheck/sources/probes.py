@@ -57,6 +57,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any, Literal
 
 from .base import SearchKind
@@ -139,6 +140,15 @@ class SourceProbe:
 
     ``data/gem/`` is gitignored, so ClimateTRACE's ownership artifacts are
     absent from a fresh CI checkout — that is a skip, not a failure.
+
+    Since Phase 230 the sweep's workflow warms the two index-tier stores
+    (``onrc_romania.sqlite``, ``meip.sqlite``) from their release assets before
+    running, using the adapters' own ``db_path()`` — which is what these paths
+    resolve to, so the two mechanisms cannot disagree. The declaration stays as
+    the **fallback**: a failed download skips the probe exactly as before,
+    rather than reporting a red source because a CDN blipped. The report then
+    names the assertion the skip left unevaluated, which is the part that was
+    missing while both of these skipped every week.
     """
 
     snapshot_max_age_days: int | None = None
@@ -741,7 +751,10 @@ PROBES: dict[str, SourceProbe] = {
             "13-character prefix join exists for, and the one that silently "
             "failed for 38.6% of J-number-keyed Romanian LEIs until the prefix "
             "was stored on the new-format side (Phase 211). A probe on a number "
-            "that matches exactly would pass either way and prove nothing."
+            "that matches exactly would pass either way and prove nothing. "
+            "Phase 230: the index is a release asset the workflow now downloads "
+            "before the sweep, so the snapshot assertion above is evaluated "
+            "weekly rather than skipped weekly."
         ),
     ),
     "eiti_soe": _p(
@@ -786,8 +799,8 @@ PROBES: dict[str, SourceProbe] = {
         bods_mapper="map_meip",
         notes=(
             "Phase 208. The OECD's own BODS v0.4 release of the Global Register, packed into "
-            "data/meip.sqlite (the meip-bods-2024 release asset, gitignored — this skips on a "
-            "fresh checkout until warm-up downloads it). Snapshot dated by the register's "
+            "data/meip.sqlite (the meip-bods-2024 release asset, gitignored — the sweep's "
+            "workflow warms it from that asset before running, Phase 230). Snapshot dated by the register's "
             "reference date (31 Dec 2024), so the age check fires when the next annual edition "
             "is due; the freshness URL is the OECD's zip, which sits behind a Cloudflare "
             "bot check and may answer 403 to a runner — a HEAD failure is not a source failure. "
@@ -887,6 +900,51 @@ def missing_env(probe: SourceProbe, environ: dict[str, str] | None = None) -> tu
     return tuple(name for name in probe.requires_env if not available.get(name, "").strip())
 
 
+#: Why a probe was not exercised. ``credential`` is a missing secret;
+#: ``artifact`` is a bulk store or index the adapter reads from disk.
+SKIP_CREDENTIAL = "credential"
+SKIP_ARTIFACT = "artifact"
+
+
+def skip_reason(
+    probe: SourceProbe,
+    root: "Path | None" = None,
+    environ: dict[str, str] | None = None,
+) -> tuple[str, str] | None:
+    """``(kind, reason)`` when this probe cannot be exercised here, else None.
+
+    One implementation, because the weekly sweep and the offline audit have to
+    agree about what "not exercised" means: a source the audit silently graded
+    as a defect because its index was absent would be a false red, and a source
+    the sweep silently graded as healthy because its index was absent is the
+    reason this function separates the two kinds — a credential skip and an
+    artifact skip are both untested, and the report has to say which.
+    """
+    from pathlib import Path as _Path
+
+    from ..cache import data_root
+
+    root = root if root is not None else data_root()
+    absent_env = missing_env(probe, environ)
+    if absent_env:
+        label = "not configured" if probe.tier != "inactive" else "env-gated off"
+        return SKIP_CREDENTIAL, f"{label}: {', '.join(absent_env)}"
+
+    # A configured path is not a working source.
+    credentials = configured_credentials()
+    if environ:
+        credentials.update({k: v for k, v in environ.items() if v and v.strip()})
+    for name in probe.requires_env_files:
+        path = (credentials.get(name) or "").strip()
+        if path and not _Path(path).expanduser().exists():
+            return SKIP_ARTIFACT, f"{name} points at a file that does not exist: {path}"
+
+    absent_files = [p for p in probe.requires_files if not (root / p).exists()]
+    if absent_files:
+        return SKIP_ARTIFACT, f"required local artifact absent: {', '.join(absent_files)}"
+    return None
+
+
 def key_gated_ids() -> frozenset[str]:
     """Registry ids whose probe needs at least one credential to run."""
     return frozenset(sid for sid, probe in PROBES.items() if probe.requires_env)
@@ -907,8 +965,12 @@ __all__ = [
     "LIVE_OR_CACHED",
     "MAX_SKIPPED_FOR_CREDENTIALS",
     "PROBES",
+    "SKIP_ARTIFACT",
+    "SKIP_CREDENTIAL",
     "SourceProbe",
     "Tier",
+    "configured_credentials",
     "key_gated_ids",
     "missing_env",
+    "skip_reason",
 ]

@@ -17,6 +17,12 @@ name: Source health sweep
 # expired, or a source is genuinely down — act now. Failures are retried once
 # before they count.
 #
+# A SKIPPED source is not a healthy one — it was not tested. The report says
+# so in two sections, split by what is missing and therefore by where it is
+# fixed: a credential (add the repository secret; more than
+# probes.MAX_SKIPPED_FOR_CREDENTIALS of them fails the run) or a local
+# artifact (the warm-up step below, which is allowed to fail).
+#
 # A DEGRADATION does not red the run: a rate limit, a snapshot due a refresh,
 # or a register that refuses datacentre IPs (Lithuania's JAR does) is a caveat
 # on the result, not a broken source. Degradations still open and update the
@@ -81,6 +87,25 @@ jobs:
           curl -fsSL --retry 3 -o data/gem/ownership.zip \
             https://raw.githubusercontent.com/climatetracecoalition/climate-trace-tools/main/climate_trace_tools/data/ownership/ownership.zip
           python3 -c "import zipfile; zipfile.ZipFile('data/gem/ownership.zip').testzip() and exit(1)"
+
+      # Phase 229: the index-tier probes (onrc_romania, meip) read a local
+      # SQLite store that is a build artifact, not a repo file, so both skipped
+      # every week since they shipped — and `expect_liveness={"snapshot"}` on
+      # each, the assertion this whole job exists to make, was evaluated by
+      # nobody. Production downloads the same two assets at boot; this calls
+      # the same functions, so the destination cannot disagree with what
+      # `requires_files` looks for.
+      #
+      # Allowed to fail, like the GEM step above and for the same reason: a
+      # blip on a release-asset download must not red a job whose subject is
+      # the registers. `requires_files` stays on both probes as the fallback,
+      # so a failed download skips the probe exactly as before — and the report
+      # now names the assertion that skip left unevaluated, which is the half
+      # that was missing.
+      - name: Warm the index-tier bulk stores (ONRC Romania, OECD-UNSD MEIP)
+        continue-on-error: true
+        run: uv run python scripts/warm_bulk_stores.py
+        working-directory: backend
 
       - name: Sweep every registry source
         id: sweep

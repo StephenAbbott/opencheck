@@ -28,6 +28,19 @@ Statuses
 ``skipped``   not exercised: no credential configured, a required local
               artifact absent, or the source is registered but env-gated off.
 
+A skip is reported under its own heading, split by what was missing —
+a credential or a local artifact — because the two are fixed in different
+places, and because a skip leaves this sweep's central assertion
+(``expect_liveness``) evaluated by nobody. The report names that assertion
+rather than leaving a row of dashes.
+
+Provenance is resolved exactly as ``routers/lookup.py`` resolves it, ``is_stub``
+included, and the verdict comes from ``sources.provenance_audit`` so that this
+weekly live half and the offline audit that gates every PR cannot disagree.
+It separates three things one line used to collapse into "resolved 'stub'": a
+stub bundle (the adapter had nothing to say), nothing recorded at all (the
+Ariregister/ONRC bug class), and the wrong thing recorded.
+
 Exit code is non-zero when a source **failed**, when GLEIF dispatch drifted,
 when statement counts collapsed, or when more sources skipped for want of a
 credential than ``probes.MAX_SKIPPED_FOR_CREDENTIALS`` allows — so an expired
@@ -84,9 +97,16 @@ from opencheck.sources import REGISTRY  # noqa: E402
 from opencheck.sources.probes import (  # noqa: E402
     MAX_SKIPPED_FOR_CREDENTIALS,
     PROBES,
+    SKIP_ARTIFACT,
+    SKIP_CREDENTIAL,
     SourceProbe,
-    configured_credentials,
-    missing_env,
+    skip_reason,
+)
+from opencheck.sources.provenance_audit import (  # noqa: E402
+    STUB_BUNDLE,
+    UNRECORDED,
+    check_provenance,
+    is_stub_bundle,
 )
 
 OK = "ok"
@@ -146,6 +166,15 @@ class Result:
     attempts: int = 0
     known_gap: str = ""
     statement_counts: dict[str, int] | None = None
+    #: Which kind of provenance failure, when there was one — a stub bundle, a
+    #: recorder that saw nothing, or a value that is not the expected one.
+    provenance_defect: str = ""
+    #: For a skip: ``credential`` or ``artifact``. Both mean untested, and the
+    #: report says which, because they are fixed in different places.
+    skipped_for: str = ""
+    #: The liveness this probe asserts. Carried on every row so a skipped one
+    #: names the assertion that went unevaluated rather than leaving a blank.
+    expect_liveness: list[str] = field(default_factory=list)
 
 
 async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Result:
@@ -164,7 +193,14 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
         # and no bundle key for the sweep to know about.
         with provenance.recording() as recorder, degradation.recording() as recorded:
             result = await asyncio.wait_for(call(*probe.args, **dict(probe.kwargs)), timeout=timeout)
-        prov = recorder.resolve()
+        # Resolved exactly as the pipeline resolves it, ``is_stub`` included.
+        # Without that this graded something production never renders: an
+        # adapter that records a live observation and then hands back a stub
+        # bundle reads "live" here and "Placeholder data" to the reader, and
+        # the sweep would be the last place to notice.
+        observations = recorder.observations
+        is_stub = is_stub_bundle(result)
+        prov = recorder.resolve(is_stub=is_stub)
         degradations = list(recorded)
     except asyncio.TimeoutError:
         return Result(
@@ -174,6 +210,7 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
             reason=f"timed out after {timeout:.0f}s",
             latency_ms=int((time.monotonic() - started) * 1000),
             known_gap=probe.known_gap,
+            expect_liveness=sorted(probe.expect_liveness),
         )
     except Exception as exc:  # noqa: BLE001 — a sweep must survive any adapter
         # A rate limit is a statement about our request pattern, not about the
@@ -197,6 +234,7 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
             reason=f"{type(exc).__name__}: {_redact(exc)}",
             latency_ms=int((time.monotonic() - started) * 1000),
             known_gap=probe.known_gap,
+            expect_liveness=sorted(probe.expect_liveness),
         )
 
     latency_ms = int((time.monotonic() - started) * 1000)
@@ -211,6 +249,7 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
         result_size=_size_of(result),
         observed_fields=_observed_fields(result),
         known_gap=probe.known_gap,
+        expect_liveness=sorted(probe.expect_liveness),
     )
 
     # 0. The adapter said outright that something did not answer. That is a
@@ -245,11 +284,17 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
         return out
 
     # 2. Provenance — the Ariregister class. Assert this even when the content
-    #    looks perfect, because that is exactly how the bug presented.
-    if prov.liveness not in probe.expect_liveness:
-        expected = "/".join(sorted(probe.expect_liveness))
+    #    looks perfect, because that is exactly how the bug presented. The
+    #    verdict is shared with the offline audit (Phase 230), and separates
+    #    three things one line used to collapse into "resolved 'stub'": a stub
+    #    bundle, nothing recorded at all, and the wrong thing recorded.
+    verdict = check_provenance(
+        probe, prov, observations=observations, is_stub=is_stub
+    )
+    if not verdict.ok:
         out.status = FAIL
-        out.reason = f"provenance: expected {expected}, resolved '{prov.liveness}'"
+        out.reason = verdict.reason
+        out.provenance_defect = verdict.outcome
         return out
 
     # 3. Freshness — a 'live' claim with an old timestamp is not a live fetch.
@@ -349,23 +394,16 @@ def build_scratch_data_root(real_root: Path, scratch: Path) -> Path:
     return scratch
 
 
-def _skip_reason(probe: SourceProbe, root: Path) -> str | None:
-    absent_env = missing_env(probe, dict(os.environ))  # .env counts too — see probes.configured_credentials
-    if absent_env:
-        label = "not configured" if probe.tier != "inactive" else "env-gated off"
-        return f"{label}: {', '.join(absent_env)}"
+def _skip_reason(probe: SourceProbe, root: Path) -> tuple[str, str] | None:
+    """``(kind, reason)`` or None — the shared rule in ``probes.skip_reason``.
 
-    # A configured path is not a working source.
-    credentials = configured_credentials()
-    credentials.update({k: v for k, v in os.environ.items() if v and v.strip()})
-    for name in probe.requires_env_files:
-        path = (credentials.get(name) or "").strip()
-        if path and not Path(path).expanduser().exists():
-            return f"{name} points at a file that does not exist: {path}"
-    absent_files = [p for p in probe.requires_files if not (root / p).exists()]
-    if absent_files:
-        return f"required local artifact absent: {', '.join(absent_files)}"
-    return None
+    Lives there rather than here since Phase 230 so the offline audit and this
+    sweep cannot disagree about what "not exercised" means. ``os.environ`` is
+    passed on top of the settings because Actions supplies secrets as real
+    environment variables; ``.env`` counts too, via
+    ``probes.configured_credentials``.
+    """
+    return skip_reason(probe, root, dict(os.environ))
 
 
 async def _probe_with_retry(
@@ -404,10 +442,19 @@ async def sweep(
 
     for source_id in source_ids:
         probe = PROBES[source_id]
-        reason = _skip_reason(probe, root)
-        if reason:
+        skip = _skip_reason(probe, root)
+        if skip:
+            kind, reason = skip
             results.append(
-                Result(source_id, probe.tier, SKIPPED, reason=reason, known_gap=probe.known_gap)
+                Result(
+                    source_id,
+                    probe.tier,
+                    SKIPPED,
+                    reason=reason,
+                    known_gap=probe.known_gap,
+                    skipped_for=kind,
+                    expect_liveness=sorted(probe.expect_liveness),
+                )
             )
         else:
             runnable.append(source_id)
@@ -737,7 +784,34 @@ async def check_dispatch_drift(source_ids: list[str]) -> list[DriftResult]:
 
 
 def _credential_skips(results: list[Result]) -> list[str]:
-    return [r.source_id for r in results if r.status == SKIPPED and "not configured" in r.reason]
+    return [
+        r.source_id
+        for r in results
+        if r.status == SKIPPED
+        and r.skipped_for == SKIP_CREDENTIAL
+        and "not configured" in r.reason
+    ]
+
+
+def _artifact_skips(results: list[Result]) -> list[dict[str, Any]]:
+    """Sources not exercised because a bulk store or index was absent.
+
+    Reported in their own section, naming the assertion each skip left
+    unevaluated. Until Phase 229 the index tier skipped every week without
+    that being said anywhere: ``onrc_romania`` and ``meip`` both assert
+    ``expect_liveness={"snapshot"}`` — the one assertion this sweep exists for
+    — and nothing was evaluating it. The report said "not tested", which was
+    honest and easy to read past.
+    """
+    return [
+        {
+            "source_id": r.source_id,
+            "reason": r.reason,
+            "unevaluated": r.expect_liveness,
+        }
+        for r in results
+        if r.status == SKIPPED and r.skipped_for == SKIP_ARTIFACT
+    ]
 
 
 def build_report(
@@ -755,6 +829,7 @@ def build_report(
         "counts": counts,
         "credential_skips": sorted(_credential_skips(results)),
         "max_credential_skips": MAX_SKIPPED_FOR_CREDENTIALS,
+        "artifact_skips": _artifact_skips(results),
         "sources": {r.source_id: asdict(r) for r in results},
         "statement_collapses": diff_statement_counts(
             {r.source_id: asdict(r) for r in results}, previous
@@ -861,6 +936,25 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines += ["", "### Known provenance gaps (tolerated, not fixed)", ""]
         lines += [f"- `{sid}` — {gap}" for sid, gap in sorted(gaps.items())]
 
+    artifact_skips = report.get("artifact_skips") or []
+    if artifact_skips:
+        lines += [
+            "",
+            f"### Not exercised for want of a local artifact ({len(artifact_skips)})",
+            "",
+            "A bulk store or index the adapter reads was not on the runner, so the "
+            "probe did not run — and the assertion it carries went unevaluated. "
+            "Named here rather than left as a row of dashes: an assertion nothing "
+            "evaluates is the quietest way for a check to stop checking.",
+            "",
+        ]
+        for row in sorted(artifact_skips, key=lambda r: r["source_id"]):
+            unevaluated = "/".join(row["unevaluated"]) or "—"
+            lines.append(
+                f"- `{row['source_id']}` — {row['reason']}; "
+                f"`expect_liveness={unevaluated}` not evaluated"
+            )
+
     skips = report["credential_skips"]
     if skips:
         lines += [
@@ -953,6 +1047,32 @@ def main() -> int:
     # failed; applying it there and not here would have been incoherent.
     if counts[FAIL]:
         exit_code = 1
+        # Name the two provenance failures that are easy to misread as an
+        # outage. Neither is: the source answered, and answered well.
+        unrecorded = sorted(
+            sid
+            for sid, row in report["sources"].items()
+            if row.get("provenance_defect") == UNRECORDED
+        )
+        stubbed = sorted(
+            sid
+            for sid, row in report["sources"].items()
+            if row.get("provenance_defect") == STUB_BUNDLE
+        )
+        if unrecorded:
+            print(
+                f"::error::{', '.join(unrecorded)} answered without recording where "
+                "the answer came from — real data from these sources renders as "
+                "'Placeholder data — no live source was contacted' (PR #153, PR #275).",
+                file=sys.stderr,
+            )
+        if stubbed:
+            print(
+                f"::error::{', '.join(stubbed)} returned a stub bundle for a subject "
+                "that should resolve — the probe exercised nothing, whatever else the "
+                "row says.",
+                file=sys.stderr,
+            )
     elif counts[DEGRADED]:
         print(
             f"::warning::{counts[DEGRADED]} source(s) degraded — see the rolling "

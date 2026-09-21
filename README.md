@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 228** — Washington DC entities are now fetched from DLCP once per lookup rather than twice, and the per-lookup call budget is large enough for the name-collision recovery to finish, so a company reached by name keeps its record.
+**Latest: Phase 230** — the weekly source-health sweep now downloads the two bulk stores its index-tier probes read, so assertions that skipped every week are evaluated, and a source it could not exercise is reported with the assertion that went unchecked rather than as a blank row.
 
 → [Full development history](docs/status.md)
 

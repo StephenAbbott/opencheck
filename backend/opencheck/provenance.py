@@ -120,18 +120,38 @@ class Provenance:
 STUB_PROVENANCE = Provenance()
 
 
-@dataclass
-class _Entry:
+@dataclass(frozen=True)
+class Observation:
+    """One thing an adapter said about where a payload came from."""
+
     liveness: Liveness
     retrieved_at: datetime | None
     detail: str | None
+
+
+#: Historical name, kept because it reads better inside this module's internals.
+_Entry = Observation
 
 
 class Recorder:
     """Collects provenance observations made during a single source fetch."""
 
     def __init__(self) -> None:
-        self._entries: list[_Entry] = []
+        self._entries: list[Observation] = []
+
+    @property
+    def observations(self) -> tuple[Observation, ...]:
+        """What was recorded, before resolution collapses it.
+
+        ``resolve()`` cannot answer "was anything recorded at all?": an empty
+        recorder and a recorder holding a single stub-worthy observation both
+        come back as ``STUB_PROVENANCE``. That distinction is the whole of the
+        bug class this module exists for — an adapter that records *nothing*
+        has its live data badged "Placeholder data" — so the audit harness and
+        the weekly sweep need to see the observations themselves to report
+        "recorded nothing" rather than the vaguer "resolved stub".
+        """
+        return tuple(self._entries)
 
     def record(
         self,
@@ -181,6 +201,17 @@ def recording() -> Iterator[Recorder]:
         yield recorder
     finally:
         _CURRENT.reset(token)
+
+
+def current_recorder() -> Recorder | None:
+    """The recorder for the scope in force, or None outside one.
+
+    Read-only introspection, for code that needs to know what has been
+    recorded *so far* rather than record something — the audit harness checks
+    it at the moment a request leaves an adapter, which is the point by which
+    a live observation must already exist.
+    """
+    return _CURRENT.get()
 
 
 def record(
