@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 229** — every adapter's read path is now run offline against the provenance recorder on each pull request, so a source that answers correctly while recording nothing — and is therefore badged "Placeholder data" in production — is caught in review rather than by reading live output.
+**Latest: Phase 230** — the weekly source-health sweep now downloads the two bulk stores its index-tier probes read, so assertions that skipped every week are evaluated, and a source it could not exercise is reported with the assertion that went unchecked rather than as a blank row.
 
 → [Full development history](docs/status.md)
 
