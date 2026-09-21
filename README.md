@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 228** — Washington DC entities are now fetched from DLCP once per lookup rather than twice, and the per-lookup call budget is large enough for the name-collision recovery to finish, so a company reached by name keeps its record.
+**Latest: Phase 229** — every adapter's read path is now run offline against the provenance recorder on each pull request, so a source that answers correctly while recording nothing — and is therefore badged "Placeholder data" in production — is caught in review rather than by reading live output.
 
 → [Full development history](docs/status.md)
 
