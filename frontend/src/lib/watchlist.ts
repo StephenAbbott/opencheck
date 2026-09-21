@@ -24,6 +24,15 @@ export const TOKEN_KEY = "opencheck.watchlist.token";
 export const WATCH_LABEL = "Watch for changes";
 export const WATCHING_LABEL = "On your watchlist";
 
+/** Said once when a held token turned out to name no list on this
+ *  instance and a fresh list was started in its place. */
+export const UNKNOWN_LIST_NOTICE =
+  "Your previous watchlist is no longer available on this instance — started a new one.";
+
+/** The same fact on /watchlist, where there is no list to start yet. */
+export const UNKNOWN_LIST_PAGE_NOTICE =
+  "Your previous watchlist is no longer available on this instance; it has been forgotten. Watching a company will start a new one.";
+
 export interface WatchBaseline {
   register_status: { liveness?: string; since?: string; raw?: string; source_id?: string } | null;
   risk_codes: string[];
