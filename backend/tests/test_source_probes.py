@@ -29,6 +29,7 @@ from opencheck.config import Settings
 from opencheck.identifiers import is_valid_lei
 from opencheck.sources import REGISTRY
 from opencheck.sources.probes import PROBES, SourceProbe
+from opencheck.sources.provenance_audit import BULK_ARTIFACT_FETCHERS
 
 SOURCES_DIR = Path(inspect.getfile(REGISTRY["gleif"].__class__)).parent
 
@@ -146,14 +147,13 @@ def _builds_a_raw_client(node: ast.AST) -> bool:
 #: they have no provenance observation of their own to record. Keyed by
 #: (module, function) with the reason, so every hole in the guard is visible and
 #: reviewable rather than implicit. Keep this list short.
-_EXEMPT: dict[tuple[str, str], str] = {
-    ("climatetrace.py", "_download_gem_csvs_from_gcs"): (
-        "downloads the GEM bulk CSVs to disk; the lookup that later reads them "
-        "records its own provenance"
-    ),
-    ("climatetrace.py", "_ensure_gem_data"): "bulk artifact refresh, not a lookup",
-    ("climatetrace.py", "_ensure_gleif_gem_data"): "bulk artifact refresh, not a lookup",
-}
+#:
+#: Owned by ``opencheck.sources.provenance_audit`` since Phase 230, because the
+#: behavioural guard needs the same exemptions — it watches for a request that
+#: leaves an adapter before anything is recorded, and a bulk artifact fetch is
+#: exactly that, legitimately. Two lists would mean an exemption that is true
+#: of one check and not the other.
+_EXEMPT = BULK_ARTIFACT_FETCHERS
 
 
 def test_opencorporates_probe_asserts_it_got_officers():
