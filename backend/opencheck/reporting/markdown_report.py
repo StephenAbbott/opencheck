@@ -21,6 +21,7 @@ from typing import Any
 
 from ..bods.refs import statement_index
 from ..knowability import report_statements
+from ..listing import describe as listing_line
 from .diagram import source_diagram
 from .html_report import (
     _CHECKS_CLEAR,
@@ -92,6 +93,10 @@ def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> list
             seen.add(f"`{val}`")
     if report.get("jurisdiction"):
         rows.append(["Jurisdiction", report["jurisdiction"]])
+    # Phase 236: the primary listing from PermID, from the frozen payload.
+    listed = listing_line(report.get("listing"))
+    if listed:
+        rows.append(["Primary listing (LSEG PermID)", listed])
     return [
         "## Identifiers",
         "",

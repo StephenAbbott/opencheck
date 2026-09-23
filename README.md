@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 235** — the related-party screens no longer screen the looked-up company as its own related party, and every export publishes each BODS statement once.
+**Latest: Phase 236** — a listed company now shows its primary stock-exchange listing, from LSEG PermID, with a link to the exchange's page where the pattern is verified.
 
 → [Full development history](docs/status.md)
 

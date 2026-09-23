@@ -2,7 +2,9 @@ import { useState } from "react";
 import { ExportMenu } from "../export/ExportMenu";
 import { WatchButton } from "./WatchButton";
 import { trackEvent } from "../../lib/analytics";
-import { BASE_URL } from "../../lib/api";
+import { BASE_URL, type PrimaryListing } from "../../lib/api";
+import { LISTING_EXPLANATION, LISTING_LABEL, listingView } from "../../lib/listing";
+import { Explain } from "../ui/Explain";
 import type { StatusChip } from "../../lib/subjectProfile";
 import { chipClasses } from "../ui/Chip";
 
@@ -44,6 +46,7 @@ export function SubjectCard({
   savedShare,
   save,
   notice,
+  listing = null,
 }: {
   lei: string;
   legalName: string | null;
@@ -95,10 +98,15 @@ export function SubjectCard({
   save?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
   /** Phase 217: a one-line outcome of a save, under the header row. */
   notice?: string | null;
+  /** Phase 236: the primary stock-exchange listing from PermID, as the
+   *  `listing` event carried it. Null renders nothing — OpenCheck never
+   *  says a company is unlisted. */
+  listing?: PrimaryListing | null;
 }) {
   const [copied, setCopied] = useState(false);
   const shareUrl = savedShare?.url ?? `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
   const cc = (jurisdiction || "").trim().toLowerCase().split("-")[0];
+  const listed = listingView(listing);
 
   return (
     <section className="px-4 py-[18px] sm:px-7 sm:py-6">
@@ -157,6 +165,30 @@ export function SubjectCard({
             />
             <RegisterStatusChip status={status} className="hidden sm:inline-flex" />
           </p>
+          {/* Phase 236: the primary listing, attributed to PermID. Its own
+              line under the identity row — in the min-w-0 column, so it wraps
+              rather than crushing the name. Underlined: a link must not be
+              told apart by colour alone. */}
+          {listed && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-oo-meta text-oo-muted">
+              <span>{LISTING_LABEL}:</span>
+              {listed.href ? (
+                <a
+                  href={listed.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={listed.linkLabel ?? undefined}
+                  className="text-oo-blue underline underline-offset-2 hover:text-oo-ink break-words"
+                >
+                  {listed.text}
+                </a>
+              ) : (
+                <span className={listed.unavailable ? "italic" : "text-oo-ink"}>{listed.text}</span>
+              )}
+              {!listed.unavailable && <span>(PermID)</span>}
+              <Explain label="About the primary listing">{LISTING_EXPLANATION}</Explain>
+            </p>
+          )}
         </div>
         {/* The report's one export affordance, as the subject's primary
             control. It was three: "Copy share link" here, an "Export" menu in

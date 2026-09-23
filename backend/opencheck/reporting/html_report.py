@@ -22,6 +22,7 @@ from typing import Any
 
 from ..bods.refs import statement_index
 from ..knowability import report_statements
+from ..listing import describe as listing_line
 from .diagram import source_diagram
 
 LIVE_BASE = "opencheck.world"
@@ -188,6 +189,10 @@ def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> str:
             seen.add(val)
     if report.get("jurisdiction"):
         rows.append(("Jurisdiction", report["jurisdiction"]))
+    # Phase 236: the primary listing from PermID, from the frozen payload.
+    listed = listing_line(report.get("listing"))
+    if listed:
+        rows.append(("Primary listing (LSEG PermID)", listed))
     body = "".join(
         f'<tr><th scope="row">{escape(label)}</th><td class="mono">{escape(str(val))}</td></tr>'
         for label, val in rows
