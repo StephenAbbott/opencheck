@@ -378,6 +378,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains data from SEC EDGAR (U.S. Securities and Exchange Commission), public domain."
 - **Entry point:** legal name search for US-jurisdiction entities; no API key required
 
+## LSEG PermID (primary stock-exchange listing)
+
+- **Data:** for a listed company, the organisation's primary quote — ticker, RIC and the venue's ISO 10383 MIC — resolved from the LEI. One main quote only; other listings are not shown
+- **Website:** <https://permid.org>
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (PermID's basic fields, by API, for registered users; the extended CC-NC fields are not used)
+- **Attribution:** "Primary listing from LSEG PermID, licensed CC BY 4.0."
+- **Entry point:** `q=lei:` search, then the organisation and quote records; requires a free `PERMID_API_KEY` (sent as the `access-token` query parameter). See `docs/listing.md`
+
 ## OpenSanctions
 
 - **Data:** sanctions lists, PEPs, crime-linked entities, and cross-dataset references (including the OpenOwnership dataset and the GEM energy ownership dataset)

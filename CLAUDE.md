@@ -1786,6 +1786,36 @@ and MCP had no limit at all. Things that will be re-derived otherwise:
 
 ---
 
+## The primary listing comes from PermID, frozen in one event (Phase 236)
+
+`opencheck/listing.py` + `frontend/src/lib/listing.ts`; design in
+`docs/listing.md`. Things that will be re-derived otherwise:
+
+- **One `listing` lookup event**, started as a task after `gleif_done` and
+  awaited before `subject_profile`; `fold_lookup_events` copies it into
+  `LookupResponse.listing` as recorded and puts `publicListing` on a *copy*
+  of the subject's GLEIF entity statement (`listing.apply_to_bods`) — so a
+  saved report exports the listing of its own day. It is one entry in
+  `LOOKUP_EVENT_HANDLERS`. Not a registered source; not in coverage counts.
+- **No key → no task, no event, no line.** Gated on `PERMID_API_KEY` *and*
+  `OPENCHECK_ALLOW_LIVE`. The UI never says "not listed": `not_listed`
+  renders nothing.
+- **A PermID failure is `status: "unavailable"` on the event, never a
+  `DegradedSource`** (Stephen, 24 Sept 2026). Every reader of
+  `degraded_sources` — the verdict, the MCP CAUTION, the batch chip — treats
+  an entry as a screen that did not run. Failures are never cached.
+- **Check `tr-org:hasLEI` on the organisation record** before using it: the
+  search is a text search.
+- **Links only for browser-verified venue patterns** (`VENUES` in
+  `listing.py`); Euronext gets its ticker *search* page. Never call a venue
+  page "filings"; `companyFilingsURLs` stays empty. PermID is not in BODS's
+  closed `securitiesIdentifierSchemes`, so `security` is the ticker alone.
+- permid.org is behind Cloudflare: a generic library User-Agent gets 403
+  (error 1010); the search endpoint 406s on `Accept: application/ld+json`.
+  The token is a query parameter — describe errors with `secret_scrub`.
+
+---
+
 ## Provenance is checked behaviourally, not by grepping (Phases 229–230)
 
 Liveness is declared in **two** places and an adapter can do one without the

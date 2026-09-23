@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import { getSecurities, type Security, type SecuritiesResponse } from "../../lib/api";
+import { getSecurities, type PrimaryListing, type Security, type SecuritiesResponse } from "../../lib/api";
+import { LISTING_LABEL, listingView } from "../../lib/listing";
 import { NOT_IN_GRAPH, sourceList } from "../../lib/vocab";
 import { ActionChip } from "../ui";
 import PanelSection from "../ui/PanelSection";
@@ -54,8 +55,12 @@ export function SecuritiesSection({
   onError,
   onRecovered,
   sourceNames,
+  listing = null,
 }: {
   lei: string;
+  /** Phase 236: the primary listing from PermID, shown at the top of the
+   *  panel — the one row here that says where a security trades. */
+  listing?: PrimaryListing | null;
   /** The lookup's source_id → display-name map. Without it `sourceLabel`
    *  prettifies the slug, which turns `openfigi` into "Openfigi" — a brand
    *  name OpenCheck has invented. Raw slugs were worse; an invented casing
@@ -175,6 +180,7 @@ export function SecuritiesSection({
   const isinListDown = meta.isin_list_available === false;
   if (!isinListDown && meta.total === 0 && sanctioned.length === 0) return null;
 
+  const listed = listingView(listing);
   const ncNotice = meta.license_notices.find((n) => n.source_id === "opensanctions");
   // Regimes are company-level — collect the union once for the banner header.
   const sanctionedRegimes = Array.from(
@@ -184,6 +190,25 @@ export function SecuritiesSection({
   return (
     <PanelSection title="Securities" aside={NOT_IN_GRAPH}>
       <div>
+        {listed && !listed.unavailable && (
+          <p className="mb-3 text-oo-small text-oo-muted">
+            {LISTING_LABEL} (PermID):{" "}
+            {listed.href ? (
+              <a
+                href={listed.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={listed.linkLabel ?? undefined}
+                className="text-oo-blue underline underline-offset-2 hover:text-oo-ink"
+              >
+                {listed.text}
+              </a>
+            ) : (
+              <span className="text-oo-ink">{listed.text}</span>
+            )}
+            {listed.security && <span> — {listed.security}</span>}
+          </p>
+        )}
         {/* Sanctions-first banner */}
         {sanctioned.length > 0 && (
           <div className="mb-3 rounded-oo border border-rose-200 bg-rose-50 px-4 py-3">

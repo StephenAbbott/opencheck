@@ -10,6 +10,11 @@ in the role it's good at:
 | OpenFIGI `/v3/mapping` | Type the handful of ISINs we actually display (security type, name, ticker, exchange). | Open (FIGI standard) |
 | OpenSanctions `securities.csv` | The **sanctioned subset** (LEI → sanctioned ISINs + regime), incl. EO 14071 investment bans. | CC-BY-NC 4.0 |
 
+Since Phase 236 the panel also opens with the company's **primary listing**
+from LSEG PermID (venue, ticker and a verified venue link), read from the
+lookup's frozen `listing` event rather than fetched here — see
+[listing.md](listing.md).
+
 `GET /securities?lei=&page=` assembles these lazily (the frontend fetches it only
 when the section renders) and never enumerates every ISIN.
 

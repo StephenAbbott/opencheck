@@ -430,6 +430,12 @@ class Settings(BaseSettings):
     # rate limit (and smaller batch size). Used by the securities service to
     # type the handful of ISINs we actually display.
     openfigi_api_key: str | None = Field(default=None, alias="OPENFIGI_API_KEY")
+
+    # --- LSEG PermID (the primary stock-exchange listing, Phase 236) ---
+    # Free key for registered users at https://permid.org — sent as the
+    # ``access-token`` query parameter, which is why every PermID error goes
+    # through ``secret_scrub``. Unset → no listing line and no request.
+    permid_api_key: str | None = Field(default=None, alias="PERMID_API_KEY")
     # Sanctioned-securities overlay: path to the compact LEI→ISIN index built
     # from the free OpenSanctions securities.csv export by
     # scripts/extract_securities.py. When unset, the securities panel runs on

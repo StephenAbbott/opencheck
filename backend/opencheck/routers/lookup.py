@@ -51,6 +51,7 @@ from ..openaleph_check import assess_openaleph_names
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
 from ..knowability import statement_for as knowability_statement_for
+from .. import listing as _listing
 from ..verdict import build_verdict
 from ..ra_codes import RA_BY_COUNTRY, ra_code_for
 from ..reconcile import possibly_same_entities, reconcile
@@ -271,6 +272,15 @@ class ReportResponse(BaseModel):
     #: it client-side as it expands. Describes, never judges. None for a
     #: payload recorded before this field existed.
     knowability_chain: dict[str, Any] | None = None
+    #: The subject's primary stock-exchange listing (Phase 236), from LSEG
+    #: PermID: ``status`` ("listed" / "not_listed"), ``quote`` (ticker, MIC,
+    #: RIC, security name, PermID ids), ``exchange`` (name + country, or None
+    #: for a venue OpenCheck has no name for), ``link`` (a verified venue
+    #: page, or None) and ``as_of`` — as the ``listing`` stream event carried
+    #: it, frozen at run time (``opencheck.listing``). None when no PermID key
+    #: is configured, when PermID did not answer (a degraded source, never
+    #: "not listed"), or for a payload recorded before this field existed.
+    listing: dict[str, Any] | None = None
 
 
 class LookupResponse(ReportResponse):
@@ -1249,6 +1259,16 @@ async def _lookup_pipeline(
     if ctx.jurisdiction:
         yield ("knowability", _knowability_payload(ctx.jurisdiction))
 
+    # Phase 236: the subject's primary stock-exchange listing, from PermID.
+    # Started here so its three requests overlap the fan-out, and awaited
+    # just before `subject_profile`. A PermID failure rides the same event
+    # as `status: "unavailable"` — said on the listing line, never in
+    # `degraded_sources`, which every reader treats as a screen that did not
+    # run. No key → no task and no event.
+    listing_task: asyncio.Task[dict[str, Any] | None] | None = (
+        asyncio.create_task(_listing.fetch_listing(ctx.lei)) if _listing.available() else None
+    )
+
     gleif_hit = _build_gleif_hit(ctx, gleif_bundle)
     _stamp(gleif_hit, ctx.provenance)
     hits: list[SourceHit] = [gleif_hit]
@@ -1558,6 +1578,14 @@ async def _lookup_pipeline(
     # OpenSanctions records naming one subsidiary): every consumer below —
     # the profile, the screens, the risk engine — reads one statement per id.
     bods_all = unique_statements(bods_all)
+
+    if listing_task is not None:
+        try:
+            listing_payload = await listing_task
+        except Exception:  # noqa: BLE001 — fetch_listing reports its own failures
+            listing_payload = None
+        if listing_payload is not None:
+            yield ("listing", listing_payload)
 
     # The subject's profile, from its own statements across the deepened
     # sources. Its own event rather than a rider on `risk_signals`: it is
@@ -2034,6 +2062,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     subject_profile: dict[str, Any] | None = None
     knowability: dict[str, Any] | None = None
     knowability_chain: dict[str, Any] | None = None
+    listing: dict[str, Any] | None = None
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
@@ -2079,6 +2108,8 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             knowability = payload
         elif event == "knowability_chain":
             knowability_chain = payload
+        elif event == "listing":
+            listing = payload
         elif event == "risk_signals":
             signals = payload["signals"]
             degraded_sources = payload.get("degraded_sources") or []
@@ -2102,7 +2133,10 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         # records naming one subsidiary); the export is one statement per id.
         # Folded here, not in the pipeline, so a saved report stored before
         # Phase 235 renders and exports without repeats too.
-        bods=unique_statements(bods_all),
+        # Phase 236: the primary listing goes onto the subject's GLEIF entity
+        # statement here, from the frozen event — so a saved report's export
+        # carries the listing that was true on the day it ran.
+        bods=_listing.apply_to_bods(unique_statements(bods_all), norm_lei, listing),
         bods_issues=bods_issues,
         license_notices=license_notices,
         possibly_same_entities=same_pairs,
@@ -2114,6 +2148,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         subject_profile=subject_profile,
         knowability=knowability,
         knowability_chain=knowability_chain,
+        listing=listing,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,

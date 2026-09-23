@@ -196,9 +196,45 @@ export interface LookupResponse {
   /** What is knowable along the ownership path (Phase 226) — see
    *  `KnowabilityChain`. Absent on payloads recorded before this field existed. */
   knowability_chain?: KnowabilityChain | null;
+  /** The subject's primary stock-exchange listing from LSEG PermID
+   *  (Phase 236) — see `PrimaryListing`. Absent when no PermID key is
+   *  configured and on payloads recorded before this field existed; absence
+   *  is never "not listed". */
+  listing?: PrimaryListing | null;
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
+}
+
+/** The `listing` event (Phase 236): the subject's primary stock-exchange
+ *  listing according to LSEG PermID, frozen with the run. PermID names one
+ *  primary quote, so this is never the company's full list of listings.
+ *  `status` "not_listed" = PermID records no primary quote; "unavailable" =
+ *  PermID did not answer (`reason` says why) — said on the line, never a
+ *  degraded screen. `link` is a verified venue page ("listing") or the
+ *  venue's search page ("search") — never a filings page — or null. */
+export interface PrimaryListing {
+  source_id: "permid";
+  attribution: string;
+  licence: string;
+  lei: string;
+  status: "listed" | "not_listed" | "unavailable";
+  as_of: string;
+  organisation: { permid: string; url: string } | null;
+  quote: {
+    permid: string;
+    url: string;
+    name: string | null;
+    ticker: string | null;
+    mic: string | null;
+    ric: string | null;
+    exchange_code: string | null;
+    instrument_permid: string | null;
+  } | null;
+  exchange: { name: string; country: string } | null;
+  link: { url: string; kind: "listing" | "search" } | null;
+  reason?: string;
+  detail?: string;
 }
 
 /** One adapter reading the subject's jurisdiction, as `opencheck_reads`
@@ -1552,6 +1588,7 @@ export type LookupStreamHandlers = {
   onSubjectProfile?: (e: SubjectProfileEvent) => void;
   onKnowability?: (e: KnowabilityStatement) => void;
   onKnowabilityChain?: (e: KnowabilityChain) => void;
+  onListing?: (e: PrimaryListing) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
   /** Called on both backend "error" events and EventSource network errors. */
   onError?: (detail: string) => void;
@@ -1586,6 +1623,7 @@ export const LOOKUP_EVENT_HANDLERS = {
   subject_profile: "onSubjectProfile",
   knowability: "onKnowability",
   knowability_chain: "onKnowabilityChain",
+  listing: "onListing",
 } as const satisfies Record<string, keyof LookupStreamHandlers>;
 
 type LookupDataHandlerKey = (typeof LOOKUP_EVENT_HANDLERS)[keyof typeof LOOKUP_EVENT_HANDLERS];

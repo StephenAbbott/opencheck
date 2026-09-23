@@ -192,6 +192,41 @@ def _knowability(payload: Any) -> dict[str, Any] | None:
     }
 
 
+def _listing(payload: Any) -> dict[str, Any] | None:
+    """``listing`` (Phase 236): the subject's primary stock-exchange listing
+    from LSEG PermID, from the frozen ``listing`` field — or None when no key
+    is configured or the payload predates the field — never "not listed".
+    ``status`` is "listed", "not_listed" (PermID records no primary quote) or
+    "unavailable" (PermID did not answer; ``reason`` says why)."""
+    raw = getattr(payload, "listing", None)
+    if not isinstance(raw, dict):
+        return None
+    from ..listing import describe
+
+    q = raw.get("quote") or {}
+    return {
+        "status": raw.get("status"),
+        "reason": raw.get("reason"),
+        "line": describe(raw),
+        "exchange": (raw.get("exchange") or {}).get("name"),
+        "exchange_country": (raw.get("exchange") or {}).get("country"),
+        "mic": q.get("mic"),
+        "ticker": q.get("ticker"),
+        "ric": q.get("ric"),
+        "security_name": q.get("name"),
+        "url": (raw.get("link") or {}).get("url"),
+        "url_kind": (raw.get("link") or {}).get("kind"),
+        "permid_url": q.get("url") or (raw.get("organisation") or {}).get("url"),
+        "as_of": raw.get("as_of"),
+        "attribution": raw.get("attribution"),
+        "hint": (
+            "The primary listing according to PermID: one main quote. Other listings "
+            "of the same company are not shown. A venue URL is a listing or search "
+            "page, not a filings page."
+        ),
+    }
+
+
 def shape_lookup(payload: Any) -> dict[str, Any]:
     """Flatten a ``LookupResponse`` into a compact MCP tool result."""
     bods = payload.bods or []
@@ -234,13 +269,19 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         if knowability and knowability.get("subject")
         else ""
     )
+    listing = _listing(payload)
+    listing_note = (
+        f" Primary listing (PermID): {listing['line']}."
+        if listing and listing.get("line")
+        else ""
+    )
     summary = (
         f"{payload.legal_name or 'Entity'} (LEI {payload.lei}"
         f"{', ' + payload.jurisdiction if payload.jurisdiction else ''}). "
         f"Risk signals: {risk_codes}.{context_note} "
         f"{found} of {len(sources)} sources returned data; "
         f"{len(bods)} BODS statements ({relationships} ownership/control relationships)."
-        f"{degraded_note}{licence_note}{knowability_note}"
+        f"{degraded_note}{licence_note}{knowability_note}{listing_note}"
     )
 
     return {
@@ -259,6 +300,9 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         # ownership path (Phase 226): dated register facts, never findings.
         # Null on a payload recorded before the fields existed.
         "knowability": knowability,
+        # The primary stock-exchange listing from LSEG PermID (Phase 236).
+        # Null when not checked — never read null as "not listed".
+        "listing": listing,
         "identifiers": _subject_identifiers(bods, payload.lei),
         "derived_identifiers": payload.derived_identifiers or {},
         "risk_signals": risk,
@@ -321,6 +365,9 @@ def shape_batch_row(payload: Any) -> dict[str, Any]:
             else None
         ),
         "verdict": getattr(payload, "verdict", None),
+        # Phase 236: "London Stock Exchange · SHEL" from PermID, or null when
+        # not checked — never "not listed".
+        "primary_listing": (_listing(payload) or {}).get("line"),
         "risk_count": sum(1 for r in risk if r.get("kind") == "risk"),
         "context_count": sum(1 for r in risk if r.get("kind") == "context"),
         "risk_codes": list(dict.fromkeys(r["code"] for r in risk if r.get("kind") == "risk")),

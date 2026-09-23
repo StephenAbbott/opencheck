@@ -30,6 +30,7 @@ import {
   type SourceHit,
   type SubjectProfile,
   type KnowabilityStatement,
+  type PrimaryListing,
   type KnowabilityChain,
 } from "./lib/api";
 import {
@@ -180,6 +181,8 @@ export default function App() {
   // arriving once the deepened bundles are in. Identity, not the answer.
   const [subjectProfile, setSubjectProfile] = useState<SubjectProfile | null>(null);
   const [knowability, setKnowability] = useState<KnowabilityStatement | null>(null);
+  // Phase 236: the primary listing from PermID, as the `listing` event carried it.
+  const [primaryListing, setPrimaryListing] = useState<PrimaryListing | null>(null);
   const [knowabilityChain, setKnowabilityChain] = useState<KnowabilityChain | null>(null);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   // Derived checks that did not fully run (issue #50) — rendered as a
@@ -594,6 +597,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setSubjectProfile(null);
     setKnowability(null);
     setKnowabilityChain(null);
+    setPrimaryListing(null);
     setRiskSignals([]);
     setDegradedSources([]);
     setVerdict(null);
@@ -680,6 +684,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       onSubjectProfile: (e) => setSubjectProfile(e.profile),
       onKnowability: (e) => setKnowability(e),
       onKnowabilityChain: (e) => setKnowabilityChain(e),
+      onListing: (e) => setPrimaryListing(e),
       onRiskSignals: (e) => {
         setRiskSignals(e.signals);
         setDegradedSources(e.degraded_sources ?? []);
@@ -1519,6 +1524,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setSubjectProfile(null);
     setKnowability(null);
     setKnowabilityChain(null);
+    setPrimaryListing(null);
     setRiskSignals([]);
     setDegradedSources([]);
     setVerdict(null);
@@ -2362,6 +2368,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             }
             save={saveItem}
             notice={saveNotice}
+            listing={primaryListing}
           />
         {/* ── The answer-first layer (Phase 122) ─────────────────────────
             Subject, then what the check found and how much of it ran, then
@@ -2996,6 +3003,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             onError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
             onRecovered={(panel) => setPanelErrors((prev) => clearPanelError(prev, panel))}
             sourceNames={sourceNameIndex}
+            listing={primaryListing}
           />
         )}
 
