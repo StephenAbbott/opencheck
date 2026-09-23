@@ -40,7 +40,7 @@ class TedEuNotice(_Base):
     currency: str = ""
     cpv: list[str] = Field(default_factory=list)
     contract_conclusion_date: str = ""
-    #: "won" | "tendered" | "unknown" (XML unavailable or chain unresolved).
+    #: "won" | "tendered" | "unknown" (neither the XML nor the index resolved it).
     role: str = "unknown"
     lots_won: list[str] = Field(default_factory=list)
     awarded_values: list[TedEuAwardedValue] = Field(default_factory=list)
@@ -49,6 +49,10 @@ class TedEuNotice(_Base):
     #: BT-501 values on this notice that matched the queried identifiers.
     matched_company_ids: list[str] = Field(default_factory=list)
     confirmed: bool = False
+    #: Where ``role`` came from: "notice_xml" (the eForms winner chain, with
+    #: lots and amounts), "search_index" (TED's ``winner-identifier`` field —
+    #: role only) or "" (unresolved).
+    role_basis: str = ""
     url: str = ""
     xml_url: str = ""
 

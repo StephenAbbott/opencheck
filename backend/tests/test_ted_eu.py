@@ -28,6 +28,7 @@ from opencheck.sources.ted_eu import (
     TedEuAdapter,
     build_identifier_set,
     parse_notice_xml,
+    role_from_index,
 )
 
 _SEARCH_URL = "https://api.ted.europa.eu/v3/notices/search"
@@ -272,6 +273,7 @@ async def test_bundle_with_confirmed_win(monkeypatch, httpx_mock: HTTPXMock) -> 
     notice = bundle["notices"][0]
     assert notice["role"] == "won"
     assert notice["confirmed"] is True
+    assert notice["role_basis"] == "notice_xml"
     assert notice["title"] == "Telephone services"  # eng preferred
     assert notice["buyer_name"] == "ARTE G.E.I.E."
     assert notice["buyer_country"] == "FRA"
@@ -303,9 +305,150 @@ async def test_bundle_xml_failure_degrades_to_unknown(
     notice = bundle["notices"][0]
     assert notice["role"] == "unknown"
     assert notice["confirmed"] is False
+    assert notice["role_basis"] == ""
     assert bundle["confirmed_wins"] == 0
     # The notice is kept — never dropped on confirmation failure.
     assert bundle["total_notice_count"] == 1
+
+
+def _multi_winner_xml(target_org: str = "ORG-0006") -> str:
+    """One LotResult settling two tenders — a framework agreement with two
+    winners, the shape of 431038-2025 (five winners, one result). The target
+    (SIREN 380129866) holds the *second* tender."""
+    return _notice_xml().replace(
+        '<efac:LotTender><cbc:ID schemeName="tender">TEN-0001</cbc:ID></efac:LotTender>\n'
+        '          <efac:SettledContract>',
+        '<efac:LotTender><cbc:ID>TEN-0001</cbc:ID></efac:LotTender>\n'
+        '          <efac:LotTender><cbc:ID>TEN-0002</cbc:ID></efac:LotTender>\n'
+        '          <efac:SettledContract>',
+        1,
+    ).replace(
+        "        <efac:TenderingParty>\n"
+        '          <cbc:ID schemeName="tendering-party">TPA-0001</cbc:ID>\n'
+        '          <efac:Tenderer><cbc:ID schemeName="organization">ORG-0003</cbc:ID></efac:Tenderer>\n'
+        "        </efac:TenderingParty>",
+        "        <efac:LotTender>\n"
+        '          <cbc:ID schemeName="tender">TEN-0002</cbc:ID>\n'
+        '          <efac:TenderingParty><cbc:ID>TPA-0002</cbc:ID></efac:TenderingParty>\n'
+        "          <efac:TenderLot><cbc:ID>LOT-0001</cbc:ID></efac:TenderLot>\n"
+        "        </efac:LotTender>\n"
+        "        <efac:TenderingParty>\n"
+        '          <cbc:ID schemeName="tendering-party">TPA-0001</cbc:ID>\n'
+        '          <efac:Tenderer><cbc:ID>ORG-0003</cbc:ID></efac:Tenderer>\n'
+        "        </efac:TenderingParty>\n"
+        "        <efac:TenderingParty>\n"
+        '          <cbc:ID schemeName="tendering-party">TPA-0002</cbc:ID>\n'
+        f"          <efac:Tenderer><cbc:ID>{target_org}</cbc:ID></efac:Tenderer>\n"
+        "        </efac:TenderingParty>",
+        1,
+    ).replace(
+        "      </efac:Organizations>",
+        "        <efac:Organization>\n"
+        "          <efac:Company>\n"
+        '            <cac:PartyIdentification><cbc:ID>ORG-0006</cbc:ID></cac:PartyIdentification>\n'
+        "            <cac:PartyLegalEntity><cbc:CompanyID>380129866</cbc:CompanyID></cac:PartyLegalEntity>\n"
+        "          </efac:Company>\n"
+        "        </efac:Organization>\n"
+        "      </efac:Organizations>",
+        1,
+    )
+
+
+def test_parse_notice_xml_every_tender_in_a_lot_result_is_a_winner() -> None:
+    # ORG-0003 (the first tender) is someone else; Orange holds TEN-0002.
+    xml = _multi_winner_xml()
+    assert xml.count("TEN-0002") == 2  # the fixture edit really landed
+    result = parse_notice_xml(_multi_winner_xml().replace(
+        "<cbc:CompanyID>380129866</cbc:CompanyID></cac:PartyLegalEntity>\n"
+        "          </efac:Company>\n        </efac:Organization>\n        <efac:Organization>",
+        "<cbc:CompanyID>999999999</cbc:CompanyID></cac:PartyLegalEntity>\n"
+        "          </efac:Company>\n        </efac:Organization>\n        <efac:Organization>",
+        1,
+    ), ["380129866"])
+    assert result is not None
+    assert result["role"] == "won"
+    assert result["lots_won"] == ["LOT-0001"]
+
+
+def test_role_from_index_winner() -> None:
+    raw = {
+        "winner-identifier": ["397480930", "380129866"],
+        "organisation-identifier-tenderer": ["397480930", "380129866", "1"],
+    }
+    result = role_from_index(raw, ["380 129 866"])  # normalised match
+    assert result is not None
+    assert result["role"] == "won"
+    assert result["matched_company_ids"] == ["380129866"]
+    # The flat index says nothing about lots or amounts — never invented.
+    assert result["lots_won"] == [] and result["awarded_values"] == []
+
+
+def test_role_from_index_tenderer_not_named_as_winner() -> None:
+    raw = {
+        "winner-identifier": ["397480930"],
+        "organisation-identifier-tenderer": ["397480930", "380129866"],
+    }
+    result = role_from_index(raw, ["380129866"])
+    assert result is not None and result["role"] == "tendered"
+
+
+def test_role_from_index_absent_field_asserts_nothing() -> None:
+    # A field that was not returned is not evidence of losing.
+    raw = {"organisation-identifier-tenderer": ["380129866"]}
+    assert role_from_index(raw, ["380129866"]) is None
+
+
+async def test_waf_challenge_falls_back_to_index_and_is_not_cached(
+    monkeypatch, httpx_mock: HTTPXMock
+) -> None:
+    """ted.europa.eu's AWS WAF answers datacenter IPs with 202 + an empty body
+    (Sept 2026). The 202 passed ``is_success`` and the empty body was cached
+    as the notice XML; the role then read "unknown" for the cache lifetime."""
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+    payload = _search_payload(["64098-2025"])
+    payload["notices"][0]["winner-identifier"] = ["442771044", "380129866"]
+    payload["notices"][0]["organisation-identifier-tenderer"] = [
+        "442771044",
+        "380129866",
+    ]
+    challenge = {
+        "url": "https://ted.europa.eu/en/notice/64098-2025/xml",
+        "status_code": 202,
+        "text": "",
+        "headers": {"x-amzn-waf-action": "challenge"},
+    }
+    httpx_mock.add_response(url=_SEARCH_URL, json=payload)
+    httpx_mock.add_response(**challenge)
+    adapter = TedEuAdapter()
+    bundle = await adapter.fetch_by_identifiers(_LEI, "380129866", "FR")
+    assert bundle is not None
+    notice = bundle["notices"][0]
+    assert notice["role"] == "won"
+    assert notice["role_basis"] == "search_index"
+    assert notice["confirmed"] is True
+    assert notice["lots_won"] == []
+    assert bundle["confirmed_wins"] == 1
+    # Not cached: the next confirmation asks TED again.
+    httpx_mock.add_response(url=challenge["url"], text=_notice_xml())
+    assert await adapter._fetch_notice_xml("64098-2025") is not None
+
+
+async def test_xml_role_wins_over_index_when_the_xml_resolves(
+    monkeypatch, httpx_mock: HTTPXMock
+) -> None:
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+    payload = _search_payload(["74598-2025"])
+    payload["notices"][0]["winner-identifier"] = ["380129866"]
+    httpx_mock.add_response(url=_SEARCH_URL, json=payload)
+    httpx_mock.add_response(
+        url="https://ted.europa.eu/en/notice/74598-2025/xml", text=_notice_xml()
+    )
+    bundle = await TedEuAdapter().fetch_by_identifiers(_LEI, "380129866", "FR")
+    notice = bundle["notices"][0]
+    assert notice["role_basis"] == "notice_xml"
+    assert notice["lots_won"] == ["LOT-0001"]
 
 
 # ---------------------------------------------------------------------------

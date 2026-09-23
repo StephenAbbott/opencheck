@@ -16,6 +16,15 @@ This adapter answers that question live, with two calls:
   chain (LotResult → LotTender → TenderingParty → Tenderer → Organization →
   ``cbc:CompanyID``).
 
+When the notice XML cannot be had, the role falls back to the Search API's own
+``winner-identifier`` field (TED's derivation of the same chain), and each
+notice says which of the two its role came from (``role_basis``). The
+fallback is not hypothetical: since September 2026 ``ted.europa.eu`` sits
+behind an AWS WAF that answers datacenter IPs — GitHub Actions, and in all
+likelihood Render — with ``HTTP 202``, an empty body and
+``x-amzn-waf-action: challenge``, intermittently and per IP rather than per
+URL. ``api.ted.europa.eu`` is not challenged. A challenge is never cached.
+
 Hard-won constraints (all verified live against production, 2026-08-03 —
 see the "EU TED eForms" Notion ticket for the full investigation):
 
@@ -101,6 +110,10 @@ _FIELDS = [
     "total-value-cur",
     "classification-cpv",
     "winner-selection-status",
+    # TED's own flattening of the winner chain (verified live 2026-09-23 — it
+    # names every winner of a multi-winner award). The fallback when the
+    # notice XML is unavailable.
+    "winner-identifier",
     "organisation-name-tenderer",
     "organisation-identifier-tenderer",
     "contract-conclusion-date",
@@ -283,13 +296,27 @@ def parse_notice_xml(xml_text: str, targets: list[str]) -> dict[str, Any] | None
                 entry["lot"] = lot
         elif name == "LotResult":
             status = _child_text(el, "TenderResultCode")
-            ten_id = _child_text(el, "LotTender", "ID")
+            # A LotResult names *every* tender it settles: a framework
+            # agreement awarded to several operators carries one LotTender
+            # reference per winner (431038-2025: five winners, one result).
+            # Reading only the first reported the other winners as losing
+            # tenderers.
+            ten_ids = [
+                _child_text(t, "ID") for t in el if _local(t.tag) == "LotTender"
+            ]
+            ten_ids = [t for t in ten_ids if t] or [""]
             lot = _child_text(el, "TenderLot", "ID")
             con_id = _child_text(el, "SettledContract", "ID")
-            if status or ten_id:
-                lot_results.append(
-                    {"status": status, "tender": ten_id, "lot": lot, "contract": con_id}
-                )
+            for ten_id in ten_ids:
+                if status or ten_id:
+                    lot_results.append(
+                        {
+                            "status": status,
+                            "tender": ten_id,
+                            "lot": lot,
+                            "contract": con_id,
+                        }
+                    )
         elif name == "SettledContract":
             con_id = _child_text(el, "ID")
             if not con_id:
@@ -351,6 +378,54 @@ def parse_notice_xml(xml_text: str, targets: list[str]) -> dict[str, Any] | None
         "award_dates": award_dates,
         "contract_references": contract_references,
         "matched_company_ids": matched_ids,
+    }
+
+
+def _as_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(v) for v in value if v not in (None, "")]
+    return [str(value)] if value != "" else []
+
+
+def role_from_index(
+    raw_notice: dict[str, Any], targets: list[str]
+) -> dict[str, Any] | None:
+    """The role the Search API's own fields support, without the notice XML.
+
+    ``winner-identifier`` is TED's flattening of the winner chain; the query
+    matched on ``organisation-identifier-tenderer``. A target named as a
+    winner → ``won``; named as a tenderer but not a winner → ``tendered``.
+    ``None`` when the notice carries no ``winner-identifier`` field at all —
+    silence in a field that was not returned is not evidence of losing.
+    Lot numbers, amounts and award dates are not asserted: the flat index
+    does not say which lot a winner took.
+    """
+    if "winner-identifier" not in raw_notice:
+        return None
+    target_norms = {_norm(t) for t in targets if _norm(t)}
+    if not target_norms:
+        return None
+    winners = _as_list(raw_notice.get("winner-identifier"))
+    tenderers = _as_list(raw_notice.get("organisation-identifier-tenderer"))
+    matched: list[str] = []
+    for value in [*winners, *tenderers]:
+        if _norm(value) in target_norms and value not in matched:
+            matched.append(value)
+    if any(_norm(v) in target_norms for v in winners):
+        role = "won"
+    elif any(_norm(v) in target_norms for v in tenderers):
+        role = "tendered"
+    else:
+        return None
+    return {
+        "role": role,
+        "lots_won": [],
+        "awarded_values": [],
+        "award_dates": [],
+        "contract_references": [],
+        "matched_company_ids": matched,
     }
 
 
@@ -500,12 +575,23 @@ class TedEuAdapter(SourceAdapter):
                 "contract_references": [],
                 "matched_company_ids": [],
                 "confirmed": False,
+                "role_basis": "",
                 "url": _NOTICE_HTML_URL.format(pub=pub),
                 "xml_url": _NOTICE_XML_URL.format(pub=pub),
             }
-            if confirmation is not None:
+            if confirmation is not None and confirmation["role"] in ("won", "tendered"):
                 notice.update(confirmation)
-                notice["confirmed"] = confirmation["role"] in ("won", "tendered")
+                notice["role_basis"] = "notice_xml"
+            else:
+                # XML unavailable (WAF challenge, beyond _MAX_XML_CONFIRM) or
+                # its chain did not resolve: fall back to TED's own index.
+                indexed = role_from_index(raw, identifiers)
+                if indexed is not None:
+                    notice.update(indexed)
+                    notice["role_basis"] = "search_index"
+                elif confirmation is not None:
+                    notice.update(confirmation)  # role "unknown", ids kept
+            notice["confirmed"] = notice["role"] in ("won", "tendered")
             notices.append(notice)
 
         wins = sum(1 for n in notices if n["role"] == "won")
@@ -587,12 +673,30 @@ class TedEuAdapter(SourceAdapter):
                     _NOTICE_XML_URL.format(pub=pub),
                     headers={"Accept": "application/xml, text/xml, */*"},
                 )
-                if not response.is_success:
+                # AWS WAF (Sept 2026) answers a challenged request with 202,
+                # an empty body and x-amzn-waf-action: challenge. 202 is a
+                # "success" to httpx, so is_success let it through and the
+                # empty body was cached as the notice's XML. Accept only a
+                # 200 that looks like XML; never cache anything else.
+                waf = response.headers.get("x-amzn-waf-action", "")
+                if waf:
+                    log.warning(
+                        "TED notice XML for %s blocked by WAF (%s, HTTP %s) — "
+                        "falling back to the search index",
+                        pub,
+                        waf,
+                        response.status_code,
+                    )
+                    return None
+                if response.status_code != 200:
                     log.warning(
                         "TED notice XML returned %s for %s", response.status_code, pub
                     )
                     return None
                 xml_text = response.text
+                if not xml_text.lstrip().startswith("<"):
+                    log.warning("TED notice XML for %s was not XML", pub)
+                    return None
         except Exception as exc:  # noqa: BLE001 — confirmation is best-effort
             log.warning("TED notice XML fetch failed for %s: %s", pub, exc)
             return None

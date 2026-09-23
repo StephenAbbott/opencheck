@@ -302,7 +302,13 @@ async def test_ted_eu_live_search_confirms_orange_wins():
 
     This is exactly the API-drift risk the live tier exists for: the Search
     API response keys, the expert-search grammar, and the eForms XML
-    structure are all outside OpenCheck's control."""
+    structure are all outside OpenCheck's control.
+
+    A role can come from either path. Since September 2026 ted.europa.eu's
+    AWS WAF challenges GitHub's runners (HTTP 202, empty body), so on CI the
+    notice XML is usually unavailable and the role comes from the Search
+    API's ``winner-identifier`` field — this test then guards that field. The
+    XML parser is pinned offline in test_ted_eu.py."""
     from opencheck.bods import map_ted_eu
 
     adapter = REGISTRY["ted_eu"]
@@ -321,8 +327,15 @@ async def test_ted_eu_live_search_confirms_orange_wins():
     )
     assert bundle["notices"], "no notices in bundle despite non-zero count"
     assert any(n["confirmed"] for n in bundle["notices"]), (
-        "no notice resolved to a confirmed role — the eForms notice XML "
-        "structure (NoticeResult winner chain) may have changed"
+        "no notice resolved to a confirmed role by either path — the eForms "
+        "notice XML (NoticeResult winner chain) and the Search API's "
+        "winner-identifier field may both have changed; roles seen: "
+        + repr([(n["role"], n["role_basis"]) for n in bundle["notices"]])
+    )
+    assert all(
+        n["role_basis"] in ("notice_xml", "search_index")
+        for n in bundle["notices"]
+        if n["confirmed"]
     )
 
     bods = list(map_ted_eu(bundle))
