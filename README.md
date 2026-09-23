@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 231** — the EITI pool now shows the same Nigeria CAC ownership picture as the CAC card beside it, sharing one mapping for current, ended and unnamed owners and rebuilt on the September 2026 register harvest.
+**Latest: Phase 232** — the TED procurement card keeps resolving who won when the EU's new web firewall blocks the notice XML, by falling back to TED's own winner field, and a contract awarded to several companies now counts every one of them as a winner.
 
 → [Full development history](docs/status.md)
 

@@ -836,8 +836,9 @@ function MentionsBreakdown({ hit }: { hit: SourceHit }) {
  * TedAwardsList — EU procurement award notices from TED (ted_eu source).
  *
  * Shows the notices where the entity appears as a tenderer/winner, with the
- * per-notice role resolved from the eForms XML winner chain ("won" /
- * "tendered"; "unknown" when the chain could not be resolved). Two coverage
+ * per-notice role resolved from the eForms XML winner chain, or from TED's
+ * own `winner-identifier` search field when the XML is unavailable ("won" /
+ * "tendered"; "unknown" when neither resolved it). Two coverage
  * disclosures are mandatory: TED identifier search only covers the eForms
  * era (≈2024 onwards), and awards won via subsidiaries sit under the
  * subsidiary's own identifier — absence is not evidence of no contracts.
