@@ -14,6 +14,7 @@ import pycountry
 
 from ... import names as _names
 from .. import liveness as _liveness
+from ..unique import unique_statements
 from ..statements import (
     SOURCE_NAMES,
     BODSBundle,
@@ -502,6 +503,10 @@ def map_ftm(
         result=result,
     )
 
+    # A party named by several edges (owner of two stakes, owner and
+    # director) is mapped once per edge, to the same statementId. Keep one
+    # (Phase 235 — Rosneft's OpenSanctions record repeated 13 ids).
+    result.statements = unique_statements(result.statements)
     return result
 
 

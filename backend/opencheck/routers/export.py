@@ -32,6 +32,7 @@ from ..bods import (
     to_ftm_jsonl,
     to_rdf,
     to_senzing_jsonl,
+    unique_statements,
     validate_shape,
 )
 from ..bods.senzing import _desc_to_source_id
@@ -200,6 +201,12 @@ async def export(
     stamp = saved.stamp if saved else datetime.now(UTC).strftime("%Y%m%d")
     if saved:
         slug = f"{slug}-saved"
+    # BODS requires unique statementIds (Phase 235). The fold already keeps one
+    # per id; this is the export's own guarantee, whatever path built the
+    # payload. A fresh copy, so the shared replay cache is never mutated.
+    unique = unique_statements(payload.bods)
+    if len(unique) != len(payload.bods):
+        payload = payload.model_copy(update={"bods": unique})
 
     def _licensing_for(ids: list[str]) -> LicenseAssessment:
         # A saved report carries the assessment made when it was saved.
@@ -430,7 +437,9 @@ async def export_network(request: Request, req: ExportNetworkRequest) -> Respons
     and this returns it in the requested format, reusing the same Senzing / XML /
     Cypher / licensing machinery as ``/export``.
     """
-    bods = req.bods or []
+    # A network assembled by expansion meets the same party from several
+    # anchors; publish each statement once (Phase 235).
+    bods = unique_statements(req.bods or [])
     slug = _filename_slug(req.slug or "fullcheck-network")
     stamp = datetime.now(UTC).strftime("%Y%m%d")
 

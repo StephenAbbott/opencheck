@@ -100,6 +100,7 @@ from .risk import (
     former_party_ids,
     pick_degradation_reason,
 )
+from .subject_identity import SubjectIdentity, subject_identity
 
 _LOG = logging.getLogger(__name__)
 
@@ -221,10 +222,21 @@ async def assess_icij_names(
     min_score: int = _MIN_SCORE,
     min_name_sim: float = _MIN_NAME_SIM,
     degraded: list[DegradedSource] | None = None,
+    subject_lei: str | None = None,
 ) -> list[RiskSignal]:
     """Return ``OFFSHORE_LEAKS`` risk signals for entities and persons in
     the BODS bundle whose names match a record in the ICIJ Offshore Leaks
     database.
+
+    ``subject_lei`` (Phase 235) names the looked-up company. Its statements
+    (``subject_identity``) are not related parties, so they leave the
+    related-party targets — but, unlike OpenSanctions and OpenAleph, ICIJ has
+    no subject-level adapter, so the subject's own names are screened here
+    once (``_subject_targets``) and a match is worded as the company's own
+    ("The looked-up company's name …"), attributed to one statement, and
+    deduplicated to one signal per ICIJ record (Stephen, 23 Sept 2026).
+    Before, CLP HOLDINGS LIMITED read "Related entity 'CLP HOLDINGS LIMITED'"
+    twice — once for GLEIF's statement of it and once for OpenAleph's.
 
     ``degraded`` is an optional out-collector (issue #50): when one or
     more reconciliation batches fail, a :class:`DegradedSource` record is
@@ -246,7 +258,10 @@ async def assess_icij_names(
     if not settings.allow_live:
         return []
 
-    targets = _collect_targets(bods)[:max_targets]
+    identity = subject_identity(subject_lei, bods)
+    targets = _subject_targets(identity) + _collect_targets(
+        bods, exclude=identity.statement_ids
+    )[:max_targets]
     if not targets:
         return []
 
@@ -371,8 +386,52 @@ _KIND_PERSON = "person"
 _KIND_ENTITY = "entity"
 
 
-def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
+#: At most this many distinct names of the subject are screened. Sources
+#: spell the subject differently (GLEIF's Cyrillic legal name, OpenSanctions'
+#: English one), and ICIJ matches on the spelling; three covers the legal
+#: name and two others without letting a many-sourced subject crowd the batch.
+_MAX_SUBJECT_NAMES = 3
+
+
+def _subject_targets(identity: SubjectIdentity) -> list[dict[str, Any]]:
+    """The looked-up company's own names, as ``subject`` targets.
+
+    One per distinct normalised name among the subject's entity statements,
+    the anchor statement's name first; every one is attributed to the anchor
+    statement (``SubjectIdentity.anchor_statement_id``) so two spellings that
+    hit the same ICIJ record collapse to one signal in ``_dedupe``.
+    """
+    if not identity:
+        return []
+    anchor = identity.anchor_statement_id()
+    ordered = sorted(
+        identity.statements, key=lambda s: 0 if s.get("statementId") == anchor else 1
+    )
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for stmt in ordered:
+        name = str((stmt.get("recordDetails") or {}).get("name") or "").strip()
+        key = _normalise(name)
+        if not name or not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {"kind": _KIND_ENTITY, "statement_id": anchor, "name": name,
+             "subject": True}
+        )
+        if len(out) >= _MAX_SUBJECT_NAMES:
+            break
+    return out
+
+
+def _collect_targets(
+    bods: list[dict[str, Any]], *, exclude: frozenset[str] | set[str] = frozenset()
+) -> list[dict[str, Any]]:
     """Extract ``{kind, statement_id, name}`` records from a BODS bundle.
+
+    ``exclude`` is the subject identity set (Phase 235): the looked-up
+    company's own statements are screened by ``_subject_targets``, never as
+    related parties.
 
     Mirrors ``cross_check._collect_targets`` but shared here to keep the
     ICIJ module self-contained.  Skips placeholder types
@@ -388,7 +447,7 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
         record_type = stmt.get("recordType") or ""
         rd = stmt.get("recordDetails") or {}
         sid = stmt.get("statementId") or ""
-        if not sid:
+        if not sid or sid in exclude:
             continue
         if record_type == "person":
             person_type = rd.get("personType") or ""
@@ -619,7 +678,20 @@ def _signal_from_match(
     # handing it to a reader as though it were the finding's strength
     # overstated it in exactly the direction that matters. It stays on
     # ``evidence["icij_score"]`` (Phase 136).
-    if node_type == "Intermediary":
+    if target.get("subject"):
+        # Phase 235: the looked-up company's own name. Not a related party,
+        # and still a name match — the sentence says both.
+        if node_type == "Intermediary":
+            summary = (
+                f"The looked-up company's name '{target['name']}' appears as an "
+                f"offshore-services intermediary in {dataset_label}{qual_note}."
+            )
+        else:
+            summary = (
+                f"The looked-up company's name '{target['name']}' matches a "
+                f"record in {dataset_label}{qual_note}."
+            )
+    elif node_type == "Intermediary":
         summary = (
             f"{relation} '{target['name']}' appears as an offshore-services "
             f"intermediary in {dataset_label}{qual_note}."
@@ -637,7 +709,14 @@ def _signal_from_match(
         source_id="icij",
         hit_id=node_url or f"icij:{_slug(target['name'])}",
         evidence={
-            "subject_statement_id": target["statement_id"],
+            # A subject match is anchored like SANCTIONED / PEP
+            # (``statement_id``); a related party's like every RELATED_*
+            # signal (``subject_statement_id``) — frontend signalScope reads both.
+            **(
+                {"statement_id": target["statement_id"], "subject": True}
+                if target.get("subject")
+                else {"subject_statement_id": target["statement_id"]}
+            ),
             "search_name": target["name"],
             "matched_name": matched_name,
             "icij_score": score,
@@ -819,7 +898,9 @@ def _dedupe(signals: list[RiskSignal]) -> list[RiskSignal]:
     rank = {"high": 3, "medium": 2, "low": 1}
     keyed: dict[tuple, RiskSignal] = {}
     for sig in signals:
-        sub = sig.evidence.get("subject_statement_id", "")
+        sub = sig.evidence.get("subject_statement_id") or sig.evidence.get(
+            "statement_id", ""
+        )
         key = (sig.code, sig.source_id, sig.hit_id, sub)
         existing = keyed.get(key)
         if existing is None or rank.get(sig.confidence, 0) > rank.get(existing.confidence, 0):

@@ -75,9 +75,12 @@ from .rdf import to_rdf
 from .gql import build_gql_files, gql_counts, map_to_gql
 from .aml_ai import aml_ai_counts, build_aml_ai_files, map_to_aml_ai
 from .validator import validate_shape, ValidationError
+from .unique import duplicate_statement_ids, unique_statements
 
 __all__ = [
     "BODSBundle",
+    "duplicate_statement_ids",
+    "unique_statements",
     "make_entity_statement",
     "make_person_statement",
     "make_relationship_statement",

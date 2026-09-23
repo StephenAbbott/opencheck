@@ -127,6 +127,8 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
     * Interest type codes are in the v0.4 codelist
     * ``entityType.subtype``, when present, is in the closed v0.4 codelist
       and aligns with ``entityType.type``
+    * statementIds are unique (Phase 235 — BODS requires it, and OpenCheck's
+      exports repeated them until ``bods.unique.unique_statements``)
 
     Relationship cross-reference resolution
     ---------------------------------------
@@ -145,6 +147,19 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
         if s.get("recordId"):
             known_ids.add(s["recordId"])
     issues: list[str] = []
+
+    first_at: dict[str, int] = {}
+    for i, s in enumerate(statements):
+        sid = s.get("statementId")
+        if not isinstance(sid, str) or not sid:
+            continue
+        if sid in first_at:
+            issues.append(
+                f"statement #{i} ({sid}): duplicate statementId "
+                f"(first at statement #{first_at[sid]})"
+            )
+        else:
+            first_at[sid] = i
 
     for i, s in enumerate(statements):
         prefix = f"statement #{i} ({s.get('statementId', '?')})"

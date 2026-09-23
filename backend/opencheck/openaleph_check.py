@@ -98,6 +98,7 @@ from .cross_check import (
     _extract_topics,
 )
 from .matching import is_matchable_name
+from .subject_identity import subject_identity
 from .risk import (
     DEGRADED_NOT_CONFIGURED,
     DEGRADED_UPSTREAM_ERROR,
@@ -154,6 +155,7 @@ async def assess_openaleph_names(
     min_score: float = 0.88,
     degraded: list[DegradedSource] | None = None,
     screening: list[dict[str, Any]] | None = None,
+    subject_lei: str | None = None,
 ) -> list[RiskSignal]:
     """Return scoped ``RELATED_*`` signals for related parties in the BODS
     bundle whose names percolate against a watchlist-topic OpenAleph record.
@@ -170,6 +172,11 @@ async def assess_openaleph_names(
     Each entry carries ``statement_id`` so the UI can place it next to the
     right graph node. Name-derived — never identifier corroboration.
 
+    ``subject_lei`` (Phase 235): the looked-up company's own statements
+    (``subject_identity``) are not percolated as related parties. The LEI-keyed
+    OpenAleph adapter already reads the subject's own record; percolating its
+    name here produced "Related entity 'Rosneft PJSC'" on Rosneft.
+
     No-op (returns ``[]``) when live mode is off, the bundle has no
     screenable statements, or the OpenAleph adapter is not registered.
     """
@@ -180,7 +187,9 @@ async def assess_openaleph_names(
     if not settings.allow_live:
         return []
 
-    targets = _collect_targets(bods)
+    targets = _collect_targets(
+        bods, exclude=subject_identity(subject_lei, bods).statement_ids
+    )
     if not targets:
         return []
 
