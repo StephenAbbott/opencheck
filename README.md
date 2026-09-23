@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 230** — the weekly source-health sweep now downloads the two bulk stores its index-tier probes read, so assertions that skipped every week are evaluated, and a source it could not exercise is reported with the assertion that went unchecked rather than as a blank row.
+**Latest: Phase 232** — the TED procurement card keeps resolving who won when the EU's new web firewall blocks the notice XML, by falling back to TED's own winner field, and a contract awarded to several companies now counts every one of them as a winner.
 
 → [Full development history](docs/status.md)
 
