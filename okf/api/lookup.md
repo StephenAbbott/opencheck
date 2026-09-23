@@ -25,8 +25,20 @@ cannot diverge.
 | Param | Description |
 |---|---|
 | `lei` | ISO 17442 Legal Entity Identifier (20 chars). Required. |
-| `deepen_top` | How many top hits to deepen + map + assess (default 3). |
+| `deepen_top` | How many top hits to deepen + map + assess (default 5; clamped to 0–10). |
 | `refresh` | Bypass the short-lived replay cache. |
+
+# Limits
+
+Every **fresh** run is charged to the caller's one lookup budget (Phase 234,
+`OPENCHECK_RATE_LIMIT_LOOKUP`, 10 a minute per address), shared with every
+other path that starts a full lookup — `/expand`, each LEI of
+`/expand-layer`, a watchlist baseline, a batch row, an export and the MCP
+tools. A run replayed from the 15-minute cache, or joined while another
+caller's run of the same LEI is in flight, is free. A spent budget answers
+`429` with `Retry-After` (on the stream, an `error` event carrying
+`retry_after_s`); a process already running its maximum of concurrent
+pipelines answers `503` after a bounded queue.
 
 # Response
 

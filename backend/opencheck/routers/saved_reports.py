@@ -69,11 +69,11 @@ def _store() -> sr.SavedReportsStore:
 
 
 def _refuse(exc: sr.SavedReportError) -> HTTPException:
-    return HTTPException(
-        status_code=exc.status,
-        detail=str(exc),
-        headers={"X-OpenCheck-Refusal": exc.code},
-    )
+    headers = {"X-OpenCheck-Refusal": exc.code}
+    retry = getattr(exc, "retry_after_s", None)
+    if retry:
+        headers["Retry-After"] = str(retry)
+    return HTTPException(status_code=exc.status, detail=str(exc), headers=headers)
 
 
 def _refuse_bots(request: Request) -> None:
@@ -166,6 +166,7 @@ async def save_report(request: Request, response: Response, body: SaveRequest) -
     _refuse_bots(request)
     store = _store()
     try:
+        sr.check_client_quota()
         out = await asyncio.to_thread(
             sr.save_from_replay,
             store,
@@ -176,6 +177,7 @@ async def save_report(request: Request, response: Response, body: SaveRequest) -
         )
     except sr.SavedReportError as exc:
         raise _refuse(exc) from exc
+    sr.spend_client_quota()
     response.headers.update(NOINDEX)
     return _with_url(out)
 

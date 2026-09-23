@@ -99,6 +99,9 @@ footer). The hash is re-checked on every read; a mismatch answers `500` with
 never changes the hashed record. A background task
 (`OPENCHECK_SAVED_REPORTS_PRUNE_INTERVAL_S`, six hours) deletes expired rows,
 and a read of an expired row answers `410` and deletes it.
+`OPENCHECK_SAVED_REPORTS_PER_IP` (20 a day, Phase 234) keeps one address from
+filling that cap on its own: checked before a save (REST or MCP), spent only
+when the save succeeds, `429` + `Retry-After` beyond it.
 `OPENCHECK_SAVED_REPORTS_MAX_TOTAL` (5,000) caps the store — insurance; a
 report measured 5–20 KB gzipped on 16 Sept 2026 (BIRTLEY INVESTMENT LIMITED 19
 KB raw, BP 106 KB raw).

@@ -110,6 +110,17 @@ last OpenSanctions version processed).
 Caps: `OPENCHECK_WATCHLIST_MAX_TOTAL` (200) and `_MAX_PER_LIST` (10). Cheap
 insurance given the arithmetic above, and a bound on the file.
 
+Phase 234 stops one address holding the instance cap. `POST /watch/items`
+is on the lookup tier, and its baseline — a full lookup when the reader has
+not just run one — is charged to the caller's lookup budget. Both caps are
+checked **before** the baseline runs, and a list is created only once its
+first watch can be added, so a refused add runs nothing and mints nothing.
+A tokenless add (a new list) is limited to `OPENCHECK_WATCHLIST_NEW_LISTS_PER_IP`
+(5 a day); and a list nobody has opened for `OPENCHECK_WATCHLIST_STALE_DAYS`
+(90) — the page and the Atom feed both count as opening it — is deleted with
+its watches by the worker's tick, so an abandoned list cannot keep its share
+of the cap or be re-run on every delta forever.
+
 ## The worker
 
 `watchlist.watch_loop` runs `tick()` every `OPENCHECK_WATCHLIST_INTERVAL_S`

@@ -1726,6 +1726,66 @@ otherwise:
 
 ---
 
+## One lookup budget per client, whoever asks (Phase 234)
+
+`opencheck/lookup_budget.py` + `mcp/guard.py`. Route limits count *requests*;
+this counts *work*. Before it, `/expand-layer` ran 25 pipelines per request on
+the 60/min default tier (~1,500 full lookups a minute from one IP), `/expand`
+and `POST /watch/items` ran one each on the default tier, a batch ran twenty,
+and MCP had no limit at all. Things that will be re-derived otherwise:
+
+- **The charge is at the one moment a fresh pipeline starts** —
+  `_lookup_pipeline_cached`, via `lookup_budget.charge()`. A replay is free,
+  and so is **joining a run in flight**: a fresh run is a detached `_Flight`
+  task buffering its events, and anyone asking for the same
+  `(lei, deepen_top)` meanwhile follows the same buffer. A follower that goes
+  away (an SSE tab closed) does not cancel the run; it completes into the
+  replay cache. The budget is sized by `OPENCHECK_RATE_LIMIT_LOOKUP`, the
+  string that sizes `/lookup`, so nothing can out-run `/lookup`.
+- **Who is charged comes from a context variable** set by
+  `ClientScopeMiddleware` (pure ASGI — never `BaseHTTPMiddleware`, which breaks
+  SSE and `/mcp`). It reaches MCP tool bodies (tested), batch rows and every
+  in-process `_lookup_impl` caller. **No client = server work = never charged**:
+  the watchlist worker and warm-ups. So a new *request path* is charged
+  automatically; a new *background task* is free by construction — keep it so.
+- **A spent budget is a 429 with `retry_after_s`** — an `error` event on the
+  stream, `HTTPException(429, headers={"Retry-After"})` from `_lookup_impl`.
+  `/expand-layer` turns it into `deferred` anchors (never in `expanded`, so they
+  stay on the frontier) and FullCheck's auto-run waits them out
+  (`lib/expandLayer.ts`, at most `MAX_BUDGET_WAITS` per layer). Batch rows wait
+  instead (`lookup_budget.waiting`, `OPENCHECK_BATCH_BUDGET_WAIT_S`) and a row
+  still refused is `retryable`. A malformed LEI (400) and a run refused a
+  pipeline slot (503) are refunded.
+- **Failed FullCheck hops are `failed`, with a reason** — the old
+  `except Exception: return [], []` drew a node whose owners could not be
+  fetched exactly like a node with none.
+- **`_PipelineGate`**: at most `OPENCHECK_LOOKUP_MAX_CONCURRENT` (4) pipelines
+  at once, queue up to `OPENCHECK_LOOKUP_QUEUE_WAIT_S` then 503. It and every
+  flight are bound to the running event loop and rebuilt when it changes (the
+  test suite runs several); `conftest.py` clears `_IN_FLIGHT` and the budget
+  around every test. Nothing in a pipeline may call `_lookup_impl` — a nested
+  run would wait on a slot its parent holds.
+- **`deepen_top` is clamped to 0–10** in `_lookup_pipeline_cached` and
+  `replay_entry` (`clamp_deepen_top`): every value is its own replay key, and
+  the MCP tools accepted any int.
+- **`/mcp` is behind `McpRateGuard`**, wrapped onto the route in `app.py` with
+  `guard_routes`: default tier per request, plus each `tools/call` at its REST
+  counterpart's tier (`TOOL_TIERS`). The session manager runs once per process,
+  so an HTTP-level MCP test builds its own Starlette app from a fresh manager
+  (`tests/test_lookup_budget.py::mcp_client`).
+- **Discretionary GLEIF** (`gleif_throttle.discretionary()`): share cards,
+  `/resolve-national-id`, `/subsidiaries`, `/securities` are refused at once
+  when fewer than `OPENCHECK_GLEIF_LOOKUP_RESERVE` (10) slots are left, so a
+  crawler on them cannot starve a lookup's anchor.
+- **`lookup_budget.Quota`** (the `limits` library, in memory, reset on
+  deploy) holds the per-client caps on shared capacity: new watchlists
+  (`5/day`), saved reports (`20/day`, REST + MCP), and the MCP tool tiers.
+  Check before the work, `hit()` after it succeeds. Watch caps are checked
+  before the baseline runs; a list unopened for `OPENCHECK_WATCHLIST_STALE_DAYS`
+  (90) is deleted by the worker's tick.
+
+---
+
 ## Provenance is checked behaviourally, not by grepping (Phases 229–230)
 
 Liveness is declared in **two** places and an adapter can do one without the

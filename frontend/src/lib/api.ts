@@ -429,6 +429,12 @@ export interface ExpandLayerResponse {
   /** Phase 182: what the layer cost, by hop kind — a full lookup per LEI, one
    *  register per register-scoped id, and the nodes no hop exists for. */
   hops?: { lei: number; register: number; skipped: number };
+  /** Phase 234: anchors not run because the reader's lookup budget was spent.
+   *  Never in `expanded`; ask for them again after `retry_after_s`. */
+  deferred?: string[];
+  retry_after_s?: number | null;
+  /** Phase 234: anchors that were run and could not be expanded, with why. */
+  failed?: { anchor: string; lei?: string | null; status: number; reason: string }[];
 }
 
 export type NetworkExportFormat =

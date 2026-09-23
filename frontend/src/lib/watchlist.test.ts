@@ -180,3 +180,11 @@ describe("the token", () => {
     expect(tokenFromLocation("", null)).toBeNull();
   });
 });
+
+describe("feedHelp (Phase 234)", () => {
+  it("says an unopened list is deleted, and that the feed reader counts", async () => {
+    const { feedHelp } = await import("./watchlist");
+    expect(feedHelp()).toContain("90 days is deleted");
+    expect(feedHelp()).toContain("feed reader");
+  });
+});

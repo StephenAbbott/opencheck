@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field
 
 from .. import watchlist as wl
 from ..config import get_settings
-from ..ratelimit import default_tier, heavy_tier, limiter
+from ..ratelimit import default_tier, heavy_tier, limiter, lookup_tier
 
 router = APIRouter()
 
@@ -55,7 +55,15 @@ def _store() -> wl.WatchlistStore:
 def _list_or_404(store: wl.WatchlistStore, token: str) -> str:
     th = wl.token_hash(token)
     if not store.list_exists(th):
-        raise HTTPException(status_code=404, detail="No watchlist with that token.")
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No watchlist with that token. A list that nobody opens for "
+                f"{get_settings().watchlist_stale_days} days is deleted."
+                if get_settings().watchlist_stale_days > 0
+                else "No watchlist with that token."
+            ),
+        )
     store.touch(th)
     return th
 
@@ -138,23 +146,60 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
 # it. The test suite runs with the limiter off, so only a limiter-on test
 # (test_watchlist.py) or production sees the 500 — which is how the first
 # deploy found it on /recheck and DELETE.
+def _cap_refusal(exc: wl.CapExceededError) -> HTTPException:
+    which = "this list" if exc.which == "per_list" else "this instance"
+    return HTTPException(
+        status_code=409,
+        detail=f"The cap of {exc.cap} watched companies for {which} has been reached.",
+    )
+
+
+#: Phase 234: new lists per client. Tokenless adds used to mint a list each
+#: time, so one address could fill the instance cap in about four minutes.
+_NEW_LISTS = wl.new_list_quota()
+
+
 @router.post("/watch/items", status_code=201)
-@limiter.limit(default_tier)
+@limiter.limit(lookup_tier)
 async def add_item(request: Request, response: Response, body: AddItem) -> dict[str, Any]:
     """Watch an LEI. With no token, a new list is created and its token
     returned — the one time it is. The baseline is the lookup as it stands
     (replayed when the reader has just run it, so usually free) plus the
-    mirror's material GLEIF fields."""
+    mirror's material GLEIF fields.
+
+    Phase 234: on the lookup tier, and the baseline is charged to the
+    caller's lookup budget when it is a fresh run. Both caps and the
+    new-list quota are checked *before* the baseline runs, and a list is
+    created only once its first watch can be added."""
     store = _store()
     lei = _lei_or_400(body.lei)
+    th: str | None = None
+    token: str | None = None
     if body.token:
         th = _list_or_404(store, body.token)
         token = body.token
     else:
-        token = store.create_list()
-        th = wl.token_hash(token)
+        wait = _NEW_LISTS.retry_after()
+        if wait is not None:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "This address has started as many watchlists as OpenCheck allows "
+                    f"({_NEW_LISTS.describe()}). Add companies to a list you already "
+                    "have, or try again later."
+                ),
+                headers={"Retry-After": str(int(wait + 0.999))},
+            )
+    try:
+        store.check_capacity(th, lei)
+    except wl.CapExceededError as exc:
+        raise _cap_refusal(exc) from exc
     resp, facts, watermark = await wl.baseline(lei)
     snapshot = wl.snapshot_from_response(resp)
+    if th is None:
+        token = store.create_list()
+        th = wl.token_hash(token)
+        _NEW_LISTS.hit()
     try:
         watch = store.add_watch(
             th,
@@ -166,11 +211,7 @@ async def add_item(request: Request, response: Response, body: AddItem) -> dict[
             snapshot=snapshot,
         )
     except wl.CapExceededError as exc:
-        which = "this list" if exc.which == "per_list" else "this instance"
-        raise HTTPException(
-            status_code=409,
-            detail=f"The cap of {exc.cap} watched companies for {which} has been reached.",
-        ) from exc
+        raise _cap_refusal(exc) from exc
     watch.pop("snapshot", None)
     return {"token": token, "watch": watch, **_list_payload(store, th, token, request)}
 

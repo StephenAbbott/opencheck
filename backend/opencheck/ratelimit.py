@@ -15,8 +15,12 @@ Design notes:
   ``@limiter.limit(<tier>)`` decorator. slowapi's ``SlowAPIMiddleware`` is
   deliberately not used: it is a ``BaseHTTPMiddleware``, which interferes with
   SSE streaming (``/lookup-stream``, ``/stream``) and crashes on the mounted
-  MCP routes (their endpoints aren't plain functions). ``/health`` and
+  MCP routes (their endpoints aren't plain functions) — those sit behind
+  ``mcp/guard.py``'s pure-ASGI guard instead (Phase 234). ``/health`` and
   ``/sources`` are exempt by simply not being decorated.
+* **Route limits count requests; ``lookup_budget.py`` counts work.** Since
+  Phase 234 every fresh full lookup, whichever route or MCP tool started it,
+  is also charged to one per-IP budget sized by the lookup tier.
 * **Tiers are callables**, resolved through :func:`get_settings` on every
   request, so budgets can be tuned per-deploy via env vars
   (``OPENCHECK_RATE_LIMIT_LOOKUP`` etc.) and tests can shrink them via

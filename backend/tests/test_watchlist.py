@@ -692,3 +692,61 @@ def test_every_watch_route_answers_with_the_limiter_on(limited_client: TestClien
     _watch(c, EASY, token)
     assert c.post(f"/watch/{token}/recheck", json={"lei": EASY}).status_code == 200
     assert c.post(f"/watch/{token}/recheck", json={"lei": EASY}).status_code == 429
+
+
+# ---- Phase 234: capacity one client cannot exhaust -----------------------------
+
+
+def test_new_lists_are_a_per_client_quota(client: TestClient, env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from opencheck import lookup_budget
+
+    monkeypatch.setenv("OPENCHECK_RATE_LIMIT_ENABLED", "1")
+    monkeypatch.setenv("OPENCHECK_WATCHLIST_NEW_LISTS_PER_IP", "2/day")
+    get_settings.cache_clear()
+    lookup_budget.reset_for_tests()
+    first = _watch(client, EASY)["token"]
+    _watch(client, EASY)
+    r = client.post("/watch/items", json={"lei": EASY})
+    assert r.status_code == 429 and int(r.headers["retry-after"]) >= 1
+    assert "a list you already have" in r.json()["detail"]
+    # Adding to a list the client already holds is not a new list.
+    assert client.post("/watch/items", json={"lei": PARENT, "token": first}).status_code == 201
+    # Another address is untouched.
+    r = client.post("/watch/items", json={"lei": EASY}, headers={"x-forwarded-for": "198.51.100.200"})
+    assert r.status_code == 201
+
+
+def test_a_full_instance_refuses_before_running_the_baseline(client: TestClient, env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENCHECK_WATCHLIST_MAX_TOTAL", "1")
+    get_settings.cache_clear()
+    wl.reset_for_tests()
+    _watch(client, EASY)
+    lists_before = wl.get_store().counts()
+
+    async def _must_not_run(lei: str) -> None:
+        raise AssertionError("the baseline lookup ran for a watch that cannot be kept")
+
+    monkeypatch.setattr(wl, "baseline", _must_not_run)
+    r = client.post("/watch/items", json={"lei": PARENT})
+    assert r.status_code == 409 and "this instance" in r.json()["detail"]
+    # …and no empty list was minted for the refused add.
+    with wl.get_store()._conn() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM lists").fetchone()[0] == 1
+    assert wl.get_store().counts() == lists_before
+
+
+def test_a_list_unopened_past_the_window_is_deleted(client: TestClient, env: Path) -> None:
+    token = _watch(client, EASY)["token"]
+    keep = _watch(client, PARENT)["token"]
+    store = wl.get_store()
+    with store._conn() as conn:
+        conn.execute(
+            "UPDATE lists SET last_seen_at = '2026-01-01T00:00:00Z' WHERE token_hash = ?",
+            (wl.token_hash(token),),
+        )
+    assert store.prune_stale_lists(older_than_days=90) == 1
+    assert store.prune_stale_lists(older_than_days=0) == 0
+    r = client.get(f"/watch/{token}")
+    assert r.status_code == 404 and "90 days" in r.json()["detail"]
+    assert client.get(f"/watch/{keep}").status_code == 200
+    assert store.watched_leis() == {PARENT}

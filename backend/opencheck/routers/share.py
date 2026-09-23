@@ -27,6 +27,7 @@ from fastapi.responses import HTMLResponse
 from .. import identifiers
 from ..config import get_settings
 from ..og_image import card_alt_text, render_share_card, ui_date
+from ..gleif_throttle import discretionary as gleif_discretionary
 from ..ratelimit import default_tier, limiter
 from . import lookup as lookup_router
 
@@ -152,7 +153,8 @@ async def _card_for(lei: str) -> tuple[bytes, bool]:
             png = await asyncio.to_thread(render_share_card, name, lei, signals)
         full = True
     else:
-        name = await _teaser_name(lei)
+        with gleif_discretionary():
+            name = await _teaser_name(lei)
         async with _render_gate:
             png = await asyncio.to_thread(render_share_card, name, lei, None)
         full = False
@@ -172,7 +174,9 @@ def invalidate_og_cache(lei: str) -> None:
 async def og_image(request: Request, lei: str) -> Response:
     """The shareable summary card for a LEI, as a 1200×630 PNG."""
     lei = _clean_lei(lei)
-    png, full = await _card_for(lei)
+    # Phase 234: a share card never takes GLEIF budget a lookup needs.
+    with gleif_discretionary():
+        png, full = await _card_for(lei)
     # Teasers cache briefly so a crawler retry after the sharer's lookup
     # completes picks up the full card; full cards can cache for longer.
     max_age = 3600 if full else 60
@@ -222,7 +226,8 @@ async def share_page(request: Request, lei: str) -> HTMLResponse:
             f"open corporate data from {source_count} sources · BODS v0.4"
         )
     else:
-        name = await _teaser_name(lei)
+        with gleif_discretionary():
+            name = await _teaser_name(lei)
         description = (
             f"Live due diligence from {source_count} open data sources · BODS v0.4"
         )

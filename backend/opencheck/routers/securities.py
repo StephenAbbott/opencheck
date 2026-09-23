@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
 from .. import identifiers
+from ..gleif_throttle import discretionary as gleif_discretionary
 from ..ratelimit import default_tier, limiter
 from ..securities import PAGE_SIZE, assemble_securities
 
@@ -73,4 +74,6 @@ async def securities(
     check_digit_error = identifiers.lei_check_digit_error(norm_lei)
     if check_digit_error:
         raise HTTPException(status_code=400, detail=check_digit_error)
-    return await assemble_securities(norm_lei, page=page, page_size=PAGE_SIZE)
+    # Phase 234: discretionary GLEIF calls (see gleif_throttle.discretionary).
+    with gleif_discretionary():
+        return await assemble_securities(norm_lei, page=page, page_size=PAGE_SIZE)

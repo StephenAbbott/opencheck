@@ -142,6 +142,51 @@ class ExpiredError(SavedReportError):
     code = "expired"
 
 
+class ClientQuotaError(SavedReportError):
+    """Phase 234: this client has saved as many reports as it may for now.
+
+    The instance cap (``saved_reports_max_total``) is shared by everyone, so
+    without a per-client quota one address could fill it on its own."""
+
+    status = 429
+    code = "client_quota"
+
+    def __init__(self, message: str, retry_after_s: float):
+        super().__init__(message)
+        self.retry_after_s = max(1, int(retry_after_s + 0.999))
+
+
+def _save_quota() -> Any:
+    from .config import get_settings
+    from .lookup_budget import Quota
+
+    global _SAVE_QUOTA
+    if _SAVE_QUOTA is None:
+        _SAVE_QUOTA = Quota("saved-reports", lambda: get_settings().saved_reports_per_ip)
+    return _SAVE_QUOTA
+
+
+_SAVE_QUOTA: Any = None
+
+
+def check_client_quota() -> None:
+    """Refuse (429) when the current client has used its save quota. Checked
+    before the save and spent after it (:func:`spend_client_quota`), so a
+    refused or failed save costs nothing."""
+    quota = _save_quota()
+    wait = quota.retry_after()
+    if wait is not None:
+        raise ClientQuotaError(
+            f"This address has saved as many reports as OpenCheck allows "
+            f"({quota.describe()}). Saved reports are shared capacity; try again later.",
+            wait,
+        )
+
+
+def spend_client_quota() -> None:
+    _save_quota().hit()
+
+
 class ForbiddenError(SavedReportError):
     status = 403
     code = "forbidden"

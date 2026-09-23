@@ -46,6 +46,29 @@ would `421` in production.
 Responses are flattened by `mcp/shaping.py` into compact, agent-readable
 structures.
 
+### Rate limits (Phase 234)
+
+Until Phase 234 `/mcp` had no limit: slowapi's decorators cannot reach the
+mounted app. `mcp/guard.py` is a pure-ASGI guard in front of it. Every request
+spends one unit of the default tier (60/min per address); each `tools/call`
+also spends the tier its REST counterpart is on — `opencheck_lookup`,
+`opencheck_export_bods`, `opencheck_search` and `opencheck_person_check` the
+lookup tier (10/min), `opencheck_batch_lookup` and `opencheck_save_report` the
+heavy tier (3/min). A refusal is HTTP `429` with `Retry-After` and a JSON-RPC
+error per message.
+
+That is the request limit. The work limit is shared with the website: every
+**fresh** lookup a tool starts — including each row of a batch and the check
+behind a saved report — is charged to the caller's one lookup budget
+(`OPENCHECK_RATE_LIMIT_LOOKUP`, 10 a minute), the same budget `/lookup`,
+FullCheck layers and watchlist additions draw on. A run replayed from the
+15-minute cache, or joined while another caller's run of the same LEI is in
+flight, costs nothing. A spent budget makes `opencheck_lookup` return
+`{"error": …, "status": 429}`; batch rows wait for it (up to
+`OPENCHECK_BATCH_BUDGET_WAIT_S`) and are reported `retryable` if it does not
+free. `deepen_top` is clamped to 0–10. `opencheck_save_report` also counts
+against the per-address save quota (`OPENCHECK_SAVED_REPORTS_PER_IP`).
+
 ### What `opencheck_batch_lookup` returns (Phase 164)
 
 A thin loop over `opencheck_lookup`, never a second pipeline: each row is the
@@ -66,7 +89,8 @@ minutes; a re-run inside the 15-minute replay window is free.
   anchor counted (Phase 156), `degraded` + `degraded_sources`, `licensing`,
   `report_url`.
 - **`failed[]`** — a row that could not be screened (unknown LEI → 404; GLEIF
-  throttle refusal → 503 with `retryable: true`) is a row with
+  throttle refusal → 503, or the caller's lookup budget still spent after the
+  wait → 429, both with `retryable: true`) is a row with
   `degraded: true`, not an exception: one bad LEI never aborts the other
   nineteen, and the batch is not clean while `failed` is non-empty.
 - Rows are never ranked by severity — OpenCheck does not grade companies.

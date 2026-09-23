@@ -16,6 +16,9 @@ companies with their baseline, the change log, the caps and what each tier
 is doing on this instance — and `GET /watch/{token}.atom` is the feed a
 reader subscribes to. `DELETE /watch/{token}/items/{lei}` stops watching;
 `POST /watch/{token}/recheck` re-runs one company by hand (heavy tier).
+Adding a company is on the lookup tier and its baseline is charged to the
+caller's lookup budget; an address may start five new lists a day, and a
+list nobody opens — page or feed — for 90 days is deleted (Phase 234).
 
 There are no accounts. The token is shown once and stored only as a hash.
 
