@@ -27,6 +27,7 @@ from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
 from ..config import get_settings
+from ..secret_scrub import describe_exception, scrub
 from ..cross_check import NameScreen, assess_cross_source_names
 from ..findings import (
     finding_bods_gleif,
@@ -124,10 +125,15 @@ _LOG = logging.getLogger(__name__)
 
 
 def _fmt_source_error(exc: Exception) -> str:
-    """Format a source fetch exception for the errors dict and SSE events."""
+    """Format a source fetch exception for the errors dict and SSE events.
+
+    Never ``str(exc)`` directly: an httpx status error's message is the full
+    request URL, and two adapters authenticate in the query string. See
+    :mod:`opencheck.secret_scrub`.
+    """
     if isinstance(exc, SourceSchemaError):
-        return f"Source API changed — {exc}"
-    return f"{type(exc).__name__}: {exc}"
+        return f"Source API changed — {scrub(str(exc))}"
+    return describe_exception(exc)
 
 
 def _mapper_for(source_id: str) -> Any | None:
@@ -401,7 +407,7 @@ async def _build_report(
         try:
             bundle = await task
         except Exception as exc:  # noqa: BLE001
-            errors.setdefault(source_id, f"{type(exc).__name__}: {exc}")
+            errors.setdefault(source_id, _fmt_source_error(exc))
             continue
         if bundle is None:
             continue
@@ -1118,7 +1124,7 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
         ) from exc
     except Exception as exc:  # noqa: BLE001
         raise _LookupAbort(
-            502, f"GLEIF fetch failed: {type(exc).__name__}: {exc}"
+            502, f"GLEIF fetch failed: {describe_exception(exc)}"
         ) from exc
 
     _build_derived(ctx, registered_at_id)
@@ -1470,7 +1476,7 @@ async def _lookup_pipeline(
         if isinstance(deep, Exception):
             yield ("deepen_error", {
                 "source_id": dsrc,
-                "error": f"{type(deep).__name__}: {deep}",
+                "error": _fmt_source_error(deep),
             })
             continue
         if deep is None:

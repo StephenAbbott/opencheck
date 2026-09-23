@@ -42,6 +42,7 @@ from fastapi import HTTPException
 from . import identifiers
 from .config import get_settings
 from .gleif_throttle import GleifRateLimitedError
+from .secret_scrub import describe_exception, scrub
 
 #: Hard cap on rows per batch. Stated on the page and in the 422 detail.
 MAX_ROWS = 20
@@ -161,7 +162,7 @@ async def _one(
                 {
                     "lei": lei,
                     "status": 503,
-                    "reason": str(exc) or "GLEIF is rate-limiting OpenCheck",
+                    "reason": scrub(str(exc)) or "GLEIF is rate-limiting OpenCheck",
                     "retryable": True,
                     "degraded": True,
                 },
@@ -173,7 +174,7 @@ async def _one(
                 {
                     "lei": lei,
                     "status": 500,
-                    "reason": f"{type(exc).__name__}: {exc}",
+                    "reason": describe_exception(exc),
                     "retryable": False,
                     "degraded": True,
                 },

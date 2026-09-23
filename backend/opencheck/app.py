@@ -40,6 +40,7 @@ from slowapi.errors import RateLimitExceeded
 from . import __version__, memwatch
 from .config import get_settings
 from .ratelimit import limiter, rate_limit_exceeded_handler
+from .secret_scrub import safe_message
 from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports, knowability
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
@@ -309,7 +310,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
     extra_headers: dict[str, str] = {"access-control-allow-origin": "*"} if origin else {}
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Internal server error: {exc}"},
+        content={"detail": f"Internal server error: {safe_message(exc)}"},
         headers=extra_headers,
     )
 
