@@ -26,6 +26,7 @@ from ..provenance import Provenance
 from ..bods import BODSBundle, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
+from .. import lookup_budget as _lookup_budget
 from ..config import get_settings
 from ..secret_scrub import describe_exception, scrub
 from ..cross_check import NameScreen, assess_cross_source_names
@@ -42,6 +43,7 @@ from ..findings import (
 )
 from ..ftm import subject_to_ftm_entity
 from ..gleif_throttle import GleifRateLimitedError
+from ..gleif_throttle import discretionary as gleif_discretionary
 from ..memwatch import is_bot
 from ..icij_check import assess_icij_names
 from ..names import normalise_name
@@ -1699,11 +1701,200 @@ def _invalidate_replay(lei: str) -> None:
         _REPLAY_CACHE.pop(key, None)
 
 
+# --- Phase 234: one run per LEI at a time, a bounded number at once ----------
+#
+# A fresh run is a *flight*: a task, detached from whoever asked for it, that
+# drives ``_lookup_pipeline`` and buffers its events. The first caller starts
+# it (and is charged for it — ``lookup_budget.charge``); anyone asking for the
+# same ``(lei, deepen_top)`` while it is in the air follows the same buffer
+# from the start, free. Before this, two tabs, a watchlist baseline and a
+# FullCheck hop on one LEI ran the forty-source fan-out four times.
+#
+# Flights also pass through one process-wide gate (``lookup_max_concurrent``)
+# so a burst queues instead of stacking pipelines until Render's memory limit
+# does the queueing for us. A run that cannot get a slot within
+# ``lookup_queue_wait_s`` ends in a 503 error event and its charge is
+# refunded.
+#
+# A follower that goes away (an SSE tab closed) does not cancel the flight:
+# the run completes and lands in the replay cache, which is where the next
+# visitor finds it. The budget and the gate bound how many such runs exist.
+
+#: ``deepen_top`` is accepted in this range everywhere. Every value is its own
+#: replay-cache key, so an unclamped value from an in-process caller (the MCP
+#: tools took any int) forced a fresh run per value and evicted other readers'
+#: runs from the 64-entry cache.
+DEEPEN_TOP_MAX = 10
+
+
+def clamp_deepen_top(deepen_top: Any) -> int:
+    try:
+        value = int(deepen_top)
+    except (TypeError, ValueError):
+        value = 5
+    return max(0, min(DEEPEN_TOP_MAX, value))
+
+
+class _PipelineBusyError(Exception):
+    pass
+
+
+class _PipelineGate:
+    """Counts pipelines in flight. Bound to one event loop (the test suite
+    runs several), so it is rebuilt when the loop changes."""
+
+    def __init__(self) -> None:
+        self.loop = asyncio.get_running_loop()
+        self.active = 0
+        self.cond = asyncio.Condition()
+
+    async def acquire(self, limit: int, max_wait: float) -> None:
+        if limit <= 0:
+            self.active += 1
+            return
+        async with self.cond:
+            try:
+                await asyncio.wait_for(
+                    self.cond.wait_for(lambda: self.active < limit), timeout=max(max_wait, 0.0)
+                )
+            except asyncio.TimeoutError as exc:
+                raise _PipelineBusyError from exc
+            self.active += 1
+
+    async def release(self) -> None:
+        async with self.cond:
+            self.active -= 1
+            self.cond.notify_all()
+
+
+_GATE: _PipelineGate | None = None
+
+
+def _gate() -> _PipelineGate:
+    global _GATE
+    if _GATE is None or _GATE.loop is not asyncio.get_running_loop():
+        _GATE = _PipelineGate()
+    return _GATE
+
+
+def pipelines_running() -> int:
+    """Pipelines in flight in this process (``/memstats`` and tests)."""
+    return _GATE.active if _GATE is not None else 0
+
+
+class _Flight:
+    def __init__(self) -> None:
+        self.loop = asyncio.get_running_loop()
+        self.events: list[LookupEvent] = []
+        self.done = False
+        self.exc: BaseException | None = None
+        self.cond = asyncio.Condition()
+        self.task: asyncio.Task[None] | None = None
+
+    async def push(self, event: LookupEvent) -> None:
+        async with self.cond:
+            self.events.append(event)
+            self.cond.notify_all()
+
+    async def finish(self) -> None:
+        async with self.cond:
+            self.done = True
+            self.cond.notify_all()
+
+    async def follow(self) -> AsyncIterator[LookupEvent]:
+        i = 0
+        while True:
+            async with self.cond:
+                await self.cond.wait_for(lambda: i < len(self.events) or self.done)
+                batch = self.events[i:]
+                finished = self.done
+            for event in batch:
+                yield event
+            i += len(batch)
+            if finished and i >= len(self.events):
+                break
+        if self.exc is not None and not isinstance(self.exc, asyncio.CancelledError):
+            raise self.exc
+
+
+_IN_FLIGHT: dict[str, _Flight] = {}
+
+#: Error statuses after which a run's charge is given back: nothing upstream
+#: was spent on a malformed LEI (400), or on a run refused a slot (503).
+_REFUNDED_STATUSES = frozenset({400, 503})
+
+
+async def _run_flight(
+    key: str, lei: str, deepen_top: int, flight: _Flight, stored: float, charged: str | None
+) -> None:
+    settings = get_settings()
+    completed_at: str | None = None
+    gate = _gate()
+    try:
+        try:
+            await gate.acquire(settings.lookup_max_concurrent, settings.lookup_queue_wait_s)
+        except _PipelineBusyError:
+            _lookup_budget.refund(charged)
+            await flight.push((
+                "error",
+                {
+                    "status": 503,
+                    "detail": (
+                        "OpenCheck is running as many checks as it can at once. "
+                        "Try again in a minute."
+                    ),
+                    "retry_after_s": 30,
+                },
+            ))
+            return
+        try:
+            async for event in _lookup_pipeline(lei, deepen_top=deepen_top):
+                if event[0] == "done":
+                    # Phase 216: the run names itself on its last event, so a
+                    # client holding a live (not replayed) run can still say
+                    # which run it is looking at when it asks to save it.
+                    # Stamped here, once, and buffered with the stamp — a
+                    # replay repeats the same value.
+                    completed_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                    event = ("done", {**event[1], "run_completed_at": completed_at})
+                elif event[0] == "error" and event[1].get("status") in _REFUNDED_STATUSES:
+                    _lookup_budget.refund(charged)
+                await flight.push(event)
+        finally:
+            await gate.release()
+        if completed_at is not None:
+            while len(_REPLAY_CACHE) >= _REPLAY_MAX_ENTRIES:
+                _REPLAY_CACHE.pop(next(iter(_REPLAY_CACHE)), None)
+            _REPLAY_CACHE[key] = _ReplayEntry(
+                stored=stored,
+                fetched_at=completed_at,
+                events=list(flight.events),
+            )
+    except BaseException as exc:  # noqa: BLE001 — handed to every follower
+        flight.exc = exc
+        if isinstance(exc, asyncio.CancelledError):
+            raise
+    finally:
+        if _IN_FLIGHT.get(key) is flight:
+            _IN_FLIGHT.pop(key, None)
+        await flight.finish()
+
+
+def _replay_key(lei: str, deepen_top: int) -> str:
+    return f"{lei.strip().upper()}:{clamp_deepen_top(deepen_top)}"
+
+
 async def _lookup_pipeline_cached(
     lei: str, deepen_top: int = 5, refresh: bool = False
 ) -> AsyncIterator[LookupEvent]:
-    """Replay a cached completed run, or run the pipeline and cache it."""
-    key = f"{lei.strip().upper()}:{deepen_top}"
+    """Replay a cached completed run, join one in flight, or start one.
+
+    Only starting one costs the caller anything (Phase 234): the run is
+    charged to the client's lookup budget first, and a spent budget ends the
+    stream with a 429 ``error`` event carrying ``retry_after_s``.
+    """
+    deepen_top = clamp_deepen_top(deepen_top)
+    key = _replay_key(lei, deepen_top)
     now = time.monotonic()
 
     if not refresh:
@@ -1721,27 +1912,33 @@ async def _lookup_pipeline_cached(
                 yield event
             return
 
-    buffer: list[LookupEvent] = []
-    completed_at: str | None = None
-    async for event in _lookup_pipeline(lei, deepen_top=deepen_top):
-        if event[0] == "done":
-            # Phase 216: the run names itself on its last event, so a client
-            # holding a live (not replayed) run can still say which run it is
-            # looking at when it asks to save it. Stamped here, once, and
-            # buffered with the stamp — a replay repeats the same value.
-            completed_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-            event = ("done", {**event[1], "run_completed_at": completed_at})
-        buffer.append(event)
-        yield event
+    loop = asyncio.get_running_loop()
+    flight = _IN_FLIGHT.get(key)
+    if flight is None or flight.loop is not loop or flight.done:
+        try:
+            charged = await _lookup_budget.charge()
+        except _lookup_budget.BudgetExceededError as exc:
+            yield (
+                "error",
+                {"status": 429, "detail": str(exc), "retry_after_s": exc.retry_after_s},
+            )
+            return
+        # A caller that waited for budget may find the run done or started
+        # by someone else meanwhile; take that instead and give the charge back.
+        flight = _IN_FLIGHT.get(key)
+        if flight is not None and flight.loop is loop and not flight.done:
+            _lookup_budget.refund(charged)
+        else:
+            flight = _Flight()
+            _IN_FLIGHT[key] = flight
+            flight.task = asyncio.create_task(
+                _run_flight(
+                    key, lei.strip().upper(), deepen_top, flight, time.monotonic(), charged
+                )
+            )
 
-    if completed_at is not None:
-        while len(_REPLAY_CACHE) >= _REPLAY_MAX_ENTRIES:
-            _REPLAY_CACHE.pop(next(iter(_REPLAY_CACHE)), None)
-        _REPLAY_CACHE[key] = _ReplayEntry(
-            stored=now,
-            fetched_at=completed_at,
-            events=buffer,
-        )
+    async for event in flight.follow():
+        yield event
 
 
 def replay_entry(lei: str, deepen_top: int = 5) -> _ReplayEntry | None:
@@ -1751,8 +1948,7 @@ def replay_entry(lei: str, deepen_top: int = 5) -> _ReplayEntry | None:
     Phase 216: a saved report is copied from here and nowhere else — the
     server's own record of what it streamed, never a payload a client posts.
     """
-    key = f"{lei.strip().upper()}:{deepen_top}"
-    entry = _REPLAY_CACHE.get(key)
+    entry = _REPLAY_CACHE.get(_replay_key(lei, deepen_top))
     if entry is None or time.monotonic() - entry.stored >= _REPLAY_TTL_SECONDS:
         return None
     return entry
@@ -1765,7 +1961,11 @@ async def _lookup_impl(
     lei: str, deepen_top: int = 5, refresh: bool = False
 ) -> LookupResponse:
     """Body of ``/lookup``, callable in-process (MCP tools, /narrative,
-    /export, layer expansion) without going through the rate-limited route."""
+    /export, layer expansion) without going through the rate-limited route.
+
+    Not free, though: a fresh run is charged to the current client's lookup
+    budget (Phase 234) wherever it is called from, and a spent budget raises
+    429 with ``Retry-After``."""
     norm_lei = lei.strip().upper()
     events: list[LookupEvent] = []
     async for event in _lookup_pipeline_cached(
@@ -1773,8 +1973,11 @@ async def _lookup_impl(
     ):
         if event[0] == "error":
             # Raise at once, exactly as before the fold was factored out.
+            retry = event[1].get("retry_after_s")
             raise HTTPException(
-                status_code=event[1]["status"], detail=event[1]["detail"]
+                status_code=event[1]["status"],
+                detail=event[1]["detail"],
+                headers={"Retry-After": str(retry)} if retry else None,
             )
         events.append(event)
     return fold_lookup_events(norm_lei, events)
@@ -2001,7 +2204,7 @@ async def _subsidiaries_one_layer(
 
 
 @router.get("/expand")
-@limiter.limit(default_tier)
+@limiter.limit(lookup_tier)
 async def expand(
     request: Request,
     response: Response,
@@ -2123,7 +2326,7 @@ class ExpandLayerRequest(BaseModel):
 
 
 @router.post("/expand-layer")
-@limiter.limit(default_tier)
+@limiter.limit(lookup_tier)
 async def expand_layer(
     request: Request, response: Response, req: ExpandLayerRequest
 ) -> dict[str, Any]:
@@ -2143,6 +2346,15 @@ async def expand_layer(
     items = req.items[:_MAX_LAYER_ITEMS]
     sem = asyncio.Semaphore(5)
     hops = {"lei": 0, "register": 0, "skipped": 0}
+    # Phase 234: an LEI hop is a full lookup and is charged to the caller's
+    # lookup budget like any other. When the budget runs out part-way the hop
+    # is *deferred* — named, with the seconds until budget frees — so the
+    # client can come back for it; a hop that failed is *failed*, with its
+    # reason. Both used to be ``except Exception: return [], []``, which drew
+    # a node whose owners could not be fetched exactly like a node with none.
+    deferred: list[str] = []
+    failed: list[dict[str, Any]] = []
+    retry_after: list[int] = []
 
     async def _one(item: _ExpandItem) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         async with sem:
@@ -2159,7 +2371,29 @@ async def expand_layer(
                 return await _register_one_layer(
                     item.scheme or "", item.id or "", item.anchor, name=item.name
                 )
-            except Exception:  # noqa: BLE001 — a bad node must not sink the batch
+            except HTTPException as exc:
+                if exc.status_code == 429:
+                    hops["lei"] -= 1
+                    deferred.append(item.anchor)
+                    try:
+                        retry_after.append(int((exc.headers or {}).get("Retry-After", "60")))
+                    except ValueError:
+                        retry_after.append(60)
+                else:
+                    failed.append({
+                        "anchor": item.anchor,
+                        "lei": item.lei,
+                        "status": exc.status_code,
+                        "reason": str(exc.detail),
+                    })
+                return [], []
+            except Exception as exc:  # noqa: BLE001 — a bad node must not sink the batch
+                failed.append({
+                    "anchor": item.anchor,
+                    "lei": item.lei,
+                    "status": 500,
+                    "reason": describe_exception(exc),
+                })
                 return [], []
 
     chunks = await asyncio.gather(*[_one(i) for i in items])
@@ -2180,10 +2414,18 @@ async def expand_layer(
                 seen_sig.add(key)
                 merged_sig.append(sig)
 
+    deferred_set = set(deferred)
     return {
         "bods": merged,
         "risk_signals": merged_sig,
-        "expanded": [i.anchor for i in items],
+        # Every anchor this call answered for — including failed ones, which
+        # are named in ``failed`` — but never a deferred one: the client keeps
+        # a deferred node on its frontier and asks again after
+        # ``retry_after_s``.
+        "expanded": [i.anchor for i in items if i.anchor not in deferred_set],
+        "deferred": [i.anchor for i in items if i.anchor in deferred_set],
+        "retry_after_s": max(retry_after) if retry_after else None,
+        "failed": failed,
         "count": len(items),
         "truncated": len(req.items) > _MAX_LAYER_ITEMS,
         # Phase 182: what the layer cost, by hop kind.
@@ -2330,7 +2572,21 @@ async def _resolve_national_id_impl(
     if adapter is None or not hasattr(adapter, "search_by_local_id"):
         raise HTTPException(status_code=503, detail="GLEIF adapter unavailable")
 
-    hits = await adapter.search_by_local_id(num, code)
+    # Phase 234: resolving a number is discretionary GLEIF traffic — refused
+    # outright when the window is nearly spent, so the anchor resolution of a
+    # lookup already under way is never the call that waits.
+    try:
+        with gleif_discretionary():
+            hits = await adapter.search_by_local_id(num, code)
+    except GleifRateLimitedError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "GLEIF is busy answering lookups right now, so the number could "
+                "not be resolved. Try again in a few seconds."
+            ),
+            headers={"Retry-After": "10"},
+        ) from exc
     matches: list[NationalIdMatch] = []
     for h in hits:
         if not h.hit_id:

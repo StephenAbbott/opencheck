@@ -543,6 +543,29 @@ class WatchlistStore:
             )
         return {"total": total, "distinct_leis": distinct, "in_list": mine}
 
+    def check_capacity(self, th: str | None, lei: str) -> None:
+        """Raise :class:`CapExceededError` if adding ``lei`` to the list
+        ``th`` (``None`` = a list not yet created) would break either cap.
+
+        Phase 234: asked *before* the baseline lookup, so a full instance
+        refuses without running a lookup it cannot keep. :meth:`add_watch`
+        asks again inside its transaction, which is what makes it exact."""
+        with self._conn() as conn:
+            if th is not None:
+                exists = conn.execute(
+                    "SELECT 1 FROM watches WHERE token_hash = ? AND lei = ?", (th, lei)
+                ).fetchone()
+                if exists:
+                    return
+                mine = conn.execute(
+                    "SELECT COUNT(*) FROM watches WHERE token_hash = ?", (th,)
+                ).fetchone()[0]
+                if mine >= self.caps.max_per_list:
+                    raise CapExceededError("per_list", self.caps.max_per_list)
+            total = conn.execute("SELECT COUNT(*) FROM watches").fetchone()[0]
+            if total >= self.caps.max_total:
+                raise CapExceededError("total", self.caps.max_total)
+
     def add_watch(
         self,
         th: str,
@@ -794,6 +817,37 @@ class WatchlistStore:
                 (cutoff,),
             )
             return cur.rowcount
+
+
+    def prune_stale_lists(self, *, older_than_days: int) -> int:
+        """Phase 234: delete lists nobody has opened for ``older_than_days``
+        — the page or the Atom feed; both touch ``last_seen_at`` — with their
+        watches, entries and nothing else. Without it an abandoned list held
+        its share of the instance cap, and was re-run on every delta, forever.
+        Returns the number of lists deleted."""
+        if older_than_days <= 0:
+            return 0
+        cutoff = datetime.fromtimestamp(
+            time.time() - older_than_days * 86400.0, UTC
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        with self._conn() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                stale = [
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT token_hash FROM lists WHERE last_seen_at < ?", (cutoff,)
+                    ).fetchall()
+                ]
+                for th in stale:
+                    conn.execute("DELETE FROM watches WHERE token_hash = ?", (th,))
+                    conn.execute("DELETE FROM entries WHERE token_hash = ?", (th,))
+                    conn.execute("DELETE FROM lists WHERE token_hash = ?", (th,))
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        return len(stale)
 
 
 class CapExceededError(Exception):
@@ -1215,7 +1269,7 @@ async def tick() -> dict[str, Any]:
 
     settings = get_settings()
     store = get_store()
-    out: dict[str, Any] = {"reruns": 0, "os": None, "pruned": 0}
+    out: dict[str, Any] = {"reruns": 0, "os": None, "pruned": 0, "expired": 0}
     if store is None:
         return out
     _bump(last_tick_at=_now_iso())
@@ -1234,6 +1288,7 @@ async def tick() -> dict[str, Any]:
                 store.set_meta("opensanctions_checked_at", _now_iso())
                 # Anything Tier 2 queued runs next tick, within the same bound.
         out["pruned"] = store.prune_empty_lists()
+        out["expired"] = store.prune_stale_lists(older_than_days=settings.watchlist_stale_days)
     except Exception as exc:  # noqa: BLE001 — the loop outlives any one tick
         log.exception("watchlist: tick failed")
         _bump(last_error=f"tick: {type(exc).__name__}: {exc}")
@@ -1278,6 +1333,14 @@ async def baseline(lei: str) -> tuple[Any, dict[str, Any] | None, str | None]:
         wm = mirror.watermark()
         watermark = wm.strftime("%Y-%m-%d %H:%M:%S") if wm else None
     return resp, facts, watermark
+
+
+def new_list_quota() -> Any:
+    """Per-client quota on new lists (``OPENCHECK_WATCHLIST_NEW_LISTS_PER_IP``)."""
+    from .config import get_settings
+    from .lookup_budget import Quota
+
+    return Quota("watch-lists", lambda: get_settings().watchlist_new_lists_per_ip)
 
 
 def valid_lei(value: str) -> str | None:

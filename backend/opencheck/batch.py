@@ -39,7 +39,7 @@ from typing import Any, AsyncIterator
 
 from fastapi import HTTPException
 
-from . import identifiers
+from . import identifiers, lookup_budget
 from .config import get_settings
 from .gleif_throttle import GleifRateLimitedError
 from .secret_scrub import describe_exception, scrub
@@ -141,7 +141,11 @@ async def _one(
 
     async with sem:
         try:
-            resp = await _lookup_impl(lei, deepen_top=deepen_top, refresh=refresh)
+            # Phase 234: every row is a full lookup charged to the caller's one
+            # lookup budget. A row waits for budget rather than failing — the
+            # batch already reads as "about two minutes for twenty".
+            with lookup_budget.waiting(get_settings().batch_budget_wait_s):
+                resp = await _lookup_impl(lei, deepen_top=deepen_top, refresh=refresh)
         except HTTPException as exc:
             return (
                 "row_failed",
@@ -149,9 +153,10 @@ async def _one(
                     "lei": lei,
                     "status": exc.status_code,
                     "reason": str(exc.detail),
-                    # 503 is the Phase 143/162 throttle refusal — momentary;
-                    # everything else (404 unknown, 400 shape) is durable.
-                    "retryable": exc.status_code == 503,
+                    # 503 is the Phase 143/162 throttle refusal, 429 the Phase
+                    # 234 lookup budget — both momentary; everything else
+                    # (404 unknown, 400 shape) is durable.
+                    "retryable": exc.status_code in (429, 503),
                     "degraded": True,
                 },
                 None,

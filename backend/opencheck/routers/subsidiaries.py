@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
 from .. import identifiers
+from ..gleif_throttle import discretionary as gleif_discretionary
 from ..ratelimit import default_tier, limiter
 from ..subsidiaries import assemble_subsidiaries
 from ..subsidiaries_declared import assemble_declared
@@ -89,7 +90,10 @@ async def subsidiaries(
     check_digit_error = identifiers.lei_check_digit_error(norm)
     if check_digit_error:
         raise HTTPException(status_code=400, detail=check_digit_error)
-    return await assemble_subsidiaries(norm, include_bods=(format == "bods"))
+    # Phase 234: GLEIF calls here are discretionary — refused, and reported
+    # as GLEIF not answering, rather than taking budget a lookup needs.
+    with gleif_discretionary():
+        return await assemble_subsidiaries(norm, include_bods=(format == "bods"))
 
 
 # ---------------------------------------------------------------------------

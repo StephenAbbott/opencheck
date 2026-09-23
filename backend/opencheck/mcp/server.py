@@ -304,6 +304,12 @@ async def opencheck_save_report(lei: str, deepen_top: int = 5) -> dict[str, Any]
     if store is None:
         return {"error": "Saved reports are not enabled on this instance.", "status": 503}
     try:
+        # Phase 234: the same per-address save quota as POST /saved-reports,
+        # checked before the lookup so a refused save runs nothing.
+        _sr.check_client_quota()
+    except _sr.SavedReportError as exc:
+        return {"error": str(exc), "status": exc.status, "code": exc.code}
+    try:
         resp = await _lookup(lei=lei, deepen_top=deepen_top)
     except HTTPException as exc:
         return _err(exc)
@@ -319,6 +325,7 @@ async def opencheck_save_report(lei: str, deepen_top: int = 5) -> dict[str, Any]
         )
     except _sr.SavedReportError as exc:
         return {"error": str(exc), "status": exc.status, "code": exc.code}
+    _sr.spend_client_quota()
     meta = _with_url(out)
     return {
         "report_id": meta["report_id"],

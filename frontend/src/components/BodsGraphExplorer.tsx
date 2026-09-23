@@ -53,6 +53,14 @@ import {
   possiblySameAs,
 } from "../lib/reconcile";
 import { buildSignalMap } from "../lib/signalScope";
+import {
+  deferredAnchors,
+  deferredSentence,
+  failedCountSentence,
+  failedSentence,
+  retryAfterSeconds,
+  waitingSentence,
+} from "../lib/expandLayer";
 import { independentCount } from "../lib/lineage";
 import { riskFindingCount } from "../lib/signalKind";
 import { RiskChip } from "./risk/RiskChip";
@@ -70,6 +78,9 @@ type Stmt = Record<string, unknown>;
 // Guard: cap how many anchors we'll expand across a session so a runaway
 // click-fest can't fan out the whole register (the server also caps each batch).
 const MAX_EXPANDED = 60;
+/** Phase 234: how many times one FullCheck layer waits out the lookup budget
+ *  before stopping and saying so. */
+const MAX_BUDGET_WAITS = 4;
 
 // FullCheck eager run: stop expanding once the network reaches this many company
 // nodes — also the graph's comfortable render ceiling.
@@ -363,15 +374,24 @@ export default function BodsGraphExplorer({
       const res = await expandLayer(frontier, direction);
       setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
       setDiscoveredSignals((prev) => mergeSignals(prev, res.risk_signals));
+      // Phase 234: only the anchors the server answered for. A deferred node
+      // (the reader's lookup budget ran out part-way) stays on the frontier,
+      // so adding the layer again picks it up.
       setExpandedIds((prev) => {
         const next = new Set(prev);
-        frontier.forEach((f) => next.add(f.anchor));
+        res.expanded.forEach((a) => next.add(a));
         return next;
       });
-      setManualLayers((n) => n + 1);
+      if (res.expanded.length > 0) setManualLayers((n) => n + 1);
       const newRels = (res.bods as Stmt[]).filter((s) => s.recordType === "relationship").length;
+      const deferred = deferredSentence(res);
+      const failed = failedSentence(res.failed);
       const parts: string[] = [];
-      if (newRels === 0) parts.push(`No further ${noun} disclosed for the companies at the edge of the network.`);
+      if (newRels === 0 && !deferred && !failed) {
+        parts.push(`No further ${noun} disclosed for the companies at the edge of the network.`);
+      }
+      if (failed) parts.push(failed);
+      if (deferred) parts.push(deferred);
       if (res.truncated) parts.push(`Only the first ${res.count} were expanded — there were more.`);
       setExpandNote(parts.join(" ") || null);
     } catch (e) {
@@ -390,6 +410,7 @@ export default function BodsGraphExplorer({
     returnFocusRef.current = true;
     setRunProgress("Starting FullCheck…");
     let completed = 0;
+    let failures = 0;
     try {
       // Accumulate locally: React state updates aren't visible within this loop,
       // so each layer recomputes the frontier from the local `working` set and
@@ -416,19 +437,52 @@ export default function BodsGraphExplorer({
         setRunProgress(
           `Layer ${d + 1} of ${depthBudget} — expanding ${front.length} ${front.length === 1 ? "company" : "companies"}…`
         );
-        const res = await expandLayer(front, direction);
-        working = mergeStatements(working, res.bods as Stmt[]);
-        // Only the anchors the server actually processed (it caps each batch).
-        res.expanded.forEach((a) => expanded.add(a));
-        setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
-        setDiscoveredSignals((prev) => mergeSignals(prev, res.risk_signals));
-        setExpandedIds(new Set(expanded));
+        // Phase 234: a layer can come back part-done — the anchors the
+        // reader's lookup budget did not cover are `deferred`. FullCheck waits
+        // out `retry_after_s` and asks for just those, so a depth step still
+        // means a whole layer. Bounded, and cancellable while it waits.
+        let pending = front;
+        let waits = 0;
+        while (pending.length > 0) {
+          if (waits > 0) {
+            setRunProgress(
+              `Layer ${d + 1} of ${depthBudget} — expanding the remaining ${pending.length} ${pending.length === 1 ? "company" : "companies"}…`
+            );
+          }
+          const res = await expandLayer(pending, direction);
+          working = mergeStatements(working, res.bods as Stmt[]);
+          // Only the anchors the server actually processed (it caps each batch).
+          res.expanded.forEach((a) => expanded.add(a));
+          setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
+          setDiscoveredSignals((prev) => mergeSignals(prev, res.risk_signals));
+          setExpandedIds(new Set(expanded));
+          failures += res.failed?.length ?? 0;
+          const deferred = new Set(deferredAnchors(res));
+          if (deferred.size === 0) break;
+          if (waits >= MAX_BUDGET_WAITS) {
+            stop = "your lookup budget ran out part-way through a layer — run it again in a minute to continue";
+            break;
+          }
+          waits += 1;
+          pending = pending.filter((f) => deferred.has(f.anchor));
+          for (let left = retryAfterSeconds(res); left > 0; left--) {
+            if (cancelRef.current) break;
+            setRunProgress(waitingSentence(pending.length, left));
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+          if (cancelRef.current) break;
+        }
+        if (cancelRef.current || stop) {
+          if (!cancelRef.current) completed += 1;
+          break;
+        }
         completed += 1;
       }
       if (completed > 0) setRunDepth((prev) => (prev ?? 0) + completed);
       setShowRunControls(false);
+      const failNote = failures > 0 ? ` ${failedCountSentence(failures)}` : "";
       if (cancelRef.current) setRunProgress("FullCheck cancelled.");
-      else setRunProgress(`FullCheck complete — ${stop || `reached the depth budget (${depthBudget})`}.`);
+      else setRunProgress(`FullCheck complete — ${stop || `reached the depth budget (${depthBudget})`}.${failNote}`);
     } catch (e) {
       setRunProgress(`FullCheck failed: ${(e as Error).message}`);
     } finally {

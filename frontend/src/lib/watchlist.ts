@@ -311,7 +311,12 @@ export function tierSentence(t: WatchlistTiers | null): string {
 }
 
 export function feedHelp(): string {
-  return "Subscribe in any feed reader. The address is the key to this list — anyone holding it can read it.";
+  // Phase 234: the server deletes a list unopened for
+  // OPENCHECK_WATCHLIST_STALE_DAYS (default 90); the feed reader counts.
+  return (
+    "Subscribe in any feed reader. The address is the key to this list — anyone holding it can read it. " +
+    "A list that is neither opened here nor read by a feed reader for 90 days is deleted."
+  );
 }
 
 /** Newest first, as the log reads. */

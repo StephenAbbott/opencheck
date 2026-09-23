@@ -36,9 +36,12 @@ the throttle wholesale via ``OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE=0`` in
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import logging
 import time
 from collections import deque
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 import httpx
 
@@ -65,6 +68,30 @@ class GleifRateLimitedError(Exception):
     Raised *instead of sending* when the shared budget is exhausted beyond the
     max wait, and by callers that observed a 429 and have no fallback left.
     """
+
+
+_discretionary: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "opencheck_gleif_discretionary", default=False
+)
+
+
+@contextmanager
+def discretionary() -> Iterator[None]:
+    """GLEIF calls inside the block are *discretionary* (Phase 234).
+
+    Share cards, ``/resolve-national-id``, ``/subsidiaries`` and
+    ``/securities`` sit on the 60/min default tier and spend GLEIF calls from
+    the same 50/min process budget a lookup's anchor resolution needs, so a
+    crawler on them could degrade real lookups. Inside this block a call is
+    refused at once — :class:`GleifRateLimitedError`, nothing sent, no
+    waiting — whenever fewer than ``OPENCHECK_GLEIF_LOOKUP_RESERVE`` slots of
+    the window are left. Every caller already treats that error as "GLEIF is
+    busy" and degrades honestly."""
+    token = _discretionary.set(True)
+    try:
+        yield
+    finally:
+        _discretionary.reset(token)
 
 
 class GleifThrottle:
@@ -121,6 +148,11 @@ class GleifThrottle:
         limit = settings.gleif_rate_limit_per_minute
         if limit <= 0:  # throttle disabled (tests, or operator override)
             return
+        if _discretionary.get() and not self.has_headroom(settings.gleif_lookup_reserve):
+            raise GleifRateLimitedError(
+                "GLEIF request budget is reserved for lookups "
+                f"(fewer than {settings.gleif_lookup_reserve} of {limit}/min left)"
+            )
         deadline = time.monotonic() + max(settings.gleif_throttle_max_wait_s, 0.0)
         while True:
             now = time.monotonic()

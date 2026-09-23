@@ -39,6 +39,7 @@ from slowapi.errors import RateLimitExceeded
 
 from . import __version__, memwatch
 from .config import get_settings
+from .lookup_budget import ClientScopeMiddleware
 from .ratelimit import limiter, rate_limit_exceeded_handler
 from .secret_scrub import safe_message
 from .routers import health, search, lookup, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports, knowability
@@ -275,8 +276,9 @@ app = FastAPI(
 )
 
 # Per-IP rate limiting (see opencheck/ratelimit.py). Budgets are applied with
-# explicit @limiter.limit decorators on the routes themselves; /health,
-# /sources and the mounted /mcp routes are deliberately undecorated.
+# explicit @limiter.limit decorators on the routes themselves; /health and
+# /sources are deliberately undecorated, and the mounted /mcp routes, which a
+# decorator cannot reach, sit behind mcp/guard.py (Phase 234).
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
@@ -315,6 +317,12 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
     )
 
 
+# Phase 234: every request carries its client's IP in a context variable, so
+# a full lookup started anywhere in-process — a route, a batch row, an MCP
+# tool — is charged to the one per-client lookup budget (lookup_budget.py).
+# Pure ASGI; added last so it is outermost and wraps the /mcp routes too.
+app.add_middleware(ClientScopeMiddleware)
+
 app.include_router(health.router)
 app.include_router(search.router)
 app.include_router(lookup.router)
@@ -350,7 +358,11 @@ if _MCP_ASGI is not None:
     # instead of app.mount("/mcp", …): a Mount would 307-redirect a bare
     # POST /mcp → /mcp/, which breaks MCP clients that don't replay POST bodies
     # across redirects. A direct route serves /mcp with no redirect.
-    app.router.routes.extend(_MCP_ASGI.routes)
+    # Phase 234: each route is wrapped in the MCP rate guard (mcp/guard.py) —
+    # slowapi's decorators cannot reach it, and before this phase nothing did.
+    from .mcp.guard import guard_routes as _guard_mcp_routes
+
+    app.router.routes.extend(_guard_mcp_routes(_MCP_ASGI.routes))
 
 
 # ---------------------------------------------------------------------------

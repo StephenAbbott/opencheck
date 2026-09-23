@@ -138,6 +138,10 @@ class Settings(BaseSettings):
     # GLEIF changes (0.47 %/day measured), not to how many LEIs are watched.
     watchlist_max_total: int = Field(default=200, alias="OPENCHECK_WATCHLIST_MAX_TOTAL")
     watchlist_max_per_list: int = Field(default=10, alias="OPENCHECK_WATCHLIST_MAX_PER_LIST")
+    # Phase 234: a list nobody has opened (page or Atom feed) for this many
+    # days is deleted with its watches, so abandoned lists cannot hold the
+    # instance cap forever. 0 disables.
+    watchlist_stale_days: int = Field(default=90, alias="OPENCHECK_WATCHLIST_STALE_DAYS")
     # The worker: drains queued re-runs (at most this many per tick) and,
     # when due, catches up on OpenSanctions' entity deltas. 0 disables the
     # worker; 0 on the OpenSanctions interval disables Tier 2 only.
@@ -184,10 +188,34 @@ class Settings(BaseSettings):
     # Per-IP budget for the expensive synthesis endpoints (/narrative burns
     # Anthropic tokens; /export/pdf and /export-network burn CPU).
     rate_limit_heavy: str = Field(default="3/minute", alias="OPENCHECK_RATE_LIMIT_HEAVY")
-    # Per-IP budget for everything else public (per-source retries, expansion,
-    # history, securities, share pages, …). Generous: normal UI usage fires
+    # Per-IP budget for everything else public (per-source retries, history,
+    # securities, share pages, …; expansion moved to the lookup tier in Phase 234). Generous: normal UI usage fires
     # several of these per lookup.
     rate_limit_default: str = Field(default="60/minute", alias="OPENCHECK_RATE_LIMIT_DEFAULT")
+    # --- Phase 234: full lookups, whoever asks for them (opencheck/lookup_budget.py) ---
+    # Every fresh pipeline run a client causes — /lookup, /lookup-stream,
+    # /expand, each LEI of /expand-layer, a watch baseline, a batch row, an
+    # MCP tool, an export — is charged to ONE per-IP budget, sized by
+    # ``rate_limit_lookup`` above. A replayed or joined run costs nothing.
+    # Process-wide cap on pipelines running at once (0 = no cap) and how long
+    # a fresh run may queue for a slot before it is refused with a 503.
+    lookup_max_concurrent: int = Field(default=4, alias="OPENCHECK_LOOKUP_MAX_CONCURRENT")
+    lookup_queue_wait_s: float = Field(default=60.0, alias="OPENCHECK_LOOKUP_QUEUE_WAIT_S")
+    # How long a batch row (REST or MCP) waits for the caller's lookup budget
+    # to free before the row is reported failed. Interactive callers never
+    # wait — they get a 429 with Retry-After.
+    batch_budget_wait_s: float = Field(default=90.0, alias="OPENCHECK_BATCH_BUDGET_WAIT_S")
+    # GLEIF calls from discretionary routes (share cards, /resolve-national-id,
+    # /subsidiaries, /securities) are refused rather than queued once fewer
+    # than this many slots of the per-minute GLEIF budget are left, so a
+    # crawler on those routes cannot starve a lookup's anchor resolution.
+    gleif_lookup_reserve: int = Field(default=10, alias="OPENCHECK_GLEIF_LOOKUP_RESERVE")
+    # Per-IP quotas on things that fill a process-wide cap (in-memory; reset
+    # on deploy): new watchlists and saved reports.
+    watchlist_new_lists_per_ip: str = Field(
+        default="5/day", alias="OPENCHECK_WATCHLIST_NEW_LISTS_PER_IP"
+    )
+    saved_reports_per_ip: str = Field(default="20/day", alias="OPENCHECK_SAVED_REPORTS_PER_IP")
     # --- Outbound GLEIF budget (see opencheck/gleif_throttle.py) ---
     # GLEIF rate-limits by IP at 60 req/min, shared across everything this
     # process sends it (anchor lookups, /securities ISINs, Time Machine,

@@ -86,9 +86,15 @@ def _clear_lookup_replay_cache():
     across tests."""
     from opencheck.routers import lookup as _lookup_mod
 
+    from opencheck import lookup_budget as _budget
+
     _lookup_mod._REPLAY_CACHE.clear()
+    _lookup_mod._IN_FLIGHT.clear()
+    _budget.reset_for_tests()
     yield
     _lookup_mod._REPLAY_CACHE.clear()
+    _lookup_mod._IN_FLIGHT.clear()
+    _budget.reset_for_tests()
 
 
 @pytest.fixture(autouse=True)
