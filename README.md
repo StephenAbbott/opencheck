@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 232** — the TED procurement card keeps resolving who won when the EU's new web firewall blocks the notice XML, by falling back to TED's own winner field, and a contract awarded to several companies now counts every one of them as a winner.
+**Latest: Phase 233** — a source that fails with an HTTP error is now reported by status code and host alone, so the CVR and OpenCorporates API keys can no longer reach an error message, the replay cache or a saved report.
 
 → [Full development history](docs/status.md)
 
