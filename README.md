@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 233** — a source that fails with an HTTP error is now reported by status code and host alone, so the CVR and OpenCorporates API keys can no longer reach an error message, the replay cache or a saved report.
+**Latest: Phase 234** — every full lookup a client starts, from any route, FullCheck layer, watchlist addition, batch or MCP tool, now draws on one per-address budget the size of `/lookup`'s, with single-flight runs, a cap on concurrent pipelines and per-address quotas on watchlists and saved reports.
 
 → [Full development history](docs/status.md)
 
