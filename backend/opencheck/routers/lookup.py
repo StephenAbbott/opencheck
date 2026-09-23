@@ -23,7 +23,7 @@ from .. import outbound_rate as _outbound_rate
 from .. import provenance as _provenance
 from .. import consistency, consistencystats, register_hops, signalstats
 from ..provenance import Provenance
-from ..bods import BODSBundle, validate_shape
+from ..bods import BODSBundle, unique_statements, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
 from .. import lookup_budget as _lookup_budget
@@ -327,7 +327,7 @@ async def deepen(
     bods: list[dict[str, Any]] = []
     issues: list[str] = []
     if override is not None:
-        bods = override
+        bods = unique_statements(override)
         issues = validate_shape(bods)
         prov = _stored_bundle_provenance(source, hit_id)
     else:
@@ -335,7 +335,8 @@ async def deepen(
         if mapper and not raw.get("is_stub"):
             with _provenance.mapping_provenance(prov):
                 bundle: BODSBundle = mapper(raw)
-            bods = list(bundle)
+            # One statement per statementId (Phase 235).
+            bods = unique_statements(bundle)
             issues = validate_shape(bods)
 
     info = adapter.info
@@ -424,6 +425,8 @@ async def _build_report(
                     "notice": bundle["license_notice"],
                 }
             )
+
+    bods_all = unique_statements(bods_all)  # one statement per id (Phase 235)
 
     # Seeded with whatever the source adapters recorded during the fetches
     # above — a source that could not answer from its own data says so there,
@@ -1018,7 +1021,10 @@ def _merge_signals(
                     sig["code"],
                     sig["source_id"],
                     sig["hit_id"],
-                    sig.get("evidence", {}).get("subject_statement_id", ""),
+                    # A subject-level ICIJ match (Phase 235) is anchored on
+                    # ``statement_id``; a related party's on ``subject_statement_id``.
+                    sig.get("evidence", {}).get("subject_statement_id")
+                    or sig.get("evidence", {}).get("statement_id", ""),
                 )
             else:
                 key = (sig["code"], sig["source_id"], sig["hit_id"])
@@ -1548,6 +1554,11 @@ async def _lookup_pipeline(
 
     yield ("bods_counts", {"counts": bods_counts, "breakdown": bods_breakdown})
 
+    # Two deepened results from one source can carry the same party (two
+    # OpenSanctions records naming one subsidiary): every consumer below —
+    # the profile, the screens, the risk engine — reads one statement per id.
+    bods_all = unique_statements(bods_all)
+
     # The subject's profile, from its own statements across the deepened
     # sources. Its own event rather than a rider on `risk_signals`: it is
     # identity, and the verdict event is the answer.
@@ -1578,9 +1589,14 @@ async def _lookup_pipeline(
     oa_screening: list[dict[str, Any]] = []
     name_screen = NameScreen()
     cross_raw, icij_raw, oa_raw = await asyncio.gather(
-        assess_cross_source_names(bods_all, degraded=degraded, screen=name_screen),
-        assess_icij_names(bods_all, degraded=degraded),
-        assess_openaleph_names(bods_all, degraded=degraded, screening=oa_screening),
+        # Phase 235: the looked-up company is never its own related party.
+        assess_cross_source_names(
+            bods_all, degraded=degraded, screen=name_screen, subject_lei=ctx.lei
+        ),
+        assess_icij_names(bods_all, degraded=degraded, subject_lei=ctx.lei),
+        assess_openaleph_names(
+            bods_all, degraded=degraded, screening=oa_screening, subject_lei=ctx.lei
+        ),
     )
     # EveryPolitician's terminal event, and its rows.
     #
@@ -2082,7 +2098,11 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         errors=errors,
         cross_source_links=links,
         risk_signals=signals,
-        bods=bods_all,
+        # Two results from one source can map the same party (two OpenSanctions
+        # records naming one subsidiary); the export is one statement per id.
+        # Folded here, not in the pipeline, so a saved report stored before
+        # Phase 235 renders and exports without repeats too.
+        bods=unique_statements(bods_all),
         bods_issues=bods_issues,
         license_notices=license_notices,
         possibly_same_entities=same_pairs,
@@ -2270,7 +2290,7 @@ async def _register_one_layer(
         if not isinstance(raw, dict) or raw.get("is_stub"):
             return [], []
         with _provenance.mapping_provenance(prov):
-            bods = list(mapper(raw))
+            bods = unique_statements(mapper(raw))
         bundle_signals = [
             s.to_dict() for s in assess_bundle(hop.source_id, raw, bods, hit_id=local_id)
         ]
@@ -2966,7 +2986,7 @@ async def _count_only(source_id: str, hit_id: str) -> dict[str, Any] | None:
         if mapper is None or raw.get("is_stub"):
             return None
         with _provenance.mapping_provenance(prov):
-            bods = list(mapper(raw))
+            bods = unique_statements(mapper(raw))
     return {
         "total": len(bods),
         "entities": sum(1 for s in bods if s.get("recordType") == "entity"),
@@ -3001,7 +3021,7 @@ async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
     bods: list[dict[str, Any]] = []
     issues: list[str] = []
     if override is not None:
-        bods = override
+        bods = unique_statements(override)
         issues = validate_shape(bods)
         prov = _stored_bundle_provenance(source_id, hit_id)
     else:
@@ -3009,7 +3029,8 @@ async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
         if mapper and not raw.get("is_stub"):
             with _provenance.mapping_provenance(prov):
                 bundle: BODSBundle = mapper(raw)
-            bods = list(bundle)
+            # One statement per statementId (Phase 235).
+            bods = unique_statements(bundle)
             issues = validate_shape(bods)
 
     license_notice = _license_notice_for(adapter.info, raw)

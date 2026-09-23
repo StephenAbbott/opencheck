@@ -25,6 +25,7 @@ from .. import provenance as _provenance
 from ..elf import resolve_elf
 from ..identifiers import ch_identification_is_uk, normalise_ch_company_number
 from . import liveness as _liveness
+from .unique import unique_statements
 from .annotations import annotate, commenting, identifying, pointer, transformation
 from . import identity_verification as _idv
 from .ch_constants import describe_company_type, describe_officer_role
@@ -2001,6 +2002,13 @@ def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
             _gleif_child_statements(lei, subject_sid, child, subject_statement_date)
         )
 
+    # When the direct and the ultimate parent are the same LEI (John Swire &
+    # Sons for Swire Pacific, DBS Group Holdings for DBS Bank), both passes
+    # emit that parent's statement under the same statementId. The two
+    # relationships already point at it; keep one party statement for both
+    # (Phase 235). Reporting-exception bridges are keyed by kind and stay two:
+    # GLEIF does not say a direct and an ultimate exception are one party.
+    result.statements = unique_statements(result.statements)
     return result
 
 

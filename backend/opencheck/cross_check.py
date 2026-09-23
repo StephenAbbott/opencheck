@@ -62,6 +62,7 @@ from .risk import (
     pick_degradation_reason,
 )
 from .sources import REGISTRY, SearchKind, SourceHit, source_display_name
+from .subject_identity import subject_identity
 
 _LOG = logging.getLogger(__name__)
 
@@ -156,10 +157,19 @@ async def assess_cross_source_names(
     min_score: float = 0.88,
     degraded: list[DegradedSource] | None = None,
     screen: NameScreen | None = None,
+    subject_lei: str | None = None,
 ) -> list[RiskSignal]:
     """Return scoped ``RELATED_*`` risk signals for related parties in
     the BODS bundle that match an OpenSanctions / EveryPolitician
     record by name.
+
+    ``subject_lei`` (Phase 235) names the looked-up company: its statements
+    — every source's, found by identifier (``subject_identity``) — are not
+    related parties and are not screened here. The subject is screened at
+    subject level by the LEI-keyed OpenSanctions adapter; screening it again
+    here counted its own listing a second time as third-party exposure.
+    ``None`` keeps the old behaviour, for callers screening a bundle whose
+    anchor is not the looked-up company (the register hop in ``/expand-layer``).
 
     ``degraded`` is an optional out-collector (issue #50): when the screen
     could not fully run — missing API key in live mode, upstream errors,
@@ -185,7 +195,9 @@ async def assess_cross_source_names(
         _LOG.debug("Cross-source name screening skipped: live mode is off.")
         return []
 
-    targets = _collect_targets(bods)[:max_targets]
+    targets = _collect_targets(
+        bods, exclude=subject_identity(subject_lei, bods).statement_ids
+    )[:max_targets]
     if not targets:
         return []
 
@@ -329,9 +341,15 @@ _KIND_PERSON = "person"
 _KIND_ENTITY = "entity"
 
 
-def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _collect_targets(
+    bods: list[dict[str, Any]], *, exclude: frozenset[str] | set[str] = frozenset()
+) -> list[dict[str, Any]]:
     """Pull ``{kind, statement_id, name, birth_year, former}`` records out
     of every person and entity statement in the bundle.
+
+    ``exclude`` is the subject identity set's statementIds (Phase 235,
+    ``subject_identity``): the looked-up company's own statements are not
+    related parties and are never targets.
 
     Skips placeholder shapes (``unknownPerson`` / ``anonymousEntity``)
     — they have no checkable name. Skips records with empty names.
@@ -350,7 +368,7 @@ def _collect_targets(bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
         )
         rd = stmt.get("recordDetails") or {}
         sid = stmt.get("statementId") or ""
-        if not sid:
+        if not sid or sid in exclude:
             continue
         if record_type == "person":
             person_type = rd.get("personType") or stmt.get("personType")
