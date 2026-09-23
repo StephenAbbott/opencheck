@@ -511,3 +511,173 @@ async def test_committed_index_maps_and_validates():
         assert "lei" not in hit.identifiers  # corroboration rule
         assert hit.summary  # every register branch produces a summary
     eiti_bo._reset_index_for_tests()
+
+
+# ---------------------------------------------------------------------------
+# Phase 231 — the Nigeria path shares cac_nigeria's owner grouping
+# ---------------------------------------------------------------------------
+#
+# eiti_bo used to carry its own copy of the pre-Phase-213 CAC grouping. After
+# the CAC re-harvest the same company showed two pictures on one report: the
+# superseded INACTIVE filings merged into current ownership on the eiti_bo
+# card, and a blank-name corporate owner dropped from it.
+
+_LEI_NG_H = "5493000IBP32UQZ0KL24"
+
+_BASE_PSC = {
+    "owner_rc": None, "owner_jurisdiction": None, "nationality": None,
+    "notified": "2022-01-25", "shares": True, "share_pct_direct": None,
+    "share_pct_indirect": None, "voting": False, "voting_pct_direct": None,
+    "voting_pct_indirect": None, "appoint_board": False,
+    "sig_influence_company": False, "sig_influence_trust_firm": False,
+}
+
+
+def _psc(**kw):
+    return {**_BASE_PSC, **kw}
+
+
+# Dangote Cement's shape (superseded + ended filings) and BUA Cement's
+# (an unnamed corporate owner), in one record.
+_NG_HISTORY_CAC = {
+    "company": "GAMMA CEMENT PLC", "rc": "333333", "lei": _LEI_NG_H,
+    "lei_status": "ISSUED", "status": "ACTIVE",
+    "pscs": [
+        _psc(psc_id=1, psc_status="INACTIVE", owner_name="Holdco Ltd",
+             owner_named=True, owner_kind="entity", share_pct_direct=90),
+        _psc(psc_id=2, psc_status="ACTIVE", owner_name="Holdco Ltd",
+             owner_named=True, owner_kind="entity", share_pct_direct=96.55,
+             notified="2023-05-07"),
+        _psc(psc_id=3, psc_status="INACTIVE", owner_name="Nominees Ltd",
+             owner_named=True, owner_kind="entity"),
+        _psc(psc_id=4, psc_status="CEASED", owner_name="Former Chair",
+             owner_named=True, owner_kind="person"),
+        _psc(psc_id=5, psc_status="ACTIVE", owner_name=None, owner_named=False,
+             owner_kind="entity"),
+    ],
+}
+
+_NG_HISTORY_RECORD = {
+    **_NG_RECORD,
+    "lei": _LEI_NG_H,
+    "company": "GAMMA CEMENT PLC",
+    "local_ids": {"ng_cac_rc": "333333"},
+    "source_date": "2026-09-16",
+    "retrieved": "2026-09-16",
+    "nigeria": _NG_HISTORY_CAC,
+}
+
+
+@pytest.fixture
+def ng_history_adapter(monkeypatch):
+    monkeypatch.setattr(
+        eiti_bo, "_index", {**_FIXTURE_INDEX, _LEI_NG_H: _NG_HISTORY_RECORD}
+    )
+    return eiti_bo.EitiBoAdapter()
+
+
+def _relationship_shape(stmts):
+    """(party name, party type, recordStatus, interests) per relationship —
+    everything a reader sees, nothing that depends on the source id."""
+    by_id = {s["statementId"]: s for s in stmts}
+    out = []
+    for s in stmts:
+        if s["recordType"] != "relationship":
+            continue
+        party = by_id[s["recordDetails"]["interestedParty"]]
+        rd = party["recordDetails"]
+        name = rd.get("name") or rd["names"][0]["fullName"]
+        ptype = (rd.get("entityType") or {}).get("type") or party["recordType"]
+        interests = tuple(
+            (
+                i["type"], i["directOrIndirect"],
+                (i.get("share") or {}).get("exact"),
+                i.get("startDate"), i.get("endDate"),
+                i["beneficialOwnershipOrControl"],
+            )
+            for i in s["recordDetails"]["interests"]
+        )
+        out.append((name, ptype, s["recordStatus"], interests))
+    return sorted(out, key=repr)
+
+
+async def test_nigeria_relationships_match_the_cac_nigeria_card(ng_history_adapter):
+    from opencheck.bods import map_cac_nigeria
+
+    eiti = list(map_eiti_bo(await ng_history_adapter.fetch_by_lei(_LEI_NG_H)))
+    cac = list(map_cac_nigeria({"record": _NG_HISTORY_CAC}))
+    assert validate_shape(eiti) == []
+    assert _relationship_shape(eiti) == _relationship_shape(cac)
+
+
+async def test_nigeria_superseded_filings_are_not_current_ownership(ng_history_adapter):
+    stmts = list(map_eiti_bo(await ng_history_adapter.fetch_by_lei(_LEI_NG_H)))
+    shape = {(n, st): i for n, _t, st, i in _relationship_shape(stmts)}
+    # Holdco: one current relationship, from the ACTIVE row only.
+    (holdco,) = shape[("Holdco Ltd", "new")]
+    assert holdco[:3] == ("shareholding", "direct", 96.55)
+    # Owners with no ACTIVE filing are closed — and no end date is invented.
+    for name in ("Nominees Ltd", "Former Chair"):
+        assert all(i[4] is None for i in shape[(name, "closed")])
+    assert ("Holdco Ltd", "closed") not in shape
+
+
+async def test_nigeria_unnamed_corporate_owner_is_kept(ng_history_adapter):
+    stmts = list(map_eiti_bo(await ng_history_adapter.fetch_by_lei(_LEI_NG_H)))
+    unnamed = [r for r in _relationship_shape(stmts) if r[0] == "Unnamed corporate owner"]
+    assert len(unnamed) == 1
+    # unknownEntity, never anonymousEntity: the register's API dropped the
+    # name; the company withheld nothing.
+    assert unnamed[0][1] == "unknownEntity"
+
+
+async def test_nigeria_keeps_eiti_bo_ids_and_neiti_evidence(ng_history_adapter):
+    stmts = list(map_eiti_bo(await ng_history_adapter.fetch_by_lei(_LEI_NG_H)))
+    assert {s["source"]["type"][0] for s in stmts} == {"officialRegister"}
+    subject = stmts[0]
+    assert any("NEITI" in a["description"] for a in subject.get("annotations") or [])
+    # No statement collides with a cac_nigeria statement for the same record:
+    # the two cards stay two sources with their own ids.
+    from opencheck.bods import map_cac_nigeria
+
+    cac_ids = {s["statementId"] for s in map_cac_nigeria({"record": _NG_HISTORY_CAC})}
+    assert not cac_ids & {s["statementId"] for s in stmts}
+
+
+async def test_nigeria_hit_summary_counts_current_filings(ng_history_adapter):
+    b = await ng_history_adapter.fetch_by_lei(_LEI_NG_H)
+    hit = _bh_eiti_bo(b, _ctx(_LEI_NG_H, "GAMMA CEMENT PLC"))
+    assert hit.summary.startswith("5 PSC filings · 2 current")
+    assert "NEITI solid-minerals subset" in hit.summary
+    # All-current (the earlier fixture) keeps the short form.
+    b = await ng_history_adapter.fetch_by_lei(_LEI_NG)
+    hit = _bh_eiti_bo(b, _ctx(_LEI_NG, "TEST CEMENT PLC"))
+    assert hit.summary.startswith("2 PSC filings · Nigeria CAC")
+
+
+async def test_committed_nigeria_records_agree_with_the_committed_cac_index():
+    """The shipped eiti_bo index carries the same CAC harvest as cac_nigeria,
+    and maps to the same relationships — the live Dangote Cement / BUA Cement
+    disagreement this phase fixed."""
+    import json
+    from pathlib import Path
+
+    from opencheck.bods import map_cac_nigeria
+
+    eiti_bo._reset_index_for_tests()
+    index, meta = eiti_bo._load()
+    cac = json.loads(
+        (Path(eiti_bo.__file__).resolve().parents[1] / "data" / "cac_nigeria_psc.json")
+        .read_text()
+    )
+    assert meta["registers"]["nigeria_cac"]["harvested"] == cac["meta"]["harvested"]
+    ng = {lei: r for lei, r in index.items() if r["register_id"] == "nigeria_cac"}
+    assert ng, "expected at least one NEITI-subset company"
+    adapter = eiti_bo.EitiBoAdapter()
+    for lei, record in ng.items():
+        assert record["nigeria"] == cac["index"][lei]
+        eiti = list(map_eiti_bo(await adapter.fetch_by_lei(lei)))
+        assert _relationship_shape(eiti) == _relationship_shape(
+            list(map_cac_nigeria({"record": cac["index"][lei]}))
+        ), lei
+    eiti_bo._reset_index_for_tests()

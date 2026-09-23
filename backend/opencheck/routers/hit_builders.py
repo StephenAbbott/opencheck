@@ -924,25 +924,33 @@ def _bh_eiti_soe(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _psc_filings_phrase(pscs: list[dict]) -> str:
+    """Say "N PSC filings", plus "· M current" when some are not — shared by
+    the cac_nigeria and eiti_bo cards so one report cannot count them two ways.
+
+    Phase 213: the register keeps superseded and ceased filings. Say how many
+    are current, or a company with one owner reads as having nine. Rows
+    without a status (the earlier index shape) count as current.
+    """
+    n = len(pscs)
+    phrase = f"{n} PSC filing{'s' if n != 1 else ''}"
+    current = sum(
+        1 for p in pscs if (p.get("psc_status") or "ACTIVE").upper() == "ACTIVE"
+    )
+    if current != n:
+        phrase += f" · {current} current"
+    return phrase
+
+
 def _bh_cac_nigeria(r: dict, ctx: _LookupCtx) -> SourceHit:
     record = r.get("record") or {}
     pscs = record.get("pscs") or []
-    n = len(pscs)
     # Count of PSC declaration rows in the register, not distinct owners: the
     # declared parties may be people or companies, and may be listed by virtue
     # of control rather than ownership, so "filings" is the accurate framing
     # (matches the CAC's own `numberOfPsc` field). The BODS diagram may show
     # fewer nodes because map_cac_nigeria dedupes owners by canonical name.
-    parts = [f"{n} PSC filing{'s' if n != 1 else ''}"]
-    # Phase 213: the register keeps superseded and ceased filings. Say how many
-    # are current, or a company with one owner reads as having nine. Rows
-    # without a status (the earlier index shape) count as current.
-    current = sum(
-        1 for p in pscs if (p.get("psc_status") or "ACTIVE").upper() == "ACTIVE"
-    )
-    if current != n:
-        parts[0] += f" · {current} current"
-    parts.append("Nigeria CAC public register")
+    parts = [_psc_filings_phrase(pscs), "Nigeria CAC public register"]
     # Corroboration rule: the CAC BOR publishes the RC number, NOT the LEI
     # (OpenCheck derives the LEI via GLEIF at build time). Assert only the RC —
     # the identifier the register itself publishes — never `lei`.
@@ -1014,7 +1022,8 @@ def _bh_eiti_bo(r: dict, ctx: _LookupCtx) -> SourceHit:
         parts.append("Armenia State Register")
     elif register_id == "nigeria_cac":
         pscs = (record.get("nigeria") or {}).get("pscs") or []
-        parts.append(f"{len(pscs)} PSC filing{'s' if len(pscs) != 1 else ''}")
+        # Phase 231: the same count as the cac_nigeria card beside it.
+        parts.append(_psc_filings_phrase(pscs))
         parts.append("Nigeria CAC (NEITI solid-minerals subset)")
     if record.get("source_date"):
         parts.append(f"register data {str(record['source_date'])[:10]}")
