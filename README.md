@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 230** — the weekly source-health sweep now downloads the two bulk stores its index-tier probes read, so assertions that skipped every week are evaluated, and a source it could not exercise is reported with the assertion that went unchecked rather than as a blank row.
+**Latest: Phase 231** — the EITI pool now shows the same Nigeria CAC ownership picture as the CAC card beside it, sharing one mapping for current, ended and unnamed owners and rebuilt on the September 2026 register harvest.
 
 → [Full development history](docs/status.md)
 

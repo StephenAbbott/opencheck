@@ -7019,6 +7019,151 @@ def _cac_merge_interests(lists: list[list[dict[str, Any]]]) -> list[dict[str, An
     return [best[k] for k in order]
 
 
+def _cac_owner_statements(
+    *,
+    source_id: str,
+    id_prefix: str,
+    rc: str,
+    subject_id: str,
+    pscs: list[dict[str, Any]],
+    source_url: str,
+    statement_date: str | None = None,
+) -> Iterable[dict[str, Any]]:
+    """Owners and relationships for a set of CAC PSC rows — the one grouping
+    both ``map_cac_nigeria`` and the ``eiti_bo`` Nigeria path use (Phase 231).
+
+    ``eiti_bo`` used to carry its own copy of the pre-Phase-213 grouping, so
+    after the CAC re-harvest the same company showed two different pictures
+    on one report: superseded INACTIVE filings merged into current ownership,
+    and a blank-name owner silently dropped. One function means they cannot
+    drift again.
+
+    ``id_prefix`` keeps each source's local ids as they were (``""`` for
+    ``cac_nigeria``, ``"ng:"`` for ``eiti_bo``), so every statementId either
+    source published before is unchanged.
+
+    The register keeps every filing with a status. A row is current when it
+    is ACTIVE (or carries no status — the pre-Phase-213 index shape). An
+    owner with any current row gets one relationship built from its current
+    rows only; its earlier INACTIVE filings are superseded declarations of
+    the same holding, not a second one. An owner with no current row left
+    the register: one ``closed`` relationship from all its rows. The CAC
+    publishes no cessation date, so none is invented (no ``endDate``). A
+    filing with no name at all gets its own ``unknownEntity`` party rather
+    than being dropped.
+    """
+    def _is_current(psc: dict[str, Any]) -> bool:
+        return (psc.get("psc_status") or "ACTIVE").upper() == "ACTIVE"
+
+    groups: dict[str, dict[str, Any]] = {}
+    for psc in pscs:
+        owner = (psc.get("owner_name") or "").strip()
+        if owner:
+            key = f"named:{owner}"
+        elif psc.get("owner_named") is False:
+            # A corporate PSC whose name the register does not publish: its
+            # own party per row — two blank rows are not known to be one owner.
+            key = f"unnamed:{psc.get('psc_id')}"
+        else:
+            continue
+        kind = psc.get("owner_kind") or "entity"
+        g = groups.setdefault(key, {
+            "owner": owner, "kind": kind, "psc": psc, "rows": [],
+        })
+        g["rows"].append(psc)
+
+    emitted: set[str] = set()
+    for key, g in groups.items():
+        owner = g["owner"]
+        kind = g["kind"]
+        psc = g["psc"]
+        owner_rc = psc.get("owner_rc") or None
+        juris = psc.get("owner_jurisdiction") or None
+        current_rows = [r for r in g["rows"] if _is_current(r)]
+        closed = not current_rows
+        rows = g["rows"] if closed else current_rows
+        record_kind = "psc_natural_person" if kind == "person" else "psc_corporate"
+        interests = _cac_merge_interests([
+            _cac_interests(r, record_kind=record_kind) for r in rows
+        ])
+
+        if not owner:
+            local_id = f"{id_prefix}entity:{key}:{rc}"
+            if local_id not in emitted:
+                yield make_entity_statement(
+                    source_id=source_id,
+                    local_id=local_id,
+                    name=_CAC_UNNAMED_OWNER,
+                    entity_type="unknownEntity",
+                    entity_details=_CAC_UNNAMED_DETAILS,
+                    source_url=source_url,
+                    statement_date=statement_date,
+                )
+                emitted.add(local_id)
+            ip_id = _stable_id(source_id, "entity", local_id)
+        elif kind == "person":
+            local_id = f"{id_prefix}person:{owner}"
+            nationalities = []
+            nat = psc.get("nationality") or ""
+            co = _country_obj(nat) if nat else None
+            if co:
+                nationalities = [co]
+            if local_id not in emitted:
+                yield make_person_statement(
+                    source_id=source_id,
+                    local_id=local_id,
+                    full_name=owner,
+                    nationalities=nationalities,
+                    source_url=source_url,
+                    statement_date=statement_date,
+                )
+                emitted.add(local_id)
+            ip_id = _stable_id(source_id, "person", local_id)
+        else:
+            entity_type = {
+                "arrangement": "arrangement",
+                "unknown": "unknownEntity",
+            }.get(kind, "registeredEntity")
+            local_id = f"{id_prefix}entity:{owner_rc or owner}"
+            idents = []
+            if owner_rc:
+                idents = [{
+                    "id": str(owner_rc),
+                    "scheme": "NG-CAC",
+                    "schemeName": "Nigeria Corporate Affairs Commission",
+                }]
+            if local_id not in emitted:
+                yield make_entity_statement(
+                    source_id=source_id,
+                    local_id=local_id,
+                    name=owner,
+                    jurisdiction=("Nigeria", "NG") if juris == "NG" else None,
+                    identifiers=idents,
+                    entity_type=entity_type,
+                    source_url=source_url,
+                    statement_date=statement_date,
+                )
+                emitted.add(local_id)
+            ip_id = _stable_id(source_id, "entity", local_id)
+
+        # The pre-Phase-213 local id (``rc:owner``) is kept for a named current
+        # owner, so its relationship statementId is unchanged by the rebuild.
+        rel_local = f"{id_prefix}{rc}:{owner}" if owner else f"{id_prefix}{rc}:{key}"
+        if closed:
+            rel_local += ":closed"
+        yield make_relationship_statement(
+            source_id=source_id,
+            local_id=rel_local,
+            subject_statement_id=subject_id,
+            interested_party_statement_id=ip_id,
+            interested_party_type="person" if kind == "person" else "entity",
+            interests=interests,
+            source_url=source_url,
+            statement_date=statement_date,
+            record_status="closed" if closed else "new",
+        )
+
+
 def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CacNigeriaAdapter bundle to BODS v0.4 statements.
 
@@ -7073,120 +7218,15 @@ def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     yield subject_stmt
     subject_id: str = subject_stmt["statementId"]
 
-    # ── 2. Group PSC rows by owner, emit owners + relationships ───────────
-    # The register keeps every filing with a status. A row is current when it
-    # is ACTIVE (or carries no status — the pre-Phase-213 index shape). An
-    # owner with any current row gets one relationship built from its current
-    # rows only; its earlier INACTIVE filings are superseded declarations of
-    # the same holding, not a second one. An owner with no current row left
-    # the register: one ``closed`` relationship from all its rows. The CAC
-    # publishes no cessation date, so none is invented (no ``endDate``).
-    def _is_current(psc: dict[str, Any]) -> bool:
-        return (psc.get("psc_status") or "ACTIVE").upper() == "ACTIVE"
-
-    groups: dict[str, dict[str, Any]] = {}
-    for psc in record.get("pscs") or []:
-        owner = (psc.get("owner_name") or "").strip()
-        if owner:
-            key = f"named:{owner}"
-        elif psc.get("owner_named") is False:
-            # A corporate PSC whose name the register does not publish: its
-            # own party per row — two blank rows are not known to be one owner.
-            key = f"unnamed:{psc.get('psc_id')}"
-        else:
-            continue
-        kind = psc.get("owner_kind") or "entity"
-        g = groups.setdefault(key, {
-            "owner": owner, "kind": kind, "psc": psc, "rows": [],
-        })
-        g["rows"].append(psc)
-
-    emitted: set[str] = set()
-    for key, g in groups.items():
-        owner = g["owner"]
-        kind = g["kind"]
-        psc = g["psc"]
-        owner_rc = psc.get("owner_rc") or None
-        juris = psc.get("owner_jurisdiction") or None
-        current_rows = [r for r in g["rows"] if _is_current(r)]
-        closed = not current_rows
-        rows = g["rows"] if closed else current_rows
-        record_kind = "psc_natural_person" if kind == "person" else "psc_corporate"
-        interests = _cac_merge_interests([
-            _cac_interests(r, record_kind=record_kind) for r in rows
-        ])
-
-        if not owner:
-            local_id = f"entity:{key}:{rc}"
-            if local_id not in emitted:
-                yield make_entity_statement(
-                    source_id="cac_nigeria",
-                    local_id=local_id,
-                    name=_CAC_UNNAMED_OWNER,
-                    entity_type="unknownEntity",
-                    entity_details=_CAC_UNNAMED_DETAILS,
-                    source_url=source_url,
-                )
-                emitted.add(local_id)
-            ip_id = _stable_id("cac_nigeria", "entity", local_id)
-        elif kind == "person":
-            local_id = f"person:{owner}"
-            nationalities = []
-            nat = psc.get("nationality") or ""
-            co = _country_obj(nat) if nat else None
-            if co:
-                nationalities = [co]
-            if local_id not in emitted:
-                yield make_person_statement(
-                    source_id="cac_nigeria",
-                    local_id=local_id,
-                    full_name=owner,
-                    nationalities=nationalities,
-                    source_url=source_url,
-                )
-                emitted.add(local_id)
-            ip_id = _stable_id("cac_nigeria", "person", local_id)
-        else:
-            entity_type = {
-                "arrangement": "arrangement",
-                "unknown": "unknownEntity",
-            }.get(kind, "registeredEntity")
-            local_id = f"entity:{owner_rc or owner}"
-            idents = []
-            if owner_rc:
-                idents = [{
-                    "id": str(owner_rc),
-                    "scheme": "NG-CAC",
-                    "schemeName": "Nigeria Corporate Affairs Commission",
-                }]
-            if local_id not in emitted:
-                yield make_entity_statement(
-                    source_id="cac_nigeria",
-                    local_id=local_id,
-                    name=owner,
-                    jurisdiction=("Nigeria", "NG") if juris == "NG" else None,
-                    identifiers=idents,
-                    entity_type=entity_type,
-                    source_url=source_url,
-                )
-                emitted.add(local_id)
-            ip_id = _stable_id("cac_nigeria", "entity", local_id)
-
-        # The pre-Phase-213 local id (``rc:owner``) is kept for a named current
-        # owner, so its relationship statementId is unchanged by the rebuild.
-        rel_local = f"{rc}:{owner}" if owner else f"{rc}:{key}"
-        if closed:
-            rel_local += ":closed"
-        yield make_relationship_statement(
-            source_id="cac_nigeria",
-            local_id=rel_local,
-            subject_statement_id=subject_id,
-            interested_party_statement_id=ip_id,
-            interested_party_type="person" if kind == "person" else "entity",
-            interests=interests,
-            source_url=source_url,
-            record_status="closed" if closed else "new",
-        )
+    # ── 2. Owners + relationships (shared with eiti_bo — Phase 231) ──────
+    yield from _cac_owner_statements(
+        source_id="cac_nigeria",
+        id_prefix="",
+        rc=rc,
+        subject_id=subject_id,
+        pscs=record.get("pscs") or [],
+        source_url=source_url,
+    )
 
 
 #: Display name and entityType details for a PSC row with every name field
@@ -9358,9 +9398,10 @@ def _eiti_bo_armenia_subject_orig_id(statements: list[dict[str, Any]]) -> str | 
 def _eiti_bo_map_nigeria(
     bundle: dict[str, Any], record: dict[str, Any]
 ) -> Iterable[dict[str, Any]]:
-    """CAC PSC rows for the NEITI solid-minerals subset — reuses the CAC
-    interest mapping, with the (dated) NEITI filter evidence annotated on the
-    subject so the extractives scoping is auditable."""
+    """CAC PSC rows for the NEITI solid-minerals subset — the cac_nigeria
+    owner grouping (``_cac_owner_statements``), with the (dated) NEITI filter
+    evidence annotated on the subject so the extractives scoping is
+    auditable."""
     cac_record: dict[str, Any] = record.get("nigeria") or {}
     rc: str = str(cac_record.get("rc") or "")
     name: str = (cac_record.get("company") or "").strip()
@@ -9394,84 +9435,18 @@ def _eiti_bo_map_nigeria(
     yield subject_stmt
     subject_id: str = subject_stmt["statementId"]
 
-    groups: dict[str, dict[str, Any]] = {}
-    for psc in cac_record.get("pscs") or []:
-        owner = (psc.get("owner_name") or "").strip()
-        if not owner:
-            continue
-        kind = psc.get("owner_kind") or "entity"
-        g = groups.setdefault(owner, {"kind": kind, "psc": psc, "ilists": []})
-        g["ilists"].append(_cac_interests(
-            psc,
-            record_kind=(
-                "psc_natural_person" if kind == "person" else "psc_corporate"
-            ),
-        ))
-
-    emitted: set[str] = set()
-    for owner, g in groups.items():
-        kind = g["kind"]
-        psc = g["psc"]
-        owner_rc = psc.get("owner_rc") or None
-        juris = psc.get("owner_jurisdiction") or None
-
-        if kind == "person":
-            local_id = f"ng:person:{owner}"
-            nationalities = []
-            nat = psc.get("nationality") or ""
-            co = _country_obj(nat) if nat else None
-            if co:
-                nationalities = [co]
-            if local_id not in emitted:
-                yield make_person_statement(
-                    source_id="eiti_bo",
-                    local_id=local_id,
-                    full_name=owner,
-                    nationalities=nationalities,
-                    source_url=source_url,
-                    statement_date=statement_date,
-                )
-                emitted.add(local_id)
-            ip_id = _stable_id("eiti_bo", "person", local_id)
-            ip_type = "person"
-        else:
-            entity_type = {
-                "arrangement": "arrangement",
-                "unknown": "unknownEntity",
-            }.get(kind, "registeredEntity")
-            local_id = f"ng:entity:{owner_rc or owner}"
-            idents = []
-            if owner_rc:
-                idents = [{
-                    "id": str(owner_rc),
-                    "scheme": "NG-CAC",
-                    "schemeName": "Nigeria Corporate Affairs Commission",
-                }]
-            if local_id not in emitted:
-                yield make_entity_statement(
-                    source_id="eiti_bo",
-                    local_id=local_id,
-                    name=owner,
-                    jurisdiction=("Nigeria", "NG") if juris == "NG" else None,
-                    identifiers=idents,
-                    entity_type=entity_type,
-                    source_url=source_url,
-                    statement_date=statement_date,
-                )
-                emitted.add(local_id)
-            ip_id = _stable_id("eiti_bo", "entity", local_id)
-            ip_type = "entity"
-
-        yield make_relationship_statement(
-            source_id="eiti_bo",
-            local_id=f"ng:{rc}:{owner}",
-            subject_statement_id=subject_id,
-            interested_party_statement_id=ip_id,
-            interested_party_type=ip_type,
-            interests=_cac_merge_interests(g["ilists"]),
-            source_url=source_url,
-            statement_date=statement_date,
-        )
+    # Phase 231: the same grouping as the cac_nigeria card beside it —
+    # current vs closed owners, unnamed corporate owners kept — so one report
+    # cannot show two different CAC pictures of the same company.
+    yield from _cac_owner_statements(
+        source_id="eiti_bo",
+        id_prefix="ng:",
+        rc=rc,
+        subject_id=subject_id,
+        pscs=cac_record.get("pscs") or [],
+        source_url=source_url,
+        statement_date=statement_date,
+    )
 
 
 # ==========================================================================
