@@ -14,6 +14,7 @@ from ..ra_codes import ch_ra_code
 from ..ratelimit import limiter, lookup_tier
 from ..reconcile import reconcile
 from ..risk import assess_hits
+from ..secret_scrub import describe_exception, scrub
 from ..sources import REGISTRY, SearchKind, SourceHit
 from ..sources.schemas import SourceSchemaError
 
@@ -30,10 +31,15 @@ class SearchResponse(BaseModel):
 
 
 def _fmt_source_error(exc: Exception) -> str:
-    """Format a source fetch exception for the errors dict and SSE events."""
+    """Format a source fetch exception for the errors dict and SSE events.
+
+    Never ``str(exc)`` directly: an httpx status error's message is the full
+    request URL, and two adapters authenticate in the query string. See
+    :mod:`opencheck.secret_scrub`.
+    """
     if isinstance(exc, SourceSchemaError):
-        return f"Source API changed — {exc}"
-    return f"{type(exc).__name__}: {exc}"
+        return f"Source API changed — {scrub(str(exc))}"
+    return describe_exception(exc)
 
 
 # The Companies House → LEI bridge needs the GLEIF Registration Authority code
@@ -67,7 +73,7 @@ async def _run_adapters(
         try:
             results[source_id] = await task
         except Exception as exc:  # noqa: BLE001
-            errors[source_id] = f"{type(exc).__name__}: {exc}"
+            errors[source_id] = _fmt_source_error(exc)
             results[source_id] = []
     return results, errors
 

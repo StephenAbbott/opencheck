@@ -486,6 +486,15 @@ table is broken**. A clean changelog is not evidence. Look at the rendered
 ## Other conventions
 
 - API keys go in `.env` only — never committed to the repo.
+- **Never put `str(exc)` or `f"{exc}"` into a response, an SSE event or anything
+  stored** — use `opencheck.secret_scrub.describe_exception(exc)` (or
+  `safe_message(exc)` without the type prefix). httpx puts the full request URL
+  in every `HTTPStatusError`, and CVR (`?apiKey=`) and OpenCorporates
+  (`?api_token=`) authenticate in the query string, so a 401 used to carry the
+  key into `source_error`, the replay cache and saved reports (Phase 233). A
+  status error becomes `HTTPStatusError: HTTP 401 Unauthorized from <host>`;
+  anything else is scrubbed of configured secret values, credential-named query
+  parameters and URL userinfo. `tests/test_secret_scrub.py` pins every sink.
 - Schema files use `extra="allow"` via `_Base` so unknown API fields don't break validation.
 - `validate_raw()` is called at the end of `fetch()` on the fully-assembled bundle, before returning.
 - BODS interest type for **directors/managing officials** is `seniorManagingOfficial`, not `appointmentOfBoard`.
