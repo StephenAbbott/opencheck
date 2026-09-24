@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 241** — every report, MCP summary and batch row now counts what each applicable source said against the same denominator, the check-mode tabs walk by keyboard and every page reflows at 320px, and the design-system lint ratchets raw palette colours and buttons.
+**Latest: Phase 242** — an LEI that has lapsed (with the renewal date it missed), retired or merged now says so beside the LEI, in the identity band, the MCP profile and summary, batch rows and the PDF and Markdown reports, without changing the company's register status.
 
 → [Full development history](docs/status.md)
 
