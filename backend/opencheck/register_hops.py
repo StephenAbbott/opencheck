@@ -52,7 +52,11 @@ class RegisterHop:
 #: District of Columbia's: a Delaware or New York file number carried as
 #: ``REG-US`` would otherwise be looked up in DC, where it either misses or —
 #: worse — reaches an unrelated company that happens to share the number.
-_NO_COUNTRY_ALIAS: frozenset[str] = frozenset({"US-DC"})
+#: ``CA-CORP`` (Phase 239, when RA000072 joined the mapper's table) is the
+#: same case: Corporations Canada holds federal corporations only, and a
+#: provincially incorporated company's number — most Canadian companies — says
+#: nothing about the federal register.
+_NO_COUNTRY_ALIAS: frozenset[str] = frozenset({"US-DC", "CA-CORP"})
 
 
 def _ch_normalise(value: str) -> str:

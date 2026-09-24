@@ -278,11 +278,13 @@ def stage_gleif(args) -> None:
                 "name": e.get("recordDetails_name") or "",
             }
             if e.get("recordDetails_jurisdiction_code") or e.get("recordDetails_jurisdiction_name"):
-                rd["incorporatedInJurisdiction"] = {
+                # BODS v0.4 key (Phase 239), not v0.3's incorporatedInJurisdiction.
+                rd["jurisdiction"] = {
                     "name": e.get("recordDetails_jurisdiction_name")
                     or e.get("recordDetails_jurisdiction_code"),
-                    "code": e.get("recordDetails_jurisdiction_code") or "",
                 }
+                if e.get("recordDetails_jurisdiction_code"):
+                    rd["jurisdiction"]["code"] = e["recordDetails_jurisdiction_code"]
             alt = _alt_names(e.get("recordDetails_alternateNames"))
             if alt:
                 rd["alternateNames"] = alt

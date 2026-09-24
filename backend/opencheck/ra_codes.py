@@ -38,10 +38,12 @@ values, and it is worth knowing before changing anything below.
 
 from __future__ import annotations
 
+import re
 from typing import NamedTuple
 
 __all__ = [
     "RA_BY_COUNTRY",
+    "is_ra_scheme",
     "SUB_REGISTRIES",
     "SubRegistry",
     "ch_ra_code",
@@ -147,3 +149,20 @@ def ra_code_for(country: str, number: str = "") -> str:
                 return rule.ra_code
 
     return default
+
+
+_RA_SCHEME_RE = re.compile(r"^RA\d{6}$")
+
+
+def is_ra_scheme(scheme: str | None) -> bool:
+    """True for an identifier ``scheme`` that is a bare GLEIF Registration
+    Authority code (``RA000473``).
+
+    Since Phase 239 the GLEIF mapper names a registration number it has no
+    org-id scheme for by the RA code that issued it, where it used to leave
+    the scheme blank. Everything that bridged a *blank* scheme to the same
+    number under a register's own label (``JUR:<country>:<number>`` in the
+    reconciler, ``REGISTER:<country>`` in the consistency check) treats an RA
+    code the same way — it is the same number, now with its authority named.
+    """
+    return bool(_RA_SCHEME_RE.match((scheme or "").strip().upper()))

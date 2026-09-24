@@ -433,11 +433,14 @@ def reconstruct_entity_statement(
         "name": e.get("recorddetails_name") or "",
     }
     if e.get("recorddetails_jurisdiction_code") or e.get("recorddetails_jurisdiction_name"):
-        rd["incorporatedInJurisdiction"] = {
+        # BODS v0.4 key (Phase 239) — this wrote v0.3's
+        # ``incorporatedInJurisdiction`` under bodsVersion 0.4 before.
+        rd["jurisdiction"] = {
             "name": e.get("recorddetails_jurisdiction_name")
             or e.get("recorddetails_jurisdiction_code"),
-            "code": e.get("recorddetails_jurisdiction_code") or "",
         }
+        if e.get("recorddetails_jurisdiction_code"):
+            rd["jurisdiction"]["code"] = e["recorddetails_jurisdiction_code"]
     if e.get("recorddetails_foundingdate"):
         rd["foundingDate"] = e["recorddetails_foundingdate"]
     if e.get("recorddetails_dissolutiondate"):

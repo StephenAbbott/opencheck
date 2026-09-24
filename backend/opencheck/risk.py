@@ -131,6 +131,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from .bods import jurisdiction as _bods_jurisdiction
 from .bods.lifecycle import statement_lifecycle
 from .bods.mapper import GLEIF_UNDISCLOSED_REASONS
 from .bods.mapper import _stable_id as _bods_stable_id
@@ -1613,11 +1614,11 @@ def _person_type(stmt: dict[str, Any]) -> str:
 
 
 def _entity_jurisdiction(stmt: dict[str, Any]) -> dict[str, str] | None:
-    rd = _record_details(stmt)
-    j = rd.get("jurisdiction") or stmt.get("incorporatedInJurisdiction")  # v0.4: jurisdiction; v0.3 pass-through: incorporatedInJurisdiction
-    if isinstance(j, dict):
-        return j
-    return None
+    # v0.4 ``recordDetails.jurisdiction``, or v0.3's ``incorporatedInJurisdiction``
+    # from a statement written before Phase 239. This read the legacy key at
+    # the top level, where no writer ever put it, so the FATF / EU high-risk /
+    # non-EU checks never saw an Open Ownership bundle's entities.
+    return _bods_jurisdiction.read(stmt)
 
 
 def _entity_legal_form_fields(stmt: dict[str, Any]) -> list[tuple[str, str]]:

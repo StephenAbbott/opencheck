@@ -170,7 +170,12 @@ def _add_identifiers(props: _Props, identifiers: list[dict[str, Any]], *, person
             continue
         scheme = (ident.get("scheme") or "").strip()
         haystack = f"{scheme} {ident.get('schemeName') or ''}".upper()
-        if "LEI" in haystack or _classify_lei(value):
+        # ``LEI`` as a word, not a substring: "GLEIF" contains it, and the
+        # GLEIF mapper names every registration number's scheme after GLEIF's
+        # Registration Authorities list — so until Phase 239 an unmapped
+        # register number (Equinor's organisation number) went out as a
+        # ``leiCode``.
+        if re.search(r"\bLEI\b", haystack) or _classify_lei(value):
             props.add("leiCode", value)
         elif "WIKIDATA" in haystack:
             props.add("wikidataId", value)

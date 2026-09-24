@@ -49,10 +49,10 @@ _CACHE_NS = "wikidata"
 # interests with ``beneficialOwnershipOrControl: false``.
 _FETCH_QUERY = """
 SELECT ?label ?labelLang ?description ?instance ?instanceLabel
-       ?dob ?dod ?citizenship ?citizenshipLabel
+       ?dob ?dod ?citizenship ?citizenshipLabel ?citizenshipIso
        ?position ?positionLabel ?positionStart ?positionEnd
        ?lei ?openCorporates ?isin
-       ?country ?countryLabel ?inception
+       ?country ?countryLabel ?countryIso ?inception
        ?parentOrg ?parentOrgLabel ?ownedBy ?ownedByLabel
 WHERE {
   BIND(wd:%(qid)s AS ?qid)
@@ -65,7 +65,10 @@ WHERE {
   OPTIONAL { ?qid wdt:P31 ?instance }
   OPTIONAL { ?qid wdt:P569 ?dob }
   OPTIONAL { ?qid wdt:P570 ?dod }
-  OPTIONAL { ?qid wdt:P27 ?citizenship }
+  OPTIONAL {
+    ?qid wdt:P27 ?citizenship
+    OPTIONAL { ?citizenship wdt:P297 ?citizenshipIso }
+  }
   OPTIONAL {
     ?qid p:P39 ?positionStmt .
     ?positionStmt ps:P39 ?position .
@@ -75,7 +78,10 @@ WHERE {
   OPTIONAL { ?qid wdt:P1278 ?lei }
   OPTIONAL { ?qid wdt:P1320 ?openCorporates }
   OPTIONAL { ?qid wdt:P946 ?isin }
-  OPTIONAL { ?qid wdt:P17 ?country }
+  OPTIONAL {
+    ?qid wdt:P17 ?country
+    OPTIONAL { ?country wdt:P297 ?countryIso }
+  }
   OPTIONAL { ?qid wdt:P571 ?inception }
   OPTIONAL { ?qid wdt:P749 ?parentOrg }
   OPTIONAL { ?qid wdt:P127 ?ownedBy }
@@ -728,9 +734,11 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
     inception = None
     country_qid = None
     country_label = None
+    country_iso = None
 
     instance_of: dict[str, str] = {}
     citizenships: dict[str, str] = {}
+    citizenship_iso: dict[str, str] = {}  # qid → ISO 3166-1 alpha-2 (P297)
     positions: dict[str, dict[str, Any]] = {}
     identifiers: dict[str, str] = {}
     parent_orgs: dict[str, str] = {}  # qid → label, merged from P749 + P127
@@ -752,6 +760,10 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
         if c_uri and not country_qid:
             country_qid = _qid_from_uri(c_uri)
             country_label = c_lbl
+        # P297 of the P17 value, read only for the country chosen above: a
+        # row pairs each ?country with its own ?countryIso.
+        if c_uri and country_qid == _qid_from_uri(c_uri) and not country_iso:
+            country_iso = _bv(row, "countryIso")
 
         inst_uri = _bv(row, "instance")
         inst_lbl = _bv(row, "instanceLabel")
@@ -766,6 +778,9 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
             ctz_qid = _qid_from_uri(ctz_uri)
             if ctz_qid:
                 citizenships[ctz_qid] = ctz_lbl or ctz_qid
+                ctz_iso = _bv(row, "citizenshipIso")
+                if ctz_iso and ctz_qid not in citizenship_iso:
+                    citizenship_iso[ctz_qid] = ctz_iso
 
         pos_uri = _bv(row, "position")
         pos_lbl = _bv(row, "positionLabel")
@@ -828,13 +843,21 @@ def _summarise_bindings(qid: str, bindings: list[dict[str, Any]]) -> dict[str, A
         "instance_of": [
             {"qid": i, "label": lbl} for i, lbl in instance_of.items()
         ],
+        # ``iso`` is the country's own ISO 3166-1 alpha-2 code (P297), present
+        # only where Wikidata states one (Phase 239). The BODS mapper reads it
+        # in preference to parsing the label, and never uses the Q-ID as a code.
         "citizenships": [
-            {"qid": c, "label": lbl} for c, lbl in citizenships.items()
+            {"qid": c, "label": lbl, **({"iso": citizenship_iso[c]} if c in citizenship_iso else {})}
+            for c, lbl in citizenships.items()
         ],
         "positions": list(positions.values()),
         "identifiers": identifiers,
         "country": (
-            {"qid": country_qid, "label": country_label}
+            {
+                "qid": country_qid,
+                "label": country_label,
+                **({"iso": country_iso} if country_iso else {}),
+            }
             if country_qid else None
         ),
         "dob": dob,

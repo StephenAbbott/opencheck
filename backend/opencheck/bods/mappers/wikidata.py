@@ -7,6 +7,7 @@ and emits statements through the shared factories.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pycountry
@@ -179,12 +180,14 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
     if summary.get("is_person"):
         nationalities: list[dict[str, str]] = []
         for citizenship in summary.get("citizenships") or []:
-            country_qid = citizenship.get("qid")
-            country_label = citizenship.get("label") or country_qid
-            if country_qid and country_label:
-                nationalities.append(
-                    {"name": country_label, "code": country_qid}
-                )
+            # Until Phase 239 the Q-ID went into ``code`` ("Q145"), which
+            # no ISO consumer — the PEP/nationality screens, the exports —
+            # could read. Now ISO 3166-1 alpha-2 or no code at all.
+            resolved = _wikidata_country(citizenship)
+            if resolved is None:
+                continue
+            name, code = resolved
+            nationalities.append({"name": name, **({"code": code} if code else {})})
 
         person = make_person_statement(
             source_id="wikidata",
@@ -360,24 +363,53 @@ def _normalise_wikidata_date(value: str | None) -> str | None:
     return cleaned or None
 
 
-def _wikidata_jurisdiction(country: dict[str, Any]) -> tuple[str, str] | None:
-    """Resolve a Wikidata ``country`` object to a ``(name, ISO code)`` tuple.
+_QID_RE = re.compile(r"^Q\d+$")
 
-    Wikidata's P17 returns a Q-ID — we use the country's English label
-    and pass it through pycountry to recover the alpha-2 code so the
-    BODS jurisdiction block carries an ISO code (matching every other
-    source). When the lookup fails we fall back to the raw label/Q-ID.
+
+def _wikidata_country(country: dict[str, Any]) -> tuple[str, str | None] | None:
+    """Resolve a Wikidata country object to ``(name, ISO 3166-1 alpha-2)``.
+
+    ``country`` is a ``{"qid", "label", "iso"?}`` summary for a P17 (country)
+    or P27 (citizenship) value. The code comes from, in order:
+
+    1. ``iso`` — the country item's own P297 (ISO 3166-1 alpha-2), which the
+       adapter's SPARQL reads alongside it. This is the only reliable route:
+       pycountry cannot parse Wikidata's labels for Russia, Turkey, the DRC,
+       Brunei, Cape Verde, Côte d'Ivoire or Palestine.
+    2. pycountry on the English label, for a summary cached before the
+       adapter read P297.
+    3. Nothing — the name alone. **Never the Q-ID** (Phase 239): until then a
+       failed parse fell back to it, so Rosneft exported
+       ``{"name": "Russia", "code": "Q159"}``, the knowability chain printed
+       "Q159", and the FATF / EU high-risk checks, which match on ISO codes,
+       skipped it.
+
+    ``None`` when there is no usable name either (no label, or a label that is
+    itself a Q-ID because Wikidata has no English one).
     """
     if not country:
         return None
-    name = country.get("label")
-    if not name:
-        return None
-    try:
-        match = pycountry.countries.lookup(name)
-    except LookupError:
-        return (name, country.get("qid", name))
-    return (match.name, match.alpha_2)
+    name = country.get("label") or ""
+    iso = (country.get("iso") or "").strip().upper()
+    match = None
+    if iso:
+        match = pycountry.countries.get(alpha_2=iso)
+    if match is None and name and not _QID_RE.match(name):
+        try:
+            match = pycountry.countries.lookup(name)
+        except LookupError:
+            match = None
+    code = match.alpha_2 if match is not None else None
+    if not name or _QID_RE.match(name):
+        if match is None:
+            return None
+        name = getattr(match, "common_name", None) or match.name
+    return (name, code)
+
+
+def _wikidata_jurisdiction(country: dict[str, Any]) -> tuple[str, str | None] | None:
+    """The entity's P17 country as a BODS ``(name, code)`` jurisdiction."""
+    return _wikidata_country(country)
 
 
 _OC_POSITION_TO_INTEREST_TYPE: dict[str, str] = {
@@ -813,7 +845,7 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
             "gb": "GB-COH", "nl": "NL-KVK", "se": "SE-BLV", "no": "NO-BRC",
             "fr": "FR-RCS", "be": "BE-BCE_KBO", "at": "AT-FB", "ch": "CH-FDJP",
             "pl": "PL-KRS", "cz": "CZ-ICO", "sk": "SK-ORSR", "lt": "LT-RC",
-            "lv": "LV-RE", "ee": "EE-KMKR", "sg": "SG-ACRA", "ca": "CA-CC",
+            "lv": "LV-RE", "ee": "EE-ARIREGISTER", "sg": "SG-ACRA", "ca": "CA-CC",
         }
         top_jur = jurisdiction_code.split("_")[0].lower()
         jur_scheme = _OC_JUR_TO_ORGID.get(top_jur) or f"{top_jur.upper()}-COA"

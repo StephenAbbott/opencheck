@@ -329,6 +329,27 @@ describe("reconcileBods", () => {
     expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(1);
   });
 
+  it("bridges a GLEIF RA-code scheme exactly as it bridged the blank one (Phase 239)", () => {
+    // The GLEIF mapper now names an unmapped authority by its RA code rather
+    // than leaving the scheme blank; the same number must still meet the
+    // register's own record.
+    const { statements } = reconcileBods([
+      {
+        statementId: "gleif", recordType: "entity",
+        recordDetails: { name: "Equinor ASA", jurisdiction: { code: "NO" },
+          identifiers: [{ scheme: "RA000473", id: "923609016" }] },
+        source: { description: "GLEIF" },
+      },
+      {
+        statementId: "brreg", recordType: "entity",
+        recordDetails: { name: "EQUINOR ASA", jurisdiction: { code: "NO" },
+          identifiers: [{ scheme: "NO-BRC", id: "923609016" }] },
+        source: { description: "Brønnøysund Register Centre" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(1);
+  });
+
   it("identical scheme+value still merges even for non-register schemes", () => {
     // Scheme-scoped merging is untouched by the bridge whitelist: two sources
     // asserting the SAME US-SEC-CIK are the same entity.

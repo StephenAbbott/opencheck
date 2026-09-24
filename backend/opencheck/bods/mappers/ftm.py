@@ -661,7 +661,7 @@ def _ftm_resolve_nationality(raw: str) -> dict[str, str]:
         return {"name": raw.strip()}
 
 
-def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str] | None:
+def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str | None] | None:
     """Resolve a FtM jurisdiction/country property array to ``(name, alpha-2)``.
 
     FtM stores jurisdiction as an array of strings that may be ISO 3166-1
@@ -676,8 +676,15 @@ def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str] | None:
         country = pycountry.countries.lookup(jur.strip())
         return (country.name, country.alpha_2)
     except LookupError:
-        # Unknown/custom jurisdiction — surface as-is so it's not silently lost.
-        return (jur.strip(), _country_code(jur) or jur.strip())
+        # Unknown/custom jurisdiction — keep the name so it is not silently
+        # lost, but give a code only when one resolves: ``jurisdiction.code``
+        # is ISO 3166 or absent (Phase 239). This used to fall back to the raw
+        # string, so an OpenAleph "BVI" went out as ``code: "BVI"`` and the
+        # EU high-risk / non-EU checks skipped it.
+        code = _country_code(jur)
+        if not code and pycountry.subdivisions.get(code=jur.strip().upper()):
+            code = jur.strip().upper()
+        return (jur.strip(), code or None)
 
 
 def _ftm_identifiers(
@@ -698,9 +705,10 @@ def _ftm_identifiers(
     if jur_raw:
         try:
             alpha2 = pycountry.countries.lookup(jur_raw.strip()).alpha_2
-            reg_scheme = f"REG-{alpha2}"
         except LookupError:
-            pass
+            alpha2 = _country_code(jur_raw)
+        if alpha2:
+            reg_scheme = f"REG-{alpha2}"
 
     for key, scheme, name in (
         ("leiCode", "XI-LEI", "Legal Entity Identifier"),

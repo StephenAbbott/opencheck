@@ -108,6 +108,10 @@ function isRegisterLikeScheme(scheme: string): boolean {
     .every((seg) => !NON_REGISTER_SEGMENTS.has(seg));
 }
 
+/** A GLEIF Registration Authority code used as an identifier scheme.
+ *  Mirrors `is_ra_scheme` in backend/opencheck/ra_codes.py. */
+const RA_SCHEME = /^RA\d{6}$/;
+
 const GLEIF_RECORD_URL = /^https:\/\/search\.gleif\.org\/#\/record\/([0-9A-Z]{18}[0-9]{2})$/;
 
 /** The LEI a statement is *matched* to, when it asserts no identifier of its
@@ -161,9 +165,15 @@ function identKeys(s: Stmt): string[] {
     // entity's company number in the same jurisdiction never merges them.
     // Non-register identifiers still merge scheme-scoped (`XI-VAT:value`
     // etc.), since an identical scheme+value means the same entity.
+    // A bare GLEIF Registration Authority code (`RA000473`) is GLEIF's
+    // registration number with its issuing authority named — the backend
+    // mapper's fallback since Phase 239, where the scheme used to be blank —
+    // so it bridges exactly as the blank scheme did.
     if (
       jur &&
-      (scheme === "" || (scheme.startsWith(`${jur}-`) && isRegisterLikeScheme(scheme))) &&
+      (scheme === "" ||
+        RA_SCHEME.test(scheme) ||
+        (scheme.startsWith(`${jur}-`) && isRegisterLikeScheme(scheme))) &&
       !val.includes("/")
     ) {
       keys.push(`JUR:${jur}:${val}`);

@@ -34,6 +34,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .bods import jurisdiction as _jurisdiction
 from .cache import data_root
 
 #: Display names stamped onto bundle statements whose ``source`` block lacks a
@@ -91,7 +92,7 @@ def load_bundle(source: str, key: str) -> list[dict[str, Any]] | None:
                     f"{path}:{line_no}: invalid JSON in BODS bundle"
                 ) from exc
             # The statements stay verbatim-Open-Ownership except for one
-            # display annotation: a missing ``source.description`` gets the
+            # display annotation and the key rename below: a missing ``source.description`` gets the
             # canonical source name so downstream provenance labels (the
             # narrative packet's citation chips) never fall back to the
             # anonymous "an OpenCheck source". An existing description is
@@ -102,6 +103,12 @@ def load_bundle(source: str, key: str) -> list[dict[str, Any]] | None:
                     statement["source"] = {"description": description}
                 elif isinstance(src, dict) and not src.get("description"):
                     src["description"] = description
+            # The one structural change: bundles extracted before Phase 239
+            # carry v0.3's ``incorporatedInJurisdiction`` under a v0.4
+            # ``bodsVersion``. Served as ``jurisdiction``, so the risk
+            # engine and every export read one key.
+            if isinstance(statement, dict):
+                _jurisdiction.upgrade(statement)
             statements.append(statement)
     return statements
 

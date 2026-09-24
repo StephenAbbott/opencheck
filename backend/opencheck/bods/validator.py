@@ -71,6 +71,86 @@ def entity_subtype_issue(record_details: dict[str, Any]) -> str | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# The risk engine's input contract (Phase 239)
+# ---------------------------------------------------------------------------
+#
+# The FATF, EU high-risk-third-country and non-EU checks match an entity's
+# ``jurisdiction.code`` against ISO lists, and GLEIF and a register can only
+# corroborate a number that both label with a scheme. Three failures reached
+# production because nothing checked those inputs: two adapters wrote v0.3's
+# ``incorporatedInJurisdiction`` (the risk engine never saw 225 of BP's
+# entities), Wikidata wrote Q-IDs as country codes (Rosneft "Q159"), and the
+# GLEIF mapper exported registration numbers with ``scheme: ""``.
+# ``tests/_entity_subtype_guard.py`` runs these checks over every statement
+# every source mapper produces in the suite.
+
+#: v0.3 field names that must not appear under a v0.4 ``bodsVersion``.
+V03_ENTITY_KEYS: frozenset[str] = frozenset({"incorporatedInJurisdiction"})
+
+
+def is_iso_jurisdiction_code(code: str) -> bool:
+    """ISO 3166-1 alpha-2 (``GB``) or an ISO 3166-2 subdivision (``US-DE``)."""
+    import pycountry
+
+    if not isinstance(code, str) or code != code.strip().upper():
+        return False
+    if len(code) == 2:
+        return pycountry.countries.get(alpha_2=code) is not None
+    if "-" in code:
+        return pycountry.subdivisions.get(code=code) is not None
+    return False
+
+
+def is_iso_country_code(code: str) -> bool:
+    """ISO 3166-1 alpha-2 only — a nationality is a country, not a subdivision."""
+    return isinstance(code, str) and len(code) == 2 and is_iso_jurisdiction_code(code)
+
+
+def jurisdiction_input_issues(
+    stmt: dict[str, Any], *, identifier_schemes: bool = True
+) -> list[str]:
+    """Why a statement breaks the risk engine's input contract; ``[]`` if not.
+
+    * an entity's ``jurisdiction.code``, where present, is ISO 3166-1 alpha-2
+      or ISO 3166-2 (``code`` is optional; a stand-in such as a Q-ID is not);
+    * a person's ``nationalities[].code``, where present, is ISO 3166-1 alpha-2;
+    * every identifier with an ``id`` has a non-blank ``scheme``;
+    * no v0.3 field name (``incorporatedInJurisdiction``) under v0.4.
+
+    ``identifier_schemes=False`` skips the scheme rule, for a publisher's own
+    BODS carried verbatim (MEIP: the OECD files OpenCorporates ids with a
+    ``schemeName`` and no ``scheme``, and OpenCheck does not rewrite what the
+    OECD published). Jurisdiction codes are still checked: they are what the
+    risk engine reads.
+    """
+    if not isinstance(stmt, dict):
+        return []
+    issues: list[str] = []
+    rd = stmt.get("recordDetails")
+    rd = rd if isinstance(rd, dict) else {}
+    for key in sorted(V03_ENTITY_KEYS):
+        if key in rd or key in stmt:
+            issues.append(f"v0.3 field {key!r} under BODS v0.4 (the v0.4 key is 'jurisdiction')")
+    record_type = stmt.get("recordType")
+    if record_type == "entity":
+        jur = rd.get("jurisdiction")
+        if isinstance(jur, dict) and "code" in jur and not is_iso_jurisdiction_code(jur["code"]):
+            issues.append(
+                f"jurisdiction.code {jur['code']!r} is not ISO 3166-1 alpha-2 or 3166-2"
+            )
+    if record_type == "person":
+        for nat in rd.get("nationalities") or []:
+            if isinstance(nat, dict) and "code" in nat and not is_iso_country_code(nat["code"]):
+                issues.append(f"nationalities[].code {nat['code']!r} is not ISO 3166-1 alpha-2")
+    for ident in (rd.get("identifiers") or []) if identifier_schemes else []:
+        if not isinstance(ident, dict):
+            continue
+        if str(ident.get("id") or "").strip() and not str(ident.get("scheme") or "").strip():
+            issues.append(f"identifier {ident.get('id')!r} has no scheme")
+    return issues
+
+
 _VALID_PERSON_TYPES = {"knownPerson", "anonymousPerson", "unknownPerson"}
 # Complete BODS v0.4 interestType codelist.
 # Source: https://raw.githubusercontent.com/openownership/data-standard/main/schema/codelists/interestType.csv
