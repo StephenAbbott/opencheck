@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 239** — the risk engine now reads every entity's jurisdiction as an ISO code and every registration number with a scheme, and a registry-wide test holds every source mapper to that contract.
+**Latest: Phase 241** — every report, MCP summary and batch row now counts what each applicable source said against the same denominator, the check-mode tabs walk by keyboard and every page reflows at 320px, and the design-system lint ratchets raw palette colours and buttons.
 
 → [Full development history](docs/status.md)
 
