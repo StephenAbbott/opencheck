@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 244** — a slow or failing Wikidata Query Service no longer fails the whole lookup: the check completes with every other source and reports Wikidata as not answering.
+**Latest: Phase 245** — the report opens on a two-sentence verdict (finding first, structure second), states each fact once, puts the mode tabs on the first screen at desktop and phone widths, and keeps one primary button per panel.
 
 → [Full development history](docs/status.md)
 
