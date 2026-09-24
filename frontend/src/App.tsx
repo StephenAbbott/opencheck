@@ -222,6 +222,9 @@ export default function App() {
   // renders `source_started` / `source_completed` / `source_error`, so it needs
   // the started set the stream was already sending and nothing was reading.
   const [startedSources, setStartedSources] = useState<Set<string>>(new Set());
+  // Phase 238: where this run stands in the server's queue while it waits for
+  // a pipeline slot (the `queued` event). Null when it is not waiting.
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
   // Derived rather than stored: `errors` is already the record of which sources
   // failed, and a second set could disagree with it.
   const erroredSources = useMemo(() => new Set(Object.keys(errors)), [errors]);
@@ -607,6 +610,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setApplicableSources([]);
     setCompletedSources(new Set());
     setStartedSources(new Set());
+    setQueuePosition(null);
     setPanelErrors([]);
     setIdentityOpen(false);
     // A chip selection belongs to the entity it was made on. Carried into
@@ -651,6 +655,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       // Served from the backend replay cache — badge the result with the
       // original completion time so a cached run never looks live.
       onReplayed: (e) => setReplayedAt(e.fetched_at),
+      onQueued: (e) => setQueuePosition(e.position),
       onGleifDone: (e) => {
         anchored = true;
         setStreamingLei(e.lei);
@@ -1537,6 +1542,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // a new one gets missed: a stale panel-error notice would sit on an empty
     // landing page saying "this report" when there is no report.
     setStartedSources(new Set());
+    setQueuePosition(null);
     setPanelErrors([]);
     setIdentityOpen(false);
     setExportError(null);
@@ -2279,6 +2285,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             started={startedSources}
             completed={completedSources}
             errored={erroredSources}
+            queuePosition={queuePosition}
           />
         )}
 

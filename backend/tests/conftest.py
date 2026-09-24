@@ -88,13 +88,17 @@ def _clear_lookup_replay_cache():
 
     from opencheck import lookup_budget as _budget
 
+    from opencheck import pipelinestats as _pstats
+
     _lookup_mod._REPLAY_CACHE.clear()
     _lookup_mod._IN_FLIGHT.clear()
     _budget.reset_for_tests()
+    _pstats.reset()
     yield
     _lookup_mod._REPLAY_CACHE.clear()
     _lookup_mod._IN_FLIGHT.clear()
     _budget.reset_for_tests()
+    _pstats.reset()
 
 
 @pytest.fixture(autouse=True)

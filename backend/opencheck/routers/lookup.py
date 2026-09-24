@@ -9,6 +9,8 @@ import re
 import time
 from dataclasses import dataclass, field as dc_field
 from datetime import date, datetime, timezone
+from collections import deque
+from collections.abc import Awaitable, Callable
 from typing import Any, Literal, AsyncIterator, Iterable, NamedTuple
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -27,6 +29,7 @@ from ..bods import BODSBundle, unique_statements, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
 from .. import lookup_budget as _lookup_budget
+from .. import pipelinestats as _pipelinestats
 from ..config import get_settings
 from ..secret_scrub import describe_exception, scrub
 from ..cross_check import NameScreen, assess_cross_source_names
@@ -1760,6 +1763,15 @@ def _invalidate_replay(lei: str) -> None:
 # ``lookup_queue_wait_s`` ends in a 503 error event and its charge is
 # refunded.
 #
+# Phase 238: the queue is first come, first served, a run started from the
+# interactive stream waits ``lookup_stream_queue_wait_s`` (5 min) rather than
+# 60 s, and while it waits the flight carries ``queued`` events with its place
+# in the queue — the loading grid says "waiting for a free slot" instead of
+# failing. Those events are about the wait, not the run, so they never reach
+# the replay cache or a saved report (``_TRANSIENT_EVENTS``). Every admission,
+# refusal, wait and run time is counted in ``pipelinestats`` and served as the
+# ``pipelines`` section of ``/signalstats``.
+#
 # A follower that goes away (an SSE tab closed) does not cancel the flight:
 # the run completes and lands in the replay cache, which is where the next
 # visitor finds it. The budget and the gate bound how many such runs exist.
@@ -1780,35 +1792,118 @@ def clamp_deepen_top(deepen_top: Any) -> int:
 
 
 class _PipelineBusyError(Exception):
-    pass
+    def __init__(self, waited_s: float = 0.0) -> None:
+        super().__init__()
+        self.waited_s = waited_s
+
+
+#: How often a queued run re-reads its place in the queue, and tells the
+#: reader with a ``queued`` event if it has moved (Phase 238).
+_QUEUE_POLL_S = 3.0
+
+
+class _Waiter:
+    __slots__ = ("future",)
+
+    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
+        self.future: asyncio.Future[None] = loop.create_future()
 
 
 class _PipelineGate:
-    """Counts pipelines in flight. Bound to one event loop (the test suite
-    runs several), so it is rebuilt when the loop changes."""
+    """Counts pipelines in flight and queues the rest, first come first served.
+
+    Phase 238 replaced an ``asyncio.Condition`` here: every release woke every
+    waiter to race for the slot, so a run that arrived a second ago could take
+    it from one that had waited fifty, and nothing could say where a run stood.
+    Now a released slot is handed straight to the oldest waiter, and a
+    waiter's position is its place in :attr:`waiters` — what the ``queued``
+    event reports to the loading grid.
+
+    Bound to one event loop (the test suite runs several), so it is rebuilt
+    when the loop changes.
+    """
 
     def __init__(self) -> None:
         self.loop = asyncio.get_running_loop()
         self.active = 0
-        self.cond = asyncio.Condition()
+        self.limit = 0
+        self.waiters: deque[_Waiter] = deque()
 
-    async def acquire(self, limit: int, max_wait: float) -> None:
-        if limit <= 0:
+    @property
+    def queued(self) -> int:
+        return len(self.waiters)
+
+    def position(self, waiter: _Waiter) -> int:
+        """1 = next to run; 0 = not queued."""
+        try:
+            return self.waiters.index(waiter) + 1
+        except ValueError:
+            return 0
+
+    async def acquire(
+        self,
+        limit: int,
+        max_wait: float,
+        on_queued: Callable[[int], Awaitable[None]] | None = None,
+    ) -> float:
+        """Take a slot and return the seconds spent waiting for it.
+
+        ``on_queued(position)`` is awaited when the run joins the queue and
+        whenever its position changes. Raises :class:`_PipelineBusyError`
+        after ``max_wait`` seconds without a slot.
+        """
+        self.limit = limit
+        if limit <= 0 or (self.active < limit and not self.waiters):
             self.active += 1
+            return 0.0
+        waiter = _Waiter(self.loop)
+        self.waiters.append(waiter)
+        started = self.loop.time()
+        deadline = started + max(max_wait, 0.0)
+        last = 0
+        try:
+            while not waiter.future.done():
+                pos = self.position(waiter)
+                if on_queued is not None and pos != last:
+                    last = pos
+                    await on_queued(pos)
+                    continue  # the push yielded; re-read before sleeping
+                remaining = deadline - self.loop.time()
+                if remaining <= 0:
+                    break
+                # ``asyncio.wait``, not ``wait_for``: it never cancels the
+                # future on a timeout, and a cancellation of this task always
+                # arrives as CancelledError — ``wait_for`` can swallow one
+                # that lands as the slot is handed over.
+                await asyncio.wait((waiter.future,), timeout=min(remaining, _QUEUE_POLL_S))
+        except BaseException:
+            self._abandon(waiter)
+            raise
+        if waiter.future.done():
+            return self.loop.time() - started
+        self._abandon(waiter)
+        raise _PipelineBusyError(self.loop.time() - started)
+
+    def _abandon(self, waiter: _Waiter) -> None:
+        """A waiter leaving without running: drop it from the queue, or pass
+        on the slot it was handed as it left."""
+        if waiter.future.done() and not waiter.future.cancelled():
+            self.release()
             return
-        async with self.cond:
-            try:
-                await asyncio.wait_for(
-                    self.cond.wait_for(lambda: self.active < limit), timeout=max(max_wait, 0.0)
-                )
-            except asyncio.TimeoutError as exc:
-                raise _PipelineBusyError from exc
-            self.active += 1
+        waiter.future.cancel()
+        try:
+            self.waiters.remove(waiter)
+        except ValueError:
+            pass
 
-    async def release(self) -> None:
-        async with self.cond:
-            self.active -= 1
-            self.cond.notify_all()
+    def release(self) -> None:
+        self.active -= 1
+        while self.waiters and (self.limit <= 0 or self.active < self.limit):
+            waiter = self.waiters.popleft()
+            if waiter.future.done():
+                continue
+            self.active += 1
+            waiter.future.set_result(None)
 
 
 _GATE: _PipelineGate | None = None
@@ -1824,6 +1919,11 @@ def _gate() -> _PipelineGate:
 def pipelines_running() -> int:
     """Pipelines in flight in this process (``/memstats`` and tests)."""
     return _GATE.active if _GATE is not None else 0
+
+
+def pipelines_queued() -> int:
+    """Runs waiting for a slot in this process (tests)."""
+    return _GATE.queued if _GATE is not None else 0
 
 
 class _Flight:
@@ -1867,6 +1967,21 @@ _IN_FLIGHT: dict[str, _Flight] = {}
 #: was spent on a malformed LEI (400), or on a run refused a slot (503).
 _REFUNDED_STATUSES = frozenset({400, 503})
 
+#: Events about the *wait*, not the run (Phase 238). Followers see them while
+#: the run is in the air; the replay cache — and so a saved report — keeps
+#: only what the run found.
+_TRANSIENT_EVENTS = frozenset({"queued"})
+
+
+def _queue_wait_for(kind: str | None) -> float:
+    """How long a fresh run started by ``kind`` may queue for a slot. The
+    interactive stream waits longest, because the loading grid shows the
+    reader that it is waiting and where it stands (Phase 238)."""
+    settings = get_settings()
+    if kind == "stream":
+        return max(settings.lookup_stream_queue_wait_s, settings.lookup_queue_wait_s)
+    return settings.lookup_queue_wait_s
+
 
 async def _run_flight(
     key: str, lei: str, deepen_top: int, flight: _Flight, stored: float, charged: str | None
@@ -1874,10 +1989,30 @@ async def _run_flight(
     settings = get_settings()
     completed_at: str | None = None
     gate = _gate()
+    kind = _lookup_budget.current_caller_kind()
+    max_wait = _queue_wait_for(kind)
+    joined_queue = False
+
+    async def _on_queued(position: int) -> None:
+        nonlocal joined_queue
+        if not joined_queue:
+            joined_queue = True
+            _pipelinestats.record_queued(kind, gate.queued)
+        await flight.push((
+            "queued",
+            {
+                "position": position,
+                "running": gate.active,
+                "limit": gate.limit,
+                "max_wait_s": int(max_wait),
+            },
+        ))
+
     try:
         try:
-            await gate.acquire(settings.lookup_max_concurrent, settings.lookup_queue_wait_s)
-        except _PipelineBusyError:
+            waited = await gate.acquire(settings.lookup_max_concurrent, max_wait, _on_queued)
+        except _PipelineBusyError as exc:
+            _pipelinestats.record_refused(kind, exc.waited_s, gate.queued)
             _lookup_budget.refund(charged)
             await flight.push((
                 "error",
@@ -1891,28 +2026,42 @@ async def _run_flight(
                 },
             ))
             return
+        admitted = time.monotonic()
+        _pipelinestats.record_admitted(kind, waited, gate.active, gate.queued)
+        finished = False
         try:
             async for event in _lookup_pipeline(lei, deepen_top=deepen_top):
-                if event[0] == "done":
+                name, payload = event
+                if name in ("source_completed", "source_error") and isinstance(payload, dict):
+                    _pipelinestats.record_source(
+                        payload.get("source_id"),
+                        time.monotonic() - admitted,
+                        timed_out=payload.get("error_type") == "timeout",
+                    )
+                if name == "done":
                     # Phase 216: the run names itself on its last event, so a
                     # client holding a live (not replayed) run can still say
                     # which run it is looking at when it asks to save it.
                     # Stamped here, once, and buffered with the stamp — a
                     # replay repeats the same value.
                     completed_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-                    event = ("done", {**event[1], "run_completed_at": completed_at})
-                elif event[0] == "error" and event[1].get("status") in _REFUNDED_STATUSES:
+                    event = ("done", {**payload, "run_completed_at": completed_at})
+                    finished = True
+                elif name == "error" and payload.get("status") in _REFUNDED_STATUSES:
                     _lookup_budget.refund(charged)
                 await flight.push(event)
         finally:
-            await gate.release()
+            held = time.monotonic() - admitted
+            gate.release()
+            _pipelinestats.record_released(kind, held, gate.active, gate.queued)
+            _pipelinestats.record_run(held, completed=finished)
         if completed_at is not None:
             while len(_REPLAY_CACHE) >= _REPLAY_MAX_ENTRIES:
                 _REPLAY_CACHE.pop(next(iter(_REPLAY_CACHE)), None)
             _REPLAY_CACHE[key] = _ReplayEntry(
                 stored=stored,
                 fetched_at=completed_at,
-                events=list(flight.events),
+                events=[e for e in flight.events if e[0] not in _TRANSIENT_EVENTS],
             )
     except BaseException as exc:  # noqa: BLE001 — handed to every follower
         flight.exc = exc

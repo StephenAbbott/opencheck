@@ -201,6 +201,14 @@ class Settings(BaseSettings):
     # a fresh run may queue for a slot before it is refused with a 503.
     lookup_max_concurrent: int = Field(default=4, alias="OPENCHECK_LOOKUP_MAX_CONCURRENT")
     lookup_queue_wait_s: float = Field(default=60.0, alias="OPENCHECK_LOOKUP_QUEUE_WAIT_S")
+    # Phase 238: a run started from the interactive stream (/lookup-stream)
+    # waits this long instead, because the loading grid tells the reader it
+    # is waiting and where it is in the queue. Every other caller keeps
+    # ``lookup_queue_wait_s``: a JSON client, a batch row or an MCP tool has
+    # nothing to show while it waits, and a 503 with Retry-After is clearer.
+    lookup_stream_queue_wait_s: float = Field(
+        default=300.0, alias="OPENCHECK_LOOKUP_STREAM_QUEUE_WAIT_S"
+    )
     # How long a batch row (REST or MCP) waits for the caller's lookup budget
     # to free before the row is reported failed. Interactive callers never
     # wait — they get a 429 with Retry-After.

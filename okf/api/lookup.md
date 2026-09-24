@@ -38,7 +38,10 @@ tools. A run replayed from the 15-minute cache, or joined while another
 caller's run of the same LEI is in flight, is free. A spent budget answers
 `429` with `Retry-After` (on the stream, an `error` event carrying
 `retry_after_s`); a process already running its maximum of concurrent
-pipelines answers `503` after a bounded queue.
+pipelines answers `503` after a bounded queue (60 s). The stream waits
+longer (5 min) and sends `queued` events — `position` (1 = next), `running`,
+`limit`, `max_wait_s` — while it does; they are about the wait, not the run,
+and never appear in a replay or a saved report.
 
 # Response
 

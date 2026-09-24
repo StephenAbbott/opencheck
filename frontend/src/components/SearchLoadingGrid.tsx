@@ -56,6 +56,7 @@ export default function SearchLoadingGrid({
   started,
   completed,
   errored,
+  queuePosition = null,
 }: {
   /** The registry, used only to put a display name on a chip. */
   sources: SourceInfo[];
@@ -64,6 +65,8 @@ export default function SearchLoadingGrid({
   started?: ReadonlySet<string>;
   completed?: ReadonlySet<string>;
   errored?: ReadonlySet<string>;
+  /** Phase 238: position in the server's queue, from the `queued` event. */
+  queuePosition?: number | null;
 }) {
   const empty: ReadonlySet<string> = new Set();
   const progress = lookupProgress({
@@ -72,6 +75,7 @@ export default function SearchLoadingGrid({
     started: started ?? empty,
     completed: completed ?? empty,
     errored: errored ?? empty,
+    queuePosition,
   });
   const names = Object.fromEntries(sources.map((s) => [s.id, s.name]));
   const failedCount = progress.sources.filter((s) => s.state === "failed").length;
