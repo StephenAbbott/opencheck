@@ -22,6 +22,7 @@ from typing import Any
 
 from ..bods.refs import statement_index
 from ..knowability import report_statements
+from ..coverage import coverage_sentence, report_coverage
 from ..listing import describe as listing_line
 from .diagram import source_diagram
 
@@ -605,6 +606,30 @@ def _risk(report: dict[str, Any]) -> str:
     return "".join(parts)
 
 
+def _source_names(ids: list[str]) -> str:
+    reg = _registry()
+    return ", ".join(escape(reg[i].info.name if i in reg else i) for i in ids)
+
+
+def _coverage_paras(report: dict[str, Any]) -> str:
+    """Phase 241: the coverage figures and every applicable source named —
+    the ones that answered with no record and the ones that did not answer
+    are otherwise absent from the report, which reads as silence."""
+    cov = report_coverage(report)
+    if not cov["applicable"]:
+        return ""
+    paras = [f"<p>{escape(coverage_sentence(cov))}.</p>"]
+    if cov["no_record_ids"]:
+        paras.append(
+            f"<p><strong>Answered with no record:</strong> {_source_names(cov['no_record_ids'])}.</p>"
+        )
+    if cov["failed_ids"]:
+        paras.append(
+            f"<p><strong>Did not answer:</strong> {_source_names(cov['failed_ids'])}.</p>"
+        )
+    return "".join(paras)
+
+
 def _sources_found(report: dict[str, Any]) -> str:
     reg = _registry()
     by_src: dict[str, list[dict[str, Any]]] = {}
@@ -612,7 +637,8 @@ def _sources_found(report: dict[str, Any]) -> str:
         if h.get("is_stub"):
             continue
         by_src.setdefault(h.get("source_id", ""), []).append(h)
-    if not by_src:
+    coverage = _coverage_paras(report)
+    if not by_src and not coverage:
         return ""
     blocks = []
     for sid, hits in by_src.items():
@@ -634,6 +660,7 @@ def _sources_found(report: dict[str, Any]) -> str:
         )
     return (
         '<section aria-labelledby="src"><h2 id="src">What each source found</h2>'
+        + coverage
         + "".join(blocks)
         + "</section>"
     )

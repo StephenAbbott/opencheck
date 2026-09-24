@@ -339,6 +339,34 @@ def _degraded_index(snapshot: dict[str, Any]) -> tuple[set[str], set[str]]:
     return ids, codes
 
 
+def _coverage_view(cov: dict[str, Any] | None) -> dict[str, Any]:
+    """A stored ``coverage`` block read the Phase 241 way.
+
+    A block with ``with_data`` is current: ``answered`` counts every source
+    that replied. A block without it was stored earlier, when ``answered``
+    counted only sources with a record — so that figure is its ``with_data``
+    and its ``answered`` (in the new sense) is unknown.
+    """
+    cov = cov or {}
+    if "with_data" in cov:
+        return {
+            "applicable": cov.get("applicable"),
+            "answered": cov.get("answered"),
+            "with_data": cov.get("with_data"),
+            "applicable_ids": list(cov.get("applicable_ids") or []),
+            "answered_ids": list(cov.get("answered_ids") or []),
+            "with_data_ids": list(cov.get("with_data_ids") or []),
+        }
+    return {
+        "applicable": cov.get("applicable"),
+        "answered": None,
+        "with_data": cov.get("answered"),
+        "applicable_ids": list(cov.get("applicable_ids") or []),
+        "answered_ids": [],
+        "with_data_ids": list(cov.get("answered_ids") or []),
+    }
+
+
 def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list[dict[str, Any]]:
     """Name every difference between two snapshots. Empty when nothing the
     feed reports about has changed. ``before`` may be ``None`` (first run):
@@ -402,21 +430,33 @@ def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list
             else:
                 changes.append({"kind": retired_kind, "code": code, "sources": sorted(producers)})
 
-    cov_a = before.get("coverage") or {}
-    cov_b = after.get("coverage") or {}
-    if (cov_a.get("applicable"), cov_a.get("answered")) != (
-        cov_b.get("applicable"),
-        cov_b.get("answered"),
-    ):
-        missing = sorted(set(cov_b.get("applicable_ids") or []) - set(cov_b.get("answered_ids") or []))
-        unchecked = bool(degraded_ids & set(missing)) and (cov_b.get("answered") or 0) < (
-            cov_a.get("answered") or 0
+    cov_a = _coverage_view(before.get("coverage"))
+    cov_b = _coverage_view(after.get("coverage"))
+    # Phase 241: ``answered`` now counts a source that replied with no record,
+    # and ``with_data`` holds what ``answered`` meant before. A baseline stored
+    # earlier carries only the old field, so it is compared on ``with_data``
+    # alone — comparing its ``answered`` with a new one would report every
+    # watched company's coverage as changed on the first re-run after deploy.
+    answered_known = cov_a["answered"] is not None and cov_b["answered"] is not None
+    changed = cov_a["applicable"] != cov_b["applicable"] or cov_a["with_data"] != cov_b["with_data"]
+    if answered_known and cov_a["answered"] != cov_b["answered"]:
+        changed = True
+    if changed:
+        missing = sorted(
+            set(cov_b["applicable_ids"])
+            - set(cov_b["answered_ids"] if cov_b["answered"] is not None else cov_b["with_data_ids"])
         )
+        fell = (
+            (cov_b["answered"] or 0) < (cov_a["answered"] or 0)
+            if answered_known
+            else (cov_b["with_data"] or 0) < (cov_a["with_data"] or 0)
+        )
+        unchecked = bool(degraded_ids & set(missing)) and fell
         changes.append(
             {
                 "kind": "coverage_unchecked" if unchecked else "coverage_changed",
-                "old": {"applicable": cov_a.get("applicable"), "answered": cov_a.get("answered")},
-                "new": {"applicable": cov_b.get("applicable"), "answered": cov_b.get("answered")},
+                "old": {k: cov_a[k] for k in ("applicable", "answered", "with_data")},
+                "new": {k: cov_b[k] for k in ("applicable", "answered", "with_data")},
                 "missing": missing,
             }
         )

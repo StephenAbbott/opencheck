@@ -18,6 +18,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PERSON_VERB, sourceLabel } from "../../lib/vocab";
+import { Button } from "../ui";
 import { Explain } from "../ui/Explain";
 import PanelSection from "../ui/PanelSection";
 import {
@@ -259,16 +260,11 @@ export default function BackgroundCheckPanel({
                   {checkAllProgress.done} of {checkAllProgress.total} checked…
                 </span>
               )}
-              <button
-                type="button"
-                onClick={runAll}
-                disabled={checkingAll}
-                className="rounded-oo border border-violet-300 bg-white px-3 py-1.5 text-[12px] font-medium text-violet-800 hover:bg-violet-50 disabled:opacity-50"
-              >
+              <Button variant="secondary" size="sm" onClick={runAll} disabled={checkingAll}>
                 {checkingAll
                   ? "Checking…"
                   : `Check ${currentPeople.length > CHECK_ALL_CAP ? `first ${CHECK_ALL_CAP}` : "all"}`}
-              </button>
+              </Button>
             </span>
           </div>
           <ul className="space-y-4 list-none p-0 m-0">
@@ -331,7 +327,7 @@ export default function BackgroundCheckPanel({
                 type="button"
                 onClick={() => setShowFormer((v) => !v)}
                 aria-expanded={showFormer}
-                className="text-[12px] text-oo-muted underline hover:no-underline"
+                className="text-oo-meta text-oo-muted underline hover:no-underline"
               >
                 {showFormer ? "Hide" : "Show"} {formerPeople.length} former{" "}
                 {formerPeople.length === 1 ? "connection" : "connections"} (roles
@@ -405,7 +401,7 @@ function PersonCard({
     <div className="rounded-oo border border-violet-200 bg-white overflow-hidden">
       <div className="px-4 py-3 flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <p className="font-head font-bold text-[15px] text-oo-ink">
+          <p className="font-head font-bold text-oo-lead text-oo-ink">
             {person.name}
             {person.identityVerification && (
               <span className="ml-1.5 inline-flex align-middle">
@@ -413,7 +409,7 @@ function PersonCard({
               </span>
             )}
             {person.birthYear && (
-              <span className="ml-2 font-sans font-normal text-[12px] text-oo-muted">
+              <span className="ml-2 font-sans font-normal text-oo-meta text-oo-muted">
                 b. {person.birthDate}
               </span>
             )}
@@ -425,13 +421,13 @@ function PersonCard({
             </p>
           )}
           {person.nationalities.length > 0 && (
-            <p className="text-[12px] text-oo-muted mt-0.5">
+            <p className="text-oo-meta text-oo-muted mt-0.5">
               {person.nationalities.join(", ")}
             </p>
           )}
           <ul className="mt-1.5 space-y-0.5 list-none p-0 m-0">
             {person.roles.map((role, i) => (
-              <li key={i} className="text-[12px] text-oo-ink leading-[1.5]">
+              <li key={i} className="text-oo-meta text-oo-ink leading-[1.5]">
                 <span className="font-medium">{role.label}</span>
                 {role.subjectName && (
                   <span className="text-oo-muted"> — {role.subjectName}</span>
@@ -488,33 +484,35 @@ function PersonCard({
         </div>
         <span className="shrink-0 flex items-center gap-2">
           {state.status === "done" && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onToggle}
               aria-expanded={state.open}
               aria-controls={resultId}
-              className="rounded-oo border border-violet-300 bg-white px-3 py-2 text-[12px] font-medium text-violet-800 hover:bg-violet-50"
             >
               {state.open ? "Hide" : "Show"}
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          {/* Phase 241: the design system's person action, not a bespoke
+              12px violet button repeated once per person. */}
+          <Button
+            variant="person"
+            size="sm"
             onClick={onCheck}
             disabled={state.status === "running"}
-            className="rounded-oo bg-violet-700 px-3.5 py-2 text-[12px] font-semibold text-white hover:bg-violet-800 disabled:opacity-60"
           >
             {state.status === "running"
               ? "Checking…"
               : state.status === "done"
                 ? "Re-run check"
                 : PERSON_VERB}
-          </button>
+          </Button>
         </span>
       </div>
       <div id={resultId}>
         {state.status === "error" && (
-          <p className="px-4 pb-3 text-[12px] text-red-700" role="alert">
+          <p className="px-4 pb-3 text-oo-meta text-red-700" role="alert">
             Check failed: {state.message}
           </p>
         )}
@@ -553,7 +551,7 @@ export function CheckResult({
           </div>
         </div>
       ) : (
-        <p className="text-[12px] text-oo-ink leading-[1.6]">
+        <p className="text-oo-meta text-oo-ink leading-[1.6]">
           <span className="font-medium">
             No risk signals from strong matches
           </span>{" "}
@@ -742,7 +740,7 @@ function MatchRow({ match }: { match: PersonMatch }) {
   return (
     <li className="rounded-oo border border-oo-rule bg-white px-3 py-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-[12px] font-medium text-oo-ink">
+        <span className="text-oo-meta font-medium text-oo-ink">
           {match.hit.name}
           {match.hit.is_stub && (
             <span className="ml-1.5 text-oo-meta text-oo-muted">

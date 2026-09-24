@@ -123,7 +123,7 @@ export function SubjectCard({
             {legalName || `LEI ${lei}`}
           </h2>
           {/* Identity line — small and muted so the card stays airy on mobile. */}
-          <p className="mt-1.5 flex items-center gap-2 flex-wrap text-[12px] text-oo-muted">
+          <p className="mt-1.5 flex items-center gap-2 flex-wrap text-oo-meta text-oo-muted">
             {cc && (
               <span className="inline-flex items-center gap-1.5">
                 <img
@@ -284,7 +284,7 @@ export function SubjectCard({
           pill. Rounding is responsive for the same reason as the identifier
           badge: wrapped text + rounded-full clips into the corners. */}
       {replayedAt && (
-        <p className="mt-3 flex sm:inline-flex items-center gap-2 flex-wrap text-[12px] text-[#92400e] bg-[#fef3c7] border border-[#fde68a] rounded-oo px-3 py-1.5 sm:rounded-full sm:py-1">
+        <p className="mt-3 flex sm:inline-flex items-center gap-2 flex-wrap text-oo-meta text-[#92400e] bg-[#fef3c7] border border-[#fde68a] rounded-oo px-3 py-1.5 sm:rounded-full sm:py-1">
           <span>
             Results from a check run {replayAgeLabel(replayedAt)} — not re-queried.
           </span>

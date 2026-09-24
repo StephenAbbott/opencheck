@@ -73,7 +73,7 @@ difference with a closed vocabulary (`CHANGE_KINDS`):
 | `signal_new` / `context_new` | A code appeared |
 | `signal_retired` / `context_retired` | A code is gone **and the source that produced it answered** |
 | `signal_unchecked` / `context_unchecked` | A code is gone but its producer is degraded — could not be re-checked |
-| `coverage_changed` / `coverage_unchecked` | Sources answered went up or down; `_unchecked` when the fall is degraded sources |
+| `coverage_changed` / `coverage_unchecked` | Sources answered, or sources with a record, went up or down; `_unchecked` when the fall is degraded sources. A baseline stored before Phase 241 (whose `answered` meant "with a record") is compared on `with_data` only |
 | `verdict` | The sentence changed with none of the above (a degraded source recovering, say) |
 
 The two `_unchecked` kinds are the point. Absence is a finding only when

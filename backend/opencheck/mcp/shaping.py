@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..coverage import coverage_sentence, source_coverage
 from ..sources import REGISTRY
 
 
@@ -46,10 +47,21 @@ def _subject_identifiers(bods: list[dict[str, Any]], lei: str) -> list[dict[str,
 
 
 def _sources_summary(
-    hits: list[Any], errors: dict[str, str]
+    hits: list[Any],
+    errors: dict[str, str],
+    applicable: list[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """One row per source that participated: did it return data, under what licence."""
+    """One row per applicable source: did it return data, under what licence.
+
+    Phase 241: every applicable source has a row, including one that
+    answered with no record — before, only sources with a result or an
+    error appeared, so "found" could only ever be counted against itself.
+    ``answered`` is false only for a source that errored and returned
+    nothing; ``no_record`` marks one that answered and holds nothing here.
+    """
     by_source: dict[str, dict[str, Any]] = {}
+    for sid in applicable or []:
+        by_source.setdefault(sid, {"id": sid, "found": False})
     for h in hits:
         row = by_source.setdefault(h.source_id, {"id": h.source_id, "found": False})
         raw = h.raw if isinstance(h.raw, dict) else {}
@@ -65,6 +77,8 @@ def _sources_summary(
         by_source.setdefault(sid, {"id": sid, "found": False})["error"] = msg
 
     for sid, row in by_source.items():
+        row["answered"] = row["found"] or "error" not in row
+        row["no_record"] = not row["found"] and "error" not in row
         adapter = REGISTRY.get(sid)
         if adapter is not None:
             row["name"] = adapter.info.name
@@ -227,6 +241,18 @@ def _listing(payload: Any) -> dict[str, Any] | None:
     }
 
 
+def _coverage(payload: Any) -> dict[str, Any]:
+    """``coverage.source_coverage`` for a ``LookupResponse`` — anchored when
+    GLEIF resolved the LEI, which it has whenever there is a legal name."""
+    return source_coverage(
+        payload.hits,
+        payload.errors,
+        getattr(payload, "sources_applicable", None) or [],
+        anchored=bool(payload.legal_name)
+        or any(getattr(h, "source_id", None) == "gleif" for h in payload.hits or []),
+    )
+
+
 def shape_lookup(payload: Any) -> dict[str, Any]:
     """Flatten a ``LookupResponse`` into a compact MCP tool result."""
     bods = payload.bods or []
@@ -234,8 +260,8 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
     risk = _shape_risk(payload.risk_signals)
     risk_codes = _codes_by_kind(risk, "risk") or "none"
     context_codes = _codes_by_kind(risk, "context")
-    sources = _sources_summary(payload.hits, payload.errors)
-    found = sum(1 for s in sources if s.get("found"))
+    coverage = _coverage(payload)
+    sources = _sources_summary(payload.hits, payload.errors, coverage["applicable_ids"])
     degraded = getattr(payload, "degraded_sources", None) or []
     licensing = _licensing(sources)
 
@@ -279,7 +305,7 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         f"{payload.legal_name or 'Entity'} (LEI {payload.lei}"
         f"{', ' + payload.jurisdiction if payload.jurisdiction else ''}). "
         f"Risk signals: {risk_codes}.{context_note} "
-        f"{found} of {len(sources)} sources returned data; "
+        f"{coverage_sentence(coverage)}; "
         f"{len(bods)} BODS statements ({relationships} ownership/control relationships)."
         f"{degraded_note}{licence_note}{knowability_note}{listing_note}"
     )
@@ -308,10 +334,18 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         "risk_signals": risk,
         "degraded_sources": degraded,
         "sources": sources,
+        "coverage": {
+            k: coverage[k]
+            for k in ("applicable_ids", "with_data_ids", "no_record_ids", "failed_ids")
+        },
         "counts": {
             "bods_statements": len(bods),
             "relationships": relationships,
-            "sources_with_data": found,
+            "sources_with_data": coverage["with_data"],
+            # Phase 241: the denominator the summary line and the web report
+            # use — every applicable source, GLEIF anchor included.
+            "sources_applicable": coverage["applicable"],
+            "sources_answered": coverage["answered"],
             "risk_signals": sum(1 for r in risk if r.get("kind") == "risk"),
             "context_signals": sum(1 for r in risk if r.get("kind") == "context"),
         },
@@ -339,14 +373,8 @@ def shape_batch_row(payload: Any) -> dict[str, Any]:
     OpenCheck does not grade companies (Phase 132).
     """
     risk = _shape_risk(payload.risk_signals)
-    sources = _sources_summary(payload.hits, payload.errors)
-    answered = [s["id"] for s in sources if s.get("found")]
-    # Phase 156: the anchor is one of the registry's sources and it has
-    # answered before ``sources_applicable`` fires, so it is counted in
-    # both figures here, the way ``coverageCopy()`` counts it on the web.
-    applicable = list(dict.fromkeys(["gleif", *(getattr(payload, "sources_applicable", None) or [])]))
-    if "gleif" not in answered and payload.legal_name:
-        answered.insert(0, "gleif")
+    coverage = _coverage(payload)
+    sources = _sources_summary(payload.hits, payload.errors, coverage["applicable_ids"])
     degraded = getattr(payload, "degraded_sources", None) or []
     profile = getattr(payload, "subject_profile", None) or {}
     status = profile.get("register_status") or None
@@ -374,11 +402,22 @@ def shape_batch_row(payload: Any) -> dict[str, Any]:
         "context_codes": list(
             dict.fromkeys(r["code"] for r in risk if r.get("kind") == "context")
         ),
+        # Phase 241: ``answered`` counts every applicable source that replied
+        # — with a record or with none — and ``with_data`` the ones that
+        # returned a record (what ``answered`` meant from Phase 164 to 240).
+        # The same figures as the web report's Coverage column.
         "coverage": {
-            "applicable": len(applicable),
-            "answered": len(answered),
-            "applicable_ids": applicable,
-            "answered_ids": answered,
+            k: coverage[k]
+            for k in (
+                "applicable",
+                "answered",
+                "with_data",
+                "applicable_ids",
+                "answered_ids",
+                "with_data_ids",
+                "no_record_ids",
+                "failed_ids",
+            )
         },
         "degraded": bool(degraded),
         "degraded_sources": [d.get("source_id") for d in degraded if d.get("source_id")],

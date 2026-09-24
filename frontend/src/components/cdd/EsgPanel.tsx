@@ -54,16 +54,16 @@ function SectorBars({
         return (
           <div key={sector}>
             <div className="flex items-baseline justify-between mb-1">
-              <span className="text-[11px] text-emerald-900 capitalize font-medium">
+              <span className="text-[11px] text-oo-esg-strong capitalize font-medium">
                 {sector.replace(/-/g, " ")}
               </span>
-              <span className="text-[11px] font-mono text-emerald-900">
+              <span className="text-[11px] font-mono text-oo-esg-strong">
                 {fmt.value} {fmt.unit} · {shareOfTotal}%
               </span>
             </div>
-            <div className="h-1.5 rounded-full bg-emerald-100 overflow-hidden">
+            <div className="h-1.5 rounded-full bg-oo-esg-tint overflow-hidden">
               <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
+                className="h-full rounded-full bg-oo-esg-accent transition-all"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -110,13 +110,13 @@ function TrackerTable({ projects }: { projects: GeotProjects }) {
         <thead>
           <tr>
             <th scope="col"><span className="sr-only">Tracker</span></th>
-            <th scope="col" className="pl-4 text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-800 text-right">
+            <th scope="col" className="pl-4 text-[10px] font-semibold uppercase tracking-oo-eyebrow text-oo-esg-text text-right">
               Live
             </th>
-            <th scope="col" className="pl-4 text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-800 text-right">
+            <th scope="col" className="pl-4 text-[10px] font-semibold uppercase tracking-oo-eyebrow text-oo-esg-text text-right">
               Operating
             </th>
-            <th scope="col" className="pl-4 text-[10px] font-semibold uppercase tracking-oo-eyebrow text-emerald-800 text-right">
+            <th scope="col" className="pl-4 text-[10px] font-semibold uppercase tracking-oo-eyebrow text-oo-esg-text text-right">
               ≥50%
             </th>
           </tr>
@@ -156,24 +156,24 @@ function TrackerRow({
     <tr>
       <th scope="row" className="w-full max-w-0 pt-1 align-middle text-left font-normal">
         <div className="min-w-0">
-          <div className="text-[11px] text-emerald-900 font-medium truncate">{label}</div>
-          <div className="h-1 rounded-full bg-emerald-100 overflow-hidden mt-0.5">
+          <div className="text-[11px] text-oo-esg-strong font-medium truncate">{label}</div>
+          <div className="h-1 rounded-full bg-oo-esg-tint overflow-hidden mt-0.5">
             <div
-              className="h-full rounded-full bg-emerald-400"
+              className="h-full rounded-full bg-oo-esg-accent"
               style={{ width: `${pct}%` }}
             />
           </div>
         </div>
       </th>
-      <td className="pl-4 pt-1 align-middle text-[12px] font-mono tabular-nums text-emerald-900 text-right">
+      <td className="pl-4 pt-1 align-middle text-oo-meta font-mono tabular-nums text-oo-esg-strong text-right">
         {live.toLocaleString()}
       </td>
-      <td className="pl-4 pt-1 align-middle text-[12px] font-mono tabular-nums text-emerald-800 text-right">
+      <td className="pl-4 pt-1 align-middle text-oo-meta font-mono tabular-nums text-oo-esg-text text-right">
         {operating.toLocaleString()}
       </td>
       <td
-        className={`pl-4 pt-1 align-middle text-[12px] font-mono tabular-nums text-right ${
-          controlled > 0 ? "text-emerald-900 font-semibold" : "text-emerald-800"
+        className={`pl-4 pt-1 align-middle text-oo-meta font-mono tabular-nums text-right ${
+          controlled > 0 ? "text-oo-esg-strong font-semibold" : "text-oo-esg-text"
         }`}
       >
         {controlled.toLocaleString()}
@@ -226,38 +226,38 @@ function EitiCard({ hit }: { hit: SourceHit }) {
   const years = raw.years ?? [];
 
   return (
-    <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
-      <div className="px-5 pt-4 pb-4 border-b border-emerald-200/60">
+    <div className="rounded-oo border border-oo-esg-border bg-oo-esg-bg/40 overflow-hidden">
+      <div className="px-5 pt-4 pb-4 border-b border-oo-esg-border/60">
         <SourceTag sourceId="eiti" />
-        <h3 className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+        <h3 className="font-head font-bold text-oo-lead text-oo-esg-strong leading-snug">
           {hit.name}
         </h3>
-        <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
+        <div className="text-[11px] font-mono text-oo-esg-text mt-0.5">
           {raw.country} · national ID {raw.identification}
         </div>
 
         <div className="mt-4">
-          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1">
+          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-esg-text mb-1">
             Payments to governments ·{" "}
             <a
               href="https://eiti.org/open-data"
               target="_blank"
               rel="noreferrer"
-              className="underline underline-offset-2 hover:text-emerald-900"
+              className="underline underline-offset-2 hover:text-oo-esg-strong"
             >
               EITI
               <span className="sr-only"> (opens in new tab)</span>
             </a>
           </div>
           <div className="flex items-end gap-3">
-            <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
+            <span className="font-head font-bold leading-none text-[2.6rem] text-oo-esg-text tabular-nums">
               {raw.total_usd > 0 ? formatUsd(raw.total_usd) : years.length.toLocaleString()}
             </span>
             <div className="pb-1">
-              <div className="text-[13px] font-semibold text-emerald-700">
+              <div className="text-oo-small font-semibold text-oo-esg-text">
                 {raw.total_usd > 0 ? "USD disclosed" : `reporting year${years.length === 1 ? "" : "s"}`}
               </div>
-              <div className="text-[11px] text-emerald-700">
+              <div className="text-[11px] text-oo-esg-text">
                 {years.length > 0 &&
                   (years.length > 1
                     ? `${years[years.length - 1]}–${years[0]} · ${years.length} reporting years`
@@ -272,12 +272,12 @@ function EitiCard({ hit }: { hit: SourceHit }) {
             {streams.map(([label, value]) => (
               <div key={label}>
                 <div className="flex items-baseline justify-between mb-1">
-                  <span className="text-[11px] text-emerald-900 font-medium">{label}</span>
-                  <span className="text-[11px] font-mono text-emerald-900">{formatUsd(value)}</span>
+                  <span className="text-[11px] text-oo-esg-strong font-medium">{label}</span>
+                  <span className="text-[11px] font-mono text-oo-esg-strong">{formatUsd(value)}</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-emerald-100 overflow-hidden">
+                <div className="h-1.5 rounded-full bg-oo-esg-tint overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-emerald-500"
+                    className="h-full rounded-full bg-oo-esg-accent"
                     style={{ width: `${maxStream > 0 ? (value / maxStream) * 100 : 0}%` }}
                   />
                 </div>
@@ -286,7 +286,7 @@ function EitiCard({ hit }: { hit: SourceHit }) {
           </div>
         )}
 
-        <p className="mt-3 text-[10px] text-emerald-800">
+        <p className="mt-3 text-[10px] text-oo-esg-text">
           GFS-classified fiscal disclosures under the EITI Standard · EITI
           International Secretariat, eiti.org
         </p>
@@ -345,39 +345,39 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
   const entityUrl = wikirateEntityUrl(raw.name);
 
   return (
-    <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
+    <div className="rounded-oo border border-oo-esg-border bg-oo-esg-bg/40 overflow-hidden">
       <div className="px-5 pt-4 pb-4">
         <SourceTag sourceId="wikirate" />
-        <h3 className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+        <h3 className="font-head font-bold text-oo-lead text-oo-esg-strong leading-snug">
           {hit.name}
         </h3>
-        <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
+        <div className="text-[11px] font-mono text-oo-esg-text mt-0.5">
           {raw.matched_by === "wikidata_qid" ? "Wikidata match" : "LEI match"} ·
           card ~{raw.card_id}
         </div>
 
         <div className="mt-4">
-          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1">
+          <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-esg-text mb-1">
             ESG data points ·{" "}
             <a
               href={entityUrl}
               target="_blank"
               rel="noreferrer"
-              className="underline underline-offset-2 hover:text-emerald-900"
+              className="underline underline-offset-2 hover:text-oo-esg-strong"
             >
               Wikirate
               <span className="sr-only"> (opens in new tab)</span>
             </a>
           </div>
           <div className="flex items-end gap-3">
-            <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
+            <span className="font-head font-bold leading-none text-[2.6rem] text-oo-esg-text tabular-nums">
               {total.toLocaleString()}
             </span>
             <div className="pb-1">
-              <div className="text-[13px] font-semibold text-emerald-700">
+              <div className="text-oo-small font-semibold text-oo-esg-text">
                 metric answers
               </div>
-              <div className="text-[11px] text-emerald-700">
+              <div className="text-[11px] text-oo-esg-text">
                 community-researched · latest value per metric below
               </div>
             </div>
@@ -391,7 +391,7 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
                 key={`${a.metric_name}-${i}`}
                 className="flex items-baseline justify-between gap-3"
               >
-                <span className="text-[11px] text-emerald-900 font-medium min-w-0 truncate">
+                <span className="text-[11px] text-oo-esg-strong font-medium min-w-0 truncate">
                   {a.answer_url ? (
                     <a
                       href={a.answer_url}
@@ -406,11 +406,11 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
                     a.metric_name ?? "Metric"
                   )}
                   {a.metric_designer && (
-                    <span className="text-emerald-800"> · {a.metric_designer}</span>
+                    <span className="text-oo-esg-text"> · {a.metric_designer}</span>
                   )}
                 </span>
-                <span className="text-[11px] font-mono text-emerald-900 shrink-0">
-                  {a.year && <span className="text-emerald-800">{a.year} · </span>}
+                <span className="text-[11px] font-mono text-oo-esg-strong shrink-0">
+                  {a.year && <span className="text-oo-esg-text">{a.year} · </span>}
                   {formatAnswerValue(a.value)}
                 </span>
               </div>
@@ -422,13 +422,13 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
           href={entityUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-3 inline-block text-[12px] font-semibold text-emerald-800 underline underline-offset-2 hover:text-emerald-950"
+          className="mt-3 inline-block text-oo-meta font-semibold text-oo-esg-text underline underline-offset-2 hover:text-oo-esg-strong"
         >
           View all {total.toLocaleString()} data points on wikirate.org →
           <span className="sr-only"> (opens in new tab)</span>
         </a>
 
-        <p className="mt-3 text-[10px] text-emerald-800">
+        <p className="mt-3 text-[10px] text-oo-esg-text">
           Open ESG metric answers researched by the Wikirate community ·
           Wikirate.org, CC BY 4.0
         </p>
@@ -447,14 +447,14 @@ function SourceTag({ sourceId }: { sourceId: string }) {
   if (!meta) return null;
   return (
     <div className="mb-2 -mt-0.5 flex items-center gap-1.5">
-      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
-      <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800">
+      <span className="inline-block w-1.5 h-1.5 rounded-full bg-oo-esg-accent" />
+      <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-esg-text">
         Data from{" "}
         <a
           href={meta.href}
           target="_blank"
           rel="noreferrer"
-          className="underline underline-offset-2 hover:text-emerald-900"
+          className="underline underline-offset-2 hover:text-oo-esg-strong"
         >
           {meta.org}
           <span className="sr-only"> (opens in new tab)</span>
@@ -471,17 +471,17 @@ function SourceTag({ sourceId }: { sourceId: string }) {
 
 function GemPartyChips({ heading, chips }: { heading: string; chips: GemPartyChip[] }) {
   return (
-    <div className="mt-3 pt-3 border-t border-emerald-200/60">
-      <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mr-2">
+    <div className="mt-3 pt-3 border-t border-oo-esg-border/60">
+      <span className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-esg-text mr-2">
         {heading}
       </span>
       {chips.map((p) => (
         <span
           key={p.id}
-          className="inline-block text-[11px] font-mono text-emerald-900 bg-emerald-100 border border-emerald-200 rounded px-1.5 py-0.5 mr-1"
+          className="inline-block text-[11px] font-mono text-oo-esg-strong bg-oo-esg-tint border border-oo-esg-border rounded px-1.5 py-0.5 mr-1"
         >
           {p.name}
-          {p.share !== null && <span className="text-emerald-800"> · {p.share}%</span>}
+          {p.share !== null && <span className="text-oo-esg-text"> · {p.share}%</span>}
         </span>
       ))}
     </div>
@@ -572,10 +572,10 @@ function ClimateTRACECard({
   function toggleJson()       { ensureFetched(); setShowJson(v       => !v); }
 
   return (
-    <div className="rounded-oo border border-emerald-200 bg-emerald-50/40 overflow-hidden">
-      <div className="px-5 pt-4 pb-3 border-b border-emerald-200/60">
+    <div className="rounded-oo border border-oo-esg-border bg-oo-esg-bg/40 overflow-hidden">
+      <div className="px-5 pt-4 pb-3 border-b border-oo-esg-border/60">
         <SourceTag sourceId="climatetrace" />
-        <h3 className="font-head font-bold text-[15px] text-emerald-950 leading-snug">
+        <h3 className="font-head font-bold text-oo-lead text-oo-esg-strong leading-snug">
           {hit.name}
           {hit.is_stub && (
             <span className="ml-2 text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5">
@@ -583,7 +583,7 @@ function ClimateTRACECard({
             </span>
           )}
         </h3>
-        <div className="text-[11px] font-mono text-emerald-800 mt-0.5">
+        <div className="text-[11px] font-mono text-oo-esg-text mt-0.5">
           GEM entity {hit.identifiers.gem_entity_id}
           {jointVenture && (
             <Chip tone="context" className="ml-2 font-body align-middle">
@@ -596,21 +596,21 @@ function ClimateTRACECard({
             forward when the successor's LEI is known. Context voice on
             purpose: the ESG card asserts structure, never risk. */}
         {statusBanner && (
-          <div className="mt-3 rounded-oo border border-emerald-300 bg-emerald-100/60 px-3 py-2 text-oo-small text-emerald-900">
+          <div className="mt-3 rounded-oo border border-oo-esg-border bg-oo-esg-tint/60 px-3 py-2 text-oo-small text-oo-esg-strong">
             {statusBanner.text}
             {statusBanner.followHref && (
               <>
                 {" "}
                 <a
                   href={statusBanner.followHref}
-                  className="font-semibold underline underline-offset-2 hover:text-emerald-950 whitespace-nowrap"
+                  className="font-semibold underline underline-offset-2 hover:text-oo-esg-strong whitespace-nowrap"
                 >
                   {FOLLOW_FORWARD_LABEL} →
                 </a>
               </>
             )}
             {statusBanner.urls.length > 0 && (
-              <div className="mt-1 text-oo-meta text-emerald-800">
+              <div className="mt-1 text-oo-meta text-oo-esg-text">
                 Status source:{" "}
                 {statusBanner.urls.map((u, i) => (
                   <span key={u}>
@@ -619,7 +619,7 @@ function ClimateTRACECard({
                       href={u}
                       target="_blank"
                       rel="noreferrer"
-                      className="underline underline-offset-2 hover:text-emerald-900"
+                      className="underline underline-offset-2 hover:text-oo-esg-strong"
                     >
                       {new URL(u).hostname.replace(/^www\./, "")}
                       <span className="sr-only"> (opens in new tab)</span>
@@ -636,27 +636,27 @@ function ClimateTRACECard({
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
             {formatted ? (
               <div>
-                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1">
+                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-esg-text mb-1">
                   Emissions ·{" "}
                   <a
                     href="https://climatetrace.org/"
                     target="_blank"
                     rel="noreferrer"
-                    className="underline underline-offset-2 hover:text-emerald-900"
+                    className="underline underline-offset-2 hover:text-oo-esg-strong"
                   >
                     Climate TRACE
                     <span className="sr-only"> (opens in new tab)</span>
                   </a>
                 </div>
                 <div className="flex items-end gap-3">
-                  <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
+                  <span className="font-head font-bold leading-none text-[2.6rem] text-oo-esg-text tabular-nums">
                     {formatted.value}
                   </span>
                   <div className="pb-1">
-                    <div className="text-[13px] font-semibold text-emerald-700">
+                    <div className="text-oo-small font-semibold text-oo-esg-text">
                       {formatted.unit}
                     </div>
-                    <div className="text-[11px] text-emerald-700">
+                    <div className="text-[11px] text-oo-esg-text">
                       {year} · direct assets
                     </div>
                   </div>
@@ -668,27 +668,27 @@ function ClimateTRACECard({
 
             {liveProjects > 0 && (
               <div>
-                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1">
+                <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-esg-text mb-1">
                   Projects ·{" "}
                   <a
                     href="https://globalenergymonitor.org/projects/global-energy-ownership-tracker"
                     target="_blank"
                     rel="noreferrer"
-                    className="underline underline-offset-2 hover:text-emerald-900"
+                    className="underline underline-offset-2 hover:text-oo-esg-strong"
                   >
                     GEM Ownership Tracker
                     <span className="sr-only"> (opens in new tab)</span>
                   </a>
                 </div>
                 <div className="flex items-end gap-3">
-                  <span className="font-head font-bold leading-none text-[2.6rem] text-emerald-800 tabular-nums">
+                  <span className="font-head font-bold leading-none text-[2.6rem] text-oo-esg-text tabular-nums">
                     {liveProjects.toLocaleString()}
                   </span>
                   <div className="pb-1">
-                    <div className="text-[13px] font-semibold text-emerald-700">
+                    <div className="text-oo-small font-semibold text-oo-esg-text">
                       live project{liveProjects === 1 ? "" : "s"}
                     </div>
-                    <div className="text-[11px] text-emerald-700">
+                    <div className="text-[11px] text-oo-esg-text">
                       {operatingProjects.toLocaleString()} operating ·{" "}
                       {controlledProjects.toLocaleString()} ≥50% controlled
                     </div>
@@ -700,7 +700,7 @@ function ClimateTRACECard({
         )}
 
         {!formatted && liveProjects === 0 && !hit.is_stub && (
-          <p className="mt-3 text-[13px] text-emerald-800 italic">
+          <p className="mt-3 text-oo-small text-oo-esg-text italic">
             Emissions and project data not available for this entity.
           </p>
         )}
@@ -710,10 +710,10 @@ function ClimateTRACECard({
             <TrackerTable projects={projects} />
             <div className="mt-1.5 flex items-baseline justify-between gap-2 flex-wrap">
               {footnote ? (
-                <span className="text-[11px] text-emerald-800">{footnote}</span>
+                <span className="text-[11px] text-oo-esg-text">{footnote}</span>
               ) : <span />}
               {projects.meta?.release && (
-                <span className="text-[10px] text-emerald-800">
+                <span className="text-[10px] text-oo-esg-text">
                   GEOT {projects.meta.release} · ≥50% effective share = controlled
                 </span>
               )}
@@ -724,7 +724,7 @@ function ClimateTRACECard({
         {ownership &&
           ((ownership.subsidiary_count ?? 0) > 0 ||
             (ownership.group_asset_count ?? 0) > 0) && (
-          <div className="mt-2 text-[11px] text-emerald-800">
+          <div className="mt-2 text-[11px] text-oo-esg-text">
             Group reach: {(ownership.subsidiary_count ?? 0).toLocaleString()}{" "}
             subsidiaries · {(ownership.group_asset_count ?? 0).toLocaleString()}{" "}
             Climate TRACE assets group-wide
@@ -740,7 +740,7 @@ function ClimateTRACECard({
         {owners.length > 0 && <GemPartyChips heading={gemChipHeading("owners", owners.length)} chips={owners} />}
         {parents.length > 0 && <GemPartyChips heading={gemChipHeading("parents", parents.length)} chips={parents} />}
 
-        {/* Visualise — primary invitation strip (emerald, to match the ESG card),
+        {/* Visualise — primary invitation strip (the ESG teal, to match the card),
             aligned with the "Explore the ownership graph" CTA on the other source
             cards. Hidden when the source returns ≤ 1 statement. */}
         {showGraphStrip && (
@@ -749,9 +749,9 @@ function ClimateTRACECard({
           onClick={toggleDiagram}
           aria-expanded={showDiagram}
           aria-controls={panelId}
-          className="mt-3 w-full flex items-center gap-3 rounded-oo border border-emerald-300 bg-emerald-100 px-3 py-2 text-left transition-colors hover:bg-emerald-200/70"
+          className="mt-3 w-full flex items-center gap-3 rounded-oo border border-oo-esg-border bg-oo-esg-tint px-3 py-2 text-left transition-colors hover:bg-oo-esg-border/70"
         >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-oo-esg-accent text-white">
             <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <circle cx="6" cy="2.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
               <circle cx="2" cy="9.5" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
@@ -761,15 +761,15 @@ function ClimateTRACECard({
             </svg>
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-semibold text-emerald-900 leading-tight">
+            <span className="block text-oo-small font-semibold text-oo-esg-strong leading-tight">
               {showDiagram ? "Hide ownership graph" : "Explore the ownership graph"}
             </span>
-            <span className="block text-[11px] font-mono text-emerald-700 truncate">
+            <span className="block text-[11px] font-mono text-oo-esg-text truncate">
               {graphMeta}
             </span>
           </span>
           <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true"
-            className={`shrink-0 text-emerald-700 transition-transform ${showDiagram ? "rotate-90" : ""}`}>
+            className={`shrink-0 text-oo-esg-text transition-transform ${showDiagram ? "rotate-90" : ""}`}>
             <path d="M4.5 2.5 L8 6 L4.5 9.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
@@ -778,21 +778,21 @@ function ClimateTRACECard({
         {/* Secondary drill-downs — quieter than the graph CTA. */}
         <div className={`flex flex-wrap gap-4 text-[11px] font-mono ${showGraphStrip ? "mt-2" : "mt-3"}`}>
           <button type="button" onClick={toggleStatements} aria-expanded={showStatements} aria-controls={panelId}
-            className={`hover:underline ${showStatements ? "text-emerald-800" : "text-emerald-800 hover:text-emerald-900"}`}>
+            className={`hover:underline ${showStatements ? "text-oo-esg-text" : "text-oo-esg-text hover:text-oo-esg-strong"}`}>
             {showStatements ? "Hide statements" : (
               hasKnownCount ? `${stmtCount} statement${stmtCount === 1 ? "" : "s"}` : "Statements"
             )}
           </button>
           <button type="button" onClick={toggleJson} aria-expanded={showJson} aria-controls={panelId}
-            className={`hover:underline ${showJson ? "text-emerald-800" : "text-emerald-800 hover:text-emerald-900"}`}>
+            className={`hover:underline ${showJson ? "text-oo-esg-text" : "text-oo-esg-text hover:text-oo-esg-strong"}`}>
             {showJson ? "Hide JSON" : "Raw JSON"}
           </button>
         </div>
       </div>
 
       {anyOpen && (
-        <div id={panelId} className="px-5 py-4 bg-white/60 text-[12px]">
-          {loading && <p className="text-emerald-700" role="status">Fetching…</p>}
+        <div id={panelId} className="px-5 py-4 bg-white/60 text-oo-meta">
+          {loading && <p className="text-oo-esg-text" role="status">Fetching…</p>}
           {fetchError && <p className="text-red-700" role="alert">{fetchError}</p>}
           {detail && (
             <DeepenBlock
@@ -892,22 +892,22 @@ function EsgTile({
       aria-expanded={expanded}
       className={`text-left rounded-oo border px-4 py-3 transition-colors ${
         expanded
-          ? "border-emerald-400 bg-emerald-100/70"
-          : "border-emerald-200 bg-emerald-50/40 hover:bg-emerald-100/50"
+          ? "border-oo-esg-accent bg-oo-esg-tint/70"
+          : "border-oo-esg-border bg-oo-esg-bg/40 hover:bg-oo-esg-tint/50"
       }`}
     >
-      <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-emerald-800 mb-1.5">
+      <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-esg-text mb-1.5">
         {meta?.org ?? sourceLabel(hit.source_id)}
       </div>
       <div className="flex items-baseline gap-2">
-        <span className="font-head font-bold leading-none text-[1.7rem] text-emerald-800 tabular-nums">
+        <span className="font-head font-bold leading-none text-[1.7rem] text-oo-esg-text tabular-nums">
           {stat}
         </span>
-        <span className="text-[12px] font-semibold text-emerald-700">{unit}</span>
+        <span className="text-oo-meta font-semibold text-oo-esg-text">{unit}</span>
       </div>
       <div className="mt-1 flex items-center justify-between gap-2">
-        <span className="text-[11px] text-emerald-700 truncate">{sub}</span>
-        <span className="flex items-center gap-1 shrink-0 text-[11px] font-mono text-emerald-700">
+        <span className="text-[11px] text-oo-esg-text truncate">{sub}</span>
+        <span className="flex items-center gap-1 shrink-0 text-[11px] font-mono text-oo-esg-text">
           {expanded ? "Hide" : "Detail"}
           <svg
             width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"
@@ -968,14 +968,14 @@ export function EsgPanel({
         aside={`${hitCount} result${hitCount === 1 ? "" : "s"} · ${buckets.length} source${buckets.length === 1 ? "" : "s"}`}
       >
         <div className="space-y-4">
-            <p className="text-oo-small leading-[1.65] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-oo px-3 py-2">
+            <p className="text-oo-small leading-[1.65] text-oo-esg-text bg-oo-esg-bg border border-oo-esg-border rounded-oo px-3 py-2">
               <span className="font-semibold">ESG context only.</span> Data
               from{" "}
               <a
                 href="https://globalenergymonitor.org/"
                 target="_blank"
                 rel="noreferrer"
-                className="underline underline-offset-2 hover:text-emerald-900"
+                className="underline underline-offset-2 hover:text-oo-esg-strong"
               >
                 Global Energy Monitor
                 <span className="sr-only"> (opens in new tab)</span>
@@ -985,7 +985,7 @@ export function EsgPanel({
                 href="https://climatetrace.org/"
                 target="_blank"
                 rel="noreferrer"
-                className="underline underline-offset-2 hover:text-emerald-900"
+                className="underline underline-offset-2 hover:text-oo-esg-strong"
               >
                 Climate TRACE
                 <span className="sr-only"> (opens in new tab)</span>
@@ -995,7 +995,7 @@ export function EsgPanel({
                 href="https://eiti.org/"
                 target="_blank"
                 rel="noreferrer"
-                className="underline underline-offset-2 hover:text-emerald-900"
+                className="underline underline-offset-2 hover:text-oo-esg-strong"
               >
                 EITI
                 <span className="sr-only"> (opens in new tab)</span>
@@ -1005,7 +1005,7 @@ export function EsgPanel({
                 href="https://wikirate.org/"
                 target="_blank"
                 rel="noreferrer"
-                className="underline underline-offset-2 hover:text-emerald-900"
+                className="underline underline-offset-2 hover:text-oo-esg-strong"
               >
                 Wikirate
                 <span className="sr-only"> (opens in new tab)</span>

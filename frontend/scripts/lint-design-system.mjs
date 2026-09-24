@@ -11,6 +11,16 @@
  *   2. **No `text-[NNpx]` outside the named scale.** 15 arbitrary sizes,
  *      `text-[11px]` 122 times, `text-[10px]` 77, `text-[9px]` 5 — a body text
  *      of effectively 11–13px arrived at by accident rather than decision.
+ *   4. **No raw Tailwind palette colour** (Phase 241). `bg-emerald-50`,
+ *      `text-rose-700`: 505 of them against ~138 semantic-token uses when the
+ *      Opus 5.5 check counted, which is how the ESG tab came to wear the
+ *      "ok / corroborated" green and the licence panel the risk red. Every
+ *      Tailwind hue is counted, not only the ones in use, so moving a colour
+ *      from emerald to teal cannot dodge the count; the `oo-*` tokens name
+ *      what a colour means.
+ *   5. **No raw `<button>` outside `components/ui/`** (Phase 241). 104 of
+ *      them against 15 `<Button>`s. Counted as JSX elements by the
+ *      TypeScript parser, so a `<button>` in a comment or a string is not one.
  *   3. **No banned synonym.** `lib/vocab.ts` names one word per concept;
  *      `BANNED_SYNONYMS` lists what must not come back. Until Phase 125 that
  *      list was documentation with nothing enforcing it, which is how four
@@ -73,6 +83,48 @@ const ALLOWED_HEX_FILES = new Set([
 const HEX = /#[0-9a-fA-F]{3,8}\b/g;
 /** `text-[11px]`, `text-[10.5px]`. */
 const ARBITRARY_TEXT = /text-\[[0-9.]+px\]/g;
+
+/**
+ * A Tailwind palette utility — `bg-rose-50`, `hover:text-amber-800`,
+ * `border-emerald-200/60`. Every default hue, so a migration cannot move a
+ * colour to an unlisted one and read as progress.
+ */
+const HUES =
+  "slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose";
+const PALETTE = new RegExp(
+  `(?<![\\w-])(?:bg|text|border|ring|divide|outline|fill|stroke|from|via|to|decoration|placeholder|accent)-(?:${HUES})-\\d{2,3}\\b`,
+  "g"
+);
+
+/** Where a raw `<button>` is the definition, not a drift. */
+const BUTTON_EXEMPT_DIR = "src/components/ui/";
+
+/** The metrics each file is ratcheted on, in report order. */
+const METRICS = ["hex", "text", "vocab", "palette", "button"];
+const METRIC_LABEL = {
+  hex: "raw hex",
+  text: "text-[NNpx]",
+  vocab: "banned terms",
+  palette: "raw palette classes",
+  button: "raw <button>",
+};
+
+/** Raw `<button>` JSX elements, by the TypeScript parser. */
+function countButtons(src, fileName) {
+  const sf = ts.createSourceFile(fileName, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let n = 0;
+  const visit = (node) => {
+    if (
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      node.tagName.getText(sf) === "button"
+    ) {
+      n += 1;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return n;
+}
 
 /**
  * Terms that must not reappear in user-facing strings, read from
@@ -166,7 +218,12 @@ export function scan() {
     const hex = ALLOWED_HEX_FILES.has(rel) ? 0 : (src.match(HEX) ?? []).length;
     const text = (src.match(ARBITRARY_TEXT) ?? []).length;
     const vocab = VOCAB_EXEMPT.has(rel) ? 0 : countBanned(src, terms, rel);
-    if (hex || text || vocab) counts[rel] = { hex, text, vocab };
+    const palette = (src.match(PALETTE) ?? []).length;
+    const button =
+      rel.startsWith(BUTTON_EXEMPT_DIR) || !/\.[jt]sx$/.test(rel) || /\.test\.[jt]sx$/.test(rel)
+        ? 0
+        : countButtons(src, rel);
+    if (hex || text || vocab || palette || button) counts[rel] = { hex, text, vocab, palette, button };
   }
   return counts;
 }
@@ -180,11 +237,13 @@ function loadBaseline() {
 }
 
 function totals(counts) {
-  return Object.values(counts).reduce(
-    (a, c) => ({ hex: a.hex + c.hex, text: a.text + c.text, vocab: a.vocab + (c.vocab ?? 0) }),
-    { hex: 0, text: 0, vocab: 0 }
-  );
+  const t = Object.fromEntries(METRICS.map((m) => [m, 0]));
+  for (const c of Object.values(counts)) for (const m of METRICS) t[m] += c[m] ?? 0;
+  return t;
 }
+
+const describe = (t) => METRICS.map((m) => `${t[m]} ${METRIC_LABEL[m]}`).join(", ");
+const delta = (b, c) => METRICS.map((m) => `${m} ${b[m] ?? 0}→${c[m] ?? 0}`).join("  ");
 
 const args = process.argv.slice(2);
 const counts = scan();
@@ -195,23 +254,19 @@ if (args.includes("--update")) {
   if (!allowIncrease) {
     const raised = Object.entries(counts).filter(([f, c]) => {
       const b = baseline[f];
-      return b && (c.hex > b.hex || c.text > b.text || c.vocab > (b.vocab ?? 0));
+      return b && METRICS.some((m) => (c[m] ?? 0) > (b[m] ?? 0));
     });
     if (raised.length) {
       console.error(
         "Refusing to raise the baseline. The ratchet only turns one way.\n" +
-          raised.map(([f, c]) => `  ${f}  hex ${baseline[f].hex}→${c.hex}  text ${baseline[f].text}→${c.text}  vocab ${baseline[f].vocab ?? 0}→${c.vocab}`).join("\n") +
+          raised.map(([f, c]) => `  ${f}  ${delta(baseline[f], c)}`).join("\n") +
           "\n\nFix the file, or pass --allow-increase if you genuinely mean it."
       );
       process.exit(1);
     }
   }
   writeFileSync(BASELINE, JSON.stringify(counts, null, 2) + "\n");
-  const t = totals(counts);
-  console.log(
-    `design-system: baseline written — ${t.hex} hex, ${t.text} arbitrary text sizes, ` +
-      `${t.vocab} banned terms`
-  );
+  console.log(`design-system: baseline written — ${describe(totals(counts))}`);
   process.exit(0);
 }
 
@@ -219,34 +274,34 @@ const failures = [];
 for (const [file, c] of Object.entries(counts)) {
   const b = baseline[file];
   if (!b) {
-    const parts = [
-      c.hex && `${c.hex} raw hex`,
-      c.text && `${c.text} text-[NNpx]`,
-      c.vocab && `${c.vocab} banned term${c.vocab === 1 ? "" : "s"}`,
-    ].filter(Boolean);
+    const parts = METRICS.filter((m) => c[m]).map((m) => `${c[m]} ${METRIC_LABEL[m]}`);
     failures.push(
-      `${file}: new file with ${parts.join(", ")} — new code uses the tokens, the named scale and lib/vocab.ts`
+      `${file}: new file with ${parts.join(", ")} — new code uses the tokens, the named scale, ` +
+        "lib/vocab.ts and ui/Button"
     );
     continue;
   }
-  if (c.hex > b.hex) failures.push(`${file}: raw hex ${b.hex} → ${c.hex}`);
-  if (c.text > b.text) failures.push(`${file}: text-[NNpx] ${b.text} → ${c.text}`);
-  if (c.vocab > (b.vocab ?? 0))
-    failures.push(`${file}: banned terms ${b.vocab ?? 0} → ${c.vocab} (see lib/vocab.ts)`);
+  for (const m of METRICS) {
+    if ((c[m] ?? 0) > (b[m] ?? 0)) {
+      failures.push(
+        `${file}: ${METRIC_LABEL[m]} ${b[m] ?? 0} → ${c[m]}` + (m === "vocab" ? " (see lib/vocab.ts)" : "")
+      );
+    }
+  }
 }
 
 // A file that improved should update the baseline, so the gain is locked in.
 const improved = Object.entries(counts).filter(([f, c]) => {
   const b = baseline[f];
-  return b && (c.hex < b.hex || c.text < b.text || c.vocab < (b.vocab ?? 0));
+  return b && METRICS.some((m) => (c[m] ?? 0) < (b[m] ?? 0));
 });
 const removed = Object.keys(baseline).filter((f) => !(f in counts));
 
 if (failures.length) {
   console.error("Design-system lint failed:\n" + failures.map((f) => `  ${f}`).join("\n"));
   console.error(
-    "\nUse the tokens in tailwind.config.js (oo-*) and the named type scale " +
-      "(text-oo-meta … text-oo-display) rather than literals.\n" +
+    "\nUse the tokens in tailwind.config.js (oo-*), the named type scale " +
+      "(text-oo-meta … text-oo-display) and ui/Button rather than literals.\n" +
       "If you have reduced a count elsewhere, run: npm run lint:design -- --update"
   );
   process.exit(1);
@@ -255,15 +310,14 @@ if (failures.length) {
 if (improved.length || removed.length) {
   console.error(
     "Design-system lint: counts went DOWN and the baseline is stale.\n" +
-      [...improved.map(([f, c]) => `  ${f}  hex ${baseline[f].hex}→${c.hex}  text ${baseline[f].text}→${c.text}  vocab ${baseline[f].vocab ?? 0}→${c.vocab}`),
+      [...improved.map(([f, c]) => `  ${f}  ${delta(baseline[f], c)}`),
        ...removed.map((f) => `  ${f}  now clean`)].join("\n") +
       "\n\nRun: npm run lint:design -- --update  (this locks the improvement in)"
   );
   process.exit(1);
 }
 
-const t = totals(counts);
 console.log(
-  `design-system: ok — ${t.hex} raw hex, ${t.text} arbitrary text sizes, ` +
-    `${t.vocab} banned terms remaining across ${Object.keys(counts).length} files (ratcheting down)`
+  `design-system: ok — ${describe(totals(counts))} remaining across ` +
+    `${Object.keys(counts).length} files (ratcheting down)`
 );

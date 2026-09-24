@@ -176,6 +176,7 @@ export function rowCoverage(row: BatchRow, registryTotal: number | null): Covera
     total: registryTotal,
     jurisdiction: row.jurisdiction,
     screening: false,
+    failed: row.coverage.failed_ids?.length ?? 0,
     anchorAnswered: true,
   });
 }
@@ -192,6 +193,7 @@ const CSV_HEADER = [
   "context_codes",
   "sources_applicable",
   "sources_answered",
+  "sources_with_data",
   "degraded",
   "degraded_sources",
   "state",
@@ -216,7 +218,7 @@ export function rowsToCsv(rows: TableRow[], origin = ""): string {
     if ("failed" in r) {
       lines.push(
         [
-          r.lei, "", "", "", "", "", "", "", "", "", "", "true", "", "not checked",
+          r.lei, "", "", "", "", "", "", "", "", "", "", "", "true", "", "not checked",
           r.failed.reason, `${origin}/?lei=${r.lei}`,
         ].map(csvCell).join(","),
       );
@@ -236,6 +238,7 @@ export function rowsToCsv(rows: TableRow[], origin = ""): string {
         row.context_codes.join(" "),
         row.coverage.applicable,
         row.coverage.answered,
+        row.coverage.with_data ?? "",
         row.degraded ? "true" : "false",
         row.degraded_sources.join(" "),
         row.degraded ? "degraded" : "done",

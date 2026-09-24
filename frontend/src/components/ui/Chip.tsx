@@ -22,7 +22,7 @@ export type ChipTone = "risk" | "context" | "warn" | "ok" | "neutral" | "accent"
 export type ChipSize = "sm" | "md";
 
 const TONES: Record<ChipTone, string> = {
-  risk: "bg-rose-100 border-rose-400 text-rose-800",
+  risk: "bg-oo-risk-bg border-oo-risk-border text-oo-risk-text",
   context: "bg-oo-info-bg border-oo-info-border text-oo-info-text",
   warn: "bg-oo-warn-bg border-oo-warn-border text-oo-warn-text",
   ok: "bg-oo-ok-bg border-oo-ok-border text-oo-ok-text",

@@ -1367,6 +1367,19 @@ export function isValidLei(lei: string): boolean {
   return LEI_PATTERN.test(lei.trim().toUpperCase());
 }
 
+/**
+ * What the Paste-an-LEI field says about a malformed value, or null when it
+ * is well formed (Phase 241). Replaces the browser's `pattern` tooltip, and
+ * says what is wrong rather than only that something is.
+ */
+export function leiInputMessage(raw: string): string | null {
+  const v = raw.trim().toUpperCase();
+  if (!v) return "Paste an LEI: 20 letters and digits.";
+  if (!/^[A-Z0-9]*$/.test(v)) return "An LEI holds only letters and digits.";
+  if (v.length !== 20) return `An LEI is 20 characters long; this is ${v.length}.`;
+  return null;
+}
+
 export function search(
   q: string,
   kind: SearchKind = "entity"
@@ -1754,12 +1767,19 @@ export interface BatchRow {
   context_count: number;
   risk_codes: string[];
   context_codes: string[];
-  /** The GLEIF anchor is counted in both figures (Phase 156). */
+  /** The GLEIF anchor is counted in every figure (Phase 156). Phase 241:
+   *  `answered` counts every source that replied — with a record or with
+   *  none — and `with_data` the ones with a record (what `answered` meant
+   *  before). Optional fields are absent from rows served before then. */
   coverage: {
     applicable: number;
     answered: number;
+    with_data?: number;
     applicable_ids: string[];
     answered_ids: string[];
+    with_data_ids?: string[];
+    no_record_ids?: string[];
+    failed_ids?: string[];
   };
   /** A screening check did not fully run — never a clean row. */
   degraded: boolean;

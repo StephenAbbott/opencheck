@@ -21,6 +21,7 @@ from typing import Any
 
 from ..bods.refs import statement_index
 from ..knowability import report_statements
+from ..coverage import coverage_sentence, report_coverage
 from ..listing import describe as listing_line
 from .diagram import source_diagram
 from .html_report import (
@@ -358,9 +359,20 @@ def _sources_found(report: dict[str, Any]) -> list[str]:
         if h.get("is_stub"):
             continue
         by_src.setdefault(h.get("source_id", ""), []).append(h)
-    if not by_src:
+    cov = report_coverage(report)
+    if not by_src and not cov["applicable"]:
         return []
     lines = ["## What each source found", ""]
+    # Phase 241 — the text twin of ``html_report._coverage_paras``.
+    if cov["applicable"]:
+        def names(ids: list[str]) -> str:
+            return ", ".join(reg[i].info.name if i in reg else i for i in ids)
+
+        lines += [f"{coverage_sentence(cov)}.", ""]
+        if cov["no_record_ids"]:
+            lines += [f"**Answered with no record:** {names(cov['no_record_ids'])}.", ""]
+        if cov["failed_ids"]:
+            lines += [f"**Did not answer:** {names(cov['failed_ids'])}.", ""]
     for sid, hits in by_src.items():
         adapter = reg.get(sid)
         if adapter is None:

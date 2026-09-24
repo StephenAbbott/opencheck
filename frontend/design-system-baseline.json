@@ -1,127 +1,247 @@
 {
   "src/App.tsx": {
-    "hex": 3,
-    "text": 58,
-    "vocab": 0
+    "hex": 0,
+    "text": 29,
+    "vocab": 0,
+    "palette": 48,
+    "button": 22
   },
   "src/components/ApiPage.tsx": {
     "hex": 0,
-    "text": 18,
-    "vocab": 0
+    "text": 7,
+    "vocab": 0,
+    "palette": 6,
+    "button": 1
   },
   "src/components/BODSGraph.tsx": {
     "hex": 25,
     "text": 0,
-    "vocab": 0
+    "vocab": 0,
+    "palette": 0,
+    "button": 9
   },
   "src/components/BehindTheScenesPage.tsx": {
     "hex": 0,
-    "text": 26,
-    "vocab": 0
+    "text": 14,
+    "vocab": 0,
+    "palette": 9,
+    "button": 0
   },
   "src/components/BodsGraphExplorer.tsx": {
     "hex": 1,
-    "text": 5,
-    "vocab": 0
+    "text": 1,
+    "vocab": 0,
+    "palette": 3,
+    "button": 5
+  },
+  "src/components/BodsTree.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 0,
+    "button": 1
   },
   "src/components/BtsCard.tsx": {
     "hex": 0,
     "text": 2,
-    "vocab": 0
+    "vocab": 0,
+    "palette": 0,
+    "button": 0
   },
   "src/components/ChangelogPage.tsx": {
     "hex": 0,
-    "text": 5,
-    "vocab": 0
+    "text": 2,
+    "vocab": 0,
+    "palette": 0,
+    "button": 0
+  },
+  "src/components/GraphLegend.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 0,
+    "button": 1
   },
   "src/components/HomePanels.tsx": {
     "hex": 5,
-    "text": 5,
-    "vocab": 0
+    "text": 1,
+    "vocab": 0,
+    "palette": 0,
+    "button": 1
   },
   "src/components/SourceLegend.tsx": {
     "hex": 0,
     "text": 3,
-    "vocab": 0
+    "vocab": 0,
+    "palette": 0,
+    "button": 2
+  },
+  "src/components/SourcesPage.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 1,
+    "button": 1
   },
   "src/components/cdd/BackgroundCheckPanel.tsx": {
     "hex": 0,
-    "text": 50,
-    "vocab": 0
+    "text": 39,
+    "vocab": 0,
+    "palette": 22,
+    "button": 6
   },
   "src/components/cdd/ClusterGroup.tsx": {
     "hex": 0,
     "text": 3,
-    "vocab": 0
+    "vocab": 0,
+    "palette": 7,
+    "button": 0
+  },
+  "src/components/cdd/EitiAssessmentCard.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 23,
+    "button": 0
   },
   "src/components/cdd/EsgPanel.tsx": {
     "hex": 0,
-    "text": 50,
-    "vocab": 0
+    "text": 35,
+    "vocab": 0,
+    "palette": 4,
+    "button": 4
+  },
+  "src/components/cdd/HistoryTimeline.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 22,
+    "button": 0
   },
   "src/components/cdd/LivenessBadge.tsx": {
     "hex": 0,
     "text": 1,
-    "vocab": 0
+    "vocab": 0,
+    "palette": 12,
+    "button": 0
   },
   "src/components/cdd/NarrativePanel.tsx": {
     "hex": 7,
-    "text": 19,
-    "vocab": 0
+    "text": 8,
+    "vocab": 0,
+    "palette": 31,
+    "button": 9
   },
   "src/components/cdd/NzAssociations.tsx": {
     "hex": 0,
-    "text": 18,
-    "vocab": 0
+    "text": 10,
+    "vocab": 0,
+    "palette": 3,
+    "button": 3
   },
   "src/components/cdd/PersonReportPage.tsx": {
     "hex": 0,
-    "text": 11,
-    "vocab": 0
+    "text": 2,
+    "vocab": 0,
+    "palette": 13,
+    "button": 4
+  },
+  "src/components/cdd/SavedReportBanner.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 0,
+    "button": 3
   },
   "src/components/cdd/SecuritiesSection.tsx": {
     "hex": 3,
-    "text": 12,
-    "vocab": 0
+    "text": 8,
+    "vocab": 0,
+    "palette": 15,
+    "button": 4
   },
   "src/components/cdd/SourceBucketCard.tsx": {
     "hex": 0,
-    "text": 37,
-    "vocab": 0
+    "text": 28,
+    "vocab": 0,
+    "palette": 36,
+    "button": 2
   },
   "src/components/cdd/SubjectCard.tsx": {
     "hex": 3,
-    "text": 3,
-    "vocab": 0
+    "text": 1,
+    "vocab": 0,
+    "palette": 4,
+    "button": 2
   },
   "src/components/cdd/SubsidiaryNetwork.tsx": {
     "hex": 0,
-    "text": 13,
-    "vocab": 0
+    "text": 8,
+    "vocab": 0,
+    "palette": 12,
+    "button": 7
+  },
+  "src/components/cdd/VerdictStrip.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 0,
+    "button": 2
   },
   "src/components/export/ExportMenu.tsx": {
     "hex": 2,
-    "text": 3,
-    "vocab": 0
+    "text": 2,
+    "vocab": 0,
+    "palette": 0,
+    "button": 6
+  },
+  "src/components/export/ExportPanel.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 0,
+    "button": 1
   },
   "src/components/icons/index.tsx": {
     "hex": 22,
     "text": 0,
-    "vocab": 0
+    "vocab": 0,
+    "palette": 0,
+    "button": 0
   },
   "src/components/risk/RiskChip.tsx": {
     "hex": 0,
-    "text": 2,
-    "vocab": 0
+    "text": 0,
+    "vocab": 0,
+    "palette": 99,
+    "button": 2
+  },
+  "src/components/risk/SignalEvidence.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 0,
+    "button": 1
   },
   "src/components/ui/Button.tsx": {
     "hex": 2,
     "text": 0,
-    "vocab": 0
+    "vocab": 0,
+    "palette": 3,
+    "button": 0
+  },
+  "src/components/ui/MatchConfidenceChip.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 2,
+    "button": 0
   },
   "src/components/ui/ui.test.ts": {
     "hex": 2,
     "text": 0,
-    "vocab": 0
+    "vocab": 0,
+    "palette": 0,
+    "button": 0
   }
 }

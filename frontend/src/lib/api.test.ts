@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { EXPORT_FORMATS, exportUrl, reportRequestBody, savedReportShareUrl } from "./api";
+import { EXPORT_FORMATS, exportUrl, leiInputMessage, reportRequestBody, savedReportShareUrl } from "./api";
 
 /**
  * Wiring tests for the export URL builder. These pin the request the Export
@@ -81,5 +81,16 @@ describe("downloads from a saved report (Phase 218)", () => {
 
   it("shares a saved report through its own share page", () => {
     expect(savedReportShareUrl(ID)).toMatch(new RegExp(`/share/saved/${ID}$`));
+  });
+});
+
+describe("leiInputMessage (Phase 241)", () => {
+  it("accepts a well-formed LEI, whatever its case and surrounding space", () => {
+    expect(leiInputMessage(" 213800lh1bzh3di6g760 ")).toBeNull();
+  });
+  it("says what is wrong, not only that something is", () => {
+    expect(leiInputMessage("")).toBe("Paste an LEI: 20 letters and digits.");
+    expect(leiInputMessage("2138-00LH1BZH3DI6G76")).toBe("An LEI holds only letters and digits.");
+    expect(leiInputMessage("213800LH1BZH3DI6G7")).toBe("An LEI is 20 characters long; this is 18.");
   });
 });

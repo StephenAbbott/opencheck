@@ -26,7 +26,7 @@ function CompanyRow({ c }: { c: NzAssociatedCompany }) {
   const name = c.name || `Company ${c.number}`;
   return (
     <li className="py-1.5 border-t border-oo-rule first:border-t-0">
-      <div className="text-[12px] text-oo-ink leading-snug">
+      <div className="text-oo-meta text-oo-ink leading-snug">
         {c.link ? (
           <a href={c.link} target="_blank" rel="noopener noreferrer" className="hover:underline">
             {name}
@@ -62,7 +62,7 @@ function PersonRow({ p }: { p: NzPersonAssociations }) {
     <li className="px-3 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-head font-bold text-[13px] text-oo-ink leading-snug">
+          <div className="font-head font-bold text-oo-small text-oo-ink leading-snug">
             {p.name}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-1">
@@ -71,7 +71,7 @@ function PersonRow({ p }: { p: NzPersonAssociations }) {
             ))}
             <span className="text-[10px] text-oo-muted">in this company</span>
           </div>
-          <div className="mt-1.5 text-[12px] leading-[1.5]">
+          <div className="mt-1.5 text-oo-meta leading-[1.5]">
             {linked ? (
               <span className="text-oo-ink">
                 Also in <strong>{p.other_company_count}</strong> other active{" "}
@@ -199,12 +199,12 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
       tabIndex={-1}
       className="mt-3 rounded-oo border border-oo-rule bg-oo-bg p-3 focus:outline-none"
     >
-      {loading && <p role="status" className="text-[12px] text-oo-muted">Searching the NZ register…</p>}
-      {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
+      {loading && <p role="status" className="text-oo-meta text-oo-muted">Searching the NZ register…</p>}
+      {error && <p role="alert" className="text-oo-meta text-red-700">{error}</p>}
 
       {data && !data.available && (
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[12px] text-oo-muted leading-[1.6]">
+          <p className="text-oo-meta text-oo-muted leading-[1.6]">
             Associations lookup isn’t available{data.reason ? ` (${data.reason})` : ""}.
           </p>
           <button
@@ -220,7 +220,7 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
       {data && data.available && (
         <>
           <div className="flex items-baseline justify-between gap-2">
-            <h4 className="font-head font-bold text-[13px] text-oo-ink">
+            <h4 className="font-head font-bold text-oo-small text-oo-ink">
               Director &amp; shareholder associations
             </h4>
             <div className="flex items-baseline gap-3 shrink-0">
@@ -244,7 +244,7 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
           </p>
 
           {data.people.length === 0 ? (
-            <p className="mt-2 text-[12px] text-oo-muted">No directors or shareholders to check.</p>
+            <p className="mt-2 text-oo-meta text-oo-muted">No directors or shareholders to check.</p>
           ) : (
             <ul className="mt-2 divide-y divide-oo-rule rounded-oo border border-oo-rule bg-white">
               {data.people.map((p) => (

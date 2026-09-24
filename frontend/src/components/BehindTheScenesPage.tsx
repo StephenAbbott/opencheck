@@ -16,7 +16,7 @@ export function BehindTheScenesPage() {
       >
         Behind the Scenes
       </h2>
-      <p className="text-[14px] leading-[1.75] text-oo-muted mb-8 max-w-2xl">
+      <p className="text-oo-body leading-[1.75] text-oo-muted mb-8 max-w-2xl">
         OpenCheck is a proof-of-concept that shows what becomes possible when
         open data is anchored on the Legal Entity Identifier (LEI) and
         expressed in a common standard. This page explains how it works and
@@ -58,7 +58,7 @@ export function BehindTheScenesPage() {
             entity</strong> — an exact name and jurisdiction match with no shared
             identifier — as a suggestion to review, never a silent merge.
           </p>
-          <p className="text-[13px] text-oo-muted leading-[1.7]">
+          <p className="text-oo-small text-oo-muted leading-[1.7]">
             Switch to{" "}
             <strong className="text-oo-ink font-semibold">FullCheck</strong> to
             walk the wider ownership-and-control network: OpenCheck expands
@@ -72,7 +72,7 @@ export function BehindTheScenesPage() {
           {/* Phase 122: BackgroundCheck had shipped un-documented here, and
               Climate & ESG was not a mode at all — it rendered as a section
               inside QuickCheck. Both are tabs now, so both are described. */}
-          <p className="text-[13px] text-oo-muted leading-[1.7] mt-3">
+          <p className="text-oo-small text-oo-muted leading-[1.7] mt-3">
             <strong className="text-oo-ink font-semibold">BackgroundCheck</strong>{" "}
             screens the people rather than the company: the officers, directors
             and beneficial owners named in the records, each checked against the
@@ -80,7 +80,7 @@ export function BehindTheScenesPage() {
             person. A person the sources could not answer for is reported as
             unscreened, never as clear.
           </p>
-          <p className="text-[13px] text-oo-muted leading-[1.7] mt-3">
+          <p className="text-oo-small text-oo-muted leading-[1.7] mt-3">
             <strong className="text-oo-ink font-semibold">Climate &amp; ESG</strong>{" "}
             is a different question from the other three, which is why it sits
             apart in the tab strip: not who owns the company, but what it does —
@@ -113,7 +113,7 @@ export function BehindTheScenesPage() {
             </a>
             . BODS defines three statement types:
           </p>
-          <dl className="text-[13px] space-y-2">
+          <dl className="text-oo-small space-y-2">
             {[
               ["Entity statement", "blue", "A legal entity — company, trust, foundation."],
               ["Person statement", "violet", "A natural person (or anonymous/unknown person)."],
@@ -129,7 +129,7 @@ export function BehindTheScenesPage() {
               </div>
             ))}
           </dl>
-          <p className="text-[13px] text-oo-muted mt-3 leading-[1.7]">
+          <p className="text-oo-small text-oo-muted mt-3 leading-[1.7]">
             Each source has a dedicated mapper in{" "}
             <code className="font-mono text-[11px] bg-oo-bg px-1 rounded">opencheck/bods/mapper.py</code>.
             Statement IDs are deterministic (SHA-256 of source + type + local key)
@@ -156,7 +156,7 @@ export function BehindTheScenesPage() {
             for Companies House) that OpenCheck uses to route to the right
             national register adapter.
           </p>
-          <p className="text-[13px] text-oo-muted leading-[1.7]">
+          <p className="text-oo-small text-oo-muted leading-[1.7]">
             Name search uses the{" "}
             <a
               href="https://mcp.gleif.org/gleif-api/mcp"
@@ -190,7 +190,7 @@ export function BehindTheScenesPage() {
             or create open data standards and aligning data to a global
             framework like the Global Legal Entity Identifier (LEI) System.
           </p>
-          <p className="text-[13px] text-oo-muted leading-[1.7]">
+          <p className="text-oo-small text-oo-muted leading-[1.7]">
             OpenCheck is a concrete demonstration of the GODIN thesis: a single
             LEI, combined with open standards like BODS, lets a user pull
             information from 20+ independent registries into a unified,
@@ -203,9 +203,9 @@ export function BehindTheScenesPage() {
           <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
             OpenCheck is fully open-source under the MIT license.
           </p>
-          <div className="space-y-3 text-[13px] text-oo-muted">
+          <div className="space-y-3 text-oo-small text-oo-muted">
             <div>
-              <p className="font-semibold text-oo-ink text-[12px] uppercase tracking-wide mb-1">Backend</p>
+              <p className="font-semibold text-oo-ink text-oo-meta uppercase tracking-wide mb-1">Backend</p>
               <div>
                 <BtsBadge>Python 3.12</BtsBadge>
                 <BtsBadge>FastAPI</BtsBadge>
@@ -215,7 +215,7 @@ export function BehindTheScenesPage() {
               </div>
             </div>
             <div>
-              <p className="font-semibold text-oo-ink text-[12px] uppercase tracking-wide mb-1">Frontend</p>
+              <p className="font-semibold text-oo-ink text-oo-meta uppercase tracking-wide mb-1">Frontend</p>
               <div>
                 <BtsBadge>React 18 + TypeScript</BtsBadge>
                 <BtsBadge>Vite</BtsBadge>
@@ -225,7 +225,7 @@ export function BehindTheScenesPage() {
               </div>
             </div>
             <div>
-              <p className="font-semibold text-oo-ink text-[12px] uppercase tracking-wide mb-1">Standards</p>
+              <p className="font-semibold text-oo-ink text-oo-meta uppercase tracking-wide mb-1">Standards</p>
               <div>
                 <BtsBadge>ISO 17442 (LEI)</BtsBadge>
                 <BtsBadge>BODS v0.4</BtsBadge>

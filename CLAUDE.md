@@ -1522,6 +1522,55 @@ raise a count without `--allow-increase`. Allowlisted for hex:
 `lib/graphStyle.ts` (Cytoscape takes colour strings, not class names — this is
 the graph's token file) and `lib/bovsIcons.ts` (base64 data URIs).
 
+**Two more metrics since Phase 241**, on the same per-file ratchet:
+**raw Tailwind palette classes** (`bg-emerald-50`, `hover:text-rose-700` —
+*every* Tailwind hue, so moving a colour from emerald to teal cannot read as
+progress) and **raw `<button>` JSX elements outside `components/ui/`**
+(counted by the TypeScript parser; test files exempt). Use the `oo-*` tokens
+for what a colour *means* — `oo-risk-*` (a finding against the subject, the
+only red-family tier; `Chip tone="risk"` reads it), `oo-warn-*`, `oo-ok-*`,
+`oo-info-*`, `oo-esg-*` (the Climate & ESG tab, built on `oo.node.teal`) — and
+`ui/Button` (a `person` variant, BackgroundCheck's purple, joined the five in
+Phase 241). The 12/13/14/15/26px arbitrary sizes were codemodded onto
+`oo-meta`/`oo-small`/`oo-body`/`oo-lead`/`oo-display`; 11px and 10px stay
+arbitrary **on purpose** (Stephen, 24 Sept 2026: no `oo-micro` step), so the
+ratchet keeps pushing them up to the 12px floor rather than legitimising them.
+A licence condition is `warn`, never `risk`: the export panel's red
+"share-alike" boxes read like sanctions findings.
+
+---
+
+## Coverage: one definition, every source named (Phase 241)
+
+`backend/opencheck/coverage.py` (`source_coverage`, `coverage_sentence`,
+`report_coverage`) and `frontend/src/lib/lookupProgress.ts` (`settledCount`,
+`settledLine`, `noRecordSources`). Every surface that counts sources uses
+these — the MCP summary, the batch row (so the watchlist baseline and the CSV),
+the PDF/Markdown "What each source found", the loading grid, the "What each
+source said" header and the Coverage column. Before, three denominators: the
+MCP summary divided sources *with a record* by sources *with a record or an
+error* ("11 of 11 sources returned data" for Shell, 13 applicable), and the
+loading bar left the GLEIF anchor out while the header put it in.
+
+- **Buckets per applicable source:** with data · no record · did not answer;
+  *answered* = with data + no record. A source that returned a record and then
+  errored (a deepen/read timeout) is answered *and* partial. The GLEIF anchor
+  is applicable and answered whenever the lookup resolved.
+- **Batch `coverage.answered` changed meaning**: it counts every source that
+  replied; `with_data` is what `answered` meant from Phase 164 to 240. The
+  watchlist reads a baseline without `with_data` as pre-241 and compares it on
+  `with_data` only (`watchlist._coverage_view`) — otherwise every watch would
+  report "coverage changed" on its first re-run after deploy.
+- **Every source error is a degradation** (Stephen, 24 Sept 2026):
+  `degradation.add_source_errors` runs in both `_lookup_pipeline` and
+  `_build_report` — `check: source_fetch` when the source returned nothing,
+  `source_read` when it returned a record and the read failed. An adapter's own
+  record for the source is not repeated. The verdict says "one source answered
+  only in part" for `source_read`.
+- **No-record sources are named**: a chip row "Answered with no record" under
+  "What each source said", and "Answered with no record: …" / "Did not answer:
+  …" lines in the PDF/Markdown. Absence in the same voice as presence.
+
 ---
 
 ## The watchlist re-runs on deltas, never on a clock (Phase 215)

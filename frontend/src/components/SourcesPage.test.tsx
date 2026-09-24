@@ -139,6 +139,24 @@ describe("SourcesPage", () => {
     );
   });
 
+  it("says the sweep history in a sentence, and keeps the definition list valid (Phase 241)", async () => {
+    renderPage();
+    await screen.findByText(/Last sweep ·/);
+    const degraded = card(/Lithuanian Register/);
+    // Was an aria-label on the dd reading "Healthy, Degraded, Degraded".
+    expect(
+      within(degraded).getByText("Last 3 sweeps: 1 healthy, 2 degraded; latest 31 Aug 2026."),
+    ).toBeInTheDocument();
+    expect(degraded.querySelector("dd[aria-label]")).toBeNull();
+    // A dl holds only dt/dd pairs, each group wrapped in one div.
+    for (const dl of degraded.querySelectorAll("dl")) {
+      for (const child of Array.from(dl.children)) {
+        expect(child.tagName).toBe("DIV");
+        for (const inner of Array.from(child.children)) expect(["DT", "DD"]).toContain(inner.tagName);
+      }
+    }
+  });
+
   it("is a real disclosure: the panel it names appears and disappears", async () => {
     renderPage();
     await screen.findByText(/Last sweep ·/);

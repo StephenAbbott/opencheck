@@ -218,10 +218,11 @@ function CardStatus({ health }: { health: CardHealth | null }) {
         <dl className="grid gap-x-6 gap-y-1 text-oo-meta sm:grid-cols-2 m-0">
           <div className="flex items-baseline gap-2">
             <dt className="text-oo-muted whitespace-nowrap">Last {health.history.length === 1 ? "sweep" : `${health.history.length} sweeps`}</dt>
-            <dd className="m-0 flex items-center gap-1" aria-label={health.history.map((h) => STATUS_WORD[h]).join(", ")}>
+            <dd className="m-0 flex items-center gap-1">
               {health.history.map((h, i) => (
                 <span key={i} aria-hidden="true" className={`inline-block w-2 h-2 rounded-full ${STATUS_DOT[h]}`} />
               ))}
+              <span className="sr-only">{health.historyText}</span>
             </dd>
           </div>
           {health.rows.map((r) => (

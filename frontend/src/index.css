@@ -44,6 +44,15 @@
   --oo-ok-bg: #ecfdf5;
   --oo-ok-border: #a7f3d0;
   --oo-ok-text: #047857;
+  --oo-esg-bg: #f0fdfa; /* Phase 241 -- the Climate & ESG tier */
+  --oo-esg-tint: #ccfbf1;
+  --oo-esg-border: #99f6e4;
+  --oo-esg-accent: #0d9488;
+  --oo-esg-text: #115e59;
+  --oo-esg-strong: #134e4a;
+  --oo-risk-bg: #ffe4e6; /* Phase 241 -- the risk-finding tier */
+  --oo-risk-border: #fb7185;
+  --oo-risk-text: #9f1239;
   --oo-info-bg: #f0f9ff;
   --oo-info-border: #bae6fd;
   --oo-info-text: #0369a1;

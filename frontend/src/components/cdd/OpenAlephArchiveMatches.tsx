@@ -109,7 +109,7 @@ export function OpenAlephArchiveMatches({
                 href={m.url}
                 target="_blank"
                 rel="noreferrer"
-                className="text-oo-blue hover:underline underline-offset-2"
+                className="text-oo-blue underline underline-offset-2 hover:no-underline"
               >
                 {m.collection || "an OpenAleph collection"}
                 <span className="sr-only"> (opens in new tab)</span>

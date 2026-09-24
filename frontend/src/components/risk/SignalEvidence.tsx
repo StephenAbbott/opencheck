@@ -80,7 +80,7 @@ export function SignalEvidence({
           <button
             type="button"
             onClick={() => onShowSource?.(id)}
-            className="font-medium text-oo-blue hover:underline underline-offset-2"
+            className="font-medium text-oo-blue underline underline-offset-2 hover:no-underline"
           >
             Show the {sourceLabel(id, sourceNames)} record
           </button>

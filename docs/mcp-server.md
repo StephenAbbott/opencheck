@@ -135,6 +135,21 @@ fetch `/batch-export` directly.
   a bundle holding CC-BY-NC OpenSanctions statements shipped
   `license_notices: []` to agents while the panel said "NOT for commercial
   use". The `summary` line ends with the licensing headline.
+- **Coverage** (Phase 241) — the `summary` line counts against every
+  applicable source, GLEIF anchor included: "12 of 13 sources answered (9 with
+  records, 3 with no record); 1 did not answer" — the numerator and denominator
+  the web report's Coverage column uses. Before this it divided sources *with a
+  record* by sources *with a record or an error*, so Shell read "11 of 11
+  sources returned data" while its batch row said 13 applied. `sources[]` has a
+  row for every applicable source, with `answered` and `no_record`;
+  `coverage` lists `applicable_ids`, `with_data_ids`, `no_record_ids` and
+  `failed_ids`; `counts` adds `sources_applicable` and `sources_answered`
+  beside `sources_with_data`. In the batch row `coverage.answered` now counts
+  every source that replied and **`coverage.with_data`** holds what `answered`
+  meant from Phase 164 to 240; the CSV gains a `sources_with_data` column. A
+  source that errored — outright, or after returning a record (a read that
+  timed out) — is now in `degraded_sources` (`check: source_fetch` or
+  `source_read`), so it raises the CAUTION and the row's `degraded` flag.
 - **`knowability`** (Phase 226) — what is knowable where the company sits:
   `subject` is the dated statement for the subject's jurisdiction (`code`,
   `name`, `sentence`, `access`, `review_status`, `last_verified`,

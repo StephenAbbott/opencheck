@@ -112,8 +112,8 @@ async def opencheck_lookup(lei: str, deepen_top: int = 5) -> dict[str, Any]:
     """Run customer due diligence on a legal entity by its LEI.
 
     Returns the entity's identity, cross-reference identifiers, risk signals
-    (sanctions / PEP / debarment / FATF / complex structure), and which sources
-    returned data. Call opencheck_export_bods for the full ownership graph, and
+    (sanctions / PEP / debarment / FATF / complex structure), and what each
+    applicable source said — with a record, with no record, or no answer. Call opencheck_export_bods for the full ownership graph, and
     opencheck_save_report to keep this check as a shareable, verifiable record.
 
     Args:

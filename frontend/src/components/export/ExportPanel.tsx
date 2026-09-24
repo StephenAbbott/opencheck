@@ -9,7 +9,7 @@ import {
   type LicenseAssessment,
 } from "../../lib/api";
 import { LIVE_DOWNLOADS, SAVED_DOWNLOADS } from "../../lib/savedReport";
-import { SectionHeading } from "../ui";
+import { Chip, SectionHeading, type ChipTone } from "../ui";
 import { DATA_SECTION_ID } from "./ExportMenu";
 
 /**
@@ -41,15 +41,26 @@ import { DATA_SECTION_ID } from "./ExportMenu";
  * an aspirational format is a 400 with extra steps.
  */
 
-const COLOR: Record<"green" | "amber" | "red", string> = {
-  green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  amber: "bg-amber-50 text-amber-800 border-amber-200",
-  red: "bg-red-50 text-red-700 border-red-300",
+/**
+ * Licence terms in the design system's tones (Phase 241), never the risk red.
+ *
+ * The panel had a private green/amber/red palette, and "Share-alike
+ * obligations apply" sat in a red box that read like a sanctions finding
+ * three sections above it. A licence condition is something the reuser has to
+ * comply with, which is what `warn` means ("act on this, nothing failed"); an
+ * attribution-only licence is `context`; a free one is `ok`. `risk` is only
+ * ever a finding against the subject. The words still carry the meaning — the
+ * colour is never the only cue (WCAG 1.4.1).
+ */
+const LICENCE_TONE: Record<"green" | "amber" | "red", ChipTone> = {
+  green: "ok",
+  amber: "context",
+  red: "warn",
 };
-const DOT: Record<"green" | "amber" | "red", string> = {
-  green: "text-emerald-500",
-  amber: "text-amber-500",
-  red: "text-red-500",
+const COLOR: Record<"green" | "amber" | "red", string> = {
+  green: "bg-oo-ok-bg text-oo-ok-text border-oo-ok-border",
+  amber: "bg-oo-info-bg text-oo-info-text border-oo-info-border",
+  red: "bg-oo-warn-bg text-oo-warn-text border-oo-warn-border",
 };
 
 /** The picker's option set is the client's export-format type, so a format
@@ -404,7 +415,7 @@ export function ExportPanel({
           // a thousand pixels of empty space to the left of it. The content
           // decides the layout: this is a list of sources with terms attached,
           // and a list wants width.
-          <aside className="rounded-oo border border-oo-rule bg-oo-bg px-4 py-3.5" role="status">
+          <aside className="rounded-oo border border-oo-rule bg-oo-bg px-4 py-3.5">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
               <p className="text-oo-small font-bold text-oo-ink">You can reuse this</p>
               <p className="text-oo-small text-oo-muted leading-[1.5]">
@@ -417,7 +428,12 @@ export function ExportPanel({
                 ) : null}
               </p>
             </div>
-            <p className="text-oo-small text-oo-muted mt-0.5 leading-[1.5]">{a.headline}</p>
+            {/* The live region is the one sentence that changes when the
+                format or the subsidiary switch does — not the whole panel,
+                which re-announced every source's terms on each toggle. */}
+            <p className="text-oo-small text-oo-muted mt-0.5 leading-[1.5]" role="status">
+              {a.headline}
+            </p>
             {a.warnings.map((w, i) => (
               <p
                 key={i}
@@ -431,24 +447,25 @@ export function ExportPanel({
                 terms under both. The terms are not in a `title` because a
                 licence condition is the thing a reuser has to comply with, and
                 the colour is never the only cue for how restrictive it is. */}
+            {/* Phase 241: one `div` per term, holding only its `dt` and
+                `dd`s. The summary sat in a `p` beside a nested `div`, which
+                a `dl` may not contain (axe `dlitem` ×22). */}
             <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
               {a.per_source.map((s) => (
-                <div key={s.source_id} className="min-w-0">
-                  <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 text-oo-small">
-                    <dt className="text-oo-burst">{s.name}</dt>
-                    <dd
-                      className={`inline-flex items-center gap-1 border rounded px-1.5 py-0.5 text-oo-meta font-mono break-all ${COLOR[s.terms.color]}`}
-                    >
-                      <span className={DOT[s.terms.color]} aria-hidden="true">
-                        ●
-                      </span>
+                <div
+                  key={s.source_id}
+                  className="min-w-0 flex items-baseline flex-wrap gap-x-2 gap-y-1 text-oo-small"
+                >
+                  <dt className="text-oo-burst">{s.name}</dt>
+                  <dd className="m-0">
+                    <Chip tone={LICENCE_TONE[s.terms.color]} className="font-mono break-all">
                       {s.terms.license}
-                    </dd>
-                  </div>
+                    </Chip>
+                  </dd>
                   {s.terms.summary && (
-                    <p className="text-oo-meta text-oo-muted leading-[1.5]">
+                    <dd className="m-0 basis-full text-oo-meta text-oo-muted leading-[1.5]">
                       {s.terms.summary}
-                    </p>
+                    </dd>
                   )}
                 </div>
               ))}

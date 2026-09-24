@@ -151,6 +151,61 @@ export function queueLabel(position: number): string {
 }
 
 /**
+ * The one progress count (Phase 241).
+ *
+ * Mid-stream on one lookup the progress bar read "6 of 8 sources answered ·
+ * 6/8" while the section header under it read "7 of 9 sources answered · 2
+ * still running": the bar left the GLEIF anchor out, the header put it in
+ * (Phase 156's rule), and the bar counted a source that failed as answered
+ * while the header did not. Every surface that counts sources during or after
+ * a run now calls this — the loading grid, the "What each source said"
+ * header and the Coverage column — so the three cannot disagree.
+ *
+ * The anchor is counted once it has resolved, as `coverageCopy` counts it:
+ * it is one of the registry's sources, it answered, and its card is the first
+ * one in the list. A source that errored is `failed`, never `answered`.
+ */
+export interface SettledCount {
+  /** Applicable sources that replied — with a record or with none. */
+  answered: number;
+  /** Applicable sources that errored. */
+  failed: number;
+  /** Applicable sources still running. */
+  pending: number;
+  /** Every applicable source, anchor included. */
+  total: number;
+}
+
+export function settledCount({
+  anchored,
+  applicable,
+  completed,
+  errored,
+}: {
+  anchored: boolean;
+  applicable: readonly string[];
+  completed: ReadonlySet<string>;
+  errored: ReadonlySet<string>;
+}): SettledCount {
+  const anchor = anchored ? 1 : 0;
+  const failed = applicable.filter((id) => errored.has(id)).length;
+  const answered = applicable.filter((id) => completed.has(id) && !errored.has(id)).length;
+  return {
+    answered: answered + anchor,
+    failed,
+    pending: applicable.length - answered - failed,
+    total: applicable.length + anchor,
+  };
+}
+
+/** "7 of 9 sources answered · 1 did not answer" — the shared clause. */
+export function settledLine(c: SettledCount): string {
+  const noun = c.total === 1 ? "source" : "sources";
+  const failed = c.failed > 0 ? ` · ${c.failed} did not answer` : "";
+  return `${c.answered} of ${c.total} ${noun} answered${failed}`;
+}
+
+/**
  * The completion line, in the tense the stream justifies.
  *
  * The old grid flipped to the past tense "Queried N sources" on a timer. This
@@ -158,14 +213,13 @@ export function queueLabel(position: number): string {
  * settled, and it counts failures separately rather than folding them into a
  * success total — a source that errored was not queried successfully, and
  * saying "39 of 39" when three failed is the same class of untruth as the
- * simulated bar.
+ * simulated bar. Phase 241: the figures are `settledCount`'s, the same ones
+ * the section header prints.
  */
-export function progressLabel(p: LookupProgress, failedCount: number): string {
+export function progressLabel(p: LookupProgress, c: SettledCount): string {
   if (p.total === null) return p.label;
-  const of = `${p.settled} of ${p.total} source${p.total === 1 ? "" : "s"}`;
-  const failed = failedCount > 0 ? `, ${failedCount} did not answer` : "";
-  if (p.phase === "finishing") return `Queried ${of}${failed}`;
-  return `Querying — ${of} answered${failed}`;
+  if (p.phase === "finishing") return settledLine(c);
+  return `Querying — ${settledLine(c)}`;
 }
 
 /**
@@ -245,6 +299,7 @@ export function coverageCopy({
   jurisdiction,
   screening,
   pending = 0,
+  failed = 0,
   anchorAnswered = true,
 }: {
   /** From `answeredCount` — excludes the GLEIF anchor. */
@@ -257,6 +312,9 @@ export function coverageCopy({
   screening: boolean;
   /** Sources still running, for the aside. */
   pending?: number;
+  /** Sources that errored (Phase 241) — named in the aside, as the loading
+   *  grid names them. */
+  failed?: number;
   /** Whether the GLEIF anchor resolved — it did if there is a report at all. */
   anchorAnswered?: boolean;
 }): CoverageCopy {
@@ -278,10 +336,8 @@ export function coverageCopy({
     detail = `${applyClause}; ${a} answered.`;
   }
 
-  const aside =
-    pending > 0
-      ? `${a} of ${p} sources answered · ${pending} still running…`
-      : `${a} of ${p} ${p === 1 ? "source" : "sources"} answered`;
+  const line = settledLine({ answered: a, failed, pending, total: p });
+  const aside = pending > 0 ? `${line} · ${pending} still running…` : line;
 
   return {
     answered: a,
@@ -290,4 +346,25 @@ export function coverageCopy({
     detail,
     aside,
   };
+}
+
+/**
+ * The applicable sources that answered and hold nothing on this company
+ * (Phase 241).
+ *
+ * A source that completed with no result produced no card, so on a Moldovan
+ * company the Coverage column said "9 of 9 sources answered" above two cards
+ * — OpenSanctions, TED, EveryPolitician and the rest were never named, even
+ * collapsed. Silence reads as "nothing to see", which is the one thing the
+ * findings rules forbid. These are named in a row of their own under "What
+ * each source said", in registry order. A source that errored has a card
+ * already ("Did not answer"), so it is never listed here.
+ */
+export function noRecordSources(
+  applicable: readonly string[],
+  completed: ReadonlySet<string>,
+  errored: ReadonlySet<string>,
+  withCard: ReadonlySet<string>
+): string[] {
+  return applicable.filter((id) => completed.has(id) && !errored.has(id) && !withCard.has(id));
 }
