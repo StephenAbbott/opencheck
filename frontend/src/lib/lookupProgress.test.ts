@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { answeredCount, lookupProgress, progressLabel, coverageCopy, jurisdictionPhrase, queueLabel } from "./lookupProgress";
+import {
+  answeredCount,
+  lookupProgress,
+  noRecordSources,
+  progressLabel,
+  coverageCopy,
+  jurisdictionPhrase,
+  queueLabel,
+  settledCount,
+  settledLine,
+} from "./lookupProgress";
 
 const none = new Set<string>();
 const base = {
@@ -140,50 +150,95 @@ describe("lookupProgress", () => {
   });
 });
 
+/** The count the loading grid and the section header both print. */
+function counts(p: { anchored: boolean; applicable: string[]; completed: ReadonlySet<string>; errored: ReadonlySet<string> }) {
+  return settledCount(p);
+}
+
 describe("progressLabel", () => {
   it("stays in the present tense until everything has settled", () => {
-    const p = lookupProgress({
-      ...base,
-      anchored: true,
-      applicable: ["a", "b", "c"],
-      completed: new Set(["a"]),
-    });
-    expect(progressLabel(p, 0)).toBe("Querying — 1 of 3 sources answered");
+    const args = { ...base, anchored: true, applicable: ["a", "b", "c"], completed: new Set(["a"]) };
+    // The GLEIF anchor is counted, as the section header counts it.
+    expect(progressLabel(lookupProgress(args), counts(args))).toBe("Querying — 2 of 4 sources answered");
   });
 
   it("reaches the past tense only on real completion", () => {
-    const p = lookupProgress({
-      ...base,
-      anchored: true,
-      applicable: ["a", "b"],
-      completed: new Set(["a", "b"]),
-    });
-    expect(progressLabel(p, 0)).toBe("Queried 2 of 2 sources");
+    const args = { ...base, anchored: true, applicable: ["a", "b"], completed: new Set(["a", "b"]) };
+    expect(progressLabel(lookupProgress(args), counts(args))).toBe("3 of 3 sources answered");
   });
 
-  it("says how many did not answer instead of counting them as queried", () => {
-    const p = lookupProgress({
+  it("says how many did not answer instead of counting them as answered", () => {
+    const args = {
       ...base,
       anchored: true,
       applicable: ["a", "b", "c"],
-      completed: new Set(["a", "b"]),
+      completed: new Set(["a", "b", "c"]),
       errored: new Set(["c"]),
-    });
-    expect(progressLabel(p, 1)).toBe("Queried 3 of 3 sources, 1 did not answer");
+    };
+    expect(progressLabel(lookupProgress(args), counts(args))).toBe(
+      "3 of 4 sources answered · 1 did not answer"
+    );
   });
 
   it("falls back to the phase label while the total is unknown", () => {
-    expect(progressLabel(lookupProgress(base), 0)).toMatch(/connect/i);
+    expect(progressLabel(lookupProgress(base), counts(base))).toMatch(/connect/i);
   });
 
   it("agrees in number for a single source", () => {
-    const p = lookupProgress({
-      ...base,
-      anchored: true,
-      applicable: ["a"],
-      completed: new Set(["a"]),
-    });
-    expect(progressLabel(p, 0)).toBe("Queried 1 of 1 source");
+    const args = { ...base, anchored: false, applicable: ["a"], completed: new Set(["a"]) };
+    expect(settledLine(counts(args))).toBe("1 of 1 source answered");
+  });
+});
+
+describe("one progress counter (Phase 241)", () => {
+  // Mid-stream on 254900BW4MI5M0006I30 the bar read "6 of 8 sources answered ·
+  // 6/8" and the section header "7 of 9 sources answered · 2 still running".
+  const args = {
+    ...base,
+    anchored: true,
+    applicable: ["a", "b", "c", "d", "e", "f", "g", "h"],
+    completed: new Set(["a", "b", "c", "d", "e", "f"]),
+  };
+
+  it("the bar and the section header print the same numbers", () => {
+    const c = counts(args);
+    expect(c).toEqual({ answered: 7, failed: 0, pending: 2, total: 9 });
+    const bar = progressLabel(lookupProgress(args), c);
+    const header = coverageCopy({
+      answered: answeredCount(args.applicable, args.completed, args.errored),
+      applicable: args.applicable.length,
+      total: 40,
+      jurisdiction: "GB",
+      screening: true,
+      pending: c.pending,
+      failed: c.failed,
+    }).aside;
+    expect(bar).toBe("Querying — 7 of 9 sources answered");
+    expect(header).toBe("7 of 9 sources answered · 2 still running…");
+    expect(header.startsWith(bar.replace("Querying — ", ""))).toBe(true);
+  });
+
+  it("a source that errored is failed in both, never answered", () => {
+    const withError = { ...args, completed: new Set([...args.completed, "g"]), errored: new Set(["g"]) };
+    const c = counts(withError);
+    expect(c).toEqual({ answered: 7, failed: 1, pending: 1, total: 9 });
+    expect(progressLabel(lookupProgress(withError), c)).toBe(
+      "Querying — 7 of 9 sources answered · 1 did not answer"
+    );
+  });
+});
+
+describe("noRecordSources (Phase 241)", () => {
+  it("names every source that answered with nothing, and none that errored or has a card", () => {
+    const applicable = ["opensanctions", "asp_moldova", "ted_eu", "wikirate", "kvk", "everypolitician"];
+    expect(
+      noRecordSources(
+        applicable,
+        new Set(["opensanctions", "asp_moldova", "ted_eu", "wikirate", "kvk"]),
+        new Set(["kvk"]),
+        new Set(["asp_moldova", "kvk"])
+      )
+    ).toEqual(["opensanctions", "ted_eu", "wikirate"]);
   });
 });
 

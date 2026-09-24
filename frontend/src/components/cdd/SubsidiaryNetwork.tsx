@@ -93,7 +93,7 @@ function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
             {/* Phase 185: every child carries an LEI, so every child has its
                 own report — the name opens its Subsidiaries tab, so a reader
                 can walk down a group. GLEIF's record stays one click away. */}
-            <div className="text-[12px] text-oo-ink leading-snug">
+            <div className="text-oo-meta text-oo-ink leading-snug">
               <a href={subsidiaryHref(c.lei)} className="hover:underline">
                 {c.name || c.lei}
               </a>
@@ -141,7 +141,7 @@ function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
 function SummaryStats({ data }: { data: SubsidiariesResponse }) {
   return (
     <>
-      <p className="mt-1 text-[12px] text-oo-ink leading-[1.6]">
+      <p className="mt-1 text-oo-meta text-oo-ink leading-[1.6]">
         <strong>{data.direct_total}</strong> direct{" "}
         {data.direct_total === 1 ? "child" : "children"} ·{" "}
         <strong>{data.ultimate_total}</strong> ultimate{" "}
@@ -381,7 +381,7 @@ export function SubsidiaryNetwork({
         bare ? "" : "mt-3 rounded-oo border border-oo-rule bg-oo-bg p-3"
       }
     >
-      {loading && <p className="text-[12px] text-oo-muted">Fetching the GLEIF subsidiary network…</p>}
+      {loading && <p className="text-oo-meta text-oo-muted">Fetching the GLEIF subsidiary network…</p>}
       {error && (
         // role="alert" so it is announced, matching NzAssociations and
         // FullCheckPanel. Amber, not red: an upstream that did not answer is
@@ -430,7 +430,7 @@ export function SubsidiaryNetwork({
 
       {data && !data.available && data.children_available !== false && (
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[12px] text-oo-muted leading-[1.6]">
+          <p className="text-oo-meta text-oo-muted leading-[1.6]">
             No subsidiary network published{data.reason ? ` (${data.reason})` : ""}.
           </p>
           {!autoRun && (
@@ -514,7 +514,7 @@ export function SubsidiaryNetwork({
           {/* Small network rendered as an interactive BODS graph. */}
           {isGraphMode && showGraph && bods && (
             <div className="mt-2">
-              <Suspense fallback={<p className="text-[12px] text-oo-muted">Loading graph…</p>}>
+              <Suspense fallback={<p className="text-oo-meta text-oo-muted">Loading graph…</p>}>
                 <BodsGraphExplorer statements={bods} signals={graphSignals} entityName={entityName} direction="subsidiaries" fullCheck />
               </Suspense>
             </div>

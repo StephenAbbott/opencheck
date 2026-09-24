@@ -69,6 +69,30 @@ export default {
             border: "#a7f3d0", // emerald-200
             text: "#047857",   // emerald-700
           },
+          // Phase 241: the Climate & ESG tab's own tier, built on its accent
+          // (oo.node.teal). The panel used the emerald that means "ok /
+          // corroborated" everywhere else, so an emissions figure rendered in
+          // the colour of a clean screen. Teal-50 … teal-900; the text values
+          // are 4.5:1+ on esg.bg and on white.
+          esg: {
+            bg: "#f0fdfa",     // teal-50
+            tint: "#ccfbf1",   // teal-100
+            border: "#99f6e4", // teal-200
+            accent: "#0d9488", // teal-600 -- = oo.node.teal, the mode accent
+            text: "#115e59",   // teal-800
+            strong: "#134e4a", // teal-900
+          },
+          // Phase 241: the risk-finding tier, named so the one tone that
+          // asserts "adverse finding" is a token rather than a Tailwind hue a
+          // component can reach for when it only wants something to look
+          // alarming (the licence panel did, and "share-alike obligations
+          // apply" read like a sanctions finding). Same values the risk chip
+          // has always used.
+          risk: {
+            bg: "#ffe4e6",     // rose-100   -- a finding against the subject
+            border: "#fb7185", // rose-400
+            text: "#9f1239",   // rose-800   (4.5:1+ on risk.bg)
+          },
           info: {
             bg: "#f0f9ff",     // sky-50     -- structural context
             border: "#bae6fd", // sky-200

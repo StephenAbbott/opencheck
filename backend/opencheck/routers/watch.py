@@ -335,10 +335,19 @@ def _describe(change: dict[str, Any]) -> str:
         return f"No longer reported: {change.get('code')} — the source that reported it answered."
     if k in ("signal_unchecked", "context_unchecked"):
         return f"Could not re-check: {change.get('code')} — {', '.join(change.get('degraded') or change.get('sources') or [])} did not answer."
-    if k == "coverage_changed":
-        return f"Coverage: {(old or {}).get('answered')} of {(old or {}).get('applicable')} → {(new or {}).get('answered')} of {(new or {}).get('applicable')} sources answered."
-    if k == "coverage_unchecked":
-        return f"Coverage fell to {(new or {}).get('answered')} of {(new or {}).get('applicable')} because sources could not be reached — not a fact about the company."
+    if k in ("coverage_changed", "coverage_unchecked"):
+        o, n = old or {}, new or {}
+        # Phase 241: a baseline stored before then has no ``answered`` in
+        # the current sense, so the line compares sources with a record.
+        if o.get("answered") is not None and n.get("answered") is not None:
+            field, noun = "answered", "sources answered"
+        elif "with_data" in o or "with_data" in n:
+            field, noun = "with_data", "sources returned a record"
+        else:
+            field, noun = "answered", "sources answered"
+        if k == "coverage_changed":
+            return f"Coverage: {o.get(field)} of {o.get('applicable')} → {n.get(field)} of {n.get('applicable')} {noun}."
+        return f"Coverage fell to {n.get(field)} of {n.get('applicable')} {noun} because sources could not be reached — not a fact about the company."
     if k == "verdict":
         return f"Verdict: {new}"
     return f"{k}."

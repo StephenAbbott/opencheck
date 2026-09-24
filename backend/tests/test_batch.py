@@ -118,7 +118,13 @@ def test_row_is_the_single_lookup_reduced() -> None:
     # Phase 156: the GLEIF anchor is counted in both coverage figures.
     assert row["coverage"]["applicable"] == 4
     assert row["coverage"]["applicable_ids"][0] == "gleif"
-    assert row["coverage"]["answered"] == 2  # gleif + companies_house (wikidata was a stub)
+    # Phase 241: ``answered`` counts every source that replied — wikidata
+    # answered with no record — and ``with_data`` the ones with a record.
+    # opensanctions errored, so it is the one applicable source that did not.
+    assert row["coverage"]["answered"] == 3
+    assert row["coverage"]["with_data"] == 2  # gleif + companies_house
+    assert row["coverage"]["no_record_ids"] == ["wikidata"]
+    assert row["coverage"]["failed_ids"] == ["opensanctions"]
     assert row["degraded"] is True
     assert row["degraded_sources"] == ["opensanctions"]
     assert row["report_url"] == f"/?lei={lei}"
@@ -472,7 +478,7 @@ def test_rows_csv_names_every_lei_with_failed_ones_apart() -> None:
     assert lines[1].startswith(f"{a},Northwind Logistics Ltd,GB,live,")
     assert '"Sanctions, ""listed""."' in lines[1]
     assert ",degraded,," in lines[1]  # the fixture row has a degraded source
-    assert lines[2] == f"{b},,,,,,,,,,,true,,not checked,rate-limited,https://opencheck.world/?lei={b}"
+    assert lines[2] == f"{b},,,,,,,,,,,,true,,not checked,rate-limited,https://opencheck.world/?lei={b}"
 
 
 def test_zip_union_licence_is_the_strictest_member(monkeypatch) -> None:
@@ -526,7 +532,7 @@ def test_export_route_returns_the_zip_and_flags_failures(client: TestClient, mon
         rows = zf.read([n for n in zf.namelist() if n.endswith("rows.csv")][0]).decode()
     assert manifest["counts"] == {"requested": 2, "done": 1, "failed": 1, "degraded": 2}
     assert manifest["failed"][0]["lei"] == b
-    assert f"{b},,,,,,,,,,,true,,not checked,rate-limited" in rows
+    assert f"{b},,,,,,,,,,,,true,,not checked,rate-limited" in rows
 
 
 def test_export_route_is_gated_and_validated(client: TestClient) -> None:

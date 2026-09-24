@@ -14,7 +14,7 @@
  * duplication is how the styles diverged the first time.
  */
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "warn" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "warn" | "danger" | "person";
 export type ButtonSize = "sm" | "md";
 
 /** Shared by every variant: the hit target, the focus ring, the radius. */
@@ -46,6 +46,11 @@ const VARIANTS: Record<ButtonVariant, string> = {
   warn: "bg-white border-oo-warn-border text-oo-warn-text font-bold hover:bg-oo-warn-bg",
   // Reserved for a failure the user must act on. Not for empty results.
   danger: "bg-white border-rose-300 text-rose-700 font-bold hover:bg-rose-50",
+  // Phase 241: an action on a person — BackgroundCheck's accent, the node
+  // colour its mode badge wears (white on oo.node.purple is 5.7:1). It replaced a
+  // bespoke 12px, ~32px-tall violet button repeated once per person.
+  person:
+    "bg-oo-node-purple border-oo-node-purple text-white font-bold hover:bg-oo-graph-roleText hover:border-oo-graph-roleText",
 };
 
 export function buttonClasses(

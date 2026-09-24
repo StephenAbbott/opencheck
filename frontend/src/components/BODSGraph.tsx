@@ -40,6 +40,7 @@ import { RISK_PRESENTATION } from "./risk/RiskChip";
 import type { SameAsCandidate } from "../lib/reconcile";
 import type { LayerControl } from "../lib/fullCheckHeader";
 import { Button } from "./ui";
+import { animationMs } from "../lib/motion";
 
 cytoscape.use(dagre);
 
@@ -452,7 +453,7 @@ export default function BODSGraph({
 
     if (active && ids.length > 0) {
       const node = cy.getElementById(ids[0]);
-      if (node.nonempty()) cy.animate({ center: { eles: node } }, { duration: 250 });
+      if (node.nonempty()) cy.animate({ center: { eles: node } }, { duration: animationMs(250) });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, model, collapsed]);
@@ -489,7 +490,7 @@ export default function BODSGraph({
       const visible = visRef.current?.visible.has(selectedId) ?? true;
       if (node.nonempty() && visible) {
         node.select();
-        cy.animate({ center: { eles: node } }, { duration: 250 });
+        cy.animate({ center: { eles: node } }, { duration: animationMs(250) });
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -511,7 +512,7 @@ export default function BODSGraph({
     const wrapped = ((idx % matchIds.length) + matchIds.length) % matchIds.length;
     setMatchIdx(wrapped);
     const node = cy.getElementById(matchIds[wrapped]);
-    if (node.nonempty()) cy.animate({ center: { eles: node } }, { duration: 250 });
+    if (node.nonempty()) cy.animate({ center: { eles: node } }, { duration: animationMs(250) });
   }
 
   const searching = query.trim().length > 0;

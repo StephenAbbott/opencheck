@@ -123,6 +123,9 @@ export interface CardHealth {
   checked: string;
   /** Oldest first, this sweep last. */
   history: SourceHealthStatus[];
+  /** Phase 241: the history dots in words, for assistive technology —
+   *  "Last 8 sweeps: 6 healthy, 2 degraded; latest 21 Sept 2026". */
+  historyText: string;
   rows: HealthDetailRow[];
   /** The reason it is not ok, and any known gap — in the card's own words. */
   notes: string[];
@@ -153,6 +156,29 @@ function statementsPhrase(row: SourceHealthRow): string {
     return `${base} — fell since the previous sweep (${worst})`;
   }
   return base;
+}
+
+/**
+ * The history dots in one sentence (Phase 241).
+ *
+ * The dots carried an `aria-label` on a `dd`, which is not a role that takes
+ * one reliably, and it read "Degraded, Degraded, Degraded…" eight times with
+ * no date: a count and the date of the latest sweep say the same thing in a
+ * sentence a screen reader can finish.
+ */
+export function historySentence(
+  history: readonly SourceHealthStatus[],
+  latestIso: string | null | undefined
+): string {
+  if (history.length === 0) return "No sweeps recorded yet.";
+  const order: SourceHealthStatus[] = ["ok", "degraded", "fail", "skipped"];
+  const parts = order
+    .map((st) => [st, history.filter((h) => h === st).length] as const)
+    .filter(([, n]) => n > 0)
+    .map(([st, n]) => `${n} ${STATUS_WORD[st].toLowerCase()}`);
+  const head = history.length === 1 ? "Last sweep" : `Last ${history.length} sweeps`;
+  const latest = latestIso ? `; latest ${formatSweepDate(latestIso)}` : "";
+  return `${head}: ${parts.join(", ")}${latest}.`;
 }
 
 export function cardHealth(
@@ -191,6 +217,7 @@ export function cardHealth(
     tone: STATUS_TONE[row.status],
     checked,
     history: row.history,
+    historyText: historySentence(row.history, report.generated_at),
     rows,
     notes,
     openByDefault: row.status !== "ok" || Boolean(row.known_gap) || Boolean(row.statement_collapse),

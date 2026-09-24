@@ -202,3 +202,47 @@ test.describe("the report at phone width", () => {
     await expectNoHorizontalOverflow(page);
   });
 });
+
+test.describe("every page at 320px (Phase 241)", () => {
+  // WCAG 1.4.10: content reflows at 320 CSS px. The Opus 5.5 check found
+  // /changelog, /api and /about scrolling sideways there, and the header nav
+  // clipped to "Fea" — invisible to the overflow check above, because the
+  // header's `overflow-hidden` swallowed it while the link stayed focusable.
+  test.use({ viewport: { width: 320, height: 720 } });
+
+  for (const route of ROUTES) {
+    test(`${route.name} reflows without a sideways scroll`, async ({ page }) => {
+      await page.goto(route.path);
+      await expect(page.locator("h1")).toHaveCount(1);
+      await expectNoHorizontalOverflow(page);
+      // Every nav item is wholly on screen, not clipped by the header.
+      const items = page.getByRole("navigation", { name: "Site navigation" }).getByRole("button");
+      expect(await items.count()).toBeGreaterThan(0);
+      for (const item of await items.all()) {
+        const box = (await item.boundingBox())!;
+        expect(box.x, "a nav item starts off-screen").toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width, "a nav item is clipped").toBeLessThanOrEqual(320);
+      }
+    });
+  }
+});
+
+test("the arrow keys walk every check mode (Phase 241)", async ({ page }) => {
+  await page.goto(`/?lei=${BP}`);
+  await expect(page.getByRole("region", { name: "What this check found" })).toBeVisible({
+    timeout: 150_000,
+  });
+  const tablist = page.getByRole("tablist", { name: "Check mode" });
+  await tablist.getByRole("tab", { selected: true }).focus();
+  // Before Phase 241 focus moved into the panel after the first →, so the
+  // second press did nothing: a keyboard user moved one tab at a time.
+  for (let i = 1; i < CHECK_MODES.length; i++) {
+    await page.keyboard.press("ArrowRight");
+    await expect(tablist.getByRole("tab", { selected: true })).toHaveAttribute("id", `tab-${CHECK_MODES[i]}`);
+    await expect(page.locator(`#tab-${CHECK_MODES[i]}`)).toBeFocused();
+  }
+  await page.keyboard.press("Home");
+  await expect(page.locator(`#tab-${CHECK_MODES[0]}`)).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(page.locator(`#tab-${CHECK_MODES[CHECK_MODES.length - 1]}`)).toBeFocused();
+});

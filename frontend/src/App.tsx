@@ -8,6 +8,7 @@ import {
   downloadReportPdf,
   fetchSources,
   isValidLei,
+  leiInputMessage,
   getSavedReport,
   replayLookupEvents,
   retryLookupSource,
@@ -50,18 +51,20 @@ import { ExportPanel } from "./components/export/ExportPanel";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
-import { Icon, SectionHeading, SectionLabel as Eyebrow } from "./components/ui";
+import { Chip, Icon, SectionHeading, SectionLabel as Eyebrow } from "./components/ui";
 import { profileRows, statusChip } from "./lib/subjectProfile";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { PERSON_VERB, resultCount, setSourceNames, sourceLabel } from "./lib/vocab";
-import { answeredCount, coverageCopy } from "./lib/lookupProgress";
+import { answeredCount, coverageCopy, noRecordSources, settledCount } from "./lib/lookupProgress";
+import { scrollBehavior } from "./lib/motion";
 import {
   MODE_ACCENT,
   TOPIC_MODES,
   deepLinkOptions,
   documentTitleFor,
   modeLabel,
+  modeForKey,
   modeParam,
 } from "./lib/checkMode";
 import {
@@ -152,6 +155,10 @@ function personReportFromSearch(
 
 export default function App() {
   const [leiInput, setLeiInput] = useState("");
+  // Phase 241: the app's own message for a malformed LEI, in place of the
+  // browser's `pattern` tooltip — which is unstyleable, vanishes on its own
+  // and is announced inconsistently (the form is `noValidate`).
+  const [leiInputError, setLeiInputError] = useState<string | null>(null);
 
   // --- Streaming lookup state ---
   // streamingLei is set once GLEIF resolves (replaces the old `result !== null` guard).
@@ -237,6 +244,18 @@ export default function App() {
   // to say how much was checked.
   const answeredApplicable = useMemo(
     () => answeredCount(applicableSources, completedSources, erroredSources),
+    [applicableSources, completedSources, erroredSources]
+  );
+  // Phase 241: the one progress count — the loading grid computes the same
+  // figures from the same sets, so the header and the bar cannot disagree.
+  const settled = useMemo(
+    () =>
+      settledCount({
+        anchored: true,
+        applicable: applicableSources,
+        completed: completedSources,
+        errored: erroredSources,
+      }),
     [applicableSources, completedSources, erroredSources]
   );
   const [streaming, setStreaming] = useState(false);
@@ -937,7 +956,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
    * would otherwise drop to <body>; and the analytics event fires once per
    * actual change rather than on every click of an already-active tab.
    */
-  const selectMode = useCallback((next: CheckMode) => {
+  const selectMode = useCallback((next: CheckMode, opts: { focusPanel?: boolean } = {}) => {
+    // Phase 241: the tablist's arrow keys keep focus on the tab they moved
+    // to (`focusPanel: false`). Moving it into the panel on the next frame
+    // left the following arrow press on the panel, where it did nothing.
+    const focusPanel = opts.focusPanel ?? true;
     setMode((current) => {
       if (current === next) return current;
       if (next === "full") trackEvent("fullcheck_run");
@@ -950,9 +973,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       window.history.replaceState({}, "", url);
       // After the panel swaps in. requestAnimationFrame rather than a
       // timeout so it lands on the next paint whatever the render cost.
-      requestAnimationFrame(() => {
-        document.getElementById(`panel-${next}`)?.focus({ preventScroll: true });
-      });
+      if (focusPanel) {
+        requestAnimationFrame(() => {
+          document.getElementById(`panel-${next}`)?.focus({ preventScroll: true });
+        });
+      }
       return next;
     });
   }, []);
@@ -1114,6 +1139,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
 
   function runLookup(e: React.FormEvent) {
     e.preventDefault();
+    const message = leiInputMessage(leiInput);
+    setLeiInputError(message);
+    if (message) {
+      document.getElementById("lei-input")?.focus();
+      return;
+    }
     lookupLei(leiInput);
   }
 
@@ -1151,7 +1182,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     requestAnimationFrame(() => {
       document
         .getElementById("panel-name")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        ?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
     });
   }
 
@@ -1403,7 +1434,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   const showSourceCard = useCallback((sourceId: string) => {
     const el = document.getElementById(`source-${sourceId}`);
     if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
     if (el.tabIndex < 0) el.tabIndex = -1;
     el.focus({ preventScroll: true });
     el.classList.add("oc-cite-flash");
@@ -1435,7 +1466,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setIdentityOpen(true);
     const el = document.getElementById("cross-source-identifiers");
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
       if (el.tabIndex < 0) el.tabIndex = -1;
       el.focus({ preventScroll: true });
       el.classList.add("oc-cite-flash");
@@ -1486,6 +1517,19 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   const [riskCodes, contextCodes] = useMemo(
     () => partitionByKind(aggregatedCodes),
     [aggregatedCodes],
+  );
+
+  // Phase 241: every applicable source is named on the report. One that
+  // answered with nothing produces no card, so it gets a chip instead.
+  const answeredNoRecord = useMemo(
+    () =>
+      noRecordSources(
+        applicableSources,
+        completedSources,
+        erroredSources,
+        new Set(bucketList.map((b) => b.sourceId))
+      ),
+    [applicableSources, completedSources, erroredSources, bucketList]
   );
 
   // Sources that are announced (sources_applicable) but not yet completed —
@@ -1639,7 +1683,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
        * have a clean utility for offset radial gradients.
        */}
       <header
-        className="relative overflow-hidden bg-oo-navy text-white px-6 sm:px-10 lg:px-16 py-3 sm:py-4"
+        // Phase 241: no `overflow-hidden`. The gradient is a background, which
+        // the box clips already; what the overflow clipped was the nav, which
+        // at 320px read "Fea" and stayed focusable. The nav wraps instead.
+        className="relative bg-oo-navy text-white px-4 sm:px-10 lg:px-16 py-3 sm:py-4"
         role="banner"
         style={{
           backgroundImage:
@@ -1655,7 +1702,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 and the links at the other; from `md` the search field takes
                 the right-hand end and this reverts to sitting beside the
                 mark. */}
-            <div className="flex items-center gap-4 w-full justify-between md:w-auto md:justify-start">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 w-full justify-between md:w-auto md:justify-start">
               <button
                 type="button"
                 onClick={resetToHome}
@@ -1664,10 +1711,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               >
                 <OpenCheckIcon className="h-7 w-auto flex-shrink-0" />
                 <span className="font-head font-bold text-white leading-tight text-xl">
-                  Open<span className="text-[#93c5fd]">Check</span>
+                  Open<span className="text-oo-mark-line">Check</span>
                 </span>
               </button>
-            <nav aria-label="Site navigation" className="flex items-center gap-4 sm:gap-5">
+            <nav aria-label="Site navigation" className="flex flex-wrap items-center gap-x-4 sm:gap-x-5">
               {NAV_ITEMS.map((item) => {
                 const current = view === item.view;
                 return (
@@ -1676,9 +1723,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     type="button"
                     onClick={() => navigate(item.view)}
                     aria-current={current ? "page" : undefined}
-                    className={`min-h-[44px] text-[13px] transition-colors ${
+                    className={`min-h-[44px] text-oo-small transition-colors ${
                       current
-                        ? "text-white font-medium border-b-2 border-[#93c5fd]"
+                        ? "text-white font-medium border-b-2 border-oo-mark-line"
                         : "text-white/80 hover:text-white"
                     }`}
                   >
@@ -1703,7 +1750,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               onSubmit={submitHeaderSearch}
               role="search"
               aria-label="Search for a company"
-              className="hidden md:flex items-center gap-2 rounded-oo border border-white/25 bg-white/10 focus-within:bg-white/15 focus-within:border-white/45 px-3 py-1.5 min-w-[300px] transition-colors"
+              // Phase 241: a visible focus ring (oo.mark.line on navy, 9.4:1). The
+              // input's own outline is off, and a 1.19:1 fill change was the
+              // only cue that the field had focus.
+              className="hidden md:flex items-center gap-2 rounded-oo border border-white/25 bg-white/10 focus-within:bg-white/15 focus-within:border-white/45 focus-within:ring-2 focus-within:ring-oo-mark-line px-3 py-1.5 min-w-[300px] transition-colors"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="text-white/70 shrink-0">
@@ -1720,7 +1770,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 placeholder="Company name or LEI"
                 className="min-w-0 flex-1 bg-transparent text-oo-small text-white placeholder:text-white/60 focus:outline-none"
               />
-              <button type="submit" className="sr-only">
+              {/* Enter submits; the button is for assistive tech that
+                  lists buttons, and takes no Tab stop while invisible. */}
+              <button type="submit" className="sr-only" tabIndex={-1}>
                 Search
               </button>
             </form>
@@ -1733,7 +1785,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         role="main"
         tabIndex={-1}
         style={{ outline: "none" }}
-        className="flex-1 px-6 sm:px-10 lg:px-16 py-5 sm:py-6 max-w-oo-page mx-auto w-full"
+        className="flex-1 px-4 sm:px-10 lg:px-16 py-5 sm:py-6 max-w-oo-page mx-auto w-full"
       >
         {/* One <h1> per page, and never two (Phase 168).
             The main view has had one all along — `HeroHeading` on the
@@ -1761,7 +1813,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         {view === "main" && personReport && (
           <Suspense
             fallback={
-              <p className="text-[13px] text-oo-muted italic">
+              <p className="text-oo-small text-oo-muted italic">
                 Loading person report…
               </p>
             }
@@ -1784,10 +1836,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             a different entity" row. */}
         {!streamingLei && (
         <div className="mb-3">
-          <HeroHeading className="font-head font-bold text-oo-ink leading-tight text-[20px] sm:text-[26px]">
+          <HeroHeading className="font-head font-bold text-oo-ink leading-tight text-[20px] sm:text-oo-display">
             Conduct due diligence on <span className="text-oo-blue">3 million</span> companies, starting from a single ID
           </HeroHeading>
-          <p className="text-[13px] sm:text-sm text-oo-muted leading-snug mt-2">
+          <p className="text-oo-small sm:text-sm text-oo-muted leading-snug mt-2">
             With a Legal Entity Identifier, OpenCheck pulls open corporate data from 49 sources into one graph using the Beneficial Ownership Data Standard
           </p>
         </div>
@@ -1813,7 +1865,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               tabIndex={searchMode === "name" ? 0 : -1}
               onKeyDown={onSearchTabKeyDown}
               onClick={() => { setSearchMode("name"); setMobileSearchOpen(true); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors bg-white ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-oo-meta font-medium transition-colors bg-white ${
                 searchMode === "name"
                   ? "text-oo-ink border-b-2 border-oo-blue"
                   : "text-oo-muted hover:text-oo-ink"
@@ -1831,7 +1883,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               tabIndex={searchMode === "nationalId" ? 0 : -1}
               onKeyDown={onSearchTabKeyDown}
               onClick={() => { setSearchMode("nationalId"); setMobileSearchOpen(true); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-oo-meta font-medium transition-colors border-l border-oo-rule bg-white ${
                 searchMode === "nationalId"
                   ? "text-oo-ink border-b-2 border-oo-blue"
                   : "text-oo-muted hover:text-oo-ink"
@@ -1849,7 +1901,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               tabIndex={searchMode === "lei" ? 0 : -1}
               onKeyDown={onSearchTabKeyDown}
               onClick={() => { setSearchMode("lei"); setMobileSearchOpen(true); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-oo-meta font-medium transition-colors border-l border-oo-rule bg-white ${
                 searchMode === "lei"
                   ? "text-oo-ink border-b-2 border-oo-blue"
                   : "text-oo-muted hover:text-oo-ink"
@@ -1867,7 +1919,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               tabIndex={searchMode === "person" ? 0 : -1}
               onKeyDown={onSearchTabKeyDown}
               onClick={() => { setSearchMode("person"); setMobileSearchOpen(true); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium transition-colors border-l border-oo-rule bg-white ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-oo-meta font-medium transition-colors border-l border-oo-rule bg-white ${
                 searchMode === "person"
                   ? "text-oo-ink border-b-2 border-oo-blue"
                   : "text-oo-muted hover:text-oo-ink"
@@ -1925,8 +1977,18 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 )}
               </div>
 
+              {/* Phase 241: the count is announced once, by a status
+                  region that is always mounted. The container used to be
+                  \`aria-live\` itself, so it was inserted with its content —
+                  which some readers ignore and others read in full, every
+                  result button after the count. */}
+              <p role="status" className="sr-only">
+                {nameSearchMutation.data && nameSearchMutation.data.length > 0
+                  ? `${resultCount(nameSearchMutation.data.length)} — select one to search it`
+                  : ""}
+              </p>
               {nameSearchMutation.data && nameSearchMutation.data.length > 0 && (
-                <div className="mt-4" aria-live="polite">
+                <div className="mt-4">
                   <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
                     {resultCount(nameSearchMutation.data.length)} — select one to search it
                   </p>
@@ -1944,7 +2006,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                           }}
                           className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-oo-blue/40"
                         >
-                          <div className="font-head font-bold text-[14px] text-oo-ink leading-snug">
+                          <div className="font-head font-bold text-oo-body text-oo-ink leading-snug">
                             {r.legalName}
                           </div>
                           <div className="flex items-center gap-3 mt-1">
@@ -2018,7 +2080,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                         setNationalIdQuery("");
                         setNationalIdTouched(false);
                       }}
-                      className="w-full sm:w-auto border border-oo-rule rounded px-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue bg-oo-bg sm:bg-white"
+                      className="w-full sm:w-auto border border-oo-rule rounded px-3 py-2.5 text-oo-small focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue bg-oo-bg sm:bg-white"
                     >
                       {COUNTRY_OPTIONS.map(({ code, entry }) => (
                         <option key={code} value={code}>
@@ -2056,7 +2118,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                       <p
                         id="national-id-format-warn"
                         role="status"
-                        className="mt-1.5 text-[12px] text-amber-700"
+                        className="mt-1.5 text-oo-meta text-amber-700"
                       >
                         Format looks unexpected — expected {RA_CODES[selectedCountry]?.formatHint?.toLowerCase()}.
                         You can still search; GLEIF may store the number differently.
@@ -2100,8 +2162,18 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 )}
               </div>
 
+              {/* Phase 241: the count is announced once, by a status
+                  region that is always mounted. The container used to be
+                  \`aria-live\` itself, so it was inserted with its content —
+                  which some readers ignore and others read in full, every
+                  result button after the count. */}
+              <p role="status" className="sr-only">
+                {nationalIdSearchMutation.data && nationalIdSearchMutation.data.length > 1
+                  ? `${resultCount(nationalIdSearchMutation.data.length)} — select one to search it`
+                  : ""}
+              </p>
               {nationalIdSearchMutation.data && nationalIdSearchMutation.data.length > 1 && (
-                <div className="mt-4" aria-live="polite">
+                <div className="mt-4">
                   <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
                     {resultCount(nationalIdSearchMutation.data.length)} — select one to search it
                   </p>
@@ -2119,7 +2191,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                           }}
                           className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-oo-blue/40"
                         >
-                          <div className="font-head font-bold text-[14px] text-oo-ink leading-snug">
+                          <div className="font-head font-bold text-oo-body text-oo-ink leading-snug">
                             {r.legalName}
                           </div>
                           <div className="flex items-center gap-3 mt-1">
@@ -2148,14 +2220,19 @@ const NAV_ITEMS: { view: View; label: string }[] = [
 
           {/* ── LEI paste panel ── */}
           {searchMode === "lei" && (
-            <form onSubmit={runLookup} id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-4">
+            <form onSubmit={runLookup} noValidate id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-4">
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   id="lei-input"
                   type="text"
                   value={leiInput}
-                  onChange={(e) => setLeiInput(e.target.value)}
+                  onChange={(e) => {
+                    setLeiInput(e.target.value);
+                    if (leiInputError) setLeiInputError(null);
+                  }}
                   placeholder="Paste a 20-character LEI"
+                  aria-invalid={leiInputError ? true : undefined}
+                  aria-describedby={leiInputError ? "lei-input-error" : undefined}
                   spellCheck={false}
                   autoComplete="off"
                   aria-label="Legal Entity Identifier (20 characters)"
@@ -2173,6 +2250,11 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   {lookupMutation.isPending ? "Searching…" : "Search"}
                 </button>
               </div>
+              {leiInputError && (
+                <p id="lei-input-error" role="alert" className="mt-2 text-oo-small text-oo-warn-text">
+                  {leiInputError}
+                </p>
+              )}
             </form>
           )}
 
@@ -2257,7 +2339,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     ?.focus();
                 });
               }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] text-[12px] font-medium text-oo-blue hover:bg-oo-bg transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] text-oo-meta font-medium text-oo-blue hover:bg-oo-bg transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" />
@@ -2321,14 +2403,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             role="alert"
             className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-oo border border-amber-300 bg-amber-50 px-4 py-3"
           >
-            <p className="text-[13px] leading-[1.6] text-amber-900">
+            <p className="text-oo-small leading-[1.6] text-amber-900">
               <span className="font-medium">Connection lost mid-lookup.</span>{" "}
               Showing partial results for {legalName ?? streamingLei}.
             </p>
             <button
               type="button"
               onClick={() => lookupLei(streamingLei)}
-              className="shrink-0 rounded border border-amber-400 px-3 py-1.5 text-[12px] font-semibold text-amber-900 transition-colors hover:bg-amber-100"
+              className="shrink-0 rounded border border-amber-400 px-3 py-1.5 text-oo-meta font-semibold text-amber-900 transition-colors hover:bg-amber-100"
             >
               Resume lookup
             </button>
@@ -2469,20 +2551,17 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     tabIndex={active ? 0 : -1}
                     onClick={() => selectMode(tab.id)}
                     onKeyDown={(e) => {
-                      // Left/Right move between tabs (WAI-ARIA tabs pattern);
-                      // the roving tabIndex above keeps one stop in the
-                      // sequence rather than four.
-                      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                      // Left/Right/Home/End move between tabs (WAI-ARIA tabs
+                      // pattern); the roving tabIndex above keeps one stop in
+                      // the sequence rather than six. Focus stays on the tab
+                      // (Phase 241) so →→→ walks the whole strip.
+                      const next = modeForKey(e.key, tab.id, MODE_TABS.map((t) => t.id));
+                      if (!next) return;
                       e.preventDefault();
-                      const i = MODE_TABS.findIndex((t) => t.id === mode);
-                      const next =
-                        e.key === "ArrowRight"
-                          ? MODE_TABS[(i + 1) % MODE_TABS.length]
-                          : MODE_TABS[(i - 1 + MODE_TABS.length) % MODE_TABS.length];
-                      selectMode(next.id);
-                      document.getElementById(`tab-${next.id}`)?.focus();
+                      selectMode(next, { focusPanel: false });
+                      document.getElementById(`tab-${next}`)?.focus();
                     }}
-                    className={`relative flex flex-col items-center justify-center gap-1 px-2 py-2.5 min-h-[56px] text-oo-meta border-0 border-oo-rule ${cellRules} transition-colors sm:flex-row sm:shrink-0 sm:justify-start sm:gap-2 sm:rounded-t-oo sm:px-3 md:px-4 sm:pb-3 sm:pt-3 sm:text-[14px] sm:min-h-[44px] sm:border ${
+                    className={`relative flex flex-col items-center justify-center gap-1 px-2 py-2.5 min-h-[56px] text-oo-meta border-0 border-oo-rule ${cellRules} transition-colors sm:flex-row sm:shrink-0 sm:justify-start sm:gap-2 sm:rounded-t-oo sm:px-3 md:px-4 sm:pb-3 sm:pt-3 sm:text-oo-body sm:min-h-[44px] sm:border ${
                       active
                         ? "bg-white font-bold text-oo-ink sm:-mb-px sm:border-oo-rule sm:border-b-white"
                         : "font-medium text-oo-muted hover:text-oo-ink sm:border-transparent"
@@ -2932,7 +3011,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             </PanelSection>
           )}
 
-        {(cddBuckets.length > 0 || pendingCddSources.length > 0) && (
+        {(cddBuckets.length > 0 || pendingCddSources.length > 0 || answeredNoRecord.length > 0) && (
           <PanelSection
             title="What each source said"
             // The same figures as the verdict strip's Coverage column, from
@@ -2940,7 +3019,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             // first one in this list, so a count that excluded it read one
             // short of the cards beneath it (Phase 156).
             aside={
-              pendingCddSources.length > 0 ? (
+              settled.pending > 0 ? (
                 <span className="text-oo-blue">
                   {coverageCopy({
                     answered: answeredApplicable,
@@ -2948,7 +3027,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     total: sourcesQuery.data?.sources.length ?? null,
                     jurisdiction: subjectJurisdiction,
                     screening: true,
-                    pending: pendingCddSources.length,
+                    pending: settled.pending,
+                    failed: settled.failed,
                   }).aside}
                 </span>
               ) : (
@@ -2958,6 +3038,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                   total: sourcesQuery.data?.sources.length ?? null,
                   jurisdiction: subjectJurisdiction,
                   screening: false,
+                  failed: settled.failed,
                 }).aside
               )
             }
@@ -2993,6 +3074,21 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               {pendingCddSources.map((id) => (
                 <SkeletonSourceCard key={id} />
               ))}
+              {answeredNoRecord.length > 0 && (
+                <div id="sources-no-record" className="scroll-mt-4">
+                  <SectionHeading as="h3">Answered with no record</SectionHeading>
+                  <p className="mt-1 text-oo-small text-oo-muted">
+                    These sources were asked about this company and hold nothing on it.
+                  </p>
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {answeredNoRecord.map((id) => (
+                      <li key={id}>
+                        <Chip tone="neutral">{sourceLabel(id, sourceNameIndex)}</Chip>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {/* Percolation can match related parties even when the subject
                   lookup produced no OpenAleph card — keep the matches
                   visible in that case rather than dropping them. */}
@@ -3071,7 +3167,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       {/* GODIN ribbon — permanent attribution banner. */}
       <aside
         aria-label="GODIN — Global Open Data Integration Network"
-        className="px-6 sm:px-10 lg:px-16 py-4 text-white/90 text-[13px] leading-[1.6]"
+        className="px-6 sm:px-10 lg:px-16 py-4 text-white/90 text-oo-small leading-[1.6]"
         style={{
           background:
             "linear-gradient(90deg, rgb(7, 116, 95) 0%, rgb(11, 110, 92) 100%)",
@@ -3120,10 +3216,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-4">
             {/* Left: brand + tagline */}
             <div>
-              <div className="font-head font-bold text-[15px] text-oo-ink">
+              <div className="font-head font-bold text-oo-lead text-oo-ink">
                 Open<span className="text-oo-blue">Check</span>
               </div>
-              <p className="mt-2 text-[12px] text-oo-muted leading-relaxed max-w-[220px]">
+              <p className="mt-2 text-oo-meta text-oo-muted leading-relaxed max-w-[220px]">
                 Customer due diligence checks powered by the Legal Entity
                 Identifier and open standards.
               </p>
@@ -3215,7 +3311,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
               target="_blank"
               rel="noreferrer"
-              className="text-oo-blue hover:text-oo-burst"
+              className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
             >
               ATTRIBUTIONS.md
             </a>{" "}
@@ -3260,7 +3356,7 @@ function CrossSourceIdentifiersTable({
   if (!hasRows) return null;
 
   return (
-    <table className="w-full text-[13px] border-collapse table-fixed">
+    <table className="w-full text-oo-small border-collapse table-fixed">
       <thead>
         <tr>
           <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[32%]">
@@ -3280,7 +3376,7 @@ function CrossSourceIdentifiersTable({
             <td className="py-2 pr-3 text-oo-muted">
               {SCHEME_LABELS[link.key] ?? link.key}
             </td>
-            <td className="py-2 pr-3 font-mono text-[12px] text-oo-ink break-all">
+            <td className="py-2 pr-3 font-mono text-oo-meta text-oo-ink break-all">
               {link.key_value}
             </td>
             <td className="py-2 text-right">
@@ -3293,9 +3389,9 @@ function CrossSourceIdentifiersTable({
                     onClick={() =>
                       document
                         .getElementById(`source-${h.source_id}`)
-                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        ?.scrollIntoView({ behavior: scrollBehavior(), block: "start" })
                     }
-                    className="text-[11px] bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5 text-oo-muted hover:text-oo-ink hover:border-[#cfd6f5] transition-colors"
+                    className="text-[11px] bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5 text-oo-muted hover:text-oo-ink hover:border-oo-softBorder transition-colors"
                   >
                     {shortSourceName(h.source_id, sourceNames)}
                   </button>
@@ -3307,7 +3403,7 @@ function CrossSourceIdentifiersTable({
         {gleifMapped.map(({ scheme, value }) => (
           <tr key={scheme} className="border-t border-oo-rule">
             <td className="py-2 pr-3 text-oo-muted">{scheme}</td>
-            <td className="py-2 pr-3 font-mono text-[12px] text-oo-ink break-all">{value}</td>
+            <td className="py-2 pr-3 font-mono text-oo-meta text-oo-ink break-all">{value}</td>
             <td className="py-2 text-right">
               <span className="inline-flex items-center gap-1 text-[11px] bg-blue-50 border border-blue-200 text-blue-700 rounded px-1.5 py-0.5">
                 <svg
@@ -3460,7 +3556,7 @@ function DegradedScreensNotice({
             <path d="M12 17h.01" />
           </svg>
           <div className="min-w-0">
-            <p className="font-head font-bold text-[14px] text-amber-900">
+            <p className="font-head font-bold text-oo-body text-amber-900">
               Screening incomplete — {degraded.length} check
               {degraded.length === 1 ? "" : "s"} did not fully run
             </p>
@@ -3492,7 +3588,7 @@ function DegradedScreensNotice({
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-[12px] text-amber-800">
+            <p className="mt-2 text-oo-meta text-amber-800">
               The absence of the signals above is not evidence of absence —
               an empty result here is not a clean screen.
             </p>
@@ -3502,7 +3598,7 @@ function DegradedScreensNotice({
           <button
             type="button"
             onClick={onRetry}
-            className="shrink-0 rounded border border-amber-400 px-3 py-1.5 text-[12px] font-semibold text-amber-900 transition-colors hover:bg-amber-100"
+            className="shrink-0 rounded border border-amber-400 px-3 py-1.5 text-oo-meta font-semibold text-amber-900 transition-colors hover:bg-amber-100"
           >
             Re-run screening
           </button>
@@ -3522,12 +3618,12 @@ function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
       : pairs.slice(0, POSSIBLY_SAME_PREVIEW_COUNT);
   return (
     <>
-      <p className="text-[12px] text-oo-muted mb-3">
+      <p className="text-oo-meta text-oo-muted mb-3">
         These records share an exact name and jurisdiction but no common
         identifier, so they are <em>likely</em> the same entity — flagged for
         review, not merged automatically.
       </p>
-      <table className="w-full text-[13px] border-collapse table-fixed">
+      <table className="w-full text-oo-small border-collapse table-fixed">
         <thead>
           <tr>
             {/* Narrower Records column and tighter letter-spacing on mobile:
@@ -3567,7 +3663,7 @@ function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
                   )}
                 </div>
               </td>
-              <td className="py-2 pr-3 font-mono text-[12px] text-oo-muted">
+              <td className="py-2 pr-3 font-mono text-oo-meta text-oo-muted">
                 {p.jurisdiction || "—"}
               </td>
               <td className="py-2 text-right">
@@ -3589,7 +3685,7 @@ function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
           type="button"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
-          className="mt-3 text-[12px] font-medium text-oo-blue hover:text-oo-burst underline underline-offset-2"
+          className="mt-3 text-oo-meta font-medium text-oo-blue hover:text-oo-burst underline underline-offset-2"
         >
           {expanded
             ? "Show fewer"

@@ -39,6 +39,9 @@ if TYPE_CHECKING:  # pragma: no cover
 #: The check name adapters use when the source itself did not answer, as
 #: distinct from a derived screen that could not run.
 CHECK_SOURCE_FETCH = "source_fetch"
+#: Phase 241: the source returned a record and then failed while it was being
+#: read in full (a deepen error) — a partial answer, not a missing one.
+CHECK_SOURCE_READ = "source_read"
 
 # ``risk`` imports ``sources``, so an adapter importing ``risk`` at module
 # level is a circular import. These mirror the DEGRADED_* constants there and
@@ -57,7 +60,9 @@ def reason_for_failure(failure: str) -> str:
     ``risk.classify_degradation_reason`` does this for a live exception; an
     adapter that has already swallowed the error has only the label left.
     """
-    if failure.startswith("HTTP 429"):
+    # ``in``, not ``startswith``: a pipeline error string carries the
+    # exception type first ("HTTPStatusError: HTTP 429 Too Many Requests …").
+    if "HTTP 429" in failure:
         return REASON_RATE_LIMITED
     if "Timeout" in failure:
         return REASON_TIMEOUT
@@ -134,6 +139,55 @@ def record(
     )
 
 
+#: The ``detail`` of a degradation built from a pipeline error. Fixed
+#: sentences, so no entity name can reach them; each reads after the source's
+#: name ("OpenAleph — did not answer …").
+SOURCE_ERROR_DETAIL = "did not answer, so its records were not consulted"
+SOURCE_READ_DETAIL = (
+    "returned a result, then failed before it could be read in full — "
+    "its records are incomplete in this report"
+)
+
+
+def add_source_errors(
+    degraded: list[DegradedSource],
+    errors: dict[str, str],
+    *,
+    with_data: set[str],
+) -> None:
+    """Phase 241: every source error is a degradation.
+
+    A source that errored used to appear only on its own card. Its absence
+    from ``degraded_sources`` meant the verdict, the MCP summary's CAUTION
+    and the batch row's ``degraded`` flag all read the lookup as complete —
+    and a source that returned a result *and* then failed (OpenAleph's
+    ``ReadTimeout`` while its record was read, on Scottish Mortgage) read as
+    a clean answer everywhere. Appends one record per errored source that an
+    adapter has not already recorded: ``CHECK_SOURCE_FETCH`` when it returned
+    nothing, ``CHECK_SOURCE_READ`` when it returned a record (``with_data``).
+    """
+    from .risk import DegradedSource  # lazy: risk imports sources
+
+    covered = {
+        d.source_id
+        for d in degraded
+        if d.check in (CHECK_SOURCE_FETCH, CHECK_SOURCE_READ)
+    }
+    for source_id in sorted(errors):
+        if source_id in covered:
+            continue
+        partial = source_id in with_data
+        degraded.append(
+            DegradedSource(
+                source_id=source_id,
+                check=CHECK_SOURCE_READ if partial else CHECK_SOURCE_FETCH,
+                affected_signals=[],
+                detail=SOURCE_READ_DETAIL if partial else SOURCE_ERROR_DETAIL,
+                reason=reason_for_failure(errors[source_id] or ""),
+            )
+        )
+
+
 @contextmanager
 def recording() -> Iterator[list[DegradedSource]]:
     """Scoped form, for tests and scripts."""
@@ -147,10 +201,12 @@ def recording() -> Iterator[list[DegradedSource]]:
 
 __all__ = [
     "CHECK_SOURCE_FETCH",
+    "CHECK_SOURCE_READ",
     "REASON_NOT_CONFIGURED",
     "REASON_RATE_LIMITED",
     "REASON_TIMEOUT",
     "REASON_UPSTREAM_ERROR",
+    "add_source_errors",
     "begin",
     "collect",
     "reason_for_failure",

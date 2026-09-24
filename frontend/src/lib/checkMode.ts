@@ -147,3 +147,34 @@ export function documentTitleFor(mode: CheckMode, name: string): string {
   if (mode === "quick") return `${name} - OpenCheck`;
   return `${name} — ${modeLabel(mode)} — OpenCheck`;
 }
+
+/**
+ * The tab a key moves to in the mode tablist (Phase 241), or null for a key
+ * the tablist does not handle. WAI-ARIA tabs pattern: Left/Right wrap, Home
+ * and End jump to the ends.
+ *
+ * It takes the tab the key was pressed *on*, not the selected mode. Before
+ * Phase 241 the handler read the selected mode and `selectMode` moved focus
+ * into the panel on the next frame, so after one → the next arrow landed on
+ * the panel and did nothing: a keyboard user moved one tab at a time.
+ */
+export function modeForKey(
+  key: string,
+  from: CheckMode,
+  order: readonly CheckMode[] = CHECK_MODES
+): CheckMode | null {
+  const i = order.indexOf(from);
+  if (i < 0) return null;
+  switch (key) {
+    case "ArrowRight":
+      return order[(i + 1) % order.length];
+    case "ArrowLeft":
+      return order[(i - 1 + order.length) % order.length];
+    case "Home":
+      return order[0];
+    case "End":
+      return order[order.length - 1];
+    default:
+      return null;
+  }
+}

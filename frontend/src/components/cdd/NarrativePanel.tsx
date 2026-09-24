@@ -41,6 +41,7 @@ import {
 } from "../../lib/evidenceDisclosure";
 import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
 import { Chip, SectionHeading } from "../ui";
+import { scrollBehavior } from "../../lib/motion";
 
 const CONF_BADGE: Record<string, string> = {
   high: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -93,7 +94,7 @@ function focusCitation(cite: Cite) {
   if (cite.sourceId) {
     const el = document.getElementById(`oc-source-${cite.sourceId}`);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
       if (el.tabIndex < 0) el.tabIndex = -1;
       el.focus({ preventScroll: true });
       el.classList.add("oc-cite-flash");
@@ -236,7 +237,7 @@ function DispositionControls({
             maxLength={2000}
             rows={2}
             placeholder="Why is this accepted, disputed or held for review?"
-            className="mt-1 w-full rounded-oo border border-oo-rule p-2 text-[12px] text-oo-ink placeholder:text-[#6b7280] focus:border-oo-blue focus:outline-none focus:ring-1 focus:ring-oo-blue/30"
+            className="mt-1 w-full rounded-oo border border-oo-rule p-2 text-oo-meta text-oo-ink placeholder:text-[#6b7280] focus:border-oo-blue focus:outline-none focus:ring-1 focus:ring-oo-blue/30"
           />
         </span>
       )}
@@ -566,7 +567,7 @@ export function NarrativePanel({
             type="button"
             onClick={() => setCollapsed((c) => !c)}
             aria-expanded={!collapsed}
-            className="inline-flex items-center gap-1 rounded-oo border border-oo-rule text-oo-muted text-[12px] font-medium px-3 py-1.5 hover:border-oo-blue hover:text-oo-blue transition-colors"
+            className="inline-flex items-center gap-1 rounded-oo border border-oo-rule text-oo-muted text-oo-meta font-medium px-3 py-1.5 hover:border-oo-blue hover:text-oo-blue transition-colors"
           >
             {collapsed ? (
               <>
@@ -599,12 +600,12 @@ export function NarrativePanel({
             type="button"
             onClick={generate}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-oo bg-oo-blue text-white text-[13px] font-medium px-4 py-2 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-oo bg-oo-blue text-white text-oo-small font-medium px-4 py-2 disabled:opacity-60"
           >
             {loading ? "Generating…" : "Generate summary"}
           </button>
           {error && (
-            <p role="alert" className="mt-3 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
+            <p role="alert" className="mt-3 text-oo-meta text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
               {error}
             </p>
           )}
@@ -613,7 +614,7 @@ export function NarrativePanel({
 
       {data && !collapsed && (
         <div className="mt-4">
-          <p className="text-[14px] leading-relaxed text-oo-ink max-w-[82ch]">{data.summary}</p>
+          <p className="text-oo-body leading-relaxed text-oo-ink max-w-[82ch]">{data.summary}</p>
 
           {/* The control that acts on the summary as a whole, above the
               evidence list rather than after it, because a reader who has
@@ -723,7 +724,7 @@ export function NarrativePanel({
                       .filter((x): x is Cite => x !== null)
                   );
                   return (
-                    <li key={c.id} className="text-[13px] text-oo-ink">
+                    <li key={c.id} className="text-oo-small text-oo-ink">
                       <span>{c.text}</span>{" "}
                       <span className="inline-flex flex-wrap gap-1 align-middle">
                         {cites.map((group) => (
@@ -763,7 +764,7 @@ export function NarrativePanel({
                     setEvidenceExpanded(true);
                     trackEvent("evidence_expand");
                   }}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-oo border border-[#cfd6f5] bg-[#eef1fb] px-4 py-2 text-[13px] font-semibold text-oo-blue transition-colors hover:bg-[#e3e8f8]"
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-oo border border-[#cfd6f5] bg-[#eef1fb] px-4 py-2 text-oo-small font-semibold text-oo-blue transition-colors hover:bg-[#e3e8f8]"
                 >
                   Show all {data.claims.length} evidence statements
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5" aria-hidden>
@@ -777,7 +778,7 @@ export function NarrativePanel({
                   aria-expanded={true}
                   aria-controls="oc-evidence-claims"
                   onClick={() => setEvidenceExpanded(false)}
-                  className="mt-2 text-[12px] font-medium text-oo-blue underline underline-offset-2 hover:text-oo-burst"
+                  className="mt-2 text-oo-meta font-medium text-oo-blue underline underline-offset-2 hover:text-oo-burst"
                 >
                   Collapse evidence
                 </button>
@@ -792,7 +793,7 @@ export function NarrativePanel({
               </p>
               <ul className="list-disc pl-5 space-y-0.5">
                 {data.packet.gaps.map((g) => (
-                  <li key={g.id} className="text-[12px] text-amber-900">
+                  <li key={g.id} className="text-oo-meta text-amber-900">
                     {g.statement}
                   </li>
                 ))}
@@ -807,14 +808,14 @@ export function NarrativePanel({
               </p>
               <ul className="list-disc pl-5 space-y-0.5">
                 {data.limitations.map((l, i) => (
-                  <li key={i} className="text-[12px] text-oo-muted">{l}</li>
+                  <li key={i} className="text-oo-meta text-oo-muted">{l}</li>
                 ))}
               </ul>
             </div>
           )}
 
           {!data.validation_ok && (
-            <p className="mt-3 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
+            <p className="mt-3 text-oo-meta text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
               {data.dropped_claims.length} statement
               {data.dropped_claims.length === 1 ? " was" : "s were"} withheld because they could not be
               tied to a source.
@@ -826,7 +827,7 @@ export function NarrativePanel({
             is added beyond what they state. Generated by {data.model} · prompt {data.prompt_version}
             {data.run_id ? <> · run <span className="font-mono">{data.run_id}</span></> : null}.{" "}
             {!saved && (
-              <button type="button" onClick={generate} className="text-oo-blue hover:underline">
+              <button type="button" onClick={generate} className="text-oo-blue underline underline-offset-2 hover:no-underline">
                 Regenerate
               </button>
             )}

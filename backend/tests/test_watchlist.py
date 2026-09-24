@@ -185,7 +185,9 @@ def test_snapshot_reduces_the_response_to_the_facts_the_feed_compares() -> None:
         {"code": "NON_EU_JURISDICTION", "source_id": "gleif", "kind": "context"},
         {"code": "SANCTIONED", "source_id": "opensanctions", "kind": "risk"},
     ]
-    assert snap["coverage"]["applicable"] == 3 and snap["coverage"]["answered"] == 2
+    # Phase 241: opensanctions answered with no record — answered, not with data.
+    assert snap["coverage"]["applicable"] == 3 and snap["coverage"]["answered"] == 3
+    assert snap["coverage"]["with_data"] == 2
     assert [c["source_id"] for c in snap["checked"]] == ["companies_house", "gleif", "opensanctions"]
 
 
@@ -236,7 +238,30 @@ def test_coverage_that_fell_because_a_source_was_degraded_is_unchecked() -> None
     )
     cov = [c for c in wl.diff_snapshots(before, after) if c["kind"].startswith("coverage")]
     assert len(cov) == 1 and cov[0]["kind"] == "coverage_unchecked"
-    assert cov[0]["missing"] == ["companies_house", "opensanctions"]  # OS never answered in the fixture
+    # Phase 241: opensanctions answered with no record in both runs; only the
+    # source that errored is missing.
+    assert cov[0]["missing"] == ["companies_house"]
+
+
+def test_a_baseline_stored_before_phase_241_is_compared_on_sources_with_data() -> None:
+    """A stored baseline's ``answered`` meant "with a record". Compared with
+    the new ``answered`` it would report every watch as changed on the first
+    re-run after deploy; read as ``with_data`` it reports nothing."""
+    before = wl.snapshot_from_response(_resp(EASY))
+    legacy = dict(before)
+    legacy["coverage"] = {
+        "applicable": before["coverage"]["applicable"],
+        "answered": before["coverage"]["with_data"],
+        "applicable_ids": before["coverage"]["applicable_ids"],
+        "answered_ids": before["coverage"]["with_data_ids"],
+    }
+    after = wl.snapshot_from_response(_resp(EASY))
+    assert not [c for c in wl.diff_snapshots(legacy, after) if c["kind"].startswith("coverage")]
+    # …and a real fall in sources with a record still registers.
+    fewer = wl.snapshot_from_response(_resp(EASY, hits=[_hit("gleif")]))
+    cov = [c for c in wl.diff_snapshots(legacy, fewer) if c["kind"].startswith("coverage")]
+    assert len(cov) == 1 and cov[0]["old"]["answered"] is None
+    assert (cov[0]["old"]["with_data"], cov[0]["new"]["with_data"]) == (2, 1)
 
 
 def test_new_signal_status_and_name_changes_are_named() -> None:
@@ -515,7 +540,8 @@ def test_add_get_remove_and_the_baseline(client: TestClient, env: Path) -> None:
     page = client.get(f"/watch/{token}").json()
     assert [x["lei"] for x in page["watches"]] == [EASY]
     assert page["watches"][0]["baseline"]["risk_codes"] == ["SANCTIONED"]
-    assert page["watches"][0]["baseline"]["coverage"]["answered"] == 2
+    assert page["watches"][0]["baseline"]["coverage"]["answered"] == 3
+    assert page["watches"][0]["baseline"]["coverage"]["with_data"] == 2
     assert page["tiers"]["gleif"]["available"] is True
     assert page["tiers"]["gleif"]["watermark"] == WATERMARK
     r = client.delete(f"/watch/{token}/items/{EASY}")

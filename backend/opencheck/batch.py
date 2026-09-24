@@ -272,6 +272,7 @@ CSV_COLUMNS = [
     "context_codes",
     "sources_applicable",
     "sources_answered",
+    "sources_with_data",
     "degraded",
     "degraded_sources",
     "state",
@@ -372,6 +373,7 @@ def _csv_row_done(row: dict[str, Any], origin: str) -> list[Any]:
         " ".join(row.get("context_codes") or []),
         cov.get("applicable", ""),
         cov.get("answered", ""),
+        cov.get("with_data", ""),
         "true" if row.get("degraded") else "false",
         " ".join(row.get("degraded_sources") or []),
         "degraded" if row.get("degraded") else "done",
@@ -382,7 +384,7 @@ def _csv_row_done(row: dict[str, Any], origin: str) -> list[Any]:
 
 def _csv_row_failed(row: dict[str, Any], origin: str) -> list[Any]:
     return [
-        row["lei"], "", "", "", "", "", "", "", "", "", "", "true", "",
+        row["lei"], "", "", "", "", "", "", "", "", "", "", "", "true", "",
         "not checked", row.get("reason") or "", f"{origin}/?lei={row['lei']}",
     ]
 

@@ -36,7 +36,7 @@ function SecRow({ s, danger }: { s: Security; danger?: boolean }) {
         danger ? "bg-rose-50/60" : "border-b border-oo-rule/60 last:border-b-0"
       }`}
     >
-      <span className="font-mono text-[12px] text-oo-ink shrink-0">{s.isin}</span>
+      <span className="font-mono text-oo-meta text-oo-ink shrink-0">{s.isin}</span>
       {danger && (
         <span className="text-[10px] rounded-full px-1.5 py-0.5 bg-rose-100 text-rose-800 shrink-0">
           sanctioned
@@ -217,7 +217,7 @@ export function SecuritiesSection({
                 <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                 <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
-              <span className="font-bold text-[13px] text-rose-700">
+              <span className="font-bold text-oo-small text-rose-700">
                 {sanctioned.length} sanctioned secur{sanctioned.length === 1 ? "ity" : "ities"}
               </span>
             </div>
@@ -307,7 +307,7 @@ export function SecuritiesSection({
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search ISIN, name, ticker…"
                 aria-label="Search securities by ISIN, name or ticker"
-                className="flex-1 min-w-[160px] text-[12px] font-mono border border-oo-rule rounded px-2 py-1"
+                className="flex-1 min-w-[160px] text-oo-meta font-mono border border-oo-rule rounded px-2 py-1"
               />
               {types.map((t) => (
                 <button
@@ -332,7 +332,7 @@ export function SecuritiesSection({
                 ))}
               </ul>
             ) : (
-              <p className="text-[12px] text-oo-muted py-2">No matching securities on the loaded pages.</p>
+              <p className="text-oo-meta text-oo-muted py-2">No matching securities on the loaded pages.</p>
             )}
             <div className="mt-2 flex items-center gap-3 text-[11px] text-oo-muted font-mono">
               <span role="status">

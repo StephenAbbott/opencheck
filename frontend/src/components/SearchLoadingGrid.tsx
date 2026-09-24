@@ -23,7 +23,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { SourceInfo } from "../lib/api";
-import { lookupProgress, progressLabel } from "../lib/lookupProgress";
+import { lookupProgress, progressLabel, settledCount } from "../lib/lookupProgress";
 import { sourceLabel } from "../lib/vocab";
 
 const CHIP_STYLE: Record<string, string> = {
@@ -78,7 +78,14 @@ export default function SearchLoadingGrid({
     queuePosition,
   });
   const names = Object.fromEntries(sources.map((s) => [s.id, s.name]));
-  const failedCount = progress.sources.filter((s) => s.state === "failed").length;
+  // Phase 241: the same count the "What each source said" header prints,
+  // GLEIF anchor included — they read "6 of 8" and "7 of 9" side by side.
+  const counts = settledCount({
+    anchored,
+    applicable,
+    completed: completed ?? empty,
+    errored: errored ?? empty,
+  });
   // The live region is throttled, not live-per-event. Replacing an animation
   // that announced on a timer with one that announces on every
   // `source_completed` would queue ~39 utterances — a firehose is as unusable
@@ -87,29 +94,24 @@ export default function SearchLoadingGrid({
   // failure announcements.)
   const [announced, setAnnounced] = useState("");
   const pending = useRef("");
-  pending.current = progress.total === null ? progress.label : progressLabel(progress, failedCount);
+  pending.current = progress.total === null ? progress.label : progressLabel(progress, counts);
   const phase = progress.phase;
   useEffect(() => {
     setAnnounced(pending.current);
     const t = setInterval(() => setAnnounced(pending.current), 4000);
     return () => clearInterval(t);
   }, [phase]);
-  const pct = progress.total ? (progress.settled / progress.total) * 100 : 0;
+  const pct = progress.total ? ((counts.answered + counts.failed) / counts.total) * 100 : 0;
 
   return (
     <div className="bg-white border border-oo-rule rounded-oo p-4 mb-6">
       <div className="flex items-center gap-3 mb-2">
         <p className="text-oo-meta text-oo-muted flex-1" aria-hidden="true">
-          {progress.total === null ? progress.label : progressLabel(progress, failedCount)}
+          {progress.total === null ? progress.label : progressLabel(progress, counts)}
         </p>
         <p role="status" className="sr-only">
           {announced}
         </p>
-        {progress.total !== null && (
-          <span aria-hidden="true" className="text-oo-meta font-mono text-oo-muted">
-            {progress.settled} / {progress.total}
-          </span>
-        )}
       </div>
 
       {/* Indeterminate until the stream says how many sources apply — a bar at

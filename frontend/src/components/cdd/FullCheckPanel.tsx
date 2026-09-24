@@ -177,7 +177,7 @@ export default function FullCheckPanel({
               e.preventDefault();
               onOpenSubsidiaries();
             }}
-            className="text-oo-blue hover:underline"
+            className="text-oo-blue underline underline-offset-2 hover:no-underline"
           >
             open Subsidiaries
           </a>

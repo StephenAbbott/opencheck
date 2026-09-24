@@ -167,11 +167,11 @@ export function ExampleLeiPicker({
               onClick={() => onPick(ex.lei)}
               className="w-full text-left bg-white border border-oo-rule rounded-oo p-4 transition-shadow hover:shadow-oo-card disabled:opacity-50"
             >
-              <div className="font-head text-[14px] font-bold text-oo-ink leading-tight pr-6">
+              <div className="font-head text-oo-body font-bold text-oo-ink leading-tight pr-6">
                 {ex.name}
               </div>
               {ex.hint && (
-                <div className="text-[12px] text-oo-muted mt-0.5">
+                <div className="text-oo-meta text-oo-muted mt-0.5">
                   {ex.hint}
                 </div>
               )}
@@ -351,11 +351,11 @@ export function HowItWorks() {
 
               {/* Right content */}
               <div className={isLast ? "pb-0" : "pb-6"} style={{ paddingTop: 3 }}>
-                <p className="font-head font-bold text-[14px] text-oo-ink leading-snug">
+                <p className="font-head font-bold text-oo-body text-oo-ink leading-snug">
                   <span className="sr-only">{`Step ${step.num}: `}</span>
                   {step.title}
                 </p>
-                <p className="text-[13px] leading-[1.65] text-oo-muted mt-1.5">
+                <p className="text-oo-small leading-[1.65] text-oo-muted mt-1.5">
                   {step.body}
                 </p>
               </div>

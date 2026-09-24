@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { scrollBehavior } from "../../lib/motion";
 
 /**
  * The report's one "Share and export" control (Phase 128).
@@ -54,16 +55,13 @@ export function nextMenuIndex(
 export function jumpToDataSection(): void {
   const target = document.getElementById(DATA_SECTION_ID);
   if (!target) return;
-  const reduced = window.matchMedia?.(
-    "(prefers-reduced-motion: reduce)"
-  )?.matches;
-  target.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
+  target.scrollIntoView({ behavior: scrollBehavior() });
   const heading = target.querySelector<HTMLElement>("[data-export-target]");
   heading?.focus({ preventScroll: true });
 }
 
 const ITEM_CLASSES =
-  "w-full flex items-start gap-2.5 text-left rounded-oo px-3 py-2.5 text-[13px] text-oo-ink hover:bg-[#eef1fb] focus:bg-[#eef1fb] focus:outline-none disabled:opacity-60";
+  "w-full flex items-start gap-2.5 text-left rounded-oo px-3 py-2.5 text-oo-small text-oo-ink hover:bg-[#eef1fb] focus:bg-[#eef1fb] focus:outline-none disabled:opacity-60";
 
 function GroupHeading({ children }: { children: string }) {
   return (

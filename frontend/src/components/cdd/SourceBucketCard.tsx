@@ -69,7 +69,7 @@ function BoAccessFootnote({ notice }: { notice: BoAccessNotice }) {
         <path d="M8 7.2V11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
         <circle cx="8" cy="5" r="0.7" fill="currentColor" />
       </svg>
-      <p className="text-[12px] leading-[1.6] text-oo-muted">
+      <p className="text-oo-meta leading-[1.6] text-oo-muted">
         {sentence}
         {access_url && (
           <>
@@ -681,7 +681,7 @@ export function DeepenBlock({
       {detail.license_notice && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-oo p-3">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="font-head font-bold text-[13px]">License notice</span>
+            <span className="font-head font-bold text-oo-small">License notice</span>
             <LicenseChip license={detail.license} />
           </div>
           <p className="mt-1 leading-[1.6]">{detail.license_notice}</p>
@@ -690,7 +690,7 @@ export function DeepenBlock({
 
       {detail.bods.length === 0 && (detail.raw.coverage_note as string | undefined) && (
         <div className="bg-sky-50 border border-sky-200 text-sky-900 rounded-oo p-3">
-          <p className="text-[13px] leading-[1.6]">{detail.raw.coverage_note as string}</p>
+          <p className="text-oo-small leading-[1.6]">{detail.raw.coverage_note as string}</p>
         </div>
       )}
 
@@ -727,7 +727,7 @@ export function DeepenBlock({
           <Suspense
             fallback={
               <div
-                className="h-48 rounded-oo border border-oo-rule bg-oo-bg/40 motion-safe:animate-pulse flex items-center justify-center text-[12px] text-oo-muted"
+                className="h-48 rounded-oo border border-oo-rule bg-oo-bg/40 motion-safe:animate-pulse flex items-center justify-center text-oo-meta text-oo-muted"
                 role="status"
               >
                 Loading graph…
@@ -946,14 +946,14 @@ function HitFinding({ hit }: { hit: SourceHit }) {
   return (
     <>
       <p
-        className={`text-[13px] mt-1 leading-[1.6] ${
+        className={`text-oo-small mt-1 leading-[1.6] ${
           finding.sub ? "text-oo-ink" : "text-oo-muted"
         }`}
       >
         {finding.lead}
       </p>
       {finding.sub && (
-        <p className="text-[12px] text-oo-muted mt-0.5 leading-[1.5]">{finding.sub}</p>
+        <p className="text-oo-meta text-oo-muted mt-0.5 leading-[1.5]">{finding.sub}</p>
       )}
     </>
   );
@@ -1084,7 +1084,7 @@ function HitRow({
     <li className="px-5 py-4">
       {/* Entity name (+ optional title accessory, e.g. See timeline), summary, risk chips */}
       <div className="flex items-start justify-between gap-3">
-        <div className="font-head font-bold text-[15px] text-oo-ink leading-snug min-w-0">
+        <div className="font-head font-bold text-oo-lead text-oo-ink leading-snug min-w-0">
           {(() => {
             const url = sourceEntityUrl(hit.source_id, hit);
             return url ? (
@@ -1202,7 +1202,7 @@ function HitRow({
 
       {/* Expanded content */}
       {anyOpen && (
-        <div id={panelId} className="mt-4 bg-oo-bg rounded-oo p-4 text-[12px]">
+        <div id={panelId} className="mt-4 bg-oo-bg rounded-oo p-4 text-oo-meta">
           {loading && <p className="text-oo-muted" role="status">Fetching…</p>}
           {error && error === NOT_DEEPENED_IN_SAVED && (
             <p className="text-oo-muted" role="status">{error}</p>
@@ -1382,7 +1382,7 @@ export function SourceBucketCard({
         <BoAccessFootnote notice={bucket.boAccess} />
       )}
       {footnote && (
-        <p className="px-5 py-2.5 border-t border-oo-rule text-[12px] text-oo-muted">
+        <p className="px-5 py-2.5 border-t border-oo-rule text-oo-meta text-oo-muted">
           {footnote}
         </p>
       )}

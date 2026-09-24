@@ -177,8 +177,13 @@ def test_pipe_characters_escaped_in_table_cells():
     assert "shares \\| class A" in md
 
 
-def test_stub_only_report_omits_sources_section():
+def test_stub_only_report_has_no_per_source_blocks():
     report = _report()
-    report["hits"] = [h for h in report["hits"] if h["is_stub"]]
+    stubs = [h for h in report["hits"] if h["is_stub"]]
+    report["hits"] = stubs
     md = build_report_markdown(report)
-    assert "## What each source found" not in md
+    # Phase 241: the section stays, to name every source that applied; a
+    # placeholder result is not a record, so none gets a block of its own.
+    section = md.split("## What each source found", 1)[1].split("\n## ", 1)[0]
+    assert "### " not in section
+    assert "none with a record" in section

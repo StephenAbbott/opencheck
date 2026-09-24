@@ -6,9 +6,11 @@ import {
   TOPIC_MODES,
   deepLinkOptions,
   documentTitleFor,
+  modeForKey,
   modeLabel,
   modeParam,
   parseMode,
+  type CheckMode,
 } from "./checkMode";
 
 describe("parseMode", () => {
@@ -175,5 +177,29 @@ describe("deepLinkOptions", () => {
     // Two hand-rolled readers is how one of them ends up missing `focus`.
     const search = "?lei=X&mode=full&focus=opencheck-abc";
     expect(deepLinkOptions(search)).toEqual(deepLinkOptions(search));
+  });
+});
+
+describe("modeForKey (Phase 241)", () => {
+  it("walks every tab with →, from the tab the key was pressed on", () => {
+    const walked: string[] = ["quick"];
+    let at: CheckMode = "quick";
+    for (let i = 0; i < CHECK_MODES.length - 1; i++) {
+      at = modeForKey("ArrowRight", at)!;
+      walked.push(at);
+    }
+    expect(walked).toEqual(CHECK_MODES);
+  });
+
+  it("wraps, and jumps with Home and End", () => {
+    expect(modeForKey("ArrowRight", "esg")).toBe("quick");
+    expect(modeForKey("ArrowLeft", "quick")).toBe("esg");
+    expect(modeForKey("Home", "history")).toBe("quick");
+    expect(modeForKey("End", "full")).toBe("esg");
+  });
+
+  it("ignores every other key", () => {
+    expect(modeForKey("Enter", "quick")).toBeNull();
+    expect(modeForKey("ArrowDown", "quick")).toBeNull();
   });
 });

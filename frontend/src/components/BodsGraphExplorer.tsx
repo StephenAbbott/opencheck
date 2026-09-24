@@ -691,7 +691,7 @@ export default function BodsGraphExplorer({
       )}
 
       {expandNote && (
-        <p role="status" className="mb-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-[1.5]">
+        <p role="status" className="mb-2 text-oo-meta text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-[1.5]">
           {expandNote}
         </p>
       )}
@@ -758,12 +758,12 @@ export default function BodsGraphExplorer({
 
       {fullCheck && (
         <div className="mt-3 flex items-center gap-2 flex-wrap border-t border-oo-rule pt-3">
-          <span className="text-[12px] text-oo-muted">Export network</span>
+          <span className="text-oo-meta text-oo-muted">Export network</span>
           <select
             value={exportFormat}
             aria-label="Export network format"
             onChange={(e) => setExportFormat(e.target.value as NetworkExportFormat)}
-            className="border border-oo-rule rounded px-2 py-1 text-[12px] bg-white"
+            className="border border-oo-rule rounded px-2 py-1 text-oo-meta bg-white"
           >
             <option value="zip">ZIP (all formats + licences)</option>
             <option value="json">BODS · JSON</option>
@@ -780,7 +780,7 @@ export default function BodsGraphExplorer({
             type="button"
             onClick={exportNetwork}
             disabled={exporting}
-            className="bg-oo-blue text-white text-[12px] font-medium rounded px-3 py-1 hover:bg-oo-burst transition-colors disabled:opacity-50"
+            className="bg-oo-blue text-white text-oo-meta font-medium rounded px-3 py-1 hover:bg-oo-burst transition-colors disabled:opacity-50"
           >
             {exporting ? "Exporting…" : "Download"}
           </button>

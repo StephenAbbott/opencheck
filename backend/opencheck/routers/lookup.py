@@ -450,6 +450,10 @@ async def _build_report(
     # above — a source that could not answer from its own data says so there,
     # not only in the server log. The derived screens append to the same list.
     degraded: list[DegradedSource] = _degradation.collect()
+    # Phase 241: and every source error, as in the lookup pipeline.
+    _degradation.add_source_errors(
+        degraded, errors, with_data={h.source_id for h in hits if not h.is_stub}
+    )
     # The register fan-out is over, so the call budgets close with it. The
     # derived screens below talk to name-screening services, none of which
     # publish a per-minute quota this module governs.
@@ -1506,6 +1510,9 @@ async def _lookup_pipeline(
     # past the top-N cap, so the connected-people list and canonical graphs
     # don't depend on a nondeterministic completion-order race (issue #73).
     deepen_pairs = _select_deepen_pairs(deepened_bundles, deepen_top, ctx)
+    # Phase 241: a read that failed after the source answered is a partial
+    # answer, recorded as a degradation below (``add_source_errors``).
+    deepen_errors: dict[str, str] = {}
     deepen_raw = await asyncio.gather(
         *[
             # Deepen usually replays the adapter's cached fetch, but give it
@@ -1519,9 +1526,10 @@ async def _lookup_pipeline(
     )
     for (dsrc, dhit), deep in zip(deepen_pairs, deepen_raw):
         if isinstance(deep, Exception):
+            deepen_errors.setdefault(dsrc, _fmt_source_error(deep))
             yield ("deepen_error", {
                 "source_id": dsrc,
-                "error": _fmt_source_error(deep),
+                "error": deepen_errors[dsrc],
             })
             continue
         if deep is None:
@@ -1628,6 +1636,13 @@ async def _lookup_pipeline(
     # above — a source that could not answer from its own data says so there,
     # not only in the server log. The derived screens append to the same list.
     degraded: list[DegradedSource] = _degradation.collect()
+    # Phase 241: every source error is a degradation — one that returned
+    # nothing, and one that returned a record and then failed to be read.
+    _degradation.add_source_errors(
+        degraded,
+        {**deepen_errors, **errors},
+        with_data={h.source_id for h in hits if not h.is_stub},
+    )
     # As in _build_report: the fan-out is done, so the budgets close with the
     # degradation scope and the derived screens run outside both.
     _outbound_rate.end()

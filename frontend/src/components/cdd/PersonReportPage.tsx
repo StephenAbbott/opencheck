@@ -73,7 +73,7 @@ export default function PersonReportPage({
       <button
         type="button"
         onClick={onBack}
-        className="text-[12px] text-oo-blue underline hover:no-underline mb-3"
+        className="text-oo-meta text-oo-blue underline hover:no-underline mb-3"
       >
         ← Back
       </button>
@@ -88,12 +88,12 @@ export default function PersonReportPage({
             <h2 className="font-head font-bold text-[20px] text-oo-ink">
               {name}
               {birthYear && (
-                <span className="ml-2 font-sans font-normal text-[13px] text-oo-muted">
+                <span className="ml-2 font-sans font-normal text-oo-small text-oo-muted">
                   b. {birthYear}
                 </span>
               )}
             </h2>
-            <p className="text-[12px] text-violet-900/80 leading-[1.6] mt-1">
+            <p className="text-oo-meta text-violet-900/80 leading-[1.6] mt-1">
               Screened by <span className="font-medium">name</span>
               {birthYear ? " and birth year" : ""} across every
               source. Results are potential matches with their evidence shown —
@@ -104,7 +104,7 @@ export default function PersonReportPage({
           <button
             type="button"
             onClick={copyLink}
-            className="shrink-0 rounded-oo border border-violet-300 bg-white px-3 py-1.5 text-[12px] font-medium text-violet-800 hover:bg-violet-50"
+            className="shrink-0 rounded-oo border border-violet-300 bg-white px-3 py-1.5 text-oo-meta font-medium text-violet-800 hover:bg-violet-50"
           >
             {copied ? "Link copied ✓" : "Copy link to this report"}
           </button>
@@ -112,19 +112,19 @@ export default function PersonReportPage({
       </div>
 
       {state.status === "loading" && (
-        <p className="text-[13px] text-oo-muted italic" aria-live="polite">
+        <p className="text-oo-small text-oo-muted italic" aria-live="polite">
           Checking {name} against the sources that hold people…
         </p>
       )}
       {state.status === "error" && (
         <div role="alert" className="rounded-oo border border-red-200 bg-red-50 px-4 py-3">
-          <p className="text-[13px] text-red-800 mb-1.5">
+          <p className="text-oo-small text-red-800 mb-1.5">
             Check failed: {state.message}
           </p>
           <button
             type="button"
             onClick={run}
-            className="text-[12px] text-red-800 underline hover:no-underline"
+            className="text-oo-meta text-red-800 underline hover:no-underline"
           >
             Retry
           </button>
@@ -133,7 +133,7 @@ export default function PersonReportPage({
       {state.status === "done" && (
         <div className="rounded-oo border border-violet-200 bg-white overflow-hidden">
           <div className="px-4 py-2.5 flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-[12px] text-oo-muted">
+            <p className="text-oo-meta text-oo-muted">
               {state.result.matches.length} match
               {state.result.matches.length === 1 ? "" : "es"} across{" "}
               {state.result.sources.length} source
@@ -142,7 +142,7 @@ export default function PersonReportPage({
             <button
               type="button"
               onClick={run}
-              className="text-[12px] text-violet-800 underline hover:no-underline"
+              className="text-oo-meta text-violet-800 underline hover:no-underline"
             >
               Re-run check
             </button>

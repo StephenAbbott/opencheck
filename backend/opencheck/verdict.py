@@ -201,6 +201,8 @@ def build_verdict(
 #: Adapters record this when the SOURCE itself did not answer, as opposed to a
 #: derived screen that could not run (see ``opencheck.degradation``).
 _SOURCE_FETCH = "source_fetch"
+#: Phase 241: a source that returned a record and failed while it was read.
+_SOURCE_READ = "source_read"
 
 
 def _incomplete_phrase(degraded: list[dict[str, Any]]) -> str:
@@ -213,8 +215,9 @@ def _incomplete_phrase(degraded: list[dict[str, Any]]) -> str:
     unreachable says nothing about whether anyone was screened. Phrasing both
     the same way over-claims on one and under-explains the other.
     """
-    screens = [d for d in degraded if d.get("check") != _SOURCE_FETCH]
+    screens = [d for d in degraded if d.get("check") not in (_SOURCE_FETCH, _SOURCE_READ)]
     sources = [d for d in degraded if d.get("check") == _SOURCE_FETCH]
+    partial = [d for d in degraded if d.get("check") == _SOURCE_READ]
 
     parts: list[str] = []
     if screens:
@@ -226,4 +229,8 @@ def _incomplete_phrase(degraded: list[dict[str, Any]]) -> str:
         noun = "one source" if n == 1 else f"{n} sources"
         verb = "did not answer" if n == 1 else "did not answer"
         parts.append(f"{noun} {verb}, so its records were not consulted")
+    if partial:
+        n = len({d.get("source_id") for d in partial if d.get("source_id")}) or len(partial)
+        noun = "one source" if n == 1 else f"{n} sources"
+        parts.append(f"{noun} answered only in part")
     return ", and ".join(parts)

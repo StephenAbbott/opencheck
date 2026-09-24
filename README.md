@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 240** — owners that are ministries, government agencies or GLEIF-registered government entities are now classified as state bodies, so state-owned companies such as Equinor and Rosneft carry the state-control signal, with each state's holding listed once across sources.
+**Latest: Phase 241** — every report, MCP summary and batch row now counts what each applicable source said against the same denominator, the check-mode tabs walk by keyboard and every page reflows at 320px, and the design-system lint ratchets raw palette colours and buttons.
 
 → [Full development history](docs/status.md)
 

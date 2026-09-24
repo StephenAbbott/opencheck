@@ -22,7 +22,7 @@ export function ChangelogPage() {
       >
         Changelog
       </h2>
-      <p className="text-[14px] leading-[1.75] text-oo-muted mb-6 max-w-2xl">
+      <p className="text-oo-body leading-[1.75] text-oo-muted mb-6 max-w-2xl">
         Notable updates to OpenCheck, newest first. Generated from the project's{" "}
         <a
           href={`${REPO_URL}/blob/main/docs/status.md`}
@@ -44,12 +44,12 @@ export function ChangelogPage() {
                 <span className="font-mono text-[11px] tracking-oo-eyebrow uppercase text-oo-blue shrink-0">
                   Phase {e.phase}
                 </span>
-                <h3 className="font-head font-bold text-[15px] text-oo-ink leading-snug">
+                <h3 className="font-head font-bold text-oo-lead text-oo-ink leading-snug [overflow-wrap:anywhere]">
                   {e.title}
                 </h3>
               </div>
               {e.summary && (
-                <p className="text-[13px] text-oo-muted mt-1.5 leading-[1.65]">
+                <p className="text-oo-small text-oo-muted mt-1.5 leading-[1.65]">
                   {e.summary}
                 </p>
               )}

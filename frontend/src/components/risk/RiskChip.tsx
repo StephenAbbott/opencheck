@@ -230,8 +230,8 @@ export function RiskChip({
       classes: "bg-slate-100 text-slate-700 border-slate-200",
     };
   const padding = compact
-    ? "px-2 py-0.5 text-[12px] font-medium"
-    : "px-3 py-1 text-[13px] font-semibold";
+    ? "px-2 py-0.5 text-oo-meta font-medium"
+    : "px-3 py-1 text-oo-small font-semibold";
   // Phase 124: `title` is gone from both branches. It was the only carrier of
   // `signal.summary` on the interactive chip — a screen-reader user who did
   // not activate the button heard the label and nothing else — and it leaked

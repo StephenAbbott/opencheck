@@ -19,7 +19,7 @@ function CopyField({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-center gap-3 bg-oo-bg border border-oo-rule rounded-oo px-3 py-2">
-      <code className="font-mono text-[13px] text-oo-ink flex-1 break-all">{value}</code>
+      <code className="font-mono text-oo-small text-oo-ink flex-1 break-all">{value}</code>
       <button
         type="button"
         onClick={() => {
@@ -60,15 +60,15 @@ function ApiEndpoint({
         <span className={`font-mono text-[10px] font-semibold rounded px-1.5 py-0.5 border ${methodClasses}`}>
           {method}
         </span>
-        <code className="font-mono text-[13px] text-oo-ink break-all">{path}</code>
+        <code className="font-mono text-oo-small text-oo-ink break-all">{path}</code>
       </div>
-      <p className="text-[13px] leading-[1.7] text-oo-muted mt-1.5">{children}</p>
+      <p className="text-oo-small leading-[1.7] text-oo-muted mt-1.5">{children}</p>
       {params && params.length > 0 && (
         <dl className="mt-2 space-y-1">
           {params.map(([k, v]) => (
             <div key={k} className="flex gap-2 text-[12.5px] leading-[1.6]">
               <dt className="font-mono text-oo-blue shrink-0">{k}</dt>
-              <dd className="text-oo-muted">{v}</dd>
+              <dd className="min-w-0 text-oo-muted [overflow-wrap:anywhere]">{v}</dd>
             </div>
           ))}
         </dl>
@@ -79,7 +79,7 @@ function ApiEndpoint({
 
 export function ApiPage() {
   const base = BASE_URL || "https://api.opencheck.world";
-  const mono = "font-mono text-[12px] bg-oo-bg px-1 rounded";
+  const mono = "font-mono text-oo-meta bg-oo-bg px-1 rounded";
   return (
     <section aria-labelledby="api-heading">
       <h2
@@ -88,7 +88,7 @@ export function ApiPage() {
       >
         API
       </h2>
-      <p className="text-[14px] leading-[1.75] text-oo-muted mb-6 max-w-2xl">
+      <p className="text-oo-body leading-[1.75] text-oo-muted mb-6 max-w-2xl">
         OpenCheck exposes a small, read-only REST API. Every endpoint is a{" "}
         <code className={mono}>GET</code> that returns JSON — except{" "}
         <code className={mono}>/export</code> (a downloadable bundle) and the
@@ -170,7 +170,7 @@ export function ApiPage() {
         </BtsCard>
 
         <BtsCard title="MCP server — for AI agents">
-          <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
+          <p className="text-oo-small leading-[1.7] text-oo-muted mb-3">
             OpenCheck speaks the{" "}
             <a
               href="https://modelcontextprotocol.io"
@@ -202,12 +202,12 @@ export function ApiPage() {
               ["opencheck_list_sources", "Inventory of the data sources, with licence and live status."],
             ] as [string, string][]).map(([name, desc]) => (
               <div key={name} className="flex gap-2 text-[12.5px] leading-[1.6]">
-                <dt className="font-mono text-oo-blue shrink-0 break-all">{name}</dt>
-                <dd className="text-oo-muted">{desc}</dd>
+                <dt className="font-mono text-oo-blue min-w-0 break-all">{name}</dt>
+                <dd className="min-w-0 text-oo-muted [overflow-wrap:anywhere]">{desc}</dd>
               </div>
             ))}
           </dl>
-          <p className="text-[13px] leading-[1.7] text-oo-muted mt-4">
+          <p className="text-oo-small leading-[1.7] text-oo-muted mt-4">
             Add it as a custom connector in any MCP client (e.g. Claude Desktop →
             Settings → Connectors). It is discoverable via{" "}
             <a
@@ -270,7 +270,7 @@ export function ApiPage() {
         </BtsCard>
 
         <BtsCard title="AI narrative &amp; analyst sign-off">
-          <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
+          <p className="text-oo-small leading-[1.7] text-oo-muted mb-3">
             An optional AI-written plain-English summary of a lookup, plus the
             defensible audit trail an analyst builds around it. Generated only on
             request; each run is identified by a <code className={mono}>run_id</code>{" "}
@@ -323,7 +323,7 @@ export function ApiPage() {
         </BtsCard>
 
         <BtsCard title="Enrichments — on demand">
-          <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
+          <p className="text-oo-small leading-[1.7] text-oo-muted mb-3">
             Heavier, source-specific views kept off the main lookup and fetched
             only when asked. Each returns JSON; results are cached.
           </p>
@@ -372,11 +372,11 @@ export function ApiPage() {
         </BtsCard>
 
         <BtsCard title="Quick start">
-          <p className="text-[13px] leading-[1.7] text-oo-muted mb-3">
+          <p className="text-oo-small leading-[1.7] text-oo-muted mb-3">
             Search for a company by its LEI and get the unified BODS view:
           </p>
           <CopyField value={`curl "${base}/lookup?lei=HWUPKR0MPOU8FGXBT394"`} />
-          <p className="text-[13px] leading-[1.7] text-oo-muted mt-4">
+          <p className="text-oo-small leading-[1.7] text-oo-muted mt-4">
             Full request/response detail is in{" "}
             <a
               href="https://github.com/StephenAbbott/opencheck/blob/main/docs/how-it-works.md#api-surface"
