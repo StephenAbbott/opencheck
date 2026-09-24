@@ -6,8 +6,15 @@
  */
 import { describe, expect, it } from "vitest";
 
-import type { SubjectProfile } from "./api";
-import { formatProfileDate, profileRows, statusChip } from "./subjectProfile";
+import type { LeiRegistration, SubjectProfile } from "./api";
+import {
+  LEI_NOT_ENTITY_STATUS,
+  formatProfileDate,
+  leiRegistrationChip,
+  leiRegistrationLine,
+  profileRows,
+  statusChip,
+} from "./subjectProfile";
 
 const NAMES = {
   companies_house: "UK Companies House",
@@ -153,5 +160,80 @@ describe("formatProfileDate", () => {
     expect(formatProfileDate("2002-02-05")).toBe("5 Feb 2002");
     expect(formatProfileDate("2002")).toBe("2002");
     expect(formatProfileDate("2002-02")).toBe("2002-02");
+  });
+});
+
+// Phase 242 — the LEI record's own status. AFPC's record as GLEIF published it
+// on 24 Sept 2026: LAPSED, renewal due 19 Oct 2017, entity still ACTIVE.
+const lapsed: LeiRegistration = {
+  status: "LAPSED",
+  label: "Lapsed",
+  flag: true,
+  since: "2017-10-19",
+  next_renewal_date: "2017-10-19",
+  last_update_date: "2026-04-08",
+  initial_registration_date: "2016-10-21",
+  managing_lou: "5493001KJTIIGC8Y1R12",
+  source_id: "gleif",
+  sentence:
+    "GLEIF records this LEI as lapsed: its renewal was due on 19 Oct 2017 and has not been made, so no issuer has re-checked its reference data since then. GLEIF last updated the record on 8 Apr 2026. This is the status of the LEI record, not of the company.",
+};
+const issued: LeiRegistration = {
+  ...lapsed,
+  status: "ISSUED",
+  label: "Issued",
+  flag: false,
+  since: null,
+  next_renewal_date: "2027-03-21",
+  sentence: "GLEIF records this LEI as issued.",
+};
+
+describe("leiRegistrationChip", () => {
+  it("says a lapse with the date it took effect, in the context tone", () => {
+    const chip = leiRegistrationChip(lapsed);
+    expect(chip).toEqual({ label: "LEI lapsed since 19 Oct 2017", tone: "context", detail: lapsed.sentence });
+  });
+
+  it("renders nothing for an issued LEI, or when no status was recorded", () => {
+    expect(leiRegistrationChip(issued)).toBeNull();
+    expect(leiRegistrationChip(null)).toBeNull();
+    expect(leiRegistrationChip(undefined)).toBeNull();
+  });
+
+  it("gives no date where GLEIF publishes none, and reads a batch row's two fields", () => {
+    expect(leiRegistrationChip({ status: "RETIRED" })?.label).toBe("LEI retired");
+    expect(leiRegistrationChip({ status: "PENDING_TRANSFER" })?.label).toBe("LEI pending transfer");
+    expect(leiRegistrationChip({ status: "LAPSED", since: "2026-09-21" })).toEqual({
+      label: "LEI lapsed since 21 Sept 2026",
+      tone: "context",
+      detail: `GLEIF records this LEI as lapsed since 21 Sept 2026. This is ${LEI_NOT_ENTITY_STATUS}.`,
+    });
+  });
+
+  it("never borrows the register chip's tones or a risk tone", () => {
+    for (const status of ["LAPSED", "RETIRED", "MERGED", "ANNULLED", "DUPLICATE"]) {
+      expect(leiRegistrationChip({ status })?.tone).toBe("context");
+    }
+  });
+});
+
+describe("the LEI registration row", () => {
+  it("states the status beside register status, and says it is not the company's", () => {
+    const rows = profileRows(shell({ lei_registration: lapsed }), NAMES);
+    const i = rows.findIndex((r) => r.label === "LEI registration");
+    expect(rows[i - 1].label).toBe("Register status");
+    expect(rows[i]).toEqual({
+      label: "LEI registration",
+      value: `Lapsed — renewal was due 19 Oct 2017 · ${LEI_NOT_ENTITY_STATUS}`,
+      sources: "Source: GLEIF",
+    });
+    // The register status row is untouched: a lapsed LEI is not a dissolved company.
+    expect(rows[i - 1].value).toBe("Active");
+  });
+
+  it("states an issued LEI briefly, and omits the row with no status", () => {
+    expect(leiRegistrationLine(issued)).toBe("Issued — renews 21 Mar 2027");
+    expect(profileRows(shell(), NAMES).some((r) => r.label === "LEI registration")).toBe(false);
+    expect(profileRows(shell({ lei_registration: null }), NAMES).some((r) => r.label === "LEI registration")).toBe(false);
   });
 });

@@ -13,7 +13,7 @@ Events, in order::
 
     batch_start  {accepted: [LEI…], rejected: [{token, reason}…],
                   overflow: n, cap: 20, concurrency: 2}
-    row_done     {lei, legal_name, jurisdiction, register_status, verdict,
+    row_done     {lei, legal_name, jurisdiction, register_status, lei_registration, verdict,
                   risk_count, context_count, coverage, degraded, …}
     row_failed   {lei, status, reason, retryable, degraded: true}
     batch_done   {requested, done, failed}

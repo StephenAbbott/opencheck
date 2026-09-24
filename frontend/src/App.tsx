@@ -52,7 +52,7 @@ import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { Chip, Icon, SectionHeading, SectionLabel as Eyebrow } from "./components/ui";
-import { profileRows, statusChip } from "./lib/subjectProfile";
+import { leiRegistrationChip, profileRows, statusChip } from "./lib/subjectProfile";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { PERSON_VERB, resultCount, setSourceNames, sourceLabel } from "./lib/vocab";
@@ -2444,6 +2444,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             identifierSources={leiConfirmedSourceCount}
             onShowIdentifiers={showCrossSourceIdentifiers}
             status={statusChip(subjectProfile, sourceNameIndex)}
+            leiRegistration={leiRegistrationChip(subjectProfile?.lei_registration)}
             pdfBusy={pdfBusy}
             mdBusy={mdBusy}
             onPdf={downloadPdf}

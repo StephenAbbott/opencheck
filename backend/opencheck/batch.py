@@ -265,6 +265,8 @@ CSV_COLUMNS = [
     "legal_name",
     "jurisdiction",
     "register_status",
+    "lei_registration",
+    "lei_registration_since",
     "verdict",
     "risk_count",
     "risk_codes",
@@ -360,12 +362,15 @@ async def collect_batch(
 
 def _csv_row_done(row: dict[str, Any], origin: str) -> list[Any]:
     status = row.get("register_status") or {}
+    lei_reg = row.get("lei_registration") or {}
     cov = row.get("coverage") or {}
     return [
         row["lei"],
         row.get("legal_name") or "",
         row.get("jurisdiction") or "",
         status.get("liveness") or "",
+        lei_reg.get("status") or "",
+        lei_reg.get("since") or "",
         row.get("verdict") or "",
         row.get("risk_count", 0),
         " ".join(row.get("risk_codes") or []),
@@ -384,7 +389,7 @@ def _csv_row_done(row: dict[str, Any], origin: str) -> list[Any]:
 
 def _csv_row_failed(row: dict[str, Any], origin: str) -> list[Any]:
     return [
-        row["lei"], "", "", "", "", "", "", "", "", "", "", "", "true", "",
+        row["lei"], "", "", "", "", "", "", "", "", "", "", "", "", "", "true", "",
         "not checked", row.get("reason") or "", f"{origin}/?lei={row['lei']}",
     ]
 

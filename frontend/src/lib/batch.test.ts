@@ -142,10 +142,20 @@ describe("rowsToCsv", () => {
     expect(lines[1]).toContain(`"Sanctions, on the company itself."`);
     expect(lines[1]).toContain(",SANCTIONED,");
     expect(lines[1]).toContain(`https://opencheck.world/?lei=${SHELL}`);
-    expect(lines[2]).toContain(`${BOV},,,,,,,,,,,,true,,not checked,No GLEIF record found,`);
+    expect(lines[2]).toContain(`${BOV},,,,,,,,,,,,,,true,,not checked,No GLEIF record found,`);
     // Phase 241: one column per header, and the backend's CSV has the same header.
     expect(lines[1].replace(/"[^"]*"/g, "x").split(",")).toHaveLength(lines[0].split(",").length);
     expect(lines[0].split(",")).toContain("sources_with_data");
+  });
+
+  it("carries the LEI registration status and its date in their own columns (Phase 242)", () => {
+    const csv = rowsToCsv([
+      { state: "done", lei: SHELL, row: row({ lei_registration: { status: "LAPSED", since: "2017-10-19" } }) },
+    ]);
+    const [header, line] = csv.trimEnd().split("\r\n").map((l) => l.split(","));
+    expect(line[header.indexOf("lei_registration")]).toBe("LAPSED");
+    expect(line[header.indexOf("lei_registration_since")]).toBe("2017-10-19");
+    expect(line[header.indexOf("register_status")]).toBe("live");
   });
 
   it("names the file by the day", () => {

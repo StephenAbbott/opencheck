@@ -186,6 +186,8 @@ const CSV_HEADER = [
   "legal_name",
   "jurisdiction",
   "register_status",
+  "lei_registration",
+  "lei_registration_since",
   "verdict",
   "risk_count",
   "risk_codes",
@@ -218,7 +220,7 @@ export function rowsToCsv(rows: TableRow[], origin = ""): string {
     if ("failed" in r) {
       lines.push(
         [
-          r.lei, "", "", "", "", "", "", "", "", "", "", "", "true", "", "not checked",
+          r.lei, "", "", "", "", "", "", "", "", "", "", "", "", "", "true", "", "not checked",
           r.failed.reason, `${origin}/?lei=${r.lei}`,
         ].map(csvCell).join(","),
       );
@@ -231,6 +233,8 @@ export function rowsToCsv(rows: TableRow[], origin = ""): string {
         row.legal_name ?? "",
         row.jurisdiction ?? "",
         row.register_status?.liveness ?? "",
+        row.lei_registration?.status ?? "",
+        row.lei_registration?.since ?? "",
         row.verdict ?? "",
         row.risk_count,
         row.risk_codes.join(" "),

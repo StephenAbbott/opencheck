@@ -23,6 +23,7 @@ from typing import Any
 from ..bods.refs import statement_index
 from ..knowability import report_statements
 from ..coverage import coverage_sentence, report_coverage
+from ..lei_registration import report_value as lei_registration_value
 from ..listing import describe as listing_line
 from .diagram import source_diagram
 
@@ -173,12 +174,23 @@ def _name(stmt: dict[str, Any]) -> str:
     return (stmt.get("recordDetails") or {}).get("name") or "an entity"
 
 
+#: Identifier-table rows whose value is a sentence, set in the body face
+#: rather than the monospace one used for identifiers.
+_PROSE_ROWS = frozenset({"LEI registration (GLEIF)"})
+_MONO = ' class="mono"'
+
+
 def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> str:
     rows: list[tuple[str, str]] = []
     if report.get("lei"):
         rows.append(("Legal Entity Identifier (LEI)", report["lei"]))
+    # Phase 242: the LEI record's own status, from the frozen profile.
+    lei_reg = lei_registration_value(report)
+    if lei_reg:
+        rows.append(("LEI registration (GLEIF)", lei_reg))
     for k, v in (report.get("derived_identifiers") or {}).items():
-        if not v:
+        # The derived set carries the LEI too; it is already the first row.
+        if not v or v == report.get("lei"):
             continue
         rows.append((_ID_LABELS.get(k, k.replace("_", " ").capitalize()), v))
     # Any extra schemes the subject entity itself publishes.
@@ -195,7 +207,8 @@ def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> str:
     if listed:
         rows.append(("Primary listing (LSEG PermID)", listed))
     body = "".join(
-        f'<tr><th scope="row">{escape(label)}</th><td class="mono">{escape(str(val))}</td></tr>'
+        f'<tr><th scope="row">{escape(label)}</th>'
+        f'<td{"" if label in _PROSE_ROWS else _MONO}>{escape(str(val))}</td></tr>'
         for label, val in rows
     )
     return (

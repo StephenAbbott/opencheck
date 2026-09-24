@@ -57,6 +57,10 @@ class _LookupCtx:
     #: note, which reads as "we don't know" for the source everything else is
     #: anchored to.
     provenance: Provenance | None = None
+    #: The LEI's own registration status (Phase 242) from the anchor's
+    #: ``registration`` block — ``lei_registration.from_gleif_record``. Rides
+    #: on the ``subject_profile`` event; ``None`` when the anchor carried none.
+    lei_registration: dict[str, Any] | None = None
 
 
 def _hit(
