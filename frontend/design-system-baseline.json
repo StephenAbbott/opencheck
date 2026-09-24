@@ -1,10 +1,10 @@
 {
   "src/App.tsx": {
     "hex": 0,
-    "text": 29,
+    "text": 1,
     "vocab": 0,
-    "palette": 45,
-    "button": 22
+    "palette": 6,
+    "button": 1
   },
   "src/components/ApiPage.tsx": {
     "hex": 0,
@@ -69,6 +69,20 @@
     "palette": 0,
     "button": 1
   },
+  "src/components/SearchPanel.tsx": {
+    "hex": 0,
+    "text": 11,
+    "vocab": 0,
+    "palette": 21,
+    "button": 11
+  },
+  "src/components/SiteChrome.tsx": {
+    "hex": 0,
+    "text": 3,
+    "vocab": 0,
+    "palette": 0,
+    "button": 6
+  },
   "src/components/SourceLegend.tsx": {
     "hex": 0,
     "text": 3,
@@ -96,6 +110,13 @@
     "vocab": 0,
     "palette": 7,
     "button": 0
+  },
+  "src/components/cdd/CrossSourceIdentifiersTable.tsx": {
+    "hex": 0,
+    "text": 5,
+    "vocab": 0,
+    "palette": 3,
+    "button": 1
   },
   "src/components/cdd/EitiAssessmentCard.tsx": {
     "hex": 0,
@@ -125,6 +146,13 @@
     "palette": 12,
     "button": 0
   },
+  "src/components/cdd/ModeTabs.tsx": {
+    "hex": 0,
+    "text": 0,
+    "vocab": 0,
+    "palette": 0,
+    "button": 1
+  },
   "src/components/cdd/NarrativePanel.tsx": {
     "hex": 7,
     "text": 8,
@@ -145,6 +173,20 @@
     "vocab": 0,
     "palette": 13,
     "button": 4
+  },
+  "src/components/cdd/PossiblySameTable.tsx": {
+    "hex": 0,
+    "text": 7,
+    "vocab": 0,
+    "palette": 3,
+    "button": 1
+  },
+  "src/components/cdd/ReportNotices.tsx": {
+    "hex": 0,
+    "text": 2,
+    "vocab": 0,
+    "palette": 12,
+    "button": 1
   },
   "src/components/cdd/SavedReportBanner.tsx": {
     "hex": 0,

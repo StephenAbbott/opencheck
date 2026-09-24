@@ -14,8 +14,11 @@ timestamp: 2026-06-14
 - **Frontend:** React + Vite + TypeScript, with a Cytoscape.js ownership graph.
 - **Source adapters:** one per data source in `backend/opencheck/sources/`,
   registered in a single `REGISTRY`. See [sources/](/sources/).
-- **BODS mapper:** `backend/opencheck/bods/mapper.py` — a `map_<source_id>()`
-  function per source turns raw payloads into [BODS v0.4](/standards/bods.md).
+- **BODS mapper:** a `map_<source_id>()` function per source turns raw payloads
+  into [BODS v0.4](/standards/bods.md). They live one module per country or
+  source family in `backend/opencheck/bods/mappers/` (Phase 246) and are all
+  re-exported from `backend/opencheck/bods/mapper.py`, which keeps the GLEIF
+  mapper and the published-BODS passthroughs.
 
 # The lookup pipeline
 

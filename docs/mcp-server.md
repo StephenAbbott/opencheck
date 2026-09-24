@@ -180,7 +180,8 @@ The MCP `resolve_national_id` tool wraps the new **`GET /resolve-national-id`**
 endpoint (`number`, optional `country` ISO-alpha-2 or explicit `ra_code`). It
 reuses the GLEIF adapter's `search_by_local_id` (queries GLEIF's three local-id
 filter fields, de-duplicated by LEI) — the inverse of the normal LEI-first flow.
-The `country → RA code` map (`_RA_BY_COUNTRY` in `routers/lookup.py`) mirrors
+The `country → RA code` map (`RA_BY_COUNTRY` in `opencheck/ra_codes.py`, with
+the endpoint in `routers/national_id.py` since Phase 246) mirrors
 `frontend/src/lib/raCodes.ts` and the RA table in `CLAUDE.md`; keep them in sync
 when adding a register.
 

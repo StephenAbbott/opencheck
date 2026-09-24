@@ -29,7 +29,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from opencheck import lookup_budget, pipelinestats, signalstats
+from opencheck import lookup_budget, lookup_replay, pipelinestats, signalstats
 from opencheck.config import get_settings
 from opencheck.routers import lookup as lk
 
@@ -74,7 +74,7 @@ def one_slot(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("OPENCHECK_LOOKUP_MAX_CONCURRENT", "1")
     monkeypatch.setenv("OPENCHECK_LOOKUP_QUEUE_WAIT_S", "0.05")
     monkeypatch.setenv("OPENCHECK_LOOKUP_STREAM_QUEUE_WAIT_S", "5")
-    monkeypatch.setattr(lk, "_QUEUE_POLL_S", 0.01)
+    monkeypatch.setattr(lookup_replay, "_QUEUE_POLL_S", 0.01)  # read there (Phase 246)
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
