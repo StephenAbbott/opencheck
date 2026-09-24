@@ -49,11 +49,53 @@ def _person(sid: str, full_name: str | None = None, *, person_type: str = "known
     return {"statementId": sid, "recordType": "person", "recordDetails": rd}
 
 
-def _entity(sid: str, name: str | None = None, *, entity_type: str = "registeredEntity") -> dict[str, Any]:
+def _entity(
+    sid: str,
+    name: str | None = None,
+    *,
+    entity_type: str = "registeredEntity",
+    jurisdiction: str | None = None,
+    founded: str | None = None,
+    lei: str | None = None,
+) -> dict[str, Any]:
     rd: dict[str, Any] = {"entityType": {"type": entity_type}}
     if name:
         rd["name"] = name
+    if jurisdiction:
+        rd["jurisdiction"] = {"name": jurisdiction, "code": jurisdiction}
+    if founded:
+        rd["foundingDate"] = founded
+    if lei:
+        rd["identifiers"] = [{"id": lei, "scheme": "XI-LEI"}]
     return {"statementId": sid, "recordType": "entity", "recordDetails": rd}
+
+
+def _routing_client(
+    reconcile: dict[str, Any], extend_rows: dict[str, Any] | Exception | None = None
+) -> AsyncMock:
+    """A mocked client that answers the reconcile ``queries`` POST and the
+    Phase 237 ``extend`` POST separately, as the live service does."""
+    posts: list[dict[str, Any]] = []
+
+    async def _post(url: str, **kwargs: Any) -> MagicMock:
+        data = kwargs.get("data") or {}
+        posts.append(data)
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        if "extend" in data:
+            if isinstance(extend_rows, Exception):
+                raise extend_rows
+            resp.json = MagicMock(return_value={"meta": [], "rows": extend_rows or {}})
+        else:
+            resp.json = MagicMock(return_value=reconcile)
+        return resp
+
+    client = AsyncMock()
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+    client.post = AsyncMock(side_effect=_post)
+    client.posts = posts
+    return client
 
 
 # ---------------------------------------------------------------------
@@ -469,11 +511,15 @@ def test_missing_node_id_yields_empty_node_url() -> None:
     assert sig.hit_id.startswith("icij:")  # falls back to the slug
 
 
-def test_signal_from_match_high_confidence_when_match_true() -> None:
+def test_icij_match_true_alone_is_medium_not_high() -> None:
+    """Phase 237: ICIJ's own ``match: true`` is recorded, not trusted. A
+    match with no jurisdiction corroboration rests on a name alone."""
     sig = _signal_from_match(_icij_match(match=True, score=85), _target(), min_score=70)
     assert sig is not None
     assert sig.code == OFFSHORE_LEAKS
-    assert sig.confidence == "high"
+    assert sig.confidence == "medium"
+    assert sig.evidence["icij_match"] is True
+    assert "name-only match: capped at medium" in sig.evidence["gates"]
     assert sig.source_id == "icij"
 
 
@@ -488,11 +534,10 @@ def test_signal_from_match_none_below_threshold() -> None:
     assert sig is None
 
 
-def test_signal_from_match_match_true_overrides_threshold() -> None:
-    """match: true should produce a signal even below the score threshold."""
+def test_match_true_no_longer_overrides_the_score_threshold() -> None:
+    """Until Phase 237 ``match: true`` let a score-30 result through."""
     sig = _signal_from_match(_icij_match(match=True, score=30), _target(), min_score=70)
-    assert sig is not None
-    assert sig.confidence == "high"
+    assert sig is None
 
 
 def test_signal_from_match_name_too_dissimilar_returns_none() -> None:
@@ -677,24 +722,20 @@ async def test_emits_signal_on_reconciliation_match(monkeypatch) -> None:
         "q0-intermediary": {"result": []},
     }
 
-    mock_response = MagicMock()
-    mock_response.raise_for_status = MagicMock()
-    mock_response.json = MagicMock(return_value=api_response)
-
-    mock_client = AsyncMock()
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
-    mock_client.post = AsyncMock(return_value=mock_response)
-
+    mock_client = _routing_client(
+        api_response, {"12345": {"country_codes": [{"str": "PA"}]}}
+    )
     with patch("opencheck.icij_check.build_client", return_value=mock_client):
-        bods = [_entity("e1", "Mossack Fonseca")]
+        bods = [_entity("e1", "Mossack Fonseca", jurisdiction="PA")]
         signals = await assess_icij_names(bods)
 
     assert len(signals) == 1
     sig = signals[0]
     assert sig.code == OFFSHORE_LEAKS
     assert sig.source_id == "icij"
+    # High because the jurisdiction corroborates, not because of match: true.
     assert sig.confidence == "high"
+    assert sig.evidence["jurisdiction_gate"]["status"] == "corroborated"
     assert sig.evidence["subject_statement_id"] == "e1"
     assert sig.evidence["dataset"] == "Panama Papers"
     assert sig.hit_id == "https://offshoreleaks.icij.org/nodes/12345"
@@ -871,3 +912,307 @@ def test_no_offshore_leaks_summary_prints_the_icij_score(
     assert str(score) not in sig.summary
     # Kept where the gate and any later analysis can read it.
     assert sig.evidence["icij_score"] == score
+
+
+# ---------------------------------------------------------------------
+# Phase 237 — leak-date and jurisdiction gates
+# ---------------------------------------------------------------------
+
+from opencheck.icij_check import (  # noqa: E402
+    _LEAK_CUTOFF_YEARS,
+    _bare_id,
+    _leak_cutoff,
+    _parse_node_row,
+    _party_facts,
+)
+
+CLP_LEI = "2138002WGQKEBZQVJW66"
+
+
+def _clp_panama_intermediary() -> dict[str, Any]:
+    """The live result for CLP HOLDINGS LIMITED, as ICIJ returned it on
+    2026-09-24: a Panama Papers Intermediary, match true, score 100."""
+    return {
+        "id": "11012596",
+        "name": "CLP HOLDINGS LIMITED",
+        "description": "Intermediary node extracted from the Panama Papers data.",
+        "match": True,
+        "score": 100.0,
+        "types": [{"id": ".../oldb/intermediary", "name": "Intermediary"}],
+    }
+
+
+_CLP_NODE = {"country_codes": ["HK"], "valid_until": "The Panama Papers  data is current through 2015"}
+
+
+def test_clp_shape_jersey_company_founded_2021_is_dropped_by_date() -> None:
+    """CLP HOLDINGS LIMITED — Jersey, incorporated 2021-03-09 per GLEIF —
+    was a HIGH OFFSHORE_LEAKS off a Panama Papers intermediary whose
+    documents end in 2015. It cannot be in them."""
+    target = {
+        "kind": "entity", "statement_id": "clp", "name": "CLP HOLDINGS LIMITED",
+        "subject": True, "founded": "2021-03-09", "countries": ["JE"],
+    }
+    sig = _signal_from_match(
+        _clp_panama_intermediary(), target, min_score=70,
+        node=_CLP_NODE, details_answered=True,
+    )
+    assert sig is None
+
+
+def test_clp_shape_dropped_even_when_the_extend_call_failed() -> None:
+    """The date gate does not need the extend call: the table knows the
+    Panama Papers end in 2015."""
+    target = {
+        "kind": "entity", "statement_id": "clp", "name": "CLP HOLDINGS LIMITED",
+        "founded": "2021-03-09", "countries": ["JE"],
+    }
+    sig = _signal_from_match(
+        _clp_panama_intermediary(), target, min_score=70,
+        node=None, details_answered=False,
+    )
+    assert sig is None
+
+
+def test_clp_shape_older_jersey_company_survives_but_jurisdiction_differs() -> None:
+    target = {
+        "kind": "entity", "statement_id": "clp", "name": "CLP HOLDINGS LIMITED",
+        "founded": "2009-01-01", "countries": ["JE"],
+    }
+    sig = _signal_from_match(
+        _clp_panama_intermediary(), target, min_score=70,
+        node=_CLP_NODE, details_answered=True,
+    )
+    assert sig is not None
+    assert sig.confidence == "medium"
+    assert sig.evidence["jurisdiction_gate"] == {
+        "status": "differs", "party_countries": ["JE"], "record_countries": ["HK"],
+    }
+    assert sig.evidence["date_gate"] == {
+        "status": "passed", "party_date": "2009-01-01",
+        "leak_cutoff_year": 2015, "cutoff_source": "icij",
+    }
+    assert sig.evidence["gates"] == [
+        "gate passed: incorporation 2009-01-01 ≤ leak cutoff 2015",
+        "jurisdiction differs: JE ≠ HK",
+        "name-only match: capped at medium",
+    ]
+
+
+def test_hong_kong_company_matching_a_hong_kong_record_is_high() -> None:
+    target = {
+        "kind": "entity", "statement_id": "clp", "name": "CLP HOLDINGS LIMITED",
+        "founded": "1998-01-09", "countries": ["HK"],
+    }
+    sig = _signal_from_match(
+        _clp_panama_intermediary(), target, min_score=70,
+        node=_CLP_NODE, details_answered=True,
+    )
+    assert sig is not None
+    assert sig.confidence == "high"
+    assert sig.evidence["gates"] == [
+        "gate passed: incorporation 1998-01-09 ≤ leak cutoff 2015",
+        "jurisdiction HK = HK",
+    ]
+
+
+def test_bp_shape_bahamas_record_with_no_country_is_medium() -> None:
+    """BP's BRITANNIC TRADING LIMITED against a Bahamas Leaks entity: ICIJ
+    holds no country for the node (live, 2026-09-24), so the match rests on
+    the name and cannot be high — it was, on ICIJ's match flag."""
+    match = {
+        "id": "20015606",
+        "name": "BRITANNIC TRADING LIMITED",
+        "description": "Entity node extracted from the Bahamas Leaks data.",
+        "match": True,
+        "score": 100.0,
+        "types": [{"id": ".../oldb/entity", "name": "Entity"}],
+    }
+    target = {
+        "kind": "entity", "statement_id": "bt", "name": "BRITANNIC TRADING LIMITED",
+        "founded": "1985-07-05", "countries": ["GB"],
+    }
+    node = {"country_codes": [], "valid_until": "The Bahamas Leaks data is current through early 2016."}
+    sig = _signal_from_match(match, target, min_score=70, node=node, details_answered=True)
+    assert sig is not None
+    assert sig.confidence == "medium"
+    assert sig.evidence["date_gate"]["leak_cutoff_year"] == 2016
+    assert "jurisdiction not checked: ICIJ record carries no country" in sig.evidence["gates"]
+
+
+def test_person_is_never_high_even_when_countries_agree() -> None:
+    """Stephen, 24 Sept 2026: a common name in a country is not corroboration."""
+    match = {
+        "id": "1", "name": "JOHN SMITH", "score": 100, "match": True,
+        "description": "Officer node extracted from the Panama Papers data.",
+        "types": [{"name": "Officer"}],
+    }
+    target = {"kind": "person", "statement_id": "p", "name": "John Smith",
+              "founded": "1960-04", "countries": ["GB"]}
+    sig = _signal_from_match(
+        match, target, min_score=70,
+        node={"country_codes": ["GB"], "valid_until": ""}, details_answered=True,
+    )
+    assert sig is not None
+    assert sig.confidence == "medium"
+    assert sig.evidence["jurisdiction_gate"]["status"] == "corroborated"
+    assert sig.evidence["gates"][0] == "gate passed: birth 1960-04 ≤ leak cutoff 2015"
+
+
+def test_person_born_after_the_leak_is_dropped() -> None:
+    match = {
+        "id": "1", "name": "JANE DOE", "score": 100, "match": True,
+        "description": "Officer node extracted from the Offshore Leaks data.",
+        "types": [{"name": "Officer"}],
+    }
+    target = {"kind": "person", "statement_id": "p", "name": "Jane Doe",
+              "founded": "2011", "countries": []}
+    assert _signal_from_match(match, target, min_score=70) is None
+
+
+def test_icij_valid_until_is_preferred_over_the_table() -> None:
+    """Pandora's providers end at different years; the dataset-wide table
+    entry is the permissive bound, ICIJ's per-node line the precise one."""
+    assert _leak_cutoff("Pandora Papers", "Some Provider", None) == (2021, "table")
+    assert _leak_cutoff(
+        "Pandora Papers", "Some Provider",
+        {"valid_until": "Provider data is current through 2016"},
+    ) == (2016, "icij")
+    assert _leak_cutoff("Paradise Papers", "Appleby", None) == (2014, "table")
+    assert _leak_cutoff("FBME Bank", "", None) == (None, "")
+
+
+def test_unknown_leak_is_not_date_gated_and_says_so() -> None:
+    match = {
+        "id": "9", "name": "ACME HOLDINGS LIMITED", "score": 95, "match": False,
+        "description": "Entity node extracted from the FBME Bank data.",
+        "types": [{"name": "Entity"}],
+    }
+    target = {"kind": "entity", "statement_id": "e", "name": "ACME HOLDINGS LIMITED",
+              "founded": "2024-01-01", "countries": ["GB"]}
+    sig = _signal_from_match(match, target, min_score=70)
+    assert sig is not None
+    assert sig.evidence["date_gate"]["status"] == "not_checked"
+    assert "date not checked: no cutoff known for this leak" in sig.evidence["gates"]
+
+
+def test_table_bounds_are_never_earlier_than_icij_published_lines() -> None:
+    """The table is the fallback, so it may only ever be the permissive
+    side: each dataset-wide year is ≥ every sub-collection year listed."""
+    for (ds, coll), year in _LEAK_CUTOFF_YEARS.items():
+        if coll:
+            assert _LEAK_CUTOFF_YEARS[(ds, "")] >= year, (ds, coll)
+
+
+def test_party_facts_reads_jurisdiction_subdivision_and_addresses() -> None:
+    rd = {
+        "foundingDate": "1998-01-09",
+        "jurisdiction": {"name": "Delaware", "code": "US-DE"},
+        "addresses": [{"type": "registered", "country": {"name": "Jersey", "code": "JE"}}],
+    }
+    assert _party_facts(rd, "entity") == ("1998-01-09", {"US", "JE"})
+    assert _party_facts({"birthDate": "1970"}, "person") == ("1970", set())
+    assert _party_facts({"foundingDate": "unknown"}, "entity") == (None, set())
+
+
+def test_parse_node_row_and_bare_id() -> None:
+    assert _parse_node_row({
+        "country_codes": [{"str": "vg"}, {"str": "HK"}, {"str": "XXX"}],
+        "valid_until": [{"str": "The Offshore Leaks data is current through 2010"}],
+    }) == {"country_codes": ["HK", "VG"],
+           "valid_until": "The Offshore Leaks data is current through 2010"}
+    assert _bare_id("https://offshoreleaks.icij.org/nodes/123") == "123"
+    assert _bare_id("123") == "123"
+
+
+def _clp_bods() -> list[dict[str, Any]]:
+    return [
+        _entity("gleif-clp", "CLP HOLDINGS LIMITED", jurisdiction="JE",
+                founded="2021-03-09", lei=CLP_LEI),
+    ]
+
+
+def _clp_reconcile() -> dict[str, Any]:
+    return {
+        "q0-entity": {"result": []},
+        "q0-officer": {"result": []},
+        "q0-intermediary": {"result": [_clp_panama_intermediary()]},
+    }
+
+
+@pytest.fixture
+def _live(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+async def test_end_to_end_clp_subject_gets_no_offshore_leaks_signal(_live) -> None:
+    client = _routing_client(_clp_reconcile(), {"11012596": {
+        "country_codes": [{"str": "HK"}],
+        "valid_until": [{"str": "The Panama Papers  data is current through 2015"}],
+    }})
+    with patch("opencheck.icij_check.build_client", return_value=client):
+        signals = await assess_icij_names(_clp_bods(), subject_lei=CLP_LEI)
+    assert signals == []
+    # The extend call asked about the one candidate that passed the name gates.
+    extend = json.loads(next(p["extend"] for p in client.posts if "extend" in p))
+    assert extend["ids"] == ["11012596"]
+
+
+async def test_end_to_end_extend_failure_keeps_matches_at_medium_without_degrading(_live) -> None:
+    reconcile = {
+        "q0-entity": {"result": [{
+            "id": "20015606", "name": "BRITANNIC TRADING LIMITED", "score": 100,
+            "match": True, "types": [{"name": "Entity"}],
+            "description": "Entity node extracted from the Bahamas Leaks data.",
+        }]},
+        "q0-officer": {"result": []},
+        "q0-intermediary": {"result": []},
+    }
+    client = _routing_client(reconcile, httpx.ConnectError("boom"))
+    degraded: list = []
+    with patch("opencheck.icij_check.build_client", return_value=client):
+        signals = await assess_icij_names(
+            [_entity("bt", "BRITANNIC TRADING LIMITED", jurisdiction="GB")],
+            degraded=degraded,
+        )
+    assert [s.confidence for s in signals] == ["medium"]
+    assert degraded == []
+    assert (
+        "jurisdiction not checked: ICIJ node details unavailable"
+        in signals[0].evidence["gates"]
+    )
+
+
+async def test_no_extend_call_when_nothing_passes_the_name_gates(_live) -> None:
+    reconcile = {
+        "q0-entity": {"result": [{
+            "id": "1", "name": "TOTALLY DIFFERENT PLC", "score": 90, "match": False,
+            "description": "Entity node extracted from the Panama Papers data.",
+        }]},
+    }
+    client = _routing_client(reconcile, {})
+    with patch("opencheck.icij_check.build_client", return_value=client):
+        assert await assess_icij_names([_entity("e", "ACME BVI LTD")]) == []
+    assert not any("extend" in p for p in client.posts)
+
+
+async def test_subject_facts_pool_the_earliest_founding_date(_live) -> None:
+    """Two sources describe the subject; one dates a re-registration. The
+    earliest date is the one the gate reads, so a true match is kept."""
+    bods = [
+        _entity("gleif-clp", "CLP HOLDINGS LIMITED", jurisdiction="HK",
+                founded="2021-03-09", lei=CLP_LEI),
+        _entity("oc-clp", "CLP Holdings Ltd", founded="1998-01-09", lei=CLP_LEI),
+    ]
+    client = _routing_client(_clp_reconcile(), {"11012596": {
+        "country_codes": [{"str": "HK"}], "valid_until": [],
+    }})
+    with patch("opencheck.icij_check.build_client", return_value=client):
+        signals = await assess_icij_names(bods, subject_lei=CLP_LEI)
+    assert len(signals) == 1
+    assert signals[0].confidence == "high"
+    assert signals[0].evidence["date_gate"]["party_date"] == "1998-01-09"
+    assert signals[0].evidence["date_gate"]["cutoff_source"] == "table"

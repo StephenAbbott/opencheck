@@ -215,6 +215,9 @@ async def test_icij_per_name_fallback_only_loses_the_poison_name(
     }
 
     def route(request: httpx.Request) -> httpx.Response:
+        if "extend" in parse_qs(request.content.decode()):
+            # Phase 237: the node-details call for the one surviving candidate.
+            return httpx.Response(201, json={"meta": [], "rows": {}})
         queries = _posted_queries(request)
         if len(_names_in(queries)) > 1:  # the batch → deterministic rejection
             return httpx.Response(500, json={"code": 500, "message": "Server Error"})
@@ -233,8 +236,9 @@ async def test_icij_per_name_fallback_only_loses_the_poison_name(
         degraded=degraded,
     )
 
-    # 1 batch POST + 2 per-name retries.
-    assert len(httpx_mock.get_requests()) == 3
+    # 1 batch POST + 2 per-name retries + 1 node-details (extend) call for
+    # the clean name's candidate (Phase 237).
+    assert len(httpx_mock.get_requests()) == 4
     # The clean name was screened and matched.
     assert [s.code for s in signals] == [OFFSHORE_LEAKS]
     assert signals[0].evidence["subject_statement_id"] == "e1"

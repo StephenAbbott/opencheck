@@ -1816,6 +1816,39 @@ and MCP had no limit at all. Things that will be re-derived otherwise:
 
 ---
 
+## OFFSHORE_LEAKS is gated by date and jurisdiction, never by ICIJ's flag (Phase 237)
+
+`icij_check.py`. Found by the Opus 5.5 check (DQ-3): CLP HOLDINGS LIMITED
+(Jersey, founded 2021) carried a **high** OFFSHORE_LEAKS off a Panama Papers
+intermediary whose documents end in 2015, because ICIJ's `match: true` set the
+confidence. Things that will be re-derived otherwise:
+
+- **`match: true` decides nothing** — not the score threshold, not the
+  confidence. It stays on `evidence["icij_match"]`.
+- **The node's country and cutoff come from the reconcile `extend` service**:
+  `POST /api/v1/reconcile` with an `extend` form field (`{"ids": [...],
+  "properties": [{"id": "country_codes"}, ...]}`) — not `queries`. Rows give
+  `country_codes` and `valid_until` ("The Panama Papers data is current through
+  2015"); `jurisdiction` / `incorporation_date` were empty on every node sampled
+  (24 Sept 2026). Asked only for candidates that passed the name gates.
+- **Date gate:** the party's `foundingDate` (entity) or `birthDate` (person)
+  year after the leak's last year → the match is dropped. Cutoff = ICIJ's
+  `valid_until`, else `_LEAK_CUTOFF_YEARS`, whose dataset-wide entries are the
+  *latest* sub-collection year or the publication year, so the table can only
+  keep what the precise cutoff would drop. The subject's date is the
+  **earliest** across its identity set. An unknown leak is not date-gated, and
+  the evidence says so.
+- **Only a jurisdiction match makes it high, and only for entities**: the
+  party's BODS `jurisdiction` country (`US-DE` → `US`) or address country among
+  the node's `country_codes`. Persons are always `medium` (Stephen, 24 Sept
+  2026). A failed extend call is **not** a `DegradedSource` — matches stay
+  medium, the safe direction.
+- **The gates are on the evidence**: `gates` (sentences such as "gate passed:
+  incorporation 1972-11-03 ≤ leak cutoff 2015", "jurisdiction HK = HK",
+  "name-only match: capped at medium"), `date_gate`, `jurisdiction_gate`.
+
+---
+
 ## Provenance is checked behaviourally, not by grepping (Phases 229–230)
 
 Liveness is declared in **two** places and an adapter can do one without the

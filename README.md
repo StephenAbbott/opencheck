@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 236** — a listed company now shows its primary stock-exchange listing, from LSEG PermID, with a link to the exchange's page where the pattern is verified.
+**Latest: Phase 237** — an offshore-leaks match must now be possible by date, and only a matching jurisdiction makes it high-confidence; ICIJ's own match flag no longer decides anything.
 
 → [Full development history](docs/status.md)
 
