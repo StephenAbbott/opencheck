@@ -742,6 +742,12 @@ def _offline_index_covers(adapter: Any, lei: str) -> bool:
         return True
 
 
+async def _reraise(exc: Exception) -> Any:
+    """An awaitable that fails with ``exc`` — a failure found before dispatch,
+    replayed through the dispatch loop so it is reported like any other."""
+    raise exc
+
+
 def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]:
     """Build the (source_id, awaitable) dispatch list for this lookup.
 
@@ -768,6 +774,12 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         tasks.append(("opencorporates", REGISTRY["opencorporates"].fetch(ctx.ocid)))
     if ctx.qid and _want("wikidata"):
         tasks.append(("wikidata", REGISTRY["wikidata"].fetch(ctx.qid)))
+    elif ctx.qid_error is not None and _want("wikidata"):
+        # Phase 244: the QID lookup itself failed. Wikidata is applicable —
+        # we asked and it did not answer — so it is dispatched as a task that
+        # re-raises that failure, and the ordinary path turns it into a
+        # `source_error` (and, through `add_source_errors`, a degradation).
+        tasks.append(("wikidata", _reraise(ctx.qid_error)))
     os_adapter = REGISTRY.get("opensanctions")
     if os_adapter and SearchKind.ENTITY in os_adapter.info.supports and _want("opensanctions"):
         tasks.append(("opensanctions", os_adapter.search(ctx.lei, SearchKind.ENTITY)))
@@ -1219,7 +1231,24 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
 
     wikidata_adapter = REGISTRY["wikidata"]
     if hasattr(wikidata_adapter, "find_qid_by_lei"):
-        ctx.qid = await wikidata_adapter.find_qid_by_lei(lei)  # type: ignore[attr-defined]
+        # Phase 244: the QID is optional enrichment, so a slow or failing
+        # Wikidata Query Service must never fail the lookup. Unguarded, a WDQS
+        # ReadTimeout escaped the pipeline and every fresh /lookup answered
+        # HTTP 500 (Equinor and Rosneft, 24 Sept 2026). The failure is kept on
+        # the context, not swallowed: `_dispatch` reports it as Wikidata's
+        # `source_error`, so the report says Wikidata did not answer instead
+        # of implying the company has no Wikidata record.
+        try:
+            ctx.qid = await wikidata_adapter.find_qid_by_lei(lei)  # type: ignore[attr-defined]
+        except Exception as exc:  # noqa: BLE001
+            ctx.qid = None
+            ctx.qid_error = exc
+            _LOG.warning(
+                "Wikidata QID lookup failed for %s: %s — Wikidata will be "
+                "reported as not answering for this lookup.",
+                lei,
+                describe_exception(exc),
+            )
     if ctx.qid:
         ctx.derived["wikidata_qid"] = ctx.qid
 
