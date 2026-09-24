@@ -18,7 +18,8 @@ Visual language (matches the on-screen BOVS styling):
   wrapped to the room the edge has, with its start year; the register's own
   wording and full dates are in the text-equivalent table
 - an ended relationship (closed record, or every interest past its endDate)
-  keeps its colour, is drawn faint and says "ended <date>" (Phase 219)
+  keeps its kind, is drawn in a lighter tint (still 3:1) with a hollow
+  arrowhead and says "ended <date>" (Phases 219, 243)
 """
 
 # This module builds long inline-SVG strings; wrapping them to 100 cols would
@@ -62,15 +63,16 @@ class EdgeStyle:
     text_color: str  # label colour, darkened to reach 4.5:1 (WCAG 1.4.3)
     dash: str        # "solid" | "dotted" | "dashed" — the non-colour cue (WCAG 1.4.1)
     name: str        # legend name
+    ended_color: str = ""  # an ended edge's line colour, ≥3:1 on white (Phase 243)
 
 
 #: Mirrors ``EDGE_STYLE`` in ``frontend/src/lib/graphStyle.ts`` (the four kinds a
 #: relationship can be; ``possiblySame`` is a canvas-only suggestion edge).
 EDGE_STYLE: dict[str, EdgeStyle] = {
-    "ownership": EdgeStyle("#3b82f6", "#1d4ed8", "solid", "Ownership"),
-    "control": EdgeStyle("#e65100", "#9a3412", "dotted", "Control"),
-    "role": EdgeStyle("#7c3aed", "#6d28d9", "dashed", "Role"),
-    "unknown": EdgeStyle("#888888", "#595959", "solid", "Unclassified"),
+    "ownership": EdgeStyle("#3b82f6", "#1d4ed8", "solid", "Ownership", "#5391f7"),
+    "control": EdgeStyle("#e65100", "#9a3412", "dotted", "Control", "#ea6d29"),
+    "role": EdgeStyle("#7c3aed", "#6d28d9", "dashed", "Role", "#a77bf3"),
+    "unknown": EdgeStyle("#888888", "#595959", "solid", "Unclassified", "#929292"),
 }
 
 #: The SVG for each dash pattern. A 3-unit round-capped stroke with a near-zero
@@ -114,10 +116,13 @@ INTEREST_LABELS: dict[str, str] = {
 #: Mirrors ``buildEdgeLabel``'s ``labels.slice(0, 2)``.
 MAX_INTEREST_LINES = 2
 
-# Phase 219 — the line opacity of an ended relationship. Mirrors
-# ``ENDED_EDGE.lineOpacity`` in graphStyle.ts (pinned since Phase 221). Labels
-# stay fully opaque (WCAG 1.4.3).
-_ENDED_OPACITY = 0.5
+# Phase 219 / 243 — an ended relationship is drawn in its kind's
+# ``ended_color`` (a lighter tint held at ≥3:1 on white, WCAG 1.4.11) with a
+# hollow arrowhead. Mirrors ``EdgeStyle.endedColor`` and ``ENDED_EDGE.arrowFill``
+# in graphStyle.ts (pinned by the parity test). Phase 219's 0.5 stroke-opacity
+# measured under 2.3:1. Labels stay at full text contrast (WCAG 1.4.3).
+_ENDED_ARROW_FILL = "hollow"
+_ENDED_MIN_CONTRAST = 3.0
 
 _R = 26              # node radius
 _VIEW_W = 760
@@ -618,16 +623,21 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
     # Build accessible description.
     summary = _summary(nodes, edges)
     parts.append(f'<desc id="ds">{escape(summary)}</desc>')
-    # Arrowheads: one per edge kind drawn, and a faded twin for an ended edge
-    # (Phase 219) — a marker does not inherit the line's stroke-opacity.
+    # Arrowheads: one per edge kind drawn, and a hollow twin in the lighter
+    # ended tint for an ended edge (Phase 219 / 243).
     cats = [c for c in EDGE_STYLE if any(e["cat"] == c for e in edges)]
     defs = ["<defs>"]
     for c in cats:
         for ended in (False, True):
-            fade = f' fill-opacity="{_ENDED_OPACITY}"' if ended else ""
+            st = EDGE_STYLE[c]
+            head = (
+                f'fill="#fff" stroke="{st.ended_color}" stroke-width="1.5"'
+                if ended
+                else f'fill="{st.color}"'
+            )
             defs.append(
-                f'<marker id="{_marker_id(c, ended)}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
-                f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{EDGE_STYLE[c].color}"{fade}/></marker>'
+                f'<marker id="{_marker_id(c, ended)}" viewBox="-1 -1 12 12" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+                f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" {head}/></marker>'
             )
     defs.append("</defs>")
     parts.append("".join(defs))
@@ -642,11 +652,11 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
     for e in edges:
         (px, py), (sx, sy) = pos[e["from"]], pos[e["to"]]
         style = EDGE_STYLE[e["cat"]]
-        fade = f' stroke-opacity="{_ENDED_OPACITY}"' if e.get("ended") else ""
+        stroke = style.ended_color if e.get("ended") else style.color
         x1, x2 = px + _R, sx - _R
         parts.append(
             f'<line x1="{x1:.0f}" y1="{py:.0f}" x2="{x2:.0f}" y2="{sy:.0f}" '
-            f'stroke="{style.color}" stroke-width="3"{_DASH_ATTRS[style.dash]}{fade} '
+            f'stroke="{stroke}" stroke-width="3"{_DASH_ATTRS[style.dash]} '
             f'marker-end="url(#{_marker_id(e["cat"], bool(e.get("ended")))})"/>'
         )
         dp, ds = degree[e["from"]], degree[e["to"]]
@@ -668,15 +678,21 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
     lx = 40.0
     entries = [(EDGE_STYLE[c], EDGE_STYLE[c].name, False) for c in cats]
     if any(e.get("ended") for e in edges):
-        entries.append((EdgeStyle(_MUTE, _MUTE, "solid", ""), "Ended relationship (drawn faint)", True))
-    for style, text, faint in entries:
-        fade = f' stroke-opacity="{_ENDED_OPACITY}"' if faint else ""
+        entries.append((EDGE_STYLE["unknown"], "Ended relationship (lighter, hollow arrowhead)", True))
+    for style, text, ended in entries:
+        stroke = style.ended_color if ended else style.color
         parts.append(
-            f'<line x1="{lx:.0f}" y1="{ly}" x2="{lx + 24:.0f}" y2="{ly}" stroke="{style.color}" '
-            f'stroke-width="3"{_DASH_ATTRS[style.dash]}{fade}/>'
+            f'<line x1="{lx:.0f}" y1="{ly}" x2="{lx + 24:.0f}" y2="{ly}" stroke="{stroke}" '
+            f'stroke-width="3"{_DASH_ATTRS[style.dash]}/>'
         )
-        parts.append(f'<text x="{lx + 30:.0f}" y="{ly + 4}" font-size="9" fill="{_MUTE}">{escape(text)}</text>')
-        lx += 30 + len(text) * 5.2 + 24
+        if ended:  # the hollow head, drawn inline (a legend sample is not an edge)
+            parts.append(
+                f'<path d="M{lx + 24:.0f} {ly - 3.5} L{lx + 31:.0f} {ly} L{lx + 24:.0f} {ly + 3.5} z" '
+                f'fill="#fff" stroke="{stroke}" stroke-width="1.5"/>'
+            )
+        tx = lx + (36 if ended else 30)
+        parts.append(f'<text x="{tx:.0f}" y="{ly + 4}" font-size="9" fill="{_MUTE}">{escape(text)}</text>')
+        lx = tx + len(text) * 5.2 + 24
     parts.append("</svg>")
     return "".join(parts), summary
 

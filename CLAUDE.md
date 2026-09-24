@@ -535,7 +535,8 @@ table is broken**. A clean changelog is not evidence. Look at the rendered
 `EDGE_STYLE` from there, so a colour change moves the diagram and its key
 together. `backend/opencheck/reporting/diagram.py` draws the exported PDF/HTML
 diagram with **copies** of `EDGE_STYLE` (all four relationship kinds: colour,
-label colour, dash, legend name), `ENDED_EDGE.lineOpacity`, and `bodsGraph.ts`'s
+label colour, dash, legend name, `endedColor`), `ENDED_EDGE.arrowFill` /
+`minContrast`, and `bodsGraph.ts`'s
 `INTEREST_LABELS`, `categorise()` type sets and `buildEdgeLabel`'s two-line cap.
 Since Phase 221 **`backend/tests/test_reporting_diagram_parity.py` parses the
 TypeScript and fails when either side moves alone** — change both in one
@@ -1368,8 +1369,10 @@ interest has an `endDate` on or before today; read both, because Open
 Ownership's PSC extract has closed records with no `endDate` and CH officer
 resignations have `endDate` on records never closed. A closed record with no
 date says "ended", never an invented date. `GraphEdge.ended` / `endedOn` drive
-`edge[?ended]` in the stylesheet: `line-opacity` `ENDED_EDGE.lineOpacity`
-(0.5 — 0.35 made a dotted control edge vanish) and **no label background**,
+`edge[?ended]` in the stylesheet: the kind's `EDGE_STYLE.endedColor` (a lighter
+tint held at **≥3:1 on white**, WCAG 1.4.11 — Phase 219's `line-opacity: 0.5`
+measured 1.75–2.26:1 and was replaced in Phase 243), a **hollow arrowhead**
+(`ENDED_EDGE.arrowFill`, the non-colour cue) and **no label background**,
 because a two- or three-line autorotated label on a short edge otherwise hides
 the faded line entirely. The label's "ended <date>" line is the non-colour cue;
 the legend gets an "Ended relationship" modifier (not a sixth edge kind — an
@@ -1379,8 +1382,44 @@ labelled from its current interests; the ended ones move into `details`. C
 hides a *current* ultimate-consolidation edge only behind *current* direct
 edges. Why a fade: BOVS has no historical-relationship rule, but completeness
 forbids omitting a party and relevance allows "tinting or transparency"; every
-dash pattern was already taken. The risk engine reads the same rule since
+dash pattern was already taken. `graphStyle.test.ts` and
+`test_reporting_diagram_parity.py` both measure every `endedColor`. The risk engine reads the same rule since
 Phase 220 — see "Ended relationships in the risk engine" below.
+
+---
+
+## The graph at scale (Phase 243)
+
+`lib/graphScale.ts` (pure, tested in `graphScale.test.ts`) + `BODSGraph.tsx`.
+Found by the Opus 5.5 check (D-H3, A-M1, A-M2): Shell's FullCheck is 16
+owners/officers, SHELL PLC and 132 single-parent leaf subsidiaries, which
+dagre drew as two rows thousands of pixels wide — 3px labels at Fit.
+
+- **Sibling clusters.** On a rank wider than `RANK_CLUSTER_THRESHOLD` (40),
+  the leaf siblings one hub shares are grouped by the joining edge's first
+  source + kind + ended ("GLEIF: 94 subsidiaries"), groups of ≥
+  `MIN_CLUSTER_SIZE` (5) only. Leaf *parents* above a hub group the same way
+  ("… officers"). **A node carrying a signal badge is never grouped**
+  (Stephen, 24 Sept 2026). Clusters are canvas-only: `BodsTree` still lists
+  every row, and a search match or a selection from the tree opens the group
+  that hides it. Cluster ids are stable across FullCheck expansion. Labels
+  never say "owns" (GLEIF L2 is consolidation) — the test pins it.
+- **Wrapped ranks.** After dagre, `wrapWideRanks` folds any rank that is all
+  leaves (down) or all roots (up) and wider than `WRAP_MAX_COLS` into rows
+  matching the canvas aspect, spaced for the widest node, and moves the ranks
+  beyond it. A rank that mixes parents and leaves is left alone.
+- **Fit to content.** The canvas height follows the drawn bounding box
+  (`canvasHeightFor`, 360–640px) and "Fit" fits displayed elements only.
+- **Overlay targets.** Every overlay control is a transparent box ≥ 24px
+  square (`hitBox`, WCAG 2.5.8) around the drawn pill; badge type ≥ 11px. The
+  overlay is **one tab stop** (`role="toolbar"`, roving tabindex, arrows /
+  Home / End in reading order), a focused off-canvas mark pans into view, and
+  a "Skip to text version" link comes first. A collapse toggle is drawn only
+  where collapsing hides something (`collapsibleNodes`) — in a DAG most
+  officers' "−" did nothing. The single and stacked signal badges are one
+  `<button>`.
+- **Legend and phones.** The signal legend starts open; "Read as text" starts
+  open under 640px (`prefersTextFirst`), with the canvas still above it.
 
 ---
 

@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 242** — an LEI that has lapsed (with the renewal date it missed), retired or merged now says so beside the LEI, in the identity band, the MCP profile and summary, batch rows and the PDF and Markdown reports, without changing the company's register status.
+**Latest: Phase 243** — large ownership graphs group wide ranks of subsidiaries into expandable boxes and fit the canvas to the drawing, the diagram's controls are 24px targets behind one keyboard stop, and ended relationships stay visible at 3:1 with a hollow arrowhead.
 
 → [Full development history](docs/status.md)
 

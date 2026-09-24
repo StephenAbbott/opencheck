@@ -26,9 +26,10 @@
  * FullCheck's network exploration will build on.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import BODSGraph from "./BODSGraph";
 import BodsTree from "./BodsTree";
+import { prefersTextFirst } from "../lib/graphScale";
 import { bodsToGraph, autoCollapse, buildTree, type GraphModel } from "../lib/bodsGraph";
 import {
   expandLayer,
@@ -234,6 +235,20 @@ export default function BodsGraphExplorer({
   }, [statements, baseModel]);
 
   const rows = useMemo(() => buildTree(model, collapsed), [model, collapsed]);
+
+  // Phase 243 — the text equivalent starts open on a phone, where a canvas of
+  // any size is a smear (Stephen, 24 Sept 2026: the diagram stays above it).
+  // Read once, on mount: a reader who closes it on a phone keeps it closed.
+  const [textOpen, setTextOpen] = useState<boolean>(() => prefersTextFirst());
+  const textVersionId = `graph-text-${useId().replace(/:/g, "")}`;
+  const textSummaryRef = useRef<HTMLElement>(null);
+  const skipToText = useCallback(() => {
+    setTextOpen(true);
+    const summary = textSummaryRef.current;
+    if (!summary) return;
+    summary.focus();
+    summary.scrollIntoView?.({ block: "nearest" });
+  }, []);
 
   /**
    * Select a statement by id, expanding a collapsed ancestor first so it is
@@ -717,6 +732,8 @@ export default function BodsGraphExplorer({
               sameAs={sameAs}
               layer={fullCheck && !readOnly ? layer : undefined}
               onAddLayer={fullCheck && !readOnly ? addNextLayer : undefined}
+              onSkipToText={skipToText}
+              textVersionId={textVersionId}
             />
             {/* Provenance sits UNDER the canvas it describes. Above it, on a
                 network nobody had asked to expand yet, it was four source chips
@@ -739,8 +756,16 @@ export default function BodsGraphExplorer({
             hidden behind a mode switch was worse, because a reader could land
             in the equivalent *instead of* the diagram. A disclosure that names
             its row count is available on every mount and costs nothing shut. */}
-        <details className="rounded-oo border border-oo-rule bg-white">
-          <summary className="cursor-pointer px-3 py-1.5 text-oo-meta text-oo-blue hover:bg-oo-soft rounded-oo">
+        <details
+          id={textVersionId}
+          className="rounded-oo border border-oo-rule bg-white"
+          open={textOpen}
+          onToggle={(e) => setTextOpen((e.currentTarget as HTMLDetailsElement).open)}
+        >
+          <summary
+            ref={textSummaryRef}
+            className="cursor-pointer px-3 py-1.5 min-h-[24px] text-oo-meta text-oo-blue hover:bg-oo-soft rounded-oo"
+          >
             Read as text — {rows.length} {rows.length === 1 ? "row" : "rows"}, keyboard navigable
           </summary>
           <div className="border-t border-oo-rule">
