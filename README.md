@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 245** — the report opens on a two-sentence verdict (finding first, structure second), states each fact once, puts the mode tabs on the first screen at desktop and phone widths, and keeps one primary button per panel.
+**Latest: Phase 246** — the regrown files are re-split: each source's BODS mapper in its own module, `App()` into hooks and panels with an error boundary around every lazy tab, and the lookup router's replay cache, gate and expansion endpoints in modules of their own.
 
 → [Full development history](docs/status.md)
 
