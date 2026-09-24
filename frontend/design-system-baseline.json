@@ -3,7 +3,7 @@
     "hex": 0,
     "text": 29,
     "vocab": 0,
-    "palette": 48,
+    "palette": 45,
     "button": 22
   },
   "src/components/ApiPage.tsx": {
@@ -32,7 +32,7 @@
     "text": 1,
     "vocab": 0,
     "palette": 3,
-    "button": 5
+    "button": 4
   },
   "src/components/BodsTree.tsx": {
     "hex": 0,
@@ -130,7 +130,7 @@
     "text": 8,
     "vocab": 0,
     "palette": 31,
-    "button": 9
+    "button": 8
   },
   "src/components/cdd/NzAssociations.tsx": {
     "hex": 0,
@@ -186,7 +186,7 @@
     "text": 0,
     "vocab": 0,
     "palette": 0,
-    "button": 2
+    "button": 1
   },
   "src/components/export/ExportMenu.tsx": {
     "hex": 2,

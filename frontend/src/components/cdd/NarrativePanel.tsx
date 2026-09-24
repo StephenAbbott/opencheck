@@ -40,7 +40,7 @@ import {
   shouldCollapseEvidence,
 } from "../../lib/evidenceDisclosure";
 import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
-import { Chip, SectionHeading } from "../ui";
+import { Button, Chip, SectionHeading } from "../ui";
 import { scrollBehavior } from "../../lib/motion";
 
 const CONF_BADGE: Record<string, string> = {
@@ -596,14 +596,12 @@ export function NarrativePanel({
 
       {!data && !collapsed && !saved && (
         <div className="mt-4">
-          <button
-            type="button"
-            onClick={generate}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-oo bg-oo-blue text-white text-oo-small font-medium px-4 py-2 disabled:opacity-60"
-          >
+          {/* Secondary (Phase 245): the summary is optional reading, and a
+              solid blue button on every QuickCheck competed with the report's
+              own actions for the one primary slot. */}
+          <Button variant="secondary" size="sm" onClick={generate} disabled={loading}>
             {loading ? "Generating…" : "Generate summary"}
-          </button>
+          </Button>
           {error && (
             <p role="alert" className="mt-3 text-oo-meta text-amber-800 bg-amber-50 border border-amber-200 rounded-oo px-3 py-2">
               {error}

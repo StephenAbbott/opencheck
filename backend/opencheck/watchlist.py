@@ -87,6 +87,7 @@ from typing import Any
 
 from . import identifiers
 from .names import name_similarity
+from .verdict import VERDICT_TEMPLATE
 
 log = logging.getLogger("opencheck.watchlist")
 
@@ -297,6 +298,9 @@ def snapshot_from_response(resp: Any) -> dict[str, Any]:
         "coverage": row["coverage"],
         "degraded_sources": degraded,
         "verdict": row["verdict"],
+        # Phase 245: which wording produced ``verdict``, so a template change
+        # is not reported as a change in the company (see diff_snapshots).
+        "verdict_template": VERDICT_TEMPLATE,
         # Which sources were actually reached, and when (Phase 99/100: the
         # retrieval clock, per source). The feed says "these sources were
         # checked on that date as a result".
@@ -461,7 +465,11 @@ def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list
             }
         )
 
-    if (before.get("verdict") or None) != (after.get("verdict") or None) and not any(
+    # A snapshot written before Phase 245 carries no template number: it was
+    # template 1. Two sentences from different templates differ in wording
+    # whatever happened to the company, so they are not compared.
+    same_template = (before.get("verdict_template") or 1) == (after.get("verdict_template") or 1)
+    if same_template and (before.get("verdict") or None) != (after.get("verdict") or None) and not any(
         c["kind"] in ("register_status", "signal_new", "signal_retired", "signal_unchecked")
         for c in changes
     ):

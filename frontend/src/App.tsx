@@ -39,8 +39,7 @@ import {
   type GleifSearchResult,
 } from "./lib/gleifNationalId";
 import { COUNTRY_OPTIONS, RA_CODES, raCodeFor, validateNationalId } from "./lib/raCodes";
-import { countLeiConfirmingSources } from "./lib/identifierBadge";
-import { independentCount } from "./lib/lineage";
+import { countLeiConfirmingSources, identityBandContents } from "./lib/identifierBadge";
 import { partitionByKind } from "./lib/signalKind";
 import {
   OpenCheckIcon,
@@ -51,7 +50,8 @@ import { ExportPanel } from "./components/export/ExportPanel";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
-import { Chip, Icon, SectionHeading, SectionLabel as Eyebrow } from "./components/ui";
+import { useIsPhone } from "./lib/viewport";
+import { Button, Chip, Icon, SectionHeading, SectionLabel as Eyebrow } from "./components/ui";
 import { leiRegistrationChip, profileRows, statusChip } from "./lib/subjectProfile";
 import ConfidenceLegend from "./components/ui/ConfidenceLegend";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
@@ -168,6 +168,7 @@ export default function App() {
   // On mobile, the search inputs collapse once results are on screen (the
   // tab bar stays); this reopens them. Desktop is unaffected.
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const phoneLayout = useIsPhone();
   /** The header field's own value, kept apart from `nameQuery` so typing in
    *  one does not rewrite the other under the reader. */
   const [headerQuery, setHeaderQuery] = useState("");
@@ -1328,19 +1329,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     return result;
   }, [hits]);
 
-  // Distinct sources participating in cross-source identifier links — the
-  // headline number for the collapsed reconciliation box ("N identifiers
-  // matched across M sources"). NOT the SubjectCard badge number: that badge
-  // sits next to the LEI, so it counts only LEI-confirming sources (below).
-  const crossLinkedSourceCount = useMemo(() => {
-    const srcs = new Set<string>();
-    for (const link of crossSourceLinks)
-      for (const h of link.hits) srcs.add(h.source_id);
-    // Independent origins, not participating adapters: OpenCorporates and
-    // Companies House sharing a company number is one register (lineage.ts).
-    return independentCount([...srcs]);
-  }, [crossSourceLinks]);
-
   // Distinct sources that independently publish the subject's LEI — the
   // SubjectCard badge number. Scoped to the LEI because the badge renders
   // beside it; see countLeiConfirmingSources for the rationale.
@@ -1460,6 +1448,43 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       return;
     }
     flashIdentityBand();
+  };
+
+  /** Reopen the full search panel from the header (Phase 245). Focus has to
+   *  be moved deliberately: the control that calls this may unmount itself,
+   *  and dropping focus to <body> strands the keyboard entry path. */
+  const openSearchPanel = () => {
+    setMobileSearchOpen(true);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: scrollBehavior() });
+      document
+        .querySelector<HTMLElement>(
+          // Scoped to the search tablist: the mode tabs (QuickCheck and
+          // friends) are role="tab" too, and one of those is always selected.
+          '[role="tablist"][aria-label="Search method"] [role="tab"][aria-selected="true"]'
+        )
+        ?.focus();
+    });
+  };
+
+  /** Scroll to and focus an element by id, once it exists (Phase 245). */
+  const goToElement = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+    if (el.tabIndex < 0) el.tabIndex = -1;
+    el.focus({ preventScroll: true });
+  };
+
+  /** The verdict strip's count links here rather than repeating the chips
+   *  (Phase 245). Risk signals is a QuickCheck section, so switch first. */
+  const showRiskSignals = () => {
+    if (mode !== "quick") {
+      selectMode("quick", { focusPanel: false });
+      requestAnimationFrame(() => requestAnimationFrame(() => goToElement("risk-signals")));
+      return;
+    }
+    goToElement("risk-signals");
   };
 
   const flashIdentityBand = () => {
@@ -1666,6 +1691,122 @@ const NAV_ITEMS: { view: View; label: string }[] = [
 
   const HeroHeading = streamingLei ? "h2" : "h1";
 
+
+  // ── Phase 245: the report's top, as pieces the two layouts arrange ──
+  // `phoneLayout` changes the ORDER of the subject, the mode tabs and the
+  // verdict (see where they render); Tailwind restyles, it cannot reorder
+  // without splitting focus order from visual order.
+  const verdictStrip = (
+    <VerdictStrip
+      verdict={verdict}
+      riskSignals={riskCodes}
+      contextSignals={contextCodes}
+      degraded={degradedSources}
+      sourcesAnswered={answeredApplicable}
+      sourcesApplicable={applicableSources.length}
+      registryTotal={sourcesQuery.data?.sources.length ?? null}
+      jurisdiction={subjectJurisdiction}
+      knowability={knowability}
+      graphShape={graphShape}
+      // Not on the FullCheck tab: an invitation to the page the reader is on.
+      onOpenNetwork={mode === "full" ? undefined : () => selectMode("full")}
+      onShowSignals={showRiskSignals}
+      onShowDegraded={() => goToElement("screening-incomplete")}
+      screening={streaming}
+      saved={Boolean(savedReport)}
+    />
+  );
+
+  const modeTabs = (
+      <div
+        role="tablist"
+        aria-label="Check mode"
+        /* No bottom margin: the tab strip claims the card beneath it, and
+           a 24px gap between them breaks the claim — the active tab's
+           white edge has to meet the card's. The honesty notices that can
+           sit between the two carry their own top margin instead, so they
+           are the exception rather than the default spacing. */
+        /* Phase 157: below `sm` the strip is a 2×2 grid of stacked
+           icon-over-label cells — the pattern the search-method tablist
+           already uses. The one-row strip needs ~657px, so on a 390px
+           phone a reader saw "QuickCheck · FullCheck · Ba…" and two of
+           the four modes did not exist unless they knew to swipe. From
+           `sm` up the strip is unchanged (padding eases to px-3 until
+           `md` so it still fits at 700), and the wrappers collapse to
+           `contents` on phones so the buttons are the grid cells. */
+        className="grid grid-cols-2 overflow-hidden rounded-oo border border-oo-rule bg-oo-bg mb-3 sm:mb-0 sm:flex sm:items-end sm:gap-1 sm:overflow-x-auto sm:overflow-y-auto sm:rounded-none sm:border-0 sm:border-b sm:bg-transparent"
+      >
+        {MODE_TABS.map((tab, i) => {
+          const active = mode === tab.id;
+          // Grid lines for the phone layout: a left rule on the right-hand
+          // column, a top rule on the second row. Reset at `sm`, where the
+          // button's own tab border takes over.
+          // Phase 185: five tabs. An odd count leaves the last cell alone
+          // on its row, so it spans both columns rather than sitting beside
+          // an empty one.
+          const lastAlone = MODE_TABS.length % 2 === 1 && i === MODE_TABS.length - 1;
+          const cellRules = `${i % 2 === 1 ? "border-l" : ""} ${i >= 2 ? "border-t" : ""} ${lastAlone ? "col-span-2 sm:col-span-1" : ""}`.trim();
+          return (
+            <div
+              key={tab.id}
+              className={
+                // The divider marks where the depths end and the topics
+                // begin: on the first topic tab only, not on every one.
+                tab.topic && !MODE_TABS[i - 1]?.topic
+                  ? "contents sm:flex sm:items-end sm:pl-2 sm:ml-1 md:pl-3 md:ml-2 sm:border-l sm:border-oo-rule"
+                  : "contents sm:flex sm:items-end"
+              }
+            >
+              <button
+                type="button"
+                role="tab"
+                id={`tab-${tab.id}`}
+                aria-selected={active}
+                aria-controls={`panel-${tab.id}`}
+                tabIndex={active ? 0 : -1}
+                onClick={() => selectMode(tab.id)}
+                onKeyDown={(e) => {
+                  // Left/Right/Home/End move between tabs (WAI-ARIA tabs
+                  // pattern); the roving tabIndex above keeps one stop in
+                  // the sequence rather than six. Focus stays on the tab
+                  // (Phase 241) so →→→ walks the whole strip.
+                  const next = modeForKey(e.key, tab.id, MODE_TABS.map((t) => t.id));
+                  if (!next) return;
+                  e.preventDefault();
+                  selectMode(next, { focusPanel: false });
+                  document.getElementById(`tab-${next}`)?.focus();
+                }}
+                className={`relative flex flex-col items-center justify-center gap-1 px-2 py-2.5 min-h-[56px] text-oo-meta border-0 border-oo-rule ${cellRules} transition-colors sm:flex-row sm:shrink-0 sm:justify-start sm:gap-2 sm:rounded-t-oo sm:px-3 md:px-4 sm:pb-3 sm:pt-3 sm:text-oo-body sm:min-h-[44px] sm:border ${
+                  active
+                    ? "bg-white font-bold text-oo-ink sm:-mb-px sm:border-oo-rule sm:border-b-white"
+                    : "font-medium text-oo-muted hover:text-oo-ink sm:border-transparent"
+                }`}
+              >
+                {active && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-x-0 top-0 h-[3px] sm:inset-x-[-1px] sm:top-[-1px] sm:rounded-t-oo"
+                    style={{ background: tab.accent }}
+                  />
+                )}
+                {/* The glyph takes the mode accent when active and the
+                    muted text colour otherwise, via currentColor on a
+                    wrapper — Icon itself never takes a colour prop, so
+                    there is exactly one way to colour an icon. */}
+                <span
+                  className="inline-flex shrink-0"
+                  style={active ? { color: tab.accent } : undefined}
+                >
+                  <Icon name={tab.icon} size={17} />
+                </span>
+                {tab.label}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+  );
+
   return (
     <SavedReportContext.Provider value={savedCtx}>
     <div className="min-h-screen flex flex-col bg-oo-bg">
@@ -1715,6 +1856,22 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 </span>
               </button>
             <nav aria-label="Site navigation" className="flex flex-wrap items-center gap-x-4 sm:gap-x-5">
+              {/* Phones have no header field (it needs ~300px), so on a report
+                  this is the search entry point — the row that used to sit
+                  under the header is gone (Phase 245). */}
+              {searchPanelsCollapsed && (
+                <button
+                  type="button"
+                  onClick={openSearchPanel}
+                  aria-label="Search for another company or person"
+                  className="md:hidden inline-flex min-h-[44px] min-w-[36px] items-center justify-center text-white/80 hover:text-white"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+                  </svg>
+                </button>
+              )}
               {NAV_ITEMS.map((item) => {
                 const current = view === item.view;
                 return (
@@ -1745,7 +1902,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 It handles the two things a header field can honestly handle:
                 a pasted LEI runs straight through, anything else goes to the
                 company-name search. National ID and person search stay in the
-                full panel, which the prompt row still opens. */}
+                full panel, which "More search options" beside it reopens. */}
+            <div className="hidden md:flex items-center gap-4">
             <form
               onSubmit={submitHeaderSearch}
               role="search"
@@ -1776,6 +1934,18 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                 Search
               </button>
             </form>
+            {/* National ID and person search need the full panel. On a report
+                it is folded away; this reopens it (Phase 245). */}
+            {searchPanelsCollapsed && (
+              <button
+                type="button"
+                onClick={openSearchPanel}
+                className="hidden md:inline-flex shrink-0 min-h-[44px] items-center text-oo-small text-white/80 underline-offset-2 hover:text-white hover:underline"
+              >
+                More search options
+              </button>
+            )}
+            </div>
           </div>
         </div>
       </header>
@@ -1844,7 +2014,17 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           </p>
         </div>
         )}
-        <div className="mb-4 bg-white border border-oo-rule rounded-oo overflow-hidden">
+        {/* Phase 245: on a report the panel is folded into the header — a
+            "More search options" control there reopens it — so the collapsed
+            state renders nothing here. The one-line row that used to stand in
+            for it sat between the header and the subject on every report. */}
+        <div
+          className={
+            searchPanelsCollapsed
+              ? "hidden"
+              : "mb-4 bg-white border border-oo-rule rounded-oo overflow-hidden"
+          }
+        >
           {/* Tab bar — homepage only.
 
               It used to stay on the report as a "landmark", with only the
@@ -2319,35 +2499,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
 
           </div>
 
-          {searchPanelsCollapsed && (
-            // Focus has to be moved deliberately: this button unmounts itself
-            // on click, and with the tab bar no longer rendered on a report
-            // page it is the *only* search affordance there — so dropping
-            // focus to <body> strands the entire keyboard entry path.
-            <button
-              type="button"
-              onClick={() => {
-                setMobileSearchOpen(true);
-                requestAnimationFrame(() => {
-                  document
-                    .querySelector<HTMLElement>(
-                      // Scoped to the search tablist: the mode tabs (QuickCheck
-                      // and friends) are role="tab" too, and one of those is
-                      // always selected.
-                      '[role="tablist"][aria-label="Search method"] [role="tab"][aria-selected="true"]'
-                    )
-                    ?.focus();
-                });
-              }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] text-oo-meta font-medium text-oo-blue hover:bg-oo-bg transition-colors"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-              More search options — national ID, person name
-            </button>
-          )}
         </div>
 
         {/* No aria-live here — the role="alert" child announces itself */}
@@ -2407,13 +2558,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               <span className="font-medium">Connection lost mid-lookup.</span>{" "}
               Showing partial results for {legalName ?? streamingLei}.
             </p>
-            <button
-              type="button"
-              onClick={() => lookupLei(streamingLei)}
-              className="shrink-0 rounded border border-amber-400 px-3 py-1.5 text-oo-meta font-semibold text-amber-900 transition-colors hover:bg-amber-100"
-            >
+            <Button variant="warn" size="sm" className="shrink-0" onClick={() => lookupLei(streamingLei)}>
               Resume lookup
-            </button>
+            </Button>
           </div>
         )}
 
@@ -2467,27 +2614,22 @@ const NAV_ITEMS: { view: View; label: string }[] = [
             the count of screens that failed cannot drift apart on screen.
             One card with the subject (Phase 126): the verdict is what the
             subject amounts to, not a separate object floating beneath it. */}
-          <VerdictStrip
-            verdict={verdict}
-            riskSignals={riskCodes}
-            contextSignals={contextCodes}
-            degraded={degradedSources}
-            sourcesAnswered={answeredApplicable}
-            sourcesApplicable={applicableSources.length}
-            registryTotal={sourcesQuery.data?.sources.length ?? null}
-            jurisdiction={subjectJurisdiction}
-            knowability={knowability}
-            graphShape={graphShape}
-            onOpenNetwork={() => selectMode("full")}
-            screening={streaming}
-            onRerun={
-              streamingLei && !streaming && !savedReport
-                ? () => lookupLei(streamingLei, { refresh: true })
-                : undefined
-            }
-            saved={Boolean(savedReport)}
-          />
+          {!phoneLayout && verdictStrip}
           </div>
+        )}
+
+        {/* ── Phones (Phase 245): tabs directly under the subject ─────────
+            At 390px the verdict strip is ~800px tall, so the mode tabs began
+            ~1,300px down Shell's report — a reader had to scroll past every
+            column to learn there were five other views. On a phone the
+            order is subject, tabs, verdict. Rendered in that order, not
+            reordered with CSS: focus and reading order follow the DOM, and
+            they must match what the eye sees at every width. */}
+        {streamingLei && phoneLayout && (
+          <>
+            {modeTabs}
+            <div className="mb-3 rounded-oo border border-oo-rule bg-white">{verdictStrip}</div>
+          </>
         )}
 
         {/* ── Modes as the report's structure (Phase 122) ─────────────
@@ -2503,95 +2645,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               question, not a fourth depth of check. It used to render as a
               section inside QuickCheck, reachable by scrolling and by
               nothing else. */}
-        {streamingLei && (
-          <div
-            role="tablist"
-            aria-label="Check mode"
-            /* No bottom margin: the tab strip claims the card beneath it, and
-               a 24px gap between them breaks the claim — the active tab's
-               white edge has to meet the card's. The honesty notices that can
-               sit between the two carry their own top margin instead, so they
-               are the exception rather than the default spacing. */
-            /* Phase 157: below `sm` the strip is a 2×2 grid of stacked
-               icon-over-label cells — the pattern the search-method tablist
-               already uses. The one-row strip needs ~657px, so on a 390px
-               phone a reader saw "QuickCheck · FullCheck · Ba…" and two of
-               the four modes did not exist unless they knew to swipe. From
-               `sm` up the strip is unchanged (padding eases to px-3 until
-               `md` so it still fits at 700), and the wrappers collapse to
-               `contents` on phones so the buttons are the grid cells. */
-            className="grid grid-cols-2 overflow-hidden rounded-oo border border-oo-rule bg-oo-bg mb-3 sm:mb-0 sm:flex sm:items-end sm:gap-1 sm:overflow-x-auto sm:overflow-y-auto sm:rounded-none sm:border-0 sm:border-b sm:bg-transparent"
-          >
-            {MODE_TABS.map((tab, i) => {
-              const active = mode === tab.id;
-              // Grid lines for the phone layout: a left rule on the right-hand
-              // column, a top rule on the second row. Reset at `sm`, where the
-              // button's own tab border takes over.
-              // Phase 185: five tabs. An odd count leaves the last cell alone
-              // on its row, so it spans both columns rather than sitting beside
-              // an empty one.
-              const lastAlone = MODE_TABS.length % 2 === 1 && i === MODE_TABS.length - 1;
-              const cellRules = `${i % 2 === 1 ? "border-l" : ""} ${i >= 2 ? "border-t" : ""} ${lastAlone ? "col-span-2 sm:col-span-1" : ""}`.trim();
-              return (
-                <div
-                  key={tab.id}
-                  className={
-                    // The divider marks where the depths end and the topics
-                    // begin: on the first topic tab only, not on every one.
-                    tab.topic && !MODE_TABS[i - 1]?.topic
-                      ? "contents sm:flex sm:items-end sm:pl-2 sm:ml-1 md:pl-3 md:ml-2 sm:border-l sm:border-oo-rule"
-                      : "contents sm:flex sm:items-end"
-                  }
-                >
-                  <button
-                    type="button"
-                    role="tab"
-                    id={`tab-${tab.id}`}
-                    aria-selected={active}
-                    aria-controls={`panel-${tab.id}`}
-                    tabIndex={active ? 0 : -1}
-                    onClick={() => selectMode(tab.id)}
-                    onKeyDown={(e) => {
-                      // Left/Right/Home/End move between tabs (WAI-ARIA tabs
-                      // pattern); the roving tabIndex above keeps one stop in
-                      // the sequence rather than six. Focus stays on the tab
-                      // (Phase 241) so →→→ walks the whole strip.
-                      const next = modeForKey(e.key, tab.id, MODE_TABS.map((t) => t.id));
-                      if (!next) return;
-                      e.preventDefault();
-                      selectMode(next, { focusPanel: false });
-                      document.getElementById(`tab-${next}`)?.focus();
-                    }}
-                    className={`relative flex flex-col items-center justify-center gap-1 px-2 py-2.5 min-h-[56px] text-oo-meta border-0 border-oo-rule ${cellRules} transition-colors sm:flex-row sm:shrink-0 sm:justify-start sm:gap-2 sm:rounded-t-oo sm:px-3 md:px-4 sm:pb-3 sm:pt-3 sm:text-oo-body sm:min-h-[44px] sm:border ${
-                      active
-                        ? "bg-white font-bold text-oo-ink sm:-mb-px sm:border-oo-rule sm:border-b-white"
-                        : "font-medium text-oo-muted hover:text-oo-ink sm:border-transparent"
-                    }`}
-                  >
-                    {active && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute inset-x-0 top-0 h-[3px] sm:inset-x-[-1px] sm:top-[-1px] sm:rounded-t-oo"
-                        style={{ background: tab.accent }}
-                      />
-                    )}
-                    {/* The glyph takes the mode accent when active and the
-                        muted text colour otherwise, via currentColor on a
-                        wrapper — Icon itself never takes a colour prop, so
-                        there is exactly one way to colour an icon. */}
-                    <span
-                      className="inline-flex shrink-0"
-                      style={active ? { color: tab.accent } : undefined}
-                    >
-                      <Icon name={tab.icon} size={17} />
-                    </span>
-                    {tab.label}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {/* Phase 245: from `sm` up the tabs sit under the subject-and-verdict
+            card; on a phone they are rendered above the verdict instead
+            (see `phoneLayout`), so the mode choice is on the first screen. */}
+        {streamingLei && !phoneLayout && modeTabs}
 
         {/* Entity-scoped panels (risk signals, cross-source identifiers,
             possibly-same pairs) are hidden in BackgroundCheck mode — that
@@ -2907,39 +2964,16 @@ const NAV_ITEMS: { view: View; label: string }[] = [
               // which is the moment a reader is actually asking.
               open={identityOpen}
               onToggle={setIdentityOpen}
-              aside={
-                crossLinkedSourceCount >= 2 ? (
-                  <>
-                    <span className="font-semibold">
-                      {crossSourceLinks.length + gleifMappedIds.length} identifier
-                      {crossSourceLinks.length + gleifMappedIds.length === 1 ? "" : "s"}
-                    </span>{" "}
-                    matched across{" "}
-                    <span className="font-semibold">{crossLinkedSourceCount} independent sources</span>
-                  </>
-                ) : gleifMappedIds.length > 0 ? (
-                  <>
-                    <span className="font-semibold">
-                      {gleifMappedIds.length} identifier
-                      {gleifMappedIds.length === 1 ? "" : "s"}
-                    </span>{" "}
-                    mapped by GLEIF
-                  </>
-                ) : (
-                  // Never a bare title with a chevron. The band is shut by
-                  // default and the affordance that opens it — the subject
-                  // card's identifier badge — renders only at two or more
-                  // confirming sources, so on a lookup that has only
-                  // possibly-same pairs the heading has to say what is inside
-                  // it itself.
-                  <>
-                    <span className="font-semibold">
-                      {possiblySame.length} candidate pair
-                      {possiblySame.length === 1 ? "" : "s"}
-                    </span>{" "}
-                    flagged for review
-                  </>
-                )
+              // Phase 245: what is inside, never a second corroboration
+              // count. "2 identifiers matched across 5 independent sources"
+              // sat one screen below the subject card's "LEI confirmed by 4
+              // sources" — two numbers answering two questions, read as one.
+              // The badge makes the claim; the band holds the evidence.
+              aside={identityBandContents({
+                profile: profileRowsForBand.length > 0,
+                identifiers: crossSourceLinks.length + gleifMappedIds.length,
+                candidatePairs: possiblySame.length,
+              })
               }
             >
               {/* The profile leads the band (Phase 154): legal form,
@@ -3015,10 +3049,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         {(cddBuckets.length > 0 || pendingCddSources.length > 0 || answeredNoRecord.length > 0) && (
           <PanelSection
             title="What each source said"
-            // The same figures as the verdict strip's Coverage column, from
-            // the same helper, GLEIF anchor included — the GLEIF card is the
-            // first one in this list, so a count that excluded it read one
-            // short of the cards beneath it (Phase 156).
+            // Only while sources are still answering (Phase 245). Once they
+            // have, the verdict strip's Coverage column is where the count
+            // lives: the same number here was the third statement of it in
+            // one QuickCheck. Each card below says what its source did.
             aside={
               settled.pending > 0 ? (
                 <span className="text-oo-blue">
@@ -3032,16 +3066,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
                     failed: settled.failed,
                   }).aside}
                 </span>
-              ) : (
-                coverageCopy({
-                  answered: answeredApplicable,
-                  applicable: applicableSources.length,
-                  total: sourcesQuery.data?.sources.length ?? null,
-                  jurisdiction: subjectJurisdiction,
-                  screening: false,
-                  failed: settled.failed,
-                }).aside
-              )
+              ) : undefined
             }
           >
             <div className="space-y-4">
@@ -3535,9 +3560,10 @@ function DegradedScreensNotice({
   if (degraded.length === 0) return null;
   return (
     <section
+      id="screening-incomplete"
       role="status"
       aria-label="Screening incomplete"
-      className="mt-6 mb-8 rounded-oo border border-amber-300 bg-amber-50 p-5"
+      className="scroll-mt-4 mt-6 mb-8 rounded-oo border border-amber-300 bg-amber-50 p-5"
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-3 min-w-0">

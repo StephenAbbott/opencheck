@@ -38,3 +38,34 @@ export function countLeiConfirmingSources(
   }
   return independentCount([...sources]);
 }
+
+/**
+ * What the collapsed "Is this the right company?" band holds, for its
+ * heading (Phase 245).
+ *
+ * It used to say "N identifiers matched across M independent sources" — a
+ * second corroboration count one screen below the subject card's "LEI
+ * confirmed by K sources", with a different number because it answers a
+ * different question. Two counts of corroboration read as one fact stated
+ * twice, and disagreeing. The badge makes the claim; the band's heading now
+ * says only what is inside it, so a reader deciding whether to open it knows
+ * what they will find. Never empty: the band renders only when one of the
+ * three is present.
+ */
+export function identityBandContents({
+  profile,
+  identifiers,
+  candidatePairs,
+}: {
+  profile: boolean;
+  identifiers: number;
+  candidatePairs: number;
+}): string {
+  const parts: string[] = [];
+  if (profile) parts.push("company profile");
+  if (identifiers > 0) parts.push(`${identifiers} shared identifier${identifiers === 1 ? "" : "s"}`);
+  if (candidatePairs > 0)
+    parts.push(`${candidatePairs} candidate pair${candidatePairs === 1 ? "" : "s"} to review`);
+  const text = parts.join(" · ");
+  return text ? text[0].toUpperCase() + text.slice(1) : "";
+}

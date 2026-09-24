@@ -19,6 +19,7 @@ import {
 } from "../../lib/annotations";
 import { mergeSignals } from "../../lib/expand";
 import { scopeCrossSourceSignals } from "../../lib/signalScope";
+import { isRiskFinding } from "../../lib/signalKind";
 import { NzAssociations } from "./NzAssociations";
 import { useSavedReport } from "./savedReportContext";
 import { NOT_DEEPENED_IN_SAVED, RAW_NOT_SAVED } from "../../lib/savedReport";
@@ -990,6 +991,7 @@ function HitRow({
   const saved = useSavedReport();
 
   const anyOpen = showDiagram || showStatements || showJson;
+  const rowChips = riskSignals.filter(isRiskFinding);
 
   async function ensureFetched() {
     if (detail || loading) return;
@@ -1118,9 +1120,14 @@ function HitRow({
       )}
       <MentionsBreakdown hit={hit} />
       <TedAwardsList hit={hit} />
-      {riskSignals.length > 0 && (
+      {/* Risk findings only (Phase 245). A structural observation — "No
+          parent in GLEIF (exempt)" — is what the row's own sentence above
+          already says, and the Risk signals section says it again with its
+          evidence; a third chip here was the repeat the Opus 5.5 check
+          counted. A risk chip stays: it attributes a finding to a source. */}
+      {rowChips.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
-          {riskSignals.map((sig, i) => (
+          {rowChips.map((sig, i) => (
             <RiskChip key={`${sig.code}-${i}`} signal={sig} compact />
           ))}
         </div>

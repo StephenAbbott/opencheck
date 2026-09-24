@@ -280,6 +280,10 @@ export interface CoverageCopy {
   statNoun: string;
   /** The sentence under the numeral. */
   detail: string;
+  /** Which sources were in question at all, and nothing about how many
+   *  answered — the Coverage column's second line since Phase 245, under
+   *  "N of M sources answered", which already says that once. */
+  scope: string;
   /** "10 of 11 sources answered · 1 still running…" for the aside while
    *  streaming; "11 of 11 sources answered" once settled. */
   aside: string;
@@ -344,6 +348,7 @@ export function coverageCopy({
     applicable: p,
     statNoun: a === 1 ? "source answered" : "sources answered",
     detail,
+    scope: `${applyClause}.`,
     aside,
   };
 }

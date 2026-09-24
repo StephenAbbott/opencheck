@@ -288,6 +288,11 @@ describe("coverageCopy (Phase 156)", () => {
     expect(c.statNoun).toBe("sources answered");
     expect(c.detail).toBe("11 of OpenCheck's 40 sources apply to a GB company; every one answered.");
     expect(c.aside).toBe("11 of 11 sources answered");
+    // Phase 245: the Coverage column's second line says which sources were in
+    // question and nothing about how many answered — the numeral above it
+    // already says that, and a third count was the repeat the check found.
+    expect(c.scope).toBe("11 of OpenCheck's 40 sources apply to a GB company.");
+    expect(c.scope).not.toMatch(/answered/);
   });
 
   it("says how many are still answering while the stream is open", () => {

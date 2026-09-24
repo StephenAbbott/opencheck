@@ -2,12 +2,8 @@ import type { DegradedSource, GraphShape, KnowabilityStatement, RiskSignal } fro
 import { networkSummary } from "../../lib/graphShape";
 import { knowabilityView } from "../../lib/knowability";
 import { coverageCopy } from "../../lib/lookupProgress";
-import { RiskChip } from "../risk/RiskChip";
 import { Chip, SectionLabel } from "../ui";
 import { Explain } from "../ui/Explain";
-
-/** How many chips sit beside the sentence before the rest are left to the strip below. */
-const CHIP_PREVIEW = 3;
 
 /**
  * VerdictStrip — the answer-first layer (Phase 122).
@@ -47,6 +43,16 @@ const CHIP_PREVIEW = 3;
  * because a coverage gap is not an accusation. Full width rather than inside
  * the Coverage column because the sentence is two to four clauses long and
  * the column is a third of the strip.
+ *
+ * **Phase 245 — nothing said twice.** The Opus 5.5 check counted, in one
+ * QuickCheck on Shell, the related-party chips twice (here and under Risk
+ * signals), the source count three times and "one check did not run" twice.
+ * So: "What we found" is a count and a link to `#risk-signals`, where the
+ * chips live; Coverage is one coverage statement, and a gap is a link to the
+ * notice that names it rather than a second copy of that notice; and the
+ * knowability band folded into the Coverage column behind an `Explain`, so the
+ * mode tabs start higher. The dated badge stays visible, the sentence is one
+ * press away, and it is still the server's sentence, verbatim.
  */
 export function VerdictStrip({
   verdict,
@@ -57,14 +63,15 @@ export function VerdictStrip({
   sourcesApplicable,
   graphShape,
   onOpenNetwork,
-  onRerun,
+  onShowSignals,
+  onShowDegraded,
   saved = false,
   screening = false,
   registryTotal = null,
   jurisdiction = null,
   knowability = null,
 }: {
-  /** The deterministic sentence from the backend. */
+  /** The deterministic sentences from the backend. */
   verdict?: string | null;
   riskSignals: RiskSignal[];
   contextSignals: RiskSignal[];
@@ -82,24 +89,26 @@ export function VerdictStrip({
   jurisdiction?: string | null;
   /** The `knowability` event for the subject's jurisdiction (Phase 224), or
    *  null before it lands / when the jurisdiction is unknown / on a payload
-   *  saved before the event existed — the band is simply absent then. */
+   *  saved before the event existed — the line is simply absent then. */
   knowability?: KnowabilityStatement | null;
   /** How big the mapped graph is — `graph_shape` on the `risk_signals`
    *  event. Counts the statements this check produced, never what FullCheck
    *  might go on to find. Absent until the event lands. */
   graphShape?: GraphShape | null;
   /** Switches the report to FullCheck. Omitted when there is no network to
-   *  open, which is also when the column does not render. */
+   *  open — and on the FullCheck tab itself (Phase 245), where an invitation
+   *  to the page the reader is already on is noise. */
   onOpenNetwork?: () => void;
-  /** Re-runs the lookup bypassing the replay cache. */
-  onRerun?: () => void;
+  /** Goes to the Risk signals section, where the chips are (Phase 245). */
+  onShowSignals?: () => void;
+  /** Goes to the notice naming the checks that did not run (Phase 245). */
+  onShowDegraded?: () => void;
   /** Phase 217: a saved report — its network is drawn as saved, not expanded. */
   saved?: boolean;
   /** Sources are still streaming: counts are partial, so say nothing yet. */
   screening?: boolean;
 }) {
   const total = riskSignals.length + contextSignals.length;
-  const preview = riskSignals.slice(0, CHIP_PREVIEW);
 
   // Nothing to say yet, and a half-finished verdict is worse than none.
   if (screening && total === 0 && !verdict) return null;
@@ -115,6 +124,7 @@ export function VerdictStrip({
   const network = networkSummary(graphShape);
   const showNetwork = Boolean(network && onOpenNetwork);
   const knowable = knowability ? knowabilityView(knowability) : null;
+  const gapLabel = `${degradedCount === 1 ? "One check" : `${degradedCount} checks`} did not run`;
 
   return (
     <section
@@ -132,7 +142,7 @@ export function VerdictStrip({
           showNetwork ? "lg:grid-cols-3" : ""
         }`.trim()}
       >
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col items-start gap-2.5">
           <SectionLabel as="h2">What we found</SectionLabel>
           <p className="text-oo-small text-oo-ink">
             <span className="font-head font-bold text-oo-stat">{total}</span>{" "}
@@ -144,71 +154,115 @@ export function VerdictStrip({
               </>
             )}
           </p>
-          {preview.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {/* Interactive, like the chips in the Risk signals section
-                  below. They shipped inert here, which made the first three
-                  signals a reader meets the only ones that would not open —
-                  the same chip, in the same colours, behaving differently
-                  depending on how far down the page it sat. */}
-              {preview.map((sig) => (
-                <RiskChip key={sig.code} signal={sig} compact />
-              ))}
-              {riskSignals.length > preview.length && (
-                <span className="text-oo-small text-oo-muted self-center">
-                  +{riskSignals.length - preview.length} more
-                </span>
-              )}
-            </div>
-          ) : (
+          {/* A count and a way to the chips, never the chips themselves: they
+              are the Risk signals section's, one screen down, and printing
+              them here as well was the first repeat on the Opus 5.5 list. */}
+          {total > 0 && onShowSignals ? (
+            <a
+              href="#risk-signals"
+              onClick={(e) => {
+                e.preventDefault();
+                onShowSignals();
+              }}
+              className="text-oo-small font-semibold text-oo-blue underline underline-offset-2 hover:no-underline"
+            >
+              {total === 1 ? "Read it under Risk signals" : "Read them under Risk signals"}
+            </a>
+          ) : screening ? (
+            <p className="text-oo-small text-oo-muted">Still checking.</p>
+          ) : total === 0 && !verdict ? (
+            // The verdict says this when there is one; without it the column
+            // must still say what a zero means.
             <p className="text-oo-small text-oo-muted">
-              {screening
-                ? "Still checking."
-                : "No risk signals surfaced across the sources that answered."}
+              No risk signals surfaced across the sources that answered.
             </p>
-          )}
+          ) : null}
         </div>
 
-        <div className="flex flex-col gap-2.5 sm:pl-6 sm:border-l border-oo-rule">
+        <div className="flex flex-col items-start gap-2.5 sm:pl-6 sm:border-l border-oo-rule">
           <SectionLabel as="h2">Coverage</SectionLabel>
           <p className="text-oo-small text-oo-ink">
-            <span className="font-head font-bold text-oo-stat">{coverage.answered}</span>{" "}
-            {coverage.statNoun}
+            <span className="font-head font-bold text-oo-stat">{coverage.answered}</span> of{" "}
+            {coverage.applicable} {coverage.applicable === 1 ? "source" : "sources"} answered
           </p>
           {degradedCount > 0 ? (
-            <div className="flex items-start gap-2 text-oo-small text-oo-warn-text bg-oo-warn-bg border border-oo-warn-border rounded-oo px-2.5 py-2">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className="shrink-0 mt-0.5"
+            // One link to the notice that names the gap, not a second copy of
+            // it: the notice below the tabs carries the detail and the re-run.
+            onShowDegraded ? (
+              <a
+                href="#screening-incomplete"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onShowDegraded();
+                }}
+                className="text-oo-small font-semibold text-oo-warn-text underline underline-offset-2 hover:no-underline"
               >
-                <path d="M12 9v4" />
-                <path d="M12 17h.01" />
-                <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-              </svg>
-              <span>
-                {degradedCount === 1 ? "One check" : `${degradedCount} checks`} did not run, so
-                this is not a clean screen.{" "}
-                {onRerun && (
-                  <button
-                    type="button"
-                    onClick={onRerun}
-                    className="font-bold underline underline-offset-2 hover:no-underline"
-                  >
-                    Run it again
-                  </button>
-                )}
-              </span>
-            </div>
+                {gapLabel} — see which
+              </a>
+            ) : (
+              <p className="text-oo-small font-semibold text-oo-warn-text">{gapLabel}.</p>
+            )
           ) : (
-            <p className="text-oo-small text-oo-muted">{coverage.detail}</p>
+            <p className="text-oo-small text-oo-muted">
+              {screening ? coverage.detail : coverage.scope}
+            </p>
+          )}
+
+          {knowable && (
+            <div
+              className="mt-1 flex w-full flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-oo-rule pt-3"
+              data-testid="knowability-band"
+            >
+              {/* Phase 245: the band that sat full-width under the columns,
+                  folded into Coverage — it answers the same question from the
+                  other side (what could the registers have told us). The
+                  dated badge stays in view; the sentence and the register
+                  facts behind it are one press away, verbatim. */}
+              <SectionLabel as="h3">{knowable.heading}</SectionLabel>
+              <span className="text-oo-meta text-oo-muted">{knowable.subheading}</span>
+              <Chip tone={knowable.badge.tone} size="sm">
+                {knowable.badge.label}
+              </Chip>
+              <Explain
+                label={`What can be known about ${knowable.subheading}: the statement and the register facts behind it`}
+              >
+                <span className="block text-oo-small">{knowable.sentence}</span>
+                {knowable.rows.length > 0 && (
+                  <dl className="mt-1.5 grid grid-cols-1 gap-y-1 sm:grid-cols-[max-content_1fr] sm:gap-x-4">
+                    {knowable.rows.map((row) => (
+                      <div key={row.label} className="contents">
+                        <dt className="font-semibold text-oo-muted">{row.label}</dt>
+                        <dd>{row.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                {knowable.sources.length > 0 && (
+                  <span className="mt-1.5 block">
+                    <span className="font-semibold text-oo-muted">Sources</span>{" "}
+                    {knowable.sources.map((src, i) => (
+                      <span key={src.url}>
+                        {i > 0 && " · "}
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline underline-offset-2 hover:no-underline break-all"
+                        >
+                          {src.title}
+                        </a>
+                      </span>
+                    ))}
+                  </span>
+                )}
+                {knowable.asOfLine && (
+                  <span className="mt-1.5 block text-oo-muted">
+                    {knowable.asOfLine}. The facts are maintained by hand in OpenCheck&apos;s
+                    jurisdiction table and describe the register, not this company.
+                  </span>
+                )}
+              </Explain>
+            </div>
           )}
         </div>
 
@@ -262,77 +316,11 @@ export function VerdictStrip({
             <span className="text-oo-small text-oo-muted">
               {saved
                 ? "Every record the saved check mapped, in one graph."
-                : "Expand owners and controllers layer by layer, then explore the whole network in one graph."}
+                : "Expand owners and controllers layer by layer."}
             </span>
           </div>
         )}
       </div>
-
-      {knowable && (
-        <div
-          className="mt-5 flex flex-wrap items-start gap-x-8 gap-y-2 border-t border-oo-rule pt-4"
-          data-testid="knowability-band"
-        >
-          {/* Label on the left, statement on the right when the strip is wide
-              enough for both (the shape of a definition), stacked when it is
-              not — the sentence keeps its 76ch measure either way. */}
-          {/* min-w-0, not shrink-0: at phone width the label, the country and
-              the badge must wrap onto two lines, not push the badge off the
-              right edge of the screen (seen on TAQA Bratani, 18 Sept 2026). */}
-          <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
-            <SectionLabel as="h2">{knowable.heading}</SectionLabel>
-            <span className="text-oo-meta text-oo-muted">{knowable.subheading}</span>
-            <Chip tone={knowable.badge.tone} size="sm">
-              {knowable.badge.label}
-            </Chip>
-          </div>
-          {/* A div, not a <p>: the ⓘ disclosure expands a <dl> in flow, and a
-              <dl> inside a <p> closes the paragraph in the HTML parser. */}
-          <div className="flex-1 basis-[38ch] text-oo-small text-oo-ink max-w-[76ch]">
-            {knowable.sentence}
-            {(knowable.rows.length > 0 || knowable.sources.length > 0) && (
-              <>
-                {" "}
-                <Explain
-                  className="align-text-bottom" label={`Show the register facts behind this statement for ${knowable.subheading}`}>
-                  <dl className="grid grid-cols-1 gap-y-1 sm:grid-cols-[max-content_1fr] sm:gap-x-4">
-                    {knowable.rows.map((row) => (
-                      <div key={row.label} className="contents">
-                        <dt className="font-semibold text-oo-muted">{row.label}</dt>
-                        <dd>{row.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  {knowable.sources.length > 0 && (
-                    <p className="mt-1.5">
-                      <span className="font-semibold text-oo-muted">Sources</span>{" "}
-                      {knowable.sources.map((src, i) => (
-                        <span key={src.url}>
-                          {i > 0 && " · "}
-                          <a
-                            href={src.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline underline-offset-2 hover:no-underline break-all"
-                          >
-                            {src.title}
-                          </a>
-                        </span>
-                      ))}
-                    </p>
-                  )}
-                  {knowable.asOfLine && (
-                    <p className="mt-1.5 text-oo-muted">
-                      {knowable.asOfLine}. The facts are maintained by hand in OpenCheck&apos;s
-                      jurisdiction table and describe the register, not this company.
-                    </p>
-                  )}
-                </Explain>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </section>
   );
 }

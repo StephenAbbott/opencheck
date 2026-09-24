@@ -1,4 +1,4 @@
-"""The verdict sentence — one deterministic line stating what was found.
+"""The verdict — at most two deterministic sentences stating what was found.
 
 Phase 122. The results page opens with the subject and then a single
 sentence saying what the check turned up, before any evidence, any source
@@ -72,7 +72,7 @@ _STRUCTURE_CODES = frozenset({"COMPLEX_OWNERSHIP_LAYERS", "GLEIF_REPORTING_EXCEP
 
 #: Risk clauses, in the order they are read. A sentence takes at most the
 #: first two: three findings in one line stops being a sentence and starts
-#: being a list, and the chips beside it already carry the full set.
+#: being a list, and the Risk signals section carries the full set.
 _RISK_CLAUSES: tuple[tuple[tuple[str, ...], str], ...] = (
     (_SUBJECT_SANCTIONS, "sanctions findings on the company itself"),
     (_SUBJECT_EXPORT, "export-control findings on the company itself"),
@@ -115,22 +115,34 @@ def _layer_depth(signals: list[dict[str, Any]]) -> int | None:
     return best
 
 
-def _structure_clause(signals: list[dict[str, Any]]) -> str | None:
-    """The shape of the company, as a phrase. Never an adverse finding."""
+def _structure_sentence(signals: list[dict[str, Any]]) -> str | None:
+    """The shape of the company, as a sentence of its own. Never a finding.
+
+    Phase 245: this used to be a phrase hung off the risk clauses with
+    "over" ("…, over no parent filed with GLEIF, under a permitted
+    exception"), which made one sentence pivot twice. It is now a second
+    sentence, so the finding is read first and the shape second.
+    """
     all_codes = _codes(signals)
-    parts: list[str] = []
 
     depth = _layer_depth(signals)
     if depth:
-        parts.append(f"an ownership chain {depth} layers deep")
+        return f"Its ownership chain is {depth} layers deep."
 
-    if "GLEIF_REPORTING_EXCEPTION" in all_codes and not depth:
+    if "GLEIF_REPORTING_EXCEPTION" in all_codes:
         # A permitted reporting exception, not a failure to disclose.
-        parts.append("no parent filed with GLEIF, under a permitted exception")
+        return "No parent is filed with GLEIF, which the LEI reporting rules permit."
 
-    if not parts:
-        return None
-    return " and ".join(parts)
+    return None
+
+
+#: Bumped whenever the wording of ``build_verdict`` changes without the
+#: facts behind it changing. The watchlist stores it beside each snapshot's
+#: verdict and only reports a verdict change between snapshots written by the
+#: same template — otherwise a deploy would make every watched company report
+#: "verdict changed" on its next re-run. 1 = Phases 122–244 (one sentence),
+#: 2 = Phase 245 (risk sentence, then structure sentence).
+VERDICT_TEMPLATE = 2
 
 
 def build_verdict(
@@ -139,13 +151,19 @@ def build_verdict(
     *,
     legal_name: str | None = None,
 ) -> str | None:
-    """One sentence describing what the check found.
+    """At most two short sentences: what was found, then the company's shape.
 
     ``signals`` is the merged signal list exactly as it crosses the wire
     (dicts from ``RiskSignal.to_dict``), ``degraded`` the ``DegradedSource``
     dicts from the same event. Returns ``None`` when there is nothing
     truthful to say — the caller renders no sentence rather than a hollow
     one.
+
+    Risk first, structure second (Phase 245). The first sentence says what
+    the records show — or that nothing surfaced, qualified by any check that
+    did not run; the second, when there is one, says how the company is put
+    together. Neither pivots on a preposition: "X, over Y, under Z" read as
+    one clause qualifying the next, which is not what it meant.
 
     The subject is deliberately unnamed in most sentences ("the company
     itself"): the name is the ``h1`` directly above it, and repeating it
@@ -163,17 +181,14 @@ def build_verdict(
         if len(clauses) == _MAX_RISK_CLAUSES:
             break
 
-    structure = _structure_clause(signals)
+    structure = _structure_sentence(signals)
 
     if clauses:
-        head = clauses[0] if len(clauses) == 1 else f"{clauses[0]}, and {clauses[1]}"
-        sentence = head[0].upper() + head[1:]
-        if structure:
-            sentence = f"{sentence}, over {structure}"
+        head = clauses[0] if len(clauses) == 1 else f"{clauses[0]} and {clauses[1]}"
         # No completeness caveat here on purpose. "We found X" stays true
         # whatever else failed to run; only an *absence* needs qualifying,
         # and the Coverage column carries the detail either way.
-        return sentence + "."
+        return _join(f"The records show {head}.", structure)
 
     matched = {c for codes, _ in _RISK_CLAUSES for c in codes}
     unhandled = risk_codes - matched - _STRUCTURE_CODES
@@ -185,17 +200,27 @@ def build_verdict(
         return None
 
     if structure and risk_codes:
-        base = f"The records show {structure}"
-    elif structure:
-        base = f"No risk signals surfaced, over {structure}"
+        # The only risk-kind signals are structural (a deep chain): they are
+        # real signals, so "no risk signals surfaced" would be false. The
+        # structure sentence is the whole finding.
+        first = None
     elif degraded:
-        base = "No risk signals surfaced"
+        first = f"No risk signals surfaced, but {_incomplete_phrase(degraded)}."
     else:
-        base = "No risk signals surfaced across the sources that answered"
+        first = "No risk signals surfaced across the sources that answered."
 
-    if degraded:
-        base += f", but {_incomplete_phrase(degraded)}"
-    return base + "."
+    if first is None:
+        tail = None
+        if degraded:
+            gap = _incomplete_phrase(degraded)
+            tail = f"{gap[0].upper()}{gap[1:]}."
+        return _join(structure, tail)
+    return _join(first, structure)
+
+
+def _join(*sentences: str | None) -> str | None:
+    kept = [s for s in sentences if s]
+    return " ".join(kept) if kept else None
 
 
 #: Adapters record this when the SOURCE itself did not answer, as opposed to a
