@@ -66,8 +66,37 @@ Response::
       }
     }
 
-Scores are on a 0–100 scale.  ``match: true`` means ICIJ judges it a
-high-confidence match.
+Scores are on a 0–100 scale. ``match: true`` is ICIJ's own "this is the
+one" flag. Since Phase 237 it decides nothing here — not the score
+threshold, not the confidence — because ICIJ's scorer is the input this
+module does not trust (it rated ENERGEN BIOGAS ↔ BIOGAS ENERGY 90/100). It is
+kept on ``evidence["icij_match"]`` as a recorded fact.
+
+Node details: the ``extend`` service (Phase 237)
+------------------------------------------------
+
+A reconciliation result carries a name, a type and a sentence, and nothing
+that can tell two same-named companies apart. The same endpoint's data
+extension (``POST`` with an ``extend`` form field instead of ``queries``)
+returns, per node id, ``country_codes`` (ISO 3166-1 alpha-2, from the node's
+addresses and jurisdiction) and ``valid_until`` — ICIJ's own statement of how
+far the leak's documents run ("The Panama Papers data is current through
+2015"). ``jurisdiction`` and ``incorporation_date`` are declared properties
+too, but came back empty on every node sampled on 2026-09-24, so nothing
+relies on them. One extra request per batch, and only when a candidate has
+already passed the name gates. Two gates follow (``_gate``):
+
+* **Date.** A party founded (or born) after the year the leak's documents
+  end cannot be in it. The cutoff is ICIJ's ``valid_until`` where the extend
+  call answered, else ``_LEAK_CUTOFF_YEARS``. Such a match is dropped.
+* **Jurisdiction.** The party's own country — the BODS ``jurisdiction`` code
+  and its address countries — among the node's ``country_codes`` is the one
+  corroboration an ICIJ match can carry. Only a corroborated *entity* match
+  is ``high``; every other match, and every person match (Stephen, 24 Sept
+  2026: a common name in a country is not corroboration), is ``medium``.
+
+A failed extend call degrades nothing: the date gate still runs off the
+table, and the matches stay at ``medium`` — the safe direction.
 
 Two more v0.2 shape changes, confirmed live 2026-07-30: the node type moved
 from ``type`` to ``types`` (both are read), and ``description`` is now a
@@ -149,9 +178,41 @@ _RESULTS_PER_TYPE = 2
 # inside one request.
 _BATCH_SIZE = 8
 
-# ICIJ score threshold (0–100). Matches below this are ignored unless
-# ``match: true`` — ICIJ's own high-confidence flag overrides the threshold.
+# ICIJ score threshold (0–100). A coarse first filter and nothing more.
+# Until Phase 237 ICIJ's ``match: true`` overrode it and made the signal
+# "high"; it now does neither (see the module docstring).
 _MIN_SCORE = 70
+
+# The year each leak's documents end, for the date gate when the extend call
+# did not answer. ICIJ's own ``valid_until`` is preferred (it is per
+# sub-collection: Pandora's providers run from 2016 to 2018). Keys are
+# ``(dataset, collection)`` lower-cased; ``""`` is the whole dataset, and
+# where the sub-collections disagree it takes the LATEST (or, where ICIJ
+# publishes no dataset-wide line, the publication year), so the table can
+# only ever keep a match the precise cutoff would drop — never the reverse.
+# Figures are ICIJ's valid_until lines as read on 2026-09-24.
+_LEAK_CUTOFF_YEARS: dict[tuple[str, str], int] = {
+    ("offshore leaks", ""): 2010,  # "current through 2010"
+    ("panama papers", ""): 2015,  # "current through 2015"
+    ("bahamas leaks", ""): 2016,  # "current through early 2016"
+    ("paradise papers", "appleby"): 2014,  # "Appleby data is current through 2014"
+    ("paradise papers", ""): 2017,  # registries through 2016; published Nov 2017
+    ("pandora papers", "trident trust"): 2016,
+    ("pandora papers", "alemán, cordero, galindo & lee (alcogal)"): 2018,
+    ("pandora papers", ""): 2021,  # providers vary; published Oct 2021
+}
+
+# "The Panama Papers data is current through 2015",
+# "The Bahamas Leaks data is current through early 2016."
+_VALID_UNTIL_RE = re.compile(r"current through\D*(\d{4})", re.IGNORECASE)
+
+# Node properties asked of the extend service. ``valid_until`` and
+# ``country_codes`` exist on every node type; the others are Entity-only and
+# are asked for in case ICIJ starts populating them.
+_EXTEND_PROPERTIES = ("country_codes", "valid_until", "jurisdiction")
+
+# Node ids per extend request — the manifest's batchSize.
+_EXTEND_BATCH = 25
 
 # Secondary sanity check: even if ICIJ scores high, the returned name must be
 # this similar to what we searched. Uses the shared Phase-D scorer (see
@@ -407,6 +468,17 @@ def _subject_targets(identity: SubjectIdentity) -> list[dict[str, Any]]:
     ordered = sorted(
         identity.statements, key=lambda s: 0 if s.get("statementId") == anchor else 1
     )
+    # One company, however many sources describe it: its facts for the
+    # Phase 237 gates are pooled across the identity set — the EARLIEST
+    # founding date any source gives (so a source that dates a
+    # re-registration cannot drop a true match) and every country.
+    founded: str | None = None
+    countries: set[str] = set()
+    for stmt in identity.statements:
+        f, c = _party_facts(stmt.get("recordDetails") or {}, _KIND_ENTITY)
+        if f and (founded is None or f < founded):
+            founded = f
+        countries |= c
     seen: set[str] = set()
     out: list[dict[str, Any]] = []
     for stmt in ordered:
@@ -417,7 +489,8 @@ def _subject_targets(identity: SubjectIdentity) -> list[dict[str, Any]]:
         seen.add(key)
         out.append(
             {"kind": _KIND_ENTITY, "statement_id": anchor, "name": name,
-             "subject": True}
+             "subject": True, "founded": founded,
+             "countries": sorted(countries)}
         )
         if len(out) >= _MAX_SUBJECT_NAMES:
             break
@@ -456,9 +529,11 @@ def _collect_targets(
             name = _person_name(rd)
             if not name:
                 continue
+            born, countries = _party_facts(rd, _KIND_PERSON)
             out.append(
                 {"kind": _KIND_PERSON, "statement_id": sid, "name": name,
-                 "former": sid in former}
+                 "former": sid in former, "founded": born,
+                 "countries": sorted(countries)}
             )
         elif record_type == "entity":
             entity_type = (
@@ -471,11 +546,44 @@ def _collect_targets(
             name = (rd.get("name") or "").strip()
             if not name:
                 continue
+            founded, countries = _party_facts(rd, _KIND_ENTITY)
             out.append(
                 {"kind": _KIND_ENTITY, "statement_id": sid, "name": name,
-                 "former": sid in former}
+                 "former": sid in former, "founded": founded,
+                 "countries": sorted(countries)}
             )
     return out
+
+
+def _party_facts(rd: dict[str, Any], kind: str) -> tuple[str | None, set[str]]:
+    """What the party's own statement says about when and where it is.
+
+    Returns ``(date, countries)``: the ``foundingDate`` of an entity or the
+    ``birthDate`` of a person (as published — ``YYYY``, ``YYYY-MM`` or a full
+    date; only the year is compared), and the ISO 3166-1 alpha-2 countries of
+    its ``jurisdiction`` (an entity's; ``US-DE`` counts as ``US``) and of its
+    addresses. Used by the Phase 237 gates in ``_gate``.
+    """
+    raw_date = rd.get("foundingDate") if kind == _KIND_ENTITY else rd.get("birthDate")
+    date = str(raw_date).strip() if raw_date else None
+    if date and not re.match(r"^\d{4}", date):
+        date = None
+    countries: set[str] = set()
+
+    def _add(code: Any) -> None:
+        text = str(code or "").strip().upper()
+        if re.match(r"^[A-Z]{2}(-|$)", text):
+            countries.add(text[:2])
+
+    if kind == _KIND_ENTITY:
+        juris = rd.get("jurisdiction")
+        if isinstance(juris, dict):
+            _add(juris.get("code"))
+    for addr in rd.get("addresses") or []:
+        if isinstance(addr, dict):
+            country = addr.get("country")
+            _add(country.get("code") if isinstance(country, dict) else country)
+    return date, countries
 
 
 def _person_name(rd: dict[str, Any]) -> str:
@@ -572,17 +680,109 @@ async def _check_batch(
         response.raise_for_status()
         raw = response.json()
 
+        # Name gates first, so the extend call is only made — and only asks
+        # about nodes — that could become a signal.
+        candidates: list[tuple[dict[str, Any], dict[str, Any]]] = []
+        for query_key, target in keyed_targets.items():
+            query_result = raw.get(query_key) or {}
+            results = query_result.get("result") or []
+            for match in results:
+                if _passes_name_gates(
+                    match, target, min_score=min_score, min_name_sim=min_name_sim
+                ):
+                    candidates.append((match, target))
+        if not candidates:
+            return []
+        details = await _fetch_node_details(
+            client, [str(m.get("id") or "") for m, _ in candidates]
+        )
+
     signals: list[RiskSignal] = []
-    for query_key, target in keyed_targets.items():
-        query_result = raw.get(query_key) or {}
-        results = query_result.get("result") or []
-        for match in results:
-            sig = _signal_from_match(
-                match, target, min_score=min_score, min_name_sim=min_name_sim
-            )
-            if sig is not None:
-                signals.append(sig)
+    for match, target in candidates:
+        node = details.get(_bare_id(match.get("id"))) if details is not None else None
+        sig = _signal_from_match(
+            match,
+            target,
+            min_score=min_score,
+            min_name_sim=min_name_sim,
+            node=node,
+            details_answered=details is not None,
+        )
+        if sig is not None:
+            signals.append(sig)
     return signals
+
+
+def _bare_id(raw_id: Any) -> str:
+    """The node id the extend service keys its rows on — the bare id, also
+    when a (pre-v0.2) result carried the full node URL."""
+    text = str(raw_id or "").strip().rstrip("/")
+    return text.rsplit("/", 1)[-1] if text.startswith(("http://", "https://")) else text
+
+
+async def _fetch_node_details(
+    client: httpx.AsyncClient, raw_ids: list[str]
+) -> dict[str, dict[str, Any]] | None:
+    """``country_codes`` and ``valid_until`` for each node, from the
+    reconciliation service's data extension (Phase 237).
+
+    Returns ``{node_id: {"country_codes": [...], "valid_until": str,
+    "jurisdiction": str}}``, or ``None`` when the service did not answer.
+    ``None`` is never a degradation: the date gate falls back to
+    ``_LEAK_CUTOFF_YEARS`` and every match stays at ``medium``, which is the
+    direction that cannot overstate a finding.
+    """
+    ids = list(dict.fromkeys(i for i in (_bare_id(r) for r in raw_ids) if i))
+    if not ids:
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    try:
+        for start in range(0, len(ids), _EXTEND_BATCH):
+            extend = {
+                "ids": ids[start: start + _EXTEND_BATCH],
+                "properties": [{"id": p} for p in _EXTEND_PROPERTIES],
+            }
+            response = await client.post(
+                _RECONCILE_URL, data={"extend": json.dumps(extend)}
+            )
+            response.raise_for_status()
+            rows = (response.json() or {}).get("rows") or {}
+            if not isinstance(rows, dict):
+                return None
+            for node_id, row in rows.items():
+                if isinstance(row, dict):
+                    out[str(node_id)] = _parse_node_row(row)
+    except Exception as exc:  # noqa: BLE001
+        _LOG.warning(
+            "ICIJ Offshore Leaks node details unavailable: %s: %s — "
+            "matches kept at medium confidence, date gate on the table.",
+            type(exc).__name__,
+            exc,
+        )
+        return None
+    return out
+
+
+def _parse_node_row(row: dict[str, Any]) -> dict[str, Any]:
+    """One extend row → plain values. Each property is a list of
+    ``{"str": ...}`` cells."""
+
+    def _cells(prop: str) -> list[str]:
+        cells = row.get(prop) or []
+        if not isinstance(cells, list):
+            return []
+        return [
+            str(c.get("str") or "").strip()
+            for c in cells
+            if isinstance(c, dict) and str(c.get("str") or "").strip()
+        ]
+
+    countries = sorted(
+        {c.upper() for c in _cells("country_codes") + _cells("jurisdiction")
+         if re.fullmatch(r"[A-Za-z]{2}", c)}
+    )
+    valid = _cells("valid_until")
+    return {"country_codes": countries, "valid_until": valid[0] if valid else ""}
 
 
 # ---------------------------------------------------------------------
@@ -590,17 +790,18 @@ async def _check_batch(
 # ---------------------------------------------------------------------
 
 
-def _signal_from_match(
+def _passes_name_gates(
     match: dict[str, Any],
     target: dict[str, Any],
     *,
     min_score: int,
     min_name_sim: float = _MIN_NAME_SIM,
-) -> RiskSignal | None:
-    """Convert one ICIJ reconciliation result to an OFFSHORE_LEAKS signal.
+) -> bool:
+    """Whether a reconciliation result names the target at all.
 
-    Returns ``None`` when:
-    * The score is below threshold AND ``match`` is not ``True``.
+    False when:
+    * The ICIJ score is below ``min_score``. ICIJ's ``match: true`` no longer
+      overrides this (Phase 237).
     * The returned name is too dissimilar to the searched name
       (secondary sanity check, guards against ICIJ index collisions).
     * The target is an ENTITY and the two names disagree on their
@@ -611,28 +812,25 @@ def _signal_from_match(
       and every token is distinctive, so persons rely on the similarity
       threshold alone.
     """
-    score: int = int(match.get("score") or 0)
-    is_high_confidence: bool = bool(match.get("match"))
-
-    if not is_high_confidence and score < min_score:
-        return None
+    score = int(match.get("score") or 0)
+    if score < min_score:
+        return False
 
     matched_name: str = (match.get("name") or "").strip()
     if not matched_name:
-        return None
+        return False
 
     # Secondary name-similarity sanity check.
     if _name_sim(target["name"], matched_name) < min_name_sim:
-        return None
+        return False
 
-    # Distinctive-token gate. Applied even to ICIJ ``match: true`` results
-    # — ICIJ's own scorer rated the ENERGEN/BIOGAS collision 90/100, so
-    # its confidence flag earns no bypass. Entity targets always; person
-    # targets only when either name carries a legal form, because BODS
-    # person statements sometimes hold corporate officers and those are
-    # organisations for matching purposes. Real personal names ("NICHOLAS
-    # PAUL RATCLIFFE") are all distinctive tokens and rely on the
-    # similarity threshold alone.
+    # Distinctive-token gate. ICIJ's own scorer rated the ENERGEN/BIOGAS
+    # collision 90/100, so neither its score nor its ``match`` flag earns a
+    # bypass. Entity targets always; person targets only when either name
+    # carries a legal form, because BODS person statements sometimes hold
+    # corporate officers and those are organisations for matching purposes.
+    # Real personal names ("NICHOLAS PAUL RATCLIFFE") are all distinctive
+    # tokens and rely on the similarity threshold alone.
     entityish = (
         target["kind"] != _KIND_PERSON
         or names.has_org_form_tokens(target["name"])
@@ -641,7 +839,145 @@ def _signal_from_match(
     if entityish and not names.distinctive_token_agreement(
         target["name"], matched_name
     ):
+        return False
+    return True
+
+
+def _leak_cutoff(
+    dataset: str, collection: str, node: dict[str, Any] | None
+) -> tuple[int | None, str]:
+    """The last year a leak's documents cover, and where that came from.
+
+    ICIJ's own ``valid_until`` (via the extend call) first — it is per
+    sub-collection — then ``_LEAK_CUTOFF_YEARS``. ``(None, "")`` for a leak
+    neither knows (FBME Bank; a future dataset): the date gate is then not
+    applied, and the evidence says so.
+    """
+    if node:
+        m = _VALID_UNTIL_RE.search(node.get("valid_until") or "")
+        if m:
+            return int(m.group(1)), "icij"
+    ds = dataset.lower()
+    coll = collection.lower()
+    year = _LEAK_CUTOFF_YEARS.get((ds, coll))
+    if year is None:
+        year = _LEAK_CUTOFF_YEARS.get((ds, ""))
+    return (year, "table") if year is not None else (None, "")
+
+
+def _gate(
+    target: dict[str, Any],
+    *,
+    dataset: str,
+    collection: str,
+    node: dict[str, Any] | None,
+    details_answered: bool,
+) -> tuple[bool, str, dict[str, Any]]:
+    """The Phase 237 gates: ``(keep, confidence, evidence)``.
+
+    * **Date** — a party whose founding (entity) or birth (person) year is
+      after the leak's last year cannot be in it: ``keep`` is False. CLP
+      HOLDINGS LIMITED (Jersey, founded 2021) against a Panama Papers
+      intermediary (documents through 2015) is the shape.
+    * **Jurisdiction** — the party's countries (``_party_facts``) among the
+      node's ``country_codes``. The only corroboration an ICIJ match carries,
+      so the only way to ``high``, and for entities only: a person match is
+      ``medium`` whatever the countries say (Stephen, 24 Sept 2026).
+
+    The evidence records each gate's inputs, outcome and one sentence
+    (``gates``), so a reader can see why a match stands at its confidence.
+    """
+    kind = target["kind"]
+    founded = target.get("founded")
+    party_countries = list(target.get("countries") or [])
+    cutoff, cutoff_source = _leak_cutoff(dataset, collection, node)
+    date_word = "incorporation" if kind == _KIND_ENTITY else "birth"
+    notes: list[str] = []
+
+    if founded and cutoff is not None:
+        year = int(str(founded)[:4])
+        if year > cutoff:
+            return False, "", {}
+        date_status = "passed"
+        notes.append(
+            f"gate passed: {date_word} {founded} ≤ leak cutoff {cutoff}"
+        )
+    elif cutoff is None:
+        date_status = "not_checked"
+        notes.append("date not checked: no cutoff known for this leak")
+    else:
+        date_status = "not_checked"
+        notes.append(f"date not checked: no {date_word} date on the party")
+
+    record_countries: list[str] = list((node or {}).get("country_codes") or [])
+    matched = sorted(set(party_countries) & set(record_countries))
+    if matched:
+        juris_status = "corroborated"
+        notes.append(
+            "jurisdiction "
+            + ", ".join(f"{c} = {c}" for c in matched)
+        )
+    elif not details_answered:
+        juris_status = "not_checked"
+        notes.append("jurisdiction not checked: ICIJ node details unavailable")
+    elif not party_countries:
+        juris_status = "not_checked"
+        notes.append("jurisdiction not checked: no country on the party")
+    elif not record_countries:
+        juris_status = "not_checked"
+        notes.append("jurisdiction not checked: ICIJ record carries no country")
+    else:
+        juris_status = "differs"
+        notes.append(
+            f"jurisdiction differs: {'/'.join(party_countries)} ≠ "
+            f"{'/'.join(record_countries)}"
+        )
+
+    corroborated = juris_status == "corroborated" and kind != _KIND_PERSON
+    if not corroborated:
+        notes.append("name-only match: capped at medium")
+
+    evidence = {
+        "gates": notes,
+        "date_gate": {
+            "status": date_status,
+            "party_date": founded,
+            "leak_cutoff_year": cutoff,
+            "cutoff_source": cutoff_source or None,
+        },
+        "jurisdiction_gate": {
+            "status": juris_status,
+            "party_countries": party_countries,
+            "record_countries": record_countries,
+        },
+    }
+    return True, ("high" if corroborated else "medium"), evidence
+
+
+def _signal_from_match(
+    match: dict[str, Any],
+    target: dict[str, Any],
+    *,
+    min_score: int,
+    min_name_sim: float = _MIN_NAME_SIM,
+    node: dict[str, Any] | None = None,
+    details_answered: bool = False,
+) -> RiskSignal | None:
+    """Convert one ICIJ reconciliation result to an OFFSHORE_LEAKS signal.
+
+    Returns ``None`` when the result fails the name gates
+    (``_passes_name_gates``) or the date gate (``_gate``). ``node`` is the
+    result's extend row (``_fetch_node_details``); ``details_answered`` says
+    whether the extend call answered at all, which is what separates "ICIJ
+    holds no country for this node" from "we could not ask".
+    """
+    if not _passes_name_gates(
+        match, target, min_score=min_score, min_name_sim=min_name_sim
+    ):
         return None
+    score: int = int(match.get("score") or 0)
+    icij_match: bool = bool(match.get("match"))
+    matched_name: str = (match.get("name") or "").strip()
 
     node_url: str = _node_url(match.get("id"))
     description: str = match.get("description") or ""
@@ -649,6 +985,16 @@ def _signal_from_match(
     jurisdiction = _parse_jurisdiction(description)
     collection = _parse_collection(description)
     node_type = _node_type(match)
+
+    keep, confidence, gate_evidence = _gate(
+        target,
+        dataset=dataset,
+        collection=collection,
+        node=node,
+        details_answered=details_answered,
+    )
+    if not keep:
+        return None
 
     relation = "Related party" if target["kind"] == _KIND_PERSON else "Related entity"
     # Phase 220: a party whose every link has ended is still screened, and
@@ -704,7 +1050,7 @@ def _signal_from_match(
 
     return RiskSignal(
         code=OFFSHORE_LEAKS,
-        confidence="high" if is_high_confidence else "medium",
+        confidence=confidence,
         summary=summary,
         source_id="icij",
         hit_id=node_url or f"icij:{_slug(target['name'])}",
@@ -720,13 +1066,15 @@ def _signal_from_match(
             "search_name": target["name"],
             "matched_name": matched_name,
             "icij_score": score,
-            "icij_match": is_high_confidence,
+            # ICIJ's own flag, recorded — it decides nothing (Phase 237).
+            "icij_match": icij_match,
             "dataset": dataset,
             "jurisdiction": jurisdiction,
             "collection": collection,
             "node_type": node_type,
             "node_url": node_url,
             "kind": target["kind"],
+            **gate_evidence,
             **({"former": True} if target.get("former") else {}),
         },
     )
