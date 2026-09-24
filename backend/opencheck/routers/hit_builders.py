@@ -50,6 +50,13 @@ class _LookupCtx:
     #: GLEIF-published S&P Global / Capital IQ id — corroborates MEIP's CapIQ id.
     spglobal: str | None = None
     qid: str | None = None
+    #: Why the LEI → Wikidata QID lookup could not answer (Phase 244), or
+    #: ``None`` when it answered — with a QID or with "no mapping". Kept apart
+    #: from ``qid`` because ``qid is None`` means both "Wikidata has no QID for
+    #: this LEI" and "Wikidata did not reply", and only the second is a failure
+    #: the report must name. ``_dispatch`` turns it into a Wikidata
+    #: ``source_error`` rather than letting it fail the whole lookup.
+    qid_error: Exception | None = None
     #: Where the GLEIF anchor payload actually came from. The anchor is
     #: resolved *before* the dispatch loop that fills ``provenances``, so
     #: without carrying it here GLEIF is the one source with no entry in

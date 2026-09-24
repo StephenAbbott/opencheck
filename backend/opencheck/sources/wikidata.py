@@ -29,6 +29,7 @@ from .. import identifiers
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
+from ..secret_scrub import describe_exception
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 # 20-char ISO 17442 LEI shape (shared; see opencheck/identifiers.py).
@@ -755,9 +756,21 @@ class WikidataAdapter(SourceAdapter):
             "roots": " ".join(f"wd:{r}" for r in sorted(_CLASS_ROOTS)),
         }
         # A throwaway cache key: the per-class entries below are what is kept.
-        payload = await self._sparql(
-            query, cache_key=f"{_CACHE_NS}/class-roots-query/{_slug(query)}"
-        )
+        # Phase 244: a transport failure (a WDQS ReadTimeout) is a failed
+        # query like any other — the docstring's promise — rather than an
+        # exception that throws away the main fetch it was enriching.
+        try:
+            payload = await self._sparql(
+                query, cache_key=f"{_CACHE_NS}/class-roots-query/{_slug(query)}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning(
+                "Wikidata class-roots query failed (%s) — classifying owners "
+                "on their direct classes",
+                describe_exception(exc),
+            )
+            return out
         if "results" not in payload:
             return out
         parsed = _parse_class_roots(payload["results"].get("bindings", []), set(missing))
@@ -795,10 +808,16 @@ class WikidataAdapter(SourceAdapter):
     ) -> dict[str, Any]:
         """Run a SPARQL query against the Wikidata Query Service.
 
-        Returns an empty dict (rather than raising) on any HTTP error so
-        that a Wikidata rate-limit or outage doesn't crash the entire
-        /lookup response.  A 429 ("1 req / min") is the most common
-        failure mode on the free Render tier.
+        Returns an empty dict (rather than raising) on an HTTP error
+        *status* — a 429 ("1 req / min") is the most common failure mode on
+        the free Render tier. A *transport* failure (``httpx.ReadTimeout``
+        when WDQS is slow, a refused connection) is raised, deliberately:
+        an empty dict would read as "Wikidata has nothing", and callers
+        decide what the failure means. ``fetch`` lets it reach the pipeline
+        as a Wikidata ``source_error``; ``_resolve_ctx`` catches it around
+        ``find_qid_by_lei`` and reports it the same way (Phase 244 — until
+        then it failed the whole lookup with an HTTP 500); ``_class_roots``
+        and ``_filter_to_humans`` fail open.
         """
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
