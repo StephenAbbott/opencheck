@@ -547,6 +547,7 @@ def test_map_ted_eu_entity_statement_only() -> None:
     assert identifiers == [
         {
             "id": "380129866",
+            "scheme": "EFORMS-BT-501",
             "schemeName": "Organisation identifier — eForms BT-501 (via TED notice)",
         }
     ]

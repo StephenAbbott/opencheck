@@ -190,8 +190,9 @@ def test_infogreffe_takes_the_siren_scheme() -> None:
     entity = next(s for s in bundle if s.get("recordType") == "entity")
     ids = entity["recordDetails"]["identifiers"]
     siren = [i for i in ids if i["scheme"] == "FR-INSEE"]
-    # The number is published as GLEIF filed it; merging canonicalises separators.
-    assert [i["id"] for i in siren] == ["542 051 180"]
+    # Phase 239: published without whitespace, the form the register itself
+    # uses (it was "as GLEIF filed it" — "542 051 180" — until then).
+    assert [i["id"] for i in siren] == ["542051180"]
     assert "Infogreffe" in siren[0]["schemeName"]
 
 

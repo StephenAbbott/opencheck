@@ -26,6 +26,7 @@ from typing import Iterable
 
 from . import identifiers, names
 from .matching import canonical_identifier, is_matchable_name
+from .ra_codes import is_ra_scheme
 from .sources import SearchKind, SourceHit, lineage
 
 
@@ -269,7 +270,9 @@ def _identifier_keys(stmt: dict) -> set[str]:
         val = canonical_identifier(raw, min_len=0) or raw
         scheme = str(i.get("scheme") or "?").strip().upper()
         keys.add(f"{scheme}:{val}")
-        if jur and (scheme == "" or scheme.startswith(f"{jur}-")) and "VAT" not in scheme and "/" not in val:
+        # A bare RA code (Phase 239) is GLEIF's registration number with its
+        # authority named, where the scheme used to be blank.
+        if jur and (scheme == "" or is_ra_scheme(scheme) or scheme.startswith(f"{jur}-")) and "VAT" not in scheme and "/" not in val:
             keys.add(f"JUR:{jur}:{val}")
     return keys
 

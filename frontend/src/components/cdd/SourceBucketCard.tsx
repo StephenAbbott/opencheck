@@ -280,8 +280,14 @@ function EntityStatementCard({ stmt }: { stmt: BODSStmt }) {
   const rd = (stmt.recordDetails ?? {}) as Record<string, unknown>;
   const name = stmtStr(rd, "name");
   const entityType = stmtStr(rd, "entityType", "type");
-  const jurisdiction = stmtStr(rd, "incorporatedInJurisdiction", "name");
-  const jurisdictionCode = stmtStr(rd, "incorporatedInJurisdiction", "code");
+  // BODS v0.4 ``jurisdiction`` first. This read only v0.3's
+  // ``incorporatedInJurisdiction`` until Phase 239, so every mapper writing
+  // v0.4 drew an entity card with no jurisdiction row; the legacy key stays
+  // for a saved report written before then.
+  const jurisdiction =
+    stmtStr(rd, "jurisdiction", "name") || stmtStr(rd, "incorporatedInJurisdiction", "name");
+  const jurisdictionCode =
+    stmtStr(rd, "jurisdiction", "code") || stmtStr(rd, "incorporatedInJurisdiction", "code");
   const foundingDate = stmtStr(rd, "foundingDate");
   // Register status (Phase 151): shown only when the register says the entity
   // has ended or is ending — "active" on every card would be noise, and the

@@ -24,7 +24,7 @@ def _person_bundle() -> dict:
             "instance_of": [{"qid": "Q5", "label": "human"}],
             "citizenships": [
                 {"qid": "Q15180", "label": "Soviet Union"},
-                {"qid": "Q159", "label": "Russia"},
+                {"qid": "Q159", "label": "Russia", "iso": "RU"},
             ],
             "positions": [
                 {
@@ -130,10 +130,13 @@ def test_map_wikidata_person_normalises_dob() -> None:
 
 
 def test_map_wikidata_person_lists_nationalities() -> None:
+    """Phase 239: the code is the country's ISO 3166-1 alpha-2 (P297), never
+    its Q-ID. The Soviet Union has no current alpha-2, so it is named and
+    carries no code — this test used to pin ``{"Q15180", "Q159"}``."""
     bundle = map_wikidata(_person_bundle())
     person = next(iter(bundle))
-    nationality_qids = {n["code"] for n in person["recordDetails"]["nationalities"]}
-    assert nationality_qids == {"Q15180", "Q159"}
+    nationalities = person["recordDetails"]["nationalities"]
+    assert nationalities == [{"name": "Soviet Union"}, {"name": "Russia", "code": "RU"}]
 
 
 def test_map_wikidata_person_passes_validator() -> None:

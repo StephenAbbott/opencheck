@@ -68,7 +68,15 @@ def pytest_addoption(parser):
 def pytest_collection_modifyitems(config, items):
     """Skip @pytest.mark.live tests unless explicitly opted in. Keeps the
     default suite (and CI) fully offline; run live with `pytest --run-live`
-    or `OPENCHECK_RUN_LIVE=1`."""
+    or `OPENCHECK_RUN_LIVE=1`.
+
+    Also moves the mapper-coverage check (Phase 239) to the end of the run: it
+    asserts every registered source's mapper went through the contract guard,
+    which is only true once every other test has run."""
+    last = [i for i in items if i.name == "test_every_registered_source_mapper_was_checked"]
+    for item in last:
+        items.remove(item)
+        items.append(item)
     if config.getoption("--run-live") or os.environ.get("OPENCHECK_RUN_LIVE") == "1":
         return
     skip_live = pytest.mark.skip(
@@ -112,7 +120,9 @@ def _entity_subtype_guard_check():
     if violations:
         lines = "\n".join(f"  {m} → {sid}: {issue}" for m, sid, issue in violations)
         pytest.fail(
-            "A mapper emitted an invalid BODS v0.4 entityType.subtype — local "
-            "entity-type wording belongs in entityType.details:\n" + lines,
+            "A mapper broke the BODS v0.4 mapper contract — an invalid "
+            "entityType.subtype (local wording belongs in entityType.details), "
+            "or a jurisdiction / identifier input the risk engine cannot read "
+            "(Phase 239):\n" + lines,
             pytrace=False,
         )

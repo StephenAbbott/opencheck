@@ -653,7 +653,12 @@ def _build_entity_statement(
     jname = row.get("recorddetails_jurisdiction_name") or ""
     jcode = row.get("recorddetails_jurisdiction_code") or ""
     if jname or jcode:
-        record_details["incorporatedInJurisdiction"] = {
+        # BODS v0.4 names this ``jurisdiction``. Open Ownership's flattened
+        # column is ``recorddetails_jurisdiction_*``; writing it back under
+        # v0.3's ``incorporatedInJurisdiction`` hid every one of these
+        # entities from the FATF, EU high-risk and non-EU checks, which read
+        # the v0.4 key.
+        record_details["jurisdiction"] = {
             k: v for k, v in [("name", jname), ("code", jcode)] if v
         }
 

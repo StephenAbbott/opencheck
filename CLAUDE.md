@@ -375,6 +375,10 @@ source: the page shows the last sweep's verdict and says when it was reached.
       **never** `entityType.subtype` — a closed v0.4 codelist. A registry-wide
       guard in `tests/conftest.py` fails any test whose mapper emits an
       invalid subtype (Phase 214)
+      The same guard (Phase 239) fails a test whose mapper emits a
+      `jurisdiction.code` / `nationalities[].code` that is not ISO 3166, an
+      identifier with an `id` and no `scheme`, or v0.3's
+      `incorporatedInJurisdiction` — see "The risk engine's input contract"
 - [ ] `routers/hit_builders.py` — `_bh_<name>()` hit builder (only this).
       Moved out of `routers/lookup.py` in Phase 168 and re-exported from it
 - [ ] `tests/test_<name>.py` — adapter + mapper tests
@@ -1892,6 +1896,61 @@ otherwise:
 - Option 2 (more slots) and option 4 (reserved interactive slots) were
   deliberately **not** done (Stephen, 24 Sept 2026): decide them from the
   counters.
+
+---
+
+## The risk engine's input contract (Phase 239)
+
+The FATF, EU high-risk-third-country and non-EU checks match
+`recordDetails.jurisdiction.code` against ISO lists, and GLEIF and a register
+corroborate only a number both label with a scheme. Three defects reached
+production because nothing checked those inputs: `bods_gleif` / `bods_uk_psc`
+(and `scripts/extract_bods_subgraphs.py`) wrote v0.3's
+`incorporatedInJurisdiction` and `risk._entity_jurisdiction` read it at the
+statement's top level, so no Open Ownership bundle entity reached the checks
+(Bank Saderat PLC drew no FATF black-list signal for its Iranian parents);
+Wikidata fell back to the Q-ID as a country code (Rosneft `"Q159"`); and the
+GLEIF mapper exported most registration numbers with `scheme: ""`.
+
+- **The contract is `bods/validator.py::jurisdiction_input_issues`**, run on
+  every statement every source mapper yields anywhere in the suite by the
+  Phase 214 guard (`tests/_entity_subtype_guard.py`, which now also wraps
+  iterator returns — the passthrough mappers returned `iter(list)` and were
+  never checked). `code` is optional; where present it is ISO 3166-1 alpha-2
+  or 3166-2. A source that cannot resolve a country gives the name alone,
+  **never a stand-in**. `map_meip` is exempt from the scheme rule only
+  (`PUBLISHER_VERBATIM`: the OECD's identifiers are the OECD's).
+  `test_mapper_contract.py::test_every_registered_source_mapper_was_checked`
+  runs last on a full run and fails if a registered source's mapper produced
+  no statement anywhere in the suite.
+- **One reader for an entity's jurisdiction:** `bods/jurisdiction.py` (`read`
+  accepts the v0.4 key and both v0.3 placements; `upgrade` renames in place).
+  `bods_data.load_bundle` upgrades the committed `data/cache/bods_data/`
+  extracts on read — the files themselves still carry the v0.3 key.
+- **Wikidata reads P297** for the P17 country and each P27 citizenship
+  (nested `OPTIONAL` in `_FETCH_QUERY`, same row count). `_wikidata_country`:
+  P297, then pycountry on the label (summaries cached before the change), then
+  the name alone.
+- **GLEIF RA → scheme** (`gleif_registration_scheme`): every RA code an adapter
+  dispatches on maps to **the scheme that adapter's own mapper writes** (the
+  "scheme follows the number" rule — `test_every_ra_code_an_adapter_dispatches_on_has_a_scheme`
+  fails when an adapter claims an unmapped RA). Anything else takes **the RA
+  code itself** as the scheme (Stephen, 24 Sept 2026) — never `REG-<country>`,
+  which `register_hops` aliases to a country's one register. `is_ra_scheme()`
+  (backend `ra_codes.py`, frontend `reconcile.ts`) lets an RA-code scheme
+  bridge on jurisdiction + number exactly as the blank scheme did.
+  RA000466 files the NZBN on most records → `NZ-NZBN` by value. EE is
+  `EE-ARIREGISTER` and SE `SE-BLV` on both sides now (were `EE-RIK` / `SE-ON`;
+  ariregister's own subject used `EE-KMKR`, which is the VAT number).
+  `registeredAs` is written without spaces when it is all digits once they go
+  (`normalise_registered_as`), and with single spaces otherwise (Malta's
+  `C 83807`). `CA-CORP` is in `register_hops._NO_COUNTRY_ALIAS`: the federal
+  register cannot stand in for a provincial number.
+- Adding RA codes to `_GLEIF_RA_TO_ORG_ID` **adds FullCheck register hops**
+  (`register_hops` derives them from the table) — nineteen more schemes in
+  Phase 239, each with its `REG-<country>` alias where the country has one hop.
+
+---
 
 ## Provenance is checked behaviourally, not by grepping (Phases 229–230)
 

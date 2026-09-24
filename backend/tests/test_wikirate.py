@@ -233,9 +233,10 @@ def test_map_wikirate_entity_statement():
     assert schemes["XI-LEI"] == LEI
     assert schemes["WIKIDATA"] == QID
     assert schemes["US-SEC-CIK"] == "313807"
-    # open_corporates_id carries a schemeName but no org-id scheme code.
-    unschemed = [i for i in details["identifiers"] if "scheme" not in i]
-    assert any(i["id"] == "00102498" for i in unschemed)
+    # open_corporates_id is a bare company number with no jurisdiction: named
+    # for what it is (Phase 239 — it had no scheme), never a register scheme.
+    assert schemes["OPENCORPORATES-COMPANY-NUMBER"] == "00102498"
+    assert all(i.get("scheme") for i in details["identifiers"])
     src = stmt["source"]
     assert src["url"] == "https://wikirate.org/~637"
 

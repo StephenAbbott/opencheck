@@ -320,7 +320,9 @@ def test_map_eiti_emits_entity_statement() -> None:
     assert validate_shape(statements) == []
 
 
-def test_map_eiti_unknown_country_omits_scheme() -> None:
+def test_map_eiti_unknown_country_names_the_disclosure_not_a_register() -> None:
+    """Phase 239: no identifier leaves without a scheme. EITI does not say
+    which register issued the number, so the scheme names the disclosure."""
     bundle = {
         "source_id": "eiti",
         "country": "MN",
@@ -330,7 +332,7 @@ def test_map_eiti_unknown_country_omits_scheme() -> None:
     }
     statements = list(map_eiti(bundle))
     ident = statements[0]["recordDetails"]["identifiers"][0]
-    assert "scheme" not in ident
+    assert ident["scheme"] == "EITI-IDENTIFICATION"
     assert "EITI" in ident["schemeName"]
 
 

@@ -26,13 +26,14 @@ bad statement from each return shape.
 
 from __future__ import annotations
 
+import collections.abc
 import functools
 import importlib
 import pkgutil
 import types
 from typing import Any, Callable, Iterator
 
-from opencheck.bods.validator import entity_subtype_issue
+from opencheck.bods.validator import entity_subtype_issue, jurisdiction_input_issues
 
 #: Violations recorded since the last :func:`drain`, as
 #: ``(mapper name, statementId, issue)``.
@@ -63,12 +64,32 @@ def is_source_mapper(name: str, value: Any) -> bool:
     )
 
 
+#: Mappers that hand on a publisher's own BODS verbatim, whose identifiers
+#: are the publisher's to fix, not OpenCheck's (Phase 208: "do not improve"
+#: the OECD's statements). Exempt from the identifier-scheme rule only.
+PUBLISHER_VERBATIM: frozenset[str] = frozenset({"map_meip"})
+
+#: Mappers that yielded at least one statement since the session began —
+#: read by ``test_mapper_contract.py`` to prove every registered source's
+#: mapper went through the checks, not just the ones someone tested.
+EXERCISED: set[str] = set()
+
+
 def check_statement(mapper: str, stmt: Any) -> None:
-    if not isinstance(stmt, dict) or stmt.get("recordType") != "entity":
+    if not isinstance(stmt, dict):
+        return
+    EXERCISED.add(mapper)
+    sid = str(stmt.get("statementId") or "?")
+    # Phase 239: the risk engine's jurisdiction / identifier input contract.
+    for issue in jurisdiction_input_issues(
+        stmt, identifier_schemes=mapper not in PUBLISHER_VERBATIM
+    ):
+        VIOLATIONS.append((mapper, sid, issue))
+    if stmt.get("recordType") != "entity":
         return
     issue = entity_subtype_issue(stmt.get("recordDetails") or {})
     if issue:
-        VIOLATIONS.append((mapper, str(stmt.get("statementId") or "?"), issue))
+        VIOLATIONS.append((mapper, sid, issue))
 
 
 def _checked(mapper: str, gen: Iterator[Any]) -> Iterator[Any]:
@@ -86,7 +107,11 @@ def wrap(fn: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(fn)
     def guarded(*args: Any, **kwargs: Any) -> Any:
         result = fn(*args, **kwargs)
-        if isinstance(result, types.GeneratorType):
+        # Any iterator, not only a generator: the passthrough mappers
+        # (``map_bods_gleif``, ``map_bods_uk_psc``, ``map_meip``) return
+        # ``iter(list)``, which went through this guard unchecked until
+        # Phase 239's coverage test noticed.
+        if isinstance(result, collections.abc.Iterator):
             return _checked(fn.__name__, result)
         statements = getattr(result, "statements", None)
         if isinstance(statements, list):

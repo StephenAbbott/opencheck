@@ -436,7 +436,11 @@ def finding_bods_gleif(payload: dict[str, Any], statement_id: str) -> str | None
     if dissolved:
         status_clause: str | None = f"dissolved {dissolved}"
     else:
-        jurisdiction = (entity.get("incorporatedInJurisdiction") or {}).get("name")
+        # v0.4 ``jurisdiction``; the v0.3 key is what the adapter wrote
+        # before Phase 239 and a replayed payload may still carry it.
+        jurisdiction = (
+            entity.get("jurisdiction") or entity.get("incorporatedInJurisdiction") or {}
+        ).get("name")
         status_clause = f"incorporated in {jurisdiction}" if jurisdiction else None
 
     return clauses_to_sentence([parent_clause, child_clause, status_clause], sep="; ")

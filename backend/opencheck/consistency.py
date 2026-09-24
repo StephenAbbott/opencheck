@@ -66,6 +66,7 @@ from typing import Any, Callable, Iterable
 from . import identifiers as _identifiers
 from .bods import liveness as _liveness
 from .bods.mapper import SOURCE_NAMES
+from .ra_codes import is_ra_scheme
 from .reconcile import _entity_jurisdiction, _identifier_keys
 from .sources import lineage
 
@@ -197,7 +198,11 @@ def one_per_entity_identifiers(stmt: dict[str, Any]) -> dict[str, str]:
         # number is also compared under a jurisdiction key — the same rule
         # the merge uses. Two statements bridged by LEI whose register
         # numbers differ is the clash worth finding.
-        if jur and (scheme == "" or (scheme.startswith(f"{jur}-") and _is_register_scheme(scheme))):
+        if jur and (
+            scheme == ""
+            or is_ra_scheme(scheme)  # GLEIF's number, authority named (Phase 239)
+            or (scheme.startswith(f"{jur}-") and _is_register_scheme(scheme))
+        ):
             out.setdefault(f"REGISTER:{jur}", value)
     return out
 

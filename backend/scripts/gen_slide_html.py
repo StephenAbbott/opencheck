@@ -107,7 +107,7 @@ def bods_to_cytoscape(statements: list[dict]) -> dict:
                 "label": rd.get("name") or rid[:20],
                 "type": "entity",
                 "entityType": (rd.get("entityType") or {}).get("type", "registeredEntity"),
-                "jurisdiction": (rd.get("incorporatedInJurisdiction") or {}).get("code", ""),
+                "jurisdiction": (rd.get("jurisdiction") or rd.get("incorporatedInJurisdiction") or {}).get("code", ""),
             }
 
         elif rt == "person":

@@ -1350,8 +1350,11 @@ def _map_corporate_psc(
 # fall through to a blank scheme with schemeName "GLEIF Registration Authorities List".
 # ---------------------------------------------------------------------------
 _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
-    # Estonia — Centre of Registers and Information Systems (RIK)
-    "RA000181": ("EE-RIK", "Centre of Registers and Information Systems (Estonia)"),
+    # Estonia — Commercial Register (Äriregister, RIK). EE-RIK until Phase
+    # 239, while the ariregister adapter wrote EE-ARIREGISTER for the same
+    # registry code, so the two never corroborated. The scheme follows the
+    # adapter (the Hong Kong / DC rule).
+    "RA000181": ("EE-ARIREGISTER", "Estonian e-Business Register (Äriregister)"),
     # France — Sirene (INSEE)
     "RA000189": ("FR-INSEE", "Sirene — Institut National de la Statistique et des Études Économiques (France)"),
     # France — Registre du Commerce et des Sociétés (Infogreffe). Its
@@ -1369,8 +1372,9 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000601": ("US-DC", "District of Columbia Department of Licensing and Consumer Protection"),
     # Netherlands — Kamer van Koophandel (KvK)
     "RA000463": ("NL-KVK", "Netherlands Chamber of Commerce (KvK)"),
-    # Sweden — Bolagsverket (Swedish Companies Registration Office)
-    "RA000544": ("SE-ON", "Swedish Companies Registration Office (Bolagsverket)"),
+    # Sweden — Bolagsverket (Swedish Companies Registration Office). SE-ON
+    # until Phase 239; the bolagsverket adapter writes SE-BLV.
+    "RA000544": ("SE-BLV", "Swedish Companies Registration Office (Bolagsverket)"),
     # Switzerland — Federal Statistical Office UID Register (uid.admin.ch)
     "RA000548": ("CH-FDJP", "Swiss Commercial Register (Federal Office of Justice)"),
     # Switzerland — Handelsregister / ZEFIX (Federal Office of Justice)
@@ -1422,7 +1426,121 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000567": ("UA-EDR", "EDRPOU — Unified State Register (Ukraine)"),
     "RA001026": ("UA-EDR", "EDRPOU — Unified State Register (Ukraine)"),
     "RA001027": ("UA-EDR", "EDRPOU — Unified State Register (Ukraine)"),
+    # ── Phase 239: every RA code an OpenCheck adapter dispatches on ──────
+    # Until then these fell through to ``scheme: ""`` — Equinor exported
+    # ``{"id": "923 609 016", "scheme": ""}`` — so a GLEIF record and the
+    # register's own record could not corroborate by identifier and FullCheck
+    # had no register hop for them. Each scheme is the one the adapter's own
+    # mapper writes for the number GLEIF files in ``registeredAs``, so the two
+    # meet (the rule RA000192 and the Hong Kong pair already follow). RA codes
+    # are the table in CLAUDE.md, verified live against GLEIF 2026-08-28.
+    # Norway — Register of Business Enterprises (Foretaksregisteret), and the
+    # Central Coordinating Register (Enhetsregisteret), which files the same
+    # nine-digit organisation number.
+    "RA000472": ("NO-BRC", "Brønnøysund Register Centre — organisation number (Norway)"),
+    "RA000473": ("NO-BRC", "Brønnøysund Register Centre — organisation number (Norway)"),
+    # Denmark — Central Business Register (Erhvervsstyrelsen)
+    "RA000170": ("DK-CVR", "Central Business Register — CVR number (Denmark)"),
+    # Ireland — Companies Registration Office
+    "RA000402": ("IE-CRO", "Companies Registration Office (Ireland)"),
+    # Latvia — Register of Enterprises (Uzņēmumu reģistrs)
+    "RA000423": ("LV-UR", "Latvian Register of Enterprises (UR)"),
+    # Lithuania — Register of Legal Entities (Registrų centras)
+    "RA000430": ("LT-JAR", "Register of Legal Entities (Lithuania)"),
+    # Austria — Firmenbuch (BM für Justiz)
+    "RA000017": ("AT-FB", "Firmenbuch (Austrian Commercial Register)"),
+    # Poland — National Court Register (KRS)
+    "RA000484": ("PL-KRS", "National Court Register — KRS number (Poland)"),
+    # Slovakia — Business Register; ``registeredAs`` is the IČO, which the
+    # rpo_slovakia mapper writes as SK-RPO.
+    "RA000526": ("SK-RPO", "Register of Legal Entities — IČO (Slovakia)"),
+    # Canada — federal Corporate Registry (Corporations Canada). The
+    # provincial registries (RA000073–RA000085) number differently and take
+    # the RA-code fallback below.
+    "RA000072": ("CA-CORP", "Corporations Canada — federal corporation number"),
+    # Croatia — Court Registry (Sudski registar); ``registeredAs`` is the MBS.
+    "RA000156": ("HR-MBS", "Court Registry — MBS (Croatia)"),
+    # Czechia — Commercial Register (Ministerstvo spravedlnosti); the IČO.
+    "RA000163": ("CZ-ICO", "Identification number — IČO (Czechia)"),
+    # Cyprus — Department of Registrar of Companies and Intellectual Property
+    "RA000161": ("CY-DRCOR", "Registrar of Companies (Cyprus)"),
+    # Finland — Business Information System (PRH / YTJ); the Y-tunnus.
+    "RA000188": ("FI-PRH", "Finnish Patent and Registration Office — Business ID (Y-tunnus)"),
+    # Malta — Malta Business Registry
+    "RA000443": ("MT-MBR", "Malta Business Registry"),
+    # Australia — ASIC's Register of Companies files the ACN; the Australian
+    # Business Register (ATO) files the ABN.
+    "RA000014": ("AU-ACN", "Australian Company Number (ASIC)"),
+    "RA000013": ("AU-ABN", "Australian Business Number (Australian Business Register)"),
+    # New Zealand — Companies Office
+    "RA000466": ("NZ-COH", "New Zealand Companies Register"),
+    # Brazil — Receita Federal CNPJ register
+    "RA000681": ("BR-RFB", "CNPJ — Receita Federal (Brazil)"),
+    # India — Ministry of Corporate Affairs (MCA21); the CIN.
+    "RA000394": ("IN-MCA", "Ministry of Corporate Affairs — CIN (India)"),
+    # Nigeria — Corporate Affairs Commission; the RC number.
+    "RA000469": ("NG-CAC", "Corporate Affairs Commission — RC number (Nigeria)"),
+    # Greece — General Commercial Registry (ΓΕΜΗ)
+    "RA000685": ("GR-GEMI", "General Commercial Registry (ΓΕΜΗ)"),
 }
+
+#: GLEIF's two "no Registration Authority List entry" codes — ``RA999999``
+#: (an authority not on the list, named in ``registeredAt.other``) and
+#: ``RA888888`` (none available). They take the RA-code fallback like any
+#: other unmapped code, with ``other`` as the scheme name where GLEIF gives one.
+_GLEIF_UNLISTED_RA_CODES: frozenset[str] = frozenset({"RA999999", "RA888888"})
+
+
+def normalise_registered_as(value: Any) -> str:
+    """GLEIF's ``registeredAs`` as a register writes it (Phase 239).
+
+    GLEIF files what each LEI issuer typed: "923 609 016" for a Norwegian
+    organisation number, "542 051 180" for a SIREN, "052 266 823" for an ACN.
+    A number that is all digits once its spaces go is written without them —
+    the form every one of those registers publishes, so a spaced copy never
+    met its own register's record. Anything else keeps single spaces, because
+    for some registers the space is part of the number (Malta's "C 83807").
+    """
+    text = " ".join(str(value or "").split())
+    compact = text.replace(" ", "")
+    return compact if compact.isdigit() else text
+
+
+def gleif_registration_scheme(
+    ra_id: str,
+    jurisdiction_code: str | None,
+    other: str | None = None,
+    registered_as: str = "",
+) -> tuple[str, str]:
+    """``(scheme, schemeName)`` for a number GLEIF files under ``ra_id``.
+
+    0. New Zealand's Companies Office (RA000466) files the 13-digit NZBN on
+       most records and the company number on the rest; the value says
+       which (sampled live, 24 Sept 2026).
+
+    1. An RA code in ``_GLEIF_RA_TO_ORG_ID`` → its org-id scheme.
+    2. An unmapped RA in a US state → the ISO 3166-2 subdivision code
+       (org-id.guide has no per-state entries; see ``_US_STATE_REGISTRY_NAMES``).
+    3. Anything else → **the RA code itself** (Stephen, 24 Sept 2026). A blank
+       scheme told a reader nothing and let no two statements corroborate;
+       ``REG-<country>`` was rejected because ``register_hops`` aliases it to
+       the country's one register, and a fund code or a provincial number
+       would then be looked up on a register that did not issue it. The RA
+       code is exactly what GLEIF asserts — which authority issued the number
+       — and cannot alias to anything.
+    """
+    ra = (ra_id or "").strip().upper()
+    if ra == "RA000466" and re.fullmatch(r"94\d{11}", registered_as or ""):
+        return "NZ-NZBN", "New Zealand Business Number"
+    if ra in _GLEIF_RA_TO_ORG_ID:
+        return _GLEIF_RA_TO_ORG_ID[ra]
+    jur = (jurisdiction_code or "").strip().upper()
+    if jur.startswith("US-") and ra not in _GLEIF_UNLISTED_RA_CODES:
+        return jur, _US_STATE_REGISTRY_NAMES.get(jur, f"{jur} company registry")
+    other_name = (other or "").strip()
+    if ra in _GLEIF_UNLISTED_RA_CODES and other_name:
+        return ra, other_name
+    return ra, f"GLEIF Registration Authorities List — {ra}"
 
 # ---------------------------------------------------------------------------
 # US state company registries
@@ -2344,22 +2462,16 @@ def _gleif_entity_statement(
     #     code as scheme (e.g. "US-DE") and look up the registry name in
     #     _US_STATE_REGISTRY_NAMES.  org-id.guide has no per-state US entries
     #     but ISO 3166-2 codes are unambiguous and machine-readable.
-    #  3. Anything else → blank scheme, "GLEIF Registration Authorities List".
-    registered_as = entity_block.get("registeredAs")
+    #  3. Anything else → the RA code itself (Phase 239; was a blank scheme).
+    #     See ``gleif_registration_scheme``; the number is written the way the
+    #     register writes it — ``normalise_registered_as``.
+    registered_as = normalise_registered_as(entity_block.get("registeredAs"))
     registered_at = entity_block.get("registeredAt") or {}
     ra_id = registered_at.get("id")
     if registered_as and ra_id:
-        if ra_id in _GLEIF_RA_TO_ORG_ID:
-            org_id_scheme, org_id_name = _GLEIF_RA_TO_ORG_ID[ra_id]
-        elif jurisdiction_code and jurisdiction_code.upper().startswith("US-"):
-            state_code = jurisdiction_code.upper()
-            org_id_scheme = state_code
-            org_id_name = _US_STATE_REGISTRY_NAMES.get(
-                state_code,
-                f"{state_code} company registry",
-            )
-        else:
-            org_id_scheme, org_id_name = "", "GLEIF Registration Authorities List"
+        org_id_scheme, org_id_name = gleif_registration_scheme(
+            ra_id, jurisdiction_code, registered_at.get("other"), registered_as
+        )
         identifiers.append(
             {
                 "id": registered_as,
@@ -3557,11 +3669,16 @@ def map_eiti(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         identifier["scheme"] = scheme[0]
         identifier["schemeName"] = f"{scheme[1]} (via EITI disclosure)"
     else:
-        identifier["schemeName"] = "National registry identifier (via EITI disclosure)"
+        # EITI does not say which register issued the number (CLAUDE.md, "What
+        # EITI does and does not publish as an identifier"), so the scheme
+        # names where it came from rather than guessing a register (Phase 239;
+        # it had none). Not ``REG-<country>``: that aliases into a register hop.
+        identifier["scheme"] = "EITI-IDENTIFICATION"
+        identifier["schemeName"] = "Identification given in an EITI disclosure"
 
     jurisdiction_obj = _country_obj(country) if country else None
-    jur_tuple: tuple[str, str] | None = (
-        (jurisdiction_obj["name"], jurisdiction_obj["code"])
+    jur_tuple: tuple[str, str | None] | None = (
+        (jurisdiction_obj["name"], jurisdiction_obj.get("code"))
         if jurisdiction_obj
         else None
     )
@@ -3610,8 +3727,8 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     country: str = (bundle.get("country") or "").strip().upper()
     jurisdiction_obj = _country_obj(country) if country else None
-    jur_tuple: tuple[str, str] | None = (
-        (jurisdiction_obj["name"], jurisdiction_obj["code"])
+    jur_tuple: tuple[str, str | None] | None = (
+        (jurisdiction_obj["name"], jurisdiction_obj.get("code"))
         if jurisdiction_obj
         else None
     )
@@ -3721,13 +3838,19 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
 # Wikirate Company-card identifier fields → BODS identifier schemes.
 # Only fields Wikirate itself publishes are asserted (corroboration rule).
-_WIKIRATE_IDENTIFIER_SCHEMES: dict[str, tuple[str | None, str]] = {
+_WIKIRATE_IDENTIFIER_SCHEMES: dict[str, tuple[str, str]] = {
     "legal_entity_identifier": ("XI-LEI", "Legal Entity Identifier"),
     "wikidata_id": ("WIKIDATA", "Wikidata"),
     "uk_company_number": ("GB-COH", "Companies House"),
     "sec_central_index_key": ("US-SEC-CIK", "SEC EDGAR CIK"),
     "australian_business_number": ("AU-ABN", "Australian Business Number"),
-    "open_corporates_id": (None, "OpenCorporates company number"),
+    # A company number with no jurisdiction — not OpenCorporates' own
+    # ``gb/00102498`` id, so not the ``OpenCorporates`` scheme. Named for what
+    # it is (Phase 239; it had no scheme at all), and deliberately not
+    # jurisdiction-prefixed, so it never bridges to a register's number.
+    "open_corporates_id": (
+        "OPENCORPORATES-COMPANY-NUMBER", "OpenCorporates company number, no jurisdiction"
+    ),
 }
 
 
@@ -3755,10 +3878,9 @@ def map_wikirate(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             value = value[0] if value else None
         if not value:
             continue
-        identifier = {"id": str(value), "schemeName": f"{scheme_name} (via Wikirate)"}
-        if scheme:
-            identifier["scheme"] = scheme
-        identifiers.append(identifier)
+        identifiers.append(
+            {"id": str(value), "scheme": scheme, "schemeName": f"{scheme_name} (via Wikirate)"}
+        )
 
     entity = make_entity_statement(
         source_id="wikirate",
@@ -3813,9 +3935,14 @@ def map_ted_eu(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 }
             )
         else:
+            # eForms says which field the number was filed in, never which
+            # register issued it, so the scheme names the field (Phase 239;
+            # it had none). Not jurisdiction-prefixed: it must not bridge to
+            # a register's number on a coincidence of digits.
             identifiers.append(
                 {
                     "id": value,
+                    "scheme": "EFORMS-BT-501",
                     "schemeName": (
                         "Organisation identifier — eForms BT-501 (via TED notice)"
                     ),
@@ -4005,9 +4132,14 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     vat = bundle.get("vat_number") or ""
     identifiers: list[dict[str, str]] = [
         {
+            # The registry code (registrikood). EE-KMKR until Phase 239 —
+            # but KMKR is Estonia's VAT number, which the next identifier
+            # carries; the registry code is the one this mapper already
+            # writes as EE-ARIREGISTER for corporate shareholders, and the
+            # scheme GLEIF's RA000181 now maps to.
             "id": registry_code,
-            "scheme": "EE-KMKR",
-            "schemeName": "Estonian e-Business Register (Äriregister / KMKR)",
+            "scheme": "EE-ARIREGISTER",
+            "schemeName": "Estonian e-Business Register (Äriregister)",
         }
     ]
     if vat:
@@ -6329,7 +6461,7 @@ def _emit_gem_interested_party(
     # (BODS: "jurisdiction is used to represent the particular state").
     party_country = _country_obj(party.get("country") or "")
     party_jur = (
-        (party_country["name"], party_country["code"]) if party_country else None
+        (party_country["name"], party_country.get("code")) if party_country else None
     )
 
     party_entity = make_entity_statement(
@@ -6455,8 +6587,8 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
         or ""
     ).strip()
     jurisdiction = _country_obj(country_raw) if country_raw else None
-    jur_tuple: tuple[str, str] | None = (
-        (jurisdiction["name"], jurisdiction["code"]) if jurisdiction else None
+    jur_tuple: tuple[str, str | None] | None = (
+        (jurisdiction["name"], jurisdiction.get("code")) if jurisdiction else None
     )
 
     entity_type = _gem_entity_type(gem_row, lei)

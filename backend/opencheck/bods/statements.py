@@ -361,7 +361,7 @@ def make_entity_statement(
     source_id: str,
     local_id: str,
     name: str,
-    jurisdiction: tuple[str, str] | None = None,
+    jurisdiction: tuple[str, str | None] | None = None,
     identifiers: Iterable[dict[str, str]] = (),
     founding_date: str | None = None,
     dissolution_date: str | None = None,
@@ -391,10 +391,12 @@ def make_entity_statement(
         "identifiers": list(identifiers),
     }
     if jurisdiction:
-        record_details["jurisdiction"] = {
-            "name": jurisdiction[0],
-            "code": jurisdiction[1],
-        }
+        # ``code`` is optional in BODS and, where present, must be ISO 3166-1
+        # alpha-2 or 3166-2 — a source that knows the country's name but not
+        # its code gives the name alone rather than a stand-in (Phase 239).
+        record_details["jurisdiction"] = {"name": jurisdiction[0]}
+        if jurisdiction[1]:
+            record_details["jurisdiction"]["code"] = jurisdiction[1]
     if founding_date:
         record_details["foundingDate"] = founding_date
     if dissolution_date:
@@ -771,9 +773,15 @@ def _country_code(name: str | None) -> str:
     if not name:
         return ""
     stripped = name.strip()
-    # Already a two-letter code — pass through normalised.
+    # Already a two-letter code — pass through normalised, if it is one.
+    # Phase 239: any two letters used to pass, so "UK" (not an ISO code; the
+    # UK's is GB) or a typo reached ``jurisdiction.code`` and the ISO-keyed
+    # risk lists silently skipped it.
     if len(stripped) == 2 and stripped.isalpha():
-        return stripped.upper()
+        upper = stripped.upper()
+        if upper == "UK":
+            return "GB"
+        return upper if pycountry.countries.get(alpha_2=upper) else ""
     # Overrides for names pycountry can't look up.
     _OVERRIDES: dict[str, str] = {
         # UK constituent nations and common CH sub-jurisdiction strings.
@@ -786,6 +794,8 @@ def _country_code(name: str | None) -> str:
         "great britain": "GB",
         "united kingdom": "GB",
         # Common abbreviations.
+        "bvi": "VG",
+        "british virgin islands": "VG",
         "uae": "AE",
         "usa": "US",
         "us": "US",
