@@ -48,8 +48,9 @@ def test_every_relationship_edge_kind_matches_graph_style():
     # possiblySame is a canvas-only suggestion edge; every other kind is drawn.
     assert set(ts) - {"possiblySame"} == set(diagram.EDGE_STYLE)
     for kind, py in diagram.EDGE_STYLE.items():
-        assert (py.color, py.text_color, py.dash, py.name) == (
+        assert (py.color, py.text_color, py.dash, py.name, py.ended_color) == (
             ts[kind]["color"], ts[kind]["textColor"], ts[kind]["dash"], ts[kind]["name"],
+            ts[kind]["endedColor"],
         ), f"{kind} differs between diagram.py and graphStyle.ts"
 
 
@@ -57,10 +58,31 @@ def test_every_dash_pattern_has_an_svg_form():
     assert {s.dash for s in diagram.EDGE_STYLE.values()} <= set(diagram._DASH_ATTRS)
 
 
-def test_ended_opacity_matches_graph_style():
+def test_ended_mark_matches_graph_style():
     body = _block(_read("graphStyle.ts"), "export const ENDED_EDGE")
-    m = re.search(r"lineOpacity:\s*([\d.]+)", body)
-    assert m and float(m.group(1)) == diagram._ENDED_OPACITY
+    fill = re.search(r'arrowFill:\s*"(\w+)"', body)
+    floor = re.search(r"minContrast:\s*([\d.]+)", body)
+    assert fill and fill.group(1) == diagram._ENDED_ARROW_FILL
+    assert floor and float(floor.group(1)) == diagram._ENDED_MIN_CONTRAST
+
+
+def _contrast_on_white(hex_colour: str) -> float:
+    def channel(c: int) -> float:
+        v = c / 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+    h = hex_colour.lstrip("#")
+    r, g, b = (channel(int(h[i:i + 2], 16)) for i in (0, 2, 4))
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return 1.05 / (lum + 0.05)
+
+
+def test_every_ended_colour_keeps_three_to_one_on_white():
+    """WCAG 1.4.11 (Phase 243): Phase 219's 0.5 opacity measured 1.75–2.26:1."""
+    for kind, st in diagram.EDGE_STYLE.items():
+        ended = _contrast_on_white(st.ended_color)
+        assert ended >= diagram._ENDED_MIN_CONTRAST, kind
+        assert ended <= _contrast_on_white(st.color), f"{kind}: ended is darker than current"
 
 
 def test_interest_labels_match_bods_graph():

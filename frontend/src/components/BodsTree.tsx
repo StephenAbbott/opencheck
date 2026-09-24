@@ -218,7 +218,8 @@ export default function BodsTree({
             )}
 
             {/* Interest cell. An ended edge (Phase 219) says so in words: the
-                canvas draws it faint, which has no text equivalent, and only
+                canvas draws it lighter with a hollow arrowhead, which has no
+                text equivalent, and only
                 the label's first line is shown here. */}
             {row.interestLabel && (
               <span className="flex-shrink-0 text-oo-meta text-oo-muted truncate max-w-[40%]">

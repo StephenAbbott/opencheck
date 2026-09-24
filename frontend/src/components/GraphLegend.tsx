@@ -14,7 +14,7 @@
 
 import { useMemo, useState } from "react";
 import type { RiskSignal } from "../lib/api";
-import { ENDED_EDGE, buildGraphLegend } from "../lib/graphStyle";
+import { EDGE_STYLE, buildGraphLegend } from "../lib/graphStyle";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
 import { IdentityTick } from "./ui/IdentityTick";
 
@@ -44,6 +44,7 @@ export default function GraphLegend({
   hasCollapsed,
   hasIdentityVerified = false,
   hasEnded = false,
+  hasClusters = false,
 }: {
   edgeCategories: Iterable<string>;
   signalsByNode: Map<string, RiskSignal[]>;
@@ -51,6 +52,7 @@ export default function GraphLegend({
   hasCollapsed: boolean;
   hasIdentityVerified?: boolean;
   hasEnded?: boolean;
+  hasClusters?: boolean;
 }) {
   const legend = useMemo(
     () =>
@@ -61,14 +63,17 @@ export default function GraphLegend({
         hasCollapsed,
         hasIdentityVerified,
         hasEnded,
+        hasClusters,
         signalName,
       }),
-    [edgeCategories, signalsByNode, hasPeople, hasCollapsed, hasIdentityVerified, hasEnded]
+    [edgeCategories, signalsByNode, hasPeople, hasCollapsed, hasIdentityVerified, hasEnded, hasClusters]
   );
-  // Signals can run to a dozen entries on a big FullCheck network. The edge and
-  // node marks are the ones a reader needs to parse the shape at all, so they
-  // are always visible; the signal marks sit behind a count they can open.
-  const [showSignals, setShowSignals] = useState(false);
+  // Signals can run to a dozen entries on a big FullCheck network, so they sit
+  // behind a count the reader can close. They start OPEN (Phase 243): shut, a
+  // node read "RP / RCS / N / Ex" with nothing on screen to say what the
+  // letters meant until the reader found "Show 4 signal marks" (Opus 5.5
+  // check, D-H3).
+  const [showSignals, setShowSignals] = useState(true);
 
   const total =
     legend.edges.length + legend.edgeModifiers.length + legend.nodes.length + legend.signals.length;
@@ -89,19 +94,18 @@ export default function GraphLegend({
           </span>
         ))}
 
-        {/* Phase 219 — the modifier chip shows the fade itself: a neutral rule
-            at the same line opacity the canvas uses, beside words that say
-            what the fade means. */}
+        {/* Phase 219 / 243 — the modifier chip shows the mark itself: a
+            lighter rule ending in a hollow arrowhead, beside words that say
+            what it means. */}
         {legend.edgeModifiers.map((m) => (
           <span
             key={m.key}
             className="flex items-center gap-1.5 text-oo-meta font-medium px-2 py-0.5 rounded-full border border-oo-rule bg-white text-oo-muted"
           >
-            <span
-              aria-hidden="true"
-              className="inline-block w-3.5 flex-shrink-0 border-t-2 border-oo-navy"
-              style={{ opacity: ENDED_EDGE.lineOpacity }}
-            />
+            <svg aria-hidden="true" width="18" height="8" viewBox="0 0 18 8" className="flex-shrink-0">
+              <line x1="0" y1="4" x2="11" y2="4" stroke={EDGE_STYLE.unknown.endedColor} strokeWidth="2" />
+              <path d="M 11 1 L 17 4 L 11 7 z" fill="white" stroke={EDGE_STYLE.unknown.endedColor} strokeWidth="1.2" />
+            </svg>
             {m.name}
             <span className="sr-only"> — {m.meaning}</span>
           </span>
@@ -119,6 +123,11 @@ export default function GraphLegend({
               />
             ) : n.key === "identityVerified" ? (
               <IdentityTick />
+            ) : n.key === "cluster" ? (
+              <span
+                aria-hidden="true"
+                className="inline-block h-3 w-4 rounded-sm border-2 border-double border-oo-blue bg-oo-soft flex-shrink-0"
+              />
             ) : (
               <span
                 aria-hidden="true"

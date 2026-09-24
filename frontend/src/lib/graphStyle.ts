@@ -96,7 +96,7 @@ export function signalStyle(code: string): SignalStyle {
 // Edge kinds — the same values the Cytoscape stylesheet applies
 //
 // The exported PDF/HTML diagram (backend/opencheck/reporting/diagram.py) draws
-// with copies of EDGE_STYLE and ENDED_EDGE.lineOpacity.
+// with copies of EDGE_STYLE (endedColor included) and ENDED_EDGE.arrowFill.
 // backend/tests/test_reporting_diagram_parity.py parses this file and fails
 // when the two differ, so change both together (Phase 221).
 // ---------------------------------------------------------------------------
@@ -112,6 +112,11 @@ export interface EdgeStyle {
   tint: string;
   /** The non-colour cue — so the legend is not colour-only (WCAG 1.4.1). */
   dash: "solid" | "dotted" | "dashed";
+  /** The line colour of an ENDED relationship of this kind (Phase 243): the
+   *  kind's colour mixed towards white, but never below 3:1 on white
+   *  (WCAG 1.4.11). `graphStyle.test.ts` and the backend parity test both
+   *  measure it. */
+  endedColor: string;
   name: string;
   /** What this kind of line asserts, in one clause. */
   meaning: string;
@@ -119,27 +124,27 @@ export interface EdgeStyle {
 
 export const EDGE_STYLE: Record<EdgeLegendKind, EdgeStyle> = {
   ownership: {
-    color: "#3b82f6", textColor: "#1d4ed8", tint: "#eff6ff", dash: "solid",
+    color: "#3b82f6", endedColor: "#5391f7", textColor: "#1d4ed8", tint: "#eff6ff", dash: "solid",
     name: "Ownership",
     meaning: "a reported holding in the company it points to",
   },
   control: {
-    color: "#e65100", textColor: "#9a3412", tint: "#fdf0e8", dash: "dotted",
+    color: "#e65100", endedColor: "#ea6d29", textColor: "#9a3412", tint: "#fdf0e8", dash: "dotted",
     name: "Control",
     meaning: "influence or control reported without a shareholding",
   },
   role: {
-    color: "#7c3aed", textColor: "#6d28d9", tint: "#f5f3ff", dash: "dashed",
+    color: "#7c3aed", endedColor: "#a77bf3", textColor: "#6d28d9", tint: "#f5f3ff", dash: "dashed",
     name: "Role",
     meaning: "a directorship or other officer appointment",
   },
   unknown: {
-    color: "#888888", textColor: "#595959", tint: "#f8fafc", dash: "solid",
+    color: "#888888", endedColor: "#929292", textColor: "#595959", tint: "#f8fafc", dash: "solid",
     name: "Unclassified",
     meaning: "a relationship the source did not categorise",
   },
   possiblySame: {
-    color: "#b45309", textColor: "#b45309", tint: "#fffbeb", dash: "dashed",
+    color: "#b45309", endedColor: "#b45309", textColor: "#b45309", tint: "#fffbeb", dash: "dashed",
     name: "Likely same entity",
     meaning: "same name and jurisdiction, no shared identifier — review, not a merge",
   },
@@ -148,30 +153,57 @@ export const EDGE_STYLE: Record<EdgeLegendKind, EdgeStyle> = {
 /**
  * An ended relationship (Phase 219) is not a sixth edge kind: an ended
  * shareholding is still ownership. It is a modifier on whichever kind it is —
- * the same colour and dash, drawn faint, with "ended <date>" as a second label
- * line.
+ * the same dash, a lighter tint of the same colour, a hollow arrowhead, and
+ * "ended <date>" as a second label line.
  *
- * Why a fade and not a line style: BOVS has no rule for historical
+ * Why lighter and not a line style: BOVS has no rule for historical
  * relationships, but its relevance rule lets less relevant parts be drawn "with
  * reduced prominence through tinting or transparency", and its completeness
  * rule forbids leaving them out. Every dash pattern is already spoken for
  * (dotted control, dashed role, dashed amber "likely same").
  *
- * `lineOpacity` fades the line and its arrowhead (Cytoscape draws both with
- * `line-opacity`) but never the label, whose text has to keep 4.5:1 (WCAG
- * 1.4.3). The label's date line is the non-colour cue (WCAG 1.4.1).
+ * Phase 219 drew it at `line-opacity: 0.5`, which measured 1.75–2.26:1 on
+ * white — under the 3:1 WCAG 1.4.11 asks of a line a reader has to see
+ * (Opus 5.5 check, A-M2). Phase 243 replaces the opacity with a per-kind
+ * `EdgeStyle.endedColor` tint held at ≥ `minContrast`, so the reduction in
+ * prominence is now small, and the hollow arrowhead is what says "ended" at a
+ * glance (WCAG 1.4.1: not colour alone). The label's date line says it in
+ * words, at full text contrast.
  */
 export const ENDED_EDGE = {
-  lineOpacity: 0.5,
+  /** Cytoscape `target-arrow-fill`; the PDF diagram draws the same. */
+  arrowFill: "hollow",
+  /** The floor every `endedColor` is held to, against white. */
+  minContrast: 3,
   name: "Ended relationship",
-  meaning: "drawn faint, with the date it ended — the source records that it has ceased",
+  meaning: "drawn lighter with a hollow arrowhead, and the date it ended — the source records that it has ceased",
 } as const;
+
+/** WCAG relative luminance of a `#rrggbb` colour. */
+function relativeLuminance(hex: string): number {
+  const h = hex.replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(h.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** The canvas background every line is measured against. */
+export const CANVAS_BACKGROUND = "#ffffff";
+
+/** WCAG contrast ratio of two `#rrggbb` colours (≥ 1); against the canvas
+ *  background when `b` is omitted. */
+export function contrastRatio(a: string, b: string = CANVAS_BACKGROUND): number {
+  const [la, lb] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (la + 0.05) / (lb + 0.05);
+}
 
 // ---------------------------------------------------------------------------
 // Node marks — the three distinctions the old legend never named
 // ---------------------------------------------------------------------------
 
-export type NodeMark = "person" | "collapsed" | "identityVerified";
+export type NodeMark = "person" | "collapsed" | "identityVerified" | "cluster";
 
 export const NODE_MARK: Record<NodeMark, { name: string; meaning: string }> = {
   person: { name: "Person", meaning: "drawn with a dashed outline; companies are solid" },
@@ -182,7 +214,23 @@ export const NODE_MARK: Record<NodeMark, { name: string; meaning: string }> = {
     name: "Identity verified with Companies House",
     meaning: "green tick — the register records an identity verification statement for this person",
   },
+  // Phase 243. Says what is inside and what is never inside, so a count is
+  // not read as "nothing to see here".
+  cluster: {
+    name: "Grouped siblings",
+    meaning:
+      "a box counting the leaf companies one source reports under the same parent — press its + to draw them; a node carrying a signal is never grouped, and the text version lists every one",
+  },
 };
+
+/** The grouped-siblings node (Phase 243) — Cytoscape takes colour strings. */
+export const CLUSTER_NODE = {
+  width: 150,
+  height: 56,
+  fill: "#eef1fb",   // oo.soft
+  border: "#3d30d4", // oo.blue
+  text: "#1a1a2e",   // the node-label ink
+} as const;
 
 // ---------------------------------------------------------------------------
 // Building the legend
@@ -228,6 +276,7 @@ export function buildGraphLegend({
   hasCollapsed,
   hasIdentityVerified = false,
   hasEnded = false,
+  hasClusters = false,
   signalName,
 }: {
   edgeCategories: Iterable<string>;
@@ -238,6 +287,8 @@ export function buildGraphLegend({
   hasIdentityVerified?: boolean;
   /** Any edge has ended (Phase 219). */
   hasEnded?: boolean;
+  /** Any sibling group is drawn as one node (Phase 243). */
+  hasClusters?: boolean;
   signalName: (code: string) => string;
 }): GraphLegendModel {
   const present = new Set(edgeCategories);
@@ -253,6 +304,7 @@ export function buildGraphLegend({
   if (hasPeople) nodes.push({ key: "person", ...NODE_MARK.person });
   if (hasCollapsed) nodes.push({ key: "collapsed", ...NODE_MARK.collapsed });
   if (hasIdentityVerified) nodes.push({ key: "identityVerified", ...NODE_MARK.identityVerified });
+  if (hasClusters) nodes.push({ key: "cluster", ...NODE_MARK.cluster });
 
   // Distinct codes actually badged on a node in this graph, worst first, so the
   // legend reads in the same order as the eye ranks the badges.

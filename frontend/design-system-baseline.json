@@ -14,11 +14,11 @@
     "button": 1
   },
   "src/components/BODSGraph.tsx": {
-    "hex": 25,
+    "hex": 17,
     "text": 0,
     "vocab": 0,
     "palette": 0,
-    "button": 9
+    "button": 8
   },
   "src/components/BehindTheScenesPage.tsx": {
     "hex": 0,

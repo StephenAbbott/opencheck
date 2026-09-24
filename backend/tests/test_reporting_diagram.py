@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from opencheck.reporting.diagram import source_diagram
+from opencheck.reporting.diagram import EDGE_STYLE, source_diagram
 
 
 def _bundle():
@@ -162,19 +162,24 @@ def _line_for(svg: str, colour: str) -> str:
     return next(m for m in re.findall(r"<line [^>]*/>", svg) if f'stroke="{colour}"' in m and "marker-end" in m)
 
 
-def test_ended_relationship_is_drawn_faint_with_its_colour_and_dated():
+def test_ended_relationship_is_drawn_lighter_hollow_headed_and_dated():
     rels, by_id = _ceased_bundle()
     d = source_diagram(rels, by_id, source_name="UK Companies House")
-    own_line = _line_for(d.svg, "#3b82f6")
-    assert 'stroke-opacity="0.5"' in own_line
+    # Phase 243: the ownership kind's ended tint, not a 0.5 opacity (which
+    # measured under 2.3:1 on white, WCAG 1.4.11).
+    own_line = _line_for(d.svg, EDGE_STYLE["ownership"].ended_color)
+    assert "stroke-opacity" not in d.svg
     assert 'url(#ar-ownership-ended)' in own_line
+    # The ended arrowhead is hollow: white fill, outlined in the ended tint.
+    marker = re.search(r'<marker id="ar-ownership-ended"[^>]*>(.*?)</marker>', d.svg).group(1)
+    assert 'fill="#fff"' in marker and EDGE_STYLE["ownership"].ended_color in marker
     assert "ended 18 June 2019" in d.svg
     # The current director edge is untouched.
     role_line = _line_for(d.svg, "#7c3aed")
-    assert "stroke-opacity" not in role_line and "url(#ar-role)" in role_line
-    # Nobody is dropped (BOVS completeness) and the legend names the fade.
+    assert "url(#ar-role)" in role_line
+    # Nobody is dropped (BOVS completeness) and the legend names the mark.
     assert "Jane Eleanor Smith" in d.svg
-    assert "Ended relationship" in d.svg
+    assert "Ended relationship (lighter, hollow arrowhead)" in d.svg
 
 
 def test_closed_record_without_a_date_says_ended_in_the_table():
@@ -191,7 +196,7 @@ def test_closed_record_without_a_date_says_ended_in_the_table():
 def test_open_record_with_a_past_end_date_is_ended_too():
     rels, by_id = _ceased_bundle(closed=False)
     d = source_diagram(rels, by_id, source_name="UK Companies House")
-    assert 'stroke-opacity="0.5"' in _line_for(d.svg, "#3b82f6")
+    assert "url(#ar-ownership-ended)" in _line_for(d.svg, EDGE_STYLE["ownership"].ended_color)
 
 
 def test_no_ended_legend_entry_when_nothing_has_ended():
@@ -260,7 +265,9 @@ def test_significant_influence_is_control_orange_and_dotted_as_on_screen():
     lines = [m for m in re.findall(r"<line [^>]*/>", d.svg) if "marker-end" in m]
     assert len(lines) == 2
     for line in lines:
-        assert f'stroke="{control.color}"' in line
+        # One of the two ended: its own lighter control tint (Phase 243).
+        colour = control.ended_color if "-ended)" in line else control.color
+        assert f'stroke="{colour}"' in line
         assert 'stroke-dasharray="0.5 6"' in line and 'stroke-linecap="round"' in line
     assert "#7c3aed" not in d.svg  # no purple anywhere: nothing here is a role
     # Label text uses the darkened label colour, not the line colour (WCAG 1.4.3).
@@ -270,7 +277,7 @@ def test_significant_influence_is_control_orange_and_dotted_as_on_screen():
 def test_legend_lists_only_the_kinds_drawn():
     rels, by_id = _saderat_bundle()
     d = source_diagram(rels, by_id, source_name="UK Companies House")
-    assert _legend(d.svg) == ["Control", "Ended relationship (drawn faint)"]
+    assert _legend(d.svg) == ["Control", "Ended relationship (lighter, hollow arrowhead)"]
     rels, by_id = _bundle()
     d = source_diagram(rels, by_id, source_name="UK Companies House")
     assert _legend(d.svg) == ["Ownership", "Role"]

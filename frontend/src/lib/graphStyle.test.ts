@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   EDGE_STYLE,
   ENDED_EDGE,
+  CANVAS_BACKGROUND,
+  contrastRatio,
   NODE_MARK,
   SIGNAL_STYLE,
   buildGraphLegend,
@@ -127,12 +129,29 @@ describe("buildGraphLegend", () => {
     expect(legend.edges.map((e) => e.key)).toEqual(["ownership"]);
   });
 
-  it("fades an ended edge visibly but does not make it vanish", () => {
+  it("draws an ended edge lighter but never below 3:1 on white (Phase 243)", () => {
     // BOVS completeness: no party may be omitted. A line too faint to see
-    // omits it in all but name.
-    expect(ENDED_EDGE.lineOpacity).toBeGreaterThanOrEqual(0.25);
-    expect(ENDED_EDGE.lineOpacity).toBeLessThanOrEqual(0.5);
-    expect(ENDED_EDGE.meaning.length).toBeGreaterThan(10);
+    // omits it in all but name — and at line-opacity 0.5 (Phase 219) every
+    // kind measured 1.75–2.26:1, under WCAG 1.4.11's 3:1.
+    for (const [kind, st] of Object.entries(EDGE_STYLE)) {
+      if (kind === "possiblySame") continue; // a suggestion edge never ends
+      const ended = contrastRatio(st.endedColor);
+      expect(ended, kind).toBeGreaterThanOrEqual(ENDED_EDGE.minContrast);
+      // Lighter than (or, where the kind has no headroom, equal to) the
+      // current line — never darker, which would invert the emphasis.
+      expect(ended, kind).toBeLessThanOrEqual(contrastRatio(st.color));
+    }
+    // The non-colour cue.
+    expect(ENDED_EDGE.arrowFill).toBe("hollow");
+    expect(ENDED_EDGE.meaning).toMatch(/hollow arrowhead/);
+  });
+
+  it("measures contrast the WCAG way", () => {
+    expect(contrastRatio(CANVAS_BACKGROUND, CANVAS_BACKGROUND)).toBeCloseTo(1, 5);
+    // Symmetric, and the label colours the stylesheet uses clear 4.5:1.
+    const [a, b] = [EDGE_STYLE.ownership.textColor, EDGE_STYLE.ownership.color];
+    expect(contrastRatio(a, b)).toBeCloseTo(contrastRatio(b, a), 10);
+    for (const st of Object.values(EDGE_STYLE)) expect(contrastRatio(st.textColor)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("renders nothing at all for an empty graph", () => {
