@@ -59,6 +59,8 @@ from ..verdict import build_verdict
 from ..ra_codes import RA_BY_COUNTRY, ra_code_for
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
+from ..risk import merge_state_controlled as _risk_merge_state_controlled
+from ..bods.state_bodies import classify_government_entities
 from ..ratelimit import default_tier, limiter, lookup_tier
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 from ..sources.eiti import us_ein_for_lei as eiti_us_ein_for_lei
@@ -352,6 +354,9 @@ async def deepen(
             bods = unique_statements(bundle)
             issues = validate_shape(bods)
 
+    # Phase 240: an owner whose LEI GLEIF files as a government is a state
+    # body, whichever source named it — before the risk rules read the types.
+    bods = classify_government_entities(bods, source_id=source)
     info = adapter.info
     license_notice = _license_notice_for(info, raw)
     signals = [s.to_dict() for s in assess_bundle(source, raw, bods, hit_id=hit_id)]
@@ -956,6 +961,9 @@ def _prefer_deeper_chain(
 
 _COLLAPSE_RESOLVERS = {
     "COMPLEX_OWNERSHIP_LAYERS": _prefer_deeper_chain,
+    # Phase 240: pools every source's state parties and regroups them by
+    # state, so one 67% holding named by two sources is one holding.
+    "STATE_CONTROLLED": _risk_merge_state_controlled,
 }
 
 
@@ -980,8 +988,14 @@ _COLLAPSE_RESOLVERS = {
 # confidence rather than depth, so the number shown would be arbitrary.
 # COMPLEX_OWNERSHIP_LAYERS keeps its global collapse and resolves the
 # conflict with ``_prefer_deeper_chain`` above instead.
+#
+# STATE_CONTROLLED (Phase 240) collapses globally too, and its resolver
+# COMBINES rather than picks: ``merge_state_controlled`` pools every
+# source's ``evidence.matches``, so no node loses its badge — the one
+# condition the paragraph above sets for living here.
 _STRUCTURAL_SIGNAL_CODES = {
     "COMPLEX_OWNERSHIP_LAYERS",
+    "STATE_CONTROLLED",
     "COMPLEX_CORPORATE_STRUCTURE",
     "POSSIBLE_OBFUSCATION",
     "SANCTIONED_SECURITY",
@@ -2489,7 +2503,9 @@ async def _register_one_layer(
         if not isinstance(raw, dict) or raw.get("is_stub"):
             return [], []
         with _provenance.mapping_provenance(prov):
-            bods = unique_statements(mapper(raw))
+            bods = classify_government_entities(
+                unique_statements(mapper(raw)), source_id=hop.source_id
+            )
         bundle_signals = [
             s.to_dict() for s in assess_bundle(hop.source_id, raw, bods, hit_id=local_id)
         ]
@@ -3232,6 +3248,7 @@ async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
             bods = unique_statements(bundle)
             issues = validate_shape(bods)
 
+    bods = classify_government_entities(bods, source_id=source_id)  # Phase 240, as in _deepen
     license_notice = _license_notice_for(adapter.info, raw)
     signals = [s.to_dict() for s in assess_bundle(source_id, raw, bods, hit_id=hit_id)]
     return {
