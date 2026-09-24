@@ -5,7 +5,7 @@ import { trackEvent } from "../../lib/analytics";
 import { BASE_URL, type PrimaryListing } from "../../lib/api";
 import { LISTING_EXPLANATION, LISTING_LABEL, listingView } from "../../lib/listing";
 import { Explain } from "../ui/Explain";
-import type { StatusChip } from "../../lib/subjectProfile";
+import type { LeiRegistrationChip, StatusChip } from "../../lib/subjectProfile";
 import { chipClasses } from "../ui/Chip";
 
 
@@ -37,6 +37,7 @@ export function SubjectCard({
   identifierSources = 0,
   onShowIdentifiers,
   status = null,
+  leiRegistration = null,
   pdfBusy = false,
   mdBusy = false,
   onPdf,
@@ -79,6 +80,12 @@ export function SubjectCard({
    *  and address live in "Is this the right company?", which the badge
    *  beside this chip opens. Null renders nothing — absence is not active. */
   status?: StatusChip | null;
+  /** Phase 242: the LEI record's own status, from
+   *  `lib/subjectProfile.leiRegistrationChip` — null for ISSUED and for no
+   *  status, so it renders only when the LEI has lapsed, retired, merged…
+   *  Its own chip, beside the LEI it qualifies, in the `context` tone: it is
+   *  a different claim from register status and must not read as one. */
+  leiRegistration?: LeiRegistrationChip | null;
   /** Report downloads. They live on App because the payload they embed (the
    *  narrative and its dispositions) is produced by a different card. */
   pdfBusy?: boolean;
@@ -163,6 +170,7 @@ export function SubjectCard({
               onClick={onShowIdentifiers}
               className="hidden sm:inline-flex gap-1 rounded-full px-2.5 py-0.5"
             />
+            <LeiRegistrationBadge chip={leiRegistration} className="hidden sm:inline-flex" />
             <RegisterStatusChip status={status} className="hidden sm:inline-flex" />
           </p>
           {/* Phase 236: the primary listing, attributed to PermID. Its own
@@ -272,6 +280,11 @@ export function SubjectCard({
       {/* Same placement rule as the badge: its own line under the header row
           on mobile, so it can never squeeze the name; inline beside the LEI
           on sm+, where the hidden instance is display:none. */}
+      {leiRegistration && (
+        <div className="sm:hidden mt-2">
+          <LeiRegistrationBadge chip={leiRegistration} />
+        </div>
+      )}
       <div className="sm:hidden mt-2">
         <RegisterStatusChip status={status} />
       </div>
@@ -317,6 +330,25 @@ export function SubjectCard({
  * ended. Never the risk tone: dissolved is a fact about the company, not a
  * finding against it. The full sentence is read to assistive technology.
  */
+/** The LEI record's status (Phase 242). Visible label + the full sentence
+ *  for assistive technology — the same pattern as the register chip beside
+ *  it; the identity band's "LEI registration" row says it in full on screen. */
+function LeiRegistrationBadge({
+  chip,
+  className = "",
+}: {
+  chip: LeiRegistrationChip | null;
+  className?: string;
+}) {
+  if (!chip) return null;
+  return (
+    <span className={`${chipClasses(chip.tone, "sm", className)} font-medium`.trim()}>
+      <span aria-hidden="true">{chip.label}</span>
+      <span className="sr-only">{chip.detail}</span>
+    </span>
+  );
+}
+
 function RegisterStatusChip({
   status,
   className = "",

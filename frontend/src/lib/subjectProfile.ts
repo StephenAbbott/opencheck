@@ -25,7 +25,12 @@
  *   you find*.
  */
 
-import type { SubjectProfile, SubjectProfileFact, SubjectProfileStatus } from "./api";
+import type {
+  LeiRegistration,
+  SubjectProfile,
+  SubjectProfileFact,
+  SubjectProfileStatus,
+} from "./api";
 import { sourceLabel, sourceList } from "./vocab";
 
 export type StatusChipTone = "neutral" | "warn" | "terminal";
@@ -79,6 +84,84 @@ export function statusChip(
   };
 }
 
+// ---------------------------------------------------------------------------
+// The LEI record's own status (Phase 242)
+// ---------------------------------------------------------------------------
+//
+// GLEIF's `registration.status` says whether the LEI *record* is kept up, not
+// whether the company exists — that is register status, above. So it gets its
+// own chip beside the LEI, in the `context` tone (a fact about the record, not
+// a finding, and visibly a different claim from the neutral register chip),
+// and only for a status other than ISSUED (Stephen, 24 Sept 2026). The row in
+// the identity band always states it. Mirrors `opencheck/lei_registration.py`.
+
+/** GLEIF LEI-CDF RegistrationStatus → the word a reader sees. */
+export const LEI_REGISTRATION_LABEL: Record<string, string> = {
+  ISSUED: "Issued",
+  LAPSED: "Lapsed",
+  RETIRED: "Retired",
+  MERGED: "Merged",
+  ANNULLED: "Annulled",
+  DUPLICATE: "Duplicate",
+  CANCELLED: "Cancelled",
+  TRANSFERRED: "Transferred",
+  PENDING_TRANSFER: "Pending transfer",
+  PENDING_ARCHIVAL: "Pending archival",
+  PENDING_VALIDATION: "Pending validation",
+};
+
+/** The clause every non-ISSUED statement ends on — the reading this exists
+ *  to stop is "lapsed LEI = dissolved company". */
+export const LEI_NOT_ENTITY_STATUS = "the LEI record's status, not the company's";
+
+export function leiRegistrationLabel(status: string): string {
+  const s = status.toUpperCase();
+  return (
+    LEI_REGISTRATION_LABEL[s] ??
+    s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, " ")
+  );
+}
+
+export interface LeiRegistrationChip {
+  label: string;
+  tone: "context";
+  /** The full claim — the server's frozen sentence when there is one. */
+  detail: string;
+}
+
+/** The chip beside the LEI, or null for ISSUED and for no status at all.
+ *  "LEI lapsed since 19 Oct 2017" — a lapse takes effect on the renewal date
+ *  that was missed, the one date GLEIF publishes for it. */
+export function leiRegistrationChip(
+  reg: Pick<LeiRegistration, "status"> & Partial<LeiRegistration> | null | undefined,
+): LeiRegistrationChip | null {
+  if (!reg || !reg.status) return null;
+  const status = reg.status.toUpperCase();
+  if (status === "ISSUED") return null;
+  const word = leiRegistrationLabel(status).toLowerCase();
+  const since = status === "LAPSED" && reg.since ? ` since ${formatProfileDate(reg.since)}` : "";
+  return {
+    label: `LEI ${word}${since}`,
+    tone: "context",
+    detail:
+      reg.sentence ||
+      `GLEIF records this LEI as ${word}${since}. This is ${LEI_NOT_ENTITY_STATUS}.`,
+  };
+}
+
+/** The identity-band row value — mirrors `lei_registration.short_line`, plus
+ *  the not-the-company clause where the status is not ISSUED. */
+export function leiRegistrationLine(reg: LeiRegistration | null | undefined): string | null {
+  if (!reg || !reg.status) return null;
+  const status = reg.status.toUpperCase();
+  const label = reg.label || leiRegistrationLabel(status);
+  const renewal = reg.next_renewal_date;
+  let line = label;
+  if (status === "LAPSED" && renewal) line = `${label} — renewal was due ${formatProfileDate(renewal)}`;
+  else if (status === "ISSUED" && renewal) line = `${label} — renews ${formatProfileDate(renewal)}`;
+  return status === "ISSUED" ? line : `${line} · ${LEI_NOT_ENTITY_STATUS}`;
+}
+
 export interface ProfileRow {
   label: string;
   value: string;
@@ -125,6 +208,13 @@ export function profileRows(
               ? ` — register status: “${profile.register_status.raw}”`
               : ""),
           sources: `Source: ${sourceList(profile.register_status.sources, names)}`,
+        }
+      : null,
+    profile.lei_registration && leiRegistrationLine(profile.lei_registration)
+      ? {
+          label: "LEI registration",
+          value: leiRegistrationLine(profile.lei_registration) as string,
+          sources: `Source: ${sourceList([profile.lei_registration.source_id || "gleif"], names)}`,
         }
       : null,
     factRow("Incorporated", profile.founding_date, formatProfileDate, names),

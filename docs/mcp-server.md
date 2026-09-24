@@ -84,6 +84,8 @@ minutes; a re-run inside the 15-minute replay window is free.
   20 are counted in `overflow`, never silently dropped.
 - **`rows[]`** in paste order: `lei`, `legal_name`, `jurisdiction`,
   `register_status` (Phase 151 liveness, from the subject profile),
+  `lei_registration` (`{status, since}` — the LEI record's GLEIF status,
+  Phase 242; null when the anchor carried none, never read as ISSUED),
   `verdict`, `risk_count` / `risk_codes` and `context_count` / `context_codes`
   (the Phase 153 kind split), `coverage {applicable, answered}` with the GLEIF
   anchor counted (Phase 156), `degraded` + `degraded_sources`, `licensing`,
@@ -127,6 +129,15 @@ fetch `/batch-export` directly.
   `registered_address`, each listing the sources that state the value and
   how many of them are independent. Facts, never findings — a dissolved
   company is reported as dissolved; whether that matters is the reader's call.
+  Since Phase 242 it also carries `lei_registration`: the LEI **record's**
+  status from GLEIF's `registration` block (`status` ISSUED / LAPSED /
+  RETIRED / MERGED / ANNULLED / …, `flag` when not ISSUED, `since` — for a
+  lapse, the renewal date that was missed — `next_renewal_date`,
+  `last_update_date`, `initial_registration_date`, `managing_lou` and a
+  `sentence`). It is not the company's status and never changes
+  `register_status`; GLEIF publishes no "last validated" date, so none is
+  given. A status other than ISSUED is also said in `summary`, right after
+  the LEI.
 - **`licensing`** — the composite licence verdict over the sources that
   returned data (`commercial_use`, `attribution_required`, `share_alike`,
   `headline`, `warnings`), computed by the same `licensing.assess` the web

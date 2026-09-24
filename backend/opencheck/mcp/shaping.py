@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .. import lei_registration as _lei_reg
 from ..coverage import coverage_sentence, source_coverage
 from ..sources import REGISTRY
 
@@ -253,6 +254,19 @@ def _coverage(payload: Any) -> dict[str, Any]:
     )
 
 
+def _lei_registration(payload: Any) -> dict[str, Any] | None:
+    """The profile's ``lei_registration`` plus its row ``line``, or ``None``.
+
+    Read from the frozen ``subject_profile`` (Phase 242), never re-fetched, so
+    a saved report says what GLEIF recorded on the day of the run.
+    """
+    profile = getattr(payload, "subject_profile", None) or {}
+    reg = profile.get("lei_registration") if isinstance(profile, dict) else None
+    if not isinstance(reg, dict) or not reg.get("status"):
+        return None
+    return {**reg, "line": _lei_reg.short_line(reg)}
+
+
 def shape_lookup(payload: Any) -> dict[str, Any]:
     """Flatten a ``LookupResponse`` into a compact MCP tool result."""
     bods = payload.bods or []
@@ -301,9 +315,20 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         if listing and listing.get("line")
         else ""
     )
+    # Phase 242: the LEI record's own status, said up front when it is not
+    # ISSUED — a lapsed LEI is the first thing a reader of the identifier
+    # needs, and it is not a finding, so it never joins the risk codes.
+    lei_reg = _lei_registration(payload)
+    lei_reg_note = (
+        f"LEI registration (GLEIF): {lei_reg['line']} — the status of the LEI "
+        "record, not of the company. "
+        if lei_reg and lei_reg.get("flag") and lei_reg.get("line")
+        else ""
+    )
     summary = (
         f"{payload.legal_name or 'Entity'} (LEI {payload.lei}"
         f"{', ' + payload.jurisdiction if payload.jurisdiction else ''}). "
+        f"{lei_reg_note}"
         f"Risk signals: {risk_codes}.{context_note} "
         f"{coverage_sentence(coverage)}; "
         f"{len(bods)} BODS statements ({relationships} ownership/control relationships)."
@@ -393,6 +418,14 @@ def shape_batch_row(payload: Any) -> dict[str, Any]:
             else None
         ),
         "verdict": getattr(payload, "verdict", None),
+        # Phase 242: the LEI record's status and, for a lapse, its date —
+        # {"status": "LAPSED", "since": "2017-10-19"} — or null when the
+        # anchor carried none. Never read null as ISSUED.
+        "lei_registration": (
+            {k: lei_reg[k] for k in ("status", "since") if lei_reg.get(k) is not None}
+            if (lei_reg := _lei_registration(payload))
+            else None
+        ),
         # Phase 236: "London Stock Exchange · SHEL" from PermID, or null when
         # not checked — never "not listed".
         "primary_listing": (_listing(payload) or {}).get("line"),

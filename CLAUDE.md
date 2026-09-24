@@ -2089,6 +2089,36 @@ shapes as read from Wikidata, OpenSanctions and GLEIF on 24 Sept 2026.
 
 ---
 
+## The LEI's own registration status is not the company's (Phase 242)
+
+`opencheck/lei_registration.py` + `lib/subjectProfile.ts`
+(`leiRegistrationChip`, `leiRegistrationLine`). Found by the Opus 5.5 check
+(DQ-4): American Foreign Policy Council (`549300W96W2VKSMVDF81`) has been
+LAPSED since 19 Oct 2017 and only the SEO entity page said so.
+
+- **Read once, from the anchor.** `_resolve_ctx` reads GLEIF's
+  `registration` block off the record it already holds — live API, Golden
+  Copy mirror and snapshot all carry it — into `ctx.lei_registration`; a
+  curated Open Ownership bundle has none, so the live identifier call fills
+  it. It rides on the `subject_profile` event as `lei_registration`, frozen
+  with the run, so a saved report says what GLEIF recorded that day.
+- **Never liveness.** `register_status` (from `entity.status`) is unchanged;
+  `mapper.py`'s comment that LEI status ≠ entity status stands. Nothing here
+  reaches `risk.py` or the verdict.
+- **Only GLEIF's own dates** (Stephen, 24 Sept 2026). GLEIF has no "last
+  validated" field. A lapse is dated by `nextRenewalDate` — the renewal that
+  was missed; no other status gets a `since`. `lastUpdateDate` is "GLEIF last
+  updated the record", never a validation (AFPC's reads 2026, nine years
+  after the lapse).
+- **ISSUED is stated, not flagged.** The `context`-tone chip beside the LEI
+  (subject card, batch row) renders only when `flag` (status ≠ ISSUED); the
+  identity-band row "LEI registration", the MCP `profile`, the batch row's
+  `lei_registration` + two CSV columns, and the report's Identifiers table
+  always state it. The MCP `summary` and every non-ISSUED sentence say it is
+  the LEI record's status, not the company's.
+
+---
+
 ## Provenance is checked behaviourally, not by grepping (Phases 229–230)
 
 Liveness is declared in **two** places and an adapter can do one without the
