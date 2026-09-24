@@ -133,7 +133,7 @@ from typing import Any
 
 from .bods import jurisdiction as _bods_jurisdiction
 from .bods.lifecycle import statement_lifecycle
-from .bods.mapper import GLEIF_UNDISCLOSED_REASONS
+from .bods.mapper import GLEIF_UNDISCLOSED_REASONS, SOURCE_NAMES
 from .bods.mapper import _stable_id as _bods_stable_id
 from .bods.nominees import NOMINEE_NATURE_CODES, is_nominee_nature
 from .bods.refs import Iterable
@@ -167,10 +167,14 @@ OPAQUE_OWNERSHIP = "OPAQUE_OWNERSHIP"
 GLEIF_REPORTING_EXCEPTION = "GLEIF_REPORTING_EXCEPTION"
 
 # Code — ownership structure (BODS-derived). Fires when an owner / controlling
-# party is modelled as a state or state body (BODS entityType 'state'/'stateBody',
-# per the SOE modelling requirement). Presence-only, corroborating — currently
-# sourced from Wikidata, which is crowd-sourced and famous-names-only, so its
-# absence means nothing. Medium confidence; not part of the AMLA composite.
+# party above the subject is modelled as a state or state body (BODS entityType
+# 'state'/'stateBody', per the SOE modelling requirement). Presence-only,
+# corroborating — the state nodes come from Wikidata, GEM, the EITI SOE
+# database, OpenSanctions' public bodies and (Phase 240) any owner whose LEI
+# GLEIF files as a resident government entity; every one covers part of the
+# world, so its absence means nothing. One signal per lookup, one holding per
+# state (``merge_state_controlled``). Medium confidence; not part of the AMLA
+# composite.
 STATE_CONTROLLED = "STATE_CONTROLLED"
 
 # Codes — AMLA CDD RTS (BODS-derived)
@@ -1808,12 +1812,198 @@ _STATE_SOURCE_CAVEATS: dict[str, str] = {
     "wikidata": "Wikidata-sourced — crowd-sourced, famous names only",
     "climatetrace": "Global Energy Monitor ownership data — energy sector only",
     "eiti_soe": "EITI State-Owned Enterprises Database — EITI countries only",
+    "opensanctions": "OpenSanctions — public bodies as OpenSanctions types them",
 }
+
+#: Phase 240: the ``entityType.details`` a party carries when OpenCheck typed
+#: it a state body from GLEIF's entity category rather than from the source
+#: that named it (``bods/state_bodies.py``). The caveat then names both.
+GLEIF_GOVERNMENT_DETAILS_PREFIX = "Resident government entity in GLEIF"
 
 
 def _state_source_caveat(source_id: str) -> str:
     """Human-readable coverage caveat for the source that produced the node."""
     return _STATE_SOURCE_CAVEATS.get(source_id, f"sourced from {source_id}")
+
+
+def _state_code(stmt: dict[str, Any]) -> str | None:
+    """The ISO 3166-1 country a state / state body belongs to, if stated.
+
+    A subdivision code (``US-TX``) counts as its country: Texas and a US
+    federal agency are both the United States for the purpose of saying
+    "the state holds X%". Only the code is read, never a name — two sources
+    naming Norway differently must not become two states, and a name alone
+    is exactly the stand-in Phase 239 forbids.
+    """
+    code = (_bods_jurisdiction.read(stmt) or {}).get("code") or ""
+    code = str(code).strip().upper()
+    if len(code) >= 2 and code[:2].isalpha() and (len(code) == 2 or code[2] == "-"):
+        return code[:2]
+    return None
+
+
+def _state_name(code: str) -> str:
+    try:
+        import pycountry
+
+        country = pycountry.countries.get(alpha_2=code)
+    except Exception:  # noqa: BLE001 — a name is cosmetic
+        country = None
+    return getattr(country, "name", None) or code
+
+
+def _share_of(stmt: dict[str, Any]) -> dict[str, Any] | None:
+    """The first stated share on a relationship, as published."""
+    for interest in _interests(stmt):
+        share = interest.get("share")
+        if isinstance(share, dict) and any(
+            share.get(k) is not None for k in ("exact", "minimum", "maximum")
+        ):
+            keys = ("exact", "minimum", "maximum")
+            return {k: share[k] for k in keys if share.get(k) is not None}
+    return None
+
+
+def _share_text(share: dict[str, Any] | None) -> str | None:
+    if not share:
+        return None
+
+    def pct(v: Any) -> str:
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return str(v)
+        return f"{f:g}%"
+
+    if share.get("exact") is not None:
+        return pct(share["exact"])
+    lo, hi = share.get("minimum"), share.get("maximum")
+    if lo is not None and hi is not None:
+        return f"{pct(lo)[:-1]}–{pct(hi)}"
+    return f"at least {pct(lo)}" if lo is not None else f"up to {pct(hi)}"
+
+
+def _state_holdings(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Group state parties into one holding per state (Phase 240).
+
+    Two sources that name the same stake by different bodies — OpenSanctions'
+    "FINANSDEPARTEMENTET" and Wikidata's "Ministry of Trade, Industry and
+    Fisheries", both 67% of Equinor — are one state holding, listed with each
+    body and its source. Grouped on the state's ISO code only; a party whose
+    source gives no code stays a holding of its own. **No identity is
+    claimed** between the bodies (Stephen, 24 Sept 2026: group in the signal;
+    the graph keeps every node): they are grouped as the same *state*, which
+    is what the signal asserts, not merged as the same body.
+    """
+    groups: dict[str, dict[str, Any]] = {}
+    for m in matches:
+        key = m.get("state") or f"node:{m['statement_id']}"
+        g = groups.setdefault(key, {
+            "state": m.get("state"),
+            "state_name": m.get("state_name") or m.get("name"),
+            "parties": [],
+        })
+        g["parties"].append(m)
+    out: list[dict[str, Any]] = []
+    for g in groups.values():
+        parties = sorted(
+            g["parties"],
+            key=lambda m: (not m["current"], m.get("name") or "", m.get("source_id") or ""),
+        )
+        current = [m for m in parties if m["current"]]
+        shares: list[str] = []
+        for m in current:
+            text = _share_text(m.get("share"))
+            if text and text not in shares:
+                shares.append(text)
+        out.append({
+            "state": g["state"],
+            "state_name": g["state_name"],
+            "current": bool(current),
+            "shares": shares,
+            "sources": sorted({m["source_id"] for m in parties if m.get("source_id")}),
+            "parties": parties,
+        })
+    out.sort(key=lambda h: (not h["current"], h["state_name"] or ""))
+    return out
+
+
+def _holding_clause(holding: dict[str, Any]) -> str:
+    """"Norway, 67% — FINANSDEPARTEMENTET (OpenSanctions); Ministry … (Wikidata)"."""
+    def label(m: dict[str, Any]) -> str:
+        src = SOURCE_NAMES.get(m.get("source_id") or "", m.get("source_id") or "")
+        text = f"{m.get('name') or m['statement_id']} ({src})" if src else str(m.get("name"))
+        return text if m["current"] else f"formerly {text}"
+
+    who = "; ".join(label(m) for m in holding["parties"])
+    if not holding["state"]:
+        # No country to group on: the party is the holding, named once.
+        return who
+    head = holding["state_name"]
+    if holding["shares"]:
+        head += ", " + " or ".join(holding["shares"])
+    return f"{head} — {who}"
+
+
+def _state_controlled_from_matches(
+    matches: list[dict[str, Any]],
+    *,
+    source_id: str,
+    hit_id: str,
+    subject_node: str,
+) -> RiskSignal | None:
+    """One STATE_CONTROLLED signal from its state parties, however many
+    sources they came from — the per-source rule and the lookup's merge
+    (``merge_state_controlled``) both end here, so the sentence and the
+    evidence cannot differ between a source's drawer and the report."""
+    if not matches:
+        return None
+    holdings = _state_holdings(matches)
+    ended_only = [
+        rid
+        for h in holdings
+        if not h["current"]
+        for m in h["parties"]
+        for rid in m.get("relationship_statement_ids") or ()
+    ]
+    qualifier = f" ({INCLUDING_ENDED})" if ended_only else ""
+    anchor = next((m for m in matches if m["current"]), matches[0])
+    sources = sorted({m["source_id"] for m in matches if m.get("source_id")})
+    caveats = [_state_source_caveat(sid) for sid in sources]
+    if any(
+        str(m.get("basis") or "").startswith(GLEIF_GOVERNMENT_DETAILS_PREFIX)
+        for m in matches
+    ):
+        caveats.append("state body per its GLEIF entity category")
+    # One sentence per holding: party names carry commas ("Ministry of Trade,
+    # Industry and Fisheries"), so the holdings cannot share a list.
+    clauses = " ".join(f"{_holding_clause(h)}." for h in holdings)
+    return RiskSignal(
+        code=STATE_CONTROLLED,
+        confidence="medium",
+        summary=(
+            f"A controlling owner is a state or state body{qualifier} — a "
+            f"possible state-owned enterprise. {clauses} Corroborating "
+            f"indicator ({'; '.join(caveats)}); not a determination, and its "
+            "absence is not evidence the entity is privately owned."
+        ),
+        source_id=source_id,
+        hit_id=hit_id,
+        evidence={
+            "state_owners": sorted({m.get("name") or m["statement_id"] for m in matches}),
+            "statement_id": anchor["statement_id"],  # the state/stateBody node
+            "subject_statement_id": subject_node,     # the controlled entity
+            # Every state party, so each node carries the graph badge.
+            "matches": matches,
+            "state_holdings": [
+                {k: v for k, v in h.items() if k != "parties"}
+                | {"party_statement_ids": [m["statement_id"] for m in h["parties"]]}
+                for h in holdings
+            ],
+            "sources": sources,
+            **_ended_evidence(ended_only),
+        },
+    )
 
 
 def _state_controlled_signals(
@@ -1824,7 +2014,10 @@ def _state_controlled_signals(
     BODS-derived and source-agnostic: per the BODS *Representing state-owned
     enterprises* requirement, an SOE connects (directly or indirectly) to an
     entity statement with ``entityType.type`` ``state`` / ``stateBody``. We fire
-    when such an entity is the interested party of a relationship in the bundle.
+    when such an entity owns or controls the subject, directly or further up
+    (Phase 240: *above* the subject only — a state that owns one of the
+    subject's subsidiaries, or the subject itself being a ministry that owns
+    companies, is not state control of the subject).
 
     Presence-only and corroborating: every source that can produce such a node
     covers only part of the world (Wikidata is crowd-sourced and famous-names-
@@ -1846,67 +2039,95 @@ def _state_controlled_signals(
     if not state_ids:
         return []
 
-    owners: list[str] = []
-    state_node: str = ""
-    subject_node: str = ""
+    subject = _subject_entity_id(hit_id, bods)
+    in_scope = (
+        _upstream_entity_ids(subject, bods) if subject is not None else set(state_ids)
+    )
+
     # Phase 220: a state holding that has ENDED still counts (Stephen's
-    # decision — keep, and say so), but the state/subject nodes the overlay
-    # anchors on prefer a current holding, and the ended ones are named.
-    current_state_nodes: set[str] = set()
-    first_current: tuple[str, str] | None = None
-    ended_rels: dict[str, list[str]] = {}
+    # decision — keep, and say so); Phase 240 groups by state, so only a state
+    # with no current holding at all makes the signal rest on ended links.
     ended = _ended_relationship_ids(bods)
     _resolve = _refs_resolver(bods)
+    by_party: dict[str, dict[str, Any]] = {}
+    subject_node = subject or ""
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship":
             continue
         subj, ip, _ = _relationship_endpoints(stmt, _resolve)
-        if ip in state_ids:
-            name = _record_details(ents.get(ip, {})).get("name") or ip
-            owners.append(name)
-            rel_id = _statement_id(stmt)
-            if rel_id in ended:
-                ended_rels.setdefault(ip, []).append(rel_id)
-            else:
-                current_state_nodes.add(ip)
-                first_current = first_current or (ip, subj)
-            state_node = state_node or ip
-            subject_node = subject_node or subj
-    if not owners:
+        if ip not in state_ids or ip not in in_scope:
+            continue
+        rd = _record_details(ents.get(ip, {}))
+        code = _state_code(ents.get(ip, {}))
+        rel_id = _statement_id(stmt)
+        is_current = rel_id not in ended
+        m = by_party.get(ip)
+        if m is None:
+            m = by_party[ip] = {
+                "statement_id": ip,
+                "name": rd.get("name") or ip,
+                "source_id": source_id,
+                "entity_type": (rd.get("entityType") or {}).get("type"),
+                "basis": (rd.get("entityType") or {}).get("details"),
+                "state": code,
+                "state_name": _state_name(code) if code else None,
+                "share": None,
+                "direct": False,
+                "current": False,
+                "relationship_statement_ids": [],
+            }
+        m["relationship_statement_ids"].append(rel_id)
+        m["direct"] = m["direct"] or subj == subject
+        # A current holding's share wins over an ended one's.
+        if is_current and not m["current"]:
+            m["current"] = True
+            m["share"] = _share_of(stmt)
+        elif m["share"] is None and not m["current"]:
+            m["share"] = _share_of(stmt)
+        subject_node = subject_node or subj
+    if not by_party:
         return []
-    if first_current is not None:
-        state_node, subject_node = first_current
+    matches = [
+        {k: v for k, v in m.items() if v is not None} | {"current": m["current"]}
+        for m in by_party.values()
+    ]
+    sig = _state_controlled_from_matches(
+        matches, source_id=source_id, hit_id=hit_id, subject_node=subject_node,
+    )
+    return [sig] if sig is not None else []
 
-    # Only a state owner with NO current holding makes the signal rest on an
-    # ended relationship; an ended record beside a current one for the same
-    # state is history, not the basis of the claim.
-    ended_only = [
-        rid
-        for ip, rids in ended_rels.items()
-        if ip not in current_state_nodes
-        for rid in rids
-    ]
-    qualifier = f" ({INCLUDING_ENDED})" if ended_only else ""
-    return [
-        RiskSignal(
-            code=STATE_CONTROLLED,
-            confidence="medium",
-            summary=(
-                f"A controlling owner is a state or state body{qualifier} — a "
-                "possible state-owned enterprise. Corroborating indicator "
-                f"({_state_source_caveat(source_id)}); not a determination, and "
-                "its absence is not evidence the entity is privately owned."
-            ),
-            source_id=source_id,
-            hit_id=hit_id,
-            evidence={
-                "state_owners": sorted(set(owners)),
-                "statement_id": state_node,            # the state/stateBody node
-                "subject_statement_id": subject_node,  # the controlled entity
-                **_ended_evidence(ended_only),
-            },
-        )
-    ]
+
+def merge_state_controlled(
+    incumbent: dict[str, Any], new: dict[str, Any]
+) -> dict[str, Any]:
+    """Collapse two sources' STATE_CONTROLLED signals into one (Phase 240).
+
+    The lookup's ``_merge_signals`` calls this for the code: the parties are
+    pooled (one entry per statement), regrouped by state and the sentence
+    rebuilt, so Equinor reads "Norway, 67% — FINANSDEPARTEMENTET
+    (OpenSanctions); Ministry of Trade, Industry and Fisheries (Wikidata)"
+    once, rather than two chips with a 67% holder each.
+    """
+    seen: set[str] = set()
+    matches: list[dict[str, Any]] = []
+    for sig in (incumbent, new):
+        for m in (sig.get("evidence") or {}).get("matches") or ():
+            sid = m.get("statement_id")
+            if isinstance(m, dict) and sid and sid not in seen:
+                seen.add(sid)
+                matches.append(dict(m))
+    if not matches:
+        return new
+    ev = incumbent.get("evidence") or {}
+    merged = _state_controlled_from_matches(
+        matches,
+        source_id=incumbent.get("source_id") or new.get("source_id") or "",
+        hit_id=incumbent.get("hit_id") or new.get("hit_id") or "",
+        subject_node=ev.get("subject_statement_id")
+        or (new.get("evidence") or {}).get("subject_statement_id")
+        or "",
+    )
+    return merged.to_dict() if merged is not None else new
 
 
 # ----------------------------------------------------------------------

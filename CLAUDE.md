@@ -571,7 +571,7 @@ other labels.
 **Signal→BODS node mapping** (evidence fields) — owned by `frontend/src/lib/signalScope.ts`, **not** by `BODSGraph.tsx`. Add a new evidence shape there and every consumer picks it up:
 - `SANCTIONED`, `PEP` → `evidence.statement_id` (added in Phase 45 via `_bods_stable_id(source_id, hit_id)` in `risk.py`)
 - `RELATED_SANCTIONED`, `RELATED_PEP` → `evidence.subject_statement_id`
-- `TRUST_OR_ARRANGEMENT`, `NOMINEE`, AMLA composites → `evidence.matches[].statement_id`
+- `TRUST_OR_ARRANGEMENT`, `NOMINEE`, AMLA composites, `STATE_CONTROLLED` (Phase 240) → `evidence.matches[].statement_id`
 - `NON_EU_JURISDICTION`, `FATF_BLACK_LIST`, `FATF_GREY_LIST` → `evidence.jurisdictions[].statement_id`
 - `COMPLEX_OWNERSHIP_LAYERS` → `evidence.longest_path[]` (array of statementIds, subject first — the chain runs upwards from it) plus `evidence.subject_statement_id`
 
@@ -1949,6 +1949,55 @@ GLEIF mapper exported most registration numbers with `scheme: ""`.
 - Adding RA codes to `_GLEIF_RA_TO_ORG_ID` **adds FullCheck register hops**
   (`register_hops` derives them from the table) — nineteen more schemes in
   Phase 239, each with its `REG-<country>` alias where the country has one hop.
+
+---
+
+## State owners and STATE_CONTROLLED (Phase 240)
+
+`risk._state_controlled_signals` + `merge_state_controlled`,
+`bods/state_bodies.py`, `sources/wikidata.py`, `bods/mappers/ftm.py`. Found by
+the Opus 5.5 check (DQ-5): Equinor's three 67% owners and Rosneft's
+government owners were all `registeredEntity`, so the signal never fired, and
+Equinor's listed owners summed past 200%. Stephen's decisions (24 Sept 2026)
+and the things that will be re-derived otherwise:
+
+- **Three classifiers, no name matching.** Wikidata owners through `P279*` to
+  ministry / government agency / government / executive branch
+  (`_CLASS_ROOTS_QUERY`, cached per class; a business, company or SOE class
+  wins over any government class, and "government organization" is not a
+  root — SOEs sit under it). FtM `PublicBody` and the `gov.*` topics **except
+  `gov.soe`, `gov.igo`, `gov.head`, `gov.religion`** — OpenSanctions tags
+  ministries `gov.soe` too, but the topic means an enterprise. And any owner,
+  from any source, whose `XI-LEI` GLEIF files as `RESIDENT_GOVERNMENT_ENTITY`,
+  read from the Golden Copy mirror (`entity_pages.get_store()`, a local read —
+  no mirror, no change): `classify_government_entities()` runs at the three
+  places a source bundle is mapped and assessed (`deepen`, `_safe_deepen`, the
+  FullCheck hop), copies what it changes, sets `entityType.details` and a
+  `transformation` annotation recording what the source typed it, and leaves
+  MEIP's verbatim statements alone (`VERBATIM_SOURCES`).
+  FINANSDEPARTEMENTET (`549300L0BT3FJTN9MX24`) is the case: a `Company`
+  tagged `gov.soe` in OpenSanctions, `STATE_GOVERNMENT` in GLEIF.
+- **Wikidata end dates are read** (`P580`/`P582`):
+  an owner whose every statement ended is emitted with `endDate` and drawn as
+  ended — kept, not dropped. The ownership cache key is `ownership-v2/`.
+- **Only owners above the subject count** (`_upstream_entity_ids` from
+  `_subject_entity_id`): a state owning one of the subject's subsidiaries, or
+  a ministry looked up itself, is not state control of the subject.
+- **Grouped in the signal, never merged in the graph.** `STATE_CONTROLLED` is
+  in `_STRUCTURAL_SIGNAL_CODES` with `merge_state_controlled` as its collapse
+  resolver: it **pools** every source's `evidence.matches` (one per state
+  node, so every node keeps its badge) and regroups them by the state's ISO
+  code into `state_holdings` — one sentence per state, "Norway, 67% —
+  FINANSDEPARTEMENTET (OpenSanctions); Ministry of Trade, Industry and
+  Fisheries (Wikidata); formerly …". No identity between the bodies is
+  claimed; a party with no country code is its own holding. "Including ended
+  relationships" now means a *state* with no current holding, not a body.
+- **Post-deploy:** the curated Rosneft (and possibly Ørsted) card may start
+  showing `STATE_CONTROLLED` once Wikidata answers — check production and run
+  the curated-narrative regen checklist before editing `EXAMPLE_LEIS`.
+
+Tests: `tests/test_state_owners_phase240.py`, on the Equinor and Rosneft
+shapes as read from Wikidata, OpenSanctions and GLEIF on 24 Sept 2026.
 
 ---
 

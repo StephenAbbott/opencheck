@@ -59,6 +59,16 @@ def _emit_wikidata_owner(
     ]
     owner_url = f"https://www.wikidata.org/wiki/{oqid}"
 
+    # Phase 240: the owner's country, where Wikidata gives exactly one — the
+    # state-holding grouping in STATE_CONTROLLED reads it to recognise two
+    # sources' state owners as the same state.
+    jurisdiction: tuple[str, str | None] | None = None
+    country_code = (owner.get("country") or "").upper()
+    if country_code:
+        country = pycountry.countries.get(alpha_2=country_code)
+        if country is not None:
+            jurisdiction = (country.name, country.alpha_2)
+
     if owner.get("bods_kind") == "person":
         owner_stmt = make_person_statement(
             source_id="wikidata", local_id=oqid, full_name=oname,
@@ -69,6 +79,7 @@ def _emit_wikidata_owner(
         owner_stmt = make_entity_statement(
             source_id="wikidata", local_id=oqid, name=oname, identifiers=identifiers,
             entity_type=owner.get("entity_type") or "registeredEntity",
+            jurisdiction=jurisdiction,
             source_url=owner_url,
         )
         ip_type = "entity"
@@ -99,6 +110,14 @@ def _emit_wikidata_owner(
     else:
         interest["type"] = "otherInfluenceOrControl"
         detail = f"Controlling owner declared on Wikidata ({via})"
+    # Phase 240: P580 / P582 on the ownership statement. An ended holding
+    # keeps its end date and is drawn as ended (Phases 219/220) rather than
+    # dropped — Stephen, 24 Sept 2026.
+    if owner.get("start_date"):
+        interest["startDate"] = owner["start_date"]
+    if owner.get("end_date"):
+        interest["endDate"] = owner["end_date"]
+        detail += f"; ended {owner['end_date']} (Wikidata end time)"
     if ref_src:
         detail += f"; source: {ref_src}"
     interest["details"] = detail

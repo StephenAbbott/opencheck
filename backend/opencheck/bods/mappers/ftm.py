@@ -49,6 +49,30 @@ _FTM_ENTITY_SCHEMAS = {
 }
 _FTM_PERSON_SCHEMAS = {"Person"}
 
+# Phase 240: FtM parties typed a BODS ``stateBody``. The ``PublicBody`` schema,
+# and the government topics that describe a body of the state itself. Left
+# out on purpose: ``gov.soe`` (a state-owned *enterprise* is a registeredEntity
+# connecting up to a state, per the BODS SOE requirement — though OpenSanctions
+# also tags ministries with it, e.g. FINANSDEPARTEMENTET and Russia's Ministry
+# of Finance), ``gov.igo`` (an intergovernmental body is no one state's), and
+# ``gov.head`` / ``gov.religion``, which describe people and religious leaders.
+_FTM_STATE_BODY_SCHEMAS = frozenset({"PublicBody"})
+_FTM_STATE_BODY_TOPICS = frozenset({
+    "gov", "gov.national", "gov.state", "gov.muni", "gov.admin",
+    "gov.executive", "gov.legislative", "gov.judicial", "gov.security",
+    "gov.financial",
+})
+
+
+def _ftm_state_body_basis(schema: str, props: dict[str, Any]) -> str | None:
+    """Why an FtM entity is a state body, in words — or None if it is not."""
+    if schema in _FTM_STATE_BODY_SCHEMAS:
+        return f"FollowTheMoney schema {schema}"
+    topics = sorted(set(props.get("topics") or ()) & _FTM_STATE_BODY_TOPICS)
+    if topics:
+        return "FollowTheMoney topic " + ", ".join(topics)
+    return None
+
 # Which BODS person name type each FtM name property becomes. The entity side
 # has no equivalent: BODS v0.4 gives entities an untyped `alternateNames`
 # array, so `alias` and `previousName` flatten into one list there and the
@@ -589,11 +613,14 @@ def _ftm_entity_statement(
     identifiers = _ftm_identifiers(ftm_id, source_id, props)
     addresses = _ftm_addresses(props)
     founding_date = (props.get("incorporationDate") or [None])[0]
+    state_basis = _ftm_state_body_basis(payload.get("schema") or "", props)
 
     stmt = make_entity_statement(
         source_id=source_id,
         local_id=ftm_id,
         name=name,
+        entity_type="stateBody" if state_basis else "registeredEntity",
+        entity_details=state_basis,
         jurisdiction=jurisdiction,
         identifiers=identifiers,
         addresses=addresses,
