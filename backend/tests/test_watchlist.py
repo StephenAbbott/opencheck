@@ -264,6 +264,22 @@ def test_a_baseline_stored_before_phase_241_is_compared_on_sources_with_data() -
     assert (cov[0]["old"]["with_data"], cov[0]["new"]["with_data"]) == (2, 1)
 
 
+def test_a_verdict_worded_by_an_older_template_is_not_a_change() -> None:
+    """Phase 245 rewrote the verdict as two sentences. A baseline stored
+    before it carries no ``verdict_template`` and the old wording; compared
+    with a new snapshot of the same facts it must report nothing, or every
+    watched company would say "verdict changed" on its next re-run."""
+    before = wl.snapshot_from_response(_resp(EASY))
+    assert before["verdict_template"] == 2
+    legacy = {k: v for k, v in before.items() if k != "verdict_template"}
+    legacy["verdict"] = "Sanctions findings on the company itself."
+    after = wl.snapshot_from_response(_resp(EASY))
+    assert wl.diff_snapshots(legacy, after) == []
+    # Between two snapshots of the same template a wording change still shows.
+    changed = dict(after, verdict="Something else.")
+    assert [c["kind"] for c in wl.diff_snapshots(before, changed)] == ["verdict"]
+
+
 def test_new_signal_status_and_name_changes_are_named() -> None:
     before = wl.snapshot_from_response(_resp(EASY))
     after = wl.snapshot_from_response(

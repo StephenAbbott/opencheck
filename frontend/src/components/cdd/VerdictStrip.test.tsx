@@ -21,7 +21,7 @@ import { VerdictStrip } from "./VerdictStrip";
 import type { KnowabilityStatement, RiskSignal } from "../../lib/api";
 
 const VERDICT =
-  "A politically exposed person among the parties named, and ownership that runs through three or more layers.";
+  "The records show a politically exposed person among the parties named. Its ownership chain is 4 layers deep.";
 
 const signal = (code: string, overrides: Partial<RiskSignal> = {}): RiskSignal => ({
   code,
@@ -76,33 +76,33 @@ const KNOWABILITY: KnowabilityStatement = {
   as_of: "2026-09-18",
 };
 
-describe("VerdictStrip — what can be known (Phase 224)", () => {
+describe("VerdictStrip — what can be known (Phase 224, folded into Coverage in Phase 245)", () => {
   it("renders nothing for the band until the statement lands", () => {
     renderStrip();
     expect(screen.queryByTestId("knowability-band")).toBeNull();
     expect(screen.queryByRole("heading", { name: "What can be known" })).toBeNull();
   });
 
-  it("carries the server sentence verbatim, once, under its own heading inside the region", () => {
+  it("sits inside the Coverage column, with its dated badge in view", () => {
     renderStrip({ knowability: KNOWABILITY });
     const region = screen.getByRole("region", { name: "What this check found" });
-    expect(within(region).getByRole("heading", { name: "What can be known" })).toBeInTheDocument();
-    expect(screen.getAllByText(KNOWABILITY.sentence)).toHaveLength(1);
-    // The three column headings are untouched.
-    expect(within(region).getByRole("heading", { name: "Coverage" })).toBeInTheDocument();
+    const heading = within(region).getByRole("heading", { name: "What can be known" });
+    const coverage = within(region).getByRole("heading", { name: "Coverage" }).parentElement!;
+    expect(coverage).toContainElement(heading);
     expect(screen.getByText("Unverified draft")).toBeInTheDocument();
   });
 
-  it("opens the per-field list and the sources behind the ⓘ", async () => {
+  it("keeps the server sentence verbatim, once, one press away", async () => {
     const user = userEvent.setup();
     renderStrip({ knowability: KNOWABILITY });
+    expect(screen.queryByText(KNOWABILITY.sentence)).toBeNull();
     const button = screen.getByRole("button", {
-      name: "Show the register facts behind this statement for Cayman Islands",
+      name: "What can be known about Cayman Islands: the statement and the register facts behind it",
     });
     expect(button).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("Threshold wording")).toBeNull();
     await user.click(button);
     expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByText(KNOWABILITY.sentence)).toHaveLength(1);
     expect(screen.getByText("Threshold wording")).toBeInTheDocument();
     expect(screen.getByText("25 % or more")).toBeInTheDocument();
     expect(screen.getByText("no Cayman Islands register")).toBeInTheDocument();
@@ -115,8 +115,8 @@ describe("VerdictStrip — what can be known (Phase 224)", () => {
 
   it("is never a signal: the statement adds nothing to the What we found count", () => {
     renderStrip({ knowability: KNOWABILITY, riskSignals: [], contextSignals: [] });
-    expect(screen.getByText("0")).toBeInTheDocument();
-    expect(screen.getByText("No risk signals surfaced across the sources that answered.")).toBeInTheDocument();
+    const found = screen.getByRole("heading", { name: "What we found" }).parentElement!;
+    expect(found.textContent).toContain("0 signals");
   });
 });
 
@@ -140,35 +140,16 @@ describe("VerdictStrip", () => {
     expect(within(regions[0]).getByRole("heading", { name: "Coverage" })).toBeInTheDocument();
   });
 
-  it("previews three chips and counts the rest, rather than printing all of them", () => {
-    renderStrip();
-    const chips = screen.getAllByRole("button", { name: /Related PEP|Offshore leaks|≥3 layers|Opaque ownership/ });
-    expect(chips).toHaveLength(3);
-    expect(screen.getByText("+1 more")).toBeInTheDocument();
-  });
-
-  it("renders its chips as controls, the same as the section below", async () => {
-    renderStrip();
-    // They shipped inert here for four phases: the same chip, in the same
-    // colours, opening only if it happened to sit further down the page.
-    const chip = screen.getByRole("button", { name: /Related PEP/ });
-    expect(chip).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(chip);
-    expect(chip).toHaveAttribute("aria-expanded", "true");
-  });
-
-  it("keeps a chip's summary out of its name and reachable as a description (Phase 160)", () => {
-    renderStrip();
-    const chip = screen.getByRole("button", { name: /Related PEP/ });
-    // The confidence glyph is aria-hidden, so it is not in the name — the
-    // word is, which is the point of Phase 122's glyph-plus-label pair.
-    expect(chip).toHaveAccessibleName("One source only: Related PEP");
-    // "Opensanctions", not "OpenSanctions": `RiskChip` calls `sourceLabel`
-    // with no registry-names map, so it takes the prettified-id fallback,
-    // while the identity-band rows next to it pass the map and get the
-    // registry's own capitalisation. Pinned as observed rather than as
-    // preferred — a real, small inconsistency, and now a visible one.
-    expect(chip).toHaveAccessibleDescription("Summary sentence for RELATED_PEP. Source: Opensanctions.");
+  it("counts the signals and links to them, never printing the chips a second time (Phase 245)", async () => {
+    const onShowSignals = vi.fn();
+    renderStrip({ onShowSignals });
+    // The chips are the Risk signals section's. The Opus 5.5 check found the
+    // same related-party chips twice in one QuickCheck, here and there.
+    expect(screen.queryByRole("button", { name: /Related PEP/ })).toBeNull();
+    const link = screen.getByRole("link", { name: "Read them under Risk signals" });
+    expect(link).toHaveAttribute("href", "#risk-signals");
+    await userEvent.click(link);
+    expect(onShowSignals).toHaveBeenCalledOnce();
   });
 
   it("counts risk and structural signals apart", () => {
@@ -179,12 +160,23 @@ describe("VerdictStrip", () => {
     expect(found.textContent).toContain("5 signals — 4 risk, 1 structural");
   });
 
-  it("says what a clean check means, and never leaves the column empty", () => {
-    renderStrip({ riskSignals: [], contextSignals: [] });
+  it("leaves a clean result to the verdict rather than saying it twice", () => {
+    renderStrip({
+      riskSignals: [],
+      contextSignals: [],
+      verdict: "No risk signals surfaced across the sources that answered.",
+    });
+    expect(
+      screen.getAllByText("No risk signals surfaced across the sources that answered."),
+    ).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: /Risk signals/ })).toBeNull();
+  });
+
+  it("still says what a zero means when the backend sent no sentence", () => {
+    renderStrip({ riskSignals: [], contextSignals: [], verdict: null });
     expect(
       screen.getByText("No risk signals surfaced across the sources that answered."),
     ).toBeInTheDocument();
-    expect(screen.queryByText("+1 more")).not.toBeInTheDocument();
   });
 
   it("says it is still checking rather than clean while the screen is open", () => {
@@ -193,6 +185,29 @@ describe("VerdictStrip", () => {
     expect(
       screen.queryByText("No risk signals surfaced across the sources that answered."),
     ).not.toBeInTheDocument();
+  });
+
+  it("states coverage once: answered over applicable, then which sources were in question", () => {
+    renderStrip();
+    const coverage = screen.getByRole("heading", { name: "Coverage" }).parentElement!;
+    expect(coverage.textContent).toContain("11 of 11 sources answered");
+    expect(coverage.textContent).toContain("11 of OpenCheck's 40 sources apply to a GB company.");
+    // The old second line ("…; every one answered.") restated the first.
+    expect(coverage.textContent).not.toContain("every one answered");
+  });
+
+  it("points at the notice for a check that did not run, rather than repeating it", async () => {
+    const onShowDegraded = vi.fn();
+    renderStrip({
+      degraded: [
+        { source_id: "wikidata", check: "source_fetch", reason: "timeout", detail: "", affected_signals: [] },
+      ],
+      onShowDegraded,
+    });
+    expect(screen.queryByText(/not a clean screen/)).toBeNull();
+    const link = screen.getByRole("link", { name: "One check did not run — see which" });
+    await userEvent.click(link);
+    expect(onShowDegraded).toHaveBeenCalledOnce();
   });
 
   it("renders no sentence at all when the backend sent none", () => {

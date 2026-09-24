@@ -810,7 +810,10 @@ export default function BODSGraph({
               says that "Run FullCheck" cannot. */}
           {layer && onAddLayer && (
             <Button
-              variant={layer.disabled ? "ghost" : "primary"}
+              // Secondary, never primary (Phase 245): "Run FullCheck" is the
+              // panel's one primary action, and the check found three solid
+              // blue buttons on one phone screen of FullCheck.
+              variant={layer.disabled ? "ghost" : "secondary"}
               size="sm"
               className="ml-1"
               onClick={onAddLayer}

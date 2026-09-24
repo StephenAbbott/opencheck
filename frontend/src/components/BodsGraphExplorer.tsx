@@ -72,7 +72,7 @@ import {
   runHelper,
   summaryParts,
 } from "../lib/fullCheckHeader";
-import { buttonClasses } from "./ui";
+import { Button, buttonClasses } from "./ui";
 
 type Stmt = Record<string, unknown>;
 
@@ -801,14 +801,11 @@ export default function BodsGraphExplorer({
             <option value="gql">BigQuery · GQL (zip)</option>
             <option value="amlai">Google AML AI (zip)</option>
           </select>
-          <button
-            type="button"
-            onClick={exportNetwork}
-            disabled={exporting}
-            className="bg-oo-blue text-white text-oo-meta font-medium rounded px-3 py-1 hover:bg-oo-burst transition-colors disabled:opacity-50"
-          >
+          {/* Secondary (Phase 245): one primary per panel, and FullCheck's is
+              "Run FullCheck". */}
+          <Button variant="secondary" size="sm" onClick={exportNetwork} disabled={exporting}>
             {exporting ? "Exporting…" : "Download"}
-          </button>
+          </Button>
         </div>
       )}
     </div>

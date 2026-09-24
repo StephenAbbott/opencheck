@@ -201,6 +201,34 @@ test.describe("the report at phone width", () => {
 
     await expectNoHorizontalOverflow(page);
   });
+
+  test("puts the mode tabs directly under the subject, above the verdict (Phase 245)", async ({ page }) => {
+    await page.goto(`/?lei=${BP}`);
+    const verdict = page.getByRole("region", { name: "What this check found" });
+    await expect(verdict).toBeVisible({ timeout: 150_000 });
+    const tabsBox = (await page.getByRole("tablist", { name: "Check mode" }).boundingBox())!;
+    const verdictBox = (await verdict.boundingBox())!;
+    // The Opus 5.5 check measured the tabs ~1,290px down Shell at 390px,
+    // under every verdict column. Measured here as an order, and against the
+    // first screen, rather than as class names.
+    expect(tabsBox.y, "the tabs sit below the verdict").toBeLessThan(verdictBox.y);
+    expect(tabsBox.y, "the tabs start below the first screen").toBeLessThan(844);
+    // One search entry point on a report: the header's, not a row above the subject.
+    await expect(page.getByRole("button", { name: "Search for another company or person" })).toBeVisible();
+    await expect(page.getByText("More search options — national ID, person name")).toHaveCount(0);
+  });
+});
+
+test("at 1280×800 the mode tabs are on the first screen (Phase 245)", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`/?lei=${BP}`);
+  await expect(page.getByRole("region", { name: "What this check found" })).toBeVisible({
+    timeout: 150_000,
+  });
+  const box = (await page.getByRole("tablist", { name: "Check mode" }).boundingBox())!;
+  // Whole strip in view, not just its top edge.
+  expect(box.y + box.height, "the tabs end below the first screen").toBeLessThanOrEqual(800);
+  await expect(page.getByRole("button", { name: "More search options" })).toBeVisible();
 });
 
 test.describe("every page at 320px (Phase 241)", () => {

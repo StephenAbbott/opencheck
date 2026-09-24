@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countLeiConfirmingSources } from "./identifierBadge";
+import { countLeiConfirmingSources, identityBandContents } from "./identifierBadge";
 import type { CrossSourceLink } from "./api";
 
 const LEI = "529900IH9V4I3VHQVO92";
@@ -74,6 +74,24 @@ describe("the badge count and the section count", () => {
     // round: every source publishing the LEI participates in a link.
     expect(countLeiConfirmingSources(links, LEI)).toBeLessThanOrEqual(
       allSources.size,
+    );
+  });
+});
+
+describe("identityBandContents (Phase 245)", () => {
+  it("says what the band holds and never counts sources a second time", () => {
+    const text = identityBandContents({ profile: true, identifiers: 2, candidatePairs: 1 });
+    expect(text).toBe("Company profile · 2 shared identifiers · 1 candidate pair to review");
+    // The subject card's badge is the one corroboration count on the page.
+    expect(text).not.toMatch(/source/);
+  });
+
+  it("names only what is present", () => {
+    expect(identityBandContents({ profile: false, identifiers: 1, candidatePairs: 0 })).toBe(
+      "1 shared identifier",
+    );
+    expect(identityBandContents({ profile: false, identifiers: 0, candidatePairs: 2 })).toBe(
+      "2 candidate pairs to review",
     );
   });
 });

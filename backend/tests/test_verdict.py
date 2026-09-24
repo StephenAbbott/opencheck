@@ -41,7 +41,7 @@ def test_a_genuinely_empty_run_says_so_plainly() -> None:
 
 def test_subject_sanctions_lead_the_sentence() -> None:
     v = build_verdict([_sig("SANCTIONED")], [])
-    assert v == "Sanctions findings on the company itself."
+    assert v == "The records show sanctions findings on the company itself."
 
 
 def test_two_findings_are_joined_but_a_third_is_not() -> None:
@@ -56,22 +56,27 @@ def test_two_findings_are_joined_but_a_third_is_not() -> None:
     assert v is not None
     # Two clauses read as a sentence; three read as a list, and the chips
     # beside the sentence already carry the full set.
-    assert v.count(", and ") == 1
+    assert v.count(" and ") == 1
     assert "offshore-leaks" not in v
 
 
 def test_subject_findings_outrank_related_ones() -> None:
     v = build_verdict([_sig("RELATED_SANCTIONED"), _sig("SANCTIONED")], [])
     assert v is not None
-    assert v.startswith("Sanctions findings on the company itself")
+    assert v.startswith("The records show sanctions findings on the company itself")
 
 
-def test_structure_is_appended_not_asserted_as_a_finding() -> None:
+def test_structure_is_a_second_sentence_not_asserted_as_a_finding() -> None:
+    # Phase 245: risk first, structure second, as two sentences. The old
+    # single sentence hung the structure off the finding with "over".
     v = build_verdict(
         [_sig("SANCTIONED"), _sig("COMPLEX_OWNERSHIP_LAYERS", layers=4)],
         [],
     )
-    assert v == "Sanctions findings on the company itself, over an ownership chain 4 layers deep."
+    assert v == (
+        "The records show sanctions findings on the company itself. "
+        "Its ownership chain is 4 layers deep."
+    )
 
 
 def test_layer_count_is_read_from_the_signal_not_recomputed() -> None:
@@ -141,17 +146,53 @@ def test_the_sentence_never_grades_the_company() -> None:
             assert word not in lowered, f"{word!r} in {v!r}"
 
 
-def test_every_sentence_is_one_sentence() -> None:
-    for signals in (
-        [_sig("SANCTIONED")],
-        [_sig("SANCTIONED"), _sig("EXPORT_CONTROLLED"), _sig("COMPLEX_OWNERSHIP_LAYERS", layers=4)],
-        [_sig("STATE_CONTROLLED")],
+def test_the_verdict_is_at_most_two_sentences_with_no_pivot() -> None:
+    # Phase 245 (Opus 5.5 check, D-H4): Shell's verdict pivoted on "over" and
+    # "under" across four clauses. Two short sentences, each starting with a
+    # capital, and neither preposition used to hang one clause off another.
+    exc = _sig("GLEIF_REPORTING_EXCEPTION", kind="context")
+    for signals, degraded in (
+        ([_sig("SANCTIONED")], []),
+        ([_sig("SANCTIONED"), _sig("EXPORT_CONTROLLED"), _sig("COMPLEX_OWNERSHIP_LAYERS", layers=4)], []),
+        ([_sig("STATE_CONTROLLED")], []),
+        ([_sig("RELATED_PEP"), _sig("RELATED_COUNTER_SANCTIONED"), exc], []),
+        ([exc], [_degraded()]),
+        ([_sig("COMPLEX_OWNERSHIP_LAYERS", layers=3)], [_degraded()]),
+        ([], [_degraded()]),
     ):
-        v = build_verdict(signals, [])
+        v = build_verdict(signals, degraded)
         assert v is not None
+        sentences = [x for x in v.split(". ") if x]
+        assert 1 <= len(sentences) <= 2, v
         assert v.endswith(".")
-        assert v.count(".") == 1
-        assert v[0].isupper()
+        for sentence in sentences:
+            assert sentence[0].isupper(), v
+        assert ", over " not in v and ", under " not in v, v
+
+
+def test_shell_reads_risk_then_structure() -> None:
+    # The shape the ticket quoted, as two sentences.
+    v = build_verdict(
+        [
+            _sig("RELATED_PEP"),
+            _sig("RELATED_COUNTER_SANCTIONED"),
+            _sig("GLEIF_REPORTING_EXCEPTION", kind="context"),
+        ],
+        [],
+    )
+    assert v == (
+        "The records show a politically exposed person among the parties named "
+        "and a counter-sanctions designation by a non-mainstream authority. "
+        "No parent is filed with GLEIF, which the LEI reporting rules permit."
+    )
+
+
+def test_structure_only_run_names_the_gap_in_its_own_sentence() -> None:
+    v = build_verdict([_sig("COMPLEX_OWNERSHIP_LAYERS", layers=3)], [_degraded()])
+    assert v == (
+        "Its ownership chain is 3 layers deep. "
+        "One check did not run — an empty result there is not a clean screen."
+    )
 
 
 def test_unknown_codes_are_dropped_rather_than_half_rendered() -> None:
@@ -205,7 +246,7 @@ def test_counter_sanctions_never_read_as_sanctions() -> None:
     # say what the record is and never borrow the vocabulary of a listing.
     for code in ("COUNTER_SANCTIONED", "RELATED_COUNTER_SANCTIONED"):
         v = build_verdict([_sig(code)], [])
-        assert v == "A counter-sanctions designation by a non-mainstream authority."
+        assert v == "The records show a counter-sanctions designation by a non-mainstream authority."
         assert "sanctioned parties" not in v.lower()
         assert "sanctions findings" not in v.lower()
 
@@ -218,11 +259,11 @@ def test_counter_sanctions_are_read_after_every_other_finding() -> None:
         [],
     )
     assert v is not None
-    assert v.startswith("A politically exposed person among the parties named, and an appearance")
+    assert v.startswith("The records show a politically exposed person among the parties named and an appearance")
     assert "counter-sanctions" not in v
     # And with only the PEP beside it, it appears — after the PEP.
     v2 = build_verdict([_sig("RELATED_COUNTER_SANCTIONED"), _sig("RELATED_PEP")], [])
     assert v2 == (
-        "A politically exposed person among the parties named, "
+        "The records show a politically exposed person among the parties named "
         "and a counter-sanctions designation by a non-mainstream authority."
     )
