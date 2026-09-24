@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 243** — large ownership graphs group wide ranks of subsidiaries into expandable boxes and fit the canvas to the drawing, the diagram's controls are 24px targets behind one keyboard stop, and ended relationships stay visible at 3:1 with a hollow arrowhead.
+**Latest: Phase 244** — a slow or failing Wikidata Query Service no longer fails the whole lookup: the check completes with every other source and reports Wikidata as not answering.
 
 → [Full development history](docs/status.md)
 
