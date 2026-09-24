@@ -3,93 +3,46 @@ import { trackEvent } from "./lib/analytics";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
 import {
-  downloadReportMarkdown,
   savedReportShareUrl,
-  downloadReportPdf,
   fetchSources,
   isValidLei,
-  leiInputMessage,
   getSavedReport,
   replayLookupEvents,
   retryLookupSource,
-  saveReport,
   streamLookup,
   SavedReportError,
   type LookupStreamHandlers,
-  type SavedReport,
-  type SavedReportMeta,
   type BoAccessNotice,
-  type BodsBreakdown,
-  type BodsCountsEvent,
-  type CrossSourceLink,
-  type DegradedSource,
-  type SourceLiveness,
-  type GraphShape,
-  type OpenAlephScreeningMatch,
-  type PossiblySameEntity,
   type RiskSignal,
-  type SourceHit,
-  type SubjectProfile,
-  type KnowabilityStatement,
-  type PrimaryListing,
-  type KnowabilityChain,
 } from "./lib/api";
-import {
-  searchByNationalId,
-  type GleifSearchResult,
-} from "./lib/gleifNationalId";
-import { COUNTRY_OPTIONS, RA_CODES, raCodeFor, validateNationalId } from "./lib/raCodes";
-import { countLeiConfirmingSources, identityBandContents } from "./lib/identifierBadge";
+import { countLeiConfirmingSources } from "./lib/identifierBadge";
+import { rank } from "./components/risk/RiskChip";
 import { partitionByKind } from "./lib/signalKind";
-import {
-  OpenCheckIcon,
-  GleifIcon,
-} from "./components/icons";
-import { RiskChip, RISK_PRESENTATION, rank } from "./components/risk/RiskChip";
-import { ExportPanel } from "./components/export/ExportPanel";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { useIsPhone } from "./lib/viewport";
-import { Button, Chip, Icon, SectionHeading, SectionLabel as Eyebrow } from "./components/ui";
-import { leiRegistrationChip, profileRows, statusChip } from "./lib/subjectProfile";
-import ConfidenceLegend from "./components/ui/ConfidenceLegend";
+import { Button } from "./components/ui";
+import { leiRegistrationChip, statusChip } from "./lib/subjectProfile";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
-import { PERSON_VERB, resultCount, setSourceNames, sourceLabel } from "./lib/vocab";
-import { answeredCount, coverageCopy, noRecordSources, settledCount } from "./lib/lookupProgress";
+import { setSourceNames } from "./lib/vocab";
+import { noRecordSources } from "./lib/lookupProgress";
 import { scrollBehavior } from "./lib/motion";
 import {
-  MODE_ACCENT,
-  TOPIC_MODES,
   deepLinkOptions,
   documentTitleFor,
   modeLabel,
-  modeForKey,
   modeParam,
 } from "./lib/checkMode";
 import {
-  SAVED_WITHOUT_SUMMARY,
   modeInSavedReport,
   notInSavedReport,
   openErrorMessage,
-  rememberManageToken,
   reportIdFromPath,
-  runCompletedAtFrom,
-  saveEligibility,
-  savedConfirmation,
-  savedDeepen,
-  savedStatements as savedStatementsFrom,
-  utcDate,
-  utcDateTime,
 } from "./lib/savedReport";
 import { SavedReportBanner, SavedReportExcluded } from "./components/cdd/SavedReportBanner";
-import { SavedReportContext, type SavedReportContextValue } from "./components/cdd/savedReportContext";
+import { SavedReportContext } from "./components/cdd/savedReportContext";
 import type { CheckMode } from "./lib/checkMode";
-import type { IconName } from "./components/ui";
-import { NarrativePanel } from "./components/cdd/NarrativePanel";
-import { SignalEvidence } from "./components/risk/SignalEvidence";
-import { evidenceForCode } from "./lib/signalEvidence";
-import { Explain } from "./components/ui/Explain";
 import { SourcesPage } from "./components/SourcesPage";
 import BatchPage from "./components/BatchPage";
 import WatchlistPage from "./components/WatchlistPage";
@@ -101,16 +54,26 @@ import {
   ExampleLeiPicker,
   HowItWorks,
 } from "./components/HomePanels";
-import type { ReportExportPayload } from "./components/cdd/NarrativePanel";
 import {
-  SourceBucketCard,
-  SkeletonSourceCard,
   type SourceBucket,
 } from "./components/cdd/SourceBucketCard";
-import { OpenAlephArchiveMatches } from "./components/cdd/OpenAlephArchiveMatches";
 import { EsgPanel } from "./components/cdd/EsgPanel";
-import { SecuritiesSection } from "./components/cdd/SecuritiesSection";
-import { clearPanelError, mergePanelError, panelLabel, type PanelError } from "./lib/panelErrors";
+import { clearPanelError, mergePanelError, type PanelError } from "./lib/panelErrors";
+import {
+  PAGE_TITLES,
+  VIEW_DOCUMENT_TITLES,
+  pathToView,
+  viewToPath,
+  type View,
+} from "./lib/views";
+import { DegradedScreensNotice, PanelErrorsNotice } from "./components/cdd/ReportNotices";
+import { ModeBlurb, ModeTabs } from "./components/cdd/ModeTabs";
+import { PanelBoundary, PanelLoading } from "./components/ui/PanelBoundary";
+import { SiteFooter, SiteHeader } from "./components/SiteChrome";
+import { SearchPanel } from "./components/SearchPanel";
+import { useSearchForm } from "./hooks/useSearchForm";
+import { useLookupStream } from "./hooks/useLookupStream";
+import { useSavedReport } from "./hooks/useSavedReport";
 
 // FullCheck (enhanced due diligence) view — lazy so Cytoscape/graph code only
 // loads when a user switches into FullCheck mode.
@@ -120,6 +83,8 @@ const BackgroundCheckPanel = lazy(
 );
 const SubsidiariesPanel = lazy(() => import("./components/cdd/SubsidiariesPanel"));
 const HistoryPanel = lazy(() => import("./components/cdd/HistoryPanel"));
+// Phase 246: QuickCheck is a lazy chunk too, like the five modes beside it.
+const QuickCheckPanel = lazy(() => import("./components/cdd/QuickCheckPanel"));
 const PersonReportPage = lazy(
   () => import("./components/cdd/PersonReportPage")
 );
@@ -138,7 +103,6 @@ function personReportFromSearch(
   };
 }
 
-
 /**
  * OpenCheck — LEI-anchored customer due diligence UI.
  *
@@ -150,28 +114,54 @@ function personReportFromSearch(
  *   3. We render a single subject view on top of the unified result.
  */
 
-
-
-
 export default function App() {
-  const [leiInput, setLeiInput] = useState("");
-  // Phase 241: the app's own message for a malformed LEI, in place of the
-  // browser's `pattern` tooltip — which is unstyleable, vanishes on its own
-  // and is announced inconsistently (the form is `noValidate`).
-  const [leiInputError, setLeiInputError] = useState<string | null>(null);
+  // The search panel's fields and its two GLEIF searches (Phase 246: a hook,
+  // because the header, the homepage and `resetToHome` read them too).
+  const search = useSearchForm();
+  const { nameSearchMutation, nationalIdSearchMutation } = search;
 
-  // --- Streaming lookup state ---
-  // streamingLei is set once GLEIF resolves (replaces the old `result !== null` guard).
-  const [streamingLei, setStreamingLei] = useState<string | null>(null);
-  const [legalName, setLegalName] = useState<string | null>(null);
-  const [subjectJurisdiction, setSubjectJurisdiction] = useState<string | null>(null);
+  // The lookup run on screen — every field its events set, and the one
+  // handler builder the live stream and a saved report's replay share.
+  const stream = useLookupStream();
+  const {
+    streamingLei,
+    legalName,
+    subjectJurisdiction,
+    hits,
+    errors,
+    crossSourceLinks,
+    possiblySame,
+    subjectProfile,
+    knowability,
+    primaryListing,
+    knowabilityChain,
+    riskSignals,
+    degradedSources,
+    verdict,
+    sourceLiveness,
+    oaScreening,
+    graphShape,
+    applicableSources,
+    completedSources,
+    startedSources,
+    queuePosition,
+    erroredSources,
+    answeredApplicable,
+    settled,
+    streaming,
+    bodsCountMap,
+    bodsBreakdownMap,
+    streamDropped,
+    replayedAt,
+    runCompletedAt,
+    retryingSources,
+    cleanupRef,
+  } = stream;
+
   // On mobile, the search inputs collapse once results are on screen (the
   // tab bar stays); this reopens them. Desktop is unaffected.
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const phoneLayout = useIsPhone();
-  /** The header field's own value, kept apart from `nameQuery` so typing in
-   *  one does not rewrite the other under the reader. */
-  const [headerQuery, setHeaderQuery] = useState("");
   /** The identity band is a disclosure, opened by the subject card's
    *  identifier badge. Reset per lookup, like everything else about a
    *  result. */
@@ -181,42 +171,6 @@ export default function App() {
    *  per-entity state because the lookup reset clears it. */
   const [selectedSignalCode, setSelectedSignalCode] = useState<string | null>(null);
   const searchPanelsCollapsed = !!streamingLei && !mobileSearchOpen;
-  const [hits, setHits] = useState<SourceHit[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [crossSourceLinks, setCrossSourceLinks] = useState<CrossSourceLink[]>([]);
-  const [possiblySame, setPossiblySame] = useState<PossiblySameEntity[]>([]);
-  // What the registers say the subject *is* (Phase 154) — its own event,
-  // arriving once the deepened bundles are in. Identity, not the answer.
-  const [subjectProfile, setSubjectProfile] = useState<SubjectProfile | null>(null);
-  const [knowability, setKnowability] = useState<KnowabilityStatement | null>(null);
-  // Phase 236: the primary listing from PermID, as the `listing` event carried it.
-  const [primaryListing, setPrimaryListing] = useState<PrimaryListing | null>(null);
-  const [knowabilityChain, setKnowabilityChain] = useState<KnowabilityChain | null>(null);
-  const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
-  // Derived checks that did not fully run (issue #50) — rendered as a
-  // warning above the risk panel; empty signals + non-empty degraded is
-  // NOT a clean screen.
-  const [degradedSources, setDegradedSources] = useState<DegradedSource[]>([]);
-  // The answer-first sentence, rendered above the evidence. Built in the
-  // backend (opencheck/verdict.py) from the signals and degradations, so
-  // the page, the PDF, the share card and the API cannot disagree — and
-  // so it costs no model call.
-  const [verdict, setVerdict] = useState<string | null>(null);
-  // How current each source's payload is, keyed by source_id. Arrives on the
-  // risk_signals event alongside degraded_sources — the two answer the same
-  // shape of question: what in this result should not be read at face value.
-  const [sourceLiveness, setSourceLiveness] = useState<
-    Record<string, SourceLiveness>
-  >({});
-  // Informational OpenAleph percolation matches (Phase 96) — related-party
-  // names found in archive/watchlist collections whose topics map to no
-  // RELATED_* code. Name-derived; never identifier corroboration.
-  const [oaScreening, setOaScreening] = useState<OpenAlephScreeningMatch[]>([]);
-  // How big the mapped graph is, for the verdict strip's ownership-network
-  // column. Rides on the same event as the signals, the degradations and the
-  // verdict sentence, so the three columns describe one run.
-  const [graphShape, setGraphShape] = useState<GraphShape | null>(null);
-  const [applicableSources, setApplicableSources] = useState<string[]>([]);
   // Panels that fetch outside `_lookup_pipeline` (/securities, /subsidiaries).
   // Deliberately NOT merged into `degradedSources`: that list arrives on the
   // same event as `signals` and as the backend-built verdict sentence, and the
@@ -225,41 +179,6 @@ export default function App() {
   // nothing about it — and `onRiskSignals` overwrites the list wholesale, so it
   // would be erased anyway. See lib/panelErrors.ts.
   const [panelErrors, setPanelErrors] = useState<PanelError[]>([]);
-  const [completedSources, setCompletedSources] = useState<Set<string>>(new Set());
-  // Phase 124: the loading grid used to simulate per-source progress. It now
-  // renders `source_started` / `source_completed` / `source_error`, so it needs
-  // the started set the stream was already sending and nothing was reading.
-  const [startedSources, setStartedSources] = useState<Set<string>>(new Set());
-  // Phase 238: where this run stands in the server's queue while it waits for
-  // a pipeline slot (the `queued` event). Null when it is not waiting.
-  const [queuePosition, setQueuePosition] = useState<number | null>(null);
-  // Derived rather than stored: `errors` is already the record of which sources
-  // failed, and a second set could disagree with it.
-  const erroredSources = useMemo(() => new Set(Object.keys(errors)), [errors]);
-  // Coverage counts only sources that were dispatched. `completedSources` also
-  // holds the GLEIF anchor, which emits source_started/source_completed BEFORE
-  // sources_applicable and is never in that list — so the raw size could exceed
-  // the total and the strip read "13 of 12 sources answered", above the line
-  // "Every applicable source answered." A coverage figure that overshoots its
-  // own denominator undermines the one number on the page whose whole job is
-  // to say how much was checked.
-  const answeredApplicable = useMemo(
-    () => answeredCount(applicableSources, completedSources, erroredSources),
-    [applicableSources, completedSources, erroredSources]
-  );
-  // Phase 241: the one progress count — the loading grid computes the same
-  // figures from the same sets, so the header and the bar cannot disagree.
-  const settled = useMemo(
-    () =>
-      settledCount({
-        anchored: true,
-        applicable: applicableSources,
-        completed: completedSources,
-        errored: erroredSources,
-      }),
-    [applicableSources, completedSources, erroredSources]
-  );
-  const [streaming, setStreaming] = useState(false);
   // QuickCheck (subject screening, default) vs FullCheck (network EDD) vs
   // BackgroundCheck (screening the people connected to the entity). Reset to
   // QuickCheck on each new lookup so the headline experience is always QuickCheck.
@@ -279,179 +198,33 @@ export default function App() {
    * the lookup mutation for why that distinction is the whole feature.
    */
   const [focusStatementId, setFocusStatementId] = useState<string | null>(null);
-  // Maps "source_id:hit_id" → BODS statement count; populated by the bods_counts SSE event.
-  const [bodsCountMap, setBodsCountMap] = useState<Record<string, number>>({});
-  // Same key → entity / relationship split, for the source-card graph CTA subtitle.
-  const [bodsBreakdownMap, setBodsBreakdownMap] = useState<
-    Record<string, BodsBreakdown>
-  >({});
-  // True when the SSE connection dropped AFTER the GLEIF anchor resolved —
-  // partial results are on screen and a "Resume lookup" banner is shown.
-  const [streamDropped, setStreamDropped] = useState(false);
-  // Wall-clock ISO time the on-screen results were originally fetched, when
-  // they came from the backend replay cache rather than a fresh run. Null for
-  // live runs. Drives the "Results from a check N min ago" badge.
-  const [replayedAt, setReplayedAt] = useState<string | null>(null);
-  // ── Saved reports (Phase 217) ──────────────────────────────────────
-  // `runCompletedAt` names the run on screen (its `done` event carries it);
-  // a save names that run and the server copies its own held copy. A
-  // per-source retry changes the page without changing the run, so it
-  // blocks saving until the check is run again.
-  const [runCompletedAt, setRunCompletedAt] = useState<string | null>(null);
-  const [retriedSinceRun, setRetriedSinceRun] = useState(false);
-  const [saveBusy, setSaveBusy] = useState(false);
-  const [savedFromRun, setSavedFromRun] = useState<SavedReportMeta | null>(null);
-  const [saveNotice, setSaveNotice] = useState<string | null>(null);
-  // The saved report on screen at /report/{id}. Non-null means this page is
-  // a record, not a live check: everything that would reach for today's data
-  // is off, and the banner above the subject says so.
-  const [savedReport, setSavedReport] = useState<SavedReport | null>(null);
-  const [savedOpening, setSavedOpening] = useState(false);
-  const [savedOpenError, setSavedOpenError] = useState<string | null>(null);
-  // Source IDs with an in-flight per-source retry (/lookup-source).
-  const [retryingSources, setRetryingSources] = useState<Set<string>>(new Set());
+  // The saved copy on screen, saving the live run, and the exports (Phase 246).
+  const saved = useSavedReport({ streamingLei, runCompletedAt, streaming });
+  const {
+    savedReport,
+    setSavedReport,
+    savedOpening,
+    setSavedOpening,
+    savedOpenError,
+    setSavedOpenError,
+    saveNotice,
+    setRetriedSinceRun,
+    saveItem,
+    savedCtx,
+    savedNetwork,
+    savedNarrative,
+    setExportPayload,
+    exportError,
+    setExportError,
+    pdfBusy,
+    mdBusy,
+    downloadPdf,
+    downloadMarkdown,
+  } = saved;
   // Screen-reader announcement for per-source failures and retry outcomes,
   // rendered in the sr-only role="status" region in <main>.
   const [srAnnouncement, setSrAnnouncement] = useState("");
 
-  // Cleanup ref — holds the SSE close function for the current in-flight stream.
-  const cleanupRef = useRef<(() => void) | null>(null);
-
-  // Close any open stream when the component unmounts.
-  useEffect(() => () => { cleanupRef.current?.(); }, []);
-  // Path → view mapping. /sources and /about are real URLs; everything
-  // else falls through to "main" (the SPA rewrite in render.yaml serves
-  // index.html for all paths so deep links work).
-  type View =
-    | "main"
-    | "sources"
-    | "behind"
-    | "api"
-    | "changelog"
-    | "batch"
-    | "watchlist"
-    | "features";
-
-  /**
-   * The header nav, constant across every view (Phase 122). One label per
-   * destination: v1 called the same page "Behind the scenes →", "About",
-   * "How it works →" and "Behind the Scenes" depending on where you met it,
-   * and replaced the whole nav with "← Back" on every sub-page, so /api and
-   * /sources were unreachable from each other.
-   */
-    /**
-   * The five checks, in the order they escalate: the subject alone, its
-   * network, the people in it — then the two topics, Subsidiaries (what it
-   * owns, Phase 185) and Climate & ESG, which are different questions rather
-   * than further depths, and are separated in the strip to say so. Accents
-   * come from `MODE_ACCENT` in lib/checkMode.ts — the `oo.node.*` brand tier
-   * that already names each mode's badge, plus the graph's control colour
-   * for subsidiaries — so the tab, the badge and the graph edge are one
-   * colour rather than three.
-   */
-  const MODE_TABS: {
-    id: CheckMode;
-    label: string;
-    icon: IconName;
-    accent: string;
-    blurb: string;
-    topic?: boolean;
-  }[] = [
-    {
-      id: "quick",
-      label: "QuickCheck",
-      icon: "quickcheck",
-      accent: MODE_ACCENT.quick,
-      blurb: "Screening this company on its own — sanctions, control, structure. The fastest answer.",
-    },
-    {
-      id: "full",
-      label: "FullCheck",
-      icon: "fullcheck",
-      accent: MODE_ACCENT.full,
-      blurb: "Following the ownership chain outwards, then screening everything it reaches.",
-    },
-    {
-      id: "background",
-      label: "BackgroundCheck",
-      icon: "backgroundcheck",
-      accent: MODE_ACCENT.background,
-      blurb: "Screening the officers, directors and beneficial owners named in the records.",
-    },
-    {
-      id: "subsidiaries",
-      label: "Subsidiaries",
-      icon: "subsidiaries",
-      accent: MODE_ACCENT.subsidiaries,
-      blurb: "What this company owns, from every source that publishes a list — they disagree, and the tab says why.",
-      topic: TOPIC_MODES.has("subsidiaries"),
-    },
-    {
-      id: "history",
-      label: "History",
-      icon: "history",
-      accent: MODE_ACCENT.history,
-      blurb: "How this company's records changed, merged from every register that keeps a change log — most keep none.",
-      topic: TOPIC_MODES.has("history"),
-    },
-    {
-      id: "esg",
-      label: "Climate & ESG",
-      icon: "esg",
-      accent: MODE_ACCENT.esg,
-      blurb: "Emissions and asset records published about this company — what it does, rather than who owns it.",
-      topic: TOPIC_MODES.has("esg"),
-    },
-  ];
-
-// No "Search" item. It did exactly what the logo beside it does — go to the
-// homepage — and now that the header carries a real search field, a nav link
-// labelled "Search" that is not the search field is a third thing pointing at
-// two behaviours. The logo remains the way home.
-/** Views that already render a heading of their own: `main` has the hero, or
- *  the report's sr-only heading once a lookup is on screen, and `batch` has
- *  BatchPage's "Screen a list". */
-type SelfTitledView = "main" | "batch" | "watchlist";
-
-/** The page title every other view puts in the document outline. The
- *  `Exclude` is the point: a new view cannot be added without either giving
- *  it a title here or declaring that it titles itself. */
-const PAGE_TITLES: Record<Exclude<View, SelfTitledView>, string> = {
-  sources: "The sources OpenCheck queries",
-  features: "What OpenCheck can do",
-  behind: "About OpenCheck",
-  api: "The OpenCheck API",
-  changelog: "OpenCheck development history",
-};
-
-const NAV_ITEMS: { view: View; label: string }[] = [
-    { view: "sources", label: "Sources" },
-    { view: "api", label: "API" },
-    // Phase 175: "About" gave the top nav its slot to the page that explains
-    // the architecture; a first-time visitor wants to know what the thing
-    // DOES before how it is built. /about keeps its URL and its footer link.
-    { view: "features", label: "Features" },
-  ];
-  function pathToView(path: string): View {
-    if (path === "/sources") return "sources";
-    if (path === "/features") return "features";
-    if (path === "/about") return "behind";
-    if (path === "/api") return "api";
-    if (path === "/changelog") return "changelog";
-    if (path === "/batch") return "batch";
-    if (path === "/watchlist") return "watchlist";
-    return "main";
-  }
-  function viewToPath(v: View): string {
-    if (v === "sources") return "/sources";
-    if (v === "features") return "/features";
-    if (v === "behind") return "/about";
-    if (v === "api") return "/api";
-    if (v === "changelog") return "/changelog";
-    if (v === "batch") return "/batch";
-    if (v === "watchlist") return "/watchlist";
-    return "/";
-  }
   const [view, setView] = useState<View>(() => pathToView(window.location.pathname));
 
   /** Navigate to a view, updating the browser URL. */
@@ -473,36 +246,10 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       document.title = savedReport
         ? `Saved report: ${documentTitleFor(mode, legalName)}`
         : documentTitleFor(mode, legalName);
-    } else if (view === "sources") {
-      document.title = "Data Sources — OpenCheck";
-    } else if (view === "features") {
-      document.title = "Features — OpenCheck";
-    } else if (view === "behind") {
-      document.title = "Behind the Scenes — OpenCheck";
-    } else if (view === "api") {
-      document.title = "API — OpenCheck";
-    } else if (view === "changelog") {
-      document.title = "Changelog — OpenCheck";
-    } else if (view === "batch") {
-      document.title = "Screen a list — OpenCheck";
-    } else if (view === "watchlist") {
-      document.title = "Watchlist — OpenCheck";
     } else {
-      document.title = "OpenCheck";
+      document.title = view === "main" ? "OpenCheck" : VIEW_DOCUMENT_TITLES[view];
     }
   }, [legalName, view, mode, savedReport]);
-
-  // Phase 217: a saved report is shared by link and never indexed. robots.txt
-  // already disallows /report on this host; the meta tag covers a crawler that
-  // renders the page anyway, and comes off again when the reader leaves.
-  useEffect(() => {
-    if (!savedReport) return;
-    const meta = document.createElement("meta");
-    meta.name = "robots";
-    meta.content = "noindex, nofollow";
-    document.head.appendChild(meta);
-    return () => meta.remove();
-  }, [savedReport]);
 
   // Focus management — move focus to #main-content on view changes so keyboard
   // and screen reader users are oriented to the new page content (WCAG 2.4.3).
@@ -518,91 +265,9 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     if (el) el.focus({ preventScroll: true });
   }, [view]);
 
-  // Three-mode search: "name" = GLEIF name search; "nationalId" = registration
-  // number reverse lookup; "lei" = paste LEI directly.
-  // TENTATIVE (Phase E): the "person" tab is under evaluation — Stephen's
-  // instinct is to keep person search as a follow-on from entity pages.
-  // It is deliberately isolated in its own commit for a clean revert.
-  const [searchMode, setSearchMode] = useState<"name" | "nationalId" | "lei" | "person">("name");
-  // APG tabs keyboard pattern: Left/Right arrows (wrapping), Home and End move
-  // both focus and selection across the search-mode tabs (roving tabindex).
-  const SEARCH_TAB_ORDER = ["name", "nationalId", "lei", "person"] as const;
-  const SEARCH_TAB_IDS: Record<(typeof SEARCH_TAB_ORDER)[number], string> = {
-    name: "tab-name",
-    nationalId: "tab-national-id",
-    lei: "tab-lei",
-    person: "tab-person",
-  };
-  function onSearchTabKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
-    const idx = SEARCH_TAB_ORDER.indexOf(searchMode);
-    let next: number;
-    if (e.key === "ArrowRight") next = (idx + 1) % SEARCH_TAB_ORDER.length;
-    else if (e.key === "ArrowLeft") next = (idx + SEARCH_TAB_ORDER.length - 1) % SEARCH_TAB_ORDER.length;
-    else if (e.key === "Home") next = 0;
-    else if (e.key === "End") next = SEARCH_TAB_ORDER.length - 1;
-    else return;
-    e.preventDefault();
-    const mode = SEARCH_TAB_ORDER[next];
-    setSearchMode(mode);
-    setMobileSearchOpen(true);
-    document.getElementById(SEARCH_TAB_IDS[mode])?.focus();
-  }
-  const [nameQuery, setNameQuery] = useState("");
-  // TENTATIVE person tab inputs (Phase E — see searchMode note above).
-  const [personQuery, setPersonQuery] = useState("");
-  const [personBirthYear, setPersonBirthYear] = useState("");
-  const [nationalIdQuery, setNationalIdQuery] = useState("");
-  // ISO 3166-1 alpha-2 country code for the national ID tab; defaults to UK.
-  const [selectedCountry, setSelectedCountry] = useState("GB");
-  // Tracks whether the national ID input has been blurred at least once.
-  // Format warnings are suppressed until the field is touched so they don't
-  // fire on every keystroke while the user is still typing.
-  const [nationalIdTouched, setNationalIdTouched] = useState(false);
-
   const sourcesQuery = useQuery({
     queryKey: ["sources"],
     queryFn: () => fetchSources(),
-  });
-
-  // ── Name-search mutation ──────────────────────────────────────────────────
-  // Queries GLEIF's public API by legal name. Returns a list of matching
-  // entities for the user to pick from; selection hands off to lookupMutation.
-  const nameSearchMutation = useMutation<GleifSearchResult[], Error, string>({
-    mutationFn: async (q: string) => {
-      const url =
-        `https://api.gleif.org/api/v1/lei-records` +
-        `?filter[entity.legalName]=${encodeURIComponent(q)}&page[size]=10`;
-      const resp = await fetch(url, { headers: { Accept: "application/vnd.api+json" } });
-      if (!resp.ok) throw new Error(`GLEIF API returned ${resp.status}`);
-      const json = await resp.json();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (json.data ?? []).map((item: any) => {
-        const attrs = item.attributes ?? {};
-        const entity = attrs.entity ?? {};
-        const reg = attrs.registration ?? {};
-        return {
-          lei: attrs.lei as string,
-          legalName:
-            (entity.legalName?.name as string) ??
-            (entity.legalName as string) ??
-            attrs.lei,
-          country: entity.legalAddress?.country ?? "—",
-          status: reg.status ?? "—",
-        } satisfies GleifSearchResult;
-      });
-    },
-  });
-
-  // ── National-ID search mutation ──────────────────────────────────────────
-  // Queries GLEIF's three registration-ID filter fields in parallel using
-  // the RA code for the selected country. On single result, auto-navigates;
-  // on multiple results, shows the same picker as the name search.
-  const nationalIdSearchMutation = useMutation<
-    GleifSearchResult[],
-    Error,
-    { raCode: string; id: string }
-  >({
-    mutationFn: ({ raCode, id }) => searchByNationalId(raCode, id),
   });
 
   /**
@@ -611,26 +276,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
    * so a saved report can never inherit a live check's state or the reverse.
    */
   function resetReportState() {
-    setStreamingLei(null);
-    setLegalName(null);
-    setHits([]);
-    setErrors({});
-    setCrossSourceLinks([]);
-    setPossiblySame([]);
-    setSubjectProfile(null);
-    setKnowability(null);
-    setKnowabilityChain(null);
-    setPrimaryListing(null);
-    setRiskSignals([]);
-    setDegradedSources([]);
-    setVerdict(null);
-    setSourceLiveness({});
-    setOaScreening([]);
-    setGraphShape(null);
-    setApplicableSources([]);
-    setCompletedSources(new Set());
-    setStartedSources(new Set());
-    setQueuePosition(null);
+    stream.reset();
     setPanelErrors([]);
     setIdentityOpen(false);
     // A chip selection belongs to the entity it was made on. Carried into
@@ -644,17 +290,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // is the previous entity's summary and its analyst's signed decisions.
     setExportError(null);
     setExportPayload({ narrative: null, dispositions: null });
-    setStreaming(false);
-    setBodsCountMap({});
-    setBodsBreakdownMap({});
-    setStreamDropped(false);
-    setRetryingSources(new Set());
-    setReplayedAt(null);
-    // Phase 217: the run's name, and anything saved from it.
-    setRunCompletedAt(null);
-    setRetriedSinceRun(false);
-    setSavedFromRun(null);
-    setSaveNotice(null);
+    // Phase 217: anything saved from the run.
+    saved.resetForNewRun();
   }
 
   /**
@@ -667,79 +304,13 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     onAnchor: (e: { lei: string; legal_name: string | null }) => void;
     onFailure: (detail: string) => void;
   }): LookupStreamHandlers {
-    // Tracks whether the GLEIF anchor resolved: a connection drop before
-    // it is a hard error; after it, we keep partial results and offer a
-    // "Resume lookup" instead.
-    let anchored = false;
-    return {
-      // Served from the backend replay cache — badge the result with the
-      // original completion time so a cached run never looks live.
-      onReplayed: (e) => setReplayedAt(e.fetched_at),
-      onQueued: (e) => setQueuePosition(e.position),
-      onGleifDone: (e) => {
-        anchored = true;
-        setStreamingLei(e.lei);
-        setLegalName(e.legal_name);
-        setSubjectJurisdiction(e.jurisdiction);
+    return stream.handlers({
+      onAnchor: (e) => {
         setMobileSearchOpen(false); // re-collapse the mobile search inputs
-        setStreaming(true);
-        cb.onAnchor({ lei: e.lei, legal_name: e.legal_name });
+        cb.onAnchor(e);
       },
-      onSourcesApplicable: (e) => setApplicableSources(e.source_ids),
-      onSourceStarted: (e) =>
-        setStartedSources((prev) => new Set([...prev, e.source_id])),
-      // Dedup by source_id:hit_id — in dev, React StrictMode runs the lookup
-      // effect twice, so two streams can each deliver the same hit. The guard
-      // makes hit accumulation idempotent (no-op in production, where
-      // StrictMode doesn't double-invoke).
-      onHit: (e) =>
-        setHits((prev) =>
-          prev.some((h) => h.source_id === e.source_id && h.hit_id === e.hit_id)
-            ? prev
-            : [...prev, e]
-        ),
-      onSourceCompleted: (e) =>
-        setCompletedSources((prev) => new Set([...prev, e.source_id])),
-      onSourceError: (e) => {
-        setErrors((prev) => ({ ...prev, [e.source_id]: e.error }));
-        setCompletedSources((prev) => new Set([...prev, e.source_id]));
-      },
-      onCrossSourceLinks: (e) => setCrossSourceLinks(e.links),
-      onPossiblySame: (e) => setPossiblySame(e.pairs),
-      onSubjectProfile: (e) => setSubjectProfile(e.profile),
-      onKnowability: (e) => setKnowability(e),
-      onKnowabilityChain: (e) => setKnowabilityChain(e),
-      onListing: (e) => setPrimaryListing(e),
-      onRiskSignals: (e) => {
-        setRiskSignals(e.signals);
-        setDegradedSources(e.degraded_sources ?? []);
-        setVerdict(e.verdict ?? null);
-        setSourceLiveness(e.source_liveness ?? {});
-        setOaScreening(e.openaleph_screening ?? []);
-        setGraphShape(e.graph_shape ?? null);
-      },
-      onBodsCounts: (e: BodsCountsEvent) => {
-        setBodsCountMap(e.counts);
-        if (e.breakdown) setBodsBreakdownMap(e.breakdown);
-      },
-      onDone: (e) => {
-        setStreaming(false);
-        setStreamDropped(false);
-        setRunCompletedAt(runCompletedAtFrom(e));
-        cleanupRef.current = null;
-      },
-      onError: (detail) => {
-        setStreaming(false);
-        cleanupRef.current = null;
-        if (anchored) {
-          // Mid-lookup drop (e.g. Render cold start, flaky network):
-          // keep the partial results and surface the resume banner.
-          setStreamDropped(true);
-        } else {
-          cb.onFailure(detail);
-        }
-      },
-    };
+      onFailure: cb.onFailure,
+    });
   }
 
   /**
@@ -762,7 +333,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       setFocusStatementId(null);
       // A tab a saved report does not hold still opens, and says so.
       setMode(opts?.mode ?? "quick");
-      setLeiInput(report.lei);
+      search.setLeiInput(report.lei);
       setSavedReport(report);
       setExportPayload({
         narrative: report.payload.narrative,
@@ -782,56 +353,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       );
     } finally {
       setSavedOpening(false);
-    }
-  }
-
-  /** Copy a link, reporting whether the clipboard took it. */
-  async function copyLink(url: string): Promise<boolean> {
-    try {
-      await navigator.clipboard?.writeText(url);
-      return Boolean(navigator.clipboard);
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Save the live check on screen (Phase 217). The server copies its own held
-   * run; the summary goes with it only if the server wrote it from this run —
-   * otherwise the report is saved without it and the reader is told, rather
-   * than the save failing over the part they did not ask about.
-   */
-  async function saveThisReport() {
-    if (!streamingLei || !runCompletedAt || saveBusy) return;
-    setSaveBusy(true);
-    setExportError(null);
-    setSaveNotice(null);
-    const narrativeRunId = exportPayload.narrative?.run_id || null;
-    try {
-      let meta: SavedReportMeta & { manage_token: string };
-      let withSummary = Boolean(narrativeRunId);
-      let droppedSummary = false;
-      try {
-        meta = await saveReport({ lei: streamingLei, run_completed_at: runCompletedAt, narrative_run_id: narrativeRunId });
-      } catch (e) {
-        if (!(e instanceof SavedReportError) || e.code !== "narrative_not_held" || !narrativeRunId) throw e;
-        meta = await saveReport({ lei: streamingLei, run_completed_at: runCompletedAt });
-        withSummary = false;
-        droppedSummary = true;
-      }
-      rememberManageToken(meta.report_id, meta.manage_token);
-      setSavedFromRun(meta);
-      const copied = await copyLink(savedReportShareUrl(meta.report_id));
-      setSaveNotice(
-        droppedSummary
-          ? `${SAVED_WITHOUT_SUMMARY} ${copied ? "The link is copied. " : ""}Kept until ${utcDate(meta.expires_at)}.`
-          : savedConfirmation(meta, withSummary, copied),
-      );
-      trackEvent("report_saved");
-    } catch (e) {
-      setExportError(e instanceof Error ? e.message : "Could not save this report.");
-    } finally {
-      setSaveBusy(false);
     }
   }
 
@@ -917,7 +438,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     opts?: { refresh?: boolean; mode?: CheckMode; focus?: string | null }
   ) {
     const lei = rawLei.trim().toUpperCase();
-    setLeiInput(lei);
+    search.setLeiInput(lei);
     setView("main");
     // Leaving a saved report for a live check: the address must stop saying
     // /report/{id}, or a refresh would reopen the record, not the check.
@@ -1069,12 +590,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         cleanupRef.current = null;
         setSavedReport(null);
         setSavedOpenError(null);
-        setStreamingLei(null);
-        setLegalName(null);
-        setHits([]);
-        setErrors({});
-        setStreaming(false);
-        setStreamDropped(false);
+        stream.reset();
         lookupMutation.reset();
         setView("main");
       }
@@ -1100,7 +616,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
   /** Re-run a single failed source via /lookup-source (per-source retry). */
   async function retrySource(sourceId: string) {
     if (!streamingLei) return;
-    setRetryingSources((prev) => new Set([...prev, sourceId]));
+    stream.setRetryingSources((prev) => new Set([...prev, sourceId]));
     // The page no longer shows one run once a source is re-run on its own,
     // so it can no longer be saved as one (the server has dropped the run
     // from its replay cache too).
@@ -1109,44 +625,33 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     try {
       const res = await retryLookupSource(streamingLei, sourceId);
       if (res.error) {
-        setErrors((prev) => ({ ...prev, [sourceId]: res.error as string }));
+        stream.setErrors((prev) => ({ ...prev, [sourceId]: res.error as string }));
         setSrAnnouncement(`${sourceName} retry failed.`);
       } else {
-        setErrors((prev) => {
+        stream.setErrors((prev) => {
           const next = { ...prev };
           delete next[sourceId];
           return next;
         });
-        setHits((prev) => [
+        stream.setHits((prev) => [
           ...prev.filter((h) => h.source_id !== sourceId),
           ...res.hits,
         ]);
         setSrAnnouncement(`${sourceName} retried successfully.`);
       }
     } catch (e) {
-      setErrors((prev) => ({
+      stream.setErrors((prev) => ({
         ...prev,
         [sourceId]: e instanceof Error ? e.message : String(e),
       }));
       setSrAnnouncement(`${sourceName} retry failed.`);
     } finally {
-      setRetryingSources((prev) => {
+      stream.setRetryingSources((prev) => {
         const next = new Set(prev);
         next.delete(sourceId);
         return next;
       });
     }
-  }
-
-  function runLookup(e: React.FormEvent) {
-    e.preventDefault();
-    const message = leiInputMessage(leiInput);
-    setLeiInputError(message);
-    if (message) {
-      document.getElementById("lei-input")?.focus();
-      return;
-    }
-    lookupLei(leiInput);
   }
 
   /**
@@ -1160,9 +665,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
    * results to pick from — the header has no room to render them, and a
    * search whose results appear nowhere is worse than no search field.
    */
-  function submitHeaderSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const q = headerQuery.trim();
+  function searchFromHeader(query: string) {
+    const q = query.trim();
     if (!q) return;
     // The header is on every page, so the search has to *get to* the page that
     // can show a result. Without this it fired a real GLEIF request from
@@ -1170,14 +674,13 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // ran a whole 39-source lookup behind a screen that never changed —
     // leaving `?person=…&lei=…` in the URL as a permanently stuck link.
     showEntitySearchSurface();
-    setHeaderQuery("");
     if (isValidLei(q.toUpperCase())) {
       lookupLei(q);
       return;
     }
-    setSearchMode("name");
+    search.setSearchMode("name");
     setMobileSearchOpen(true);
-    setNameQuery(q);
+    search.setNameQuery(q);
     nameSearchMutation.mutate(q);
     // The results render in the panel this just opened, so the page follows.
     requestAnimationFrame(() => {
@@ -1203,13 +706,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     }
   }
 
-  function searchByName(e: React.FormEvent) {
-    e.preventDefault();
-    const q = nameQuery.trim();
-    if (!q) return;
-    nameSearchMutation.mutate(q);
-  }
-
   // Build a set of source IDs that are categorised as ESG.
   const esgSourceIds = useMemo<Set<string>>(() => {
     if (!sourcesQuery.data) return new Set();
@@ -1228,11 +724,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         ? Object.fromEntries(sourcesQuery.data.sources.map((s) => [s.id, s.name]))
         : {},
     [sourcesQuery.data]
-  );
-  // The identity band's profile rows (Phase 154) — derived once per profile.
-  const profileRowsForBand = useMemo(
-    () => profileRows(subjectProfile, sourceNameIndex),
-    [subjectProfile, sourceNameIndex],
   );
 
   // Publish it, so a component holding a source id and no map still says the
@@ -1299,36 +790,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
 
   const totalHits = cddBuckets.reduce((n, b) => n + b.hits.length, 0);
 
-  // Extract GLEIF LEI Mapping identifiers from the GLEIF hit's raw attributes.
-  // These are published by the GLEIF LEI Mapping programme (GODIN) and are not
-  // surfaced through cross_source_links because they don't require corroboration
-  // from a second source — GLEIF is the authoritative bridge.
-  const gleifMappedIds = useMemo<{ scheme: string; value: string }[]>(() => {
-    const gleifHit = hits.find((h) => h.source_id === "gleif");
-    if (!gleifHit) return [];
-    const attrs = (gleifHit.raw as Record<string, unknown>) ?? {};
-    const result: { scheme: string; value: string }[] = [];
-    const ocid = attrs["ocid"];
-    if (ocid && typeof ocid === "string")
-      result.push({ scheme: "OpenCorporates ID", value: ocid });
-    const bic = attrs["bic"];
-    if (bic) {
-      const bicVal = Array.isArray(bic) ? bic[0] : bic;
-      if (typeof bicVal === "string") result.push({ scheme: "BIC (ISO 9362)", value: bicVal });
-    }
-    const mic = attrs["mic"];
-    if (mic) {
-      const micVal = Array.isArray(mic) ? mic[0] : mic;
-      if (typeof micVal === "string") result.push({ scheme: "MIC (ISO 10383)", value: micVal });
-    }
-    const spglobal = attrs["spglobal"];
-    if (spglobal) {
-      const spVal = Array.isArray(spglobal) ? spglobal[0] : spglobal;
-      if (typeof spVal === "string") result.push({ scheme: "S&P CIQ Company ID", value: spVal });
-    }
-    return result;
-  }, [hits]);
-
   // Distinct sources that independently publish the subject's LEI — the
   // SubjectCard badge number. Scoped to the LEI because the badge renders
   // beside it; see countLeiConfirmingSources for the rationale.
@@ -1339,95 +800,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         : 0,
     [crossSourceLinks, streamingLei],
   );
-
-  // The report exports embed the narrative and its dispositions, which are
-  // produced by NarrativePanel further down the page. That is why the control
-  // used to live in *its* header; now the control is on the subject and the
-  // payload comes up to here instead.
-  const [exportPayload, setExportPayload] = useState<ReportExportPayload>({
-    narrative: null,
-    dispositions: null,
-  });
-  const [pdfBusy, setPdfBusy] = useState(false);
-  const [mdBusy, setMdBusy] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
-
-  const downloadPdf = useCallback(async () => {
-    if (!streamingLei) return;
-    setPdfBusy(true);
-    setExportError(null);
-    try {
-      await downloadReportPdf(
-        streamingLei,
-        exportPayload.narrative,
-        exportPayload.dispositions,
-        savedReport?.report_id ?? null
-      );
-      trackEvent("pdf_export");
-    } catch (e) {
-      setExportError(e instanceof Error ? e.message : "Could not generate the PDF.");
-    } finally {
-      setPdfBusy(false);
-    }
-  }, [streamingLei, exportPayload, savedReport]);
-
-  const downloadMarkdown = useCallback(async () => {
-    if (!streamingLei) return;
-    setMdBusy(true);
-    setExportError(null);
-    try {
-      // Same embedding rules as the PDF — the same record in a portable
-      // format, and it works even where the PDF route is 503.
-      await downloadReportMarkdown(
-        streamingLei,
-        exportPayload.narrative,
-        exportPayload.dispositions,
-        savedReport?.report_id ?? null
-      );
-    } catch (e) {
-      setExportError(
-        e instanceof Error ? e.message : "Could not generate the Markdown report."
-      );
-    } finally {
-      setMdBusy(false);
-    }
-  }, [streamingLei, exportPayload, savedReport]);
-
-  // The worst signal, with the corroboration behind it. Derived from the
-  // signals the backend already sent — see lib/signalEvidence.ts for the
-  // rules that keep the sentence from claiming more than they support.
-  // The signal the one evidence box is explaining — the reader's choice, and
-  // nothing before they make one.
-  //
-  // It used to open on the worst signal, picked by a severity ordering. That
-  // is OpenCheck grading findings: it put "the most serious signal is shown
-  // above" on the page, and it decided which of a company's findings a reader
-  // met first. The product's own rule is that a signal is a pointer to a
-  // record, not a conclusion about the company, and ranking them is a
-  // conclusion. The chips are the menu; the box answers whichever one is
-  // asked. `leadSignal` is gone with it.
-  //
-  // A selection that a re-run no longer produces resolves to null, which is
-  // the same state as "nothing selected yet" — not an empty box.
-  const shownSignal = useMemo(
-    () =>
-      selectedSignalCode
-        ? evidenceForCode(riskSignals, selectedSignalCode, sourceLiveness)
-        : null,
-    [selectedSignalCode, riskSignals, sourceLiveness]
-  );
-
-  /** Scroll to a source card and flash it — the same affordance narrative
-   *  citations and the identifier table already use. */
-  const showSourceCard = useCallback((sourceId: string) => {
-    const el = document.getElementById(`source-${sourceId}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
-    if (el.tabIndex < 0) el.tabIndex = -1;
-    el.focus({ preventScroll: true });
-    el.classList.add("oc-cite-flash");
-    window.setTimeout(() => el.classList.remove("oc-cite-flash"), 1600);
-  }, []);
 
   /** SubjectCard badge action: open the identity band, scroll to it and flash
    *  it (the same affordance narrative citations use).
@@ -1499,29 +871,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     }
   };
 
-  // Extract GLEIF direct-children counts from the GLEIF hit's raw dict.
-  // The adapter fetches only the first page (≤ 10) so we surface both
-  // the fetched count and the total reported by GLEIF pagination.
-  const gleifChildrenInfo = useMemo<{ fetched: number; total: number } | null>(() => {
-    const gleifHit = hits.find((h) => h.source_id === "gleif");
-    if (!gleifHit) return null;
-    const raw = (gleifHit.raw as Record<string, unknown>) ?? {};
-    const total = typeof raw["direct_children_total"] === "number" ? raw["direct_children_total"] : 0;
-    const fetched = typeof raw["direct_children_fetched"] === "number" ? raw["direct_children_fetched"] : 0;
-    return total > 0 ? { fetched, total } : null;
-  }, [hits]);
-
-  // Index risk signals by `${source_id}:${hit_id}` so hit rows can
-  // pull their own chips without re-scanning the whole list.
-  const riskByHit = useMemo(() => {
-    const out: Record<string, RiskSignal[]> = {};
-    for (const sig of riskSignals) {
-      const k = `${sig.source_id}:${sig.hit_id}`;
-      (out[k] = out[k] ?? []).push(sig);
-    }
-    return out;
-  }, [riskSignals]);
-
   // Distinct codes — used for the top-level summary chip strip.
   const aggregatedCodes = useMemo(() => {
     const seen = new Map<string, RiskSignal>();
@@ -1568,11 +917,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     [applicableSources, completedSources, esgSourceIds],
   );
 
-  // Only show the national-ID format warning after the field has been blurred
-  // (touched) so partial input during typing doesn't trigger an amber state.
-  const nationalIdFormatOk =
-    !nationalIdTouched || validateNationalId(selectedCountry, nationalIdQuery);
-
   /**
    * Back to a fresh homepage. Extracted from the logo button in Phase 122
    * so the nav's "Search" item and the wordmark cannot drift apart — the
@@ -1586,46 +930,17 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     setSavedReport(null);
     setSavedOpenError(null);
     setSavedOpening(false);
-    setRunCompletedAt(null);
-    setSavedFromRun(null);
-    setSaveNotice(null);
-    setStreamingLei(null);
-    setLegalName(null);
-    setHits([]);
-    setErrors({});
-    setCrossSourceLinks([]);
-    setPossiblySame([]);
-    setSubjectProfile(null);
-    setKnowability(null);
-    setKnowabilityChain(null);
-    setPrimaryListing(null);
-    setRiskSignals([]);
-    setDegradedSources([]);
-    setVerdict(null);
-    setSourceLiveness({});
-    setOaScreening([]);
-    setGraphShape(null);
-    setApplicableSources([]);
-    setCompletedSources(new Set());
-    // Phase 124 added these two and this 30-setter reset is exactly the place
-    // a new one gets missed: a stale panel-error notice would sit on an empty
-    // landing page saying "this report" when there is no report.
-    setStartedSources(new Set());
-    setQueuePosition(null);
+    saved.resetForNewRun();
+    // The whole run (Phase 246: one `stream.reset()` rather than the thirty
+    // setters that stood here, where a new field was exactly what got missed
+    // — Phase 124 had to add two by hand).
+    stream.reset();
     setPanelErrors([]);
     setIdentityOpen(false);
     setExportError(null);
     setExportPayload({ narrative: null, dispositions: null });
-    setStreaming(false);
     lookupMutation.reset();
-    nameSearchMutation.reset();
-    nationalIdSearchMutation.reset();
-    setLeiInput("");
-    setNameQuery("");
-    setNationalIdQuery("");
-    setSelectedCountry("GB");
-    setNationalIdTouched(false);
-    setSearchMode("name");
+    search.reset();
     // Clear ?lei= so the address bar returns to a clean homepage URL.
     if (window.location.search || window.location.pathname !== "/") {
       const url = new URL(window.location.href);
@@ -1637,60 +952,12 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Saved report wiring (Phase 217) ───────────────────────────────────
-  const savedEvents = savedReport?.payload.events ?? null;
-  const savedCtx = useMemo<SavedReportContextValue | null>(
-    () =>
-      savedEvents
-        ? { deepen: (sourceId: string, hitId: string) => savedDeepen(savedEvents, sourceId, hitId) }
-        : null,
-    [savedEvents],
-  );
-  const savedNetwork = useMemo(
-    () => (savedEvents ? savedStatementsFrom(savedEvents) : null),
-    [savedEvents],
-  );
-  const savedNarrative = useMemo<ReportExportPayload | null>(
-    () =>
-      savedReport
-        ? { narrative: savedReport.payload.narrative, dispositions: savedReport.payload.dispositions }
-        : null,
-    [savedReport],
-  );
   const runLiveFromSaved = useCallback(() => {
     if (savedReport) lookupLei(savedReport.lei);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedReport]);
-  const saveItem = useMemo(() => {
-    if (savedReport || !streamingLei) return undefined;
-    if (savedFromRun) {
-      const link = savedReportShareUrl(savedFromRun.report_id);
-      return {
-        label: "Copy saved-report link",
-        description: `Saved ${utcDateTime(savedFromRun.saved_at)} · kept until ${utcDate(savedFromRun.expires_at)}`,
-        onSelect: (): void => {
-          void copyLink(link).then((ok) =>
-            setSaveNotice(ok ? "The saved-report link is copied." : link),
-          );
-        },
-      };
-    }
-    const eligibility = saveEligibility({ streaming, runCompletedAt, retried: retriedSinceRun });
-    return {
-      label: saveBusy ? "Saving…" : "Save this report",
-      description: eligibility.reason ?? "A fixed record of these findings, with a link, kept for 90 days",
-      disabled: !eligibility.canSave || saveBusy,
-      onSelect: (): void => {
-        void saveThisReport();
-      },
-    };
-    // saveThisReport and copyLink read state through their own closures on
-    // each render; the memo only has to follow what decides the item.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedReport, streamingLei, savedFromRun, streaming, runCompletedAt, retriedSinceRun, saveBusy, exportPayload]);
 
   const HeroHeading = streamingLei ? "h2" : "h1";
-
 
   // ── Phase 245: the report's top, as pieces the two layouts arrange ──
   // `phoneLayout` changes the ORDER of the subject, the mode tabs and the
@@ -1717,95 +984,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
     />
   );
 
-  const modeTabs = (
-      <div
-        role="tablist"
-        aria-label="Check mode"
-        /* No bottom margin: the tab strip claims the card beneath it, and
-           a 24px gap between them breaks the claim — the active tab's
-           white edge has to meet the card's. The honesty notices that can
-           sit between the two carry their own top margin instead, so they
-           are the exception rather than the default spacing. */
-        /* Phase 157: below `sm` the strip is a 2×2 grid of stacked
-           icon-over-label cells — the pattern the search-method tablist
-           already uses. The one-row strip needs ~657px, so on a 390px
-           phone a reader saw "QuickCheck · FullCheck · Ba…" and two of
-           the four modes did not exist unless they knew to swipe. From
-           `sm` up the strip is unchanged (padding eases to px-3 until
-           `md` so it still fits at 700), and the wrappers collapse to
-           `contents` on phones so the buttons are the grid cells. */
-        className="grid grid-cols-2 overflow-hidden rounded-oo border border-oo-rule bg-oo-bg mb-3 sm:mb-0 sm:flex sm:items-end sm:gap-1 sm:overflow-x-auto sm:overflow-y-auto sm:rounded-none sm:border-0 sm:border-b sm:bg-transparent"
-      >
-        {MODE_TABS.map((tab, i) => {
-          const active = mode === tab.id;
-          // Grid lines for the phone layout: a left rule on the right-hand
-          // column, a top rule on the second row. Reset at `sm`, where the
-          // button's own tab border takes over.
-          // Phase 185: five tabs. An odd count leaves the last cell alone
-          // on its row, so it spans both columns rather than sitting beside
-          // an empty one.
-          const lastAlone = MODE_TABS.length % 2 === 1 && i === MODE_TABS.length - 1;
-          const cellRules = `${i % 2 === 1 ? "border-l" : ""} ${i >= 2 ? "border-t" : ""} ${lastAlone ? "col-span-2 sm:col-span-1" : ""}`.trim();
-          return (
-            <div
-              key={tab.id}
-              className={
-                // The divider marks where the depths end and the topics
-                // begin: on the first topic tab only, not on every one.
-                tab.topic && !MODE_TABS[i - 1]?.topic
-                  ? "contents sm:flex sm:items-end sm:pl-2 sm:ml-1 md:pl-3 md:ml-2 sm:border-l sm:border-oo-rule"
-                  : "contents sm:flex sm:items-end"
-              }
-            >
-              <button
-                type="button"
-                role="tab"
-                id={`tab-${tab.id}`}
-                aria-selected={active}
-                aria-controls={`panel-${tab.id}`}
-                tabIndex={active ? 0 : -1}
-                onClick={() => selectMode(tab.id)}
-                onKeyDown={(e) => {
-                  // Left/Right/Home/End move between tabs (WAI-ARIA tabs
-                  // pattern); the roving tabIndex above keeps one stop in
-                  // the sequence rather than six. Focus stays on the tab
-                  // (Phase 241) so →→→ walks the whole strip.
-                  const next = modeForKey(e.key, tab.id, MODE_TABS.map((t) => t.id));
-                  if (!next) return;
-                  e.preventDefault();
-                  selectMode(next, { focusPanel: false });
-                  document.getElementById(`tab-${next}`)?.focus();
-                }}
-                className={`relative flex flex-col items-center justify-center gap-1 px-2 py-2.5 min-h-[56px] text-oo-meta border-0 border-oo-rule ${cellRules} transition-colors sm:flex-row sm:shrink-0 sm:justify-start sm:gap-2 sm:rounded-t-oo sm:px-3 md:px-4 sm:pb-3 sm:pt-3 sm:text-oo-body sm:min-h-[44px] sm:border ${
-                  active
-                    ? "bg-white font-bold text-oo-ink sm:-mb-px sm:border-oo-rule sm:border-b-white"
-                    : "font-medium text-oo-muted hover:text-oo-ink sm:border-transparent"
-                }`}
-              >
-                {active && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-x-0 top-0 h-[3px] sm:inset-x-[-1px] sm:top-[-1px] sm:rounded-t-oo"
-                    style={{ background: tab.accent }}
-                  />
-                )}
-                {/* The glyph takes the mode accent when active and the
-                    muted text colour otherwise, via currentColor on a
-                    wrapper — Icon itself never takes a colour prop, so
-                    there is exactly one way to colour an icon. */}
-                <span
-                  className="inline-flex shrink-0"
-                  style={active ? { color: tab.accent } : undefined}
-                >
-                  <Icon name={tab.icon} size={17} />
-                </span>
-                {tab.label}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-  );
+  const modeTabs = <ModeTabs mode={mode} onSelect={selectMode} />;
 
   return (
     <SavedReportContext.Provider value={savedCtx}>
@@ -1817,138 +996,14 @@ const NAV_ITEMS: { view: View; label: string }[] = [
       >
         Skip to main content
       </a>
-      {/*
-       * Header — full-width dark banner, BO design system.
-       * Decorative blue radial gradient sits top-right (rgba 61,48,212,0.28)
-       * fading to transparent. Inline style because Tailwind doesn't
-       * have a clean utility for offset radial gradients.
-       */}
-      <header
-        // Phase 241: no `overflow-hidden`. The gradient is a background, which
-        // the box clips already; what the overflow clipped was the nav, which
-        // at 320px read "Fea" and stayed focusable. The nav wraps instead.
-        className="relative bg-oo-navy text-white px-4 sm:px-10 lg:px-16 py-3 sm:py-4"
-        role="banner"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle 500px at calc(100% + 80px) -80px, rgba(61, 48, 212, 0.28), transparent)",
-        }}
-      >
-        <div className="max-w-oo-page mx-auto relative">
-          <div className="flex items-center justify-between gap-4">
-            {/* On mobile the search field is hidden, so this group is the only
-                child of the row and the nav ended up crowded against the
-                wordmark with the whole right half of the banner empty. Full
-                width with the two ends pushed apart puts the mark at one edge
-                and the links at the other; from `md` the search field takes
-                the right-hand end and this reverts to sitting beside the
-                mark. */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 w-full justify-between md:w-auto md:justify-start">
-              <button
-                type="button"
-                onClick={resetToHome}
-                aria-label="OpenCheck — back to homepage"
-                className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left"
-              >
-                <OpenCheckIcon className="h-7 w-auto flex-shrink-0" />
-                <span className="font-head font-bold text-white leading-tight text-xl">
-                  Open<span className="text-oo-mark-line">Check</span>
-                </span>
-              </button>
-            <nav aria-label="Site navigation" className="flex flex-wrap items-center gap-x-4 sm:gap-x-5">
-              {/* Phones have no header field (it needs ~300px), so on a report
-                  this is the search entry point — the row that used to sit
-                  under the header is gone (Phase 245). */}
-              {searchPanelsCollapsed && (
-                <button
-                  type="button"
-                  onClick={openSearchPanel}
-                  aria-label="Search for another company or person"
-                  className="md:hidden inline-flex min-h-[44px] min-w-[36px] items-center justify-center text-white/80 hover:text-white"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                    <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
-                  </svg>
-                </button>
-              )}
-              {NAV_ITEMS.map((item) => {
-                const current = view === item.view;
-                return (
-                  <button
-                    key={item.view}
-                    type="button"
-                    onClick={() => navigate(item.view)}
-                    aria-current={current ? "page" : undefined}
-                    className={`min-h-[44px] text-oo-small transition-colors ${
-                      current
-                        ? "text-white font-medium border-b-2 border-oo-mark-line"
-                        : "text-white/80 hover:text-white"
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
-            </nav>
-            </div>
-            {/* The constant search field. On a report page the tabbed panel is
-                collapsed to a single prompt row, which left the header — the
-                one piece of chrome present on every page — with no way to
-                start a search from. The source counts that used to sit here
-                are said in the hero and listed in full on /sources; a stat
-                does not need to be in the banner of a report about a company.
-
-                It handles the two things a header field can honestly handle:
-                a pasted LEI runs straight through, anything else goes to the
-                company-name search. National ID and person search stay in the
-                full panel, which "More search options" beside it reopens. */}
-            <div className="hidden md:flex items-center gap-4">
-            <form
-              onSubmit={submitHeaderSearch}
-              role="search"
-              aria-label="Search for a company"
-              // Phase 241: a visible focus ring (oo.mark.line on navy, 9.4:1). The
-              // input's own outline is off, and a 1.19:1 fill change was the
-              // only cue that the field had focus.
-              className="hidden md:flex items-center gap-2 rounded-oo border border-white/25 bg-white/10 focus-within:bg-white/15 focus-within:border-white/45 focus-within:ring-2 focus-within:ring-oo-mark-line px-3 py-1.5 min-w-[300px] transition-colors"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="text-white/70 shrink-0">
-                <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
-              </svg>
-              <label htmlFor="oo-header-search" className="sr-only">
-                Company name or LEI
-              </label>
-              <input
-                id="oo-header-search"
-                type="text"
-                value={headerQuery}
-                onChange={(e) => setHeaderQuery(e.target.value)}
-                placeholder="Company name or LEI"
-                className="min-w-0 flex-1 bg-transparent text-oo-small text-white placeholder:text-white/60 focus:outline-none"
-              />
-              {/* Enter submits; the button is for assistive tech that
-                  lists buttons, and takes no Tab stop while invisible. */}
-              <button type="submit" className="sr-only" tabIndex={-1}>
-                Search
-              </button>
-            </form>
-            {/* National ID and person search need the full panel. On a report
-                it is folded away; this reopens it (Phase 245). */}
-            {searchPanelsCollapsed && (
-              <button
-                type="button"
-                onClick={openSearchPanel}
-                className="hidden md:inline-flex shrink-0 min-h-[44px] items-center text-oo-small text-white/80 underline-offset-2 hover:text-white hover:underline"
-              >
-                More search options
-              </button>
-            )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        view={view}
+        onNavigate={navigate}
+        onHome={resetToHome}
+        searchPanelsCollapsed={searchPanelsCollapsed}
+        onOpenSearchPanel={openSearchPanel}
+        onSearch={searchFromHeader}
+      />
 
       <main
         id="main-content"
@@ -2014,492 +1069,15 @@ const NAV_ITEMS: { view: View; label: string }[] = [
           </p>
         </div>
         )}
-        {/* Phase 245: on a report the panel is folded into the header — a
-            "More search options" control there reopens it — so the collapsed
-            state renders nothing here. The one-line row that used to stand in
-            for it sat between the header and the subject on every report. */}
-        <div
-          className={
-            searchPanelsCollapsed
-              ? "hidden"
-              : "mb-4 bg-white border border-oo-rule rounded-oo overflow-hidden"
-          }
-        >
-          {/* Tab bar — homepage only.
-
-              It used to stay on the report as a "landmark", with only the
-              440 lines of input panels collapsing beneath it. That left four
-              tabs and a search affordance above every result, which is the
-              v1 page's opening move: search first, answer second. The v2
-              report opens on the subject. The one-line prompt below is the
-              whole search surface on a result page, and reopening it brings
-              the tabs back with it. */}
-          {!searchPanelsCollapsed && (
-          <div role="tablist" aria-label="Search method" className="flex border-b border-oo-rule">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={searchMode === "name"}
-              aria-controls={searchMode === "name" ? "panel-name" : undefined}
-              id="tab-name"
-              tabIndex={searchMode === "name" ? 0 : -1}
-              onKeyDown={onSearchTabKeyDown}
-              onClick={() => { setSearchMode("name"); setMobileSearchOpen(true); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-oo-meta font-medium transition-colors bg-white ${
-                searchMode === "name"
-                  ? "text-oo-ink border-b-2 border-oo-blue"
-                  : "text-oo-muted hover:text-oo-ink"
-              }`}
-            >
-              <GleifIcon aria-hidden style={{ height: "1.1em", width: "auto", flexShrink: 0 }} />
-              Company name
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={searchMode === "nationalId"}
-              aria-controls={searchMode === "nationalId" ? "panel-national-id" : undefined}
-              id="tab-national-id"
-              tabIndex={searchMode === "nationalId" ? 0 : -1}
-              onKeyDown={onSearchTabKeyDown}
-              onClick={() => { setSearchMode("nationalId"); setMobileSearchOpen(true); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-oo-meta font-medium transition-colors border-l border-oo-rule bg-white ${
-                searchMode === "nationalId"
-                  ? "text-oo-ink border-b-2 border-oo-blue"
-                  : "text-oo-muted hover:text-oo-ink"
-              }`}
-            >
-              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M4 12h8m-8 5h16"/></svg>
-              National ID
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={searchMode === "lei"}
-              aria-controls={searchMode === "lei" ? "panel-lei" : undefined}
-              id="tab-lei"
-              tabIndex={searchMode === "lei" ? 0 : -1}
-              onKeyDown={onSearchTabKeyDown}
-              onClick={() => { setSearchMode("lei"); setMobileSearchOpen(true); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-oo-meta font-medium transition-colors border-l border-oo-rule bg-white ${
-                searchMode === "lei"
-                  ? "text-oo-ink border-b-2 border-oo-blue"
-                  : "text-oo-muted hover:text-oo-ink"
-              }`}
-            >
-              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-2"/><path d="M12 12h4m-4 4h4m-8-4h.01M8 16h.01"/></svg>
-              Paste an LEI
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={searchMode === "person"}
-              aria-controls={searchMode === "person" ? "panel-person" : undefined}
-              id="tab-person"
-              tabIndex={searchMode === "person" ? 0 : -1}
-              onKeyDown={onSearchTabKeyDown}
-              onClick={() => { setSearchMode("person"); setMobileSearchOpen(true); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 px-3 py-2 text-oo-meta font-medium transition-colors border-l border-oo-rule bg-white ${
-                searchMode === "person"
-                  ? "text-oo-ink border-b-2 border-oo-blue"
-                  : "text-oo-muted hover:text-oo-ink"
-              }`}
-            >
-              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5"/></svg>
-              Person name
-            </button>
-          </div>
-          )}
-
-          {/* Panels collapse once results are on screen — the tab bar stays
-              as a landmark; the prompt row below reopens them. Phase 122
-              widened this from mobile-only: 440 lines of search panel above
-              a report is the same problem on a laptop as on a phone. */}
-          <div className={searchPanelsCollapsed ? "hidden" : ""}>
-
-          {/* ── Name search panel ── */}
-          {searchMode === "name" && (
-            <div id="panel-name" role="tabpanel" aria-labelledby="tab-name" className="p-4">
-              <form onSubmit={searchByName}>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    id="name-input"
-                    type="search"
-                    value={nameQuery}
-                    onChange={(e) => setNameQuery(e.target.value)}
-                    placeholder="Search by company name"
-                    autoComplete="off"
-                    aria-label="Company name"
-                    className="flex-1 border border-oo-rule rounded px-3 py-2.5 bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
-                  />
-                  <button
-                    type="submit"
-                    disabled={nameSearchMutation.isPending || !nameQuery.trim()}
-                    aria-busy={nameSearchMutation.isPending}
-                    className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
-                  >
-                    {nameSearchMutation.isPending ? "Searching…" : "Search"}
-                  </button>
-                </div>
-              </form>
-
-              {/* No aria-live here — the role="alert" children announce themselves */}
-              <div>
-                {nameSearchMutation.isError && (
-                  <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
-                    {nameSearchMutation.error?.message ?? "Search failed"}
-                  </div>
-                )}
-                {nameSearchMutation.isSuccess && nameSearchMutation.data.length === 0 && (
-                  <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
-                    No entities found. Try a shorter or different spelling.
-                  </div>
-                )}
-              </div>
-
-              {/* Phase 241: the count is announced once, by a status
-                  region that is always mounted. The container used to be
-                  \`aria-live\` itself, so it was inserted with its content —
-                  which some readers ignore and others read in full, every
-                  result button after the count. */}
-              <p role="status" className="sr-only">
-                {nameSearchMutation.data && nameSearchMutation.data.length > 0
-                  ? `${resultCount(nameSearchMutation.data.length)} — select one to search it`
-                  : ""}
-              </p>
-              {nameSearchMutation.data && nameSearchMutation.data.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
-                    {resultCount(nameSearchMutation.data.length)} — select one to search it
-                  </p>
-                  <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
-                    {nameSearchMutation.data.map((r) => (
-                      <li key={r.lei}>
-                        <button
-                          type="button"
-                          aria-label={`Search ${r.legalName}, LEI ${r.lei}`}
-                          onClick={() => {
-                            nameSearchMutation.reset();
-                            setNameQuery("");
-                            lookupLei(r.lei);
-                            focusMain();
-                          }}
-                          className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-oo-blue/40"
-                        >
-                          <div className="font-head font-bold text-oo-body text-oo-ink leading-snug">
-                            {r.legalName}
-                          </div>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="font-mono text-[11px] text-oo-blue">
-                              {r.lei}
-                            </span>
-                            <span className="text-[11px] text-oo-muted">{r.country}</span>
-                            <span
-                              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                                r.status === "ISSUED"
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : "bg-oo-bg text-oo-muted border-oo-rule"
-                              }`}
-                            >
-                              {r.status}
-                            </span>
-                          </div>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── National ID panel ── */}
-          {searchMode === "nationalId" && (
-            <div id="panel-national-id" role="tabpanel" aria-labelledby="tab-national-id" className="p-4">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const q = nationalIdQuery.trim();
-                  if (!q) return;
-                  const entry = RA_CODES[selectedCountry];
-                  if (!entry) return;
-                  nationalIdSearchMutation.mutate(
-                    // raCodeFor, not entry.raCode: a GB number beginning SC or
-                    // NI belongs to a different Companies House authority, and
-                    // scoping it to England & Wales returns nothing at all.
-                    { raCode: raCodeFor(selectedCountry, q), id: q },
-                    {
-                      onSuccess: (results) => {
-                        if (results.length === 1) {
-                          // Single unambiguous match — go straight to the lookup.
-                          nationalIdSearchMutation.reset();
-                          setNationalIdQuery("");
-                          lookupLei(results[0].lei);
-                          focusMain();
-                        }
-                        // Multiple results: show the picker below (same as name search).
-                      },
-                    },
-                  );
-                }}
-              >
-                <div className="flex flex-col sm:flex-row sm:gap-3 sm:items-end gap-3">
-                  <div className="sm:flex-none">
-                    <label
-                      htmlFor="national-id-country"
-                      className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
-                    >
-                      Country
-                    </label>
-                    <select
-                      id="national-id-country"
-                      value={selectedCountry}
-                      onChange={(e) => {
-                        setSelectedCountry(e.target.value);
-                        nationalIdSearchMutation.reset();
-                        setNationalIdQuery("");
-                        setNationalIdTouched(false);
-                      }}
-                      className="w-full sm:w-auto border border-oo-rule rounded px-3 py-2.5 text-oo-small focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue bg-oo-bg sm:bg-white"
-                    >
-                      {COUNTRY_OPTIONS.map(({ code, entry }) => (
-                        <option key={code} value={code}>
-                          {entry.countryName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label
-                      htmlFor="national-id-input"
-                      className="block text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2"
-                    >
-                      {RA_CODES[selectedCountry]?.idLabel ?? "Registration number"}
-                    </label>
-                    <input
-                      id="national-id-input"
-                      type="text"
-                      value={nationalIdQuery}
-                      onChange={(e) => setNationalIdQuery(e.target.value)}
-                      onBlur={() => setNationalIdTouched(true)}
-                      placeholder={RA_CODES[selectedCountry]?.placeholder ?? ""}
-                      autoComplete="off"
-                      spellCheck={false}
-                      aria-label={RA_CODES[selectedCountry]?.idLabel ?? "Registration number"}
-                      aria-describedby={!nationalIdFormatOk ? "national-id-format-warn" : undefined}
-                      aria-invalid={!nationalIdFormatOk || undefined}
-                      className={`w-full border rounded px-3 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue ${
-                        !nationalIdFormatOk
-                          ? "border-amber-400 bg-amber-50/40"
-                          : "border-oo-rule bg-oo-bg sm:bg-white"
-                      }`}
-                    />
-                    {!nationalIdFormatOk && (
-                      <p
-                        id="national-id-format-warn"
-                        role="status"
-                        className="mt-1.5 text-oo-meta text-amber-700"
-                      >
-                        Format looks unexpected — expected {RA_CODES[selectedCountry]?.formatHint?.toLowerCase()}.
-                        You can still search; GLEIF may store the number differently.
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={nationalIdSearchMutation.isPending || !nationalIdQuery.trim()}
-                    aria-busy={nationalIdSearchMutation.isPending}
-                    className="w-full sm:w-auto sm:flex-none bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
-                  >
-                    {nationalIdSearchMutation.isPending ? "Searching…" : "Search"}
-                  </button>
-                </div>
-              </form>
-
-              {/* No aria-live here — the role="alert" children announce themselves */}
-              <div>
-                {nationalIdSearchMutation.isError && (
-                  <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
-                    {nationalIdSearchMutation.error?.message ?? "Search failed"}
-                  </div>
-                )}
-                {nationalIdSearchMutation.isSuccess && nationalIdSearchMutation.data.length === 0 && (
-                  <div role="alert" className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-oo p-3 text-sm">
-                    No LEI found for this registration number in GLEIF. The company may not have an LEI, or the number may be recorded differently.{" "}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        nationalIdSearchMutation.reset();
-                        setNationalIdQuery("");
-                        setSearchMode("name");
-                        focusMain();
-                      }}
-                      className="underline hover:no-underline"
-                    >
-                      Try searching by company name instead →
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Phase 241: the count is announced once, by a status
-                  region that is always mounted. The container used to be
-                  \`aria-live\` itself, so it was inserted with its content —
-                  which some readers ignore and others read in full, every
-                  result button after the count. */}
-              <p role="status" className="sr-only">
-                {nationalIdSearchMutation.data && nationalIdSearchMutation.data.length > 1
-                  ? `${resultCount(nationalIdSearchMutation.data.length)} — select one to search it`
-                  : ""}
-              </p>
-              {nationalIdSearchMutation.data && nationalIdSearchMutation.data.length > 1 && (
-                <div className="mt-4">
-                  <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
-                    {resultCount(nationalIdSearchMutation.data.length)} — select one to search it
-                  </p>
-                  <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
-                    {nationalIdSearchMutation.data.map((r) => (
-                      <li key={r.lei}>
-                        <button
-                          type="button"
-                          aria-label={`Search ${r.legalName}, LEI ${r.lei}`}
-                          onClick={() => {
-                            nationalIdSearchMutation.reset();
-                            setNationalIdQuery("");
-                            lookupLei(r.lei);
-                            focusMain();
-                          }}
-                          className="w-full text-left px-4 py-3 hover:bg-oo-bg transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-oo-blue/40"
-                        >
-                          <div className="font-head font-bold text-oo-body text-oo-ink leading-snug">
-                            {r.legalName}
-                          </div>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="font-mono text-[11px] text-oo-blue">
-                              {r.lei}
-                            </span>
-                            <span className="text-[11px] text-oo-muted">{r.country}</span>
-                            <span
-                              className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                                r.status === "ISSUED"
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : "bg-oo-bg text-oo-muted border-oo-rule"
-                              }`}
-                            >
-                              {r.status}
-                            </span>
-                          </div>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── LEI paste panel ── */}
-          {searchMode === "lei" && (
-            <form onSubmit={runLookup} noValidate id="panel-lei" role="tabpanel" aria-labelledby="tab-lei" className="p-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  id="lei-input"
-                  type="text"
-                  value={leiInput}
-                  onChange={(e) => {
-                    setLeiInput(e.target.value);
-                    if (leiInputError) setLeiInputError(null);
-                  }}
-                  placeholder="Paste a 20-character LEI"
-                  aria-invalid={leiInputError ? true : undefined}
-                  aria-describedby={leiInputError ? "lei-input-error" : undefined}
-                  spellCheck={false}
-                  autoComplete="off"
-                  aria-label="Legal Entity Identifier (20 characters)"
-                  pattern="[A-Za-z0-9]{20}"
-                  inputMode="text"
-                  className="flex-1 border border-oo-rule rounded px-3 py-2.5 font-mono uppercase tracking-wide bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue placeholder:font-sans placeholder:normal-case placeholder:tracking-normal"
-                  maxLength={20}
-                />
-                <button
-                  type="submit"
-                  disabled={lookupMutation.isPending || !leiInput.trim()}
-                  aria-busy={lookupMutation.isPending}
-                  className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
-                >
-                  {lookupMutation.isPending ? "Searching…" : "Search"}
-                </button>
-              </div>
-              {leiInputError && (
-                <p id="lei-input-error" role="alert" className="mt-2 text-oo-small text-oo-warn-text">
-                  {leiInputError}
-                </p>
-              )}
-            </form>
-          )}
-
-          {/* ── Person search panel (TENTATIVE, Phase E) ── */}
-          {searchMode === "person" && (
-            <div id="panel-person" role="tabpanel" aria-labelledby="tab-person" className="p-4">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const name = personQuery.trim();
-                  if (name.length < 2) return;
-                  const by = Number(personBirthYear);
-                  openPersonReport(
-                    name,
-                    Number.isInteger(by) && by >= 1900 && by <= 2100 ? by : undefined
-                  );
-                }}
-              >
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    id="person-input"
-                    type="search"
-                    value={personQuery}
-                    onChange={(e) => setPersonQuery(e.target.value)}
-                    placeholder="Search by person name"
-                    autoComplete="off"
-                    aria-label="Person name"
-                    className="flex-1 border border-oo-rule rounded px-3 py-2.5 bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
-                  />
-                  <input
-                    type="text"
-                    value={personBirthYear}
-                    onChange={(e) => setPersonBirthYear(e.target.value)}
-                    placeholder="Birth year (optional)"
-                    inputMode="numeric"
-                    pattern="[0-9]{4}"
-                    maxLength={4}
-                    aria-label="Birth year (optional, corroborates name matches)"
-                    className="w-full sm:w-44 border border-oo-rule rounded px-3 py-2.5 bg-oo-bg sm:bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
-                  />
-                  <button
-                    type="submit"
-                    disabled={personQuery.trim().length < 2}
-                    className="w-full sm:w-auto bg-oo-blue text-white rounded px-5 py-2.5 font-medium hover:bg-oo-burst transition-colors disabled:opacity-50"
-                  >
-                    {PERSON_VERB}
-                  </button>
-                </div>
-              </form>
-              <p className="text-[11px] text-oo-muted leading-[1.6] mt-3">
-                Screens a person by name across every source that holds people
-                (Companies House officers, OpenSanctions, EveryPolitician,
-                Wikidata, OpenAleph) for PEP, sanctions and offshore-leaks
-                signals. Name-based: results are potential matches with their
-                evidence shown, never confirmed identities. Adding a birth year
-                helps corroborate matches. Tip: for people connected to a
-                company, the BackgroundCheck view on the company's report gives
-                the same screening with role context attached.
-              </p>
-            </div>
-          )}
-
-          </div>
-
-        </div>
+        <SearchPanel
+          search={search}
+          collapsed={searchPanelsCollapsed}
+          onExpand={() => setMobileSearchOpen(true)}
+          lookupPending={lookupMutation.isPending}
+          onLookup={lookupLei}
+          onOpenPerson={openPersonReport}
+          onPicked={focusMain}
+        />
 
         {/* No aria-live here — the role="alert" child announces itself */}
         <div>
@@ -2680,7 +1258,6 @@ const NAV_ITEMS: { view: View; label: string }[] = [
 
         {streamingLei && panelErrors.length > 0 && <PanelErrorsNotice errors={panelErrors} />}
 
-
         {/* Each mode's content is a labelled tabpanel with tabIndex={-1},
             so selectMode can move focus into it after the switch. Without
             that, switching tab unmounts most of the page and focus falls to
@@ -2688,7 +1265,7 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         {savedReport && streamingLei && !modeInSavedReport(mode) ? (
           <div id={`panel-${mode}`} role="tabpanel" aria-labelledby={`tab-${mode}`} tabIndex={-1}>
             <PanelCard>
-              <ModeBlurb mode={mode} tabs={MODE_TABS} />
+              <ModeBlurb mode={mode} />
               <SavedReportExcluded
                 sentence={notInSavedReport(modeLabel(mode))}
                 onRunLive={runLiveFromSaved}
@@ -2698,101 +1275,83 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         ) : mode === "full" && streamingLei ? (
           <div id="panel-full" role="tabpanel" aria-labelledby="tab-full" tabIndex={-1}>
             <PanelCard>
-              <ModeBlurb mode="full" tabs={MODE_TABS} />
-              <Suspense
-                fallback={
-                  <PanelSection>
-                    <p className="text-oo-small text-oo-muted italic">Loading FullCheck…</p>
-                  </PanelSection>
-                }
-              >
-                <FullCheckPanel
-                  lei={streamingLei}
-                  legalName={legalName}
-                  signals={riskSignals}
-                  focusStatementId={focusStatementId}
-                  savedStatements={savedNetwork}
-                  knowabilityChain={knowabilityChain}
-                  onOpenSubsidiaries={() => selectMode("subsidiaries")}
-                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
-                  onPanelRecovered={(panel) =>
-                    setPanelErrors((prev) => clearPanelError(prev, panel))
-                  }
-                />
-              </Suspense>
+              <ModeBlurb mode="full" />
+              <PanelBoundary label="FullCheck">
+                <Suspense fallback={<PanelLoading label="FullCheck" />}>
+                  <FullCheckPanel
+                    lei={streamingLei}
+                    legalName={legalName}
+                    signals={riskSignals}
+                    focusStatementId={focusStatementId}
+                    savedStatements={savedNetwork}
+                    knowabilityChain={knowabilityChain}
+                    onOpenSubsidiaries={() => selectMode("subsidiaries")}
+                    onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                    onPanelRecovered={(panel) =>
+                      setPanelErrors((prev) => clearPanelError(prev, panel))
+                    }
+                  />
+                </Suspense>
+              </PanelBoundary>
             </PanelCard>
           </div>
         ) : mode === "background" && streamingLei ? (
           <div id="panel-background" role="tabpanel" aria-labelledby="tab-background" tabIndex={-1}>
             <PanelCard>
-              <ModeBlurb mode="background" tabs={MODE_TABS} />
-              <Suspense
-                fallback={
-                  <PanelSection>
-                    <p className="text-oo-small text-oo-muted italic">
-                      Loading BackgroundCheck…
-                    </p>
-                  </PanelSection>
-                }
-              >
-                <BackgroundCheckPanel
-                  lei={streamingLei}
-                  legalName={legalName}
-                  onOpenReport={openPersonReport}
-                />
-              </Suspense>
+              <ModeBlurb mode="background" />
+              <PanelBoundary label="BackgroundCheck">
+                <Suspense fallback={<PanelLoading label="BackgroundCheck" />}>
+                  <BackgroundCheckPanel
+                    lei={streamingLei}
+                    legalName={legalName}
+                    onOpenReport={openPersonReport}
+                  />
+                </Suspense>
+              </PanelBoundary>
             </PanelCard>
           </div>
         ) : mode === "subsidiaries" && streamingLei ? (
           <div id="panel-subsidiaries" role="tabpanel" aria-labelledby="tab-subsidiaries" tabIndex={-1}>
             <PanelCard>
-              <ModeBlurb mode="subsidiaries" tabs={MODE_TABS} />
-              <Suspense
-                fallback={
-                  <PanelSection>
-                    <p className="text-oo-small text-oo-muted italic">Loading Subsidiaries…</p>
-                  </PanelSection>
-                }
-              >
-                <SubsidiariesPanel
-                  lei={streamingLei}
-                  legalName={legalName}
-                  signals={riskSignals}
-                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
-                  onPanelRecovered={(panel) =>
-                    setPanelErrors((prev) => clearPanelError(prev, panel))
-                  }
-                />
-              </Suspense>
+              <ModeBlurb mode="subsidiaries" />
+              <PanelBoundary label="Subsidiaries">
+                <Suspense fallback={<PanelLoading label="Subsidiaries" />}>
+                  <SubsidiariesPanel
+                    lei={streamingLei}
+                    legalName={legalName}
+                    signals={riskSignals}
+                    onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                    onPanelRecovered={(panel) =>
+                      setPanelErrors((prev) => clearPanelError(prev, panel))
+                    }
+                  />
+                </Suspense>
+              </PanelBoundary>
             </PanelCard>
           </div>
         ) : mode === "history" && streamingLei ? (
           <div id="panel-history" role="tabpanel" aria-labelledby="tab-history" tabIndex={-1}>
             <PanelCard>
-              <ModeBlurb mode="history" tabs={MODE_TABS} />
-              <Suspense
-                fallback={
-                  <PanelSection>
-                    <p className="text-oo-small text-oo-muted italic">Loading History…</p>
-                  </PanelSection>
-                }
-              >
-                <HistoryPanel
-                  lei={streamingLei}
-                  legalName={legalName}
-                  onFocusPerson={focusPersonInNetwork}
-                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
-                  onPanelRecovered={(panel) =>
-                    setPanelErrors((prev) => clearPanelError(prev, panel))
-                  }
-                />
-              </Suspense>
+              <ModeBlurb mode="history" />
+              <PanelBoundary label="History">
+                <Suspense fallback={<PanelLoading label="History" />}>
+                  <HistoryPanel
+                    lei={streamingLei}
+                    legalName={legalName}
+                    onFocusPerson={focusPersonInNetwork}
+                    onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                    onPanelRecovered={(panel) =>
+                      setPanelErrors((prev) => clearPanelError(prev, panel))
+                    }
+                  />
+                </Suspense>
+              </PanelBoundary>
             </PanelCard>
           </div>
         ) : mode === "esg" && streamingLei ? (
           <div id="panel-esg" role="tabpanel" aria-labelledby="tab-esg" tabIndex={-1}>
             <PanelCard>
-              <ModeBlurb mode="esg" tabs={MODE_TABS} />
+              <ModeBlurb mode="esg" />
               {esgBuckets.length > 0 || pendingEsgSources.length > 0 ? (
                 <EsgPanel
                   buckets={esgBuckets}
@@ -2819,344 +1378,54 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         ) : (
           <div id="panel-quick" role="tabpanel" aria-labelledby="tab-quick" tabIndex={-1}>
           {streamingLei && (
-          <PanelCard>
-        {/* The mode's own sentence, as the card's first band. The strings have
-            been on MODE_TABS since Phase 122 and rendered nowhere: a tab
-            labelled "QuickCheck" says what it is called, not what it does, and
-            a reader arriving on a shared link has no other way to find out
-            which of the four they are looking at. */}
-        <ModeBlurb mode="quick" tabs={MODE_TABS} />
-        {streamingLei && mode === "quick" && (
-          <NarrativePanel
-            lei={streamingLei}
-            onExportPayload={setExportPayload}
-            saved={savedNarrative}
-          />
-        )}
-
-
-        {/* Risk signals, with structural context as a captioned sub-block
-            inside it rather than a peer section. Two sibling sections put a
-            structural observation at the same weight as an adverse finding,
-            and printed the confidence legend twice on one screen. Neither the
-            AMLA CDD RTS nor AMLR Annex III treats a non-EU jurisdiction as a
-            risk factor in itself, so the distinction still has to be made —
-            it is made by the caption, in a sentence, which is what the v2
-            design does. */}
-        {(riskCodes.length > 0 || contextCodes.length > 0) && mode === "quick" && (
-          <PanelSection
-            id="risk-signals"
-            title="Risk signals"
-            aside={<ConfidenceLegend />}
-          >
-            {riskCodes.length > 0 ? (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  {riskCodes.map((sig) => (
-                    <RiskChip
-                      key={sig.code}
-                      signal={sig}
-                      selected={shownSignal?.signal.code === sig.code}
-                      onSelect={(s) => setSelectedSignalCode(s.code)}
-                    />
-                  ))}
-                </div>
-                {/* One box, not one per chip: a chip that opened its own
-                    expansion left two boxes on screen saying the same kind of
-                    sentence in two different styles. It shows whichever chip
-                    the reader selected and nothing before that — see
-                    `shownSignal` for why it no longer opens on a signal of
-                    OpenCheck's choosing. */}
-                {shownSignal && (
-                  <div className="mt-3.5">
-                    <SignalEvidence
-                      lead={shownSignal}
-                      sourceNames={sourceNameIndex}
-                      hasCard={(id: string) =>
-                        cddBuckets.some((b) => b.sourceId === id)
-                      }
-                      onShowSource={showSourceCard}
-                    />
-                  </div>
-                )}
-                {/* Plain sentence, and the regulatory detail behind it kept in
-                    an `Explain` rather than deleted: "chips aligned to AMLA
-                    (the EU Anti-Money Laundering Authority) read BODS
-                    (Beneficial Ownership Data Standard) records" is an
-                    accurate thing to be able to find and a poor thing to open
-                    a section with. */}
-                <p className="text-oo-small text-oo-muted mt-2.5">
-                  Select any chip to read the record behind it.{" "}
-                  <Explain label="Where these come from">
-                    Signals are derived from open data by deterministic rules,
-                    never by a model. Those aligned to AMLA — the EU
-                    Anti-Money Laundering Authority — are read from BODS
-                    (Beneficial Ownership Data Standard) records; jurisdiction
-                    signals come from the FATF (Financial Action Task Force)
-                    and EU lists. A signal is a pointer to a record, not a
-                    conclusion about the company.
-                  </Explain>
-                </p>
-              </>
-            ) : (
-              // The verdict strip already says "No risk signals surfaced
-              // across the sources that answered" one screen above; repeating
-              // it verbatim here reads as a rendering fault. This section only
-              // exists in that case to hold the structural chips, so it says
-              // what it is holding.
-              <p className="text-oo-small text-oo-muted">
-                Nothing adverse surfaced. The structural facts below describe how
-                the company is put together.
-              </p>
-            )}
-
-            {contextCodes.length > 0 && (
-              <div className="mt-5" id="structural-context">
-                <p className="text-oo-small text-oo-muted mb-2">
-                  Structural context — how the company is put together, not a
-                  finding against it.
-                </p>
-                {/* These stay self-expanding rather than driving the box
-                    above them. The box sits under the risk chips, and a
-                    control that updates something off-screen above it is
-                    worse than one that opens in place — the styles are the
-                    same either way, because the expansion is the same
-                    `SignalEvidence` component. */}
-                <div className="flex flex-wrap gap-2">
-                  {contextCodes.map((sig) => (
-                    <RiskChip key={sig.code} signal={sig} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </PanelSection>
-        )}
-
-        {/* "Archive matches — OpenAleph" (informational percolation matches,
-            Phase 97) renders underneath the OpenAleph source card in the
-            sources list below — see OpenAlephArchiveMatches. */}
-
-        {/* One question, not two boxes.
-
-            "Cross-source identifiers" and "Possibly the same entity" are the
-            same enquiry from two directions — what corroborates that this is
-            the right company, and what suggests the records might not all be
-            it. Splitting them into two collapsibles with two eyebrow labels
-            made a reader open two things to answer one question, and put the
-            reassuring half and the doubtful half in separate boxes where
-            neither qualified the other.
-
-            The band keeps `id="cross-source-identifiers"` because the subject
-            card's identifier badge scrolls to it by that id, and because a
-            shared report link may already carry the anchor. */}
-        {(crossSourceLinks.length > 0 ||
-          gleifMappedIds.length > 0 ||
-          possiblySame.length > 0 ||
-          profileRowsForBand.length > 0) &&
-          mode === "quick" && (
-            <PanelSection
-              id="cross-source-identifiers"
-              title="Is this the right company?"
-              // Shut on arrival. Identity corroboration is reassurance, and
-              // reassurance that occupies a screen before anyone doubted
-              // anything is in the way of the finding. The subject card's
-              // "LEI confirmed by N sources" badge is what opens it —
-              // which is the moment a reader is actually asking.
-              open={identityOpen}
-              onToggle={setIdentityOpen}
-              // Phase 245: what is inside, never a second corroboration
-              // count. "2 identifiers matched across 5 independent sources"
-              // sat one screen below the subject card's "LEI confirmed by 4
-              // sources" — two numbers answering two questions, read as one.
-              // The badge makes the claim; the band holds the evidence.
-              aside={identityBandContents({
-                profile: profileRowsForBand.length > 0,
-                identifiers: crossSourceLinks.length + gleifMappedIds.length,
-                candidatePairs: possiblySame.length,
-              })
-              }
-            >
-              {/* The profile leads the band (Phase 154): legal form,
-                  register status, incorporation date and registered address
-                  are answers to *which* company, and this is where a reader
-                  asking that already looks — the LEI badge on the subject
-                  card opens it. Each row names the sources stating it, never
-                  a count: two sources that copy each other would read as
-                  two. A fact no source stated is absent, not "unknown". */}
-              {profileRowsForBand.length > 0 && (
-                <div
-                  className={
-                    crossSourceLinks.length > 0 || gleifMappedIds.length > 0
-                      ? "mb-5 border-b border-oo-rule pb-4"
-                      : ""
-                  }
-                >
-                  <Eyebrow as="h3">Company profile — what the registers say</Eyebrow>
-                  <dl className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-                    {profileRowsForBand.map((row) => (
-                      <div key={row.label} className="flex flex-col gap-0.5 min-w-0">
-                        <dt className="font-body text-oo-meta font-bold uppercase tracking-oo-eyebrow text-oo-muted">
-                          {row.label}
-                        </dt>
-                        <dd className="m-0 text-oo-small text-oo-ink break-words">{row.value}</dd>
-                        <dd className="m-0 text-oo-meta text-oo-muted">{row.sources}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              )}
-
-              {(crossSourceLinks.length > 0 || gleifMappedIds.length > 0) && (
-                <CrossSourceIdentifiersTable
-                  links={crossSourceLinks}
-                  gleifMapped={gleifMappedIds}
+            <PanelBoundary label="QuickCheck">
+              <Suspense
+                fallback={
+                  <PanelCard>
+                    <PanelLoading label="QuickCheck" />
+                  </PanelCard>
+                }
+              >
+                <QuickCheckPanel
+                  lei={streamingLei}
+                  legalName={legalName}
+                  jurisdiction={subjectJurisdiction}
+                  streaming={streaming}
                   sourceNames={sourceNameIndex}
+                  registryTotal={sourcesQuery.data?.sources.length ?? null}
+                  hits={hits}
+                  riskSignals={riskSignals}
+                  riskCodes={riskCodes}
+                  contextCodes={contextCodes}
+                  sourceLiveness={sourceLiveness}
+                  selectedSignalCode={selectedSignalCode}
+                  onSelectSignal={setSelectedSignalCode}
+                  subjectProfile={subjectProfile}
+                  crossSourceLinks={crossSourceLinks}
+                  possiblySame={possiblySame}
+                  identityOpen={identityOpen}
+                  onIdentityToggle={setIdentityOpen}
+                  cddBuckets={cddBuckets}
+                  esgBuckets={esgBuckets}
+                  pendingCddSources={pendingCddSources}
+                  answeredNoRecord={answeredNoRecord}
+                  applicableCount={applicableSources.length}
+                  answeredApplicable={answeredApplicable}
+                  settled={settled}
+                  bodsCountMap={bodsCountMap}
+                  bodsBreakdownMap={bodsBreakdownMap}
+                  oaScreening={oaScreening}
+                  primaryListing={primaryListing}
+                  savedReport={savedReport}
+                  savedNarrative={savedNarrative}
+                  onExportPayload={setExportPayload}
+                  onRetrySource={retrySource}
+                  retryingSources={retryingSources}
+                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                  onPanelRecovered={(panel) => setPanelErrors((prev) => clearPanelError(prev, panel))}
                 />
-              )}
-
-              {possiblySame.length > 0 && (
-                <div
-                  id="possibly-same"
-                  className={
-                    crossSourceLinks.length > 0 || gleifMappedIds.length > 0
-                      ? "mt-5 border-t border-oo-rule pt-4 scroll-mt-4"
-                      : "scroll-mt-4"
-                  }
-                >
-                  {/* A sub-block, not a peer section — the same treatment
-                      structural context gets inside Risk signals. These pairs
-                      qualify the corroboration above them, and a reader who
-                      sees "2 identifiers matched across 5 sources" needs to
-                      meet them in the same breath rather than in the next box
-                      down. */}
-                  <SectionHeading as="h3">Possibly the same entity</SectionHeading>
-                  <p className="mt-1 text-oo-small text-oo-muted">
-                    <span className="font-semibold">
-                      {possiblySame.length} candidate pair
-                      {possiblySame.length === 1 ? "" : "s"}
-                    </span>{" "}
-                    flagged for review — same name &amp; jurisdiction, no shared
-                    identifier
-                  </p>
-                  <div className="mt-3">
-                    <PossiblySameTable pairs={possiblySame} />
-                  </div>
-                </div>
-              )}
-            </PanelSection>
-          )}
-
-        {(cddBuckets.length > 0 || pendingCddSources.length > 0 || answeredNoRecord.length > 0) && (
-          <PanelSection
-            title="What each source said"
-            // Only while sources are still answering (Phase 245). Once they
-            // have, the verdict strip's Coverage column is where the count
-            // lives: the same number here was the third statement of it in
-            // one QuickCheck. Each card below says what its source did.
-            aside={
-              settled.pending > 0 ? (
-                <span className="text-oo-blue">
-                  {coverageCopy({
-                    answered: answeredApplicable,
-                    applicable: applicableSources.length,
-                    total: sourcesQuery.data?.sources.length ?? null,
-                    jurisdiction: subjectJurisdiction,
-                    screening: true,
-                    pending: settled.pending,
-                    failed: settled.failed,
-                  }).aside}
-                </span>
-              ) : undefined
-            }
-          >
-            <div className="space-y-4">
-              {cddBuckets.map((b) => (
-                <div key={b.sourceId} id={`source-${b.sourceId}`} className="scroll-mt-4">
-                  <SourceBucketCard
-                    bucket={b}
-                    riskByHit={riskByHit}
-                    subjectSignals={riskSignals}
-                    bodsCountMap={bodsCountMap}
-                    bodsBreakdownMap={bodsBreakdownMap}
-                    onRetry={b.error && !savedReport ? () => retrySource(b.sourceId) : undefined}
-                    retrying={retryingSources.has(b.sourceId)}
-                    liveness={sourceLiveness[b.sourceId]}
-                    footnote={
-                      b.sourceId === "gleif" && gleifChildrenInfo && gleifChildrenInfo.total > 100
-                        ? `Showing the first ${gleifChildrenInfo.fetched} of ${gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2) — the whole network is in the Subsidiaries tab`
-                        : undefined
-                    }
-                    /* Informational percolation matches (Phase 97) sit with
-                       the source they came from — inside its card, not as a
-                       second card stacked underneath it. */
-                    extra={
-                      b.sourceId === "openaleph" && oaScreening.length > 0 ? (
-                        <OpenAlephArchiveMatches matches={oaScreening} />
-                      ) : undefined
-                    }
-                  />
-                </div>
-              ))}
-              {pendingCddSources.map((id) => (
-                <SkeletonSourceCard key={id} />
-              ))}
-              {answeredNoRecord.length > 0 && (
-                <div id="sources-no-record" className="scroll-mt-4">
-                  <SectionHeading as="h3">Answered with no record</SectionHeading>
-                  <p className="mt-1 text-oo-small text-oo-muted">
-                    These sources were asked about this company and hold nothing on it.
-                  </p>
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
-                    {answeredNoRecord.map((id) => (
-                      <li key={id}>
-                        <Chip tone="neutral">{sourceLabel(id, sourceNameIndex)}</Chip>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {/* Percolation can match related parties even when the subject
-                  lookup produced no OpenAleph card — keep the matches
-                  visible in that case rather than dropping them. */}
-              {oaScreening.length > 0 &&
-                !cddBuckets.some((b) => b.sourceId === "openaleph") && (
-                  <OpenAlephArchiveMatches matches={oaScreening} standalone />
-                )}
-            </div>
-          </PanelSection>
-        )}
-
-        {streamingLei && !savedReport && (
-          <SecuritiesSection
-            lei={streamingLei}
-            onError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
-            onRecovered={(panel) => setPanelErrors((prev) => clearPanelError(prev, panel))}
-            sourceNames={sourceNameIndex}
-            listing={primaryListing}
-          />
-        )}
-
-
-        {/* Phase 208: MEIP is a source. Its statements arrive on the source
-            cards above like any other register's, and a group head's list
-            lives on the Subsidiaries tab — nothing about MEIP renders here
-            outside a card. */}
-
-        {streamingLei && !streaming && totalHits > 0 && (
-          <ExportPanel
-            lei={streamingLei}
-            legalName={legalName}
-            contributingSourceIds={[...cddBuckets, ...esgBuckets]
-              .filter((b) => b.hits.some((h) => !h.is_stub))
-              .map((b) => b.sourceId)}
-            saved={
-              savedReport
-                ? { reportId: savedReport.report_id, licensing: savedReport.payload.licensing }
-                : null
-            }
-          />
-        )}
-          </PanelCard>
+              </Suspense>
+            </PanelBoundary>
           )}
           </div>
         )}
@@ -3190,535 +1459,8 @@ const NAV_ITEMS: { view: View; label: string }[] = [
         )}
       </main>
 
-      {/* GODIN ribbon — permanent attribution banner. */}
-      <aside
-        aria-label="GODIN — Global Open Data Integration Network"
-        className="px-6 sm:px-10 lg:px-16 py-4 text-white/90 text-oo-small leading-[1.6]"
-        style={{
-          background:
-            "linear-gradient(90deg, rgb(7, 116, 95) 0%, rgb(11, 110, 92) 100%)",
-        }}
-      >
-        <div className="max-w-oo-page mx-auto flex flex-wrap items-center gap-x-4 gap-y-2">
-          <a
-            href="https://godin.gleif.org/"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="GODIN — Global Open Data Integration Network (opens in new tab)"
-          >
-            <img
-              src="https://godin.gleif.org/images/512/14456540/GODINRGBColourWide.png"
-              alt="GODIN logo"
-              className="h-8 w-auto"
-              style={{ filter: "brightness(0) invert(1)" }}
-            />
-          </a>
-          <p className="flex-1 min-w-0">
-            OpenCheck is built on open data and open standards from{" "}
-            <a
-              href="https://godin.gleif.org/"
-              target="_blank"
-              rel="noreferrer"
-              className="underline underline-offset-2 font-medium hover:text-white"
-            >
-              GODIN members
-            </a>{" "}
-            and others, and demonstrates the kind of interoperability GODIN
-            exists to enable.{" "}
-            <button
-              type="button"
-              onClick={() => navigate("behind")}
-              className="underline underline-offset-2 font-medium hover:text-white"
-            >
-              How it works →
-            </button>
-          </p>
-        </div>
-      </aside>
-
-      <footer className="border-t border-oo-rule bg-oo-bg px-6 sm:px-10 lg:px-16 pt-8 pb-6">
-        <div className="max-w-oo-page mx-auto">
-          {/* Two-column grid: brand + tagline left, link groups right */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-4">
-            {/* Left: brand + tagline */}
-            <div>
-              <div className="font-head font-bold text-oo-lead text-oo-ink">
-                Open<span className="text-oo-blue">Check</span>
-              </div>
-              <p className="mt-2 text-oo-meta text-oo-muted leading-relaxed max-w-[220px]">
-                Customer due diligence checks powered by the Legal Entity
-                Identifier and open standards.
-              </p>
-            </div>
-            {/* Right: link groups */}
-            <div className="flex gap-10 sm:justify-end">
-              <div>
-                <h3 className="font-body text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
-                  Project
-                </h3>
-                <a
-                  href="/api"
-                  onClick={(e) => { e.preventDefault(); navigate("api"); }}
-                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
-                >
-                  API
-                </a>
-                <a
-                  href="/changelog"
-                  onClick={(e) => { e.preventDefault(); navigate("changelog"); }}
-                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
-                >
-                  Changelog
-                </a>
-                <a
-                  href="https://github.com/StephenAbbott/opencheck"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
-                >
-                  GitHub
-                </a>
-                <a
-                  href="/sources"
-                  onClick={(e) => { e.preventDefault(); navigate("sources"); }}
-                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
-                >
-                  Sources
-                </a>
-                <a
-                  href="/watchlist"
-                  onClick={(e) => { e.preventDefault(); navigate("watchlist"); }}
-                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
-                >
-                  Watchlist
-                </a>
-                <a
-                  href="/features"
-                  onClick={(e) => { e.preventDefault(); navigate("features"); }}
-                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
-                >
-                  Features
-                </a>
-                <a
-                  href="/about"
-                  onClick={(e) => { e.preventDefault(); navigate("behind"); }}
-                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst"
-                >
-                  About
-                </a>
-              </div>
-              <div>
-                <h3 className="font-body text-[10px] font-medium tracking-widest uppercase text-oo-muted mb-3">
-                  Legal
-                </h3>
-                <a
-                  href="https://github.com/StephenAbbott/opencheck?tab=License-1-ov-file"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst mb-2"
-                >
-                  MIT licence
-                </a>
-                <a
-                  href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block font-mono text-oo-meta text-oo-blue hover:text-oo-burst"
-                >
-                  ATTRIBUTIONS.md
-                </a>
-              </div>
-            </div>
-          </div>
-          {/* Bottom strip */}
-          <div className="mt-8 pt-4 border-t border-oo-rule text-[11px] text-oo-muted font-mono">
-            Third-party data is licensed per source — see{" "}
-            <a
-              href="https://github.com/StephenAbbott/opencheck/blob/main/ATTRIBUTIONS.md"
-              target="_blank"
-              rel="noreferrer"
-              className="text-oo-blue underline underline-offset-2 hover:text-oo-burst"
-            >
-              ATTRIBUTIONS.md
-            </a>{" "}
-            for details.
-          </div>
-        </div>
-      </footer>
+      <SiteFooter onNavigate={navigate} />
     </div>
     </SavedReportContext.Provider>
-  );
-}
-
-
-
-
-/** Human-readable label for each reconcile bridge key. */
-const SCHEME_LABELS: Record<string, string> = {
-  lei: "Legal Entity Identifier (LEI)",
-  wikidata_qid: "Wikidata QID",
-  gb_coh: "Companies House number",
-  opensanctions_id: "OpenSanctions ID",
-  name: "Name match",
-};
-
-/** Short display name for a source chip — the lead clause of the registry
- *  name ("EITI — Extractive Industries…" → "EITI"). */
-function shortSourceName(sourceId: string, names: Record<string, string>): string {
-  const full = names[sourceId] ?? sourceId;
-  return full.split(" — ")[0].split(" (")[0].trim();
-}
-
-function CrossSourceIdentifiersTable({
-  links,
-  gleifMapped,
-  sourceNames = {},
-}: {
-  links: CrossSourceLink[];
-  gleifMapped: { scheme: string; value: string }[];
-  sourceNames?: Record<string, string>;
-}) {
-  const hasRows = links.length > 0 || gleifMapped.length > 0;
-  if (!hasRows) return null;
-
-  return (
-    <table className="w-full text-oo-small border-collapse table-fixed">
-      <thead>
-        <tr>
-          <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[32%]">
-            Scheme
-          </th>
-          <th className="text-left text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[32%]">
-            Value
-          </th>
-          <th className="text-right text-[10px] font-medium tracking-widest uppercase text-oo-muted pb-2 w-[36%]">
-            Confirmed by
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {links.map((link, i) => (
-          <tr key={`${link.key}:${link.key_value}:${i}`} className="border-t border-oo-rule">
-            <td className="py-2 pr-3 text-oo-muted">
-              {SCHEME_LABELS[link.key] ?? link.key}
-            </td>
-            <td className="py-2 pr-3 font-mono text-oo-meta text-oo-ink break-all">
-              {link.key_value}
-            </td>
-            <td className="py-2 text-right">
-              <span className="inline-flex flex-wrap gap-1 justify-end">
-                {link.hits.map((h) => (
-                  <button
-                    key={h.source_id}
-                    type="button"
-                    aria-label={`${sourceLabel(h.source_id, sourceNames)} — jump to this source's results`}
-                    onClick={() =>
-                      document
-                        .getElementById(`source-${h.source_id}`)
-                        ?.scrollIntoView({ behavior: scrollBehavior(), block: "start" })
-                    }
-                    className="text-[11px] bg-oo-bg border border-oo-rule rounded px-1.5 py-0.5 text-oo-muted hover:text-oo-ink hover:border-oo-softBorder transition-colors"
-                  >
-                    {shortSourceName(h.source_id, sourceNames)}
-                  </button>
-                ))}
-              </span>
-            </td>
-          </tr>
-        ))}
-        {gleifMapped.map(({ scheme, value }) => (
-          <tr key={scheme} className="border-t border-oo-rule">
-            <td className="py-2 pr-3 text-oo-muted">{scheme}</td>
-            <td className="py-2 pr-3 font-mono text-oo-meta text-oo-ink break-all">{value}</td>
-            <td className="py-2 text-right">
-              <span className="inline-flex items-center gap-1 text-[11px] bg-blue-50 border border-blue-200 text-blue-700 rounded px-1.5 py-0.5">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-3 h-3"
-                  aria-hidden="true"
-                >
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                </svg>
-                Mapped by GLEIF
-              </span>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-/**
- * Renders the name-only "likely same" entity candidates surfaced by the backend
- * reconciler (exact name + jurisdiction, no shared identifier). These are
- * **suggestions for a human to review**, never confirmed merges — the certain
- * matches already appear in the cross-source identifiers table above. Renders
- * nothing when there are no candidates.
- */
-// How many possibly-same pairs are visible before the rest collapse behind
-// the "Show more" toggle. Multi-source subjects (e.g. DNO ASA) can flag many
-// pairs, which otherwise dominates the results page.
-const POSSIBLY_SAME_PREVIEW_COUNT = 2;
-
-/**
- * Failures in the panels that fetch outside the lookup pipeline.
- *
- * Separate from DegradedScreensNotice on purpose — see lib/panelErrors.ts for
- * why these must not be merged into `degraded_sources`. Same amber, same
- * closing principle, different sentence: a section that is not on screen
- * because its fetch failed must not be read as a section with nothing in it.
- */
-function PanelErrorsNotice({ errors }: { errors: PanelError[] }) {
-  if (errors.length === 0) return null;
-  return (
-    <section
-      role="status"
-      aria-label="Part of this report could not be loaded"
-      className="mt-6 mb-8 rounded-oo border border-oo-warn-border bg-oo-warn-bg p-5"
-    >
-      <h2 className="font-head font-bold text-oo-body text-oo-warn-text">
-        Part of this report could not be loaded
-      </h2>
-      <ul className="mt-2 space-y-1.5">
-        {errors.map((e) => (
-          <li key={e.panel} className="text-oo-meta text-oo-warn-text leading-[1.6]">
-            <span className="font-semibold">{panelLabel(e.panel)}</span> — {e.detail}. You
-            are not seeing {e.missing}.
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 text-oo-meta text-oo-warn-text">
-        These sections are missing from the page, not empty. Their absence is not
-        evidence of absence.
-      </p>
-    </section>
-  );
-}
-
-/** Human phrasing for the closed degradation-reason vocabulary. */
-const DEGRADED_REASON_LABELS: Record<string, string> = {
-  upstream_error: "the upstream service errored",
-  timeout: "the upstream service timed out",
-  not_configured: "the required API credential is not configured",
-  rate_limited: "the upstream service rate-limited the request",
-};
-
-/**
- * The mode's own sentence, as its panel card's first band.
- *
- * The strings have been on `MODE_TABS` since Phase 122 and rendered nowhere.
- * A tab labelled "QuickCheck" says what it is called, not what it does, and a
- * reader arriving on a shared link has no other way to find out which of the
- * four they are looking at. Three of the four panels used to state it
- * themselves — in their own coloured strip, in their own words, at a heading
- * level of their own choosing — which is three chances to disagree with the
- * tab above them; this is one.
- */
-function ModeBlurb({
-  mode,
-  tabs,
-}: {
-  mode: CheckMode;
-  tabs: { id: CheckMode; blurb: string }[];
-}) {
-  const blurb = tabs.find((t) => t.id === mode)?.blurb;
-  if (!blurb) return null;
-  return (
-    <PanelSection>
-      <p className="text-oo-small text-oo-muted">{blurb}</p>
-    </PanelSection>
-  );
-}
-
-/**
- * Warning box for degraded upstream screens (issue #50). Sits above the
- * risk panel and renders whenever the backend reports that a derived
- * check (related-party sanctions/PEP screening, ICIJ offshore-leaks
- * reconciliation) did not fully run — including when there are zero risk
- * signals, which is precisely the case that must not pass for a clean
- * screen. Details are counts only; the backend never sends the
- * related-party names that were being screened.
- */
-function DegradedScreensNotice({
-  degraded,
-  sourceNames = {},
-  onRetry,
-}: {
-  degraded: DegradedSource[];
-  sourceNames?: Record<string, string>;
-  /** Re-runs the lookup bypassing the replay cache; absent while streaming. */
-  onRetry?: () => void;
-}) {
-  if (degraded.length === 0) return null;
-  return (
-    <section
-      id="screening-incomplete"
-      role="status"
-      aria-label="Screening incomplete"
-      className="scroll-mt-4 mt-6 mb-8 rounded-oo border border-amber-300 bg-amber-50 p-5"
-    >
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3 min-w-0">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
-            aria-hidden="true"
-          >
-            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-            <path d="M12 9v4" />
-            <path d="M12 17h.01" />
-          </svg>
-          <div className="min-w-0">
-            <p className="font-head font-bold text-oo-body text-amber-900">
-              Screening incomplete — {degraded.length} check
-              {degraded.length === 1 ? "" : "s"} did not fully run
-            </p>
-            <ul className="mt-2 space-y-1.5 text-[12.5px] leading-[1.6] text-amber-900">
-              {degraded.map((d, i) => (
-                <li key={`${d.source_id}:${d.check}:${i}`}>
-                  <span className="font-semibold">
-                    {d.source_id === "opencheck"
-                      ? "OpenCheck"
-                      : shortSourceName(d.source_id, sourceNames)}
-                  </span>{" "}
-                  — {d.detail}{" "}
-                  <span className="text-amber-800">
-                    ({DEGRADED_REASON_LABELS[d.reason] ?? d.reason})
-                  </span>
-                  {d.affected_signals.length > 0 && (
-                    <span className="ml-1.5 inline-flex flex-wrap gap-1 align-middle">
-                      {d.affected_signals.map((code) => (
-                        <span
-                          key={code}
-                          className="text-[10px] font-semibold uppercase tracking-wide bg-white/70 border border-amber-300 rounded px-1.5 py-0.5 text-amber-900"
-                        >
-                          {RISK_PRESENTATION[code]?.label ??
-                            code.replace(/_/g, " ")}
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2 text-oo-meta text-amber-800">
-              The absence of the signals above is not evidence of absence —
-              an empty result here is not a clean screen.
-            </p>
-          </div>
-        </div>
-        {onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="shrink-0 rounded border border-amber-400 px-3 py-1.5 text-oo-meta font-semibold text-amber-900 transition-colors hover:bg-amber-100"
-          >
-            Re-run screening
-          </button>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function PossiblySameTable({ pairs }: { pairs: PossiblySameEntity[] }) {
-  const [expanded, setExpanded] = useState(false);
-  if (pairs.length === 0) return null;
-  const hiddenCount = pairs.length - POSSIBLY_SAME_PREVIEW_COUNT;
-  const visible =
-    expanded || hiddenCount <= 0
-      ? pairs
-      : pairs.slice(0, POSSIBLY_SAME_PREVIEW_COUNT);
-  return (
-    <>
-      <p className="text-oo-meta text-oo-muted mb-3">
-        These records share an exact name and jurisdiction but no common
-        identifier, so they are <em>likely</em> the same entity — flagged for
-        review, not merged automatically.
-      </p>
-      <table className="w-full text-oo-small border-collapse table-fixed">
-        <thead>
-          <tr>
-            {/* Narrower Records column and tighter letter-spacing on mobile:
-                at tracking-widest the single words "Jurisdiction" and
-                "Confidence" are wider than an 18% column on a phone, so they
-                overflow their cells and collide. break-words lets them wrap
-                rather than spill. */}
-            <th className="text-left text-[10px] font-medium tracking-wide sm:tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[44%] sm:w-[64%] align-bottom">
-              Records
-            </th>
-            <th className="text-left text-[10px] font-medium tracking-wide sm:tracking-widest uppercase text-oo-muted pb-2 pr-3 w-[26%] sm:w-[18%] align-bottom break-words">
-              Jurisdiction
-            </th>
-            <th className="text-right text-[10px] font-medium tracking-wide sm:tracking-widest uppercase text-oo-muted pb-2 w-[30%] sm:w-[18%] align-bottom break-words">
-              Confidence
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {visible.map((p) => (
-            <tr key={`${p.a}~${p.b}`} className="border-t border-oo-rule align-top">
-              <td className="py-2 pr-3 text-oo-ink">
-                <div className="break-words">
-                  {p.a_name || p.a}
-                  {p.a_source && (
-                    <span className="ml-1.5 align-middle text-[10px] bg-oo-bg border border-oo-rule rounded px-1 py-0.5 text-oo-muted whitespace-nowrap">
-                      {p.a_source}
-                    </span>
-                  )}
-                </div>
-                <div className="break-words text-oo-muted">
-                  {p.b_name || p.b}
-                  {p.b_source && (
-                    <span className="ml-1.5 align-middle text-[10px] bg-oo-bg border border-oo-rule rounded px-1 py-0.5 text-oo-muted whitespace-nowrap">
-                      {p.b_source}
-                    </span>
-                  )}
-                </div>
-              </td>
-              <td className="py-2 pr-3 font-mono text-oo-meta text-oo-muted">
-                {p.jurisdiction || "—"}
-              </td>
-              <td className="py-2 text-right">
-                <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 border border-amber-300 text-amber-800 rounded px-1.5 py-0.5">
-                  likely same
-                </span>
-                {p.reason && (
-                  <span className="block mt-1 text-[11px] text-oo-muted break-words">
-                    {p.reason}
-                  </span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {hiddenCount > 0 && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          className="mt-3 text-oo-meta font-medium text-oo-blue hover:text-oo-burst underline underline-offset-2"
-        >
-          {expanded
-            ? "Show fewer"
-            : `Show ${hiddenCount} more possible duplicate${hiddenCount === 1 ? "" : "s"}`}
-        </button>
-      )}
-    </>
   );
 }

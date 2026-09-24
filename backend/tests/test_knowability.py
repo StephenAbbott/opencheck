@@ -434,6 +434,7 @@ def test_fold_carries_the_knowability_event_as_recorded(monkeypatch) -> None:
     """A saved report replays the sentence that was true on the day it ran:
     the fold copies the event payload and never re-renders it from today's
     table or today's clock (Phase 218's no-clock rule)."""
+    from opencheck import lookup_replay
     from opencheck.routers import lookup as lookup_mod
 
     frozen = lookup_mod._knowability_payload("EE", date(2026, 1, 1))
@@ -442,7 +443,7 @@ def test_fold_carries_the_knowability_event_as_recorded(monkeypatch) -> None:
     def _boom(*_a, **_k):  # pragma: no cover - the assertion is that it is not called
         raise AssertionError("fold must not re-render the knowability statement")
 
-    monkeypatch.setattr(lookup_mod, "knowability_statement_for", _boom)
+    monkeypatch.setattr(lookup_replay, "knowability_statement_for", _boom)
     events = [
         ("gleif_done", {"lei": "X", "legal_name": "Co", "jurisdiction": "EE", "derived_identifiers": {}}),
         ("knowability", frozen),

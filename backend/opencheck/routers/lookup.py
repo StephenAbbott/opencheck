@@ -6,15 +6,12 @@ import asyncio
 import json
 import logging
 import re
-import time
 from dataclasses import dataclass, field as dc_field
-from datetime import date, datetime, timezone
-from collections import deque
-from collections.abc import Awaitable, Callable
-from typing import Any, Literal, AsyncIterator, Iterable, NamedTuple
+from datetime import datetime, timezone
+from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from .. import __version__
@@ -23,13 +20,11 @@ from .. import identifiers
 from .. import degradation as _degradation
 from .. import outbound_rate as _outbound_rate
 from .. import provenance as _provenance
-from .. import consistency, consistencystats, register_hops, signalstats
+from .. import consistency, consistencystats, signalstats
 from ..provenance import Provenance
 from ..bods import BODSBundle, unique_statements, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
-from .. import lookup_budget as _lookup_budget
-from .. import pipelinestats as _pipelinestats
 from ..config import get_settings
 from ..secret_scrub import describe_exception, scrub
 from ..cross_check import NameScreen, assess_cross_source_names
@@ -46,7 +41,6 @@ from ..findings import (
 )
 from ..ftm import subject_to_ftm_entity
 from ..gleif_throttle import GleifRateLimitedError
-from ..gleif_throttle import discretionary as gleif_discretionary
 from ..memwatch import is_bot
 from ..icij_check import assess_icij_names
 from ..names import normalise_name
@@ -54,10 +48,8 @@ from ..openaleph_check import assess_openaleph_names
 from .. import lei_registration as _lei_registration
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
-from ..knowability import statement_for as knowability_statement_for
 from .. import listing as _listing
 from ..verdict import build_verdict
-from ..ra_codes import RA_BY_COUNTRY, ra_code_for
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
@@ -126,6 +118,55 @@ from .hit_builders import (  # noqa: F401
     _extract_edgar_cik,
     _hit,
     _local_id_for,
+)
+
+# Phase 246: the replay cache, the pipeline gate, the flights and the fold live
+# in ``opencheck/lookup_replay.py``; the FullCheck expansion endpoints in
+# ``routers/expand.py``. Re-exported here because saved reports, share cards,
+# batch, the MCP tools and the tests reach them through this module. The cache
+# and in-flight dicts are the same objects under both names; a module-level
+# setting (``_QUEUE_POLL_S``) must be patched where it is read, in
+# ``lookup_replay``.
+from ..lookup_replay import (  # noqa: F401  (re-exported)
+    DEEPEN_TOP_MAX,
+    LookupEvent,
+    _Flight,
+    _GATE,
+    _IN_FLIGHT,
+    _PipelineBusyError,
+    _PipelineGate,
+    _QUEUE_POLL_S,
+    _REFUNDED_STATUSES,
+    _REPLAY_CACHE,
+    _REPLAY_MAX_ENTRIES,
+    _REPLAY_TTL_SECONDS,
+    _ReplayEntry,
+    _TRANSIENT_EVENTS,
+    _Waiter,
+    _gate,
+    _invalidate_replay,
+    _knowability_payload,
+    _lookup_pipeline_cached,
+    _queue_wait_for,
+    _replay_key,
+    _run_flight,
+    clamp_deepen_top,
+    fold_lookup_events,
+    pipelines_queued,
+    pipelines_running,
+    replay_entry,
+)
+from ..graph_shape import (  # noqa: F401  (re-exported, Phase 246)
+    _count_parties,
+    _graph_shape,
+    _identifier_keys,
+)
+from .national_id import (  # noqa: F401  (re-exported, Phase 246)
+    NationalIdMatch,
+    ResolveNationalIdResponse,
+    _RA_BY_COUNTRY,
+    _resolve_national_id_impl,
+    resolve_national_id,
 )
 
 router = APIRouter()
@@ -514,8 +555,6 @@ async def _build_report(
 # into the lookup flow means declaring the spec on the adapter class and
 # adding a ``_bh_<id>()`` hit builder here — nothing else.
 
-LookupEvent = tuple[str, Any]
-
 
 # RA-code derivers declared by the adapters themselves, collected from the
 # registry. GB is special-cased on jurisdiction in _build_derived() because
@@ -556,10 +595,6 @@ def _build_derived(ctx: _LookupCtx, registered_at_id: str) -> None:
                 except ValueError:
                     pass  # malformed local ID on the LEI record — skip source
                 break
-
-
-
-
 
 
 def _edgar_hit(cik: str, legal_name: str) -> SourceHit:
@@ -695,8 +730,6 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
                 # leads with the document count.
                 h.finding = finding_openaleph(h.raw, mentions)
     return deduped
-
-
 
 
 def _name_screen_can_run() -> bool:
@@ -1792,436 +1825,6 @@ async def _lookup_pipeline(
     })
 
 
-# --- replay cache --------------------------------------------------------------
-#
-# Completed lookup runs are kept in memory for a short window so a page
-# refresh, a shared URL, or an SSE reconnect replays instantly instead of
-# re-querying every source. Only runs that reached the "done" event are
-# cached; per-source retries and ?refresh=true invalidate/bypass.
-#
-# Replays are never allowed to masquerade as live runs: a replayed stream is
-# prefixed with a "replayed" event carrying the wall-clock completion time of
-# the original run, and the sync /lookup response mirrors it as
-# ``replayed`` / ``fetched_at`` so the UI can badge the result and offer a
-# fresh check.
-
-
-class _ReplayEntry(NamedTuple):
-    stored: float  # monotonic clock, for the TTL check
-    fetched_at: str  # wall-clock UTC ISO 8601 completion time, for display
-    events: list[LookupEvent]
-
-
-_REPLAY_TTL_SECONDS = 15 * 60.0
-_REPLAY_MAX_ENTRIES = 64
-_REPLAY_CACHE: dict[str, _ReplayEntry] = {}
-
-
-def _invalidate_replay(lei: str) -> None:
-    prefix = f"{lei.strip().upper()}:"
-    for key in [k for k in _REPLAY_CACHE if k.startswith(prefix)]:
-        _REPLAY_CACHE.pop(key, None)
-
-
-# --- Phase 234: one run per LEI at a time, a bounded number at once ----------
-#
-# A fresh run is a *flight*: a task, detached from whoever asked for it, that
-# drives ``_lookup_pipeline`` and buffers its events. The first caller starts
-# it (and is charged for it — ``lookup_budget.charge``); anyone asking for the
-# same ``(lei, deepen_top)`` while it is in the air follows the same buffer
-# from the start, free. Before this, two tabs, a watchlist baseline and a
-# FullCheck hop on one LEI ran the forty-source fan-out four times.
-#
-# Flights also pass through one process-wide gate (``lookup_max_concurrent``)
-# so a burst queues instead of stacking pipelines until Render's memory limit
-# does the queueing for us. A run that cannot get a slot within
-# ``lookup_queue_wait_s`` ends in a 503 error event and its charge is
-# refunded.
-#
-# Phase 238: the queue is first come, first served, a run started from the
-# interactive stream waits ``lookup_stream_queue_wait_s`` (5 min) rather than
-# 60 s, and while it waits the flight carries ``queued`` events with its place
-# in the queue — the loading grid says "waiting for a free slot" instead of
-# failing. Those events are about the wait, not the run, so they never reach
-# the replay cache or a saved report (``_TRANSIENT_EVENTS``). Every admission,
-# refusal, wait and run time is counted in ``pipelinestats`` and served as the
-# ``pipelines`` section of ``/signalstats``.
-#
-# A follower that goes away (an SSE tab closed) does not cancel the flight:
-# the run completes and lands in the replay cache, which is where the next
-# visitor finds it. The budget and the gate bound how many such runs exist.
-
-#: ``deepen_top`` is accepted in this range everywhere. Every value is its own
-#: replay-cache key, so an unclamped value from an in-process caller (the MCP
-#: tools took any int) forced a fresh run per value and evicted other readers'
-#: runs from the 64-entry cache.
-DEEPEN_TOP_MAX = 10
-
-
-def clamp_deepen_top(deepen_top: Any) -> int:
-    try:
-        value = int(deepen_top)
-    except (TypeError, ValueError):
-        value = 5
-    return max(0, min(DEEPEN_TOP_MAX, value))
-
-
-class _PipelineBusyError(Exception):
-    def __init__(self, waited_s: float = 0.0) -> None:
-        super().__init__()
-        self.waited_s = waited_s
-
-
-#: How often a queued run re-reads its place in the queue, and tells the
-#: reader with a ``queued`` event if it has moved (Phase 238).
-_QUEUE_POLL_S = 3.0
-
-
-class _Waiter:
-    __slots__ = ("future",)
-
-    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
-        self.future: asyncio.Future[None] = loop.create_future()
-
-
-class _PipelineGate:
-    """Counts pipelines in flight and queues the rest, first come first served.
-
-    Phase 238 replaced an ``asyncio.Condition`` here: every release woke every
-    waiter to race for the slot, so a run that arrived a second ago could take
-    it from one that had waited fifty, and nothing could say where a run stood.
-    Now a released slot is handed straight to the oldest waiter, and a
-    waiter's position is its place in :attr:`waiters` — what the ``queued``
-    event reports to the loading grid.
-
-    Bound to one event loop (the test suite runs several), so it is rebuilt
-    when the loop changes.
-    """
-
-    def __init__(self) -> None:
-        self.loop = asyncio.get_running_loop()
-        self.active = 0
-        self.limit = 0
-        self.waiters: deque[_Waiter] = deque()
-
-    @property
-    def queued(self) -> int:
-        return len(self.waiters)
-
-    def position(self, waiter: _Waiter) -> int:
-        """1 = next to run; 0 = not queued."""
-        try:
-            return self.waiters.index(waiter) + 1
-        except ValueError:
-            return 0
-
-    async def acquire(
-        self,
-        limit: int,
-        max_wait: float,
-        on_queued: Callable[[int], Awaitable[None]] | None = None,
-    ) -> float:
-        """Take a slot and return the seconds spent waiting for it.
-
-        ``on_queued(position)`` is awaited when the run joins the queue and
-        whenever its position changes. Raises :class:`_PipelineBusyError`
-        after ``max_wait`` seconds without a slot.
-        """
-        self.limit = limit
-        if limit <= 0 or (self.active < limit and not self.waiters):
-            self.active += 1
-            return 0.0
-        waiter = _Waiter(self.loop)
-        self.waiters.append(waiter)
-        started = self.loop.time()
-        deadline = started + max(max_wait, 0.0)
-        last = 0
-        try:
-            while not waiter.future.done():
-                pos = self.position(waiter)
-                if on_queued is not None and pos != last:
-                    last = pos
-                    await on_queued(pos)
-                    continue  # the push yielded; re-read before sleeping
-                remaining = deadline - self.loop.time()
-                if remaining <= 0:
-                    break
-                # ``asyncio.wait``, not ``wait_for``: it never cancels the
-                # future on a timeout, and a cancellation of this task always
-                # arrives as CancelledError — ``wait_for`` can swallow one
-                # that lands as the slot is handed over.
-                await asyncio.wait((waiter.future,), timeout=min(remaining, _QUEUE_POLL_S))
-        except BaseException:
-            self._abandon(waiter)
-            raise
-        if waiter.future.done():
-            return self.loop.time() - started
-        self._abandon(waiter)
-        raise _PipelineBusyError(self.loop.time() - started)
-
-    def _abandon(self, waiter: _Waiter) -> None:
-        """A waiter leaving without running: drop it from the queue, or pass
-        on the slot it was handed as it left."""
-        if waiter.future.done() and not waiter.future.cancelled():
-            self.release()
-            return
-        waiter.future.cancel()
-        try:
-            self.waiters.remove(waiter)
-        except ValueError:
-            pass
-
-    def release(self) -> None:
-        self.active -= 1
-        while self.waiters and (self.limit <= 0 or self.active < self.limit):
-            waiter = self.waiters.popleft()
-            if waiter.future.done():
-                continue
-            self.active += 1
-            waiter.future.set_result(None)
-
-
-_GATE: _PipelineGate | None = None
-
-
-def _gate() -> _PipelineGate:
-    global _GATE
-    if _GATE is None or _GATE.loop is not asyncio.get_running_loop():
-        _GATE = _PipelineGate()
-    return _GATE
-
-
-def pipelines_running() -> int:
-    """Pipelines in flight in this process (``/memstats`` and tests)."""
-    return _GATE.active if _GATE is not None else 0
-
-
-def pipelines_queued() -> int:
-    """Runs waiting for a slot in this process (tests)."""
-    return _GATE.queued if _GATE is not None else 0
-
-
-class _Flight:
-    def __init__(self) -> None:
-        self.loop = asyncio.get_running_loop()
-        self.events: list[LookupEvent] = []
-        self.done = False
-        self.exc: BaseException | None = None
-        self.cond = asyncio.Condition()
-        self.task: asyncio.Task[None] | None = None
-
-    async def push(self, event: LookupEvent) -> None:
-        async with self.cond:
-            self.events.append(event)
-            self.cond.notify_all()
-
-    async def finish(self) -> None:
-        async with self.cond:
-            self.done = True
-            self.cond.notify_all()
-
-    async def follow(self) -> AsyncIterator[LookupEvent]:
-        i = 0
-        while True:
-            async with self.cond:
-                await self.cond.wait_for(lambda: i < len(self.events) or self.done)
-                batch = self.events[i:]
-                finished = self.done
-            for event in batch:
-                yield event
-            i += len(batch)
-            if finished and i >= len(self.events):
-                break
-        if self.exc is not None and not isinstance(self.exc, asyncio.CancelledError):
-            raise self.exc
-
-
-_IN_FLIGHT: dict[str, _Flight] = {}
-
-#: Error statuses after which a run's charge is given back: nothing upstream
-#: was spent on a malformed LEI (400), or on a run refused a slot (503).
-_REFUNDED_STATUSES = frozenset({400, 503})
-
-#: Events about the *wait*, not the run (Phase 238). Followers see them while
-#: the run is in the air; the replay cache — and so a saved report — keeps
-#: only what the run found.
-_TRANSIENT_EVENTS = frozenset({"queued"})
-
-
-def _queue_wait_for(kind: str | None) -> float:
-    """How long a fresh run started by ``kind`` may queue for a slot. The
-    interactive stream waits longest, because the loading grid shows the
-    reader that it is waiting and where it stands (Phase 238)."""
-    settings = get_settings()
-    if kind == "stream":
-        return max(settings.lookup_stream_queue_wait_s, settings.lookup_queue_wait_s)
-    return settings.lookup_queue_wait_s
-
-
-async def _run_flight(
-    key: str, lei: str, deepen_top: int, flight: _Flight, stored: float, charged: str | None
-) -> None:
-    settings = get_settings()
-    completed_at: str | None = None
-    gate = _gate()
-    kind = _lookup_budget.current_caller_kind()
-    max_wait = _queue_wait_for(kind)
-    joined_queue = False
-
-    async def _on_queued(position: int) -> None:
-        nonlocal joined_queue
-        if not joined_queue:
-            joined_queue = True
-            _pipelinestats.record_queued(kind, gate.queued)
-        await flight.push((
-            "queued",
-            {
-                "position": position,
-                "running": gate.active,
-                "limit": gate.limit,
-                "max_wait_s": int(max_wait),
-            },
-        ))
-
-    try:
-        try:
-            waited = await gate.acquire(settings.lookup_max_concurrent, max_wait, _on_queued)
-        except _PipelineBusyError as exc:
-            _pipelinestats.record_refused(kind, exc.waited_s, gate.queued)
-            _lookup_budget.refund(charged)
-            await flight.push((
-                "error",
-                {
-                    "status": 503,
-                    "detail": (
-                        "OpenCheck is running as many checks as it can at once. "
-                        "Try again in a minute."
-                    ),
-                    "retry_after_s": 30,
-                },
-            ))
-            return
-        admitted = time.monotonic()
-        _pipelinestats.record_admitted(kind, waited, gate.active, gate.queued)
-        finished = False
-        try:
-            async for event in _lookup_pipeline(lei, deepen_top=deepen_top):
-                name, payload = event
-                if name in ("source_completed", "source_error") and isinstance(payload, dict):
-                    _pipelinestats.record_source(
-                        payload.get("source_id"),
-                        time.monotonic() - admitted,
-                        timed_out=payload.get("error_type") == "timeout",
-                    )
-                if name == "done":
-                    # Phase 216: the run names itself on its last event, so a
-                    # client holding a live (not replayed) run can still say
-                    # which run it is looking at when it asks to save it.
-                    # Stamped here, once, and buffered with the stamp — a
-                    # replay repeats the same value.
-                    completed_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-                    event = ("done", {**payload, "run_completed_at": completed_at})
-                    finished = True
-                elif name == "error" and payload.get("status") in _REFUNDED_STATUSES:
-                    _lookup_budget.refund(charged)
-                await flight.push(event)
-        finally:
-            held = time.monotonic() - admitted
-            gate.release()
-            _pipelinestats.record_released(kind, held, gate.active, gate.queued)
-            _pipelinestats.record_run(held, completed=finished)
-        if completed_at is not None:
-            while len(_REPLAY_CACHE) >= _REPLAY_MAX_ENTRIES:
-                _REPLAY_CACHE.pop(next(iter(_REPLAY_CACHE)), None)
-            _REPLAY_CACHE[key] = _ReplayEntry(
-                stored=stored,
-                fetched_at=completed_at,
-                events=[e for e in flight.events if e[0] not in _TRANSIENT_EVENTS],
-            )
-    except BaseException as exc:  # noqa: BLE001 — handed to every follower
-        flight.exc = exc
-        if isinstance(exc, asyncio.CancelledError):
-            raise
-    finally:
-        if _IN_FLIGHT.get(key) is flight:
-            _IN_FLIGHT.pop(key, None)
-        await flight.finish()
-
-
-def _replay_key(lei: str, deepen_top: int) -> str:
-    return f"{lei.strip().upper()}:{clamp_deepen_top(deepen_top)}"
-
-
-async def _lookup_pipeline_cached(
-    lei: str, deepen_top: int = 5, refresh: bool = False
-) -> AsyncIterator[LookupEvent]:
-    """Replay a cached completed run, join one in flight, or start one.
-
-    Only starting one costs the caller anything (Phase 234): the run is
-    charged to the client's lookup budget first, and a spent budget ends the
-    stream with a 429 ``error`` event carrying ``retry_after_s``.
-    """
-    deepen_top = clamp_deepen_top(deepen_top)
-    key = _replay_key(lei, deepen_top)
-    now = time.monotonic()
-
-    if not refresh:
-        entry = _REPLAY_CACHE.get(key)
-        if entry is not None and now - entry.stored < _REPLAY_TTL_SECONDS:
-            # Provenance first, so the UI knows before any result arrives.
-            yield (
-                "replayed",
-                {
-                    "fetched_at": entry.fetched_at,
-                    "age_seconds": round(now - entry.stored, 1),
-                },
-            )
-            for event in entry.events:
-                yield event
-            return
-
-    loop = asyncio.get_running_loop()
-    flight = _IN_FLIGHT.get(key)
-    if flight is None or flight.loop is not loop or flight.done:
-        try:
-            charged = await _lookup_budget.charge()
-        except _lookup_budget.BudgetExceededError as exc:
-            yield (
-                "error",
-                {"status": 429, "detail": str(exc), "retry_after_s": exc.retry_after_s},
-            )
-            return
-        # A caller that waited for budget may find the run done or started
-        # by someone else meanwhile; take that instead and give the charge back.
-        flight = _IN_FLIGHT.get(key)
-        if flight is not None and flight.loop is loop and not flight.done:
-            _lookup_budget.refund(charged)
-        else:
-            flight = _Flight()
-            _IN_FLIGHT[key] = flight
-            flight.task = asyncio.create_task(
-                _run_flight(
-                    key, lei.strip().upper(), deepen_top, flight, time.monotonic(), charged
-                )
-            )
-
-    async for event in flight.follow():
-        yield event
-
-
-def replay_entry(lei: str, deepen_top: int = 5) -> _ReplayEntry | None:
-    """The held completed run for ``(lei, deepen_top)``, or ``None`` when
-    there is none or it has aged out of the replay window.
-
-    Phase 216: a saved report is copied from here and nowhere else — the
-    server's own record of what it streamed, never a payload a client posts.
-    """
-    entry = _REPLAY_CACHE.get(_replay_key(lei, deepen_top))
-    if entry is None or time.monotonic() - entry.stored >= _REPLAY_TTL_SECONDS:
-        return None
-    return entry
-
-
 # --- endpoints ---------------------------------------------------------------
 
 
@@ -2251,139 +1854,6 @@ async def _lookup_impl(
     return fold_lookup_events(norm_lei, events)
 
 
-def _knowability_payload(jurisdiction: str, today: date | None = None) -> dict[str, Any]:
-    """The ``knowability`` event: the subject-jurisdiction statement as JSON.
-
-    ``as_of`` records the day the sentence was rendered, so a reader of a
-    saved report can see the date the "a change is announced for …" clause
-    was judged against. Region-suffixed codes (``US-DE``) fall back to the
-    country inside ``statement_for``."""
-    today = today or date.today()
-    st = knowability_statement_for(jurisdiction, today)
-    payload = st.model_dump(mode="json")
-    payload["as_of"] = today.isoformat()
-    return payload
-
-
-def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupResponse:
-    """Collect a lookup's event stream into one ``LookupResponse``.
-
-    Factored out of ``_lookup_impl`` in Phase 216 so a saved report — whose
-    payload *is* the stored event list — folds into the same response the
-    live pipeline produces: the PDF, Markdown and MCP views of a saved report
-    cannot drift from the live ones. A ``hit`` payload may be a ``SourceHit``
-    (live, in-process) or its JSON dict (read back from a saved report).
-    """
-    norm_lei = lei.strip().upper()
-    hits: list[Any] = []
-    errors: dict[str, str] = {}
-    links: list[dict[str, Any]] = []
-    signals: list[dict[str, Any]] = []
-    degraded_sources: list[dict[str, Any]] = []
-    source_liveness: dict[str, dict[str, Any]] = {}
-    graph_shape: dict[str, Any] = {}
-    verdict: str | None = None
-    subject_profile: dict[str, Any] | None = None
-    knowability: dict[str, Any] | None = None
-    knowability_chain: dict[str, Any] | None = None
-    listing: dict[str, Any] | None = None
-    oa_screening: list[dict[str, Any]] = []
-    bods_all: list[dict[str, Any]] = []
-    same_pairs: list[dict[str, Any]] = []
-    bods_issues: list[str] = []
-    license_notices: list[dict[str, str]] = []
-    legal_name: str | None = None
-    jurisdiction: str | None = None
-    derived: dict[str, str] = {}
-    replayed = False
-    fetched_at: str | None = None
-    sources_applicable: list[str] = []
-    run_completed_at: str | None = None
-
-    for event, payload in events:
-        if event == "replayed":
-            replayed = True
-            fetched_at = payload["fetched_at"]
-        elif event == "sources_applicable":
-            sources_applicable = list(payload.get("source_ids") or [])
-        elif event == "error":
-            raise HTTPException(
-                status_code=payload["status"], detail=payload["detail"]
-            )
-        elif event == "gleif_done":
-            legal_name = payload["legal_name"]
-            jurisdiction = payload["jurisdiction"]
-            derived = payload["derived_identifiers"]
-        elif event == "hit":
-            hits.append(payload)
-        elif event == "source_error":
-            errors[payload["source_id"]] = payload["error"]
-        elif event == "deepen_error":
-            errors.setdefault(payload["source_id"], payload["error"])
-        elif event == "deepen_result":
-            bods_all.extend(payload["bods"])
-        elif event == "cross_source_links":
-            links = payload["links"]
-        elif event == "possibly_same_entities":
-            same_pairs = payload["pairs"]
-        elif event == "subject_profile":
-            subject_profile = payload.get("profile")
-        elif event == "knowability":
-            knowability = payload
-        elif event == "knowability_chain":
-            knowability_chain = payload
-        elif event == "listing":
-            listing = payload
-        elif event == "risk_signals":
-            signals = payload["signals"]
-            degraded_sources = payload.get("degraded_sources") or []
-            verdict = payload.get("verdict")
-            oa_screening = payload.get("openaleph_screening") or []
-            source_liveness = payload.get("source_liveness") or {}
-            graph_shape = payload.get("graph_shape") or {}
-        elif event == "done":
-            bods_issues = payload["bods_issues"]
-            license_notices = payload["license_notices"]
-            run_completed_at = payload.get("run_completed_at")
-
-    return LookupResponse(
-        query=norm_lei,
-        kind=SearchKind.ENTITY,
-        hits=hits,
-        errors=errors,
-        cross_source_links=links,
-        risk_signals=signals,
-        # Two results from one source can map the same party (two OpenSanctions
-        # records naming one subsidiary); the export is one statement per id.
-        # Folded here, not in the pipeline, so a saved report stored before
-        # Phase 235 renders and exports without repeats too.
-        # Phase 236: the primary listing goes onto the subject's GLEIF entity
-        # statement here, from the frozen event — so a saved report's export
-        # carries the listing that was true on the day it ran.
-        bods=_listing.apply_to_bods(unique_statements(bods_all), norm_lei, listing),
-        bods_issues=bods_issues,
-        license_notices=license_notices,
-        possibly_same_entities=same_pairs,
-        degraded_sources=degraded_sources,
-        openaleph_screening=oa_screening,
-        source_liveness=source_liveness,
-        graph_shape=graph_shape,
-        verdict=verdict,
-        subject_profile=subject_profile,
-        knowability=knowability,
-        knowability_chain=knowability_chain,
-        listing=listing,
-        lei=norm_lei,
-        legal_name=legal_name,
-        jurisdiction=jurisdiction,
-        derived_identifiers=derived,
-        replayed=replayed,
-        fetched_at=fetched_at,
-        sources_applicable=sources_applicable,
-        run_completed_at=run_completed_at,
-    )
-
-
 @router.get("/lookup", response_model=LookupResponse)
 @limiter.limit(lookup_tier)
 async def lookup(
@@ -2399,319 +1869,6 @@ async def lookup(
     identical data to /lookup-stream, without the streaming.
     """
     return await _lookup_impl(lei=lei, deepen_top=deepen_top, refresh=refresh)
-
-
-def _entity_idents(stmt: dict[str, Any]) -> set[str]:
-    """Upper-cased identifier values carried by a BODS entity statement."""
-    ids = (stmt.get("recordDetails") or {}).get("identifiers") or []
-    return {(i.get("id") or "").strip().upper() for i in ids if (i.get("id") or "").strip()}
-
-
-def _anchor_replacements(bods: list[dict[str, Any]], key: str, anchor: str) -> dict[str, str]:
-    """The statementId → ``anchor`` rewrites that collapse every representation of
-    the entity identified by ``key`` — an LEI, or since Phase 182 a register
-    number such as a Companies House company number — onto the existing graph
-    node.
-
-    Fix for the spike's cross-source finding: a national register keys its entity
-    statement on the company number, not the LEI, so matching on the LEI alone
-    left a floating duplicate. We seed the identifier set from every statement
-    that asserts the key (GLEIF ties the LEI to the company number), then mark any
-    entity statement sharing one of those identifier values for rewrite.
-    """
-    from ..bods.mapper import _stable_id
-
-    norm = key.strip().upper()
-    subj_idents: set[str] = {norm}
-    for s in bods:
-        if s.get("recordType") == "entity" and norm in _entity_idents(s):
-            subj_idents |= _entity_idents(s)
-
-    # The GLEIF subject statement is keyed on the LEI itself; a register hop's
-    # subject is found through its identifiers like every other statement.
-    subject_ids = {_stable_id("gleif", "entity", norm)} if _LEI_SHAPE.match(norm) else set()
-    for s in bods:
-        if s.get("recordType") == "entity" and (_entity_idents(s) & subj_idents):
-            subject_ids.add(s["statementId"])
-    subject_ids.discard(anchor)
-    return {sid: anchor for sid in subject_ids}
-
-
-def _apply_id_remap(items: list[dict[str, Any]], repl: dict[str, str]) -> list[dict[str, Any]]:
-    """Rewrite statement ids over a serialised list (BODS *or* risk signals). A
-    blunt string replace is safe — opencheck statement ids are unique 24-hex
-    tokens with no collision risk — and it catches every reference field uniformly
-    (including the ``evidence.statement_id`` fields risk signals carry)."""
-    if not repl:
-        return items
-    raw = json.dumps(items)
-    for old, new in repl.items():
-        raw = raw.replace(old, new)
-    return json.loads(raw)
-
-
-def _collapse_onto_anchor(bods: list[dict[str, Any]], lei: str, anchor: str) -> list[dict[str, Any]]:
-    """Collapse every representation of the LEI-identified entity onto ``anchor``."""
-    return _apply_id_remap(bods, _anchor_replacements(bods, lei, anchor))
-
-
-async def _expand_one_layer(
-    lei: str, anchor: str, *, deepen_top: int = 3
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Owner-ward hop: re-anchor a standard ``lookup`` (the entity's owners) and
-    stitch it onto ``anchor`` (reusing the replay cache). Returns the new layer's
-    BODS **and** the risk signals the sub-lookup already screened for the expanded
-    entity — both with ids remapped onto the anchor — so FullCheck accumulates
-    network-wide risk as it expands."""
-    norm = lei.strip().upper()
-    resp = await _lookup_impl(lei=norm, deepen_top=deepen_top)  # raises 400/404
-    repl = _anchor_replacements(resp.bods, norm, anchor)
-    return _apply_id_remap(resp.bods, repl), _apply_id_remap(resp.risk_signals, repl)
-
-
-async def _subsidiaries_one_layer(
-    lei: str, anchor: str
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Subsidiary-ward hop: fetch the entity's GLEIF Level-2 children and stitch
-    them under ``anchor``. GLEIF L2 children aren't risk-screened, so no signals."""
-    from ..subsidiaries import assemble_subsidiaries
-
-    norm = lei.strip().upper()
-    data = await assemble_subsidiaries(norm, include_bods=True)
-    bods = (data or {}).get("bods") or []
-    return _collapse_onto_anchor(bods, norm, anchor), []
-
-
-@router.get("/expand")
-@limiter.limit(lookup_tier)
-async def expand(
-    request: Request,
-    response: Response,
-    lei: str = Query(..., description="LEI of the corporate node to expand."),
-    anchor: str = Query(
-        ...,
-        description=(
-            "statementId of the existing graph node being expanded. The "
-            "looked-up entity's identity statements are remapped onto it so the "
-            "new owners layer stitches onto the existing node, not a duplicate."
-        ),
-    ),
-    deepen_top: int = Query(3, ge=0, le=10),
-) -> dict[str, Any]:
-    """Progressive discovery: resolve one corporate node a hop deeper.
-
-    Live-only and corporate-hops only (person nodes are terminal and the caller
-    never expands them); not part of the main lookup synthesis. The owner-ward
-    traversal foundation that FullCheck's network exploration builds on. See
-    ``/expand-layer`` for the batch (whole-frontier) variant.
-    """
-    bods, _signals = await _expand_one_layer(lei, anchor, deepen_top=deepen_top)
-    return {"lei": lei.strip().upper(), "anchor": anchor, "bods": bods}
-
-
-async def _register_one_layer(
-    scheme: str, ident: str, anchor: str, *, name: str | None = None
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Owner-ward hop on a register-scoped identifier (Phase 182): dispatch only
-    the register that owns the scheme — Companies House for ``GB-COH`` — map its
-    bundle to BODS, screen the parties it returns against OpenSanctions and
-    EveryPolitician, and stitch the lot onto ``anchor``.
-
-    This is the *cheap* hop: one register (four calls for Companies House —
-    profile, officers, PSCs, PSC statements — plus its own PSC walk) and the
-    name screen, not the forty-source fan-out ``_expand_one_layer`` pays for an
-    LEI. It runs inside its own degradation and outbound-budget scopes, as the
-    pipeline does, so a rate-capped register degrades instead of timing out.
-    An unknown scheme, a value that is not a number of that register, or a
-    register that is not live for this deployment yields nothing — never a
-    guess.
-    """
-    hop = register_hops.hop_for(scheme)
-    if hop is None:
-        return [], []
-    try:
-        local_id = hop.normalise(ident)
-    except ValueError:
-        return [], []
-    adapter = REGISTRY.get(hop.source_id)
-    mapper = _mapper_for(hop.source_id)
-    if adapter is None or mapper is None:
-        return [], []
-
-    _degradation.begin()
-    _outbound_rate.begin()
-    # Phase 184: the register's walk counters file this under "hop", not
-    # "lookup" — the two are different questions for the PSC-graph ticket.
-    origin_token = signalstats.walk_origin.set("hop")
-    try:
-        kwargs = {"legal_name": name} if hop.pass_legal_name and name else {}
-        raw, prov = await _fetch_with_provenance(adapter, local_id, **kwargs)
-        if not isinstance(raw, dict) or raw.get("is_stub"):
-            return [], []
-        with _provenance.mapping_provenance(prov):
-            bods = classify_government_entities(
-                unique_statements(mapper(raw)), source_id=hop.source_id
-            )
-        bundle_signals = [
-            s.to_dict() for s in assess_bundle(hop.source_id, raw, bods, hit_id=local_id)
-        ]
-    finally:
-        signalstats.walk_origin.reset(origin_token)
-        degraded: list[DegradedSource] = _degradation.collect()
-        _outbound_rate.end()
-    # Sanctions screening of the new node and everything it brought with it —
-    # the subject entity is a target of the name screen like any other party.
-    cross = await assess_cross_source_names(bods, degraded=degraded)
-    signals = _merge_signals(bundle_signals, [s.to_dict() for s in cross])
-    repl = _anchor_replacements(bods, local_id, anchor)
-    return _apply_id_remap(bods, repl), _apply_id_remap(signals, repl)
-
-
-@router.get("/expand-schemes")
-@limiter.limit(default_tier)
-async def expand_schemes(request: Request, response: Response) -> dict[str, Any]:
-    """The identifier schemes ``/expand-layer`` can hop on without an LEI
-    (Phase 182): scheme → the register that answers it. The frontier reads this
-    so a node is offered for expansion only when a hop exists for it."""
-    return {"schemes": register_hops.describe()}
-
-
-_MAX_LAYER_ITEMS = 25  # cap concurrent hops per "add layer" so it can't fan out the register
-
-
-class _ExpandItem(BaseModel):
-    """One frontier node. An LEI re-anchors a full lookup; a register-scoped
-    identifier (``scheme`` + ``id``, e.g. ``GB-COH`` + ``02999029``) takes the
-    cheap register hop (Phase 182). A node carrying both is expanded on its
-    LEI — the client prefers it, and so does the server."""
-
-    anchor: str
-    lei: str | None = None
-    scheme: str | None = None
-    id: str | None = None
-    #: The node's name as shown, for registers whose fetch takes ``legal_name``.
-    name: str | None = None
-
-    @model_validator(mode="after")
-    def _keyed(self) -> _ExpandItem:
-        if not self.lei and not (self.scheme and self.id):
-            raise ValueError("an item needs an lei, or a scheme and an id")
-        return self
-
-
-class ExpandLayerRequest(BaseModel):
-    items: list[_ExpandItem]
-    # Context-aware direction: an ownership graph digs up (owners); a subsidiary
-    # tree digs down (GLEIF Level-2 children). The view tells us which.
-    direction: Literal["owners", "subsidiaries"] = "owners"
-
-
-@router.post("/expand-layer")
-@limiter.limit(lookup_tier)
-async def expand_layer(
-    request: Request, response: Response, req: ExpandLayerRequest
-) -> dict[str, Any]:
-    """Progressive discovery (batch): take the whole current frontier and go one
-    layer deeper on every node at once, in the graph's existing direction.
-
-    Each item names a frontier node by LEI, or (Phase 182) by a register-scoped
-    identifier, plus its ``anchor`` (the caller selects the frontier).
-    ``direction`` picks the hop: ``owners`` re-anchors a standard lookup on an
-    LEI, or dispatches just the owning register for a register-scoped id (up
-    the ownership chain); ``subsidiaries`` fetches GLEIF Level-2 children (down
-    the subsidiary tree) and needs an LEI — a register-only node is skipped
-    there. Hops run concurrently (bounded), each stitched onto its anchor, and
-    the results are merged + de-duplicated by ``statementId``. Capped at
-    ``_MAX_LAYER_ITEMS`` so a click can't fan out the whole register.
-    """
-    items = req.items[:_MAX_LAYER_ITEMS]
-    sem = asyncio.Semaphore(5)
-    hops = {"lei": 0, "register": 0, "skipped": 0}
-    # Phase 234: an LEI hop is a full lookup and is charged to the caller's
-    # lookup budget like any other. When the budget runs out part-way the hop
-    # is *deferred* — named, with the seconds until budget frees — so the
-    # client can come back for it; a hop that failed is *failed*, with its
-    # reason. Both used to be ``except Exception: return [], []``, which drew
-    # a node whose owners could not be fetched exactly like a node with none.
-    deferred: list[str] = []
-    failed: list[dict[str, Any]] = []
-    retry_after: list[int] = []
-
-    async def _one(item: _ExpandItem) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        async with sem:
-            try:
-                if item.lei:
-                    hops["lei"] += 1
-                    if req.direction == "subsidiaries":
-                        return await _subsidiaries_one_layer(item.lei, item.anchor)
-                    return await _expand_one_layer(item.lei, item.anchor)
-                if req.direction == "subsidiaries" or not register_hops.hop_for(item.scheme):
-                    hops["skipped"] += 1
-                    return [], []
-                hops["register"] += 1
-                return await _register_one_layer(
-                    item.scheme or "", item.id or "", item.anchor, name=item.name
-                )
-            except HTTPException as exc:
-                if exc.status_code == 429:
-                    hops["lei"] -= 1
-                    deferred.append(item.anchor)
-                    try:
-                        retry_after.append(int((exc.headers or {}).get("Retry-After", "60")))
-                    except ValueError:
-                        retry_after.append(60)
-                else:
-                    failed.append({
-                        "anchor": item.anchor,
-                        "lei": item.lei,
-                        "status": exc.status_code,
-                        "reason": str(exc.detail),
-                    })
-                return [], []
-            except Exception as exc:  # noqa: BLE001 — a bad node must not sink the batch
-                failed.append({
-                    "anchor": item.anchor,
-                    "lei": item.lei,
-                    "status": 500,
-                    "reason": describe_exception(exc),
-                })
-                return [], []
-
-    chunks = await asyncio.gather(*[_one(i) for i in items])
-
-    seen: set[str] = set()
-    merged: list[dict[str, Any]] = []
-    seen_sig: set[str] = set()
-    merged_sig: list[dict[str, Any]] = []
-    for bods_chunk, sig_chunk in chunks:
-        for s in bods_chunk:
-            sid = s.get("statementId")
-            if sid and sid not in seen:
-                seen.add(sid)
-                merged.append(s)
-        for sig in sig_chunk:
-            key = json.dumps(sig, sort_keys=True, default=str)
-            if key not in seen_sig:
-                seen_sig.add(key)
-                merged_sig.append(sig)
-
-    deferred_set = set(deferred)
-    return {
-        "bods": merged,
-        "risk_signals": merged_sig,
-        # Every anchor this call answered for — including failed ones, which
-        # are named in ``failed`` — but never a deferred one: the client keeps
-        # a deferred node on its frontier and asks again after
-        # ``retry_after_s``.
-        "expanded": [i.anchor for i in items if i.anchor not in deferred_set],
-        "deferred": [i.anchor for i in items if i.anchor in deferred_set],
-        "retry_after_s": max(retry_after) if retry_after else None,
-        "failed": failed,
-        "count": len(items),
-        "truncated": len(req.items) > _MAX_LAYER_ITEMS,
-        # Phase 182: what the layer cost, by hop kind.
-        "hops": hops,
-    }
 
 
 @router.get("/lookup-stream")
@@ -2766,127 +1923,6 @@ async def _lookup_sse_events(
             yield {"event": "hit", "data": payload.model_dump_json()}
         else:
             yield {"event": event, "data": json.dumps(payload)}
-
-
-# The country → RA code map and the sub-registry prefix rules now live together
-# in ``opencheck.ra_codes``; this name is re-exported because callers and tests
-# reference it. Phase 141: the map used to live here and the prefix rules in
-# ``routers/search.py``, and this endpoint consulted only the map — so
-# ``country="GB"`` scoped a Scottish or Northern Irish number to the England &
-# Wales authority and returned nothing. Use ``ra_code_for(country, number)``
-# rather than reading this map directly.
-_RA_BY_COUNTRY = RA_BY_COUNTRY
-
-
-class NationalIdMatch(BaseModel):
-    """One LEI record carrying the queried national registration number."""
-
-    lei: str
-    name: str
-    jurisdiction: str | None = None
-
-
-class ResolveNationalIdResponse(BaseModel):
-    """LEIs that carry a given national company-registration number."""
-
-    number: str
-    country: str | None = None
-    ra_code: str | None = None
-    matches: list[NationalIdMatch]
-    # Advisory only (Phase A, rigour adoption): set when the number fails its
-    # national scheme's check digit — the query still runs, this just explains
-    # an otherwise-mystifying empty result. None when no validator applies.
-    checksum_warning: str | None = None
-
-
-@router.get("/resolve-national-id", response_model=ResolveNationalIdResponse)
-@limiter.limit(default_tier)
-async def resolve_national_id(
-    request: Request,
-    response: Response,
-    number: str = Query(
-        ...,
-        min_length=1,
-        description="National company-registration number, e.g. a UK Companies House number.",
-    ),
-    country: str = Query(
-        "",
-        description="ISO 3166-1 alpha-2 country code (e.g. 'GB'); resolved to a GLEIF RA code.",
-    ),
-    ra_code: str = Query(
-        "",
-        description="GLEIF Registration Authority code (e.g. 'RA000585'); overrides 'country' when set.",
-    ),
-) -> ResolveNationalIdResponse:
-    """Resolve a local company-registration number to its LEI(s) via GLEIF.
-
-    The inverse of OpenCheck's normal LEI-first flow: a caller who has a
-    national registry number (but not the LEI) obtains it here, then feeds the
-    LEI to ``/lookup``. Queries GLEIF's three local-id filter fields and
-    de-duplicates by LEI. The RA code — resolved from ``country`` when not given
-    explicitly — scopes the search to one registry, avoiding false matches from
-    coincidental number collisions across jurisdictions.
-    """
-    return await _resolve_national_id_impl(number=number, country=country, ra_code=ra_code)
-
-
-async def _resolve_national_id_impl(
-    number: str, country: str = "", ra_code: str = ""
-) -> ResolveNationalIdResponse:
-    """Body of ``/resolve-national-id``, callable in-process (MCP tool)
-    without going through the rate-limited route."""
-    num = number.strip()
-    # The number, not just the country, decides the authority: Companies House
-    # files Scottish and Northern Irish companies under RA000587 and RA000586
-    # rather than the England & Wales RA000585 that "GB" maps to. Reading the
-    # country map alone — which this did until Phase 141 — scoped an SC number
-    # to the wrong registry and returned an empty result, which reads as an
-    # absent company rather than a bad query. An explicit ra_code still wins.
-    code = (ra_code or ra_code_for(country, num)).strip()
-
-    # Advisory check-digit validation (never blocks the query — the registry
-    # is the authority): only for countries whose GLEIF registry number is
-    # unambiguously a python-stdnum scheme (see identifiers.py).
-    checksum_warning = identifiers.national_id_checksum_warning(country, num)
-
-    adapter = REGISTRY.get("gleif")
-    if adapter is None or not hasattr(adapter, "search_by_local_id"):
-        raise HTTPException(status_code=503, detail="GLEIF adapter unavailable")
-
-    # Phase 234: resolving a number is discretionary GLEIF traffic — refused
-    # outright when the window is nearly spent, so the anchor resolution of a
-    # lookup already under way is never the call that waits.
-    try:
-        with gleif_discretionary():
-            hits = await adapter.search_by_local_id(num, code)
-    except GleifRateLimitedError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "GLEIF is busy answering lookups right now, so the number could "
-                "not be resolved. Try again in a few seconds."
-            ),
-            headers={"Retry-After": "10"},
-        ) from exc
-    matches: list[NationalIdMatch] = []
-    for h in hits:
-        if not h.hit_id:
-            continue
-        jurisdiction = None
-        if isinstance(h.raw, dict):
-            entity = ((h.raw.get("attributes") or {}).get("entity") or {})
-            jurisdiction = entity.get("jurisdiction")
-        matches.append(
-            NationalIdMatch(lei=h.hit_id, name=h.name, jurisdiction=jurisdiction)
-        )
-
-    return ResolveNationalIdResponse(
-        number=num,
-        country=(country.strip().upper() or None),
-        ra_code=(code or None),
-        matches=matches,
-        checksum_warning=checksum_warning,
-    )
 
 
 class LookupSourceResponse(BaseModel):
@@ -3114,115 +2150,6 @@ def _select_deepen_pairs(
             deepen_pairs.append(pair)
             seen.add(pair)
     return deepen_pairs
-
-
-def _identifier_keys(statement: dict[str, Any]) -> list[str]:
-    """The published identifiers on a statement, normalised for comparison."""
-    details = statement.get("recordDetails") or {}
-    keys: list[str] = []
-    for ident in details.get("identifiers") or []:
-        if not isinstance(ident, dict):
-            continue
-        scheme = ident.get("scheme") or ident.get("schemeName") or ""
-        value = ident.get("id")
-        if isinstance(value, str) and value.strip():
-            keys.append(f"{scheme}:{value.strip()}".lower())
-    return keys
-
-
-def _count_parties(statements: list[dict[str, Any]]) -> int:
-    """How many distinct parties a list of same-kind statements describes.
-
-    Every mapper derives its ids as ``_stable_id(source_id, kind, local_id)``,
-    so GLEIF's copy of a company and Companies House's copy have **different**
-    ``statementId``s by construction. Counting statements and calling the total
-    "companies" therefore overstated every graph where two sources describe the
-    subject — which is nearly all of them.
-
-    Records are joined into one party when they share a published identifier
-    (``recordDetails.identifiers[]``), which is the evidence ``reconcile.py``
-    already requires before it will assert cross-source corroboration. It is a
-    transitive join, not a "pick one key" rule: GLEIF may publish only the LEI
-    while Companies House publishes a company number *and* the LEI, so the two
-    records agree on one identifier out of three and must still be one party.
-
-    Names are deliberately **not** used. A name match is not an identity claim
-    anywhere else in OpenCheck — ``possibly_same_entities`` exists precisely to
-    hold name-only pairs out of the graph and hand them to a human — and it
-    must not become one here just because it would make a number smaller.
-
-    The consequence is that the figure is an **upper bound**: two records of
-    one company sharing no identifier stay two. That is the safe direction for
-    an invitation into FullCheck, whose job is to go and resolve exactly those.
-    """
-    parent: dict[str, str] = {}
-
-    def find(x: str) -> str:
-        parent.setdefault(x, x)
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-
-    def union(a: str, b: str) -> None:
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[ra] = rb
-
-    roots: list[str] = []
-    for index, statement in enumerate(statements):
-        sid = statement.get("statementId")
-        node = f"stmt:{sid}" if isinstance(sid, str) else f"stmt:#{index}"
-        find(node)
-        roots.append(node)
-        for key in _identifier_keys(statement):
-            union(node, f"id:{key}")
-
-    return len({find(node) for node in roots})
-
-
-def _graph_shape(
-    bods: list[dict[str, Any]], signals: list[dict[str, Any]]
-) -> dict[str, int | None]:
-    """How big the ownership-and-control graph on this page actually is.
-
-    The report's third verdict column invites the reader into FullCheck, and an
-    invitation with no numbers on it is a button. These are the numbers the
-    check has *already earned*: the parties in the merged BODS bundle — the
-    same bundle ``/export`` ships and the risk engine assessed — collapsed by
-    ``_count_parties`` so one company described by three sources counts once.
-
-    It deliberately does **not** reach for the GLEIF subsidiary total or
-    anything FullCheck would go on to discover. Those are a different scope,
-    and a sentence that mixes "what we have" with "what we might find" is the
-    same overclaim as a progress bar that runs ahead of its stream.
-
-    ``depth`` is the longest ownership chain the risk layer actually measured
-    (``COMPLEX_OWNERSHIP_LAYERS`` carries it as ``evidence.longest_path``), or
-    ``None`` when the signal did not fire — never a guess, and never 0, which
-    would render as a flat graph.
-    """
-    entities = [s for s in bods if s.get("recordType") == "entity"]
-    persons = [s for s in bods if s.get("recordType") == "person"]
-    relationships = {
-        s.get("statementId")
-        for s in bods
-        if s.get("recordType") == "relationship" and isinstance(s.get("statementId"), str)
-    }
-
-    depth: int | None = None
-    for signal in signals:
-        if signal.get("code") != "COMPLEX_OWNERSHIP_LAYERS":
-            continue
-        path = (signal.get("evidence") or {}).get("longest_path")
-        if isinstance(path, list) and path:
-            depth = max(depth or 0, len(path))
-    return {
-        "companies": _count_parties(entities),
-        "people": _count_parties(persons),
-        "relationships": len(relationships),
-        "depth": depth,
-    }
 
 
 async def _count_only(source_id: str, hit_id: str) -> dict[str, Any] | None:

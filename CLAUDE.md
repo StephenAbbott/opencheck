@@ -42,7 +42,7 @@ dependencies changed but are harmless to run otherwise.
 - **Backend**: FastAPI, split into `backend/opencheck/routers/` (health, search, lookup, export).
 - **Frontend**: React + Tailwind, split into `frontend/src/components/` (icons, risk, export, cdd).
 - **Sources**: each adapter lives in `backend/opencheck/sources/<name>.py`, registered in `sources/__init__.py`.
-- **BODS mapping**: each adapter has a corresponding `map_<name>()` function in `bods/mapper.py`, exported from `bods/__init__.py`.
+- **BODS mapping**: each adapter has a corresponding `map_<name>()` function in `bods/mappers/<country or source>.py` (Phase 246), re-exported from `bods/mapper.py` and exported from `bods/__init__.py`.
 
 ---
 
@@ -339,7 +339,7 @@ source: the page shows the last sweep's verdict and says when it was reached.
   no signal-mapping topic (poi, corp.disqual, leak/court collections) go to
   the `screening` out-collector → `openaleph_screening` on the
   `risk_signals` event / LookupResponse / ReportResponse → the "Archive
-  matches — OpenAleph" section in App.tsx. Informational, never identifier
+  matches — OpenAleph" section in `components/cdd/QuickCheckPanel.tsx`. Informational, never identifier
   corroboration. No key / HTTP failure → `DegradedSource` records
   (issue #50) — never a silent clean screen. OS+OA duplicate signals for
   the same node are deliberately kept (dedupe keys include source_id).
@@ -366,10 +366,14 @@ source: the page shows the last sweep's verdict and says when it was reached.
       `lookup_pass_legal_name` declared on the class
 - [ ] `sources/schemas/<name>.py` — Pydantic bundle schema
 - [ ] `sources/__init__.py` — import + REGISTRY entry
-- [ ] `bods/mapper.py` — `map_<name>()` function (+ `bods/__init__.py` export).
-      Phase 168 moved the shared statement factories to `bods/statements.py`
-      and the two largest sections to `bods/mappers/{ftm,wikidata}.py`;
-      `mapper.py` re-exports all of it, so imports are unchanged either way.
+- [ ] `bods/mappers/<country>.py` — `map_<name>()` in its own module (a new
+      country, or the existing module for that country), re-exported from
+      `bods/mapper.py` (+ `bods/__init__.py` export). **Not in `mapper.py`
+      itself** — Phase 246 moved every per-source section out and
+      `tests/test_mapper_modules.py` fails on a new `map_*` defined there. A
+      module imports from `..statements` and its siblings, never from
+      `..mapper` (a cycle; the same test checks it). Phase 168 moved the shared
+      statement factories to `bods/statements.py`.
       The register's own entity-type wording ("Local Company", "Public")
       goes to `entityType.details` via `make_entity_statement(entity_details=…)`,
       **never** `entityType.subtype` — a closed v0.4 codelist. A registry-wide
@@ -578,7 +582,7 @@ other labels.
 
 **Signal scoping across render sites (Phase 109)** — `RELATED_*` signals are assessed against the **merged** bundle late in `_lookup_pipeline` and ride on the top-level `risk_signals` event; a `/deepen` response carries only that source's own findings. So the three `BodsGraphExplorer` render sites see different lists, and the two per-bundle ones saw no cross-source signals at all: a node the risk panel called sanctions-linked rendered unbadged, i.e. as "checked and clean".
 
-`lib/signalScope.ts` closes that gap. `scopeCrossSourceSignals(signals, statements)` keeps a signal only when its code starts with `RELATED_` **and** `signalStatementIds()` intersects the bundle's `statementId`s; `buildSignalMap()` (moved here from `BODSGraph.tsx`) is built on the same mapping, so the filter and the badge renderer cannot drift — that drift was the bug. Wiring: `App.tsx` → `SourceBucketCard subjectSignals` → `HitRow` → `DeepenBlock` (merged with `detail.risk_signals` via `mergeSignals`, plus a caption naming the count); `FullCheckPanel` → `SubsidiaryNetwork signals`. `EsgPanel`'s `DeepenBlock` defaults to `[]` — deliberate, it has no subject-level list.
+`lib/signalScope.ts` closes that gap. `scopeCrossSourceSignals(signals, statements)` keeps a signal only when its code starts with `RELATED_` **and** `signalStatementIds()` intersects the bundle's `statementId`s; `buildSignalMap()` (moved here from `BODSGraph.tsx`) is built on the same mapping, so the filter and the badge renderer cannot drift — that drift was the bug. Wiring: `App.tsx` → `QuickCheckPanel` → `SourceBucketCard subjectSignals` → `HitRow` → `DeepenBlock` (merged with `detail.risk_signals` via `mergeSignals`, plus a caption naming the count); `FullCheckPanel` → `SubsidiaryNetwork signals`. `EsgPanel`'s `DeepenBlock` defaults to `[]` — deliberate, it has no subject-level list.
 
 Scoping is **RELATED_\* only, on purpose**. Subject-level codes stay out because their evidence is computed over the merged graph: a source bundle usually holds only a fragment of a `longest_path`, so badging `COMPLEX_OWNERSHIP_LAYERS` there would assert something untrue of the graph on screen (same for `FATF_*` via `jurisdictions[]`). `signalScope.test.ts` pins that exclusion — widening it should require editing a test, not relaxing a predicate.
 
@@ -1068,9 +1072,9 @@ key before joining EITI to EITI.
 
 ---
 
-## Frontend curated examples (App.tsx)
+## Frontend curated examples (HomePanels.tsx)
 
-`EXAMPLE_LEIS` in `frontend/src/App.tsx` contains pre-computed `signals` arrays shown on the picker cards before the user clicks. These must be kept in sync with what the risk engine actually produces for each entity. When the risk engine changes (new signals, retired signals, confidence changes), update `EXAMPLE_LEIS` to match.
+`EXAMPLE_LEIS` in `frontend/src/components/HomePanels.tsx` (moved out of `App.tsx` in Phase 168) contains pre-computed `signals` arrays shown on the picker cards before the user clicks. These must be kept in sync with what the risk engine actually produces for each entity. When the risk engine changes (new signals, retired signals, confidence changes), update `EXAMPLE_LEIS` to match.
 
 Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_OWNERSHIP_LAYERS`, `COMPLEX_CORPORATE_STRUCTURE`, `SANCTIONED`, `RELATED_SANCTIONED`, `NON_EU_JURISDICTION`. Confidence `"high"` renders as `●`, `"medium"` as `◐`.
 
@@ -1268,7 +1272,8 @@ for compatibility but neither owns the data any more.
 - **`frontend/src/lib/raCodes.ts` mirrors it** — `raCodeFor()` plus a
   `subRegistries` declaration per entry. `backend/tests/test_ra_codes.py`
   parses that file and fails if the codes or the prefix rules diverge, and
-  pins that `App.tsx` calls `raCodeFor()` rather than reading `entry.raCode`.
+  pins that `components/SearchPanel.tsx` (App.tsx until Phase 246) calls
+  `raCodeFor()` rather than reading `entry.raCode`.
 - **`COUNTRY_OPTIONS` is derived from `RA_CODES`**, not hand-listed. The
   hand-listed version had silently dropped New Zealand, and Greece was never
   added to the frontend at all when the ΓΕΜΗ adapter shipped — so two working
@@ -1322,8 +1327,8 @@ filtered by `entity.legalAddress.country`.
 
 | File | Purpose |
 |---|---|
-| `backend/opencheck/routers/lookup.py` | Main lookup endpoint + SSE stream — both must have identical derived-identifier blocks |
-| `backend/opencheck/bods/mapper.py` | All BODS v0.4 mapping functions; ~6800 lines |
+| `backend/opencheck/routers/lookup.py` | Main lookup endpoint + SSE stream, one pipeline for both; the replay cache, gate and fold are in `lookup_replay.py`, the FullCheck expansion in `routers/expand.py` |
+| `backend/opencheck/bods/mapper.py` | GLEIF mapper + passthroughs, and the address every per-source mapper in `bods/mappers/` is re-exported from |
 | `backend/opencheck/risk.py` | Risk signal rules (PEP, SANCTIONED, AMLA, FATF, etc.) |
 | `backend/opencheck/cross_check.py` | RELATED_PEP / RELATED_SANCTIONED from cross-source name matching |
 | `frontend/src/components/BODSGraph.tsx` | Cytoscape.js ownership graph with BOVS icons, flags, edge annotations, risk overlays |
@@ -1656,7 +1661,8 @@ Things that will be re-derived otherwise:
 
 - **The payload is the lookup's event stream, not `LookupResponse`.** The
   React report is a fold over the stream, so replaying stored events is what
-  renders the same report. `routers.lookup.fold_lookup_events` is the one fold
+  renders the same report. `fold_lookup_events` (`opencheck/lookup_replay.py`,
+  re-exported from `routers.lookup`) is the one fold
   — `_lookup_impl` calls it too — so a saved report's PDF/MCP view cannot drift
   from the live one. Keep `deepen_result` in the stored events: the stream
   skips it, the exports need its BODS.
@@ -1684,7 +1690,8 @@ Things that will be re-derived otherwise:
 ### The saved-report page (Phase 217)
 
 - **One event→handler table** (`LOOKUP_EVENT_HANDLERS` in `lib/api.ts`) and one
-  handler builder (`buildLookupHandlers` in `App.tsx`) serve the live stream and
+  handler builder (`useLookupStream().handlers` in `hooks/useLookupStream.ts`,
+  wrapped by `buildLookupHandlers` in `App.tsx`) serve the live stream and
   `replayLookupEvents`. Add a new lookup event to the table, never to one side.
 - **Anything that fetches when opened must consult `SavedReportContext`**
   (`components/cdd/savedReportContext.ts`) or be hidden on a saved report —
@@ -1944,7 +1951,8 @@ confidence. Things that will be re-derived otherwise:
 
 ## The lookup gate is counted, FIFO, and patient with the stream (Phase 238)
 
-`routers/lookup.py` (`_PipelineGate`, `_run_flight`) + `opencheck/pipelinestats.py`;
+`opencheck/lookup_replay.py` (`_PipelineGate`, `_run_flight`; in `routers/lookup.py`
+until Phase 246) + `opencheck/pipelinestats.py`;
 the investigation is `claude/pipeline-gate-investigation-2026-09-24.md` in the
 project. On 23 Sept 2026 two large companies opened together got the 503, and
 nothing could say who held the four slots. Things that will be re-derived
@@ -2167,3 +2175,45 @@ Both were found by reading live production output.
   `expect_liveness` that skip left unevaluated. Before this, `onrc_romania` and
   `meip` skipped every week carrying the one assertion the sweep exists for.
 - Design and decisions: `docs/source-health-plan.md`.
+
+---
+
+## Where the regrown files went (Phase 246)
+
+`bods/mapper.py` (11,144 lines), `App.tsx` (3,724) and `routers/lookup.py`
+(3,338) had each regrown past their Phase 168 split. The seams, and what will
+be re-derived otherwise:
+
+- **Backend.** Every per-source section of `mapper.py` is its own module in
+  `bods/mappers/` (one per country, or per source family: `eiti.py`,
+  `climatetrace.py`, `sec_edgar.py` …), moved by top-level name with its
+  helpers; `mapper.py` keeps GLEIF, the RA/US-state tables and the three
+  passthroughs, and re-exports **every** name the modules define, private
+  helpers included. `routers/lookup.py` lost the replay cache, gate, flights
+  and fold to `opencheck/lookup_replay.py`, the `/expand*` endpoints to
+  `routers/expand.py` (its own router, included in `app.py`), `/resolve-national-id`
+  to `routers/national_id.py`, and the graph-shape counters to
+  `opencheck/graph_shape.py`; `lookup.py` re-exports all of it, and the cache
+  and in-flight dicts are the same objects under both names.
+- **Patch a name where it is read.** A re-export is a second binding:
+  `monkeypatch.setattr(lookup, "_QUEUE_POLL_S", …)` no longer reaches the gate,
+  so tests patch `lookup_replay` (and `routers.expand` for a register hop's
+  `_fetch_with_provenance` / `_mapper_for` / `assess_*`). The two deliberate
+  exceptions call back through the module so the old patch points still work:
+  a flight runs `lookup._lookup_pipeline`, and `/expand` runs
+  `lookup._lookup_impl`. `fold_lookup_events` imports `LookupResponse` when it
+  runs — `routers.lookup` imports `lookup_replay`, never the reverse.
+- **Frontend.** `App()` keeps routing, the lookup mutation, mode selection and
+  the page layout. The run's state and the handler builder are
+  `hooks/useLookupStream.ts` (`reset()` replaces the thirty-setter resets that
+  kept missing new fields); the saved copy, saving and the PDF/Markdown exports
+  are `hooks/useSavedReport.ts`; the search panel's fields and GLEIF searches
+  are `hooks/useSearchForm.ts`, rendered by `components/SearchPanel.tsx`. The
+  header and footer are `components/SiteChrome.tsx`, the mode tablist and blurb
+  `components/cdd/ModeTabs.tsx`, views and their paths `lib/views.ts`.
+- **QuickCheck is lazy like the other five tabs** (`components/cdd/QuickCheckPanel.tsx`),
+  and **every lazy mode panel sits inside `ui/PanelBoundary`**: a chunk that
+  fails to load (a tab opened on a page served before a deploy) or a panel
+  that throws now says so inside its tab instead of unmounting the whole app.
+  Wrap a new lazy panel the same way, with `PanelLoading` as its fallback.
+

@@ -254,10 +254,10 @@ def _patch_register_hop(monkeypatch, *, fetched: list[str], screened: list[list[
     async def _no_lookup(**kwargs):
         raise AssertionError("a register hop must not run the full lookup")
 
-    monkeypatch.setattr("opencheck.routers.lookup._fetch_with_provenance", _fake_fetch)
-    monkeypatch.setattr("opencheck.routers.lookup._mapper_for", _fake_mapper)
-    monkeypatch.setattr("opencheck.routers.lookup.assess_cross_source_names", _fake_screen)
-    monkeypatch.setattr("opencheck.routers.lookup.assess_bundle", lambda *a, **k: [])
+    monkeypatch.setattr("opencheck.routers.expand._fetch_with_provenance", _fake_fetch)
+    monkeypatch.setattr("opencheck.routers.expand._mapper_for", _fake_mapper)
+    monkeypatch.setattr("opencheck.routers.expand.assess_cross_source_names", _fake_screen)
+    monkeypatch.setattr("opencheck.routers.expand.assess_bundle", lambda *a, **k: [])
     monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _no_lookup)
 
 
@@ -298,13 +298,13 @@ def test_a_register_hop_files_its_walk_under_the_hop_origin(client, monkeypatch)
     seen: list[str] = []
     fetched: list[str] = []
     _patch_register_hop(monkeypatch, fetched=fetched, screened=[])
-    real_fetch = __import__("opencheck.routers.lookup", fromlist=["x"])._fetch_with_provenance
+    real_fetch = __import__("opencheck.routers.expand", fromlist=["x"])._fetch_with_provenance
 
     async def _observing_fetch(adapter, hit_id, **kwargs):
         seen.append(signalstats.walk_origin.get())
         return await real_fetch(adapter, hit_id, **kwargs)
 
-    monkeypatch.setattr("opencheck.routers.lookup._fetch_with_provenance", _observing_fetch)
+    monkeypatch.setattr("opencheck.routers.expand._fetch_with_provenance", _observing_fetch)
     r = client.post("/expand-layer", json={
         "items": [{"scheme": "GB-COH", "id": "2999029", "anchor": "ANCHOR-CH"}],
     })
@@ -406,7 +406,7 @@ def test_an_item_needs_an_lei_or_a_scheme_and_an_id(client):
 
 
 def test_anchor_replacements_seed_the_gleif_subject_only_for_an_lei():
-    from opencheck.routers.lookup import _anchor_replacements
+    from opencheck.routers.expand import _anchor_replacements
 
     bods = _ch_bundle(_CH_SUBJECT)
     repl = _anchor_replacements(bods, _CH_SUBJECT, "ANCHOR")

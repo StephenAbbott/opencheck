@@ -41,7 +41,8 @@ from opencheck.sources import REGISTRY
 
 _FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend" / "src"
 _FRONTEND_RA_CODES = _FRONTEND_DIR / "lib" / "raCodes.ts"
-_FRONTEND_APP = _FRONTEND_DIR / "App.tsx"
+# The national-ID search panel moved out of App.tsx in Phase 246.
+_FRONTEND_SEARCH_PANEL = _FRONTEND_DIR / "components" / "SearchPanel.tsx"
 
 #: Country → RA code, verified live 2026-08-28. This is the reference the other
 #: copies are checked against; changing a value here without re-verifying it
@@ -282,9 +283,9 @@ def test_frontend_picker_scopes_by_number() -> None:
     defect, and it looks entirely reasonable — which is why it needs pinning
     rather than reviewing.
     """
-    app = _FRONTEND_APP.read_text(encoding="utf-8")
+    app = _FRONTEND_SEARCH_PANEL.read_text(encoding="utf-8")
     submit = re.search(r"nationalIdSearchMutation\.mutate\(\s*(?://[^\n]*\n\s*)*\{[^}]*\}", app)
-    assert submit, "could not find the national-ID submit call in App.tsx"
+    assert submit, "could not find the national-ID submit call in SearchPanel.tsx"
     assert "raCodeFor(" in submit.group(0), (
         "the national-ID search must scope with raCodeFor(country, number), "
         f"not a flat country code — found: {submit.group(0)!r}"
