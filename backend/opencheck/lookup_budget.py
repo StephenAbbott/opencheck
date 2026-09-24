@@ -54,7 +54,9 @@ __all__ = [
     "ClientScopeMiddleware",
     "Quota",
     "charge",
+    "caller_scope",
     "client_scope",
+    "current_caller_kind",
     "current_client",
     "refund",
     "reset_for_tests",
@@ -63,6 +65,11 @@ __all__ = [
 
 _client: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "opencheck_client", default=None
+)
+#: Phase 238: what kind of caller the work is for (``pipelinestats.CALLER_KINDS``),
+#: from the request path. ``None`` = no request = server work.
+_caller: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "opencheck_caller_kind", default=None
 )
 _wait_s: contextvars.ContextVar[float] = contextvars.ContextVar(
     "opencheck_budget_wait_s", default=0.0
@@ -86,6 +93,24 @@ def client_scope(client: str | None) -> Iterator[None]:
         _client.reset(token)
 
 
+def current_caller_kind() -> str | None:
+    """The kind of caller this work is for (Phase 238) — ``stream``, ``api``,
+    ``mcp``… from the request path — or ``None`` for work the server started
+    itself. Read by the lookup gate to decide how long a run may queue and to
+    attribute it in ``/signalstats``; never an IP, never a path."""
+    return _caller.get()
+
+
+@contextmanager
+def caller_scope(kind: str | None) -> Iterator[None]:
+    """Attribute work inside the block to caller ``kind`` (tests)."""
+    token = _caller.set(kind)
+    try:
+        yield
+    finally:
+        _caller.reset(token)
+
+
 @contextmanager
 def waiting(max_s: float) -> Iterator[None]:
     """Inside the block a fresh run waits up to ``max_s`` for the client's
@@ -100,7 +125,8 @@ def waiting(max_s: float) -> Iterator[None]:
 
 
 class ClientScopeMiddleware:
-    """Pure ASGI: sets :func:`current_client` for the life of each request.
+    """Pure ASGI: sets :func:`current_client` (and, since Phase 238,
+    :func:`current_caller_kind`) for the life of each request.
 
     Not ``BaseHTTPMiddleware`` — that wraps the response in a way that breaks
     SSE streaming and the mounted MCP routes (see ``ratelimit.py``). The IP
@@ -114,12 +140,15 @@ class ClientScopeMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        from .pipelinestats import caller_kind_for_path
         from .ratelimit import client_ip
 
         token = _client.set(client_ip(Request(scope)))
+        kind_token = _caller.set(caller_kind_for_path(scope.get("path")))
         try:
             await self.app(scope, receive, send)
         finally:
+            _caller.reset(kind_token)
             _client.reset(token)
 
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answeredCount, lookupProgress, progressLabel, coverageCopy, jurisdictionPhrase } from "./lookupProgress";
+import { answeredCount, lookupProgress, progressLabel, coverageCopy, jurisdictionPhrase, queueLabel } from "./lookupProgress";
 
 const none = new Set<string>();
 const base = {
@@ -271,5 +271,34 @@ describe("coverageCopy (Phase 156)", () => {
     expect(c.detail).toBe("1 of OpenCheck's 40 sources applies to this company; every one answered.");
     const none = coverageCopy({ answered: 0, applicable: 1, total: 40, jurisdiction: "GB", screening: false, anchorAnswered: false });
     expect(none.detail).toBe("1 of OpenCheck's 40 sources applies to a GB company; 0 answered.");
+  });
+});
+
+describe("waiting for a slot (Phase 238)", () => {
+  it("says the run is waiting, and where it stands, while it has no slot", () => {
+    const p = lookupProgress({ ...base, queuePosition: 3 });
+    expect(p.phase).toBe("queued");
+    expect(p.label).toBe("OpenCheck is busy — waiting for a free slot, 2 checks ahead of yours…");
+    expect(p.sources).toEqual([]);
+    expect(p.total).toBeNull();
+  });
+
+  it("words the head of the queue and a single check ahead", () => {
+    expect(queueLabel(1)).toBe("OpenCheck is busy — your check is next in line for a free slot…");
+    expect(queueLabel(2)).toBe("OpenCheck is busy — waiting for a free slot, 1 check ahead of yours…");
+  });
+
+  it("drops the queue line as soon as the run starts", () => {
+    // The GLEIF source_started is the run taking its slot. A position kept
+    // in state must never outlive the wait it described.
+    const p = lookupProgress({ ...base, queuePosition: 1, started: new Set(["gleif"]) });
+    expect(p.phase).toBe("anchoring");
+    expect(p.label).not.toMatch(/slot/);
+    expect(lookupProgress({ ...base, queuePosition: 1, anchored: true }).phase).toBe("dispatching");
+  });
+
+  it("ignores a missing or zero position", () => {
+    expect(lookupProgress({ ...base, queuePosition: null }).phase).toBe("connecting");
+    expect(lookupProgress({ ...base, queuePosition: 0 }).phase).toBe("connecting");
   });
 });

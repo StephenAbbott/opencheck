@@ -1760,7 +1760,8 @@ and MCP had no limit at all. Things that will be re-derived otherwise:
   `except Exception: return [], []` drew a node whose owners could not be
   fetched exactly like a node with none.
 - **`_PipelineGate`**: at most `OPENCHECK_LOOKUP_MAX_CONCURRENT` (4) pipelines
-  at once, queue up to `OPENCHECK_LOOKUP_QUEUE_WAIT_S` then 503. It and every
+  at once, queue up to `OPENCHECK_LOOKUP_QUEUE_WAIT_S` then 503 (Phase 238:
+  FIFO, and the interactive stream waits longer — see below). It and every
   flight are bound to the running event loop and rebuilt when it changes (the
   test suite runs several); `conftest.py` clears `_IN_FLIGHT` and the budget
   around every test. Nothing in a pipeline may call `_lookup_impl` — a nested
@@ -1848,6 +1849,49 @@ confidence. Things that will be re-derived otherwise:
   "name-only match: capped at medium"), `date_gate`, `jurisdiction_gate`.
 
 ---
+
+## The lookup gate is counted, FIFO, and patient with the stream (Phase 238)
+
+`routers/lookup.py` (`_PipelineGate`, `_run_flight`) + `opencheck/pipelinestats.py`;
+the investigation is `claude/pipeline-gate-investigation-2026-09-24.md` in the
+project. On 23 Sept 2026 two large companies opened together got the 503, and
+nothing could say who held the four slots. Things that will be re-derived
+otherwise:
+
+- **Every admission, queue, refusal, wait and run time is counted** in
+  `pipelinestats` and served as the `pipelines` section of `/signalstats`:
+  started / queued / refused / **slot-seconds per caller kind**, current and
+  peak slots and queue, queue-wait and run-time percentiles (nearest-rank over
+  the last 500), and per source the time into the run at which it answered
+  plus its timeouts. Read `by_caller.*.slot_seconds` to see who occupies the
+  gate.
+- **The caller kind comes from the request path**, set by
+  `ClientScopeMiddleware` beside the client IP (`lookup_budget.current_caller_kind`,
+  `pipelinestats.caller_kind_for_path`): `stream`, `api`, `batch`, `expand`,
+  `export`, `narrative`, `watch`, `mcp`, `other`, and `server` for work with no
+  request (the watchlist worker). A closed vocabulary — never a path, an IP or
+  an LEI. A new route that starts pipelines is `other` until it is added to
+  `_PATH_KINDS`.
+- **The queue is first come, first served.** The old `asyncio.Condition` woke
+  every waiter on every release to race for the slot. Now `release()` hands
+  the slot straight to the oldest waiter; a waiter that leaves is removed, and
+  one that leaves as it is handed a slot passes it on (`_abandon`). The wait is
+  `asyncio.wait`, **not `wait_for`**, which can swallow a cancellation that
+  lands as the slot is handed over.
+- **Only `/lookup-stream` waits longer** — `OPENCHECK_LOOKUP_STREAM_QUEUE_WAIT_S`
+  (300 s, never less than the general wait). A JSON client, batch row or MCP
+  tool has nothing to show while waiting, so it keeps the 60 s and the 503.
+  The flight's wait is decided by whoever *started* it.
+- **`queued` events** (`position`, `running`, `limit`, `max_wait_s`) are pushed
+  when a run joins the queue and whenever it moves up. They are
+  `_TRANSIENT_EVENTS`: filtered out before the replay cache, so a replay and a
+  saved report never carry them. The frontend reads them through
+  `LOOKUP_EVENT_HANDLERS` (`queued: "onQueued"`) into `lookupProgress`'s
+  `queued` phase — "OpenCheck is busy — waiting for a free slot, N checks ahead
+  of yours…" — which ends at the run's first `source_started`.
+- Option 2 (more slots) and option 4 (reserved interactive slots) were
+  deliberately **not** done (Stephen, 24 Sept 2026): decide them from the
+  counters.
 
 ## Provenance is checked behaviourally, not by grepping (Phases 229–230)
 

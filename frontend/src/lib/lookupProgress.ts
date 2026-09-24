@@ -29,6 +29,7 @@
 
 /** Where the lookup is. Ordered: each phase can only follow the one before. */
 export type LookupPhase =
+  | "queued"
   | "connecting"
   | "anchoring"
   | "dispatching"
@@ -58,6 +59,7 @@ export interface LookupProgress {
 }
 
 const PHASE_LABEL: Record<LookupPhase, string> = {
+  queued: "Waiting for a free slot…",
   connecting: "Connecting…",
   anchoring: "Resolving the entity in GLEIF…",
   dispatching: "Working out which sources apply…",
@@ -72,6 +74,7 @@ export function lookupProgress({
   completed,
   errored,
   finished,
+  queuePosition = null,
 }: {
   /** `gleif_done` has arrived. */
   anchored: boolean;
@@ -85,6 +88,9 @@ export function lookupProgress({
   errored: ReadonlySet<string>;
   /** Every applicable source has settled — the risk stage is running. */
   finished?: boolean;
+  /** Phase 238: the latest `queued` event's position (1 = next), or null.
+   *  Only read until the run starts — any later event means it has a slot. */
+  queuePosition?: number | null;
 }): LookupProgress {
   const sources: SourceProgress[] = applicable.map((sourceId) => ({
     sourceId,
@@ -104,7 +110,14 @@ export function lookupProgress({
   // "everything settled" is the honest end of the querying phase, not
   // "nothing left started".
   const allSettled = total !== null && settled === total;
-  const phase: LookupPhase = !anchored
+  // Queued only while nothing else has happened: the first `source_started`
+  // (GLEIF) is the run taking its slot, so a stale position can never
+  // outlive the wait it described.
+  const queued =
+    queuePosition !== null && queuePosition > 0 && !anchored && started.size === 0 && applicable.length === 0;
+  const phase: LookupPhase = queued
+    ? "queued"
+    : !anchored
     ? applicable.length > 0 || started.size > 0
       ? "anchoring"
       : "connecting"
@@ -119,7 +132,22 @@ export function lookupProgress({
         ? "finishing"
         : "querying";
 
-  return { phase, sources, settled, total, label: PHASE_LABEL[phase] };
+  const label = queued && queuePosition !== null ? queueLabel(queuePosition) : PHASE_LABEL[phase];
+  return { phase, sources, settled, total, label };
+}
+
+/**
+ * The line shown while a run waits for a slot (Phase 238).
+ *
+ * Before this, a run that could not get one of the server's slots within a
+ * minute ended in "OpenCheck is running as many checks as it can at once" —
+ * an error for what is only a wait. The stream now waits longer and says so,
+ * counting the checks ahead rather than naming a time it cannot promise.
+ */
+export function queueLabel(position: number): string {
+  if (position <= 1) return "OpenCheck is busy — your check is next in line for a free slot…";
+  const ahead = position - 1;
+  return `OpenCheck is busy — waiting for a free slot, ${ahead} ${ahead === 1 ? "check" : "checks"} ahead of yours…`;
 }
 
 /**

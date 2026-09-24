@@ -381,4 +381,17 @@ def stats() -> dict[str, Any]:
         # True only if the cardinality cap was hit — i.e. something is
         # generating keys it should not be, and these numbers are partial.
         "truncated": truncated,
+        # Phase 238: the lookup gate — who starts runs, how often one is
+        # queued or refused, queue waits and run times (pipelinestats.py).
+        "pipelines": _pipeline_stats(),
     }
+
+
+def _pipeline_stats() -> dict[str, Any]:
+    try:
+        from . import pipelinestats
+
+        return pipelinestats.stats()
+    except Exception as exc:  # noqa: BLE001 — never fail /signalstats
+        log.debug("pipelinestats.stats failed, ignoring: %s", exc)
+        return {}

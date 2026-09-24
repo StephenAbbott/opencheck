@@ -1573,8 +1573,25 @@ export interface ReplayedEvent {
   age_seconds: number;
 }
 
+/**
+ * Phase 238: the run is waiting for one of the server's pipeline slots.
+ * Sent when it joins the queue and again whenever it moves up. Never stored:
+ * the replay cache and saved reports hold only what the run found.
+ */
+export interface QueuedEvent {
+  /** 1 = next to run. */
+  position: number;
+  /** Slots in use when this was sent. */
+  running: number;
+  /** Slots the server runs at once. */
+  limit: number;
+  /** How long this run may wait before it is refused. */
+  max_wait_s: number;
+}
+
 export type LookupStreamHandlers = {
   onReplayed?: (e: ReplayedEvent) => void;
+  onQueued?: (e: QueuedEvent) => void;
   onGleifDone?: (e: LookupGleifDoneEvent) => void;
   onSourcesApplicable?: (e: LookupSourcesApplicableEvent) => void;
   onSourceStarted?: (e: SourceStartedEvent) => void;
@@ -1610,6 +1627,7 @@ export type LookupStreamHandlers = {
  */
 export const LOOKUP_EVENT_HANDLERS = {
   replayed: "onReplayed",
+  queued: "onQueued",
   gleif_done: "onGleifDone",
   sources_applicable: "onSourcesApplicable",
   source_started: "onSourceStarted",
