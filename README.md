@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 239** — the risk engine now reads every entity's jurisdiction as an ISO code and every registration number with a scheme, and a registry-wide test holds every source mapper to that contract.
+**Latest: Phase 240** — owners that are ministries, government agencies or GLEIF-registered government entities are now classified as state bodies, so state-owned companies such as Equinor and Rosneft carry the state-control signal, with each state's holding listed once across sources.
 
 → [Full development history](docs/status.md)
 

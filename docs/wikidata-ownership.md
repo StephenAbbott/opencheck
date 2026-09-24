@@ -121,3 +121,42 @@ even higher than 82%.
 its share is marked indicative and the UI must show "source: Wikipedia/Wikidata,
 unreferenced". Never present a bare percentage. This makes the foundation/family
 enrichment defensible enough to ship.
+
+## Phase 240 — subclasses, end dates and the class table
+
+The Opus 5.5 check (DQ-5) found Equinor's three 67% owners and Rosneft's
+government owners all typed `registeredEntity`, so `STATE_CONTROLLED` never
+fired. Three causes, all in this extraction:
+
+- **Wikidata types ministries by subclass.** Equinor's owners are
+  "ministry of trade", "ministry of energy" and "Ministry of Norway"; Rosneft's
+  are "executive branch" and "Federal Agency". None is `ministry` (Q192350)
+  itself, so the direct-P31 match classified every one as a company. The
+  adapter now asks a second, per-*class* query (`_CLASS_ROOTS_QUERY`: which of
+  the classifier's roots each owner class reaches by `P279*`) and caches the
+  answer per class, so the ownership query stays cheap on a slow WDQS and a
+  class seen once costs nothing again. A failed roots query falls back to the
+  direct classes.
+- **A business is never a state body.** Wikidata files a *state-owned
+  enterprise* under "government organization" and a *statutory corporation*
+  under "government agency" — both also sit under "company". So company
+  classes are checked first, and "government organization" (Q2659904) is not a
+  state-body root at all. BODS models an SOE as a `registeredEntity` connected
+  up to a state, never as a state body.
+- **Ended ownership was read as current.** Two of Equinor's three 67%
+  statements carry a `P582` end time (Ministry of Energy until 31 Dec 2021,
+  Ministry of Industry 1972–78). The query now reads `P580`/`P582` per
+  statement; an owner whose every statement has
+  ended is emitted with `endDate` and drawn as ended (Phases 219/220) — kept,
+  not dropped (Stephen, 24 Sept 2026). WDQS loses date precision: a year-only
+  value arrives as 1 January, which BODS permits.
+- **Owners carry their country** (`P297`, or their `P17` country's), which the
+  state grouping in `STATE_CONTROLLED` keys on.
+- **Four class QIDs in the Phase 62 table named something else** — the
+  "sovereign wealth fund" entry was *Lautenschläger*, the two "trust" entries
+  were *functional programming* and *athletic conference*, and "noble family"
+  was a deleted item. All re-checked against Wikidata on 24 Sept 2026 and
+  pinned by `tests/test_state_owners_phase240.py`.
+
+The ownership cache key moved to `ownership-v2/<qid>`: a v1 payload has no
+statement ids or dates and would go on serving concurrent 67% holders.

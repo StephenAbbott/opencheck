@@ -140,8 +140,8 @@ SELECT ?roleLabel ?person ?personLabel ?start WHERE {
 # come back alongside each ownership edge. P127 (owned by) and P749 (parent
 # organization) are queried as two UNION branches so we can record which.
 _OWNERSHIP_QUERY = """
-SELECT ?owner ?ownerLabel ?via ?ownerClass ?proportion
-       ?statedIn ?statedInLabel ?refUrl ?retrieved
+SELECT ?st ?owner ?ownerLabel ?via ?ownerClass ?ownerIso ?ownerCountry ?proportion
+       ?start ?end ?statedIn ?statedInLabel ?refUrl ?retrieved
 WHERE {
   {
     wd:%(qid)s p:P127 ?st . ?st ps:P127 ?owner . BIND("P127" AS ?via)
@@ -149,7 +149,11 @@ WHERE {
     wd:%(qid)s p:P749 ?st . ?st ps:P749 ?owner . BIND("P749" AS ?via)
   }
   OPTIONAL { ?owner wdt:P31 ?ownerClass }
+  OPTIONAL { ?owner wdt:P297 ?ownerIso }
+  OPTIONAL { ?owner wdt:P17 ?ownerCountryItem . OPTIONAL { ?ownerCountryItem wdt:P297 ?ownerCountry } }
   OPTIONAL { ?st pq:P1107 ?proportion }
+  OPTIONAL { ?st pq:P580 ?start }
+  OPTIONAL { ?st pq:P582 ?end }
   OPTIONAL {
     ?st prov:wasDerivedFrom ?ref .
     OPTIONAL { ?ref pr:P248 ?statedIn }
@@ -157,6 +161,22 @@ WHERE {
     OPTIONAL { ?ref pr:P813 ?retrieved }
   }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+}
+"""
+
+# Phase 240: which of the classifier's root classes each owner class sits
+# under (``P279*``). Asked once per *class*, not per owner, and cached per
+# class: the ownership query above stays cheap on a slow WDQS, and the classes
+# ("Ministry of Norway", "Federal Agency") recur across lookups. Wikidata
+# rarely types a ministry as ``ministry`` itself — Equinor's owners are
+# "ministry of trade" and "Ministry of Norway", Rosneft's are "executive
+# branch" and "Federal Agency" — so a direct-P31 match classified every one of
+# them as a company.
+_CLASS_ROOTS_QUERY = """
+SELECT ?cls ?root WHERE {
+  VALUES ?cls { %(classes)s }
+  VALUES ?root { %(roots)s }
+  ?cls wdt:P279* ?root .
 }
 """
 
@@ -203,16 +223,44 @@ def _parse_roleholders(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
 # Controlling-owner classification + parsing (prototype)
 # ---------------------------------------------------------------------
 
-# Wikidata P31 class QIDs → owner category. Direct-P31 based (subclass-aware
-# refinement via P279* is a follow-up); a name-hint fallback handles the common
-# cases where Wikidata's P31 is generic. Tuneable — see docs/wikidata-ownership.md.
+# Wikidata P31 class QIDs → owner category. An owner's class set is its
+# direct P31 classes **plus** whichever of the roots below they sit under by
+# ``P279*`` (``_CLASS_ROOTS_QUERY``, Phase 240); a name-hint fallback handles
+# the cases where Wikidata's P31 is generic. Every QID here was checked against
+# Wikidata on 24 Sept 2026 — the Phase 62 table carried four that named
+# something else ("Lautenschläger" for sovereign wealth fund, "functional
+# programming" and "athletic conference" for trust, a deleted item for noble
+# family). ``test_wikidata_ownership.py`` pins the labels.
 _PERSON_CLASSES = frozenset({"Q5"})                                 # human
 _FOUNDATION_CLASSES = frozenset({"Q157031", "Q708676", "Q163740"})  # foundation, charity, nonprofit
-_ARRANGEMENT_CLASSES = frozenset({"Q193076", "Q2992826"})           # trust / fiduciary arrangement
-_STATE_CLASSES = frozenset({"Q3624078", "Q7275"})                   # sovereign state, state
-_STATEBODY_CLASSES = frozenset({"Q7188", "Q327333", "Q192350", "Q2659904"})  # govt, agency, ministry
-_GLIE_CLASSES = frozenset({"Q1808582"})                             # sovereign wealth fund
-_FAMILY_CLASSES = frozenset({"Q8436", "Q17304012"})                 # family, noble family
+# trust (legal arrangement); organisation constituted as a trust
+_ARRANGEMENT_CLASSES = frozenset({"Q854022", "Q104637669"})
+_STATE_CLASSES = frozenset({"Q3624078", "Q7275", "Q6256"})  # sovereign state, state, country
+_STATEBODY_CLASSES = frozenset({
+    "Q192350",   # ministry
+    "Q327333",   # government agency
+    "Q7188",     # government
+    "Q35798",    # executive branch
+})
+# Anything that is a business, a company or a state-owned enterprise is a
+# company, whatever else it is: a statutory corporation sits under both
+# "government agency" and "company", and a state-owned enterprise under
+# "government organization". BODS models an SOE as a registeredEntity that
+# connects up to a state — never as a state body itself. "Government
+# organization" (Q2659904) is deliberately NOT a state-body root: SOEs sit
+# under it.
+_COMPANY_CLASSES = frozenset({"Q4830453", "Q783794", "Q270791"})    # business, company, SOE
+_GLIE_CLASSES = frozenset({"Q1061648"})                             # sovereign wealth fund
+# family, noble family, royal family
+_FAMILY_CLASSES = frozenset({"Q8436", "Q13417114", "Q2006518"})
+
+#: The roots ``_CLASS_ROOTS_QUERY`` walks up to. Foundation / arrangement /
+#: person stay direct-P31 (plus name hints): their subclass trees are wide and
+#: the direct classes are what Wikidata actually uses for them.
+_CLASS_ROOTS: frozenset[str] = (
+    _STATE_CLASSES | _STATEBODY_CLASSES | _COMPANY_CLASSES | _GLIE_CLASSES
+    | _FAMILY_CLASSES
+)
 
 _FOUNDATION_HINTS = ("foundation", "stiftung", "fondation", "fondazione", "stichting")
 _ARRANGEMENT_HINTS = ("treuhand", " trust", "fiducie", "fideicomiso")
@@ -230,23 +278,78 @@ _CATEGORY_BODS: dict[str, tuple[str, str | None]] = {
 
 
 def _classify_owner(classes: set[str], name: str | None) -> str:
-    """Map an owner's P31 class set (+ name hints) to a controlling-owner category."""
+    """Map an owner's class set (+ name hints) to a controlling-owner category.
+
+    ``classes`` is the owner's direct P31 classes together with the
+    ``_CLASS_ROOTS`` they reach by ``P279*``. Order matters: a family is
+    dropped before anything else, a sovereign wealth fund is an intermediary
+    (BODS's government-linked investment entity), and a business beats a
+    government class, because Wikidata files state-owned companies and
+    statutory corporations under both.
+    """
     name_l = (name or "").lower()
     if classes & _FAMILY_CLASSES:
         return "family"
     if classes & _PERSON_CLASSES:
         return "person"
-    if classes & _STATEBODY_CLASSES:
-        return "statebody"
-    if classes & _STATE_CLASSES:
-        return "state"
     if classes & _GLIE_CLASSES:
         return "glie"
+    # A business is never a state or a state body, whatever government class
+    # it also sits under. It can still be a foundation or trust by name below
+    # (all three are registeredEntity-or-arrangement anyway).
+    if not classes & _COMPANY_CLASSES:
+        if classes & _STATEBODY_CLASSES:
+            return "statebody"
+        if classes & _STATE_CLASSES:
+            return "state"
     if classes & _FOUNDATION_CLASSES or any(h in name_l for h in _FOUNDATION_HINTS):
         return "foundation"
     if classes & _ARRANGEMENT_CLASSES or any(h in name_l for h in _ARRANGEMENT_HINTS):
         return "arrangement"
     return "company"
+
+
+def _ownership_classes(bindings: list[dict[str, Any]]) -> set[str]:
+    """Every direct P31 class the ownership rows name, for the roots query."""
+    out: set[str] = set()
+    for row in bindings:
+        cls = _qid_from_uri(_bv(row, "ownerClass"))
+        if cls and cls.startswith("Q") and cls[1:].isdigit():
+            out.add(cls)
+    return out
+
+
+def _parse_class_roots(
+    bindings: list[dict[str, Any]], classes: set[str]
+) -> dict[str, list[str]]:
+    """``{class: [roots it reaches]}`` for every asked class, ``[]`` for none."""
+    out: dict[str, set[str]] = {c: set() for c in classes}
+    for row in bindings:
+        cls = _qid_from_uri(_bv(row, "cls"))
+        root = _qid_from_uri(_bv(row, "root"))
+        if cls in out and root:
+            out[cls].add(root)
+    return {c: sorted(r) for c, r in out.items()}
+
+
+def _wikidata_date(value: str | None) -> str | None:
+    """A WDQS time literal (``2021-12-31T00:00:00Z``) as ``YYYY-MM-DD``.
+
+    WDQS drops the precision: a year-only value arrives as 1 January of that
+    year, which BODS permits ("rounded to the first day"), and the relationship
+    details say the dates are Wikidata's.
+    """
+    if not value:
+        return None
+    text = value.lstrip("+")
+    if len(text) < 10 or text[4] != "-" or text[7] != "-":
+        return None
+    year, month, day = text[:4], text[5:7], text[8:10]
+    if not (year.isdigit() and month.isdigit() and day.isdigit()):
+        return None
+    # A raw year- or month-precision value spells the unknown parts "00";
+    # BODS asks for them rounded to the first.
+    return f"{year}-{month if month != '00' else '01'}-{day if day != '00' else '01'}"
 
 
 def _proportion_to_pct(value: str | None) -> float | None:
@@ -262,15 +365,38 @@ def _proportion_to_pct(value: str | None) -> float | None:
     return round(pct, 4)
 
 
-def _parse_ownership(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _parse_ownership(
+    bindings: list[dict[str, Any]],
+    class_roots: dict[str, list[str]] | None = None,
+    *,
+    today: str | None = None,
+) -> list[dict[str, Any]]:
     """Collapse ownership SPARQL rows into a per-owner list ready for BODS mapping.
 
     Each entry carries the owner's category (person / foundation / arrangement /
     company / glie / state / stateBody), an **indicative** share percentage, the
-    relating property/properties (P127 / P749), and the statement's references.
+    relating property/properties (P127 / P749), the statement's references, the
+    owner's country (ISO 3166-1 alpha-2, from its own P297 or its P17 country's)
+    and — Phase 240 — the statement's P580 start / P582 end dates.
     **Family-typed owners are dropped** — a "family" is neither a legal entity nor
     a single natural person, so we do not fabricate a person or invent a group.
+
+    ``class_roots`` maps each owner class to the ``_CLASS_ROOTS`` it reaches by
+    ``P279*``; without it (a failed roots query, a cached payload) the owner is
+    classified on its direct classes alone, as before Phase 240.
+
+    **Ended ownership is kept and dated, never dropped** (Stephen, 24 Sept
+    2026). Wikidata keeps a stake that moved between ministries as two P127
+    statements, the old one closed by a P582 end time; reading neither date is
+    how Equinor came to show three 67% holders. An owner with any statement
+    still open is a current owner, dated from that statement; an owner whose
+    every statement has ended carries the latest end date, and the mapper
+    emits it as an ended relationship.
     """
+    from datetime import date as _date
+
+    today = today or _date.today().isoformat()
+    roots = class_roots or {}
     by: dict[str, dict[str, Any]] = {}
     for row in bindings:
         oqid = _qid_from_uri(_bv(row, "owner"))
@@ -280,8 +406,8 @@ def _parse_ownership(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if rec is None:
             rec = {
                 "qid": oqid, "name": _bv(row, "ownerLabel") or oqid,
-                "via": set(), "classes": set(), "proportion": None,
-                "references": [], "_refseen": set(),
+                "via": set(), "classes": set(), "countries": set(),
+                "statements": {}, "references": [], "_refseen": set(),
             }
             by[oqid] = rec
         via = _bv(row, "via")
@@ -290,9 +416,30 @@ def _parse_ownership(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
         cls = _qid_from_uri(_bv(row, "ownerClass"))
         if cls:
             rec["classes"].add(cls)
+            rec["classes"].update(roots.get(cls) or ())
+        # A state's own ISO code (P297) says which state it is; anything else
+        # takes its P17 country's. Both are read so a state that also names a
+        # P17 (itself) cannot land in two.
+        own_iso = (_bv(row, "ownerIso") or "").strip().upper()
+        country = own_iso or (_bv(row, "ownerCountry") or "").strip().upper()
+        if len(country) == 2 and country.isalpha():
+            rec["countries"].add(country)
+        # One entry per ownership statement. Rows from before Phase 240 (a
+        # cached payload, a test fixture) carry no ``st``: they collapse into
+        # one undated statement, which is what they always meant.
+        st_key = _bv(row, "st") or "_"
+        st = rec["statements"].setdefault(
+            st_key, {"proportion": None, "start": None, "end": None}
+        )
         prop = _bv(row, "proportion")
-        if prop and rec["proportion"] is None:
-            rec["proportion"] = prop
+        if prop and st["proportion"] is None:
+            st["proportion"] = prop
+        start = _wikidata_date(_bv(row, "start"))
+        if start and st["start"] is None:
+            st["start"] = start
+        end = _wikidata_date(_bv(row, "end"))
+        if end and st["end"] is None:
+            st["end"] = end
         url, stated, retrieved = _bv(row, "refUrl"), _bv(row, "statedInLabel"), _bv(row, "retrieved")
         if url or stated:
             key = (stated or "", url or "")
@@ -308,7 +455,19 @@ def _parse_ownership(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if category == "family":
             continue  # decided: drop family owners (see docs/wikidata-ownership.md)
         bods_kind, entity_type = _CATEGORY_BODS[category]
-        share = _proportion_to_pct(rec["proportion"])
+
+        statements = list(rec["statements"].values())
+        current = [s for s in statements if not s["end"] or s["end"] > today]
+        pool = current or statements
+        # The statement the relationship is dated from: one with a share if
+        # any has one, then the most recently started.
+        pick = max(
+            pool,
+            key=lambda s: (s["proportion"] is not None, s["start"] or ""),
+        )
+        ends = [s["end"] for s in statements if s["end"]]
+        end_date = None if current or not ends else max(ends)
+
         out.append({
             "qid": rec["qid"],
             "name": rec["name"],
@@ -316,7 +475,12 @@ def _parse_ownership(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "bods_kind": bods_kind,        # "person" | "entity"
             "entity_type": entity_type,    # BODS entityType.type, or None for persons
             "via": sorted(rec["via"]),     # ["P127"] owned-by / ["P749"] parent
-            "share_percent": share,        # INDICATIVE only — never render as fact alone
+            "share_percent": _proportion_to_pct(pick["proportion"]),  # INDICATIVE only
+            "start_date": pick["start"],
+            "end_date": end_date,          # None while any statement is open
+            # One country only: an owner Wikidata places in two is left
+            # without one rather than assigned either.
+            "country": next(iter(rec["countries"])) if len(rec["countries"]) == 1 else None,
             "references": rec["references"],
             "has_reference": bool(rec["references"]),
         })
@@ -487,7 +651,10 @@ class WikidataAdapter(SourceAdapter):
         rh_query   = _ROLEHOLDER_QUERY % {"qid": qid}
         own_query  = _OWNERSHIP_QUERY % {"qid": qid}
         rh_cache_key  = f"{_CACHE_NS}/roleholders/{qid}"
-        own_cache_key = f"{_CACHE_NS}/ownership/{qid}"
+        # v2 (Phase 240): the payload now carries statement ids, P580/P582
+        # dates and owner countries. A cached v1 payload has none of them and
+        # would keep serving Equinor its three concurrent 67% holders.
+        own_cache_key = f"{_CACHE_NS}/ownership-v2/{qid}"
 
         # Run all three SPARQL queries concurrently — roleholders (P169/P488…)
         # and controlling owners (P127/P749) are separate queries because they
@@ -526,7 +693,11 @@ class WikidataAdapter(SourceAdapter):
         # both queries return nothing.
         is_entity = summary.get("is_entity")
         summary["roleholders"] = _parse_roleholders(rh_bindings) if is_entity else []
-        summary["controlling_owners"] = _parse_ownership(own_bindings) if is_entity else []
+        if is_entity:
+            class_roots = await self._class_roots(_ownership_classes(own_bindings))
+            summary["controlling_owners"] = _parse_ownership(own_bindings, class_roots)
+        else:
+            summary["controlling_owners"] = []
 
         return {
             "source_id": self.id,
@@ -550,11 +721,50 @@ class WikidataAdapter(SourceAdapter):
         qid = hit_id.strip().upper()
         if not qid.startswith("Q") or not qid[1:].isdigit():
             return []
-        cache_key = f"{_CACHE_NS}/ownership/{qid}"
+        cache_key = f"{_CACHE_NS}/ownership-v2/{qid}"
         if not self.info.live_available and not self._cache.has(cache_key):
             return []
         payload = await self._sparql(_OWNERSHIP_QUERY % {"qid": qid}, cache_key=cache_key)
-        return _parse_ownership(payload.get("results", {}).get("bindings", []))
+        bindings = payload.get("results", {}).get("bindings", [])
+        class_roots = await self._class_roots(_ownership_classes(bindings))
+        return _parse_ownership(bindings, class_roots)
+
+    async def _class_roots(self, classes: set[str]) -> dict[str, list[str]]:
+        """The ``_CLASS_ROOTS`` each class reaches by ``P279*`` (Phase 240).
+
+        Cached per class, so a class seen in any earlier lookup costs nothing;
+        only the unseen ones go to WDQS, in one query. A failed query leaves
+        those classes out of the answer — the owner is then classified on its
+        direct classes, as before — and caches nothing, so the next lookup
+        asks again.
+        """
+        out: dict[str, list[str]] = {}
+        missing: list[str] = []
+        for cls in sorted(classes):
+            hit = self._cache.get_payload(f"{_CACHE_NS}/class-roots/{cls}")
+            if hit is not None and isinstance(hit[0], dict):
+                out[cls] = list(hit[0].get("roots") or [])
+            else:
+                missing.append(cls)
+        if not missing:
+            return out
+        if not self.info.live_available:
+            return out
+        query = _CLASS_ROOTS_QUERY % {
+            "classes": " ".join(f"wd:{c}" for c in missing),
+            "roots": " ".join(f"wd:{r}" for r in sorted(_CLASS_ROOTS)),
+        }
+        # A throwaway cache key: the per-class entries below are what is kept.
+        payload = await self._sparql(
+            query, cache_key=f"{_CACHE_NS}/class-roots-query/{_slug(query)}"
+        )
+        if "results" not in payload:
+            return out
+        parsed = _parse_class_roots(payload["results"].get("bindings", []), set(missing))
+        for cls, cls_roots in parsed.items():
+            self._cache.put(f"{_CACHE_NS}/class-roots/{cls}", {"roots": cls_roots})
+            out[cls] = cls_roots
+        return out
 
     # ------------------------------------------------------------------
     # HTTP with caching

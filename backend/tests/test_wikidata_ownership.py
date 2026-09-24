@@ -48,7 +48,7 @@ def _bindings():
         # state body (ministry)
         _row("Q3", "Ministry of Energy", cls="Q192350"),
         # sovereign wealth fund → GLIE
-        _row("Q4", "Qatar Investment Authority", cls="Q1808582"),
+        _row("Q4", "Qatar Investment Authority", cls="Q1061648"),
         # family → DROPPED
         _row("Q5", "Cargill family", cls="Q8436"),
         # plain company (generic P31, no name hint)
