@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 237** — an offshore-leaks match must now be possible by date, and only a matching jurisdiction makes it high-confidence; ICIJ's own match flag no longer decides anything.
+**Latest: Phase 238** — the lookup gate is now counted on `/signalstats`, queues first come first served, and lets a streamed lookup wait for a slot with its place in the queue shown instead of failing after a minute.
 
 → [Full development history](docs/status.md)
 
