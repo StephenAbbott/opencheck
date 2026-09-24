@@ -51,7 +51,9 @@ re-publication), `bods` (the merged BODS statements), `cross_source_links`,
 `risk_signals`, `license_notices`, `verdict` (the deterministic one-line
 sentence) and `subject_profile` (what the registers say the company *is*:
 legal form, register status, founding date and registered address, each with
-the sources stating it — facts, never findings; Phase 154), and `listing`
+the sources stating it — facts, never findings; Phase 154 — plus
+`lei_registration`, the LEI record's own GLEIF status and dates, which is not
+the company's status; Phase 242), and `listing`
 (the primary stock-exchange listing from LSEG PermID — venue, ticker, MIC and a
 verified venue link — or null when no PermID key is configured; Phase 236).
 

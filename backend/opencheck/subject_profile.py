@@ -158,7 +158,12 @@ def _pick(
     }
 
 
-def build_subject_profile(lei: str, bods: list[dict[str, Any]]) -> dict[str, Any] | None:
+def build_subject_profile(
+    lei: str,
+    bods: list[dict[str, Any]],
+    *,
+    lei_registration: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     """The four profile fields for ``lei``, or ``None`` with no subject statement.
 
     Shape::
@@ -170,8 +175,14 @@ def build_subject_profile(lei: str, bods: list[dict[str, Any]]) -> dict[str, Any
           "founding_date": {...} | None,
           "registered_address": {"value", "country", "sources", ...} | None,
           "jurisdiction": "GB" | None,
+          "lei_registration": {...} | None,
           "statement_ids": [...],
         }
+
+    ``lei_registration`` (Phase 242) is the LEI record's own status —
+    ``opencheck.lei_registration`` — passed in from the GLEIF anchor, because
+    BODS has no field for it. It sits beside ``register_status`` and never
+    changes it: a lapsed LEI says nothing about whether the company exists.
     """
     stmts = subject_statements(lei, bods)
     if not stmts:
@@ -244,5 +255,6 @@ def build_subject_profile(lei: str, bods: list[dict[str, Any]]) -> dict[str, Any
         "founding_date": _pick(foundings, registers, same=_dates_agree, prefer_longer=True),
         "registered_address": address,
         "jurisdiction": jurisdiction,
+        "lei_registration": lei_registration,
         "statement_ids": [str(s.get("statementId") or "") for s in stmts],
     }

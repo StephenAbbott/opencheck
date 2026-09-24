@@ -313,6 +313,27 @@ export interface SubjectProfileStatus {
   other_values: { source_id: string; value: string }[];
 }
 
+/** The LEI record's own registration status (Phase 242), from the GLEIF
+ *  anchor's `registration` block — `opencheck/lei_registration.py`. Not the
+ *  company's status: a LAPSED LEI belongs to a company that may be alive and
+ *  has not renewed its LEI. `since` is set only for LAPSED (the renewal date
+ *  that was missed); GLEIF publishes no "last validated" date. */
+export interface LeiRegistration {
+  /** GLEIF RegistrationStatus: ISSUED, LAPSED, RETIRED, MERGED, ANNULLED… */
+  status: string;
+  label: string;
+  /** True for any status other than ISSUED — the chip renders only then. */
+  flag: boolean;
+  since: string | null;
+  next_renewal_date: string | null;
+  last_update_date: string | null;
+  initial_registration_date: string | null;
+  managing_lou: string | null;
+  source_id: string;
+  /** The server's sentence, frozen with the run. */
+  sentence: string | null;
+}
+
 /** The subject's profile, assembled by `opencheck/subject_profile.py` from
  *  the subject's own entity statements: facts, never findings. */
 export interface SubjectProfile {
@@ -321,6 +342,9 @@ export interface SubjectProfile {
   founding_date: SubjectProfileFact | null;
   registered_address: (SubjectProfileFact & { country: string }) | null;
   jurisdiction: string | null;
+  /** Phase 242. Absent on payloads recorded before it, null when the anchor
+   *  carried no registration block — never read either as ISSUED. */
+  lei_registration?: LeiRegistration | null;
   statement_ids: string[];
 }
 
@@ -1762,6 +1786,8 @@ export interface BatchRow {
     raw?: string | null;
     source_id?: string;
   } | null;
+  /** Phase 242: the LEI record's status; absent on rows served before it. */
+  lei_registration?: { status: string; since?: string | null } | null;
   verdict: string | null;
   risk_count: number;
   context_count: number;

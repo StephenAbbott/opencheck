@@ -48,7 +48,7 @@ import {
   sortRows,
   type TableRow,
 } from "../lib/batch";
-import { statusChip } from "../lib/subjectProfile";
+import { leiRegistrationChip, statusChip } from "../lib/subjectProfile";
 import { Button, Chip, SectionLabel, sectionLabelClasses } from "./ui";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
 
@@ -367,7 +367,27 @@ function RegisterStatus({
       : null,
     sourceNames,
   );
-  if (!chip) return <span className="text-oo-muted">—</span>;
+  // Phase 242: the LEI record's own status, beside — never instead of —
+  // the register status. Renders only when it is not ISSUED.
+  const leiChip = leiRegistrationChip(row.lei_registration);
+  const leiBadge = leiChip ? (
+    <Chip tone={leiChip.tone} size="sm">
+      <span aria-hidden="true">{leiChip.label}</span>
+      <span className="sr-only">{leiChip.detail}</span>
+    </Chip>
+  ) : null;
+  if (!chip) return leiBadge ?? <span className="text-oo-muted">—</span>;
+  if (leiBadge)
+    return (
+      <span className="inline-flex flex-wrap gap-1">
+        <RegisterChip chip={chip} />
+        {leiBadge}
+      </span>
+    );
+  return <RegisterChip chip={chip} />;
+}
+
+function RegisterChip({ chip }: { chip: NonNullable<ReturnType<typeof statusChip>> }) {
   const classes =
     chip.tone === "terminal"
       ? "inline-flex items-center rounded-full border font-body px-2.5 py-0.5 text-oo-meta bg-oo-navy border-oo-navy text-white font-medium"

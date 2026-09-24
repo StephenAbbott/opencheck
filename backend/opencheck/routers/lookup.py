@@ -51,6 +51,7 @@ from ..memwatch import is_bot
 from ..icij_check import assess_icij_names
 from ..names import normalise_name
 from ..openaleph_check import assess_openaleph_names
+from .. import lei_registration as _lei_registration
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
 from ..knowability import statement_for as knowability_statement_for
@@ -1146,6 +1147,9 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
             ctx.jurisdiction = entity_block.get("jurisdiction") or ""
             ctx.registered_as = entity_block.get("registeredAs") or ""
             registered_at_id = (entity_block.get("registeredAt") or {}).get("id") or ""
+            ctx.lei_registration = _lei_registration.from_gleif_record(
+                gleif_bundle.get("record")
+            )
     except _LookupAbort:
         raise
     except GleifRateLimitedError as exc:
@@ -1189,6 +1193,12 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
             else:
                 gleif_src = gleif_bundle
             if not gleif_src.get("is_stub"):
+                if ctx.lei_registration is None:
+                    # A curated Open Ownership bundle holds no registration
+                    # block; the live call is the one place it can come from.
+                    ctx.lei_registration = _lei_registration.from_gleif_record(
+                        gleif_src.get("record")
+                    )
                 attrs = (gleif_src.get("record") or {}).get("attributes") or {}
                 ctx.ocid = attrs.get("ocid") or None
                 sp = attrs.get("spglobal")
@@ -1615,7 +1625,14 @@ async def _lookup_pipeline(
     # The subject's profile, from its own statements across the deepened
     # sources. Its own event rather than a rider on `risk_signals`: it is
     # identity, and the verdict event is the answer.
-    yield ("subject_profile", {"profile": build_subject_profile(ctx.lei, bods_all)})
+    yield (
+        "subject_profile",
+        {
+            "profile": build_subject_profile(
+                ctx.lei, bods_all, lei_registration=ctx.lei_registration
+            )
+        },
+    )
 
     # Phase 226: what is knowable along the ownership path — one statement
     # per jurisdiction on the upward walk from the subject's own statements,
