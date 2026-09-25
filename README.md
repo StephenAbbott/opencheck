@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 247** — PEP signals are merged to one per person per upstream record, a PEP only by virtue of a role at the looked-up company is labelled as context, and the verdict says "possible" when every name match behind a finding is medium confidence or lower.
+**Latest: Phase 248** — the homepage example cards are re-verified against production and show each company's three most severe findings with a count of the rest.
 
 → [Full development history](docs/status.md)
 
