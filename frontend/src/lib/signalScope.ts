@@ -37,6 +37,8 @@ type Stmt = Record<string, unknown>;
  * The five shapes (documented in CLAUDE.md, "Signal→BODS node mapping"):
  *   - `evidence.statement_id`            — SANCTIONED, PEP
  *   - `evidence.subject_statement_id`    — RELATED_SANCTIONED, RELATED_PEP, …
+ *     (+ `evidence.subject_statement_ids[]` when a PEP signal was merged
+ *     across several statements for one person, Phase 247)
  *   - `evidence.matches[].statement_id`  — TRUST_OR_ARRANGEMENT, NOMINEE, AMLA
  *   - `evidence.jurisdictions[].statement_id` — FATF_*, NON_EU_JURISDICTION
  *   - `evidence.longest_path[]`          — COMPLEX_OWNERSHIP_LAYERS
@@ -50,6 +52,13 @@ export function signalStatementIds(sig: RiskSignal): string[] {
 
   if (typeof ev.statement_id === "string") ids.push(ev.statement_id);
   if (typeof ev.subject_statement_id === "string") ids.push(ev.subject_statement_id);
+  // Phase 247: a PEP signal merged across two statements for the same person
+  // (one with a birth date, one without) names both, so both nodes keep it.
+  if (Array.isArray(ev.subject_statement_ids)) {
+    for (const id of ev.subject_statement_ids) {
+      if (typeof id === "string" && id !== ev.subject_statement_id) ids.push(id);
+    }
+  }
 
   for (const key of ["matches", "jurisdictions"] as const) {
     const arr = ev[key];

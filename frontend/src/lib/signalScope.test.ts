@@ -46,6 +46,22 @@ describe("signalStatementIds", () => {
     expect(signalStatementIds(signal("RELATED_PEP", { subject_statement_id: "s2" }))).toEqual(["s2"]);
   });
 
+  it("reads every statement a merged PEP signal names (Phase 247)", () => {
+    // Anders Opedal: two person statements, one upstream record — one chip,
+    // and both nodes keep the badge.
+    const merged = signal("RELATED_PEP", {
+      subject_statement_id: "st-dob",
+      subject_statement_ids: ["st-dob", "st-no-dob"],
+    });
+    expect(signalStatementIds(merged)).toEqual(["st-dob", "st-no-dob"]);
+  });
+
+  it("scopes a PEP-by-this-role context signal like any RELATED_* signal", () => {
+    const own = signal("RELATED_PEP_SUBJECT_ROLE", { subject_statement_id: "st-roth" });
+    expect(signalStatementIds(own)).toEqual(["st-roth"]);
+    expect(isCrossSourceSignal(own)).toBe(true);
+  });
+
   it("reads evidence.matches[].statement_id (TRUST_OR_ARRANGEMENT, NOMINEE, AMLA)", () => {
     const sig = signal("TRUST_OR_ARRANGEMENT", {
       matches: [{ statement_id: "s3" }, { statement_id: "s4" }, { no_id: true }],

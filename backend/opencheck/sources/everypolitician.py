@@ -154,7 +154,9 @@ class EveryPoliticianAdapter(SourceAdapter):
         if countries:
             summary_bits.append(countries[0].upper())
         if not summary_bits:
-            summary_bits.append("politician")
+            # Phase 247: not every record is a politician — the dataset holds
+            # PEPs, state-company leadership included.
+            summary_bits.append("politically exposed person")
 
         identifiers: dict[str, str] = {"opensanctions_id": ftm_id}
         wikidata = props.get("wikidataId")

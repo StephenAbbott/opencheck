@@ -73,20 +73,58 @@ _STRUCTURE_CODES = frozenset({"COMPLEX_OWNERSHIP_LAYERS", "GLEIF_REPORTING_EXCEP
 #: Risk clauses, in the order they are read. A sentence takes at most the
 #: first two: three findings in one line stops being a sentence and starts
 #: being a list, and the Risk signals section carries the full set.
-_RISK_CLAUSES: tuple[tuple[tuple[str, ...], str], ...] = (
-    (_SUBJECT_SANCTIONS, "sanctions findings on the company itself"),
-    (_SUBJECT_EXPORT, "export-control findings on the company itself"),
-    (_DEBARMENT, "procurement debarment findings"),
-    (_RELATED_SANCTIONS, "sanctions findings on parties connected to it"),
-    (_RELATED_EXPORT, "export-control findings on parties connected to it"),
-    (_SANCTIONS_LINKED, "records linking it to sanctioned parties"),
-    (_PEP, "a politically exposed person among the parties named"),
-    (_JURISDICTION, "a jurisdiction on an international watch list"),
-    (_LEAKS, "an appearance in offshore-leaks data"),
-    (_OPACITY, "ownership recorded in a form that obscures who benefits"),
-    (_STATE, "state ownership recorded on the company"),
-    (_COUNTER_SANCTIONS, "a counter-sanctions designation by a non-mainstream authority"),
+#:
+#: The third element is the clause's *possible* form (Phase 247), used when
+#: every signal behind it is medium confidence or lower. Only the clauses
+#: built on name matches have one (Stephen, 25 Sept 2026): a PEP, a related
+#: party's listing, an offshore-leaks node, a debarment or counter-sanctions
+#: record reached by name. There the confidence is about *identity* — is this
+#: the same person — and "The records show a politically exposed person"
+#: over nothing but "Possible name match only" chips asserted the identity
+#: every chip declined to. State ownership, a watch-list jurisdiction and the
+#: shape of the ownership are read off the company's own records; their
+#: confidence is about something else, and they keep one wording.
+_RISK_CLAUSES: tuple[tuple[tuple[str, ...], str, str | None], ...] = (
+    (_SUBJECT_SANCTIONS, "sanctions findings on the company itself", None),
+    (_SUBJECT_EXPORT, "export-control findings on the company itself", None),
+    (
+        _DEBARMENT,
+        "procurement debarment findings",
+        "possible procurement debarment findings",
+    ),
+    (
+        _RELATED_SANCTIONS,
+        "sanctions findings on parties connected to it",
+        "possible sanctions findings on parties connected to it",
+    ),
+    (
+        _RELATED_EXPORT,
+        "export-control findings on parties connected to it",
+        "possible export-control findings on parties connected to it",
+    ),
+    (_SANCTIONS_LINKED, "records linking it to sanctioned parties", None),
+    (
+        _PEP,
+        "a politically exposed person among the parties named",
+        "a possible politically exposed person among the parties named",
+    ),
+    (_JURISDICTION, "a jurisdiction on an international watch list", None),
+    (
+        _LEAKS,
+        "an appearance in offshore-leaks data",
+        "a possible appearance in offshore-leaks data",
+    ),
+    (_OPACITY, "ownership recorded in a form that obscures who benefits", None),
+    (_STATE, "state ownership recorded on the company", None),
+    (
+        _COUNTER_SANCTIONS,
+        "a counter-sanctions designation by a non-mainstream authority",
+        "a possible counter-sanctions designation by a non-mainstream authority",
+    ),
 )
+
+#: Confidences that make a name-match clause "possible".
+_TENTATIVE = frozenset({"medium", "low"})
 
 _MAX_RISK_CLAUSES = 2
 
@@ -97,6 +135,17 @@ def _codes(signals: list[dict[str, Any]], kind: str | None = None) -> set[str]:
         for s in signals
         if s.get("code") and (kind is None or (s.get("kind") or "risk") == kind)
     }
+
+
+def _all_tentative(signals: list[dict[str, Any]], codes: tuple[str, ...]) -> bool:
+    """True when every risk signal behind a clause is medium or lower."""
+    behind = [
+        s for s in signals
+        if s.get("code") in codes and (s.get("kind") or "risk") == "risk"
+    ]
+    return bool(behind) and all(
+        str(s.get("confidence") or "").lower() in _TENTATIVE for s in behind
+    )
 
 
 def _layer_depth(signals: list[dict[str, Any]]) -> int | None:
@@ -141,8 +190,9 @@ def _structure_sentence(signals: list[dict[str, Any]]) -> str | None:
 #: verdict and only reports a verdict change between snapshots written by the
 #: same template — otherwise a deploy would make every watched company report
 #: "verdict changed" on its next re-run. 1 = Phases 122–244 (one sentence),
-#: 2 = Phase 245 (risk sentence, then structure sentence).
-VERDICT_TEMPLATE = 2
+#: 2 = Phase 245 (risk sentence, then structure sentence), 3 = Phase 247
+#: ("possible" when every name-match signal behind a clause is medium or low).
+VERDICT_TEMPLATE = 3
 
 
 def build_verdict(
@@ -175,9 +225,12 @@ def build_verdict(
     risk_codes = _codes(signals, kind="risk")
 
     clauses: list[str] = []
-    for codes, phrase in _RISK_CLAUSES:
+    for codes, phrase, possible in _RISK_CLAUSES:
         if risk_codes.intersection(codes):
-            clauses.append(phrase)
+            if possible and _all_tentative(signals, codes):
+                clauses.append(possible)
+            else:
+                clauses.append(phrase)
         if len(clauses) == _MAX_RISK_CLAUSES:
             break
 
@@ -190,7 +243,7 @@ def build_verdict(
         # and the Coverage column carries the detail either way.
         return _join(f"The records show {head}.", structure)
 
-    matched = {c for codes, _ in _RISK_CLAUSES for c in codes}
+    matched = {c for codes, _, _ in _RISK_CLAUSES for c in codes}
     unhandled = risk_codes - matched - _STRUCTURE_CODES
 
     if unhandled and not structure:

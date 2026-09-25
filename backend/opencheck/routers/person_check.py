@@ -45,7 +45,12 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
 from ..bods import map_companies_house
-from ..cross_check import _birth_year_compatible, _name_score
+from ..cross_check import (
+    _birth_year_compatible,
+    _name_score,
+    corroborating_attributes,
+    match_confidence,
+)
 from ..ratelimit import limiter, lookup_tier
 from ..reconcile import reconcile
 from ..risk import assess_hits
@@ -130,6 +135,17 @@ def _score_hit(
     )
 
 
+_RANK = {"low": 1, "medium": 2, "high": 3}
+
+
+def _capped(rule_confidence: Any, match_ceiling: str) -> str:
+    """The lower of the rule's confidence and the match's."""
+    rule = str(rule_confidence or "")
+    if _RANK.get(rule, 0) and _RANK[rule] <= _RANK.get(match_ceiling, 0):
+        return rule
+    return match_ceiling
+
+
 async def _person_check_impl(
     name: str, birth_year: int | None
 ) -> PersonCheckResponse:
@@ -154,13 +170,35 @@ async def _person_check_impl(
         match = score_by_key.get((signal.source_id, signal.hit_id))
         if match is not None:
             # Every person-level claim must carry its matching evidence.
+            corroboration = corroborating_attributes(
+                {"kind": "person", "birth_year": birth_year}, match.hit.raw or {}
+            )
             payload["evidence"] = dict(payload.get("evidence") or {})
             payload["evidence"]["match"] = {
                 "query_name": name,
                 "name_score": match.name_score,
                 "birth_year_checked": birth_year is not None,
                 "birth_year_compatible": match.birth_year_compatible,
+                "corroboration": list(corroboration),
+                "name_match_only": not corroboration,
             }
+            # Phase 247: one confidence rule for a person matched by name,
+            # here and on the entity report. The rule that fired rates the
+            # *record* (a direct listing is high); whether the record is this
+            # person is the match's own confidence, from
+            # ``cross_check.match_confidence``, and the signal can be no
+            # surer than that. Jane Holl Lute was rated high here with no
+            # birth year checked while the company lookup rated the same
+            # match medium.
+            payload["confidence"] = _capped(
+                payload.get("confidence"),
+                match_confidence({"kind": "person"}, match.name_score, corroboration),
+            )
+            if not corroboration:
+                payload["summary"] = (
+                    "Possible name match only — no birth date or nationality "
+                    f"in common to confirm the same person: {payload.get('summary') or ''}"
+                )
         signals.append(payload)
 
     sources: list[CheckedSource] = []

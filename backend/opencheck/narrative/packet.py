@@ -192,6 +192,10 @@ _RISK_LABELS = {
     "RELATED_EXPORT_RISK": "Related party flagged for trade risk",
     "PEP": "Politically exposed person",
     "RELATED_PEP": "Related party politically exposed",
+    "RELATED_PEP_SUBJECT_ROLE": (
+        "Related party politically exposed only by virtue of a role at this "
+        "company (context, not a finding)"
+    ),
     "FATF_BLACK_LIST": "FATF black-list jurisdiction",
     "EU_HIGH_RISK_THIRD_COUNTRY": "EU high-risk third country",
     "FATF_GREY_LIST": "FATF grey-list jurisdiction",
