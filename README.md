@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 248** — the homepage example cards are re-verified against production and show each company's three most severe findings with a count of the rest.
+**Latest: Phase 249** — the EITI assessment card shows the stock exchange listing the company declared to EITI, verbatim and kept apart from PermID's primary listing.
 
 → [Full development history](docs/status.md)
 

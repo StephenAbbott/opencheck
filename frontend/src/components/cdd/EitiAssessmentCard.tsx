@@ -6,6 +6,9 @@
  * 1. **Beneficial ownership disclosure.** EITI's expectation 6 result, as a
  *    chip, with the sentence that makes the advocacy point: where a company
  *    does disclose, what it published is a *document*.
+ *    Under it, the stock exchange listing the company declared to EITI
+ *    (Phase 249), verbatim — kept apart from PermID's "Primary listing"
+ *    line on the subject card and never reconciled with it.
  * 2. **The declared subsidiaries — as a count and a pointer.** The list of
  *    names the company typed into an EITI form, and its cross-reference
  *    against the other lists OpenCheck holds, moved to the Subsidiaries tab
@@ -31,6 +34,9 @@ import type { SourceHit } from "../../lib/api";
 import {
   assessmentYears,
   boDisclosure,
+  DECLARED_LISTING_LABEL,
+  DECLARED_LISTING_LINK_LABEL,
+  declaredListing,
   disclosureLink,
   disclosureSentence,
   expectation,
@@ -74,6 +80,7 @@ export function EitiAssessmentCard({
   const year = latestAssessmentYear(raw);
   const bo = boDisclosure(raw);
   const link = disclosureLink(raw);
+  const listing = declaredListing(raw);
   const sentence = disclosureSentence(raw);
   const subs = raw?.subsidiaries ?? [];
   const exp2 = expectation(raw, SUBSIDIARY_EXPECTATION, year);
@@ -167,6 +174,36 @@ export function EitiAssessmentCard({
                 <span className="sr-only"> (opens in new tab)</span>
               </a>
             </p>
+          )}
+          {listing && (
+            <div className="mt-3" data-testid="eiti-declared-listing">
+              <div className="text-oo-meta font-semibold text-oo-esg-text">
+                {DECLARED_LISTING_LABEL}
+                {listing.year ? ` · ${listing.year}` : ""}
+              </div>
+              {/* ESG-tier tokens, not the card's emerald: Phase 241 retired
+                  emerald as the ESG colour and the lint ratchet counts it. */}
+              {listing.text && (
+                <p className="mt-0.5 text-oo-small leading-relaxed text-oo-esg-strong whitespace-pre-line break-words">
+                  {/* Verbatim. A URL-shaped value stays text: links come
+                      from stock_url alone. */}
+                  {listing.quoted ? `EITI recorded: “${listing.text}”` : listing.text}
+                </p>
+              )}
+              {listing.link && (
+                <p className="mt-1 text-oo-small">
+                  <a
+                    href={listing.link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-oo-esg-strong underline underline-offset-2 hover:text-oo-navy"
+                  >
+                    {DECLARED_LISTING_LINK_LABEL} ({listing.link.year})
+                    <span className="sr-only"> (opens in new tab)</span>
+                  </a>
+                </p>
+              )}
+            </div>
           )}
           {bo.comment && (
             <div className="mt-2">

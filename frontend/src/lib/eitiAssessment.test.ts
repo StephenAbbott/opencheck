@@ -14,6 +14,9 @@ import {
   boDisclosureLabel,
   boDisclosureTone,
   crossReference,
+  DECLARED_LISTING_LABEL,
+  DECLARED_LISTING_LINK_LABEL,
+  declaredListing,
   disclosureLink,
   disclosureSentence,
   latestAssessmentYear,
@@ -22,6 +25,9 @@ import {
   type ComparisonList,
   type EitiAssessmentBundle,
 } from "./eitiAssessment";
+import { LISTING_LABEL } from "./listing";
+// Vite's `?raw`, not `node:fs` — the frontend tsconfig has no Node types.
+import EITI_ASSESSMENT_SRC from "./eitiAssessment.ts?raw";
 
 function bundle(over: Partial<EitiAssessmentBundle> = {}): EitiAssessmentBundle {
   return {
@@ -247,5 +253,108 @@ describe("the summary tile", () => {
     const tile = assessmentTile(bundle({ subsidiaries: [] }));
     expect(tile.stat).toBe("—");
     expect(tile.sub).toBe("assessed 2025 · no subsidiary list filed");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 249 — the listing as declared to EITI
+// ---------------------------------------------------------------------------
+
+/** exp_6 rows in the shapes the shipped index carries (read 25 Sept 2026). */
+function listingBundle(
+  byYear: Record<string, { stock_exchange?: string | null; stock_url?: string | null }>,
+): EitiAssessmentBundle {
+  const assessments: EitiAssessmentBundle["assessments"] = {};
+  for (const [y, v] of Object.entries(byYear)) {
+    assessments[y] = { exp_6: { result: "Expectation met", ...v } };
+  }
+  return bundle({ assessments });
+}
+
+describe("declaredListing", () => {
+  it("takes the latest year's text and dates a link from an earlier year", () => {
+    // Glencore: 2023 has text + the LSE company page, 2025 text only.
+    const l = declaredListing(
+      listingBundle({
+        "2023": {
+          stock_exchange: "London Stock Exchange",
+          stock_url: "https://www.londonstockexchange.com/stock/GLEN/glencore-plc/company-page",
+        },
+        "2025": { stock_exchange: "London Stock Exchange" },
+      }),
+    );
+    expect(l).toEqual({
+      text: "London Stock Exchange",
+      year: "2025",
+      quoted: false,
+      link: {
+        url: "https://www.londonstockexchange.com/stock/GLEN/glencore-plc/company-page",
+        year: "2023",
+      },
+    });
+  });
+
+  it("prefers the latest year's link when more than one year carries one", () => {
+    const l = declaredListing(
+      listingBundle({
+        "2023": { stock_exchange: "Oslo Børs", stock_url: "https://www.euronext.com/en/markets/oslo" },
+        "2025": { stock_exchange: "Oslo Stock Exchange", stock_url: "https://live.euronext.com/en/product/equities/NO0011157232-XOSL" },
+      }),
+    );
+    expect(l?.link).toEqual({ url: "https://live.euronext.com/en/product/equities/NO0011157232-XOSL", year: "2025" });
+  });
+
+  it("keeps the text verbatim — never split into exchanges or tidied", () => {
+    const text = "Savannah Energy is Listed under AIM, London Stock Exchange";
+    expect(declaredListing(listingBundle({ "2023": { stock_exchange: `  ${text}\n` } }))?.text).toBe(text);
+    // Line breaks inside the value survive for the card to render.
+    expect(
+      declaredListing(listingBundle({ "2023": { stock_exchange: "Prime Market\nTokyo Stock Exchange" } }))?.text,
+    ).toBe("Prime Market\nTokyo Stock Exchange");
+  });
+
+  it("quotes EITI's 'not applicable' answers rather than reading them as unlisted", () => {
+    for (const t of ["Not applicable", "Not Applicable.", "This is not applicable to NNPC limited at the momment"]) {
+      const l = declaredListing(listingBundle({ "2023": { stock_exchange: t } }));
+      expect(l?.quoted).toBe(true);
+      expect(l?.text).toBe(t);
+    }
+    expect(declaredListing(listingBundle({ "2025": { stock_exchange: "Saudi Exchange" } }))?.quoted).toBe(false);
+  });
+
+  it("never turns URL-shaped text into a link — links come from stock_url alone", () => {
+    // Chevron's stock_exchange value is a web address.
+    const l = declaredListing(
+      listingBundle({ "2023": { stock_exchange: "www.chevron.com/investors/financial-information#secfilings" } }),
+    );
+    expect(l?.text).toBe("www.chevron.com/investors/financial-information#secfilings");
+    expect(l?.link).toBeNull();
+  });
+
+  it("drops a non-http link instead of rendering it as an href", () => {
+    const l = declaredListing(
+      listingBundle({ "2023": { stock_exchange: "Nasdaq", stock_url: "javascript:alert(1)" } }),
+    );
+    expect(l?.link).toBeNull();
+  });
+
+  it("shows a link on its own when EITI recorded only a link", () => {
+    const l = declaredListing(listingBundle({ "2023": { stock_url: "https://www.thecse.com" } }));
+    expect(l).toEqual({ text: null, year: null, quoted: false, link: { url: "https://www.thecse.com", year: "2023" } });
+  });
+
+  it("returns null when EITI recorded nothing, rather than an empty line", () => {
+    expect(declaredListing(listingBundle({ "2023": {}, "2025": { stock_exchange: "  " } }))).toBeNull();
+    expect(declaredListing(null)).toBeNull();
+  });
+
+  it("is labelled apart from PermID's line and never calls the link 'filings'", () => {
+    expect(DECLARED_LISTING_LABEL).not.toBe(LISTING_LABEL);
+    expect(DECLARED_LISTING_LABEL).toMatch(/declared to EITI/);
+    expect(DECLARED_LISTING_LINK_LABEL).not.toMatch(/filing/i);
+  });
+
+  it("does not read PermID's listing — the two are never merged or reconciled", () => {
+    expect(EITI_ASSESSMENT_SRC).not.toMatch(/["']\.\/listing(\.ts)?["']/);
   });
 });
