@@ -15,6 +15,7 @@ import {
 } from "./icons";
 import { RiskChip, RISK_PRESENTATION } from "./risk/RiskChip";
 import { buttonClasses } from "./ui";
+import { cardChips, moreFindingsLabel } from "../lib/exampleCards";
 
 /**
  * Curated demo subjects that have a pre-extracted Open Ownership BODS
@@ -22,9 +23,9 @@ import { buttonClasses } from "./ui";
  * resolves entirely offline. The list is small + opinionated; users
  * can paste any other LEI into the input.
  *
- * ``signals`` are pre-computed from the cached BODS bundles so the
- * picker cards show representative risk flags before the user clicks.
- * Confidence: high = definitively flagged; medium = structurally likely.
+ * ``signals`` are every risk code production returns for the subject,
+ * checked by hand (see the note above ``EXAMPLE_LEIS``), so the picker
+ * cards show what the check finds before the user clicks.
  */
 export interface ExampleSignal {
   code: string;
@@ -40,26 +41,29 @@ export interface ExampleLei {
 
 // Signals shown on the picker cards. These are CLAIMS ABOUT PRODUCTION
 // OUTPUT and nothing fails when they drift — verify against production
-// (the entity page, or the packet inside the regenerated curated
-// narratives), never by reading the card back.
+// (`/lookup?lei=…&refresh=true` on api.opencheck.world), never by reading
+// the card back.
 //
-// Last verified 2026-09-05 against production /export bundles, per source.
-// Risk findings only: NON_EU_JURISDICTION is now kind="context" and the
-// results page shows it under a separate "Structural context" heading,
-// which a bare chip strip on a card cannot convey.
+// Last verified 2026-09-25 against production, after Phase 247 deployed.
+// Each list is EVERY distinct risk code production returned for that
+// subject, at the highest confidence it reached — the card draws the worst
+// three and counts the rest (`lib/exampleCards.ts`, Phase 248), so the order
+// here does not matter and nothing is left out to make a card fit. Risk
+// findings only: context codes (NON_EU_JURISDICTION,
+// GLEIF_REPORTING_EXCEPTION, RELATED_PEP_SUBJECT_ROLE) sit under "Structural
+// context" on the results page, which a bare chip strip cannot convey —
+// `exampleCards.test.ts` fails on one here.
+//
+// What changed on 2026-09-25: Rosneft listed 2 of its 14 codes; Ørsted gained
+// STATE_CONTROLLED (Phase 240); Eli Lilly's OFFSHORE_LEAKS is medium since the
+// Phase 237 gates, and RELATED_EXPORT_RISK no longer fires; Ørsted's
+// RELATED_PEP is now one board member (Julia King) — the other six are
+// context since Phase 247.
 //
 // Phase 170 removed COMPLEX_OWNERSHIP_LAYERS from BP, Rosneft, Eesti Energia
-// and Ørsted. Every one of those chips was a V through the subject — a parent,
-// the subject, and one of its SUBSIDIARIES (Ørsted's was "Non-consolidating
-// parent -> ØRSTED A/S -> Eleven Mile Solar Center") — counted as three layers
-// of ownership above it. With the walk anchored at the subject and pointing
-// upwards none of the four reaches three layers, and none of the six curated
-// subjects now does. Finding examples that carry a REAL layered chain is an
-// open follow-up: it needs a subject whose intermediaries are themselves in
-// the bulk BODS, which is a coverage question, not a picker question.
-//
-// Ordered by graph severity, then confidence — so the strongest finding
-// leads rather than whichever code sorts first alphabetically.
+// and Ørsted: every one of those chips was a V through the subject counted as
+// three layers above it. None of the six curated subjects reaches three
+// layers; finding an example with a real layered chain is an open follow-up.
 export const EXAMPLE_LEIS: ExampleLei[] = [
   {
     lei: "213800LH1BZH3DI6G760",
@@ -75,7 +79,19 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "Russian state oil",
     signals: [
       { code: "SANCTIONED", confidence: "high" },
+      { code: "RELATED_SANCTIONED", confidence: "high" },
+      { code: "SANCTIONED_SECURITY", confidence: "high" },
+      { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
       { code: "EXPORT_CONTROLLED", confidence: "high" },
+      { code: "RELATED_EXPORT_CONTROLLED", confidence: "high" },
+      { code: "DEBARMENT", confidence: "high" },
+      { code: "RELATED_DEBARMENT", confidence: "high" },
+      { code: "EU_HIGH_RISK_THIRD_COUNTRY", confidence: "high" },
+      { code: "RELATED_SANCTIONS_LINKED", confidence: "high" },
+      { code: "RELATED_EXPORT_CONTROL_LINKED", confidence: "high" },
+      { code: "EXPORT_RISK", confidence: "medium" },
+      { code: "STATE_CONTROLLED", confidence: "medium" },
+      { code: "RELATED_PEP", confidence: "medium" },
     ],
   },
   {
@@ -101,12 +117,8 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Ørsted A/S",
     hint: "Danish offshore energy company",
     signals: [
-      // OFFSHORE_LEAKS removed 2026-09-05: production returns only RELATED_PEP
-      // (plus GLEIF_REPORTING_EXCEPTION as context) — the ICIJ match this card
-      // claimed is no longer made. Unrelated to Phase 170; ordinary drift of
-      // the kind the comment above warns about, found by checking the card
-      // against the regenerated narrative packet rather than by reading it back.
       { code: "RELATED_PEP", confidence: "medium" },
+      { code: "STATE_CONTROLLED", confidence: "medium" },
     ],
   },
   {
@@ -114,14 +126,8 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Eli Lilly and Company",
     hint: "American pharmaceutical giant",
     signals: [
-      { code: "RELATED_EXPORT_RISK", confidence: "high" },
       { code: "RELATED_PEP", confidence: "medium" },
-      { code: "OFFSHORE_LEAKS", confidence: "high" },
-      // Risk signals only. Eli Lilly also reports GLEIF_REPORTING_EXCEPTION
-      // (kind="context": NATURAL_PERSONS — widely held, no consolidating
-      // parent entity), but the picker card has no risk/context split, so a
-      // context entry here would render as a fourth risk chip and overstate
-      // the finding count the entity page shows.
+      { code: "OFFSHORE_LEAKS", confidence: "medium" },
     ],
   },
 ];
@@ -175,9 +181,11 @@ export function ExampleLeiPicker({
                   {ex.hint}
                 </div>
               )}
-              {ex.signals && ex.signals.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {ex.signals.map((sig) => (
+              {ex.signals && ex.signals.length > 0 && (() => {
+                const { shown, more } = cardChips(ex.signals);
+                return (
+                <div className="flex flex-wrap items-center gap-1 mt-2">
+                  {shown.map((sig) => (
                     <RiskChip
                       key={sig.code}
                       signal={{
@@ -192,8 +200,14 @@ export function ExampleLeiPicker({
                       interactive={false}
                     />
                   ))}
+                  {more > 0 && (
+                    <span className="text-oo-meta text-oo-muted">
+                      {moreFindingsLabel(more)}
+                    </span>
+                  )}
                 </div>
-              )}
+                );
+              })()}
             </button>
             {/* Phase 122: the Neo4j CSV download that used to sit here came
                 off. It is a developer affordance on the app's headline entry
