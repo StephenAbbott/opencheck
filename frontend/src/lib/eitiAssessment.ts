@@ -198,6 +198,83 @@ export function disclosureLink(bundle: EitiAssessmentBundle | null): DisclosureL
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// The listing the company declared to EITI (expectation 6)
+// ---------------------------------------------------------------------------
+
+/**
+ * The card line's label. Deliberately not `listing.ts`'s "Primary listing":
+ * that line is PermID's reading of one main quote, this one is what the company
+ * typed into an EITI form. The two are never merged or reconciled — they
+ * answer different questions and disagree for good reasons (a secondary
+ * listing, a delisting between assessments, a free-text answer).
+ */
+export const DECLARED_LISTING_LABEL = "Listing as declared to EITI";
+
+/**
+ * What the link is called. **Never "filings"** — the URLs EITI carries are a
+ * company share-price page (Barrick, Tullow), an exchange's company page
+ * (Glencore), a regulator's profile (Ivanhoe → SEDAR) or a filings page (Rio
+ * Tinto), and nothing in the data says which. Saying where the link came from
+ * is the one thing that is true of all of them.
+ */
+export const DECLARED_LISTING_LINK_LABEL = "Link given to EITI";
+
+export interface DeclaredListing {
+  /** EITI's `stock_exchange` value, verbatim (trimmed), or null when only a
+   *  link was recorded. Free text as typed: "London Stock Exchange, Ghana
+   *  Stock Exchange", a sentence, a URL, or "Not applicable". */
+  text: string | null;
+  /** The assessment year the text comes from. */
+  year: string | null;
+  /** True when the text is EITI's "not applicable" answer. Rendered as a
+   *  quotation of what EITI recorded rather than read as "not listed" —
+   *  whether the company is listed is not something the text establishes. */
+  quoted: boolean;
+  /** The link, dated by the year that carried it — every link in the shipped
+   *  index is from 2023 while the text is usually from 2025, so an undated
+   *  link under a 2025 line would misdate it. */
+  link: DisclosureLink | null;
+}
+
+const NOT_APPLICABLE = /\bnot\s+applicable\b/i;
+
+/** Only http(s) links are rendered; anything else in `stock_url` is dropped
+ *  rather than turned into an `href`. */
+function safeHttpUrl(value: string): string | null {
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The stock exchange listing the company declared under EITI expectation 6:
+ * the latest year's text, and the latest year's link with that year attached
+ * (Stephen, 25 Sept 2026). The text is never parsed into exchanges, and a
+ * URL-shaped value in `stock_exchange` stays text (Chevron's is a web address);
+ * links come from `stock_url` alone.
+ */
+export function declaredListing(bundle: EitiAssessmentBundle | null): DeclaredListing | null {
+  let text: string | null = null;
+  let year: string | null = null;
+  let link: DisclosureLink | null = null;
+  for (const y of assessmentYears(bundle)) {
+    const exp = bundle?.assessments?.[y]?.[BO_EXPECTATION] ?? {};
+    const t = (exp.stock_exchange ?? "").trim();
+    if (!text && t) {
+      text = t;
+      year = y;
+    }
+    const u = safeHttpUrl((exp.stock_url ?? "").trim());
+    if (!link && u) link = { url: u, year: y };
+  }
+  if (!text && !link) return null;
+  return { text, year, quoted: !!text && NOT_APPLICABLE.test(text), link };
+}
+
 /**
  * The advocacy sentence, assembled from what the row actually says.
  *

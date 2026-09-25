@@ -15,7 +15,7 @@
  *   cross-reference claims that used to be here.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const getSubsidiaries = vi.fn();
@@ -179,5 +179,81 @@ describe("the beneficial ownership disclosure", () => {
     );
     expect(screen.getByText("Chevron U.S.A. Inc.")).toBeVisible();
     expect(screen.getAllByText("Chevron Corporation").length).toBeGreaterThan(0);
+  });
+});
+
+describe("the listing as declared to EITI (Phase 249)", () => {
+  const glencoreListing = {
+    "2023": {
+      exp_6: {
+        result: "Expectation met",
+        stock_exchange: "London Stock Exchange",
+        stock_url: "https://www.londonstockexchange.com/stock/GLEN/glencore-plc/company-page",
+      },
+    },
+    "2025": { exp_6: { result: "Expectation met", stock_exchange: "London Stock Exchange" } },
+  };
+
+  it("shows the latest text under its own label and a dated, neutrally named link", () => {
+    render(<EitiAssessmentCard hit={hit({ assessments: glencoreListing })} />);
+    const block = screen.getByTestId("eiti-declared-listing");
+    expect(within(block).getByText("Listing as declared to EITI · 2025")).toBeVisible();
+    expect(within(block).getByText("London Stock Exchange")).toBeVisible();
+    const link = within(block).getByRole("link", {
+      name: "Link given to EITI (2023) (opens in new tab)",
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://www.londonstockexchange.com/stock/GLEN/glencore-plc/company-page",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("never says 'filings' and never borrows PermID's 'Primary listing'", () => {
+    render(<EitiAssessmentCard hit={hit({ assessments: glencoreListing })} />);
+    const block = screen.getByTestId("eiti-declared-listing");
+    expect(block.textContent).not.toMatch(/filing/i);
+    expect(block.textContent).not.toMatch(/primary listing/i);
+  });
+
+  it("quotes a 'not applicable' answer as what EITI recorded", () => {
+    render(
+      <EitiAssessmentCard
+        hit={hit({
+          assessments: {
+            "2023": { exp_6: { result: "Not available", stock_exchange: "Not Applicable." } },
+          },
+        })}
+      />,
+    );
+    const block = screen.getByTestId("eiti-declared-listing");
+    expect(within(block).getByText("EITI recorded: “Not Applicable.”")).toBeVisible();
+  });
+
+  it("renders URL-shaped text as text, not as a link", () => {
+    render(
+      <EitiAssessmentCard
+        hit={hit({
+          assessments: {
+            "2023": {
+              exp_6: {
+                result: "Expectation met",
+                stock_exchange: "www.chevron.com/investors/financial-information#secfilings",
+              },
+            },
+          },
+        })}
+      />,
+    );
+    const block = screen.getByTestId("eiti-declared-listing");
+    expect(
+      within(block).getByText("www.chevron.com/investors/financial-information#secfilings"),
+    ).toBeVisible();
+    expect(within(block).queryByRole("link")).toBeNull();
+  });
+
+  it("renders no line when EITI recorded no listing", () => {
+    render(<EitiAssessmentCard hit={hit()} />);
+    expect(screen.queryByTestId("eiti-declared-listing")).toBeNull();
   });
 });
