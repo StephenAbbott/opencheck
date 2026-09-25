@@ -83,6 +83,10 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   // report / parent without an LEI). Lowest severity, like NON_EU_JURISDICTION,
   // so the exception bridge node is never ranked as a warning.
   GLEIF_REPORTING_EXCEPTION: { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"Ex", severity:0 },
+  // Context, not risk (Phase 247) — a PEP only through a role at the looked-up
+  // company itself (a state company's own board). Slate like the other context
+  // badges and severity 0, so a board member never outranks a real finding.
+  RELATED_PEP_SUBJECT_ROLE: { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"PR", severity:0 },
 };
 
 export const DEFAULT_SIGNAL_STYLE: SignalStyle =

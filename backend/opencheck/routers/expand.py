@@ -32,6 +32,7 @@ from ..risk import DegradedSource, assess_bundle
 from ..secret_scrub import describe_exception
 from ..sources import REGISTRY
 from . import lookup as _lookup
+from ..pep_merge import merge_derived_pep
 from .lookup import _LEI_SHAPE, _fetch_with_provenance, _mapper_for, _merge_signals
 
 router = APIRouter()
@@ -198,7 +199,11 @@ async def _register_one_layer(
     # Sanctions screening of the new node and everything it brought with it —
     # the subject entity is a target of the name screen like any other party.
     cross = await assess_cross_source_names(bods, degraded=degraded)
-    signals = _merge_signals(bundle_signals, [s.to_dict() for s in cross])
+    # Phase 247: one PEP chip per upstream record here too. The own-role label
+    # is left to the lookup, which knows its subject.
+    signals = _merge_signals(
+        bundle_signals, merge_derived_pep([s.to_dict() for s in cross])
+    )
     repl = _anchor_replacements(bods, local_id, anchor)
     return _apply_id_remap(bods, repl), _apply_id_remap(signals, repl)
 

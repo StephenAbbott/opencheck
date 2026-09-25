@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 246** — the regrown files are re-split: each source's BODS mapper in its own module, `App()` into hooks and panels with an error boundary around every lazy tab, and the lookup router's replay cache, gate and expansion endpoints in modules of their own.
+**Latest: Phase 247** — PEP signals are merged to one per person per upstream record, a PEP only by virtue of a role at the looked-up company is labelled as context, and the verdict says "possible" when every name match behind a finding is medium confidence or lower.
 
 → [Full development history](docs/status.md)
 

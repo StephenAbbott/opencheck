@@ -5,6 +5,10 @@ import type { RiskSignal } from "../../lib/api";
 import type { SignalEvidenceData } from "../../lib/signalEvidence";
 import { sourceLabel } from "../../lib/vocab";
 
+/** The quiet slate every *context* chip wears (kind="context") — structural
+ *  information, never a warning. One string so the three cannot drift. */
+const CONTEXT_CLASSES = "bg-slate-50 text-slate-700 border-slate-200";
+
 /**
  * Map a risk signal code to a colour palette + short display label.
  * Codes are stable strings from the backend ``opencheck.risk`` module.
@@ -81,7 +85,7 @@ export const RISK_PRESENTATION: Record<
   // exceptions fires OPAQUE_OWNERSHIP instead.
   GLEIF_REPORTING_EXCEPTION: {
     label: "No parent in GLEIF (exempt)",
-    classes: "bg-slate-50 text-slate-700 border-slate-200",
+    classes: CONTEXT_CLASSES,
   },
   TRUST_OR_ARRANGEMENT: {
     label: "Trust / arrangement",
@@ -92,7 +96,7 @@ export const RISK_PRESENTATION: Record<
   // with STATE_CONTROLLED, which is a different kind of claim entirely.
   NON_EU_JURISDICTION: {
     label: "Outside EU/EEA",
-    classes: "bg-slate-50 text-slate-700 border-slate-200",
+    classes: CONTEXT_CLASSES,
   },
   STATE_CONTROLLED: {
     label: "State-controlled",
@@ -117,6 +121,13 @@ export const RISK_PRESENTATION: Record<
   RELATED_PEP: {
     label: "Related PEP",
     classes: "bg-violet-50 text-violet-700 border-violet-300",
+  },
+  // Context, not risk (Phase 247): politically exposed only by virtue of a
+  // role at this company — the board of a state company screened as its own
+  // PEPs. Same quiet slate as the other context chips, never the PEP violet.
+  RELATED_PEP_SUBJECT_ROLE: {
+    label: "PEP by virtue of this role",
+    classes: CONTEXT_CLASSES,
   },
   RELATED_SANCTIONED: {
     label: "Related sanctioned",

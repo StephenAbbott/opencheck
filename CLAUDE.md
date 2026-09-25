@@ -342,7 +342,9 @@ source: the page shows the last sweep's verdict and says when it was reached.
   matches — OpenAleph" section in `components/cdd/QuickCheckPanel.tsx`. Informational, never identifier
   corroboration. No key / HTTP failure → `DegradedSource` records
   (issue #50) — never a silent clean screen. OS+OA duplicate signals for
-  the same node are deliberately kept (dedupe keys include source_id).
+  the same node are deliberately kept (dedupe keys include source_id) —
+  **except `RELATED_PEP`**, merged per upstream record since Phase 247
+  (see "PEP signals" below).
 
 ### Replay cache, shareable URLs, per-source retry (Phase 47)
 
@@ -2217,3 +2219,49 @@ be re-derived otherwise:
   that throws now says so inside its tab instead of unmounting the whole app.
   Wrap a new lazy panel the same way, with `PanelLoading` as its fallback.
 
+---
+
+## PEP signals: one per upstream record, own-role PEPs are context (Phase 247)
+
+`opencheck/pep_merge.py`, called on the cross-check + OpenAleph signals
+**before** `_merge_signals` (so `/signalstats` counts the merged number) in
+`_lookup_pipeline` and `_build_report`; `routers/expand.py` merges only.
+Found by the Opus 5.5 check (DQ-7, DQ-8): Equinor carried 38 `RELATED_PEP`
+for 13 people, and Shell's verdict asserted a PEP over nothing but "Possible
+name match only" chips. Things that will be re-derived otherwise:
+
+- **EveryPolitician returns OpenSanctions' entity id; OpenAleph's id is that
+  id + `.` + 40 hex** (the collection signature). `upstream_record_id()`
+  reads both through `sources.lineage.derived_from`. Grouping is
+  `(upstream id, normalised related-party name)` — across person statements,
+  so the two Anders Opedal nodes share one chip and
+  `evidence.subject_statement_ids` (read by `signalScope.ts`) keeps both
+  badges. The winner is the highest confidence, ties to the upstream source.
+  **Only `RELATED_PEP`** — the sanctions family is untouched.
+- **Own-role PEPs** (Stephen, 25 Sept 2026: keep, label, context): when every
+  position on the OpenSanctions record is at the subject, the signal becomes
+  `RELATED_PEP_SUBJECT_ROLE`, `kind: "context"` — a new code rather than a
+  flag on `RELATED_PEP`, so the chip, the graph badge (slate, severity 0), the
+  OG card, the narrative label and the verdict all read it correctly by
+  construction. Positions come from `positionOccupancies[].post[]` via
+  `REGISTRY["opensanctions"].fetch` (cached, one call per record, max 25). The
+  organisation is matched by **name on either side of the comma** —
+  `no_brreg` writes "Chairman, EQUINOR ASA", `dk_pep` writes "Ørsted A/S,
+  board of directors (vice chairman)" — because OpenSanctions holds Equinor
+  twice and the positions point at the LEI-less `Organization`. A failed read
+  leaves the signal as it was (`pep_role_checked: false`), never a
+  degradation.
+- **The verdict's "possible" forms apply to name-match clauses only** (PEP,
+  related sanctions/export/debarment, offshore leaks, counter-sanctions) —
+  not to state ownership, jurisdiction or opacity (Stephen, 25 Sept 2026).
+  `VERDICT_TEMPLATE` = 3; bump it again on any rewording.
+- **`/person-check` uses `cross_check.match_confidence` too**: a signal's
+  confidence is the lower of the rule's and the match's, and an
+  uncorroborated one opens "Possible name match only".
+- **Curated cards:** Ørsted's and Eesti Energia's `RELATED_PEP` medium chips
+  still hold (Julia King; Jürgen Ligi) — re-check after deploy, and run the
+  curated-narrative regen checklist, since Ørsted's other six board members
+  become context.
+
+Tests: `tests/test_pep_merge_phase247.py`, on the Equinor / Ørsted shapes read
+from OpenSanctions and OpenAleph on 25 Sept 2026.

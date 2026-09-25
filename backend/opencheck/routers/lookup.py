@@ -49,6 +49,8 @@ from .. import lei_registration as _lei_registration
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
 from .. import listing as _listing
+from .. import pep_merge as _pep_merge
+from ..subject_identity import subject_identity
 from ..verdict import build_verdict
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
@@ -514,9 +516,18 @@ async def _build_report(
             bods_all, degraded=degraded, screening=oa_screening
         )
     ]
+    # Phase 247: one PEP chip per person per upstream record, and PEPs by
+    # virtue of the searched company's own role labelled as context.
+    related = await _pep_merge.consolidate_pep_signals(
+        cross_signals + oa_signals,
+        subject_names=[q] if kind == SearchKind.ENTITY else [],
+        subject_record_ids=[
+            h.hit_id for h in hits if h.source_id == "opensanctions" and not h.is_stub
+        ],
+    )
 
     all_signals = _merge_signals(
-        search_signals, deepen_signals, cross_signals, icij_signals, oa_signals
+        search_signals, deepen_signals, related, icij_signals
     )
 
     return ReportResponse(
@@ -1048,6 +1059,7 @@ _STRUCTURAL_SIGNAL_CODES = {
 }
 _STATEMENT_SCOPED_SIGNAL_CODES = {
     "RELATED_PEP",
+    "RELATED_PEP_SUBJECT_ROLE",
     "RELATED_SANCTIONED",
     "RELATED_COUNTER_SANCTIONED",
     "RELATED_SANCTIONS_CONTROLLED",
@@ -1772,12 +1784,26 @@ async def _lookup_pipeline(
     sec_sig = _securities.sanctioned_securities_signal(lei)
     sec_signals = [sec_sig] if sec_sig else []
 
+    # Phase 247: the related-party PEP signals from OpenSanctions,
+    # EveryPolitician and OpenAleph are one observation per upstream record —
+    # merged here, before the counters see them — and a PEP whose only
+    # position is at this company is labelled as context (see pep_merge).
+    identity = subject_identity(ctx.lei, bods_all)
+    related = await _pep_merge.consolidate_pep_signals(
+        [s.to_dict() for s in cross_raw] + [s.to_dict() for s in oa_raw],
+        subject_names=_pep_merge.subject_names_from(
+            bods_all, identity.statement_ids, ctx.legal_name
+        ),
+        subject_record_ids=[
+            h.hit_id for h in hits if h.source_id == "opensanctions" and not h.is_stub
+        ],
+    )
+
     merged = _merge_signals(
         search_signals,
         deepen_signals,
-        [s.to_dict() for s in cross_raw],
+        related,
         [s.to_dict() for s in icij_raw],
-        [s.to_dict() for s in oa_raw],
         sec_signals,
         record_as="lookup",
     )

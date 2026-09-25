@@ -270,11 +270,19 @@ def test_a_verdict_worded_by_an_older_template_is_not_a_change() -> None:
     with a new snapshot of the same facts it must report nothing, or every
     watched company would say "verdict changed" on its next re-run."""
     before = wl.snapshot_from_response(_resp(EASY))
-    assert before["verdict_template"] == 2
+    assert before["verdict_template"] == 3
     legacy = {k: v for k, v in before.items() if k != "verdict_template"}
     legacy["verdict"] = "Sanctions findings on the company itself."
     after = wl.snapshot_from_response(_resp(EASY))
     assert wl.diff_snapshots(legacy, after) == []
+    # Phase 247 ("possible" for name-match clauses) bumped it again: a Phase
+    # 245 baseline with the unhedged wording is not a change either.
+    phase_245 = dict(
+        before,
+        verdict_template=2,
+        verdict="The records show a politically exposed person among the parties named.",
+    )
+    assert wl.diff_snapshots(phase_245, after) == []
     # Between two snapshots of the same template a wording change still shows.
     changed = dict(after, verdict="Something else.")
     assert [c["kind"] for c in wl.diff_snapshots(before, changed)] == ["verdict"]

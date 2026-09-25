@@ -255,7 +255,7 @@
     "hex": 0,
     "text": 0,
     "vocab": 0,
-    "palette": 99,
+    "palette": 96,
     "button": 2
   },
   "src/components/risk/SignalEvidence.tsx": {

@@ -70,6 +70,11 @@ _LOG = logging.getLogger(__name__)
 # Risk code names — match strings used by the frontend's
 # RISK_PRESENTATION map.
 RELATED_PEP = "RELATED_PEP"
+#: Phase 247 — a related party who is a PEP only through a position at the
+#: looked-up company itself (the board of a state-owned enterprise, read from
+#: OpenSanctions' ``no_brreg``-style datasets). Emitted by ``pep_merge`` as
+#: ``kind="context"``, never by the screens below.
+RELATED_PEP_SUBJECT_ROLE = "RELATED_PEP_SUBJECT_ROLE"
 RELATED_SANCTIONED = "RELATED_SANCTIONED"
 RELATED_COUNTER_SANCTIONED = "RELATED_COUNTER_SANCTIONED"
 RELATED_SANCTIONS_CONTROLLED = "RELATED_SANCTIONS_CONTROLLED"
@@ -662,13 +667,28 @@ def _signal_from_ep(
         return None
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return None
+    # Phase 247: the record's own position, not a label for it. This used to
+    # say "political office-holder" for every EveryPolitician record — an
+    # employee-elected director of a state company is in the dataset as a PEP
+    # without holding any political office.
     return _make_signal(
         code=RELATED_PEP,
         target=target,
         hit=hit,
         score=score,
-        summary_extra="political office-holder",
+        summary_extra=_ep_finding(hit),
     )
+
+
+def _ep_finding(hit: SourceHit) -> str:
+    """"PEP (Member of the Storting)" — the position the record names, or
+    just "PEP" when it names none."""
+    props = (hit.raw or {}).get("properties") or {}
+    positions = props.get("position") or []
+    if isinstance(positions, str):
+        positions = [positions]
+    first = next((str(p).strip() for p in positions if str(p).strip()), "")
+    return f"PEP ({first})" if first else "PEP"
 
 
 def match_confidence(

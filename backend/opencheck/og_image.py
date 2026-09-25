@@ -71,6 +71,8 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     "COMPLEX_CORPORATE_STRUCTURE": ("Complex structure (AMLA)", "#fef2f2", "#b91c1c"),
     "POSSIBLE_OBFUSCATION": ("Possible obfuscation", "#fefce8", "#854d0e"),
     "RELATED_PEP": ("Related PEP", "#f5f3ff", "#6d28d9"),
+    # Context (Phase 247) — never counted on the card, labelled if it is shown.
+    "RELATED_PEP_SUBJECT_ROLE": ("PEP by this role", "#f8fafc", "#475569"),
     "RELATED_SANCTIONED": ("Related sanctioned", "#fff1f2", "#be123c"),
     "RELATED_COUNTER_SANCTIONED": ("Related counter-sanctioned", "#f1f5f9", "#334155"),
     "RELATED_SANCTIONS_CONTROLLED": ("Related sanction control", "#ffe4e6", "#9f1239"),
