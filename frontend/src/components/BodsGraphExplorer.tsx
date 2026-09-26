@@ -29,7 +29,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import BODSGraph from "./BODSGraph";
 import BodsTree from "./BodsTree";
-import { prefersTextFirst } from "../lib/graphScale";
+import { prefersTextFirst, revealIn } from "../lib/graphScale";
 import { bodsToGraph, autoCollapse, buildTree, type GraphModel } from "../lib/bodsGraph";
 import {
   expandLayer,
@@ -63,7 +63,7 @@ import {
   waitingSentence,
 } from "../lib/expandLayer";
 import { independentCount } from "../lib/lineage";
-import { riskFindingCount } from "../lib/signalKind";
+import { groupNetworkSignals, riskFindingCount } from "../lib/signalKind";
 import { RiskChip } from "./risk/RiskChip";
 import { SourceLegend } from "./SourceLegend";
 import {
@@ -230,11 +230,18 @@ export default function BodsGraphExplorer({
       setShowRunControls(false);
       setHighlightSource(null);
       setCollapsed(autoCollapse(baseModel));
+      setTreeCollapsed(new Set());
       prevStatementsRef.current = statements;
     }
   }, [statements, baseModel]);
 
-  const rows = useMemo(() => buildTree(model, collapsed), [model, collapsed]);
+  // Phase 250: the text version has its own disclosure state. Collapsing a
+  // node on the canvas used to drop its rows from "Read as text" too — Shell
+  // went from 190 rows to 58 — which made the equivalent less complete than
+  // the picture's own grouping does (Stephen, 26 Sept 2026: collapse is a
+  // canvas control; the text lists every row until a reader folds it there).
+  const [treeCollapsed, setTreeCollapsed] = useState<Set<string>>(() => new Set());
+  const rows = useMemo(() => buildTree(model, treeCollapsed), [model, treeCollapsed]);
 
   // Phase 243 — the text equivalent starts open on a phone, where a canvas of
   // any size is a smear (Stephen, 24 Sept 2026: the diagram stays above it).
@@ -267,11 +274,13 @@ export default function BodsGraphExplorer({
       const sid = canonicalStatementId(rawId, recon?.remap);
       if (!model.nodes.some((n) => n.id === sid)) return false;
       setCollapsed((prev) => {
-        if (!prev.has(sid)) return prev;
-        const next = new Set(prev);
+        const opened = revealIn(model, prev, sid);
+        if (!opened.has(sid)) return opened;
+        const next = new Set(opened);
         next.delete(sid);
         return next;
       });
+      setTreeCollapsed((prev) => revealIn(model, prev, sid));
       setSelectedId(sid);
       return true;
     },
@@ -304,13 +313,20 @@ export default function BodsGraphExplorer({
     if (focusStatement(focusStatementId)) focusedRef.current = focusStatementId;
   }, [focusStatementId, focusStatement]);
 
-  function toggleCollapse(id: string) {
-    setCollapsed((prev) => {
+  /** A fold in the text version — the canvas keeps its own. */
+  function toggleTreeCollapse(id: string) {
+    setTreeCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  }
+
+  /** A row chosen in the text version is drawn: open whatever hides it. */
+  function selectFromText(id: string | null) {
+    if (id) setCollapsed((prev) => revealIn(model, prev, id));
+    setSelectedId(id);
   }
 
   // ── "Add next layer" over the whole frontier (direction set by the view) ───
@@ -338,6 +354,7 @@ export default function BodsGraphExplorer({
     [signals, discoveredSignals]
   );
   const subjectRiskCount = useMemo(() => riskFindingCount(signals), [signals]);
+  const additionalGroups = useMemo(() => groupNetworkSignals(additionalSignals), [additionalSignals]);
 
   // ── FullCheck provenance: source legend + highlight-by-source ──────────────
   const [highlightSource, setHighlightSource] = useState<string | null>(null);
@@ -690,15 +707,26 @@ export default function BodsGraphExplorer({
           <p className="text-oo-small text-oo-ink">
             {networkRiskSentence({
               subject: subjectRiskCount,
-              additional: riskFindingCount(additionalSignals),
+              additional: additionalGroups.risk.length,
+              context: additionalGroups.context.length,
               hasRun,
               saved: readOnly,
             })}
           </p>
-          {additionalSignals.length > 0 && (
+          {/* Phase 250: one chip per code, risk before context — the same
+              grouping the sentence counts, so the two cannot disagree. */}
+          {additionalGroups.risk.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {additionalSignals.map((sig, i) => (
-                <RiskChip key={i} signal={sig} compact />
+              {additionalGroups.risk.map((g) => (
+                <RiskChip key={g.code} signal={g.lead} group={g.signals} compact />
+              ))}
+            </div>
+          )}
+          {additionalGroups.context.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-oo-meta text-oo-muted">Structural context:</span>
+              {additionalGroups.context.map((g) => (
+                <RiskChip key={g.code} signal={g.lead} group={g.signals} compact />
               ))}
             </div>
           )}
@@ -772,8 +800,8 @@ export default function BodsGraphExplorer({
             <BodsTree
               rows={rows}
               selectedId={selectedId}
-              onSelect={setSelectedId}
-              onToggleCollapse={toggleCollapse}
+              onSelect={selectFromText}
+              onToggleCollapse={toggleTreeCollapse}
               entityName={entityName}
               signalsByNode={signalMap}
             />

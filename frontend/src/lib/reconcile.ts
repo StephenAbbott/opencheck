@@ -214,6 +214,48 @@ export function personKey(s: Stmt): string | null {
   return `PERSON:${tokens.join("|")}|${birth.slice(0, 7)}`;
 }
 
+/**
+ * Fold a person group into the one group whose name says more (Phase 250).
+ *
+ * Registers spell a person out; Wikidata uses the name they are known by.
+ * Companies House files "MACKENZIE, Andrew Stewart", Wikidata "Andrew
+ * Mackenzie" — the same man, born December 1956 in both — and the equal-token
+ * key drew him twice on Shell's board. So a group whose name tokens are a
+ * **subset** of another group's, with the same birth month, joins it.
+ *
+ * The birth month is still required on both sides: this widens how names are
+ * compared, never what a merge rests on. Conservative on ambiguity — a name
+ * that fits inside two different fuller names ("Andrew Mackenzie" inside
+ * both "Andrew Stewart Mackenzie" and "Andrew James Mackenzie") joins
+ * neither, and a group needs at least two tokens of its own to fold at all.
+ * Mutates `groups`.
+ */
+export function foldPersonGroups(groups: Map<string, Stmt[]>): void {
+  const parsed = [...groups.keys()].map((key) => {
+    const body = key.slice("PERSON:".length);
+    const cut = body.lastIndexOf("|");
+    return { key, tokens: new Set(body.slice(0, cut).split("|")), month: body.slice(cut + 1) };
+  });
+  const moves: [string, string][] = [];
+  for (const g of parsed) {
+    if (g.tokens.size < 2) continue;
+    const supersets = parsed.filter(
+      (h) =>
+        h.key !== g.key &&
+        h.month === g.month &&
+        h.tokens.size > g.tokens.size &&
+        [...g.tokens].every((t) => h.tokens.has(t)),
+    );
+    if (supersets.length === 1) moves.push([g.key, supersets[0].key]);
+  }
+  for (const [from, to] of moves) {
+    const members = groups.get(from);
+    if (!members || !groups.has(to)) continue;
+    groups.set(to, [...groups.get(to)!, ...members]);
+    groups.delete(from);
+  }
+}
+
 export function reconcileBods(statements: Stmt[]): ReconcileResult {
   const stmts = statements ?? [];
   const entities = stmts.filter((s) => s.recordType === "entity" && s.statementId);
@@ -340,6 +382,7 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
     if (!k) continue; // not enough to merge on — left as its own node
     personGroups.set(k, [...(personGroups.get(k) ?? []), s]);
   }
+  foldPersonGroups(personGroups);
 
   for (const [key, members] of personGroups) {
     if (members.length < 2) continue;

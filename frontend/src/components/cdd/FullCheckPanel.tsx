@@ -33,6 +33,7 @@ import BodsGraphExplorer from "../BodsGraphExplorer";
 import { KnowabilityChainList } from "./KnowabilityChainList";
 import PanelSection from "../ui/PanelSection";
 import type { PanelError, PanelId } from "../../lib/panelErrors";
+import { networkIntro } from "../../lib/fullCheckHeader";
 
 type Stmt = Record<string, unknown>;
 
@@ -131,12 +132,16 @@ export default function FullCheckPanel({
         )}
         {statements && (
           <>
-            <p className="mb-3 text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
-              The wider corporate network connected to{" "}
-              <span className="font-medium text-oo-ink">{legalName ?? lei}</span>.
-              {savedStatements
-                ? " As saved: every record the check mapped. Expanding the network looks up today's records, so it is not offered here."
-                : " Run FullCheck to expand owners and controllers layer by layer."}
+            {/* Phase 250: one text node. The name used to sit in its own
+                styled <span>, and Chrome's accessibility tree split the
+                sentence round it — a tree reader heard "connected to . Run
+                FullCheck…". A sentence that must be heard whole is written
+                whole. */}
+            <p
+              data-testid="fullcheck-intro"
+              className="mb-3 text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]"
+            >
+              {networkIntro(legalName ?? lei, Boolean(savedStatements))}
             </p>
             <BodsGraphExplorer
               statements={statements}

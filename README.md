@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 249** — the EITI assessment card shows the stock exchange listing the company declared to EITI, verbatim and kept apart from PermID's primary listing.
+**Latest: Phase 250** — FullCheck's network risk chips are grouped to match the sentence, graph marks no longer collide, and Shell's owners and officers read at Fit with duplicate officers merged.
 
 → [Full development history](docs/status.md)
 
