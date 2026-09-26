@@ -255,6 +255,38 @@ test.describe("every page at 320px (Phase 241)", () => {
   }
 });
 
+test.describe("the header is one row on a phone report (Phase 251)", () => {
+  // On an iPhone (390px) a report page's header broke onto two lines: the mark
+  // on one, the search icon and the three links on the next. 360px is the
+  // narrowest common phone; below it (320) the row may wrap, and the Phase 241
+  // test above holds it to wrapping rather than clipping.
+  test.use({ viewport: { width: 360, height: 800 } });
+
+  test("mark, search icon and every nav link share one line", async ({ page }) => {
+    await page.goto(`/?lei=${BP}`);
+    await expect(page.getByRole("region", { name: "What this check found" })).toBeVisible({
+      timeout: 150_000,
+    });
+    const banner = page.getByRole("banner");
+    const mark = banner.getByRole("button", { name: "OpenCheck — back to homepage" });
+    const items = banner.getByRole("navigation", { name: "Site navigation" }).getByRole("button");
+    await expect(
+      items.filter({ has: page.locator("svg") }),
+      "the report page shows the search icon",
+    ).toHaveCount(1);
+    const markBox = (await mark.boundingBox())!;
+    const markMid = markBox.y + markBox.height / 2;
+    for (const item of await items.all()) {
+      const box = (await item.boundingBox())!;
+      expect(
+        Math.abs(box.y + box.height / 2 - markMid),
+        `"${(await item.getAttribute("aria-label")) ?? (await item.textContent())}" wrapped below the mark`,
+      ).toBeLessThanOrEqual(4);
+      expect(box.x + box.width, "a nav item is clipped").toBeLessThanOrEqual(360);
+    }
+  });
+});
+
 test("the arrow keys walk every check mode (Phase 241)", async ({ page }) => {
   await page.goto(`/?lei=${BP}`);
   await expect(page.getByRole("region", { name: "What this check found" })).toBeVisible({

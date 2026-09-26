@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 250** — FullCheck's network risk chips are grouped to match the sentence, graph marks no longer collide, and Shell's owners and officers read at Fit with duplicate officers merged.
+**Latest: Phase 251** — the header stays on one line on phones: the mark, search icon and Sources / API / Features now fit a single row from 360px wide.
 
 → [Full development history](docs/status.md)
 

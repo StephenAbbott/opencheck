@@ -65,20 +65,24 @@ export function SiteHeader({
                 width with the two ends pushed apart puts the mark at one edge
                 and the links at the other; from `md` the search field takes
                 the right-hand end and this reverts to sitting beside the
-                mark. */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 w-full justify-between md:w-auto md:justify-start">
+                mark.
+                Phase 251: below `sm` the mark, gaps and search button are
+                tightened so mark + search + three links fit one line from
+                360px (on a 390px iPhone they needed 369px of 358). At 320px
+                the row still wraps rather than clipping. */}
+            <div className="flex flex-wrap items-center gap-x-2.5 sm:gap-x-4 gap-y-1 w-full justify-between md:w-auto md:justify-start">
               <button
                 type="button"
                 onClick={onHome}
                 aria-label="OpenCheck — back to homepage"
-                className="flex items-center gap-2.5 hover:opacity-80 transition-opacity text-left"
+                className="flex items-center gap-2 sm:gap-2.5 hover:opacity-80 transition-opacity text-left"
               >
-                <OpenCheckIcon className="h-7 w-auto flex-shrink-0" />
-                <span className="font-head font-bold text-white leading-tight text-xl">
+                <OpenCheckIcon className="h-6 sm:h-7 w-auto flex-shrink-0" />
+                <span className="font-head font-bold text-white leading-tight text-lg sm:text-xl">
                   Open<span className="text-oo-mark-line">Check</span>
                 </span>
               </button>
-            <nav aria-label="Site navigation" className="flex flex-wrap items-center gap-x-4 sm:gap-x-5">
+            <nav aria-label="Site navigation" className="flex flex-wrap items-center gap-x-2.5 sm:gap-x-5">
               {/* Phones have no header field (it needs ~300px), so on a report
                   this is the search entry point — the row that used to sit
                   under the header is gone (Phase 245). */}
@@ -87,7 +91,7 @@ export function SiteHeader({
                   type="button"
                   onClick={onOpenSearchPanel}
                   aria-label="Search for another company or person"
-                  className="md:hidden inline-flex min-h-[44px] min-w-[36px] items-center justify-center text-white/80 hover:text-white"
+                  className="md:hidden inline-flex min-h-[44px] min-w-[32px] items-center justify-center text-white/80 hover:text-white"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     strokeWidth="2" strokeLinecap="round" aria-hidden="true">
