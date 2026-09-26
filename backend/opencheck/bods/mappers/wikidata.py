@@ -324,6 +324,11 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
             source_id="wikidata",
             local_id=person_qid,
             full_name=person_name,
+            # Phase 250: P569 at Wikidata's own precision (YYYY, YYYY-MM or
+            # YYYY-MM-DD). It is what lets FullCheck draw Companies House's
+            # "MACKENZIE, Andrew Stewart" and Wikidata's "Andrew Mackenzie"
+            # as one node — the person merge needs a name and a birth month.
+            birth_date=roleholder.get("birth_date"),
             identifiers=person_identifiers,
             source_url=f"https://www.wikidata.org/wiki/{person_qid}",
         )

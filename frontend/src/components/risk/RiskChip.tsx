@@ -224,8 +224,12 @@ export function RiskChip({
   interactive = true,
   selected = false,
   onSelect,
+  group,
 }: {
   signal: RiskSignal;
+  /** Phase 250: every instance of this code the chip stands for, `signal`
+   *  among them. Two or more draws "×N" and opens evidence for each one. */
+  group?: RiskSignal[];
   compact?: boolean;
   interactive?: boolean;
   /** Selectable mode: whether this chip is the one being explained. */
@@ -252,13 +256,21 @@ export function RiskChip({
   // referenced element whether or not it is rendered, and a visible-to-AT
   // copy in the document would be read a second time in browse mode, which
   // is the duplication this exists to remove.
-  const described = describedText(signal);
+  const count = group && group.length > 1 ? group.length : 1;
+  const described =
+    count > 1 ? `${count} instances. ${group!.map(describedText).join(" ")}` : describedText(signal);
   const description = <span id={descriptionId} hidden>{described}</span>;
   const chipContent = (
     <>
       <span aria-hidden className="text-oo-meta">{CONFIDENCE_GLYPH[signal.confidence] ?? "•"}</span>
       <span className="sr-only">{CONFIDENCE_LABEL[signal.confidence] ?? signal.confidence}: </span>
       <span>{presentation.label}</span>
+      {count > 1 && (
+        <>
+          <span aria-hidden className="tabular-nums">×{count}</span>
+          <span className="sr-only">, {count} instances</span>
+        </>
+      )}
     </>
   );
 
@@ -317,7 +329,11 @@ export function RiskChip({
       {description}
       {open && (
         <span className="basis-full">
-          <SignalEvidence lead={chipEvidence(signal)} />
+          {count > 1 ? (
+            group!.map((g, i) => <SignalEvidence key={i} lead={chipEvidence(g)} />)
+          ) : (
+            <SignalEvidence lead={chipEvidence(signal)} />
+          )}
         </span>
       )}
     </>

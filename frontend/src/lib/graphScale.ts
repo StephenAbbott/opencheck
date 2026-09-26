@@ -182,6 +182,83 @@ export interface WrapOptions {
   aspect?: number;
   colSep?: number;
   rowSep?: number;
+  /**
+   * Phase 250: the canvas's width and its tallest height, in px. Given, a
+   * rank is folded into however many columns lets "Fit" zoom furthest in —
+   * which can mean folding a rank narrower than `maxCols` — and only when
+   * the unfolded graph would fit below `FOLD_ZOOM`. Shell's 17 owners and
+   * officers were two rows of 8 at zoom 0.58; three rows of 6 fit at 0.8.
+   */
+  viewport?: { width: number; height: number };
+}
+
+/** Folding for the viewport only starts below this fit zoom. */
+export const FOLD_ZOOM = 0.9;
+/** Fit padding, per side, in px (`cy.fit(…, 32)`). */
+const FIT_PAD = 32;
+/** How far a node and its label reach round its centre, in graph units. */
+const REACH = { x: 70, up: 45, down: 110 };
+
+interface Extent {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+function extentOf(nodes: { x: number; y: number; w?: number }[]): Extent {
+  const e = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+  for (const n of nodes) {
+    const half = Math.max(REACH.x, (n.w ?? 0) / 2);
+    e.minX = Math.min(e.minX, n.x - half);
+    e.maxX = Math.max(e.maxX, n.x + half);
+    e.minY = Math.min(e.minY, n.y - REACH.up);
+    e.maxY = Math.max(e.maxY, n.y + REACH.down);
+  }
+  return e;
+}
+
+/** The zoom "Fit" would reach for a drawing `w` × `h` in `viewport`. */
+export function fitZoom(w: number, h: number, viewport: { width: number; height: number }): number {
+  return Math.min((viewport.width - 2 * FIT_PAD) / w, (viewport.height - 2 * FIT_PAD) / h);
+}
+
+/**
+ * Rows for folding `rank` so the whole drawing fits at the highest zoom,
+ * or 1 (leave it) when folding gains under 5% or the drawing already fits
+ * at `FOLD_ZOOM`. `extraH` is the height earlier folds have already added.
+ */
+function rowsForViewport(
+  rank: PlacedNode[],
+  all: PlacedNode[],
+  viewport: { width: number; height: number },
+  colSep: number,
+  rowSep: number,
+  extraH: number,
+): number {
+  const whole = extentOf(all);
+  const others = extentOf(all.filter((n) => !rank.includes(n)));
+  const xs = rank.map((n) => n.x);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const baseH = whole.maxY - whole.minY + extraH;
+  const zoomFor = (cols: number) => {
+    const rows = Math.ceil(rank.length / cols);
+    const half = ((Math.min(cols, rank.length) - 1) * colSep) / 2 + REACH.x;
+    const w = Math.max(others.maxX, cx + half) - Math.min(others.minX, cx - half);
+    return fitZoom(w, baseH + (rows - 1) * rowSep, viewport);
+  };
+  const flat = zoomFor(rank.length);
+  if (flat >= FOLD_ZOOM) return 1;
+  let bestCols = rank.length;
+  let best = flat;
+  for (let cols = rank.length - 1; cols >= 2; cols -= 1) {
+    const z = zoomFor(cols);
+    if (z > best * 1.01) {
+      best = z;
+      bestCols = cols;
+    }
+  }
+  return best > flat * 1.05 ? Math.ceil(rank.length / bestCols) : 1;
 }
 
 /**
@@ -195,7 +272,7 @@ export interface WrapOptions {
  */
 export function wrapWideRanks(
   nodes: PlacedNode[],
-  { maxCols = WRAP_MAX_COLS, aspect = 0, colSep = 140, rowSep = 150 }: WrapOptions = {},
+  { maxCols = WRAP_MAX_COLS, aspect = 0, colSep = 140, rowSep = 150, viewport }: WrapOptions = {},
 ): Map<string, { x: number; y: number }> {
   const pos = new Map(nodes.map((n) => [n.id, { x: n.x, y: n.y }]));
   const ranks = new Map<number, PlacedNode[]>();
@@ -205,14 +282,26 @@ export function wrapWideRanks(
   }
   const ys = [...ranks.keys()].sort((a, b) => a - b);
 
+  // How many rows a rank folds into: the Phase 243 rule (wider than
+  // `maxCols`, at the canvas's proportions), or — with a viewport — whichever
+  // fold lets Fit zoom furthest in, and never fewer rows than the old rule.
+  const foldRows = (rank: PlacedNode[], extraH: number): number => {
+    const legacy = rank.length > maxCols
+      ? Math.ceil(rank.length / colsFor(rank.length, maxCols, aspect, colSep, rowSep))
+      : 1;
+    if (!viewport) return legacy;
+    return Math.max(legacy, rowsForViewport(rank, nodes, viewport, sepFor(rank, colSep), rowSep, extraH));
+  };
+
   // Downward folds, top to bottom; each pushes everything under it down.
   let pushDown = 0;
   const shiftBelow = new Map<number, number>();
   for (const y of ys) {
     shiftBelow.set(y, pushDown);
     const rank = ranks.get(y)!;
-    if (rank.length <= maxCols || !rank.every((n) => n.leaf)) continue;
-    const rows = Math.ceil(rank.length / colsFor(rank.length, maxCols, aspect, colSep, rowSep));
+    if (!rank.every((n) => n.leaf) || rank.length < 3) continue;
+    const rows = foldRows(rank, pushDown);
+    if (rows <= 1) continue;
     placeRows(rank, rows, sepFor(rank, colSep), rowSep, 1, pos);
     pushDown += (rows - 1) * rowSep;
   }
@@ -222,8 +311,9 @@ export function wrapWideRanks(
   for (const y of [...ys].reverse()) {
     shiftAbove.set(y, pushUp);
     const rank = ranks.get(y)!;
-    if (rank.length <= maxCols || !rank.every((n) => n.root) || rank.every((n) => n.leaf)) continue;
-    const rows = Math.ceil(rank.length / colsFor(rank.length, maxCols, aspect, colSep, rowSep));
+    if (!rank.every((n) => n.root) || rank.every((n) => n.leaf) || rank.length < 3) continue;
+    const rows = foldRows(rank, pushDown + pushUp);
+    if (rows <= 1) continue;
     placeRows(rank, rows, sepFor(rank, colSep), rowSep, -1, pos);
     pushUp += (rows - 1) * rowSep;
   }
@@ -271,6 +361,39 @@ function placeRows(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Readable at Fit (Phase 250)
+// ---------------------------------------------------------------------------
+
+/** Node labels are drawn at this size in the graph's own units. */
+export const LABEL_FONT_PX = 11;
+/** The smallest a node label may render at Fit before the canvas acts. */
+export const READABLE_LABEL_PX = 9;
+/** Labels grow at most to this, in graph units: past it a two-line name no
+ *  longer fits the gap between rows and the labels start covering nodes. */
+export const LABEL_FONT_MAX_PX = 14;
+/** Room a label may take across, in graph units, at the base size. */
+export const LABEL_MAX_WIDTH = 120;
+
+/** Whether labels at `zoom` render below `READABLE_LABEL_PX`. */
+export function labelsUnreadable(zoom: number, font = LABEL_FONT_PX): boolean {
+  return font * zoom < READABLE_LABEL_PX - 0.05;
+}
+
+/**
+ * The label size, in graph units, that renders at `READABLE_LABEL_PX` at
+ * `zoom` — never below the base size, never above `LABEL_FONT_MAX_PX`.
+ *
+ * Shell PLC's FullCheck fits at 0.59: 11px labels render at 6.5px. Growing
+ * the label in graph units as the fit zooms out keeps what is drawn at
+ * reading size; the cap is where it would start to collide instead.
+ */
+export function labelFontFor(zoom: number): number {
+  if (!(zoom > 0)) return LABEL_FONT_PX;
+  const want = Math.ceil((READABLE_LABEL_PX / zoom) * 10) / 10;
+  return Math.min(LABEL_FONT_MAX_PX, Math.max(LABEL_FONT_PX, want));
+}
+
 /**
  * The canvas height that fits a laid-out graph of `bbox` at `width` without
  * leaving most of it empty — clamped, so a two-node graph is not a sliver and
@@ -305,6 +428,102 @@ export function hitBox(cx: number, cy: number, w: number, h: number): { left: nu
   const width = Math.max(MIN_TARGET_PX, w);
   const height = Math.max(MIN_TARGET_PX, h);
   return { left: cx - width / 2, top: cy - height / 2, width, height };
+}
+
+// ---------------------------------------------------------------------------
+// Marks that do not collide (Phase 250)
+// ---------------------------------------------------------------------------
+
+/**
+ * The drawn size of a signal badge on a node of screen radius `r`. The badge
+ * keeps a floor in pixels whatever the zoom (its type never drops below
+ * `MIN_BADGE_FONT_PX`), which is exactly why marks collide on a zoomed-out
+ * network: the nodes shrink and the marks do not. The width is estimated
+ * generously from the text, so a collision check built on it errs apart.
+ */
+export function signalPillSize(r: number, text: string, stacked: boolean): { fontPx: number; w: number; h: number } {
+  const badgePx = Math.max(18, r * 0.55);
+  const fontPx = Math.max(MIN_BADGE_FONT_PX, badgePx * 0.42);
+  const h = Math.max(badgePx * 0.9, fontPx + 6);
+  const floor = Math.max(stacked ? badgePx * 1.5 : badgePx * 1.8, fontPx * 2.4);
+  const w = Math.max(floor, fontPx * 0.72 * text.length + fontPx);
+  return { fontPx, w, h };
+}
+
+/** The drawn size of a collapse / group toggle ("−", "+132"). */
+export function togglePillSize(r: number, label: string): { fontPx: number; w: number; h: number } {
+  const h = Math.max(16, r * 0.42);
+  const fontPx = Math.max(MIN_BADGE_FONT_PX, h * 0.55);
+  const w = Math.max(h * 2, fontPx * (label.length * 0.62 + 1.4));
+  return { fontPx, w, h };
+}
+
+export interface Rect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** A mark's hit box, the node it belongs to, and which way it may move. */
+export interface MarkBox extends Rect {
+  key: string;
+  owner: string;
+  /** Signal badges sit above their node and move up; toggles hang below and move down. */
+  move: "up" | "down";
+}
+
+function overlaps(a: Rect, b: Rect, gap: number): boolean {
+  return (
+    a.left < b.left + b.width + gap &&
+    b.left < a.left + a.width + gap &&
+    a.top < b.top + b.height + gap &&
+    b.top < a.top + a.height + gap
+  );
+}
+
+/**
+ * Vertical offsets that keep every mark's hit box clear of every other mark
+ * and of every other node (Phase 250).
+ *
+ * After "+1 layer" on Shell PLC the canvas fits a network ten times wider at a
+ * third of the zoom: nodes 42px apart carrying badges 35px wide, packed
+ * shoulder to shoulder, and a group's "+174" pill across the next node and its
+ * badge. Moving nodes would need the zoom, which needs the layout — so the
+ * marks move instead, in screen space, after the fit: a badge rises clear of
+ * whatever it would cover, a toggle drops. Marks are placed top to bottom,
+ * left to right, so the result does not depend on model order. A mark never
+ * avoids its own node — it sits on that node's rim by design.
+ *
+ * Returns `key → dy` for the marks that moved.
+ */
+export function resolveMarkCollisions(
+  marks: MarkBox[],
+  obstacles: (Rect & { owner: string })[],
+  { gap = 2, maxSteps = 8 }: { gap?: number; maxSteps?: number } = {},
+): Map<string, number> {
+  const placed: (Rect & { owner: string; key?: string })[] = [];
+  const moved = new Map<string, number>();
+  const order = [...marks].sort((a, b) =>
+    Math.abs(a.top - b.top) > 1 ? a.top - b.top : a.left - b.left,
+  );
+  for (const m of order) {
+    let dy = 0;
+    for (let step = 0; step < maxSteps; step += 1) {
+      const at = { left: m.left, top: m.top + dy, width: m.width, height: m.height };
+      const hit =
+        placed.find((p) => overlaps(at, p, gap)) ??
+        obstacles.find((o) => o.owner !== m.owner && overlaps(at, o, gap));
+      if (!hit) break;
+      dy =
+        m.move === "up"
+          ? hit.top - gap - (m.top + m.height)
+          : hit.top + hit.height + gap - m.top;
+    }
+    if (dy !== 0) moved.set(m.key, dy);
+    placed.push({ left: m.left, top: m.top + dy, width: m.width, height: m.height, owner: m.owner, key: m.key });
+  }
+  return moved;
 }
 
 /**
@@ -375,4 +594,32 @@ export function collapsibleNodes(model: GraphModel, collapsed: Set<string>): Set
     if (computeVisibility(model, next).hidden.size > base) out.add(id);
   }
   return out;
+}
+
+/**
+ * The collapsed set with every collapsed ancestor of `id` opened, so the
+ * canvas draws `id` (Phase 250). Returns `collapsed` itself when nothing
+ * hides it, so a React state update is a no-op.
+ *
+ * The text version stopped following the canvas's collapse in Phase 250
+ * (Stephen, 26 Sept 2026: collapsing is a canvas control; the text lists
+ * every row) — so a row chosen there can name a node the canvas is hiding.
+ */
+export function revealIn(model: GraphModel, collapsed: Set<string>, id: string): Set<string> {
+  if (collapsed.size === 0) return collapsed;
+  const parents = new Map<string, string[]>();
+  for (const e of model.edges) (parents.get(e.target) ?? parents.set(e.target, []).get(e.target)!).push(e.source);
+  const ancestors = new Set<string>();
+  const stack = [...(parents.get(id) ?? [])];
+  while (stack.length) {
+    const u = stack.pop()!;
+    if (ancestors.has(u)) continue;
+    ancestors.add(u);
+    stack.push(...(parents.get(u) ?? []));
+  }
+  const open = [...collapsed].filter((c) => ancestors.has(c));
+  if (open.length === 0) return collapsed;
+  const next = new Set(collapsed);
+  for (const c of open) next.delete(c);
+  return next;
 }

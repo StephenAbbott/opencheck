@@ -243,7 +243,7 @@ async def test_fetch_survives_a_class_roots_timeout(monkeypatch) -> None:
             raise httpx.ReadTimeout("")
         if "/ownership-v2/" in cache_key:
             return {"results": {"bindings": [owner_row]}}
-        if "/roleholders/" in cache_key:
+        if "/roleholders-v2/" in cache_key:
             return {"results": {"bindings": []}}
         return {"results": {"bindings": [{
             "item": {"type": "uri", "value": f"{uri}Q244"},

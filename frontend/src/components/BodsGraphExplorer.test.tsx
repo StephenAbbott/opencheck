@@ -28,11 +28,18 @@ vi.mock("./BODSGraph", () => ({
   default: ({
     layer,
     onAddLayer,
+    onCollapsedChange,
   }: {
     layer?: { label: string; count: number | null; ariaLabel: string; disabled: boolean };
     onAddLayer?: () => void;
+    onCollapsedChange?: (next: Set<string>) => void;
   }) => (
     <div data-testid="canvas">
+      {onCollapsedChange && (
+        <button type="button" onClick={() => onCollapsedChange(new Set(["A"]))}>
+          Canvas: collapse A
+        </button>
+      )}
       {layer && onAddLayer && (
         <button
           type="button"
@@ -281,5 +288,63 @@ describe("focusing a statement from outside the graph", () => {
     await openTree(user);
 
     expect(screen.queryAllByRole("treeitem", { selected: true })).toHaveLength(0);
+  });
+});
+
+describe("Phase 250", () => {
+  const rel: Stmt = {
+    statementId: "r-ab",
+    recordType: "relationship",
+    recordDetails: {
+      subject: "B",
+      interestedParty: "A",
+      interests: [{ type: "shareholding", share: { exact: 60 } }],
+    },
+    source: { description: "GLEIF" },
+  };
+  const textSummary = () => screen.getByText(/^Read as text/);
+
+  it("collapsing on the canvas leaves every row in the text version", async () => {
+    const user = userEvent.setup();
+    render(<BodsGraphExplorer statements={[A, B, rel]} fullCheck signals={[]} />);
+    const before = textSummary().textContent;
+    expect(before).toMatch(/2 rows/);
+    await user.click(screen.getByRole("button", { name: "Canvas: collapse A" }));
+    expect(textSummary().textContent).toBe(before);
+  });
+
+  it("draws one chip per risk code, and the sentence counts the same chips", async () => {
+    const sig = (code: string, sid: string, kind?: "context") => ({
+      code,
+      confidence: "medium",
+      summary: `${code} on ${sid}`,
+      source_id: "opensanctions",
+      evidence: { subject_statement_id: sid },
+      ...(kind ? { kind } : {}),
+    });
+    expandLayer.mockResolvedValue({
+      bods: [C],
+      risk_signals: [
+        sig("OFFSHORE_LEAKS", "C"),
+        sig("OFFSHORE_LEAKS", "B"),
+        sig("RELATED_DEBARMENT", "C"),
+        sig("NON_EU_JURISDICTION", "C", "context"),
+        sig("NON_EU_JURISDICTION", "B", "context"),
+      ],
+      expanded: ["A", "B"],
+      count: 2,
+      truncated: false,
+    });
+    const user = userEvent.setup();
+    render(<BodsGraphExplorer statements={[A, B]} fullCheck signals={[]} />);
+    await addLayer(user);
+    expect(
+      screen.getByText(/FullCheck surfaced 2 risk signals across the wider network.*It also noted 1 structural observation/),
+    ).toBeInTheDocument();
+    const leaks = screen.getAllByRole("button", { name: /Offshore leaks/ });
+    expect(leaks).toHaveLength(1);
+    expect(leaks[0]).toHaveAccessibleName(/2 instances/);
+    expect(screen.getAllByRole("button", { name: /Outside EU/ })).toHaveLength(1);
+    expect(screen.getByText("Structural context:")).toBeInTheDocument();
   });
 });
