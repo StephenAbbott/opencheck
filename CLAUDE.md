@@ -1430,6 +1430,44 @@ dagre drew as two rows thousands of pixels wide — 3px labels at Fit.
 
 ---
 
+## Readable at Fit, marks that do not collide (Phase 250)
+
+Follow-ups to Phase 243 found on Shell PLC's FullCheck. `lib/graphScale.ts`
+(pure, pinned in `graphScale.test.ts`), `BODSGraph.tsx`,
+`BodsGraphExplorer.tsx`, `lib/signalKind.ts`, `lib/reconcile.ts`.
+
+- **Readable at Fit = labels render ≥ `READABLE_LABEL_PX` (9).** Three
+  levers, in order, inside the layout effect: (1) when a fit is unreadable,
+  `dense` turns on and sibling groups form on any rank wider than
+  `WRAP_MAX_COLS`, not only past 40 — a second layout pass; sticky while the
+  network grows, cleared when it shrinks; a badged node is still never
+  grouped. (2) `wrapWideRanks({ viewport })` folds a rank into whichever
+  column count lets Fit zoom furthest in (only when the unfolded fit is below
+  `FOLD_ZOOM`), which can fold a rank narrower than `WRAP_MAX_COLS`. (3)
+  `labelFontFor(zoom)` grows node labels in graph units up to
+  `LABEL_FONT_MAX_PX` (14); every layout starts from the stylesheet size
+  (`removeStyle`). Past the cap, a very wide graph can still render smaller —
+  a phone, or a rank that mixes parents and leaves (never folded).
+- **Marks are placed after the fit, in screen space.** Badges and toggles
+  keep a pixel floor while nodes shrink, so `resolveMarkCollisions` lifts a
+  signal badge / drops a toggle until its ≥24px hit box clears every other
+  mark and every other node (and flag); a lifted badge draws a thread to its
+  node. `signalPillSize` / `togglePillSize` are shared by the check and the
+  render — change the size in one place.
+- **The text version has its own fold state.** Canvas collapse no longer
+  removes rows from "Read as text" (Stephen, 26 Sept 2026); choosing a row
+  there calls `revealIn` to open whatever hides it on the canvas.
+- **Network risk chips are grouped by code** (`groupNetworkSignals`: risk,
+  then context on a "Structural context" row), so the chip count is the
+  sentence's count by construction; `RiskChip group=` draws "×N" and opens
+  every instance's evidence.
+- **People fold a shorter name into a fuller one** (`foldPersonGroups`) —
+  same birth month, token subset, exactly one candidate, ≥2 tokens. Wikidata
+  roleholders carry P569 at Wikidata's precision for this (year-only stays
+  `YYYY`, never `YYYY-01-01`).
+
+---
+
 ## Ended relationships in the risk engine (Phase 220)
 
 `risk.py` reads `bods/lifecycle.py` (`statement_lifecycle`) through two

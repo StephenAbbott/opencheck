@@ -626,6 +626,64 @@ describe("reconcileBods — people", () => {
   });
 });
 
+describe("reconcileBods — a shorter name inside a fuller one (Phase 250)", () => {
+  // Shell PLC's FullCheck, 25 Sept 2026: Wikidata's "Andrew Mackenzie" and
+  // "Wael Sawan" drew beside Companies House's "MACKENZIE, Andrew Stewart"
+  // and "SAWAN, Wael (W.)". Wikidata now publishes P569; the birth months
+  // below are what Wikidata and Companies House hold for them.
+  const people = (stmts: Stmt[]) => reconcileBods(stmts).statements.filter((s) => s.recordType === "person");
+
+  it("folds Wikidata's short name into the register's fuller one", () => {
+    const out = people([
+      person("ch-am", "MACKENZIE, Andrew Stewart", "1956-12", "UK Companies House"),
+      person("oc-am", "ANDREW STEWART MACKENZIE", "1956-12", "OpenCorporates"),
+      person("wd-am", "Andrew Mackenzie", "1956-12-20", "Wikidata"),
+      person("ch-ws", "SAWAN, Wael (W.)", "1974-07", "UK Companies House"),
+      person("wd-ws", "Wael Sawan", "1974-07", "Wikidata"),
+    ]);
+    expect(out).toHaveLength(2);
+    const am = out.find((p) => (p._sources as string[]).includes("OpenCorporates"))!;
+    expect((am._sources as string[]).sort()).toEqual(["OpenCorporates", "UK Companies House", "Wikidata"]);
+  });
+
+  it("still needs the birth month on both sides", () => {
+    expect(people([
+      person("ch", "MACKENZIE, Andrew Stewart", "1956-12", "UK Companies House"),
+      person("wd", "Andrew Mackenzie", undefined, "Wikidata"),
+    ])).toHaveLength(2);
+    expect(people([
+      person("ch", "MACKENZIE, Andrew Stewart", "1956-12", "UK Companies House"),
+      person("wd", "Andrew Mackenzie", "1956", "Wikidata"),
+    ])).toHaveLength(2);
+    expect(people([
+      person("ch", "MACKENZIE, Andrew Stewart", "1956-12", "UK Companies House"),
+      person("wd", "Andrew Mackenzie", "1956-11-02", "Wikidata"),
+    ])).toHaveLength(2);
+  });
+
+  it("joins neither when the short name fits two fuller ones", () => {
+    expect(people([
+      person("a", "MACKENZIE, Andrew Stewart", "1956-12", "UK Companies House"),
+      person("b", "MACKENZIE, Andrew James", "1956-12", "UK Companies House"),
+      person("wd", "Andrew Mackenzie", "1956-12-20", "Wikidata"),
+    ])).toHaveLength(3);
+  });
+
+  it("does not fold a one-token name", () => {
+    expect(people([
+      person("ch", "MACKENZIE, Andrew Stewart", "1956-12", "UK Companies House"),
+      person("wd", "Mackenzie", "1956-12", "Wikidata"),
+    ])).toHaveLength(2);
+  });
+
+  it("does not fold names that only overlap", () => {
+    expect(people([
+      person("ch", "MACKENZIE, Andrew Stewart", "1956-12", "UK Companies House"),
+      person("wd", "Andrew Mackenzie Smith", "1956-12", "Wikidata"),
+    ])).toHaveLength(2);
+  });
+});
+
 describe("reconcileBods — a match OpenCheck made, not an identifier (EITI)", () => {
   // PT Pertamina (Persero), 2026-09-10: the EITI Company Assessment statement
   // asserts no identifier and no jurisdiction, so it floated as a second node.

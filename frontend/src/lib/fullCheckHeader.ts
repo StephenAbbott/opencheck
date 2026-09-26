@@ -104,11 +104,16 @@ export function summaryParts(shape: NetworkShape, lead: ExpansionLead): string[]
 export function networkRiskSentence({
   subject,
   additional,
+  context = 0,
   hasRun,
   saved = false,
 }: {
   subject: number;
   additional: number;
+  /** Phase 250: distinct structural-context codes the expansion added. They
+   *  are drawn as their own chip row, so the sentence names them — otherwise
+   *  a reader counts the chips and gets a different number. */
+  context?: number;
   hasRun: boolean;
   /** Phase 217: a saved report's network cannot be expanded (expansion looks
    *  up today's records), so it never invites a run. */
@@ -126,17 +131,19 @@ export function networkRiskSentence({
     return `${kept} The wider network is not expanded in a saved report.`;
   }
   if (!hasRun) return `${quick} Run FullCheck to screen the wider network for risk.`;
+  const noted =
+    context > 0 ? ` It also noted ${plural(context, "structural observation")}, which are not risk findings.` : "";
   if (additional === 0) {
-    return subject === 0
+    return (subject === 0
       ? "FullCheck screened the wider network and found no risk signals, and QuickCheck flagged none on the subject."
       : `FullCheck screened the wider network and found nothing beyond the ${plural(
           subject,
           "signal",
-        )} QuickCheck flagged on the subject.`;
+        )} QuickCheck flagged on the subject.`) + noted;
   }
-  return subject === 0
+  return (subject === 0
     ? `FullCheck surfaced ${plural(additional, "risk signal")} across the wider network; QuickCheck flagged none on the subject.`
-    : `FullCheck surfaced ${plural(additional, "risk signal")} across the wider network, beyond the ${subject} QuickCheck flagged on the subject.`;
+    : `FullCheck surfaced ${plural(additional, "risk signal")} across the wider network, beyond the ${subject} QuickCheck flagged on the subject.`) + noted;
 }
 
 /** What the toolbar's single-layer control shows and announces. */
@@ -211,4 +218,12 @@ export function runHelper({
   const what = direction === "subsidiaries" ? "subsidiaries" : "owners and controllers";
   const who = registerHops && direction === "owners" ? "an LEI or a readable company number" : "an LEI";
   return `Expands ${what} to that depth, for companies with ${who}, capped at ${cap}.`;
+}
+
+/** The one sentence above the FullCheck canvas — a single string, so it
+ *  reaches the accessibility tree as one run of text (Phase 250). */
+export function networkIntro(name: string, saved: boolean): string {
+  return saved
+    ? `The wider corporate network connected to ${name}. As saved: every record the check mapped. Expanding the network looks up today's records, so it is not offered here.`
+    : `The wider corporate network connected to ${name}. Run FullCheck to expand owners and controllers layer by layer.`;
 }

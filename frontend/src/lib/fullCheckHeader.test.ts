@@ -14,6 +14,7 @@ import {
   expansionLead,
   layerControl,
   networkRiskSentence,
+  networkIntro,
   runHelper,
   summaryParts,
   type NetworkShape,
@@ -75,6 +76,17 @@ describe("summaryParts", () => {
 });
 
 describe("networkRiskSentence", () => {
+  it("names the structural observations the chip row draws (Phase 250)", () => {
+    expect(networkRiskSentence({ subject: 2, additional: 5, context: 2, hasRun: true })).toBe(
+      "FullCheck surfaced 5 risk signals across the wider network, beyond the 2 QuickCheck flagged on the subject. " +
+        "It also noted 2 structural observations, which are not risk findings.",
+    );
+    expect(networkRiskSentence({ subject: 0, additional: 0, context: 1, hasRun: true })).toMatch(
+      /found no risk signals.*It also noted 1 structural observation, which/,
+    );
+    expect(networkRiskSentence({ subject: 1, additional: 2, hasRun: true })).not.toMatch(/structural/);
+  });
+
   it("before a run, reports QuickCheck and names the action that widens it", () => {
     expect(networkRiskSentence({ subject: 1, additional: 0, hasRun: false })).toBe(
       "QuickCheck flagged 1 risk signal in the records gathered so far. " +
@@ -187,5 +199,14 @@ describe("no sentence ships a bare zero", () => {
 
   it.each(sentences)("%s", (sentence) => {
     expect(sentence).not.toMatch(/(^|\s)0(\s|$)/);
+  });
+});
+
+describe("networkIntro (Phase 250)", () => {
+  it("is one sentence with the name inside it", () => {
+    expect(networkIntro("SHELL PLC", false)).toBe(
+      "The wider corporate network connected to SHELL PLC. Run FullCheck to expand owners and controllers layer by layer.",
+    );
+    expect(networkIntro("SHELL PLC", true)).toMatch(/^The wider corporate network connected to SHELL PLC\. As saved/);
   });
 });

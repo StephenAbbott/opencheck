@@ -14,6 +14,18 @@ import {
   rovingTarget,
   shortSourceName,
   wrapWideRanks,
+  fitZoom,
+  labelFontFor,
+  labelsUnreadable,
+  resolveMarkCollisions,
+  revealIn,
+  signalPillSize,
+  togglePillSize,
+  LABEL_FONT_MAX_PX,
+  LABEL_FONT_PX,
+  READABLE_LABEL_PX,
+  WRAP_MAX_COLS,
+  type MarkBox,
   type PlacedNode,
 } from "./graphScale";
 
@@ -265,5 +277,113 @@ describe("collapsibleNodes", () => {
     expect(collapsibleNodes(lone, new Set()).has("owner0")).toBe(true);
     // A collapsed node stays toggleable, so it can be opened again.
     expect(collapsibleNodes(m, new Set(["owner1"])).has("owner1")).toBe(true);
+  });
+});
+
+describe("readable at Fit (Phase 250)", () => {
+  it("grows labels to render at the readable size, within the cap", () => {
+    // Shell PLC's FullCheck fitted at 0.59: 11px labels drew at 6.5px.
+    expect(labelsUnreadable(0.59)).toBe(true);
+    expect(labelsUnreadable(0.82)).toBe(false);
+    expect(labelFontFor(1)).toBe(LABEL_FONT_PX);
+    expect(labelFontFor(0.7) * 0.7).toBeGreaterThanOrEqual(READABLE_LABEL_PX);
+    expect(labelFontFor(0.3)).toBe(LABEL_FONT_MAX_PX);
+    expect(labelFontFor(0)).toBe(LABEL_FONT_PX);
+  });
+
+  it("groups Shell's officers once Fit cannot be read, and never a badged one", () => {
+    // 16 owners and officers sit on one rank: under the Phase 243 threshold
+    // (40), over the dense one (a rank that would need wrapping).
+    const model = shellShape({ owners: 16 });
+    const plain = findSiblingClusters(model);
+    expect(plain.some((c) => c.direction === "above")).toBe(false);
+    const dense = findSiblingClusters(model, { rankThreshold: WRAP_MAX_COLS, flagged: new Set(["owner0"]) });
+    const above = dense.find((c) => c.direction === "above")!;
+    expect(above.members).toHaveLength(15);
+    expect(above.members).not.toContain("owner0");
+  });
+});
+
+describe("wrapWideRanks with a viewport (Phase 250)", () => {
+  const row = (n: number, y: number, flags: { leaf: boolean; root: boolean }, id = "n"): PlacedNode[] =>
+    Array.from({ length: n }, (_, i) => ({ id: `${id}${y}-${i}`, x: i * 140, y, ...flags }));
+  const viewport = { width: 920, height: 640 };
+  const zoomOf = (nodes: PlacedNode[], pos: Map<string, { x: number; y: number }>) => {
+    const xs = nodes.map((n) => pos.get(n.id)!.x);
+    const ys = nodes.map((n) => pos.get(n.id)!.y);
+    return fitZoom(Math.max(...xs) - Math.min(...xs) + 140, Math.max(...ys) - Math.min(...ys) + 155, viewport);
+  };
+
+  it("folds Shell's owners and officers into rows Fit can read", () => {
+    // After the officers are grouped: 12 parties and the group box on one
+    // rank, SHELL PLC, and its subsidiaries' box — dagre's 180 between ranks.
+    const nodes = [
+      ...row(13, 0, { leaf: false, root: true }),
+      ...row(1, 180, { leaf: false, root: false }, "s"),
+      ...row(1, 360, { leaf: true, root: false }, "c"),
+    ];
+    const flat = zoomOf(nodes, new Map(nodes.map((n) => [n.id, { x: n.x, y: n.y }])));
+    const pos = wrapWideRanks(nodes, { viewport, colSep: 140, rowSep: 150 });
+    const rows = new Set(nodes.slice(0, 13).map((n) => pos.get(n.id)!.y)).size;
+    expect(rows).toBeGreaterThan(1);
+    const z = zoomOf(nodes, pos);
+    expect(labelsUnreadable(flat, LABEL_FONT_MAX_PX)).toBe(true);
+    expect(z).toBeGreaterThan(flat * 1.3);
+    expect(LABEL_FONT_MAX_PX * z).toBeGreaterThanOrEqual(READABLE_LABEL_PX);
+  });
+
+  it("leaves a rank alone when the drawing already fits", () => {
+    const nodes = [...row(4, 0, { leaf: false, root: true }), ...row(1, 250, { leaf: true, root: false }, "s")];
+    const pos = wrapWideRanks(nodes, { viewport });
+    for (const n of nodes) expect(pos.get(n.id)).toEqual({ x: n.x, y: n.y });
+  });
+});
+
+describe("resolveMarkCollisions (Phase 250)", () => {
+  const mark = (key: string, owner: string, left: number, top: number, move: "up" | "down" = "up"): MarkBox => ({
+    key, owner, left, top, width: 35, height: 24, move,
+  });
+
+  it("lifts the second of two badges packed shoulder to shoulder", () => {
+    const moved = resolveMarkCollisions([mark("a", "A", 0, 100), mark("b", "B", 20, 100)], []);
+    expect(moved.has("a")).toBe(false);
+    expect(moved.get("b")).toBe(-26); // clear of a, with the 2px gap
+  });
+
+  it("drops a group's +N pill off the neighbouring node, never off its own", () => {
+    const node = (owner: string, left: number) => ({ owner, left, top: 100, width: 50, height: 50 });
+    const moved = resolveMarkCollisions([mark("t", "C", 30, 110, "down")], [node("C", 0), node("N", 40)]);
+    expect(moved.get("t")).toBe(42); // below N's footprint, which ends at 150
+    expect(resolveMarkCollisions([mark("t", "C", 10, 110, "down")], [node("C", 0)]).size).toBe(0);
+  });
+
+  it("keeps marks apart in every direction after moving them", () => {
+    const marks = Array.from({ length: 6 }, (_, i) => mark(`m${i}`, `N${i}`, i * 12, 100));
+    const moved = resolveMarkCollisions(marks, []);
+    const boxes = marks.map((m) => ({ ...m, top: m.top + (moved.get(m.key) ?? 0) }));
+    for (let i = 0; i < boxes.length; i += 1)
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i], b = boxes[j];
+        const hit = a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
+        expect(hit).toBe(false);
+      }
+  });
+
+  it("sizes pills from their text, never below the type floor", () => {
+    expect(signalPillSize(12, "RSL", false).fontPx).toBe(MIN_BADGE_FONT_PX);
+    expect(signalPillSize(12, "RSL", false).w).toBeGreaterThan(signalPillSize(12, "N", false).w - 0.01);
+    expect(togglePillSize(12, "+174").w).toBeGreaterThan(togglePillSize(12, "−").w);
+  });
+});
+
+describe("revealIn (Phase 250)", () => {
+  it("opens every collapsed ancestor of a row chosen in the text version", () => {
+    const model: GraphModel = {
+      nodes: ["a", "b", "c", "d"].map(node),
+      edges: [edge("a", "b"), edge("b", "c"), edge("d", "d")],
+    };
+    const collapsed = new Set(["a", "b", "d"]);
+    expect([...revealIn(model, collapsed, "c")]).toEqual(["d"]);
+    expect(revealIn(model, collapsed, "a")).toBe(collapsed);
   });
 });

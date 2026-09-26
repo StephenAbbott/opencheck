@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import re
 from typing import Any
 
 import httpx
@@ -96,7 +97,7 @@ WHERE {
 # member, P6346 treasurer, P1037 director/manager) with no end-date qualifier.
 # Run concurrently with _FETCH_QUERY for entity subjects only.
 _ROLEHOLDER_QUERY = """
-SELECT ?roleLabel ?person ?personLabel ?start WHERE {
+SELECT ?roleLabel ?person ?personLabel ?start ?dob ?dobPrecision WHERE {
   {
     wd:%(qid)s p:P169 ?stmt .
     ?stmt ps:P169 ?person .
@@ -130,6 +131,12 @@ SELECT ?roleLabel ?person ?personLabel ?start WHERE {
   }
   FILTER(!BOUND(?end))
   FILTER(ISIRI(?person))
+  OPTIONAL {
+    ?person p:P569 ?dobStmt .
+    ?dobStmt wikibase:rank ?dobRank ; psv:P569 ?dobNode .
+    ?dobNode wikibase:timeValue ?dob ; wikibase:timePrecision ?dobPrecision .
+    FILTER(?dobRank != wikibase:DeprecatedRank)
+  }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 """
@@ -209,7 +216,10 @@ def _parse_roleholders(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
         start = _bv(row, "start")
 
         if person_qid not in by_person:
-            by_person[person_qid] = {"qid": person_qid, "name": name, "roles": []}
+            by_person[person_qid] = {"qid": person_qid, "name": name, "roles": [], "_dobs": set()}
+        dob = _dob_at_precision(_bv(row, "dob"), _bv(row, "dobPrecision"))
+        if dob:
+            by_person[person_qid]["_dobs"].add(dob)
 
         existing_labels = {r["label"] for r in by_person[person_qid]["roles"]}
         if role_label not in existing_labels:
@@ -217,7 +227,44 @@ def _parse_roleholders(bindings: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 {"label": role_label, "start": start}
             )
 
-    return list(by_person.values())
+    out: list[dict[str, Any]] = []
+    for person in by_person.values():
+        dobs = person.pop("_dobs")
+        # Two different birth dates on one item is a dispute, not a fact:
+        # publish none rather than pick one (Phase 250).
+        if len(dobs) == 1:
+            person["birth_date"] = next(iter(dobs))
+        out.append(person)
+    return out
+
+
+def _dob_at_precision(value: str | None, precision: str | None) -> str | None:
+    """A Wikidata P569 value at the precision Wikidata records it (Phase 250).
+
+    SPARQL hands every date back as a full ``xsd:dateTime`` — a birth known
+    only to the year arrives as ``1956-01-01T00:00:00Z``. Reading that as
+    1 January would invent a month, and the FullCheck person merge keys on
+    year **and month** (``reconcile.ts::personKey``), so a year-only date
+    must stay ``YYYY``. Precision 11 = day, 10 = month, 9 = year; anything
+    coarser (decade, century) is not a birth date worth publishing.
+    """
+    if not value:
+        return None
+    try:
+        prec = int(precision) if precision is not None else 11
+    except ValueError:
+        return None
+    m = re.match(r"^\+?(\d{4})-(\d{2})-(\d{2})", value)
+    if not m:
+        return None
+    year, month, day = m.groups()
+    if prec >= 11:
+        return f"{year}-{month}-{day}"
+    if prec == 10:
+        return f"{year}-{month}"
+    if prec == 9:
+        return year
+    return None
 
 
 # ---------------------------------------------------------------------
@@ -651,7 +698,7 @@ class WikidataAdapter(SourceAdapter):
         main_query = _FETCH_QUERY % {"qid": qid}
         rh_query   = _ROLEHOLDER_QUERY % {"qid": qid}
         own_query  = _OWNERSHIP_QUERY % {"qid": qid}
-        rh_cache_key  = f"{_CACHE_NS}/roleholders/{qid}"
+        rh_cache_key  = f"{_CACHE_NS}/roleholders-v2/{qid}"
         # v2 (Phase 240): the payload now carries statement ids, P580/P582
         # dates and owner countries. A cached v1 payload has none of them and
         # would keep serving Equinor its three concurrent 67% holders.

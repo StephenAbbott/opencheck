@@ -46,7 +46,16 @@ import {
   findSiblingClusters,
   hiddenByCluster,
   hitBox,
-  MIN_BADGE_FONT_PX,
+  resolveMarkCollisions,
+  labelFontFor,
+  labelsUnreadable,
+  LABEL_FONT_PX,
+  LABEL_MAX_WIDTH,
+  WRAP_MAX_COLS,
+  signalPillSize,
+  togglePillSize,
+  type MarkBox,
+  type Rect,
   readingOrder,
   rovingTarget,
   wrapWideRanks,
@@ -74,6 +83,7 @@ interface NodeOverlay {
   hiddenCount?: number;    // descendants hidden because this node is collapsed
   identityVerified?: boolean; // Companies House verified identity → tick at SE (Phase 203)
   clusterId?: string;         // a grouped-siblings node (Phase 243)
+  halfW?: number;             // screen half-width when wider than 2r (a cluster box)
 }
 
 // The graph's visual vocabulary moved to lib/graphStyle.ts in Phase 124, so
@@ -81,6 +91,55 @@ interface NodeOverlay {
 // pulls in Cytoscape). Re-exported here because RiskChip.test.ts and other
 // call sites have always imported SIGNAL_STYLE from this module.
 export { SIGNAL_STYLE } from "../lib/graphStyle";
+
+/** What a node's collapse / group toggle says. */
+function toggleLabel(item: NodeOverlay): string {
+  return item.collapsed ? (item.hiddenCount ? `+${item.hiddenCount}` : "+") : "−";
+}
+
+/**
+ * Every overlay mark's hit box and every node's footprint, for the collision
+ * pass (Phase 250). Uses the same size functions the render does, so what is
+ * checked is what is drawn.
+ */
+function overlayGeometry(
+  overlays: NodeOverlay[],
+  signalMap: Map<string, RiskSignal[]>,
+): { marks: MarkBox[]; nodes: (Rect & { owner: string })[] } {
+  const marks: MarkBox[] = [];
+  const nodes: (Rect & { owner: string })[] = [];
+  for (const item of overlays) {
+    const hw = item.halfW ?? item.r;
+    nodes.push({ owner: item.id, left: item.cx - hw, top: item.cy - item.r, width: hw * 2, height: item.r * 2 });
+    if (item.flagUrl && !item.clusterId) {
+      const bw = item.r * BADGE_W_FACTOR;
+      const bh = item.r * BADGE_H_FACTOR;
+      nodes.push({
+        owner: item.id,
+        left: item.cx + item.r * Math.cos(OVERLAY_ANGLE) - bw / 2,
+        top: item.cy - item.r * Math.sin(OVERLAY_ANGLE) - bh / 2,
+        width: bw,
+        height: bh,
+      });
+    }
+    const sigs = item.signals ?? signalMap.get(item.id);
+    if (sigs && sigs.length > 0) {
+      const worst = sigs.reduce(
+        (best, sg) => (signalStyle(sg.code).severity > signalStyle(best.code).severity ? sg : best),
+        sigs[0],
+      );
+      const text = sigs.length === 1 ? signalStyle(worst.code).label : `${sigs.length} ⚠`;
+      const { w, h } = signalPillSize(item.r, text, sigs.length > 1);
+      const box = hitBox(item.cx - item.r * Math.cos(OVERLAY_ANGLE), item.cy - item.r * Math.sin(OVERLAY_ANGLE), w, h);
+      marks.push({ key: `${item.id}::signal`, owner: item.id, move: "up", ...box });
+    }
+    if (item.hasChildren) {
+      const { w, h } = togglePillSize(item.r, toggleLabel(item));
+      marks.push({ key: `${item.id}::toggle`, owner: item.id, move: "down", ...hitBox(item.cx, item.cy + item.r, w, h) });
+    }
+  }
+  return { marks, nodes };
+}
 
 // ---------------------------------------------------------------------------
 // BODS GraphModel → Cytoscape elements
@@ -375,10 +434,30 @@ export default function BODSGraph({
 
   // Phase 243 — sibling clusters on wide ranks. A node the badges would mark
   // is never grouped: a finding inside a count is a finding nobody sees.
-  const clusters = useMemo(() => {
-    const flagged = new Set(model.nodes.filter((n) => signalMap.has(n.id)).map((n) => n.id));
-    return findSiblingClusters(model, { flagged });
-  }, [model, signalMap]);
+  // Phase 250 — and on any rank that would need wrapping, once a fit has
+  // shown the labels cannot be read at the default threshold ("dense").
+  // Sticky while the network grows (FullCheck expansion), cleared when it
+  // shrinks — a new subject starts from the default again.
+  const [dense, setDense] = useState(false);
+  const nodeCountRef = useRef(model.nodes.length);
+  useEffect(() => {
+    if (model.nodes.length < nodeCountRef.current) setDense(false);
+    nodeCountRef.current = model.nodes.length;
+  }, [model]);
+  const flaggedIds = useMemo(
+    () => new Set(model.nodes.filter((n) => signalMap.has(n.id)).map((n) => n.id)),
+    [model, signalMap],
+  );
+  const denseClusters = useMemo(
+    () => findSiblingClusters(model, { flagged: flaggedIds, rankThreshold: WRAP_MAX_COLS }),
+    [model, flaggedIds],
+  );
+  const clusters = useMemo(
+    () => (dense ? denseClusters : findSiblingClusters(model, { flagged: flaggedIds })),
+    [dense, denseClusters, model, flaggedIds],
+  );
+  const denseRef = useRef({ dense, more: denseClusters.length > clusters.length });
+  denseRef.current = { dense, more: denseClusters.length > clusters.length };
   const clusterById = useMemo(() => new Map(clusters.map((c) => [c.id, c])), [clusters]);
   const clusterRef = useRef(clusterById);
   clusterRef.current = clusterById;
@@ -456,6 +535,7 @@ export default function BODSGraph({
           cx:      pos.x * zoom + pan.x,
           cy:      pos.y * zoom + pan.y,
           r:       cluster ? (CLUSTER_NODE.height * zoom) / 2 : (node.width() * zoom) / 2,
+          halfW:   cluster ? (CLUSTER_NODE.width * zoom) / 2 : undefined,
           icon:    node.data("icon")    as string,
           flagUrl: node.data("flagUrl") as string | undefined,
           signals: signalMap.get(id),
@@ -542,6 +622,9 @@ export default function BODSGraph({
       });
     });
 
+    // Labels go back to their stylesheet size before every layout, so a size
+    // grown for one fit is never carried into the next (Phase 250).
+    cy.nodes().removeStyle("font-size text-max-width");
     const visEles = cy.elements().filter((e) => e.style("display") !== "none");
     visEles.layout(DAGRE_LAYOUT).run();
 
@@ -556,7 +639,11 @@ export default function BODSGraph({
         id: n.id(), x: n.position("x"), y: n.position("y"),
         leaf: !hasOut.has(n.id()), root: !hasIn.has(n.id()), w: n.width(),
       })),
-      { aspect: el.clientWidth / CANVAS_MAX_HEIGHT },
+      {
+        aspect: el.clientWidth / CANVAS_MAX_HEIGHT,
+        // Phase 250: fold for the canvas the graph will actually be fitted to.
+        viewport: { width: el.clientWidth, height: CANVAS_MAX_HEIGHT },
+      },
     );
     cy.batch(() => {
       visNodes.forEach((n) => {
@@ -571,6 +658,25 @@ export default function BODSGraph({
     el.style.height = `${canvasHeightFor({ w: bb.w, h: bb.h }, el.clientWidth)}px`;
     cy.resize();
     fitVisible(cy);
+
+    // Phase 250 — readable at Fit. First lever: group the groupable on every
+    // wide rank (a second pass, with `dense` set). Second: draw the labels
+    // larger in graph units so they render at reading size, up to a cap.
+    const { dense: isDense, more } = denseRef.current;
+    if (!isDense && more && labelsUnreadable(cy.zoom())) {
+      setDense(true);
+      return;
+    }
+    const people = visNodes.filter((n) => n.data("recordType") !== "cluster");
+    for (let pass = 0; pass < 2; pass += 1) {
+      const font = labelFontFor(cy.zoom());
+      if (font <= LABEL_FONT_PX && pass === 0) break;
+      people.style({
+        "font-size": font,
+        "text-max-width": `${Math.round(Math.min(LABEL_MAX_WIDTH * (font / LABEL_FONT_PX), 132))}px`,
+      });
+      fitVisible(cy);
+    }
     updateOverlaysRef.current?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model, signals, collapsed, clusters, expandedClusters]);
@@ -729,6 +835,13 @@ export default function BODSGraph({
     return keys;
   }, [overlays]);
   const activeKey = rovingKey && rovingKeys.includes(rovingKey) ? rovingKey : rovingKeys[0] ?? null;
+
+  // Phase 250 — marks keep a pixel floor while nodes shrink with the zoom, so
+  // on a wide network they piled into each other. Lift/drop them clear.
+  const markOffsets = useMemo(() => {
+    const { marks, nodes } = overlayGeometry(overlays, signalMap);
+    return resolveMarkCollisions(marks, nodes);
+  }, [overlays, signalMap]);
 
   function onOverlayKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     const current = (document.activeElement as HTMLElement | null)?.dataset?.rovingKey;
@@ -915,10 +1028,8 @@ export default function BODSGraph({
                 sigs[0]
               );
               const st = signalStyle(worst.code);
-              const badgePx = Math.max(18, item.r * 0.55);
-              const fontPx = Math.max(MIN_BADGE_FONT_PX, badgePx * 0.42);
-              const pillH = Math.max(badgePx * 0.9, fontPx + 6);
-              const pillW = Math.max(sigs.length === 1 ? badgePx * 1.8 : badgePx * 1.5, fontPx * 2.4);
+              const text = sigs.length === 1 ? st.label : `${sigs.length} ⚠`;
+              const { fontPx, w: pillW, h: pillH } = signalPillSize(item.r, text, sigs.length > 1);
               // The badge's own mark is 1-3 characters; its accessible name was
               // the RAW CODE ("RELATED_SANCTIONS_CONTROLLED: ..."), which is a
               // backend constant, not a label. RISK_PRESENTATION already holds
@@ -930,8 +1041,18 @@ export default function BODSGraph({
               // One button whatever the count (Phase 243 merged the single-
               // and stacked-badge buttons). Its box is at least 24px square
               // (WCAG 2.5.8) and transparent; the pill inside keeps its size.
-              const box = hitBox(sigCx, sigCy, pillW, pillH);
+              // Phase 250: lifted clear of any mark or node it would cover.
+              const lift = markOffsets.get(key) ?? 0;
+              const box = hitBox(sigCx, sigCy + lift, pillW, pillH);
               sigBadge = (
+                <>
+                {lift !== 0 && (
+                  // A lifted badge keeps a thread to the node it belongs to.
+                  <span aria-hidden="true" style={{
+                    position: "absolute", left: sigCx - 0.75, width: 1.5,
+                    top: sigCy + lift, height: -lift, background: st.border, opacity: 0.7,
+                  }}/>
+                )}
                 <button
                   type="button"
                   aria-label={tooltip}
@@ -940,7 +1061,7 @@ export default function BODSGraph({
                   onFocus={() => onRovingFocus(key, item)}
                   onClick={() =>
                     setSignalTooltip((prev) =>
-                      prev?.id === item.id ? null : { id: item.id, x: sigCx, y: sigCy, text: tooltip }
+                      prev?.id === item.id ? null : { id: item.id, x: sigCx, y: box.top + box.height / 2, text: tooltip }
                     )
                   }
                   className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oo-blue"
@@ -964,9 +1085,10 @@ export default function BODSGraph({
                     fontSize: fontPx, fontWeight: 700, color: st.text,
                     boxShadow: "0 1px 3px rgba(0,0,0,0.2)", whiteSpace: "nowrap", padding: `0 ${fontPx * 0.5}px`,
                   }}>
-                    {sigs.length === 1 ? st.label : `${sigs.length} ⚠`}
+                    {text}
                   </span>
                 </button>
+                </>
               );
             }
 
@@ -975,13 +1097,11 @@ export default function BODSGraph({
             // keeps the drawn size.
             let toggle: React.ReactNode = null;
             if (item.hasChildren) {
-              const tp = Math.max(16, item.r * 0.42);
-              const fontPx = Math.max(MIN_BADGE_FONT_PX, tp * 0.55);
-              const label = item.collapsed ? (item.hiddenCount ? `+${item.hiddenCount}` : "+") : "−";
+              const label = toggleLabel(item);
+              const { fontPx, w: pillW, h: tp } = togglePillSize(item.r, label);
               const cluster = item.clusterId ? clusterById.get(item.clusterId) : undefined;
-              const pillW = Math.max(tp * 2, fontPx * (label.length * 0.62 + 1.4));
-              const box = hitBox(item.cx, item.cy + item.r, pillW, tp);
               const key = `${item.id}::toggle`;
+              const box = hitBox(item.cx, item.cy + item.r + (markOffsets.get(key) ?? 0), pillW, tp);
               toggle = (
                 <button
                   type="button"

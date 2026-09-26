@@ -57,3 +57,44 @@ export function partitionByKind(
   }
   return [risk, context];
 }
+
+/** One chip's worth of signals: every instance of one code (Phase 250). */
+export interface SignalGroup {
+  code: string;
+  /** The instance the chip shows: the most confident, first on ties. */
+  lead: RiskSignal;
+  /** Every instance, in input order — the chip's evidence lists them all. */
+  signals: RiskSignal[];
+}
+
+const CONFIDENCE_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 };
+
+/**
+ * Group signals by code, in first-seen order.
+ *
+ * FullCheck's Network risk box said "5 risk signals" over twelve chips, three
+ * of them "Outside EU/EEA": the sentence counted distinct risk codes
+ * (`riskFindingCount`), the chips drew one per instance, and two of the codes
+ * drawn were context, which the sentence does not count. Grouping here is the
+ * same rule `riskFindingCount` applies, so a chip row built from
+ * `groupSignalsByCode(risk)` has exactly `riskFindingCount(risk)` chips.
+ */
+export function groupSignalsByCode(signals: RiskSignal[]): SignalGroup[] {
+  const groups = new Map<string, SignalGroup>();
+  for (const sig of signals) {
+    const g = groups.get(sig.code);
+    if (!g) {
+      groups.set(sig.code, { code: sig.code, lead: sig, signals: [sig] });
+      continue;
+    }
+    g.signals.push(sig);
+    if ((CONFIDENCE_RANK[sig.confidence] ?? 0) > (CONFIDENCE_RANK[g.lead.confidence] ?? 0)) g.lead = sig;
+  }
+  return [...groups.values()];
+}
+
+/** Risk groups then context groups — what the Network risk box draws. */
+export function groupNetworkSignals(signals: RiskSignal[]): { risk: SignalGroup[]; context: SignalGroup[] } {
+  const [risk, context] = partitionByKind(signals);
+  return { risk: groupSignalsByCode(risk), context: groupSignalsByCode(context) };
+}
