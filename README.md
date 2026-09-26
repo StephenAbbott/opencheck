@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 249** — the EITI assessment card shows the stock exchange listing the company declared to EITI, verbatim and kept apart from PermID's primary listing.
+**Latest: Phase 251** — the header stays on one line on phones: the mark, search icon and Sources / API / Features now fit a single row from 360px wide.
 
 → [Full development history](docs/status.md)
 
