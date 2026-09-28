@@ -2438,15 +2438,24 @@ def _non_eu_jurisdiction_signal(
             )
     if not non_eu:
         return None
-    # Pull a short, deduped list of country codes for the summary.
-    codes = sorted({m["code"] for m in non_eu})
     # Phase 220: a jurisdiction reached only through an ended link still
     # counts — and the signal says so, naming the ended links that reach it.
     via_ended_only = upstream - _upstream_entity_ids(
         subject_id, bods, current_only=True
     )
+    for m in non_eu:
+        if m["statement_id"] in via_ended_only:
+            # Present only when true, like the Phase 220 keys, so a
+            # current-only signal's evidence is unchanged.
+            m["via_ended_only"] = True
+    # Phase 259: the qualifier is about a COUNTRY the chain reaches only
+    # through ended links. Apple's SEC EDGAR bundle has Vanguard Capital
+    # Management (US, current) and The Vanguard Group (US, ended); the chain
+    # reaches the US through a current holding, so it must not read
+    # "(including ended relationships) … US".
+    ended_only_codes = _ended_only_codes(non_eu)
     ended_ids: list[str] = []
-    if any(m["statement_id"] in via_ended_only for m in non_eu):
+    if ended_only_codes:
         ended = _ended_relationship_ids(bods)
         _resolve = _refs_resolver(bods)
         for stmt in bods:
@@ -2455,7 +2464,6 @@ def _non_eu_jurisdiction_signal(
             subj, ip, _ = _relationship_endpoints(stmt, _resolve)
             if ip in via_ended_only and (subj == subject_id or subj in upstream):
                 ended_ids.append(_statement_id(stmt))
-    qualifier = f" ({INCLUDING_ENDED})" if ended_ids else ""
     # NB: this is the standalone signal and stays bundle-wide — it reports
     # "the chain touches these jurisdictions", which is a different
     # question from AMLA Article 12(1)(b). The *condition* used by the
@@ -2465,19 +2473,83 @@ def _non_eu_jurisdiction_signal(
         code=NON_EU_JURISDICTION,
         confidence="low",
         kind="context",
-        summary=(
-            f"Ownership chain{qualifier} reaches jurisdictions outside the "
-            "EU/EEA: "
-            + ", ".join(codes)
-            + ". Structural context, not a risk finding — neither the AMLA "
-            "CDD RTS nor AMLR Annex III treats non-EU status as a risk "
-            "factor in itself. Contributes to AMLA Article 12(1) condition "
-            "(b) only where it appears on the layered ownership path."
+        summary=_non_eu_summary(
+            sorted({m["code"] for m in non_eu}), qualified=bool(ended_ids)
         ),
         source_id=source_id,
         hit_id=hit_id,
         evidence={"jurisdictions": non_eu, **_ended_evidence(ended_ids)},
     )
+
+
+def _ended_only_codes(jurisdictions: Iterable[dict[str, Any]]) -> set[str]:
+    """Country codes every entry for which is reached only via ended links."""
+    current: set[str] = set()
+    ended: set[str] = set()
+    for m in jurisdictions:
+        code = (m.get("code") or "").upper()
+        if not code:
+            continue
+        (ended if m.get("via_ended_only") else current).add(code)
+    return ended - current
+
+
+def _non_eu_summary(codes: list[str], *, qualified: bool) -> str:
+    qualifier = f" ({INCLUDING_ENDED})" if qualified else ""
+    return (
+        f"Ownership chain{qualifier} reaches jurisdictions outside the "
+        "EU/EEA: "
+        + ", ".join(codes)
+        + ". Structural context, not a risk finding — neither the AMLA "
+        "CDD RTS nor AMLR Annex III treats non-EU status as a risk "
+        "factor in itself. Contributes to AMLA Article 12(1) condition "
+        "(b) only where it appears on the layered ownership path."
+    )
+
+
+def merge_non_eu_jurisdiction(
+    incumbent: dict[str, Any], new: dict[str, Any]
+) -> dict[str, Any]:
+    """Collapse two sources' NON_EU_JURISDICTION notes into one (Phase 259).
+
+    The note fired once per source that deepened, so a US company read "…
+    reaches jurisdictions outside the EU/EEA: US" from Wikidata and again
+    from SEC EDGAR. ``_merge_signals`` now keys the code globally and calls
+    this: every source's jurisdictions are pooled (one entry per statement,
+    so every graph badge stays), the sources that reported it ride along in
+    ``evidence.reported_by``, and "including ended relationships" survives
+    only while some country is reached through ended links alone, in every
+    source that reached it.
+    """
+    seen: set[str] = set()
+    pooled: list[dict[str, Any]] = []
+    reported_by: list[str] = []
+    ended_ids: set[str] = set()
+    for sig in (incumbent, new):
+        ev = sig.get("evidence") or {}
+        for src in ev.get("reported_by") or [sig.get("source_id") or ""]:
+            if src and src not in reported_by:
+                reported_by.append(src)
+        for m in ev.get("jurisdictions") or ():
+            sid = m.get("statement_id") if isinstance(m, dict) else None
+            if sid and sid not in seen:
+                seen.add(sid)
+                pooled.append(dict(m))
+        ended_ids.update(ev.get("ended_relationship_statement_ids") or ())
+    if not pooled:
+        return new
+    qualified = bool(_ended_only_codes(pooled)) and bool(ended_ids)
+    merged = dict(incumbent)
+    merged["summary"] = _non_eu_summary(
+        sorted({(m.get("code") or "").upper() for m in pooled if m.get("code")}),
+        qualified=qualified,
+    )
+    merged["evidence"] = {
+        "jurisdictions": pooled,
+        "reported_by": reported_by,
+        **_ended_evidence(ended_ids if qualified else ()),
+    }
+    return merged
 
 
 def _trust_condition_met(

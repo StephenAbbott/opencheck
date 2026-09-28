@@ -66,6 +66,26 @@ export function signalSubjectKey(signal: RiskSignal): string {
   return "self";
 }
 
+/**
+ * The sources that reported a signal.
+ *
+ * Usually its one `source_id`. A code the backend collapses across sources
+ * into a single signal — `NON_EU_JURISDICTION` since Phase 259, one note per
+ * lookup instead of one per source — lists every contributing source in
+ * `evidence.reported_by`, and those are the sources that said it: counting
+ * `source_id` alone would turn "reported by Wikidata and SEC EDGAR" into
+ * "reported by one source".
+ */
+export function signalSourceIds(signal: RiskSignal): string[] {
+  const e = (signal.evidence ?? {}) as Record<string, unknown>;
+  const reportedBy = e.reported_by;
+  if (Array.isArray(reportedBy)) {
+    const ids = reportedBy.filter((x): x is string => typeof x === "string" && x !== "");
+    if (ids.length > 0) return [...new Set(ids)];
+  }
+  return signal.source_id ? [signal.source_id] : [];
+}
+
 const CONFIDENCE_RANK: Record<string, number> = { high: 2, medium: 1, low: 0 };
 
 /**
@@ -132,7 +152,9 @@ function evidenceFor(
   const sourceIds: string[] = [];
   for (const s of signals) {
     if (s.code !== best.code || signalSubjectKey(s) !== subject) continue;
-    if (s.source_id && !sourceIds.includes(s.source_id)) sourceIds.push(s.source_id);
+    for (const id of signalSourceIds(s)) {
+      if (!sourceIds.includes(id)) sourceIds.push(id);
+    }
   }
 
   // Oldest, and only when every contributing source reported one.

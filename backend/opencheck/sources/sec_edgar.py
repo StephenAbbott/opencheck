@@ -43,6 +43,7 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .edgar_codes import EDGAR_CODES, edgar_country
 from .schemas import validate_raw
 from .schemas.sec_edgar import EDGARBundle
 
@@ -106,21 +107,30 @@ _RETRY_BACKOFF_BASE = 1.0  # seconds; doubled on each attempt
 _RETRY_BACKOFF_MAX = 8.0  # cap, regardless of Retry-After or backoff
 _RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
 
-# EDGAR citizenship/organisation codes → ISO 3166-1 alpha-2.
-_US_STATES: frozenset[str] = frozenset({
-    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-    "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-    "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-    "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-    "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-    "DC",
-})
-
-_EDGAR_CITIZENSHIP_TO_ISO: dict[str, str] = {
-    "X1": "US",   # US Person
-    "X2": "CA",   # Canadian person
-    **{state: "US" for state in _US_STATES},
+# EDGAR citizenship/organisation codes → ISO 3166-1 alpha-2: the SEC's full
+# state-and-country table since Phase 259 (``edgar_codes.py``). The table
+# this replaced knew only X1, the states and X2, which it read as Canada —
+# X2 is Burkina Faso — so TCI Fund Management and Christopher Hohn (X0,
+# United Kingdom) carried no nationality at all.
+_EDGAR_NAME_TO_CODE: dict[str, str] = {
+    name.upper(): code for code, (_iso, name) in EDGAR_CODES.items()
 }
+
+
+def _edgar_citizenship(raw: str) -> tuple[str, str]:
+    """``(iso_alpha2, name)`` for a ``citizenshipOrOrganization`` value.
+
+    An EDGAR code first ("X0", "DE"); some filers write the SEC's name
+    instead ("UNITED KINGDOM", "Delaware"), which is looked up in the same
+    table. Anything else is ``("", "")`` — never a guess.
+    """
+    raw = (raw or "").strip()
+    iso, name = edgar_country(raw)
+    if iso or name:
+        return iso, name
+    code = _EDGAR_NAME_TO_CODE.get(raw.upper())
+    return edgar_country(code) if code else ("", "")
+
 
 # typeOfReportingPerson codes that indicate a natural person.
 _INDIVIDUAL_CODES: frozenset[str] = frozenset({"IN"})
@@ -545,7 +555,7 @@ def _parse_reporter_element(elem: ET.Element) -> dict[str, Any] | None:
     reporter_cik = _xml_text(elem.find(_ns("reportingPersonCIK"))).lstrip("0") or ""
     type_code = _xml_text(elem.find(_ns("typeOfReportingPerson")))
     citizenship_raw = _xml_text(elem.find(_ns("citizenshipOrOrganization")))
-    citizenship_iso = _EDGAR_CITIZENSHIP_TO_ISO.get(citizenship_raw.upper(), "")
+    citizenship_iso, citizenship_name = _edgar_citizenship(citizenship_raw)
 
     def _float(tag_name: str) -> float | None:
         raw = _xml_text(elem.find(_ns(tag_name)))
@@ -562,6 +572,7 @@ def _parse_reporter_element(elem: ET.Element) -> dict[str, Any] | None:
         "type_code": type_code,
         "citizenship_raw": citizenship_raw,
         "citizenship_iso": citizenship_iso,
+        "citizenship_name": citizenship_name,
         "is_individual": type_code in _INDIVIDUAL_CODES,
         "percent_of_class": _float("percentOfClass"),
         "sole_voting_power": _float("soleVotingPower"),
@@ -591,7 +602,7 @@ def _parse_13g_reporter_element(
     reporter_cik = _xml_text(elem.find(ntag("reportingPersonCIK"))).lstrip("0") or ""
     type_code = _xml_text(elem.find(ntag("typeOfReportingPerson")))
     citizenship_raw = _xml_text(elem.find(ntag("citizenshipOrOrganization")))
-    citizenship_iso = _EDGAR_CITIZENSHIP_TO_ISO.get(citizenship_raw.upper(), "")
+    citizenship_iso, citizenship_name = _edgar_citizenship(citizenship_raw)
 
     def _float_direct(tag_name: str) -> float | None:
         el = elem.find(ntag(tag_name))
@@ -625,6 +636,7 @@ def _parse_13g_reporter_element(
         "type_code": type_code,
         "citizenship_raw": citizenship_raw,
         "citizenship_iso": citizenship_iso,
+        "citizenship_name": citizenship_name,
         "is_individual": type_code in _INDIVIDUAL_CODES,
         "percent_of_class": _float_direct("classPercent"),
         "sole_voting_power": _float_nested("soleVotingPower"),
@@ -953,10 +965,22 @@ class SecEdgarAdapter(SourceAdapter):
                 if filed > latest_filing_date:
                     latest_filing_date = filed
 
-                for reporter in parsed.get("reporters") or []:
+                reporters = parsed.get("reporters") or []
+                for reporter in reporters:
                     raw_records.append(
                         {
                             "reporter": reporter,
+                            # Phase 259: the other reporting persons on the
+                            # same filing. A joint filing's cover pages can
+                            # each report the SAME shares (TCI Fund
+                            # Management and Christopher Hohn, 8.21% each,
+                            # of one Moody's stake), so the mapper says so
+                            # rather than let two 8.21% edges read as 16.42%.
+                            "joint_with": [
+                                other.get("name") or ""
+                                for other in reporters
+                                if other is not reporter and other.get("name")
+                            ],
                             "issuer": parsed.get("issuer", {}),
                             "filer_cik": parsed.get("filer_cik", ""),
                             "filing_url": xml_url,

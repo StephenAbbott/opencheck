@@ -2351,9 +2351,37 @@ any US issuer, and production said "answered, no record" every time.
   The reporter key's name now goes through the same normaliser too: JPMorgan
   filed a McDonald's 13G as "JPMORGAN CHASE & CO" and its amendment as
   "JPMORGAN CHASE & CO.", and both were kept.
-- Not done: EDGAR's `X0`-style country codes (X0 = United Kingdom) are not in
-  `_EDGAR_CITIZENSHIP_TO_ISO`, so TCI and Hohn carry no nationality; and joint
-  filers are drawn as parallel shareholdings, not as a control chain.
+- **Phase 259 (the "SEC EDGAR data quality issues" ticket):**
+  - **EDGAR's country codes come from the SEC's table**, in
+    `sources/edgar_codes.py` (`EDGAR_CODES`, `edgar_country`). The old map knew
+    X1, the states and **X2, which it read as Canada — X2 is Burkina Faso**
+    (Canada is Z4, provinces A0–B0). X0 = United Kingdom, so TCI and Hohn are
+    GB now. Guam / Puerto Rico / US Virgin Islands keep their own ISO codes;
+    Netherlands Antilles (P8) and Unknown (XX) carry a name alone, never a
+    stand-in code. A filer that writes the SEC's name ("Delaware") is looked
+    up in the same table. `tests/fixtures/sec_edgar/edgar_state_country_codes.json`
+    is the published table verbatim; the test fails if a code or name drifts.
+  - **Joint filings stay as filed** (Stephen, 28 Sept 2026): one relationship
+    per reporting person, no control chain read out of the free-text items,
+    and the interest's `details` say "Reported in one joint filing with …;
+    holdings in a joint filing can be the same shares reported for each
+    person, so they are not added together". `joint_with` rides on each
+    filing record.
+  - **`NON_EU_JURISDICTION` is one note per lookup.** It is in
+    `_STRUCTURAL_SIGNAL_CODES` with `risk.merge_non_eu_jurisdiction` as its
+    resolver, which POOLS every source's `evidence.jurisdictions` (so every
+    badge stays) and names the sources in `evidence.reported_by`. The MCP
+    rows, the PDF/Markdown signal line and the frontend's corroboration count
+    (`signalEvidence.signalSourceIds`) read `reported_by`; anything counting
+    `source_id` alone would under-count. "Including ended relationships" is
+    now per COUNTRY: a jurisdiction entry reached only through ended links
+    carries `via_ended_only: true`, and the qualifier survives only for a
+    country that no current link, in any source, reaches — Apple's SEC
+    EDGAR bundle reached the US through Vanguard Capital Management's
+    current holding and still said "(including ended relationships)"
+    because The Vanguard Group's exit filing was also US. `/signalstats`
+    credits the merged note to its first source only.
+  - Form 13F institutional holders are a separate, later phase.
 
 ---
 

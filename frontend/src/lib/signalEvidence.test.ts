@@ -5,6 +5,7 @@ import {
   corroborationClause,
   evidenceFooter,
   evidenceForCode,
+  signalSourceIds,
   splitEvidenceSources,
 } from "./signalEvidence";
 import type { RiskSignal } from "./api";
@@ -273,5 +274,32 @@ describe("evidenceFooter", () => {
     );
     expect(evidenceFooter(lead(1, null))).toBe("Reported by one source.");
     expect(evidenceFooter(lead(0, null))).toBe("");
+  });
+});
+
+describe("signalSourceIds (Phase 259)", () => {
+  it("reads evidence.reported_by for a note the backend collapsed across sources", () => {
+    // NON_EU_JURISDICTION is one note per lookup since Phase 259; the sources
+    // that reported it ride in evidence.reported_by, and the box must still
+    // say two sources reported it, not one.
+    const merged = sig({
+      code: "NON_EU_JURISDICTION",
+      source_id: "wikidata",
+      evidence: {
+        jurisdictions: [{ statement_id: "E-US", code: "US" }],
+        reported_by: ["wikidata", "sec_edgar"],
+      },
+    });
+    expect(signalSourceIds(merged)).toEqual(["wikidata", "sec_edgar"]);
+    const ev = evidenceForCode([merged], "NON_EU_JURISDICTION");
+    expect(ev?.sourceIds).toEqual(["wikidata", "sec_edgar"]);
+    expect(ev?.sourceCount).toBe(2);
+  });
+
+  it("falls back to source_id, and ignores junk in reported_by", () => {
+    expect(signalSourceIds(sig({}))).toEqual(["opensanctions"]);
+    expect(signalSourceIds(sig({ evidence: { reported_by: [] } }))).toEqual(["opensanctions"]);
+    expect(signalSourceIds(sig({ evidence: { reported_by: [3, ""] } }))).toEqual(["opensanctions"]);
+    expect(signalSourceIds(sig({ source_id: "" }))).toEqual([]);
   });
 });

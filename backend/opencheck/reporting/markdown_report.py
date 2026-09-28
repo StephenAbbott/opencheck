@@ -26,6 +26,7 @@ from ..lei_registration import report_value as lei_registration_value
 from ..listing import describe as listing_line
 from .diagram import source_diagram
 from .html_report import (
+    _signal_source_name,
     _CHECKS_CLEAR,
     _CONTEXT_NOTE,
     _DISPOSITION_LABELS,
@@ -309,8 +310,7 @@ def _degraded_lines(report: dict[str, Any]) -> list[str]:
 
 def _signal_line(sig: dict[str, Any], reg: Any) -> str:
     conf = sig.get("confidence", "medium")
-    src = reg.get(sig.get("source_id", ""))
-    src_name = src.info.name if src else (sig.get("source_id") or "OpenCheck risk engine")
+    src_name = _signal_source_name(sig, reg)
     label = _signal_label(sig.get("code", ""))
     return f"- **{label}** ({conf}) — {sig.get('summary') or ''} — *{src_name}*"
 
