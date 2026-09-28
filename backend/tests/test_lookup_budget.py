@@ -397,8 +397,10 @@ async def test_discretionary_gleif_calls_leave_the_reserve_to_lookups(monkeypatc
                 await t.acquire()
         # 3 sent + 2 reserved = the limit: a discretionary call is refused
         # at once, without waiting and without sending …
-        with gt.discretionary(), pytest.raises(gt.GleifRateLimitedError):
+        with gt.discretionary(), pytest.raises(gt.GleifRateLimitedError) as refused:
             await t.acquire()
+        # Phase 253: the refusal says it was OpenCheck's reserve, not GLEIF.
+        assert refused.value.reason == "held_for_lookups"
         assert t.in_flight_window == 3
         # … while a lookup still gets the two reserved slots.
         await t.acquire()
@@ -406,6 +408,31 @@ async def test_discretionary_gleif_calls_leave_the_reserve_to_lookups(monkeypatc
         assert t.in_flight_window == 5
     finally:
         get_settings.cache_clear()
+
+
+async def test_a_discretionary_refusal_after_a_429_blames_gleif(monkeypatch) -> None:
+    """Phase 253: inside the penalty box a 429 really was seen, so the
+    refusal is GLEIF's rate limit, not the lookup reserve."""
+    from opencheck import gleif_throttle as gt
+
+    monkeypatch.setenv("OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE", "5")
+    monkeypatch.setenv("OPENCHECK_GLEIF_LOOKUP_RESERVE", "2")
+    get_settings.cache_clear()
+    t = gt.GleifThrottle()
+    try:
+        t.penalise(30)
+        with gt.discretionary(), pytest.raises(gt.GleifRateLimitedError) as refused:
+            await t.acquire()
+        assert refused.value.reason == "rate_limited"
+        assert t.in_flight_window == 0
+    finally:
+        get_settings.cache_clear()
+
+
+def test_gleif_rate_limited_error_defaults_to_rate_limited() -> None:
+    from opencheck import gleif_throttle as gt
+
+    assert gt.GleifRateLimitedError("budget exhausted").reason == "rate_limited"
 
 
 # ---------------------------------------------------------------------------

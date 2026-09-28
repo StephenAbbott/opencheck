@@ -718,6 +718,13 @@ export interface SecuritiesResponse {
    *  The sanctioned overlay is a local index on the backend and still runs,
    *  so `sanctioned` is trustworthy even when `total`/`securities` are not. */
   isin_list_available: boolean;
+  /** Phase 253: GLEIF's ISIN page is cached a day. `true` when an older page
+   *  (≤ 30 days) stood in because GLEIF could not be asked; `isin_list_as_of`
+   *  is when GLEIF was asked (ISO 8601 UTC). Absent on older backends. */
+  isin_list_stale?: boolean;
+  isin_list_as_of?: string | null;
+  /** Why GLEIF could not be asked — see `lib/securities.ts`. */
+  isin_list_unavailable_reason?: "held_for_lookups" | "rate_limited" | "unreachable" | null;
   sources: string[];
   license_notices: { source_id: string; notice: string }[];
 }

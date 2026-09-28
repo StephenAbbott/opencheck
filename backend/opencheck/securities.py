@@ -18,6 +18,17 @@ The design rule: **never enumerate every ISIN**. Sanctioned securities (small,
 pre-filtered, high value) come from OpenSanctions independently of GLEIF paging;
 the long tail is a count behind a page.
 
+Phase 253: **GLEIF's ISIN page is cached**, one day fresh, and an expired
+entry up to thirty days old stands in when GLEIF cannot be asked. This was the
+one GLEIF call no cache absorbed — every QuickCheck render, replayed lookups
+and saved reports included, re-asked GLEIF — and, being discretionary (Phase
+234), it is the call refused first when the budget runs low. A stand-in page
+is labelled (``isin_list_stale``, ``isin_list_as_of``), never passed off as
+today's. When nothing can stand in, ``isin_list_unavailable_reason`` says why
+— ``held_for_lookups`` (OpenCheck kept its last GLEIF slots for lookups;
+nothing was sent), ``rate_limited`` or ``unreachable`` — so the page stops
+blaming GLEIF for a refusal that was OpenCheck's own.
+
 A corollary (Phase 145): **GLEIF failing must not fail the overlay**. The
 sanctioned index is a local file — the one check with a compliance consequence
 needs no network at all — so a GLEIF 429/outage degrades the response
@@ -31,13 +42,16 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 import urllib.request
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
 import httpx
 
 from . import identifiers
+from .cache import Cache
 from .config import get_settings
 from .gleif_throttle import GleifRateLimitedError
 from .http import build_client
@@ -46,6 +60,20 @@ log = logging.getLogger(__name__)
 
 _GLEIF_ISINS_URL = "https://api.gleif.org/api/v1/lei-records/{lei}/isins"
 _OPENFIGI_URL = "https://api.openfigi.com/v3/mapping"
+
+# Phase 253: GLEIF ISIN pages are cached. The count moves slowly (GLEIF's own
+# mapping file is republished daily), so a day-old page is served as current;
+# an older one only stands in when GLEIF cannot be asked, and says so.
+ISINS_CACHE_NS = "gleif_isins"
+ISINS_FRESH_DAYS = 1.0
+ISINS_STALE_MAX_DAYS = 30.0
+
+# Why the ISIN list is missing — the reader is told which.
+UNAVAILABLE_HELD = "held_for_lookups"
+UNAVAILABLE_RATE_LIMITED = "rate_limited"
+UNAVAILABLE_UNREACHABLE = "unreachable"
+
+_isins_cache = Cache()
 
 # ISINs shown per drawer page. Kept small so OpenFIGI enrichment stays cheap.
 PAGE_SIZE = 20
@@ -247,6 +275,43 @@ async def _openfigi_map(client, isins: list[str], api_key: str | None) -> dict[s
     return out
 
 
+def _isins_cache_key(lei: str, page: int, page_size: int) -> str:
+    return f"{ISINS_CACHE_NS}/{lei}/p{page}-s{page_size}"
+
+
+def _cached_isins(
+    lei: str, page: int, page_size: int, *, max_age_days: float
+) -> tuple[int, list[str], float] | None:
+    """``(total, isins, fetched_at)`` from the cache when no older than
+    ``max_age_days``; ``None`` otherwise. ``fetched_at`` is when GLEIF was
+    asked (epoch seconds) — the date a stand-in page is labelled with."""
+    hit = _isins_cache.get(_isins_cache_key(lei, page, page_size))
+    if hit is None or not isinstance(hit.payload, dict):
+        return None
+    wrapped = hit.payload
+    try:
+        fetched_at = float(wrapped.get("_cached_at", hit.retrieved_at))
+        body = wrapped["payload"]
+        total, isins = int(body["total"]), [str(i) for i in body["isins"]]
+    except (KeyError, TypeError, ValueError):
+        return None
+    if (time.time() - fetched_at) / 86_400 > max_age_days:
+        return None
+    return total, isins, fetched_at
+
+
+def _unavailable_reason(exc: Exception) -> str:
+    if isinstance(exc, GleifRateLimitedError):
+        return getattr(exc, "reason", UNAVAILABLE_RATE_LIMITED)
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+        return UNAVAILABLE_RATE_LIMITED
+    return UNAVAILABLE_UNREACHABLE
+
+
+def _iso(epoch: float) -> str:
+    return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat(timespec="seconds")
+
+
 async def assemble_securities(
     lei: str, *, page: int = 1, page_size: int = PAGE_SIZE
 ) -> dict[str, Any]:
@@ -263,6 +328,9 @@ async def assemble_securities(
         "securities": [],
         "sanctioned": [],
         "isin_list_available": False,
+        "isin_list_stale": False,
+        "isin_list_as_of": None,
+        "isin_list_unavailable_reason": None,
         "sources": [],
         "license_notices": [],
     }
@@ -275,10 +343,25 @@ async def assemble_securities(
     sanctioned_map = _sanctioned_for_lei(lei) if overlay_on else {}
 
     isin_list_available = True
+    isin_list_stale = False
+    unavailable_reason: str | None = None
     total, isins = 0, []
+    fresh = _cached_isins(lei, page, page_size, max_age_days=ISINS_FRESH_DAYS)
+    fetched_at = fresh[2] if fresh else time.time()
     async with build_client() as client:
         try:
-            total, isins = await _gleif_isins(client, lei, page, page_size)
+            if fresh is not None:
+                total, isins = fresh[0], fresh[1]
+            else:
+                total, isins = await _gleif_isins(client, lei, page, page_size)
+                fetched_at = time.time()
+                try:
+                    _isins_cache.put(
+                        _isins_cache_key(lei, page, page_size),
+                        {"total": total, "isins": isins},
+                    )
+                except OSError as exc:  # a cache that cannot be written is not an outage
+                    log.warning("could not cache GLEIF ISIN page for %s: %s", lei, exc)
         except (GleifRateLimitedError, httpx.HTTPError) as exc:
             # GLEIF saying no — a 429 handed back by the Phase 143 transport,
             # the throttle refusing to send, a timeout, an outage — must not
@@ -290,8 +373,20 @@ async def assemble_securities(
             # unavailable. The response says honestly which part is missing
             # (`isin_list_available: false`, GLEIF absent from `sources`)
             # instead of failing the part that works.
-            log.warning("GLEIF ISIN list unavailable for %s: %s", lei, exc)
-            isin_list_available = False
+            unavailable_reason = _unavailable_reason(exc)
+            stale = _cached_isins(lei, page, page_size, max_age_days=ISINS_STALE_MAX_DAYS)
+            if stale is not None:
+                # Phase 253: an older page GLEIF did publish beats no page —
+                # labelled with the day it was fetched, never as today's.
+                total, isins, fetched_at = stale
+                isin_list_stale = True
+                log.info(
+                    "GLEIF ISIN list for %s served from a %s cache entry (%s)",
+                    lei, _iso(fetched_at), unavailable_reason,
+                )
+            else:
+                log.warning("GLEIF ISIN list unavailable for %s: %s", lei, exc)
+                isin_list_available = False
         figi_map = await _openfigi_map(client, isins, settings.openfigi_api_key)
         # Sanctioned ISINs may not be in the current GLEIF page (or in GLEIF at
         # all — e.g. Rosneft). Enrich those too so the banner shows their type.
@@ -324,6 +419,11 @@ async def assemble_securities(
         "securities": securities,
         "sanctioned": sanctioned,
         "isin_list_available": isin_list_available,
+        "isin_list_stale": isin_list_stale,
+        "isin_list_as_of": _iso(fetched_at) if isin_list_available else None,
+        # Set whenever GLEIF could not be asked — including when a stale page
+        # stood in, so the stand-in can say why it is not today's.
+        "isin_list_unavailable_reason": unavailable_reason,
         "sources": sources,
         "license_notices": (
             [{"source_id": "opensanctions", "notice": _OS_NC_NOTICE}] if sanctioned else []
