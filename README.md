@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 253** — the Securities panel caches GLEIF's ISIN list for a day and, when GLEIF cannot be asked, says whether OpenCheck held the request back, GLEIF refused it or GLEIF did not answer.
+**Latest: Phase 255** — the subsidiary network's BODS gives each parent–child pair one dated relationship and draws a subsidiary's direct parent where GLEIF names one, and the MCP server gains `opencheck_subsidiaries`.
 
 → [Full development history](docs/status.md)
 
