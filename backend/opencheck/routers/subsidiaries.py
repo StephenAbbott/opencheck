@@ -60,6 +60,10 @@ class SubsidiariesResponse(BaseModel):
     snapshot_source: str | None = None
     #: One sentence naming what GLEIF did not answer (None when it answered).
     degraded_detail: str | None = None
+    # Phase 258: why GLEIF gave no answer — "held_for_lookups" (OpenCheck kept
+    # its last GLEIF requests for lookups; nothing was sent), "rate_limited"
+    # or "unreachable". None when it answered or the mirror served the network.
+    unavailable_reason: str | None = None
     direct_total: int = 0
     ultimate_total: int = 0
     distinct_fetched: int = 0

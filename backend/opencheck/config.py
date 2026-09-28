@@ -459,6 +459,26 @@ class Settings(BaseSettings):
     securities_index_url: str | None = Field(
         default=None, alias="OPENCHECK_SECURITIES_INDEX_URL"
     )
+    # --- Phase 258: GLEIF's ISIN-to-LEI file as a local table (isin_index.py) ---
+    # Built on the server from GLEIF's daily keyless zip — at boot when absent,
+    # then whenever GLEIF publishes a newer file. ``/securities`` reads it
+    # before calling GLEIF. Unset = a file in the system temp directory; on
+    # Render it lives on the persistent disk (render.yaml).
+    isin_index_db_file: str | None = Field(default=None, alias="OPENCHECK_ISIN_INDEX_DB_FILE")
+    # ``false`` never downloads: a file already at the path is used as found.
+    # Downloads also need OPENCHECK_ALLOW_LIVE.
+    isin_index_sync: bool = Field(default=True, alias="OPENCHECK_ISIN_INDEX_SYNC")
+    # How often to ask GLEIF whether a newer file exists (one small JSON call;
+    # a rebuild only when the file name changed). 0 disables the loop; boot
+    # still checks once.
+    isin_index_refresh_interval_s: float = Field(
+        default=21600.0, alias="OPENCHECK_ISIN_INDEX_REFRESH_INTERVAL_S"
+    )
+    # A table whose file is older than this is not used — /securities falls
+    # back to the (cached) live GLEIF call rather than serve an old count.
+    isin_index_max_age_days: float = Field(
+        default=3.0, alias="OPENCHECK_ISIN_INDEX_MAX_AGE_DAYS"
+    )
     wikidata_sparql_endpoint: str = Field(
         default="https://query.wikidata.org/sparql",
         alias="WIKIDATA_SPARQL_ENDPOINT",

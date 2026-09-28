@@ -2436,32 +2436,41 @@ Things that will be re-derived otherwise:
 
 ---
 
-## Three adapter schemes renamed to their org-id codes (Phase 257)
+## GLEIF's ISIN file behind /securities, and where the GLEIF budget goes (Phase 258)
 
-`SK-RPO` → **`SK-ICO`**, `BR-RFB` → **`BR-CNPJ`**, `CA-CORP` → **`CA-CC`**.
-Each was named after the register or authority a number is read from, not
-after the number, and libcovebods reported all three as
-`entity_identifiers_not_known_scheme` (the Phase 255 five-network check).
-Tests: `tests/test_org_id_schemes_phase257.py`.
+`opencheck/isin_index.py`, `opencheck/gleifstats.py`; design in
+`docs/securities.md`. Things that will be re-derived otherwise:
 
-- **Both sides in one commit, always.** The scheme follows the adapter (Phase
-  239): the mapper (`bods/mappers/slovakia.py` — the RPO subject *and* RPVS's
-  legal-person KUVs — `brazil.py`, `canada.py`) and `_GLEIF_RA_TO_ORG_ID`
-  (RA000526, RA000681, RA000072) moved together, so GLEIF and the register
-  still corroborate on one scheme-scoped key. `register_hops` derives its hops
-  from that table, so `SK-ICO` / `BR-CNPJ` / `CA-CC` hop and the old names no
-  longer do; `REG-SK` and `REG-BR` still alias; `CA-CC` replaced `CA-CORP` in
-  `_NO_COUNTRY_ALIAS`.
-- **`SK-ICO`, not `SK-ORSR`.** org-id's `SK-ORSR` is the Ministry of Justice
-  register, numbered by court and insert; the value OpenCheck holds is the
-  Statistical Office's IČO. The internal dispatch keys (`sk_ico`, `br_cnpj`,
-  `ca_corp_id`) and constant names are internal and stay.
-- **Frozen payloads keep the old names, and that is history, not a defect.**
-  A saved report or watchlist baseline taken before the rename carries
-  `CA-CORP` etc. `watchlist.diff_snapshots` reports an identifier change only
-  for a scheme present on both sides with different values, so a rename is not
-  reported (pinned); `reconcile.ts` still bridges the legacy label on
-  jurisdiction + number.
-- Hit summaries read `CA-CC {number}` (`sources/corporations_canada.py`,
-  `routers/hit_builders.py`); `cnpj_brazil`'s already read `BR-CNPJ`.
-
+- **The table is built on the server** from GLEIF's daily keyless zip
+  (`mapping.gleif.org/api/v2/isin-lei/latest`) — at boot when absent, then
+  when GLEIF names a newer file (every six hours; fifteen minutes after a
+  failure). No release asset, nothing committed. Staged into a scratch table
+  and read back `ORDER BY lei, isin`, so the input need not be sorted and
+  memory stays ~50 MB; written beside the old file and `os.replace`d.
+- **`counts` holds the count on its own** — never derive a count by
+  decompressing `chunks` (636,388 ISINs for one LEI).
+- **An LEI the table lacks is `total: 0`, not a miss** — the file is GLEIF's
+  complete mapping. Only a table that is absent, wrong-schema or older than
+  `OPENCHECK_ISIN_INDEX_MAX_AGE_DAYS` sends `/securities` to the Phase 253
+  cached live call. `isin_list_source` says which answered.
+- **ISIN order, not GLEIF's** (Stephen, 28 Sept 2026): the live API's order is
+  unstable; a sorted list keeps pages and saved reports stable.
+- **The suite never downloads it**: `conftest.py` sets
+  `OPENCHECK_ISIN_INDEX_SYNC=0` and points the path at a file that does not
+  exist, so a developer's locally built table cannot leak into tests.
+- **Every GLEIF request is counted where it leaves** — the throttled
+  transport — by route (`gleifstats.ROUTES`, set by `ClientScopeMiddleware`
+  from the path) and by GLEIF endpoint (`ENDPOINTS`, from the URL), with
+  `sent` / `http_429` / `refused_held_for_lookups` / `refused_rate_limited`.
+  Served as `/signalstats` → `gleif`, with `isins_share` (the Golden Copy
+  gate's number), `securities_served` and the table's `isin_index` status.
+  Closed vocabularies only: an unknown route, endpoint or outcome is folded
+  or dropped, never a new key. A route that calls GLEIF is `other` until it
+  is added to `_PATH_ROUTES`.
+- **`GleifRateLimitedError.reason`** — `held_for_lookups` when the Phase 234
+  reserve refused (nothing sent), `rate_limited` in the penalty box or when
+  the budget ran out; `gleif_throttle.unavailable_reason(exc, status=)` maps
+  any failure to the three reasons. `/securities` and `/subsidiaries`
+  (`unavailable_reason` + a `degraded_detail` naming the cause) both read it.
+  Share cards say nothing about GLEIF to a reader — a refused teaser name
+  renders the LEI-only card — so for them the counter is the whole record.

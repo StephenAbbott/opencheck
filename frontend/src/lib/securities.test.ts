@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   SECURITIES_SOURCE_NAMES,
+  isinListSourceLine,
   isinListStaleLine,
   isinListUnavailableNotice,
 } from "./securities";
@@ -54,5 +55,25 @@ describe("SECURITIES_SOURCE_NAMES", () => {
   it("spells OpenFIGI the way OpenFIGI does", () => {
     expect(sourceList(["openfigi", "opensanctions"], { opensanctions: "OpenSanctions", ...SECURITIES_SOURCE_NAMES }))
       .toBe("OpenFIGI and OpenSanctions");
+  });
+});
+
+describe("isinListSourceLine (Phase 258)", () => {
+  it("dates a list read from GLEIF's file and says its order", () => {
+    expect(isinListSourceLine("gleif_file", "2026-09-28T07:15:11+00:00", 1813)).toBe(
+      "From GLEIF's ISIN-to-LEI file of 28 Sept 2026, listed in ISIN order.",
+    );
+  });
+
+  it("does not mention order for a single ISIN", () => {
+    expect(isinListSourceLine("gleif_file", "2026-09-28T07:15:11Z", 1)).toBe(
+      "From GLEIF's ISIN-to-LEI file of 28 Sept 2026.",
+    );
+  });
+
+  it("is silent for the live API and for no list", () => {
+    expect(isinListSourceLine("gleif_api", "2026-09-28T07:15:11Z", 5)).toBeNull();
+    expect(isinListSourceLine(null, null, 0)).toBeNull();
+    expect(isinListSourceLine(undefined, undefined, 0)).toBeNull();
   });
 });

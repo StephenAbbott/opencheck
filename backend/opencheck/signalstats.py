@@ -384,6 +384,10 @@ def stats() -> dict[str, Any]:
         # Phase 238: the lookup gate — who starts runs, how often one is
         # queued or refused, queue waits and run times (pipelinestats.py).
         "pipelines": _pipeline_stats(),
+        # Phase 258: where the shared GLEIF budget goes, by route and GLEIF
+        # endpoint, the throttle's refusals by reason, how /securities was
+        # served, and the ISIN table's state (gleifstats.py).
+        "gleif": _gleif_stats(),
     }
 
 
@@ -394,4 +398,14 @@ def _pipeline_stats() -> dict[str, Any]:
         return pipelinestats.stats()
     except Exception as exc:  # noqa: BLE001 — never fail /signalstats
         log.debug("pipelinestats.stats failed, ignoring: %s", exc)
+        return {}
+
+
+def _gleif_stats() -> dict[str, Any]:
+    try:
+        from . import gleifstats
+
+        return gleifstats.stats()
+    except Exception as exc:  # noqa: BLE001 — never fail /signalstats
+        log.debug("gleifstats.stats failed, ignoring: %s", exc)
         return {}

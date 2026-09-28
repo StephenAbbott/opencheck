@@ -47,6 +47,18 @@ os.environ.setdefault("OPENCHECK_IDENTIFIER_CHECKSUMS_ENFORCED", "0")
 # get_settings.cache_clear() + reset_throttle_for_tests()).
 os.environ.setdefault("OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE", "0")
 
+# GLEIF's ISIN-to-LEI table (Phase 258) is never downloaded or built by the
+# suite, and never read from wherever a developer's dev server left one: the
+# path points at a file that does not exist unless a test builds it there.
+# tests/test_isin_index.py builds small tables per test under tmp_path.
+import tempfile as _tempfile  # noqa: E402
+
+os.environ.setdefault("OPENCHECK_ISIN_INDEX_SYNC", "0")
+os.environ.setdefault(
+    "OPENCHECK_ISIN_INDEX_DB_FILE",
+    os.path.join(_tempfile.mkdtemp(prefix="opencheck-test-isin-"), "absent.sqlite"),
+)
+
 # Registry-wide entityType.subtype guard (Phase 214). Installed here, at
 # conftest import time and after the env flags above, so every test module's
 # ``from opencheck.bods.mapper import map_x`` binds the guarded mapper. See
@@ -98,15 +110,22 @@ def _clear_lookup_replay_cache():
 
     from opencheck import pipelinestats as _pstats
 
+    from opencheck import gleifstats as _gstats
+    from opencheck import isin_index as _isin_index
+
     _lookup_mod._REPLAY_CACHE.clear()
     _lookup_mod._IN_FLIGHT.clear()
     _budget.reset_for_tests()
     _pstats.reset()
+    _gstats.reset_for_tests()
+    _isin_index.reset_for_tests()
     yield
     _lookup_mod._REPLAY_CACHE.clear()
     _lookup_mod._IN_FLIGHT.clear()
     _budget.reset_for_tests()
     _pstats.reset()
+    _gstats.reset_for_tests()
+    _isin_index.reset_for_tests()
 
 
 @pytest.fixture(autouse=True)
