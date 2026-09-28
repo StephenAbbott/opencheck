@@ -63,8 +63,8 @@ def map_cnpj_brazil(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     def _cnpj_id(value: str) -> dict[str, str]:
         return {
             "id": value,
-            "scheme": "BR-RFB",
-            "schemeName": "Receita Federal do Brasil — CNPJ",
+            "scheme": "BR-CNPJ",
+            "schemeName": "Cadastro Nacional da Pessoa Jurídica — CNPJ (Receita Federal do Brasil)",
         }
 
     # ── 1. Company entity statement ───────────────────────────────────────

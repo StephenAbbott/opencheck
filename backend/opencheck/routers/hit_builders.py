@@ -654,7 +654,7 @@ def _bh_corporations_canada(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHi
     return _hit(
         "corporations_canada", local_id,
         name=name or ctx.legal_name or "",
-        summary=f"CA-CORP {local_id}",
+        summary=f"CA-CC {local_id}",
         identifiers={"ca_corp_id": local_id}, raw=corp,
     )
 

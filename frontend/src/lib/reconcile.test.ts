@@ -255,8 +255,10 @@ describe("reconcileBods", () => {
   });
 
   it("bridges the same register number under different register labels (CA-CORP ↔ CA-CC)", () => {
-    // Verified live on Canada Basketball: Corporations Canada emits CA-CORP,
-    // OpenCorporates passes through CA-CC — same number, same entity. The
+    // Verified live on Canada Basketball: Corporations Canada emitted CA-CORP
+    // and OpenCorporates passes through CA-CC — same number, same entity.
+    // Since Phase 257 both write CA-CC, but a saved report or an older export
+    // still carries CA-CORP, so the two labels must keep bridging. The
     // non-register denylist must not break this (a whitelist would have).
     const { statements } = reconcileBods([
       {
@@ -277,11 +279,11 @@ describe("reconcileBods", () => {
 
   it("does not bridge CA-BN (tax) but keeps NZ-NZBN (register) — segment matching, not substring", () => {
     const { statements } = reconcileBods([
-      // CA-BN vs CA-CORP same digits → must NOT merge ("BN" segment is tax).
+      // CA-BN vs CA-CC same digits → must NOT merge ("BN" segment is tax).
       {
         statementId: "ca-corp", recordType: "entity",
         recordDetails: { name: "Maple Corp", jurisdiction: { code: "CA" },
-          identifiers: [{ scheme: "CA-CORP", id: "1067752" }] },
+          identifiers: [{ scheme: "CA-CC", id: "1067752" }] },
         source: { description: "Corporations Canada" },
       },
       {

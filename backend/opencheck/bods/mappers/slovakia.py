@@ -33,7 +33,9 @@ def map_rpo_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     provides public-procurement beneficial ownership data separately.
 
     Identifiers emitted:
-      • IČO  — scheme "SK-RPO"
+      • IČO  — scheme "SK-ICO" (org-id.guide: the organisation identification
+        number the Statistical Office assigns; not SK-ORSR, which numbers the
+        Business Register by court and insert)
     """
     if not bundle or bundle.get("is_stub"):
         return
@@ -55,8 +57,8 @@ def map_rpo_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     identifiers: list[dict[str, str]] = [
         {
             "id": ico,
-            "scheme": "SK-RPO",
-            "schemeName": "Register právnických osôb (Slovak Register of Legal Persons)",
+            "scheme": "SK-ICO",
+            "schemeName": "Identifikačné číslo organizácie — IČO (Slovakia)",
         }
     ]
 
@@ -184,8 +186,8 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             if kuv_ico:
                 ip_identifiers.append({
                     "id": kuv_ico,
-                    "scheme": "SK-RPO",
-                    "schemeName": "Register právnických osôb (Slovak Register of Legal Persons)",
+                    "scheme": "SK-ICO",
+                    "schemeName": "Identifikačné číslo organizácie — IČO (Slovakia)",
                 })
 
             ip_stmt = make_entity_statement(

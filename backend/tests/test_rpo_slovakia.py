@@ -443,7 +443,7 @@ class TestMapRpoSlovakia:
         rd = stmts[0]["recordDetails"]
         idents = rd.get("identifiers") or []
         schemes = [i["scheme"] for i in idents]
-        assert "SK-RPO" in schemes
+        assert "SK-ICO" in schemes
 
     def test_or_identifier_when_reg_number_present(self) -> None:
         bundle = self._make_bundle()

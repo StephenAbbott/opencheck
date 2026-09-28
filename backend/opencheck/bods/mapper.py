@@ -525,12 +525,13 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # Poland — National Court Register (KRS)
     "RA000484": ("PL-KRS", "National Court Register — KRS number (Poland)"),
     # Slovakia — Business Register; ``registeredAs`` is the IČO, which the
-    # rpo_slovakia mapper writes as SK-RPO.
-    "RA000526": ("SK-RPO", "Register of Legal Entities — IČO (Slovakia)"),
+    # rpo_slovakia mapper writes as org-id's SK-ICO (Phase 257; was SK-RPO).
+    "RA000526": ("SK-ICO", "Organisation identification number — IČO (Slovakia)"),
     # Canada — federal Corporate Registry (Corporations Canada). The
     # provincial registries (RA000073–RA000085) number differently and take
-    # the RA-code fallback below.
-    "RA000072": ("CA-CORP", "Corporations Canada — federal corporation number"),
+    # the RA-code fallback below. org-id's CA-CC ("should be used for the
+    # Canada Corporation Number"; Phase 257, was CA-CORP).
+    "RA000072": ("CA-CC", "Canada Corporation Number (Corporations Canada)"),
     # Croatia — Court Registry (Sudski registar); ``registeredAs`` is the MBS.
     "RA000156": ("HR-MBS", "Court Registry — MBS (Croatia)"),
     # Czechia — Commercial Register (Ministerstvo spravedlnosti); the IČO.
@@ -547,8 +548,9 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000013": ("AU-ABN", "Australian Business Number (Australian Business Register)"),
     # New Zealand — Companies Office
     "RA000466": ("NZ-COH", "New Zealand Companies Register"),
-    # Brazil — Receita Federal CNPJ register
-    "RA000681": ("BR-RFB", "CNPJ — Receita Federal (Brazil)"),
+    # Brazil — Receita Federal CNPJ register; org-id's BR-CNPJ (Phase 257,
+    # was BR-RFB, named after the authority rather than the number).
+    "RA000681": ("BR-CNPJ", "National Registry of Legal Entities — CNPJ (Brazil)"),
     # India — Ministry of Corporate Affairs (MCA21); the CIN.
     "RA000394": ("IN-MCA", "Ministry of Corporate Affairs — CIN (India)"),
     # Nigeria — Corporate Affairs Commission; the RC number.

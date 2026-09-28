@@ -70,8 +70,10 @@ const sourceOf = (s: Stmt): string =>
  *  because scheme labels are open-ended in practice — OpenCorporates
  *  passes through org-id-style codes (CA-CC, US-DE, …) that legitimately
  *  bridge to national-adapter labels for the same number (verified live:
- *  Canada Basketball's 0343587 arrives as both CA-CORP and CA-CC); a
- *  whitelist silently drops those real merges. Non-register identifiers
+ *  Canada Basketball's 0343587 arrived as both CA-CORP and CA-CC until
+ *  Phase 257 renamed the Corporations Canada scheme to CA-CC — a saved
+ *  report or an older export still carries CA-CORP); a whitelist silently
+ *  drops those real merges. Non-register identifiers
  *  still merge scheme-scoped (`XI-VAT:value` etc.) — an identical
  *  scheme+value means the same entity. When adding an adapter that emits a
  *  new tax/securities/classification scheme, extend this set.

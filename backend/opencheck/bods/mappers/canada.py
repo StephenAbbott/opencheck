@@ -102,8 +102,8 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     identifiers: list[dict[str, str]] = [
         {
             "id": corp_id,
-            "scheme": "CA-CORP",
-            "schemeName": "Corporations Canada — ISED federal register",
+            "scheme": "CA-CC",
+            "schemeName": "Canada Corporation Number (Corporations Canada)",
         }
     ]
     bn_block = corp.get("businessNumbers") or {}
