@@ -64,6 +64,10 @@ dependencies = [
     # characters while the register holds traditional ones, so a plain
     # comparison drops real matches (15 of 66 on a live sample, 2026-09-10).
     "opencc-python-reimplemented>=0.1.7",
+    # cryptography — AES-256-GCM + scrypt for the off-host SQLite backups
+    # (opencheck/backups.py, Phase 260). Already installed as a dependency of
+    # the MCP SDK; named here because OpenCheck now imports it directly.
+    "cryptography>=43",
 ]
 
 [project.optional-dependencies]

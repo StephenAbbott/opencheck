@@ -85,8 +85,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from . import identifiers
+from . import identifiers, sqlite_schema
 from .names import name_similarity
+from .secret_scrub import describe_exception
 from .verdict import VERDICT_TEMPLATE
 
 log = logging.getLogger("opencheck.watchlist")
@@ -95,7 +96,12 @@ log = logging.getLogger("opencheck.watchlist")
 TIER_GLEIF = "gleif"
 TIER_OPENSANCTIONS = "opensanctions"
 TIER_MANUAL = "manual"
-TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL)
+#: Phase 260: a re-run of every watched entity because OpenSanctions versions
+#: could no longer be read (aged out of ``versions.json``, or their delta file
+#: is gone). Writes an entry only when the re-run found a difference — unlike
+#: a Tier 2 hit, the catch-up itself is not news about the company.
+TIER_CATCHUP = "catch_up"
+TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL, TIER_CATCHUP)
 
 #: The kinds a diff can contain. Closed vocabulary; the frontend words them
 #: (``lib/watchlist.ts``) and a test pins that every kind has words.
@@ -130,8 +136,14 @@ OS_VERSIONS_URL = "https://data.opensanctions.org/artifacts/default/versions.jso
 OS_DELTA_URL = "https://data.opensanctions.org/artifacts/default/{version}/entities.delta.json"
 
 #: How many OpenSanctions versions one tick will catch up on. Four a day are
-#: published; after a week down this bounds the work to ~130 MB.
+#: published; after a week down this bounds the work to ~130 MB. The backlog
+#: is drained OLDEST first (Phase 260): the watermark only ever moves past a
+#: version that was read, or one recorded as a gap, so a longer outage takes
+#: several ticks instead of silently skipping everything but the newest 12.
 OS_MAX_VERSIONS_PER_TICK = 12
+
+#: How many recorded gaps the store keeps (``meta.opensanctions_gaps``).
+OS_GAPS_KEPT = 20
 
 
 def _now_iso() -> str:
@@ -532,6 +544,14 @@ CREATE TABLE IF NOT EXISTS meta (
 """
 
 
+#: Phase 260: the file's ``PRAGMA user_version`` history. Version 1 is the
+#: schema as Phase 215 shipped it, so a file written before 260 (version 0)
+#: is stamped 1 and nothing else changes. Append; never edit a shipped step.
+MIGRATIONS: tuple[sqlite_schema.Migration, ...] = (
+    sqlite_schema.Migration(1, "Phase 215 schema", sqlite_schema.statements(SCHEMA)),
+)
+
+
 @dataclass
 class Caps:
     max_total: int
@@ -547,8 +567,11 @@ class WatchlistStore:
         self.path = Path(path)
         self.caps = caps
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._conn() as conn:
-            conn.executescript(SCHEMA)
+        conn = self._conn()
+        try:
+            self.schema_version = sqlite_schema.migrate(conn, self.path, MIGRATIONS)
+        finally:
+            conn.close()
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=30.0, isolation_level=None)
@@ -803,10 +826,19 @@ class WatchlistStore:
 
     def enqueue(self, lei: str, tier: str, trigger: dict[str, Any]) -> bool:
         """Queue a re-run of ``lei``. One pending row per LEI: a second
-        trigger before the first ran is folded into it."""
+        trigger before the first ran is folded into it — except that a
+        catch-up row (Phase 260) gives way to a real trigger, whose entry is
+        news in itself, so a delta naming the company is never folded into a
+        catch-up that writes nothing when the re-run finds no difference."""
         with self._conn() as conn:
-            existing = conn.execute("SELECT id FROM pending WHERE lei = ?", (lei,)).fetchone()
+            existing = conn.execute("SELECT id, tier FROM pending WHERE lei = ?", (lei,)).fetchone()
             if existing:
+                if existing["tier"] == TIER_CATCHUP and tier != TIER_CATCHUP:
+                    conn.execute(
+                        "UPDATE pending SET tier = ?, trigger_json = ? WHERE id = ?",
+                        (tier, json.dumps(trigger), existing["id"]),
+                    )
+                    return True
                 return False
             conn.execute(
                 "INSERT INTO pending (lei, tier, trigger_json, queued_at) VALUES (?, ?, ?, ?)",
@@ -987,6 +1019,9 @@ class WatcherState:
     os_queued: int = 0
     os_last_checked_at: str | None = None
     os_last_error: str | None = None
+    os_backlog: int = 0  # listed versions newer than the watermark, not yet read
+    os_gaps: int = 0  # versions recorded as unreadable since boot
+    os_last_gap_at: str | None = None
     reruns: int = 0
     rerun_failures: int = 0
     entries_written: int = 0
@@ -1167,24 +1202,89 @@ def scan_os_delta(lines: Iterable[str], watched: dict[str, list[str]], version: 
     return [{"lei": lei, "trigger": t} for lei, t in triggers.items()]
 
 
+class _DeltaGone(Exception):
+    """A listed version whose delta file answers 404 — it will not come back."""
+
+
+def _read_os_delta(client: Any, store: "WatchlistStore", watched: dict[str, list[str]], version: str) -> int:
+    queued = 0
+    with client.stream("GET", OS_DELTA_URL.format(version=version), timeout=600.0) as r:
+        if r.status_code == 404:
+            raise _DeltaGone(version)
+        r.raise_for_status()
+        for item in scan_os_delta(r.iter_lines(), watched, version):
+            if store.enqueue(item["lei"], TIER_OPENSANCTIONS, item["trigger"]):
+                queued += 1
+    return queued
+
+
+def os_gaps(store: "WatchlistStore") -> list[dict[str, Any]]:
+    """The OpenSanctions versions the watcher could not read, newest last."""
+    raw = store.get_meta("opensanctions_gaps")
+    try:
+        gaps = json.loads(raw) if raw else []
+    except json.JSONDecodeError:
+        gaps = []
+    return gaps if isinstance(gaps, list) else []
+
+
+def _record_os_gap(store: "WatchlistStore", gap: dict[str, Any]) -> int:
+    """Record versions that could not be read and queue a catch-up re-run of
+    every watched entity, so a company named only in a lost delta is still
+    re-checked. Returns how many re-runs were queued."""
+    gap = {**gap, "detected_at": _now_iso()}
+    gaps = (os_gaps(store) + [gap])[-OS_GAPS_KEPT:]
+    store.set_meta("opensanctions_gaps", json.dumps(gaps))
+    queued = 0
+    trigger = {"tier": TIER_CATCHUP, "reason": gap["reason"], "after": gap.get("after"), "before": gap.get("before")}
+    for lei in sorted(store.watched_leis()):
+        if store.enqueue(lei, TIER_CATCHUP, trigger):
+            queued += 1
+    log.warning(
+        "watchlist: OpenSanctions versions could not be read (%s, after %s, before %s); "
+        "queued %d catch-up re-run%s",
+        gap["reason"], gap.get("after"), gap.get("before"), queued, "" if queued == 1 else "s",
+    )
+    with _state_lock:
+        _state.os_gaps += 1
+        _state.os_last_gap_at = gap["detected_at"]
+    return queued
+
+
+def _set_backlog(n: int) -> None:
+    with _state_lock:
+        _state.os_backlog = n
+
+
 def opensanctions_tick(client: Any | None = None) -> dict[str, Any]:
-    """Catch up on every OpenSanctions version since the last one seen and
-    queue a re-run for each watched entity a delta named. Runs on a thread.
-    Downloads nothing when nothing is watched."""
+    """Catch up on OpenSanctions versions since the last one seen, oldest
+    first and at most :data:`OS_MAX_VERSIONS_PER_TICK` per call, and queue a
+    re-run for each watched entity a delta named. Runs on a thread.
+    Downloads nothing when nothing is watched.
+
+    The watermark (``meta.opensanctions_version``) moves past a version only
+    once its delta was read, or once it is recorded as a *gap*: versions that
+    aged out of ``versions.json`` (it lists about the last 100 — some 25
+    days) before they were read, or a listed version whose delta answers
+    404. A gap queues a catch-up re-run of every watched entity
+    (:data:`TIER_CATCHUP`) — without it a company named only in a lost delta
+    would never be re-checked. Any other failure stops the tick with the
+    watermark where it was, so the next tick retries that same version.
+    """
     import httpx
 
     store = get_store()
     if store is None:
         return {"versions": 0, "queued": 0}
     watched = store.watched_names()
-    result = {"versions": 0, "queued": 0}
+    result: dict[str, Any] = {"versions": 0, "queued": 0}
     _bump(os_last_checked_at=_now_iso())
     if not watched:
         return result
     own_client = client is None
     client = client or httpx.Client(follow_redirects=True, headers={"User-Agent": "OpenCheck watchlist"})
     try:
-        versions = _os_versions(client)
+        versions = sorted(set(_os_versions(client)))
         if not versions:
             return result
         last = store.get_meta("opensanctions_version")
@@ -1192,25 +1292,41 @@ def opensanctions_tick(client: Any | None = None) -> dict[str, Any]:
             # First run: mark the current version and start from the next.
             store.set_meta("opensanctions_version", versions[-1])
             _bump(os_last_version=versions[-1])
+            _set_backlog(0)
             return result
-        todo = [v for v in versions if v > last][-OS_MAX_VERSIONS_PER_TICK:]
-        for version in todo:
-            queued = 0
-            with client.stream("GET", OS_DELTA_URL.format(version=version), timeout=600.0) as r:
-                r.raise_for_status()
-                for item in scan_os_delta(r.iter_lines(), watched, version):
-                    if store.enqueue(item["lei"], TIER_OPENSANCTIONS, item["trigger"]):
-                        queued += 1
+        pending = [v for v in versions if v > last]
+        if pending and last not in versions and last < versions[0]:
+            # Versions between ``last`` and the oldest still listed were
+            # published and dropped from the list while we were not reading.
+            result["catch_up_queued"] = _record_os_gap(
+                store, {"reason": "aged_out", "after": last, "before": versions[0]}
+            )
+            result["gaps"] = 1
+        todo = pending[:OS_MAX_VERSIONS_PER_TICK]
+        _set_backlog(len(pending))
+        for i, version in enumerate(todo):
+            try:
+                queued = _read_os_delta(client, store, watched, version)
+            except _DeltaGone:
+                result["catch_up_queued"] = result.get("catch_up_queued", 0) + _record_os_gap(
+                    store, {"reason": "delta_missing", "after": version, "before": version}
+                )
+                result["gaps"] = result.get("gaps", 0) + 1
+                queued = 0
             store.set_meta("opensanctions_version", version)
+            _set_backlog(len(pending) - i - 1)
             result["versions"] += 1
             result["queued"] += queued
             _bump(os_versions_seen=1, os_queued=queued, os_last_version=version, os_last_error=None)
             if queued:
                 log.info("watchlist: OpenSanctions %s named %d watched entit%s", version, queued, "y" if queued == 1 else "ies")
+        result["backlog"] = len(pending) - len(todo)
+        if result["backlog"]:
+            log.info("watchlist: %d OpenSanctions version%s still to read", result["backlog"], "" if result["backlog"] == 1 else "s")
         return result
     except Exception as exc:  # noqa: BLE001
-        log.warning("watchlist: OpenSanctions delta failed: %s", exc)
-        _bump(os_last_error=f"{type(exc).__name__}: {exc}")
+        log.warning("watchlist: OpenSanctions delta failed: %s", describe_exception(exc))
+        _bump(os_last_error=describe_exception(exc))
         return result
     finally:
         if own_client:
@@ -1238,10 +1354,14 @@ async def rerun(lei: str, tier: str, trigger: dict[str, Any], *, only_token_hash
     the entity — a Tier 2 hit is itself the news even if the screen came
     back the same. A manual re-check that finds nothing writes no entry.
     """
-    store = get_store()
+    # Phase 260: every store and mirror read below runs on a worker thread —
+    # this coroutine runs on the event loop (the worker's tick, or the
+    # manual re-check route), and the SQLite calls can wait up to 30 s on a
+    # write lock the mirror refresh holds.
+    store = await asyncio.to_thread(get_store)
     if store is None:
         return {"lei": lei, "entries": 0, "changes": []}
-    rows = store.rows_for_lei(lei, with_hash=True)
+    rows = await asyncio.to_thread(store.rows_for_lei, lei, with_hash=True)
     if only_token_hash:
         rows = [r for r in rows if r["token_hash"] == only_token_hash]
     if not rows:
@@ -1255,16 +1375,47 @@ async def rerun(lei: str, tier: str, trigger: dict[str, Any], *, only_token_hash
         return {"lei": lei, "entries": 0, "changes": [], "error": f"{type(exc).__name__}"}
     _bump(reruns=1)
 
+    facts, watermark = await asyncio.to_thread(_mirror_facts, lei)
+    snapshot = snapshot_from_response(resp)
+    written, all_changes = await asyncio.to_thread(
+        _write_rerun, store, rows, lei, tier, trigger, resp, facts, watermark, snapshot
+    )
+    _bump(entries_written=written)
+    return {
+        "lei": lei,
+        "legal_name": resp.legal_name,
+        "entries": written,
+        "changes": all_changes,
+        "checked": snapshot["checked"],
+        "degraded": snapshot["degraded_sources"],
+        "snapshot": snapshot,
+    }
+
+
+def _mirror_facts(lei: str) -> tuple[dict[str, Any] | None, str | None]:
+    """The mirror's material GLEIF facts for ``lei`` and its watermark."""
     from . import entity_pages as ep
 
     mirror = ep.get_store()
-    facts = gleif_facts(mirror, lei) if mirror is not None else None
-    watermark = None
-    if mirror is not None:
-        wm = mirror.watermark()
-        watermark = wm.strftime("%Y-%m-%d %H:%M:%S") if wm else None
-    snapshot = snapshot_from_response(resp)
+    if mirror is None:
+        return None, None
+    facts = gleif_facts(mirror, lei)
+    wm = mirror.watermark()
+    return facts, (wm.strftime("%Y-%m-%d %H:%M:%S") if wm else None)
 
+
+def _write_rerun(
+    store: "WatchlistStore",
+    rows: list[dict[str, Any]],
+    lei: str,
+    tier: str,
+    trigger: dict[str, Any],
+    resp: Any,
+    facts: dict[str, Any] | None,
+    watermark: str | None,
+    snapshot: dict[str, Any],
+) -> tuple[int, list[dict[str, Any]]]:
+    """Move each list's baseline on and write its entry. Runs on a thread."""
     written = 0
     all_changes: list[dict[str, Any]] = []
     for row in rows:
@@ -1281,6 +1432,8 @@ async def rerun(lei: str, tier: str, trigger: dict[str, Any], *, only_token_hash
             legal_name=resp.legal_name,
             jurisdiction=resp.jurisdiction,
         )
+        # A Tier 2 hit is itself the news; a catch-up or a GLEIF re-run that
+        # found nothing is not.
         if changes or tier == TIER_OPENSANCTIONS:
             store.add_entry(
                 th,
@@ -1293,16 +1446,7 @@ async def rerun(lei: str, tier: str, trigger: dict[str, Any], *, only_token_hash
                 legal_name=resp.legal_name,
             )
             written += 1
-    _bump(entries_written=written)
-    return {
-        "lei": lei,
-        "legal_name": resp.legal_name,
-        "entries": written,
-        "changes": all_changes,
-        "checked": snapshot["checked"],
-        "degraded": snapshot["degraded_sources"],
-        "snapshot": snapshot,
-    }
+    return written, all_changes
 
 
 # ---------------------------------------------------------------------------
@@ -1316,27 +1460,31 @@ async def tick() -> dict[str, Any]:
     from .config import get_settings
 
     settings = get_settings()
-    store = get_store()
+    store = await asyncio.to_thread(get_store)
     out: dict[str, Any] = {"reruns": 0, "os": None, "pruned": 0, "expired": 0}
     if store is None:
         return out
     _bump(last_tick_at=_now_iso())
     try:
-        for item in store.take_pending(settings.watchlist_reruns_per_tick):
+        for item in await asyncio.to_thread(store.take_pending, settings.watchlist_reruns_per_tick):
             await rerun(item["lei"], item["tier"], item["trigger"])
             out["reruns"] += 1
         interval = settings.watchlist_opensanctions_interval_s
         if interval > 0:
-            last = store.get_meta("opensanctions_checked_at")
+            last = await asyncio.to_thread(store.get_meta, "opensanctions_checked_at")
             due = last is None or (
                 datetime.now(UTC) - datetime.strptime(last, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
             ).total_seconds() >= interval
-            if due:
+            # Phase 260: a backlog left by the last catch-up is read on the
+            # next tick, not after another full interval.
+            if due or state().get("os_backlog", 0) > 0:
                 out["os"] = await asyncio.to_thread(opensanctions_tick)
-                store.set_meta("opensanctions_checked_at", _now_iso())
+                await asyncio.to_thread(store.set_meta, "opensanctions_checked_at", _now_iso())
                 # Anything Tier 2 queued runs next tick, within the same bound.
-        out["pruned"] = store.prune_empty_lists()
-        out["expired"] = store.prune_stale_lists(older_than_days=settings.watchlist_stale_days)
+        out["pruned"] = await asyncio.to_thread(store.prune_empty_lists)
+        out["expired"] = await asyncio.to_thread(
+            store.prune_stale_lists, older_than_days=settings.watchlist_stale_days
+        )
     except Exception as exc:  # noqa: BLE001 — the loop outlives any one tick
         log.exception("watchlist: tick failed")
         _bump(last_error=f"tick: {type(exc).__name__}: {exc}")
@@ -1370,16 +1518,10 @@ async def watch_loop(interval_s: float) -> None:
 async def baseline(lei: str) -> tuple[Any, dict[str, Any] | None, str | None]:
     """The lookup response (usually replayed — the reader is on the report
     page), the mirror facts and the mirror watermark for a new watch."""
-    from . import entity_pages as ep
     from .routers.lookup import _lookup_impl
 
     resp = await _lookup_impl(lei)
-    mirror = ep.get_store()
-    facts = gleif_facts(mirror, lei) if mirror is not None else None
-    watermark = None
-    if mirror is not None:
-        wm = mirror.watermark()
-        watermark = wm.strftime("%Y-%m-%d %H:%M:%S") if wm else None
+    facts, watermark = await asyncio.to_thread(_mirror_facts, lei)
     return resp, facts, watermark
 
 

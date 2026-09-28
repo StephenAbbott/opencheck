@@ -263,6 +263,14 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .saved_reports import prune_loop
 
         prune_task = asyncio.create_task(prune_loop(prune_interval))
+    # Phase 260: off-host, encrypted backups of the watchlist and saved-report
+    # files to a private GitHub release (opencheck/backups.py). Needs the
+    # repo, token and passphrase; 0 on the interval disables.
+    backup_task: asyncio.Task[None] | None = None
+    from . import backups
+
+    if get_settings().backup_interval_s > 0 and backups.configured():
+        backup_task = asyncio.create_task(backups.backup_loop())
     async with AsyncExitStack() as stack:
         if _MCP is not None and not _mcp_session_started:
             await stack.enter_async_context(_MCP.session_manager.run())
@@ -286,6 +294,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 watch_task.cancel()
             if prune_task is not None and not prune_task.done():
                 prune_task.cancel()
+            if backup_task is not None and not backup_task.done():
+                backup_task.cancel()
 
 
 app = FastAPI(

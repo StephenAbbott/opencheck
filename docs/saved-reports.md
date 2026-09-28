@@ -102,6 +102,10 @@ and a read of an expired row answers `410` and deletes it.
 `OPENCHECK_SAVED_REPORTS_PER_IP` (20 a day, Phase 234) keeps one address from
 filling that cap on its own: checked before a save (REST or MCP), spent only
 when the save succeeds, `429` + `Retry-After` beyond it.
+The file carries `PRAGMA user_version` (`saved_reports.MIGRATIONS`, Phase
+260) and is backed up once a day, encrypted, to a private GitHub repository
+([`backups.md`](backups.md)) — a record promised as durable no longer rests
+on one disk.
 `OPENCHECK_SAVED_REPORTS_MAX_TOTAL` (5,000) caps the store — insurance; a
 report measured 5–20 KB gzipped on 16 Sept 2026 (BIRTLEY INVESTMENT LIMITED 19
 KB raw, BP 106 KB raw).

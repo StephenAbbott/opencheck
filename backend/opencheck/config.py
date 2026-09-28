@@ -176,6 +176,28 @@ class Settings(BaseSettings):
         default=21600.0, alias="OPENCHECK_SAVED_REPORTS_PRUNE_INTERVAL_S"
     )
 
+    # --- Phase 260: off-host backups of OpenCheck's own SQLite files ---
+    # watchlist.sqlite and saved_reports.sqlite live on one Render disk. Once
+    # a day (opencheck/backups.py) each is copied with SQLite's online backup
+    # API, integrity-checked, gzipped, encrypted (AES-256-GCM, key from the
+    # passphrase by scrypt) and uploaded as an asset of one release on a
+    # PRIVATE GitHub repository. All three settings must be set, or nothing
+    # runs; the task refuses a repository GitHub reports as public — saved
+    # reports are unlisted capabilities and a watchlist names what someone
+    # watches. Restore with backend/scripts/restore_backup.py.
+    backup_github_repo: str | None = Field(default=None, alias="OPENCHECK_BACKUP_GITHUB_REPO")
+    # A fine-grained token with Contents: read and write on that one repo.
+    backup_github_token: str | None = Field(default=None, alias="OPENCHECK_BACKUP_GITHUB_TOKEN")
+    # Named *_secret so opencheck.secret_scrub redacts it from any message.
+    backup_passphrase_secret: str | None = Field(default=None, alias="OPENCHECK_BACKUP_PASSPHRASE")
+    backup_release_tag: str = Field(default="sqlite-backups", alias="OPENCHECK_BACKUP_RELEASE_TAG")
+    # Seconds between backups of a file, judged from the newest asset already
+    # on the release — so a deploy does not reset the clock. The task wakes
+    # hourly to ask. 0 disables.
+    backup_interval_s: float = Field(default=86400.0, alias="OPENCHECK_BACKUP_INTERVAL_S")
+    # How many backups of each file the release keeps; older ones are deleted.
+    backup_keep: int = Field(default=14, alias="OPENCHECK_BACKUP_KEEP")
+
     # --- Rate limiting / abuse protection (see opencheck/ratelimit.py) ---
     # Master switch. The test suite turns it off in conftest.py so unrelated
     # tests never trip budgets; dedicated tests re-enable it per-fixture.

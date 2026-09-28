@@ -36,6 +36,7 @@ import {
   readToken,
   sortEntries,
   storeToken,
+  tierChip,
   tierSentence,
   tokenFromLocation,
   triggerSentence,
@@ -355,7 +356,7 @@ function EntryView({
 }) {
   const checked = checkedSentence(e.checked);
   const degraded = Array.from(new Set(e.degraded.map((d) => d.source_id))).filter(Boolean);
-  const tierTone = e.tier === "opensanctions" ? "risk" : e.tier === "gleif" ? "accent" : "neutral";
+  const chip = tierChip(e.tier);
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -371,8 +372,8 @@ function EntryView({
           {entryHeadline(e)}
         </a>
         <span className="text-oo-meta text-oo-muted">
-          <Chip tone={tierTone} size="sm">
-            {e.tier === "gleif" ? "GLEIF delta" : e.tier === "opensanctions" ? "OpenSanctions delta" : "By hand"}
+          <Chip tone={chip.tone} size="sm">
+            {chip.label}
           </Chip>{" "}
           {e.created_at.replace("T", " ").slice(0, 16)} UTC
         </span>

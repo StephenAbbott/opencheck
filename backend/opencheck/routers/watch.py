@@ -19,6 +19,7 @@ wild would otherwise re-check on every visit.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from xml.sax.saxutils import escape
 
@@ -29,6 +30,7 @@ from pydantic import BaseModel, Field
 from .. import watchlist as wl
 from ..config import get_settings
 from ..ratelimit import default_tier, heavy_tier, limiter, lookup_tier
+from ..sqlite_schema import SchemaTooNewError
 
 router = APIRouter()
 
@@ -42,8 +44,25 @@ class RecheckItem(BaseModel):
     lei: str = Field(..., min_length=20, max_length=40)
 
 
+# Phase 260: every store call below runs on a worker thread. The store opens a
+# SQLite connection with a 30 s busy timeout, and the mirror-refresh thread and
+# the watcher write the same file — called on the event loop, one /watch
+# request waiting on a write lock froze every request on the server for up to
+# 30 s. The route bodies stay async; the SQLite work is ``_db(...)``.
+async def _db(fn: Any, *args: Any, **kwargs: Any) -> Any:
+    return await asyncio.to_thread(fn, *args, **kwargs)
+
+
 def _store() -> wl.WatchlistStore:
-    store = wl.get_store()
+    try:
+        store = wl.get_store()
+    except SchemaTooNewError as exc:
+        # Phase 260: a file written by a newer build (a rollback) is refused,
+        # never written to; the route says so rather than 500.
+        raise HTTPException(
+            status_code=503,
+            detail="The watchlist file was written by a newer version of OpenCheck; this instance will not write to it.",
+        ) from exc
     if store is None:
         raise HTTPException(
             status_code=503,
@@ -80,7 +99,7 @@ def _public_api_base(request: Request) -> str:
     return base or str(request.base_url).rstrip("/")
 
 
-def _tiers() -> dict[str, Any]:
+def _tiers(gaps: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """What the two tiers are doing — for the page's honesty line."""
     from .. import entity_pages as ep
     from .. import mirror_refresh
@@ -103,6 +122,10 @@ def _tiers() -> dict[str, Any]:
             "available": settings.watchlist_opensanctions_interval_s > 0,
             "last_version": wl.state().get("os_last_version"),
             "last_checked_at": wl.state().get("os_last_checked_at"),
+            # Phase 260: versions listed but not read yet, and the most
+            # recent versions that could not be read at all.
+            "backlog": wl.state().get("os_backlog", 0),
+            "gaps": gaps or [],
         },
         "worker": {
             "enabled": wl.state().get("enabled", False),
@@ -136,7 +159,7 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "total_watched": counts["total"],
         },
         "feed_url": f"{_public_api_base(request)}/watch/{token}.atom",
-        "tiers": _tiers(),
+        "tiers": _tiers(wl.os_gaps(store)[-3:]),
     }
 
 
@@ -171,12 +194,12 @@ async def add_item(request: Request, response: Response, body: AddItem) -> dict[
     caller's lookup budget when it is a fresh run. Both caps and the
     new-list quota are checked *before* the baseline runs, and a list is
     created only once its first watch can be added."""
-    store = _store()
+    store = await _db(_store)
     lei = _lei_or_400(body.lei)
     th: str | None = None
     token: str | None = None
     if body.token:
-        th = _list_or_404(store, body.token)
+        th = await _db(_list_or_404, store, body.token)
         token = body.token
     else:
         wait = _NEW_LISTS.retry_after()
@@ -191,17 +214,18 @@ async def add_item(request: Request, response: Response, body: AddItem) -> dict[
                 headers={"Retry-After": str(int(wait + 0.999))},
             )
     try:
-        store.check_capacity(th, lei)
+        await _db(store.check_capacity, th, lei)
     except wl.CapExceededError as exc:
         raise _cap_refusal(exc) from exc
     resp, facts, watermark = await wl.baseline(lei)
     snapshot = wl.snapshot_from_response(resp)
     if th is None:
-        token = store.create_list()
+        token = await _db(store.create_list)
         th = wl.token_hash(token)
         _NEW_LISTS.hit()
     try:
-        watch = store.add_watch(
+        watch = await _db(
+            store.add_watch,
             th,
             lei,
             legal_name=resp.legal_name,
@@ -213,16 +237,17 @@ async def add_item(request: Request, response: Response, body: AddItem) -> dict[
     except wl.CapExceededError as exc:
         raise _cap_refusal(exc) from exc
     watch.pop("snapshot", None)
-    return {"token": token, "watch": watch, **_list_payload(store, th, token, request)}
+    payload = await _db(_list_payload, store, th, token, request)
+    return {"token": token, "watch": watch, **payload}
 
 
 @router.get("/watch/{token}.atom")
 @limiter.limit(default_tier)
 async def feed(request: Request, token: str) -> Response:
-    store = _store()
-    th = _list_or_404(store, token)
-    entries = store.entries(th, limit=50)
-    watches = store.watches(th)
+    store = await _db(_store)
+    th = await _db(_list_or_404, store, token)
+    entries = await _db(store.entries, th, limit=50)
+    watches = await _db(store.watches, th)
     xml = render_atom(
         feed_id=f"urn:opencheck:watchlist:{th[:24]}",
         self_url=f"{_public_api_base(request)}/watch/{token}.atom",
@@ -241,22 +266,22 @@ async def feed(request: Request, token: str) -> Response:
 @router.get("/watch/{token}")
 @limiter.limit(default_tier)
 async def get_list(request: Request, token: str) -> JSONResponse:
-    store = _store()
-    th = _list_or_404(store, token)
+    store = await _db(_store)
+    th = await _db(_list_or_404, store, token)
     return JSONResponse(
-        _list_payload(store, th, token, request), headers={"Cache-Control": "private, no-store"}
+        await _db(_list_payload, store, th, token, request), headers={"Cache-Control": "private, no-store"}
     )
 
 
 @router.delete("/watch/{token}/items/{lei}")
 @limiter.limit(default_tier)
 async def remove_item(request: Request, response: Response, token: str, lei: str) -> dict[str, Any]:
-    store = _store()
-    th = _list_or_404(store, token)
+    store = await _db(_store)
+    th = await _db(_list_or_404, store, token)
     norm = _lei_or_400(lei)
-    if not store.remove_watch(th, norm):
+    if not await _db(store.remove_watch, th, norm):
         raise HTTPException(status_code=404, detail="That LEI is not on this watchlist.")
-    return _list_payload(store, th, token, request)
+    return await _db(_list_payload, store, th, token, request)
 
 
 @router.post("/watch/{token}/recheck")
@@ -264,16 +289,17 @@ async def remove_item(request: Request, response: Response, token: str, lei: str
 async def recheck(request: Request, response: Response, token: str, body: RecheckItem) -> dict[str, Any]:
     """Re-check one watched entity now. A deliberate human action, so it
     bypasses the replay cache; the heavy tier bounds it."""
-    store = _store()
-    th = _list_or_404(store, token)
+    store = await _db(_store)
+    th = await _db(_list_or_404, store, token)
     lei = _lei_or_400(body.lei)
-    if store.get_watch(th, lei) is None:
+    if await _db(store.get_watch, th, lei) is None:
         raise HTTPException(status_code=404, detail="That LEI is not on this watchlist.")
     result = await wl.rerun(lei, wl.TIER_MANUAL, {"tier": wl.TIER_MANUAL}, only_token_hash=th)
     if result.get("error"):
         raise HTTPException(status_code=503, detail="The re-check could not run; the baseline is unchanged.")
     result.pop("snapshot", None)
-    return {"result": result, **_list_payload(store, th, token, request)}
+    payload = await _db(_list_payload, store, th, token, request)
+    return {"result": result, **payload}
 
 
 @router.get("/watchstats")
@@ -282,12 +308,25 @@ async def watch_stats() -> JSONResponse:
     named, renewal churn filtered, re-runs, entries. Same contract as
     ``/mirror``: public, no LEI or name can appear."""
     counts = {"total": 0, "distinct_leis": 0, "pending": 0}
-    store = wl.get_store()
+    store = await _db(wl.get_store)
     if store is not None:
-        c = store.counts()
-        counts = {"total": c["total"], "distinct_leis": c["distinct_leis"], "pending": store.pending_count()}
+
+        def _counts() -> dict[str, int]:
+            c = store.counts()
+            return {"total": c["total"], "distinct_leis": c["distinct_leis"], "pending": store.pending_count()}
+
+        counts = await _db(_counts)
+    from .. import backups
+
     return JSONResponse(
-        {"enabled": store is not None, "watched": counts, "watcher": wl.state()},
+        {
+            "enabled": store is not None,
+            "watched": counts,
+            "watcher": wl.state(),
+            # Phase 260: the off-host backups of this file and the saved
+            # reports — dates, sizes and errors only, never the repository.
+            "backups": backups.state(),
+        },
         headers={"Cache-Control": "no-store"},
     )
 
@@ -310,6 +349,7 @@ TIER_SENTENCE = {
     wl.TIER_GLEIF: "GLEIF published a change to this record",
     wl.TIER_OPENSANCTIONS: "OpenSanctions published a change naming this entity",
     wl.TIER_MANUAL: "Re-checked on request",
+    wl.TIER_CATCHUP: "Re-checked to catch up on OpenSanctions versions the watcher could not read",
 }
 
 
@@ -353,6 +393,19 @@ def _describe(change: dict[str, Any]) -> str:
     return f"{k}."
 
 
+def _catch_up_sentence(trig: dict[str, Any]) -> str:
+    """Why a catch-up re-run happened, in the feed's words."""
+    if trig.get("reason") == "delta_missing":
+        return (
+            f"OpenSanctions version {trig.get('after')} was listed but its delta file could not be "
+            "downloaded, so every watched company was re-checked."
+        )
+    return (
+        f"OpenSanctions versions published after {trig.get('after')} and before {trig.get('before')} "
+        "were no longer listed when the watcher came to read them, so every watched company was re-checked."
+    )
+
+
 def _entry_title(entry: dict[str, Any]) -> str:
     name = entry.get("legal_name") or entry["lei"]
     changes = entry.get("changes") or []
@@ -384,6 +437,8 @@ def _entry_content(entry: dict[str, Any]) -> str:
             + (f"; datasets: {', '.join(trig.get('datasets') or [])}" if trig.get("datasets") else "")
             + "."
         )
+    if entry["tier"] == wl.TIER_CATCHUP:
+        lines[0] = _catch_up_sentence(trig)
     changes = entry.get("changes") or []
     if changes:
         lines.append("What a re-run found:")
