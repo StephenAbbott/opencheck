@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 253** — the Securities panel caches GLEIF's ISIN list for a day and, when GLEIF cannot be asked, says whether OpenCheck held the request back, GLEIF refused it or GLEIF did not answer.
+**Latest: Phase 254** — SEC EDGAR now matches a GLEIF legal name to its SEC company number when the SEC writes it with a state tag or without the apostrophe, as it does for Moody's.
 
 → [Full development history](docs/status.md)
 
