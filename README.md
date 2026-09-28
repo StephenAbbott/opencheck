@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 259** — SEC EDGAR reads every EDGAR country code from the SEC's own table, marks joint filings as possibly the same shares, and OpenCheck shows one "outside the EU/EEA" note per lookup instead of one per source.
+**Latest: Phase 260** — The watchlist reads a backlog of OpenSanctions deltas oldest first and re-checks every watched company when a delta is lost, keeps its database work off the event loop, and both the watchlist and saved-report files gain schema versions and encrypted daily backups to a private repository.
 
 → [Full development history](docs/status.md)
 
