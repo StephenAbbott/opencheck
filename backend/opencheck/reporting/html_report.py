@@ -567,10 +567,32 @@ _CONTEXT_NOTE = (
 )
 
 
+def _signal_source_name(sig: dict[str, Any], reg: Any) -> str:
+    """The source(s) a signal names, for the report line.
+
+    A code collapsed across sources (NON_EU_JURISDICTION, Phase 259) lists
+    them in ``evidence.reported_by``; otherwise the one ``source_id``.
+    """
+    reported_by = (sig.get("evidence") or {}).get("reported_by")
+    ids = (
+        [x for x in reported_by if isinstance(x, str) and x]
+        if isinstance(reported_by, list) and reported_by
+        else [sig.get("source_id") or ""]
+    )
+    names: list[str] = []
+    for sid in ids:
+        src = reg.get(sid) if sid else None
+        name = src.info.name if src else (sid or "OpenCheck risk engine")
+        if name not in names:
+            names.append(name)
+    if len(names) <= 1:
+        return names[0] if names else "OpenCheck risk engine"
+    return ", ".join(names[:-1]) + " and " + names[-1]
+
+
 def _signal_div(sig: dict[str, Any], reg: Any, *, extra_class: str = "") -> str:
     conf = sig.get("confidence", "medium")
-    src = reg.get(sig.get("source_id", ""))
-    src_name = src.info.name if src else (sig.get("source_id") or "OpenCheck risk engine")
+    src_name = _signal_source_name(sig, reg)
     label = _signal_label(sig.get("code", ""))
     return (
         f'<div class="signal {escape(conf)}{extra_class}"><span class="h">{escape(label)}</span> '

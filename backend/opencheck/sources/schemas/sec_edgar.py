@@ -37,6 +37,8 @@ class EDGARFiling(_Base):
     filed: str | None = None
     # The date of the event that required the filing (Phase 252).
     event_date: str | None = None
+    # The other reporting persons on the same filing (Phase 259).
+    joint_with: list[str] = Field(default_factory=list)
     source_url: str | None = None
 
 

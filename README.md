@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 258** — the Securities panel reads GLEIF's own daily ISIN-to-LEI file instead of calling GLEIF, and every GLEIF call OpenCheck makes is counted by route and endpoint.
+**Latest: Phase 259** — SEC EDGAR reads every EDGAR country code from the SEC's own table, marks joint filings as possibly the same shares, and OpenCheck shows one "outside the EU/EEA" note per lookup instead of one per source.
 
 → [Full development history](docs/status.md)
 

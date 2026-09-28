@@ -88,6 +88,10 @@ def test_non_eu_jurisdiction_dedups_per_source_like_fatf() -> None:
     sources was silently dropped from ``evidence.jurisdictions[]``,
     un-badging those nodes in the graph. It is a jurisdiction rule and
     must behave like the FATF jurisdiction rules.
+
+    Phase 259 put it back in _STRUCTURAL_SIGNAL_CODES — one note per
+    lookup, not one per source — with a resolver that POOLS rather than
+    overwrites, so this test still holds: both nodes survive.
     """
     gleif = _signal(
         "NON_EU_JURISDICTION",
@@ -157,8 +161,15 @@ def test_whole_structure_signals_still_collapse_globally() -> None:
         "COMPLEX_CORPORATE_STRUCTURE",
         "POSSIBLE_OBFUSCATION",
     } <= _STRUCTURAL_SIGNAL_CODES
-    for code in ("TRUST_OR_ARRANGEMENT", "NOMINEE", "NON_EU_JURISDICTION"):
+    for code in ("TRUST_OR_ARRANGEMENT", "NOMINEE"):
         assert code not in _STRUCTURAL_SIGNAL_CODES
+    # NON_EU_JURISDICTION collapses globally since Phase 259 — allowed only
+    # because its resolver POOLS every source's jurisdictions (the test
+    # above still proves both nodes survive), never assigns.
+    from opencheck.routers.lookup import _COLLAPSE_RESOLVERS
+
+    assert "NON_EU_JURISDICTION" in _STRUCTURAL_SIGNAL_CODES
+    assert "NON_EU_JURISDICTION" in _COLLAPSE_RESOLVERS
 
 
 def test_layer_depth_survives_regardless_of_source_order() -> None:

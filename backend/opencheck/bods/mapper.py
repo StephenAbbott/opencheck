@@ -197,6 +197,7 @@ from .mappers.sec_edgar import (  # noqa: F401  (re-exported, Phase 246)
     _SEC_CUSTODIAL_REPORTER_CODES,
     _iso2_to_country_name,
     _pycountry,
+    _join_names,
     _sec_beneficial_ownership,
     map_sec_edgar,
     reports_exit,

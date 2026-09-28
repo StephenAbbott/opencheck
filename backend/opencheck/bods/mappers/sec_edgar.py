@@ -87,6 +87,13 @@ def _sec_beneficial_ownership(
     return party_type == "person"
 
 
+def _join_names(names: list[str]) -> str:
+    """"A", "A and B", "A, B and C"."""
+    if len(names) <= 1:
+        return "".join(names)
+    return ", ".join(names[:-1]) + " and " + names[-1]
+
+
 def reports_exit(reporter: dict[str, Any]) -> bool:
     """Whether a 13D/13G reporter's filing says it now holds nothing.
 
@@ -209,6 +216,9 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
         reporter_cik = reporter.get("reporter_cik") or ""
         is_individual = reporter.get("is_individual", False)
         citizenship_iso = reporter.get("citizenship_iso") or ""
+        # The SEC's own name for the code, for a place with no current ISO
+        # code (Netherlands Antilles): carried as a name alone (Phase 259).
+        citizenship_name = reporter.get("citizenship_name") or ""
         percent = reporter.get("percent_of_class")
         filing_url = filing.get("filing_url") or subject_url
 
@@ -230,6 +240,8 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
             if citizenship_iso:
                 country_name = _iso2_to_country_name(citizenship_iso)
                 nationalities = [{"name": country_name, "code": citizenship_iso}]
+            elif citizenship_name and citizenship_name.upper() != "UNKNOWN":
+                nationalities = [{"name": citizenship_name.title()}]
 
             reporter_stmt = make_person_statement(
                 source_id="sec_edgar",
@@ -246,6 +258,8 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
             if citizenship_iso:
                 country_name = _iso2_to_country_name(citizenship_iso)
                 jur = (country_name, citizenship_iso)
+            elif citizenship_name and citizenship_name.upper() != "UNKNOWN":
+                jur = (citizenship_name.title(), None)
 
             reporter_stmt = make_entity_statement(
                 source_id="sec_edgar",
@@ -306,6 +320,24 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
                 if shareholding.get("details")
                 else note
             )
+        # Phase 259 (Stephen, 28 Sept 2026): a joint filing stays one
+        # relationship per reporting person, as the structured XML has it —
+        # no control chain is read out of the free-text items — but says
+        # that the holdings are one filing's and may be the same shares.
+        joint_with = [n for n in (filing.get("joint_with") or []) if n]
+        if joint_with:
+            joint_note = (
+                "Reported in one joint filing with "
+                + _join_names(joint_with)
+                + "; holdings in a joint filing can be the same shares "
+                "reported for each person, so they are not added together"
+            )
+            shareholding["details"] = (
+                f"{shareholding['details']}. {joint_note}"
+                if shareholding.get("details")
+                else joint_note
+            )
+
         record_status = "new"
         if reports_exit(reporter):
             # An exit filing: the reporter's latest filing says it holds

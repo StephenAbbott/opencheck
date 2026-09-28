@@ -2,8 +2,8 @@ import { useId, useState } from "react";
 import { CONFIDENCE_GLYPH, CONFIDENCE_LABEL } from "../ui/Chip";
 import { SignalEvidence } from "./SignalEvidence";
 import type { RiskSignal } from "../../lib/api";
-import type { SignalEvidenceData } from "../../lib/signalEvidence";
-import { sourceLabel } from "../../lib/vocab";
+import { signalSourceIds, type SignalEvidenceData } from "../../lib/signalEvidence";
+import { sourceList } from "../../lib/vocab";
 
 /** The quiet slate every *context* chip wears (kind="context") — structural
  *  information, never a warning. One string so the three cannot drift. */
@@ -346,9 +346,10 @@ export function RiskChip({
  * description — never part of its name.
  */
 export function describedText(signal: RiskSignal): string {
-  return `${signal.summary}${
-    signal.source_id ? ` Source: ${sourceLabel(signal.source_id)}.` : ""
-  }`;
+  const ids = signalSourceIds(signal);
+  if (ids.length === 0) return signal.summary;
+  const label = ids.length === 1 ? "Source" : "Sources";
+  return `${signal.summary} ${label}: ${sourceList(ids)}.`;
 }
 
 /**
@@ -361,7 +362,7 @@ export function chipEvidence(signal: RiskSignal): SignalEvidenceData {
   return {
     signal,
     sourceCount: 0,
-    sourceIds: signal.source_id ? [signal.source_id] : [],
+    sourceIds: signalSourceIds(signal),
     checkedAt: null,
   };
 }

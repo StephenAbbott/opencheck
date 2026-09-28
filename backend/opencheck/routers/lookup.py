@@ -54,6 +54,7 @@ from ..subject_identity import subject_identity
 from ..verdict import build_verdict
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
+from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
 from ..bods.state_bodies import classify_government_entities
 from ..ratelimit import default_tier, limiter, lookup_tier
@@ -1021,6 +1022,10 @@ _COLLAPSE_RESOLVERS = {
     # Phase 240: pools every source's state parties and regroups them by
     # state, so one 67% holding named by two sources is one holding.
     "STATE_CONTROLLED": _risk_merge_state_controlled,
+    # Phase 259: one "outside the EU/EEA" note per lookup, pooling every
+    # source's jurisdictions (so every graph badge stays) and naming the
+    # sources in ``evidence.reported_by``.
+    "NON_EU_JURISDICTION": _risk_merge_non_eu,
 }
 
 
@@ -1050,8 +1055,14 @@ _COLLAPSE_RESOLVERS = {
 # COMBINES rather than picks: ``merge_state_controlled`` pools every
 # source's ``evidence.matches``, so no node loses its badge — the one
 # condition the paragraph above sets for living here.
+#
+# NON_EU_JURISDICTION (Phase 259) joins on the same terms:
+# ``merge_non_eu_jurisdiction`` pools every source's
+# ``evidence.jurisdictions`` (per node), so a US company reads the note once
+# rather than once per source, and every badge stays.
 _STRUCTURAL_SIGNAL_CODES = {
     "COMPLEX_OWNERSHIP_LAYERS",
+    "NON_EU_JURISDICTION",
     "STATE_CONTROLLED",
     "COMPLEX_CORPORATE_STRUCTURE",
     "POSSIBLE_OBFUSCATION",

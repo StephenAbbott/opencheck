@@ -130,9 +130,18 @@ def _shape_risk(signals: list[dict[str, Any]]) -> list[dict[str, Any]]:
             row["kind"] = kind
             row["sources"] = []
             merged[key] = row
-        sid = s.get("source_id")
-        if sid and sid not in row["sources"]:
-            row["sources"].append(sid)
+        # A code collapsed across sources upstream (NON_EU_JURISDICTION,
+        # Phase 259) names every contributing source in
+        # ``evidence.reported_by``; ``source_id`` alone is only the first.
+        reported_by = (s.get("evidence") or {}).get("reported_by")
+        sids = (
+            [x for x in reported_by if isinstance(x, str) and x]
+            if isinstance(reported_by, list) and reported_by
+            else [s.get("source_id")]
+        )
+        for sid in sids:
+            if sid and sid not in row["sources"]:
+                row["sources"].append(sid)
     return list(merged.values())
 
 
