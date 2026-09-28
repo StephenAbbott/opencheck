@@ -1198,9 +1198,9 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Belgium | bce_belgium | `RA000025` — Crossroad Bank of Enterprises | 2026-08-28 — table previously said RA000143 (wrong) |
 | Austria | firmenbuch | `RA000017` — Commercial Register (BM für Justiz) | 2026-08-28 — table previously said RA000128 (wrong) |
 | Poland | krs_poland | `RA000484` — National Court Register (KRS) | 2026-08-28 — table previously said RA000439 (wrong) |
-| Slovakia | rpo_slovakia / rpvs_slovakia | `RA000526` — Business Register (Ministerstvo spravodlivosti) | 2026-08-28 — table previously said RA000476 (wrong) |
+| Slovakia | rpo_slovakia / rpvs_slovakia | `RA000526` — Business Register (Ministerstvo spravodlivosti) | 2026-08-28 — table previously said RA000476 (wrong). `registeredAs` is the bare eight-digit IČO (re-checked 2026-09-28); scheme `SK-ICO` since Phase 257 |
 | Singapore | acra_singapore | `RA000523` — Business Registry (ACRA) | 2026-09-10 — 12,292 of 13,326 active SG LEIs register under it, **all with the UEN in `registeredAs`** (table previously said RA000509, wrong). VCC sub-funds (`T21VC0144D-SF001`) are filed here too but ACRA publishes no sub-fund rows, so `normalise_uen` rejects them. Other SG authorities: `RA000524` MAS, `RA000669` Registry of Societies, `RA000781` Charity Portal, `RA000996` OPERA |
-| Canada | corporations_canada | `RA000072` — Corporate Registry (federal; provinces are RA000073–RA000085) | 2026-08-28 |
+| Canada | corporations_canada | `RA000072` — Corporate Registry (federal; provinces are RA000073–RA000085) | 2026-08-28. `registeredAs` carries the check digit after a hyphen (`1709920-7`; re-checked 2026-09-28), which `normalise_corp_id` folds to `17099207`; scheme `CA-CC` since Phase 257 |
 | Denmark | cvr_denmark | `RA000170` — Central Business Register (Erhvervsstyrelsen) | 2026-08-28 |
 | Croatia | sudreg_croatia | `RA000156` — Croatian Court Registry (Sudski registar) | 2026-08-28 |
 | Czechia | ares | `RA000163` — Commercial Register (Ministerstvo spravedlnosti) | 2026-08-28 — ⚠️ ambiguous; the adapter is named for **ARES**, which is `RA000168` (Register of Economic Entities, Ministerstvo financí) |
@@ -1210,7 +1210,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Switzerland | zefix | `RA000548` in the adapter | 2026-08-28 — ⚠️ **mismatch**: `RA000548` is the *UID-Register* (Bundesamt für Statistik, covers CH **and** LI). Zefix, the commercial register, is `RA000549` |
 | Australia | abr_australia | `RA000014` — Register of Companies (ASIC) · `RA000013` — Australian Business Register (ATO) | 2026-08-28 |
 | New Zealand | nz_companies | `RA000466` — Companies Register (Companies Office) | 2026-08-28 (near-miss neighbour: `RA000749` NZ Business Number Register) |
-| Brazil | cnpj_brazil | `RA000681` — National Registry for Legal Entity (Receita Federal / CNPJ) | 2026-08-28 (state Juntas Comerciais are RA000036–RA000062) |
+| Brazil | cnpj_brazil | `RA000681` — National Registry for Legal Entity (Receita Federal / CNPJ) | 2026-08-28 (state Juntas Comerciais are RA000036–RA000062). `registeredAs` is punctuated (`33.856.394/0001-33`; re-checked 2026-09-28); scheme `BR-CNPJ` since Phase 257 |
 | India | mca_india | `RA000394` — Companies Register (MCA21) | 2026-08-28 |
 | Nigeria | cac_nigeria | `RA000469` — Company Registry (Corporate Affairs Commission) | 2026-09-16 — all 30 set LEIs re-checked, `registeredAs` = RC (also verified 2026-08-12, 2026-08-28; Africa's first public BO register). Offline curated example set of 30 LEI-anchored companies (`data/cac_nigeria_psc.json`, Phase 213); a live adapter is deferred pending CAC / Oasis Management engagement. LEI-keyed dispatch (not an RA deriver); asserts only the CAC-published RC number (`ng_cac_rc`), not the derived LEI. |
 | Greece | gemi_greece | `RA000685` — General Commercial Registry (G.E.MI.), businessregistry.gr | 2026-08-28 — 20 of 25 sampled Greek LEI records use it |
@@ -2080,8 +2080,9 @@ GLEIF mapper exported most registration numbers with `scheme: ""`.
   ariregister's own subject used `EE-KMKR`, which is the VAT number).
   `registeredAs` is written without spaces when it is all digits once they go
   (`normalise_registered_as`), and with single spaces otherwise (Malta's
-  `C 83807`). `CA-CORP` is in `register_hops._NO_COUNTRY_ALIAS`: the federal
-  register cannot stand in for a provincial number.
+  `C 83807`). `CA-CC` (`CA-CORP` until Phase 257) is in
+  `register_hops._NO_COUNTRY_ALIAS`: the federal register cannot stand in for
+  a provincial number.
 - Adding RA codes to `_GLEIF_RA_TO_ORG_ID` **adds FullCheck register hops**
   (`register_hops` derives them from the table) — nineteen more schemes in
   Phase 239, each with its `REG-<country>` alias where the country has one hop.
@@ -2399,6 +2400,8 @@ Things that will be re-derived otherwise:
   `_GLEIF_RA_TO_ORG_ID` — no adapter claims them, so no register hop follows.
   The adapter schemes that are not org-id codes (CA-CORP, BR-RFB, SK-RPO,
   RO-ONRC, HK-BRN, US-DE) were left alone: each is a both-sides decision.
+  Phase 257 renamed the first three (see below); the other three stay, because
+  no org-id code fits the number OpenCheck holds.
 - **A person's non-document identifiers are annotations.** BODS keeps
   `personStatement.identifiers` for `{ISO3}-{PASSPORT|TAXID|IDCARD}`;
   `make_person_statement` moves anything else (Wikidata Q-ids, OpenSanctions /
@@ -2430,3 +2433,35 @@ Things that will be re-derived otherwise:
   `/subsidiaries` (optionally the MEIP / EITI / GEM lists, apart and not BODS),
   and `opencheck_export_bods(include_subsidiaries=True)` runs the
   `/export?subsidiaries=true` merge. Default tier, like the REST route.
+
+---
+
+## Three adapter schemes renamed to their org-id codes (Phase 257)
+
+`SK-RPO` → **`SK-ICO`**, `BR-RFB` → **`BR-CNPJ`**, `CA-CORP` → **`CA-CC`**.
+Each was named after the register or authority a number is read from, not
+after the number, and libcovebods reported all three as
+`entity_identifiers_not_known_scheme` (the Phase 255 five-network check).
+Tests: `tests/test_org_id_schemes_phase257.py`.
+
+- **Both sides in one commit, always.** The scheme follows the adapter (Phase
+  239): the mapper (`bods/mappers/slovakia.py` — the RPO subject *and* RPVS's
+  legal-person KUVs — `brazil.py`, `canada.py`) and `_GLEIF_RA_TO_ORG_ID`
+  (RA000526, RA000681, RA000072) moved together, so GLEIF and the register
+  still corroborate on one scheme-scoped key. `register_hops` derives its hops
+  from that table, so `SK-ICO` / `BR-CNPJ` / `CA-CC` hop and the old names no
+  longer do; `REG-SK` and `REG-BR` still alias; `CA-CC` replaced `CA-CORP` in
+  `_NO_COUNTRY_ALIAS`.
+- **`SK-ICO`, not `SK-ORSR`.** org-id's `SK-ORSR` is the Ministry of Justice
+  register, numbered by court and insert; the value OpenCheck holds is the
+  Statistical Office's IČO. The internal dispatch keys (`sk_ico`, `br_cnpj`,
+  `ca_corp_id`) and constant names are internal and stay.
+- **Frozen payloads keep the old names, and that is history, not a defect.**
+  A saved report or watchlist baseline taken before the rename carries
+  `CA-CORP` etc. `watchlist.diff_snapshots` reports an identifier change only
+  for a scheme present on both sides with different values, so a rename is not
+  reported (pinned); `reconcile.ts` still bridges the legacy label on
+  jurisdiction + number.
+- Hit summaries read `CA-CC {number}` (`sources/corporations_canada.py`,
+  `routers/hit_builders.py`); `cnpj_brazil`'s already read `BR-CNPJ`.
+

@@ -208,7 +208,7 @@ class TestMapCorporationsCanada:
         stmts = list(map_corporations_canada(self._build_bundle()))
         entity = next(s for s in stmts if s["recordType"] == "entity")
         ids = {i["scheme"]: i["id"] for i in entity["recordDetails"]["identifiers"]}
-        assert ids["CA-CORP"] == "1007"
+        assert ids["CA-CC"] == "1007"
 
     def test_business_number_identifier(self) -> None:
         stmts = list(map_corporations_canada(self._build_bundle()))
