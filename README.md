@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 256** — a person's moved identifier reads back with its scheme name whole, a personal Russian INN stays in BODS as a tax ID, and a stock-exchange listing names its operating market.
+**Latest: Phase 259** — SEC EDGAR reads every EDGAR country code from the SEC's own table, marks joint filings as possibly the same shares, and OpenCheck shows one "outside the EU/EEA" note per lookup instead of one per source.
 
 → [Full development history](docs/status.md)
 
