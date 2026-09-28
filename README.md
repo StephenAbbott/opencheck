@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 256** — a person's moved identifier reads back with its scheme name whole, a personal Russian INN stays in BODS as a tax ID, and a stock-exchange listing names its operating market.
+**Latest: Phase 257** — the Slovak, Brazilian and Canadian register identifiers now carry their org-id.guide schemes (SK-ICO, BR-CNPJ, CA-CC) on both the register and the GLEIF side.
 
 → [Full development history](docs/status.md)
 
