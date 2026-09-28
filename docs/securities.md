@@ -18,6 +18,39 @@ lookup's frozen `listing` event rather than fetched here — see
 `GET /securities?lei=&page=` assembles these lazily (the frontend fetches it only
 when the section renders) and never enumerates every ISIN.
 
+## When GLEIF cannot be asked (Phases 145 and 252)
+
+The GLEIF call is *discretionary* (Phase 234): when fewer than
+`OPENCHECK_GLEIF_LOOKUP_RESERVE` slots of the per-minute budget are left,
+OpenCheck refuses it without sending anything so lookups keep their anchor
+calls. GLEIF itself can also refuse (a 429) or not answer. None of these takes
+the panel down — the sanctioned overlay is a local index and always runs.
+
+Since Phase 253 each ISIN page is **cached**, keyed on LEI + page + page size:
+
+| Age of the cached page | What `/securities` does |
+|---|---|
+| ≤ 1 day (`ISINS_FRESH_DAYS`) | Serves it; GLEIF is not asked. |
+| older | Asks GLEIF; on success, replaces the entry. |
+| ≤ 30 days (`ISINS_STALE_MAX_DAYS`) and GLEIF cannot be asked | Serves it with `isin_list_stale: true`, dated by `isin_list_as_of`. |
+| no usable entry and GLEIF cannot be asked | `isin_list_available: false`, count and page empty. |
+
+A zero-ISIN answer is cached like any other — most LEIs (about 97% in GLEIF's
+own ISIN-to-LEI file, 28 Sept 2026) have none, and those are the answers least
+worth re-asking for. A failed answer is never cached.
+
+`isin_list_unavailable_reason` says why GLEIF could not be asked, and the panel
+says it in words (`frontend/src/lib/securities.ts`):
+
+| Reason | Meaning |
+|---|---|
+| `held_for_lookups` | OpenCheck kept its last GLEIF slots for lookups. **Nothing was sent to GLEIF.** |
+| `rate_limited` | GLEIF answered 429 (or did recently — the penalty box), or the process budget ran out. |
+| `unreachable` | GLEIF did not answer (timeout, connection error, 5xx). |
+
+Before Phase 253 the panel said "GLEIF is rate-limiting or unreachable" in all
+three cases, including the first, where GLEIF was never asked.
+
 ## Sanctioned overlay — bulk index
 
 OpenSanctions has **no live "sanctioned securities by LEI" API** — that

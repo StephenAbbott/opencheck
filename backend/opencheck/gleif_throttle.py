@@ -67,7 +67,21 @@ class GleifRateLimitedError(Exception):
 
     Raised *instead of sending* when the shared budget is exhausted beyond the
     max wait, and by callers that observed a 429 and have no fallback left.
+
+    ``reason`` says which (Phase 253), because a reader is told the cause:
+
+    * ``"rate_limited"`` — GLEIF itself said no (a 429, or the penalty box one
+      left behind) or the process budget ran out. The default.
+    * ``"held_for_lookups"`` — nothing is wrong with GLEIF: a *discretionary*
+      call was refused because fewer than ``OPENCHECK_GLEIF_LOOKUP_RESERVE``
+      slots were left, and OpenCheck keeps those for lookups (Phase 234).
+      Telling the reader "GLEIF is rate-limiting" here was false — that is the
+      Quantexa report of 28 Sept 2026 (refused in 0.32 s, nothing sent).
     """
+
+    def __init__(self, *args: object, reason: str = "rate_limited") -> None:
+        super().__init__(*args)
+        self.reason = reason
 
 
 _discretionary: contextvars.ContextVar[bool] = contextvars.ContextVar(
@@ -149,9 +163,16 @@ class GleifThrottle:
         if limit <= 0:  # throttle disabled (tests, or operator override)
             return
         if _discretionary.get() and not self.has_headroom(settings.gleif_lookup_reserve):
+            if time.monotonic() < self._penalty_until:
+                # A 429 was seen recently: GLEIF really is refusing.
+                raise GleifRateLimitedError(
+                    "GLEIF answered 429 recently; discretionary call not sent",
+                    reason="rate_limited",
+                )
             raise GleifRateLimitedError(
                 "GLEIF request budget is reserved for lookups "
-                f"(fewer than {settings.gleif_lookup_reserve} of {limit}/min left)"
+                f"(fewer than {settings.gleif_lookup_reserve} of {limit}/min left)",
+                reason="held_for_lookups",
             )
         deadline = time.monotonic() + max(settings.gleif_throttle_max_wait_s, 0.0)
         while True:

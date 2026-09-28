@@ -2,7 +2,12 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { getSecurities, type PrimaryListing, type Security, type SecuritiesResponse } from "../../lib/api";
 import { LISTING_LABEL, listingView } from "../../lib/listing";
 import { NOT_IN_GRAPH, sourceList } from "../../lib/vocab";
-import { ActionChip } from "../ui";
+import { ActionChip, Button } from "../ui";
+import {
+  SECURITIES_SOURCE_NAMES,
+  isinListStaleLine,
+  isinListUnavailableNotice,
+} from "../../lib/securities";
 import PanelSection from "../ui/PanelSection";
 import {
   panelError,
@@ -81,6 +86,9 @@ export function SecuritiesSection({
   const [showAllRegimes, setShowAllRegimes] = useState(false);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("All");
+  // Phase 253: "try again in a minute" gets a control — bumping this re-runs
+  // the fetch below.
+  const [attempt, setAttempt] = useState(0);
   const uid = useId();
   const regimesId = `${uid}-regimes`;
   const sanctionedListId = `${uid}-sanctioned`;
@@ -124,7 +132,7 @@ export function SecuritiesSection({
     return () => {
       cancelled = true;
     };
-  }, [lei]);
+  }, [lei, attempt]);
 
   const types = useMemo(() => {
     const set = new Set<string>();
@@ -178,6 +186,9 @@ export function SecuritiesSection({
   // overlay ran — the section stays visible to say so, even with nothing
   // sanctioned, because hiding it would read as "checked and clean list".
   const isinListDown = meta.isin_list_available === false;
+  const staleLine = isinListDown
+    ? null
+    : isinListStaleLine(meta.isin_list_stale, meta.isin_list_as_of, meta.isin_list_unavailable_reason);
   if (!isinListDown && meta.total === 0 && sanctioned.length === 0) return null;
 
   const listed = listingView(listing);
@@ -266,16 +277,12 @@ export function SecuritiesSection({
             or the sentence below when it found nothing, covers what did run). */}
         {isinListDown ? (
           <div className="rounded-oo border border-amber-200 bg-amber-50 px-3 py-2 text-oo-small text-amber-900">
-            The GLEIF ISIN list could not be fetched (GLEIF is rate-limiting or
-            unreachable), so how many securities are mapped to this LEI is
-            unknown right now — try again in a minute.
-            {sanctioned.length === 0 && (
-              <>
-                {" "}The sanctioned-securities check did run, from OpenCheck's
-                local OpenSanctions index: it records no sanctioned securities
-                for this entity.
-              </>
-            )}
+            {/* Phase 253: the notice names the actual cause — OpenCheck holding
+                the call back for lookups is not GLEIF rate-limiting. */}
+            <p>{isinListUnavailableNotice(meta.isin_list_unavailable_reason, sanctioned.length)}</p>
+            <Button variant="secondary" size="sm" className="mt-2" onClick={() => setAttempt((n) => n + 1)}>
+              Try again
+            </Button>
           </div>
         ) : (
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -294,8 +301,9 @@ export function SecuritiesSection({
             )}
           </div>
         )}
+        {staleLine && <div className="text-oo-meta text-oo-muted mt-1">{staleLine}</div>}
         <div className="text-oo-meta text-oo-muted mt-1.5">
-          {sourceList(meta.sources, sourceNames)}
+          {sourceList(meta.sources, { ...SECURITIES_SOURCE_NAMES, ...sourceNames })}
         </div>
 
         {/* Drawer */}

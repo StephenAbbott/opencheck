@@ -270,6 +270,7 @@ async def test_gleif_failure_still_serves_sanctioned_overlay(monkeypatch, tmp_pa
 
     assert out["available"] is True
     assert out["isin_list_available"] is False
+    assert out["isin_list_unavailable_reason"] in {"rate_limited", "unreachable"}
     assert out["total"] == 0 and out["securities"] == []
     assert len(out["sanctioned"]) == 1
     s = out["sanctioned"][0]
@@ -305,6 +306,148 @@ async def test_gleif_success_reports_isin_list_available(monkeypatch, tmp_path):
         out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
     assert out["isin_list_available"] is True
     assert "gleif" in out["sources"]
+
+
+# ---------------------------------------------------------------------------
+# Phase 253: the GLEIF ISIN page is cached; a stale page stands in, labelled
+# ---------------------------------------------------------------------------
+
+
+class _CountingClient(_FakeClient):
+    def __init__(self, **kw) -> None:
+        super().__init__(**kw)
+        self.gleif_calls = 0
+
+    async def get(self, url: str, params=None, headers=None) -> _Resp:
+        self.gleif_calls += 1
+        return await super().get(url, params=params, headers=headers)
+
+
+def _age_cache_entry(lei: str, days: float, page: int = 1) -> None:
+    """Rewrite a cached ISIN page's fetch time to ``days`` ago."""
+    hit = svc._isins_cache.get(svc._isins_cache_key(lei, page, svc.PAGE_SIZE))
+    assert hit is not None, "expected a cached page"
+    wrapped = hit.payload
+    wrapped["_cached_at"] = wrapped["_cached_at"] - days * 86_400
+    hit.path.write_text(json.dumps(wrapped), encoding="utf-8")
+
+
+_LEI = "7LTWFZYICNSX8D621K86"
+
+
+async def test_a_fresh_cached_page_is_served_without_asking_gleif(monkeypatch, tmp_path):
+    ok = _CountingClient(gleif=_gleif_payload(["DE000A1"], total=1), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(ok)):
+        first = await svc.assemble_securities(_LEI)
+        second = await svc.assemble_securities(_LEI)
+    assert ok.gleif_calls == 1
+    assert second["total"] == 1 and [s["isin"] for s in second["securities"]] == ["DE000A1"]
+    assert second["isin_list_available"] is True and second["isin_list_stale"] is False
+    assert second["isin_list_unavailable_reason"] is None
+    assert second["isin_list_as_of"] == first["isin_list_as_of"]
+    assert "gleif" in second["sources"]
+
+
+async def test_zero_isins_is_cached_too(monkeypatch, tmp_path):
+    """Most LEIs have no ISINs at all (97% in GLEIF's own mapping file) —
+    the empty answer is the one worth not re-asking for."""
+    ok = _CountingClient(gleif=_gleif_payload([], total=0), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(ok)):
+        await svc.assemble_securities(_LEI)
+        out = await svc.assemble_securities(_LEI)
+    assert ok.gleif_calls == 1
+    assert out["isin_list_available"] is True and out["total"] == 0
+
+
+async def test_a_day_old_page_is_re_asked(monkeypatch, tmp_path):
+    ok = _CountingClient(gleif=_gleif_payload(["DE000A1"], total=1), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(ok)):
+        await svc.assemble_securities(_LEI)
+        _age_cache_entry(_LEI, 1.5)
+        out = await svc.assemble_securities(_LEI)
+    assert ok.gleif_calls == 2
+    assert out["isin_list_stale"] is False
+
+
+@pytest.mark.parametrize(
+    ("gleif_error", "reason"),
+    [
+        (GleifRateLimitedError("reserved", reason="held_for_lookups"), "held_for_lookups"),
+        (GleifRateLimitedError("budget exhausted"), "rate_limited"),
+        (_gleif_429(), "rate_limited"),
+        (httpx.ConnectTimeout("timed out"), "unreachable"),
+    ],
+    ids=["held-for-lookups", "throttle-budget", "429", "network"],
+)
+async def test_a_stale_page_stands_in_labelled_when_gleif_cannot_be_asked(
+    monkeypatch, tmp_path, gleif_error, reason
+):
+    ok = _FakeClient(gleif=_gleif_payload(["DE000A1"], total=1), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(ok)):
+        first = await svc.assemble_securities(_LEI)
+    _age_cache_entry(_LEI, 5)
+    down = _FakeClient(gleif=None, gleif_error=gleif_error, openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(down)):
+        out = await svc.assemble_securities(_LEI)
+    assert out["isin_list_available"] is True
+    assert out["isin_list_stale"] is True
+    assert out["isin_list_unavailable_reason"] == reason
+    assert out["total"] == 1 and [s["isin"] for s in out["securities"]] == ["DE000A1"]
+    # Dated to when GLEIF was asked — five days before the first answer.
+    from datetime import datetime, timedelta
+    as_of = datetime.fromisoformat(out["isin_list_as_of"])
+    assert as_of < datetime.fromisoformat(first["isin_list_as_of"]) - timedelta(days=4)
+    assert "gleif" in out["sources"]
+
+
+async def test_a_month_old_page_does_not_stand_in(monkeypatch, tmp_path):
+    ok = _FakeClient(gleif=_gleif_payload(["DE000A1"], total=1), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(ok)):
+        await svc.assemble_securities(_LEI)
+    _age_cache_entry(_LEI, svc.ISINS_STALE_MAX_DAYS + 1)
+    down = _FakeClient(
+        gleif=None,
+        gleif_error=GleifRateLimitedError("reserved", reason="held_for_lookups"),
+        openfigi_by_isin={},
+    )
+    with patch.object(svc, "build_client", lambda: _FakeCM(down)):
+        out = await svc.assemble_securities(_LEI)
+    assert out["isin_list_available"] is False
+    assert out["isin_list_stale"] is False and out["isin_list_as_of"] is None
+    assert out["isin_list_unavailable_reason"] == "held_for_lookups"
+    assert out["securities"] == [] and "gleif" not in out["sources"]
+
+
+async def test_a_failed_answer_is_never_cached(monkeypatch, tmp_path):
+    down = _FakeClient(gleif=None, gleif_error=_gleif_429(), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(down)):
+        await svc.assemble_securities(_LEI)
+    assert svc._isins_cache.get(svc._isins_cache_key(_LEI, 1, svc.PAGE_SIZE)) is None
+
+
+async def test_pages_are_cached_separately(monkeypatch, tmp_path):
+    ok = _CountingClient(gleif=_gleif_payload(["DE000A1"], total=40), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(ok)):
+        await svc.assemble_securities(_LEI, page=1)
+        await svc.assemble_securities(_LEI, page=2)
+        await svc.assemble_securities(_LEI, page=2)
+    assert ok.gleif_calls == 2
+
+
+def test_endpoint_carries_the_reason_and_stale_fields(monkeypatch, tmp_path):
+    fake = _FakeClient(
+        gleif=None,
+        gleif_error=GleifRateLimitedError("reserved", reason="held_for_lookups"),
+        openfigi_by_isin={},
+    )
+    with patch.object(svc, "build_client", lambda: _FakeCM(fake)):
+        with TestClient(app) as client:
+            r = client.get("/securities", params={"lei": _LEI})
+    body = r.json()
+    assert r.status_code == 200
+    assert body["isin_list_available"] is False
+    assert body["isin_list_unavailable_reason"] == "held_for_lookups"
+    assert body["isin_list_stale"] is False and body["isin_list_as_of"] is None
 
 
 def test_sanctioned_securities_signal(monkeypatch, tmp_path):

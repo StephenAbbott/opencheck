@@ -49,6 +49,15 @@ class SecuritiesResponse(BaseModel):
     # answers 200 with the overlay applied and `total`/`securities` empty —
     # the reader is told which part is missing instead of losing the section.
     isin_list_available: bool = True
+    # Phase 253: the ISIN page is cached a day; an older page stands in when
+    # GLEIF cannot be asked, flagged `isin_list_stale` and dated by
+    # `isin_list_as_of` (when GLEIF was asked, ISO 8601 UTC).
+    isin_list_stale: bool = False
+    isin_list_as_of: str | None = None
+    # Why GLEIF could not be asked: "held_for_lookups" (OpenCheck kept its
+    # last GLEIF slots for lookups — nothing was sent), "rate_limited" or
+    # "unreachable". None when it answered or a fresh cached page was used.
+    isin_list_unavailable_reason: str | None = None
     sources: list[str]
     license_notices: list[dict[str, str]]
 
