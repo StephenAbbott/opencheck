@@ -450,6 +450,103 @@ def test_endpoint_carries_the_reason_and_stale_fields(monkeypatch, tmp_path):
     assert body["isin_list_stale"] is False and body["isin_list_as_of"] is None
 
 
+# ---------------------------------------------------------------------------
+# Phase 258: GLEIF's ISIN-to-LEI file answers first
+# ---------------------------------------------------------------------------
+
+
+class _NoGleifClient(_FakeClient):
+    """Fails the test if /securities calls GLEIF while a table can answer."""
+
+    async def get(self, url: str, params=None, headers=None) -> _Resp:
+        raise AssertionError(f"GLEIF was called with a usable table: {url}")
+
+
+@pytest.fixture
+def isin_table(tmp_path, monkeypatch):
+    from datetime import datetime, timezone
+
+    from opencheck import isin_index
+
+    csv_path = tmp_path / "lei-isin.csv"
+    rows = [f"{_LEI},DE000A{i:06d}" for i in range(25)]
+    csv_path.write_text("LEI,ISIN\n" + "\n".join(reversed(rows)) + "\n", encoding="utf-8")
+    db = tmp_path / "isin.sqlite"
+    monkeypatch.setenv("OPENCHECK_ISIN_INDEX_DB_FILE", str(db))
+    get_settings.cache_clear()
+    isin_index.reset_for_tests()
+    uploaded = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    isin_index.build_index(csv_path, db, file_name="isin-lei-x.zip", uploaded_at=uploaded)
+    yield uploaded
+    isin_index.reset_for_tests()
+    get_settings.cache_clear()
+
+
+async def test_the_table_answers_without_asking_gleif(isin_table):
+    from opencheck import gleifstats
+
+    client = _NoGleifClient(gleif=None, openfigi_by_isin={"DE000A000000": {"securityType2": "Bond"}})
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities(_LEI)
+    assert out["total"] == 25
+    assert [s["isin"] for s in out["securities"]] == [f"DE000A{i:06d}" for i in range(20)]
+    assert out["securities"][0]["type"] == "Bond"
+    assert out["isin_list_available"] is True and out["isin_list_stale"] is False
+    assert out["isin_list_source"] == "gleif_file"
+    assert out["isin_list_unavailable_reason"] is None
+    assert out["isin_list_as_of"].startswith(isin_table[:16])
+    assert "gleif" in out["sources"]
+    assert gleifstats.stats()["securities_served"]["file"] == 1
+
+
+async def test_the_table_pages_in_isin_order(isin_table):
+    client = _NoGleifClient(gleif=None, openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities(_LEI, page=2)
+    assert [s["isin"] for s in out["securities"]] == [f"DE000A{i:06d}" for i in range(20, 25)]
+
+
+async def test_an_lei_the_file_does_not_list_is_none_with_no_call(isin_table):
+    client = _NoGleifClient(gleif=None, openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities("213800WMPZ7LH3F92517")
+    assert out["total"] == 0 and out["securities"] == []
+    assert out["isin_list_available"] is True
+    assert out["isin_list_source"] == "gleif_file"
+
+
+async def test_an_old_table_falls_back_to_the_live_call(isin_table, monkeypatch):
+    monkeypatch.setenv("OPENCHECK_ISIN_INDEX_MAX_AGE_DAYS", "-1")
+    get_settings.cache_clear()
+    ok = _CountingClient(gleif=_gleif_payload(["DE000A1"], total=1), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(ok)):
+        out = await svc.assemble_securities(_LEI)
+    assert ok.gleif_calls == 1
+    assert out["total"] == 1 and out["isin_list_source"] == "gleif_api"
+
+
+async def test_without_a_table_the_source_is_the_api(monkeypatch, tmp_path):
+    ok = _FakeClient(gleif=_gleif_payload(["DE000A1"], total=1), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(ok)):
+        out = await svc.assemble_securities(_LEI)
+    assert out["isin_list_source"] == "gleif_api"
+
+
+async def test_a_failed_list_has_no_source(monkeypatch, tmp_path):
+    down = _FakeClient(gleif=None, gleif_error=_gleif_429(), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(down)):
+        out = await svc.assemble_securities(_LEI)
+    assert out["isin_list_source"] is None
+
+
+def test_endpoint_carries_the_list_source(isin_table):
+    client = _NoGleifClient(gleif=None, openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        with TestClient(app) as tc:
+            body = tc.get("/securities", params={"lei": _LEI}).json()
+    assert body["isin_list_source"] == "gleif_file" and body["total"] == 25
+
+
 def test_sanctioned_securities_signal(monkeypatch, tmp_path):
     _write_index(tmp_path, monkeypatch, {
         "7LTWFZYICNSX8D621K86": {

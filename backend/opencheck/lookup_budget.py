@@ -143,11 +143,16 @@ class ClientScopeMiddleware:
         from .pipelinestats import caller_kind_for_path
         from .ratelimit import client_ip
 
+        from .gleifstats import reset_route, set_route
+
         token = _client.set(client_ip(Request(scope)))
         kind_token = _caller.set(caller_kind_for_path(scope.get("path")))
+        # Phase 258: which surface a GLEIF call is spent for (gleifstats).
+        route_token = set_route(scope.get("path"))
         try:
             await self.app(scope, receive, send)
         finally:
+            reset_route(route_token)
             _caller.reset(kind_token)
             _client.reset(token)
 

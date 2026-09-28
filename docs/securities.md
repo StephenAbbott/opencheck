@@ -18,7 +18,44 @@ lookup's frozen `listing` event rather than fetched here — see
 `GET /securities?lei=&page=` assembles these lazily (the frontend fetches it only
 when the section renders) and never enumerates every ISIN.
 
-## When GLEIF cannot be asked (Phases 145 and 252)
+## GLEIF's ISIN-to-LEI file answers first (Phase 258)
+
+GLEIF publishes its complete ISIN-to-LEI mapping every day as a keyless zip
+(`https://mapping.gleif.org/api/v2/isin-lei/latest` names the newest file).
+OpenCheck holds it as a local SQLite table (`opencheck/isin_index.py`) and
+`/securities` reads that before calling GLEIF:
+
+- **An LEI the file lists** is paged locally. The count is one indexed read
+  (`counts`), the page a slice of at most two zlib chunks of 500 ISINs
+  (`chunks`), so an issuer with 636,388 ISINs costs the same as one with 3.
+- **An LEI the file does not list** is answered `total: 0` with no call. On
+  28 Sept 2026 the file held 9,150,433 rows across 98,677 LEIs — 2.9% of the
+  ~3.4 million GLEIF has issued — so this is the commonest answer.
+- **ISIN order** (Stephen, 28 Sept 2026). GLEIF's API pages its ISINs in no
+  stable order (Shell's page 1 opens `US82266MXH68…`); the table's are
+  sorted, so page 2 today is page 2 tomorrow and a saved report's page reads
+  the same. The first 20 shown therefore differ from GLEIF's own page 1.
+- **Dated by the file**: `isin_list_source: "gleif_file"` and
+  `isin_list_as_of` = the file's `uploadedAt`; the panel says "From GLEIF's
+  ISIN-to-LEI file of 28 Sept 2026, listed in ISIN order."
+- **Built on the server**, never committed and never a release asset: at boot
+  when the file is absent, and whenever GLEIF names a newer file (checked
+  every `OPENCHECK_ISIN_INDEX_REFRESH_INTERVAL_S`, six hours; fifteen minutes
+  after a failed check). A build takes ~40 s and ~50 MB of memory and writes
+  ~90 MB of SQLite; it is written beside the old table and swapped in, so a
+  failed build keeps the old one. On Render the file is
+  `/var/data/isin_lei.sqlite` (`OPENCHECK_ISIN_INDEX_DB_FILE`).
+- **Never an old count**: a table whose file is older than
+  `OPENCHECK_ISIN_INDEX_MAX_AGE_DAYS` (3) is not used, and `/securities`
+  falls back to the cached live call below. Parity with live GLEIF was exact
+  for every LEI checked (Shell 1,813; `529900W18LQJJN6SJ336` 636,388;
+  `549300TS3U4JKMR1B479` 531,250; every Shell page against the sorted list).
+
+`/signalstats` → `gleif.isin_index` reports the table (file, age, rows, last
+sync outcome); `gleif.securities_served` counts how each `/securities`
+answer was served (file / cache / live / stale / unavailable by reason).
+
+## When GLEIF cannot be asked (Phases 145 and 253)
 
 The GLEIF call is *discretionary* (Phase 234): when fewer than
 `OPENCHECK_GLEIF_LOOKUP_RESERVE` slots of the per-minute budget are left,

@@ -5,6 +5,7 @@ import { NOT_IN_GRAPH, sourceList } from "../../lib/vocab";
 import { ActionChip, Button } from "../ui";
 import {
   SECURITIES_SOURCE_NAMES,
+  isinListSourceLine,
   isinListStaleLine,
   isinListUnavailableNotice,
 } from "../../lib/securities";
@@ -189,6 +190,10 @@ export function SecuritiesSection({
   const staleLine = isinListDown
     ? null
     : isinListStaleLine(meta.isin_list_stale, meta.isin_list_as_of, meta.isin_list_unavailable_reason);
+  // Phase 258: a list read from GLEIF's daily file says so, with its date.
+  const sourceLine = isinListDown
+    ? null
+    : isinListSourceLine(meta.isin_list_source, meta.isin_list_as_of, meta.total);
   if (!isinListDown && meta.total === 0 && sanctioned.length === 0) return null;
 
   const listed = listingView(listing);
@@ -302,6 +307,7 @@ export function SecuritiesSection({
           </div>
         )}
         {staleLine && <div className="text-oo-meta text-oo-muted mt-1">{staleLine}</div>}
+        {sourceLine && <div className="text-oo-meta text-oo-muted mt-1">{sourceLine}</div>}
         <div className="text-oo-meta text-oo-muted mt-1.5">
           {sourceList(meta.sources, { ...SECURITIES_SOURCE_NAMES, ...sourceNames })}
         </div>

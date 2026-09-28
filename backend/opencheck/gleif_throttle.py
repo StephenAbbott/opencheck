@@ -218,6 +218,40 @@ def _retry_after_seconds(response: httpx.Response) -> float:
     return min(max(value, 0.0), _MAX_RETRY_AFTER_S)
 
 
+#: Why a GLEIF answer is missing (Phase 253 for /securities, Phase 258 for
+#: every discretionary caller).
+UNAVAILABLE_HELD = "held_for_lookups"
+UNAVAILABLE_RATE_LIMITED = "rate_limited"
+UNAVAILABLE_UNREACHABLE = "unreachable"
+
+
+def unavailable_reason(exc: BaseException | None = None, *, status: int | None = None) -> str:
+    """The reason a GLEIF call produced no answer: from the exception the
+    throttle or httpx raised, or from a non-success HTTP ``status``."""
+    if isinstance(exc, GleifRateLimitedError):
+        return getattr(exc, "reason", UNAVAILABLE_RATE_LIMITED)
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+    if status == 429:
+        return UNAVAILABLE_RATE_LIMITED
+    return UNAVAILABLE_UNREACHABLE
+
+
+async def _acquire_counted(throttle: GleifThrottle, endpoint: str) -> None:
+    """``throttle.acquire()``, counting a refusal by its reason (Phase 258)."""
+    from . import gleifstats
+
+    try:
+        await throttle.acquire()
+    except GleifRateLimitedError as exc:
+        reason = getattr(exc, "reason", "rate_limited")
+        gleifstats.record_call(
+            endpoint,
+            "refused_held_for_lookups" if reason == "held_for_lookups" else "refused_rate_limited",
+        )
+        raise
+
+
 class GleifThrottledTransport(httpx.AsyncBaseTransport):
     """Transport wrapper: budget + one Retry-After-honouring retry for GLEIF.
 
@@ -232,11 +266,16 @@ class GleifThrottledTransport(httpx.AsyncBaseTransport):
         if (request.url.host or "").lower() != GLEIF_HOST:
             return await self._inner.handle_async_request(request)
 
+        from . import gleifstats
+
+        endpoint = gleifstats.endpoint_for(request.url.path)
         throttle = get_throttle()
-        await throttle.acquire()
+        await _acquire_counted(throttle, endpoint)
+        gleifstats.record_call(endpoint, "sent")
         response = await self._inner.handle_async_request(request)
         if response.status_code != 429:
             return response
+        gleifstats.record_call(endpoint, "http_429")
 
         # One retry, honouring Retry-After. The penalty is shared so the
         # sibling calls of the same lookup back off with us.
@@ -249,9 +288,11 @@ class GleifThrottledTransport(httpx.AsyncBaseTransport):
         )
         await response.aclose()
         await asyncio.sleep(delay)
-        await throttle.acquire()
+        await _acquire_counted(throttle, endpoint)
+        gleifstats.record_call(endpoint, "sent")
         response = await self._inner.handle_async_request(request)
         if response.status_code == 429:
+            gleifstats.record_call(endpoint, "http_429")
             # Still saturated: penalise and hand the 429 back — the caller's
             # fallback chain (stale cache → snapshot → 503) takes it from here.
             throttle.penalise(_retry_after_seconds(response))

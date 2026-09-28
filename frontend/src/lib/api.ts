@@ -725,6 +725,10 @@ export interface SecuritiesResponse {
   isin_list_as_of?: string | null;
   /** Why GLEIF could not be asked — see `lib/securities.ts`. */
   isin_list_unavailable_reason?: "held_for_lookups" | "rate_limited" | "unreachable" | null;
+  /** Phase 258: "gleif_file" when GLEIF's daily ISIN-to-LEI file answered
+   *  (ISIN order, dated by `isin_list_as_of`), "gleif_api" for the live
+   *  endpoint or its cache; null when there is no list. */
+  isin_list_source?: "gleif_file" | "gleif_api" | null;
   sources: string[];
   license_notices: { source_id: string; notice: string }[];
 }

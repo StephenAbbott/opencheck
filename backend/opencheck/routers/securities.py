@@ -58,6 +58,10 @@ class SecuritiesResponse(BaseModel):
     # last GLEIF slots for lookups — nothing was sent), "rate_limited" or
     # "unreachable". None when it answered or a fresh cached page was used.
     isin_list_unavailable_reason: str | None = None
+    # Phase 258: "gleif_file" when GLEIF's daily ISIN-to-LEI file answered
+    # (the list is in ISIN order and dated by `isin_list_as_of`), "gleif_api"
+    # when the live endpoint or its cache did; None when there is no list.
+    isin_list_source: str | None = None
     sources: list[str]
     license_notices: list[dict[str, str]]
 

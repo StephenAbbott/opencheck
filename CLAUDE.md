@@ -2430,3 +2430,44 @@ Things that will be re-derived otherwise:
   `/subsidiaries` (optionally the MEIP / EITI / GEM lists, apart and not BODS),
   and `opencheck_export_bods(include_subsidiaries=True)` runs the
   `/export?subsidiaries=true` merge. Default tier, like the REST route.
+
+---
+
+## GLEIF's ISIN file behind /securities, and where the GLEIF budget goes (Phase 258)
+
+`opencheck/isin_index.py`, `opencheck/gleifstats.py`; design in
+`docs/securities.md`. Things that will be re-derived otherwise:
+
+- **The table is built on the server** from GLEIF's daily keyless zip
+  (`mapping.gleif.org/api/v2/isin-lei/latest`) — at boot when absent, then
+  when GLEIF names a newer file (every six hours; fifteen minutes after a
+  failure). No release asset, nothing committed. Staged into a scratch table
+  and read back `ORDER BY lei, isin`, so the input need not be sorted and
+  memory stays ~50 MB; written beside the old file and `os.replace`d.
+- **`counts` holds the count on its own** — never derive a count by
+  decompressing `chunks` (636,388 ISINs for one LEI).
+- **An LEI the table lacks is `total: 0`, not a miss** — the file is GLEIF's
+  complete mapping. Only a table that is absent, wrong-schema or older than
+  `OPENCHECK_ISIN_INDEX_MAX_AGE_DAYS` sends `/securities` to the Phase 253
+  cached live call. `isin_list_source` says which answered.
+- **ISIN order, not GLEIF's** (Stephen, 28 Sept 2026): the live API's order is
+  unstable; a sorted list keeps pages and saved reports stable.
+- **The suite never downloads it**: `conftest.py` sets
+  `OPENCHECK_ISIN_INDEX_SYNC=0` and points the path at a file that does not
+  exist, so a developer's locally built table cannot leak into tests.
+- **Every GLEIF request is counted where it leaves** — the throttled
+  transport — by route (`gleifstats.ROUTES`, set by `ClientScopeMiddleware`
+  from the path) and by GLEIF endpoint (`ENDPOINTS`, from the URL), with
+  `sent` / `http_429` / `refused_held_for_lookups` / `refused_rate_limited`.
+  Served as `/signalstats` → `gleif`, with `isins_share` (the Golden Copy
+  gate's number), `securities_served` and the table's `isin_index` status.
+  Closed vocabularies only: an unknown route, endpoint or outcome is folded
+  or dropped, never a new key. A route that calls GLEIF is `other` until it
+  is added to `_PATH_ROUTES`.
+- **`GleifRateLimitedError.reason`** — `held_for_lookups` when the Phase 234
+  reserve refused (nothing sent), `rate_limited` in the penalty box or when
+  the budget ran out; `gleif_throttle.unavailable_reason(exc, status=)` maps
+  any failure to the three reasons. `/securities` and `/subsidiaries`
+  (`unavailable_reason` + a `degraded_detail` naming the cause) both read it.
+  Share cards say nothing about GLEIF to a reader — a refused teaser name
+  renders the LEI-only card — so for them the counter is the whole record.
