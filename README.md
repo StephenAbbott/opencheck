@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 252** — the SEC EDGAR source finds the structured Schedule 13D/13G filings it had been missing for every US issuer, because it asked EDGAR for the forms by their pre-2024 names.
+**Latest: Phase 253** — the Securities panel caches GLEIF's ISIN list for a day and, when GLEIF cannot be asked, says whether OpenCheck held the request back, GLEIF refused it or GLEIF did not answer.
 
 → [Full development history](docs/status.md)
 
