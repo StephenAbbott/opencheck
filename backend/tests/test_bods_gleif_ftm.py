@@ -15,6 +15,7 @@ from opencheck.bods import (
     map_opensanctions,
     validate_shape,
 )
+from opencheck.bods.annotations import person_identifiers_from_annotations
 
 
 # ---------------------------------------------------------------------
@@ -611,7 +612,7 @@ def test_map_gleif_exception_statements_carry_oo_style_annotation() -> None:
             a.get("motivation") == "commenting"
             and "NATURAL_PERSONS GLEIF Reporting Exception" in a.get("description", "")
             and "LEI00000000000000022" in a.get("description", "")
-            and a.get("statementPointerTarget") == "/"
+            and a.get("statementPointerTarget") == "/recordDetails"
             for a in anns
         ), stmt["statementId"]
 
@@ -991,7 +992,9 @@ def test_map_opensanctions_person() -> None:
     s = statements[0]
     assert s["recordType"] == "person"
     assert s["recordDetails"]["birthDate"] == "1952-10-07"
-    schemes = {i["scheme"] for i in s["recordDetails"]["identifiers"]}
+    # Phase 255: not an identity document, so an identifying annotation.
+    assert "identifiers" not in s["recordDetails"]
+    schemes = {i["scheme"] for i in person_identifiers_from_annotations(s)}
     assert "WIKIDATA" in schemes
 
 

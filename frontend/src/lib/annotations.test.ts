@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  personIdentifierNotes,
   __resetAsFiled,
   annotatedFieldCount,
   annotationsAt,
@@ -175,5 +176,24 @@ describe("shared as-filed state", () => {
     off();
     setAsFiled(true);
     expect(n).toBe(0);
+  });
+});
+
+describe("personIdentifierNotes (Phase 255)", () => {
+  it("recovers the identifier in the shape it left identifiers", () => {
+    const stmt = {
+      annotations: [
+        { motivation: "commenting", description: "unrelated" },
+        {
+          statementPointerTarget: "/recordDetails",
+          motivation: "identifying",
+          description:
+            "SEC EDGAR CIK identifier 1373161 (scheme US-SEC-CIK). BODS keeps a person's identifiers for identity documents, so this one is published here.",
+        },
+      ],
+    };
+    expect(personIdentifierNotes(stmt)).toEqual([
+      { id: "1373161", scheme: "US-SEC-CIK", schemeName: "SEC EDGAR CIK" },
+    ]);
   });
 });

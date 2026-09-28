@@ -65,6 +65,7 @@ from typing import Any, Callable, Iterable
 
 from . import identifiers as _identifiers
 from .bods import liveness as _liveness
+from .bods.annotations import dropped_partial_date
 from .bods.mapper import SOURCE_NAMES
 from .ra_codes import is_ra_scheme
 from .reconcile import _entity_jurisdiction, _identifier_keys
@@ -244,7 +245,9 @@ def _extract_jurisdiction(stmt: dict[str, Any]) -> str | None:
 
 def _extract_founding(stmt: dict[str, Any]) -> str | None:
     raw = str((stmt.get("recordDetails") or {}).get("foundingDate") or "").strip()
-    return raw or None
+    # Phase 255: a year-only date is not a BODS foundingDate, so it travels in
+    # a transformation annotation; compared at its own precision as before.
+    return raw or dropped_partial_date(stmt, "foundingDate")
 
 
 def _dates_same(a: str, b: str) -> bool:

@@ -154,3 +154,31 @@ export function __resetAsFiled(): void {
   asFiledOn = false;
   listeners.clear();
 }
+
+// ---------------------------------------------------------------------
+// Person identifiers published as annotations (Phase 255)
+// ---------------------------------------------------------------------
+
+/** Mirrors `_NOTE_RE` in backend/opencheck/bods/annotations.py: the fixed
+ *  description shape `person_identifier_note` writes. */
+const PERSON_IDENTIFIER_NOTE = /^(.+?) identifier (\S+) \(scheme ([^)]+)\)\./;
+
+/** Identifiers a person statement carries as `identifying` annotations —
+ *  BODS keeps `identifiers` for identity documents, so a Wikidata Q-id or an
+ *  aggregator's record id is published there instead (Phase 255). Same
+ *  `{id, scheme, schemeName, uri}` shape they had in `identifiers`. */
+export function personIdentifierNotes(
+  stmt: unknown,
+): { id: string; scheme: string; schemeName: string; uri?: string }[] {
+  if (stmt == null || typeof stmt !== "object") return [];
+  const raw = (stmt as Record<string, unknown>).annotations;
+  if (!Array.isArray(raw)) return [];
+  const out: { id: string; scheme: string; schemeName: string; uri?: string }[] = [];
+  for (const a of raw as BODSAnnotation[]) {
+    if (!a || a.motivation !== "identifying") continue;
+    const m = PERSON_IDENTIFIER_NOTE.exec(a.description ?? "");
+    if (!m) continue;
+    out.push({ id: m[2], scheme: m[3], schemeName: m[1], ...(a.url ? { uri: a.url } : {}) });
+  }
+  return out;
+}

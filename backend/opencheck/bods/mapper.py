@@ -20,7 +20,7 @@ import pycountry
 from ..elf import resolve_elf
 from . import liveness as _liveness
 from .unique import unique_statements
-from .annotations import annotate, commenting
+from .annotations import annotate, commenting, pointer
 
 # Phase 168 moved the statement factories and the two largest per-source
 # sections into their own modules; Phase 246 moved every other source's
@@ -555,6 +555,23 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000469": ("NG-CAC", "Corporate Affairs Commission — RC number (Nigeria)"),
     # Greece — General Commercial Registry (ΓΕΜΗ)
     "RA000685": ("GR-GEMI", "General Commercial Registry (ΓΕΜΗ)"),
+    # Phase 255: registers GLEIF files numbers under that have an org-id.guide
+    # code but no OpenCheck adapter. Until now they fell back to the bare RA
+    # code, which libcove reports as an unknown scheme (the five-network
+    # check of 28 Sept 2026: Malaysia, the Philippines, Italy, Israel,
+    # Panama, Sri Lanka, Pakistan, Japan and Mexico). No adapter claims these
+    # RA codes, so no FullCheck register hop follows (``register_hops``).
+    # Hamburg's Handelsregister (RA000259) stays on its RA code: org-id's
+    # DE-CR wants the court prefix, which ``registeredAs`` does not carry.
+    "RA000439": ("MY-SSM", "Companies Commission of Malaysia (SSM)"),
+    "RA000483": ("PH-SEC", "Securities and Exchange Commission (Philippines)"),
+    "RA000407": ("IT-RI", "Business Register of the Italian Chambers of Commerce (InfoCamere)"),
+    "RA000406": ("IL-ROC", "Registrar of Companies (Israel Corporations Authority)"),
+    "RA000478": ("PA-PRP", "Public Registry of Panama"),
+    "RA000540": ("LK-DRC", "Department of the Registrar of Companies (Sri Lanka)"),
+    "RA000475": ("PK-SEC", "Securities and Exchange Commission of Pakistan"),
+    "RA001075": ("JP-JCN", "National Tax Agency Corporate Number Publication Site (Japan)"),
+    "RA000449": ("MX-RFC", "Federal Taxpayers Registry (Mexico, SAT)"),
 }
 
 #: GLEIF's two "no Registration Authority List entry" codes — ``RA999999``
@@ -991,11 +1008,31 @@ def map_gleif_subsidiaries(
     """Map a subject entity + its merged direct/ultimate children to BODS.
 
     Used by the lazy ``/subsidiaries`` reveal. ``children`` is a list of
-    ``{"record": <GLEIF L1 data object>, "relations": ["direct"|"ultimate", …]}``.
-    A child that is **both** a direct and an ultimate child gets **two**
-    relationshipStatements (``directOrIndirect`` ``direct`` and ``indirect``) —
-    the graph merges them into one annotated edge, but the statements stay
-    distinct in the data and the export.
+    ``{"record": <GLEIF L1 data object>, "relations": ["direct"|"ultimate", …],
+    "rels": {"direct"|"ultimate": <RR data object>}, "direct_parent":
+    {"lei", "rel"}}`` — the last two optional (Phase 255).
+
+    **One relationship per pair (Phase 255).** A child that is both a direct
+    and an ultimate child of the subject gets a single ``direct`` statement
+    whose details say the subject is also its ultimate consolidating parent.
+    Until Phase 255 it got two (``direct`` and ``indirect``) for the same pair
+    — 221 of 541 relationship statements across the five networks checked on
+    28 Sept 2026 were that duplicate.
+
+    **Ultimate-only children get their path where GLEIF gives one.** When the
+    child's direct parent is itself in the network, the ``child → parent``
+    direct edge is emitted (local id ``{parent}:direct-child:{child}``, the id
+    the parent's own network would give it) beside the ``indirect`` edge to the
+    subject — the graph draws the direct edge and hides the ultimate one
+    behind it. A direct parent outside the network (often a lapsed LEI of a
+    merged holding company) is named in a ``commenting`` annotation on the
+    indirect edge rather than drawn, since only its LEI is held.
+
+    **Dates come from the relationship record.** ``statementDate`` is the RR
+    registration's ``lastUpdateDate`` and the interest carries
+    ``startDate``/``endDate`` from its ``RELATIONSHIP_PERIOD``. Without an RR
+    record the statement is as it was: undated interests, publication-date
+    ``statementDate``.
     """
     if not subject_lei:
         return []
@@ -1004,9 +1041,15 @@ def map_gleif_subsidiaries(
         subject_lei, (subject_attrs or {}).get("entity") or {}, subj_url,
         attrs=subject_attrs,
     )
+    subject_name = (
+        (((subject_attrs or {}).get("entity") or {}).get("legalName") or {}).get("name")
+        or subject_lei
+    )
     out: list[dict[str, Any]] = [subj]
     subj_sid = subj["statementId"]
     seen: set[str] = set()
+    child_sids: dict[str, str] = {}
+    deferred: list[tuple[str, str, dict[str, Any]]] = []
     for c in children:
         rec = c.get("record") or {}
         attrs = rec.get("attributes") or rec
@@ -1019,22 +1062,104 @@ def map_gleif_subsidiaries(
             child_lei, attrs.get("entity") or {}, child_url, attrs=attrs
         )
         out.append(child_stmt)
-        for kind in sorted(set(c.get("relations") or [])):
-            out.append(make_relationship_statement(
-                source_id="gleif",
-                local_id=f"{subject_lei}:{kind}-child:{child_lei}",
-                subject_statement_id=child_stmt["statementId"],
-                interested_party_statement_id=subj_sid,
-                interested_party_type="entity",
-                interests=[{
-                    "type": "otherInfluenceOrControl",
-                    "directOrIndirect": "direct" if kind == "direct" else "indirect",
-                    "beneficialOwnershipOrControl": False,
-                    "details": f"GLEIF Level 2 {kind}-child (accounting consolidation)",
-                }],
+        child_sids[child_lei] = child_stmt["statementId"]
+        relations = set(c.get("relations") or [])
+        rels = c.get("rels") or {}
+        if "direct" in relations:
+            details = "GLEIF Level 2 direct-child (accounting consolidation)"
+            if "ultimate" in relations:
+                details += "; also its ultimate consolidating parent"
+            out.append(_gleif_child_relationship(
+                local_id=f"{subject_lei}:direct-child:{child_lei}",
+                child_sid=child_stmt["statementId"],
+                parent_sid=subj_sid,
+                direct=True,
+                details=details,
+                rr=rels.get("direct"),
                 source_url=child_url,
             ))
+        elif "ultimate" in relations:
+            rel = _gleif_child_relationship(
+                local_id=f"{subject_lei}:ultimate-child:{child_lei}",
+                child_sid=child_stmt["statementId"],
+                parent_sid=subj_sid,
+                direct=False,
+                details="GLEIF Level 2 ultimate-child (accounting consolidation)",
+                rr=rels.get("ultimate"),
+                source_url=child_url,
+            )
+            out.append(rel)
+            if c.get("direct_parent"):
+                deferred.append((child_lei, child_url, {**c["direct_parent"], "_rel": rel}))
+
+    # Direct parents are placed after every child statement exists, so a
+    # parent listed later in GLEIF's page still resolves.
+    for child_lei, child_url, dp in deferred:
+        parent_lei = dp.get("lei") or ""
+        parent_sid = child_sids.get(parent_lei)
+        if parent_sid and parent_lei != child_lei:
+            out.append(_gleif_child_relationship(
+                local_id=f"{parent_lei}:direct-child:{child_lei}",
+                child_sid=child_sids[child_lei],
+                parent_sid=parent_sid,
+                direct=True,
+                details="GLEIF Level 2 direct-child (accounting consolidation)",
+                rr=dp.get("rel"),
+                source_url=child_url,
+            ))
+        elif parent_lei and parent_lei != subject_lei:
+            annotate(dp["_rel"], commenting(
+                "/recordDetails",
+                f"GLEIF names {parent_lei} as this entity's direct consolidating "
+                f"parent. That LEI is not among {subject_name}'s consolidated "
+                "subsidiaries in GLEIF, so the path through it is not shown.",
+            ))
     return out
+
+
+def _gleif_rr_period(rr: dict[str, Any] | None) -> tuple[str | None, str | None]:
+    """``(startDate, endDate)`` of an RR record's ``RELATIONSHIP_PERIOD``."""
+    rel = ((rr or {}).get("attributes") or {}).get("relationship") or {}
+    for period in rel.get("periods") or []:
+        if (period or {}).get("type") == "RELATIONSHIP_PERIOD":
+            start = (period.get("startDate") or "")[:10] or None
+            end = (period.get("endDate") or "")[:10] or None
+            return start, end
+    return None, None
+
+
+def _gleif_child_relationship(
+    *,
+    local_id: str,
+    child_sid: str,
+    parent_sid: str,
+    direct: bool,
+    details: str,
+    rr: dict[str, Any] | None,
+    source_url: str,
+) -> dict[str, Any]:
+    """One GLEIF Level 2 consolidation relationship, dated from its RR record."""
+    interest: dict[str, Any] = {
+        "type": "otherInfluenceOrControl",
+        "directOrIndirect": "direct" if direct else "indirect",
+        "beneficialOwnershipOrControl": False,
+        "details": details,
+    }
+    start, end = _gleif_rr_period(rr)
+    if start:
+        interest["startDate"] = start
+    if end:
+        interest["endDate"] = end
+    return make_relationship_statement(
+        source_id="gleif",
+        local_id=local_id,
+        subject_statement_id=child_sid,
+        interested_party_statement_id=parent_sid,
+        interested_party_type="entity",
+        interests=[interest],
+        source_url=source_url,
+        statement_date=_gleif_registration_date((rr or {}).get("attributes")),
+    )
 
 
 def _gleif_exception_statements(
@@ -1072,7 +1197,7 @@ def _gleif_exception_statements(
         details += f"; legal reference: {reference}"
 
     exception_note = commenting(
-        "/",
+        "/recordDetails",
         (
             f"This statement was created due to a {reason or 'GLEIF'}"
             f" GLEIF Reporting Exception for {lei}. Reporting exceptions are"
@@ -1374,11 +1499,41 @@ def _gleif_entity_statement(
     # `legalFormLabel` annotation. This is what the AMLA trust/arrangement risk
     # signal keys off, so a GLEIF-only foundation/trust (no national-register
     # hit) is still caught — matching the legal form, never the entity name.
-    legal_form_label = resolve_elf((entity_block.get("legalForm") or {}).get("id"))
+    legal_form_label = _gleif_legal_form_label(entity_block.get("legalForm"))
     if legal_form_label:
         stmt["recordDetails"]["legalFormLabel"] = legal_form_label
 
+    # Phase 255: the LEI record's own registration status, when it is not
+    # ISSUED. 60 of the 320 subsidiaries in five networks checked on 28 Sept
+    # 2026 had LAPSED LEIs and nothing in the BODS said so. Worded by the
+    # Phase 242 module, which ends every sentence on "the status of the LEI
+    # record, not of the company" — a lapsed LEI is not a dissolved company,
+    # and ``liveness`` above stays the only reader of entity status.
+    from ..lei_registration import from_gleif_record
+
+    lei_reg = from_gleif_record({"attributes": attrs or {}})
+    if lei_reg and lei_reg.get("flag"):
+        annotate(stmt, commenting(pointer("recordDetails"), lei_reg["sentence"]))
+
     return stmt
+
+
+def _gleif_legal_form_label(legal_form: dict[str, Any] | None) -> str | None:
+    """The legal-form label for a GLEIF ``entity.legalForm`` block.
+
+    The ISO 20275 code's Latin-script name where the ELF list has one;
+    otherwise (``9999`` "no ELF code", ``8888`` "legacy", or a code the
+    vendored list lacks) the free-text ``legalForm.other`` GLEIF carries
+    beside it. Before Phase 255 the second branch was dropped, and 26 of 320
+    subsidiaries checked on 28 Sept 2026 — every Arabic, Hebrew and Ukrainian
+    one among them — had no label at all.
+    """
+    block = legal_form or {}
+    label = resolve_elf(block.get("id"))
+    if label:
+        return label
+    other = str(block.get("other") or "").strip()
+    return other or None
 
 
 def _gleif_jurisdiction(code: str) -> tuple[str, str]:
@@ -1458,6 +1613,16 @@ def map_meip(bundle: dict[str, Any]) -> BODSBundle:
     ``statementId`` / ``recordId`` / ``source`` / ``publicationDetails`` and
     the one annotation the file carries. Nothing is re-mapped: the first
     source whose statements reach the graph as the publisher wrote them.
+
+    Phase 255: the statements are **ordered** — every entity and person before
+    any relationship, each group in the order published. BODS asks that a
+    relationship's parties precede it in a dataset (libcovebods:
+    ``relationship_interested_party_not_before_relationship_in_dataset``), and
+    the OECD's own file does not always do so. Reordering changes no
+    statement; the ids stay the OECD's.
     """
-    return iter(bundle.get("bods_statements", []))
+    statements = list(bundle.get("bods_statements", []))
+    parties = [s for s in statements if (s or {}).get("recordType") != "relationship"]
+    relationships = [s for s in statements if (s or {}).get("recordType") == "relationship"]
+    return iter(parties + relationships)
 _DC_COUNTRY = {"name": "United States", "code": "US"}

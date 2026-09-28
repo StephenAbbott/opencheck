@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 254** — SEC EDGAR now matches a GLEIF legal name to its SEC company number when the SEC writes it with a state tag or without the apostrophe, as it does for Moody's.
+**Latest: Phase 255** — the subsidiary network's BODS gives each parent–child pair one dated relationship and draws a subsidiary's direct parent where GLEIF names one, and the MCP server gains `opencheck_subsidiaries`.
 
 → [Full development history](docs/status.md)
 

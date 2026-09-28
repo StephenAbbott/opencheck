@@ -238,3 +238,25 @@ describe("extractConnectedPeople — Companies House identity verification (Phas
     expect(people[0].identityVerification?.route).toBe("companiesHouse");
   });
 });
+
+describe("Phase 255: person identifiers published as annotations", () => {
+  it("reads a Wikidata Q-id from its identifying annotation, on the old key", () => {
+    const withNote = person("p1", "Vladimir Putin", {}, "Wikidata");
+    (withNote as Record<string, unknown>).annotations = [
+      {
+        statementPointerTarget: "/recordDetails",
+        motivation: "identifying",
+        description:
+          "Wikidata Q identifier Q7747 (scheme WIKIDATA). BODS keeps a person's identifiers for identity documents, so this one is published here: it says which record the statement was matched on, not who the person is.",
+        url: "https://www.wikidata.org/wiki/Q7747",
+      },
+    ];
+    const bundle = [
+      entity("e1", "ROSNEFT"),
+      withNote,
+      rel("r1", "e1", "p1", [{ type: "seniorManagingOfficial" }], "Wikidata"),
+    ];
+    const [p] = extractConnectedPeople(bundle);
+    expect(p.identifiers).toContain("wikidata:q7747");
+  });
+});

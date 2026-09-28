@@ -43,6 +43,7 @@ two-hop code translation that discards the register's own vocabulary is.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 #: BODS v0.4 annotation motivation codelist.
@@ -270,3 +271,91 @@ def validate_all(statements: Iterable[dict[str, Any]]) -> list[str]:
         for problem in validate_annotations(statement):
             problems.append(f"{statement.get('statementId', '?')}: {problem}")
     return problems
+
+
+# ----------------------------------------------------------------------
+# Person identifiers BODS has no place for (Phase 255)
+# ----------------------------------------------------------------------
+
+#: BODS v0.4 reserves ``personStatement.identifiers`` for identity documents:
+#: the schema describes the scheme as ``{JURISDICTION}-{TYPE}`` with an ISO
+#: 3166-1 alpha-3 jurisdiction and TYPE one of PASSPORT, TAXID or IDCARD, and
+#: libcovebods reports anything else as ``person_identifiers_invalid_composition``.
+PERSON_IDENTIFIER_SCHEME = re.compile(r"^[A-Z]{3}-(PASSPORT|TAXID|IDCARD)$")
+
+_NOTE_RE = re.compile(
+    r"^(?P<name>.+?) identifier (?P<id>\S+) \(scheme (?P<scheme>[^)]+)\)\."
+)
+
+
+def is_person_identifier_scheme(scheme: Any) -> bool:
+    return bool(PERSON_IDENTIFIER_SCHEME.match(str(scheme or "").strip()))
+
+
+def person_identifier_note(ident: dict[str, Any]) -> dict[str, Any] | None:
+    """An ``identifying`` annotation carrying a person identifier that is not
+    an identity document — a Wikidata Q-id, an aggregator's record id, a
+    register's own person key.
+
+    Phase 255, generalising the Companies House officer-id precedent (Phase
+    203). The description is written in one fixed shape so the identifier can
+    be read back (:func:`person_identifiers_from_annotations`, and
+    ``frontend/src/lib/backgroundCheck.ts``): people are still grouped on the
+    same ``scheme:id`` key they were grouped on when it sat in
+    ``identifiers``.
+    """
+    value = str(ident.get("id") or "").strip()
+    scheme = str(ident.get("scheme") or "").strip() or str(ident.get("schemeName") or "").strip()
+    if not value or not scheme:
+        return None
+    name = str(ident.get("schemeName") or scheme).strip()
+    annotation = identifying(
+        pointer("recordDetails"),
+        (
+            f"{name} identifier {value} (scheme {scheme}). BODS keeps a "
+            "person's identifiers for identity documents, so this one is "
+            "published here: it says which record the statement was matched "
+            "on, not who the person is."
+        ),
+    )
+    uri = str(ident.get("uri") or "").strip()
+    if uri:
+        annotation["url"] = uri
+    return annotation
+
+
+def person_identifiers_from_annotations(statement: dict[str, Any]) -> list[dict[str, str]]:
+    """The identifiers :func:`person_identifier_note` moved into annotations,
+    in the ``{id, scheme, schemeName[, uri]}`` shape they left."""
+    out: list[dict[str, str]] = []
+    for a in statement.get("annotations") or []:
+        if not isinstance(a, dict) or a.get("motivation") != "identifying":
+            continue
+        m = _NOTE_RE.match(str(a.get("description") or ""))
+        if not m:
+            continue
+        ident = {"id": m["id"], "scheme": m["scheme"], "schemeName": m["name"]}
+        if a.get("url"):
+            ident["uri"] = str(a["url"])
+        out.append(ident)
+    return out
+
+
+#: The sentence ``make_entity_statement`` writes when it leaves out a partial
+#: founding or dissolution date (Phase 255).
+_DROPPED_DATE_RE = re.compile(r"gives the (founding|dissolution) date as “([^”]+)”")
+
+
+def dropped_partial_date(statement: dict[str, Any], key: str) -> str | None:
+    """The partial ``foundingDate`` / ``dissolutionDate`` a source gave and
+    BODS could not carry, read back from its ``transformation`` annotation —
+    for readers (the cross-source consistency check) that compare dates at
+    the coarser precision and lose nothing by it."""
+    label = {"foundingDate": "founding", "dissolutionDate": "dissolution"}.get(key)
+    for a in statement.get("annotations") or []:
+        if not isinstance(a, dict) or a.get("motivation") != "transformation":
+            continue
+        m = _DROPPED_DATE_RE.search(str(a.get("description") or ""))
+        if m and m[1] == label:
+            return m[2]
+    return None

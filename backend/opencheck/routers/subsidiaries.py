@@ -68,6 +68,9 @@ class SubsidiariesResponse(BaseModel):
     render_mode: str = "graph"  # "graph" | "table"
     truncated: bool = False
     jurisdictions: list[SubJurisdiction] = []
+    #: Phase 255: ``jurisdictions`` rolled up to ISO 3166-1 alpha-2 (a
+    #: ``US-DE`` or ``CA-AB`` subsidiary counts under ``US`` / ``CA``).
+    countries: list[SubJurisdiction] = []
     children: list[SubChild] = []
     bods: list[dict] | None = None
 

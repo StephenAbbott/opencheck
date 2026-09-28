@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from opencheck.bods import map_wikidata, validate_shape
+from opencheck.bods.annotations import person_identifiers_from_annotations
 
 
 # ---------------------------------------------------------------------
@@ -114,12 +115,13 @@ def test_map_wikidata_person_emits_person_statement() -> None:
 def test_map_wikidata_person_carries_qid_identifier() -> None:
     bundle = map_wikidata(_person_bundle())
     person = next(iter(bundle))
-    schemes = {i["scheme"] for i in person["recordDetails"]["identifiers"]}
-    assert "WIKIDATA" in schemes
-    qid_id = next(
-        i for i in person["recordDetails"]["identifiers"] if i["scheme"] == "WIKIDATA"
-    )
+    # Phase 255: BODS keeps person identifiers for identity documents, so the
+    # Q-id is an identifying annotation carrying the Wikidata URL.
+    assert "identifiers" not in person["recordDetails"]
+    notes = person_identifiers_from_annotations(person)
+    qid_id = next(i for i in notes if i["scheme"] == "WIKIDATA")
     assert qid_id["id"] == "Q7747"
+    assert qid_id["uri"] == "https://www.wikidata.org/wiki/Q7747"
     assert qid_id["uri"] == "https://www.wikidata.org/wiki/Q7747"
 
 

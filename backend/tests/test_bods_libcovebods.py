@@ -1024,13 +1024,11 @@ def test_libcovebods_ftm_person_with_typed_names():
     `alternative`, `birth`). An invented code — `individual`, say, which is
     not in the codelist however often it is quoted — would be caught here.
 
-    This one cannot use `assert_valid`, because an FtM-mapped *person* already
-    trips one additional check on `main`, with or without names:
-    `person_identifiers_invalid_composition`, raised for the OPENSANCTIONS
-    scheme on a person identifier. That is pre-existing and out of scope here
-    (verified by mapping the same payload with no aliases), so it is asserted
-    exactly rather than waved past — if it is ever fixed, this test fails and
-    asks to be updated."""
+    Until Phase 255 an FtM-mapped *person* tripped
+    `person_identifiers_invalid_composition` for its OPENSANCTIONS record id,
+    and this test pinned that exactly so a fix would be noticed. Phase 255
+    moved non-document person identifiers into an `identifying` annotation;
+    the person now validates clean, and the record id is still published."""
     from opencheck.bods.mapper import map_ftm
     bundle = map_ftm(
         {
@@ -1049,9 +1047,14 @@ def test_libcovebods_ftm_person_with_typed_names():
     )
     report = validate_bods_statements(_to_list(bundle))
     assert report["json_errors"] == [], report["json_errors"]
-    assert [e["type"] for e in report["additional_errors"]] == [
-        "person_identifiers_invalid_composition"
-    ], report["additional_errors"]
+    assert report["additional_errors"] == [], report["additional_errors"]
+
+    person = _to_list(bundle)[0]
+    assert "identifiers" not in person["recordDetails"]
+    assert any(
+        a["motivation"] == "identifying" and "identifier NK-per (scheme OPENSANCTIONS)" in a["description"]
+        for a in person["annotations"]
+    )
 
     names = _to_list(bundle)[0]["recordDetails"]["names"]
     assert [n["type"] for n in names] == ["legal", "alternative", "former"]

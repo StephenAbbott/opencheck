@@ -51,6 +51,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .. import identifiers
+from .annotations import person_identifiers_from_annotations
 from .refs import resolver
 
 # BODS entityType.type → FtM schema.
@@ -223,7 +224,12 @@ def _person_to_ftm(stmt: dict[str, Any]) -> dict[str, Any]:
         props.add("name" if not primary_done else "alias", full)
         primary_done = True
 
-    _add_identifiers(props, rd.get("identifiers") or [], person=True)
+    # Phase 255: non-document person identifiers ride in annotations.
+    _add_identifiers(
+        props,
+        [*(rd.get("identifiers") or []), *person_identifiers_from_annotations(stmt)],
+        person=True,
+    )
 
     props.add("birthDate", rd.get("birthDate"))
     for nat in rd.get("nationalities") or []:

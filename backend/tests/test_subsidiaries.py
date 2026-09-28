@@ -1,7 +1,8 @@
 """Tests for the GLEIF subsidiary-network reveal (lazy ``/subsidiaries``).
 
-Covers the BODS mapping (a ``both`` child → two relationship statements, kept
-distinct), the assemble summary (counts, render-mode threshold, direct-first
+Covers the BODS mapping (a ``both`` child → one direct relationship statement
+since Phase 255; the rest of the Phase 255 mapping is in
+``test_subsidiaries_phase255.py``), the assemble summary (counts, render-mode threshold, direct-first
 ordering, gating), the Phase 146 honest-degradation behaviour (GLEIF refusing
 is not an entity without children; a degraded result is never cached; the
 Golden Copy snapshot stands in for the direct relation) and endpoint LEI
@@ -50,23 +51,21 @@ def _children(*specs: tuple[str, str, list[str]]) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def test_both_child_emits_two_distinct_relationship_statements():
+def test_both_child_emits_one_direct_relationship_statement():
+    """Phase 255: a child that is both a direct and an ultimate child gets ONE
+    statement for the pair (it got two, direct + indirect, until then), and
+    its details say the subject is also its ultimate consolidating parent."""
     children = _children(("254900AAAAAAAAAAAA01", "Both Child Ltd", ["direct", "ultimate"]))
     stmts = map_gleif_subsidiaries(_SUBJECT, {"entity": {"legalName": {"name": "Subject"}}}, children)
 
     rels = [s for s in stmts if s["recordType"] == "relationship"]
     ents = [s for s in stmts if s["recordType"] == "entity"]
-    # subject + one child entity, two relationships (direct + indirect).
     assert len(ents) == 2
-    assert len(rels) == 2
-
-    dirs = sorted(r["recordDetails"]["interests"][0]["directOrIndirect"] for r in rels)
-    assert dirs == ["direct", "indirect"]
-    # Both statements stay distinct (different statementId) but share the pair.
-    assert len({r["statementId"] for r in rels}) == 2
-    details = {r["recordDetails"]["interests"][0]["details"] for r in rels}
-    assert any("direct-child" in d for d in details)
-    assert any("ultimate-child" in d for d in details)
+    assert len(rels) == 1
+    (interest,) = rels[0]["recordDetails"]["interests"]
+    assert interest["directOrIndirect"] == "direct"
+    assert "direct-child" in interest["details"]
+    assert "also its ultimate consolidating parent" in interest["details"]
 
 
 def test_direct_and_ultimate_only_children_emit_single_statements():
@@ -131,9 +130,9 @@ async def test_assemble_small_network_is_graph_mode(monkeypatch):
     # node_estimate = max(direct_total, ultimate_total, distinct) = 3
     assert res["node_estimate"] == 3
     assert res["bods"] is not None
-    # one "both" child → 2 rels; one direct + one ultimate → 1 each = 4 rels.
+    # Phase 255: one relationship per pair — "both", direct, ultimate → 3.
     rels = [s for s in res["bods"] if s["recordType"] == "relationship"]
-    assert len(rels) == 4
+    assert len(rels) == 3
 
 
 async def test_assemble_large_network_degrades_to_table(monkeypatch):

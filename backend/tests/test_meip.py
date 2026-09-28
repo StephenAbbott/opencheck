@@ -123,7 +123,11 @@ async def test_adapter_fetches_declares_snapshot_and_maps_through(fixture_db) ->
     assert rec.resolve().liveness == "snapshot"
     assert raw["lei"] == SUB_A1
     statements = list(map_meip(raw))
-    assert statements == raw["bods_statements"], "the mapper is a passthrough"
+    # A passthrough (Phase 255: reordered so parties precede relationships,
+    # every statement unchanged).
+    assert sorted(map(repr, statements)) == sorted(map(repr, raw["bods_statements"]))
+    kinds = [s["recordType"] for s in statements]
+    assert kinds == sorted(kinds, key=lambda k: k == "relationship")
     # deepen / retry path
     again = await adapter.fetch(SUB_A1)
     assert again["bods_statements"] == raw["bods_statements"]

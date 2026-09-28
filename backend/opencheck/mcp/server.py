@@ -32,7 +32,9 @@ _INSTRUCTIONS = (
     "opencheck_resolve_national_id if you have a national registration number); "
     "then call opencheck_lookup with the LEI for owners, controllers and risk "
     "signals; call opencheck_export_bods for the full machine-readable ownership "
-    "graph in BODS v0.4. For a list of companies call opencheck_batch_lookup "
+    "graph in BODS v0.4 (include_subsidiaries=true folds in the GLEIF subsidiary "
+    "network), or opencheck_subsidiaries for what the company consolidates. "
+    "For a list of companies call opencheck_batch_lookup "
     "with up to 20 LEIs and read each row's verdict, counts and degraded flag. "
     "To keep a check as a record the reader can share and verify, call "
     "opencheck_save_report with the LEI; it returns a link and a SHA-256. "
@@ -194,7 +196,7 @@ async def opencheck_batch_lookup(leis: list[str], deepen_top: int = 5) -> dict[s
 
 @mcp.tool()
 async def opencheck_export_bods(
-    lei: str, format: str = "json", deepen_top: int = 3
+    lei: str, format: str = "json", deepen_top: int = 3, include_subsidiaries: bool = False
 ) -> dict[str, Any]:
     """Export an entity's beneficial-ownership graph as BODS v0.4 statements.
 
@@ -205,8 +207,14 @@ async def opencheck_export_bods(
             into Senzing for entity resolution), or "ftm" (FollowTheMoney
             entities, ready for OpenSanctions / OpenAleph / ftm-CLI workflows).
         deepen_top: How many top sources to deepen (0-10, default 3).
+        include_subsidiaries: Also fold in the GLEIF subsidiary network (direct
+            and ultimate children, accounting consolidation) — the same merge as
+            ``GET /export?subsidiaries=true``. Off by default: a large group adds
+            hundreds of statements.
     """
     from ..bods import map_to_ftm, map_to_senzing
+    from ..gleif_throttle import discretionary as gleif_discretionary
+    from ..routers.export import _merge_subsidiaries
     from ..routers.lookup import _lookup_impl as _lookup
 
     if format not in ("json", "jsonl", "senzing", "ftm"):
@@ -217,6 +225,12 @@ async def opencheck_export_bods(
         resp = await _lookup(lei=lei, deepen_top=deepen_top)
     except HTTPException as exc:
         return _err(exc)
+
+    subsidiary_statements = 0
+    if include_subsidiaries:
+        # Phase 255: the REST export's merge, deduplicated by statementId.
+        with gleif_discretionary():
+            resp, subsidiary_statements = await _merge_subsidiaries(resp)
 
     if format in ("senzing", "ftm"):
         records = (map_to_senzing if format == "senzing" else map_to_ftm)(resp.bods)
@@ -236,6 +250,7 @@ async def opencheck_export_bods(
         "lei": resp.lei,
         "format": format,
         "statement_count": len(resp.bods),
+        "subsidiary_statement_count": subsidiary_statements,
         "statements": statements,
         "bods_issues": resp.bods_issues,
         "license_notices": resp.license_notices,
@@ -348,6 +363,76 @@ async def opencheck_save_report(lei: str, deepen_top: int = 5) -> dict[str, Any]
 
 
 @mcp.tool()
+async def opencheck_subsidiaries(
+    lei: str, format: str = "summary", include_declared: bool = False
+) -> dict[str, Any]:
+    """What a legal entity consolidates: its GLEIF subsidiary network.
+
+    GLEIF Level 2 direct and ultimate children (accounting consolidation — a
+    consolidating parent need not be a shareholder, and GLEIF publishes no
+    percentages). Returns counts, per-jurisdiction and per-country breakdowns
+    and one row per child; ``format="bods"`` adds the network as BODS v0.4
+    statements (one relationship per parent–child pair, dated from GLEIF's
+    relationship records, with the direct parent drawn where GLEIF names one).
+
+    Args:
+        lei: ISO 17442 Legal Entity Identifier (20 chars).
+        format: "summary" (default) or "bods" (adds ``bods``: the statements).
+        include_declared: Also return the subsidiary lists OpenCheck holds from
+            other sources — the OECD-UNSD MEIP register, EITI and Global Energy
+            Monitor — kept apart per source. These are rows, not BODS, and they
+            measure different things from GLEIF and from each other.
+    """
+    from .. import identifiers
+    from ..gleif_throttle import discretionary as gleif_discretionary
+    from ..sources import REGISTRY
+    from ..subsidiaries import assemble_subsidiaries
+    from ..subsidiaries_declared import assemble_declared
+
+    if format not in ("summary", "bods"):
+        return {"error": f"format must be 'summary' or 'bods', got {format!r}"}
+    norm = (lei or "").strip().upper()
+    if not identifiers.LEI_PATH_SHAPE.match(norm):
+        return {"error": f"{norm!r} is not a valid LEI (20-character alphanumeric).", "status": 400}
+    check_digit_error = identifiers.lei_check_digit_error(norm)
+    if check_digit_error:
+        return {"error": check_digit_error, "status": 400}
+
+    with gleif_discretionary():
+        network = await assemble_subsidiaries(norm, include_bods=(format == "bods"))
+    out: dict[str, Any] = {**network}
+    if format != "bods":
+        out.pop("bods", None)
+    else:
+        out["statement_count"] = len(network.get("bods") or [])
+    out["measures"] = (
+        "GLEIF Level 2 accounting consolidation: entities that hold an LEI and "
+        "report this entity as their direct or ultimate consolidating parent. "
+        "Subsidiaries without an LEI, or that report no parent, are not here."
+    )
+    notices = [_license_notice(REGISTRY.get("gleif"))]
+    if include_declared:
+        declared = await assemble_declared(norm)
+        out["declared"] = declared
+        for src in declared.get("sources") or []:
+            if src.get("covered"):
+                notices.append(_license_notice(REGISTRY.get(src.get("id"))))
+    out["license_notices"] = [n for n in notices if n]
+    return out
+
+
+def _license_notice(adapter: Any) -> dict[str, str] | None:
+    if adapter is None:
+        return None
+    info = adapter.info
+    return {
+        "source_id": info.id,
+        "license": info.license,
+        "attribution": info.attribution,
+    }
+
+
+@mcp.tool()
 async def opencheck_list_sources() -> dict[str, Any]:
     """List the data sources OpenCheck consults, with licence and live status."""
     from ..routers.health import sources as _sources
@@ -363,6 +448,7 @@ TOOL_NAMES = [
     "opencheck_lookup",
     "opencheck_batch_lookup",
     "opencheck_export_bods",
+    "opencheck_subsidiaries",
     "opencheck_person_check",
     "opencheck_save_report",
     "opencheck_list_sources",
