@@ -1,6 +1,6 @@
 """Phase 252 — SEC EDGAR reads the structured SCHEDULE 13D/13G forms.
 
-From Phase 36 to 251 the adapter asked EDGAR's filing feed for ``SC 13D`` /
+Until Phase 252 the adapter asked EDGAR's filing feed for ``SC 13D`` /
 ``SC 13G``. The ``type=`` filter is a prefix match and the December 2024 XML
 mandate renamed the forms to ``SCHEDULE 13D`` / ``SCHEDULE 13G``, so the
 adapter only ever saw legacy filings, skipped each one for having no XML, and

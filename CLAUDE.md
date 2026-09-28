@@ -2308,7 +2308,7 @@ from OpenSanctions and OpenAleph on 25 Sept 2026.
 
 ## SEC EDGAR asks for the SCHEDULE forms, not SC (Phase 252)
 
-`sources/sec_edgar.py`. From Phase 36 to 251 the adapter found **nothing** for
+`sources/sec_edgar.py`. Until Phase 252 the adapter found **nothing** for
 any US issuer, and production said "answered, no record" every time.
 
 - **The December 2024 XML mandate renamed the forms**: structured filings are

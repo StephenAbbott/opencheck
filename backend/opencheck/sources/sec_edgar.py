@@ -10,11 +10,13 @@ Search strategy
     so the name-search fallback is rarely used.
 
 Fetch strategy
-    data.sec.gov/submissions/CIK{padded}.json lists all 13D/13G filings
-    associated with the company (as issuer or as filer).  For each eligible
-    accession (filed ≥ 2024-12-18), primary_doc.xml is fetched from:
-        /Archives/edgar/data/{issuer_cik}/{accession_nodashes}/primary_doc.xml
-    Files are archived under the subject company's CIK, not the filer's CIK.
+    The browse-edgar filing feed for the company's CIK, once per structured
+    form type — ``SCHEDULE 13D`` and ``SCHEDULE 13G`` (Phase 252: the feed's
+    ``type=`` is a prefix match and the mandate renamed the forms, so the
+    legacy ``SC 13D`` / ``SC 13G`` names never return a structured filing).
+    For each accession, primary_doc.xml is fetched from the archive path in
+    the feed entry:
+        /Archives/edgar/data/{cik}/{accession_nodashes}/primary_doc.xml
     Results are deduplicated per reporter, retaining the most recent filing.
 
 No API key is required — EDGAR is publicly accessible.  The User-Agent header
