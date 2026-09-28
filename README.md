@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 256** — a person's moved identifier reads back with its scheme name whole, a personal Russian INN stays in BODS as a tax ID, and a stock-exchange listing names its operating market.
+**Latest: Phase 258** — the Securities panel reads GLEIF's own daily ISIN-to-LEI file instead of calling GLEIF, and every GLEIF call OpenCheck makes is counted by route and endpoint.
 
 → [Full development history](docs/status.md)
 
