@@ -79,6 +79,18 @@ _FILINGS_ATOM_13G = """\
   <title>EDGAR Filing Search</title>
 </feed>"""
 
+def _mock_legacy_feeds(httpx_mock: HTTPXMock, subject_cik: str) -> None:
+    """Empty legacy SC 13D / SC 13G feeds, read only when nothing structured survives."""
+    for form in ("SC+13D", "SC+13G"):
+        httpx_mock.add_response(
+            url=(
+                f"{_BROWSE}?action=getcompany&CIK={subject_cik}"
+                f"&type={form}&dateb=&owner=include&count=40&search_text=&output=atom"
+            ),
+            text=_FILINGS_ATOM_13G,
+        )
+
+
 _FILING_XML = """\
 <?xml version="1.0" encoding="UTF-8"?>
 <edgarSubmission xmlns="http://www.sec.gov/edgar/schedule13D">
@@ -236,19 +248,19 @@ async def test_search_returns_empty_for_person_kind() -> None:
 async def test_fetch_parses_filings(httpx_mock: HTTPXMock) -> None:
     subject_cik = "1793659"
 
-    # Atom feed for SC 13D
+    # Atom feed for SCHEDULE 13D
     httpx_mock.add_response(
         url=(
             f"{_BROWSE}?action=getcompany&CIK={subject_cik}"
-            f"&type=SC+13D&dateb=&owner=include&count=40&search_text=&output=atom"
+            f"&type=SCHEDULE+13D&dateb=&owner=include&count=40&search_text=&output=atom"
         ),
         text=_FILINGS_ATOM_13D,
     )
-    # Atom feed for SC 13G (empty)
+    # Atom feed for SCHEDULE 13G (empty)
     httpx_mock.add_response(
         url=(
             f"{_BROWSE}?action=getcompany&CIK={subject_cik}"
-            f"&type=SC+13G&dateb=&owner=include&count=40&search_text=&output=atom"
+            f"&type=SCHEDULE+13G&dateb=&owner=include&count=40&search_text=&output=atom"
         ),
         text=_FILINGS_ATOM_13G,
     )
@@ -314,11 +326,11 @@ async def test_fetch_deduplicates_by_reporter_cik(httpx_mock: HTTPXMock) -> None
     )
 
     httpx_mock.add_response(
-        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13D&dateb=&owner=include&count=40&search_text=&output=atom",
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SCHEDULE+13D&dateb=&owner=include&count=40&search_text=&output=atom",
         text=older_filing_atom,
     )
     httpx_mock.add_response(
-        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13G&dateb=&owner=include&count=40&search_text=&output=atom",
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SCHEDULE+13G&dateb=&owner=include&count=40&search_text=&output=atom",
         text=newer_filing_atom,
     )
     # Older filing XML
@@ -621,17 +633,20 @@ async def test_directional_filter_discards_filings_by_subject(
 </feed>"""
 
     httpx_mock.add_response(
-        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13D&dateb=&owner=include&count=40&search_text=&output=atom",
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SCHEDULE+13D&dateb=&owner=include&count=40&search_text=&output=atom",
         text=wrong_issuer_atom,
     )
     httpx_mock.add_response(
-        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13G&dateb=&owner=include&count=40&search_text=&output=atom",
+        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SCHEDULE+13G&dateb=&owner=include&count=40&search_text=&output=atom",
         text=_FILINGS_ATOM_13G,
     )
     httpx_mock.add_response(
         url=f"{_EDGAR_BASE}/Archives/edgar/data/{subject_cik}/000179365925000001/primary_doc.xml",
         text=_FILING_XML_WRONG_ISSUER,
     )
+    # Nothing about the subject survived, so the legacy feeds are read for
+    # the coverage note.
+    _mock_legacy_feeds(httpx_mock, subject_cik)
 
     adapter = SecEdgarAdapter()
     bundle = await adapter.fetch(subject_cik)
@@ -666,16 +681,16 @@ async def test_legacy_filing_count_excludes_by_filings(
 <?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <entry>
-    <category scheme="https://www.sec.gov/" term="SCHEDULE 13G"/>
-    <title>SCHEDULE 13G - 2024-11-14</title>
+    <category scheme="https://www.sec.gov/" term="SC 13G"/>
+    <title>SC 13G - 2024-11-14</title>
     <id>urn:tag:sec.gov,2008:accession-number=0001793659-24-000100</id>
     <link rel="alternate" href="https://www.sec.gov/Archives/edgar/data/{subject_cik}/000179365924000100/0001793659-24-000100-index.htm"/>
     <updated>2024-11-14T12:00:00-05:00</updated>
     <summary>Filed: 2024-11-14</summary>
   </entry>
   <entry>
-    <category scheme="https://www.sec.gov/" term="SCHEDULE 13G"/>
-    <title>SCHEDULE 13G - 2024-06-01</title>
+    <category scheme="https://www.sec.gov/" term="SC 13G"/>
+    <title>SC 13G - 2024-06-01</title>
     <id>urn:tag:sec.gov,2008:accession-number=0001793659-24-000050</id>
     <link rel="alternate" href="https://www.sec.gov/Archives/edgar/data/{subject_cik}/000179365924000050/0001793659-24-000050-index.htm"/>
     <updated>2024-06-01T12:00:00-04:00</updated>
@@ -683,10 +698,11 @@ async def test_legacy_filing_count_excludes_by_filings(
   </entry>
 </feed>"""
 
-    httpx_mock.add_response(
-        url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13D&dateb=&owner=include&count=40&search_text=&output=atom",
-        text=_FILINGS_ATOM_13G,  # empty
-    )
+    for form in ("SCHEDULE+13D", "SCHEDULE+13G", "SC+13D"):
+        httpx_mock.add_response(
+            url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type={form}&dateb=&owner=include&count=40&search_text=&output=atom",
+            text=_FILINGS_ATOM_13G,  # empty
+        )
     httpx_mock.add_response(
         url=f"{_BROWSE}?action=getcompany&CIK={subject_cik}&type=SC+13G&dateb=&owner=include&count=40&search_text=&output=atom",
         text=legacy_atom,

@@ -199,6 +199,7 @@ from .mappers.sec_edgar import (  # noqa: F401  (re-exported, Phase 246)
     _pycountry,
     _sec_beneficial_ownership,
     map_sec_edgar,
+    reports_exit,
 )
 from .mappers.norway import (  # noqa: F401  (re-exported, Phase 246)
     _BRREG_ROLE_MAP,

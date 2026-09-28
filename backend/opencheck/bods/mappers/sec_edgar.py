@@ -87,6 +87,27 @@ def _sec_beneficial_ownership(
     return party_type == "person"
 
 
+def reports_exit(reporter: dict[str, Any]) -> bool:
+    """Whether a 13D/13G reporter's filing says it now holds nothing.
+
+    True when the aggregate held is 0 and the percent of class is 0 or not
+    given, or when the aggregate is not given and the percent is 0. A filing
+    below the 5% threshold but above zero (a 13G/A reporting 4.8%) is NOT an
+    exit: the holding continues, it has only stopped being reportable, so it
+    is carried as filed.
+    """
+    aggregate = reporter.get("aggregate_amount_owned")
+    percent = reporter.get("percent_of_class")
+    try:
+        aggregate = None if aggregate is None else float(aggregate)
+        percent = None if percent is None else float(percent)
+    except (TypeError, ValueError):
+        return False
+    if aggregate is not None:
+        return aggregate == 0 and (percent is None or percent == 0)
+    return percent == 0
+
+
 def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
     """Map a SEC EDGAR 13D/13G bundle to BODS v0.4.
 
@@ -285,7 +306,30 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
                 if shareholding.get("details")
                 else note
             )
-        if percent is not None:
+        record_status = "new"
+        if reports_exit(reporter):
+            # An exit filing: the reporter's latest filing says it holds
+            # nothing. Drawn as an ended relationship (Phase 219), never as a
+            # current 0% shareholding and never dropped. The end date is the
+            # filing's own event date; without one the record is closed with
+            # no date rather than given an invented one.
+            event_date = filing.get("event_date") or ""
+            exit_note = (
+                f"The reporter's latest filing reports no shares held "
+                f"(event date {event_date})"
+                if event_date
+                else "The reporter's latest filing reports no shares held"
+            )
+            shareholding["details"] = (
+                f"{shareholding['details']}. {exit_note}"
+                if shareholding.get("details")
+                else exit_note
+            )
+            if event_date:
+                shareholding["endDate"] = event_date
+            else:
+                record_status = "closed"
+        elif percent is not None:
             shareholding["share"] = {"exact": percent}
 
         rel_stmt = make_relationship_statement(
@@ -300,6 +344,7 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
             # SEC. That is the source's declaration date, so it is the
             # statementDate.
             statement_date=filing.get("filed") or None,
+            record_status=record_status,
         )
         result.statements.append(rel_stmt)
 

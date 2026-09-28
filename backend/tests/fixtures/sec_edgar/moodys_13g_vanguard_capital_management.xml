@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?><edgarSubmission xmlns="http://www.sec.gov/edgar/schedule13g" xmlns:com="http://www.sec.gov/edgar/common">
+<schemaVersion>X0202</schemaVersion>
+<headerData>
+<submissionType>SCHEDULE 13G</submissionType>
+<filerInfo>
+<filer>
+<filerCredentials>
+<cik>0002100119</cik>
+<ccc>XXXXXXXX</ccc>
+</filerCredentials>
+</filer>
+<liveTestFlag>LIVE</liveTestFlag>
+</filerInfo>
+</headerData>
+<formData>
+<coverPageHeader>
+<securitiesClassTitle>Common Stock</securitiesClassTitle>
+<eventDateRequiresFilingThisStatement>03/31/2026</eventDateRequiresFilingThisStatement>
+<issuerInfo>
+<issuerCik>0001059556</issuerCik>
+<issuerName>Moody's Corp</issuerName>
+<issuerCusips>
+<issuerCusipNumber>615369105</issuerCusipNumber>
+</issuerCusips>
+<issuerPrincipalExecutiveOfficeAddress>
+<com:street1>7 World Trade Center</com:street1>
+<com:street2>250 Greenwich Street</com:street2>
+<com:city>New York</com:city>
+<com:stateOrCountry>NY</com:stateOrCountry>
+<com:zipCode>10007</com:zipCode>
+</issuerPrincipalExecutiveOfficeAddress>
+</issuerInfo>
+<designateRulesPursuantThisScheduleFiled>
+<designateRulePursuantThisScheduleFiled>Rule 13d-1(b)</designateRulePursuantThisScheduleFiled>
+</designateRulesPursuantThisScheduleFiled>
+</coverPageHeader>
+<coverPageHeaderReportingPersonDetails>
+<reportingPersonName>Vanguard Capital Management</reportingPersonName>
+<citizenshipOrOrganization>PA</citizenshipOrOrganization>
+<reportingPersonBeneficiallyOwnedNumberOfShares>
+<soleVotingPower>1530249</soleVotingPower>
+<sharedVotingPower>0</sharedVotingPower>
+<soleDispositivePower>11415565</soleDispositivePower>
+<sharedDispositivePower>0</sharedDispositivePower>
+</reportingPersonBeneficiallyOwnedNumberOfShares>
+<reportingPersonBeneficiallyOwnedAggregateNumberOfShares>11415565</reportingPersonBeneficiallyOwnedAggregateNumberOfShares>
+<classPercent>6.41</classPercent>
+<typeOfReportingPerson>IA</typeOfReportingPerson>
+</coverPageHeaderReportingPersonDetails>
+  </formData>
+</edgarSubmission>

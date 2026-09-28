@@ -35,6 +35,8 @@ class EDGARFiling(_Base):
     filing_url: str | None = None
     form_type: str | None = None
     filed: str | None = None
+    # The date of the event that required the filing (Phase 252).
+    event_date: str | None = None
     source_url: str | None = None
 
 
