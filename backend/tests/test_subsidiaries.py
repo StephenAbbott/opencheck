@@ -391,3 +391,68 @@ async def test_endpoint_reports_degradation_as_200(_live):
     assert model.children_available is False
     assert model.degraded_detail
     assert model.children == []
+
+
+# ---------------------------------------------------------------------------
+# Phase 258: the sentence names the cause
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("failure", "reason", "cause"),
+    [
+        (
+            GleifRateLimitedError("reserved", reason="held_for_lookups"),
+            "held_for_lookups",
+            "OpenCheck kept its last GLEIF requests for lookups",
+        ),
+        (_FakeResponse(429), "rate_limited", "GLEIF is rate-limiting OpenCheck's requests"),
+        (GleifRateLimitedError("budget exhausted"), "rate_limited", "rate-limiting"),
+        (httpx.ConnectTimeout("timed out"), "unreachable", "GLEIF did not answer"),
+        (_FakeResponse(503), "unreachable", "GLEIF did not answer"),
+    ],
+    ids=["held-for-lookups", "429", "throttle-budget", "network", "5xx"],
+)
+async def test_a_refused_network_names_its_cause(_live, failure, reason, cause):
+    client = _FakeClient(children={"direct": failure, "ultimate": failure})
+    with patch.object(subs, "build_client", lambda: _FakeCM(client)):
+        with patch.object(subs, "_snapshot_children", lambda lei, kind="direct": None):
+            res = await subs.assemble_subsidiaries(_SUBJECT)
+    assert res["unavailable_reason"] == reason
+    assert cause in res["degraded_detail"]
+    assert "not a finding" in res["degraded_detail"]
+    if reason == "held_for_lookups":
+        # The Quantexa lesson: OpenCheck's own reserve is not GLEIF refusing.
+        assert "rate-limiting" not in res["degraded_detail"]
+        assert "unreachable" not in res["degraded_detail"]
+
+
+async def test_a_partial_refusal_names_its_cause(_live):
+    child = _l1("254900AAAAAAAAAAAA30", "Direct Only Ltd")
+    client = _FakeClient(
+        children={
+            "direct": _page([child], 1),
+            "ultimate": GleifRateLimitedError("reserved", reason="held_for_lookups"),
+        }
+    )
+    with patch.object(subs, "build_client", lambda: _FakeCM(client)):
+        res = await subs.assemble_subsidiaries(_SUBJECT)
+    assert res["unavailable_reason"] == "held_for_lookups"
+    assert res["degraded_detail"].startswith("The ultimate (indirect) children could not be fetched")
+    assert "for lookups" in res["degraded_detail"]
+
+
+async def test_an_answered_network_has_no_reason(_live):
+    client = _FakeClient(children={"direct": None, "ultimate": None})
+    with patch.object(subs, "build_client", lambda: _FakeCM(client)):
+        res = await subs.assemble_subsidiaries(_SUBJECT)
+    assert res["unavailable_reason"] is None and res["degraded_detail"] is None
+
+
+def test_degraded_detail_without_a_reason_keeps_the_old_wording():
+    """An older cache entry or caller with no reason: say what was said before
+    rather than guess a cause."""
+    detail = subs._degraded_detail(False, False, False, None)
+    assert detail.startswith("GLEIF is rate-limiting or unreachable")
+    snap = subs._degraded_detail(True, True, True, "2026-09-07")
+    assert snap.startswith("GLEIF did not answer for this network")

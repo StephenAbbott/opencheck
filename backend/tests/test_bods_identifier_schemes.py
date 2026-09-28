@@ -262,9 +262,9 @@ _ADAPTER_CASES: list[tuple[str, Any, dict[str, Any], str]] = [
     ("bolagsverket", map_bolagsverket, _BOLAGSVERKET_BUNDLE, "SE-BLV"),
     ("jar_lithuania", map_jar_lithuania, _JAR_LITHUANIA_BUNDLE, "LT-JAR"),
     ("krs_poland", map_krs_poland, _KRS_POLAND_BUNDLE, "PL-KRS"),
-    ("rpo_slovakia", map_rpo_slovakia, _RPO_SLOVAKIA_BUNDLE, "SK-RPO"),
+    ("rpo_slovakia", map_rpo_slovakia, _RPO_SLOVAKIA_BUNDLE, "SK-ICO"),
     ("bce_belgium", map_bce_belgium, _BCE_BELGIUM_BUNDLE, "BE-BCE_KBO"),
-    ("corporations_canada", map_corporations_canada, _CORPORATIONS_CANADA_BUNDLE, "CA-CORP"),
+    ("corporations_canada", map_corporations_canada, _CORPORATIONS_CANADA_BUNDLE, "CA-CC"),
     ("acra_singapore", map_acra_singapore, _ACRA_SINGAPORE_BUNDLE, "SG-ACRA"),
     ("cvr_denmark", map_cvr_denmark, _CVR_DENMARK_BUNDLE, "DK-CVR"),
     ("firmenbuch", map_firmenbuch, _FIRMENBUCH_BUNDLE, "AT-FB"),
@@ -432,7 +432,7 @@ class TestAdapterSpecificSchemes:
         }
         ids = _identifiers(map_corporations_canada, bundle_with_bn)
         schemes = _scheme_ids(ids)
-        assert "CA-CORP" in schemes
+        assert "CA-CC" in schemes
         assert "CA-BN" in schemes, (
             f"CA-BN should appear when businessNumbers.businessNumber is present. Got: {sorted(schemes)}"
         )
@@ -462,7 +462,7 @@ class TestAdapterSpecificSchemes:
         }
         ids = _identifiers(map_rpo_slovakia, bundle)
         schemes = _scheme_ids(ids)
-        assert "SK-RPO" in schemes
+        assert "SK-ICO" in schemes
         assert "SK-OR" in schemes, (
             f"SK-OR should appear when registration_numbers is non-empty. Got: {sorted(schemes)}"
         )

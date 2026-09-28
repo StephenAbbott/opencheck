@@ -29,6 +29,14 @@ today's. When nothing can stand in, ``isin_list_unavailable_reason`` says why
 nothing was sent), ``rate_limited`` or ``unreachable`` — so the page stops
 blaming GLEIF for a refusal that was OpenCheck's own.
 
+Phase 258: **GLEIF's own daily ISIN-to-LEI file answers first**
+(``isin_index.py``). It is the complete mapping — 98,677 of ~3.4 million LEIs
+hold any ISIN — so an LEI it does not list is answered "none" with no GLEIF
+call, and a listed one is paged locally in ISIN order. ``isin_list_source``
+says which path answered; the cache and live call below run only when there is
+no usable table (absent, still building, or older than
+``OPENCHECK_ISIN_INDEX_MAX_AGE_DAYS``).
+
 A corollary (Phase 145): **GLEIF failing must not fail the overlay**. The
 sanctioned index is a local file — the one check with a compliance consequence
 needs no network at all — so a GLEIF 429/outage degrades the response
@@ -51,9 +59,10 @@ from urllib.parse import quote
 import httpx
 
 from . import identifiers
+from . import gleifstats, isin_index
 from .cache import Cache
 from .config import get_settings
-from .gleif_throttle import GleifRateLimitedError
+from .gleif_throttle import GleifRateLimitedError, unavailable_reason
 from .http import build_client
 
 log = logging.getLogger(__name__)
@@ -301,11 +310,34 @@ def _cached_isins(
 
 
 def _unavailable_reason(exc: Exception) -> str:
-    if isinstance(exc, GleifRateLimitedError):
-        return getattr(exc, "reason", UNAVAILABLE_RATE_LIMITED)
-    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
-        return UNAVAILABLE_RATE_LIMITED
-    return UNAVAILABLE_UNREACHABLE
+    return unavailable_reason(exc)
+
+
+#: Where an ISIN list came from (``isin_list_source``).
+SOURCE_FILE = "gleif_file"
+SOURCE_API = "gleif_api"
+
+
+def _table_page(lei: str, page: int, page_size: int) -> isin_index.IsinPage | None:
+    """A page from GLEIF's ISIN file table, or ``None`` when there is no
+    usable table. Never raises: a broken table means the live path."""
+    try:
+        return isin_index.lookup(lei, page, page_size)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("ISIN table read failed for %s: %s", lei, exc)
+        return None
+
+
+def _epoch(iso: str | None) -> float | None:
+    if not iso:
+        return None
+    try:
+        when = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return when.timestamp()
 
 
 def _iso(epoch: float) -> str:
@@ -331,6 +363,7 @@ async def assemble_securities(
         "isin_list_stale": False,
         "isin_list_as_of": None,
         "isin_list_unavailable_reason": None,
+        "isin_list_source": None,
         "sources": [],
         "license_notices": [],
     }
@@ -346,11 +379,24 @@ async def assemble_securities(
     isin_list_stale = False
     unavailable_reason: str | None = None
     total, isins = 0, []
-    fresh = _cached_isins(lei, page, page_size, max_age_days=ISINS_FRESH_DAYS)
+    # Phase 258: GLEIF's own daily ISIN-to-LEI file, held as a local table,
+    # answers first — including "none", for the ~97% of LEIs it does not
+    # list. The live call below only runs when there is no usable table.
+    table_page = _table_page(lei, page, page_size)
+    fresh = (
+        None
+        if table_page is not None
+        else _cached_isins(lei, page, page_size, max_age_days=ISINS_FRESH_DAYS)
+    )
     fetched_at = fresh[2] if fresh else time.time()
+    list_source = SOURCE_FILE if table_page is not None else SOURCE_API
+    served = "file" if table_page is not None else ("cache" if fresh is not None else "live")
     async with build_client() as client:
         try:
-            if fresh is not None:
+            if table_page is not None:
+                total, isins = table_page.total, table_page.isins
+                fetched_at = _epoch(table_page.as_of) or fetched_at
+            elif fresh is not None:
                 total, isins = fresh[0], fresh[1]
             else:
                 total, isins = await _gleif_isins(client, lei, page, page_size)
@@ -380,6 +426,7 @@ async def assemble_securities(
                 # labelled with the day it was fetched, never as today's.
                 total, isins, fetched_at = stale
                 isin_list_stale = True
+                served = "stale"
                 log.info(
                     "GLEIF ISIN list for %s served from a %s cache entry (%s)",
                     lei, _iso(fetched_at), unavailable_reason,
@@ -387,12 +434,15 @@ async def assemble_securities(
             else:
                 log.warning("GLEIF ISIN list unavailable for %s: %s", lei, exc)
                 isin_list_available = False
+                served = f"unavailable_{unavailable_reason}"
         figi_map = await _openfigi_map(client, isins, settings.openfigi_api_key)
         # Sanctioned ISINs may not be in the current GLEIF page (or in GLEIF at
         # all — e.g. Rosneft). Enrich those too so the banner shows their type.
         missing = [i for i in sanctioned_map if i not in figi_map]
         if missing:
             figi_map.update(await _openfigi_map(client, missing, settings.openfigi_api_key))
+
+    gleifstats.record_securities(served)
 
     securities = [
         _row(isin, figi_map.get(isin), isin in sanctioned_map, sanctioned_map.get(isin))
@@ -424,6 +474,10 @@ async def assemble_securities(
         # Set whenever GLEIF could not be asked — including when a stale page
         # stood in, so the stand-in can say why it is not today's.
         "isin_list_unavailable_reason": unavailable_reason,
+        # Phase 258: where the list came from — "gleif_file" (GLEIF's daily
+        # ISIN-to-LEI file, in ISIN order, dated by `isin_list_as_of`) or
+        # "gleif_api" (the live endpoint, or its cache). None when absent.
+        "isin_list_source": list_source if isin_list_available else None,
         "sources": sources,
         "license_notices": (
             [{"source_id": "opensanctions", "notice": _OS_NC_NOTICE}] if sanctioned else []

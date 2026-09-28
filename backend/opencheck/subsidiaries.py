@@ -53,6 +53,7 @@ from . import mirrorstats, provenance
 from .bods import map_gleif_subsidiaries
 from .cache import Cache
 from .config import get_settings
+from .gleif_throttle import UNAVAILABLE_UNREACHABLE, unavailable_reason
 from .http import build_client
 from .sources.gleif import SNAPSHOT_DETAIL
 
@@ -107,8 +108,13 @@ _PARENT_LOOKUP_CONCURRENCY = 4
 _cache = Cache()
 
 
-async def _children(client, lei: str, kind: str) -> tuple[list[dict], int, bool]:
-    """``(records, total, answered)`` of GLEIF {direct|ultimate}-children records.
+async def _children(
+    client, lei: str, kind: str
+) -> tuple[list[dict], int, bool, str | None]:
+    """``(records, total, answered, reason)`` of GLEIF {direct|ultimate}-children
+    records. ``reason`` (Phase 258) says why ``answered`` is false —
+    ``held_for_lookups`` / ``rate_limited`` / ``unreachable``; ``None`` when
+    GLEIF answered.
 
     ``answered`` is the honesty bit. **404 is an answer** — GLEIF has no
     children of this kind for this LEI — so it returns ``True`` with an empty
@@ -128,19 +134,19 @@ async def _children(client, lei: str, kind: str) -> tuple[list[dict], int, bool]
             )
         except Exception as exc:  # noqa: BLE001 — incl. GleifRateLimitedError
             _LOG.warning("subsidiaries: %s-children HTTP error: %s", kind, exc)
-            return records, total, False
+            return records, total, False, unavailable_reason(exc)
         if resp.status_code == 404:
             break  # a real answer: no children of this kind
         if not resp.is_success:
             _LOG.warning(
                 "subsidiaries: %s-children refused with HTTP %s", kind, resp.status_code
             )
-            return records, total, False
+            return records, total, False, unavailable_reason(status=resp.status_code)
         try:
             payload = resp.json()
         except ValueError:
             _LOG.warning("subsidiaries: %s-children returned unparseable JSON", kind)
-            return records, total, False
+            return records, total, False, UNAVAILABLE_UNREACHABLE
         data = payload.get("data") or []
         records.extend(d for d in data if isinstance(d, dict))
         pagination = (payload.get("meta") or {}).get("pagination") or {}
@@ -149,7 +155,7 @@ async def _children(client, lei: str, kind: str) -> tuple[list[dict], int, bool]
         last = pagination.get("lastPage")
         if not data or (last and page >= last):
             break
-    return records, total, True
+    return records, total, True, None
 
 
 async def _child_relationships(
@@ -404,8 +410,8 @@ async def _build(lei: str) -> dict[str, Any]:
         # nothing for them.
         (
             (subj_attrs, subj_ok),
-            (direct_recs, direct_total, direct_ok),
-            (ultimate_recs, ultimate_total, ultimate_ok),
+            (direct_recs, direct_total, direct_ok, direct_reason),
+            (ultimate_recs, ultimate_total, ultimate_ok, ultimate_reason),
         ) = await asyncio.gather(
             _subject_attrs(client, lei),
             _children(client, lei, "direct"),
@@ -477,6 +483,8 @@ async def _build(lei: str) -> dict[str, Any]:
         "subject_available": subj_ok,
         "snapshot_date": snapshot_date,
         "snapshot_source": "fallback" if snapshot_date else None,
+        # Phase 258: why a relation was not answered, for the sentence.
+        "unavailable_reason": direct_reason or ultimate_reason,
         _COMPLETE_KEY: complete,
         _SHAPE_KEY: _SHAPE,
         _ENRICHED_KEY: enriched,
@@ -592,6 +600,7 @@ _EMPTY = {
     "children_available": True, "direct_available": True,
     "ultimate_available": True, "snapshot_fallback": False,
     "snapshot_date": None, "snapshot_source": None, "degraded_detail": None,
+    "unavailable_reason": None,
 }
 
 
@@ -651,7 +660,11 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
         "snapshot_source": snapshot_source,
         "degraded_detail": _degraded_detail(
             direct_available, ultimate_available, snapshot_fallback, snapshot_date,
-            snapshot_source,
+            snapshot_source, data.get("unavailable_reason"),
+        ),
+        # Phase 258: held_for_lookups / rate_limited / unreachable, or None.
+        "unavailable_reason": (
+            None if snapshot_source == "mirror" else data.get("unavailable_reason")
         ),
         "direct_total": direct_total,
         "ultimate_total": ultimate_total,
@@ -694,37 +707,57 @@ def _snapshot_datetime(publish: str | None) -> datetime | None:
         return None
 
 
+#: Phase 258: the cause, when known, in the reader's words. Before, every
+#: refusal read "GLEIF is rate-limiting or unreachable" — including the
+#: Phase 234 reserve, when OpenCheck had not asked GLEIF at all.
+_CAUSE = {
+    "held_for_lookups": "OpenCheck kept its last GLEIF requests for lookups, so GLEIF was not asked",
+    "rate_limited": "GLEIF is rate-limiting OpenCheck's requests",
+    "unreachable": "GLEIF did not answer",
+}
+_UNKNOWN_CAUSE = "GLEIF is rate-limiting or unreachable"
+
+
 def _degraded_detail(
     direct_available: bool,
     ultimate_available: bool,
     snapshot_fallback: bool,
     snapshot_date: str | None,
     snapshot_source: str | None = None,
+    reason: str | None = None,
 ) -> str | None:
-    """One sentence naming what GLEIF did not answer. ``None`` when it did —
-    and ``None`` for a mirror-served network too (Phase 179): nothing was
+    """One sentence naming what GLEIF did not answer, and why. ``None`` when it
+    did — and ``None`` for a mirror-served network too (Phase 179): nothing was
     refused, the snapshot was the chosen source, and the badge and
     ``snapshot_date`` already say so.
 
     Written here rather than in the frontend because the backend is the only
     layer that knows *which* of the two relation calls was refused, and
     "we could not check" has to be specific to be worth more than silence.
+    ``reason`` (Phase 258) names the cause; without one the sentence keeps its
+    older wording rather than guess.
     """
     if snapshot_source == "mirror":
         return None
+    cause = _CAUSE.get(reason or "", _UNKNOWN_CAUSE)
     if snapshot_fallback:
         dated = f" (extract of {snapshot_date})" if snapshot_date else ""
         if not ultimate_available:
             return (
-                "GLEIF is rate-limiting or unreachable. Direct children are "
+                f"{cause}. Direct children are "
                 f"shown from OpenCheck's Golden Copy snapshot{dated}; the "
                 "ultimate (indirect) children could not be checked at all."
             )
         if not direct_available:
             return (
-                "GLEIF is rate-limiting or unreachable. The ultimate (indirect) "
+                f"{cause}. The ultimate (indirect) "
                 f"children are shown from OpenCheck's Golden Copy snapshot{dated}; "
                 "the direct children could not be checked at all."
+            )
+        if reason in _CAUSE:
+            return (
+                f"{cause}, so this network is shown from OpenCheck's Golden Copy "
+                f"snapshot{dated} rather than live."
             )
         return (
             "GLEIF did not answer for this network, so it is shown from "
@@ -732,15 +765,25 @@ def _degraded_detail(
         )
     if not direct_available and not ultimate_available:
         return (
-            "GLEIF is rate-limiting or unreachable, so the subsidiary network "
+            f"{cause}, so the subsidiary network "
             "could not be checked. This is not a finding that the entity has none."
         )
     if not direct_available:
+        if reason in _CAUSE:
+            return (
+                f"The direct children could not be fetched ({_CAUSE[reason]}) — only "
+                "the ultimate (indirect) ones are shown, so this network is incomplete."
+            )
         return (
             "GLEIF did not return the direct children — only the ultimate "
             "(indirect) ones are shown, so this network is incomplete."
         )
     if not ultimate_available:
+        if reason in _CAUSE:
+            return (
+                f"The ultimate (indirect) children could not be fetched ({_CAUSE[reason]}) "
+                "— only the direct ones are shown, so this network is incomplete."
+            )
         return (
             "GLEIF did not return the ultimate (indirect) children — only the "
             "direct ones are shown, so this network is incomplete."

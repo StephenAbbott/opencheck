@@ -85,3 +85,22 @@ export function isinListStaleLine(
   const when = asOf ? `as of ${utcDate(asOf)}` : "from an earlier check";
   return `GLEIF's ISIN list ${when} — OpenCheck could not re-check it just now (${staleCause(reason)}).`;
 }
+
+/** Phase 258: where the list came from. */
+export type IsinListSource = "gleif_file" | "gleif_api";
+
+/** The provenance line under the count when GLEIF's daily ISIN-to-LEI file
+ *  answered, or `null` otherwise (the live API needs no caption; a stand-in
+ *  has its own line). Says the order, because GLEIF's own search pages its
+ *  ISINs in a different one. */
+export function isinListSourceLine(
+  source: string | null | undefined,
+  asOf: string | null | undefined,
+  total: number,
+): string | null {
+  if (source !== "gleif_file") return null;
+  const dated = asOf ? ` of ${utcDate(asOf)}` : "";
+  return total > 1
+    ? `From GLEIF's ISIN-to-LEI file${dated}, listed in ISIN order.`
+    : `From GLEIF's ISIN-to-LEI file${dated}.`;
+}

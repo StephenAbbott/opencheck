@@ -178,6 +178,20 @@ async def _warm_caches_background() -> None:
     except Exception as exc:  # noqa: BLE001
         log.warning("PSC graph warm-up failed (the live walk remains): %s", exc)
 
+    # Phase 258: GLEIF's ISIN-to-LEI file as a local table behind /securities
+    # — built here from GLEIF's daily zip when absent or superseded (~40 s).
+    # Last in the sequence so it never delays a source's index. Until it
+    # lands, /securities uses the Phase 253 cached live call.
+    try:
+        from .isin_index import warm_index as warm_isin_index
+
+        stats = await asyncio.to_thread(warm_isin_index)
+        log.info("ISIN index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("ISIN index warm-up failed (live GLEIF calls remain): %s", exc)
+
 
 # The MCP streamable-HTTP session manager is single-use per instance (its
 # ``run()`` can be entered only once per process). Production starts the lifespan
@@ -217,6 +231,14 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .psc_graph import refresh_loop as psc_refresh_loop
 
         psc_task = asyncio.create_task(psc_refresh_loop(psc_interval))
+    # Phase 258: ask GLEIF for a newer ISIN-to-LEI file on a timer, so the
+    # daily file lands without a deploy. 0 disables; boot still checks once.
+    isin_task: asyncio.Task[None] | None = None
+    isin_interval = get_settings().isin_index_refresh_interval_s
+    if isin_interval > 0 and get_settings().allow_live and get_settings().isin_index_sync:
+        from .isin_index import refresh_loop as isin_refresh_loop
+
+        isin_task = asyncio.create_task(isin_refresh_loop(isin_interval))
     # Phase 187: feed the PSC graph from the register's stream. Needs the
     # graph file and the streaming key; returns at once otherwise.
     stream_task: asyncio.Task[None] | None = None
@@ -256,6 +278,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 refresh_task.cancel()
             if psc_task is not None and not psc_task.done():
                 psc_task.cancel()
+            if isin_task is not None and not isin_task.done():
+                isin_task.cancel()
             if stream_task is not None and not stream_task.done():
                 stream_task.cancel()
             if watch_task is not None and not watch_task.done():

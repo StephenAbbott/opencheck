@@ -327,7 +327,7 @@ class CorporationsCanadaAdapter(SourceAdapter):
         name = extract_current_name(corp) or corp_id or "Unknown"
         status = (corp.get("status") or "").strip()
         act = (corp.get("act") or "").strip()
-        summary = f"CA-CORP {corp_id}"
+        summary = f"CA-CC {corp_id}"
         if status:
             summary += f" · {status}"
         if act:

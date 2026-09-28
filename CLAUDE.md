@@ -1198,9 +1198,9 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Belgium | bce_belgium | `RA000025` — Crossroad Bank of Enterprises | 2026-08-28 — table previously said RA000143 (wrong) |
 | Austria | firmenbuch | `RA000017` — Commercial Register (BM für Justiz) | 2026-08-28 — table previously said RA000128 (wrong) |
 | Poland | krs_poland | `RA000484` — National Court Register (KRS) | 2026-08-28 — table previously said RA000439 (wrong) |
-| Slovakia | rpo_slovakia / rpvs_slovakia | `RA000526` — Business Register (Ministerstvo spravodlivosti) | 2026-08-28 — table previously said RA000476 (wrong) |
+| Slovakia | rpo_slovakia / rpvs_slovakia | `RA000526` — Business Register (Ministerstvo spravodlivosti) | 2026-08-28 — table previously said RA000476 (wrong). `registeredAs` is the bare eight-digit IČO (re-checked 2026-09-28); scheme `SK-ICO` since Phase 257 |
 | Singapore | acra_singapore | `RA000523` — Business Registry (ACRA) | 2026-09-10 — 12,292 of 13,326 active SG LEIs register under it, **all with the UEN in `registeredAs`** (table previously said RA000509, wrong). VCC sub-funds (`T21VC0144D-SF001`) are filed here too but ACRA publishes no sub-fund rows, so `normalise_uen` rejects them. Other SG authorities: `RA000524` MAS, `RA000669` Registry of Societies, `RA000781` Charity Portal, `RA000996` OPERA |
-| Canada | corporations_canada | `RA000072` — Corporate Registry (federal; provinces are RA000073–RA000085) | 2026-08-28 |
+| Canada | corporations_canada | `RA000072` — Corporate Registry (federal; provinces are RA000073–RA000085) | 2026-08-28. `registeredAs` carries the check digit after a hyphen (`1709920-7`; re-checked 2026-09-28), which `normalise_corp_id` folds to `17099207`; scheme `CA-CC` since Phase 257 |
 | Denmark | cvr_denmark | `RA000170` — Central Business Register (Erhvervsstyrelsen) | 2026-08-28 |
 | Croatia | sudreg_croatia | `RA000156` — Croatian Court Registry (Sudski registar) | 2026-08-28 |
 | Czechia | ares | `RA000163` — Commercial Register (Ministerstvo spravedlnosti) | 2026-08-28 — ⚠️ ambiguous; the adapter is named for **ARES**, which is `RA000168` (Register of Economic Entities, Ministerstvo financí) |
@@ -1210,7 +1210,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Switzerland | zefix | `RA000548` in the adapter | 2026-08-28 — ⚠️ **mismatch**: `RA000548` is the *UID-Register* (Bundesamt für Statistik, covers CH **and** LI). Zefix, the commercial register, is `RA000549` |
 | Australia | abr_australia | `RA000014` — Register of Companies (ASIC) · `RA000013` — Australian Business Register (ATO) | 2026-08-28 |
 | New Zealand | nz_companies | `RA000466` — Companies Register (Companies Office) | 2026-08-28 (near-miss neighbour: `RA000749` NZ Business Number Register) |
-| Brazil | cnpj_brazil | `RA000681` — National Registry for Legal Entity (Receita Federal / CNPJ) | 2026-08-28 (state Juntas Comerciais are RA000036–RA000062) |
+| Brazil | cnpj_brazil | `RA000681` — National Registry for Legal Entity (Receita Federal / CNPJ) | 2026-08-28 (state Juntas Comerciais are RA000036–RA000062). `registeredAs` is punctuated (`33.856.394/0001-33`; re-checked 2026-09-28); scheme `BR-CNPJ` since Phase 257 |
 | India | mca_india | `RA000394` — Companies Register (MCA21) | 2026-08-28 |
 | Nigeria | cac_nigeria | `RA000469` — Company Registry (Corporate Affairs Commission) | 2026-09-16 — all 30 set LEIs re-checked, `registeredAs` = RC (also verified 2026-08-12, 2026-08-28; Africa's first public BO register). Offline curated example set of 30 LEI-anchored companies (`data/cac_nigeria_psc.json`, Phase 213); a live adapter is deferred pending CAC / Oasis Management engagement. LEI-keyed dispatch (not an RA deriver); asserts only the CAC-published RC number (`ng_cac_rc`), not the derived LEI. |
 | Greece | gemi_greece | `RA000685` — General Commercial Registry (G.E.MI.), businessregistry.gr | 2026-08-28 — 20 of 25 sampled Greek LEI records use it |
@@ -2080,8 +2080,9 @@ GLEIF mapper exported most registration numbers with `scheme: ""`.
   ariregister's own subject used `EE-KMKR`, which is the VAT number).
   `registeredAs` is written without spaces when it is all digits once they go
   (`normalise_registered_as`), and with single spaces otherwise (Malta's
-  `C 83807`). `CA-CORP` is in `register_hops._NO_COUNTRY_ALIAS`: the federal
-  register cannot stand in for a provincial number.
+  `C 83807`). `CA-CC` (`CA-CORP` until Phase 257) is in
+  `register_hops._NO_COUNTRY_ALIAS`: the federal register cannot stand in for
+  a provincial number.
 - Adding RA codes to `_GLEIF_RA_TO_ORG_ID` **adds FullCheck register hops**
   (`register_hops` derives them from the table) — nineteen more schemes in
   Phase 239, each with its `REG-<country>` alias where the country has one hop.
@@ -2427,6 +2428,8 @@ Things that will be re-derived otherwise:
   `_GLEIF_RA_TO_ORG_ID` — no adapter claims them, so no register hop follows.
   The adapter schemes that are not org-id codes (CA-CORP, BR-RFB, SK-RPO,
   RO-ONRC, HK-BRN, US-DE) were left alone: each is a both-sides decision.
+  Phase 257 renamed the first three (see below); the other three stay, because
+  no org-id code fits the number OpenCheck holds.
 - **A person's non-document identifiers are annotations.** BODS keeps
   `personStatement.identifiers` for `{ISO3}-{PASSPORT|TAXID|IDCARD}`;
   `make_person_statement` moves anything else (Wikidata Q-ids, OpenSanctions /
@@ -2458,3 +2461,44 @@ Things that will be re-derived otherwise:
   `/subsidiaries` (optionally the MEIP / EITI / GEM lists, apart and not BODS),
   and `opencheck_export_bods(include_subsidiaries=True)` runs the
   `/export?subsidiaries=true` merge. Default tier, like the REST route.
+
+---
+
+## GLEIF's ISIN file behind /securities, and where the GLEIF budget goes (Phase 258)
+
+`opencheck/isin_index.py`, `opencheck/gleifstats.py`; design in
+`docs/securities.md`. Things that will be re-derived otherwise:
+
+- **The table is built on the server** from GLEIF's daily keyless zip
+  (`mapping.gleif.org/api/v2/isin-lei/latest`) — at boot when absent, then
+  when GLEIF names a newer file (every six hours; fifteen minutes after a
+  failure). No release asset, nothing committed. Staged into a scratch table
+  and read back `ORDER BY lei, isin`, so the input need not be sorted and
+  memory stays ~50 MB; written beside the old file and `os.replace`d.
+- **`counts` holds the count on its own** — never derive a count by
+  decompressing `chunks` (636,388 ISINs for one LEI).
+- **An LEI the table lacks is `total: 0`, not a miss** — the file is GLEIF's
+  complete mapping. Only a table that is absent, wrong-schema or older than
+  `OPENCHECK_ISIN_INDEX_MAX_AGE_DAYS` sends `/securities` to the Phase 253
+  cached live call. `isin_list_source` says which answered.
+- **ISIN order, not GLEIF's** (Stephen, 28 Sept 2026): the live API's order is
+  unstable; a sorted list keeps pages and saved reports stable.
+- **The suite never downloads it**: `conftest.py` sets
+  `OPENCHECK_ISIN_INDEX_SYNC=0` and points the path at a file that does not
+  exist, so a developer's locally built table cannot leak into tests.
+- **Every GLEIF request is counted where it leaves** — the throttled
+  transport — by route (`gleifstats.ROUTES`, set by `ClientScopeMiddleware`
+  from the path) and by GLEIF endpoint (`ENDPOINTS`, from the URL), with
+  `sent` / `http_429` / `refused_held_for_lookups` / `refused_rate_limited`.
+  Served as `/signalstats` → `gleif`, with `isins_share` (the Golden Copy
+  gate's number), `securities_served` and the table's `isin_index` status.
+  Closed vocabularies only: an unknown route, endpoint or outcome is folded
+  or dropped, never a new key. A route that calls GLEIF is `other` until it
+  is added to `_PATH_ROUTES`.
+- **`GleifRateLimitedError.reason`** — `held_for_lookups` when the Phase 234
+  reserve refused (nothing sent), `rate_limited` in the penalty box or when
+  the budget ran out; `gleif_throttle.unavailable_reason(exc, status=)` maps
+  any failure to the three reasons. `/securities` and `/subsidiaries`
+  (`unavailable_reason` + a `degraded_detail` naming the cause) both read it.
+  Share cards say nothing about GLEIF to a reader — a refused teaser name
+  renders the LEI-only card — so for them the counter is the whole record.

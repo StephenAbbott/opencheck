@@ -125,6 +125,13 @@ services:
       # re-check. Without it the meip source covers nothing.
       - key: OPENCHECK_MEIP_DB_FILE
         value: /var/data/meip.sqlite
+      # --- Phase 258: GLEIF's ISIN-to-LEI file behind /securities ---
+      # Built on this server from GLEIF's daily keyless zip (~32 MB in,
+      # ~90 MB of SQLite out, ~40 s) at boot when absent, then whenever
+      # GLEIF publishes a newer file (checked every six hours). Needs no
+      # release asset. Without it /securities calls GLEIF live, as before.
+      - key: OPENCHECK_ISIN_INDEX_DB_FILE
+        value: /var/data/isin_lei.sqlite
       # --- Phase 215: the watchlist ---
       # watchlist.sqlite — watched LEIs, baselines and the change log
       # (opencheck/watchlist.py, docs/watchlist.md). Shares the disk above;
