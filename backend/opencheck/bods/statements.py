@@ -39,8 +39,8 @@ import pycountry
 from .. import names as _names_mod
 from .. import provenance as _provenance
 from .annotations import (
+    as_person_document,
     commenting,
-    is_person_identifier_scheme,
     person_identifier_note,
     pointer,
     transformation,
@@ -514,8 +514,11 @@ def make_person_statement(
     identifier_notes: list[dict[str, Any]] = []
     kept_identifiers: list[dict[str, str]] = []
     for ident in identifiers:
-        if is_person_identifier_scheme((ident or {}).get("scheme")):
-            kept_identifiers.append(ident)
+        # Phase 256: a personal tax number filed under an organisation-style
+        # scheme (RU-INN) is rewritten to its {ISO3}-TAXID form and kept.
+        document = as_person_document(ident or {})
+        if document is not None:
+            kept_identifiers.append(document)
         else:
             note = person_identifier_note(ident or {})
             if note:

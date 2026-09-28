@@ -1052,7 +1052,7 @@ def test_libcovebods_ftm_person_with_typed_names():
     person = _to_list(bundle)[0]
     assert "identifiers" not in person["recordDetails"]
     assert any(
-        a["motivation"] == "identifying" and "identifier NK-per (scheme OPENSANCTIONS)" in a["description"]
+        a["motivation"] == "identifying" and "Identifier NK-per (scheme OPENSANCTIONS;" in a["description"]
         for a in person["annotations"]
     )
 

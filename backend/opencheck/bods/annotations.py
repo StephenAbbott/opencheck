@@ -283,13 +283,50 @@ def validate_all(statements: Iterable[dict[str, Any]]) -> list[str]:
 #: libcovebods reports anything else as ``person_identifiers_invalid_composition``.
 PERSON_IDENTIFIER_SCHEME = re.compile(r"^[A-Z]{3}-(PASSPORT|TAXID|IDCARD)$")
 
+#: Phase 256: "Identifier <id> (scheme <SCHEME>; <schemeName>). …". The
+#: Phase 255 shape put the scheme name first and appended " identifier", which
+#: read "Wikidata Q identifier identifier Q525666" and could not tell where a
+#: name ending in "identifier" stopped. The name is last, up to the ")." that
+#: ends the first sentence, so a name with its own brackets reads back whole.
 _NOTE_RE = re.compile(
+    r"^Identifier (?P<id>\S+) \(scheme (?P<scheme>[^;]+); (?P<name>.+?)\)\. BODS keeps"
+)
+#: The Phase 255 shape, still read: saved reports keep the statements of their day.
+_LEGACY_NOTE_RE = re.compile(
     r"^(?P<name>.+?) identifier (?P<id>\S+) \(scheme (?P<scheme>[^)]+)\)\."
 )
+
+#: Person identifiers some sources file under an organisation-style scheme
+#: that are in fact the person's tax number, and so belong in ``identifiers``
+#: as ``{ISO3}-TAXID`` (Phase 256). A Russian INN is 12 digits for a person
+#: (10 for a company); OpenSanctions gives Igor Sechin's as ``RU-INN``.
+PERSON_TAXID_SCHEMES: dict[str, tuple[str, re.Pattern[str]]] = {
+    "RU-INN": ("RUS-TAXID", re.compile(r"^\d{12}$")),
+}
 
 
 def is_person_identifier_scheme(scheme: Any) -> bool:
     return bool(PERSON_IDENTIFIER_SCHEME.match(str(scheme or "").strip()))
+
+
+def as_person_document(ident: dict[str, Any]) -> dict[str, Any] | None:
+    """*ident* as a BODS person identifier, when it is one: already
+    ``{ISO3}-{PASSPORT|TAXID|IDCARD}``, or a scheme in
+    :data:`PERSON_TAXID_SCHEMES` (rewritten, with ``schemeName`` kept so the
+    source's own label survives). ``None`` for anything else."""
+    scheme = str((ident or {}).get("scheme") or "").strip()
+    if is_person_identifier_scheme(scheme):
+        return ident
+    rule = PERSON_TAXID_SCHEMES.get(scheme.upper())
+    value = str(ident.get("id") or "").strip()
+    # Only a value in the personal form: a 10-digit INN is a company's.
+    if rule and rule[1].match(value):
+        target = rule[0]
+        out = dict(ident)
+        out["scheme"] = target
+        out.setdefault("schemeName", scheme)
+        return out
+    return None
 
 
 def person_identifier_note(ident: dict[str, Any]) -> dict[str, Any] | None:
@@ -312,7 +349,7 @@ def person_identifier_note(ident: dict[str, Any]) -> dict[str, Any] | None:
     annotation = identifying(
         pointer("recordDetails"),
         (
-            f"{name} identifier {value} (scheme {scheme}). BODS keeps a "
+            f"Identifier {value} (scheme {scheme}; {name}). BODS keeps a "
             "person's identifiers for identity documents, so this one is "
             "published here: it says which record the statement was matched "
             "on, not who the person is."
@@ -331,7 +368,8 @@ def person_identifiers_from_annotations(statement: dict[str, Any]) -> list[dict[
     for a in statement.get("annotations") or []:
         if not isinstance(a, dict) or a.get("motivation") != "identifying":
             continue
-        m = _NOTE_RE.match(str(a.get("description") or ""))
+        text = str(a.get("description") or "")
+        m = _NOTE_RE.match(text) or _LEGACY_NOTE_RE.match(text)
         if not m:
             continue
         ident = {"id": m["id"], "scheme": m["scheme"], "schemeName": m["name"]}

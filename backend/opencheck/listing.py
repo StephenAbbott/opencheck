@@ -183,6 +183,31 @@ VENUES: dict[str, Venue] = {
     "XNAI": Venue("Nairobi Securities Exchange", "KE"),
 }
 
+#: Phase 256: the operating MIC of every venue above that is a *segment* MIC,
+#: from the ISO 10383 register (iso20022.org, read 28 Sept 2026). Every other
+#: MIC in ``VENUES`` is itself an operating MIC. BODS asks for
+#: ``operatingMarketIdentifierCode`` whenever ``marketIdentifierCode`` is set
+#: (libcovebods: ``entity_security_listing_market_identifier_code_set_but_not_
+#: operating_market_identifier_code``) — Shell's XLON listing tripped it.
+OPERATING_MIC: dict[str, str] = {
+    "XNGS": "XNAS",
+    "XNMS": "XNAS",
+    "XNCM": "XNAS",
+    "XMSM": "XDUB",
+    "XMAD": "BMEX",
+    "XASE": "XNYS",
+    "ARCX": "XNYS",
+    "XTKS": "XJPX",
+}
+
+
+def operating_mic(mic: str | None) -> str | None:
+    """The ISO 10383 operating MIC for a venue OpenCheck knows, else None."""
+    code = (mic or "").upper()
+    if code not in VENUES:
+        return None
+    return OPERATING_MIC.get(code, code)
+
 
 def venue_link(mic: str | None, ticker: str | None) -> dict[str, str] | None:
     """``{url, kind}`` for a verified venue and a ticker, else None."""
@@ -426,6 +451,9 @@ def securities_listing(listing: dict[str, Any] | None) -> dict[str, Any] | None:
     }
     if q.get("mic"):
         out["marketIdentifierCode"] = q["mic"]
+        operating = operating_mic(q["mic"])
+        if operating:
+            out["operatingMarketIdentifierCode"] = operating
     return out
 
 

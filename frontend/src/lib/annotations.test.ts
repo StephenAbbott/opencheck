@@ -197,3 +197,32 @@ describe("personIdentifierNotes (Phase 255)", () => {
     ]);
   });
 });
+
+describe("personIdentifierNotes — Phase 256 sentence", () => {
+  it("reads the scheme name whole, brackets included", () => {
+    const stmt = {
+      annotations: [
+        {
+          motivation: "identifying",
+          description:
+            "Identifier Q525666 (scheme WIKIDATA; Wikidata Q identifier). BODS keeps a person's identifiers for identity documents, so this one is published here.",
+          url: "https://www.wikidata.org/wiki/Q525666",
+        },
+        {
+          motivation: "identifying",
+          description:
+            "Identifier abc (scheme EE-ARIREGISTER-HASH; Estonian e-Business Register (person hash)). BODS keeps a person's identifiers for identity documents.",
+        },
+      ],
+    };
+    expect(personIdentifierNotes(stmt)).toEqual([
+      {
+        id: "Q525666",
+        scheme: "WIKIDATA",
+        schemeName: "Wikidata Q identifier",
+        uri: "https://www.wikidata.org/wiki/Q525666",
+      },
+      { id: "abc", scheme: "EE-ARIREGISTER-HASH", schemeName: "Estonian e-Business Register (person hash)" },
+    ]);
+  });
+});
