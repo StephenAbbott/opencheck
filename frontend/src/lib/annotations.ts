@@ -160,8 +160,12 @@ export function __resetAsFiled(): void {
 // ---------------------------------------------------------------------
 
 /** Mirrors `_NOTE_RE` in backend/opencheck/bods/annotations.py: the fixed
- *  description shape `person_identifier_note` writes. */
-const PERSON_IDENTIFIER_NOTE = /^(.+?) identifier (\S+) \(scheme ([^)]+)\)\./;
+ *  description shape `person_identifier_note` writes (Phase 256:
+ *  "Identifier <id> (scheme <SCHEME>; <schemeName>). BODS keeps …"). */
+const PERSON_IDENTIFIER_NOTE = /^Identifier (\S+) \(scheme ([^;]+); (.+?)\)\. BODS keeps/;
+/** The Phase 255 shape ("<schemeName> identifier <id> (scheme <SCHEME>).") —
+ *  still read, because a saved report keeps the statements of its day. */
+const LEGACY_PERSON_IDENTIFIER_NOTE = /^(.+?) identifier (\S+) \(scheme ([^)]+)\)\./;
 
 /** Identifiers a person statement carries as `identifying` annotations —
  *  BODS keeps `identifiers` for identity documents, so a Wikidata Q-id or an
@@ -176,9 +180,16 @@ export function personIdentifierNotes(
   const out: { id: string; scheme: string; schemeName: string; uri?: string }[] = [];
   for (const a of raw as BODSAnnotation[]) {
     if (!a || a.motivation !== "identifying") continue;
-    const m = PERSON_IDENTIFIER_NOTE.exec(a.description ?? "");
-    if (!m) continue;
-    out.push({ id: m[2], scheme: m[3], schemeName: m[1], ...(a.url ? { uri: a.url } : {}) });
+    const text = a.description ?? "";
+    const m = PERSON_IDENTIFIER_NOTE.exec(text);
+    if (m) {
+      out.push({ id: m[1], scheme: m[2], schemeName: m[3], ...(a.url ? { uri: a.url } : {}) });
+      continue;
+    }
+    const legacy = LEGACY_PERSON_IDENTIFIER_NOTE.exec(text);
+    if (legacy) {
+      out.push({ id: legacy[2], scheme: legacy[3], schemeName: legacy[1], ...(a.url ? { uri: a.url } : {}) });
+    }
   }
   return out;
 }

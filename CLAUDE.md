@@ -2408,6 +2408,16 @@ Things that will be re-derived otherwise:
   and Senzing exports) and `personIdentifierNotes` in `lib/annotations.ts`
   (BackgroundCheck grouping, on the same `scheme:id` key). **Read person
   identifiers through those helpers, never `rd.identifiers` alone.**
+  Phase 256: the sentence is `Identifier <id> (scheme <SCHEME>; <schemeName>).
+  BODS keeps …` (the Phase 255 `<schemeName> identifier <id> (scheme …)` shape
+  read "Wikidata Q identifier identifier Q…" and is still parsed, for saved
+  reports). A personal tax number filed under an organisation-style scheme is
+  rewritten and **kept** in `identifiers` — `annotations.PERSON_TAXID_SCHEMES`,
+  today `RU-INN` (12 digits only; 10 is a company's) → `RUS-TAXID`.
+- A listing's `operatingMarketIdentifierCode` comes from `listing.OPERATING_MIC`
+  (the segment MICs in `VENUES`, from ISO 10383; every other venue MIC is its
+  own operating MIC). A venue added to `VENUES` that is a segment MIC needs
+  its entry there, or BODS gets the wrong operating MIC.
 - **A partial `foundingDate`/`dissolutionDate` is left out**, never completed:
   `make_entity_statement` drops a year or year-month and records the source's
   words in a `transformation` annotation; `annotations.dropped_partial_date`

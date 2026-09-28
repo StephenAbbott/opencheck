@@ -593,6 +593,8 @@ def test_exports_still_carry_the_moved_person_identifier():
 def test_backgroundcheck_reads_the_same_description_shape():
     """``annotations.ts`` parses the sentence ``person_identifier_note`` writes."""
     ts = (_REPO / "frontend/src/lib/annotations.ts").read_text(encoding="utf-8")
+    # Phase 256 shape, and the Phase 255 one still read for saved reports.
+    assert "^Identifier (\\S+) \\(scheme ([^;]+); (.+?)\\)\\. BODS keeps" in ts
     assert "identifier (\\S+) \\(scheme ([^)]+)\\)" in ts
 
 

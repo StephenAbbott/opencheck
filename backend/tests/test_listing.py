@@ -335,6 +335,7 @@ def test_the_listing_goes_on_the_gleif_subject_statement_as_a_copy() -> None:
                 "stockExchangeName": "London Stock Exchange",
                 "security": {"ticker": "SHEL"},
                 "marketIdentifierCode": "XLON",
+                "operatingMarketIdentifierCode": "XLON",  # Phase 256
             }
         ],
     }
