@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 251** — the header stays on one line on phones: the mark, search icon and Sources / API / Features now fit a single row from 360px wide.
+**Latest: Phase 252** — the SEC EDGAR source finds the structured Schedule 13D/13G filings it had been missing for every US issuer, because it asked EDGAR for the forms by their pre-2024 names.
 
 → [Full development history](docs/status.md)
 

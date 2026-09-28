@@ -10,11 +10,13 @@ Search strategy
     so the name-search fallback is rarely used.
 
 Fetch strategy
-    data.sec.gov/submissions/CIK{padded}.json lists all 13D/13G filings
-    associated with the company (as issuer or as filer).  For each eligible
-    accession (filed ≥ 2024-12-18), primary_doc.xml is fetched from:
-        /Archives/edgar/data/{issuer_cik}/{accession_nodashes}/primary_doc.xml
-    Files are archived under the subject company's CIK, not the filer's CIK.
+    The browse-edgar filing feed for the company's CIK, once per structured
+    form type — ``SCHEDULE 13D`` and ``SCHEDULE 13G`` (Phase 252: the feed's
+    ``type=`` is a prefix match and the mandate renamed the forms, so the
+    legacy ``SC 13D`` / ``SC 13G`` names never return a structured filing).
+    For each accession, primary_doc.xml is fetched from the archive path in
+    the feed entry:
+        /Archives/edgar/data/{cik}/{accession_nodashes}/primary_doc.xml
     Results are deduplicated per reporter, retaining the most recent filing.
 
 No API key is required — EDGAR is publicly accessible.  The User-Agent header
@@ -55,6 +57,8 @@ _CACHE_NS = "sec_edgar"
 _NS_13D = "http://www.sec.gov/edgar/schedule13D"
 _NS_13G = "http://www.sec.gov/edgar/schedule13g"  # lowercase g — different schema
 _NS_ATOM = "http://www.w3.org/2005/Atom"
+# Address fields (street1, city …) in both schedules are in this namespace.
+_NS_COMMON = "http://www.sec.gov/edgar/common"
 
 # Maximum filings retrieved per form type per subject company.
 # Set to 40 so that even when a company has many self-filed 13G entries
@@ -68,6 +72,21 @@ _MAX_FILINGS = 40
 # beneficial-owner data can be extracted from them.
 # See https://www.sec.gov/rules/final/2024/33-11253.pdf
 _STRUCTURED_FROM = "2024-12-18"
+
+# EDGAR form types, as the ``type=`` parameter of the browse-edgar filing feed
+# spells them. The filter is a PREFIX match on the form name, and the XML
+# mandate RENAMED the forms: every structured filing is ``SCHEDULE 13D`` /
+# ``SCHEDULE 13G`` (``/A`` for amendments), every legacy one ``SC 13D`` /
+# ``SC 13G``. ``type=SC+13G`` therefore never returns a structured filing.
+# Until Phase 252 the adapter asked only for the ``SC`` forms, so it found the
+# legacy filings, skipped each one for having no XML, and answered "no
+# record" for every US issuer — Moody's has three structured 13G filings
+# (TCI / Christopher Hohn, Vanguard Capital Management, The Vanguard Group)
+# and OpenCheck showed none. Verified against live EDGAR, 28 Sept 2026.
+_STRUCTURED_FORM_TYPES: tuple[str, ...] = ("SCHEDULE+13D", "SCHEDULE+13G")
+# Queried only to explain an empty result (the coverage note): legacy filings
+# carry no primary_doc.xml, so nothing is ever parsed from them.
+_LEGACY_FORM_TYPES: tuple[str, ...] = ("SC+13D", "SC+13G")
 
 # How many days before a live-tier EDGAR cache entry is treated as stale.
 # Institutional investors file SC 13G annual updates in January/February;
@@ -177,6 +196,24 @@ def _xml_text(elem: ET.Element | None) -> str:
     if elem is None:
         return ""
     return (elem.text or "").strip()
+
+
+def _us_date_to_iso(raw: str) -> str:
+    """``MM/DD/YYYY`` (EDGAR's schedule dates) → ``YYYY-MM-DD``; else ``""``.
+
+    An ISO date passes through unchanged. Anything else is dropped rather
+    than guessed at.
+    """
+    raw = (raw or "").strip()
+    m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{4})", raw)
+    if m:
+        month, day, year = (int(g) for g in m.groups())
+        if 1 <= month <= 12 and 1 <= day <= 31:
+            return f"{year:04d}-{month:02d}-{day:02d}"
+        return ""
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+        return raw
+    return ""
 
 
 def _ns(tag: str) -> str:
@@ -377,14 +414,25 @@ def _parse_filing_xml(xml_text: str, source_url: str = "") -> dict[str, Any] | N
     issuer_cik = _xml_text(issuer_cik_el).lstrip("0") or ""
     issuer_name = _xml_text(issuer_info.find(ntag("issuerName")))
 
-    # CUSIP is a flat child of issuerInfo in both schemas:
-    #   13D: issuerCUSIP  (per SEC XML spec / John Friedman's columnar mapping)
-    #   13G: issuerCusip
-    # The old nested path issuerCusips/issuerCusipNumber was wrong.
-    cusip_el = issuer_info.find(ntag("issuerCUSIP"))
+    # CUSIP. Every live filing read in Phase 252 (13D and 13G, X0202 schema)
+    # nests it: issuerCusips/issuerCusipNumber — the path an earlier comment
+    # here called wrong. The flat issuerCUSIP / issuerCusip spellings are kept
+    # as fallbacks. No real filing had reached this parser before Phase 252
+    # (see _STRUCTURED_FORM_TYPES), which is how the claim went unchecked.
+    cusip_el = issuer_info.find(f"{ntag('issuerCusips')}/{ntag('issuerCusipNumber')}")
+    if cusip_el is None:
+        cusip_el = issuer_info.find(ntag("issuerCUSIP"))
     if cusip_el is None:
         cusip_el = issuer_info.find(ntag("issuerCusip"))
     issuer_cusip = _xml_text(cusip_el)
+
+    # The date of the event that required this filing — 13D ``dateOfEvent``,
+    # 13G ``eventDateRequiresFilingThisStatement``, both MM/DD/YYYY. For an
+    # exit filing (nothing left held) it dates the end of the holding.
+    event_date = _us_date_to_iso(
+        _xml_text(cover_header.find(ntag("dateOfEvent")))
+        or _xml_text(cover_header.find(ntag("eventDateRequiresFilingThisStatement")))
+    )
 
     # filerCik — the entity that submitted this document
     # (headerData/filerInfo/filer/filerCredentials/cik).
@@ -394,12 +442,20 @@ def _parse_filing_xml(xml_text: str, source_url: str = "") -> dict[str, Any] | N
     filer_cik_el = root.find(f".//{ntag('filerCredentials')}/{ntag('cik')}")
     filer_cik = _xml_text(filer_cik_el).lstrip("0") if filer_cik_el is not None else ""
 
-    # Address block (optional — present in most 13D filings).
+    # Address block — 13D ``address``, 13G
+    # ``issuerPrincipalExecutiveOfficeAddress``. The fields inside are in the
+    # EDGAR *common* namespace (``com:street1``), not the schedule's own; the
+    # schedule namespace is kept as a fallback.
     addr_el = issuer_info.find(ntag("address"))
+    if addr_el is None:
+        addr_el = issuer_info.find(ntag("issuerPrincipalExecutiveOfficeAddress"))
     issuer_address: dict[str, str] = {}
     if addr_el is not None:
         for field in ("street1", "street2", "city", "stateOrCountry", "zipCode"):
-            val = _xml_text(addr_el.find(ntag(field)))
+            field_el = addr_el.find(f"{{{_NS_COMMON}}}{field}")
+            if field_el is None:
+                field_el = addr_el.find(ntag(field))
+            val = _xml_text(field_el)
             if val:
                 issuer_address[field] = val
 
@@ -431,6 +487,7 @@ def _parse_filing_xml(xml_text: str, source_url: str = "") -> dict[str, Any] | N
         "issuer": issuer,
         "reporters": reporters,
         "filer_cik": filer_cik,
+        "event_date": event_date,
         "source_url": source_url,
     }
 
@@ -532,6 +589,35 @@ def _parse_13g_reporter_element(
             "reportingPersonBeneficiallyOwnedAggregateNumberOfShares"
         ),
     }
+
+
+def _reporter_key(rec: dict[str, Any]) -> str:
+    """Who a filing record is about, for keeping one filing per reporter.
+
+    The reporter's own CIK when the filing gives one. Schedule 13G usually
+    does not: it names each reporting person without a CIK. Before Phase 252
+    the fallback was the *filer's* CIK alone, so a joint filing collapsed onto
+    one reporter — TCI Fund Management and Christopher Hohn file together on
+    Moody's, and Hohn was dropped. The fallback is now the filer's CIK plus the
+    reporter's name, which keeps joint reporters apart and still lets a later
+    amendment by the same filer replace an earlier one.
+    """
+    reporter = rec.get("reporter") or {}
+    if reporter.get("reporter_cik"):
+        return f"cik:{reporter['reporter_cik']}"
+    name = " ".join((reporter.get("name") or "").upper().replace(",", " ").split())
+    return f"filer:{rec.get('filer_cik') or ''}:{name}"
+
+
+def _latest_per_reporter(raw_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep each reporter's most recently filed record, in first-seen order."""
+    best: dict[str, dict[str, Any]] = {}
+    for rec in raw_records:
+        key = _reporter_key(rec)
+        prev = best.get(key)
+        if prev is None or (rec.get("filed") or "") > (prev.get("filed") or ""):
+            best[key] = rec
+    return list(best.values())
 
 
 # ----------------------------------------------------------------------
@@ -751,58 +837,36 @@ class SecEdgarAdapter(SourceAdapter):
     async def _fetch_filings_for_subject(
         self, subject_cik: str
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-        """Retrieve and parse recent 13D/13G filings for a subject company.
+        """Retrieve and parse the structured 13D/13G filings about a company.
 
         Uses the EDGAR filing-search atom feed (browse-edgar?action=getcompany&
-        CIK=<cik>&type=SC+13D/13G&output=atom) to list filings where the given
-        company is the issuer (subject).  One atom request is made per form type.
+        CIK=<cik>&type=<form>&output=atom) once per structured form type —
+        ``SCHEDULE 13D`` and ``SCHEDULE 13G`` (see ``_STRUCTURED_FORM_TYPES``:
+        the ``type=`` filter is a prefix match, and the XML mandate renamed
+        the forms, so asking for ``SC 13G`` never returns a structured filing).
 
-        Only filings on/after ``_STRUCTURED_FROM`` (the SEC structured-XML
-        mandate) carry a ``primary_doc.xml`` from which beneficial owners can
-        be parsed; older filings are counted but skipped (no HTTP fetch).
+        Only when no structured filing about the subject survives are the
+        legacy ``SC 13D`` / ``SC 13G`` feeds read, and then only to count them
+        for the coverage note: legacy filings have no ``primary_doc.xml``.
 
-        Primary XML documents are archived under the filer's CIK (extracted from
-        the atom entry link href), at the root of each accession directory:
+        Primary XML documents are fetched from the archive path in the atom
+        entry's link, at the root of each accession directory:
             /Archives/edgar/data/{filer_cik}/{accession_nodashes}/primary_doc.xml
 
         Returns ``(records, meta)`` where ``meta`` carries filing counts and the
         latest filing date so the caller can explain an empty result.
+        ``legacy_filing_count`` is ``None`` when the legacy feeds were not read.
         """
         raw_records: list[dict[str, Any]] = []
-        legacy_count = 0
         structured_count = 0
         filing_by_count = 0   # filings BY the subject (not about it) — discarded
         latest_filing_date = ""
 
-        for form_type_param in ("SC+13D", "SC+13G"):
-            atom_url = (
-                f"{_BROWSE_BASE}?action=getcompany&CIK={subject_cik}"
-                f"&type={form_type_param}&dateb=&owner=include"
-                f"&count={_MAX_FILINGS}&search_text=&output=atom"
-            )
-            atom_cache_key = f"{_CACHE_NS}/filings/{subject_cik}/{form_type_param}"
-            # Filing-list atom feeds are mutable (new filings arrive); apply TTL.
-            atom_text = await self._get_text(
-                atom_url, cache_key=atom_cache_key, max_age_days=_CACHE_TTL_DAYS
-            )
-            if not atom_text:
-                continue
-
-            refs = _parse_filing_refs_from_atom(atom_text)
-            for ref in refs:
-                filed = ref.get("filed") or ""
-
-                # Filings before the structured-XML mandate have no
-                # primary_doc.xml — count them but don't waste a fetch.
-                if filed and filed < _STRUCTURED_FROM:
-                    # We'll update latest_filing_date and legacy_count after
-                    # the directional check below (legacy filings are cheap to
-                    # count without fetching the XML).  Temporarily stage them.
-                    legacy_count += 1
-                    if filed > latest_filing_date:
-                        latest_filing_date = filed
+        for form_type_param in _STRUCTURED_FORM_TYPES:
+            for ref in await self._filing_refs(subject_cik, form_type_param):
+                # A legacy form cannot carry XML, whatever its date.
+                if ref.get("form_type", "").upper().startswith("SC "):
                     continue
-
                 structured_count += 1
 
                 filer_cik = ref.get("filer_cik") or subject_cik
@@ -824,14 +888,12 @@ class SecEdgarAdapter(SourceAdapter):
                 # filings BY that company (where it is the reporting investor).
                 # We only want filings where the subject company is the issuer,
                 # i.e. third parties reporting their >5 % stake in it.
-                # Filings BY the subject company are about its own positions in
-                # other companies — useful separately, but not for KYC/CDD on
-                # the entity under investigation.
                 issuer_cik_in_xml = (parsed.get("issuer") or {}).get("cik", "")
                 if issuer_cik_in_xml and issuer_cik_in_xml != subject_cik:
                     filing_by_count += 1
                     continue
 
+                filed = ref.get("filed") or ""
                 if filed > latest_filing_date:
                     latest_filing_date = filed
 
@@ -843,28 +905,25 @@ class SecEdgarAdapter(SourceAdapter):
                             "filer_cik": parsed.get("filer_cik", ""),
                             "filing_url": xml_url,
                             "form_type": ref["form_type"],
-                            "filed": ref["filed"],
+                            "filed": filed,
+                            "event_date": parsed.get("event_date") or "",
                         }
                     )
 
-        # Deduplicate: per reporter CIK, keep the most-recently-dated filing.
-        # Fall back to filer_cik (from headerData) for 13G filings that omit
-        # reportingPersonCIK inside the reporter details element.
-        best: dict[str, dict[str, Any]] = {}
-        no_cik: list[dict[str, Any]] = []
-        for rec in raw_records:
-            reporter_cik = (
-                (rec["reporter"] or {}).get("reporter_cik", "")
-                or rec.get("filer_cik", "")
-            )
-            if not reporter_cik:
-                no_cik.append(rec)
-                continue
-            prev = best.get(reporter_cik)
-            if prev is None or rec["filed"] > prev["filed"]:
-                best[reporter_cik] = rec
+        records = _latest_per_reporter(raw_records)
 
-        records = list(best.values()) + no_cik
+        legacy_count: int | None = None
+        if not records:
+            legacy_count = 0
+            for form_type_param in _LEGACY_FORM_TYPES:
+                for ref in await self._filing_refs(subject_cik, form_type_param):
+                    if not ref.get("form_type", "").upper().startswith("SC "):
+                        continue
+                    legacy_count += 1
+                    filed = ref.get("filed") or ""
+                    if filed > latest_filing_date:
+                        latest_filing_date = filed
+
         meta = {
             "legacy_filing_count": legacy_count,
             "structured_filing_count": structured_count,
@@ -872,6 +931,22 @@ class SecEdgarAdapter(SourceAdapter):
             "latest_filing_date": latest_filing_date,
         }
         return records, meta
+
+    async def _filing_refs(
+        self, subject_cik: str, form_type_param: str
+    ) -> list[dict[str, str]]:
+        """One browse-edgar filing feed for *subject_cik*, parsed to refs."""
+        atom_url = (
+            f"{_BROWSE_BASE}?action=getcompany&CIK={subject_cik}"
+            f"&type={form_type_param}&dateb=&owner=include"
+            f"&count={_MAX_FILINGS}&search_text=&output=atom"
+        )
+        atom_cache_key = f"{_CACHE_NS}/filings/{subject_cik}/{form_type_param}"
+        # Filing-list atom feeds are mutable (new filings arrive); apply TTL.
+        atom_text = await self._get_text(
+            atom_url, cache_key=atom_cache_key, max_age_days=_CACHE_TTL_DAYS
+        )
+        return _parse_filing_refs_from_atom(atom_text) if atom_text else []
 
     # ------------------------------------------------------------------
     # HTTP with caching

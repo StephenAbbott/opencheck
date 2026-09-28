@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+  <feed xmlns="http://www.w3.org/2005/Atom">
+    <author>
+      <email>webmaster@sec.gov</email>
+      <name>Webmaster</name>
+    </author>
+    <company-info>
+      <addresses>
+        <address type="mailing">
+          <city>NEW YORK</city>
+          <state>NY</state>
+          <street1>7 WORLD TRADE CENTER</street1>
+          <street2>AT 250 GREENWICH STREET</street2>
+          <zip>10007</zip>
+        </address>
+        <address type="business">
+          <city>NEW YORK</city>
+          <phone>2125530300</phone>
+          <state>NY</state>
+          <street1>7 WORLD TRADE CENTER</street1>
+          <street2>AT 250 GREENWICH STREET</street2>
+          <zip>10007</zip>
+        </address>
+      </addresses>
+      <assigned-sic>7320</assigned-sic>
+      <assigned-sic-desc>SERVICES-CONSUMER CREDIT REPORTING, COLLECTION AGENCIES</assigned-sic-desc>
+      <assigned-sic-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;SIC=7320&amp;owner=include&amp;count=40</assigned-sic-href>
+      <cik>0001059556</cik>
+      <cik-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001059556&amp;owner=include&amp;count=40</cik-href>
+      <conformed-name>MOODYS CORP /DE/</conformed-name>
+      <fiscal-year-end>1231</fiscal-year-end>
+      <formerly-names count="2">
+        <names>
+          <date>2000-02-04</date>
+          <name>DUN &amp;amp;amp; BRADSTREET CORP /DE/</name>
+        </names>
+        <names>
+          <date>1998-06-26</date>
+          <name>NEW DUN &amp;amp;amp; BRADSTREET CORP</name>
+        </names>
+      </formerly-names>
+      <state-location>NY</state-location>
+      <state-location-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;State=NY&amp;owner=include&amp;count=40</state-location-href>
+      <state-of-incorporation>DE</state-of-incorporation>
+    </company-info>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="SCHEDULE 13G/A" />
+      <content type="text/xml">
+        <accession-number>0000902664-26-002468</accession-number>
+        <act>34</act>
+        <amend>[Amend]</amend>
+        <file-number>005-55475</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=005-55475&amp;owner=include&amp;count=40</file-number-href>
+        <filing-date>2026-05-15</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1059556/000090266426002468/0000902664-26-002468-index.htm</filing-href>
+        <filing-type>SCHEDULE 13G/A</filing-type>
+        <film-number>26982566</film-number>
+        <form-name>Statement of Beneficial Ownership by Certain Investors</form-name>
+        <size>10 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0000902664-26-002468</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1059556/000090266426002468/0000902664-26-002468-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2026-05-15 &lt;b&gt;AccNo:&lt;/b&gt; 0000902664-26-002468 &lt;b&gt;Size:&lt;/b&gt; 10 KB</summary>
+      <title>SCHEDULE 13G/A [Amend]  - Statement of Beneficial Ownership by Certain Investors</title>
+      <updated>2026-05-15T08:30:14-04:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="SCHEDULE 13G" />
+      <content type="text/xml">
+        <accession-number>0002100119-26-000791</accession-number>
+        <act>34</act>
+        <file-number>005-55475</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=005-55475&amp;owner=include&amp;count=40</file-number-href>
+        <filing-date>2026-04-30</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1059556/000210011926000791/0002100119-26-000791-index.htm</filing-href>
+        <filing-type>SCHEDULE 13G</filing-type>
+        <film-number>26921577</film-number>
+        <form-name>Statement of Beneficial Ownership by Certain Investors</form-name>
+        <size>7 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0002100119-26-000791</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1059556/000210011926000791/0002100119-26-000791-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2026-04-30 &lt;b&gt;AccNo:&lt;/b&gt; 0002100119-26-000791 &lt;b&gt;Size:&lt;/b&gt; 7 KB</summary>
+      <title>SCHEDULE 13G  - Statement of Beneficial Ownership by Certain Investors</title>
+      <updated>2026-04-30T11:31:16-04:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="SCHEDULE 13G/A" />
+      <content type="text/xml">
+        <accession-number>0000102909-26-001883</accession-number>
+        <act>34</act>
+        <amend>[Amend]</amend>
+        <file-number>005-55475</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=005-55475&amp;owner=include&amp;count=40</file-number-href>
+        <filing-date>2026-03-27</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1059556/000010290926001883/0000102909-26-001883-index.htm</filing-href>
+        <filing-type>SCHEDULE 13G/A</filing-type>
+        <film-number>26802454</film-number>
+        <form-name>Statement of Beneficial Ownership by Certain Investors</form-name>
+        <size>7 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0000102909-26-001883</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1059556/000010290926001883/0000102909-26-001883-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2026-03-27 &lt;b&gt;AccNo:&lt;/b&gt; 0000102909-26-001883 &lt;b&gt;Size:&lt;/b&gt; 7 KB</summary>
+      <title>SCHEDULE 13G/A [Amend]  - Statement of Beneficial Ownership by Certain Investors</title>
+      <updated>2026-03-27T10:52:21-04:00</updated>
+    </entry>
+    <id>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001059556</id>
+    <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=1059556&amp;type=SCHEDULE 13G&amp;owner=include&amp;start=0&amp;count=40" rel="alternate" type="text/html" />
+    <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=1059556&amp;type=SCHEDULE 13G&amp;owner=include&amp;start=0&amp;count=40&amp;output=atom" rel="self" type="application/atom+xml" />
+    <title>MOODYS CORP /DE/  (0001059556)</title>
+    <updated>2026-09-28T03:50:35-04:00</updated>
+  </feed>

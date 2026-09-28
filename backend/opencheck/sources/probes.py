@@ -643,11 +643,18 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "sec_edgar": _p(
         tier="live",
-        subject="US issuer by CIK",
-        expect_fields=("issuer_cik", "coverage_note"),
-        allow_empty=True,
-        args=("1793659",),
+        subject="Moody's Corporation (CIK 1059556)",
+        expect_fields=("issuer_cik", "filings"),
+        args=("1059556",),
         bods_mapper="map_sec_edgar",
+        notes=(
+            "Phase 252: the probe used to accept an empty answer with a coverage note — which is exactly "
+            "what the adapter returned for EVERY issuer while it asked EDGAR for the legacy 'SC 13G' forms "
+            "instead of the structured 'SCHEDULE 13G' ones, so the sweep stayed green on a source that never "
+            "found anything. Moody's has structured 13G filings (TCI Fund Management / Christopher Hohn, "
+            "Vanguard Capital Management, and The Vanguard Group's exit filing) as of 28 Sept 2026, so an "
+            "empty result here now fails. If Moody's ever stops having any, repoint rather than re-allow empty."
+        ),
     ),
     "wikidata": _p(
         tier="live",

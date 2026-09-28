@@ -2303,3 +2303,38 @@ name match only" chips. Things that will be re-derived otherwise:
 
 Tests: `tests/test_pep_merge_phase247.py`, on the Equinor / Ørsted shapes read
 from OpenSanctions and OpenAleph on 25 Sept 2026.
+
+---
+
+## SEC EDGAR asks for the SCHEDULE forms, not SC (Phase 252)
+
+`sources/sec_edgar.py`. Until Phase 252 the adapter found **nothing** for
+any US issuer, and production said "answered, no record" every time.
+
+- **The December 2024 XML mandate renamed the forms**: structured filings are
+  `SCHEDULE 13D` / `SCHEDULE 13G` (`/A`), legacy ones `SC 13D` / `SC 13G`.
+  browse-edgar's `type=` is a **prefix** match, so `type=SC+13G` never returns
+  a structured filing. `_STRUCTURED_FORM_TYPES` holds the right pair;
+  `_LEGACY_FORM_TYPES` is read only when nothing structured survives, to count
+  for the coverage note (`legacy_filing_count` is `None` otherwise).
+- **Why it hid**: the tests mocked `SC+13G` URLs returning `SCHEDULE 13G`
+  entries — a pairing EDGAR never serves — and the health probe accepted an
+  empty answer with a coverage note, which is exactly what the bug produced.
+  The probe is now Moody's (CIK 1059556) with `filings` required; the fixtures
+  in `tests/fixtures/sec_edgar/` are Moody's real feed and filings.
+- **Real filings, first read in Phase 252**: CUSIP is nested
+  (`issuerCusips/issuerCusipNumber`), address fields are in the
+  `http://www.sec.gov/edgar/common` namespace (13G's block is
+  `issuerPrincipalExecutiveOfficeAddress`), and the event date is `dateOfEvent`
+  (13D) or `eventDateRequiresFilingThisStatement` (13G), MM/DD/YYYY.
+- **13G names reporting persons without a CIK.** One record per reporter is
+  keyed on the reporter's CIK, else filer CIK + name (`_reporter_key`) — keyed
+  on the filer alone, a joint filing (TCI Fund Management + Christopher Hohn)
+  kept one reporter.
+- **An exit filing is an ended relationship** (`reports_exit`: 0 shares held):
+  `endDate` = the filing's event date, no `share`, or `recordStatus: closed`
+  with no date when there is none. A filing below 5% but above zero is carried
+  as filed — the holding continues, it has only stopped being reportable.
+- Not done: EDGAR's `X0`-style country codes (X0 = United Kingdom) are not in
+  `_EDGAR_CITIZENSHIP_TO_ISO`, so TCI and Hohn carry no nationality; and joint
+  filers are drawn as parallel shareholdings, not as a control chain.
