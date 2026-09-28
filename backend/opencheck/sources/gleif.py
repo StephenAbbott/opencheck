@@ -85,6 +85,10 @@ SNAPSHOT_DETAIL: dict[str, str] = {
 # relationships are not served indefinitely from cache.
 _RELATIONSHIP_CACHE_MAX_AGE_DAYS = 1.0
 
+#: Phase 255: at most this many pages of 100 direct children in the lookup
+#: (the subsidiaries network reads the same cap, ``subsidiaries._PAGE_CAP``).
+_DIRECT_CHILDREN_PAGE_CAP = 10
+
 # Main LEI record (entity name, address, registration status).  These change
 # less frequently than relationships but can be updated when an entity renews
 # its LEI or amends its registered details.  7-day TTL is a reasonable balance
@@ -574,32 +578,48 @@ class GleifAdapter(SourceAdapter):
     async def _fetch_direct_children(
         self, lei: str
     ) -> tuple[list[dict[str, Any]], int]:
-        """Fetch the first page of direct subsidiaries for ``lei``.
+        """Fetch the direct subsidiaries of ``lei``, paging 100 at a time.
 
-        Returns ``(records, total)`` where ``records`` is a list of up to 10
-        Level 1 lei-record data objects (same shape as the Level 1 fetch) and
-        ``total`` is the full count reported by GLEIF pagination metadata.
+        Returns ``(records, total)`` where ``records`` are Level 1 lei-record
+        data objects and ``total`` is GLEIF's pagination count. Until Phase
+        255 only the first page was read, so a group with more than 100 direct
+        children (Shell plc: 105) lost the rest from the lookup graph and the
+        MCP export without a word. Pages beyond the first are read up to
+        :data:`_DIRECT_CHILDREN_PAGE_CAP`; a page that fails ends the walk and
+        keeps what arrived (``total`` still says how many GLEIF holds).
 
         Returns ``([], 0)`` when:
         * live mode is disabled and the result is not cached
         * GLEIF reports no children for this entity (empty ``data`` or 404)
         """
-        cache_key = f"{_CACHE_NS}/lei/{lei}/direct-children-p1-s100"
-        payload = await self._get_optional(
-            f"/lei-records/{quote(lei)}/direct-children?page[size]=100&page[number]=1",
-            cache_key=cache_key,
-            max_age_days=_RELATIONSHIP_CACHE_MAX_AGE_DAYS,
-        )
-        if payload is None:
-            return [], 0
-
-        records: list[dict[str, Any]] = payload.get("data") or []
-        total: int = (
-            (payload.get("meta") or {})
-            .get("pagination", {})
-            .get("total", len(records))
-        )
-        return records, total
+        records: list[dict[str, Any]] = []
+        total = 0
+        for page in range(1, _DIRECT_CHILDREN_PAGE_CAP + 1):
+            fetch = self._get_optional(
+                f"/lei-records/{quote(lei)}/direct-children"
+                f"?page[size]=100&page[number]={page}",
+                cache_key=f"{_CACHE_NS}/lei/{lei}/direct-children-p{page}-s100",
+                max_age_days=_RELATIONSHIP_CACHE_MAX_AGE_DAYS,
+            )
+            if page == 1:
+                # The first page behaves exactly as before Phase 255.
+                payload = await fetch
+            else:
+                try:
+                    payload = await fetch
+                except Exception:  # noqa: BLE001 — keep the pages that arrived
+                    break
+            if payload is None:
+                break
+            data: list[dict[str, Any]] = payload.get("data") or []
+            records.extend(data)
+            pagination = (payload.get("meta") or {}).get("pagination") or {}
+            if page == 1:
+                total = int(pagination.get("total", len(data)) or 0)
+            last = pagination.get("lastPage")
+            if not data or not last or page >= int(last):
+                break
+        return records, max(total, len(records))
 
     async def _parent_or_exception(
         self, lei: str, kind: str

@@ -526,6 +526,7 @@ async def test_subsidiary_network_flag_off_stays_live(
         )
     result = await subs.assemble_subsidiaries(TOP)
     assert result["snapshot_source"] is None
+    # Phase 255: no children, so no relationship records are asked for.
     assert len(httpx_mock.get_requests()) == 3
 
 

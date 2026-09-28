@@ -49,6 +49,7 @@ from functools import lru_cache
 from typing import Any
 
 from .. import identifiers
+from .annotations import person_identifiers_from_annotations
 from .refs import resolver
 
 DATA_SOURCE = "OPENCHECK"
@@ -237,7 +238,10 @@ def _person_record(stmt: dict[str, Any]) -> dict[str, Any]:
         )
         primary_done = True
 
-    features.extend(_identifier_features(rd.get("identifiers") or []))
+    # Phase 255: non-document person identifiers ride in annotations.
+    features.extend(_identifier_features(
+        [*(rd.get("identifiers") or []), *person_identifiers_from_annotations(stmt)]
+    ))
 
     if rd.get("birthDate"):
         features.append({"DATE_OF_BIRTH": rd["birthDate"]})

@@ -9,6 +9,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from opencheck.bods.mapper import map_sec_edgar
+from opencheck.bods.annotations import person_identifiers_from_annotations
 from opencheck.cache import Cache
 from opencheck.config import get_settings
 from opencheck.sources import SearchKind
@@ -462,7 +463,9 @@ def test_map_sec_edgar_person_statement():
     assert details["personType"] == "knownPerson"
     nats = details["nationalities"]
     assert any(n["code"] == "US" for n in nats)
-    ids_by_scheme = {i["scheme"]: i["id"] for i in details["identifiers"]}
+    # Phase 255: a CIK is not an identity document — identifying annotation.
+    assert "identifiers" not in details
+    ids_by_scheme = {i["scheme"]: i["id"] for i in person_identifiers_from_annotations(person_stmt)}
     assert ids_by_scheme["US-SEC-CIK"] == "1373161"
 
 

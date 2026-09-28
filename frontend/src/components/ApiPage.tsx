@@ -197,7 +197,8 @@ export function ApiPage() {
               ["opencheck_resolve_national_id", "Resolve a national company-registration number to its LEI."],
               ["opencheck_lookup", "Due diligence by LEI: identity, identifiers, risk signals, source coverage."],
               ["opencheck_batch_lookup", "Up to 20 LEIs at once: one compact row each, with failed rows kept apart."],
-              ["opencheck_export_bods", "The full ownership-and-control graph as BODS v0.4 statements."],
+              ["opencheck_export_bods", "The full ownership-and-control graph as BODS v0.4 statements; include_subsidiaries folds in the GLEIF subsidiary network."],
+              ["opencheck_subsidiaries", "What a company consolidates: its GLEIF subsidiary network as counts, rows or BODS, optionally with the MEIP, EITI and GEM lists kept apart."],
               ["opencheck_save_report", "Keep a check as a saved report: a link and a SHA-256 of exactly what was found, not re-checked."],
               ["opencheck_list_sources", "Inventory of the data sources, with licence and live status."],
             ] as [string, string][]).map(([name, desc]) => (
@@ -341,8 +342,10 @@ export function ApiPage() {
             direct and ultimate children merged and tagged{" "}
             <code className={mono}>direct</code> / <code className={mono}>ultimate</code> /{" "}
             <code className={mono}>both</code>, with exact counts (even when the child
-            list is page-capped), a jurisdiction spread, and a{" "}
+            list is page-capped), a jurisdiction and a country spread, and a{" "}
             <code className={mono}>render_mode</code> hint (graph ≤ 150 nodes, else table).
+            In BODS, each parent–child pair is one relationship dated from GLEIF’s
+            relationship record, and a child’s direct parent is drawn where GLEIF names one.
           </ApiEndpoint>
           <ApiEndpoint path="/securities?lei=<LEI>&page=<n>">
             Securities (ISINs) mapped to the LEI from GLEIF + OpenFIGI, flagging any that

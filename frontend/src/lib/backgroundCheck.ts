@@ -16,6 +16,7 @@
  * remain traceable to their statements.
  */
 
+import { personIdentifierNotes } from "./annotations";
 import { refIndex, resolveRef } from "./bodsRefs";
 import {
   ROUTE_ACSP,
@@ -265,7 +266,9 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
         person.nationalities.push(label);
       }
     }
-    for (const idObj of arr(rd.identifiers).map(rec)) {
+    // Phase 255: a Wikidata Q-id or record id now rides in an `identifying`
+    // annotation; read it back so people still group on the same key.
+    for (const idObj of [...arr(rd.identifiers).map(rec), ...personIdentifierNotes(s).map(rec)]) {
       const scheme = str(idObj.scheme) ?? str(idObj.schemeName);
       const value = str(idObj.id);
       const idKey = (scheme && value ? `${scheme}:${value}` : value)?.toLowerCase();

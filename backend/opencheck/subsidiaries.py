@@ -60,6 +60,14 @@ _LOG = logging.getLogger(__name__)
 
 _RECORD_URL = "https://api.gleif.org/api/v1/lei-records/{lei}"
 _CHILDREN_URL = "https://api.gleif.org/api/v1/lei-records/{lei}/{kind}-children"
+#: Phase 255: the Level 2 relationship records behind the children — the only
+#: place GLEIF publishes a relationship's period and its own update date.
+_CHILD_RELS_URL = (
+    "https://api.gleif.org/api/v1/lei-records/{lei}/{kind}-child-relationships"
+)
+_PARENT_REL_URL = (
+    "https://api.gleif.org/api/v1/lei-records/{lei}/direct-parent-relationship"
+)
 
 _CACHE_NS = "subsidiaries"
 _PAGE_SIZE = 100
@@ -75,6 +83,26 @@ _CACHE_MAX_AGE_DAYS = 7.0
 #: degradation marker, so their emptiness cannot be trusted to mean anything;
 #: they are re-fetched rather than served.
 _COMPLETE_KEY = "complete"
+
+#: Phase 255: the payload shape. Entries written before relationship records
+#: and direct parents were read carry none of them, so they are rebuilt
+#: rather than served — they would export the old flat, undated network.
+_SHAPE_KEY = "shape"
+_SHAPE = 2
+
+#: Phase 255: whether the relationship records and the direct-parent lookups
+#: all answered. A complete but unenriched network is cached (the children
+#: are the network), but only trusted for :data:`_UNENRICHED_MAX_AGE_DAYS`.
+_ENRICHED_KEY = "enriched"
+_UNENRICHED_MAX_AGE_DAYS = 1 / 24
+
+#: Phase 255: at most this many live ``/direct-parent-relationship`` calls per
+#: network, for ultimate-only children the Golden Copy could not place. The
+#: calls are discretionary (the caller's ``gleif_discretionary()`` scope), and
+#: a child left unplaced keeps its indirect edge to the head — nothing is lost
+#: but the intermediate hop.
+_PARENT_LOOKUP_CAP = 25
+_PARENT_LOOKUP_CONCURRENCY = 4
 
 _cache = Cache()
 
@@ -122,6 +150,180 @@ async def _children(client, lei: str, kind: str) -> tuple[list[dict], int, bool]
         if not data or (last and page >= last):
             break
     return records, total, True
+
+
+async def _child_relationships(
+    client, lei: str, kind: str
+) -> tuple[dict[str, dict], bool]:
+    """``({child_lei: relationship record}, answered)`` for one relation kind.
+
+    Phase 255. The children endpoints return each child's Level 1 record,
+    which says nothing about the relationship itself; these return the RR
+    records — ``RELATIONSHIP_PERIOD`` and the relationship's own
+    ``registration.lastUpdateDate``. Paged exactly as :func:`_children`. A
+    refusal costs the dates, never the children: callers leave the
+    ``*_available`` flags alone and only decline to cache.
+    """
+    url = _CHILD_RELS_URL.format(lei=quote(lei), kind=kind)
+    out: dict[str, dict] = {}
+    for page in range(1, _PAGE_CAP + 1):
+        try:
+            resp = await client.get(
+                url, params={"page[size]": _PAGE_SIZE, "page[number]": page}
+            )
+        except Exception as exc:  # noqa: BLE001 — incl. GleifRateLimitedError
+            _LOG.warning("subsidiaries: %s-child-relationships error: %s", kind, exc)
+            return out, False
+        if resp.status_code == 404:
+            break
+        if not resp.is_success:
+            return out, False
+        try:
+            payload = resp.json() or {}
+        except ValueError:
+            return out, False
+        data = payload.get("data") or []
+        for d in data:
+            child = _rr_start_lei(d)
+            if child:
+                out[child] = d
+        last = ((payload.get("meta") or {}).get("pagination") or {}).get("lastPage")
+        if not data or not last or page >= last:
+            break
+    return out, True
+
+
+def _rr_start_lei(rr: dict | None) -> str | None:
+    """The child (start node) LEI of a GLEIF relationship record."""
+    if not isinstance(rr, dict):
+        return None
+    rel = (rr.get("attributes") or {}).get("relationship") or {}
+    return ((rel.get("startNode") or {}).get("id")) or None
+
+
+def _rr_end_lei(rr: dict | None) -> str | None:
+    """The parent (end node) LEI of a GLEIF relationship record."""
+    if not isinstance(rr, dict):
+        return None
+    rel = (rr.get("attributes") or {}).get("relationship") or {}
+    return ((rel.get("endNode") or {}).get("id")) or None
+
+
+def _store_direct_parents(leis: list[str]) -> dict[str, dict]:
+    """``{child_lei: direct-parent relationship record}`` from the Golden Copy.
+
+    The store keeps ``direct_parent_lei`` on every entity row and, from Phase
+    178, the RR row with its period. Where only the parent LEI is held, a bare
+    relationship record naming it is returned — the edge is known, the dates
+    are not.
+    """
+    if not leis:
+        return {}
+    from .entity_pages import get_store, gleif_relationship_record
+
+    store = get_store()
+    if store is None:
+        return {}
+    try:
+        rows = store.get_many(leis)
+    except Exception:  # noqa: BLE001 — a store read never fails the network
+        return {}
+    out: dict[str, dict] = {}
+    for lei, row in rows.items():
+        parent = row.direct_parent_lei
+        if not parent:
+            continue
+        rr = None
+        try:
+            held = store.relationship(lei, "direct")
+        except Exception:  # noqa: BLE001
+            held = None
+        if held is not None and held.parent_lei == parent:
+            rr = gleif_relationship_record(held)
+        out[lei] = rr or {
+            "type": "relationship-records",
+            "attributes": {"relationship": {
+                "startNode": {"id": lei, "type": "LEI"},
+                "endNode": {"id": parent, "type": "LEI"},
+                "type": "IS_DIRECTLY_CONSOLIDATED_BY",
+            }},
+        }
+    return out
+
+
+async def _live_direct_parents(client, leis: list[str]) -> tuple[dict[str, dict], bool]:
+    """``({child_lei: RR record}, answered)`` from GLEIF's
+    ``/direct-parent-relationship``, for at most :data:`_PARENT_LOOKUP_CAP`
+    children. A 404 is an answer (the child files a reporting exception
+    instead of a parent); anything else is a refusal, reported so the result
+    is not cached."""
+    sem = asyncio.Semaphore(_PARENT_LOOKUP_CONCURRENCY)
+    answered = True
+
+    async def one(child: str) -> tuple[str, dict | None]:
+        nonlocal answered
+        async with sem:
+            # Once GLEIF (or the discretionary budget) has said no, stop
+            # asking: every further call would be refused the same way.
+            if not answered:
+                return child, None
+            try:
+                resp = await client.get(_PARENT_REL_URL.format(lei=quote(child)))
+            except Exception:  # noqa: BLE001 — incl. GleifRateLimitedError
+                answered = False
+                return child, None
+        if resp.status_code == 404:
+            return child, None
+        if not resp.is_success:
+            answered = False
+            return child, None
+        try:
+            data = (resp.json() or {}).get("data")
+        except ValueError:
+            answered = False
+            return child, None
+        return child, data if isinstance(data, dict) and _rr_end_lei(data) else None
+
+    wanted = leis[:_PARENT_LOOKUP_CAP]
+    results = await asyncio.gather(*(one(c) for c in wanted))
+    # The rest were never asked: the network is not enriched, so it is
+    # rebuilt after an hour rather than kept a week.
+    return {c: rr for c, rr in results if rr}, answered and len(leis) <= len(wanted)
+
+
+def _attach_relationships(
+    children: list[dict[str, Any]],
+    direct_rels: dict[str, dict],
+    ultimate_rels: dict[str, dict],
+) -> None:
+    """Put each child's relationship records on it (in place)."""
+    for m in children:
+        clei = _child_lei(m)
+        rels: dict[str, dict] = {}
+        if clei in direct_rels and "direct" in m["relations"]:
+            rels["direct"] = direct_rels[clei]
+        if clei in ultimate_rels and "ultimate" in m["relations"]:
+            rels["ultimate"] = ultimate_rels[clei]
+        m["rels"] = rels
+
+
+def _child_lei(m: dict[str, Any]) -> str:
+    rec = m.get("record") or {}
+    attrs = rec.get("attributes") or rec
+    return attrs.get("lei") or rec.get("id") or ""
+
+
+def _ultimate_only(children: list[dict[str, Any]]) -> list[str]:
+    return [_child_lei(m) for m in children if m["relations"] == ["ultimate"]]
+
+
+def _attach_direct_parents(
+    children: list[dict[str, Any]], parents: dict[str, dict]
+) -> None:
+    for m in children:
+        rr = parents.get(_child_lei(m))
+        if rr is not None and m["relations"] == ["ultimate"]:
+            m["direct_parent"] = {"lei": _rr_end_lei(rr), "rel": rr}
 
 
 async def _subject_attrs(client, lei: str) -> tuple[dict[str, Any], bool]:
@@ -180,10 +382,26 @@ async def _build(lei: str) -> dict[str, Any]:
 
     cache_key = f"{_CACHE_NS}/{lei}"
     cached = _cache.get_payload(cache_key, max_age_days=_CACHE_MAX_AGE_DAYS)
-    if cached is not None and cached[0].get(_COMPLETE_KEY) is True:
+    if (
+        cached is not None
+        and cached[0].get(_COMPLETE_KEY) is True
+        and cached[0].get(_SHAPE_KEY) == _SHAPE
+        and (
+            cached[0].get(_ENRICHED_KEY) is True
+            # An unenriched network (relationship records or direct parents
+            # refused) is served for an hour, then rebuilt — long enough not
+            # to re-spend the calls on every request, short enough that the
+            # dates arrive once GLEIF has room.
+            or _cache.get_payload(cache_key, max_age_days=_UNENRICHED_MAX_AGE_DAYS)
+            is not None
+        )
+    ):
         return cached[0]
 
     async with build_client() as client:
+        # The children come first and alone: they are the network, and a
+        # Phase 234 discretionary budget spent on dates first could leave
+        # nothing for them.
         (
             (subj_attrs, subj_ok),
             (direct_recs, direct_total, direct_ok),
@@ -193,6 +411,27 @@ async def _build(lei: str) -> dict[str, Any]:
             _children(client, lei, "direct"),
             _children(client, lei, "ultimate"),
         )
+        # Phase 255: the relationship records behind them (dates), then the
+        # direct parents of the ultimate-only children (the path). Both are
+        # enrichment: refusal leaves the network whole and undated or flat.
+        (direct_rels, direct_rels_ok), (ultimate_rels, ultimate_rels_ok) = (
+            await asyncio.gather(
+                _child_relationships(client, lei, "direct"),
+                _child_relationships(client, lei, "ultimate"),
+            )
+            if (direct_recs or ultimate_recs)
+            else (({}, True), ({}, True))
+        )
+        merged = _merge_children(direct_recs, ultimate_recs)
+        unplaced = _ultimate_only(merged)
+        parents = _store_direct_parents(unplaced)
+        remaining = [c for c in unplaced if c not in parents]
+        parents_ok = True
+        # Only when the direct list is whole: with it refused, every "both"
+        # child reads as ultimate-only and the calls would all be wasted.
+        if remaining and direct_ok:
+            live_parents, parents_ok = await _live_direct_parents(client, remaining)
+            parents.update(live_parents)
 
     # GLEIF would not give us the direct children — try the local Golden Copy
     # before reporting none. Only when nothing at all arrived live: a partial
@@ -215,7 +454,15 @@ async def _build(lei: str) -> dict[str, Any]:
             snapshot_date = snapshot_date or ultimate_snapshot_date
 
     children = _merge_children(direct_recs, ultimate_recs)
+    _attach_relationships(children, direct_rels, ultimate_rels)
+    # A snapshot stand-in can change which children are ultimate-only; place
+    # any the live pass did not ask about from the store as well.
+    late = [c for c in _ultimate_only(children) if c not in parents]
+    if late:
+        parents.update(_store_direct_parents(late))
+    _attach_direct_parents(children, parents)
     complete = subj_ok and direct_ok and ultimate_ok
+    enriched = direct_rels_ok and ultimate_rels_ok and parents_ok
     result = {
         "lei": lei,
         "subject_attrs": subj_attrs,
@@ -231,6 +478,8 @@ async def _build(lei: str) -> dict[str, Any]:
         "snapshot_date": snapshot_date,
         "snapshot_source": "fallback" if snapshot_date else None,
         _COMPLETE_KEY: complete,
+        _SHAPE_KEY: _SHAPE,
+        _ENRICHED_KEY: enriched,
     }
     if complete:
         _cache.put(cache_key, result)
@@ -257,21 +506,41 @@ def _mirror_network(lei: str) -> dict[str, Any] | None:
     ultimate_rows, ultimate_total = store.children(lei, limit=cap, kind="ultimate")
     watermark = store.watermark()
     subject = gleif_record_from_row(row)
+    children = _merge_children(
+        [gleif_record_from_row(r) for r in direct_rows],
+        [gleif_record_from_row(r) for r in ultimate_rows],
+    )
+    # Phase 255: the RR rows the mirror holds, and the direct parents of the
+    # ultimate-only children, both read locally.
+    direct_rels: dict[str, dict] = {}
+    ultimate_rels: dict[str, dict] = {}
+    if store.has_relationships:
+        from .entity_pages import gleif_relationship_record
+
+        for m in children:
+            clei = _child_lei(m)
+            for kind, bucket in (("direct", direct_rels), ("ultimate", ultimate_rels)):
+                if kind not in m["relations"]:
+                    continue
+                held = store.relationship(clei, kind)
+                if held is not None and held.parent_lei == lei:
+                    bucket[clei] = gleif_relationship_record(held)
+    _attach_relationships(children, direct_rels, ultimate_rels)
+    _attach_direct_parents(children, _store_direct_parents(_ultimate_only(children)))
     return {
         "lei": lei,
         "subject_attrs": subject.get("attributes") or {},
         "direct_total": direct_total,
         "ultimate_total": ultimate_total,
-        "children": _merge_children(
-            [gleif_record_from_row(r) for r in direct_rows],
-            [gleif_record_from_row(r) for r in ultimate_rows],
-        ),
+        "children": children,
         "direct_available": True,
         "ultimate_available": True,
         "subject_available": True,
         "snapshot_date": watermark.strftime("%Y-%m-%d") if watermark else None,
         "snapshot_source": "mirror",
         _COMPLETE_KEY: True,
+        _SHAPE_KEY: _SHAPE,
+        _ENRICHED_KEY: True,
     }
 
 
@@ -315,7 +584,7 @@ def _row(m: dict[str, Any]) -> dict[str, Any]:
 _EMPTY = {
     "available": False, "direct_total": 0, "ultimate_total": 0,
     "distinct_fetched": 0, "indirect_only": 0, "node_estimate": 0,
-    "render_mode": "graph", "truncated": False, "jurisdictions": [],
+    "render_mode": "graph", "truncated": False, "jurisdictions": [], "countries": [],
     "children": [], "bods": None,
     # Offline/demo mode is not a GLEIF refusal — the network was never asked
     # for, and `reason` says so. Declaring these available keeps the degraded
@@ -355,6 +624,14 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
     for r in rows:
         jmap[r["jurisdiction"] or "—"] = jmap.get(r["jurisdiction"] or "—", 0) + 1
     jurisdictions = sorted(jmap.items(), key=lambda kv: -kv[1])[:30]
+    # Phase 255: the same counts rolled up to the country. GLEIF files a US or
+    # Canadian company under its state or province (``US-DE``, ``CA-AB``), so
+    # ``jurisdictions`` lists Shell's Canadian subsidiaries as CA 5 and CA-AB 6.
+    cmap: dict[str, int] = {}
+    for r in rows:
+        country = (r["jurisdiction"] or "—").split("-", 1)[0] or "—"
+        cmap[country] = cmap.get(country, 0) + 1
+    countries = sorted(cmap.items(), key=lambda kv: (-kv[1], kv[0]))
 
     result: dict[str, Any] = {
         "lei": lei,
@@ -384,6 +661,7 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
         "render_mode": "graph" if node_estimate <= GRAPH_THRESHOLD else "table",
         "truncated": len(children) < node_estimate,
         "jurisdictions": [{"code": k, "count": v} for k, v in jurisdictions],
+        "countries": [{"code": k, "count": v} for k, v in countries],
         "children": rows,
         "bods": None,
     }

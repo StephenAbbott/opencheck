@@ -293,7 +293,7 @@ def map_eiti_assessment(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             # untrue about whichever company got the other.
             annotations.append(
                 commenting(
-                    "/",
+                    "/recordDetails",
                     (
                         f"EITI Company Assessment {year}, expectation 6 "
                         f"(company discloses beneficial ownership): {result}. "
@@ -318,7 +318,7 @@ def map_eiti_assessment(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             )
             annotations.append(
                 commenting(
-                    "/",
+                    "/recordDetails",
                     (
                         f"Declared {len(declared)} controlled subsidiaries to "
                         f"EITI{where} ({year}). Names only — EITI publishes no "
@@ -330,7 +330,7 @@ def map_eiti_assessment(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         elif (exp2.get("result") or "").strip():
             annotations.append(
                 commenting(
-                    "/",
+                    "/recordDetails",
                     (
                         f"EITI Company Assessment {year}, expectation 2 "
                         f"(company publishes a list of controlled "
@@ -349,7 +349,7 @@ def map_eiti_assessment(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if matched and _norm_for_compare(matched) != _norm_for_compare(name):
         annotations.append(
             commenting(
-                "/",
+                "/recordDetails",
                 (
                     f"EITI names this supporting company \u201c{name}\u201d. "
                     f"OpenCheck resolved it to the LEI of \u201c{matched}\u201d, "

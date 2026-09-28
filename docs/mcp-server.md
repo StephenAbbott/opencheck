@@ -37,7 +37,8 @@ would `421` in production.
 | `opencheck_resolve_national_id(number, country="", ra_code="")` | National registration number → LEI(s) |
 | `opencheck_lookup(lei, deepen_top=5)` | Identity, identifiers, risk signals, source coverage |
 | `opencheck_batch_lookup(leis, deepen_top=5)` | Up to 20 LEIs → one compact row each (name, jurisdiction, register status, verdict sentence, risk/context counts, coverage, `degraded`), plus `failed` rows and `rejected` tokens — see below |
-| `opencheck_export_bods(lei, format="json", deepen_top=3)` | Full ownership graph — BODS v0.4 (`json`/`jsonl`), Senzing JSON entity records (`senzing`), or FollowTheMoney entities (`ftm`) |
+| `opencheck_export_bods(lei, format="json", deepen_top=3, include_subsidiaries=False)` | Full ownership graph — BODS v0.4 (`json`/`jsonl`), Senzing JSON entity records (`senzing`), or FollowTheMoney entities (`ftm`). `include_subsidiaries` folds in the GLEIF subsidiary network, deduplicated by `statementId` — the same merge as `GET /export?subsidiaries=true`; `subsidiary_statement_count` says how many it added (Phase 255) |
+| `opencheck_subsidiaries(lei, format="summary", include_declared=False)` | What a company consolidates: `GET /subsidiaries` — GLEIF Level 2 direct and ultimate children, counts, `jurisdictions` and `countries`, one row per child; `format="bods"` adds the network as BODS v0.4. `include_declared` adds the OECD-UNSD MEIP, EITI and Global Energy Monitor lists under `declared`, kept apart per source and not BODS. Carries `measures` and `license_notices` (Phase 255) |
 | `opencheck_person_check(name, birth_year=None)` | Screen one person (PEP / sanctions / offshore-leaks) — evidence-shaped: signals from strong matches only, per-source outcomes, caveats |
 | `opencheck_save_report(lei, deepen_top=5)` | Runs (or reuses a held) check and keeps it as a saved report — `url`, `json_url`, `content_hash`, `saved_at` / `expires_at`, `manage_token`, `verdict`, licence headline (Phase 218; see [saved reports](saved-reports.md)) |
 | `opencheck_list_sources()` | Adapter inventory with licence + live status |
@@ -53,7 +54,8 @@ mounted app. `mcp/guard.py` is a pure-ASGI guard in front of it. Every request
 spends one unit of the default tier (60/min per address); each `tools/call`
 also spends the tier its REST counterpart is on — `opencheck_lookup`,
 `opencheck_export_bods`, `opencheck_search` and `opencheck_person_check` the
-lookup tier (10/min), `opencheck_batch_lookup` and `opencheck_save_report` the
+lookup tier (10/min), `opencheck_subsidiaries` the default tier `GET
+/subsidiaries` is on (its GLEIF calls are discretionary, as on the REST route), `opencheck_batch_lookup` and `opencheck_save_report` the
 heavy tier (3/min). A refusal is HTTP `429` with `Retry-After` and a JSON-RPC
 error per message.
 

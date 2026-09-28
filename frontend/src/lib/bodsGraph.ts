@@ -235,6 +235,11 @@ const DIRECT_CONSOLIDATION = "IS_DIRECTLY_CONSOLIDATED_BY";
 
 type ConsolidationKind = "direct" | "ultimate" | null;
 
+/** The clause `map_gleif_subsidiaries` appends to a direct-child statement
+ *  whose parent is also the child's ultimate consolidating parent (Phase 255,
+ *  replacing a second, indirect statement for the same pair). */
+export const ALSO_ULTIMATE = "also its ultimate consolidating parent";
+
 /** Classify a relationship's consolidation flavour from its interest details.
  *  Recognises both the OO-bundle form (``IS_…_CONSOLIDATED_BY``) and the live
  *  GLEIF mapper form (``…direct-child`` / ``…ultimate-child``). */
@@ -262,6 +267,11 @@ function consolidationFlavour(interests: Interest[]): string | null {
     const k = consolidationKind([i]);
     if (k === "direct") direct = true;
     else if (k === "ultimate") ultimate = true;
+    // Phase 255: the subsidiary network publishes ONE statement for a child
+    // that is both a direct and an ultimate child, and says so in its details.
+    if (k === "direct" && (i.details ?? "").toLowerCase().includes(ALSO_ULTIMATE)) {
+      ultimate = true;
+    }
   }
   return direct && ultimate ? "Controls (direct + ultimate)" : null;
 }

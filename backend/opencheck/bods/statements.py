@@ -38,7 +38,13 @@ import pycountry
 
 from .. import names as _names_mod
 from .. import provenance as _provenance
-from .annotations import commenting, pointer
+from .annotations import (
+    commenting,
+    is_person_identifier_scheme,
+    person_identifier_note,
+    pointer,
+    transformation,
+)
 from .psc_natures import describe_nature
 
 # ----------------------------------------------------------------------
@@ -397,10 +403,29 @@ def make_entity_statement(
         record_details["jurisdiction"] = {"name": jurisdiction[0]}
         if jurisdiction[1]:
             record_details["jurisdiction"]["code"] = jurisdiction[1]
-    if founding_date:
-        record_details["foundingDate"] = founding_date
-    if dissolution_date:
-        record_details["dissolutionDate"] = dissolution_date
+    # Phase 255: BODS v0.4 types foundingDate / dissolutionDate as a full
+    # ``date`` (unlike a person's birthDate, which may be partial). A source
+    # that knows only the year — OpenSanctions gives Showa Shell Sekiyu's
+    # founding as "1942" — used to fail schema validation on the whole
+    # export. The value is left out, never completed to 1942-01-01, and what
+    # the source said is recorded.
+    dropped_dates: list[dict[str, Any]] = []
+    for key, raw in (("foundingDate", founding_date), ("dissolutionDate", dissolution_date)):
+        if not raw:
+            continue
+        text = str(raw).strip()
+        if _FULL_DATE.match(text):
+            record_details[key] = text[:10]
+        elif text:
+            label = "founding" if key == "foundingDate" else "dissolution"
+            dropped_dates.append(transformation(
+                pointer("recordDetails"),
+                (
+                    f"{SOURCE_NAMES.get(source_id, source_id)} gives the {label} "
+                    f"date as “{text}”. BODS requires a full date for {key}, so "
+                    "it is left out here rather than completed to one."
+                ),
+            ))
     addresses = list(addresses)
     if addresses:
         record_details["addresses"] = addresses
@@ -414,7 +439,7 @@ def make_entity_statement(
     if alternate_names:
         record_details["alternateNames"] = alternate_names
 
-    return {
+    statement: dict[str, Any] = {
         "statementId": statement_id,
         "recordId": record_id,
         "declarationSubject": record_id,
@@ -425,6 +450,13 @@ def make_entity_statement(
         "recordDetails": record_details,
         "source": _source_block(source_id, source_url),
     }
+    if dropped_dates:
+        statement["annotations"] = dropped_dates
+    return statement
+
+
+#: A full ISO date at the start of a value ("2016-03-07" or a datetime).
+_FULL_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}(?:$|[T ])")
 
 
 def make_person_statement(
@@ -475,9 +507,21 @@ def make_person_statement(
         "personType": person_type,
         "names": person_names,
     }
-    identifiers = list(identifiers)
-    if identifiers:
-        record_details["identifiers"] = identifiers
+    # Phase 255: only identity-document schemes stay in ``identifiers``; any
+    # other person identifier (a Wikidata Q-id, an OpenSanctions record id, a
+    # register's person key) moves to an ``identifying`` annotation, which is
+    # where BODS lets it be said. Grouping and the exports read it back.
+    identifier_notes: list[dict[str, Any]] = []
+    kept_identifiers: list[dict[str, str]] = []
+    for ident in identifiers:
+        if is_person_identifier_scheme((ident or {}).get("scheme")):
+            kept_identifiers.append(ident)
+        else:
+            note = person_identifier_note(ident or {})
+            if note:
+                identifier_notes.append(note)
+    if kept_identifiers:
+        record_details["identifiers"] = kept_identifiers
     nationalities = list(nationalities)
     if nationalities:
         record_details["nationalities"] = nationalities
@@ -489,7 +533,7 @@ def make_person_statement(
     if political_exposure:
         record_details["politicalExposure"] = political_exposure
 
-    return {
+    statement: dict[str, Any] = {
         "statementId": statement_id,
         "recordId": record_id,
         "declarationSubject": record_id,
@@ -500,6 +544,9 @@ def make_person_statement(
         "recordDetails": record_details,
         "source": _source_block(source_id, source_url),
     }
+    if identifier_notes:
+        statement["annotations"] = identifier_notes
+    return statement
 
 
 def make_relationship_statement(

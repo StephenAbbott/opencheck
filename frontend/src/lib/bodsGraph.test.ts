@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  ALSO_ULTIMATE,
   bodsToGraph,
   searchNodes,
   computeLevels,
@@ -620,5 +621,32 @@ describe("consolidation clean-up (C) with ended relationships (Phase 219)", () =
   it("still hides an ended ultimate edge the direct chain covers", () => {
     const { edges } = bodsToGraph(closeOne("r-pg-u"), { asOf: "2026-09-16" });
     expect(edges.map((e) => `${e.source}->${e.target}`).sort()).toEqual(["C->G", "P->C"]);
+  });
+});
+
+describe("Phase 255: one statement for a direct-and-ultimate child", () => {
+  it("labels the single statement as direct + ultimate", () => {
+    const statements = [
+      { statementId: "P", recordType: "entity", recordDetails: { name: "P" } },
+      { statementId: "C", recordType: "entity", recordDetails: { name: "C" } },
+      {
+        statementId: "r",
+        recordType: "relationship",
+        recordDetails: {
+          interestedParty: "P",
+          subject: "C",
+          interests: [
+            {
+              type: "otherInfluenceOrControl",
+              directOrIndirect: "direct",
+              details: `GLEIF Level 2 direct-child (accounting consolidation); ${ALSO_ULTIMATE}`,
+            },
+          ],
+        },
+      },
+    ];
+    const { edges } = bodsToGraph(statements);
+    expect(edges).toHaveLength(1);
+    expect(edges[0].label).toBe("Controls (direct + ultimate)");
   });
 });

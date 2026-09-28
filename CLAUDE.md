@@ -2338,3 +2338,69 @@ any US issuer, and production said "answered, no record" every time.
 - Not done: EDGAR's `X0`-style country codes (X0 = United Kingdom) are not in
   `_EDGAR_CITIZENSHIP_TO_ISO`, so TCI and Hohn carry no nationality; and joint
   filers are drawn as parallel shareholdings, not as a control chain.
+
+---
+
+## The subsidiary network's BODS, and person identifiers (Phase 255)
+
+`opencheck/subsidiaries.py` + `bods/mapper.py::map_gleif_subsidiaries`, from a
+five-network check on 28 Sept 2026 (Shell, Unilever, Quantexa, Moody's, Novo
+Nordisk — the Notion ticket *Improve quality of OpenCheck subsidiaries data*).
+Things that will be re-derived otherwise:
+
+- **One relationship per parent–child pair.** A child that is both a direct
+  and an ultimate child gets one `direct` statement whose details end
+  `; also its ultimate consolidating parent` — `ALSO_ULTIMATE` in
+  `frontend/src/lib/bodsGraph.ts`, which the graph reads to label the edge
+  "Controls (direct + ultimate)"; `test_subsidiaries_phase255.py` fails if the
+  two drift. It used to be two statements (221 of 541 were that duplicate).
+- **Ultimate-only children get their path.** Their direct parent comes from
+  the Golden Copy store first (`_store_direct_parents`, free), then from live
+  `/direct-parent-relationship` — at most `_PARENT_LOOKUP_CAP` (25) calls,
+  stopping at the first refusal. A parent in the network gets a `child →
+  parent` direct edge (local id `{parent}:direct-child:{child}`, the id the
+  parent's own network gives it) beside the indirect edge to the head, which
+  the graph's rule C hides. A parent outside the network (often a lapsed LEI
+  of a merged holding company — Unilever N.V., BG Group) is named in a
+  `commenting` annotation on the indirect edge, never drawn.
+- **Dates come from GLEIF's relationship records** (`/{kind}-child-relationships`,
+  paged like the children): `statementDate` = the RR registration's
+  `lastUpdateDate`, interest `startDate`/`endDate` = `RELATIONSHIP_PERIOD`.
+- **Children first, enrichment after.** The children calls run alone, then the
+  RR calls, then the parent lookups — a Phase 234 discretionary budget spent on
+  dates must never cost the network. Enrichment that is refused leaves the
+  network whole: it is cached (`complete`) but flagged `enriched: false` and
+  trusted for an hour, not a week. A childless network asks for no RR records.
+  The cache `shape` is 2; older entries are rebuilt.
+- `/subsidiaries` gains `countries` (the jurisdictions rolled up to ISO
+  3166-1). The lookup's GLEIF direct children are paged (10 × 100): Shell's
+  export lost 5 of 105 to the old single page.
+- **Every GLEIF entity statement** with a non-ISSUED LEI carries the Phase 242
+  sentence as a `commenting` annotation ("…the status of the LEI record, not
+  of the company"); the legal-form label falls back to `legalForm.other` for
+  ELF `9999`; nine RA codes with org-id codes and no adapter (MY-SSM, PH-SEC,
+  IT-RI, IL-ROC, PA-PRP, LK-DRC, PK-SEC, JP-JCN, MX-RFC) joined
+  `_GLEIF_RA_TO_ORG_ID` — no adapter claims them, so no register hop follows.
+  The adapter schemes that are not org-id codes (CA-CORP, BR-RFB, SK-RPO,
+  RO-ONRC, HK-BRN, US-DE) were left alone: each is a both-sides decision.
+- **A person's non-document identifiers are annotations.** BODS keeps
+  `personStatement.identifiers` for `{ISO3}-{PASSPORT|TAXID|IDCARD}`;
+  `make_person_statement` moves anything else (Wikidata Q-ids, OpenSanctions /
+  OpenAleph record ids, SEC CIKs, register person keys) into an `identifying`
+  annotation written by `annotations.person_identifier_note` in one fixed
+  sentence shape, read back by `person_identifiers_from_annotations` (the FtM
+  and Senzing exports) and `personIdentifierNotes` in `lib/annotations.ts`
+  (BackgroundCheck grouping, on the same `scheme:id` key). **Read person
+  identifiers through those helpers, never `rd.identifiers` alone.**
+- **A partial `foundingDate`/`dissolutionDate` is left out**, never completed:
+  `make_entity_statement` drops a year or year-month and records the source's
+  words in a `transformation` annotation; `annotations.dropped_partial_date`
+  reads it back (the consistency check compares at the coarser precision, as
+  before). A datetime is cut to its date.
+- Annotations that describe a whole statement target `/recordDetails`, never
+  `/` (libcove: `annotation_statement_pointer_target_invalid`).
+- `map_meip` orders the OECD's statements parties-first; ids unchanged.
+- **MCP**: `opencheck_subsidiaries(lei, format, include_declared)` serves
+  `/subsidiaries` (optionally the MEIP / EITI / GEM lists, apart and not BODS),
+  and `opencheck_export_bods(include_subsidiaries=True)` runs the
+  `/export?subsidiaries=true` merge. Default tier, like the REST route.
