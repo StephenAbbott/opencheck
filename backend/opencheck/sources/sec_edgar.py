@@ -144,6 +144,47 @@ _LEGAL_FORM_SUFFIXES: frozenset[str] = frozenset({
 _TRAILING_CONNECTOR_TOKENS: frozenset[str] = frozenset({"AND"})
 
 
+# Straight, curly and modifier apostrophes, and the backtick some filers use.
+_APOSTROPHES = re.compile("['\u2018\u2019\u02bc`]")
+
+# EDGAR's conformed names carry a trailing state / country / series tag —
+# "MOODYS CORP /DE/", "ICU MEDICAL INC/DE", "COSTCO WHOLESALE CORP /NEW",
+# "Gores Holdings X, Inc. / CI", "Spirax-Sarco Engineering PLC/ADR". 552 of
+# the 8,004 titles in company_tickers.json (28 Sept 2026). Normalised, the tag
+# became a trailing token that also stopped the legal-form strip, so none of
+# those companies could be matched by name (Phase 254).
+_EDGAR_TITLE_TAG = re.compile(r"^(?P<head>.*?)(?P<sep>\s*/\s*)(?P<tag>[A-Za-z]{2,8})\s*/?\s*$")
+
+
+def _strip_edgar_title_tag(title: str) -> str:
+    """Remove EDGAR's trailing ``/XX/`` tag from a conformed company name.
+
+    Applied to EDGAR's names only, never to GLEIF's. The tag is removed only
+    where the slash is plainly a separator — whitespace before it, or it
+    follows punctuation or a legal-form token ("INC/DE", "Corp./CI",
+    "PLC/ADR") — so a name whose slash is part of the name keeps it:
+    "Cadeler A/S" (one-letter tag, never matched) and "DATA I/O CORP"
+    (nothing trails) are untouched.
+    """
+    title = (title or "").strip()
+    m = _EDGAR_TITLE_TAG.match(title)
+    if not m:
+        return title
+    head = m.group("head")
+    if not head.strip():
+        return title
+    separated = bool(m.group("sep")[:1].isspace()) or head[-1:] in ".,)"
+    last = re.sub(r"[^A-Za-z]", "", head.split()[-1]).upper() if head.split() else ""
+    if separated or last in _LEGAL_FORM_SUFFIXES:
+        return head.rstrip(" ,")
+    return title
+
+
+def _edgar_title_key(title: str) -> str:
+    """The match key for an EDGAR conformed name: tag stripped, then normalised."""
+    return _normalise_company_name(_strip_edgar_title_tag(title))
+
+
 def _normalise_company_name(name: str) -> str:
     """Normalise a company name for cross-source matching.
 
@@ -170,7 +211,10 @@ def _normalise_company_name(name: str) -> str:
     # "walt disney co" untouched — tests/test_names.py pins the gap as a
     # canary that fails when a future rigour covers it (then delete the
     # local strip; tests/test_sec_edgar_resolve.py pins the Disney match).
-    s = names.normalise_name(name or "").upper()
+    # Apostrophes are dropped, never turned into a space (Phase 254): GLEIF
+    # writes "MOODY'S CORPORATION" and EDGAR "MOODYS CORP", and the shared
+    # fold's punctuation-to-space made the first "MOODY S" — no match.
+    s = names.normalise_name(_APOSTROPHES.sub("", name or "")).upper()
     tokens = s.split()
     while tokens and tokens[0] == "THE":
         tokens = tokens[1:]
@@ -605,7 +649,11 @@ def _reporter_key(rec: dict[str, Any]) -> str:
     reporter = rec.get("reporter") or {}
     if reporter.get("reporter_cik"):
         return f"cik:{reporter['reporter_cik']}"
-    name = " ".join((reporter.get("name") or "").upper().replace(",", " ").split())
+    # The name through the company-name normaliser (Phase 254): the same
+    # filer spells itself "JPMORGAN CHASE & CO" in one 13G and
+    # "JPMORGAN CHASE & CO." in its amendment (McDonald's, 2026), and a
+    # punctuation difference kept the superseded 5.1% beside the current 4.3%.
+    name = _normalise_company_name(reporter.get("name") or "")
     return f"filer:{rec.get('filer_cik') or ''}:{name}"
 
 
@@ -704,8 +752,8 @@ class SecEdgarAdapter(SourceAdapter):
         exchange-listed US issuer.
 
         Returns an empty dict if the file can't be retrieved (offline, no
-        contact e-mail set, etc.).  When two titles normalise to the same
-        key, the first wins.
+        contact e-mail set, etc.).  A key that two different CIKs share is
+        left out (Phase 254) rather than given to whichever came first.
         """
         if self._ticker_index is not None:
             return self._ticker_index
@@ -715,7 +763,7 @@ class SecEdgarAdapter(SourceAdapter):
             return {}
 
         raw = await self._get_text(_TICKERS_URL, cache_key=cache_key)
-        index: dict[str, str] = {}
+        ciks: dict[str, set[str]] = {}
         if raw:
             try:
                 data = json.loads(raw)
@@ -730,9 +778,16 @@ class SecEdgarAdapter(SourceAdapter):
                 cik_raw = row.get("cik_str")
                 if title == "" or cik_raw is None:
                     continue
-                key = _normalise_company_name(title)
-                if key and key not in index:
-                    index[key] = str(cik_raw).lstrip("0") or "0"
+                key = _edgar_title_key(title)
+                if key:
+                    ciks.setdefault(key, set()).add(str(cik_raw).lstrip("0") or "0")
+        # A key two issuers share is not an answer: "FIRST BANCORP /NC/" and
+        # "FIRST BANCORP /PR/" both key to "FIRST BANCORP", and "Toro Co" /
+        # "Toro Corp" to "TORO". Until Phase 254 the first title in the file
+        # won, which could hand a lookup another company's filings. An
+        # ambiguous key is left out, and resolution falls through to the
+        # company search (which must also agree exactly).
+        index = {key: next(iter(found)) for key, found in ciks.items() if len(found) == 1}
         self._ticker_index = index
         return index
 
@@ -759,12 +814,13 @@ class SecEdgarAdapter(SourceAdapter):
 
         # Fallback: normalised company-search, pick an exact normalised match.
         candidates = await self.search(target, SearchKind.ENTITY)
-        for hit in candidates:
-            if hit.is_stub:
-                continue
-            if _normalise_company_name(hit.name) == target:
-                return hit.hit_id
-        return None
+        matches = {
+            hit.hit_id
+            for hit in candidates
+            if not hit.is_stub and _edgar_title_key(hit.name) == target
+        }
+        # Exactly one company, or no answer — the same rule as the index.
+        return next(iter(matches)) if len(matches) == 1 else None
 
     # ------------------------------------------------------------------
     # Fetch
