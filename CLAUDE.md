@@ -2335,6 +2335,22 @@ any US issuer, and production said "answered, no record" every time.
   `endDate` = the filing's event date, no `share`, or `recordStatus: closed`
   with no date when there is none. A filing below 5% but above zero is carried
   as filed — the holding continues, it has only stopped being reportable.
+- **Phase 254: the CIK step failed first for many issuers.** A lookup
+  reaches `fetch` only once a CIK is known — from OpenCorporates, else by
+  matching the GLEIF legal name against `company_tickers.json`. Two misses:
+  EDGAR's conformed names end in a state / country / series tag
+  (`MOODYS CORP /DE/`, `ICU MEDICAL INC/DE`, `… /NEW`, `…/ADR` — 552 of 8,004
+  titles), and an apostrophe became a space (`MOODY S`). `_edgar_title_key`
+  strips the tag from **EDGAR's names only** (never GLEIF's — `A/S` must
+  survive) and `_normalise_company_name` drops apostrophes. **A key two CIKs
+  share resolves to neither** — the index used to give it to the first title
+  in the file (`FIRST BANCORP /NC/` vs `/PR/`, `INDEPENDENT BANK CORP` MA vs
+  MI), and the company-search fallback now needs exactly one match too.
+  Measured on 420 titles against live GLEIF names: 100 GLEIF records newly
+  resolve to the right CIK, none lost, one wrong first-wins match dropped.
+  The reporter key's name now goes through the same normaliser too: JPMorgan
+  filed a McDonald's 13G as "JPMORGAN CHASE & CO" and its amendment as
+  "JPMORGAN CHASE & CO.", and both were kept.
 - Not done: EDGAR's `X0`-style country codes (X0 = United Kingdom) are not in
   `_EDGAR_CITIZENSHIP_TO_ISO`, so TCI and Hohn carry no nationality; and joint
   filers are drawn as parallel shareholdings, not as a control chain.
