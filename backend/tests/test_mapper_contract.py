@@ -313,12 +313,12 @@ def test_every_ra_code_an_adapter_dispatches_on_has_a_scheme() -> None:
         ("RA000472", "NO-BRC"),
         ("RA000170", "DK-CVR"),
         ("RA000394", "IN-MCA"),
-        ("RA000072", "CA-CORP"),
+        ("RA000072", "CA-CC"),
         ("RA000014", "AU-ACN"),
         ("RA000469", "NG-CAC"),
         ("RA000484", "PL-KRS"),
         ("RA000017", "AT-FB"),
-        ("RA000526", "SK-RPO"),
+        ("RA000526", "SK-ICO"),
         # Aligned to the adapters (Stephen, 24 Sept 2026).
         ("RA000181", "EE-ARIREGISTER"),
         ("RA000544", "SE-BLV"),
@@ -331,7 +331,7 @@ def test_ra_scheme(ra: str, scheme: str) -> None:
 def test_an_unmapped_authority_is_named_by_its_ra_code() -> None:
     # Cayman Islands General Registry — no org-id scheme, no adapter.
     assert gleif_registration_scheme("RA000087", "KY")[0] == "RA000087"
-    # A Canadian province: never CA-CORP, never REG-CA.
+    # A Canadian province: never CA-CC, never REG-CA.
     assert gleif_registration_scheme("RA000076", "CA-ON")[0] == "RA000076"
     # GLEIF's "not on the list" code, with the authority it names instead.
     assert gleif_registration_scheme("RA999999", "KY", "Cayman Monetary Authority") == (

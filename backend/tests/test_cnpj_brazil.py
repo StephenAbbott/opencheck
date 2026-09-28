@@ -269,7 +269,7 @@ class TestMapCnpjBrazil:
         rd = ent["recordDetails"]
         assert rd["jurisdiction"]["code"] == "BR"
         ids = {i["scheme"]: i["id"] for i in rd["identifiers"]}
-        assert ids["BR-RFB"] == "33000167000101"
+        assert ids["BR-CNPJ"] == "33000167000101"
         assert rd.get("foundingDate") == "1966-09-28"
         assert rd["entityType"]["details"] == "Sociedade de Economia Mista"
         assert any(n.get("fullName") == "PETROBRAS" for n in rd.get("names", [])) or \
@@ -296,7 +296,7 @@ class TestMapCnpjBrazil:
             and s["recordDetails"]["name"] == "UNIAO HOLDING LTDA"
         )
         ids = {i["scheme"]: i["id"] for i in partner["recordDetails"]["identifiers"]}
-        assert ids["BR-RFB"] == "11222333000181"
+        assert ids["BR-CNPJ"] == "11222333000181"
         rels = [s for s in stmts if s["recordType"] == "relationship"]
         socio_rel = next(
             r for r in rels
