@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-09-18"
+timestamp: "2026-09-29"
 ---
 
 # Source licence matrix
@@ -47,6 +47,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Malta Business Registry (MBR) (`malta_mbr`) | `CC-BY-4.0` | yes | yes | no |
 | Ministry of Corporate Affairs — Company Master Data (India) (`mca_india`) | `GODL-India` | conditional | yes | no |
 | OECD-UNSD Multinational Enterprise Information Platform (MEIP) (`meip`) | `OECD-Terms` | yes | yes | no |
+| New York Department of State — Division of Corporations (`ny_dos`) | `OPEN-NY-Terms` | yes | no | no |
 | New Zealand Companies Register (NZBN) (`nz_companies`) | `CC-BY-4.0` | yes | yes | no |
 | ONRC — Oficiul Național al Registrului Comerțului (Romania) (`onrc_romania`) | `CC-BY-4.0` | yes | yes | no |
 | OpenAleph (`openaleph`) | `per-collection` | conditional | yes | no |

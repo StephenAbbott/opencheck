@@ -192,6 +192,18 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "Government, the data provider and DATA.GOV.HK."
         ),
     ),
+    "open-ny-terms": _terms(
+        "OPEN-NY-Terms", "OPEN-NY Terms of Use (data.ny.gov)",
+        commercial="yes", attribution=False, share_alike=False, redistribution="yes",
+        url="https://data.ny.gov/download/77gx-ii52/application/pdf",
+        summary=(
+            "\u201cSo long as you are not doing anything malicious with NYS data, "
+            "you may use it as you wish, subject to no other requirements.\u201d "
+            "No attribution, share-alike or pre-approval; a revocable licence, "
+            "with the State's disclaimer of warranties and liability. OpenCheck "
+            "attributes the Department of State anyway (terms read 29 Sept 2026)."
+        ),
+    ),
     "sodl-1.0": _terms(
         "SODL-1.0", "Data License — Serbian Open Data Portal (SODL 1.0)",
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",

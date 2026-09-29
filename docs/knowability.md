@@ -1156,7 +1156,7 @@ Data generated 2026-09-18T13:30:46+00:00; sentences rendered as of 2026-09-18. *
 | 6AMLD LIA / BORIS | Not applicable / Not applicable |
 | 6AMLD details | FinCEN domestic BO reporting ended ~Aug 2026; SEC 13D 5% disclosure for listed issuers only. |
 | Next FATF/FSRB assessment | FATF / APG / CFATF; onsite 2026-02-01; plenary 2026-10-01 |
-| OpenCheck reads | `dlcp_dc` (BO) |
+| OpenCheck reads | `dlcp_dc` (BO), `ny_dos` |
 | OpenCheck source (note) | sec_edgar |
 
 ## Stated absence

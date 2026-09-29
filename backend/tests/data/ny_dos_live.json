@@ -1,0 +1,2990 @@
+{
+ "_captured": "Real SODA 2.1 responses from data.ny.gov, captured 2026-09-29 with the exact queries NyDosAdapter issues (see sources/ny_dos.py). Keys are <entity>/<part>.",
+ "dos_ids": {
+  "corning": "49779",
+  "maybank": "1484459",
+  "alta": "4081330",
+  "lentor": "5810913",
+  "quantexa": "5215193",
+  "collision_8512": "8512",
+  "missing": "99999999"
+ },
+ "responses": {
+  "corning/filings": [
+   {
+    "corpid_num": "49779",
+    "film_num": "5119-56",
+    "date_filed": "1936-12-24T00:00:00.000",
+    "eff_date": "1936-12-24T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CONSOLIDATION",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING GLASS WORKS",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "5119-57",
+    "date_filed": "1936-12-24T00:00:00.000",
+    "eff_date": "1936-12-24T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CONSOLIDATION",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "6404-119",
+    "date_filed": "1945-04-04T00:00:00.000",
+    "eff_date": "1945-04-04T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "6406-53",
+    "date_filed": "1945-04-07T00:00:00.000",
+    "eff_date": "1945-04-07T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "6475-25",
+    "date_filed": "1945-09-12T00:00:00.000",
+    "eff_date": "1945-09-12T00:00:00.000",
+    "documenttype": "CERTIFICATE OF MERGER",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "6977-77",
+    "date_filed": "1947-03-25T00:00:00.000",
+    "eff_date": "1947-03-25T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "7232-21",
+    "date_filed": "1948-03-05T00:00:00.000",
+    "eff_date": "1948-03-05T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "7480-11",
+    "date_filed": "1949-03-16T00:00:00.000",
+    "eff_date": "1949-03-16T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "7715-137",
+    "date_filed": "1950-03-09T00:00:00.000",
+    "eff_date": "1950-03-09T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "7967-108",
+    "date_filed": "1951-03-09T00:00:00.000",
+    "eff_date": "1951-03-09T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8192-83",
+    "date_filed": "1952-03-10T00:00:00.000",
+    "eff_date": "1952-03-10T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8213-103",
+    "date_filed": "1952-04-10T00:00:00.000",
+    "eff_date": "1952-04-10T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8438-42",
+    "date_filed": "1953-03-06T00:00:00.000",
+    "eff_date": "1953-03-06T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8683-127",
+    "date_filed": "1954-03-05T00:00:00.000",
+    "eff_date": "1954-03-05T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8923-125",
+    "date_filed": "1955-01-21T00:00:00.000",
+    "eff_date": "1955-01-21T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8965-16",
+    "date_filed": "1955-03-14T00:00:00.000",
+    "eff_date": "1955-03-14T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "9620",
+    "date_filed": "1956-03-08T00:00:00.000",
+    "eff_date": "1956-03-08T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "54783",
+    "date_filed": "1957-03-07T00:00:00.000",
+    "eff_date": "1957-03-07T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "99187",
+    "date_filed": "1958-03-07T00:00:00.000",
+    "eff_date": "1958-03-07T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "133070",
+    "date_filed": "1958-11-28T00:00:00.000",
+    "eff_date": "1958-11-28T00:00:00.000",
+    "documenttype": "CERTIFICATE OF MERGER",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "149762",
+    "date_filed": "1959-03-06T00:00:00.000",
+    "eff_date": "1959-03-06T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "204103",
+    "date_filed": "1960-03-03T00:00:00.000",
+    "eff_date": "1960-03-03T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "257609",
+    "date_filed": "1961-03-03T00:00:00.000",
+    "eff_date": "1961-03-03T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "316100",
+    "date_filed": "1962-03-12T00:00:00.000",
+    "eff_date": "1962-03-12T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "321501",
+    "date_filed": "1962-04-13T00:00:00.000",
+    "eff_date": "1962-04-13T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "370766",
+    "date_filed": "1963-03-13T00:00:00.000",
+    "eff_date": "1963-03-13T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "399837",
+    "date_filed": "1963-10-04T00:00:00.000",
+    "eff_date": "1963-10-04T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "406122",
+    "date_filed": "1963-11-15T00:00:00.000",
+    "eff_date": "1963-12-01T00:00:00.000",
+    "documenttype": "CERTIFICATE OF MERGER",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "425287",
+    "date_filed": "1964-03-10T00:00:00.000",
+    "eff_date": "1964-03-10T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "480007",
+    "date_filed": "1965-02-05T00:00:00.000",
+    "eff_date": "1965-02-05T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "541806-4",
+    "date_filed": "1966-02-04T00:00:00.000",
+    "eff_date": "1966-02-04T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "602083-4",
+    "date_filed": "1967-02-03T00:00:00.000",
+    "eff_date": "1967-02-03T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "613720-5",
+    "date_filed": "1967-04-17T00:00:00.000",
+    "eff_date": "1967-04-17T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "623552-24",
+    "date_filed": "1967-06-13T00:00:00.000",
+    "eff_date": "1967-06-13T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "665537-4",
+    "date_filed": "1968-02-09T00:00:00.000",
+    "eff_date": "1968-02-09T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "677128-4",
+    "date_filed": "1968-04-12T00:00:00.000",
+    "eff_date": "1968-04-12T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "736042-4",
+    "date_filed": "1969-02-13T00:00:00.000",
+    "eff_date": "1969-02-13T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "749668-3",
+    "date_filed": "1969-04-11T00:00:00.000",
+    "eff_date": "1969-04-11T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "806718-4",
+    "date_filed": "1970-01-13T00:00:00.000",
+    "eff_date": "1970-01-13T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "828586-5",
+    "date_filed": "1970-04-20T00:00:00.000",
+    "eff_date": "1970-04-20T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "840409-27",
+    "date_filed": "1970-06-15T00:00:00.000",
+    "eff_date": "1970-06-15T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "880926-4",
+    "date_filed": "1971-01-11T00:00:00.000",
+    "eff_date": "1971-01-11T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "958298-4",
+    "date_filed": "1972-01-10T00:00:00.000",
+    "eff_date": "1972-01-10T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A48484-4",
+    "date_filed": "1973-02-08T00:00:00.000",
+    "eff_date": "1973-02-08T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A48894-4",
+    "date_filed": "1973-02-09T00:00:00.000",
+    "eff_date": "1973-02-09T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A65030-27",
+    "date_filed": "1973-04-16T00:00:00.000",
+    "eff_date": "1973-04-16T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A135068-4",
+    "date_filed": "1974-02-13T00:00:00.000",
+    "eff_date": "1974-02-13T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A212980-4",
+    "date_filed": "1975-02-10T00:00:00.000",
+    "eff_date": "1975-02-10T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A291916-4",
+    "date_filed": "1976-02-06T00:00:00.000",
+    "eff_date": "1976-02-06T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A376082-4",
+    "date_filed": "1977-02-07T00:00:00.000",
+    "eff_date": "1977-02-07T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A480030-8",
+    "date_filed": "1978-04-19T00:00:00.000",
+    "eff_date": "1978-04-19T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B039924-2",
+    "date_filed": "1983-11-16T00:00:00.000",
+    "eff_date": "1983-11-16T00:00:00.000",
+    "documenttype": "ASSUMED NAME CORP INITIAL FILING",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "J & M COFFEE SHOP"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B091160-3",
+    "date_filed": "1984-04-16T00:00:00.000",
+    "eff_date": "1984-04-16T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B219379-9",
+    "date_filed": "1985-04-25T00:00:00.000",
+    "eff_date": "1985-04-25T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B378983-6",
+    "date_filed": "1986-07-10T00:00:00.000",
+    "eff_date": "1986-07-10T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B491968-3",
+    "date_filed": "1987-05-04T00:00:00.000",
+    "eff_date": "1987-05-04T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B634564-3",
+    "date_filed": "1988-05-02T00:00:00.000",
+    "eff_date": "1988-05-02T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "C004910-4",
+    "date_filed": "1989-04-28T00:00:00.000",
+    "eff_date": "1989-04-28T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "C059993-15",
+    "date_filed": "1989-09-28T00:00:00.000",
+    "eff_date": "1989-09-28T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "C060508-28",
+    "date_filed": "1989-09-29T00:00:00.000",
+    "eff_date": "1989-09-29T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "920505000472",
+    "date_filed": "1992-05-05T00:00:00.000",
+    "eff_date": "1992-05-05T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "940718000377",
+    "date_filed": "1994-07-18T00:00:00.000",
+    "eff_date": "1994-07-18T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "940726000429",
+    "date_filed": "1994-07-26T00:00:00.000",
+    "eff_date": "1994-07-26T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CORRECTION",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "941103000287",
+    "date_filed": "1994-11-03T00:00:00.000",
+    "eff_date": "1994-11-03T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "960711000360",
+    "date_filed": "1996-07-11T00:00:00.000",
+    "eff_date": "1996-07-11T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "961220002164",
+    "date_filed": "1996-12-20T00:00:00.000",
+    "eff_date": "1996-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "981119000466",
+    "date_filed": "1998-11-19T00:00:00.000",
+    "eff_date": "1998-11-19T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "981207002383",
+    "date_filed": "1998-12-07T00:00:00.000",
+    "eff_date": "1998-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "000428000625",
+    "date_filed": "2000-04-28T00:00:00.000",
+    "eff_date": "2000-04-28T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "001109000727",
+    "date_filed": "2000-11-09T00:00:00.000",
+    "eff_date": "2000-11-09T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "001213002532",
+    "date_filed": "2000-12-13T00:00:00.000",
+    "eff_date": "2000-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "010122000662",
+    "date_filed": "2001-01-22T00:00:00.000",
+    "eff_date": "2001-01-22T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "020805000549",
+    "date_filed": "2002-08-05T00:00:00.000",
+    "eff_date": "2002-08-05T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "021204002114",
+    "date_filed": "2002-12-04T00:00:00.000",
+    "eff_date": "2002-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "050125002403",
+    "date_filed": "2005-01-25T00:00:00.000",
+    "eff_date": "2004-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "050314000380",
+    "date_filed": "2005-03-14T00:00:00.000",
+    "eff_date": "2005-03-14T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "061208002831",
+    "date_filed": "2006-12-08T00:00:00.000",
+    "eff_date": "2006-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "090512002747",
+    "date_filed": "2009-05-12T00:00:00.000",
+    "eff_date": "2008-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "100504000189",
+    "date_filed": "2010-05-04T00:00:00.000",
+    "eff_date": "2010-05-04T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "100504000201",
+    "date_filed": "2010-05-04T00:00:00.000",
+    "eff_date": "2010-05-04T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "100723000111",
+    "date_filed": "2010-07-23T00:00:00.000",
+    "eff_date": "2010-07-23T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "110504002599",
+    "date_filed": "2011-05-04T00:00:00.000",
+    "eff_date": "2010-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "120427000975",
+    "date_filed": "2012-04-27T00:00:00.000",
+    "eff_date": "2012-04-27T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "121212006816",
+    "date_filed": "2012-12-12T00:00:00.000",
+    "eff_date": "2012-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "140114000208",
+    "date_filed": "2014-01-14T00:00:00.000",
+    "eff_date": "2014-01-14T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "141219006049",
+    "date_filed": "2014-12-19T00:00:00.000",
+    "eff_date": "2014-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "161221006101",
+    "date_filed": "2016-12-21T00:00:00.000",
+    "eff_date": "2016-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "181217006776",
+    "date_filed": "2018-12-17T00:00:00.000",
+    "eff_date": "2018-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "201221060364",
+    "date_filed": "2020-12-21T00:00:00.000",
+    "eff_date": "2020-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "221207001785",
+    "date_filed": "2022-12-07T00:00:00.000",
+    "eff_date": "2022-12-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "241202001554",
+    "date_filed": "2024-12-02T00:00:00.000",
+    "eff_date": "2024-12-02T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "CORNING INCORPORATED",
+    "juris": "NY",
+    "cnty_prin_ofc": "Steuben"
+   }
+  ],
+  "corning/status": [
+   {
+    "corpid_num": "49779",
+    "film_num": "5119-56",
+    "date_filed": "1936-12-24T00:00:00.000",
+    "mod_cert_code": "07DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "5119-57",
+    "date_filed": "1936-12-24T00:00:00.000",
+    "mod_cert_code": "07DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "6404-119",
+    "date_filed": "1945-04-04T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "6406-53",
+    "date_filed": "1945-04-07T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "6475-25",
+    "date_filed": "1945-09-12T00:00:00.000",
+    "mod_cert_code": "06DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "6977-77",
+    "date_filed": "1947-03-25T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "7232-21",
+    "date_filed": "1948-03-05T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "7480-11",
+    "date_filed": "1949-03-16T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "7715-137",
+    "date_filed": "1950-03-09T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "7967-108",
+    "date_filed": "1951-03-09T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8192-83",
+    "date_filed": "1952-03-10T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8213-103",
+    "date_filed": "1952-04-10T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8438-42",
+    "date_filed": "1953-03-06T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8683-127",
+    "date_filed": "1954-03-05T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8923-125",
+    "date_filed": "1955-01-21T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "8965-16",
+    "date_filed": "1955-03-14T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "9620",
+    "date_filed": "1956-03-08T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "54783",
+    "date_filed": "1957-03-07T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "99187",
+    "date_filed": "1958-03-07T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "133070",
+    "date_filed": "1958-11-28T00:00:00.000",
+    "mod_cert_code": "06DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "149762",
+    "date_filed": "1959-03-06T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "204103",
+    "date_filed": "1960-03-03T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "257609",
+    "date_filed": "1961-03-03T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "316100",
+    "date_filed": "1962-03-12T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "321501",
+    "date_filed": "1962-04-13T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "370766",
+    "date_filed": "1963-03-13T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "399837",
+    "date_filed": "1963-10-04T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "406122",
+    "date_filed": "1963-11-15T00:00:00.000",
+    "mod_cert_code": "06DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "425287",
+    "date_filed": "1964-03-10T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "480007",
+    "date_filed": "1965-02-05T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "541806-4",
+    "date_filed": "1966-02-04T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "602083-4",
+    "date_filed": "1967-02-03T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "613720-5",
+    "date_filed": "1967-04-17T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "623552-24",
+    "date_filed": "1967-06-13T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "665537-4",
+    "date_filed": "1968-02-09T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "677128-4",
+    "date_filed": "1968-04-12T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "736042-4",
+    "date_filed": "1969-02-13T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "749668-3",
+    "date_filed": "1969-04-11T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "806718-4",
+    "date_filed": "1970-01-13T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "828586-5",
+    "date_filed": "1970-04-20T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "840409-27",
+    "date_filed": "1970-06-15T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "880926-4",
+    "date_filed": "1971-01-11T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "958298-4",
+    "date_filed": "1972-01-10T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A48484-4",
+    "date_filed": "1973-02-08T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A48894-4",
+    "date_filed": "1973-02-09T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A65030-27",
+    "date_filed": "1973-04-16T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A135068-4",
+    "date_filed": "1974-02-13T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A212980-4",
+    "date_filed": "1975-02-10T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A291916-4",
+    "date_filed": "1976-02-06T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A376082-4",
+    "date_filed": "1977-02-07T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "A480030-8",
+    "date_filed": "1978-04-19T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B039924-2",
+    "date_filed": "1983-11-16T00:00:00.000",
+    "mod_cert_code": "93"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B091160-3",
+    "date_filed": "1984-04-16T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B219379-9",
+    "date_filed": "1985-04-25T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B378983-6",
+    "date_filed": "1986-07-10T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B491968-3",
+    "date_filed": "1987-05-04T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "B634564-3",
+    "date_filed": "1988-05-02T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "C004910-4",
+    "date_filed": "1989-04-28T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "C059993-15",
+    "date_filed": "1989-09-28T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "C060508-28",
+    "date_filed": "1989-09-29T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "920505000472",
+    "date_filed": "1992-05-05T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "940718000377",
+    "date_filed": "1994-07-18T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "940726000429",
+    "date_filed": "1994-07-26T00:00:00.000",
+    "mod_cert_code": "05DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "941103000287",
+    "date_filed": "1994-11-03T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "960711000360",
+    "date_filed": "1996-07-11T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "961220002164",
+    "date_filed": "1996-12-20T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "981119000466",
+    "date_filed": "1998-11-19T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "981207002383",
+    "date_filed": "1998-12-07T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "000428000625",
+    "date_filed": "2000-04-28T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "001109000727",
+    "date_filed": "2000-11-09T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "001213002532",
+    "date_filed": "2000-12-13T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "010122000662",
+    "date_filed": "2001-01-22T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "020805000549",
+    "date_filed": "2002-08-05T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "021204002114",
+    "date_filed": "2002-12-04T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "050125002403",
+    "date_filed": "2005-01-25T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "050314000380",
+    "date_filed": "2005-03-14T00:00:00.000",
+    "mod_cert_code": "27DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "061208002831",
+    "date_filed": "2006-12-08T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "090512002747",
+    "date_filed": "2009-05-12T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "100504000189",
+    "date_filed": "2010-05-04T00:00:00.000",
+    "mod_cert_code": "27DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "100504000201",
+    "date_filed": "2010-05-04T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "100723000111",
+    "date_filed": "2010-07-23T00:00:00.000",
+    "mod_cert_code": "27DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "110504002599",
+    "date_filed": "2011-05-04T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "120427000975",
+    "date_filed": "2012-04-27T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "121212006816",
+    "date_filed": "2012-12-12T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "140114000208",
+    "date_filed": "2014-01-14T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "141219006049",
+    "date_filed": "2014-12-19T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "161221006101",
+    "date_filed": "2016-12-21T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "181217006776",
+    "date_filed": "2018-12-17T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "201221060364",
+    "date_filed": "2020-12-21T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "221207001785",
+    "date_filed": "2022-12-07T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "241202001554",
+    "date_filed": "2024-12-02T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   }
+  ],
+  "corning/names": [
+   {
+    "corpid_num": "49779",
+    "film_num": "5119-56",
+    "date_filed": "1936-12-24T00:00:00.000",
+    "name_type": "A",
+    "name_status": "I",
+    "corp_name": "CORNING GLASS WORKS"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "C004910-4",
+    "date_filed": "1989-04-28T00:00:00.000",
+    "name_type": "A",
+    "name_status": "A",
+    "corp_name": "CORNING INCORPORATED"
+   }
+  ],
+  "corning/addresses": [
+   {
+    "corpid_num": "49779",
+    "film_num": "961220002164",
+    "date_filed": "1996-12-20T00:00:00.000",
+    "addr_type": "3",
+    "name": "ROGER G ACKERMAN",
+    "addr1": "ONE RIVERFRONT PLAZA",
+    "city": "CORNING",
+    "state": "NY",
+    "zip5": "14831",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "961220002164",
+    "date_filed": "1996-12-20T00:00:00.000",
+    "addr_type": "4",
+    "name": "ROGER G ACKERMAN",
+    "addr1": "ONE RIVERFRONT PLAZA",
+    "city": "CORNING",
+    "state": "NY",
+    "zip5": "14831",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "021204002114",
+    "date_filed": "2002-12-04T00:00:00.000",
+    "addr_type": "3",
+    "name": "JAMES R HOUGHTON",
+    "addr1": "ONE RIVERFRONT PLAZA",
+    "city": "CORNING",
+    "state": "NY",
+    "zip5": "14831",
+    "zip4": "0001",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "021204002114",
+    "date_filed": "2002-12-04T00:00:00.000",
+    "addr_type": "4",
+    "name": "THE CORPORATION",
+    "addr1": "ONE RIVERFRONT PLAZA",
+    "city": "CORNING",
+    "state": "NY",
+    "zip5": "14831",
+    "zip4": "0001",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "061208002831",
+    "date_filed": "2006-12-08T00:00:00.000",
+    "addr_type": "3",
+    "name": "WENDELL P WEEKS",
+    "addr1": "ONE RIVERFRONT PLAZA",
+    "city": "CORNING",
+    "state": "NY",
+    "zip5": "14831",
+    "zip4": "0001",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "241202001554",
+    "date_filed": "2024-12-02T00:00:00.000",
+    "addr_type": "3",
+    "name": "WENDELL P WEEKS",
+    "addr1": "ONE RIVERFRONT PLAZA",
+    "city": "CORNING",
+    "state": "NY",
+    "zip5": "14831",
+    "zip4": "0001",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "241202001554",
+    "date_filed": "2024-12-02T00:00:00.000",
+    "addr_type": "3",
+    "name": "WENDELL P WEEKS",
+    "addr1": "ONE RIVERFRONT PLAZA",
+    "city": "CORNING",
+    "state": "NY",
+    "zip5": "14831",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "49779",
+    "film_num": "241202001554",
+    "date_filed": "2024-12-02T00:00:00.000",
+    "addr_type": "3",
+    "name": "WENDELL P WEEKS",
+    "addr1": "ONE RIVERFRONT PLAZA",
+    "city": "CORNING",
+    "state": "NY",
+    "zip5": "14831",
+    "country": "USA"
+   }
+  ],
+  "maybank/filings": [
+   {
+    "corpid_num": "1484459",
+    "film_num": "901026000352",
+    "date_filed": "1990-10-26T00:00:00.000",
+    "eff_date": "1990-10-26T00:00:00.000",
+    "documenttype": "CERTIFICATE OF INCORPORATION",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "KIM ENG SECURITIES U.S.A. INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "921110002839",
+    "date_filed": "1992-11-10T00:00:00.000",
+    "eff_date": "1992-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "931025002851",
+    "date_filed": "1993-10-25T00:00:00.000",
+    "eff_date": "1993-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "961007002162",
+    "date_filed": "1996-10-07T00:00:00.000",
+    "eff_date": "1996-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "981002002197",
+    "date_filed": "1998-10-02T00:00:00.000",
+    "eff_date": "1998-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "000927002670",
+    "date_filed": "2000-09-27T00:00:00.000",
+    "eff_date": "2000-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "020919002575",
+    "date_filed": "2002-09-19T00:00:00.000",
+    "eff_date": "2002-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "041104002118",
+    "date_filed": "2004-11-04T00:00:00.000",
+    "eff_date": "2004-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "060125000980",
+    "date_filed": "2006-01-25T00:00:00.000",
+    "eff_date": "2006-01-25T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "060210000587",
+    "date_filed": "2006-02-10T00:00:00.000",
+    "eff_date": "2006-02-10T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "061004002653",
+    "date_filed": "2006-10-04T00:00:00.000",
+    "eff_date": "2006-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "081007002343",
+    "date_filed": "2008-10-07T00:00:00.000",
+    "eff_date": "2008-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "090715000044",
+    "date_filed": "2009-07-15T00:00:00.000",
+    "eff_date": "2009-07-15T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "090730000351",
+    "date_filed": "2009-07-30T00:00:00.000",
+    "eff_date": "2009-07-30T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "101027002158",
+    "date_filed": "2010-10-27T00:00:00.000",
+    "eff_date": "2010-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "120221000562",
+    "date_filed": "2012-02-21T00:00:00.000",
+    "eff_date": "2012-02-21T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK KIM ENG SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "121109002278",
+    "date_filed": "2012-11-09T00:00:00.000",
+    "eff_date": "2012-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "141016006394",
+    "date_filed": "2014-10-16T00:00:00.000",
+    "eff_date": "2014-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "161003006271",
+    "date_filed": "2016-10-03T00:00:00.000",
+    "eff_date": "2016-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "181001007344",
+    "date_filed": "2018-10-01T00:00:00.000",
+    "eff_date": "2018-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "201001060261",
+    "date_filed": "2020-10-01T00:00:00.000",
+    "eff_date": "2020-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "230620002247",
+    "date_filed": "2023-06-16T00:00:00.000",
+    "eff_date": "2023-06-16T00:00:00.000",
+    "documenttype": "CERTIFICATE OF AMENDMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "230718000427",
+    "date_filed": "2023-07-18T00:00:00.000",
+    "eff_date": "2022-10-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "260915004843",
+    "date_filed": "2026-09-15T00:00:00.000",
+    "eff_date": "2026-09-15T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "law": "402 BCL",
+    "corp_name": "MAYBANK SECURITIES USA INC.",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   }
+  ],
+  "maybank/status": [
+   {
+    "corpid_num": "1484459",
+    "film_num": "901026000352",
+    "date_filed": "1990-10-26T00:00:00.000",
+    "mod_cert_code": "01DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "921110002839",
+    "date_filed": "1992-11-10T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "931025002851",
+    "date_filed": "1993-10-25T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "961007002162",
+    "date_filed": "1996-10-07T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "981002002197",
+    "date_filed": "1998-10-02T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "000927002670",
+    "date_filed": "2000-09-27T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "020919002575",
+    "date_filed": "2002-09-19T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "041104002118",
+    "date_filed": "2004-11-04T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "060125000980",
+    "date_filed": "2006-01-25T00:00:00.000",
+    "mod_cert_code": "27DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "060210000587",
+    "date_filed": "2006-02-10T00:00:00.000",
+    "mod_cert_code": "27DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "061004002653",
+    "date_filed": "2006-10-04T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "081007002343",
+    "date_filed": "2008-10-07T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "090715000044",
+    "date_filed": "2009-07-15T00:00:00.000",
+    "mod_cert_code": "27DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "090730000351",
+    "date_filed": "2009-07-30T00:00:00.000",
+    "mod_cert_code": "27DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "101027002158",
+    "date_filed": "2010-10-27T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "120221000562",
+    "date_filed": "2012-02-21T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "121109002278",
+    "date_filed": "2012-11-09T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "141016006394",
+    "date_filed": "2014-10-16T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "161003006271",
+    "date_filed": "2016-10-03T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "181001007344",
+    "date_filed": "2018-10-01T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "201001060261",
+    "date_filed": "2020-10-01T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "230620002247",
+    "date_filed": "2023-06-20T00:00:00.000",
+    "mod_cert_code": "02DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "230718000427",
+    "date_filed": "2023-07-18T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "260915004843",
+    "date_filed": "2026-09-15T00:00:00.000",
+    "mod_cert_code": "32DB A",
+    "status": "Active"
+   }
+  ],
+  "maybank/names": [
+   {
+    "corpid_num": "1484459",
+    "film_num": "901026000352",
+    "date_filed": "1990-10-26T00:00:00.000",
+    "name_type": "A",
+    "name_status": "I",
+    "corp_name": "KIM ENG SECURITIES U.S.A. INC."
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "120221000562",
+    "date_filed": "2012-02-21T00:00:00.000",
+    "name_type": "A",
+    "name_status": "I",
+    "corp_name": "MAYBANK KIM ENG SECURITIES USA INC."
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "230620002247",
+    "date_filed": "2023-06-20T00:00:00.000",
+    "name_type": "A",
+    "name_status": "A",
+    "corp_name": "MAYBANK SECURITIES USA INC."
+   }
+  ],
+  "maybank/addresses": [
+   {
+    "corpid_num": "1484459",
+    "film_num": "921110002839",
+    "date_filed": "1992-11-10T00:00:00.000",
+    "addr_type": "3",
+    "name": "CHAN KENG LOKE, PRESIDENT",
+    "addr1": "406 EAST 50TH STREET",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "921110002839",
+    "date_filed": "1992-11-10T00:00:00.000",
+    "addr_type": "4",
+    "name": "KIM ENG SECURITIES USA, INC.",
+    "addr1": "406 EAST 50TH STREET",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "931025002851",
+    "date_filed": "1993-10-25T00:00:00.000",
+    "addr_type": "3",
+    "name": "CHAN KENG LOKE",
+    "addr1": "406  EAST 50TH STREET",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "931025002851",
+    "date_filed": "1993-10-25T00:00:00.000",
+    "addr_type": "4",
+    "name": "THE CORPORATION",
+    "addr1": "406  EAST 50TH STREET",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "020919002575",
+    "date_filed": "2002-09-19T00:00:00.000",
+    "addr_type": "3",
+    "name": "MELANIE LEE",
+    "addr1": "406 E 50TH ST",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "061004002653",
+    "date_filed": "2006-10-04T00:00:00.000",
+    "addr_type": "3",
+    "name": "JESSICA KIM",
+    "addr1": "406 EAST 50TH ST",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "121109002278",
+    "date_filed": "2012-11-09T00:00:00.000",
+    "addr_type": "3",
+    "name": "JESSICA KIM",
+    "addr1": "777 THIRD AVE",
+    "addr2": "21ST FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10017",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "121109002278",
+    "date_filed": "2012-11-09T00:00:00.000",
+    "addr_type": "4",
+    "name": "THE CORPORATION",
+    "addr1": "777 THIRD AVE",
+    "addr2": "21ST FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10017",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "181001007344",
+    "date_filed": "2018-10-01T00:00:00.000",
+    "addr_type": "3",
+    "name": "JESSICA KIM",
+    "addr1": "400 PARK AVENUE",
+    "addr2": "11TH FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "181001007344",
+    "date_filed": "2018-10-01T00:00:00.000",
+    "addr_type": "4",
+    "name": "MAYBANK KIM ENG SECURITIES USA INC.",
+    "addr1": "400 PARK AVENUE",
+    "addr2": "11TH FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "230620002247",
+    "date_filed": "2023-06-20T00:00:00.000",
+    "addr_type": "3",
+    "name": "JESSICA KIM",
+    "addr1": "400 PARK AVENUE",
+    "addr2": "11TH FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "230718000427",
+    "date_filed": "2023-07-18T00:00:00.000",
+    "addr_type": "3",
+    "name": "JESSICA KIM",
+    "addr1": "400 PARK AVENUE",
+    "addr2": "11TH FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "230718000427",
+    "date_filed": "2023-07-18T00:00:00.000",
+    "addr_type": "3",
+    "name": "AHMAD HAMDI BIN ABDULLAH",
+    "addr1": "400 PARK AVENUE",
+    "addr2": "11TH FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "260915004843",
+    "date_filed": "2026-09-15T00:00:00.000",
+    "addr_type": "3",
+    "name": "JESSICA KIM",
+    "addr1": "400 PARK AVENUE",
+    "addr2": "11TH FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "260915004843",
+    "date_filed": "2026-09-15T00:00:00.000",
+    "addr_type": "3",
+    "name": "AHMAD HAMDI BIN ABDULLAH",
+    "addr1": "400 PARK AVENUE",
+    "addr2": "11TH FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   },
+   {
+    "corpid_num": "1484459",
+    "film_num": "260915004843",
+    "date_filed": "2026-09-15T00:00:00.000",
+    "addr_type": "3",
+    "name": "AHMAD HAMDI BIN ABDULLAH",
+    "addr1": "400 PARK AVENUE",
+    "addr2": "11TH FL",
+    "city": "NEW YORK",
+    "state": "NY",
+    "zip5": "10022",
+    "country": "USA"
+   }
+  ],
+  "alta/filings": [
+   {
+    "corpid_num": "4081330",
+    "film_num": "110414000105",
+    "date_filed": "2011-04-14T00:00:00.000",
+    "eff_date": "2011-04-14T00:00:00.000",
+    "documenttype": "ARTICLES OF ORGANIZATION",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "ALTA PARTNERS, LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "Nassau"
+   },
+   {
+    "corpid_num": "4081330",
+    "film_num": "110419000835",
+    "date_filed": "2011-04-19T00:00:00.000",
+    "eff_date": "2011-04-19T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "ALTA PARTNERS, LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "Nassau"
+   },
+   {
+    "corpid_num": "4081330",
+    "film_num": "220407002416",
+    "date_filed": "2022-04-07T00:00:00.000",
+    "eff_date": "2021-04-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "ALTA PARTNERS, LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "Nassau"
+   },
+   {
+    "corpid_num": "4081330",
+    "film_num": "240228002082",
+    "date_filed": "2024-02-28T00:00:00.000",
+    "eff_date": "2024-02-28T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "ALTA PARTNERS, LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "Nassau"
+   },
+   {
+    "corpid_num": "4081330",
+    "film_num": "250708000691",
+    "date_filed": "2025-07-08T00:00:00.000",
+    "eff_date": "2025-07-08T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "ALTA PARTNERS, LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "Nassau"
+   }
+  ],
+  "alta/status": [
+   {
+    "corpid_num": "4081330",
+    "film_num": "110414000105",
+    "date_filed": "2011-04-14T00:00:00.000",
+    "mod_cert_code": "01DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "4081330",
+    "film_num": "110419000835",
+    "date_filed": "2011-04-19T00:00:00.000",
+    "mod_cert_code": "27DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "4081330",
+    "film_num": "220407002416",
+    "date_filed": "2022-04-07T00:00:00.000",
+    "mod_cert_code": "32DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "4081330",
+    "film_num": "240228002082",
+    "date_filed": "2024-02-28T00:00:00.000",
+    "mod_cert_code": "32DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "4081330",
+    "film_num": "250708000691",
+    "date_filed": "2025-07-08T00:00:00.000",
+    "mod_cert_code": "32DA A",
+    "status": "Active"
+   }
+  ],
+  "alta/names": [
+   {
+    "corpid_num": "4081330",
+    "film_num": "110414000105",
+    "date_filed": "2011-04-14T00:00:00.000",
+    "name_type": "A",
+    "name_status": "A",
+    "corp_name": "ALTA PARTNERS, LLC"
+   }
+  ],
+  "alta/addresses": [],
+  "lentor/filings": [
+   {
+    "corpid_num": "5810913",
+    "film_num": "200812010538",
+    "date_filed": "2020-08-12T00:00:00.000",
+    "eff_date": "2020-08-12T00:00:00.000",
+    "documenttype": "ARTICLES OF ORGANIZATION",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "LENTOR CAPITAL LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "201007000119",
+    "date_filed": "2020-10-07T00:00:00.000",
+    "eff_date": "2020-10-07T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "LENTOR CAPITAL LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "Albany"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "201116000026",
+    "date_filed": "2020-11-16T00:00:00.000",
+    "eff_date": "2020-11-16T00:00:00.000",
+    "documenttype": "CERTIFICATE OF PUBLICATION",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "LENTOR CAPITAL LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "201214000331",
+    "date_filed": "2020-12-14T00:00:00.000",
+    "eff_date": "2020-12-14T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "LENTOR CAPITAL LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "220802002091",
+    "date_filed": "2022-08-02T00:00:00.000",
+    "eff_date": "2022-08-01T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "LENTOR CAPITAL LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "240806002436",
+    "date_filed": "2024-08-05T00:00:00.000",
+    "eff_date": "2024-08-05T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE BY ENTITY",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "LENTOR CAPITAL LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "240918002651",
+    "date_filed": "2024-09-17T00:00:00.000",
+    "eff_date": "2024-09-17T00:00:00.000",
+    "documenttype": "CERTIFICATE OF CHANGE BY ENTITY",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "LENTOR CAPITAL LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "251126003157",
+    "date_filed": "2025-11-26T00:00:00.000",
+    "eff_date": "2025-11-26T00:00:00.000",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "LENTOR CAPITAL LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "260724000905",
+    "date_filed": "2026-07-24T00:00:00.000",
+    "eff_date": "2026-07-24T00:00:00.000",
+    "documenttype": "CERTIFICATE OF DISSOLUTION-CANCELLATION",
+    "entitytype": "DOMESTIC LIMITED LIABILITY COMPANY",
+    "law": "203 LLC",
+    "corp_name": "LENTOR CAPITAL LLC",
+    "juris": "NY",
+    "cnty_prin_ofc": "New York"
+   }
+  ],
+  "lentor/status": [
+   {
+    "corpid_num": "5810913",
+    "film_num": "200812010538",
+    "date_filed": "2020-08-12T00:00:00.000",
+    "mod_cert_code": "01DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "201007000119",
+    "date_filed": "2020-10-07T00:00:00.000",
+    "mod_cert_code": "27DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "201116000026",
+    "date_filed": "2020-11-16T00:00:00.000",
+    "mod_cert_code": "49DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "201214000331",
+    "date_filed": "2020-12-14T00:00:00.000",
+    "mod_cert_code": "27DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "220802002091",
+    "date_filed": "2022-08-02T00:00:00.000",
+    "mod_cert_code": "32DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "240806002436",
+    "date_filed": "2024-08-06T00:00:00.000",
+    "mod_cert_code": "27DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "240918002651",
+    "date_filed": "2024-09-18T00:00:00.000",
+    "mod_cert_code": "27DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "251126003157",
+    "date_filed": "2025-11-26T00:00:00.000",
+    "mod_cert_code": "32DA A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5810913",
+    "film_num": "260724000905",
+    "date_filed": "2026-07-24T00:00:00.000",
+    "mod_cert_code": "10DA A",
+    "status": "Inactive"
+   }
+  ],
+  "lentor/names": [
+   {
+    "corpid_num": "5810913",
+    "film_num": "200812010538",
+    "date_filed": "2020-08-12T00:00:00.000",
+    "name_type": "A",
+    "name_status": "I",
+    "corp_name": "LENTOR CAPITAL LLC"
+   }
+  ],
+  "lentor/addresses": [],
+  "quantexa/filings": [
+   {
+    "corpid_num": "5215193",
+    "film_num": "171010000541",
+    "date_filed": "2017-10-10T00:00:00.000",
+    "eff_date": "2017-10-10T00:00:00.000",
+    "for_inc_date": "10/05/2017",
+    "documenttype": "APPLICATION OF AUTHORITY",
+    "entitytype": "FOREIGN BUSINESS CORPORATION",
+    "law": "1304 BCL",
+    "corp_name": "QUANTEXA INC.",
+    "juris": "DE",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "SR-109696",
+    "date_filed": "2019-05-14T00:00:00.000",
+    "eff_date": "2019-05-14T00:00:00.000",
+    "for_inc_date": "10/05/2017",
+    "documenttype": "CERTIFICATE OF CHANGE (BY AGENT)",
+    "entitytype": "FOREIGN BUSINESS CORPORATION",
+    "law": "1304 BCL",
+    "corp_name": "QUANTEXA INC.",
+    "juris": "DE",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "220118002053",
+    "date_filed": "2022-01-18T00:00:00.000",
+    "eff_date": "2022-01-18T00:00:00.000",
+    "for_inc_date": "10/05/2017",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "FOREIGN BUSINESS CORPORATION",
+    "law": "1304 BCL",
+    "corp_name": "QUANTEXA INC.",
+    "juris": "DE",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "231025003034",
+    "date_filed": "2023-10-25T00:00:00.000",
+    "eff_date": "2023-10-01T00:00:00.000",
+    "for_inc_date": "10/05/2017",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "FOREIGN BUSINESS CORPORATION",
+    "law": "1304 BCL",
+    "corp_name": "QUANTEXA INC.",
+    "juris": "DE",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "251013000071",
+    "date_filed": "2025-10-13T00:00:00.000",
+    "eff_date": "2025-10-13T00:00:00.000",
+    "for_inc_date": "10/05/2017",
+    "documenttype": "BIENNIAL STATEMENT",
+    "entitytype": "FOREIGN BUSINESS CORPORATION",
+    "law": "1304 BCL",
+    "corp_name": "QUANTEXA INC.",
+    "juris": "DE",
+    "cnty_prin_ofc": "New York"
+   }
+  ],
+  "quantexa/status": [
+   {
+    "corpid_num": "5215193",
+    "film_num": "171010000541",
+    "date_filed": "2017-10-10T00:00:00.000",
+    "mod_cert_code": "01FB",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "SR-109696",
+    "date_filed": "2019-05-14T00:00:00.000",
+    "mod_cert_code": "45FB A",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "220118002053",
+    "date_filed": "2022-01-18T00:00:00.000",
+    "mod_cert_code": "32FB",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "231025003034",
+    "date_filed": "2023-10-25T00:00:00.000",
+    "mod_cert_code": "32FB",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "251013000071",
+    "date_filed": "2025-10-13T00:00:00.000",
+    "mod_cert_code": "32FB",
+    "status": "Active"
+   }
+  ],
+  "quantexa/names": [
+   {
+    "corpid_num": "5215193",
+    "film_num": "171010000541",
+    "date_filed": "2017-10-10T00:00:00.000",
+    "name_type": "A",
+    "name_status": "A",
+    "corp_name": "QUANTEXA INC."
+   }
+  ],
+  "quantexa/addresses": [
+   {
+    "corpid_num": "5215193",
+    "film_num": "231025003034",
+    "date_filed": "2023-10-25T00:00:00.000",
+    "addr_type": "3",
+    "name": "VISHAL MARRIA",
+    "addr1": "243 BEDFORD HILL",
+    "city": "LONDON",
+    "country": "GBR"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "231025003034",
+    "date_filed": "2023-10-25T00:00:00.000",
+    "addr_type": "3",
+    "name": "VISHAL MARRIA",
+    "addr1": "HILL HOUSE, 1 LITTLE NEW STREET",
+    "addr2": "ATTENTION: QUANTEXA LIMITED",
+    "city": "LONDON",
+    "country": "GBR"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "251013000071",
+    "date_filed": "2025-10-13T00:00:00.000",
+    "addr_type": "3",
+    "name": "VISHAL MARRIA",
+    "addr1": "243 BEDFORD HILL",
+    "city": "LONDON",
+    "country": "GBR"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "251013000071",
+    "date_filed": "2025-10-13T00:00:00.000",
+    "addr_type": "3",
+    "name": "VISHAL MARRIA",
+    "addr1": "HILL HOUSE, 1 LITTLE NEW STREET",
+    "addr2": "ATTENTION: QUANTEXA LIMITED",
+    "city": "LONDON",
+    "country": "GBR"
+   },
+   {
+    "corpid_num": "5215193",
+    "film_num": "251013000071",
+    "date_filed": "2025-10-13T00:00:00.000",
+    "addr_type": "3",
+    "name": "VISHAL MARRIA",
+    "addr1": "C/O COMPANY SECRETARIAL DEPARTMENT, 280 BISHOPSGATE",
+    "addr2": "ATTENTION: QUANTEXA LIMITED",
+    "city": "LONDON",
+    "country": "GBR"
+   }
+  ],
+  "collision_8512/filings": [
+   {
+    "corpid_num": "8512",
+    "film_num": "F61-55",
+    "date_filed": "1900-09-01T00:00:00.000",
+    "eff_date": "1900-09-01T00:00:00.000",
+    "documenttype": "APPLICATION OF AUTHORITY",
+    "entitytype": "FOREIGN BUSINESS CORPORATION",
+    "corp_name": "THE MUNICIPAL WASTE PAPER RECEPTACLE COMPANY",
+    "juris": "NJ",
+    "cnty_prin_ofc": "New York"
+   },
+   {
+    "corpid_num": "8512",
+    "film_num": "Z004564-2",
+    "date_filed": "1979-06-04T00:00:00.000",
+    "eff_date": "1979-06-04T00:00:00.000",
+    "documenttype": "ASSUMED NAME CORP INITIAL FILING",
+    "entitytype": "DOMESTIC BUSINESS CORPORATION",
+    "corp_name": "TOY TOWN"
+   }
+  ],
+  "collision_8512/status": [
+   {
+    "corpid_num": "8512",
+    "film_num": "F61-55",
+    "date_filed": "1900-09-01T00:00:00.000",
+    "mod_cert_code": "01FB",
+    "status": "Active"
+   },
+   {
+    "corpid_num": "8512",
+    "film_num": "Z004564-2",
+    "date_filed": "1979-06-04T00:00:00.000",
+    "mod_cert_code": "93"
+   }
+  ],
+  "collision_8512/names": [
+   {
+    "corpid_num": "8512",
+    "film_num": "F61-55",
+    "date_filed": "1900-09-01T00:00:00.000",
+    "name_type": "A",
+    "name_status": "A",
+    "corp_name": "THE MUNICIPAL WASTE PAPER RECEPTACLE COMPANY"
+   }
+  ],
+  "collision_8512/addresses": [],
+  "missing/filings": [],
+  "missing/status": [],
+  "missing/names": [],
+  "missing/addresses": [],
+  "_soql_error_400": {
+   "status": 400,
+   "body": {
+    "message": "Query coordinator error: query.soql.no-such-column; No such column: nonexistent_column",
+    "errorCode": "query.soql.no-such-column",
+    "data": {
+     "column": "nonexistent_column"
+    }
+   }
+  }
+ }
+}

@@ -372,6 +372,15 @@ from .mappers.us_dc import (  # noqa: F401  (re-exported, Phase 246)
     _dc_epoch_to_date,
     map_dlcp_dc,
 )
+from .mappers.us_ny import (  # noqa: F401  (re-exported, Phase 263)
+    _NY_LIVE_STATUSES,
+    _NY_TERMINAL_STATUSES,
+    _ny_entity_details,
+    _ny_role_details,
+    map_ny_dos,
+    ny_ceo_local_id,
+    ny_ceo_statement_id,
+)
 
 
 def ch_person_statement_id(company_number: str, officer: dict[str, Any]) -> str:
@@ -444,6 +453,22 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # through GLEIF — one scheme, so the two sources corroborate each other
     # rather than each asserting an identifier the other appears to lack.
     "RA000601": ("US-DC", "District of Columbia Department of Licensing and Consumer Protection"),
+    # United States — New York Department of State, Division of Corporations
+    # (Phase 263). ``registeredAs`` is the bare DOS ID on 13,442 of the 16,819
+    # US-NY LEI records (2026-09-29) — and on 53 records in OTHER
+    # jurisdictions: foreign companies authorised in New York, such as
+    # Quantexa Inc (US-DE, 5215193). Until this entry the jurisdiction
+    # fallback below labelled those numbers ``US-DE``, i.e. as Delaware file
+    # numbers. The scheme follows the number, not the jurisdiction.
+    "RA000628": ("US-NY", "New York Department of State, Division of Corporations"),
+    # United States — New York State Department of Financial Services,
+    # Registry of insurance companies. Its ``registeredAs`` is an NAIC company
+    # code (ShelterPoint Life, 81434), not a DOS ID, so it must NOT take the
+    # jurisdiction fallback's ``US-NY``: that scheme is a register hop to the
+    # Department of State since Phase 263, and an NAIC code looked up there
+    # either misses or reaches an unrelated entity. It keeps its RA code, the
+    # rule for a register with no org-id code (Stephen, 24 Sept 2026).
+    "RA000747": ("RA000747", "New York State Department of Financial Services — Registry of insurance companies"),
     # Netherlands — Kamer van Koophandel (KvK)
     "RA000463": ("NL-KVK", "Netherlands Chamber of Commerce (KvK)"),
     # Sweden — Bolagsverket (Swedish Companies Registration Office). SE-ON

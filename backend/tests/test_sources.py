@@ -118,7 +118,9 @@ _IDENTIFIER_KEYED = {
     # searched — the register is reached from the file number GLEIF files
     # under RA000601 (see the adapter docstring); its one name query is an
     # internal recovery path behind a failed identifier, not a search.
-    "apr_serbia", "dlcp_dc",
+    # ny_dos: the same — reached from the DOS ID GLEIF files under RA000628;
+    # it has no name search at all.
+    "apr_serbia", "dlcp_dc", "ny_dos",
     "asp_moldova", "onrc_romania",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",

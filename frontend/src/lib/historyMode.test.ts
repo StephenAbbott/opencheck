@@ -21,6 +21,7 @@ import {
   buildTimelineRows,
   corroboratedCount,
   datedSpan,
+  HISTORY_SOURCES,
   historyDegradedNotice,
   historySentence,
   historySourceLabel,
@@ -165,6 +166,16 @@ describe("recordUrl", () => {
     );
   });
 
+  it("links a New York row to the open-data query for its filings", () => {
+    // Phase 263. DOS's public inquiry has no per-entity address, so the link
+    // is the data.ny.gov query the History rows were built from. Corning
+    // Incorporated's DOS ID, opened against data.ny.gov on 2026-09-29.
+    expect(recordUrl("ny_dos", _LEI, { ny_dos: "49779" })).toBe(
+      "https://data.ny.gov/resource/63wc-4exh.json?corpid_num=49779",
+    );
+    expect(recordUrl("ny_dos", _LEI, {})).toBeNull();
+  });
+
   it("returns null rather than a broken link when the number is absent", () => {
     for (const id of ["companies_house", "nz_companies", "ariregister", "cvr_denmark"]) {
       expect(recordUrl(id, _LEI, {})).toBeNull();
@@ -182,6 +193,13 @@ describe("historySourceLabel", () => {
     expect(historySourceLabel("companies_house")).toBe("Companies House");
     expect(historySourceLabel("nz_companies")).toBe("Companies Office (NZ)");
     expect(historySourceLabel("ariregister")).toBe("e-Äriregister (EE)");
+    expect(historySourceLabel("ny_dos")).toBe("Dept. of State (NY)");
+  });
+
+  it("labels every source that can emit history — none falls back to its slug", () => {
+    for (const id of HISTORY_SOURCES) {
+      expect(historySourceLabel(id)).not.toBe(id);
+    }
   });
 
   it("falls back to the slug rather than rendering nothing", () => {

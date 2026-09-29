@@ -692,7 +692,9 @@ is the token file for the six accents (allowlisted for hex like
   Estonian or Danish row can link back to its record — before it, only GLEIF
   and Companies House could. The tab states the scarcity: five registers keep
   a change log and the rest answer only about now, so a thin timeline is a
-  record-keeping fact, not a fact about the company.
+  record-keeping fact, not a fact about the company. **Phase 263 made it six**:
+  the New York Department of State (`timeline/ny_dos.py`), reconstructed from
+  the rows `ny_dos`'s ordinary fetch returns — see "New York DOS" below.
 - Entity-scoped sections (risk signals, structural context, cross-source
   identifiers, possibly-same) are guarded `mode === "quick"`. They were
   `mode !== "background"`, which silently included the new ESG tab.
@@ -714,10 +716,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Eighteen** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
+**Nineteen** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -934,6 +936,49 @@ cost debugging time.
   signal against a company that withheld nothing.
 - Some filings now name an executive holding the parent's stake (MTN Nigeria:
   Ralph Mupita 73.39%). Carried as filed.
+
+---
+
+## New York DOS (ny_dos) — the All Filings family (Phase 263)
+
+`sources/ny_dos.py`, `bods/mappers/us_ny.py`, `timeline/ny_dos.py`. Stephen's
+decisions (29 Sept 2026): the weekly **All Filings** family, not the monthly
+Active Corporations snapshot; the CEO as a person, **name and role only**;
+History in the same phase; a wrong DOS ID is a **note card**. Things that will
+be re-derived otherwise:
+
+- **Four SODA queries per entity**, together, on `corpid_num` (the DOS ID):
+  `63wc-4exh` All Filings, `3gg2-jgnp` status history, `ekwr-p59j` name
+  history, `2tms-hftb` addresses — `addr_type` 3 (CEO) and 4 (principal
+  executive office) only. Cached together on the DOS ID alone and only when
+  all four answered (Phases 228 and 262); the name gate runs over the cache.
+- **Assumed-name filings are not the entity's.** They sit in All Filings under
+  a separate sequential numbering that collides with DOS IDs (`293750` MILK AND
+  HONEY PRODUCTIONS, `293751` JUSTALK…; Corning's `49779` carries a 1983
+  "ASSUMED NAME CORP INITIAL FILING" for J & M COFFEE SHOP).
+  `entity_filings_of()` drops them; every reader goes through it or through
+  `summarise()`, the one reading of the rows.
+- **The Active Corporations snapshot drops dissolved companies**, which is why
+  it was rejected: LENTOR CAPITAL LLC (`5810913`) dissolved on 24 July 2026
+  with an ISSUED LEI and is in the status history, not the snapshot.
+- **Foreign entities.** A foreign entity DOS records as Inactive only lost its
+  authority in New York: not terminal, no `dissolutionDate`, and its
+  `foundingDate` is `for_inc_date` (home incorporation), never the New York
+  authority date. DOS's two-letter `juris` codes include non-ISO ones (`EN`,
+  `EW`, `WL`, `QU`); `jurisdiction_of()` returns None for them and the code
+  goes to `entityType.details` in words.
+- **The CEO** is `seniorManagingOfficial`, no `beneficialOwnershipOrControl`
+  (no BO regime, so no `bo_regimes.py` entry). A trailing comma-clause made
+  only of title words is removed ("CHAN KENG LOKE, PRESIDENT"); placeholders
+  ("VACANT VACANT", "THE CORPORATION") are no one. On History, CEO changes
+  are the Tier-4 board stream dated `SNAPSHOT_WINDOW` between two statements
+  (DOS publishes no appointment date) — the tab words it "approximate".
+  `ny_ceo_statement_id` is shared by the mapper and the emitter.
+- **The bucket is per event loop** (`_bucket()`): the four reads contend for
+  it, and an `asyncio.Lock` that has been waited on binds to its loop.
+- `SOCRATA_APP_TOKEN` (optional) goes in the `X-App-Token` header, never the
+  URL. Licence `OPEN-NY-Terms` — commercial use yes, attribution not required
+  (given anyway).
 
 ---
 
@@ -1245,6 +1290,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Moldova | asp_moldova | `RA000451` — State Register of Legal Entities (ASP) · `RA000950` — National Commission for Financial Markets · `RA000951` — National Bank of Moldova | 2026-09-15 — all 55 legal-address MD records: 50 RA000451, 2 each RA000950/RA000951, 1 RA999999 (the National Bank, no number); **all three real codes carry the 13-digit IDNO** in `registeredAs`, check digit weights 7-3-1. One record (`16479`, Mogo Loans SRL) is not an IDNO. `filter[entity.jurisdiction]=MD` also matches `US-MD` (Maryland) — filter on `entity.legalAddress.country`. Scheme `MD-IDNO`. **Not in `RA_BY_COUNTRY`**, for the same reason as Hong Kong |
 | Serbia | apr_serbia | `RA000517` — Business Registers Agency (APR) | 2026-09-17 — all 304 GLEIF records with jurisdiction RS: 295 RA000517, 6 RA999999, 2 RA000684 (Securities Commission fund numbers), 1 RA000518 (APR's entrepreneurs register); **every RA000517 record files the 8-digit matični broj**, no zero-padding needed. 141 of 146 ISSUED records resolve against the 31 Aug 2026 cut (misses: 2 sole traders, the Chamber of Commerce, 2 RA999999 state bodies). Scheme `RS-APR` (org-id.guide). In `RA_BY_COUNTRY` — one authority |
 | United States — District of Columbia | dlcp_dc | `RA000601` — DC Corporations Division (DLCP) | 2026-09-18 — 502 of the 726 GLEIF records with jurisdiction `US-DC` use it (the rest: RA999999 ×209, RA888888 ×4, RA000602 ×4, others ×7), **every one with the Corporations Division file number in `registeredAs`**. The file number is an opaque string in at least six live shapes (`000347`, `L00005029230`, `L21249`, `N00008414776`, `P00454`, `US-DC-LL012601299`) — never normalise it. 487 of 500 resolve against the register; by LEI status `ISSUED` 144/145, `LAPSED` 322/333, `RETIRED` 22/23, the misses being lapsed LEIs on legacy identifiers. **A name check is mandatory**: GLEIF files `L21249` for American Foreign Policy Council and DLCP's `L21249` is CONNIE-19 STREET LLC. Scheme `US-DC` — the ISO 3166-2 subdivision code the BODS mapper already stamps on a DC entity reached through GLEIF, so the two corroborate rather than each asserting an identifier the other lacks. **Not in `RA_BY_COUNTRY`**: the US has fifty-odd company registers and `US` cannot mean DC's; for the same reason `US-DC` is in `register_hops._NO_COUNTRY_ALIAS`, so no `REG-US` alias is built from it |
+| United States — New York | ny_dos | `RA000628` — Corporation and Business Entity Database (Department of State, Division of Corporations) · `RA000747` — Registry of insurance companies (Department of Financial Services) | 2026-09-29 — all 16,819 GLEIF records with jurisdiction `US-NY`: 13,442 RA000628, 3,050 RA999999, 55 RA000747, 33 RA888888; ISSUED 3,921 of 4,848 under RA000628. **RA000628 also appears on 53 records in other jurisdictions** — foreign companies authorised in New York (Quantexa Inc, `US-DE`, `5215193`) — so the deriver keys on the RA code, never the jurisdiction. `registeredAs` is the bare DOS ID, 1–9 digits, unpadded on both sides. Resolution over the ISSUED records: 3,878 agree on the current name, 8 more only on a former name, 23 resolve only in the All Filings family (dissolved, or newer than the snapshot), **8 are wrong numbers** (Salt City FCU files `8512`, THE MUNICIPAL WASTE PAPER RECEPTACLE COMPANY) → note card, 4 are in no DOS dataset. RA000747 files an **NAIC code**, not a DOS ID: it maps to its own RA code in `_GLEIF_RA_TO_ORG_ID` so the US-state jurisdiction fallback cannot label it `US-NY` and hop it to DOS. Scheme `US-NY` (the DC rule); in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
 
 ### ✅ FIXED 2026-08-28: Scotland/Northern Ireland, and two more RA maps
 
