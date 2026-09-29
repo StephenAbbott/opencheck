@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 260** — The watchlist reads a backlog of OpenSanctions deltas oldest first and re-checks every watched company when a delta is lost, keeps its database work off the event loop, and both the watchlist and saved-report files gain schema versions and encrypted daily backups to a private repository.
+**Latest: Phase 261** — The Subsidiaries tab's GLEIF list now shows the spread by country, a chip on each subsidiary whose LEI has lapsed, the direct parent of every indirect subsidiary, and when each consolidation began and ended.
 
 → [Full development history](docs/status.md)
 

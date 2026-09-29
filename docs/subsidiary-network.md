@@ -132,3 +132,28 @@ the API page. Since Phase 208 MEIP is also a source in its own right — the
 OECD's BODS v0.4 statements sit on the QuickCheck card and in the graph, one
 edge per group membership from the subject to its group head — while a head's
 members stay on this tab's list rather than becoming graph nodes.
+
+## What each GLEIF row says (Phase 261)
+
+Phase 255 read GLEIF's relationship records and the direct parents of the
+ultimate-only children; Phase 261 puts them on the rows. Each `children[]`
+entry of `GET /subsidiaries` carries:
+
+| Field | What it is |
+|---|---|
+| `lei_registration` | the child LEI's own registration status — `{status, label, flag, since, next_renewal_date}`. `status` beside it is the *company's* (ACTIVE); a LAPSED LEI belongs to a company that may be perfectly alive. `null` when GLEIF's record has no registration block — never read as ISSUED |
+| `direct_parent_lei`, `direct_parent_in_network` | for an ultimate-only child, the LEI GLEIF names as its direct consolidating parent, and whether that LEI is in this network. Often outside it: a lapsed LEI of a merged holding company (Unilever N.V., BG Group) |
+| `relationship_start`, `relationship_end` | the relationship record's `RELATIONSHIP_PERIOD` — the direct record's for a "both" child (the edge the graph draws), else the ultimate one's |
+
+and the response carries **`enriched`**: `false` when GLEIF would not give the
+relationship records or the direct parents, so an undated row, or one with no
+"via" line, is not evidence that there is none. The tab says so in an amber
+note rather than letting a missing date look like no date.
+
+The tab shows the spread **by country** (`countries`: a `US-DE` or `CA-AB`
+subsidiary counts under `US` / `CA`), a context-tone chip on every row whose
+LEI is not ISSUED, "Consolidated since …" from the period, and for an
+ultimate-only child either "via <parent>" (linking to that row) or the LEI
+GLEIF gives with "the path through it is not shown". Consolidation vocabulary
+only — never "owns", "holds" or a percentage. The direct-parent line belongs
+to the GLEIF list alone; the other lists stay as their sources publish them.
