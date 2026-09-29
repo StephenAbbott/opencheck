@@ -25,6 +25,16 @@ from typing import Any
 
 from . import provenance
 
+#: Phase 262: how long a remembered "the register has no such record" is
+#: trusted before the register is asked again. Only a definitive answer — an
+#: HTTP 404, or a 402/403 meaning "not on this API tier" — may be remembered
+#: as absent at all (see ``Cache.put_absent``); a 5xx, a 429 or a network
+#: error must never be cached, because it says nothing about the record.
+#: Until Phase 262 a cached absence never expired, so one outage could make a
+#: company read as "found, nothing filed" until the next deploy wiped the
+#: cache directory.
+ABSENT_TTL_DAYS: float = 7.0
+
 
 def _find_project_root(start_file: Path) -> Path:
     """Walk up from ``start_file`` to the project's data root.
@@ -168,6 +178,17 @@ class Cache:
             )
         return path
 
+    def put_absent(self, key: str) -> Path:
+        """Remember that the upstream definitively has no record under ``key``.
+
+        Call this ONLY for a definitive answer (HTTP 404, or 402/403 for an
+        endpoint the account's tier does not include) — never for a 5xx, a 429
+        or a network error, which say nothing about whether the record exists.
+        The entry is a cached ``None`` and ``get_payload`` stops honouring it
+        after ``ABSENT_TTL_DAYS``, so a record registered since is picked up.
+        """
+        return self.put(key, None)
+
     # ``put`` wraps the payload; ``get`` unwraps it transparently.
     def get_payload(self, key: str, max_age_days: float | None = None) -> tuple[Any, str] | None:
         """Return ``(payload, tier)`` or ``None`` on miss.
@@ -175,16 +196,29 @@ class Cache:
         ``max_age_days`` — when set, live-tier entries older than this many
         days are treated as a cache miss so callers re-fetch fresh data.
         Demo fixtures are never expired.
+
+        A live-tier cached absence (payload ``None``, written by
+        ``put_absent``) always expires after ``ABSENT_TTL_DAYS``, whatever
+        ``max_age_days`` says — see the constant for why.
         """
         hit = self.get(key)
         if hit is None:
             return None
         # Both tiers may or may not have the ``_cached_at`` wrapper.
         if isinstance(hit.payload, dict) and "payload" in hit.payload and "_cached_at" in hit.payload:
-            if max_age_days is not None and hit.tier == "live":
-                cached_at: float = hit.payload.get("_cached_at", 0.0)
-                age_days = (time.time() - cached_at) / 86_400
-                if age_days > max_age_days:
-                    return None
-            return hit.payload["payload"], hit.tier
+            inner = hit.payload["payload"]
+            if hit.tier == "live":
+                limit = max_age_days
+                if inner is None:
+                    limit = (
+                        ABSENT_TTL_DAYS
+                        if limit is None
+                        else min(limit, ABSENT_TTL_DAYS)
+                    )
+                if limit is not None:
+                    cached_at: float = hit.payload.get("_cached_at", 0.0)
+                    age_days = (time.time() - cached_at) / 86_400
+                    if age_days > limit:
+                        return None
+            return inner, hit.tier
         return hit.payload, hit.tier

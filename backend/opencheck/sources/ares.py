@@ -46,6 +46,7 @@ from typing import Any
 
 import httpx
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -64,6 +65,30 @@ _AGGREGATE_URL = f"{_BASE}/ekonomicke-subjekty"
 _VR_URL = f"{_BASE}/ekonomicke-subjekty-vr"
 
 _CACHE_NS = "ares"
+
+# Phase 262: the assembled-bundle cache moved to a new key. Bundles under the
+# old ``ares/bundle/`` key never expired and could have been built while the
+# VR endpoint was failing — a company with no shareholders or directors
+# because the register was down, remembered for good. Nothing is migrated:
+# the old entries are simply never read again, and the next lookup rebuilds
+# from the (still valid) aggregate cache plus a fresh VR answer.
+_BUNDLE_NS = f"{_CACHE_NS}/bundle-v2"
+
+# Degradation details — fixed sentences, never an entity name (the
+# ``DegradedSource`` privacy contract).
+_AGG_FAILED_DETAIL = (
+    "the ARES register did not answer, so the Czech register record was not consulted"
+)
+_VR_FAILED_DETAIL = (
+    "the ARES commercial-register (VR) endpoint did not answer, so shareholders "
+    "and directors were not consulted"
+)
+
+
+def _failure_label(exc: httpx.HTTPError) -> str:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"HTTP {exc.response.status_code}"
+    return type(exc).__name__
 
 # Czech legal-form codes → English description.
 _LEGAL_FORMS: dict[str, str] = {
@@ -314,11 +339,13 @@ class AresAdapter(SourceAdapter):
 
     async def fetch(self, hit_id: str, *, legal_name: str | None = None) -> dict[str, Any]:
         ico = normalise_ico(hit_id)
-        bundle_key = f"{_CACHE_NS}/bundle/{ico}"
+        bundle_key = f"{_BUNDLE_NS}/{ico}"
         settings = get_settings()
         cache = Cache()
 
         # --- 1. Bundle cache ---
+        # Only bundles built from a VR answer carrying data are stored here
+        # (see below), so a hit never hides a VR outage or an expired absence.
         cached_bundle = cache.get_payload(bundle_key)
         if cached_bundle is not None:
             return cached_bundle[0]
@@ -338,35 +365,57 @@ class AresAdapter(SourceAdapter):
                     resp.raise_for_status()
                     aggregate = resp.json()
                     cache.put(agg_key, aggregate)
-                except httpx.HTTPStatusError as exc:
-                    _log.warning("ares: aggregate 404/error for %s: %s", ico, exc)
-                    return self._stub(ico, legal_name)
                 except httpx.HTTPError as exc:
-                    _log.warning("ares: aggregate fetch error for %s: %s", ico, exc)
+                    label = _failure_label(exc)
+                    _log.warning("ares: aggregate fetch failed for %s: %s", ico, label)
+                    if label != "HTTP 404":
+                        # Phase 262: a register that did not answer is not a
+                        # register with nothing on file. Nothing is cached.
+                        degradation.record(
+                            self.id,
+                            _AGG_FAILED_DETAIL,
+                            reason=degradation.reason_for_failure(label),
+                        )
                     return self._stub(ico, legal_name)
 
         # --- 3. Fetch VR endpoint (404 is normal for non-VR entities) ---
         vr_key = f"{_CACHE_NS}/vr/{ico}"
+        vr_data: dict | None
         cached_vr = cache.get_payload(vr_key)
         if cached_vr is not None:
-            vr_data: dict | None = cached_vr[0]
+            vr_data = cached_vr[0]
         else:
+            vr_data = None
             async with build_client() as client:
                 try:
                     vr_resp = await client.get(f"{_VR_URL}/{ico}", timeout=15)
                     vr_resp.raise_for_status()
                     vr_data = vr_resp.json()
                     cache.put(vr_key, vr_data)
-                except httpx.HTTPStatusError:
-                    # 404 = entity not in VR; store None to avoid retrying
-                    vr_data = None
-                    cache.put(vr_key, None)
                 except httpx.HTTPError as exc:
-                    _log.warning("ares: VR fetch error for %s: %s", ico, exc)
-                    vr_data = None
+                    label = _failure_label(exc)
+                    if label == "HTTP 404":
+                        # Not in the commercial register — a definitive answer,
+                        # remembered for ABSENT_TTL_DAYS only.
+                        cache.put_absent(vr_key)
+                    else:
+                        # Phase 262: a 5xx, a 429 or a network error says
+                        # nothing about the record. Until now a 500/503/429
+                        # was cached as "not in VR" with no expiry, and the
+                        # bundle built from it was cached too.
+                        _log.warning("ares: VR fetch failed for %s: %s", ico, label)
+                        degradation.record(
+                            self.id,
+                            _VR_FAILED_DETAIL,
+                            reason=degradation.reason_for_failure(label),
+                        )
 
         bundle = self._build_bundle(ico, aggregate, vr_data)
-        cache.put(bundle_key, bundle)
+        if vr_data:
+            # Without VR data the bundle is rebuilt on each lookup from the two
+            # cached parts (no network), so the VR absence's TTL — or the next
+            # attempt after a failure — decides, not a bundle that never expires.
+            cache.put(bundle_key, bundle)
         return bundle
 
     # ------------------------------------------------------------------

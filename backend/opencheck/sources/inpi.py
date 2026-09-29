@@ -46,10 +46,14 @@ of beneficial-ownership data from the RNE.  This adapter therefore:
 
 1. Returns ``is_stub=True`` when ``diffusionINSEE == "N"`` (non-diffusable
    company — no data may be redistributed).
-2. Emits entity statements ONLY; person statements are never produced,
-   regardless of what ``composition.pouvoirs`` carries.  Any entry in that
-   array that has ``beneficiaireEffectif: true`` is a BO record and MUST
-   NOT be republished without legitimate-interest authorisation.
+2. Never emits a beneficial owner as a BODS statement: any entry in
+   ``composition.pouvoirs`` that has ``beneficiaireEffectif: true`` is a BO
+   record and MUST NOT be republished without legitimate-interest
+   authorisation.
+3. (Phase 262) Strips those BO rows from the RAW payload too, before it is
+   cached and before it reaches the bundle — ``/deepen`` republishes an INPI
+   bundle's raw payload in the Data drawer, so dropping them only in the
+   mapper was not enough. See ``strip_beneficial_owners``.
 
 Identifier scheme: ``FR-SIREN`` (follows GB-COH / CH-UID / NL-KVK pattern)
 API documentation: https://registre-national-entreprises.inpi.fr/
@@ -128,6 +132,55 @@ def siren_spellings(siren: str) -> tuple[str, ...]:
     return (plain, f"{plain[:3]} {plain[3:6]} {plain[6:]}")
 
 
+#: Keys whose whole value is beneficial-ownership data in the RNE schema. The
+#: flag-per-row form (``beneficiaireEffectif`` on a ``pouvoirs`` entry) is the
+#: one documented; a plural block is dropped too in case the account's scope
+#: ever returns one.
+_BO_BLOCK_KEYS = frozenset({"beneficiairesEffectifs", "beneficiaireEffectifs"})
+_BO_TRUE_STRINGS = frozenset({"true", "oui", "o", "1"})
+
+
+def _is_bo_flag(value: Any) -> bool:
+    if value is True:
+        return True
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return value == 1
+    if isinstance(value, str):
+        return value.strip().lower() in _BO_TRUE_STRINGS
+    return False
+
+
+def strip_beneficial_owners(data: Any) -> Any:
+    """Return a copy of an RNE payload with every beneficial-owner row removed.
+
+    French law (Loi Sapin II / décret 2017-1094) forbids OpenCheck from
+    republishing RNE beneficial-ownership data. Until Phase 262 the adapter
+    returned the RNE ``company`` payload unchanged and BO rows were dropped
+    only in the BODS mapper — but ``/deepen`` hands the raw payload to the
+    Data drawer, and the payload was cached as received. Whether OpenCheck's
+    RNE account is ever sent BO rows is unconfirmed; they are stripped
+    regardless.
+
+    Walks the whole payload, not just ``composition.pouvoirs``: the RNE also
+    carries historical formalities, and a BO row there is just as restricted.
+    A list item that is a mapping with a truthy ``beneficiaireEffectif`` is
+    dropped; a plural BO block key is dropped with its value. Idempotent.
+    """
+    if isinstance(data, dict):
+        return {
+            key: strip_beneficial_owners(value)
+            for key, value in data.items()
+            if key not in _BO_BLOCK_KEYS
+        }
+    if isinstance(data, list):
+        return [
+            strip_beneficial_owners(item)
+            for item in data
+            if not (isinstance(item, dict) and _is_bo_flag(item.get("beneficiaireEffectif")))
+        ]
+    return data
+
+
 class InpiAdapter(SourceAdapter):
     """Source adapter for INPI — French national company register (RNE)."""
 
@@ -201,6 +254,8 @@ class InpiAdapter(SourceAdapter):
 
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
+            # _make_bundle strips BO rows, so an entry cached before Phase 262
+            # with BO rows in it is still never served raw.
             data = cached[0]
             return self._make_bundle(siren, data)
 
@@ -224,6 +279,8 @@ class InpiAdapter(SourceAdapter):
                 "not_found": True,
                 "coverage_note": COVERAGE_404,
             }
+        # Strip BEFORE caching: a restricted row must not sit on disk either.
+        data = strip_beneficial_owners(data)
         self._cache.put(cache_key, data)
         return self._make_bundle(siren, data)
 
@@ -244,7 +301,7 @@ class InpiAdapter(SourceAdapter):
         return {
             "source_id": self.id,
             "siren": siren,
-            "company": data,
+            "company": strip_beneficial_owners(data),
             "is_stub": False,
         }
 

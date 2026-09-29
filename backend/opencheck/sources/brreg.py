@@ -250,7 +250,7 @@ class BrregAdapter(SourceAdapter):
                 headers={"Accept": "application/json"},
             )
             if response.status_code == 404:
-                self._cache.put(cache_key, None)
+                self._cache.put_absent(cache_key)
                 return None
             if not response.is_success:
                 import logging

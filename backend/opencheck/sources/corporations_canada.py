@@ -304,7 +304,7 @@ class CorporationsCanadaAdapter(SourceAdapter):
                 headers=self._auth_headers(),
             )
             if response.status_code == 404:
-                self._cache.put(cache_key, None)
+                self._cache.put_absent(cache_key)
                 return None
             if not response.is_success:
                 _LOG.warning(

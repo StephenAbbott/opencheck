@@ -29,9 +29,13 @@ carries a similar regime.
 from __future__ import annotations
 
 import hashlib
+import logging
 from typing import Any
 from urllib.parse import quote
 
+import httpx
+
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -40,6 +44,14 @@ from .lineage import NATIONAL_REGISTERS
 from .oc_relationships import get_bulk_lookup_for_settings
 from .schemas import validate_raw
 from .schemas.opencorporates import OCBundle
+
+_log = logging.getLogger(__name__)
+
+# Degradation detail — a fixed sentence, never an entity name.
+_NETWORK_FAILED_DETAIL = (
+    "the OpenCorporates relationships (network) endpoint did not answer, so "
+    "corporate relationships from it were not consulted"
+)
 
 _API_BASE = "https://api.opencorporates.com/v0.4"
 _CACHE_NS = "opencorporates"
@@ -218,7 +230,13 @@ class OpenCorporatesAdapter(SourceAdapter):
     async def _get_optional(
         self, path: str, *, cache_key: str
     ) -> dict[str, Any] | None:
-        """Like ``_get`` but returns ``None`` on 404."""
+        """Like ``_get`` but returns ``None`` when there is no record.
+
+        A 404 (or a 402/403 for a tier the key lacks) is cached as absent with
+        the cache's absence TTL. Any other failure returns ``None`` too — the
+        record is optional — but is recorded as a degradation and NOT cached,
+        so the next lookup asks again.
+        """
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
             return cached[0]
@@ -237,12 +255,28 @@ class OpenCorporatesAdapter(SourceAdapter):
                 if response.status_code in (402, 403, 404):
                     # 402/403: endpoint requires a premium API tier.
                     # 404:     no data for this company.
-                    self._cache.put(cache_key, None)
+                    # Both are definitive answers — remembered for
+                    # ABSENT_TTL_DAYS, not for ever.
+                    self._cache.put_absent(cache_key)
                     return None
                 response.raise_for_status()
                 payload = response.json()
-        except Exception:  # noqa: BLE001
-            self._cache.put(cache_key, None)
+        except Exception as exc:  # noqa: BLE001 — optional data never fails the lookup
+            # Phase 262: a 5xx, a 429, a network error or an unreadable body
+            # says nothing about whether the record exists. Until now every
+            # exception was cached as None with no expiry, so one outage read
+            # as "no relationships" until the cache directory was wiped.
+            label = (
+                f"HTTP {exc.response.status_code}"
+                if isinstance(exc, httpx.HTTPStatusError)
+                else type(exc).__name__
+            )
+            _log.warning("opencorporates: optional fetch failed (%s): %s", path, label)
+            degradation.record(
+                self.id,
+                _NETWORK_FAILED_DETAIL,
+                reason=degradation.reason_for_failure(label),
+            )
             return None
 
         self._cache.put(cache_key, payload)

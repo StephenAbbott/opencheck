@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 261** — The Subsidiaries tab's GLEIF list now shows the spread by country, a chip on each subsidiary whose LEI has lapsed, the direct parent of every indirect subsidiary, and when each consolidation began and ended.
+**Latest: Phase 262** — A register outage is no longer cached as "no record" (only a 404 is remembered, for a week), and INPI's raw payload is stripped of beneficial-owner rows before it is cached or shown.
 
 → [Full development history](docs/status.md)
 
