@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 262** — A register outage is no longer cached as "no record" (only a 404 is remembered, for a week), and INPI's raw payload is stripped of beneficial-owner rows before it is cached or shown.
+**Latest: Phase 263** — The New York Department of State is the 50th source and the sixth register on the History tab, read from its weekly filings, status and name histories by the DOS ID GLEIF files.
 
 → [Full development history](docs/status.md)
 
