@@ -92,6 +92,11 @@ class SubsidiariesResponse(BaseModel):
     #: Phase 261: False when GLEIF would not give the relationship records or
     #: the direct parents — the dates and paths on the rows could not be read.
     enriched: bool = True
+    #: Which half of the enrichment answered: the relationship records (the
+    #: rows' dates) and the direct-parent lookups (the "via" paths).
+    #: ``enriched`` is true only when both are.
+    relationships_read: bool = True
+    parents_read: bool = True
     children: list[SubChild] = []
     bods: list[dict] | None = None
 

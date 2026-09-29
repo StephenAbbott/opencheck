@@ -320,6 +320,21 @@ describe("enrichmentNote (Phase 261)", () => {
     expect(note).toContain("could not be read");
     expect(note).toContain("not a finding");
   });
+  it("names only the paths when the relationship records answered (Shell, 29 Sept 2026)", () => {
+    const note = enrichmentNote({ enriched: false, relationships_read: true, parents_read: false, children: [kid] }) ?? "";
+    expect(note).toContain("some paths through intermediate companies could not be read");
+    expect(note).not.toMatch(/date/i);
+  });
+  it("names only the dates when the direct parents answered", () => {
+    const note = enrichmentNote({ enriched: false, relationships_read: false, parents_read: true, children: [kid] }) ?? "";
+    expect(note).toContain("dates");
+    expect(note).not.toMatch(/via|path/i);
+  });
+  it("names both when both were refused, or the backend predates the split", () => {
+    const both = enrichmentNote({ enriched: false, relationships_read: false, parents_read: false, children: [kid] });
+    expect(both).toContain("the dates and the paths");
+    expect(enrichmentNote({ enriched: false, children: [kid] })).toBe(both);
+  });
   it("is silent when enriched, when the backend predates the flag, and for an empty network", () => {
     expect(enrichmentNote({ enriched: true, children: [kid] })).toBeNull();
     expect(enrichmentNote({ children: [kid] })).toBeNull();

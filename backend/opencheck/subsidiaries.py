@@ -96,6 +96,12 @@ _SHAPE = 2
 #: all answered. A complete but unenriched network is cached (the children
 #: are the network), but only trusted for :data:`_UNENRICHED_MAX_AGE_DAYS`.
 _ENRICHED_KEY = "enriched"
+#: Which half of the enrichment answered: the relationship records (the
+#: dates) and the direct-parent lookups (the paths). ``enriched`` is both;
+#: the tab names only the half that was refused. Absent from payloads cached
+#: before the split, where ``enriched`` stands in for both.
+_RELATIONSHIPS_READ_KEY = "relationships_read"
+_PARENTS_READ_KEY = "parents_read"
 _UNENRICHED_MAX_AGE_DAYS = 1 / 24
 
 #: Phase 255: at most this many live ``/direct-parent-relationship`` calls per
@@ -489,6 +495,8 @@ async def _build(lei: str) -> dict[str, Any]:
         _COMPLETE_KEY: complete,
         _SHAPE_KEY: _SHAPE,
         _ENRICHED_KEY: enriched,
+        _RELATIONSHIPS_READ_KEY: direct_rels_ok and ultimate_rels_ok,
+        _PARENTS_READ_KEY: parents_ok,
     }
     if complete:
         _cache.put(cache_key, result)
@@ -552,6 +560,10 @@ def _mirror_network(lei: str) -> dict[str, Any] | None:
         # Phase 261: a mirror built without relationship rows holds no dates,
         # and the tab says so rather than showing undated rows as if dated.
         _ENRICHED_KEY: bool(store.has_relationships),
+        # The mirror reads the direct parents locally, so only the dates can
+        # be missing — when it was built without relationship rows.
+        _RELATIONSHIPS_READ_KEY: bool(store.has_relationships),
+        _PARENTS_READ_KEY: True,
     }
 
 
@@ -634,7 +646,8 @@ _EMPTY = {
     "available": False, "direct_total": 0, "ultimate_total": 0,
     "distinct_fetched": 0, "indirect_only": 0, "node_estimate": 0,
     "render_mode": "graph", "truncated": False, "jurisdictions": [], "countries": [],
-    "enriched": True, "children": [], "bods": None,
+    "enriched": True, "relationships_read": True, "parents_read": True,
+    "children": [], "bods": None,
     # Offline/demo mode is not a GLEIF refusal — the network was never asked
     # for, and `reason` says so. Declaring these available keeps the degraded
     # notice for the case it describes.
@@ -671,6 +684,7 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
 
     network = {_child_lei(m) for m in children}
     rows = [_row(m, network, lei) for m in children]
+    enriched = bool(data.get(_ENRICHED_KEY, True))
     jmap: dict[str, int] = {}
     for r in rows:
         jmap[r["jurisdiction"] or "—"] = jmap.get(r["jurisdiction"] or "—", 0) + 1
@@ -721,7 +735,12 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
         # the direct parents, so a row without a date or a "via" line is not
         # evidence that there is none. Payloads from before Phase 255 carry
         # no key; ``_build`` refuses to serve those.
-        "enriched": bool(data.get(_ENRICHED_KEY, True)),
+        "enriched": enriched,
+        # Which half was refused, so the tab does not say the dates could not
+        # be read when only the direct-parent lookups were (Shell, 29 Sept
+        # 2026: all 154 rows dated, 17 paths missing, and the note said both).
+        "relationships_read": bool(data.get(_RELATIONSHIPS_READ_KEY, enriched)),
+        "parents_read": bool(data.get(_PARENTS_READ_KEY, enriched)),
         "children": rows,
         "bods": None,
     }

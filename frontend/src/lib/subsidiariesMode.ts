@@ -353,11 +353,31 @@ export function directParentLine(
 
 /** Said once, above the rows, when GLEIF would not give the relationship
  *  records or the direct parents (`enriched: false`) — in the voice of
- *  `degraded_detail`. Without it an undated row and a row GLEIF gave no date
- *  look the same. Null when the enrichment answered, or the backend predates
- *  the flag. */
-export function enrichmentNote(data: Pick<SubsidiariesResponse, "enriched" | "children">): string | null {
+ *  `degraded_detail`, and naming only the half that was refused: on Shell
+ *  (29 Sept 2026) every row was dated and only 17 paths were missing, and a
+ *  note saying the dates could not be read was untrue. Null when the
+ *  enrichment answered, or the backend predates the flag. */
+export function enrichmentNote(
+  data: Pick<SubsidiariesResponse, "enriched" | "relationships_read" | "parents_read" | "children">,
+): string | null {
   if (data.enriched !== false || data.children.length === 0) return null;
+  // A backend from before the split: `enriched` is all there is.
+  const datesRead = data.relationships_read ?? false;
+  const pathsRead = data.parents_read ?? false;
+  if (datesRead && !pathsRead) {
+    return (
+      "GLEIF did not give the direct parent of every indirect subsidiary in this " +
+      "network, so some paths through intermediate companies could not be read. " +
+      "A row with no “via” line is not a finding that it has no intermediate parent."
+    );
+  }
+  if (pathsRead && !datesRead) {
+    return (
+      "GLEIF did not give the relationship records for this network, so the dates " +
+      "each consolidation began and ended could not be read. A row with no date is " +
+      "not a finding that there is none."
+    );
+  }
   return (
     "GLEIF did not give the relationship records or the direct parents for this " +
     "network, so the dates and the paths through intermediate companies could not " +

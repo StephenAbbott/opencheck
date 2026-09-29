@@ -186,4 +186,51 @@ def test_a_mirror_without_relationship_rows_is_not_enriched(monkeypatch):
         monkeypatch.setattr(entity_pages, "get_store", lambda h=has_rels: _store(h))
         out = subs._mirror_network(SHELL)
         assert out is not None and out["enriched"] is has_rels
+        assert out["relationships_read"] is has_rels and out["parents_read"] is True
 
+
+
+# ---------------------------------------------------------------------------
+# Which half of the enrichment was refused (the Phase 261 production check:
+# Shell's rows were all dated, only paths were missing, and the note said both)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_refused_parent_lookup_leaves_the_dates_read(_live):
+    from opencheck.gleif_throttle import GleifRateLimitedError
+
+    class _Refusing(_Client):
+        async def get(self, url, **kwargs):
+            if url.endswith("/direct-parent-relationship"):
+                self.calls.append(url)
+                raise GleifRateLimitedError("held", reason="held_for_lookups")
+            return await super().get(url, **kwargs)
+
+    client = _Refusing(_shell_routes())
+    with patch.object(subs, "build_client", lambda: _CM(client)):
+        with patch.object(subs, "_store_direct_parents", lambda leis: {}):
+            res = await subs.assemble_subsidiaries(SHELL)
+    assert res["enriched"] is False
+    assert res["relationships_read"] is True and res["parents_read"] is False
+    assert _rows_by_lei(res)[DIRECT]["relationship_start"] == "2013-11-01"
+
+
+async def test_refused_relationship_records_leave_the_parents_read(_live):
+    client = _Client(_shell_routes(**{
+        f"/{SHELL}/direct-child-relationships": _Resp(429),
+    }))
+    with patch.object(subs, "build_client", lambda: _CM(client)):
+        with patch.object(subs, "_store_direct_parents", lambda leis: {}):
+            res = await subs.assemble_subsidiaries(SHELL)
+    assert res["relationships_read"] is False and res["parents_read"] is True
+
+
+async def test_a_payload_cached_before_the_split_reads_enriched_for_both(_live, monkeypatch):
+    res = await _assemble(monkeypatch, _shell_children(), enriched=False)
+    assert res["relationships_read"] is False and res["parents_read"] is False
+    res = await _assemble(monkeypatch, _shell_children(), enriched=True)
+    assert res["relationships_read"] is True and res["parents_read"] is True
+    res = await _assemble(monkeypatch, _shell_children(), enriched=False,
+                          relationships_read=True, parents_read=False)
+    model = SubsidiariesResponse.model_validate(res).model_dump()
+    assert model["relationships_read"] is True and model["parents_read"] is False

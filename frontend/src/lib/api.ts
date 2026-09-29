@@ -952,6 +952,11 @@ export interface SubsidiariesResponse {
    *  the direct parents — a row without a date or a "via" line is then not
    *  evidence that there is none. */
   enriched?: boolean;
+  /** Which half of the enrichment answered: the relationship records (the
+   *  rows' dates) and the direct-parent lookups (the "via" paths). Optional
+   *  so an older backend still type-checks; absent, `enriched` stands in. */
+  relationships_read?: boolean;
+  parents_read?: boolean;
   children: SubsidiaryChild[];
   bods: Record<string, unknown>[] | null;
 }
