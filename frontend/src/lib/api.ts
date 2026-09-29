@@ -899,6 +899,18 @@ export interface SubsidiaryChild {
   status: string | null;
   relation: "direct" | "ultimate" | "both";
   link: string | null;
+  /** Phase 261: the child LEI's own registration status — `status` above is
+   *  the entity's. The `LeiRegistration` shape minus its sentence and the
+   *  dates only the subject's profile carries. Optional so an older backend
+   *  still type-checks. */
+  lei_registration?: Pick<LeiRegistration, "status" | "label" | "flag" | "since" | "next_renewal_date"> | null;
+  /** Phase 261: for an ultimate-only child, the LEI GLEIF names as its
+   *  direct consolidating parent, and whether that LEI is in this network. */
+  direct_parent_lei?: string | null;
+  direct_parent_in_network?: boolean | null;
+  /** Phase 261: the relationship record's RELATIONSHIP_PERIOD, YYYY-MM-DD. */
+  relationship_start?: string | null;
+  relationship_end?: string | null;
 }
 
 export interface SubsidiaryJurisdiction {
@@ -934,6 +946,12 @@ export interface SubsidiariesResponse {
   render_mode: "graph" | "table";
   truncated: boolean;
   jurisdictions: SubsidiaryJurisdiction[];
+  /** Phase 255: `jurisdictions` rolled up to ISO 3166-1 (US-DE → US). */
+  countries?: SubsidiaryJurisdiction[];
+  /** Phase 261: false when GLEIF would not give the relationship records or
+   *  the direct parents — a row without a date or a "via" line is then not
+   *  evidence that there is none. */
+  enriched?: boolean;
   children: SubsidiaryChild[];
   bods: Record<string, unknown>[] | null;
 }

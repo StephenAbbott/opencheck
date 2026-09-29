@@ -49,8 +49,9 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
-from . import mirrorstats, provenance
+from . import lei_registration, mirrorstats, provenance
 from .bods import map_gleif_subsidiaries
+from .bods.mapper import _gleif_rr_period
 from .cache import Cache
 from .config import get_settings
 from .gleif_throttle import UNAVAILABLE_UNREACHABLE, unavailable_reason
@@ -548,7 +549,9 @@ def _mirror_network(lei: str) -> dict[str, Any] | None:
         "snapshot_source": "mirror",
         _COMPLETE_KEY: True,
         _SHAPE_KEY: _SHAPE,
-        _ENRICHED_KEY: True,
+        # Phase 261: a mirror built without relationship rows holds no dates,
+        # and the tab says so rather than showing undated rows as if dated.
+        _ENRICHED_KEY: bool(store.has_relationships),
     }
 
 
@@ -573,12 +576,45 @@ def _merge_children(direct_recs: list[dict], ultimate_recs: list[dict]) -> list[
     ]
 
 
-def _row(m: dict[str, Any]) -> dict[str, Any]:
+#: Phase 261: the fields of ``lei_registration.from_gleif_record`` a row
+#: carries. The sentence, the LOU and the other dates stay on the subject's
+#: own profile — a 154-row network would otherwise repeat them 154 times.
+_ROW_REGISTRATION_KEYS = ("status", "label", "flag", "since", "next_renewal_date")
+
+
+def _row_registration(record: dict[str, Any]) -> dict[str, Any] | None:
+    """The child LEI's own registration status (Phase 261).
+
+    ``status`` on the row is the *entity* status (ACTIVE), so without this a
+    list in which 42 of Shell's 154 LEIs are LAPSED read as all current.
+    """
+    reg = lei_registration.from_gleif_record(record)
+    if reg is None:
+        return None
+    return {k: reg.get(k) for k in _ROW_REGISTRATION_KEYS}
+
+
+def _row(
+    m: dict[str, Any],
+    network: set[str] | frozenset[str] = frozenset(),
+    subject_lei: str | None = None,
+) -> dict[str, Any]:
     attrs = m["record"].get("attributes") or m["record"]
     e = attrs.get("entity") or {}
     clei = attrs.get("lei") or m["record"].get("id")
     relations = m["relations"]
     relation = "both" if set(relations) >= {"direct", "ultimate"} else relations[0]
+    # Phase 261: the relationship's own dates. The direct record is the one
+    # the graph draws for a "both" child (Phase 255: one edge per pair), so
+    # its period is the one the row states.
+    rels = m.get("rels") or {}
+    start, end = _gleif_rr_period(rels.get("direct") or rels.get("ultimate"))
+    # Phase 261: the direct parent of an ultimate-only child — the hop the
+    # graph draws and the list did not. A parent GLEIF names that is the
+    # subject itself says nothing the relation does not.
+    parent = (m.get("direct_parent") or {}).get("lei") or None
+    if parent in (clei, subject_lei):
+        parent = None
     return {
         "lei": clei,
         "name": (e.get("legalName") or {}).get("name"),
@@ -586,6 +622,11 @@ def _row(m: dict[str, Any]) -> dict[str, Any]:
         "status": e.get("status"),
         "relation": relation,
         "link": f"https://search.gleif.org/#/record/{clei}",
+        "lei_registration": _row_registration(m["record"]),
+        "direct_parent_lei": parent,
+        "direct_parent_in_network": (parent in network) if parent else None,
+        "relationship_start": start,
+        "relationship_end": end,
     }
 
 
@@ -593,7 +634,7 @@ _EMPTY = {
     "available": False, "direct_total": 0, "ultimate_total": 0,
     "distinct_fetched": 0, "indirect_only": 0, "node_estimate": 0,
     "render_mode": "graph", "truncated": False, "jurisdictions": [], "countries": [],
-    "children": [], "bods": None,
+    "enriched": True, "children": [], "bods": None,
     # Offline/demo mode is not a GLEIF refusal — the network was never asked
     # for, and `reason` says so. Declaring these available keeps the degraded
     # notice for the case it describes.
@@ -628,7 +669,8 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
     snapshot_source = data.get("snapshot_source") or ("fallback" if snapshot_date else None)
     snapshot_fallback = snapshot_date is not None
 
-    rows = [_row(m) for m in children]
+    network = {_child_lei(m) for m in children}
+    rows = [_row(m, network, lei) for m in children]
     jmap: dict[str, int] = {}
     for r in rows:
         jmap[r["jurisdiction"] or "—"] = jmap.get(r["jurisdiction"] or "—", 0) + 1
@@ -675,6 +717,11 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
         "truncated": len(children) < node_estimate,
         "jurisdictions": [{"code": k, "count": v} for k, v in jurisdictions],
         "countries": [{"code": k, "count": v} for k, v in countries],
+        # Phase 261: False = GLEIF would not give the relationship records or
+        # the direct parents, so a row without a date or a "via" line is not
+        # evidence that there is none. Payloads from before Phase 255 carry
+        # no key; ``_build`` refuses to serve those.
+        "enriched": bool(data.get(_ENRICHED_KEY, True)),
         "children": rows,
         "bods": None,
     }

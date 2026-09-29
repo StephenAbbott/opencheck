@@ -13,7 +13,14 @@
  * `compareKey` from `lib/vocab.ts`, the same one the EITI card used.
  */
 
-import type { DeclaredSource, DeclaredSourceId, SubsidiaryChild } from "./api";
+import type {
+  DeclaredSource,
+  DeclaredSourceId,
+  SubsidiariesResponse,
+  SubsidiaryChild,
+  SubsidiaryJurisdiction,
+} from "./api";
+import { formatProfileDate } from "./subjectProfile";
 import { compareKey } from "./vocab";
 
 export type ListId = DeclaredSourceId | "gleif";
@@ -279,4 +286,86 @@ export function meipContextLine(context: Record<string, unknown> | null): string
     s += " Only the members that carry an LEI are listed here.";
   }
   return `${s} `;
+}
+
+// ---------------------------------------------------------------------
+// Phase 261 — the GLEIF rows' own fields (Phase 255 data)
+// ---------------------------------------------------------------------
+
+/** The country spread: ISO 3166-1 codes, a US or Canadian subsidiary counted
+ *  under its country rather than its state or province. Reads the backend's
+ *  `countries` (Phase 255) and rolls `jurisdictions` up itself when talking
+ *  to an older backend, so Shell reads CA 11 and US 18, never CA 5 + CA-AB 6. */
+export function countrySpread(data: Pick<SubsidiariesResponse, "jurisdictions" | "countries">): SubsidiaryJurisdiction[] {
+  if (data.countries && data.countries.length > 0) return data.countries;
+  const counts = new Map<string, number>();
+  for (const j of data.jurisdictions ?? []) {
+    const code = (j.code || "—").split("-", 1)[0] || "—";
+    counts.set(code, (counts.get(code) ?? 0) + j.count);
+  }
+  return [...counts.entries()]
+    .map(([code, count]) => ({ code, count }))
+    .sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));
+}
+
+/** "Consolidated since 1 Nov 2013", "Consolidated 1 Nov 2013 – ended
+ *  3 Mar 2021", "Consolidation ended 3 Mar 2021", or null. The dates are
+ *  GLEIF's RELATIONSHIP_PERIOD — when the consolidation began and ended,
+ *  never when shares changed hands (Level 2 records no shareholding). */
+export function relationshipDates(c: Pick<SubsidiaryChild, "relationship_start" | "relationship_end">): string | null {
+  const start = c.relationship_start ? formatProfileDate(c.relationship_start) : null;
+  const end = c.relationship_end ? formatProfileDate(c.relationship_end) : null;
+  if (start && end) return `Consolidated ${start} – ended ${end}`;
+  if (end) return `Consolidation ended ${end}`;
+  if (start) return `Consolidated since ${start}`;
+  return null;
+}
+
+/** The direct parent of an ultimate-only child, as the row states it. */
+export type DirectParentLine =
+  | { kind: "in_network"; lei: string; name: string }
+  | { kind: "outside"; lei: string; sentence: string };
+
+/** Which company an ultimate-only child sits under. In the network: "via"
+ *  that row, by name. Outside it: the LEI GLEIF gives, and a sentence saying
+ *  the path is not shown — often a lapsed LEI of a merged holding company
+ *  (Unilever N.V., BG Group), and without it the row reads as if it hung off
+ *  the head. Null for a direct child, and where GLEIF names no parent. */
+export function directParentLine(
+  c: Pick<SubsidiaryChild, "relation" | "direct_parent_lei" | "direct_parent_in_network">,
+  names: ReadonlyMap<string, string | null>,
+  headName?: string,
+): DirectParentLine | null {
+  const parent = c.direct_parent_lei;
+  if (c.relation !== "ultimate" || !parent) return null;
+  if (c.direct_parent_in_network && names.has(parent)) {
+    return { kind: "in_network", lei: parent, name: names.get(parent) || parent };
+  }
+  const head = headName ? `${headName}'s` : "this network's";
+  return {
+    kind: "outside",
+    lei: parent,
+    sentence:
+      `GLEIF names ${parent} as its direct consolidating parent. That LEI is not ` +
+      `among ${head} subsidiaries in GLEIF, so the path through it is not shown.`,
+  };
+}
+
+/** Said once, above the rows, when GLEIF would not give the relationship
+ *  records or the direct parents (`enriched: false`) — in the voice of
+ *  `degraded_detail`. Without it an undated row and a row GLEIF gave no date
+ *  look the same. Null when the enrichment answered, or the backend predates
+ *  the flag. */
+export function enrichmentNote(data: Pick<SubsidiariesResponse, "enriched" | "children">): string | null {
+  if (data.enriched !== false || data.children.length === 0) return null;
+  return (
+    "GLEIF did not give the relationship records or the direct parents for this " +
+    "network, so the dates and the paths through intermediate companies could not " +
+    "be read. A row with no date or no “via” line is not a finding that there is none."
+  );
+}
+
+/** The id a row's anchor carries, so a "via" link can land on its parent. */
+export function subsidiaryRowId(lei: string): string {
+  return `subsidiary-row-${lei}`;
 }

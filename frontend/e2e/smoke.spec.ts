@@ -306,3 +306,62 @@ test("the arrow keys walk every check mode (Phase 241)", async ({ page }) => {
   await page.keyboard.press("End");
   await expect(page.locator(`#tab-${CHECK_MODES[CHECK_MODES.length - 1]}`)).toBeFocused();
 });
+
+test.describe("the Subsidiaries tab's rows at phone width (Phase 261)", () => {
+  // Phase 261 gave each GLEIF row a lapsed-LEI chip, a date line and a
+  // "via" line or an outside-parent sentence, so the rows got longer. The
+  // offline backend has no GLEIF network, so the one answer this test needs
+  // is supplied in the Phase 255 shape — the longest lines a real row carries.
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  const MID = "213800C2Y6KDQCD2WZ09";
+  const OUTSIDE = "213800AAAAAAAAAAAA99";
+  const children = [
+    {
+      lei: MID, name: "SHELL INTERNATIONAL EXPLORATION AND PRODUCTION HOLDINGS LIMITED",
+      jurisdiction: "GB", status: "ACTIVE", relation: "both", link: `https://search.gleif.org/#/record/${MID}`,
+      relationship_start: "2013-11-01", relationship_end: null,
+      lei_registration: { status: "ISSUED", label: "Issued", flag: false, since: null, next_renewal_date: "2027-01-01" },
+      direct_parent_lei: null, direct_parent_in_network: null,
+    },
+    {
+      lei: "549300XNL1VRVIODFM92", name: "SHELL DEEPWATER BORNEO SUBSIDIARY COMPANY B.V.",
+      jurisdiction: "NL", status: "ACTIVE", relation: "ultimate", link: "https://search.gleif.org/",
+      relationship_start: "2001-04-01", relationship_end: "2021-03-03",
+      lei_registration: { status: "LAPSED", label: "Lapsed", flag: true, since: "2019-10-19", next_renewal_date: "2019-10-19" },
+      direct_parent_lei: MID, direct_parent_in_network: true,
+    },
+    {
+      lei: "5493000000000000BG01", name: "BG INTERNATIONAL (CNS) LIMITED",
+      jurisdiction: "GB", status: "ACTIVE", relation: "ultimate", link: "https://search.gleif.org/",
+      relationship_start: null, relationship_end: null,
+      lei_registration: { status: "PENDING_ARCHIVAL", label: "Pending archival", flag: true, since: null, next_renewal_date: null },
+      direct_parent_lei: OUTSIDE, direct_parent_in_network: false,
+    },
+  ];
+  const network = {
+    lei: BP, available: true, reason: null, children_available: true, direct_available: true,
+    ultimate_available: true, snapshot_fallback: false, snapshot_date: null, snapshot_source: null,
+    degraded_detail: null, unavailable_reason: null, direct_total: 1, ultimate_total: 3,
+    distinct_fetched: 3, indirect_only: 2, node_estimate: 3, render_mode: "table", truncated: false,
+    jurisdictions: [{ code: "US-DE", count: 17 }, { code: "CA-AB", count: 6 }, { code: "CA", count: 5 }],
+    countries: [{ code: "US", count: 17 }, { code: "CA", count: 11 }],
+    enriched: false, children, bods: null,
+  };
+
+  test("carries the new row lines without a sideways scroll", async ({ page }) => {
+    await page.route(
+      (url) => url.pathname === "/subsidiaries",
+      (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(network) }),
+    );
+    await page.goto(`/?lei=${BP}&mode=subsidiaries`);
+    const panel = page.locator("#panel-subsidiaries");
+    await expect(panel.getByTestId("country-spread")).toContainText("CA 11", { timeout: 150_000 });
+    await expect(panel.getByTestId("enrichment-note")).toBeVisible();
+    await expect(panel.getByText(/^LEI lapsed since/)).toBeVisible();
+    await expect(panel.getByRole("link", { name: children[0].name }).last()).toBeVisible();
+    await expect(panel.getByText(new RegExp(`GLEIF names ${OUTSIDE}`))).toBeVisible();
+    await expect(panel.getByText(/^Consolidated 1 Apr 2001 – ended 3 Mar 2021$/)).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+});

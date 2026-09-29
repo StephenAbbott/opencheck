@@ -34,6 +34,20 @@ class SubChild(BaseModel):
     status: str | None = None
     relation: str  # "direct" | "ultimate" | "both"
     link: str | None = None
+    #: Phase 261: the child LEI's own registration status — ``status`` above
+    #: is the entity's. ``{status, label, flag, since, next_renewal_date}``,
+    #: the ``lei_registration`` shape minus its sentence; None when GLEIF's
+    #: record carries no registration block.
+    lei_registration: dict | None = None
+    #: Phase 261: for an ultimate-only child, the LEI GLEIF names as its
+    #: direct consolidating parent, and whether that LEI is in this network.
+    #: False is often a lapsed LEI of a merged holding company, so the path
+    #: through it is not shown. None when GLEIF names no parent.
+    direct_parent_lei: str | None = None
+    direct_parent_in_network: bool | None = None
+    #: Phase 261: the relationship record's RELATIONSHIP_PERIOD (YYYY-MM-DD).
+    relationship_start: str | None = None
+    relationship_end: str | None = None
 
 
 class SubJurisdiction(BaseModel):
@@ -75,6 +89,9 @@ class SubsidiariesResponse(BaseModel):
     #: Phase 255: ``jurisdictions`` rolled up to ISO 3166-1 alpha-2 (a
     #: ``US-DE`` or ``CA-AB`` subsidiary counts under ``US`` / ``CA``).
     countries: list[SubJurisdiction] = []
+    #: Phase 261: False when GLEIF would not give the relationship records or
+    #: the direct parents — the dates and paths on the rows could not be read.
+    enriched: bool = True
     children: list[SubChild] = []
     bods: list[dict] | None = None
 
