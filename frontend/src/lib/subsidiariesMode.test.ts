@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { DeclaredSource, SubsidiaryChild } from "./api";
 import {
+  countrySpread,
   coverageSentence,
+  directParentLine,
+  enrichmentNote,
   meipContextLine,
   openableSentence,
   orderRows,
+  relationshipDates,
   resolveLists,
   subsidiaryHref,
+  subsidiaryRowId,
 } from "./subsidiariesMode";
 
 function src(id: DeclaredSource["id"], rows: Partial<DeclaredSource["rows"][number]>[], over: Partial<DeclaredSource> = {}): DeclaredSource {
@@ -209,5 +214,121 @@ describe("meipContextLine — the MEIP band's opening sentence (Phase 208)", () 
   it("degrades to nothing on an unknown context", () => {
     expect(meipContextLine(null)).toBe("");
     expect(meipContextLine({ mode: "subsidiary" })).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------
+// Phase 261 — the GLEIF rows' own fields
+// ---------------------------------------------------------------------
+
+describe("countrySpread (Phase 261)", () => {
+  it("prefers the backend's country roll-up", () => {
+    const spread = countrySpread({
+      jurisdictions: [{ code: "US-DE", count: 17 }, { code: "US", count: 1 }],
+      countries: [{ code: "US", count: 18 }],
+    });
+    expect(spread).toEqual([{ code: "US", count: 18 }]);
+  });
+
+  it("rolls subdivisions up itself for a backend without `countries` — Shell's CA and US", () => {
+    const spread = countrySpread({
+      jurisdictions: [
+        { code: "GB", count: 40 },
+        { code: "US-DE", count: 17 },
+        { code: "CA-AB", count: 6 },
+        { code: "CA", count: 5 },
+        { code: "US", count: 1 },
+      ],
+    });
+    expect(spread).toEqual([
+      { code: "GB", count: 40 },
+      { code: "US", count: 18 },
+      { code: "CA", count: 11 },
+    ]);
+  });
+});
+
+describe("relationshipDates (Phase 261)", () => {
+  it("states the start of the consolidation", () => {
+    expect(relationshipDates({ relationship_start: "2013-11-01" })).toBe("Consolidated since 1 Nov 2013");
+  });
+  it("states an end, with or without a start", () => {
+    expect(relationshipDates({ relationship_start: "2013-11-01", relationship_end: "2021-03-03" })).toBe(
+      "Consolidated 1 Nov 2013 – ended 3 Mar 2021",
+    );
+    expect(relationshipDates({ relationship_end: "2021-03-03" })).toBe("Consolidation ended 3 Mar 2021");
+  });
+  it("says nothing when GLEIF gave no period", () => {
+    expect(relationshipDates({})).toBeNull();
+    expect(relationshipDates({ relationship_start: null, relationship_end: null })).toBeNull();
+  });
+  it("never uses ownership words or a percentage", () => {
+    const s = relationshipDates({ relationship_start: "2013-11-01", relationship_end: "2021-03-03" }) ?? "";
+    expect(s).not.toMatch(/\bown|hold|share|%/i);
+  });
+});
+
+describe("directParentLine (Phase 261)", () => {
+  const names = new Map<string, string | null>([
+    ["213800C2Y6KDQCD2WZ09", "SHELL DIRECT HOLDINGS LIMITED"],
+    ["549300XNL1VRVIODFM92", "SHELL DEEP B.V."],
+  ]);
+
+  it("names an in-network parent by its row's name", () => {
+    expect(
+      directParentLine(
+        { relation: "ultimate", direct_parent_lei: "213800C2Y6KDQCD2WZ09", direct_parent_in_network: true },
+        names,
+        "SHELL PLC",
+      ),
+    ).toEqual({ kind: "in_network", lei: "213800C2Y6KDQCD2WZ09", name: "SHELL DIRECT HOLDINGS LIMITED" });
+  });
+
+  it("gives the LEI and says the path is not shown for a parent outside the network", () => {
+    const line = directParentLine(
+      { relation: "ultimate", direct_parent_lei: "213800AAAAAAAAAAAA99", direct_parent_in_network: false },
+      names,
+      "SHELL PLC",
+    );
+    expect(line?.kind).toBe("outside");
+    expect(line?.lei).toBe("213800AAAAAAAAAAAA99");
+    expect(line && "sentence" in line ? line.sentence : "").toContain("213800AAAAAAAAAAAA99");
+    expect(line && "sentence" in line ? line.sentence : "").toContain("SHELL PLC's subsidiaries");
+    expect(line && "sentence" in line ? line.sentence : "").toContain("not shown");
+    expect(line && "sentence" in line ? line.sentence : "").not.toMatch(/\bowns?\b|holds?|%/i);
+  });
+
+  it("treats an in-network flag without a row as outside, rather than linking nowhere", () => {
+    const line = directParentLine(
+      { relation: "ultimate", direct_parent_lei: "5493000000000000ZZ99", direct_parent_in_network: true },
+      names,
+    );
+    expect(line?.kind).toBe("outside");
+  });
+
+  it("says nothing for a direct child, or where GLEIF names no parent", () => {
+    expect(directParentLine({ relation: "direct", direct_parent_lei: "213800C2Y6KDQCD2WZ09" }, names)).toBeNull();
+    expect(directParentLine({ relation: "both", direct_parent_lei: "213800C2Y6KDQCD2WZ09" }, names)).toBeNull();
+    expect(directParentLine({ relation: "ultimate", direct_parent_lei: null }, names)).toBeNull();
+  });
+});
+
+describe("enrichmentNote (Phase 261)", () => {
+  const kid = { lei: "X", name: "X", jurisdiction: null, status: null, relation: "direct" as const, link: null };
+  it("says the dates and paths could not be read when GLEIF refused them", () => {
+    const note = enrichmentNote({ enriched: false, children: [kid] });
+    expect(note).toContain("could not be read");
+    expect(note).toContain("not a finding");
+  });
+  it("is silent when enriched, when the backend predates the flag, and for an empty network", () => {
+    expect(enrichmentNote({ enriched: true, children: [kid] })).toBeNull();
+    expect(enrichmentNote({ children: [kid] })).toBeNull();
+    expect(enrichmentNote({ enriched: false, children: [] })).toBeNull();
+  });
+});
+
+describe("subsidiaryRowId (Phase 261)", () => {
+  it("is a stable anchor per LEI", () => {
+    expect(subsidiaryRowId("213800C2Y6KDQCD2WZ09")).toBe("subsidiary-row-213800C2Y6KDQCD2WZ09");
   });
 });

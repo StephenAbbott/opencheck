@@ -11,9 +11,17 @@ import {
   type PanelId,
 } from "../../lib/panelErrors";
 import { mirrorCaption } from "../../lib/vocab";
-import { subsidiaryHref } from "../../lib/subsidiariesMode";
+import {
+  countrySpread,
+  directParentLine,
+  enrichmentNote,
+  relationshipDates,
+  subsidiaryHref,
+  subsidiaryRowId,
+} from "../../lib/subsidiariesMode";
+import { leiRegistrationChip } from "../../lib/subjectProfile";
 import InvitationStrip from "../ui/InvitationStrip";
-import { Button, SectionHeading } from "../ui";
+import { Button, Chip, SectionHeading } from "../ui";
 
 // BodsGraphExplorer pulls in Cytoscape — load it only when a small network is
 // actually rendered as a graph (large networks degrade to a table + export).
@@ -70,10 +78,39 @@ function orderChildren(children: SubsidiaryChild[]): SubsidiaryChild[] {
  *  the Subsidiaries tab's other lists show, so the four bands read alike. */
 const VISIBLE_ROWS = 12;
 
-function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
+function ChildrenTable({
+  children,
+  headName,
+  note,
+}: {
+  children: SubsidiaryChild[];
+  headName?: string;
+  /** Phase 261: `enrichmentNote` — the dates and paths could not be read. */
+  note?: string | null;
+}) {
   const [showAll, setShowAll] = useState(false);
+  // Phase 261: a "via" link lands on its parent's row, opening the list first
+  // when the parent sits past the first twelve.
+  const [target, setTarget] = useState<string | null>(null);
   const ordered = orderChildren(children);
   const rows = showAll ? ordered : ordered.slice(0, VISIBLE_ROWS);
+  const names = useMemo(
+    () => new Map(children.map((c) => [c.lei, c.name] as const)),
+    [children],
+  );
+  useEffect(() => {
+    if (!target) return;
+    const el = document.getElementById(subsidiaryRowId(target));
+    if (el) {
+      el.scrollIntoView?.({ block: "center" });
+      el.focus();
+    }
+    setTarget(null);
+  }, [target, showAll]);
+  function goToRow(lei: string) {
+    if (!rows.some((r) => r.lei === lei)) setShowAll(true);
+    setTarget(lei);
+  }
   return (
     <>
       {/* Visible, not just sr-only: this is the sentence that stops "Direct"
@@ -83,11 +120,26 @@ function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
         “direct” and “ultimate” describe whose group accounts a company reports
         into, and a consolidating parent need not hold any shares.
       </p>
+      {note && (
+        <p
+          role="status"
+          data-testid="enrichment-note"
+          className="mt-2 rounded-oo border border-oo-warn-border bg-oo-warn-bg px-3 py-2 text-oo-meta text-oo-warn-text leading-[1.5]"
+        >
+          {note}
+        </p>
+      )}
     <ul className="mt-2 divide-y divide-oo-rule rounded-oo border border-oo-rule bg-white">
-      {rows.map((c) => (
+      {rows.map((c) => {
+        const leiChip = leiRegistrationChip(c.lei_registration);
+        const dates = relationshipDates(c);
+        const parent = directParentLine(c, names, headName);
+        return (
         <li
           key={`${c.lei}-${c.relation}`}
-          className="flex items-start justify-between gap-3 px-3 py-2"
+          id={subsidiaryRowId(c.lei)}
+          tabIndex={-1}
+          className="flex items-start justify-between gap-3 px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-oo-blue"
         >
           <div className="min-w-0">
             {/* Phase 185: every child carries an LEI, so every child has its
@@ -111,12 +163,50 @@ function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
                 </>
               )}
             </div>
+            {/* Phase 261: the LEI record's own status — `status` above is the
+                company's, so without this a lapsed LEI read as current. */}
+            {(leiChip || dates) && (
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                {leiChip && (
+                  <Chip tone={leiChip.tone} size="sm">
+                    <span aria-hidden="true">{leiChip.label}</span>
+                    <span className="sr-only">{leiChip.detail}</span>
+                  </Chip>
+                )}
+                {dates && (
+                  <span className="text-oo-meta text-oo-muted" data-testid="relationship-dates">
+                    {dates}
+                  </span>
+                )}
+              </div>
+            )}
+            {parent?.kind === "in_network" && (
+              <p className="mt-1 text-oo-meta text-oo-muted" data-testid="direct-parent">
+                via{" "}
+                <a
+                  href={`#${subsidiaryRowId(parent.lei)}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToRow(parent.lei);
+                  }}
+                  className="text-oo-ink hover:underline"
+                >
+                  {parent.name}
+                </a>
+              </p>
+            )}
+            {parent?.kind === "outside" && (
+              <p className="mt-1 text-oo-meta text-oo-muted leading-[1.5]" data-testid="direct-parent">
+                {parent.sentence}
+              </p>
+            )}
           </div>
           <div className="shrink-0">
             <RelationBadge relation={c.relation} />
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
     {ordered.length > VISIBLE_ROWS && (
       <Button
@@ -139,6 +229,7 @@ function ChildrenTable({ children }: { children: SubsidiaryChild[] }) {
 // ---------------------------------------------------------------------
 
 function SummaryStats({ data }: { data: SubsidiariesResponse }) {
+  const countries = countrySpread(data);
   return (
     <>
       <p className="mt-1 text-oo-meta text-oo-ink leading-[1.6]">
@@ -151,16 +242,23 @@ function SummaryStats({ data }: { data: SubsidiariesResponse }) {
           ({data.distinct_fetched} distinct{data.indirect_only > 0 ? `, ${data.indirect_only} indirect-only` : ""})
         </span>
       </p>
-      {data.jurisdictions.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1">
-          {data.jurisdictions.slice(0, 12).map((j) => (
+      {/* Phase 261: by country. GLEIF files a US or Canadian company under
+          its state or province, so the subdivision spread read Shell as
+          CA 5 + CA-AB 6 and US 1 + US-DE 17 — the country reads CA 11, US 18. */}
+      {countries.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1" data-testid="country-spread">
+          <span className="text-oo-meta text-oo-muted">By country:</span>
+          {countries.slice(0, 12).map((j) => (
             <span
               key={j.code}
-              className="text-[10px] font-mono rounded px-1.5 py-0.5 border border-oo-rule bg-oo-bg text-oo-muted"
+              className="text-oo-meta font-mono rounded px-1.5 py-0.5 border border-oo-rule bg-oo-bg text-oo-muted"
             >
               {j.code} {j.count}
             </span>
           ))}
+          {countries.length > 12 && (
+            <span className="text-oo-meta text-oo-muted">and {countries.length - 12} more</span>
+          )}
         </div>
       )}
       {data.truncated && (
@@ -528,7 +626,11 @@ export function SubsidiaryNetwork({
               covers it better, because it nests. */}
           {!(isGraphMode && showGraph && bods) &&
             (data.children.length > 0 ? (
-              <ChildrenTable children={data.children} />
+              <ChildrenTable
+                children={data.children}
+                headName={entityName}
+                note={enrichmentNote(data)}
+              />
             ) : (
               <p className="mt-2 text-oo-meta text-oo-muted">No children to list.</p>
             ))}
