@@ -713,13 +713,13 @@ class GleifAdapter(SourceAdapter):
             async with build_client() as client:
                 response = await client.get(f"{_API_BASE}{path}")
                 if response.status_code == 404:
-                    self._cache.put(cache_key, None)
+                    self._cache.put_absent(cache_key)
                     return None
                 response.raise_for_status()
                 payload = response.json()
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
-                self._cache.put(cache_key, None)
+                self._cache.put_absent(cache_key)
                 return None
             if exc.response.status_code == 429:
                 stale = self._cache.get_payload(cache_key)

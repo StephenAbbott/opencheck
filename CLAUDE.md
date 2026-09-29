@@ -493,6 +493,22 @@ table is broken**. A clean changelog is not evidence. Look at the rendered
 
 ---
 
+## A failure is never cached as "no record" (Phase 262)
+
+`Cache.put_absent(key)` is the only way to remember that an upstream has no
+record, and only for a **definitive** answer — HTTP 404, or 402/403 for an
+endpoint the account's tier lacks. `Cache.get_payload` stops honouring a
+cached absence after `cache.ABSENT_TTL_DAYS` (7), whatever `max_age_days`
+says. A 5xx, a 429, a network error or an unreadable body is **never
+cached**: record a `degradation` (`reason_for_failure("HTTP 503")` etc.) and
+return. Until Phase 262 ARES cached any VR `HTTPStatusError` as `None` and
+then cached the bundle built from it, and OpenCorporates' `_get_optional`
+cached `None` on any exception — neither expired, so one outage made a
+company read "found, nothing filed" until the next deploy. A bundle built
+while a part was absent or failed must not be cached either (ARES caches its
+bundle, under `ares/bundle-v2/`, only when VR returned data).
+`tests/test_cache_hygiene.py` pins both.
+
 ## Other conventions
 
 - API keys go in `.env` only — never committed to the repo.
@@ -951,6 +967,17 @@ These are non-obvious and cost significant debugging time. Do not deviate from t
 **Security constraint — must never be relaxed.**
 
 INPI entries where `beneficiaireEffectif == True` MUST be silently skipped and never included in any output, BODS statements, or API responses. This is required by French law (Loi Sapin II / décret 2017-1094), which prohibits republishing beneficial ownership data from the INPI register. Always check this flag before processing any INPI record.
+
+### BO rows are stripped from the raw payload too (Phase 262)
+
+`sources/inpi.py::strip_beneficial_owners` removes every list item with a
+truthy `beneficiaireEffectif` (and any `beneficiairesEffectifs` block), walking
+the **whole** payload — historical formalities included. It runs before the
+payload is cached **and** in `_make_bundle`, so an entry cached before Phase 262
+is still never served raw. Dropping the rows only in the mapper was not enough:
+`/deepen` returns an INPI bundle's `raw` to the Data drawer (`republish_raw`
+defaults to True). Never move the strip into the mapper, and never add a path
+that returns the RNE payload without going through `_make_bundle`.
 
 ### A 404 is an answer; a SIREN can have spaces (Phase 205)
 
