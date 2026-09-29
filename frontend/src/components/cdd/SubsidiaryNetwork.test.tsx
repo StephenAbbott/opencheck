@@ -224,4 +224,13 @@ describe("SubsidiaryNetwork rows (Phase 261)", () => {
     await reveal();
     expect(screen.getByTestId("enrichment-note").textContent).toContain("could not be read");
   });
+
+  it("says only the paths are missing when the dates were read", async () => {
+    getSubsidiaries.mockResolvedValue(shell({ enriched: false, relationships_read: true, parents_read: false }));
+    render(<SubsidiaryNetwork lei={HEAD} entityName="SHELL PLC" />);
+    await reveal();
+    const note = screen.getByTestId("enrichment-note").textContent ?? "";
+    expect(note).toContain("some paths");
+    expect(note).not.toMatch(/date/i);
+  });
 });
