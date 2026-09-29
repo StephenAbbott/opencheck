@@ -2502,3 +2502,48 @@ Things that will be re-derived otherwise:
   (`unavailable_reason` + a `degraded_detail` naming the cause) both read it.
   Share cards say nothing about GLEIF to a reader — a refused teaser name
   renders the LEI-only card — so for them the counter is the whole record.
+
+---
+
+## Watchlist robustness, schema versions and backups (Phase 260)
+
+From the Opus 5.5 check (C-M5, C-M6, C-L5). `opencheck/watchlist.py`,
+`routers/watch.py`, `opencheck/sqlite_schema.py`, `opencheck/backups.py`,
+`scripts/restore_backup.py`; operator's page `docs/backups.md`. Things that
+will be re-derived otherwise:
+
+- **The OpenSanctions backlog drains oldest first** (`pending[:OS_MAX_VERSIONS_PER_TICK]`),
+  and the watermark moves past a version only once it was read or recorded
+  as a gap. The old `[-12:]` slice skipped everything older than the newest
+  twelve after an outage, silently. A failed download stops the tick where
+  it was; a remaining backlog (`os_backlog`) makes the next tick read again
+  without waiting for the three-hour interval.
+- **A version that cannot be read is a gap, answered by a catch-up**:
+  versions that aged out of `versions.json` (it holds ~100, ~25 days) before
+  they were read, or a listed delta that answers 404. The gap is recorded
+  (`meta.opensanctions_gaps`, `os_gaps`) and every watched LEI is queued on
+  `TIER_CATCHUP` — an entry only when the re-run finds a difference, and a
+  real trigger replaces a pending catch-up in `enqueue` rather than being
+  folded into it. The feed, `lib/watchlist.ts` (`tierChip`,
+  `triggerSentence`, `tierSentence`) and the page all word it.
+- **No SQLite on the event loop.** Every `/watch` route body calls the store
+  through `_db()` (`asyncio.to_thread`), and `rerun`, `tick` and `baseline`
+  do the same (`_mirror_facts`, `_write_rerun`). The store waits up to 30 s
+  on a write lock the mirror-refresh hook holds; on the loop that froze the
+  server. `test_a_locked_store_does_not_freeze_the_event_loop` holds a real
+  `BEGIN EXCLUSIVE` from another thread and measures the loop.
+- **`PRAGMA user_version` on both files** via `sqlite_schema.migrate` and
+  each store's `MIGRATIONS`. Version 1 = the shipped schema, so a pre-260
+  file is stamped and unchanged. Append a `Migration` to change a schema;
+  never edit a shipped step. A newer file is refused
+  (`SchemaTooNewError` → 503 on the routes).
+- **Backups go to a PRIVATE repo, encrypted** — never the public
+  `StephenAbbott/opencheck` releases: saved reports are unlisted
+  capabilities and a watchlist says what someone watches. `check_private()`
+  runs before every upload. The file is the online-backup copy,
+  integrity-checked, gzipped, sealed in 1 MiB AES-GCM chunks (nonce = prefix +
+  counter + last flag, so truncation fails), decrypted and re-checked before
+  upload. "Due" is read from the newest asset on the release, so deploys
+  neither reset nor skip it. `/watchstats.backups` carries dates and errors,
+  never the repository or token. The passphrase setting is named
+  `backup_passphrase_secret` so `secret_scrub` redacts it.

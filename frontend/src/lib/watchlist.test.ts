@@ -12,6 +12,7 @@ import {
   checkedSentence,
   describeChange,
   entryHeadline,
+  tierChip,
   tierSentence,
   tokenFromLocation,
   triggerSentence,
@@ -170,6 +171,50 @@ describe("tierSentence", () => {
     });
     expect(s).toContain("no mirror on this instance");
     expect(s).toContain("sanctions tier is off");
+  });
+
+  it("names an OpenSanctions backlog and a gap (Phase 260)", () => {
+    const base = {
+      gleif: { available: false, watermark: null, refresh_enabled: false, last_applied_at: null, last_delta: null, rows_applied: {}, record_count: null },
+      worker: { enabled: true, interval_s: 300 },
+    };
+    const s = tierSentence({
+      ...base,
+      opensanctions: {
+        available: true, last_version: "v12", last_checked_at: null, backlog: 8,
+        gaps: [{ reason: "aged_out", after: "v0", before: "v1", detected_at: "2026-09-28T10:00:00Z" }],
+      },
+    });
+    expect(s).toContain("8 OpenSanctions versions are still to be read, oldest first.");
+    expect(s).toContain("On 2026-09-28 some OpenSanctions versions could not be read");
+    const quiet = tierSentence({ ...base, opensanctions: { available: true, last_version: "v12", last_checked_at: null, backlog: 0, gaps: [] } });
+    expect(quiet).not.toContain("still to be read");
+    expect(quiet).not.toContain("could not be read");
+    const one = tierSentence({ ...base, opensanctions: { available: true, last_version: "v12", last_checked_at: null, backlog: 1 } });
+    expect(one).toContain("1 OpenSanctions version is still to be read");
+  });
+});
+
+describe("catch-up entries (Phase 260)", () => {
+  const entry = (trigger: Record<string, unknown>) => ({
+    id: 3, lei: "213800LH1BZH3DI6G760", legal_name: "Vosper Ltd", created_at: "2026-09-28T00:00:00Z",
+    tier: "catch_up" as const, trigger, changes: [], checked: [], degraded: [],
+  });
+
+  it("says why every company was re-checked, in either case", () => {
+    expect(triggerSentence(entry({ reason: "aged_out", after: "v0", before: "v9" }))).toBe(
+      "OpenSanctions versions published after v0 were no longer listed when the watcher came to read them, so every watched company was re-checked.",
+    );
+    expect(triggerSentence(entry({ reason: "delta_missing", after: "v4", before: "v4" }))).toContain(
+      "listed version v4 but its delta file could not be downloaded",
+    );
+  });
+
+  it("has its own chip, never the sanctions tone", () => {
+    expect(tierChip("catch_up")).toEqual({ label: "Catch-up re-check", tone: "context" });
+    expect(tierChip("opensanctions").tone).toBe("risk");
+    expect(tierChip("manual").label).toBe("By hand");
+    expect(tierChip("gleif").label).toBe("GLEIF delta");
   });
 });
 

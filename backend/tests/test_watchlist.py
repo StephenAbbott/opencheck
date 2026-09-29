@@ -517,7 +517,7 @@ def test_os_tick_catches_up_on_every_version_since_the_last(client: TestClient, 
     httpx_mock.add_response(url=wl.OS_VERSIONS_URL, json={"items": ["v1", "v2", "v3", "v4", "v5"]})
     httpx_mock.add_response(url=wl.OS_DELTA_URL.format(version="v4"), text=_os_line("ADD", "Company", ["Nobody Ltd"]) + "\n")
     httpx_mock.add_response(url=wl.OS_DELTA_URL.format(version="v5"), text=_os_line("MOD", "Company", ["EASY POWER"]) + "\n")
-    assert wl.opensanctions_tick() == {"versions": 2, "queued": 1}
+    assert wl.opensanctions_tick() == {"versions": 2, "queued": 1, "backlog": 0}
     assert store.get_meta("opensanctions_version") == "v5"
     pending = store.take_pending(10)
     assert pending[0]["lei"] == EASY and pending[0]["tier"] == "opensanctions"

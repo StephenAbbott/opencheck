@@ -30,6 +30,7 @@ from .. import saved_reports as sr
 from ..config import get_settings
 from ..memwatch import is_bot
 from ..ratelimit import default_tier, heavy_tier, limiter
+from ..sqlite_schema import SchemaTooNewError
 
 router = APIRouter(tags=["saved-reports"])
 
@@ -59,7 +60,15 @@ class SaveRequest(BaseModel):
 
 
 def _store() -> sr.SavedReportsStore:
-    store = sr.get_store()
+    try:
+        store = sr.get_store()
+    except SchemaTooNewError as exc:
+        # Phase 260: a file written by a newer build (a rollback) is refused,
+        # never written to; the route says so rather than 500.
+        raise HTTPException(
+            status_code=503,
+            detail="The saved-reports file was written by a newer version of OpenCheck; this instance will not write to it.",
+        ) from exc
     if store is None:
         raise HTTPException(
             status_code=503,

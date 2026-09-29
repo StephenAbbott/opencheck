@@ -5,7 +5,7 @@ description: Watch an LEI and be told, through an Atom feed, when GLEIF or OpenS
 tags: [api, watchlist, alerts, atom, gleif, opensanctions]
 method: GET
 path: /watch
-timestamp: 2026-09-16
+timestamp: 2026-09-28
 ---
 
 # Overview
@@ -33,12 +33,18 @@ published deltas names it:
   successor, expiry) counts; renewal churn does not.
 * **OpenSanctions** — their entity-level delta per version
   ([OpenSanctions](/sources/opensanctions.md)), matched against the
-  watched company's own names or LEI.
+  watched company's own names or LEI. A backlog is read oldest first, a
+  dozen versions a tick; versions that can no longer be read are recorded
+  and every watched company is re-run instead (a *catch-up* entry, written
+  only when the re-run finds a difference) — Phase 260.
 
 The re-run is the ordinary [lookup](/api/lookup.md) with the replay cache
 bypassed; the national registers are fetched then, and only then. Each
 feed entry says which tier fired, what the re-run found, and how many
 sources were actually reached — a signal whose source could not be reached
 is reported as *could not re-check*, never as gone.
+
+The list lives in a schema-versioned SQLite file that is backed up daily,
+encrypted, to a private repository (`docs/backups.md`).
 
 Design: `docs/watchlist.md`.

@@ -61,7 +61,10 @@ export interface Watch {
   baseline: WatchBaseline;
 }
 
-export type Tier = "gleif" | "opensanctions" | "manual";
+/** Phase 260: ``catch_up`` = every watched company re-run because
+ * OpenSanctions versions could not be read (aged out of its version list,
+ * or a listed delta file gone). */
+export type Tier = "gleif" | "opensanctions" | "manual" | "catch_up";
 
 export interface Change {
   kind: string;
@@ -93,6 +96,9 @@ export interface WatchEntry {
     topics?: string[];
     matched_on?: "lei" | "name";
     score?: number;
+    reason?: "aged_out" | "delta_missing";
+    after?: string | null;
+    before?: string | null;
   };
   changes: Change[];
   checked: CheckedSource[];
@@ -109,7 +115,15 @@ export interface WatchlistTiers {
     rows_applied: Record<string, number>;
     record_count: number | null;
   };
-  opensanctions: { available: boolean; last_version: string | null; last_checked_at: string | null };
+  opensanctions: {
+    available: boolean;
+    last_version: string | null;
+    last_checked_at: string | null;
+    /** Phase 260: versions listed but not read yet (drained oldest first). */
+    backlog?: number;
+    /** Phase 260: the most recent versions that could not be read at all. */
+    gaps?: { reason: "aged_out" | "delta_missing"; after: string | null; before: string | null; detected_at: string }[];
+  };
   worker: { enabled: boolean; interval_s: number };
 }
 
@@ -257,7 +271,20 @@ export function triggerSentence(e: WatchEntry): string {
     const sets = t.datasets?.length ? ` — ${t.datasets.join(", ")}` : "";
     return `OpenSanctions ${op} ${who}, matching this company ${how}${sets}.`;
   }
+  if (e.tier === "catch_up") {
+    return t.reason === "delta_missing"
+      ? `OpenSanctions listed version ${t.after ?? "?"} but its delta file could not be downloaded, so every watched company was re-checked.`
+      : `OpenSanctions versions published after ${t.after ?? "?"} were no longer listed when the watcher came to read them, so every watched company was re-checked.`;
+  }
   return "Re-checked by hand.";
+}
+
+/** The chip on an entry: which tier fired, and its tone. */
+export function tierChip(tier: Tier): { label: string; tone: "risk" | "accent" | "neutral" | "context" } {
+  if (tier === "gleif") return { label: "GLEIF delta", tone: "accent" };
+  if (tier === "opensanctions") return { label: "OpenSanctions delta", tone: "risk" };
+  if (tier === "catch_up") return { label: "Catch-up re-check", tone: "context" };
+  return { label: "By hand", tone: "neutral" };
 }
 
 /** The one-line headline for an entry. */
@@ -306,6 +333,18 @@ export function tierSentence(t: WatchlistTiers | null): string {
         } and matched against the watched names.`
       : "OpenSanctions: the sanctions tier is off on this instance.",
   );
+  const backlog = t.opensanctions.available ? (t.opensanctions.backlog ?? 0) : 0;
+  if (backlog > 0) {
+    parts.push(
+      `${backlog} OpenSanctions version${backlog === 1 ? " is" : "s are"} still to be read, oldest first.`,
+    );
+  }
+  const gap = t.opensanctions.gaps?.length ? t.opensanctions.gaps[t.opensanctions.gaps.length - 1] : null;
+  if (gap) {
+    parts.push(
+      `On ${gap.detected_at.slice(0, 10)} some OpenSanctions versions could not be read, so every watched company was re-checked instead.`,
+    );
+  }
   parts.push("National registers are never polled; they are re-fetched only when one of those two fires.");
   return parts.join(" ");
 }

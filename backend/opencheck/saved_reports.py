@@ -89,6 +89,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from . import sqlite_schema
+
 log = logging.getLogger("opencheck.saved_reports")
 
 #: Payload schema. Bump when the payload's shape changes; a reader must keep
@@ -336,6 +338,13 @@ CREATE TABLE IF NOT EXISTS dispositions (
 );
 """
 
+#: Phase 260: the file's ``PRAGMA user_version`` history (see
+#: ``opencheck/sqlite_schema.py``). Version 1 is the Phase 216 schema, so a
+#: file written before 260 is stamped 1 and nothing else changes.
+MIGRATIONS: tuple[sqlite_schema.Migration, ...] = (
+    sqlite_schema.Migration(1, "Phase 216 schema", sqlite_schema.statements(DDL)),
+)
+
 _META_COLUMNS = "report_id, lei, legal_name, content_hash, saved_at, expires_at, extended_at, size_bytes"
 
 
@@ -349,7 +358,7 @@ class SavedReportsStore:
         self.max_total = max_total
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._conn() as conn:
-            conn.executescript(DDL)
+            self.schema_version = sqlite_schema.migrate(conn, self.path, MIGRATIONS)
 
     @contextmanager
     def _conn(self) -> Iterator[sqlite3.Connection]:

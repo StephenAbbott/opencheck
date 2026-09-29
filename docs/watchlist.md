@@ -42,7 +42,30 @@ version since the last one seen is streamed, and each organisation entity
 against the watched entities' own legal names at the 0.88 gate
 `names.name_similarity` uses everywhere else, or exactly by `leiCode`. Zero
 API calls, no re-screening, and the same public bulk file the licence
-already covers; nothing is redistributed. Person screening deltas would put
+already covers; nothing is redistributed.
+
+**A backlog is read oldest first (Phase 260).** At most
+`OS_MAX_VERSIONS_PER_TICK` (12) versions are read per tick, and the watermark
+(`meta.opensanctions_version`) moves past a version only once its delta was
+read. Until Phase 260 the tick took the *newest* twelve and moved the
+watermark past everything older, so after an outage of more than three days
+a company sanctioned in one of the dropped deltas was never re-run and
+nothing said so. Now the rest waits for the next tick — which reads it
+straight away rather than after another three hours — and `/watchstats`
+(`os_backlog`) and the page's honesty line say how many are still to read. A
+failed download stops the tick with the watermark where it was, so that same
+version is retried.
+
+`versions.json` lists only the last ~100 versions (some 25 days). When the
+watermark is older than the oldest listed version, the versions in between
+can no longer be named, let alone read; and a listed version whose delta
+answers 404 cannot be read either. Either is recorded as a **gap**
+(`meta.opensanctions_gaps`, the last 20; `os_gaps` on `/watchstats`; the
+newest three on the page) and answered with a **catch-up**: every watched
+company is queued for a re-run on the `catch_up` tier. A catch-up entry is
+written only when the re-run finds a difference — unlike an OpenSanctions
+hit, the catch-up is not news about the company — and a real trigger for the
+same LEI replaces a pending catch-up rather than being folded into it. Person screening deltas would put
 UBO names into the store — that waits for the GDPR ticket, with email.
 
 **There is no third tier.** National registers are never polled. They are
@@ -100,6 +123,15 @@ network or server fault keeps the token, because the list may still exist.
 Before this (three days after Phase 215 shipped) a browser carrying a dead
 token failed every Watch with "No watchlist with that token." and could not
 recover without clearing storage by hand.
+
+**Schema-versioned and backed up (Phase 260).** The file carries `PRAGMA
+user_version` (`watchlist.MIGRATIONS`, applied by `opencheck/sqlite_schema.py`
+on open); a file written by a newer build is refused, and the routes answer
+503 saying so. It is backed up daily, encrypted, to a private GitHub
+repository — see [`backups.md`](backups.md). And every route and worker call
+into it runs on a thread: the store waits up to 30 s on a write lock the
+mirror-refresh hook may hold, and on the event loop one `/watch` request
+doing that froze every request on the server.
 
 Tables: `lists`, `watches` (per list and LEI: the baseline GLEIF facts and
 their digest, the mirror watermark they were read at, the lookup snapshot,
