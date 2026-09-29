@@ -308,6 +308,25 @@ PROBES: dict[str, SourceProbe] = {
             "actually accepted."
         ),
     ),
+    "ny_dos": _p(
+        tier="live",
+        subject="Corning Incorporated (New York)",
+        args=("49779",),
+        kwargs={"legal_name": "CORNING INCORPORATED"},
+        expect_fields=("filings", "status_history", "name_history", "addresses"),
+        anchor_lei="549300X2937PB0CJ7I56",
+        bods_mapper="map_ny_dos",
+        notes=(
+            "The bare DOS ID exactly as GLEIF files it under RA000628, on a 1936 "
+            "consolidation with 91 filings, two names (CORNING GLASS WORKS until "
+            "1989) and a chief executive officer on its latest biennial statement "
+            "(2026-09-29). ``expect_fields`` asserts all four datasets, so DOS "
+            "renaming ``corpid_num`` in one of them, or dropping the Address "
+            "dataset, reads as a failure rather than a quietly thinner record. "
+            "Keyless; SOCRATA_APP_TOKEN, when set, only lifts the shared per-IP "
+            "throttle."
+        ),
+    ),
     "anaf_romania": _p(
         tier="live",
         subject="Dante International S.A. (eMAG)",

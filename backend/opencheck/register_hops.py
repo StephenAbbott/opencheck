@@ -56,8 +56,9 @@ class RegisterHop:
 #: table; renamed to org-id's code in Phase 257) is the
 #: same case: Corporations Canada holds federal corporations only, and a
 #: provincially incorporated company's number — most Canadian companies — says
-#: nothing about the federal register.
-_NO_COUNTRY_ALIAS: frozenset[str] = frozenset({"US-DC", "CA-CC"})
+#: nothing about the federal register. ``US-NY`` (Phase 263) is the DC case
+#: again, for the New York Department of State.
+_NO_COUNTRY_ALIAS: frozenset[str] = frozenset({"US-DC", "US-NY", "CA-CC"})
 
 
 def _ch_normalise(value: str) -> str:

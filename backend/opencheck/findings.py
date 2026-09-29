@@ -1632,6 +1632,76 @@ def finding_apr_serbia(bundle: dict[str, Any]) -> str | None:
     return sentence
 
 
+def finding_ny_dos(bundle: dict[str, Any]) -> str | None:
+    """What the New York Department of State records: status, formation, CEO.
+
+    Worded as what DOS *records*, never as what the company *is* — DOS's own
+    overview says the data "is not to be construed as ... the current legal
+    status of the entity".
+
+    * **A note card** — a DOS ID DOS does not hold, or one that belongs to a
+      different entity — is its own sentence, so the card is not silent.
+    * A domestic entity DOS records as **Inactive** leads with that and its
+      date: it changes a decision. For a foreign entity the same status means
+      only that its authority to do business in New York ended, and says so.
+    * The chief executive officer is named where DOS holds one. A
+      corporation with none on file says so; an LLC or partnership says
+      nothing, because DOS never asks them for one.
+    """
+    from .sources.ny_dos import STATUS_INACTIVE, summarise
+
+    if not bundle:
+        return None
+    if bundle.get("name_mismatch"):
+        return (
+            "The DOS ID on the LEI record belongs to a different entity at the "
+            "New York Department of State, so no record is attached."
+        )
+    if bundle.get("not_in_register"):
+        return "No entity with this DOS ID in the New York Department of State's open data."
+    if bundle.get("is_stub") or not bundle.get("filings"):
+        return None
+
+    s = summarise(bundle)
+    status = s.get("status") or ""
+    since = s.get("status_since")
+    domestic = bool(s.get("domestic"))
+    entity_type = (s.get("entity_type") or "").lower()
+
+    if status == STATUS_INACTIVE and domestic:
+        lead = "Inactive at the New York Department of State" + (f" since {since}" if since else "")
+    elif status == STATUS_INACTIVE:
+        lead = "No longer authorised to do business in New York" + (f" since {since}" if since else "")
+    elif domestic and s.get("formed_on"):
+        lead = f"Formed in New York {s['formed_on']}"
+    elif not domestic and s.get("authority_on"):
+        lead = f"Authorised to do business in New York since {s['authority_on']}"
+    elif status:
+        lead = f"{status} at the New York Department of State"
+    else:
+        lead = "On the New York Department of State's register"
+
+    clauses: list[str | None] = [lead]
+    ceos = list(s.get("ceos") or [])
+    if len(ceos) == 1:
+        clauses.append(f"chief executive officer on file: {ceos[0]}")
+    elif ceos:
+        clauses.append(f"{len(ceos)} chief executive officers on file")
+    elif "corporation" in entity_type:
+        clauses.append("no chief executive officer on file")
+    former = list(s.get("former_names") or [])
+    if len(former) == 1:
+        clauses.append(f"formerly {former[0]}")
+    elif former:
+        clauses.append(f"{len(former)} former names")
+    clauses.append(entity_type or None)
+
+    sentence = clauses_to_sentence(clauses)
+    if sentence and len(sentence) > MAX_FINDING_CHARS:
+        sentence = clauses_to_sentence(clauses[:2])
+    return sentence
+
+
 def finding_dlcp_dc(bundle: dict[str, Any]) -> str | None:
     """What DC's Corporations Division register says: status, form, owners.
 

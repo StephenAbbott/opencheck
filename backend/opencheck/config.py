@@ -553,6 +553,14 @@ class Settings(BaseSettings):
     # License: Singapore Open Data Licence 1.0.
     data_gov_sg_api_key: str | None = Field(default=None, alias="DATA_GOV_SG_API_KEY")
 
+    # --- Socrata (data.ny.gov — New York DOS, Phase 263) ---
+    # Optional. Socrata throttles keyless requests from a shared per-IP pool
+    # and does not throttle requests carrying an application token. Free: sign
+    # in at data.ny.gov → Developer Settings → Create New App Token. Sent as
+    # the ``X-App-Token`` header, never in the URL. One token works on any
+    # Socrata portal.
+    socrata_app_token: str | None = Field(default=None, alias="SOCRATA_APP_TOKEN")
+
     # --- Cyprus DRCOR (data.gov.cy open data, CC BY 4.0) ---
     # No API key. Pre-built SQLite index. Build with: python scripts/extract_cyprus.py
     # Source (3 monthly CSVs): https://data.gov.cy/el/dataset/mitroo-eggegrammenon-etaireion-emporikon-eponymion-kai-synetairismon-stin-kypro

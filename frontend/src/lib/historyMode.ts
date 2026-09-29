@@ -3,7 +3,8 @@
  *
  * `/history` merges every register OpenCheck holds a change log for onto one
  * axis — GLEIF, Companies House, the New Zealand Companies Office, the
- * Estonian e-Äriregister and Danish CVR. This module holds what the tab
+ * Estonian e-Äriregister, Danish CVR and (Phase 263) the New York Department
+ * of State. This module holds what the tab
  * *says* about that merge: which register a row came from, how to get back to
  * the record that published it, and the sentence that opens the tab.
  *
@@ -14,7 +15,7 @@
  * Two claims this module is careful about, both of the same kind the
  * Subsidiaries tab makes:
  *
- * - **Publishing a change log is rare.** Five of the registers OpenCheck reads
+ * - **Publishing a change log is rare.** Six of the registers OpenCheck reads
  *   expose entity history; the rest answer only about now. A change missing
  *   from this timeline is far more often a register that keeps no history than
  *   a change that did not happen, and the tab has to say so rather than let
@@ -35,6 +36,7 @@ export const HISTORY_SOURCES = [
   "nz_companies",
   "ariregister",
   "cvr_denmark",
+  "ny_dos",
 ] as const;
 
 export type HistorySourceId = (typeof HISTORY_SOURCES)[number];
@@ -52,6 +54,7 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   nz_companies: "Companies Office (NZ)",
   ariregister: "e-Äriregister (EE)",
   cvr_denmark: "CVR (DK)",
+  ny_dos: "Dept. of State (NY)",
 };
 
 export function historySourceLabel(sourceId: string): string {
@@ -65,7 +68,7 @@ export const VISIBLE_ROWS = 10;
  * The public record a row came from, or `null` when the register publishes no
  * addressable page for it.
  *
- * GLEIF is addressed by the LEI the caller already holds; the four national
+ * GLEIF is addressed by the LEI the caller already holds; the five national
  * registers each need their own number, which is why `/history` grew
  * `registry_numbers` in Phase 190. Before that only GLEIF and Companies House
  * could be linked and the other three rendered as plain text — a timeline that
@@ -99,6 +102,13 @@ export function recordUrl(
       return n ? `https://ariregister.rik.ee/eng/company/${encodeURIComponent(n)}` : null;
     case "cvr_denmark":
       return n ? `https://datacvr.virk.dk/enhed/virksomhed/${encodeURIComponent(n)}` : null;
+    case "ny_dos":
+      // DOS's own public inquiry is a form with no per-entity address, so the
+      // row links to the open-data query for the entity's filings — the rows
+      // the History tab was built from.
+      return n
+        ? `https://data.ny.gov/resource/63wc-4exh.json?corpid_num=${encodeURIComponent(n)}`
+        : null;
     default:
       return null;
   }
@@ -132,7 +142,7 @@ export function silentRegisters(data: HistoryResponse): string[] {
 }
 
 function numberWord(n: number): string {
-  return ["No", "One", "Two", "Three", "Four", "Five"][n] ?? String(n);
+  return ["No", "One", "Two", "Three", "Four", "Five", "Six"][n] ?? String(n);
 }
 
 /**
@@ -194,8 +204,10 @@ export const HISTORY_CAVEAT =
  * The label under a date, saying what that date actually means.
  *
  * "as recorded by GLEIF" names GLEIF rather than "the register" because GLEIF
- * is the only emitter that produces a `recorded` basis — the four national
- * registers all publish real effective dates. And because a cluster's shown
+ * is the only emitter that produces a `recorded` basis — the national
+ * registers all publish real effective dates. (New York's chief executive rows
+ * are `snapshot_window`: DOS publishes the statement that names a CEO, not
+ * the day they took office.) And because a cluster's shown
  * date is its most authoritative one (effective outranks recorded), a row
  * still reading `recorded` is one no register dated for us. Generalising the
  * wording would lose that, for no source it would become true of.
@@ -288,7 +300,7 @@ export function historyDegradedNotice(data: HistoryResponse): string | null {
   }
   if (data.registry_sources_blocked) {
     parts.push(
-      "The company-registry histories (Companies House, NZ, Estonia, Denmark) could not be attempted either — the registry number they need comes from that record.",
+      "The company-registry histories (Companies House, NZ, Estonia, Denmark, New York) could not be attempted either — the registry number they need comes from that record.",
     );
   } else if (recordDown && data.company_number_basis === "cached") {
     parts.push(

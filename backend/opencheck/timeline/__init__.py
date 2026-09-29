@@ -11,6 +11,7 @@ from .assemble import Timeline, TimelineEntry, assemble_timeline
 from .companies_house import classify_companies_house_filing
 from .cvr_denmark import cvr_change_events
 from .gleif import classify_gleif_modification, relationship_interest_dates
+from .ny_dos import ny_dos_change_events
 from .nz_companies import nz_change_events
 from .model import (
     CHANGE_TYPES,
@@ -39,6 +40,7 @@ __all__ = [
     "classify_companies_house_filing",
     "classify_gleif_modification",
     "cvr_change_events",
+    "ny_dos_change_events",
     "nz_change_events",
     "relationship_interest_dates",
 ]

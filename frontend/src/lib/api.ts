@@ -825,7 +825,7 @@ export interface HistoryResponse {
 }
 
 /** Fetch the merged change history for an LEI — every register OpenCheck
- *  holds a change log for (GLEIF, Companies House, NZ, Estonia, Denmark). */
+ *  holds a change log for (GLEIF, Companies House, NZ, Estonia, Denmark, New York). */
 export async function getHistory(
   lei: string,
   includeNoise = false,

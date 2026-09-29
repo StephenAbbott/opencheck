@@ -51,6 +51,7 @@ from .dlcp_dc import (
     DLCP_RA_CODE as _DLCP_RA_CODE,
     normalise_file_number as _normalise_dc_file_number,
 )
+from .ny_dos import NY_DOS_RA_CODE as _NY_DOS_RA_CODE, normalise_dos_id as _normalise_ny_dos_id
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
 from .inpi import (
     INPI_RA_CODES as _INPI_RA_CODES,
@@ -844,6 +845,15 @@ class GleifAdapter(SourceAdapter):
                     identifiers["us_dc_file_number"] = _normalise_dc_file_number(
                         registered_as
                     )
+                except ValueError:
+                    pass
+            # New York DOS ID — expose as ``us_ny_dos_id`` so the reconciler
+            # can bridge GLEIF ↔ the Department of State. RA000628 files the
+            # bare, unpadded ID, including for foreign companies authorised in
+            # New York, so this keys on the RA code and never the jurisdiction.
+            if registered_at_id == _NY_DOS_RA_CODE:
+                try:
+                    identifiers["us_ny_dos_id"] = _normalise_ny_dos_id(registered_as)
                 except ValueError:
                     pass
             # Brazilian CNPJ — expose as ``br_cnpj`` so the reconciler can

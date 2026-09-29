@@ -132,6 +132,7 @@ jobs:
           CVR_DENMARK_API_KEY: ${{ secrets.CVR_DENMARK_API_KEY }}
           DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
           DATA_GOV_SG_API_KEY: ${{ secrets.DATA_GOV_SG_API_KEY }}
+          SOCRATA_APP_TOKEN: ${{ secrets.SOCRATA_APP_TOKEN }}
           FIRMENBUCH_API_KEY: ${{ secrets.FIRMENBUCH_API_KEY }}
           GEMI_API_KEY: ${{ secrets.GEMI_API_KEY }}
           INPI_USERNAME: ${{ secrets.INPI_USERNAME }}

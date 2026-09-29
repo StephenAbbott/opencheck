@@ -302,6 +302,64 @@ def _bh_dlcp_dc(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_ny_dos(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the New York Department of State.
+
+    Two shapes:
+
+    * **A record.** Asserts the DOS ID the register's own rows carry — never
+      the LEI (the identifier corroboration rule in CLAUDE.md).
+    * **A note card** — the DOS ID on the LEI record is not in the register,
+      or belongs to a different entity. No identifier: DOS did not confirm
+      the number for this company, and the reconciler would read it as
+      corroboration. ``not_found`` keeps the card out of the "with data"
+      count (``coverage.py``) and marks the MCP row ``found: false`` with the
+      note (``mcp/shaping.py``).
+    """
+    from ..findings import finding_ny_dos
+    from ..sources.ny_dos import NY_DOS_SCHEME, clean_field, summarise
+
+    if r.get("not_found"):
+        return _hit(
+            "ny_dos", local_id,
+            name=ctx.legal_name or "",
+            summary=f"{NY_DOS_SCHEME} {local_id} · no record attached",
+            finding=finding_ny_dos(r),
+            identifiers={},
+            raw={
+                "not_found": True,
+                "coverage_note": r.get("coverage_note"),
+                "name_mismatch": bool(r.get("name_mismatch")),
+                "registered_name": r.get("registered_name"),
+            },
+        )
+    summary = summarise(r)
+    dos_id = summary["dos_id"] or local_id
+    status = clean_field(summary.get("status"))
+    return _hit(
+        "ny_dos", dos_id,
+        name=summary.get("name") or ctx.legal_name or "",
+        summary=f"{NY_DOS_SCHEME} {dos_id}" + (f" · {status}" if status else ""),
+        identifiers={"us_ny_dos_id": dos_id},
+        raw={
+            "dos_id": dos_id,
+            "name": summary.get("name"),
+            "entity_type": summary.get("entity_type"),
+            "jurisdiction": summary.get("juris"),
+            "status": status or None,
+            "status_since": summary.get("status_since"),
+            "formed_on": summary.get("formed_on"),
+            "authority_on": summary.get("authority_on"),
+            "former_names": summary.get("former_names") or [],
+            "assumed_names": summary.get("assumed_names") or [],
+            "chief_executive_officers": summary.get("ceos") or [],
+            "filing_count": summary.get("filing_count"),
+            "truncated": bool(r.get("truncated")),
+        },
+        finding=finding_ny_dos(r),
+    )
+
+
 def _bh_anaf_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Romania's ANAF taxpayer register.
 
