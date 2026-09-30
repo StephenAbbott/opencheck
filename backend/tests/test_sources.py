@@ -122,7 +122,7 @@ _IDENTIFIER_KEYED = {
     # it has no name search at all.
     "apr_serbia", "dlcp_dc", "ny_dos",
     "asp_moldova", "onrc_romania",
-    "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "ariregister", "bolagsverket",
+    "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "cac_nigeria", "cipa_botswana", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "meip", "nz_companies", "opencorporates", "inpi", "kvk",
     "rpo_slovakia", "sudreg_croatia", "ted_eu", "wikirate", "zefix",

@@ -19,6 +19,7 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .bolagsverket import BolagsverketAdapter
 from .brreg import BrregAdapter
 from .cac_nigeria import CacNigeriaAdapter
+from .cipa_botswana import CipaBotswanaAdapter
 from .cnpj_brazil import CnpjBrazilAdapter
 from .acra_singapore import AcraSingaporeAdapter
 from .cvr_denmark import CvrDenmarkAdapter
@@ -72,6 +73,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "bolagsverket": BolagsverketAdapter(),
     "brreg": BrregAdapter(),
     "cac_nigeria": CacNigeriaAdapter(),
+    "cipa_botswana": CipaBotswanaAdapter(),
     "climatetrace": ClimateTRACEAdapter(),
     "cnpj_brazil": CnpjBrazilAdapter(),
     "corporations_canada": CorporationsCanadaAdapter(),

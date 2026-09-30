@@ -85,6 +85,7 @@ from .hit_builders import (  # noqa: F401
     _bh_bolagsverket,
     _bh_brreg,
     _bh_cac_nigeria,
+    _bh_cipa_botswana,
     _bh_eiti_assessment,
     _bh_climatetrace,
     _bh_cnpj_brazil,
@@ -890,6 +891,17 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         and _offline_index_covers(cac_adapter, ctx.lei)
     ):
         tasks.append(("cac_nigeria", cac_adapter.fetch_by_lei(ctx.lei)))
+    # Botswana CIPA — LEI-keyed offline match against the curated register
+    # set (the cac_nigeria shape). A hit means the LEI is one of the companies
+    # GLEIF files under CIPA's Register of Companies that the harvest resolved.
+    cipa_adapter = REGISTRY.get("cipa_botswana")
+    if (
+        cipa_adapter is not None
+        and hasattr(cipa_adapter, "fetch_by_lei")
+        and _want("cipa_botswana")
+        and _offline_index_covers(cipa_adapter, ctx.lei)
+    ):
+        tasks.append(("cipa_botswana", cipa_adapter.fetch_by_lei(ctx.lei)))
     # OECD-UNSD MEIP — LEI-keyed offline match against the register's own
     # BODS release (Phase 208). A hit means the LEI is one of the 500 group
     # heads or a member of one of their groups; its statements are the
@@ -965,6 +977,8 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_eiti_soe(result, ctx) if result.get("is_state_owned") else None
     if source_id == "cac_nigeria":
         return _bh_cac_nigeria(result, ctx) if result.get("record") else None
+    if source_id == "cipa_botswana":
+        return _bh_cipa_botswana(result, ctx) if result.get("record") else None
     if source_id == "meip":
         return _bh_meip(result, ctx) if result.get("records") else None
     if source_id == "eiti_assessment":

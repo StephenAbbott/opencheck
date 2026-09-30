@@ -268,6 +268,35 @@ from .mappers.nigeria import (  # noqa: F401  (re-exported, Phase 246)
     _cac_owner_statements,
     map_cac_nigeria,
 )
+from .mappers.botswana import (  # noqa: F401  (re-exported)
+    _SOURCE_ID,
+    _CIPA_INTEREST,
+    _COMPANY_TYPES,
+    _ENTITY_TYPES,
+    _FORM_WORDS,
+    _ISO,
+    _Party,
+    _SCHEME,
+    _SCHEME_NAME,
+    _SOURCE_URL,
+    _SUB_TYPES,
+    _SUB_TYPE_WORDS,
+    _V04_INTEREST,
+    _bo_interests,
+    _company_details,
+    _dated,
+    _director_interests,
+    _entity_identifiers,
+    _jurisdiction,
+    _nominee_details,
+    _org_key,
+    _parties,
+    _person_key,
+    _shareholder_interests,
+    _valid_share,
+    cipa_counts,
+    map_cipa_botswana,
+)
 from .mappers.lithuania import (  # noqa: F401  (re-exported, Phase 246)
     _LT_ENTITY_TYPES,
     map_jar_lithuania,
@@ -581,6 +610,10 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000394": ("IN-MCA", "Ministry of Corporate Affairs — CIN (India)"),
     # Nigeria — Corporate Affairs Commission; the RC number.
     "RA000469": ("NG-CAC", "Corporate Affairs Commission — RC number (Nigeria)"),
+    # Botswana — CIPA Register of Companies. Files the UIN (BW00000466545) or,
+    # for some records, the pre-2019 company number (CO1988/1163); the
+    # cipa_botswana adapter writes both under BW-CIPA, so either corroborates.
+    "RA000035": ("BW-CIPA", "Companies and Intellectual Property Authority (Botswana)"),
     # Greece — General Commercial Registry (ΓΕΜΗ)
     "RA000685": ("GR-GEMI", "General Commercial Registry (ΓΕΜΗ)"),
     # Phase 255: registers GLEIF files numbers under that have an org-id.guide

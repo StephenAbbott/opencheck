@@ -1036,6 +1036,29 @@ def _bh_cac_nigeria(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_cipa_botswana(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the curated Botswana CIPA register set.
+
+    Asserts only the numbers CIPA itself publishes — the UIN and, where it has
+    one, the pre-2019 company number — never the LEI, which the harvest
+    derived from GLEIF (the corroboration rule in CLAUDE.md).
+    """
+    from ..findings import finding_cipa_botswana
+    from ..sources.cipa_botswana import cipa_identifiers
+
+    record = r.get("record") or {}
+    uin = record.get("uin") or ""
+    parts = [f"BW-CIPA {uin}" if uin else None, "Botswana CIPA public register"]
+    return _hit(
+        "cipa_botswana", ctx.lei,
+        name=record.get("company") or ctx.legal_name or ctx.lei,
+        summary=" · ".join(p for p in parts if p),
+        identifiers=cipa_identifiers(record),
+        raw=r,
+        finding=finding_cipa_botswana(r),
+    )
+
+
 def _bh_meip(r: dict, ctx: _LookupCtx) -> SourceHit:
     """OECD-UNSD MEIP (Phase 208) — the subject's group membership.
 

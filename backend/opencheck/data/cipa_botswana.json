@@ -1,0 +1,6536 @@
+{
+ "meta": {
+  "register": "Companies and Intellectual Property Authority (CIPA), Botswana",
+  "source_url": "https://www.cipa.co.bw",
+  "ra_codes": [
+   "RA000035",
+   "RA000821"
+  ],
+  "harvested": "2026-09-30",
+  "note": "Curated example set read from CIPA's public register pages (beneficial owners, shareholders and directors: name and role, nationality or country, dates, shares). No addresses, documents or contact details.",
+  "entities": 37,
+  "beneficial_owners": 55,
+  "shareholders": 120,
+  "directors": 321,
+  "unresolved": []
+ },
+ "index": {
+  "2138006S5ZZM5QQEOX65": {
+   "company": "Rcs Botswana Proprietary Limited",
+   "uin": "BW00001078593",
+   "old_number": "CO2008/3191",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2008-05-25",
+   "incorporated": "2008-05-25",
+   "reregistered": "2019-11-21",
+   "annual_return_filed": "2026-05-08",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Regan Franklin Adams",
+     "nationality": "ZA",
+     "start": "2016-07-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Abdool Rahim Khan",
+     "nationality": "BW",
+     "start": "2008-06-04",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Vincent Metz",
+     "nationality": "FR",
+     "start": "2024-03-18",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Marine Van Brakel",
+     "nationality": "ZA",
+     "start": "2019-12-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Patrick Jean J Alexandre",
+     "nationality": "BE",
+     "start": "2019-09-19",
+     "end": "2024-05-02"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Christian Pieter De Wit",
+     "nationality": "ZA",
+     "start": "2016-07-01",
+     "end": "2020-11-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Balraj Singh Dev",
+     "nationality": "IE",
+     "start": "2021-05-01",
+     "end": "2023-09-18"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Patrick Marie Alain Denis Miron De Lespinay",
+     "nationality": "FR",
+     "start": "2019-04-08",
+     "end": "2024-05-02"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tonia Pavlou",
+     "nationality": "ZA",
+     "start": "2023-10-10",
+     "end": "2024-08-07"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Bnp Paribas Personal Finance South Africa Limited",
+     "country": "ZA",
+     "start": "2008-06-04",
+     "end": null,
+     "shares": 100,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Regan Franklin Adams",
+     "nationalities": [
+      "ZA"
+     ],
+     "start": "2025-04-14",
+     "end": null,
+     "interests": [
+      {
+       "type": "appointmentOfBoard",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-11",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-05-08",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-05-07",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-05-06",
+     "service": "Maintain Shareholders",
+     "filings": [
+      "Maintain Shareholders"
+     ]
+    },
+    {
+     "date": "2025-10-15",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    }
+   ],
+   "lei": "2138006S5ZZM5QQEOX65",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00001078593",
+   "ra_code": "RA000035",
+   "gleif_name": "RCS BOTSWANA PROPRIETARY LIMITED"
+  },
+  "213800844OWK5XO17L23": {
+   "company": "De Beers Global Sightholder Sales Proprietary Limited",
+   "uin": "BW00000011266",
+   "old_number": "CO2008/5689",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2008-08-20",
+   "incorporated": "2008-08-20",
+   "reregistered": "2019-06-04",
+   "annual_return_filed": "2026-08-14",
+   "total_shares": 806,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Thabile Faith Moipolai",
+     "nationality": "BW",
+     "start": "2024-04-05",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Niranjan Cumuran Mylvaganam",
+     "nationality": "GB",
+     "start": "2024-08-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Paul George Rowley",
+     "nationality": "GB",
+     "start": "2014-02-28",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Susanne Naa Swaniker-Tettey",
+     "nationality": "BW",
+     "start": "2018-05-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Avischen Moodley",
+     "nationality": "ZA",
+     "start": "2022-07-25",
+     "end": "2023-07-28"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Daniel Neo Moroka",
+     "nationality": "BW",
+     "start": "2011-06-30",
+     "end": "2024-08-02"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Jonathan Dh Savage",
+     "nationality": "GB",
+     "start": "2016-06-16",
+     "end": "2020-11-27"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nigel Rupert Litton Simson",
+     "nationality": "GB",
+     "start": "2020-11-27",
+     "end": "2024-01-18"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nompumelelo D Zikalala",
+     "nationality": "ZA",
+     "start": "2018-04-01",
+     "end": "2021-12-31"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "EntityShareholder",
+     "name": "De Beers Uk Limited",
+     "uin": "BW00008148778",
+     "start": "2008-08-20",
+     "end": null,
+     "shares": 806,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Richard Shaun Lawson",
+     "nationalities": [
+      "GB"
+     ],
+     "start": "2025-08-21",
+     "end": null,
+     "interests": [
+      {
+       "type": "boardMember",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Bogolo Joy Kenewendo",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-08-19",
+     "end": "2026-08-14",
+     "interests": [
+      {
+       "type": "other",
+       "share": null,
+       "voting": null,
+       "other_reason": "Agent - Government Minister"
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-09-18",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-08-14",
+     "service": "Maintain Company Addresses",
+     "filings": [
+      "Notice of Change of Addresses"
+     ]
+    },
+    {
+     "date": "2026-08-14",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-08-14",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2026-08-14",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    }
+   ],
+   "lei": "213800844OWK5XO17L23",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000011266",
+   "ra_code": "RA000035",
+   "gleif_name": "DE BEERS GLOBAL SIGHTHOLDER SALES PROPRIETARY LIMITED"
+  },
+  "2138008EWZFH65DKLP79": {
+   "company": "Cheetah Conservation Botswana",
+   "uin": "BW00001289238",
+   "old_number": "CO2004/6327",
+   "entity_type": "public",
+   "sub_type": "limitedByGuarantee",
+   "suffix": null,
+   "status": "registered",
+   "status_since": "2004-08-09",
+   "incorporated": "2004-08-09",
+   "reregistered": "2020-01-28",
+   "annual_return_filed": "2026-08-31",
+   "total_shares": null,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Michaela Anne Alves Da Silva",
+     "nationality": "IO",
+     "start": "2020-01-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Harold Carl Hester",
+     "nationality": "ZA",
+     "start": "2020-01-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Rebecca Klein",
+     "nationality": "IO",
+     "start": "2020-01-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Felix Monggae",
+     "nationality": "BW",
+     "start": "2020-01-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Portia Kelefilwe Segomelo",
+     "nationality": "BW",
+     "start": "2020-01-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Gabotsewe Sekgororoane",
+     "nationality": "BW",
+     "start": "2020-01-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Moses Selebatso",
+     "nationality": "BW",
+     "start": "2020-01-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Cyril Taolo",
+     "nationality": "BW",
+     "start": "2020-01-20",
+     "end": null
+    }
+   ],
+   "shareholders": [],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Douglas Mpho Thamage",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-09-09",
+     "end": null,
+     "interests": [
+      {
+       "type": "other",
+       "share": null,
+       "voting": null,
+       "other_reason": "member"
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Gabotsewe Sekgororoane",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-09-09",
+     "end": null,
+     "interests": [
+      {
+       "type": "other",
+       "share": null,
+       "voting": null,
+       "other_reason": "Member"
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Michaela Anne Alves Da Silva",
+     "nationalities": [
+      "IO"
+     ],
+     "start": "2025-09-09",
+     "end": null,
+     "interests": [
+      {
+       "type": "other",
+       "share": null,
+       "voting": null,
+       "other_reason": "Member"
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Moses Selebatso",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-09-09",
+     "end": null,
+     "interests": [
+      {
+       "type": "other",
+       "share": null,
+       "voting": null,
+       "other_reason": "Member"
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Nancy Kgengwenyane",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-09-09",
+     "end": null,
+     "interests": [
+      {
+       "type": "other",
+       "share": null,
+       "voting": null,
+       "other_reason": "Member"
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Rebecca Klein",
+     "nationalities": [
+      "IO"
+     ],
+     "start": "2025-09-09",
+     "end": null,
+     "interests": [
+      {
+       "type": "other",
+       "share": null,
+       "voting": null,
+       "other_reason": "Member"
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-31",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Public Company Limited by Guarantee for 2026"
+     ]
+    },
+    {
+     "date": "2026-08-12",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-03-24",
+     "service": "Maintain Secretary Details",
+     "filings": [
+      "Notice of Change of Secretaries"
+     ]
+    },
+    {
+     "date": "2025-09-09",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2025-09-09",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Public Company Limited by Guarantee for 2025"
+     ]
+    }
+   ],
+   "lei": "2138008EWZFH65DKLP79",
+   "lei_status": "LAPSED",
+   "registered_as": "CO2004/6327",
+   "ra_code": "RA000035",
+   "gleif_name": "CHEETAH CONSERVATION BOTSWANA"
+  },
+  "2138008XGK9WZ2EHWP60": {
+   "company": "Cyan Agencies Proprietary Limited",
+   "uin": "BW00000591956",
+   "old_number": "CO1993/1225",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "1993-08-03",
+   "incorporated": "1993-08-03",
+   "reregistered": "2019-08-19",
+   "annual_return_filed": "2026-08-29",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Casparus Johannes Lotter",
+     "nationality": "ZA",
+     "start": "1993-10-11",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Stefan Lotter",
+     "nationality": "ZA",
+     "start": "2021-05-12",
+     "end": null
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Casparus Johannes Lotter",
+     "nationality": "ZA",
+     "start": "1993-10-11",
+     "end": null,
+     "shares": 75,
+     "percentage": 75
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Esme Lotter",
+     "nationality": "ZA",
+     "start": "1993-10-11",
+     "end": null,
+     "shares": 20,
+     "percentage": 20
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Stefan Lotter",
+     "nationality": "ZA",
+     "start": "2022-08-31",
+     "end": null,
+     "shares": 5,
+     "percentage": 5
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Casparus Johannes Lotter",
+     "nationalities": [
+      "ZA"
+     ],
+     "start": "2025-08-28",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 25,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-29",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-02-04",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-08-31",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-08-28",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2025-08-07",
+     "service": "Maintain Secretary Details",
+     "filings": [
+      "Notice of Change of Secretaries"
+     ]
+    }
+   ],
+   "lei": "2138008XGK9WZ2EHWP60",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00000591956",
+   "ra_code": "RA000035",
+   "gleif_name": "CYAN AGENCIES PROPRIETARY LIMITED"
+  },
+  "213800HRR5TJL8BV2R18": {
+   "company": "British American Tobacco Botswana Proprietary Limited",
+   "uin": "BW00001118806",
+   "old_number": "CO2001/103",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2001-05-22",
+   "incorporated": "2001-01-11",
+   "reregistered": "2019-11-28",
+   "annual_return_filed": "2026-02-28",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Dane Demetrios Mouyis",
+     "nationality": "ZA",
+     "start": "2024-06-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Fatimo Adejumoke Peter-Adenuga",
+     "nationality": "NG",
+     "start": "2025-09-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Stephen David Pezarro",
+     "nationality": "ZA",
+     "start": "2025-04-24",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Oscar Ricardo Da Costa Azevedo",
+     "nationality": "AO",
+     "start": "2024-06-01",
+     "end": "2024-11-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kyle Fourie",
+     "nationality": "ZA",
+     "start": "2017-04-01",
+     "end": "2021-03-04"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nkululeko Sechaba Kamolane",
+     "nationality": "ZA",
+     "start": "2021-03-04",
+     "end": "2024-06-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mpaphi John Masala",
+     "nationality": "BW",
+     "start": "2021-05-01",
+     "end": "2025-04-24"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kimesh Naidoo",
+     "nationality": "ZA",
+     "start": "2024-06-01",
+     "end": "2025-08-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Adam Warren Rampf",
+     "nationality": "ZA",
+     "start": "2017-04-01",
+     "end": "2021-03-04"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tsaone Modirwa Semausu",
+     "nationality": "BW",
+     "start": "2021-03-04",
+     "end": "2021-07-12"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Gustavo Werfel Espana",
+     "nationality": "BR",
+     "start": "2021-03-04",
+     "end": "2024-06-01"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Precis (1790) B. V.",
+     "country": "NL",
+     "start": "2001-02-08",
+     "end": null,
+     "shares": 100,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Jongikhaya Witness Qwaqwa",
+     "nationalities": [
+      "ZA"
+     ],
+     "start": "2026-02-27",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-04-10",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-02-28",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-02-28",
+     "service": "Maintain Shareholders",
+     "filings": [
+      "Maintain Shareholders"
+     ]
+    },
+    {
+     "date": "2026-02-28",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    },
+    {
+     "date": "2026-02-27",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    }
+   ],
+   "lei": "213800HRR5TJL8BV2R18",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00001118806",
+   "ra_code": "RA000035",
+   "gleif_name": "BRITISH AMERICAN TOBACCO BOTSWANA PROPRIETARY LIMITED"
+  },
+  "213800P7ACFS66ZLR993": {
+   "company": "Stockbrokers Botswana Limited",
+   "uin": "BW00000678341",
+   "old_number": "CO1988/1163",
+   "entity_type": "public",
+   "sub_type": "limitedByShares",
+   "suffix": "limitedByShares",
+   "status": "registered",
+   "status_since": "1988-11-16",
+   "incorporated": "1988-11-16",
+   "reregistered": "2019-08-30",
+   "annual_return_filed": "2025-11-27",
+   "total_shares": 10570000,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Brandon Thomas Hartney",
+     "nationality": "BW",
+     "start": "2017-03-24",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Akheel Jinabhai",
+     "nationality": "BW",
+     "start": "2016-07-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mbiganyi Charles Tibone",
+     "nationality": "BW",
+     "start": "1992-02-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Titose Charles A Tibone",
+     "nationality": "BW",
+     "start": "2021-11-09",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Bokani Tshepo Tibone",
+     "nationality": "BW",
+     "start": "2012-06-08",
+     "end": "2026-02-27"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "EntityShareholder",
+     "name": "Tsodilo Financial Services Proprietary Limited",
+     "uin": "BW00000660878",
+     "start": "2017-07-04",
+     "end": null,
+     "shares": 10569999,
+     "percentage": 100.0
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Mbiganyi Charles Tibone",
+     "nationality": "BW",
+     "start": "2012-06-08",
+     "end": null,
+     "shares": 1,
+     "percentage": 0.0
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Mbiganyi Charles Tibone",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-11-17",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 82,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-04-30",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-12-18",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-11-27",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Public Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-11-27",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    },
+    {
+     "date": "2025-11-27",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    }
+   ],
+   "lei": "213800P7ACFS66ZLR993",
+   "lei_status": "LAPSED",
+   "registered_as": "CO1988/1163",
+   "ra_code": "RA000035",
+   "gleif_name": "STOCKBROKERS BOTSWANA LIMITED"
+  },
+  "213800P9CVGYQ6GFQO55": {
+   "company": "Client Que Investments Proprietary Limited",
+   "uin": "BW00001852278",
+   "old_number": "CO2015/13800",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2015-08-27",
+   "incorporated": "2015-08-27",
+   "reregistered": "2020-05-28",
+   "annual_return_filed": "2026-08-25",
+   "total_shares": 1000,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Koziba Magwegwe",
+     "nationality": "BW",
+     "start": "2024-02-15",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "John Raath",
+     "nationality": "ZA",
+     "start": "2016-03-22",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "William John Fink",
+     "nationality": "ZA",
+     "start": "2020-10-27",
+     "end": "2021-05-12"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nathan January",
+     "nationality": "ZA",
+     "start": "2019-10-01",
+     "end": "2020-10-28"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Wouter Klerck",
+     "nationality": "BW",
+     "start": "2016-03-22",
+     "end": "2024-02-15"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "John Raath",
+     "nationality": "ZA",
+     "start": "2016-03-22",
+     "end": null,
+     "shares": 1000,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "John Raath",
+     "nationalities": [
+      "ZA"
+     ],
+     "start": "2025-04-28",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 100,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-25",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-06-20",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-08-30",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-08-04",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-04-30",
+     "service": "Maintain Secretary Details",
+     "filings": [
+      "Notice of Change of Secretaries"
+     ]
+    }
+   ],
+   "lei": "213800P9CVGYQ6GFQO55",
+   "lei_status": "LAPSED",
+   "registered_as": "CO2015/13800",
+   "ra_code": "RA000035",
+   "gleif_name": "CLIENT QUE INVESTMENTS (PROPRIETARY) LIMITED"
+  },
+  "213800QM1IRZHCWHV465": {
+   "company": "Palapye Power Generation Proprietary Limited",
+   "uin": "BW00001861761",
+   "old_number": "CO2016/3896",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "removed",
+   "status_since": "2025-03-04",
+   "incorporated": "2016-03-03",
+   "reregistered": "2020-06-01",
+   "annual_return_filed": "2024-03-13",
+   "total_shares": 200,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Eun Hwan Bae",
+     "nationality": "KR",
+     "start": "2023-09-21",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Andre John Bell",
+     "nationality": "ZA",
+     "start": "2016-03-03",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Sungho Cho",
+     "nationality": "KR",
+     "start": "2023-09-21",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Takeshi Hiramatsu",
+     "nationality": "JP",
+     "start": "2023-09-21",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kwon Jong Kim",
+     "nationality": "KR",
+     "start": "2016-03-03",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Yasuhiro Toyoda",
+     "nationality": "JP",
+     "start": "2023-09-21",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ryosuke Tsuchiya",
+     "nationality": "JP",
+     "start": "2019-04-17",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Sung Byung Kim",
+     "nationality": "KR",
+     "start": "2017-04-18",
+     "end": "2022-11-25"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Jun-Yeol Lee",
+     "nationality": "KR",
+     "start": "2016-03-03",
+     "end": "2022-11-27"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kazuaki Shibuya",
+     "nationality": "JP",
+     "start": "2017-04-18",
+     "end": "2022-11-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Suguru Tsuzaki",
+     "nationality": "JP",
+     "start": "2018-06-11",
+     "end": "2022-11-25"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Axia Power Holdings B.V",
+     "country": "NL",
+     "start": "2016-03-03",
+     "end": null,
+     "shares": 100,
+     "percentage": 50
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Posco Energy Co., Ltd.",
+     "country": "KR",
+     "start": "2016-03-03",
+     "end": null,
+     "shares": 100,
+     "percentage": 50
+    }
+   ],
+   "beneficial_owners": [],
+   "filings": [
+    {
+     "date": "2025-01-31",
+     "service": "Request Removal from the Register",
+     "filings": [
+      "Request to Remove Company from Register "
+     ]
+    },
+    {
+     "date": "2025-01-31",
+     "service": "Maintain Status",
+     "filings": [
+      "Change of Company Status "
+     ]
+    },
+    {
+     "date": "2025-01-07",
+     "service": "Maintain Status",
+     "filings": [
+      "Change of Company Status "
+     ]
+    },
+    {
+     "date": "2024-03-13",
+     "service": "File Annual Return for a Private Company for 2024",
+     "filings": [
+      "Annual Return for a Private Company for 2024"
+     ]
+    },
+    {
+     "date": "2023-10-17",
+     "service": "Maintain Director Details for a Local Company",
+     "filings": [
+      "Notice of Change of Directors "
+     ]
+    }
+   ],
+   "lei": "213800QM1IRZHCWHV465",
+   "lei_status": "RETIRED",
+   "registered_as": "CO2016/3896",
+   "ra_code": "RA000035",
+   "gleif_name": "PALAPYE POWER GENERATION (PROPRIETARY) LIMITED."
+  },
+  "213800XBLH96KZ1ILM07": {
+   "company": "Mindea Exploration And Drilling Services Proprietary Limited",
+   "uin": "BW00000193733",
+   "old_number": "CO2016/12047",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2016-06-09",
+   "incorporated": "2016-06-09",
+   "reregistered": "2019-06-26",
+   "annual_return_filed": "2026-06-10",
+   "total_shares": 1200,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Eddie Ofitlhile Babuseng",
+     "nationality": "BW",
+     "start": "2019-11-25",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Sebanka Lobatlamang",
+     "nationality": "BW",
+     "start": "2019-05-07",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kagiso Mareka",
+     "nationality": "BW",
+     "start": "2019-11-25",
+     "end": "2020-03-13"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Maureen Tumelo Mokgaotsane",
+     "nationality": "BW",
+     "start": "2016-06-09",
+     "end": "2021-07-06"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Marc Leonard Olyott",
+     "nationality": "ZA",
+     "start": "2019-11-25",
+     "end": "2023-03-07"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Eddie Ofitlhile Babuseng",
+     "nationality": "BW",
+     "start": "2025-05-19",
+     "end": null,
+     "shares": 600,
+     "percentage": 50
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Sebanka Lobatlamang",
+     "nationality": "BW",
+     "start": "2019-05-07",
+     "end": null,
+     "shares": 600,
+     "percentage": 50
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Vital Commodities Proprietary Limited",
+     "uin": "BW00001010343",
+     "start": "2019-11-25",
+     "end": "2021-07-09"
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "The Booth Proprietary Limited",
+     "uin": "BW00001888338",
+     "start": "2021-07-09",
+     "end": "2025-05-19"
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Eddie Ofitlhile Babuseng",
+     "nationality": "BW",
+     "start": "2019-11-25",
+     "end": "2023-06-05",
+     "shares": 600,
+     "percentage": 50
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Kagiso Mareka",
+     "nationality": "BW",
+     "start": "2019-11-25",
+     "end": "2020-03-13"
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Maureen Tumelo Mokgaotsane",
+     "nationality": "BW",
+     "start": "2016-06-09",
+     "end": "2023-06-05"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Eddie Ofitlhile Babuseng",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-05-19",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 50,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Sebanka Lobatlamang",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2019-05-07",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 50,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-06-10",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2025-11-13",
+     "service": "Maintain Secretary Details",
+     "filings": [
+      "Notice of Change of Secretaries"
+     ]
+    },
+    {
+     "date": "2025-07-04",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-06-30",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-06-30",
+     "service": "Maintain Company Addresses",
+     "filings": [
+      "Notice of Change of Addresses"
+     ]
+    }
+   ],
+   "lei": "213800XBLH96KZ1ILM07",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00000193733",
+   "ra_code": "RA000035",
+   "gleif_name": "MINDEA EXPLORATION & DRILLING SERVICES (PTY) LTD"
+  },
+  "2549005A9OTSIE6CZ721": {
+   "company": "Bank Gaborone Limited",
+   "uin": "BW00000015806",
+   "old_number": "CO2004/8812",
+   "entity_type": "public",
+   "sub_type": "limitedByShares",
+   "suffix": "limitedByShares",
+   "status": "registered",
+   "status_since": "2004-11-18",
+   "incorporated": "2004-11-18",
+   "reregistered": "2019-06-04",
+   "annual_return_filed": "2025-11-06",
+   "total_shares": 223590956,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Lesego Keitumetse Bannalotlhe",
+     "nationality": "BW",
+     "start": "2023-01-05",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Andre Barnard",
+     "nationality": "NA",
+     "start": "2016-07-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mbakiso Mboki Chilisa",
+     "nationality": "BW",
+     "start": "2020-07-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Christiaan Petrus De Vries",
+     "nationality": "ZA",
+     "start": "2016-07-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nigel Pattison Dixon-Warren",
+     "nationality": "BW",
+     "start": "2022-11-14",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Lorato Edith Ntakhwana",
+     "nationality": "BW",
+     "start": "2025-11-05",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Marthinus Johannes Prinsloo",
+     "nationality": "ZA",
+     "start": "2016-09-02",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Sybrand Abram Coetzee",
+     "nationality": "NA",
+     "start": "2015-07-01",
+     "end": "2023-09-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Peter Charles G Collins",
+     "nationality": "BW",
+     "start": "2008-03-06",
+     "end": "2022-10-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Bogolo Joy Kenewendo",
+     "nationality": "BW",
+     "start": "2020-09-01",
+     "end": "2024-11-07"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Olebile Makhupe",
+     "nationality": "BW",
+     "start": "2023-07-01",
+     "end": "2026-09-02"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mpho Mothibatsela",
+     "nationality": "BW",
+     "start": "2012-02-08",
+     "end": "2023-10-31"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Capricorn Group Limited",
+     "country": "NA",
+     "start": "2019-07-30",
+     "end": null,
+     "shares": 4000,
+     "percentage": 0.0
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Capricorn Investment Holdings (Botswana) Limited",
+     "uin": "BW00000129772",
+     "start": "2004-12-08",
+     "end": null,
+     "shares": 223586956,
+     "percentage": 100.0
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Capricorn Investment Holdings Limited",
+     "country": "NA",
+     "start": "2014-10-25",
+     "end": "2019-12-31"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Jacobus Christiaan Brandt",
+     "nationalities": [
+      "NA"
+     ],
+     "start": "2025-11-06",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 19,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-09-29",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-09-02",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-07-31",
+     "service": "Maintain Secretary Details",
+     "filings": [
+      "Notice of Change of Secretaries"
+     ]
+    },
+    {
+     "date": "2025-11-07",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-11-06",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Public Company Limited by Shares for 2025"
+     ]
+    }
+   ],
+   "lei": "2549005A9OTSIE6CZ721",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000015806",
+   "ra_code": "RA000035",
+   "gleif_name": "Bank Gaborone Limited"
+  },
+  "254900CFACP5V9H8W758": {
+   "company": "Stanbic Bank (Botswana) Limited",
+   "uin": "BW00000732198",
+   "old_number": "CO1991/1343",
+   "entity_type": "public",
+   "sub_type": "limitedByShares",
+   "suffix": "limitedByShares",
+   "status": "registered",
+   "status_since": "1991-07-19",
+   "incorporated": "1991-07-19",
+   "reregistered": "2019-09-09",
+   "annual_return_filed": "2026-07-23",
+   "total_shares": 1596810250,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Michaela Anne Alves Da Silva",
+     "nationality": "GB",
+     "start": "2023-07-28",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mthabisi Bokete",
+     "nationality": "BW",
+     "start": "2020-10-29",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Lungisa Fuzile",
+     "nationality": "ZA",
+     "start": "2022-06-27",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Batsho Pamela Groth",
+     "nationality": "BW",
+     "start": "2022-12-02",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mark Haskins",
+     "nationality": "BW",
+     "start": "2022-03-11",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Richard Christopher Irvine",
+     "nationality": "ZA",
+     "start": "2024-05-15",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Michael Kgengwenyane",
+     "nationality": "BW",
+     "start": "2024-04-19",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tebogo Trevor K Matome",
+     "nationality": "BW",
+     "start": "2017-10-04",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Chose Modise",
+     "nationality": "BW",
+     "start": "2022-01-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Butler Daniel Phirie",
+     "nationality": "BW",
+     "start": "2022-03-11",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Realeboga Phoi",
+     "nationality": "BW",
+     "start": "2024-08-14",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Larona Lesedi B Somolekae",
+     "nationality": "BW",
+     "start": "2022-03-11",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Antonio Caroto Coutinho",
+     "nationality": "ZA",
+     "start": "2021-07-15",
+     "end": "2024-11-29"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Philippus Rudolph De-Wet",
+     "nationality": "BW",
+     "start": "2015-06-12",
+     "end": "2024-03-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Derick Finlayson",
+     "nationality": "GB",
+     "start": "2018-11-23",
+     "end": "2020-06-11"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mythri Sambasivan George",
+     "nationality": "IN",
+     "start": "2020-10-14",
+     "end": "2022-05-23"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Craig Anthony Granville",
+     "nationality": "GB",
+     "start": "2007-07-30",
+     "end": "2023-05-10"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mohamed Ismail",
+     "nationality": "BW",
+     "start": "2015-06-12",
+     "end": "2024-03-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Agnes Tsholofelo Khunwana",
+     "nationality": "BW",
+     "start": "2024-08-14",
+     "end": "2026-06-09"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Jennifer Mary Marinelli",
+     "nationality": "GB",
+     "start": "2009-05-16",
+     "end": "2022-06-06"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Orefitlhetse C Masire",
+     "nationality": "BW",
+     "start": "2009-05-16",
+     "end": "2022-06-06"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Samuel Addae Minta",
+     "nationality": "GH",
+     "start": "2018-06-18",
+     "end": "2021-12-31"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Africa Holdings Limited",
+     "country": "GB",
+     "start": "1991-07-25",
+     "end": null,
+     "shares": 1596810250,
+     "percentage": 100.0
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "OtherBeneficialOwner",
+     "name": "Standard Bank Group Limited",
+     "country": "ZA",
+     "company_number": "1969/017128/06",
+     "entity_type": "legalEntity",
+     "sub_type": "publicCompany",
+     "start": "1991-07-19",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 100,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-09-09",
+     "service": "Lodge General Document",
+     "filings": [
+      "Subdivision and Consolidation of Shares"
+     ]
+    },
+    {
+     "date": "2026-07-28",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-07-23",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Public Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-06-26",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-06-16",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    }
+   ],
+   "lei": "254900CFACP5V9H8W758",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000732198",
+   "ra_code": "RA000035",
+   "gleif_name": "Stanbic Bank Botswana Limited"
+  },
+  "254900F2ZZRUKBSIV033": {
+   "company": "Terra Payment Services Botswana Proprietary Limited",
+   "uin": "BW00001420521",
+   "old_number": "CO2015/11750",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "removed",
+   "status_since": "2022-01-12",
+   "incorporated": "2015-07-24",
+   "reregistered": "2020-03-25",
+   "annual_return_filed": "2021-07-08",
+   "total_shares": 120,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Olivia Maria Britz",
+     "nationality": "BW",
+     "start": "2016-07-13",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Willie Kanyeki Maina",
+     "nationality": "KE",
+     "start": "2020-06-30",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Hawkins Kevin Alexander",
+     "nationality": "ZA",
+     "start": "2015-08-24",
+     "end": "2020-06-30"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Terra Payment Services (Netherlands) B.V.",
+     "country": "NL",
+     "start": "2016-07-13",
+     "end": null,
+     "shares": 120,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [],
+   "filings": [
+    {
+     "date": "2021-11-10",
+     "service": "Request Removal from the Register",
+     "filings": [
+      "Request to Remove Company from Register "
+     ]
+    },
+    {
+     "date": "2021-07-08",
+     "service": "File Annual Return for a Private Company for 2021",
+     "filings": [
+      "Annual Return for a Private Company for 2021"
+     ]
+    },
+    {
+     "date": "2021-05-06",
+     "service": "Lodge General Document",
+     "filings": [
+      "Document - Notice of Adoption of Balance Sheet Date "
+     ]
+    },
+    {
+     "date": "2020-07-08",
+     "service": "File Annual Return for a Private Company for 2020",
+     "filings": [
+      "Annual Return for a Private Company for 2020"
+     ]
+    },
+    {
+     "date": "2020-06-30",
+     "service": "Maintain Director Details for a Local Company",
+     "filings": [
+      "Notice of Change of Directors "
+     ]
+    }
+   ],
+   "lei": "254900F2ZZRUKBSIV033",
+   "lei_status": "RETIRED",
+   "registered_as": "C02015/11750",
+   "ra_code": "RA000035",
+   "gleif_name": "Terra Payment Services Botswana (Proprietary) Limited"
+  },
+  "254900FAGLCIFUKMNS41": {
+   "company": "First Capital Bank Limited",
+   "uin": "BW00000729396",
+   "old_number": "CO2005/2105",
+   "entity_type": "public",
+   "sub_type": "limitedByShares",
+   "suffix": "limitedByShares",
+   "status": "registered",
+   "status_since": "2005-05-04",
+   "incorporated": "2005-05-04",
+   "reregistered": "2019-09-09",
+   "annual_return_filed": "2026-05-06",
+   "total_shares": 127965333,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Hitesh Natwarlal Anadkat",
+     "nationality": "GB",
+     "start": "2005-10-05",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Lynette Elizabeth Armstrong",
+     "nationality": "BW",
+     "start": "2023-02-24",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Shawn Stephan Bruwer",
+     "nationality": "NA",
+     "start": "2020-11-16",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mahube Mpugwa",
+     "nationality": "BW",
+     "start": "2023-08-18",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Narayanaswamy Narasimhan",
+     "nationality": "IN",
+     "start": "2026-01-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Lesego Ayub Osman",
+     "nationality": "BW",
+     "start": "2026-03-06",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Hemantkumar Kantilal Patel",
+     "nationality": "GB",
+     "start": "2005-05-11",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Moemedi Junior Tafa",
+     "nationality": "BW",
+     "start": "2023-02-24",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Leutlwetse M Tumelo",
+     "nationality": "BW",
+     "start": "2022-05-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Richard Charles Wright",
+     "nationality": "ZA",
+     "start": "2019-07-09",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Stephen David Pezarro",
+     "nationality": "GB",
+     "start": "2008-08-05",
+     "end": "2023-03-07"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Daniel Swabi",
+     "nationality": "BW",
+     "start": "2012-07-30",
+     "end": "2023-03-07"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Boitumelo Keaobaka Tibone",
+     "nationality": "BW",
+     "start": "2016-04-26",
+     "end": "2021-07-17"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Judy Nobubuya Tsonope",
+     "nationality": "BW",
+     "start": "2015-09-28",
+     "end": "2025-09-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Reinette Estelle Van Der Merwe",
+     "nationality": "ZA",
+     "start": "2021-01-04",
+     "end": "2025-09-30"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Prime Bank Limited",
+     "country": "KE",
+     "start": "2012-04-02",
+     "end": null,
+     "nominee": true,
+     "nominator": "Hitesh Natwarlal Anadkat",
+     "shares": 6737088,
+     "percentage": 5.26
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Premier Capital (Mauritius) Limited",
+     "country": "MU",
+     "start": "2007-12-08",
+     "end": null,
+     "nominee": true,
+     "nominator": "Hitesh Natwarlal Anadkat",
+     "shares": 16619601,
+     "percentage": 12.99
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fmbcapital Holdings Plc",
+     "country": "MU",
+     "start": "2019-01-31",
+     "end": null,
+     "nominee": true,
+     "nominator": "Hitesh Natwarlal Anadkat",
+     "shares": 65439942,
+     "percentage": 51.14
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Dillon Hitesh Anadkat",
+     "nationality": "GB",
+     "start": "2018-09-12",
+     "end": null,
+     "shares": 1018333,
+     "percentage": 0.8
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Meeta Anadkat",
+     "nationality": "GB",
+     "start": "2018-09-12",
+     "end": null,
+     "shares": 2545833,
+     "percentage": 1.99
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Shaun Anadkat",
+     "nationality": "GB",
+     "start": "2018-09-12",
+     "end": null,
+     "shares": 1018333,
+     "percentage": 0.8
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Sheena Anadkat",
+     "nationality": "GB",
+     "start": "2018-09-12",
+     "end": null,
+     "shares": 1018333,
+     "percentage": 0.8
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Everglades Botswana Proprietary Limited",
+     "uin": "BW00002370664",
+     "start": "2020-12-18",
+     "end": null,
+     "nominee": true,
+     "nominator": "Hemantkumar Kantilal Patel",
+     "shares": 33567870,
+     "percentage": 26.23
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Everglades Holdings Proprietary Limited",
+     "uin": "BW00000594016",
+     "start": "2005-05-11",
+     "end": "2020-12-18"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Hemantkumar Kantilal Patel",
+     "nationalities": [
+      "GB"
+     ],
+     "start": "2025-05-26",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 33,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Hitesh Natwarlal Anadkat",
+     "nationalities": [
+      "GB"
+     ],
+     "start": "2025-05-26",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 33,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-06-19",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-06-03",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-05-06",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Public Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-03-11",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-02-12",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    }
+   ],
+   "lei": "254900FAGLCIFUKMNS41",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000729396",
+   "ra_code": "RA000035",
+   "gleif_name": "First Capital Bank Limited"
+  },
+  "254900H11H4BHWJ6EK25": {
+   "company": "Stanbic Financial Services Proprietary Limited",
+   "uin": "BW00002207780",
+   "old_number": null,
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2020-08-07",
+   "incorporated": "2020-08-07",
+   "reregistered": null,
+   "annual_return_filed": "2026-08-21",
+   "total_shares": 1000000,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Moabi Justice Letsididi",
+     "nationality": "BW",
+     "start": "2020-08-07",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Morufhi Mpho Masikara",
+     "nationality": "BW",
+     "start": "2024-02-16",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Yvette Peo Mogatusi",
+     "nationality": "BW",
+     "start": "2022-04-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mphoeng Mphoeng",
+     "nationality": "BW",
+     "start": "2025-06-10",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Shepherd Kudakwashe Aisam",
+     "nationality": "BW",
+     "start": "2020-08-07",
+     "end": "2022-07-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Omphemetse Dube",
+     "nationality": "BW",
+     "start": "2020-08-07",
+     "end": "2024-02-19"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "EntityShareholder",
+     "name": "Stanbic Bank (Botswana) Limited",
+     "uin": "BW00000732198",
+     "start": "2020-08-07",
+     "end": null,
+     "shares": 1000000,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "OtherBeneficialOwner",
+     "name": "Standard Bank Group Limited",
+     "country": "ZA",
+     "company_number": "1969/017128/06",
+     "entity_type": "legalEntity",
+     "sub_type": "publicCompany",
+     "start": "2020-08-07",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 100,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-21",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-08-06",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-06-26",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-08-26",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-08-20",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    }
+   ],
+   "lei": "254900H11H4BHWJ6EK25",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00002207780",
+   "ra_code": "RA000821",
+   "gleif_name": "Stanbic Financial Services Proprietary Limited"
+  },
+  "254900H6V9SBGVVG4G43": {
+   "company": "Motswedi Securities Proprietary Limited",
+   "uin": "BW00000431792",
+   "old_number": "CO1997/2262",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "1997-11-18",
+   "incorporated": "1997-11-18",
+   "reregistered": "2019-07-29",
+   "annual_return_filed": "2025-12-01",
+   "total_shares": 1000000,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Gary Juma",
+     "nationality": "ZW",
+     "start": "2015-07-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Motsomi Martin Makgatlhe",
+     "nationality": "BW",
+     "start": "1997-11-27",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Onkutule Sealogane Makgatlhe",
+     "nationality": "BW",
+     "start": "2002-03-16",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Vusumuzi Raseroka",
+     "nationality": "BW",
+     "start": "2026-02-24",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Letsebe Sejoe",
+     "nationality": "BW",
+     "start": "2015-11-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Reetsang Willie Mokgatlhe",
+     "nationality": "BW",
+     "start": "2017-04-11",
+     "end": "2021-11-12"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Motsomi Martin Makgatlhe",
+     "nationality": "BW",
+     "start": "1997-11-27",
+     "end": null,
+     "shares": 500000,
+     "percentage": 50
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Onkutule Sealogane Makgatlhe",
+     "nationality": "BW",
+     "start": "2002-03-16",
+     "end": null,
+     "shares": 500000,
+     "percentage": 50
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Motsomi Martin Makgatlhe",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "1997-11-27",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 50,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Onkutule Sealogane Makgatlhe",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2002-03-16",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 50,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-02-26",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-12-01",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-08-13",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-05-22",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    },
+    {
+     "date": "2025-05-22",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    }
+   ],
+   "lei": "254900H6V9SBGVVG4G43",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000431792",
+   "ra_code": "RA000035",
+   "gleif_name": "Motswedi Securities Proprietary Limited"
+  },
+  "254900MEDCMYPQ234V59": {
+   "company": "Khoemacau Copper Mining Proprietary Limited",
+   "uin": "BW00000858826",
+   "old_number": "CO2006/8",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2006-01-05",
+   "incorporated": "2006-01-05",
+   "reregistered": "2019-10-02",
+   "annual_return_filed": "2026-02-28",
+   "total_shares": 1749287384,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Boikobo Bashi Paya",
+     "nationality": "BW",
+     "start": "2018-06-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nan Wang",
+     "nationality": "AU",
+     "start": "2024-03-22",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Weiquan Xia",
+     "nationality": "CN",
+     "start": "2024-12-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Dennis Michael Bartlett",
+     "nationality": "US",
+     "start": "2019-12-31",
+     "end": "2024-03-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "David Anthony Ellis",
+     "nationality": "GB",
+     "start": "2018-11-08",
+     "end": "2024-03-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Hendrik Johannes Christoffel Ferreira",
+     "nationality": "ZA",
+     "start": "2018-11-08",
+     "end": "2024-10-29"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Richard Mark Jennings",
+     "nationality": "GB",
+     "start": "2019-07-17",
+     "end": "2024-03-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "John Angus Munro",
+     "nationality": "ZA",
+     "start": "2017-07-01",
+     "end": "2024-03-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Jacqueline Alison Murray",
+     "nationality": "AU",
+     "start": "2019-07-17",
+     "end": "2022-04-20"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Calum Kenneth Semple",
+     "nationality": "GB",
+     "start": "2022-04-20",
+     "end": "2024-03-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Timothy Roy Snider",
+     "nationality": "US",
+     "start": "2018-11-08",
+     "end": "2019-12-31"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Hana Mining Limited",
+     "country": "GB",
+     "start": "2024-03-25",
+     "end": null,
+     "shares": 1749287384,
+     "percentage": 100
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Hana Mining Limited",
+     "country": "CA",
+     "start": "2009-09-11",
+     "end": "2024-03-25",
+     "shares": 1749287384,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Nan Wang",
+     "nationalities": [
+      "AU"
+     ],
+     "start": "2025-05-20",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-20",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-07-06",
+     "service": "Lodge General Document",
+     "filings": [
+      "Certificate"
+     ]
+    },
+    {
+     "date": "2026-07-06",
+     "service": "Lodge General Document",
+     "filings": [
+      "Amalgamation proposal"
+     ]
+    },
+    {
+     "date": "2026-06-10",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-03-03",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    }
+   ],
+   "lei": "254900MEDCMYPQ234V59",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00000858826",
+   "ra_code": "RA000035",
+   "gleif_name": "Khoemacau Copper Mining Proprietary Limited"
+  },
+  "254900MMY31BYZ15SC49": {
+   "company": "Absa Securities Botswana Proprietary Limited",
+   "uin": "BW00002543818",
+   "old_number": null,
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2020-10-24",
+   "incorporated": "2020-10-24",
+   "reregistered": null,
+   "annual_return_filed": "2025-10-28",
+   "total_shares": 1000,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Tebogo Phylis Giddie",
+     "nationality": "BW",
+     "start": "2024-05-10",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Keabetswe Agatha Moshagane",
+     "nationality": "BW",
+     "start": "2020-10-24",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kudakwashe Mukushi",
+     "nationality": "ZW",
+     "start": "2025-06-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "James Gobe Nthoyi",
+     "nationality": "BW",
+     "start": "2020-10-24",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Lesley Bradley",
+     "nationality": "BW",
+     "start": "2020-10-24",
+     "end": "2022-04-20"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Cosmas Moapare",
+     "nationality": "BW",
+     "start": "2021-11-01",
+     "end": "2026-02-28"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Cynthia Morapedi",
+     "nationality": "BW",
+     "start": "2020-10-24",
+     "end": "2024-05-14"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "EntityShareholder",
+     "name": "Absa Bank Botswana Limited",
+     "uin": "BW00001237900",
+     "start": "2020-10-24",
+     "end": null,
+     "shares": 1000,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Kudakwashe Mukushi",
+     "nationalities": [
+      "ZW"
+     ],
+     "start": "2025-10-27",
+     "end": null,
+     "interests": [
+      {
+       "type": "boardMember",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-06-17",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-05-28",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-03-13",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-10-28",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-10-28",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    }
+   ],
+   "lei": "254900MMY31BYZ15SC49",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00002543818",
+   "ra_code": "RA000035",
+   "gleif_name": "Absa Securities Botswana Proprietary Limited"
+  },
+  "254900XZZG8BK9ZCA648": {
+   "company": "Botswana Insurance Fund Management Limited",
+   "uin": "BW00000532761",
+   "old_number": "CO1975/1803",
+   "entity_type": "public",
+   "sub_type": "limitedByShares",
+   "suffix": "limitedByShares",
+   "status": "registered",
+   "status_since": "1975-08-12",
+   "incorporated": "1975-08-12",
+   "reregistered": "2019-08-10",
+   "annual_return_filed": "2026-08-03",
+   "total_shares": 87048791,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "William Robertson Dommisse",
+     "nationality": "ZA",
+     "start": "2020-11-17",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Edwin Tornado Elias",
+     "nationality": "BW",
+     "start": "2023-09-19",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Seingwaeng Kgafela",
+     "nationality": "BW",
+     "start": "2019-08-09",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Clair Mathe-Lisenda",
+     "nationality": "BW",
+     "start": "2023-04-26",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Taolo Dineo Modisi",
+     "nationality": "BW",
+     "start": "2022-03-24",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Robert Mpabanga",
+     "nationality": "BW",
+     "start": "2023-07-11",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Neo Lele Bogatsu",
+     "nationality": "BW",
+     "start": "2015-12-01",
+     "end": "2023-04-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Chandrakant Chauhan",
+     "nationality": "BW",
+     "start": "2010-04-30",
+     "end": "2020-08-14"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "John Philip Hinchliffe",
+     "nationality": "GB",
+     "start": "2020-08-14",
+     "end": "2024-03-25"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mahube Mpugwa",
+     "nationality": "BW",
+     "start": "2011-06-01",
+     "end": "2022-05-09"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nigel Joseph Suliaman",
+     "nationality": "ZA",
+     "start": "2019-08-09",
+     "end": "2026-07-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Gerrit Lodewyk Van Heerde",
+     "nationality": "ZA",
+     "start": "2015-06-30",
+     "end": "2019-10-15"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Botswana Insurance Fund Management Citizen Economic Empowerment Share Trust",
+     "country": "BW",
+     "start": "2018-02-08",
+     "end": null,
+     "shares": 21849246,
+     "percentage": 25.1
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Bifm Holdings Company Limited",
+     "uin": "BW00000713751",
+     "start": "2014-01-14",
+     "end": null,
+     "shares": 65199544,
+     "percentage": 74.9
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Clair Mathe-Lisenda",
+     "nationality": "BW",
+     "start": "2023-08-07",
+     "end": null,
+     "shares": 1,
+     "percentage": 0.0
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Neo Lele Bogatsu",
+     "nationality": "BW",
+     "start": "2015-02-27",
+     "end": "2023-08-07"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Clair Mathe-Lisenda",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-07-23",
+     "end": null,
+     "interests": [
+      {
+       "type": "other",
+       "share": null,
+       "voting": null,
+       "other_reason": "Minority Shareholder"
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Clair Mathe-Lisenda",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-07-23",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Edwin Tornado Elias",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-07-23",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 25,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-03",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-08-03",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Public Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-07-28",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-06-15",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-08-04",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Public Company Limited by Shares for 2025"
+     ]
+    }
+   ],
+   "lei": "254900XZZG8BK9ZCA648",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000532761",
+   "ra_code": "RA000035",
+   "gleif_name": "Botswana Insurance Fund Management Limited"
+  },
+  "529900A1989GF4C72K37": {
+   "company": "Paa Capital Proprietary Limited",
+   "uin": "BW00000454825",
+   "old_number": "CO2012/1478",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2025-04-03",
+   "incorporated": "2012-02-18",
+   "reregistered": "2019-07-31",
+   "annual_return_filed": "2026-02-03",
+   "total_shares": 9296228,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Israel Gabriel Banda",
+     "nationality": "ZM",
+     "start": "2020-10-15",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Cem Wald",
+     "nationality": "DE",
+     "start": "2012-05-24",
+     "end": null
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Cem Wald",
+     "nationality": "DE",
+     "start": "2012-05-24",
+     "end": null,
+     "shares": 9296228,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Cem Wald",
+     "nationalities": [
+      "DE"
+     ],
+     "start": "2025-05-20",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 100,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-03-11",
+     "service": "Maintain Company Addresses",
+     "filings": [
+      "Notice of Change of Addresses"
+     ]
+    },
+    {
+     "date": "2026-02-03",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2025-10-14",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-10-01",
+     "service": "Maintain Company Addresses",
+     "filings": [
+      "Notice of Change of Addresses"
+     ]
+    },
+    {
+     "date": "2025-06-16",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    }
+   ],
+   "lei": "529900A1989GF4C72K37",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000454825",
+   "ra_code": "RA000035",
+   "gleif_name": "PAA CAPITAL (PROPRIETARY) LIMITED"
+  },
+  "529900D2FVNE5TZWLP41": {
+   "company": "Expresscredit Proprietary Limited",
+   "uin": "BW00000115487",
+   "old_number": "CO2015/20777",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2024-01-24",
+   "incorporated": "2015-12-22",
+   "reregistered": "2019-06-18",
+   "annual_return_filed": "2025-11-30",
+   "total_shares": 43579484,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Oskars Dzalbs",
+     "nationality": "LV",
+     "start": "2024-06-25",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nicolaas Petrus Esterhuyse",
+     "nationality": "NA",
+     "start": "2024-08-08",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mabua Lesego Mabua",
+     "nationality": "BW",
+     "start": "2023-05-28",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nicolaas Petrus Esterhuyse",
+     "nationality": "NA",
+     "start": "2019-05-15",
+     "end": "2022-08-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Una Hevita",
+     "nationality": "LV",
+     "start": "2019-05-15",
+     "end": "2024-08-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Keamogetse Letsididi",
+     "nationality": "BW",
+     "start": "2023-05-28",
+     "end": "2025-09-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Lepata Nnago Mafa",
+     "nationality": "BW",
+     "start": "2023-05-28",
+     "end": "2025-09-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Charlotte Onneile Mathula",
+     "nationality": "BW",
+     "start": "2022-02-10",
+     "end": "2023-06-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kiven Vhusimuzi Mvududu",
+     "nationality": "ZW",
+     "start": "2020-09-30",
+     "end": "2022-02-10"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Dineo Patricia Saleshando",
+     "nationality": "BW",
+     "start": "2017-10-01",
+     "end": "2020-09-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Edgars Sprogis",
+     "nationality": "LV",
+     "start": "2023-10-16",
+     "end": "2024-05-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Girts Suberts",
+     "nationality": "LV",
+     "start": "2019-05-15",
+     "end": "2023-10-09"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Eleving Consumer Finance Mauritius",
+     "country": "MU",
+     "start": "2019-08-12",
+     "end": null,
+     "shares": 43579484,
+     "percentage": 100
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Aigars Kesenfelds",
+     "nationality": "LV",
+     "start": "2016-11-24",
+     "end": "2019-08-12"
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Dineo Patricia Saleshando",
+     "nationality": "BW",
+     "start": "2019-08-12",
+     "end": "2020-09-30"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Aigars Kesenfelds",
+     "nationalities": [
+      "LV"
+     ],
+     "start": "2025-11-30",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 34,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-04-28",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-02-06",
+     "service": "Maintain Shareholders",
+     "filings": [
+      "Maintain Shareholders"
+     ]
+    },
+    {
+     "date": "2025-12-02",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-11-30",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-11-30",
+     "service": "Maintain Shareholders",
+     "filings": [
+      "Maintain Shareholders"
+     ]
+    }
+   ],
+   "lei": "529900D2FVNE5TZWLP41",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000115487",
+   "ra_code": "RA000035",
+   "gleif_name": "Expresscredit Proprietary Limited"
+  },
+  "5493007VY27WWF8FF542": {
+   "company": "Standard Chartered Bank Botswana Limited",
+   "uin": "BW00000404816",
+   "old_number": "CO1975/1724",
+   "entity_type": "public",
+   "sub_type": "limitedByShares",
+   "suffix": "limitedByShares",
+   "status": "registered",
+   "status_since": "1975-02-28",
+   "incorporated": "1975-02-28",
+   "reregistered": "2019-07-25",
+   "annual_return_filed": "2026-03-03",
+   "total_shares": 298350611,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Jerry Kweku Boi Bedu-Addo",
+     "nationality": "GH",
+     "start": "2018-09-09",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tapiwa Butale",
+     "nationality": "BW",
+     "start": "2024-06-03",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mpho Judith Dimbungu",
+     "nationality": "BW",
+     "start": "2023-06-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mpho Masupe",
+     "nationality": "BW",
+     "start": "2017-10-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Rapelang Rabana",
+     "nationality": "BW",
+     "start": "2021-01-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Solomon Molebatsi Sekwakwa",
+     "nationality": "BW",
+     "start": "2022-06-18",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Rodgers Majwabe Thusi",
+     "nationality": "BW",
+     "start": "2019-04-25",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tally Tshekiso",
+     "nationality": "BW",
+     "start": "2025-10-23",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mpho Judith Dimbungu",
+     "nationality": "BW",
+     "start": "2019-04-25",
+     "end": "2019-08-03"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Richard Martin Etemesi",
+     "nationality": "KE",
+     "start": "2014-07-01",
+     "end": "2019-10-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Doreen Cilla Khama",
+     "nationality": "BW",
+     "start": "2018-09-26",
+     "end": "2025-06-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Bojosi Otlhogile",
+     "nationality": "BW",
+     "start": "2008-09-24",
+     "end": "2019-12-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Thari Gilbert Pheko",
+     "nationality": "BW",
+     "start": "2020-02-18",
+     "end": "2024-06-10"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "John Yendall Stevens",
+     "nationality": "ZA",
+     "start": "2013-08-01",
+     "end": "2023-06-30"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Standard Chartered Holdings (Africa) B.V.",
+     "country": "GB",
+     "start": "2002-02-01",
+     "end": null,
+     "shares": 221246286,
+     "percentage": 74.16
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Standard Chartered Botswana Education Trust",
+     "country": "BW",
+     "start": "2016-07-16",
+     "end": null,
+     "shares": 2506145,
+     "percentage": 0.84
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Bojosi Otlhogile",
+     "nationality": "BW",
+     "start": "2008-03-24",
+     "end": "2025-04-23"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Mpho Masupe",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-07-18",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-25",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-08-10",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-03-03",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Public Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-01-27",
+     "service": "Maintain Auditor Details",
+     "filings": [
+      "Notice of Change of Auditors"
+     ]
+    },
+    {
+     "date": "2025-10-31",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    }
+   ],
+   "lei": "5493007VY27WWF8FF542",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000404816",
+   "ra_code": "RA000035",
+   "gleif_name": "STANDARD CHARTERED BANK BOTSWANA LIMITED"
+  },
+  "549300AG6EE4VQQ4OK52": {
+   "company": "Standard Chartered Botswana Nominees Proprietary Limited",
+   "uin": "BW00000341087",
+   "old_number": "CO1993/2097",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "1993-12-22",
+   "incorporated": "1993-12-22",
+   "reregistered": "2019-07-18",
+   "annual_return_filed": "2025-11-24",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Tapiwa Butale",
+     "nationality": "BW",
+     "start": "2021-12-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mpho Calvin Masupe",
+     "nationality": "BW",
+     "start": "2014-10-02",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Asuquo Edet Nkposong",
+     "nationality": "NG",
+     "start": "2019-03-06",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mbako Mbo",
+     "nationality": "BW",
+     "start": "2019-02-13",
+     "end": "2021-10-01"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "EntityShareholder",
+     "name": "Standard Chartered Bank Botswana Limited",
+     "uin": "BW00000404816",
+     "start": "2010-11-26",
+     "end": null,
+     "shares": 100,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Lone Pearl Matong",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-11-24",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-17",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-02-04",
+     "service": "Maintain Auditor Details",
+     "filings": [
+      "Notice of Change of Auditors"
+     ]
+    },
+    {
+     "date": "2025-11-24",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2025-11-24",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-11-24",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    }
+   ],
+   "lei": "549300AG6EE4VQQ4OK52",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000341087",
+   "ra_code": "RA000035",
+   "gleif_name": "STANDARD CHARTERED BOTSWANA NOMINEES PROPRIETARY LIMITED"
+  },
+  "549300DY56RZ55UDT429": {
+   "company": "Letshego Africa Holdings Limited",
+   "uin": "BW00000877524",
+   "old_number": "CO1998/442",
+   "entity_type": "public",
+   "sub_type": "limitedByShares",
+   "suffix": "limitedByShares",
+   "status": "registered",
+   "status_since": "1998-03-04",
+   "incorporated": "1998-03-04",
+   "reregistered": "2019-10-04",
+   "annual_return_filed": "2026-03-31",
+   "total_shares": 1639585461,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Catherine B Lesetedi",
+     "nationality": "BW",
+     "start": "2017-11-14",
+     "end": null,
+     "nominee": true,
+     "nominator": "Neo Lele Bogatsu"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Rubin Japhta",
+     "nationality": "ZA",
+     "start": "2026-05-05",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tshephang Master Loeto",
+     "nationality": "BW",
+     "start": "2025-08-22",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Poelo Macheche Mkpayah",
+     "nationality": "BW",
+     "start": "2026-06-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Christopher M Mokgware",
+     "nationality": "BW",
+     "start": "2022-08-11",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Rose Annelieta Wairimu Mwaura",
+     "nationality": "KE",
+     "start": "2021-12-02",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Abiodun Tajudeen Odubola",
+     "nationality": "NG",
+     "start": "2019-12-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tebogo Tomango",
+     "nationality": "BW",
+     "start": "2025-05-16",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Reinette Estelle Van Der Merwe",
+     "nationality": "ZA",
+     "start": "2025-10-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ignatius Michael Viljoen",
+     "nationality": "ZA",
+     "start": "2026-04-30",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Runa Nurunnessa Alam",
+     "nationality": "GB",
+     "start": "2018-01-19",
+     "end": "2022-03-23"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Brighton Banda",
+     "nationality": "ZA",
+     "start": "2025-03-15",
+     "end": "2025-09-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Enos Ned Banda",
+     "nationality": "ZA",
+     "start": "2016-08-03",
+     "end": "2022-06-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Emmanuel Botlhale",
+     "nationality": "BW",
+     "start": "2022-08-16",
+     "end": "2025-06-20"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ronald Hoekman",
+     "nationality": "NL",
+     "start": "2020-01-22",
+     "end": "2025-06-20"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Hannington Rubarenzya Karuhanga",
+     "nationality": "UG",
+     "start": "2013-10-04",
+     "end": "2022-06-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Aobakwe Andson Monyatsi",
+     "nationality": "BW",
+     "start": "2022-05-13",
+     "end": "2025-02-14"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ketlhalefile Motshegwa",
+     "nationality": "BW",
+     "start": "2022-08-16",
+     "end": "2025-02-19"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tinotenda Gwendoline Muteiwa",
+     "nationality": "ZW",
+     "start": "2020-03-24",
+     "end": "2026-06-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Rose Annelieta Wairimu Mwaura",
+     "nationality": "KE",
+     "start": "2021-10-25",
+     "end": "2021-12-02"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Botswana Public Officers Pension Fund - Transition",
+     "country": "BW",
+     "start": "2022-02-28",
+     "end": null,
+     "nominee": true,
+     "nominator": "Moemedi Malindah",
+     "shares": 405529315,
+     "percentage": 24.73
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana Re: Bifm Professional Local Equity Fund",
+     "country": "BW",
+     "start": "2008-12-02",
+     "end": null,
+     "shares": 44869554,
+     "percentage": 2.74
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Business Doctor Investment Limited",
+     "country": "IM",
+     "start": "2021-02-26",
+     "end": null,
+     "shares": 51338913,
+     "percentage": 3.13
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Scbn (Pty) Ltd Re: Citi 024/76- Kuwait Inv Authority",
+     "country": "KW",
+     "start": "2021-02-26",
+     "end": null,
+     "shares": 73571687,
+     "percentage": 4.49
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees Proprietary Limited Re: Vunani Bpopf",
+     "country": "BW",
+     "start": "2022-02-28",
+     "end": null,
+     "shares": 251001237,
+     "percentage": 15.31
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana Proprietary Limited Re: Sbbl O/A Bifm Market Linked Fund",
+     "country": "BW",
+     "start": "2022-02-28",
+     "end": null,
+     "shares": 46734600,
+     "percentage": 2.85
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana Proprietary Limited Re: Bpopf With Profit Portfolio-Mcp",
+     "country": "BW",
+     "start": "2022-02-28",
+     "end": null,
+     "shares": 77601240,
+     "percentage": 4.73
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana Re Morula Re Dpf",
+     "country": "BW",
+     "start": "2023-02-28",
+     "end": null,
+     "shares": 28650000,
+     "percentage": 1.75
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Botswana Life Insurance Limited",
+     "uin": "BW00000719883",
+     "start": "2010-11-23",
+     "end": null,
+     "shares": 597235521,
+     "percentage": 36.43
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Hitesh Natwarlal Anadkat",
+     "nationality": "GB",
+     "start": "2021-02-26",
+     "end": null,
+     "shares": 63053394,
+     "percentage": 3.85
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees Proprietary Limited Re: Allangray Bpopf Equity Portfolio B",
+     "country": "BW",
+     "start": "2018-02-16",
+     "end": "2022-02-28",
+     "nominee": true
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees Proprietary Limited Re:Bifm Bpopf-Equity",
+     "country": "BW",
+     "start": "2015-04-29",
+     "end": "2022-02-28",
+     "nominee": true
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees Proprietary Limited Re:Ag Bpopf Equity",
+     "country": "BW",
+     "start": "2015-03-04",
+     "end": "2022-02-28",
+     "nominee": true
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Scbn (Pty) Ltd: Hsbc Re: Sustainable Capital Africa Alpha Fund",
+     "country": "MU",
+     "start": "2014-05-08",
+     "end": "2021-02-26",
+     "nominee": true
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Scbn (Pty) Ltd: Nt Lux Re Ludp Re :Aif Clients 7.50 Percent Non Treaty Account",
+     "country": "KY",
+     "start": "2018-12-19",
+     "end": "2021-02-26",
+     "nominee": true
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Adp I Holdings 2",
+     "country": "MU",
+     "start": "2018-01-04",
+     "end": "2023-02-28"
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees Proprietary Limited Re:Iam Bpopf Equity",
+     "country": "BW",
+     "start": "2012-09-21",
+     "end": "2022-02-28",
+     "nominee": true
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Scbn (Pty) Limited Re :Ssb Bw-000000847-6-Bmo Investments Il (Ireland) Public Limited Company",
+     "country": "IE",
+     "start": "2011-12-08",
+     "end": "2021-02-26"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Kwenantle Otukile",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2026-01-22",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Neo Lele Bogatsu",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-04-28",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 38,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Moemedi Shadrack Malindah",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-04-28",
+     "end": "2026-01-22",
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 37,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-09-04",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-07-23",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-06-27",
+     "service": "Maintain Shareholders",
+     "filings": [
+      "Maintain Shareholders"
+     ]
+    },
+    {
+     "date": "2026-06-23",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    },
+    {
+     "date": "2026-06-23",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    }
+   ],
+   "lei": "549300DY56RZ55UDT429",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00000877524",
+   "ra_code": "RA000035",
+   "gleif_name": "Letshego Holdings Limited"
+  },
+  "549300NGP68ESFZN6010": {
+   "company": "Absa Bank Botswana Limited",
+   "uin": "BW00001237900",
+   "old_number": "CO1975/1732",
+   "entity_type": "public",
+   "sub_type": "limitedByShares",
+   "suffix": "limitedByShares",
+   "status": "registered",
+   "status_since": "1975-03-17",
+   "incorporated": "1975-03-17",
+   "reregistered": "2020-01-10",
+   "annual_return_filed": "2026-03-31",
+   "total_shares": 852161252,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Saviour Mwepu Chibiya",
+     "nationality": "ZM",
+     "start": "2022-04-04",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Priya Ravi Iyer",
+     "nationality": "IN",
+     "start": "2025-04-15",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Benjamin Monaheng Kodisang",
+     "nationality": "ZA",
+     "start": "2020-03-23",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Sethunya Dorothy Makepe",
+     "nationality": "BW",
+     "start": "2021-09-15",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Wilfred Jiwa Mandlebe",
+     "nationality": "BW",
+     "start": "2025-02-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Thabo Kagiso Matthews",
+     "nationality": "BW",
+     "start": "2022-03-15",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Cosmas Moapare",
+     "nationality": "BW",
+     "start": "2020-03-23",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Keabetswe Agatha Moshagane",
+     "nationality": "BW",
+     "start": "2019-04-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kudakwashe Mukushi",
+     "nationality": "ZW",
+     "start": "2025-06-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Sari Helena Nikka",
+     "nationality": "FI",
+     "start": "2020-03-23",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kgotlayarona Ramaphane",
+     "nationality": "BW",
+     "start": "2018-08-08",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Alfred Uyapo Majaye Dube",
+     "nationality": "BW",
+     "start": "2009-11-01",
+     "end": "2021-06-28"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kenneth Mumba Kalifungwa",
+     "nationality": "ZM",
+     "start": "2015-08-01",
+     "end": "2020-04-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kenneth Molosi",
+     "nationality": "BW",
+     "start": "2009-11-01",
+     "end": "2020-09-11"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Cynthia Morapedi",
+     "nationality": "BW",
+     "start": "2020-07-24",
+     "end": "2024-05-14"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Daniel Neo Moroka",
+     "nationality": "BW",
+     "start": "2021-07-01",
+     "end": "2023-10-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Oduetse Andrew Motshidisi",
+     "nationality": "BW",
+     "start": "2018-08-24",
+     "end": "2020-08-12"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mahomed Sajid Osman",
+     "nationality": "GB",
+     "start": "2018-08-08",
+     "end": "2020-10-02"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Absa Group Ltd",
+     "country": "ZA",
+     "start": "2016-03-15",
+     "end": null,
+     "shares": 577964146,
+     "percentage": 67.82
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Motor Vehicle Accident Fund",
+     "country": "BW",
+     "start": "2012-07-10",
+     "end": null,
+     "shares": 18736440,
+     "percentage": 2.2
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana (Pty) Ltd Re:Botswana Insurance Fund Management Market Linked Fund [Bifm Mlf]",
+     "country": "BW",
+     "start": "2019-10-28",
+     "end": null,
+     "shares": 5640764,
+     "percentage": 0.66
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana (Pty) Ltd Re:Botswana Insurance Fund Management Fund Professional Local Equity Fund [Bifm Plef]",
+     "country": "BW",
+     "start": "2019-10-28",
+     "end": null,
+     "shares": 15134335,
+     "percentage": 1.78
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana Re Ninety-One DPF (Local EQ)",
+     "country": "BW",
+     "start": "2018-09-18",
+     "end": null,
+     "shares": 8898564,
+     "percentage": 1.04
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Standard Chartered Bank Botswana Nominees Pty Ltd Re: BPOPF LEA Portfolio CO AG",
+     "country": "BW",
+     "start": "2021-12-16",
+     "end": null,
+     "shares": 23382254,
+     "percentage": 2.74
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "FNBBN (PTY) LTD RE: BPOPF MORULA ACT MEM DEP EQ",
+     "country": "BW",
+     "start": "2025-10-31",
+     "end": null
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "FNBB NOMS RE: BPOPF (Transition) MORULA B ACT DEF LE",
+     "country": "BW",
+     "start": "2025-10-31",
+     "end": null
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "STANBIC NOMS BW RE 5TH QUART BPOPF LOCAL EQUITIES INCUBAT",
+     "country": "BW",
+     "start": "2025-10-31",
+     "end": null
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "STANBIC NOMS BW RE: FIRST LIGHT MULTI MANAGER GROWTH FUND",
+     "country": "BW",
+     "start": "2025-10-31",
+     "end": null,
+     "shares": 5967993,
+     "percentage": 0.7
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees (Pty) Ltd Re: Botswana Public Officers Pension Fund Equity Portfolio C-Allangray [Bpopf Equity Portfolio C-Ag]",
+     "country": "BW",
+     "start": "2018-02-27",
+     "end": "2021-06-30"
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Iam Botswana Public Officers Pension Fund Equity [Iam Bpopf Equity]",
+     "country": "BW",
+     "start": "2012-09-21",
+     "end": "2021-03-31"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Keabetswe Agatha Moshagane",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-03-27",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-07-27",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-06-03",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-03-31",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Public Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2025-07-11",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2025-06-14",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    }
+   ],
+   "lei": "549300NGP68ESFZN6010",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00001237900",
+   "ra_code": "RA000035",
+   "gleif_name": "Absa Bank Botswana Limited"
+  },
+  "549300TZJ8EJ7CFG5H80": {
+   "company": "Morula Capital Partners Proprietary Limited",
+   "uin": "BW00000378428",
+   "old_number": "CO2017/19681",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2017-10-06",
+   "incorporated": "2017-10-06",
+   "reregistered": "2019-07-23",
+   "annual_return_filed": "2025-10-30",
+   "total_shares": 1348012,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Waibale Muganga Angelica Bojosi",
+     "nationality": "BW",
+     "start": "2018-11-14",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Zoumana Kone",
+     "nationality": "ML",
+     "start": "2017-10-06",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Boikanyo Boniface Mogami",
+     "nationality": "BW",
+     "start": "2017-10-06",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nomathemba V. Segage",
+     "nationality": "BW",
+     "start": "2017-11-06",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Susanne Naa Okailey Swaniker-Tettey",
+     "nationality": "BW",
+     "start": "2017-11-06",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Rowesai Mosarwe",
+     "nationality": "BW",
+     "start": "2024-07-23",
+     "end": "2026-03-12"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Wenyu Machacha",
+     "nationality": "BW",
+     "start": "2019-05-21",
+     "end": null,
+     "shares": 447367,
+     "percentage": 33.19
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Boikanyo Boniface Mogami",
+     "nationality": "BW",
+     "start": "2017-10-06",
+     "end": null,
+     "shares": 900645,
+     "percentage": 66.81
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Kagiso Sedimo",
+     "nationality": "BW",
+     "start": "2019-05-21",
+     "end": "2023-06-14"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Boikanyo Boniface Mogami",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-10-01",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 50,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Wenyu Machacha",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-10-01",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 50,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-07-31",
+     "service": "Maintain Company Addresses",
+     "filings": [
+      "Notice of Change of Addresses"
+     ]
+    },
+    {
+     "date": "2026-06-04",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-03-19",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-01-08",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2025-10-30",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    }
+   ],
+   "lei": "549300TZJ8EJ7CFG5H80",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00000378428",
+   "ra_code": "RA000035",
+   "gleif_name": "MORULA CAPITAL PARTNERS PROPRIETARY LIMITED"
+  },
+  "549300V6HZY8NGR44N87": {
+   "company": "Standard Chartered Bank Insurance Agency Proprietary Limited",
+   "uin": "BW00000350041",
+   "old_number": "CO2003/1461",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2003-04-25",
+   "incorporated": "2003-04-25",
+   "reregistered": "2019-07-18",
+   "annual_return_filed": "2026-04-29",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Tapiwa Butale",
+     "nationality": "BW",
+     "start": "2021-12-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mpho Calvin Masupe",
+     "nationality": "BW",
+     "start": "2014-10-02",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mbako Mbo",
+     "nationality": "BW",
+     "start": "2019-02-14",
+     "end": "2021-10-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tefo Leruo Rasedisa",
+     "nationality": "BW",
+     "start": "2020-05-25",
+     "end": "2022-10-04"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Moses Rutahigwa",
+     "nationality": "UG",
+     "start": "2024-03-18",
+     "end": "2025-04-30"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "EntityShareholder",
+     "name": "Standard Chartered Bank Botswana Limited",
+     "uin": "BW00000404816",
+     "start": "2003-04-25",
+     "end": null,
+     "shares": 100,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Thabiso Innocent Nkile",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-04-29",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-17",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-04-29",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-02-04",
+     "service": "Maintain Auditor Details",
+     "filings": [
+      "Notice of Change of Auditors"
+     ]
+    },
+    {
+     "date": "2025-05-02",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-04-30",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    }
+   ],
+   "lei": "549300V6HZY8NGR44N87",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000350041",
+   "ra_code": "RA000035",
+   "gleif_name": "STANDARD CHARTERED BANK INSURANCE AGENCY PROPRIETARY LIMITED"
+  },
+  "549300WF5C22WL5IE637": {
+   "company": "Access Bank Botswana Limited",
+   "uin": "BW00001089931",
+   "old_number": "CO1986/384",
+   "entity_type": "public",
+   "sub_type": "limitedByShares",
+   "suffix": "limitedByShares",
+   "status": "registered",
+   "status_since": "1986-06-05",
+   "incorporated": "1986-06-05",
+   "reregistered": "2019-11-22",
+   "annual_return_filed": "2026-06-08",
+   "total_shares": 725000000,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Sheperd Kudakwashe Aisam",
+     "nationality": "BW",
+     "start": "2024-01-04",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Calistas M Chijoro",
+     "nationality": "BW",
+     "start": "2024-02-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ratang Rosemary Icho-Molebatsi",
+     "nationality": "BW",
+     "start": "2019-09-10",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Lynda Mataka",
+     "nationality": "ZM",
+     "start": "2022-07-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Reetsang Willie Mokgatlhe",
+     "nationality": "BW",
+     "start": "2026-04-15",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ntoti Mosetlhe",
+     "nationality": "BW",
+     "start": "2018-11-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ogone Lekgotla Mothooagae",
+     "nationality": "BW",
+     "start": "2024-01-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mahomed Sajid Osman",
+     "nationality": "GB",
+     "start": "2026-03-02",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "John Bosco Sebabi",
+     "nationality": "RW",
+     "start": "2020-06-03",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Davis Tele",
+     "nationality": "BW",
+     "start": "2025-03-17",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Boiki Matema Wabo Tema",
+     "nationality": "BW",
+     "start": "2018-10-03",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kgotso Elvis Bannalotlhe",
+     "nationality": "BW",
+     "start": "2017-08-07",
+     "end": "2023-04-10"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Beatrice Hamza Bassey",
+     "nationality": "US",
+     "start": "2017-02-01",
+     "end": "2021-10-08"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Adams Chilisa Dambe",
+     "nationality": "BW",
+     "start": "2012-11-23",
+     "end": "2020-06-17"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Joshua Benjamin Galeforolwe",
+     "nationality": "BW",
+     "start": "2018-04-01",
+     "end": "2025-01-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Robert Michael Yorwerth Giles",
+     "nationality": "GB",
+     "start": "2021-11-05",
+     "end": "2026-07-07"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Oteng Keabetswe",
+     "nationality": "BW",
+     "start": "2023-01-12",
+     "end": "2023-02-03"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Oluseyi Kolawole Kumapayi",
+     "nationality": "NG",
+     "start": "2021-11-05",
+     "end": "2026-07-07"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Lorato Nthando Mosetlhanyane",
+     "nationality": "BW",
+     "start": "2014-07-01",
+     "end": "2025-01-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mooketsi Jacob Motlhabane",
+     "nationality": "BW",
+     "start": "2014-09-29",
+     "end": "2024-11-29"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees (Pty) Ltd Re: Aa Bpopf Equity",
+     "country": "BW",
+     "start": "2018-12-10",
+     "end": null,
+     "shares": 47975000,
+     "percentage": 6.62
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Re: Botswana Insurance Fund Management",
+     "country": "BW",
+     "start": "2018-12-10",
+     "end": null,
+     "shares": 28243131,
+     "percentage": 3.9
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees (Pty) Ltd Re: Bifm Bpopf Equity",
+     "country": "BW",
+     "start": "2018-12-10",
+     "end": null,
+     "shares": 20035963,
+     "percentage": 2.76
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees (Pty) Ltd Re: Bifm Dppf",
+     "country": "BW",
+     "start": "2018-12-10",
+     "end": null,
+     "shares": 2507917,
+     "percentage": 0.35
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana Re: Bifm Burs Employee Pension Fund",
+     "country": "BW",
+     "start": "2018-12-10",
+     "end": null,
+     "shares": 2493436,
+     "percentage": 0.34
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana Re: Bifm Pula Medical Aid Fund",
+     "country": "BW",
+     "start": "2018-12-10",
+     "end": null,
+     "shares": 1649829,
+     "percentage": 0.23
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Stanbic Nominees Botswana Re: Bifm Debswana Art Fund",
+     "country": "BW",
+     "start": "2018-12-10",
+     "end": null,
+     "shares": 1310018,
+     "percentage": 0.18
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Fnb Botswana Nominees (Pty) Ltd Re: Bifm Fnbspf",
+     "country": "BW",
+     "start": "2018-12-10",
+     "end": null,
+     "shares": 2027165,
+     "percentage": 0.28
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Access Bank Plc",
+     "country": "NG",
+     "start": "2021-10-11",
+     "end": null,
+     "shares": 507497454,
+     "percentage": 70.0
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Motor Vehicle Accident Fund",
+     "country": "BW",
+     "start": "2018-12-10",
+     "end": null,
+     "shares": 28243131,
+     "percentage": 3.9
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "A B C Holdings Limited",
+     "uin": "BW00001456676",
+     "start": "2018-12-10",
+     "end": "2021-10-11",
+     "nominee": true
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Bolaji Olaitan Agbede",
+     "nationalities": [
+      "NG"
+     ],
+     "start": "2025-06-30",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 70,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-03",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-07-14",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-07-08",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-07-07",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-06-08",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Public Company Limited by Shares for 2026"
+     ]
+    }
+   ],
+   "lei": "549300WF5C22WL5IE637",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00001089931",
+   "ra_code": "RA000035",
+   "gleif_name": "Access Bank Botswana Limited"
+  },
+  "549300Z5JP37IKEKF656": {
+   "company": "Standard Chartered Investment Services Proprietary Limited",
+   "uin": "BW00000763130",
+   "old_number": "CO2003/3480",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2003-06-24",
+   "incorporated": "2003-06-24",
+   "reregistered": "2019-09-13",
+   "annual_return_filed": "2026-06-28",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Tapiwa Butale",
+     "nationality": "BW",
+     "start": "2021-12-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Felicia Cheludo Fanikiso",
+     "nationality": "BW",
+     "start": "2025-10-13",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mpho Calvin Masupe",
+     "nationality": "BW",
+     "start": "2014-10-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Bothwell Morei",
+     "nationality": "BW",
+     "start": "2025-10-14",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mbako Mbo",
+     "nationality": "BW",
+     "start": "2019-02-13",
+     "end": "2021-10-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Thari Gilbert Pheko",
+     "nationality": "BW",
+     "start": "2022-10-26",
+     "end": "2024-06-11"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tefo Leruo Rasedisa",
+     "nationality": "BW",
+     "start": "2020-12-04",
+     "end": "2022-10-04"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Moses Rutahigwa",
+     "nationality": "UG",
+     "start": "2024-03-18",
+     "end": "2025-04-30"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "EntityShareholder",
+     "name": "Standard Chartered Bank Botswana Limited",
+     "uin": "BW00000404816",
+     "start": "2004-01-01",
+     "end": null,
+     "shares": 100,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Thabiso Innocent Nkile",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-06-25",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-17",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-06-28",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-02-04",
+     "service": "Maintain Auditor Details",
+     "filings": [
+      "Notice of Change of Auditors"
+     ]
+    },
+    {
+     "date": "2025-11-03",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-06-25",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    }
+   ],
+   "lei": "549300Z5JP37IKEKF656",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000763130",
+   "ra_code": "RA000035",
+   "gleif_name": "STANDARD CHARTERED INVESTMENT SERVICES PROPRIETARY LIMITED"
+  },
+  "8945004SR2K6E75F2L26": {
+   "company": "Tshukudu Metals Botswana Proprietary Limited",
+   "uin": "BW00000844918",
+   "old_number": "CO2015/19109",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2015-11-27",
+   "incorporated": "2015-11-27",
+   "reregistered": "2019-09-27",
+   "annual_return_filed": "2025-11-20",
+   "total_shares": 3857173051,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Jamie Anthony Caratti",
+     "nationality": "AU",
+     "start": "2025-12-09",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Jason Lester Grace",
+     "nationality": "AU",
+     "start": "2019-10-23",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Megan Marie Jansen",
+     "nationality": "AU",
+     "start": "2023-11-21",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Francinah Salome Tjitjindua",
+     "nationality": "BW",
+     "start": "2025-12-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Dale Ian Burgess",
+     "nationality": "AU",
+     "start": "2021-07-16",
+     "end": "2026-03-13"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Gabriel G Chinyepi",
+     "nationality": "BW",
+     "start": "2015-11-27",
+     "end": "2024-03-26"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Mark Andrew Clements",
+     "nationality": "AU",
+     "start": "2015-11-27",
+     "end": "2019-10-23"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Matthew Leslie Fitzgerald",
+     "nationality": "AU",
+     "start": "2019-10-23",
+     "end": "2023-09-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Julian Philip Hanna",
+     "nationality": "AU",
+     "start": "2017-01-01",
+     "end": "2021-07-16"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ian James Kerr",
+     "nationality": "AU",
+     "start": "2020-02-27",
+     "end": "2025-12-01"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Leutlwetse M Tumelo",
+     "nationality": "BW",
+     "start": "2015-11-27",
+     "end": "2021-07-16"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Metal Capital Limited",
+     "country": "GB",
+     "start": "2015-11-27",
+     "end": null,
+     "shares": 3857173051,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Jamie Anthony Caratti",
+     "nationalities": [
+      "AU"
+     ],
+     "start": "2025-12-09",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Dale Ian Burgess",
+     "nationalities": [
+      "AU"
+     ],
+     "start": "2025-10-02",
+     "end": "2025-12-09",
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-09-09",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-06-25",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-03-13",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-02-03",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-12-16",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    }
+   ],
+   "lei": "8945004SR2K6E75F2L26",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000844918",
+   "ra_code": "RA000035",
+   "gleif_name": "Tshukudu Metals Botswana Proprietary Limited"
+  },
+  "98450013F7E55B1EBA93": {
+   "company": "Express Minds Proprietary Limited",
+   "uin": "BW00001465602",
+   "old_number": "CO2016/26391",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2016-12-22",
+   "incorporated": "2016-12-22",
+   "reregistered": "2020-02-25",
+   "annual_return_filed": "2025-11-28",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Antony David Brown",
+     "nationality": "BW",
+     "start": "2026-05-28",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Goabaone Watlala",
+     "nationality": "BW",
+     "start": "2016-12-22",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ivan Borisovich Zhiznevsky",
+     "nationality": "US",
+     "start": "2026-05-28",
+     "end": null
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Goabaone Watlala",
+     "nationality": "BW",
+     "start": "2016-12-22",
+     "end": null,
+     "shares": 5,
+     "percentage": 5
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "New Digital Holdings (africa) Limited",
+     "uin": "BW00009581239",
+     "start": "2026-05-28",
+     "end": null,
+     "nominee": true,
+     "nominator": "Ivan Borisovich Zhiznevsky",
+     "shares": 95,
+     "percentage": 95
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Goabaone Watlala",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-11-28",
+     "end": null,
+     "interests": [
+      {
+       "type": "votingRights",
+       "share": null,
+       "voting": 5,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Ivan Borisovich Zhiznevsky",
+     "nationalities": [
+      "US"
+     ],
+     "start": "2026-08-26",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 95,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-09-08",
+     "service": "Maintain Company Addresses",
+     "filings": [
+      "Notice of Change of Addresses"
+     ]
+    },
+    {
+     "date": "2026-09-08",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-08-26",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2026-07-15",
+     "service": "Transfer of Shares",
+     "filings": [
+      "Notice of Transfer of Shares"
+     ]
+    },
+    {
+     "date": "2026-06-20",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    }
+   ],
+   "lei": "98450013F7E55B1EBA93",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00001465602",
+   "ra_code": "RA000035",
+   "gleif_name": "Express Minds Proprietary Limited"
+  },
+  "98450054CBN2CEA54805": {
+   "company": "Imara Capital Securities Proprietary Limited",
+   "uin": "BW00001017410",
+   "old_number": "CO1999/856",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "1999-03-09",
+   "incorporated": "1999-03-09",
+   "reregistered": "2019-11-11",
+   "annual_return_filed": "2026-03-30",
+   "total_shares": 1000,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Hector Adam Fleming",
+     "nationality": "IO",
+     "start": "2017-07-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Seilaneng Godisang",
+     "nationality": "BW",
+     "start": "2021-06-03",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Gregory Matsake",
+     "nationality": "BW",
+     "start": "2006-01-26",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kgomotso Ratlhaga",
+     "nationality": "BW",
+     "start": "2025-08-14",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "David Eric Stone",
+     "nationality": "ZA",
+     "start": "2011-07-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Brighton Tapfumaneyi Jena",
+     "nationality": "ZW",
+     "start": "2017-07-07",
+     "end": "2019-04-30"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Goitseone Tunku Kgaodi",
+     "nationality": "BW",
+     "start": "2006-01-26",
+     "end": "2020-09-17"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Lipalesa Gwyenneth Makepe",
+     "nationality": "BW",
+     "start": "2021-11-11",
+     "end": "2024-09-14"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Maheshbhai Patel",
+     "nationality": "BW",
+     "start": "2012-05-15",
+     "end": "2020-06-01"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "EntityShareholder",
+     "name": "Imara Capital Botswana Proprietary Limited",
+     "uin": "BW00001998876",
+     "start": "2010-06-29",
+     "end": null,
+     "shares": 501,
+     "percentage": 50.1
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Goitseone Tunku Kgaodi",
+     "nationality": "BW",
+     "start": "2006-07-16",
+     "end": null,
+     "shares": 115,
+     "percentage": 11.5
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Gregory Matsake",
+     "nationality": "BW",
+     "start": "2010-06-29",
+     "end": null,
+     "shares": 141,
+     "percentage": 14.1
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Clare Annette Mccammon",
+     "nationality": "IO",
+     "start": "2009-11-01",
+     "end": null,
+     "shares": 193,
+     "percentage": 19.3
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Victor Freeman Zirebwa",
+     "nationality": "ZW",
+     "start": "2014-04-25",
+     "end": null,
+     "shares": 50,
+     "percentage": 5
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Clare Annette Mccammon",
+     "nationalities": [
+      "JE"
+     ],
+     "start": "2025-03-31",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 19,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Goitseone Tunku Kgaodi",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-03-31",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 11,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Gregory Matsake",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-03-31",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 14,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-25",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    },
+    {
+     "date": "2026-05-07",
+     "service": "Cascade data update",
+     "filings": [
+      "Notice of Cascaded Company Role Details"
+     ]
+    },
+    {
+     "date": "2026-03-30",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2026-03-25",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-03-20",
+     "service": "Maintain Auditor Details",
+     "filings": [
+      "Notice of Change of Auditors"
+     ]
+    }
+   ],
+   "lei": "98450054CBN2CEA54805",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00001017410",
+   "ra_code": "RA000035",
+   "gleif_name": "Imara Capital Securities Proprietary Limited"
+  },
+  "9845005AV3NEB8490D56": {
+   "company": "M & A Wealth Proprietary Limited",
+   "uin": "BW00000574093",
+   "old_number": "CO2018/6887",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2018-04-11",
+   "incorporated": "2018-04-11",
+   "reregistered": "2019-08-15",
+   "annual_return_filed": "2026-04-22",
+   "total_shares": 3000,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Modisana Botsile",
+     "nationality": "BW",
+     "start": "2018-04-11",
+     "end": null
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Modisana Botsile",
+     "nationality": "BW",
+     "start": "2018-04-11",
+     "end": null,
+     "shares": 3000,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Modisana Botsile",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-04-11",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 100,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-04-22",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2025-04-28",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-04-25",
+     "service": "Maintain Secretary Details",
+     "filings": [
+      "Notice of Change of Secretaries"
+     ]
+    },
+    {
+     "date": "2025-04-23",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    },
+    {
+     "date": "2025-04-17",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    }
+   ],
+   "lei": "9845005AV3NEB8490D56",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00000574093",
+   "ra_code": "RA000035",
+   "gleif_name": "M & A Wealth Proprietary Limited"
+  },
+  "984500714A56F8A9I541": {
+   "company": "Lucara Botswana Proprietary Limited",
+   "uin": "BW00000664940",
+   "old_number": "CO2003/6930",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2003-11-28",
+   "incorporated": "2003-11-28",
+   "reregistered": "2019-08-29",
+   "annual_return_filed": "2025-11-12",
+   "total_shares": 17267,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Lauren Anne Freeman",
+     "nationality": "ZA",
+     "start": "2024-06-25",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tyler Alan Keeling",
+     "nationality": "CA",
+     "start": "2026-02-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Glenn Kondo",
+     "nationality": "CA",
+     "start": "2024-01-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Jeromie John Kufflick",
+     "nationality": "CA",
+     "start": "2026-02-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Naseem Banu Lahri",
+     "nationality": "BW",
+     "start": "2015-09-30",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "William Lamb",
+     "nationality": "CA",
+     "start": "2023-08-17",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Johane Mchive",
+     "nationality": "BW",
+     "start": "2017-06-12",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "John Patrick Armstrong",
+     "nationality": "CA",
+     "start": "2018-04-06",
+     "end": "2024-03-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Zara Elizabeth Boldt",
+     "nationality": "CA",
+     "start": "2018-04-01",
+     "end": "2023-12-29"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ayesha Hira",
+     "nationality": "CA",
+     "start": "2018-10-18",
+     "end": "2022-01-21"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Eira Margaret Thomas",
+     "nationality": "CA",
+     "start": "2018-02-25",
+     "end": "2023-08-14"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "African Diamonds Ltd",
+     "country": "IE",
+     "start": "2010-04-28",
+     "end": null,
+     "shares": 6573,
+     "percentage": 38.07
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Boteti Diamond Holdings Inc",
+     "country": "MU",
+     "start": "2010-04-28",
+     "end": null,
+     "shares": 9761,
+     "percentage": 56.53
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Debwat Exploration Proprietary Limited",
+     "uin": "BW00000671813",
+     "start": "2007-11-27",
+     "end": null,
+     "shares": 933,
+     "percentage": 5.4
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "William Lamb",
+     "nationalities": [
+      "CA"
+     ],
+     "start": "2025-11-12",
+     "end": null,
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "share": null,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-20",
+     "service": "Lodge General Document",
+     "filings": [
+      "Registration of Charges Document"
+     ]
+    },
+    {
+     "date": "2026-08-20",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2026-08-20",
+     "service": "Lodge General Document",
+     "filings": [
+      "Registration of Charges Document"
+     ]
+    },
+    {
+     "date": "2026-08-13",
+     "service": "Maintain Auditor Details",
+     "filings": [
+      "Notice of Change of Auditors"
+     ]
+    },
+    {
+     "date": "2026-07-23",
+     "service": "Lodge General Document",
+     "filings": [
+      "Financial Statement/Annual Report"
+     ]
+    }
+   ],
+   "lei": "984500714A56F8A9I541",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00000664940",
+   "ra_code": "RA000035",
+   "gleif_name": "Lucara Botswana Proprietary Limited"
+  },
+  "9845008V45FE84C85824": {
+   "company": "Genesis Capital Brokers Proprietary Limited",
+   "uin": "BW00000914205",
+   "old_number": null,
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2023-01-19",
+   "incorporated": "2019-10-14",
+   "reregistered": null,
+   "annual_return_filed": "2025-11-10",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Roelof Cornelius Andre Duplessis",
+     "nationality": "ZA",
+     "start": "2024-11-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kiven Vhusimuzi Mvududu",
+     "nationality": "ZW",
+     "start": "2024-11-01",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tinashe Silas Makande",
+     "nationality": "ZW",
+     "start": "2022-06-16",
+     "end": "2025-04-09"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Nyaradzo Mupfuti",
+     "nationality": "ZW",
+     "start": "2019-10-14",
+     "end": "2022-07-29"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Kiven Vhusimuzi Mvududu",
+     "nationality": "ZW",
+     "start": "2019-10-14",
+     "end": "2022-06-08"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Kiven Vhusimuzi Mvududu",
+     "nationality": "ZW",
+     "start": "2025-04-09",
+     "end": null,
+     "shares": 100,
+     "percentage": 100
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Tinashe Silas Makande",
+     "nationality": "ZW",
+     "start": "2022-06-13",
+     "end": "2025-04-09"
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Nyaradzo Mupfuti",
+     "nationality": "ZW",
+     "start": "2019-10-14",
+     "end": "2022-03-10"
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "Kiven Vhusimuzi Mvududu",
+     "nationality": "ZW",
+     "start": "2019-10-14",
+     "end": "2022-06-13",
+     "shares": 100,
+     "percentage": 100
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Kiven Vhusimuzi Mvududu",
+     "nationalities": [
+      "ZW"
+     ],
+     "start": "2025-10-15",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 100,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2025-11-19",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-11-10",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-10-15",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2025-04-22",
+     "service": "Transfer of Shares",
+     "filings": [
+      "Notice of Transfer of Shares"
+     ]
+    },
+    {
+     "date": "2025-04-09",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    }
+   ],
+   "lei": "9845008V45FE84C85824",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00000914205",
+   "ra_code": "RA000035",
+   "gleif_name": "Genesis Capital Brokers Proprietary Limited"
+  },
+  "984500BE2FBFC4C6B456": {
+   "company": "Jindal Energy (Botswana) Proprietary Limited",
+   "uin": "BW00001200784",
+   "old_number": "CO2006/6063",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2006-11-10",
+   "incorporated": "2006-11-10",
+   "reregistered": "2019-12-20",
+   "annual_return_filed": "2025-11-27",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Yogesh Goel",
+     "nationality": "IN",
+     "start": "2026-03-31",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Subramanian Viswanathan",
+     "nationality": "IN",
+     "start": "2026-03-31",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Parshant Kumar Goyal",
+     "nationality": "IN",
+     "start": "2023-01-04",
+     "end": "2025-10-22"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Sushil Gupta",
+     "nationality": "IN",
+     "start": "2012-09-18",
+     "end": "2020-03-18"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Neeraj Saxena",
+     "nationality": "IN",
+     "start": "2015-09-21",
+     "end": "2026-03-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Ashok Kumar Swami",
+     "nationality": "IN",
+     "start": "2020-03-18",
+     "end": "2026-03-31"
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Rajendra Kumar Naresh Kumar Tiwari",
+     "nationality": "IN",
+     "start": "2014-02-21",
+     "end": "2023-01-04"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "OtherShareholder",
+     "name": "Jindal Power (mauritius)Ltd",
+     "country": "MU",
+     "start": "2022-04-19",
+     "end": null,
+     "shares": 90,
+     "percentage": 90
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Mining And Power Resources Company Proprietary Limited",
+     "uin": "BW00003761376",
+     "start": "2022-04-19",
+     "end": null,
+     "shares": 10,
+     "percentage": 10
+    },
+    {
+     "kind": "OtherShareholder",
+     "name": "Jindal (Bvi) Limited",
+     "country": "IO",
+     "start": "2013-06-03",
+     "end": "2022-04-19"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "OtherBeneficialOwner",
+     "name": "Mining And Power Resources Company (Pty)Ltd",
+     "country": "BW",
+     "entity_type": "legalEntity",
+     "sub_type": "privateCompany",
+     "start": "2025-11-27",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 10,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "OtherBeneficialOwner",
+     "name": "jindal power (mauritius)Ltd",
+     "country": "IN",
+     "entity_type": "legalEntity",
+     "sub_type": "privateCompany",
+     "start": "2025-11-26",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 90,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-04-01",
+     "service": "Maintain Director Details",
+     "filings": [
+      "Notice of Change of Directors"
+     ]
+    },
+    {
+     "date": "2025-11-28",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2025-11-27",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-11-26",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2025-11-24",
+     "service": "Maintain Shareholders",
+     "filings": [
+      "Maintain Shareholders"
+     ]
+    }
+   ],
+   "lei": "984500BE2FBFC4C6B456",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00001200784",
+   "ra_code": "RA000035",
+   "gleif_name": "Jindal Energy (Botswana) Proprietary Limited"
+  },
+  "984500FC13FB5749C083": {
+   "company": "First Light Multi Manager Management Company Proprietary Limited",
+   "uin": "BW00000354522",
+   "old_number": "CO2016/23806",
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2016-11-21",
+   "incorporated": "2016-11-21",
+   "reregistered": "2019-07-19",
+   "annual_return_filed": "2025-11-26",
+   "total_shares": 900000,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Phodiso Mokgosi Baitseng",
+     "nationality": "BW",
+     "start": "2024-01-17",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Tefo Gakelebale",
+     "nationality": "BW",
+     "start": "2022-06-09",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Baboloki Boniface Reetsang",
+     "nationality": "BW",
+     "start": "2018-07-20",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Craig Allan Mockford",
+     "nationality": "ZA",
+     "start": "2016-11-28",
+     "end": "2022-08-02"
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Nadine Michelle Davies",
+     "nationality": "BW",
+     "start": "2024-09-24",
+     "end": null,
+     "shares": 900000,
+     "percentage": 100
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Prescient Holdings (Botswana) Proprietary Limited",
+     "uin": "BW00000410255",
+     "start": "2016-11-28",
+     "end": "2021-08-06",
+     "nominee": true
+    },
+    {
+     "kind": "EntityShareholder",
+     "name": "Strategic Wealth Proprietary Limited",
+     "uin": "BW00000613822",
+     "start": "2021-08-06",
+     "end": "2024-09-26"
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Nadine Michelle Davies",
+     "nationalities": [
+      "BW"
+     ],
+     "start": "2025-11-01",
+     "end": null,
+     "interests": [
+      {
+       "type": "other",
+       "share": null,
+       "voting": null,
+       "other_reason": "Shareholder"
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-04-22",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2025-11-26",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2025-11-26",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    },
+    {
+     "date": "2025-11-26",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-11-04",
+     "service": "Maintain Amount to be Paid or Consideration of Shares",
+     "filings": [
+      "Maintain Amount to be Paid or Consideration of Shares"
+     ]
+    }
+   ],
+   "lei": "984500FC13FB5749C083",
+   "lei_status": "LAPSED",
+   "registered_as": "BW00000354522",
+   "ra_code": "RA000035",
+   "gleif_name": "First Light Multi Manager Management Company Proprietary Limited"
+  },
+  "984500U5A09E95F0AD02": {
+   "company": "Temtum Services Proprietary Limited",
+   "uin": "BW00006027833",
+   "old_number": null,
+   "entity_type": "private",
+   "sub_type": "limitedByShares",
+   "suffix": "proprietaryLimited",
+   "status": "registered",
+   "status_since": "2024-05-28",
+   "incorporated": "2024-05-28",
+   "reregistered": null,
+   "annual_return_filed": "2026-05-20",
+   "total_shares": 100,
+   "directors": [
+    {
+     "kind": "IndividualDirector",
+     "name": "Videa Stephanie Mike",
+     "nationality": "GB",
+     "start": "2024-05-28",
+     "end": null
+    },
+    {
+     "kind": "IndividualDirector",
+     "name": "Faxy Phillip Moitshepi",
+     "nationality": "BW",
+     "start": "2024-05-28",
+     "end": null
+    }
+   ],
+   "shareholders": [
+    {
+     "kind": "IndividualShareholder",
+     "name": "Videa Stephanie Mike",
+     "nationality": "GB",
+     "start": "2024-05-28",
+     "end": null,
+     "shares": 40,
+     "percentage": 40
+    },
+    {
+     "kind": "IndividualShareholder",
+     "name": "David John Shimmon",
+     "nationality": "US",
+     "start": "2024-05-28",
+     "end": null,
+     "shares": 60,
+     "percentage": 60
+    }
+   ],
+   "beneficial_owners": [
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "David John Shimmon",
+     "nationalities": [
+      "US"
+     ],
+     "start": "2024-05-28",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 60,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    },
+    {
+     "kind": "IndividualBeneficialOwner",
+     "name": "Videa Stephanie",
+     "nationalities": [
+      "GB"
+     ],
+     "start": "2024-05-28",
+     "end": null,
+     "interests": [
+      {
+       "type": "shareholding",
+       "share": 40,
+       "voting": null,
+       "other_reason": null
+      }
+     ]
+    }
+   ],
+   "filings": [
+    {
+     "date": "2026-08-18",
+     "service": "Maintain Constitution",
+     "filings": [
+      "Notice of Constitution"
+     ]
+    },
+    {
+     "date": "2026-05-20",
+     "service": "Annual Return for 2026",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2026"
+     ]
+    },
+    {
+     "date": "2025-05-30",
+     "service": "Maintain Shareholders",
+     "filings": [
+      "Maintain Shareholders"
+     ]
+    },
+    {
+     "date": "2025-05-30",
+     "service": "Annual Return for 2025",
+     "filings": [
+      "Annual Return for a Private Company Limited by Shares for 2025"
+     ]
+    },
+    {
+     "date": "2025-05-28",
+     "service": "Maintain Beneficial Owner Details",
+     "filings": [
+      "Notice of Change of Beneficial Owners"
+     ]
+    }
+   ],
+   "lei": "984500U5A09E95F0AD02",
+   "lei_status": "ISSUED",
+   "registered_as": "BW00006027833",
+   "ra_code": "RA000035",
+   "gleif_name": "Temtum Services Proprietary Limited"
+  }
+ }
+}

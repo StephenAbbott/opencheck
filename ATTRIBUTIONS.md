@@ -213,6 +213,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Changes made:** OpenCheck reads the four datasets for one DOS ID and derives the current name, status, formation date and chief executive(s) from them. **Assumed-name filings are dropped** — they sit under a separate numbering that collides with DOS IDs. A title the filer appended to the CEO's name after a comma ("…, PRESIDENT") is removed. The CEO is carried by **name and role only**: the address DOS publishes beside it is not. Service-of-process and registered-agent addresses are not read.
 - **Entry point:** `us_ny_dos_id` derived from GLEIF RA code `RA000628` (Corporation and Business Entity Database), whatever the entity's jurisdiction; no name search. Optional `SOCRATA_APP_TOKEN` lifts Socrata's shared per-IP throttle.
 
+## Botswana — CIPA (Companies and Intellectual Property Authority), company and beneficial ownership register
+
+- **Data:** for a curated set of LEI-anchored Botswana companies — the company's name, UIN, pre-2019 company number, type, status and incorporation date; its **beneficial owners** (name, nationality or country, declared nature of interest and share, start and end dates); its **shareholders** (name, nationality or country of registration, share count and percentage, recorded nominee arrangements and the nominator's name, dates); its **directors** (name, nationality, dates); and the dates and names of its completed filings.
+- **Source:** the public register at <https://www.cipa.co.bw> (the Online Business Registration System, built and run by Foster Moore), read page by page by `backend/scripts/build_cipa_botswana_index.py` and committed at `backend/opencheck/data/cipa_botswana.json`. Not a live feed.
+- **License:** CIPA publishes the register to the general public but states no reuse terms for register data; its website terms of use restrict reproduction of site material. OpenCheck is seeking CIPA's written permission and treats the set as a curated example until an answer arrives.
+- **Attribution:** "Companies and Intellectual Property Authority (CIPA), Republic of Botswana — www.cipa.co.bw"
+- **Changes made:** the harvester copies an allowlist of attributes and never reads an address, uploaded document or contact detail, although the register publishes an address for every party; secretaries and auditors are not read. The records are mapped to BODS v0.4 by OpenCheck; CIPA's own BODS v0.3 export is not used. Countries are carried as filed.
+- **Entry point:** LEI-keyed offline match — the LEIs GLEIF files under RA code `RA000035` (and `RA000821` records that file a CIPA UIN).
+
 ## Moldova — ASP (Agenția Servicii Publice), State Register of Legal Entities
 
 - **Data:** companies on the State Register of Legal Entities (*Registrul de stat al unităților de drept*) — name, IDNO, legal form, registration date, registered address and activity codes — with their **directors** and the register's word for each role, and their **founders** with each founder's percentage of the share capital. Names only: no dates of birth, nationalities or identifiers for people or for corporate founders. No beneficial owners.

@@ -716,10 +716,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Nineteen** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
+**Twenty** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `cipa_botswana`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -979,6 +979,66 @@ be re-derived otherwise:
 - `SOCRATA_APP_TOKEN` (optional) goes in the `X-App-Token` header, never the
   URL. Licence `OPEN-NY-Terms` — commercial use yes, attribution not required
   (given anyway).
+
+---
+
+## Botswana CIPA (cipa_botswana) — a curated set read from the register's pages (Phase 264)
+
+`sources/cipa_botswana.py`, `bods/mappers/botswana.py`,
+`scripts/build_cipa_botswana_index.py`. Stephen's decisions (30 Sept 2026):
+build the offline set now while he asks CIPA and Foster Moore for permission,
+a bulk BODS file and the hidden export switched on; beneficial owners,
+shareholders **and** directors, name and role; **no beneficial owner's
+address**. Things that will be re-derived otherwise:
+
+- **No API, no bulk file, no licence.** The register is Foster Moore's Verne /
+  Catalyst: each page embeds its state as JSON (`var viewTree = {...}`) and
+  every action is a `POST /{app}/ui/{txId}` of Catalyst commands
+  (`view-node-set-attribute-value`, `view-node-button-click`,
+  `view-node-fire-event`). Node ids and the `XP-…-SS` URLs are **per session**
+  — find nodes by `attribute` / `domain` / `widget`, never store a URL.
+  Plain `httpx` works; no browser, no login.
+- **CIPA's own BODS export exists but is hidden and is not used.** The
+  `visualiser-button` ("Download BODS JSON", `dos: hidden`) answers
+  `ui-get-widget-data` with v0.3 statements that drop the UIN, every interest
+  date, `OtherReason` and the legal shareholders, with `share.exact: null`.
+  The mapper reads the structured `Director` / `Shareholder` /
+  `BeneficialOwner` / `ShareAllocation` records instead.
+- **The allowlist is `_ALLOWED` in the harvester**, and `_walk` never enters a
+  domain matching `Address|Document`. Never switch it to a denylist;
+  `test_committed_index_holds_no_address_or_document_field` pins it.
+- **Dates sit at two levels.** The role record carries the start and, for a
+  former holder, the **end**; the inner party record repeats the start. The
+  outer value wins — reading only the inner record loses every end date.
+- **Share allocations name a Botswana company "Name (BW…)"** and its
+  shareholder record "Name"; `_holder_key` strips the UIN. A missing
+  percentage is derived from the share count over `TotalShare`.
+- **One party per person or organisation, one relationship per party**,
+  interests per role: BO interests carry `beneficialOwnershipOrControl` (true
+  for people, false for entities), `shareholding` / `boardMember` / `nominee` /
+  `nominator` omit it (`bo_regimes`: `bo_individual`, `bo_entity`,
+  `shareholder`, `corporate_shareholder`, `director`, `nominator`). People
+  are matched by name **within one company only**; organisations by UIN, else
+  by name with legal-form words dropped.
+- **An `EntityShareholder`'s UIN says nothing about incorporation** — CIPA
+  gives external companies a UIN (De Beers UK Limited), so no jurisdiction is
+  written for it.
+- **`HasNominator: true`** on a shareholder or director is a recorded nominee
+  arrangement: a `nominee` interest on the holder (which the NOMINEE signal
+  reads) and, where CIPA names the nominator, a `nominator` relationship.
+- **Countries are carried as filed**, including `IO` (British Indian Ocean
+  Territory) — its own territory, never read as the BVI or the UK (Stephen,
+  30 Sept 2026). Never "correct" a country code.
+- **Custodial nominees stay nominees** (Stephen, 30 Sept 2026). The 2025 Act
+  defines nominee and nominator (s. 2) and makes a nominee disclose both to
+  the Registrar (s. 329A); a nominee is never a beneficial owner on the
+  strength of the nominee holding, which is why holdings carry no flag.
+- **Secretaries and auditors are not read**, by decision.
+- **The harvest is one-off** until CIPA answers the permission request; a
+  scheduled re-run is to be set up only if CIPA allows the data to be used.
+  **Do not merge the phase before that answer** (Stephen, 30 Sept 2026).
+- The BW knowability row in Stephen's Notion table was verified by him on
+  30 Sept 2026 (access since 20 Mar 2025, "at least 10 per cent (10%)").
 
 ---
 
@@ -1291,6 +1351,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Serbia | apr_serbia | `RA000517` — Business Registers Agency (APR) | 2026-09-17 — all 304 GLEIF records with jurisdiction RS: 295 RA000517, 6 RA999999, 2 RA000684 (Securities Commission fund numbers), 1 RA000518 (APR's entrepreneurs register); **every RA000517 record files the 8-digit matični broj**, no zero-padding needed. 141 of 146 ISSUED records resolve against the 31 Aug 2026 cut (misses: 2 sole traders, the Chamber of Commerce, 2 RA999999 state bodies). Scheme `RS-APR` (org-id.guide). In `RA_BY_COUNTRY` — one authority |
 | United States — District of Columbia | dlcp_dc | `RA000601` — DC Corporations Division (DLCP) | 2026-09-18 — 502 of the 726 GLEIF records with jurisdiction `US-DC` use it (the rest: RA999999 ×209, RA888888 ×4, RA000602 ×4, others ×7), **every one with the Corporations Division file number in `registeredAs`**. The file number is an opaque string in at least six live shapes (`000347`, `L00005029230`, `L21249`, `N00008414776`, `P00454`, `US-DC-LL012601299`) — never normalise it. 487 of 500 resolve against the register; by LEI status `ISSUED` 144/145, `LAPSED` 322/333, `RETIRED` 22/23, the misses being lapsed LEIs on legacy identifiers. **A name check is mandatory**: GLEIF files `L21249` for American Foreign Policy Council and DLCP's `L21249` is CONNIE-19 STREET LLC. Scheme `US-DC` — the ISO 3166-2 subdivision code the BODS mapper already stamps on a DC entity reached through GLEIF, so the two corroborate rather than each asserting an identifier the other lacks. **Not in `RA_BY_COUNTRY`**: the US has fifty-odd company registers and `US` cannot mean DC's; for the same reason `US-DC` is in `register_hops._NO_COUNTRY_ALIAS`, so no `REG-US` alias is built from it |
 | United States — New York | ny_dos | `RA000628` — Corporation and Business Entity Database (Department of State, Division of Corporations) · `RA000747` — Registry of insurance companies (Department of Financial Services) | 2026-09-29 — all 16,819 GLEIF records with jurisdiction `US-NY`: 13,442 RA000628, 3,050 RA999999, 55 RA000747, 33 RA888888; ISSUED 3,921 of 4,848 under RA000628. **RA000628 also appears on 53 records in other jurisdictions** — foreign companies authorised in New York (Quantexa Inc, `US-DE`, `5215193`) — so the deriver keys on the RA code, never the jurisdiction. `registeredAs` is the bare DOS ID, 1–9 digits, unpadded on both sides. Resolution over the ISSUED records: 3,878 agree on the current name, 8 more only on a former name, 23 resolve only in the All Filings family (dissolved, or newer than the snapshot), **8 are wrong numbers** (Salt City FCU files `8512`, THE MUNICIPAL WASTE PAPER RECEPTACLE COMPANY) → note card, 4 are in no DOS dataset. RA000747 files an **NAIC code**, not a DOS ID: it maps to its own RA code in `_GLEIF_RA_TO_ORG_ID` so the US-state jurisdiction fallback cannot label it `US-NY` and hop it to DOS. Scheme `US-NY` (the DC rule); in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
+| Botswana | cipa_botswana | `RA000035` — Register of Companies (Companies and Intellectual Property Authority) · `RA000821` — NBFIRA | 2026-09-29 — 38 LEIs under RA000035 (21 ISSUED, 15 LAPSED, 2 RETIRED), **every one filing a CIPA number in `registeredAs`**: the UIN (`BW00000466545`) for most, the pre-2019 company number (`CO1988/1163`) for some, one with a zero for the O (`C02015/11750`), and two odd shapes (`91/329`, `01/0318/06`) the register does not resolve. RA000821 (NBFIRA) files a UIN on one record and a pension-fund number on another. **Debswana has no LEI.** LEI-keyed curated set (not an RA deriver); scheme `BW-CIPA` in `_GLEIF_RA_TO_ORG_ID`, no register hop; `gleif_cipa_identifier` gives the reconciler `bw_cipa_uin` / `bw_cipa_old_number`. **Not in `RA_BY_COUNTRY`** |
 
 ### ✅ FIXED 2026-08-28: Scotland/Northern Ireland, and two more RA maps
 

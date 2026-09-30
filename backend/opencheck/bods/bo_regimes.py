@@ -515,6 +515,62 @@ _add(BORegime(
 ))
 
 _add(BORegime(
+    source_id="cipa_botswana",
+    jurisdiction="Botswana",
+    jurisdiction_code="BW",
+    register_name="CIPA register of beneficial ownership, with the share register and directors (www.cipa.co.bw)",
+    regime_kind="bo_register",
+    legal_basis=(
+        "Companies Act (Cap. 42:01) as amended by the Companies (Amendment) Act 2018, ss. 21 and 345 (register of beneficial ownership kept by CIPA)",
+        "Companies (Amendment) Act 2025 (No. 3 of 2025), s. 13 (s. 329(1): substantial-shareholder threshold raised from five to 10 per cent)",
+        "Companies (Amendment) Act 2025, s. 2 (nominee, nominator, nominee shareholder and nominee director defined) and s. 14 (new s. 329A: a nominee discloses its status and its nominator to the Registrar)",
+        "Financial Intelligence Act 2022, s. 2 (definition of beneficial owner)",
+        "Financial Intelligence Regulations 2022, reg. 7 (10 % ownership threshold)",
+    ),
+    bo_definition=(
+        "A natural person who ultimately owns or controls a legal person: "
+        "directly or indirectly holding at least 10 % of the shares, voting "
+        "rights or other ownership interest; failing that, the person "
+        "exercising control by other means; failing that, the senior managing "
+        "official."
+    ),
+    threshold_wording="at least 10 per cent (10%)",
+    threshold_operator=">=",
+    threshold_value=10.0,
+    reporting_basis=(
+        "Declared by the company on CIPA's online register with a BODS-derived "
+        "nature-of-interest codelist; legal shareholders and directors are "
+        "filed separately on the same register"
+    ),
+    natural_person_only=False,
+    fallback="Senior managing official where no natural person is identified",
+    record_kinds={
+        "bo_individual": "assert_true",
+        "bo_entity": "assert_false",      # entity interested party — definitional
+        "shareholder": "omit",            # share register: legal holding, no BO claim
+        "corporate_shareholder": "omit",
+        "director": "omit",
+        "nominator": "omit",              # recorded nominator of a nominee shareholder or director
+    },
+    notes=(
+        "CIPA also records entities as beneficial owners (e.g. a listed parent); "
+        "those are emitted with the flag false, as for any entity party",
+        "The 2025 Act says a nominee shareholder or director is never a beneficial owner "
+        "on the strength of the nominee holding or role, which is why the shareholder, "
+        "director and nominee records carry no flag; custodial nominees are kept as "
+        "nominees (Stephen, 30 Sept 2026)",
+    ),
+    sources=(
+        "https://www.cipa.co.bw/beneficial-ownership",
+        "https://www.cipa.co.bw/wp-content/uploads/2026/02/Companies-Amendment-Act-2025.pdf",
+        "https://www.cipa.co.bw/wp-content/uploads/2026/02/Beneficial-Ownership-Guidelines-2026.pdf",
+        "https://lawsociety.org.bw/wp-content/uploads/2024/07/2024-lsb-final-guidelines-on-identification-of-beneficial-ownership-information-for-attorneys.pdf",
+    ),
+    last_verified="2026-09-30",
+    review_status="verified",  # Stephen, 30 Sept 2026 — 10 % confirmed against the 2025 Act
+))
+
+_add(BORegime(
     source_id="dlcp_dc",
     jurisdiction="United States — District of Columbia",
     jurisdiction_code="US-DC",

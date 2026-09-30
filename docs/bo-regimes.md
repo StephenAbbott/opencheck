@@ -33,6 +33,7 @@ Two levels of rule interact:
 | `rpvs_slovakia` | Slovakia | bo_register | najmenej 25 % (at least 25 %) | ultimate BO | yes |
 | `sec_edgar` | United States | securities_disclosure | more than 5 % of a class of registered voting equity securities | — | no |
 | `cac_nigeria` | Nigeria | bo_register | at least 5 % | — | no |
+| `cipa_botswana` | Botswana | bo_register | at least 10 per cent (10%) | — | no |
 | `bods_gleif` | Global (GLEIF) | consolidation | — | — | no |
 | `wikidata` | None (crowdsourced) | crowdsourced | — | — | no |
 
@@ -265,6 +266,38 @@ operators below (currently `>`); Slovakia is already at `>=`. The UK is outside 
   - <https://bor.cac.gov.ng/>
   - <https://www.openownership.org/en/blog/nigeria-and-the-beneficial-ownership-data-standard/>
 - **Last verified:** 2026-08-30 — **review status: verified**
+
+## `cipa_botswana` — CIPA register of beneficial ownership, with the share register and directors (www.cipa.co.bw)
+
+- **Jurisdiction:** Botswana (BW)
+- **Regime kind:** bo_register
+- **Legal basis:**
+  - Companies Act (Cap. 42:01) as amended by the Companies (Amendment) Act 2018, ss. 21 and 345 (register of beneficial ownership kept by CIPA)
+  - Companies (Amendment) Act 2025 (No. 3 of 2025), s. 13 (s. 329(1): substantial-shareholder threshold raised from five to 10 per cent)
+  - Companies (Amendment) Act 2025, s. 2 (nominee, nominator, nominee shareholder and nominee director defined) and s. 14 (new s. 329A: a nominee discloses its status and its nominator to the Registrar)
+  - Financial Intelligence Act 2022, s. 2 (definition of beneficial owner)
+  - Financial Intelligence Regulations 2022, reg. 7 (10 % ownership threshold)
+- **Definition:** A natural person who ultimately owns or controls a legal person: directly or indirectly holding at least 10 % of the shares, voting rights or other ownership interest; failing that, the person exercising control by other means; failing that, the senior managing official.
+- **Threshold:** at least 10 per cent (10%) (`>= 10 %`)
+- **Reporting basis:** Declared by the company on CIPA's online register with a BODS-derived nature-of-interest codelist; legal shareholders and directors are filed separately on the same register
+- **Natural person only:** no
+- **Fallback:** Senior managing official where no natural person is identified
+- **`beneficialOwnershipOrControl` policy per record kind:**
+  - `bo_individual` → `assert_true`
+  - `bo_entity` → `assert_false`
+  - `shareholder` → `omit`
+  - `corporate_shareholder` → `omit`
+  - `director` → `omit`
+  - `nominator` → `omit`
+- **Notes:**
+  - CIPA also records entities as beneficial owners (e.g. a listed parent); those are emitted with the flag false, as for any entity party
+  - The 2025 Act says a nominee shareholder or director is never a beneficial owner on the strength of the nominee holding or role, which is why the shareholder, director and nominee records carry no flag; custodial nominees are kept as nominees (Stephen, 30 Sept 2026)
+- **Sources:**
+  - <https://www.cipa.co.bw/beneficial-ownership>
+  - <https://www.cipa.co.bw/wp-content/uploads/2026/02/Companies-Amendment-Act-2025.pdf>
+  - <https://www.cipa.co.bw/wp-content/uploads/2026/02/Beneficial-Ownership-Guidelines-2026.pdf>
+  - <https://lawsociety.org.bw/wp-content/uploads/2024/07/2024-lsb-final-guidelines-on-identification-of-beneficial-ownership-information-for-attorneys.pdf>
+- **Last verified:** 2026-09-30 — **review status: verified**
 
 ## `bods_gleif` — GLEIF Level 2 relationship records via Open Ownership BODS 0.4 dataset
 
