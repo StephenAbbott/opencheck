@@ -80,7 +80,28 @@ def _live_run(config) -> bool:
     return bool(config.getoption("--run-live")) or os.environ.get("OPENCHECK_RUN_LIVE") == "1"
 
 
+def _pin_org_id_guide_codes() -> None:
+    """libcovebods checks identifier schemes against org-id.guide's list, and
+    libcove2 downloads that list into its own package directory unless the
+    copy there was fetched *today* — so the first libcovebods test of every CI
+    run went to org-id.guide (Phase 266; the guard found it in CI, where no
+    earlier run had left a copy behind). Hand both checkers a committed copy."""
+    import json
+    from pathlib import Path
+
+    codes = json.loads(
+        (Path(__file__).parent / "fixtures" / "org_id_guide_codes.json").read_text("utf-8")
+    )["codes"]
+    try:
+        from libcovebods.tasks.checks import legacy_checks, record_based_checks
+    except ImportError:  # libcovebods is a dev dependency
+        return
+    for module in (legacy_checks, record_based_checks):
+        module.get_orgids_prefixes = lambda orgids_url=None: list(codes)
+
+
 def pytest_configure(config):
+    _pin_org_id_guide_codes()
     if not _live_run(config):
         _network_guard.install()
 
