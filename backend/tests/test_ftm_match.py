@@ -255,6 +255,14 @@ def _empty_strategies(monkeypatch, adapter) -> None:
     monkeypatch.setattr(adapter, "fetch_by_oc_url", empty, raising=False)
     monkeypatch.setattr(adapter, "fetch_by_registration", empty)
 
+    async def cannot_run(*_a, **_kw):
+        # ``None`` = the percolation screen could not run, so the cascade
+        # falls through to the ``q=`` name search. Unstubbed, it POSTed to
+        # search.openaleph.org (Phase 266).
+        return None
+
+    monkeypatch.setattr(adapter, "fetch_by_name_percolate", cannot_run)
+
 
 async def test_strategies_try_ftm_match_before_name_fallback(monkeypatch) -> None:
     from opencheck.routers import lookup as lookup_mod

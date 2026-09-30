@@ -8,21 +8,31 @@ name: Drift checks
 # Runs on every push/PR, and weekly so upstream enum changes are caught even when
 # nobody has pushed. To fix a failure, run the named script locally (without
 # --check) and commit the regenerated files.
+#
+# Once per change, like tests.yml (Phase 266): a pull request, or a push to
+# main — not both for the same commit.
 on:
   push:
+    branches: [main]
   pull_request:
   schedule:
     - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch: {}
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   enums:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: PSC enums (psc_descriptions.yml) up to date
@@ -33,9 +43,10 @@ jobs:
   okf:
     # The OKF check imports the source registry, so it needs the backend deps.
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
       - name: Install backend
         run: uv sync --no-dev
         working-directory: backend
@@ -47,9 +58,10 @@ jobs:
     # The FtM check imports opencheck.bods.mapper + followthemoney, so it needs
     # the backend deps with the ftm extra (pyicu build: g++/libicu-dev/pkg-config).
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
       - name: System deps for the ftm extra (followthemoney -> pyicu)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++ libicu-dev pkg-config
       - name: Install backend (with ftm extra)

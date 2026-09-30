@@ -31,8 +31,9 @@ on:
         description: "Snapshot date YYYY-MM-DD (default: the newest published)"
         required: false
 
+# Read-only by default; the one job that uploads asks for write (Phase 266).
 permissions:
-  contents: write # required to upload the release asset
+  contents: read
 
 concurrency:
   group: refresh-psc-graph
@@ -41,11 +42,15 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to upload the release asset
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
 
       - name: Install the backend
         working-directory: backend

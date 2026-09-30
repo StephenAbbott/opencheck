@@ -37,9 +37,9 @@ on:
     - cron: "30 7 * * 1" # Mondays 07:30 UTC
   workflow_dispatch: {}
 
+# Read-only by default; the one job that uploads asks for write (Phase 266).
 permissions:
-  contents: write # the source-health-latest release assets (Phase 161)
-  issues: write
+  contents: read
 
 concurrency:
   group: source-health
@@ -48,9 +48,15 @@ concurrency:
 jobs:
   sweep:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write # the source-health-latest release assets (Phase 161)
+      issues: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
       - name: System deps for the ftm extra (bods-ftm → followthemoney → pyicu)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++ libicu-dev pkg-config
       - name: Install backend
@@ -158,7 +164,7 @@ jobs:
         if: always()
         run: cat source-health.md >> "$GITHUB_STEP_SUMMARY" || echo "no report produced" >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: source-health

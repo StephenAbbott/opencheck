@@ -67,6 +67,23 @@ from tests import _entity_subtype_guard  # noqa: E402
 
 _entity_subtype_guard.install()
 
+# The suite is offline by construction (Phase 266): no lifespan warm-up
+# downloads, and a socket guard that fails any test reaching past loopback.
+# See tests/_network_guard.py. ``--run-live`` / OPENCHECK_RUN_LIVE=1 leaves
+# the network alone for the @pytest.mark.live tier.
+os.environ.setdefault("OPENCHECK_WARM_CACHES_ON_START", "0")
+
+from tests import _network_guard  # noqa: E402
+
+
+def _live_run(config) -> bool:
+    return bool(config.getoption("--run-live")) or os.environ.get("OPENCHECK_RUN_LIVE") == "1"
+
+
+def pytest_configure(config):
+    if not _live_run(config):
+        _network_guard.install()
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -89,7 +106,7 @@ def pytest_collection_modifyitems(config, items):
     for item in last:
         items.remove(item)
         items.append(item)
-    if config.getoption("--run-live") or os.environ.get("OPENCHECK_RUN_LIVE") == "1":
+    if _live_run(config):
         return
     skip_live = pytest.mark.skip(
         reason="live API smoke test — run with --run-live or OPENCHECK_RUN_LIVE=1"
@@ -143,5 +160,22 @@ def _entity_subtype_guard_check():
             "entityType.subtype (local wording belongs in entityType.details), "
             "or a jurisdiction / identifier input the risk engine cannot read "
             "(Phase 239):\n" + lines,
+            pytrace=False,
+        )
+
+
+@pytest.fixture(autouse=True)
+def _network_guard_check():
+    """Fail any test during which something tried to reach the network
+    (Phase 266). Code under test catches the refusal — that is its job — so
+    the recorded attempt, not the exception, is what fails the test."""
+    _network_guard.drain()
+    yield
+    attempts = _network_guard.drain()
+    if attempts:
+        pytest.fail(
+            "The test suite is offline (tests/_network_guard.py), and this test "
+            "tried to reach the network — mock it with respx, or mark it "
+            "@pytest.mark.live:\n  " + "\n  ".join(dict.fromkeys(attempts)),
             pytrace=False,
         )

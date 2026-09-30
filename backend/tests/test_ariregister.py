@@ -295,8 +295,31 @@ async def test_fetch_stub_on_redirect_away_from_company(adapter):
 
     assert bundle["is_stub"]
 
+@pytest.fixture
+def live(monkeypatch):
+    """Search answers only in live mode, like every other adapter's (Phase 266)."""
+    from opencheck.config import get_settings
+
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 @pytest.mark.asyncio
-async def test_search_returns_hits(adapter):
+async def test_search_is_inert_when_live_mode_is_off(adapter):
+    """Until Phase 266 this adapter's search called ariregister.rik.ee whatever
+    ``OPENCHECK_ALLOW_LIVE`` said — the one adapter that did — so every search
+    fan-out test went to the network."""
+    with respx.mock(assert_all_called=False) as router:
+        route = router.get("https://ariregister.rik.ee/eng/api/autocomplete")
+        hits = await adapter.search("Nordic Foods", SearchKind.ENTITY)
+    assert hits == []
+    assert not route.called
+
+
+@pytest.mark.asyncio
+async def test_search_returns_hits(adapter, live):
     with respx.mock:
         respx.get("https://ariregister.rik.ee/eng/api/autocomplete").mock(
             return_value=Response(200, json=_AUTOCOMPLETE_JSON)
@@ -309,7 +332,7 @@ async def test_search_returns_hits(adapter):
     assert not hits[0].is_stub
 
 @pytest.mark.asyncio
-async def test_search_empty_on_error(adapter):
+async def test_search_empty_on_error(adapter, live):
     with respx.mock:
         respx.get("https://ariregister.rik.ee/eng/api/autocomplete").mock(
             side_effect=Exception("network error")
@@ -362,7 +385,7 @@ async def test_fetch_stub_stays_stub_liveness_despite_live_attempt(adapter):
 
 
 @pytest.mark.asyncio
-async def test_search_records_live_provenance(adapter):
+async def test_search_records_live_provenance(adapter, live):
     with respx.mock:
         respx.get("https://ariregister.rik.ee/eng/api/autocomplete").mock(
             return_value=Response(200, json=_AUTOCOMPLETE_JSON)

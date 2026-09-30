@@ -15,7 +15,10 @@ This is the rule for the exported PDF / HTML / Markdown diagram. The on-screen
 graph states the same rule in ``frontend/src/lib/relationshipStatus.ts``; the
 two are pinned by parallel tests over the same cases
 (``tests/test_bods_lifecycle.py`` and ``relationshipStatus.test.ts``), not by a
-shared file — change one and change the other.
+shared file — change one and change the other. Since Phase 266
+``tests/test_frontend_parity.py`` also reads the TypeScript and fails when the
+month names, the date pattern, the closed status or the inclusive end-date
+comparison differ.
 
 Pure, side-effect-free.
 """

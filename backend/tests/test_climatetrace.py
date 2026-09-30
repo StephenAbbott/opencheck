@@ -100,6 +100,17 @@ def _make_gem_zip(
     return zip_path
 
 
+@pytest.fixture(autouse=True)
+def _no_gleif_gem_mapping_download(monkeypatch):
+    """The index tests build from a temp data root that holds no GLEIF
+    GEM↔LEI mapping, and ``_ensure_gleif_gem_data`` downloaded it from
+    mapping.gleif.org whenever it was absent (Phase 266). A test that needs
+    the mapping seeds the zip itself; the loader still reads what is there."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(_ct_mod, "_ensure_gleif_gem_data", lambda: None)
+
+
 def _reset_indexes() -> None:
     import opencheck.sources.climatetrace as _ct_mod
 
@@ -949,13 +960,25 @@ def test_lifespan_warmup_is_nonfatal(monkeypatch, tmp_path) -> None:
         raise RuntimeError("warm-up exploded")
 
     monkeypatch.setattr(_ct_mod, "warm_caches", boom)
+    # The suite turns the boot warm-up off (Phase 266); this test is about
+    # the warm-up, so it turns it back on, with every other download stubbed.
+    monkeypatch.setenv("OPENCHECK_WARM_CACHES_ON_START", "1")
+    from tests.test_offline_suite import stub_every_warm_up
+
+    stub_every_warm_up(monkeypatch, keep=("climatetrace",))
+    from opencheck.config import get_settings
+
+    get_settings.cache_clear()
 
     from fastapi.testclient import TestClient
     from opencheck.app import app
 
-    with TestClient(app) as client:  # context manager runs the lifespan
-        r = client.get("/health")
-        assert r.status_code == 200
+    try:
+        with TestClient(app) as client:  # context manager runs the lifespan
+            r = client.get("/health")
+            assert r.status_code == 200
+    finally:
+        get_settings.cache_clear()
 
 
 # ---------------------------------------------------------------------------

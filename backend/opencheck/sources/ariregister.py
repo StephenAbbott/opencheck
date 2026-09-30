@@ -428,6 +428,11 @@ class AriregisterAdapter(SourceAdapter):
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
         """Name or registry-code search via the autocomplete JSON endpoint."""
+        # Every other adapter's search answers nothing unless live mode is on;
+        # this one called ariregister.rik.ee regardless, which is how the
+        # search fan-out tests reached the network (Phase 266).
+        if not get_settings().allow_live:
+            return []
         # This adapter talks to ariregister.rik.ee directly rather than through
         # the shared http.build_client() (it needs a bare HTML Accept header
         # and a longer timeout — see module docstring), so build_client()'s

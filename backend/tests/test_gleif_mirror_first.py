@@ -536,9 +536,12 @@ async def test_subsidiary_network_flag_off_stays_live(
 
 
 async def test_mirror_endpoint_is_aggregate_only(
-    mirror_db: Path, monkeypatch: pytest.MonkeyPatch
+    httpx_mock: HTTPXMock, mirror_db: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _configure(monkeypatch, mirror_db, mirror_first=True)
+    # The one live call a mirror-served anchor makes (the cross-references);
+    # unmocked, it went to api.gleif.org (Phase 266).
+    _mock_live_record(httpx_mock, EASY)
     await GleifAdapter().fetch(EASY)
     response = TestClient(app).get("/mirror")
     assert response.status_code == 200
@@ -596,11 +599,15 @@ def test_prewarm_is_bounded_and_never_raises(tmp_path: Path) -> None:
 
 
 def test_boot_warm_up_with_a_local_file_warms_it(
-    mirror_db: Path, monkeypatch: pytest.MonkeyPatch
+    httpx_mock: HTTPXMock, mirror_db: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _configure(monkeypatch, mirror_db, mirror_first=True)
     monkeypatch.setenv("OPENCHECK_ENTITY_PAGES_DB_URL", "https://example.test/unused.gz")
     get_settings.cache_clear()
-    # The asset check is not reachable here (no network) and keeps the file.
+    # The asset check cannot be answered and keeps the file. Mocked since
+    # Phase 266 — it used to reach for example.test over the network.
+    httpx_mock.add_exception(
+        httpx.ConnectError("unreachable"), url="https://example.test/unused.gz"
+    )
     note = ep.warm_entity_pages_db()["entity_pages"]
     assert note.startswith(f"already present: {mirror_db}; page cache warmed")

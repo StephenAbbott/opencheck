@@ -29,7 +29,9 @@
 
 import type { HistoryEntry, HistoryRawChange, HistoryResponse } from "./api";
 
-/** Every source that can emit change events, in the order the tab names them. */
+/** Every source that can emit change events, in the order the tab names them.
+ *  `backend/tests/test_frontend_parity.py` (Phase 266) fails unless this is
+ *  exactly the set of emitter modules in `backend/opencheck/timeline/`. */
 export const HISTORY_SOURCES = [
   "gleif",
   "companies_house",

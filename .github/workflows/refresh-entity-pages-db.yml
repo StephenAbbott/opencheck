@@ -27,8 +27,9 @@ on:
     - cron: "30 6 1 * *" # 1st of the month, 06:30 UTC — after GLEIF's 02:00 publish
   workflow_dispatch: {}
 
+# Read-only by default; the one job that uploads asks for write (Phase 266).
 permissions:
-  contents: write # required to upload the release asset
+  contents: read
 
 concurrency:
   group: refresh-entity-pages-db
@@ -37,9 +38,13 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to upload the release asset
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
 
       - name: Install the builder's one dependency
         # The builder imports opencheck.entity_pages (stdlib-only) and uses

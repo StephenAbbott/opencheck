@@ -1,0 +1,43 @@
+name: Dependency audit
+
+# pip-audit over the backend's runtime dependencies as locked in uv.lock
+# (Phase 266). It gates only a change to the dependencies themselves — a new
+# advisory against an unchanged lock must not turn an unrelated pull request
+# red — and runs weekly so an advisory published between changes is still
+# seen. The git-pinned bods-* packages are ours and have no advisory feed, so
+# they are left out of the export. To fix a failure: `uv lock
+# --upgrade-package <name>` in backend/, run the suite, commit the lock.
+on:
+  push:
+    branches: [main]
+    paths: [backend/pyproject.toml, backend/uv.lock]
+  pull_request:
+    paths: [backend/pyproject.toml, backend/uv.lock]
+  schedule:
+    - cron: "15 6 * * 1" # Mondays 06:15 UTC, beside the drift checks
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+      - name: Export the locked runtime dependencies
+        working-directory: backend
+        run: |
+          uv export --frozen --no-dev --extra ftm --no-hashes --no-emit-project \
+            | grep -v '@ git+' > "$RUNNER_TEMP/requirements.txt"
+          wc -l "$RUNNER_TEMP/requirements.txt"
+      - name: pip-audit
+        run: uvx pip-audit --requirement "$RUNNER_TEMP/requirements.txt" --no-deps --disable-pip --progress-spinner off

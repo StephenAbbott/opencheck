@@ -21,7 +21,9 @@
  *
  * `backend/opencheck/bods/lifecycle.py` states the same rule for the PDF
  * diagram. The two are pinned by parallel tests over the same cases, not by a
- * shared file; if you change one, change the other.
+ * shared file; if you change one, change the other — since Phase 266
+ * `backend/tests/test_frontend_parity.py` parses this file and fails when its
+ * month names, date pattern, closed status or `<=` drift from the backend's.
  */
 
 export interface EndableInterest {

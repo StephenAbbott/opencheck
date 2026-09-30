@@ -19,7 +19,8 @@
  * reads a reference out of either the v0.4 bare string or the legacy wrapped
  * object and canonicalises it. Unknown references come back unchanged so a
  * dangling edge still reads as dangling. Pure; the mirror of
- * `backend/opencheck/bods/refs.py`.
+ * `backend/opencheck/bods/refs.py`, pinned to it by
+ * `backend/tests/test_frontend_parity.py` (Phase 266).
  */
 
 type Stmt = Record<string, unknown>;
