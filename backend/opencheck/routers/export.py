@@ -35,7 +35,7 @@ from ..bods import (
     unique_statements,
     validate_shape,
 )
-from ..bods.senzing import _desc_to_source_id
+from ..bods.source_ids import contributing_source_ids, record_unresolved
 from ..dispositions import load_dispositions
 from ..licensing import LicenseAssessment
 from ..licensing import assess as assess_licensing
@@ -207,6 +207,9 @@ async def export(
     unique = unique_statements(payload.bods)
     if len(unique) != len(payload.bods):
         payload = payload.model_copy(update={"bods": unique})
+    # Phase 267: say how much of the bundle ships with no source OpenCheck can
+    # name — and so no licence attribution — instead of letting it fail open.
+    record_unresolved(payload.bods, "export")
 
     def _licensing_for(ids: list[str]) -> LicenseAssessment:
         # A saved report carries the assessment made when it was saved.
@@ -440,6 +443,7 @@ async def export_network(request: Request, req: ExportNetworkRequest) -> Respons
     # A network assembled by expansion meets the same party from several
     # anchors; publish each statement once (Phase 235).
     bods = unique_statements(req.bods or [])
+    record_unresolved(bods, "export_network")
     slug = _filename_slug(req.slug or "fullcheck-network")
     stamp = datetime.now(UTC).strftime("%Y%m%d")
 
@@ -540,15 +544,10 @@ async def export_network(request: Request, req: ExportNetworkRequest) -> Respons
 
 
 def _network_source_ids(bods: list[dict[str, Any]]) -> list[str]:
-    """Registered source ids that contributed to a network, from BODS source blocks."""
-    rev = _desc_to_source_id()
-    ids: set[str] = set()
-    for s in bods:
-        desc = ((s.get("source") or {}).get("description") or "").strip()
-        sid = rev.get(desc)
-        if sid:
-            ids.add(sid)
-    return sorted(ids)
+    """Registered source ids that contributed to a network, from BODS source
+    blocks — ``source.opencheckSourceId`` first, the description for
+    statements stamped before Phase 267 (``bods/source_ids.py``)."""
+    return contributing_source_ids(bods)
 
 
 def _build_gql_zip(

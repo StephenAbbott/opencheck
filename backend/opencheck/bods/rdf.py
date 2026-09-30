@@ -144,7 +144,7 @@ def _code_term(value: str, *, default: URIRef | None = None) -> URIRef:
 def _license_literal_for(stmt: dict[str, Any]) -> Literal | None:
     """The canonical licence URI (or identifier) of the statement's source."""
     from ..licensing import most_restrictive
-    from .senzing import _source_ids_of
+    from .source_ids import source_ids_of as _source_ids_of
 
     source_ids = _source_ids_of(stmt)
     if not source_ids:
@@ -188,7 +188,7 @@ def _add_source(g, stmt_uri, stmt: dict[str, Any]) -> None:
     src = stmt.get("source") or {}
     if not src:
         return
-    from .senzing import _source_ids_of
+    from .source_ids import source_ids_of as _source_ids_of
 
     node = BNode()
     g.add((stmt_uri, BODS.source, node))

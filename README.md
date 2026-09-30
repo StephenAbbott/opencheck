@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 266** — The backend test suite runs with the network disabled, CI runs once per change with SHA-pinned actions, the runtime dependencies pass pip-audit, and mypy is gated as a per-module ratchet.
+**Latest: Phase 267** — Every BODS statement now carries the id of the source it came from, so the licence stamped on exports can no longer drop a source silently, and any statement that cannot be attributed is logged and counted.
 
 → [Full development history](docs/status.md)
 

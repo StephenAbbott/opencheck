@@ -741,6 +741,10 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     block: dict[str, Any] = {
         "type": ["officialRegister"] if source_id in _official_registers else ["thirdParty"],
         "description": source_names.get(source_id, source_id),
+        # Phase 267: the adapter id itself, so licence lookups never have to
+        # recover it from the display name above (``bods/source_ids.py``).
+        # An extension field — BODS v0.4 leaves Source's properties open.
+        "opencheckSourceId": source_id,
     }
     # ``retrievedAt`` is a factual claim about when OpenCheck downloaded the
     # data, not a timestamp of when this function happened to run. It is

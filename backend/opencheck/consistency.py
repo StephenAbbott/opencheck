@@ -127,12 +127,17 @@ _ID_BY_DESCRIPTION: dict[str, str] = {v: k for k, v in SOURCE_NAMES.items()}
 
 
 def source_id_of(stmt: dict[str, Any]) -> str:
-    """Adapter id for a statement, from the mapper's ``source.description``.
+    """Adapter id for a statement: ``source.opencheckSourceId`` (Phase 267),
+    else the mapper's ``source.description`` mapped back to its id.
 
     Falls back to the description itself for a label the mapper does not
     own (an Open Ownership bundle, say), which lineage treats as original.
     """
-    desc = str(((stmt.get("source") or {}).get("description")) or "").strip()
+    src = stmt.get("source") or {}
+    stamped = src.get("opencheckSourceId")
+    if isinstance(stamped, str) and stamped in SOURCE_NAMES:
+        return stamped
+    desc = str(src.get("description") or "").strip()
     return _ID_BY_DESCRIPTION.get(desc, desc)
 
 
