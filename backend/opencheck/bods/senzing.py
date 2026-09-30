@@ -45,12 +45,12 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
-from functools import lru_cache
 from typing import Any
 
 from .. import identifiers
 from .annotations import person_identifiers_from_annotations
 from .refs import resolver
+from .source_ids import source_ids_of
 
 DATA_SOURCE = "OPENCHECK"
 DOMAIN = "OPENCHECK"
@@ -286,30 +286,11 @@ def _pointer_features(
     return pointers
 
 
-@lru_cache(maxsize=1)
-def _desc_to_source_id() -> dict[str, str]:
-    """Reverse map: BODS ``source.description`` → opencheck source_id, derived from
-    the registry so it matches exactly how statements are stamped by
-    ``mapper._source_block``. Lazy + cached to avoid a circular import at load."""
-    from ..sources import REGISTRY
-    from .mapper import _source_block
-
-    out: dict[str, str] = {}
-    for sid in REGISTRY:
-        desc = (_source_block(sid, None).get("description") or "").strip()
-        if desc:
-            out[desc] = sid
-    return out
-
-
 def _source_ids_of(stmt: dict[str, Any]) -> set[str]:
-    """The registered source_id(s) behind a BODS statement, via its source block.
-    Empty when the source isn't a registered adapter (no licence info to attach)."""
-    desc = ((stmt.get("source") or {}).get("description") or "").strip()
-    if not desc:
-        return set()
-    sid = _desc_to_source_id().get(desc)
-    return {sid} if sid else set()
+    """The registered source_id behind a BODS statement (Phase 267: read from
+    ``source.opencheckSourceId``, the description only as a fallback — see
+    ``bods/source_ids.py``). Empty, and logged, when nothing resolves."""
+    return source_ids_of(stmt)
 
 
 def _attach_licensing(record: dict[str, Any], source_ids: set[str]) -> None:

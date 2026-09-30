@@ -51,6 +51,12 @@ lifecycle), a `recordStatus` (`new` / `updated` / `closed`), a `statementDate`,
   `subjectUnableToConfirmOrIdentifyBeneficialOwner`, …).
 - **Lifecycle:** a ceased relationship becomes a `closed` record (stable
   `recordId`, `replacesStatements` → the original `new`).
+- **Which source a statement came from:** every `source` block carries
+  `opencheckSourceId` (the adapter id, e.g. `companies_house`) beside the
+  human-readable `description`. It is an extension field — BODS v0.4 leaves the
+  Source object open, and `lib-cove-bods` lists it as an additional field, not
+  an error. The licence columns of every export are decided from it; OECD-UNSD
+  MEIP statements, otherwise passed through as published, gain this one key.
 
 # Exporting BODS from OpenCheck
 

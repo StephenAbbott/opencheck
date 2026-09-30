@@ -912,6 +912,10 @@ types are gone. One code path.
   folder ("disk I/O error") — `build_meip.py` writes to `/tmp` and copies.
   Inputs (`meip_bods.jsonl`, the XLSX, the sqlite and its gz) are gitignored.
 - A scheduled check of the OECD page for the next edition fires in March 2027.
+- **One added key (Phase 267):** `map_meip` copies each statement and adds
+  `source.opencheckSourceId: "meip"`, so the licence lookups can name it. The
+  OECD's values and ids are untouched and the store's objects are never
+  mutated; `test_meip` compares everything else verbatim.
 
 ---
 
@@ -1424,7 +1428,7 @@ filtered by `entity.legalAddress.country`.
 
 - `_stable_id(*parts)` — deterministic SHA-256-based ID; format `"opencheck-" + 24 hex chars`. Used as both `statementId` and `recordId` for entity/person statements.
 - `make_entity_statement()`, `make_person_statement()`, `make_relationship_statement()` — factory functions in `mapper.py`. Always use these; never hand-build BODS statements.
-- `_source_block(source_id, url)` — builds the `source` field. Every source_id must be in the `source_names` dict in mapper.py (6 were missing, fixed in Phase 43).
+- `_source_block(source_id, url)` — builds the `source` field (`bods/statements.py`). Every source_id must be in `SOURCE_NAMES` (6 were missing, fixed in Phase 43). Since Phase 267 it also writes `opencheckSourceId` — see "A statement names its source by id" below.
 - `_official_registers` set in mapper.py — source IDs that get `"type": ["officialRegister"]` instead of `"thirdParty"]`.
 - Relationship statements: `statementId != recordId` (unlike entity/person where they're equal).
 - Risk signal `statement_id` in evidence: `_bods_stable_id(source_id, hit_id)` — added to SANCTIONED/PEP evidence in `risk.py` in Phase 45 so frontend can look up which node to overlay.
@@ -2653,3 +2657,41 @@ will be re-derived otherwise:
   neither reset nor skip it. `/watchstats.backups` carries dates and errors,
   never the repository or token. The passphrase setting is named
   `backup_passphrase_secret` so `secret_scrub` redacts it.
+
+---
+
+## A statement names its source by id, and a miss is loud (Phase 267)
+
+`opencheck/bods/source_ids.py`. Every licence decision about a statement —
+RDF `bods:license`, Senzing `DATA_LICENSE` / `ATTRIBUTION`, a FullCheck
+network's `contributing_source_ids` and `LICENSES.md` — needs the adapter id
+behind it. Until Phase 267 it was recovered by matching `source.description`
+(a display name) back against the registry, and a miss returned an empty set
+with no trace. It missed on every OECD-UNSD MEIP statement (Shell's export on
+30 Sept 2026 shipped one Senzing record without a licence), and any edit to a
+display name in `SOURCE_NAMES` would have orphaned every statement already
+stamped. Things that will be re-derived otherwise:
+
+- **`_source_block` writes `opencheckSourceId`** beside `description`. It is a
+  BODS extension field: v0.4's Source object is open, and libcovebods lists it
+  among additional fields, not errors (Stephen, 30 Sept 2026 — chosen over an
+  annotation per statement or a frozen alias table).
+- **Read the id through `source_ids_of` / `source_id_of` /
+  `contributing_source_ids`**, never `source.description`. Order: the stamped
+  id when it is a REGISTRY id (an unregistered id such as `bods_gleif` has no
+  licence row, so it falls through); then the description, for statements
+  stamped before Phase 267 that saved reports and caches still hold; then
+  `_LEGACY_DESCRIPTIONS` (the OECD's MEIP description). Nothing else.
+- **A miss is loud** (Stephen, 30 Sept 2026): a warning once per distinct
+  description, and the export routes count unattributed statements once per
+  request (`record_unresolved(bods, "export" | "export_network")`) as
+  `/signalstats.unresolved_sources` — `surface|reason`, reasons `no_source` /
+  `unrecognised`, closed vocabularies only. Anything but zero is worth a look.
+- `test_source_ids_phase267.py` round-trips every REGISTRY id through the
+  stamp **and** through the description alone, and fails if two sources share
+  a display name. Renaming a display name is now safe; adding a source needs
+  nothing new here.
+- `consistency.source_id_of` (lineage) reads the stamped id first too.
+  **Left as they were:** `subject_identity.py`, `reconcile.py`,
+  `liveness.py` and `rdf.py`'s anchor check still compare descriptions — to
+  prefer the GLEIF statement or to label a row, not to decide a licence.

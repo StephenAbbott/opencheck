@@ -20,6 +20,7 @@ import pycountry
 from ..elf import resolve_elf
 from . import liveness as _liveness
 from .unique import unique_statements
+from .source_ids import SOURCE_ID_KEY
 from .annotations import annotate, commenting, pointer
 
 # Phase 168 moved the statement factories and the two largest per-source
@@ -1639,6 +1640,16 @@ def map_bods_uk_psc(bundle: dict[str, Any]) -> BODSBundle:
     return iter(bundle.get("bods_statements", []))
 
 
+def _with_meip_source_id(statement: Any) -> Any:
+    """A copy of an OECD statement with ``source.opencheckSourceId`` added."""
+    if not isinstance(statement, dict):
+        return statement
+    src = statement.get("source")
+    out = dict(statement)
+    out["source"] = {**src, SOURCE_ID_KEY: "meip"} if isinstance(src, dict) else {SOURCE_ID_KEY: "meip"}
+    return out
+
+
 def map_meip(bundle: dict[str, Any]) -> BODSBundle:
     """Passthrough mapper for the OECD-UNSD MEIP register (Phase 208).
 
@@ -1654,8 +1665,15 @@ def map_meip(bundle: dict[str, Any]) -> BODSBundle:
     ``relationship_interested_party_not_before_relationship_in_dataset``), and
     the OECD's own file does not always do so. Reordering changes no
     statement; the ids stay the OECD's.
+
+    Phase 267: each statement's ``source`` block gains one key,
+    ``opencheckSourceId: "meip"``, so the licence lookups (RDF, Senzing, a
+    FullCheck network's ``LICENSES.md``) can name the source. The OECD's own
+    description matches no OpenCheck display name, and before this every MEIP
+    statement shipped with no licence attribution. Nothing the OECD wrote is
+    changed; the statements are copied, never mutated in the store.
     """
-    statements = list(bundle.get("bods_statements", []))
+    statements = [_with_meip_source_id(s) for s in bundle.get("bods_statements", [])]
     parties = [s for s in statements if (s or {}).get("recordType") != "relationship"]
     relationships = [s for s in statements if (s or {}).get("recordType") == "relationship"]
     return iter(parties + relationships)

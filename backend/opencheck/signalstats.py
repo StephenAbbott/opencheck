@@ -40,6 +40,11 @@ What is counted, and where:
   four serial register calls per company, a 600-per-five-minutes key —
   is what limits UK chains in production, and how deep those chains go.
 
+* **Unattributed statements** (Phase 267) — recorded by the export routes
+  through ``bods.source_ids.record_unresolved``: statements shipped in an
+  export whose source matched no registered adapter, so no licence could be
+  attached, by ``(surface, reason)``.
+
 **Privacy.** Counts are aggregate only. The recorders read *only* closed-
 vocabulary fields — a signal's ``code`` and ``source_id``, a degradation's
 ``source_id`` / ``check`` / ``reason`` — and never ``summary``, ``hit_id``,
@@ -146,6 +151,7 @@ class _Counters:
         self.signals: Counter[tuple[str, str]] = Counter()
         self.degraded: Counter[tuple[str, str, str]] = Counter()
         self.walks = _Walks()
+        self.unresolved_sources: Counter[tuple[str, str]] = Counter()
         self.truncated = False
 
 
@@ -201,6 +207,35 @@ def record_degraded(degraded: Iterable[Mapping[str, Any]]) -> None:
                 _bounded_increment(totals.degraded, key)  # type: ignore[arg-type]
     except Exception as exc:  # noqa: BLE001
         log.debug("signalstats.record_degraded failed, ignoring: %s", exc)
+
+
+#: Surfaces that report statements they could not attribute to a registered
+#: source (Phase 267). Closed: anything else is folded into ``other``.
+UNRESOLVED_SURFACES = frozenset({"export", "export_network"})
+#: The reasons ``bods.source_ids`` gives. Closed likewise.
+UNRESOLVED_REASONS = frozenset({"no_source", "unrecognised"})
+
+
+def record_unresolved_sources(surface: str, counts: Mapping[str, int]) -> None:
+    """Count statements an export shipped without a source OpenCheck could
+    name — and so without a licence attribution — by ``(surface, reason)``.
+
+    Phase 267: the licence lookup used to fail open with no trace. Only the
+    closed vocabularies above are recorded; nothing from a statement.
+    """
+    try:
+        key_surface = surface if surface in UNRESOLVED_SURFACES else "other"
+        with totals.lock:
+            for reason, n in counts.items():
+                if reason not in UNRESOLVED_REASONS or not isinstance(n, int) or n <= 0:
+                    continue
+                key = (key_surface, reason)
+                if key not in totals.unresolved_sources and len(totals.unresolved_sources) >= _MAX_KEYS:
+                    totals.truncated = True
+                    continue
+                totals.unresolved_sources[key] += n
+    except Exception as exc:  # noqa: BLE001
+        log.debug("signalstats.record_unresolved_sources failed, ignoring: %s", exc)
 
 
 def record_lookup() -> None:
@@ -362,6 +397,7 @@ def stats() -> dict[str, Any]:
         started = totals.started
         truncated = totals.truncated
         walks = _walk_stats(totals.walks)
+        unresolved = Counter(totals.unresolved_sources)
 
     subject, related = _split_related(signals)
     return {
@@ -378,6 +414,11 @@ def stats() -> dict[str, Any]:
         "degraded": {"|".join(key): n for key, n in degraded.items()},
         # Phase 184: the Companies House corporate-PSC walk, by origin.
         "companies_house_walks": walks,
+        # Phase 267: statements an export shipped whose source matched no
+        # registered adapter, so no licence could be attached to them, by
+        # ``surface|reason``. Anything but zero is worth a look.
+        "unresolved_sources_total": sum(unresolved.values()),
+        "unresolved_sources": {"|".join(key): n for key, n in unresolved.items()},
         # True only if the cardinality cap was hit — i.e. something is
         # generating keys it should not be, and these numbers are partial.
         "truncated": truncated,

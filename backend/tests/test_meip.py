@@ -124,8 +124,17 @@ async def test_adapter_fetches_declares_snapshot_and_maps_through(fixture_db) ->
     assert raw["lei"] == SUB_A1
     statements = list(map_meip(raw))
     # A passthrough (Phase 255: reordered so parties precede relationships,
-    # every statement unchanged).
-    assert sorted(map(repr, statements)) == sorted(map(repr, raw["bods_statements"]))
+    # every statement unchanged) — except the one key Phase 267 adds to each
+    # source block so the licence lookups can name the source.
+    assert all(s["source"]["opencheckSourceId"] == "meip" for s in statements)
+
+    def _without_id(stmt: dict) -> dict:
+        src = {k: v for k, v in stmt["source"].items() if k != "opencheckSourceId"}
+        return {**stmt, "source": src}
+
+    assert sorted(repr(_without_id(s)) for s in statements) == sorted(map(repr, raw["bods_statements"]))
+    # Copied, never mutated: the store's statements carry no OpenCheck key.
+    assert not any("opencheckSourceId" in s["source"] for s in raw["bods_statements"])
     kinds = [s["recordType"] for s in statements]
     assert kinds == sorted(kinds, key=lambda k: k == "relationship")
     # deepen / retry path
