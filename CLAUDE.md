@@ -162,7 +162,7 @@ Format validation is advisory (non-blocking). The amber border + warning fires o
 
 ## Current state (Phase 45)
 
-**Test suite**: 1733 passed, 6 skipped, 5 xfailed. Run `python3 -m pytest` from `backend/`.
+**Test suite**: see "Test suite" below — the current totals are in the closing paragraph of `docs/status.md`, not here (a count in this file went stale for two hundred phases).
 
 **Frontend graph renderer**: Cytoscape.js (replaced `@openownership/bods-dagre` in Phase 44). Component: `frontend/src/components/BODSGraph.tsx`. Uses a React HTML overlay layer for BOVS icons and flags — never use Cytoscape's `background-image` for icons (canvas taint from Adobe Illustrator `xmlns:xlink` SVGs). BOVS icons are base64 data URIs in `frontend/src/lib/bovsIcons.ts`. Flags are served from `frontend/public/bods-dagre-images/flags/`. The overlay recomputes on `cy.on('viewport')`. Flag badges are at 45° NE circumference; risk signal badges at 315° NW.
 
@@ -267,8 +267,10 @@ source: the page shows the last sweep's verdict and says when it was reached.
 
 ### Cold start & per-source time budgets (Phase 47)
 
-- The FastAPI lifespan kicks off `climatetrace.warm_caches()` in a
-  background thread at startup, so Render cold starts pre-download/parse
+- The FastAPI lifespan kicks off `climatetrace.warm_caches()` (and, since, the
+  other bulk-index warm-ups in `app._warm_caches_background`) in a
+  background thread at startup — unless `OPENCHECK_WARM_CACHES_ON_START=0`,
+  which the test suite sets (Phase 266) — so Render cold starts pre-download/parse
   the GEM CSVs, GLEIF GEM↔LEI mapping and GEOT artifact before the first
   lookup. Warm-up failures are logged and non-fatal (lazy fallback).
   The climatetrace adapter's index builds run via `asyncio.to_thread` —
@@ -511,6 +513,18 @@ bundle, under `ares/bundle-v2/`, only when VR returned data).
 
 ## Other conventions
 
+- **CI (Phase 266).** `tests.yml` and the drift checks run on a pull request
+  and on a push to `main` — once per change, not twice — and a newer push to a
+  PR cancels the run it supersedes. Every job has `timeout-minutes`. Every
+  action is pinned to a commit SHA with its tag in a comment (Dependabot,
+  `.github/dependabot.yml`, proposes the updates); add a new action the same
+  way. Workflows are `contents: read` at the top, and only the job that uploads
+  a release asset asks for `contents: write`, with `persist-credentials: false`
+  on its checkout (uploads use `GH_TOKEN`; nothing pushes).
+  `dependency-audit.yml` runs pip-audit over the locked runtime dependencies
+  when `pyproject.toml` / `uv.lock` change and weekly. `openaleph-client` was
+  removed — nothing imported it, and it held urllib3 at 1.x; the OpenAleph
+  User-Agent version it supplied is now the constant `_OA_VERSION`.
 - API keys go in `.env` only — never committed to the repo.
 - **Never put `str(exc)` or `f"{exc}"` into a response, an SSE event or anything
   stored** — use `opencheck.secret_scrub.describe_exception(exc)` (or
@@ -1156,11 +1170,30 @@ Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_
 
 ## Test suite
 
-- **1733 passed, 6 skipped, 5 xfailed** as of Phase 45. Run `python3 -m pytest` from `backend/`.
+- Run `uv run pytest -q` from `backend/` (what CI runs, with `uv sync --extra ftm`
+  first — without the extra ~20 icij/openaleph tests skip or fail). The current
+  totals are the closing paragraph of `docs/status.md`; do not copy a count here.
+- **The suite is offline by construction (Phase 266).** `conftest.py` sets
+  `OPENCHECK_WARM_CACHES_ON_START=0`, so `with TestClient(app)` no longer runs
+  the lifespan's boot downloads (GEM CSVs, the GLEIF GEM↔LEI mapping, the bulk
+  indexes), and installs `tests/_network_guard.py`: any connection past
+  loopback, or DNS for any name but localhost, raises `NetworkBlocked` (an
+  `OSError`, so code takes its outage path) **and** fails the test during which
+  it happened — the recorded attempt fails it, not the exception, which code
+  under test is built to swallow. The guard also removes `HTTP(S)_PROXY` for
+  the run, since a proxy on loopback would carry every request past it. Mock
+  with respx / pytest-httpx; a test that must reach the network is
+  `@pytest.mark.live`. `--run-live` leaves the network alone. A test that is
+  *about* the warm-up turns it back on and stubs every step
+  (`tests/test_offline_suite.py::stub_every_warm_up`, which fails if the
+  warm-up grows a step it does not name). Verified with the network namespace
+  removed (`unshare -rn`), not only by the guard.
 - Async adapter tests use `pytest-asyncio` with `asyncio_mode = "auto"` (set in `pyproject.toml`).
 - HTTP mocking: use `respx` for httpx-based adapters; use `unittest.mock.AsyncMock` with `patch("...build_client", ...)` for adapters that call `build_client()` directly.
 - GraphQL adapters (CVR): mock by inspecting the request body (`request.content`) to route different query strings to different fixture responses.
-- Always check `tests/test_sources.py` (expected registry set) and `tests/test_app.py` (expected `/sources` endpoint set) when adding a new adapter — both require explicit entries.
+- `tests/test_sources.py` discovers adapter modules from the filesystem and `tests/test_app.py` compares `/sources` with `REGISTRY` — neither needs an entry for a new adapter; a deliberately unregistered one goes in `_DELIBERATELY_UNREGISTERED`.
+- **mypy is a ratchet (Phase 266).** `[tool.mypy]` is non-strict; `scripts/mypy_ratchet.py` (a CI step in the backend job) fails a module carrying more errors than `mypy-baseline.json` records, a new module carrying any, and a module carrying **fewer** until `uv run python scripts/mypy_ratchet.py --update` locks the gain in — the design-lint pattern. `--update` refuses to raise a count without `--allow-increase`.
+- **Three frontend copies are pinned by parsing the TypeScript** (`tests/test_frontend_parity.py`, Phase 266, the `test_ra_codes.py` pattern): `historyMode.ts` `HISTORY_SOURCES` / labels / `recordUrl` cases ↔ the emitter modules in `opencheck/timeline/`; `relationshipStatus.ts` ↔ `bods/lifecycle.py`; `bodsRefs.ts` ↔ `bods/refs.py`. A new timeline emitter must be named after its module and appear in all three frontend tables.
 - **Live smoke tier (`tests/test_live_smoke.py`, `@pytest.mark.live`):** opt-in tests that hit the *real* GLEIF + Wikidata APIs to catch API-shape drift without recording payloads (the deliberate alternative to vcrpy/cassettes — no PII, secrets or licence-restricted data committed). **Skipped by default**; run with `pytest --run-live -m live` (or `OPENCHECK_RUN_LIVE=1`). The skip wiring is in `conftest.py` (`pytest_addoption` + `pytest_collection_modifyitems`); the `live` marker is registered in `pyproject.toml`. Only open, key-free sources belong here — never OpenSanctions (CC-BY-NC), OpenCorporates, or key-gated/PII-heavy sources.
 
 ---

@@ -51,6 +51,12 @@ class Settings(BaseSettings):
 
     # Global toggle. When false, live adapters short-circuit to stubs.
     allow_live: bool = Field(default=False, alias="OPENCHECK_ALLOW_LIVE")
+    # Phase 266: ``false`` skips the lifespan's boot-time downloads (the GEM
+    # CSVs, the GLEIF GEM↔LEI mapping, the bulk indexes). The test suite sets
+    # it — every ``with TestClient(app)`` runs the lifespan, and the warm-up
+    # made CI depend on storage.googleapis.com and mapping.gleif.org. Each
+    # source keeps its lazy path, so nothing needs the warm-up to answer.
+    warm_caches_on_start: bool = Field(default=True, alias="OPENCHECK_WARM_CACHES_ON_START")
 
     # CORS origin for the frontend dev server.
     cors_origin: str = Field(

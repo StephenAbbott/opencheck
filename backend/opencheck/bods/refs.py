@@ -19,6 +19,10 @@ reference out of either the v0.4 bare string or the legacy wrapped object;
 or ``declarationSubject`` alias — to the **statementId** of the statement it
 names, which is what every index in the codebase is keyed on. An unknown
 reference comes back unchanged so a dangling edge still reads as dangling.
+
+``frontend/src/lib/bodsRefs.ts`` is the mirror; ``tests/test_frontend_parity.py``
+(Phase 266) parses it and fails when its party types, legacy wrapper keys, id
+fallbacks or tier order differ from this module's.
 """
 
 from __future__ import annotations

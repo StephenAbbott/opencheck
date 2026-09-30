@@ -53,7 +53,6 @@ collections.
 from __future__ import annotations
 
 import hashlib
-import importlib.metadata
 import json
 import re
 from typing import Any
@@ -86,13 +85,12 @@ _MENTION_FACET_SIZE = 10
 
 # Anubis bot-protection at search.openaleph.org whitelists requests whose
 # User-Agent matches the openaleph-client pattern ("openaleph/<version>").
-# Our global OpenCheck User-Agent triggers the Anubis challenge.  We
-# therefore use the openaleph-client version string for all OpenAleph
-# requests, which is correct attribution anyway since we depend on that package.
-try:
-    _OA_VERSION = importlib.metadata.version("openaleph-client")
-except importlib.metadata.PackageNotFoundError:
-    _OA_VERSION = "1.1"
+# Our global OpenCheck User-Agent triggers the Anubis challenge, so every
+# OpenAleph request sends that pattern. The version is the openaleph-client
+# release this adapter was written against: the package itself was a
+# dependency only for this string (nothing imported it) and pulled urllib3
+# 1.x into the runtime, so Phase 266 dropped it and pinned the value it read.
+_OA_VERSION = "1.1.3"
 _OA_USER_AGENT = f"openaleph/{_OA_VERSION}"
 
 

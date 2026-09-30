@@ -210,7 +210,10 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     process), we just run the warm-up.
     """
     global _mcp_session_started
-    warmup = asyncio.create_task(_warm_caches_background())
+    # Phase 266: the suite turns the boot downloads off (see config.py).
+    warmup: asyncio.Task[None] | None = None
+    if get_settings().warm_caches_on_start:
+        warmup = asyncio.create_task(_warm_caches_background())
     # Periodic memory/traffic report (opencheck/memwatch.py) — one log line
     # every OPENCHECK_MEMWATCH_INTERVAL seconds so an OOM kill is diagnosable
     # from the Render log stream after the fact.
@@ -278,7 +281,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         try:
             yield  # server runs here
         finally:
-            if not warmup.done():
+            if warmup is not None and not warmup.done():
                 warmup.cancel()
             if not memwatch_task.done():
                 memwatch_task.cancel()

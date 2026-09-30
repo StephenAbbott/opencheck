@@ -6,6 +6,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 |----------|---------|
 | `OPENCHECK_ALLOW_LIVE` | Master switch. `true` enables live HTTP calls for adapters whose key is set. |
 | `OPENCHECK_CORS_ORIGIN` | CORS origin for the frontend dev server. |
+| `OPENCHECK_WARM_CACHES_ON_START` | Phase 266. `false` skips the boot-time downloads (GEM CSVs, the GLEIF GEM↔LEI mapping, the bulk indexes); each source falls back to its lazy path. The test suite sets it. Default `true`. |
 | `OPENCHECK_PUBLIC_API_BASE` | Public origin of the API itself, used to build absolute `og:image` URLs on the `/share/{lei}` page (default `https://api.opencheck.world` — only override for non-production deployments). |
 | `OPENCHECK_FRONTEND_ORIGIN` | Public origin of the frontend, used as the `/share/{lei}` redirect target and `og:url` (default `https://opencheck.world`). Separate from `OPENCHECK_CORS_ORIGIN`, which is a CORS policy value and may legitimately be `*`. |
 | `COMPANIES_HOUSE_API_KEY` | UK Companies House API key (free; <https://developer.company-information.service.gov.uk/>). |

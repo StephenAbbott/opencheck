@@ -283,6 +283,13 @@ def test_shadow_counter_moves_through_a_real_lookup(monkeypatch, tmp_path: Path)
     from opencheck.config import get_settings
 
     monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    # An empty data root has no GEM data, and ClimateTRACE fetches it (GCS,
+    # then GitHub, then the GLEIF mapping) the first time a lookup asks —
+    # none of which this test is about (Phase 266: the suite is offline).
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(_ct_mod, "_ensure_gem_data", lambda: None)
+    monkeypatch.setattr(_ct_mod, "_ensure_gleif_gem_data", lambda: None)
     get_settings.cache_clear()
     consistencystats.reset()
     try:

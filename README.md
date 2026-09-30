@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 265** — INPI now claims RA001129, the new GLEIF code for the Registre national des entreprises, and the national-ID picker searches every French authority in both SIREN spellings.
+**Latest: Phase 266** — The backend test suite runs with the network disabled, CI runs once per change with SHA-pinned actions, the runtime dependencies pass pip-audit, and mypy is gated as a per-module ratchet.
 
 → [Full development history](docs/status.md)
 

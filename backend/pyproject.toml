@@ -10,17 +10,18 @@ authors = [
 ]
 dependencies = [
     "fastapi>=0.115",
+    # Security floors (Phase 266, from pip-audit): starlette arrives through
+    # fastapi and pillow through weasyprint, so neither is otherwise named —
+    # a floor here keeps a re-lock from resolving back below the fix.
+    "starlette>=1.3.1",
+    "pillow>=12.3.0",
     "uvicorn[standard]>=0.32",
     "httpx>=0.27",
     "pydantic>=2.9",
-    "pydantic-settings>=2.6",
+    "pydantic-settings>=2.14.2",
     "python-dotenv>=1.0",
     "sse-starlette>=2.1",
     "pycountry>=24.6",
-    # OpenAleph Python client — provides a requests-based AlephAPI class useful
-    # for write operations (bulk entity ingest, collection management) beyond
-    # what our async read adapter covers.
-    "openaleph-client>=1.1",
     # DuckDB — used by bods_gleif and bods_uk_psc adapters to query Parquet
     # files downloaded from Open Ownership's BODS bulk-data S3 bucket.
     "duckdb>=1.1",
@@ -45,14 +46,14 @@ dependencies = [
     # WeasyPrint — renders the accessible (tagged PDF/UA-1) due-diligence report
     # in opencheck.reporting. Imported lazily; needs Pango at runtime (installed
     # in the Docker image). segno generates the live-check QR code.
-    "weasyprint>=60",
+    "weasyprint>=70",
     "segno>=1.6",
     # MCP server (in-process, mounted at /mcp) — exposes the lookup pipeline as
     # Model Context Protocol tools for AI agents. Streamable-HTTP transport.
     # Pinned <2: SDK v2 (MCP spec 2026-07-28) renames FastMCP→MCPServer and
     # splits mcp.types out — the import would fail and app.py's defensive mount
     # would silently drop /mcp. Migration tracked on the "Update MCP" ticket.
-    "mcp>=1.28,<2",
+    "mcp>=1.28.1,<2",
     "slowapi>=0.1.10",
     # openpyxl — the /export?format=xlsx workbook. Pure Python, no system
     # libraries, and imported lazily inside the builder so a deployment
@@ -67,7 +68,7 @@ dependencies = [
     # cryptography — AES-256-GCM + scrypt for the off-host SQLite backups
     # (opencheck/backups.py, Phase 260). Already installed as a dependency of
     # the MCP SDK; named here because OpenCheck now imports it directly.
-    "cryptography>=43",
+    "cryptography>=50",
 ]
 
 [project.optional-dependencies]
@@ -149,7 +150,10 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "SIM"]
 
+# Non-strict, and gated as a ratchet in CI (Phase 266): `strict = true` stood
+# here reporting 469 errors with nothing running it. scripts/mypy_ratchet.py
+# fails a module whose error count rises above mypy-baseline.json.
 [tool.mypy]
 python_version = "3.11"
-strict = true
 ignore_missing_imports = true
+warn_unused_configs = true

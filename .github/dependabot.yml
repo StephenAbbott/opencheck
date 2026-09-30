@@ -1,0 +1,13 @@
+# Keeps the SHA-pinned GitHub Actions current (Phase 266). The workflows pin
+# every action to a commit SHA with the release tag in a comment; Dependabot
+# understands that form and proposes the new SHA and tag together, grouped
+# into one pull request a month.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
