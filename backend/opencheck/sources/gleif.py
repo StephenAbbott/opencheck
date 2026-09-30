@@ -777,8 +777,9 @@ class GleifAdapter(SourceAdapter):
             if registered_at_id == _KVK_RA_CODE:
                 identifiers["kvk_number"] = _normalise_kvk(registered_as)
             # French SIREN — expose as ``siren`` so the reconciler can bridge
-            # GLEIF ↔ INPI on the same registration number. Both French
-            # authorities file it (Sirene RA000189, Infogreffe RA000192), often
+            # GLEIF ↔ INPI on the same registration number. Every French
+            # authority files it (Sirene RA000189, Infogreffe RA000192, and
+            # the RNE RA001129 since GLEIF's RA list v1.9), often
             # grouped in threes ("542 051 180"); see ``sources/inpi.py``.
             if registered_at_id in _INPI_RA_CODES:
                 try:
@@ -940,9 +941,10 @@ class GleifAdapter(SourceAdapter):
         Wales).  Including it avoids false positives when multiple registries
         share the same local number format.  Pass ``""`` to skip the filter.
 
-        **France** (Phase 205): a SIREN scoped to either French authority is
-        searched under both (``RA000189`` Sirene and ``RA000192`` Infogreffe
-        file the same number) and in both spellings GLEIF stores it
+        **France** (Phase 205): a SIREN scoped to any French authority is
+        searched under all of them (``RA000189`` Sirene, ``RA000192``
+        Infogreffe and, since Phase 265, ``RA001129`` the RNE file the same
+        number) and in both spellings GLEIF stores it
         (``542051180`` and ``542 051 180``) — the ``registeredAs`` filter is an
         exact string match. GLEIF reads a comma in a filter value as OR, so
         this is still one request per field: before it, ``country=FR`` could

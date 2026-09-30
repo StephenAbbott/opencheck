@@ -446,6 +446,12 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # the Hong Kong and Swiss precedent: the scheme follows the number, not
     # the authority. One scheme also keeps one FullCheck hop for France.
     "RA000192": ("FR-INSEE", "SIREN — Registre du Commerce et des Sociétés, Infogreffe (France)"),
+    # France — Registre national des entreprises (INPI), added in GLEIF's RA
+    # list v1.9 (30 Sept 2026). The RNE keys every company on the SIREN, so
+    # the scheme follows the number again (Phase 265). No LEI files under it
+    # yet; claiming it now keeps the first ones from exporting ``RA001129`` as
+    # their scheme and missing the INPI corroboration.
+    "RA001129": ("FR-INSEE", "SIREN — Registre national des entreprises, INPI (France)"),
     # United States — District of Columbia Corporations Division (DLCP).
     # ``registeredAs`` is the file number on 502 of the 726 US-DC LEI records
     # (2026-09-18). The scheme is the ISO 3166-2 subdivision code, matching

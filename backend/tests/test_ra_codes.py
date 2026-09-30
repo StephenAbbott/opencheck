@@ -217,6 +217,34 @@ def test_backend_and_frontend_sub_registries_agree() -> None:
     assert backend == GB_SUB_REGISTRIES
 
 
+def _frontend_same_number_authorities() -> dict[str, list[str]]:
+    """Parse every entry's ``sameNumberAuthorities`` out of raCodes.ts."""
+    source = _FRONTEND_RA_CODES.read_text(encoding="utf-8")
+    found: dict[str, list[str]] = {}
+    for country, codes in re.findall(
+        r'\n  ([A-Z]{2}): \{\s*\n\s*raCode: "RA\d{6}",\s*\n\s*'
+        r"sameNumberAuthorities: \[([^\]]*)\]",
+        source,
+    ):
+        found[country] = re.findall(r'"(RA\d{6})"', codes)
+    return found
+
+
+def test_frontend_widens_a_french_search_to_every_inpi_authority() -> None:
+    """The picker must search every authority the INPI adapter dispatches on.
+
+    Until Phase 265 the frontend scoped France to RA000189 alone, so a company
+    filed under Infogreffe (TotalEnergies SE) or — from GLEIF's RA list v1.9 —
+    under the RNE could not be found by its SIREN, although the backend's
+    resolver has searched every French authority since Phase 205.
+    """
+    from opencheck.sources.inpi import INPI_RA_CODES
+
+    declared = _frontend_same_number_authorities()
+    assert set(declared) == {"FR"}, "a new sameNumberAuthorities entry needs a test"
+    assert {RA_BY_COUNTRY["FR"], *declared["FR"]} == set(INPI_RA_CODES)
+
+
 def test_only_gb_declares_sub_registries() -> None:
     """A new one must come with a test; this fails loudly rather than silently.
 

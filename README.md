@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 263** — The New York Department of State is the 50th source and the sixth register on the History tab, read from its weekly filings, status and name histories by the DOS ID GLEIF files.
+**Latest: Phase 265** — INPI now claims RA001129, the new GLEIF code for the Registre national des entreprises, and the national-ID picker searches every French authority in both SIREN spellings.
 
 → [Full development history](docs/status.md)
 

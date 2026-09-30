@@ -4,8 +4,9 @@ INPI operates the Registre National des Entreprises (RNE) — France's
 national company register, incorporating data from SIRENE (INSEE) and the
 Greffe network.  This adapter fetches entity data for French companies
 whose SIREN number can be derived from a GLEIF record where
-``registeredAt.id`` is ``RA000189`` (Sirene, INSEE) or ``RA000192``
-(Infogreffe, RCS) and ``registeredAs`` carries a 9-digit SIREN.
+``registeredAt.id`` is ``RA000189`` (Sirene, INSEE), ``RA000192``
+(Infogreffe, RCS) or ``RA001129`` (the RNE itself, INPI) and ``registeredAs``
+carries a 9-digit SIREN.
 
 Three things about French LEI records the adapter depends on (measured on
 live GLEIF, 11 Sept 2026 — Phase 205):
@@ -16,6 +17,16 @@ live GLEIF, 11 Sept 2026 — Phase 205):
   court's name — so both dispatch here. Until Phase 205 only ``RA000189``
   did, and an Infogreffe-registered company (TotalEnergies SE) silently got
   no INPI result and no ``siren`` at all.
+* **A third authority, added by GLEIF (Phase 265).** Registration
+  Authorities List v1.9 (30 Sept 2026) added ``RA001129`` — the Registre
+  national des entreprises, run by INPI: the register this adapter reads.
+  No LEI filed under it on the day it was published, so the number it will
+  carry is assumed, not measured: the RNE keys every company on its SIREN
+  (``/api/companies/{siren}``), so it dispatches here like the other two, and
+  :func:`normalise_siren` still refuses anything that is not nine digits.
+  Claiming it before the first record lands is the point — an unclaimed code
+  fails closed, and a French company filed under it would have read as
+  *nothing in INPI* rather than as a missed dispatch (the Phase 140 shape).
 * **Spaced SIRENs.** 391 sampled records were all nine digits, either plain
   (``552032534``) or grouped in threes (``542 051 180``). The spacing follows
   the LEI issuer, not the authority, so it appears under both codes.
@@ -57,7 +68,8 @@ of beneficial-ownership data from the RNE.  This adapter therefore:
 
 Identifier scheme: ``FR-SIREN`` (follows GB-COH / CH-UID / NL-KVK pattern)
 API documentation: https://registre-national-entreprises.inpi.fr/
-GLEIF RA codes: RA000189 (Sirene, INSEE) and RA000192 (RCS, Infogreffe)
+GLEIF RA codes: RA000189 (Sirene, INSEE), RA000192 (RCS, Infogreffe) and
+RA001129 (RNE, INPI — GLEIF RA list v1.9)
 """
 
 from __future__ import annotations
@@ -88,11 +100,15 @@ COVERAGE_404: str = (
 
 # GLEIF Registration Authority codes that file a French SIREN in
 # ``registeredAs``: Sirene (INSEE) — the dominant one, and the code
-# ``ra_codes.RA_BY_COUNTRY["FR"]`` scopes a reverse lookup to — and the
-# Registre du Commerce et des Sociétés (Infogreffe).
+# ``ra_codes.RA_BY_COUNTRY["FR"]`` scopes a reverse lookup to — the
+# Registre du Commerce et des Sociétés (Infogreffe), and the Registre national
+# des entreprises (INPI), added in GLEIF's RA list v1.9 (Phase 265).
 INPI_RA_CODE: str = "RA000189"
 INFOGREFFE_RA_CODE: str = "RA000192"
-INPI_RA_CODES: frozenset[str] = frozenset({INPI_RA_CODE, INFOGREFFE_RA_CODE})
+RNE_RA_CODE: str = "RA001129"
+INPI_RA_CODES: frozenset[str] = frozenset(
+    {INPI_RA_CODE, INFOGREFFE_RA_CODE, RNE_RA_CODE}
+)
 
 # In-process lock to prevent concurrent token-refresh races.
 _TOKEN_LOCK = asyncio.Lock()
