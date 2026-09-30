@@ -865,6 +865,18 @@ PROBES: dict[str, SourceProbe] = {
         bods_mapper="map_cac_nigeria",
         notes="Offline by design — the CAC's API is restricted to Nigerian government agencies.",
     ),
+    "cipa_botswana": _p(
+        tier="curated",
+        subject="Stanbic Bank Botswana Limited",
+        method="fetch_by_lei",
+        args=("254900CFACP5V9H8W758",),
+        expect_fields=("lei", "record"),
+        expect_liveness=frozenset({"curated"}),
+        anchor_lei="254900CFACP5V9H8W758",
+        snapshot_max_age_days=240,
+        bods_mapper="map_cipa_botswana",
+        notes="Offline by design — CIPA publishes no API or bulk file; the set is harvested from its public register pages.",
+    ),
     "eiti_bo": _p(
         tier="curated",
         subject="Dangote Cement PLC (EITI pooled BO)",

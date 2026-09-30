@@ -645,6 +645,7 @@ SOURCE_NAMES: dict[str, str] = {
     "bods_uk_psc": "UK Companies House — Persons with Significant Control (BODS bulk dataset)",
     "bolagsverket": "Bolagsverket — Swedish Companies Registration Office",
     "cac_nigeria": "CAC — Corporate Affairs Commission (Nigeria) Persons with Significant Control register",
+    "cipa_botswana": "CIPA — Companies and Intellectual Property Authority (Botswana) company and beneficial ownership register",
     "brreg": "Brønnøysundregistrene — Norwegian Register Centre",
     "brightquery": "BrightQuery / OpenData.org",
     "climatetrace": "Global Energy Monitor / Climate TRACE",
@@ -707,6 +708,7 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
         "bolagsverket",
         "brreg",
         "cac_nigeria",
+        "cipa_botswana",
         "companies_house",
         "corporations_canada",
         "cyprus_drcor",
@@ -897,6 +899,7 @@ _BO_ASSERTING_SOURCES: frozenset[str] = frozenset({
     "rpvs_slovakia",    # Register of Public Sector Partners — verified KUV
     "ur_latvia",        # Latvian BO register records
     "cac_nigeria",      # CAC Persons with Significant Control register
+    "cipa_botswana",    # CIPA beneficial ownership register (Botswana)
     "ariregister",      # Estonian register files BO alongside shareholders
     "dlcp_dc",          # DC biennial-report owner/controller disclosure (§ 29-102.11(a)(6))
 })

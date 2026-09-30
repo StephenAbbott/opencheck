@@ -1,6 +1,6 @@
 # OpenCheck — Sources
 
-Forty-nine active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Four further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
+Fifty active adapters, each implementing the same `SourceAdapter` protocol (`search`, `fetch`, `info`). Four further adapters are committed but inactive (bulk-data only) — see [Inactive / bulk-only adapters](#inactive--bulk-only-adapters) below.
 
 | ID | Name | License | Entry point | Description |
 |----|------|---------|-------------|-------------|
@@ -34,6 +34,7 @@ Forty-nine active adapters, each implementing the same `SourceAdapter` protocol 
 | `mca_india` | Ministry of Corporate Affairs — Company Master Data (India) | GODL-India | `in_cin` from GLEIF (`RA000394`) | India's national company register extract on the OGD Platform (data.gov.in) — CIN, name, status, class/category, authorised & paid-up capital, registration date, RoC, registered office address and NIC classification for ~3.67M companies. Entity statements only; no officer or ownership data; exact-match search (names uppercase). Requires a free `DATA_GOV_IN_API_KEY` |
 | `nz_companies` | New Zealand Companies Register (NZBN) | CC-BY-4.0 | `nz_company_number` from GLEIF (`RA000466`) | New Zealand company register via the NZBN API (Companies Office / MBIE). The company number resolves to the NZBN through the directory search, then the FullEntity endpoint returns entity details **plus directors** (`seniorManagingOfficial`), **shareholders with share allocations** (`shareholding` with `share.exact`) and the ultimate holding company — a real ownership graph with percentages. Requires a free `NZBN_API_KEY` (`Ocp-Apim-Subscription-Key`) |
 | `cac_nigeria` | Nigeria CAC — Persons with Significant Control register | Public register (bor.cac.gov.ng) | LEI-keyed offline match; GLEIF RA `RA000469` | **Africa's first public beneficial ownership register** (Corporate Affairs Commission). **Curated example set** of 30 LEI-anchored Nigerian companies harvested from the CAC's public register API (`borapp.cac.gov.ng/api/v1`, re-harvested 2026-09-16 after the site's redesign) and committed at `data/cac_nigeria_psc.json` (`scripts/build_cac_nigeria_index.py harvest` then `build`). Every PSC filing is kept with its register status: an owner with no ACTIVE filing becomes a `closed` relationship (no end date — the register publishes none), and a filing with every name field blank becomes an `unknownEntity` "Unnamed corporate owner" rather than being dropped (NNPC Ltd's two 50% holders among them). The harvester copies an allowlist of fields, so the emails, phone numbers, full dates of birth and identity numbers the register's API returns are never committed. Real beneficial ownership graphs — the five statutory CAMA PSC conditions map to `shareholding` / `votingRights` / `appointmentOfBoard` / `otherInfluenceOrControl`, with `beneficialOwnershipOrControl` asserted only for natural persons. **Offline / no live call** — the CAC's official API is restricted to Nigerian government agencies; a live adapter is deferred pending engagement with the CAC / Oasis Management. Asserts only the CAC-published RC number (`ng_cac_rc`), not the LEI (which OpenCheck derives via GLEIF). |
+| `cipa_botswana` | Botswana CIPA — company and beneficial ownership register | Public register (www.cipa.co.bw); no reuse terms stated | LEI-keyed offline match; GLEIF RA `RA000035` (and `RA000821` records that file a CIPA UIN) | Botswana's Companies and Intellectual Property Authority runs the company register and a **public beneficial ownership register structured in line with BODS** (Foster Moore's Verne platform). **Curated example set** of the 37 companies GLEIF files under CIPA whose number the register resolves (the UIN, or the pre-2019 company number), harvested from the register's public pages by `scripts/build_cipa_botswana_index.py harvest` and committed at `data/cipa_botswana.json`. **Beneficial owners, shareholders and directors, name and role only** — nationality or country, start and end dates, share counts and percentages, recorded nominee arrangements; the harvester copies an allowlist of attributes and never reads an address or document record, although the register publishes an address for every party. One party per person or organisation, one relationship carrying every role it holds; declared beneficial owners carry `beneficialOwnershipOrControl` (true for people, false for entities), shareholdings and directorships omit it. CIPA's own hidden "Download BODS JSON" (v0.3) is not used: it drops the UIN, every date and the free-text interest detail, and leaves out legal shareholders. **Offline / no live call** — CIPA publishes no API or bulk file. Asserts only the CIPA-published UIN / old number (`bw_cipa_uin` / `bw_cipa_old_number`), never the LEI. |
 | `ariregister` | Estonian e-Business Register (Ariregister) | Open (PSI) | registry code from GLEIF (`RA000181`) | Estonian commercial register — entity profile, officers, shareholders, and beneficial owners via the public Ariregister website (`ariregister.rik.ee`); web scraper approach, no credentials required. Estonia's planned switch to legitimate-interest BO access was postponed on its 2026-07-10 start date — BO data remains available until a revised framework is adopted (no date announced) |
 | `inpi` | INPI — Registre National des Entreprises | Open (PSI) | `fr_siren` from GLEIF | French national business registry — company profile, officers, and non-BO individual persons (full 65-code `roleEntreprise` codelist) via the RNE API; BO records excluded per Loi Sapin II |
 | `kvk` | KvK — Handelsregister | Open (PSI) | `nl_kvk` from GLEIF | Netherlands Chamber of Commerce commercial register — company details and authorised representatives |
@@ -83,19 +84,20 @@ component.
 | `live` | Fetched from the source during this lookup | the HTTP fetch time |
 | `cached` | Served from OpenCheck's response cache (`data/cache/live/`) | when the cache entry was written |
 | `snapshot` | Read from a bulk dataset (`bods_uk_psc`, `bods_gleif`, and pre-extracted Open Ownership subgraphs) | the dataset's own publication date, or the local extract's date |
-| `curated` | A fixture committed to the repository (`cac_nigeria`, `eiti_bo`, demo fixtures) | the declared harvest date, else **omitted** |
+| `curated` | A fixture committed to the repository (`cac_nigeria`, `cipa_botswana`, `eiti_bo`, demo fixtures) | the declared harvest date, else **omitted** |
 | `stub` | Placeholder data — no source was contacted | **omitted entirely** |
 
 Two omissions are deliberate. **Stub output never claims a retrieval time**: a
 placeholder must not carry provenance. And a **committed fixture with no
 declared harvest date claims none either** — a checked-out file's mtime records
 when git wrote it to that machine, which says nothing about when the data left
-the register. `cac_nigeria` and `eiti_bo` are the exceptions that prove the rule: their
+the register. `cac_nigeria`, `cipa_botswana` and `eiti_bo` are the exceptions that prove the rule: their
 indexes declare genuine harvest dates (`meta.harvested` / `meta.built`), so
 they report one.
 
 Sources that are structurally never live: `cac_nigeria` (curated example set —
 the CAC's official API is restricted to Nigerian government agencies),
+`cipa_botswana` (curated example set — CIPA publishes no API or bulk file),
 `eiti_bo` (pooled offline harvest of the DRC, Armenia and Nigeria registers —
 none offers an API),
 `bods_uk_psc` and `bods_gleif` (bulk Parquet), and the pre-extracted Open
@@ -118,7 +120,7 @@ A shareholding is a *legal* holding. Whether it is also a *beneficial* one is a
 separate fact, and only a register or a beneficial ownership declaration regime
 can supply it. Sources that do, and may therefore assert the flag:
 `companies_house` (PSC), `bods_uk_psc`, `bods_gleif`, `ur_latvia`,
-`rpvs_slovakia`, `cac_nigeria`, `eiti_bo`, `ariregister`. Everything else describes
+`rpvs_slovakia`, `cac_nigeria`, `cipa_botswana`, `eiti_bo`, `ariregister`. Everything else describes
 registered holdings, and omits the flag unless the source states it explicitly —
 an explicit `false` is information, not silence, and is always passed through.
 
@@ -254,6 +256,7 @@ terminal statuses only; an active status is not a finding.
 | `prh` | `endDate`, `liquidations` | |
 | `firmenbuch` | AUFRECHT → `aktiv` / `gelöscht` | |
 | `cac_nigeria` | `status` | ACTIVE → live; INACTIVE means returns outstanding, not dissolution, so left unclassified |
+| `cipa_botswana` | `status` + its effective date | registered → live; removed / amalgamated → terminal; liquidation / judicial management → pending |
 | `jar_lithuania` | status (Lithuanian labels) | Veikiantis → live; Išregistruotas → terminal; Likviduojamas / Bankrutuojantis / Reorganizuojamas → pending; Sustabdyta left unclassified |
 | `ares` | normalised status, `datumZaniku` | |
 | `bce_belgium` | `status` AC / ST | |

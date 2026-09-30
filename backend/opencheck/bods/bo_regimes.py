@@ -515,6 +515,54 @@ _add(BORegime(
 ))
 
 _add(BORegime(
+    source_id="cipa_botswana",
+    jurisdiction="Botswana",
+    jurisdiction_code="BW",
+    register_name="CIPA register of beneficial ownership, with the share register and directors (www.cipa.co.bw)",
+    regime_kind="bo_register",
+    legal_basis=(
+        "Companies (Amendment) Act 2018, ss. 21 and 345 (register of beneficial ownership kept by CIPA)",
+        "Financial Intelligence Act 2022, s. 2 (definition of beneficial owner)",
+        "Financial Intelligence Regulations 2022, reg. 7 (10 % ownership threshold)",
+    ),
+    bo_definition=(
+        "A natural person who ultimately owns or controls a legal person: "
+        "directly or indirectly holding at least 10 % of the shares, voting "
+        "rights or other ownership interest; failing that, the person "
+        "exercising control by other means; failing that, the senior managing "
+        "official."
+    ),
+    threshold_wording="at least 10 %",
+    threshold_operator=">=",
+    threshold_value=10.0,
+    reporting_basis=(
+        "Declared by the company on CIPA's online register with a BODS-derived "
+        "nature-of-interest codelist; legal shareholders and directors are "
+        "filed separately on the same register"
+    ),
+    natural_person_only=False,
+    fallback="Senior managing official where no natural person is identified",
+    record_kinds={
+        "bo_individual": "assert_true",
+        "bo_entity": "assert_false",      # entity interested party — definitional
+        "shareholder": "omit",            # share register: legal holding, no BO claim
+        "corporate_shareholder": "omit",
+        "director": "omit",
+        "nominator": "omit",              # recorded nominator of a nominee shareholder or director
+    },
+    notes=(
+        "CIPA also records entities as beneficial owners (e.g. a listed parent); "
+        "those are emitted with the flag false, as for any entity party",
+    ),
+    sources=(
+        "https://www.cipa.co.bw/beneficial-ownership",
+        "https://lawsociety.org.bw/wp-content/uploads/2024/07/2024-lsb-final-guidelines-on-identification-of-beneficial-ownership-information-for-attorneys.pdf",
+    ),
+    last_verified="2026-09-30",
+    review_status="draft",
+))
+
+_add(BORegime(
     source_id="dlcp_dc",
     jurisdiction="United States — District of Columbia",
     jurisdiction_code="US-DC",

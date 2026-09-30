@@ -52,6 +52,7 @@ from .dlcp_dc import (
     normalise_file_number as _normalise_dc_file_number,
 )
 from .ny_dos import NY_DOS_RA_CODE as _NY_DOS_RA_CODE, normalise_dos_id as _normalise_ny_dos_id
+from .cipa_botswana import gleif_cipa_identifier as _gleif_cipa_identifier
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
 from .inpi import (
     INPI_RA_CODES as _INPI_RA_CODES,
@@ -856,6 +857,12 @@ class GleifAdapter(SourceAdapter):
                     identifiers["us_ny_dos_id"] = _normalise_ny_dos_id(registered_as)
                 except ValueError:
                     pass
+            # Botswana CIPA — the UIN (``bw_cipa_uin``) or the pre-2019
+            # company number (``bw_cipa_old_number``), whichever GLEIF files,
+            # so the reconciler can bridge GLEIF ↔ the cipa_botswana set.
+            _cipa = _gleif_cipa_identifier(registered_at_id, registered_as)
+            if _cipa:
+                identifiers[_cipa[0]] = _cipa[1]
             # Brazilian CNPJ — expose as ``br_cnpj`` so the reconciler can
             # bridge GLEIF ↔ Receita Federal CNPJ register.
             if registered_at_id == _BR_RA_CODE:

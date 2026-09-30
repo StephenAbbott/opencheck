@@ -419,6 +419,7 @@ OFFLINE_COMPARED = frozenset(
     {
         "anaf_romania",
         "cac_nigeria",
+        "cipa_botswana",
         "cnpj_brazil",
         "eiti",
         "eiti_assessment",

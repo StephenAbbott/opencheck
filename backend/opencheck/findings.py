@@ -1780,3 +1780,67 @@ def finding_dlcp_dc(bundle: dict[str, Any]) -> str | None:
     if sentence and len(sentence) > MAX_FINDING_CHARS:
         sentence = clauses_to_sentence(clauses[:2])
     return sentence
+
+
+def finding_cipa_botswana(bundle: dict[str, Any], today: str | None = None) -> str | None:
+    """What Botswana's CIPA register records: beneficial owners, then the
+    shareholders and directors, then when beneficial ownership was last filed.
+
+    Only current roles are counted — a role is current until its end date —
+    so a company with a long board history does not read as having thirty
+    directors. A register status that changes a decision (removed, in
+    liquidation) leads. No beneficial owner on file is said, not left out.
+    """
+    from datetime import date as _date
+
+    from .bods.mappers.botswana import cipa_counts
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    record = bundle.get("record")
+    if not isinstance(record, dict) or not record.get("uin"):
+        return None
+    counts = cipa_counts(record, today or _date.today().isoformat())
+
+    status = (record.get("status") or "").strip()
+    since = human_date(record.get("status_since"))
+    lead = {
+        "removed": "Removed from the register",
+        "amalgamated": "Amalgamated and no longer on the register as a separate company",
+        "liquidation": "In liquidation",
+        "judicialManagement": "Under judicial management",
+    }.get(status)
+    clauses: list[str | None] = []
+    if lead:
+        clauses.append(lead + (f" since {since}" if since and status in ("removed", "liquidation", "judicialManagement") else ""))
+
+    bos = counts["beneficial_owners"]
+    if bos == 1:
+        current = [
+            b for b in record.get("beneficial_owners") or []
+            if not (b.get("end") and b["end"] <= (today or _date.today().isoformat()))
+        ]
+        name = (current[0].get("name") or "").strip() if current else ""
+        clauses.append(f"beneficial owner on file: {name}" if name else "1 beneficial owner on file")
+    elif bos:
+        clauses.append(f"{bos} beneficial owners on file")
+    else:
+        clauses.append("no current beneficial owner on file")
+
+    roles = [
+        plural(counts["shareholders"], "shareholder") if counts["shareholders"] else None,
+        plural(counts["directors"], "director") if counts["directors"] else None,
+    ]
+    roles = [r for r in roles if r]
+    if roles:
+        clauses.append(" and ".join(roles) + " on the register")
+
+    bo_filings = [
+        f.get("date") for f in record.get("filings") or []
+        if "beneficial owner" in str(f.get("service") or "").lower()
+        or any("beneficial owner" in str(n).lower() for n in f.get("filings") or [])
+    ]
+    last = human_date(max((d for d in bo_filings if d), default=None))
+    if last:
+        clauses.append(f"beneficial ownership last filed {last}")
+    return clauses_to_sentence(clauses)
