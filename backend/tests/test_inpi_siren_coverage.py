@@ -22,6 +22,11 @@ And a fourth, found while fixing the second: ``/resolve-national-id`` matched
 ``registeredAs`` exactly and scoped to ``RA000189`` alone, so ``country=FR``
 could not find TotalEnergies by its SIREN either.
 
+Phase 265 added a third authority: GLEIF's Registration Authorities List
+v1.9 (30 Sept 2026) created ``RA001129`` for the RNE itself. No LEI filed
+under it that day; it is claimed now so the first ones dispatch, bridge, take
+the ``FR-INSEE`` scheme and are found by a reverse lookup like the other two.
+
 The weekly sweep saw none of it: its subject is a commercial ``RA000189``
 company with an unspaced SIREN — the one shape that worked.
 """
@@ -47,6 +52,7 @@ from opencheck.sources.inpi import (
     INFOGREFFE_RA_CODE,
     INPI_RA_CODE,
     INPI_RA_CODES,
+    RNE_RA_CODE,
     InpiAdapter,
     normalise_siren,
     siren_spellings,
@@ -121,11 +127,14 @@ def test_siren_spellings() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_both_french_authorities_are_claimed() -> None:
+def test_every_french_authority_is_claimed() -> None:
     assert INPI_RA_CODE == "RA000189"
     assert INFOGREFFE_RA_CODE == "RA000192"
+    assert RNE_RA_CODE == "RA001129"  # GLEIF RA list v1.9, Phase 265
     deriver = InpiAdapter.lookup_derivers[0]
-    assert deriver.ra_codes == INPI_RA_CODES == frozenset({"RA000189", "RA000192"})
+    assert deriver.ra_codes == INPI_RA_CODES == frozenset(
+        {"RA000189", "RA000192", "RA001129"}
+    )
     assert deriver.derived_key == "siren"
 
 
@@ -136,6 +145,10 @@ def test_both_french_authorities_are_claimed() -> None:
         ("RA000189", "941 395 501", "941395501"),  # COACH AND GO — spaced
         ("RA000192", "542 051 180", "542051180"),  # TotalEnergies — Infogreffe
         ("RA000192", "939294146", "939294146"),  # RONCKET IO — Infogreffe, plain
+        # RA001129 (the RNE, Phase 265): no LEI filed under it yet — shapes
+        # assumed from the other two authorities, which file the same number.
+        ("RA001129", "542051180", "542051180"),
+        ("RA001129", "542 051 180", "542051180"),
     ],
 )
 def test_lookup_derives_a_clean_siren(ra_code: str, registered_as: str, expected: str) -> None:
@@ -170,8 +183,8 @@ def _gleif_item(ra_code: str, registered_as: str) -> dict[str, Any]:
     }
 
 
-def test_gleif_hit_bridges_on_the_siren_under_both_authorities() -> None:
-    for ra_code in ("RA000189", "RA000192"):
+def test_gleif_hit_bridges_on_the_siren_under_every_authority() -> None:
+    for ra_code in ("RA000189", "RA000192", "RA001129"):
         hit = GleifAdapter._entity_hit(_gleif_item(ra_code, "542 051 180"))
         assert hit.identifiers["siren"] == "542051180", ra_code
         # The verbatim value is still carried under the generic key.
@@ -195,6 +208,21 @@ def test_infogreffe_takes_the_siren_scheme() -> None:
     assert [i["id"] for i in siren] == ["542051180"]
     assert "Infogreffe" in siren[0]["schemeName"]
 
+
+def test_the_rne_authority_takes_the_siren_scheme_too() -> None:
+    """RA001129 (Phase 265) exports ``FR-INSEE``, never its RA code.
+
+    Unmapped, a record filed under it would have taken ``RA001129`` as its
+    scheme (the Phase 239 fallback) and could not corroborate INPI's own
+    ``FR-INSEE`` identifier for the same company.
+    """
+    assert _GLEIF_RA_TO_ORG_ID["RA001129"][0] == "FR-INSEE"
+    record = _gleif_item("RA001129", "542 051 180")
+    bundle = map_gleif({"lei": record["id"], "record": record})
+    entity = next(s for s in bundle if s.get("recordType") == "entity")
+    ids = entity["recordDetails"]["identifiers"]
+    assert [i["id"] for i in ids if i["scheme"] == "FR-INSEE"] == ["542051180"]
+    assert not [i for i in ids if i["scheme"] == "RA001129"]
 
 def test_france_still_has_one_register_hop() -> None:
     """One scheme for both authorities keeps one hop — and the REG-FR alias,
@@ -361,15 +389,17 @@ async def _search_paths(local_id: str, ra_code: str) -> list[str]:
     return [call.args[0] for call in get.await_args_list]
 
 
-@pytest.mark.parametrize("ra_code", ["RA000189", "RA000192"])
-async def test_a_french_siren_is_searched_in_both_spellings_under_both_authorities(
+@pytest.mark.parametrize("ra_code", ["RA000189", "RA000192", "RA001129"])
+async def test_a_french_siren_is_searched_in_both_spellings_under_every_authority(
     ra_code: str,
 ) -> None:
     paths = await _search_paths("542051180", ra_code)
     assert len(paths) == 3  # still one request per local-id field
     for path in paths:
         assert "=542051180,542%20051%20180&" in path, path
-        assert path.endswith("&filter[entity.registeredAt]=RA000189,RA000192"), path
+        assert path.endswith(
+            "&filter[entity.registeredAt]=RA000189,RA000192,RA001129"
+        ), path
 
 
 async def test_other_countries_are_searched_exactly_as_before() -> None:

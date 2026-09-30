@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   COUNTRY_OPTIONS,
   RA_CODES,
+  nationalIdQuery,
   raCodeFor,
   validateNationalId,
 } from "./raCodes";
@@ -133,5 +134,53 @@ describe("validateNationalId", () => {
     // accepts either, so neither may be rejected here.
     expect(validateNationalId("GR", "160228803000")).toBe(true);
     expect(validateNationalId("GR", "003324001000")).toBe(true);
+  });
+});
+
+describe("nationalIdQuery", () => {
+  // Phase 265: France files the same SIREN under Sirene (RA000189), Infogreffe
+  // (RA000192) and — from GLEIF's RA list v1.9 — the RNE (RA001129), plain or
+  // grouped in threes. The picker scoped to RA000189 alone and sent the number
+  // as typed, so TotalEnergies SE (RA000192, "542 051 180") was unreachable.
+  const FRENCH = ["RA000189", "RA000192", "RA001129"];
+
+  it("searches every French authority in both spellings", () => {
+    expect(nationalIdQuery("RA000189", "542051180")).toEqual({
+      values: ["542051180", "542 051 180"],
+      raCodes: FRENCH,
+    });
+  });
+
+  it("widens from any French authority, and reads a spaced SIREN", () => {
+    for (const code of FRENCH) {
+      expect(nationalIdQuery(code, " 542 051 180 ")).toEqual({
+        values: ["542051180", "542 051 180"],
+        raCodes: FRENCH,
+      });
+    }
+  });
+
+  it("zero-pads a SIREN as the backend does", () => {
+    expect(nationalIdQuery("RA000189", "86280393").values).toEqual([
+      "086280393",
+      "086 280 393",
+    ]);
+  });
+
+  it("sends a non-SIREN as typed rather than inventing a spelling", () => {
+    expect(nationalIdQuery("RA000189", "RCS Nanterre").values).toEqual([
+      "RCS Nanterre",
+    ]);
+  });
+
+  it("leaves every other country exactly as it was", () => {
+    expect(nationalIdQuery("RA000587", " SC651281 ")).toEqual({
+      values: ["SC651281"],
+      raCodes: ["RA000587"],
+    });
+    expect(nationalIdQuery("", "12345")).toEqual({
+      values: ["12345"],
+      raCodes: [],
+    });
   });
 });

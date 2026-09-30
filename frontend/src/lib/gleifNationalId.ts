@@ -11,6 +11,8 @@
  * Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU
  */
 
+import { nationalIdQuery } from "./raCodes";
+
 export interface GleifSearchResult {
   lei: string;
   legalName: string;
@@ -66,20 +68,20 @@ export async function searchByNationalId(
   raCode: string,
   registrationId: string,
 ): Promise<GleifSearchResult[]> {
-  const id = registrationId.trim();
+  // Every spelling and every authority that files the same number (France:
+  // three authorities, two spellings — Phase 265). Comma = OR in GLEIF filters.
+  const { values, raCodes } = nationalIdQuery(raCode, registrationId);
+  const id = values.join(",");
+  const scope: Record<string, string> = raCodes.length
+    ? { "filter[entity.registeredAt]": raCodes.join(",") }
+    : {};
 
   const [r1, r2, r3] = await Promise.all([
-    gleifFilter({
-      "filter[entity.registeredAs]": id,
-      "filter[entity.registeredAt]": raCode,
-    }),
-    gleifFilter({
-      "filter[registration.validatedAs]": id,
-      "filter[entity.registeredAt]": raCode,
-    }),
+    gleifFilter({ "filter[entity.registeredAs]": id, ...scope }),
+    gleifFilter({ "filter[registration.validatedAs]": id, ...scope }),
     gleifFilter({
       "filter[registration.otherValidationAuthorities.validatedAs]": id,
-      "filter[entity.registeredAt]": raCode,
+      ...scope,
     }),
   ]);
 

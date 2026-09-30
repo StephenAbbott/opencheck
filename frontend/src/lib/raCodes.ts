@@ -54,6 +54,36 @@ export interface RaEntry {
    * backend/tests/test_ra_codes.py parses this file and fails if they diverge.
    */
   subRegistries?: { prefixes: string[]; raCode: string; label: string }[];
+  /**
+   * Other GLEIF authorities that file the **same** number as `raCode`, for a
+   * country whose companies are split across authorities with nothing in the
+   * number to say which (unlike `subRegistries`). A reverse lookup scoped to
+   * any of them is searched under all of them.
+   *
+   * France only: Infogreffe (RA000192) files the SIREN beside Sirene, and so
+   * will the RNE (RA001129, GLEIF RA list v1.9). Until Phase 265 this file
+   * scoped a French search to RA000189 alone, so TotalEnergies SE — filed
+   * under RA000192 — could not be found by its SIREN from the picker although
+   * the backend's resolver had found it since Phase 205.
+   *
+   * Mirrors INPI_RA_CODES in backend/opencheck/sources/inpi.py —
+   * backend/tests/test_ra_codes.py parses this file and fails if they diverge.
+   */
+  sameNumberAuthorities?: string[];
+  /**
+   * Every spelling GLEIF may store the number in. GLEIF's `registeredAs`
+   * filter is an exact string match, and French LEI issuers write the SIREN
+   * both plain and grouped in threes. Absent: the number as typed.
+   */
+  spellings?: (value: string) => string[];
+}
+
+/** Both ways GLEIF writes a SIREN — mirrors `siren_spellings` in inpi.py. */
+function sirenSpellings(value: string): string[] {
+  const plain = value.replace(/\s+/g, "");
+  if (!/^\d{1,9}$/.test(plain)) return [value.trim()];
+  const siren = plain.padStart(9, "0");
+  return [siren, `${siren.slice(0, 3)} ${siren.slice(3, 6)} ${siren.slice(6)}`];
 }
 
 export const RA_CODES: Record<string, RaEntry> = {
@@ -117,6 +147,8 @@ export const RA_CODES: Record<string, RaEntry> = {
   },
   FR: {
     raCode: "RA000189",
+    sameNumberAuthorities: ["RA000192", "RA001129"],
+    spellings: sirenSpellings,
     countryName: "France",
     idLabel: "SIREN number",
     placeholder: "542107651",
@@ -305,4 +337,29 @@ export function raCodeFor(countryCode: string, value = ""): string {
     }
   }
   return entry.raCode;
+}
+
+/**
+ * What a reverse lookup actually sends to GLEIF: every spelling of the number
+ * and every authority that files it. GLEIF reads a comma in a filter value as
+ * OR, so this stays one request per field.
+ *
+ * `raCode` is the one `raCodeFor()` chose. Where it belongs to an entry with
+ * `sameNumberAuthorities`, the scope widens to all of them (sorted, so the
+ * request is stable); anywhere else the query is exactly what it was.
+ */
+export function nationalIdQuery(
+  raCode: string,
+  value: string,
+): { values: string[]; raCodes: string[] } {
+  const entry = Object.values(RA_CODES).find(
+    (e) => e.raCode === raCode || (e.sameNumberAuthorities ?? []).includes(raCode),
+  );
+  if (!entry || !entry.sameNumberAuthorities) {
+    return { values: [value.trim()], raCodes: raCode ? [raCode] : [] };
+  }
+  return {
+    values: entry.spellings ? entry.spellings(value) : [value.trim()],
+    raCodes: [entry.raCode, ...entry.sameNumberAuthorities].sort(),
+  };
 }

@@ -128,7 +128,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **API:** <https://api.inpi.fr/> (Infogreffe / INPI RNE API)
 - **License:** Open (PSI Directive / Licence Ouverte Etalab)
 - **Attribution:** "Contains data from the Registre National des Entreprises (INPI / Infogreffe), open data."
-- **Entry point:** `siren` (9-digit SIREN number) derived from GLEIF RA codes `RA000189` (Sirene) and `RA000192` (Infogreffe / RCS)
+- **Entry point:** `siren` (9-digit SIREN number) derived from GLEIF RA codes `RA000189` (Sirene), `RA000192` (Infogreffe / RCS) and `RA001129` (Registre national des entreprises, INPI — added in GLEIF RA list v1.9)
 
 ## KvK — Kamer van Koophandel (Netherlands)
 
