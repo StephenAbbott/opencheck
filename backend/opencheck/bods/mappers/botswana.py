@@ -24,9 +24,9 @@ end date. An ended role keeps its relationship with ``endDate`` on the
 interest; OpenCheck draws it faint (``bods/lifecycle.py``) rather than dropping
 it.
 
-Countries are carried as filed. Some records carry ``IO`` (British Indian
-Ocean Territory) where the name suggests the British Virgin Islands or British
-nationality — a register data point OpenCheck does not correct.
+Countries are carried as filed, including ``IO`` (British Indian Ocean
+Territory), which is its own territory, distinct from the British Virgin
+Islands and the United Kingdom (Stephen, 30 Sept 2026).
 """
 
 from __future__ import annotations

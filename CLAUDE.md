@@ -1027,10 +1027,18 @@ address**. Things that will be re-derived otherwise:
   arrangement: a `nominee` interest on the holder (which the NOMINEE signal
   reads) and, where CIPA names the nominator, a `nominator` relationship.
 - **Countries are carried as filed**, including `IO` (British Indian Ocean
-  Territory) where the context suggests the BVI or British nationality.
-- The BW knowability row was added to Stephen's Notion table as an
-  **unverified draft** on 30 Sept 2026 so `test_every_adapter_jurisdiction_has_a_row`
-  passes; re-sync after he reviews it.
+  Territory) — its own territory, never read as the BVI or the UK (Stephen,
+  30 Sept 2026). Never "correct" a country code.
+- **Custodial nominees stay nominees** (Stephen, 30 Sept 2026). The 2025 Act
+  defines nominee and nominator (s. 2) and makes a nominee disclose both to
+  the Registrar (s. 329A); a nominee is never a beneficial owner on the
+  strength of the nominee holding, which is why holdings carry no flag.
+- **Secretaries and auditors are not read**, by decision.
+- **The harvest is one-off** until CIPA answers the permission request; a
+  scheduled re-run is to be set up only if CIPA allows the data to be used.
+  **Do not merge the phase before that answer** (Stephen, 30 Sept 2026).
+- The BW knowability row in Stephen's Notion table was verified by him on
+  30 Sept 2026 (access since 20 Mar 2025, "at least 10 per cent (10%)").
 
 ---
 
