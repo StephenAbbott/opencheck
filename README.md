@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 263** — The New York Department of State is the 50th source and the sixth register on the History tab, read from its weekly filings, status and name histories by the DOS ID GLEIF files.
+**Latest: Phase 264** — Botswana's CIPA register is the 51st source: beneficial owners, shareholders and directors for the LEI-anchored Botswana companies, harvested from the register's public pages into a curated set.
 
 → [Full development history](docs/status.md)
 
