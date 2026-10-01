@@ -102,6 +102,21 @@ difference with a closed vocabulary (`CHANGE_KINDS`):
 The two `_unchecked` kinds are the point. Absence is a finding only when
 the source answered.
 
+**A rule change is not a company change.** Three stamps on every snapshot
+keep OpenCheck's own changes out of the feed. `verdict_template` (Phase 245)
+— verdicts from different templates are not compared. `RETIRED_SIGNAL_CODES`
+(Phase 272) — a code the engine stopped emitting vanishing is not
+`signal_retired`. `signal_rules` (Phase 273) — the risk-rules version a
+snapshot was taken under; `SIGNAL_RULES_CHANGED` lists, per version, the codes
+that version moved. Comparing a baseline from an older version, appearances
+and disappearances of those codes — and the verdict, which is built from them
+— are not reported; the baseline then moves on, so the next re-run compares
+like with like, and every other code (a new sanctions listing, say) still
+reports on the same re-run. Version 2 is Phase 273: the FATF / EU list signals
+stopped reading subsidiaries, which moved to `SUBSIDIARY_LISTED_JURISDICTION`.
+Bump `SIGNAL_RULES` and add an entry whenever a rule change moves which codes
+fire for an unchanged company.
+
 ## Where state lives
 
 One SQLite file on the Render persistent disk beside the GLEIF mirror

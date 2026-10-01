@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 272** — AMLA's final draft CDD standards dropped the "complex corporate structure" threshold, so OpenCheck retires that composite and instead reports intermediate ownership layers with the complexity elements on the chain — trusts, nominees and FATF- or EU-listed high-risk jurisdictions — in regime-neutral language.
+**Latest: Phase 273** — FATF and EU high-risk jurisdiction signals now describe only the company and the owners above it; subsidiaries in listed jurisdictions move to a context note, so a group parent is no longer told its ownership chain reaches a country where it merely has a subsidiary.
 
 → [Full development history](docs/status.md)
 

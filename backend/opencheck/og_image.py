@@ -65,6 +65,8 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     "GLEIF_REPORTING_EXCEPTION": ("No parent in GLEIF (exempt)", "#f8fafc", "#334155"),
     "TRUST_OR_ARRANGEMENT": ("Trust / arrangement", "#eef2ff", "#4338ca"),
     "NON_EU_JURISDICTION": ("Outside EU/EEA", "#fff7ed", "#c2410c"),
+    # Context (Phase 273) — never counted on the card, labelled if shown.
+    "SUBSIDIARY_LISTED_JURISDICTION": ("Subsidiaries in listed jurisdictions", "#f8fafc", "#475569"),
     "STATE_CONTROLLED": ("State-controlled", "#fff7ed", "#c2410c"),
     "NOMINEE": ("Nominee", "#fdf4ff", "#a21caf"),
     "COMPLEX_OWNERSHIP_LAYERS": ("Layered ownership", "#f0f9ff", "#0369a1"),

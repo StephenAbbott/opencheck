@@ -55,6 +55,7 @@ from ..verdict import build_verdict
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
 from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
+from ..risk import merge_subsidiary_listed_jurisdiction as _risk_merge_subsidiary_listed
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
 from ..bods.state_bodies import classify_government_entities
 from ..ratelimit import default_tier, limiter, lookup_tier
@@ -1027,6 +1028,9 @@ _COLLAPSE_RESOLVERS = {
     # source's jurisdictions (so every graph badge stays) and naming the
     # sources in ``evidence.reported_by``.
     "NON_EU_JURISDICTION": _risk_merge_non_eu,
+    # Phase 273: one "subsidiaries in listed jurisdictions" note per lookup,
+    # pooled per node on the same terms as NON_EU_JURISDICTION.
+    "SUBSIDIARY_LISTED_JURISDICTION": _risk_merge_subsidiary_listed,
 }
 
 
@@ -1064,6 +1068,7 @@ _COLLAPSE_RESOLVERS = {
 _STRUCTURAL_SIGNAL_CODES = {
     "COMPLEX_OWNERSHIP_LAYERS",
     "NON_EU_JURISDICTION",
+    "SUBSIDIARY_LISTED_JURISDICTION",
     "STATE_CONTROLLED",
     "COMPLEX_CORPORATE_STRUCTURE",
     "POSSIBLE_OBFUSCATION",

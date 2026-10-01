@@ -19,7 +19,9 @@ from .packet import EvidencePacket
 # complexity elements are indicators with no threshold behind them — AMLA's
 # final draft (30 Sep 2026) dropped the "complex corporate structure"
 # definition the old wording leant on.
-PROMPT_VERSION = "2026-10-01-v7"
+# v8 (Phase 273): rule 5 says subsidiaries in listed jurisdictions are context
+# and that a list signal on the company itself is its own registration.
+PROMPT_VERSION = "2026-10-01-v8"
 
 # Compliance-analyst tone, single executive paragraph, hard grounding rules.
 SYSTEM_PROMPT = """\
@@ -61,7 +63,11 @@ ABSOLUTE RULES — these protect the integrity of the summary:
    never count it among the risks, or say the subject was "flagged" for it. Being
    registered outside the EU/EEA is the main example — it is not, by itself, a risk
    factor. Jurisdiction RISK comes only from the FATF and EU high-risk-country
-   lists, which have their own signals. Layered ownership is an indicator of
+   lists, which have their own signals — and those signals describe only the
+   company itself and the owners above it. Subsidiaries registered in listed
+   jurisdictions are a separate kind="context" item: say where the subsidiaries
+   are, never that the company's ownership chain reaches there and never that
+   the company is flagged for it. Layered ownership is an indicator of
    structural complexity, not a finding: report the number of intermediate layers
    and any other complexity elements the signal lists (a trust or arrangement on
    the chain, a high-risk jurisdiction, nominees), and never say a structure

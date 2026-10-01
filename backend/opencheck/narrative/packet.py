@@ -200,6 +200,9 @@ _RISK_LABELS = {
     "EU_HIGH_RISK_THIRD_COUNTRY": "EU high-risk third country",
     "FATF_GREY_LIST": "FATF grey-list jurisdiction",
     "NON_EU_JURISDICTION": "Outside EU/EEA",
+    "SUBSIDIARY_LISTED_JURISDICTION": (
+        "Subsidiaries in FATF- or EU-listed jurisdictions (context, not a finding)"
+    ),
     "OFFSHORE_LEAKS": "Offshore Leaks match",
     "TRUST_OR_ARRANGEMENT": "Trust / arrangement",
     "NOMINEE": "Nominee arrangement",

@@ -230,6 +230,16 @@ FATF_BLACK_LIST = "FATF_BLACK_LIST"
 FATF_GREY_LIST = "FATF_GREY_LIST"
 EU_HIGH_RISK_THIRD_COUNTRY = "EU_HIGH_RISK_THIRD_COUNTRY"
 
+#: Phase 273 — ``kind="context"``. Subsidiaries (entities BELOW the subject)
+#: registered in a jurisdiction on one of the three lists above. Until Phase
+#: 273 those subsidiaries fired the list signals themselves, worded as places
+#: the subject's "ownership chain reaches into"; measured on 30 production
+#: subjects on 1 Oct 2026, 26 of 33 list-signal firings rested on nothing
+#: else. A subsidiary's jurisdiction is not the subject's ownership chain, but
+#: it is not nothing either (TotalEnergies' stake in Arctic LNG 2), so it is
+#: reported — once per lookup, as context, never as risk or in the verdict.
+SUBSIDIARY_LISTED_JURISDICTION = "SUBSIDIARY_LISTED_JURISDICTION"
+
 
 # Default EU + EEA member states (ISO 3166-1 alpha-2), used ONLY by the
 # ``NON_EU_JURISDICTION`` context note. EEA (NO/IS/LI) is included because
@@ -2281,6 +2291,9 @@ def assess_structure(
     # context, not risk.
     out.extend(_fatf_jurisdiction_signals(source_id, hit_id, bods))
     out.extend(_eu_high_risk_third_country_signals(source_id, hit_id, bods))
+    subsidiary_note = _subsidiary_listed_jurisdiction_signal(source_id, hit_id, bods)
+    if subsidiary_note is not None:
+        out.append(subsidiary_note)
 
     return out
 
@@ -3073,79 +3086,277 @@ def _layers_signal(
     )
 
 
-def _fatf_jurisdiction_signals(
-    source_id: str, hit_id: str, bods: list[dict[str, Any]]
-) -> list[RiskSignal]:
-    """Fire FATF_BLACK_LIST / FATF_GREY_LIST when any entity in the BODS
-    bundle is incorporated in a FATF-listed jurisdiction.
+def _downstream_entity_ids(
+    subject_id: str, bods: list[dict[str, Any]], *, current_only: bool = False
+) -> set[str]:
+    """Every statementId reachable from ``subject_id`` by walking *down* the
+    ownership graph — its subsidiaries, theirs, and so on. The mirror of
+    ``_upstream_entity_ids``, with the same Phase 220 ended-link rule."""
+    children: dict[str, set[str]] = {}
+    ended = _ended_relationship_ids(bods) if current_only else set()
+    _resolve = _refs_resolver(bods)
+    for stmt in bods:
+        if _stmt_kind(stmt) != "relationship":
+            continue
+        if current_only and _statement_id(stmt) in ended:
+            continue
+        subj, ip, _ = _relationship_endpoints(stmt, _resolve)
+        if subj and ip:
+            children.setdefault(ip, set()).add(subj)
+    seen: set[str] = set()
+    frontier = [subject_id]
+    while frontier:
+        node = frontier.pop()
+        for child in children.get(node, ()):
+            if child not in seen:
+                seen.add(child)
+                frontier.append(child)
+    return seen
 
-    Two separate signals — one per list — so the UI can present them with
-    different severities.  Both can fire on the same bundle (e.g. an entity
-    that is itself grey-listed but has an owner in a black-listed jurisdiction).
 
-    Lists current as of the June 2026 plenary. Update ``FATF_BLACK_LIST_CODES``
-    and ``FATF_GREY_LIST_CODES`` at each FATF plenary (typically February, June,
-    October) when the lists are refreshed.
+@dataclass
+class _ChainScope:
+    """Where each entity in a bundle sits relative to the subject (Phase 273).
+
+    ``above`` and ``below`` exclude the subject; an entity reachable both ways
+    (an ownership cycle) counts as ``above``, the stronger claim. Anything in
+    none of the three is a side branch and is not reported at all.
     """
-    black_hits: list[dict[str, str]] = []
-    grey_hits: list[dict[str, str]] = []
 
+    subject_ids: set[str]
+    above: set[str]
+    below: set[str]
+    above_via_ended_only: set[str]
+    below_via_ended_only: set[str]
+
+
+def _subject_statement_ids(hit_id: str, bods: list[dict[str, Any]]) -> set[str]:
+    """Every entity statement that IS the subject, not just the first.
+
+    A bundle can describe the subject more than once — MEIP files one
+    statement per group membership, so a company in two groups appears twice,
+    each with its own group head above it. ``_subject_entity_id`` picks one;
+    this adds every other entity statement carrying ``hit_id`` as an
+    identifier, so the chain above each of them is walked.
+    """
+    first = _subject_entity_id(hit_id, bods)
+    if first is None:
+        return set()
+    out = {first}
+    if hit_id:
+        for stmt in bods:
+            if _stmt_kind(stmt) != "entity":
+                continue
+            for ident in _record_details(stmt).get("identifiers") or []:
+                if isinstance(ident, dict) and ident.get("id") == hit_id:
+                    out.add(_statement_id(stmt))
+                    break
+    return out
+
+
+def _chain_scope(hit_id: str, bods: list[dict[str, Any]]) -> _ChainScope | None:
+    subjects = _subject_statement_ids(hit_id, bods)
+    if not subjects:
+        return None
+
+    def walk(fn, *, current_only: bool = False) -> set[str]:
+        seen: set[str] = set()
+        for sid in subjects:
+            seen |= fn(sid, bods, current_only=current_only)
+        return seen - subjects
+
+    above = walk(_upstream_entity_ids)
+    above_cur = walk(_upstream_entity_ids, current_only=True)
+    below = walk(_downstream_entity_ids) - above
+    below_cur = walk(_downstream_entity_ids, current_only=True)
+    return _ChainScope(
+        subject_ids=subjects,
+        above=above,
+        below=below,
+        above_via_ended_only=above - above_cur,
+        below_via_ended_only=below - below_cur,
+    )
+
+
+def _listed_entity_hits(
+    bods: list[dict[str, Any]], ids: set[str], codes: frozenset[str]
+) -> list[dict[str, Any]]:
+    """Entity statements in ``ids`` registered in one of ``codes``."""
+    out: list[dict[str, Any]] = []
     for stmt in bods:
         if _stmt_kind(stmt) != "entity":
+            continue
+        sid = _statement_id(stmt)
+        if sid not in ids:
             continue
         j = _entity_jurisdiction(stmt)
         if not j:
             continue
         code = (j.get("code") or "").upper()
-        name = j.get("name") or ""
+        if code and code in codes:
+            out.append({"statement_id": sid, "code": code, "name": j.get("name") or ""})
+    return out
+
+
+def _ended_ids_reaching(
+    bods: list[dict[str, Any]],
+    scope: _ChainScope,
+    nodes: set[str],
+    *,
+    upward: bool,
+) -> list[str]:
+    """Ended relationship ids on the way to ``nodes`` (reached only that way).
+
+    Upward: an ended link whose owner is one of ``nodes`` and whose subject
+    is the subject or another owner. Downward: an ended link whose subsidiary
+    is one of ``nodes`` and whose owner is the subject or another subsidiary.
+    """
+    if not nodes:
+        return []
+    ended = _ended_relationship_ids(bods)
+    _resolve = _refs_resolver(bods)
+    region = (scope.above if upward else scope.below) | scope.subject_ids
+    out: list[str] = []
+    for stmt in bods:
+        if _stmt_kind(stmt) != "relationship" or _statement_id(stmt) not in ended:
+            continue
+        subj, ip, _ = _relationship_endpoints(stmt, _resolve)
+        far, near = (ip, subj) if upward else (subj, ip)
+        if far in nodes and near in region:
+            out.append(_statement_id(stmt))
+    return out
+
+
+def _chain_list_hits(
+    bods: list[dict[str, Any]], scope: _ChainScope, codes: frozenset[str]
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """List hits on the subject and the chain above it, with positions.
+
+    Each hit carries ``position`` (``"subject"`` / ``"above"``) and, only
+    when true, ``via_ended_only``. Returns the hits and the ended relationship
+    ids that qualify them — non-empty only when some country is reached
+    through ended links alone (the Phase 259 rule).
+    """
+    hits = _listed_entity_hits(bods, scope.subject_ids | scope.above, codes)
+    for h in hits:
+        h["position"] = "subject" if h["statement_id"] in scope.subject_ids else "above"
+        if h["statement_id"] in scope.above_via_ended_only:
+            h["via_ended_only"] = True
+    ended_ids: list[str] = []
+    if _ended_only_codes(hits):
+        ended_only_nodes = {
+            h["statement_id"] for h in hits if h.get("via_ended_only")
+        }
+        ended_ids = _ended_ids_reaching(bods, scope, ended_only_nodes, upward=True)
+    return hits, ended_ids
+
+
+def _country_names(hits: Iterable[dict[str, Any]]) -> dict[str, str]:
+    """One display name per country code.
+
+    Sources spell the same country differently ("Russia", "Russian
+    Federation"), and a bundle merged from several says both; joining every
+    distinct name read "registered in Russia, Russian Federation". The most
+    frequent spelling wins, ties going to the shorter; the code stands in
+    when no source names it.
+    """
+    counts: dict[str, dict[str, int]] = {}
+    for h in hits:
+        code = h.get("code") or ""
         if not code:
             continue
-        entry = {"statement_id": _statement_id(stmt), "code": code, "name": name}
-        if code in FATF_BLACK_LIST_CODES:
-            black_hits.append(entry)
-        elif code in FATF_GREY_LIST_CODES:
-            grey_hits.append(entry)
+        bucket = counts.setdefault(code, {})
+        if h.get("name"):
+            bucket[h["name"]] = bucket.get(h["name"], 0) + 1
+    return {
+        code: (min(names, key=lambda n: (-names[n], len(n), n)) if names else code)
+        for code, names in counts.items()
+    }
 
+
+def _place_label(hits: list[dict[str, Any]]) -> str:
+    return ", ".join(sorted(_country_names(hits).values()))
+
+
+def _chain_location(hits: list[dict[str, Any]], *, qualified: bool) -> str:
+    """"The company is registered in X, and its ownership chain reaches into Y".
+
+    The subject's own registration is said as such (Phase 273, Stephen's
+    decision 2: the subject's jurisdiction counts) — where a company *is* is
+    not somewhere its chain *reaches*. A country that is both is said once,
+    as the subject's.
+    """
+    at_subject = [h for h in hits if h.get("position") == "subject"]
+    subject_codes = {h["code"] for h in at_subject}
+    above = [
+        h for h in hits
+        if h.get("position") == "above" and h["code"] not in subject_codes
+    ]
+    qualifier = f" ({INCLUDING_ENDED})" if qualified else ""
+    parts: list[str] = []
+    if at_subject:
+        parts.append(f"The company is registered in {_place_label(at_subject)}")
+    if above:
+        lead = "its" if parts else "Its"
+        parts.append(
+            f"{lead} ownership chain{qualifier} reaches into {_place_label(above)}"
+        )
+    return ", and ".join(parts)
+
+
+def _fatf_jurisdiction_signals(
+    source_id: str, hit_id: str, bods: list[dict[str, Any]]
+) -> list[RiskSignal]:
+    """FATF_BLACK_LIST / FATF_GREY_LIST when the subject, or an entity on the
+    ownership chain ABOVE it, is registered in a FATF-listed jurisdiction.
+
+    Phase 273: until now this walked every entity statement in the bundle, so
+    a group parent with one subsidiary in a grey-listed country was told its
+    ownership chain reached that country — the defect Phase 153 fixed for
+    ``NON_EU_JURISDICTION`` and Phase 170 for the layer count. Subsidiaries
+    now go to the ``SUBSIDIARY_LISTED_JURISDICTION`` context note instead;
+    side branches (neither above nor below) are not reported. Ended links
+    are kept and said (Phase 220).
+
+    Two separate signals — one per list — so the UI can present them with
+    different severities. Lists current as of the June 2026 plenary. Update
+    ``FATF_BLACK_LIST_CODES`` and ``FATF_GREY_LIST_CODES`` at each FATF
+    plenary (typically February, June, October).
+    """
+    scope = _chain_scope(hit_id, bods)
+    if scope is None:
+        return []
     out: list[RiskSignal] = []
-
-    if black_hits:
-        codes = sorted({h["code"] for h in black_hits})
-        names = sorted({h["name"] for h in black_hits if h["name"]})
-        label = ", ".join(names) if names else ", ".join(codes)
+    for code, codes, confidence, list_name, tail in (
+        (
+            FATF_BLACK_LIST, FATF_BLACK_LIST_CODES, "high", "black",
+            "a jurisdiction on the FATF High-Risk list "
+            "(Call for Action / black list, June 2026).",
+        ),
+        (
+            FATF_GREY_LIST, FATF_GREY_LIST_CODES - FATF_BLACK_LIST_CODES,
+            "medium", "grey",
+            "a jurisdiction under FATF Increased Monitoring "
+            "(grey list, June 2026).",
+        ),
+    ):
+        hits, ended_ids = _chain_list_hits(bods, scope, codes)
+        if not hits:
+            continue
         out.append(
             RiskSignal(
-                code=FATF_BLACK_LIST,
-                confidence="high",
-                summary=(
-                    f"Ownership chain reaches into {label}, "
-                    "a jurisdiction on the FATF High-Risk list "
-                    "(Call for Action / black list, June 2026)."
-                ),
+                code=code,
+                confidence=confidence,
+                summary=f"{_chain_location(hits, qualified=bool(ended_ids))}, {tail}",
                 source_id=source_id,
                 hit_id=hit_id,
-                evidence={"jurisdictions": black_hits, "list": "black"},
+                evidence={
+                    "jurisdictions": hits,
+                    "list": list_name,
+                    **_ended_evidence(ended_ids),
+                },
             )
         )
-
-    if grey_hits:
-        codes = sorted({h["code"] for h in grey_hits})
-        names = sorted({h["name"] for h in grey_hits if h["name"]})
-        label = ", ".join(names) if names else ", ".join(codes)
-        out.append(
-            RiskSignal(
-                code=FATF_GREY_LIST,
-                confidence="medium",
-                summary=(
-                    f"Ownership chain reaches into {label}, "
-                    "a jurisdiction under FATF Increased Monitoring "
-                    "(grey list, June 2026)."
-                ),
-                source_id=source_id,
-                hit_id=hit_id,
-                evidence={"jurisdictions": grey_hits, "list": "grey"},
-            )
-        )
-
     return out
 
 
@@ -3153,6 +3364,9 @@ def _eu_high_risk_third_country_signals(
     source_id: str, hit_id: str, bods: list[dict[str, Any]]
 ) -> list[RiskSignal]:
     """Fire EU_HIGH_RISK_THIRD_COUNTRY for the EU's own Article 29 list.
+
+    Scoped like the FATF signals since Phase 273: the subject and the chain
+    above it only; subsidiaries go to ``SUBSIDIARY_LISTED_JURISDICTION``.
 
     Separate from the FATF signals by design — see the comment on
     ``EU_HIGH_RISK_THIRD_COUNTRY_CODES``. Confidence is ``high`` because,
@@ -3169,36 +3383,17 @@ def _eu_high_risk_third_country_signals(
     Article 29 attaches the same obligation to the whole Annex. See the
     comment on ``EU_HRTC_SECTION_IV_CODES``.
     """
-    hits: list[dict[str, str]] = []
-    for stmt in bods:
-        if _stmt_kind(stmt) != "entity":
-            continue
-        j = _entity_jurisdiction(stmt)
-        if not j:
-            continue
-        code = (j.get("code") or "").upper()
-        if not code or code not in EU_HIGH_RISK_THIRD_COUNTRY_CODES:
-            continue
-        hits.append(
-            {
-                "statement_id": _statement_id(stmt),
-                "code": code,
-                "name": j.get("name") or "",
-                "annex_section": (
-                    "IV" if code in EU_HRTC_SECTION_IV_CODES else "I-III"
-                ),
-            }
-        )
-
+    scope = _chain_scope(hit_id, bods)
+    if scope is None:
+        return []
+    hits, ended_ids = _chain_list_hits(bods, scope, EU_HIGH_RISK_THIRD_COUNTRY_CODES)
     if not hits:
         return []
-
-    codes = sorted({h["code"] for h in hits})
-    names = sorted({h["name"] for h in hits if h["name"]})
-    label = ", ".join(names) if names else ", ".join(codes)
+    for h in hits:
+        h["annex_section"] = "IV" if h["code"] in EU_HRTC_SECTION_IV_CODES else "I-III"
 
     summary = (
-        f"Ownership chain reaches into {label}, on the EU list of "
+        f"{_chain_location(hits, qualified=bool(ended_ids))}, on the EU list of "
         "high-risk third countries with strategic AML/CFT "
         f"deficiencies ({EU_HRTC_INSTRUMENT}). EU-listed "
         "jurisdictions attract mandatory enhanced due diligence."
@@ -3210,7 +3405,7 @@ def _eu_high_risk_third_country_signals(
         iv_label = ", ".join(iv_names) or ", ".join(
             sorted({h["code"] for h in section_iv})
         )
-        verb = "is" if len(section_iv) == 1 and len(iv_names) <= 1 else "are"
+        verb = "is" if len({h["code"] for h in section_iv}) == 1 and len(iv_names) <= 1 else "are"
         summary += (
             f" {iv_label} {verb} listed under Section IV of the Annex — "
             "not identified by the FATF for a call for action or increased "
@@ -3224,9 +3419,123 @@ def _eu_high_risk_third_country_signals(
             summary=summary,
             source_id=source_id,
             hit_id=hit_id,
-            evidence={"jurisdictions": hits, "instrument": EU_HRTC_INSTRUMENT},
+            evidence={
+                "jurisdictions": hits,
+                "instrument": EU_HRTC_INSTRUMENT,
+                **_ended_evidence(ended_ids),
+            },
         )
     ]
+
+
+#: Every jurisdiction on any of the three lists, for the subsidiary note.
+#: Not narrowed by ``OPENCHECK_HIGH_RISK_JURISDICTION_LISTS`` — that setting
+#: governs the Phase 272 complexity element only, like the standalone signals.
+_ALL_LISTED_CODES: frozenset[str] = (
+    EU_HIGH_RISK_THIRD_COUNTRY_CODES | FATF_BLACK_LIST_CODES | FATF_GREY_LIST_CODES
+)
+
+_LIST_DISPLAY = {
+    HIGH_RISK_LIST_EU: "EU high-risk list",
+    HIGH_RISK_LIST_FATF_BLACK: "FATF black list",
+    HIGH_RISK_LIST_FATF_GREY: "FATF grey list",
+}
+
+
+def _all_lists_for(code: str) -> list[str]:
+    return [lid for lid in DEFAULT_HIGH_RISK_LISTS if code in _HIGH_RISK_LIST_CODES[lid]]
+
+
+def _subsidiary_listed_summary(
+    jurisdictions: list[dict[str, Any]], *, qualified: bool
+) -> str:
+    names = _country_names(jurisdictions)
+    lists = {j["code"]: j.get("lists") or [] for j in jurisdictions}
+    places = ", ".join(
+        f"{name} ({', '.join(_LIST_DISPLAY[l] for l in lists[code])})"
+        for code, name in sorted(names.items(), key=lambda kv: kv[1])
+    )
+    qualifier = f" ({INCLUDING_ENDED})" if qualified else ""
+    return (
+        f"Subsidiaries{qualifier} registered in listed jurisdictions: {places}. "
+        "Structural context, not a risk finding — a subsidiary's jurisdiction "
+        "is not the company's ownership chain, though exposure through "
+        "operations there may matter for review."
+    )
+
+
+def _subsidiary_listed_jurisdiction_signal(
+    source_id: str, hit_id: str, bods: list[dict[str, Any]]
+) -> RiskSignal | None:
+    """Context note for subsidiaries in FATF- or EU-listed jurisdictions.
+
+    Below the subject only — never the subject, never an owner (those are the
+    list signals' business), never a side branch. Each hit names every list it
+    is on. Phase 220 rule for ended links: a former subsidiary still counts,
+    and the note says so while some country is reached only that way.
+    """
+    scope = _chain_scope(hit_id, bods)
+    if scope is None or not scope.below:
+        return None
+    hits = _listed_entity_hits(bods, scope.below, _ALL_LISTED_CODES)
+    if not hits:
+        return None
+    for h in hits:
+        h["lists"] = _all_lists_for(h["code"])
+        if h["statement_id"] in scope.below_via_ended_only:
+            h["via_ended_only"] = True
+    ended_ids: list[str] = []
+    if _ended_only_codes(hits):
+        nodes = {h["statement_id"] for h in hits if h.get("via_ended_only")}
+        ended_ids = _ended_ids_reaching(bods, scope, nodes, upward=False)
+    return RiskSignal(
+        code=SUBSIDIARY_LISTED_JURISDICTION,
+        confidence="low",
+        kind="context",
+        summary=_subsidiary_listed_summary(hits, qualified=bool(ended_ids)),
+        source_id=source_id,
+        hit_id=hit_id,
+        evidence={"jurisdictions": hits, **_ended_evidence(ended_ids)},
+    )
+
+
+def merge_subsidiary_listed_jurisdiction(
+    incumbent: dict[str, Any], new: dict[str, Any]
+) -> dict[str, Any]:
+    """Collapse two sources' subsidiary notes into one, pooling per node.
+
+    Same terms as ``merge_non_eu_jurisdiction`` (Phase 259): every source's
+    jurisdictions are pooled (one entry per statement, so every graph badge
+    stays), the sources ride along in ``evidence.reported_by``, and
+    "including ended relationships" survives only while some country is
+    reached through ended links alone.
+    """
+    seen: set[str] = set()
+    pooled: list[dict[str, Any]] = []
+    reported_by: list[str] = []
+    ended_ids: set[str] = set()
+    for sig in (incumbent, new):
+        ev = sig.get("evidence") or {}
+        for src in ev.get("reported_by") or [sig.get("source_id") or ""]:
+            if src and src not in reported_by:
+                reported_by.append(src)
+        for m in ev.get("jurisdictions") or ():
+            sid = m.get("statement_id") if isinstance(m, dict) else None
+            if sid and sid not in seen:
+                seen.add(sid)
+                pooled.append(dict(m))
+        ended_ids.update(ev.get("ended_relationship_statement_ids") or ())
+    if not pooled:
+        return new
+    qualified = bool(_ended_only_codes(pooled)) and bool(ended_ids)
+    merged = dict(incumbent)
+    merged["summary"] = _subsidiary_listed_summary(pooled, qualified=qualified)
+    merged["evidence"] = {
+        "jurisdictions": pooled,
+        "reported_by": reported_by,
+        **_ended_evidence(ended_ids if qualified else ()),
+    }
+    return merged
 
 
 def _possible_obfuscation_signal(
