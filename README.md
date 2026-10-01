@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 268** — The record-consistency counters now survive deploys, the bridging identifier and scheme-less ids no longer count as agreement or clash, GLEIF's creation date and MEIP's country leave the comparison table as different concepts, and every disagreement is logged with its values.
+**Latest: Phase 269** — The Austrian Firmenbuch adapter no longer reports a renamed firm as deleted; its status is read from whether any name entry is current, not only the first.
 
 → [Full development history](docs/status.md)
 
