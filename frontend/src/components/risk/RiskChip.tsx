@@ -98,6 +98,13 @@ export const RISK_PRESENTATION: Record<
     label: "Outside EU/EEA",
     classes: CONTEXT_CLASSES,
   },
+  // Context, not risk (Phase 273): subsidiaries in FATF- or EU-listed
+  // jurisdictions. Until Phase 273 they fired the red list chips themselves,
+  // worded as the company's ownership chain.
+  SUBSIDIARY_LISTED_JURISDICTION: {
+    label: "Subsidiaries in listed jurisdictions",
+    classes: CONTEXT_CLASSES,
+  },
   STATE_CONTROLLED: {
     label: "State-controlled",
     classes: "bg-orange-50 text-orange-700 border-orange-200",

@@ -772,12 +772,13 @@ def test_high_risk_element_counts_the_subject_itself() -> None:
 
 
 def test_high_risk_element_is_scoped_to_the_layered_path() -> None:
-    """A Russian entity with no edges is on no layer. The standalone EU
-    signal still reports it (bundle-wide); the element does not."""
+    """A Russian entity with no edges is on no layer, so the element does not
+    count it — and since Phase 273 neither does the standalone EU signal: a
+    side branch is on no chain at all."""
     bods = _three_layer_chain()
     bods.append(_entity("E9", name="Unrelated OOO", jurisdiction_code="RU"))
     signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
-    assert EU_HIGH_RISK_THIRD_COUNTRY in {s.code for s in signals}
+    assert EU_HIGH_RISK_THIRD_COUNTRY not in {s.code for s in signals}
     assert "high_risk_jurisdiction" not in _elements(_layers(signals))
 
 

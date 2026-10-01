@@ -609,7 +609,7 @@ other labels.
 - `SANCTIONED`, `PEP` → `evidence.statement_id` (added in Phase 45 via `_bods_stable_id(source_id, hit_id)` in `risk.py`)
 - `RELATED_SANCTIONED`, `RELATED_PEP` → `evidence.subject_statement_id`
 - `TRUST_OR_ARRANGEMENT`, `NOMINEE`, `STATE_CONTROLLED` (Phase 240) → `evidence.matches[].statement_id`
-- `NON_EU_JURISDICTION`, `FATF_BLACK_LIST`, `FATF_GREY_LIST` → `evidence.jurisdictions[].statement_id`
+- `NON_EU_JURISDICTION`, `FATF_BLACK_LIST`, `FATF_GREY_LIST`, `EU_HIGH_RISK_THIRD_COUNTRY`, `SUBSIDIARY_LISTED_JURISDICTION` (Phase 273) → `evidence.jurisdictions[].statement_id`. Since Phase 273 the three list signals hold only the subject and its owners (`position`: `subject` / `above`); subsidiaries are in the slate context note
 - `COMPLEX_OWNERSHIP_LAYERS` → `evidence.longest_path[]` (array of statementIds, subject first — the chain runs upwards from it) plus `evidence.subject_statement_id`
 
 **Signal scoping across render sites (Phase 109)** — `RELATED_*` signals are assessed against the **merged** bundle late in `_lookup_pipeline` and ride on the top-level `risk_signals` event; a `/deepen` response carries only that source's own findings. So the three `BodsGraphExplorer` render sites see different lists, and the two per-bundle ones saw no cross-source signals at all: a node the risk panel called sanctions-linked rendered unbadged, i.e. as "checked and clean".

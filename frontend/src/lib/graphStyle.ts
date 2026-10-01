@@ -73,6 +73,10 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   // Context, not risk — slate, and the LOWEST severity, so a node is
   // never ranked by the graph on the strength of being non-EU alone.
   NON_EU_JURISDICTION:      { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"N",  severity:0 },
+  // Context (Phase 273) — a subsidiary in a listed jurisdiction. Slate and
+  // severity 0, so the graph shows where the exposure is without colouring a
+  // subsidiary as the company's own risk (owners keep the red F!/Fg/EU!).
+  SUBSIDIARY_LISTED_JURISDICTION: { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"Sj", severity:0 },
   STATE_CONTROLLED:         { bg:"#fff7ed", border:"#c2410c", text:"#c2410c", label:"St", severity:2 },
   OFFSHORE_LEAKS:           { bg:"#fef3c7", border:"#92400e", text:"#92400e", label:"OL", severity:2 },
   TRUST_OR_ARRANGEMENT:     { bg:"#eef2ff", border:"#4338ca", text:"#4338ca", label:"T",  severity:1 },

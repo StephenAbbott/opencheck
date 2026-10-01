@@ -94,6 +94,40 @@ from .verdict import VERDICT_TEMPLATE
 #: this module's import graph light; ``test_watchlist`` pins the two equal.
 RETIRED_SIGNAL_CODES: frozenset[str] = frozenset({"COMPLEX_CORPORATE_STRUCTURE"})
 
+#: Phase 273 — the risk RULES version a snapshot was taken under, mirroring
+#: Phase 245's ``verdict_template``. Bump it whenever a rule change moves which
+#: codes fire for an unchanged company, and record the codes it moved below.
+#: A snapshot written before Phase 273 carries no number: it was version 1.
+SIGNAL_RULES = 2
+
+#: version -> the codes whose firing that rules version changed. Comparing a
+#: baseline from an older version, appearances and disappearances of these
+#: codes are the rule's doing, not the company's, and are not reported; the
+#: baseline then moves on, so the next re-run compares like with like.
+#:
+#: 2 = Phase 273: the FATF / EU list signals stopped reading subsidiaries and
+#: side branches, and subsidiaries moved to SUBSIDIARY_LISTED_JURISDICTION.
+SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
+    2: frozenset(
+        {
+            "FATF_BLACK_LIST",
+            "FATF_GREY_LIST",
+            "EU_HIGH_RISK_THIRD_COUNTRY",
+            "SUBSIDIARY_LISTED_JURISDICTION",
+        }
+    ),
+}
+
+
+def _rule_moved_codes(before: dict[str, Any], after: dict[str, Any]) -> frozenset[str]:
+    """Codes a rules change between the two snapshots could have moved."""
+    old = int(before.get("signal_rules") or 1)
+    new = int(after.get("signal_rules") or 1)
+    moved: set[str] = set()
+    for version in range(old + 1, new + 1):
+        moved |= SIGNAL_RULES_CHANGED.get(version, frozenset())
+    return frozenset(moved)
+
 log = logging.getLogger("opencheck.watchlist")
 
 #: Tiers, as recorded on an entry. Closed vocabulary.
@@ -317,6 +351,9 @@ def snapshot_from_response(resp: Any) -> dict[str, Any]:
         # Phase 245: which wording produced ``verdict``, so a template change
         # is not reported as a change in the company (see diff_snapshots).
         "verdict_template": VERDICT_TEMPLATE,
+        # Phase 273: which risk-rules version produced ``signals`` (see
+        # SIGNAL_RULES), so a rule change is not reported as a company change.
+        "signal_rules": SIGNAL_RULES,
         # Which sources were actually reached, and when (Phase 99/100: the
         # retrieval clock, per source). The feed says "these sources were
         # checked on that date as a result".
@@ -426,19 +463,22 @@ def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list
             )
 
     degraded_ids, degraded_codes = _degraded_index(after)
+    rule_moved = _rule_moved_codes(before, after)
     for kind, new_kind, retired_kind, unchecked_kind in (
         ("risk", "signal_new", "signal_retired", "signal_unchecked"),
         ("context", "context_new", "context_retired", "context_unchecked"),
     ):
         ca, cb = _codes(before, kind), _codes(after, kind)
         for code in sorted(set(cb) - set(ca)):
+            if code in rule_moved:
+                continue
             changes.append({"kind": new_kind, "code": code, "sources": sorted(cb[code])})
         for code in sorted(set(ca) - set(cb)):
             # Phase 272: a code the engine stopped emitting on purpose (the
             # rule was withdrawn) vanishing from a stored baseline is not a
             # change in the company. Reporting it as "retired" would read as
             # an improvement nobody observed.
-            if code in RETIRED_SIGNAL_CODES:
+            if code in RETIRED_SIGNAL_CODES or code in rule_moved:
                 continue
             producers = ca[code]
             # The Phase 146 rule: absence is a finding only when the source
@@ -491,6 +531,9 @@ def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list
     # template 1. Two sentences from different templates differ in wording
     # whatever happened to the company, so they are not compared.
     same_template = (before.get("verdict_template") or 1) == (after.get("verdict_template") or 1)
+    # Phase 273: a verdict built under different risk rules is not compared
+    # either — the sentence is built from the signals the rules produced.
+    same_template = same_template and not rule_moved
     if same_template and (before.get("verdict") or None) != (after.get("verdict") or None) and not any(
         c["kind"] in ("register_status", "signal_new", "signal_retired", "signal_unchecked")
         for c in changes
