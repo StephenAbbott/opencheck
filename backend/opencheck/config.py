@@ -157,6 +157,16 @@ class Settings(BaseSettings):
         default=10800.0, alias="OPENCHECK_WATCHLIST_OPENSANCTIONS_INTERVAL_S"
     )
 
+    # --- Phase 268: record-consistency counters ---
+    # SQLite file the /consistencystats counters are written through to
+    # (opencheck/consistencystats.py) so the shadow-mode measurement window
+    # survives deploys. Integer counts under closed-vocabulary keys only. On
+    # Render it sits on the persistent disk beside the watchlist. Unset =
+    # in-process counters that reset on every deploy.
+    consistencystats_db_file: str | None = Field(
+        default=None, alias="OPENCHECK_CONSISTENCYSTATS_DB_FILE"
+    )
+
     # --- Phase 216: saved reports ---
     # SQLite file holding saved reports — a completed lookup's event stream,
     # frozen with its narrative, dispositions and licence assessment — and the

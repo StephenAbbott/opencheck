@@ -210,6 +210,12 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     process), we just run the warm-up.
     """
     global _mcp_session_started
+    # Phase 268: load the record-consistency counters from the persistent
+    # disk (opencheck/consistencystats.py) so the /consistencystats window
+    # spans deploys. Unset = in-process, as before. Never fails the boot.
+    from . import consistencystats
+
+    consistencystats.configure(get_settings().consistencystats_db_file)
     # Phase 266: the suite turns the boot downloads off (see config.py).
     warmup: asyncio.Task[None] | None = None
     if get_settings().warm_caches_on_start:

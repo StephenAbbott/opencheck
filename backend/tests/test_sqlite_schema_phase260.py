@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from opencheck import consistencystats as cs
 from opencheck import saved_reports as sr
 from opencheck import sqlite_schema as ss
 from opencheck import watchlist as wl
@@ -23,7 +24,11 @@ def _ver(path: Path) -> int:
         conn.close()
 
 
-@pytest.mark.parametrize("migrations", [wl.MIGRATIONS, sr.MIGRATIONS], ids=["watchlist", "saved_reports"])
+@pytest.mark.parametrize(
+    "migrations",
+    [wl.MIGRATIONS, sr.MIGRATIONS, cs.MIGRATIONS],
+    ids=["watchlist", "saved_reports", "consistencystats"],
+)
 def test_each_store_numbers_its_steps_from_one(migrations: tuple[ss.Migration, ...]) -> None:
     ss.check_contiguous(migrations)
     assert migrations[0].version == 1

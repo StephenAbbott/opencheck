@@ -138,17 +138,17 @@ def test_both_silent_produces_nothing() -> None:
 
 
 def test_founding_date_compares_at_the_coarser_precision() -> None:
-    a = _stmt("gleif", founding="2002-02-05")
-    b = _stmt("companies_house", founding="2002")
+    a = _stmt("brreg", founding="2002-02-05", lei=None, number=("GB-COH", "04366849"))
+    b = _stmt("companies_house", founding="2002", lei=None, number=("GB-COH", "04366849"))
     assert _items(assess_consistency([a, b]), "founding_date")[0].relation == AGREE
-    c = _stmt("companies_house", founding="2003-02-05")
+    c = _stmt("companies_house", founding="2003-02-05", lei=None, number=("GB-COH", "04366849"))
     assert _items(assess_consistency([a, c]), "founding_date")[0].relation == DISAGREE
 
 
 def test_wikidata_inception_is_never_compared_with_incorporation_novo_nordisk() -> None:
     """Novo Nordisk: four sources say 1931-11-28, Wikidata says 1923-01-01.
     Neither is wrong — inception ≠ incorporation — so no item exists."""
-    a = _stmt("gleif", founding="1931-11-28", jurisdiction=("Denmark", "DK"))
+    a = _stmt("cvr_denmark", founding="1931-11-28", jurisdiction=("Denmark", "DK"))
     w = _stmt("wikidata", founding="1923-01-01", jurisdiction=("Denmark", "DK"))
     assert _items(assess_consistency([a, w]), "founding_date") == []
     # Wikidata still takes part in comparisons where the concept IS shared.
@@ -175,8 +175,9 @@ def test_opencorporates_ids_are_per_registration_not_a_clash_shell() -> None:
     b["recordDetails"]["identifiers"].append({"id": "nl/34179503", "scheme": "OpenCorporates"})
     assert "OPENCORPORATES" not in one_per_entity_identifiers(a)
     clash = _items(assess_consistency([a, b]), IDENTIFIER_CLASH)
-    assert all(i.relation == AGREE for i in clash)  # the LEI, which they share
-    assert all("OPENCORPORATES" not in v for i in clash for v in i.values)
+    # The LEI they share is the bridge, not agreement (Phase 268); nothing
+    # else is comparable, so no item at all.
+    assert clash == []
 
 
 def test_same_register_different_number_is_a_clash() -> None:
@@ -187,6 +188,11 @@ def test_same_register_different_number_is_a_clash() -> None:
     clash = _items(assess_consistency([a, b]), IDENTIFIER_CLASH, DISAGREE)
     assert len(clash) == 1
     assert set(clash[0].values) == {"REGISTER:GB:04366849", "REGISTER:GB:04366850"}
+    # Labelled on both sides (GLEIF names the register since Phase 239): the
+    # same clash, under the label.
+    a2 = _stmt("gleif", number=("GB-COH", "04366849"))
+    clash = _items(assess_consistency([a2, b]), IDENTIFIER_CLASH, DISAGREE)
+    assert len(clash) == 1 and set(clash[0].values) == {"GB-COH:04366849", "GB-COH:04366850"}
 
 
 def test_register_number_formatting_differences_are_not_a_clash() -> None:
@@ -203,7 +209,7 @@ def test_tax_and_securities_ids_are_never_register_schemes() -> None:
         {"id": "0000000001", "scheme": "US-SEC-CIK"},
         {"id": "12345678", "scheme": "GB-COH"},
     ]
-    assert set(one_per_entity_identifiers(stmt)) == {"GB-COH", "REGISTER:GB"}
+    assert set(one_per_entity_identifiers(stmt)) == {"GB-COH"}
 
 
 def test_non_register_segments_match_the_frontend() -> None:
@@ -233,7 +239,10 @@ def test_live_exports_have_no_disagreements(fixture: str) -> None:
     assert result.by_relation(DISAGREE) == []
     assert result.by_relation(STALE) == []
     fields = {i.field for i in result.items}
-    assert {"jurisdiction", "founding_date", IDENTIFIER_CLASH} <= fields
+    assert {"jurisdiction", "founding_date"} <= fields
+    # Every shared identifier in these exports was the bridge (Phase 268):
+    # no identifier item at all, where Phase 152 counted 52 "agreements".
+    assert IDENTIFIER_CLASH not in fields
     # Mirror pairs exist (OpenCorporates / OpenSanctions / OpenAleph) and are
     # never counted as agreement.
     assert result.by_relation(MIRROR)
@@ -256,11 +265,14 @@ def test_consistencystats_counts_pairs_and_rates() -> None:
     consistencystats.record(assess_consistency([ch, gl]))
     consistencystats.record(assess_consistency([ch, _stmt("gleif", status=liveness.TERMINAL)]))
     consistencystats.record(assess_consistency([]))
+    consistencystats.record(assess_consistency([ch, _stmt("brreg", founding="2002")]))
     out = consistencystats.stats()
-    assert out["lookups"] == 3 and out["lookups_with_groups"] == 2
+    assert out["lookups"] == 4 and out["lookups_with_groups"] == 3
     row = out["pairs"]["liveness|companies_house|gleif"]
     assert row["disagree"] == 1 and row["agree"] == 1 and row["disagree_rate"] == 0.5
-    founding = out["pairs"]["founding_date|companies_house|gleif"]
+    # GLEIF's creation date is not compared (Phase 268); a register's is.
+    assert "founding_date|companies_house|gleif" not in out["pairs"]
+    founding = out["pairs"]["founding_date|brreg|companies_house"]
     assert founding["agree"] == 1 and founding["disagree_rate"] == 0.0
     # No values, identifiers or names anywhere in the snapshot.
     dumped = json.dumps(out)

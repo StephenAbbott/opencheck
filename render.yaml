@@ -148,6 +148,14 @@ services:
       # docs/saved-reports.md). Unset = /saved-reports answers 503.
       - key: OPENCHECK_SAVED_REPORTS_DB_FILE
         value: /var/data/saved_reports.sqlite
+      # --- Phase 268: record-consistency counters ---
+      # consistencystats.sqlite — the /consistencystats shadow-mode counters
+      # (opencheck/consistencystats.py): integer counts per field, source
+      # pair and relation, nothing else. On the disk so the two-week
+      # measurement window the Phase D gate asks for survives the daily
+      # deploys. Kilobytes. Unset = in-process, reset on every deploy.
+      - key: OPENCHECK_CONSISTENCYSTATS_DB_FILE
+        value: /var/data/consistencystats.sqlite
       # Phase 187: the register's *streaming* key (a different credential
       # from COMPANIES_HOUSE_API_KEY; one connection per key — bods-stream
       # has its own). With the file above, the app holds one connection to
