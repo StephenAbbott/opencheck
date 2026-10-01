@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 267** — Every BODS statement now carries the id of the source it came from, so the licence stamped on exports can no longer drop a source silently, and any statement that cannot be attributed is logged and counted.
+**Latest: Phase 268** — The record-consistency counters now survive deploys, the bridging identifier and scheme-less ids no longer count as agreement or clash, GLEIF's creation date and MEIP's country leave the comparison table as different concepts, and every disagreement is logged with its values.
 
 → [Full development history](docs/status.md)
 
