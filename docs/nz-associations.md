@@ -56,7 +56,73 @@ the `N address-matched, M name-only` split, the per-name register **total**
 (companies, roles, match basis), and nothing is ever asserted as a determination.
 A shared `pafId` ("same registered control point") is the strongest signal for
 nominee detection — but can also be a shared formation-agent office — so it is
-surfaced as confidence, not proof.
+surfaced as confidence, not proof. From 18 November 2026 that caveat becomes the
+common case for any director who elects an **alternative address**: see
+[Alternative addresses](#alternative-addresses-amendment-act-2025-in-force-18-november-2026)
+below.
+
+## Alternative addresses (Amendment Act 2025, in force 18 November 2026)
+
+The **Companies (Address Information) Amendment Act 2025** lets a director — and
+a shareholder who is that director or lives with them — show an **alternative
+physical address** on the public Companies Register in place of their
+residential one. It commences **18 November 2026** (the NZBN and Companies APIs
+are offline 7pm–midnight NZ time on 17 November, 06:00–11:00 UTC).
+
+The API versions do not change; the address fields do. On the NZBN v5 side,
+`roles[x].roleAddress[x].addressType` and
+`company-details.shareholding.shareAllocation[x].shareholder[x].shareholderAddress.addressType`
+become `PHYSICAL`, `ALTERNATIVE` or null. A **public viewer** (which is what
+OpenCheck is) sees `ALTERNATIVE` where one is filed and otherwise null — and
+**null means residential**, the pre-Act behaviour, not "unknown". An authority
+holder sees `PHYSICAL` and/or `ALTERNATIVE`, and for *directors* gets **both
+blocks** when both exist. OpenCheck does not read the Companies v2 API, whose
+`physicalOrPostalAddresses[x].addressType` gains `Alternative`, so that half of
+the change does not reach us.
+
+Two consequences for this panel:
+
+- **`_role_address()` chooses, it no longer takes `[0]`.** `roleAddress` can
+  hold more than one block and MBIE does not specify the order, so position is
+  a coin-flip between a home address and a service address. The adapter ranks a
+  current block before an ended one, then residential (`PHYSICAL` or null)
+  before `ALTERNATIVE`, and carries the chosen block's type through the
+  normalised role and shareholder rows as `address_type`. Pre-Act every block
+  is untyped and current, so this returns what `[0]` did.
+- **A shared alternative address is not a shared residence.** An alternative
+  address is typically the office of the accountant or agent who provides it,
+  shared by every one of their clients, so a matching `pafId` stops being
+  evidence about a *person*. The **tier is deliberately unchanged** — the
+  `address_match_count` / `name_only_count` split and the panel ordering keep
+  their meaning — but the **basis wording** changes, so the drill-down says
+  "Same alternative address — may be a shared service address" rather than
+  "Same registered address". Relabelling is honest at any volume; re-tiering
+  would silently move counts on evidence we do not yet have.
+
+### The open question: is Role Search affected?
+
+MBIE's notice covers the NZBN v5 and Companies v2 APIs. It does **not** mention
+the **Companies Entity Role Search API (v3)**, which is the API this panel
+actually searches — and that API's `physicalAddress` block has **no
+`addressType` field at all** (verified live on 1 October 2026: the block carries
+only `addressLines`, `postCode`, `countryCode` and `pafId`, the last present on
+roughly half to two-thirds of records). So one of two things happens on
+18 November, and they fail in opposite directions:
+
+| If Role Search… | Then… |
+|---|---|
+| **also switches** to the alternative address | `pafId`s still line up for the same person, but every client of one agent now shares a `pafId` → **false positives**: unrelated directors graded "address-matched" and sorted to the top of the panel, which is ranked by `address_match_count`. |
+| **keeps the residential address** | the subject's alternative-address `pafId` no longer matches Role Search's residential one → **false negatives**: genuine matches drop from high/medium to name-only, exactly for the directors who elected privacy. |
+
+Either way the tiers shift for affected directors, and there is no way to tell
+from the Role Search payload which case applies. This is the question put to
+MBIE ahead of the **14 October 2026** feedback deadline
+(`helpdesk@mail.api.business.govt.nz`), along with whether an alternative
+address carries its own `pafId`. The sandbox
+(`https://api.business.govt.nz/sandbox/…`, released 30 September 2026, test
+NZBNs `9429050923540` and `9429050923557`) needs a **sandbox-specific
+subscription key**: the production `NZBN_API_KEY` / `NZBN_ROLE_SEARCH_API_KEY`
+return 401 against it.
 
 ## What it returns
 

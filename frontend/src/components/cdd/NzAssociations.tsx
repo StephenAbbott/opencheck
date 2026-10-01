@@ -240,7 +240,11 @@ export function NzAssociations({ companyNumber }: { companyNumber: string }) {
             Every name match from the public register is shown; a matching registered address
             upgrades a match to <span className="text-blue-700 font-semibold">address-matched</span>,
             otherwise it is <span className="text-amber-700 font-semibold">name-only</span> and may
-            be a different person who shares the name. For review, not a determination.
+            be a different person who shares the name. A match on an{" "}
+            <span className="font-semibold">alternative address</span> &mdash; which a director may
+            publish instead of their home address from 18&nbsp;November&nbsp;2026 &mdash; is labelled
+            as such, because an alternative address is often an accountant&rsquo;s or agent&rsquo;s
+            office shared by all of their clients. For review, not a determination.
           </p>
 
           {data.people.length === 0 ? (

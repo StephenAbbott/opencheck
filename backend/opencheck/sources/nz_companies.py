@@ -123,11 +123,52 @@ def _paf(a: Any) -> str | None:
     return str(a.get("pafId") or "").strip() or None
 
 
+# Companies (Address Information) Amendment Act 2025 — in force 18 Nov 2026.
+# A director (and a shareholder who is that director or lives with them) may
+# show an *alternative* physical address on the public Companies Register in
+# place of their residential one. From that date the NZBN v5 address blocks
+# carry an ``addressType`` of ``PHYSICAL`` (residential), ``ALTERNATIVE``, or
+# null. Per MBIE's sandbox notice (30 Sept 2026):
+#
+#   * public viewers see ``ALTERNATIVE`` when one is filed, otherwise null
+#     (null is the pre-Act behaviour for a residential address — i.e. null
+#     means residential, it does not mean "unknown");
+#   * an authority holder sees ``PHYSICAL`` and/or ``ALTERNATIVE``, and for
+#     **directors** gets *both* blocks when both exist.
+#
+# So ``roleAddress`` can hold more than one block and MBIE does not specify the
+# order. Choosing ``[0]`` would be a coin-flip between a residential and a
+# service address, so pick deliberately instead: a current block before an
+# ended one, then residential (``PHYSICAL`` or null) before ``ALTERNATIVE``.
+# Residential is preferred because an alternative address is shared by every
+# client of the accountant or agent who provides it, so it is far weaker
+# evidence that two role records are the same person.
+_ADDR_TYPE_RANK = {"PHYSICAL": 0, "ALTERNATIVE": 2}
+_ADDR_TYPE_RANK_UNTYPED = 1
+
+
+def _address_type(a: Any) -> str | None:
+    """Normalised NZBN ``addressType`` for an address block (upper-case)."""
+    if not isinstance(a, dict):
+        return None
+    return str(a.get("addressType") or "").strip().upper() or None
+
+
 def _role_address(r: dict[str, Any]) -> dict[str, Any]:
-    """The first usable address block for a role (roleAddress[] or ASIC)."""
-    block = r.get("roleAddress")
-    if isinstance(block, list) and block and isinstance(block[0], dict):
-        return block[0]
+    """The address block to use for a role (``roleAddress[]`` or ASIC).
+
+    Chosen by ``addressType``, not by position — see ``_ADDR_TYPE_RANK``.
+    Pre-Act every block is untyped and current, so this returns the same block
+    ``[0]`` did, except that a current address now beats an ended one.
+    """
+    blocks = [a for a in (r.get("roleAddress") or []) if isinstance(a, dict)]
+    if blocks:
+        def _rank(a: dict[str, Any]) -> tuple[int, int]:
+            ended = 1 if a.get("endDate") else 0
+            kind = _address_type(a)
+            return (ended, _ADDR_TYPE_RANK.get(kind or "", _ADDR_TYPE_RANK_UNTYPED))
+        # ``min`` is stable, so blocks of equal rank keep the API's own order.
+        return min(blocks, key=_rank)
     asic = r.get("roleAsicAddress")
     return asic if isinstance(asic, dict) else {}
 
@@ -143,6 +184,7 @@ def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
         status = str(r.get("roleStatus") or "").strip() or None
         addr = _role_address(r)
         addr_str, paf = _address_str(addr), _paf(addr)
+        addr_type = _address_type(addr)
         ent = r.get("roleEntity") or {}
         if isinstance(ent, dict) and str(ent.get("entityName") or "").strip():
             out.append({
@@ -150,7 +192,7 @@ def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "name": str(ent["entityName"]).strip(),
                 "nzbn": str(ent.get("nzbn") or "").strip() or None,
                 "role_type": role_type, "status": status, "start": start, "end": end,
-                "address": addr_str, "paf_id": paf,
+                "address": addr_str, "paf_id": paf, "address_type": addr_type,
             })
             continue
         person = r.get("rolePerson")
@@ -160,7 +202,7 @@ def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "kind": "person", "name": name, "nzbn": None,
                 "search_name": _person_search_name(person),
                 "role_type": role_type, "status": status, "start": start, "end": end,
-                "address": addr_str, "paf_id": paf,
+                "address": addr_str, "paf_id": paf, "address_type": addr_type,
             })
     return out
 
@@ -196,6 +238,7 @@ def _norm_shareholders(company_details: dict[str, Any]) -> list[dict[str, Any]]:
             start = _date(h.get("appointmentDate"))
             addr = h.get("shareholderAddress") or {}
             addr_str, paf = _address_str(addr), _paf(addr)
+            addr_type = _address_type(addr)
             if isinstance(other, dict) and str(other.get("currentEntityName") or "").strip():
                 out.append({
                     "kind": "entity",
@@ -203,7 +246,7 @@ def _norm_shareholders(company_details: dict[str, Any]) -> list[dict[str, Any]]:
                     "nzbn": str(other.get("nzbn") or "").strip() or None,
                     "company_number": str(other.get("companyNumber") or "").strip() or None,
                     "shares": shares, "percent": percent, "jointly_held": joint, "start": start,
-                    "address": addr_str, "paf_id": paf,
+                    "address": addr_str, "paf_id": paf, "address_type": addr_type,
                 })
                 continue
             indiv = h.get("individualShareholder")
@@ -213,7 +256,7 @@ def _norm_shareholders(company_details: dict[str, Any]) -> list[dict[str, Any]]:
                     "kind": "person", "name": name, "nzbn": None, "company_number": None,
                     "search_name": _person_search_name(indiv),
                     "shares": shares, "percent": percent, "jointly_held": joint, "start": start,
-                    "address": addr_str, "paf_id": paf,
+                    "address": addr_str, "paf_id": paf, "address_type": addr_type,
                 })
     return out
 
