@@ -49,6 +49,8 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Demo set — Phase 0 anchor entities
 # Keep in sync with the Phase 0 Notion sub-page and EXAMPLE_LEIS in App.tsx.
+# Phase 272: "complex_corporate_structure" retired from every feature list —
+# the composite it named is no longer emitted (see risk.RETIRED_SIGNAL_CODES).
 # ---------------------------------------------------------------------------
 
 DEMO_LEIS: list[dict] = [
@@ -56,7 +58,7 @@ DEMO_LEIS: list[dict] = [
         "lei": "4OFD47D73QFJ1T1MOF29",
         "name": "Daily Mail and General Trust P L C",
         "ch": "00184594",
-        "features": ["complex_corporate_structure", "trust_or_arrangement"],
+        "features": ["trust_or_arrangement"],
         "note": "Complex corporate structure spanning jurisdictions",
     },
     {
@@ -66,7 +68,6 @@ DEMO_LEIS: list[dict] = [
         "features": [
             "trust_or_arrangement",
             "complex_ownership_layers",
-            "complex_corporate_structure",
             "non_eu_jurisdiction",
         ],
         "note": "Large corporate group with a complex structure spread across jurisdictions",

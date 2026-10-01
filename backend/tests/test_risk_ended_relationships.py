@@ -4,8 +4,8 @@ Phase 219 made an ended relationship *look* ended on every diagram; the risk
 engine still read every relationship as current. Stephen's decisions
 (17 Sept 2026):
 
-* **Structural signals keep ended relationships** — layers, the AMLA
-  composite, state control, the non-EU upstream walk, textual nominee and
+* **Structural signals keep ended relationships** — layers (and, since
+  Phase 272, the complexity elements on them), state control, the non-EU upstream walk, textual nominee and
   opaque ownership — and say "including ended relationships" in the summary
   and the evidence whenever an ended link is part of what they counted.
 * **Related-party screens keep former parties** and call them "former".
@@ -182,9 +182,10 @@ def _layers(bods):
 
 def test_layers_on_a_current_chain_are_unchanged() -> None:
     sig = _layers(_chain())
-    assert sig.summary == (
-        "Ownership chain above the subject has 3 corporate layers (AMLA threshold: ≥3)."
+    assert sig.summary.startswith(
+        "Ownership chain above the subject has 2 intermediate corporate layers."
     )
+    assert INCLUDING_ENDED not in sig.summary
     assert "includes_ended_relationships" not in sig.evidence
     assert "ended_relationship_statement_ids" not in sig.evidence
 
@@ -193,7 +194,7 @@ def test_layers_on_a_current_chain_are_unchanged() -> None:
 def test_layers_through_an_ended_link_still_count_and_say_so(link) -> None:
     sig = _layers(_chain(ended_link=link))
     assert sig.evidence["layers"] == 3
-    assert f"3 corporate layers, {INCLUDING_ENDED} (AMLA" in sig.summary
+    assert f"2 intermediate corporate layers, {INCLUDING_ENDED}." in sig.summary
     assert sig.evidence["includes_ended_relationships"] is True
     assert sig.evidence["ended_relationship_statement_ids"] == [link]
 
@@ -222,7 +223,10 @@ def test_a_current_record_beside_an_ended_one_makes_the_link_current() -> None:
     assert "includes_ended_relationships" not in _layers(bods).evidence
 
 
-def test_composite_carries_the_ended_qualifier() -> None:
+def test_elements_keep_the_ended_qualifier_on_the_layers_signal() -> None:
+    """Phase 272: the composite that carried this qualifier is retired. The
+    layers signal now carries the elements, and its sentence keeps saying
+    "including ended relationships" after the elements are attached."""
     bods = _chain(ended_link="R2") + [
         _person("N", name="Nominee Director"),
         _rel(
@@ -233,9 +237,11 @@ def test_composite_carries_the_ended_qualifier() -> None:
         ),
     ]
     sigs = assess_amla("companies_house", {"entity_id": "S"}, bods)
-    composite = next(s for s in sigs if s.code == COMPLEX_CORPORATE_STRUCTURE)
-    assert f"3 layers of ownership ({INCLUDING_ENDED}) combined with" in composite.summary
-    assert composite.evidence["ended_relationship_statement_ids"] == ["R2"]
+    assert COMPLEX_CORPORATE_STRUCTURE not in {s.code for s in sigs}
+    sig = next(s for s in sigs if s.code == COMPLEX_OWNERSHIP_LAYERS)
+    assert f"2 intermediate corporate layers, {INCLUDING_ENDED}." in sig.summary
+    assert "nominee arrangements in the structure" in sig.summary
+    assert sig.evidence["ended_relationship_statement_ids"] == ["R2"]
 
 
 def test_state_control_through_an_ended_holding_still_fires_and_says_so() -> None:

@@ -64,12 +64,13 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     # Context, not risk — a permitted GLEIF Level 2 reporting exception.
     "GLEIF_REPORTING_EXCEPTION": ("No parent in GLEIF (exempt)", "#f8fafc", "#334155"),
     "TRUST_OR_ARRANGEMENT": ("Trust / arrangement", "#eef2ff", "#4338ca"),
-    "NON_EU_JURISDICTION": ("Non-EU jurisdiction", "#fff7ed", "#c2410c"),
+    "NON_EU_JURISDICTION": ("Outside EU/EEA", "#fff7ed", "#c2410c"),
     "STATE_CONTROLLED": ("State-controlled", "#fff7ed", "#c2410c"),
     "NOMINEE": ("Nominee", "#fdf4ff", "#a21caf"),
-    "COMPLEX_OWNERSHIP_LAYERS": ("≥3 ownership layers", "#f0f9ff", "#0369a1"),
-    "COMPLEX_CORPORATE_STRUCTURE": ("Complex structure (AMLA)", "#fef2f2", "#b91c1c"),
-    "POSSIBLE_OBFUSCATION": ("Possible obfuscation", "#fefce8", "#854d0e"),
+    "COMPLEX_OWNERSHIP_LAYERS": ("Layered ownership", "#f0f9ff", "#0369a1"),
+    # Retired in Phase 272 — never emitted; labelled for stored reports.
+    "COMPLEX_CORPORATE_STRUCTURE": ("Complex structure (withdrawn rule)", "#fef2f2", "#b91c1c"),
+    "POSSIBLE_OBFUSCATION": ("Opacity with layering", "#fefce8", "#854d0e"),
     "RELATED_PEP": ("Related PEP", "#f5f3ff", "#6d28d9"),
     # Context (Phase 247) — never counted on the card, labelled if it is shown.
     "RELATED_PEP_SUBJECT_ROLE": ("PEP by this role", "#f8fafc", "#475569"),

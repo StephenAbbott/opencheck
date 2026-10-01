@@ -236,9 +236,9 @@ export default function QuickCheckPanel({
       {/* Risk signals, with structural context as a captioned sub-block
           inside it rather than a peer section. Two sibling sections put a
           structural observation at the same weight as an adverse finding,
-          and printed the confidence legend twice on one screen. Neither the
-          AMLA CDD RTS nor AMLR Annex III treats a non-EU jurisdiction as a
-          risk factor in itself, so the distinction still has to be made —
+          and printed the confidence legend twice on one screen. A non-EU
+          jurisdiction is not a risk factor in itself, so the distinction
+          still has to be made —
           it is made by the caption, in a sentence, which is what the v2
           design does. */}
       {(riskCodes.length > 0 || contextCodes.length > 0) && (
@@ -287,12 +287,16 @@ export default function QuickCheckPanel({
                 Select any chip to read the record behind it.{" "}
                 <Explain label="Where these come from">
                   Signals are derived from open data by deterministic rules,
-                  never by a model. Those aligned to AMLA — the EU
-                  Anti-Money Laundering Authority — are read from BODS
-                  (Beneficial Ownership Data Standard) records; jurisdiction
-                  signals come from the FATF (Financial Action Task Force)
-                  and EU lists. A signal is a pointer to a record, not a
-                  conclusion about the company.
+                  never by a model. Structural signals — layering, trusts,
+                  nominees — are read from BODS (Beneficial Ownership Data
+                  Standard) records and follow the elements due-diligence
+                  standards use to judge ownership complexity, such as those
+                  in the EU Anti-Money Laundering Authority's customer due
+                  diligence standards; none of them asserts that a legal
+                  threshold is met. Jurisdiction signals come from the FATF
+                  (Financial Action Task Force) and EU high-risk lists. A
+                  signal is a pointer to a record, not a conclusion about the
+                  company.
                 </Explain>
               </p>
             </>

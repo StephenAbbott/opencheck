@@ -36,7 +36,7 @@ export function BehindTheScenesPage() {
               ["02", "Derives bridge IDs", "maps the GLEIF record to national register IDs (UK company number, Dutch KvK number, Czech IČO, …) and cross-references (Wikidata Q-ID, CUSIP)."],
               ["03", "Fans out in parallel", "each source adapter receives whichever identifier it understands and fetches independently; results stream back as they arrive."],
               ["04", "Maps to BODS 0.4", "every source payload is run through a dedicated mapper, producing entity, person, and ownership/control statements in the Beneficial Ownership Data Standard."],
-              ["05", "Aggregates risk signals", "the unified BODS graph is inspected for structural risk patterns: complex chains, non-EU jurisdiction, sanctions exposure."],
+              ["05", "Aggregates risk signals", "the unified BODS graph is inspected for structural risk patterns: layered ownership chains, trusts and nominees, high-risk jurisdictions, sanctions exposure."],
             ].map(([n, bold, rest]) => (
               <li key={n} className="flex gap-3">
                 <span className="font-mono text-[11px] text-oo-blue shrink-0 mt-0.5">{n}</span>

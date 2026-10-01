@@ -562,8 +562,7 @@ _CHECKS_CLEAR = (
 
 _CONTEXT_NOTE = (
     "Not risk findings — structural facts about the ownership chain, shown "
-    "because they are useful and because some feed the AMLA complex-structure "
-    "test. Jurisdiction risk is reported separately, from the FATF and EU lists."
+    "because they help read the structure. Jurisdiction risk is reported separately, from the FATF and EU lists."
 )
 
 
@@ -608,8 +607,10 @@ def _risk(report: dict[str, Any]) -> str:
     head = (
         '<section aria-labelledby="risk"><h2 id="risk">Risk signals</h2>'
         "<p>Risk signals are structural and jurisdictional indicators for further review, computed "
-        "deterministically across the assembled statements and aligned with the EU AMLA draft "
-        "due-diligence standards. They are not determinations of wrongdoing.</p>"
+        "deterministically across the assembled statements. Structural signals follow the "
+        "elements due-diligence standards use to judge ownership complexity — layering, "
+        "arrangements, nominees, high-risk jurisdictions — without asserting that any "
+        "regime's threshold is met. They are not determinations of wrongdoing.</p>"
     )
     reg = _registry()
     parts = [head]

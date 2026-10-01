@@ -116,7 +116,7 @@ class TestStructuredPath:
     def test_summary_says_the_register_filed_it(self):
         sig = _nominee(self._signals(_raw([ROE_NOMINEE])))
         assert "Register filed" in sig.summary
-        assert "AMLA" in sig.summary
+        assert "AMLA" not in sig.summary  # Phase 272: regime-neutral
 
     def test_does_not_fire_on_ordinary_natures(self):
         assert _nominee(self._signals(_raw(["ownership-of-shares-50-to-75-percent"]))) is None
@@ -220,11 +220,12 @@ class TestTextualFallbackSurvives:
         assert "Register filed" not in sig.summary
 
 
-class TestAmlaCompositeStillWorks:
-    def test_structured_nominee_counts_toward_the_composite_rule(self):
-        """AMLA "complex structure" = >=3 layers AND >=1 of
-        {trust, non-EU, nominee}. A structured nominee must still qualify."""
-        from opencheck.risk import COMPLEX_CORPORATE_STRUCTURE
+class TestNomineeComplexityElement:
+    def test_structured_nominee_is_a_complexity_element(self):
+        """Phase 272: the composite is retired; a structured nominee filing is
+        recorded as the ``nominee`` complexity element on the layers signal,
+        carrying its ``structured`` basis."""
+        from opencheck.risk import COMPLEX_CORPORATE_STRUCTURE, COMPLEX_OWNERSHIP_LAYERS
 
         # Three ownership layers: E1 <- E2 <- E3, plus the nominee filing.
         bods = [
@@ -255,12 +256,15 @@ class TestAmlaCompositeStillWorks:
         )
         codes = {s.code for s in signals}
         assert NOMINEE in codes
-        # The composite may or may not fire depending on how layers are counted
-        # in this minimal graph; what must hold is that the nominee signal is
-        # available to it in structured form.
         nominee = _nominee(signals)
         assert nominee.evidence["basis"] == "structured"
-        assert COMPLEX_CORPORATE_STRUCTURE  # imported symbol exists
+        assert COMPLEX_CORPORATE_STRUCTURE not in codes
+        layers = [s for s in signals if s.code == COMPLEX_OWNERSHIP_LAYERS]
+        # Whether the minimal graph resolves a subject depends on hit_id; when
+        # it does, the nominee element must carry the structured basis.
+        for sig in layers:
+            [el] = [e for e in sig.evidence["complexity_elements"] if e["element"] == "nominee"]
+            assert el["basis"] == "structured"
 
 
 class TestMalformedInput:

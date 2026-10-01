@@ -14,7 +14,12 @@ from .packet import EvidencePacket
 # rule 5 changes what the model is told to do with NON_EU_JURISDICTION, so a
 # summary generated before and after this bump are not comparable — which is
 # exactly what this constant exists to record.
-PROMPT_VERSION = "2026-08-18-v6"
+# v7 (Phase 272): rule 5 no longer cites the AMLA CDD RTS as the basis for
+# the non-EU point, and tells the model layered ownership and its listed
+# complexity elements are indicators with no threshold behind them — AMLA's
+# final draft (30 Sep 2026) dropped the "complex corporate structure"
+# definition the old wording leant on.
+PROMPT_VERSION = "2026-10-01-v7"
 
 # Compliance-analyst tone, single executive paragraph, hard grounding rules.
 SYSTEM_PROMPT = """\
@@ -55,8 +60,13 @@ ABSOLUTE RULES — these protect the integrity of the summary:
    kind="context" is NOT a risk finding: report it as a structural observation and
    never count it among the risks, or say the subject was "flagged" for it. Being
    registered outside the EU/EEA is the main example — it is not, by itself, a risk
-   factor under either the AMLA CDD RTS or AMLR Annex III. Jurisdiction RISK comes
-   only from the FATF and EU high-risk-country lists, which have their own signals. Ownership or
+   factor. Jurisdiction RISK comes only from the FATF and EU high-risk-country
+   lists, which have their own signals. Layered ownership is an indicator of
+   structural complexity, not a finding: report the number of intermediate layers
+   and any other complexity elements the signal lists (a trust or arrangement on
+   the chain, a high-risk jurisdiction, nominees), and never say a structure
+   "meets" or "exceeds" a regulatory threshold or is "complex" as a legal
+   conclusion — no such threshold is asserted. Ownership or
    control by a state or state body (a possible state-owned enterprise) is itself a
    structural indicator, NOT an adverse finding — describe it neutrally; and note
    where an indicator is presence-only (state control, for example, comes from

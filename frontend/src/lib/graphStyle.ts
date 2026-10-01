@@ -6,7 +6,7 @@
  * `BODSGraph.tsx`, next to the Cytoscape stylesheet that consumes them. The
  * legend beside the canvas was a separate, hand-written list of six chips:
  * three edge kinds and three signal families. `SIGNAL_STYLE` defines **thirty**
- * badges — `RS`, `RSC`, `Db`, `REr`, `F!`, `EU!`, `≥3`, `Nm`, `Ex` and the rest
+ * badges — `RS`, `RSC`, `Db`, `REr`, `F!`, `EU!`, `L`, `Nm`, `Ex` and the rest
  * — so a node could be drawn with a two-letter mark whose only explanation was
  * a `title` containing the raw code. Node shape carried three more unlabelled
  * distinctions: a dashed border for a person, a blue ring for a collapsed
@@ -67,7 +67,8 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   EU_HIGH_RISK_THIRD_COUNTRY: { bg:"#fee2e2", border:"#b91c1c", text:"#b91c1c", label:"EU!", severity:4 },
   PEP:                      { bg:"#f5f3ff", border:"#6d28d9", text:"#6d28d9", label:"P",  severity:4 },
   RELATED_PEP:              { bg:"#f5f3ff", border:"#6d28d9", text:"#6d28d9", label:"RP", severity:4 },
-  COMPLEX_CORPORATE_STRUCTURE: { bg:"#fef2f2", border:"#b91c1c", text:"#b91c1c", label:"CC", severity:3 },
+  // Retired in Phase 272 (never emitted) — kept quiet for stored reports.
+  COMPLEX_CORPORATE_STRUCTURE: { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"CC", severity:0 },
   FATF_GREY_LIST:           { bg:"#fff7ed", border:"#9a3412", text:"#9a3412", label:"Fg", severity:2 },
   // Context, not risk — slate, and the LOWEST severity, so a node is
   // never ranked by the graph on the strength of being non-EU alone.
@@ -75,7 +76,7 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   STATE_CONTROLLED:         { bg:"#fff7ed", border:"#c2410c", text:"#c2410c", label:"St", severity:2 },
   OFFSHORE_LEAKS:           { bg:"#fef3c7", border:"#92400e", text:"#92400e", label:"OL", severity:2 },
   TRUST_OR_ARRANGEMENT:     { bg:"#eef2ff", border:"#4338ca", text:"#4338ca", label:"T",  severity:1 },
-  COMPLEX_OWNERSHIP_LAYERS: { bg:"#f0f9ff", border:"#0369a1", text:"#0369a1", label:"≥3", severity:1 },
+  COMPLEX_OWNERSHIP_LAYERS: { bg:"#f0f9ff", border:"#0369a1", text:"#0369a1", label:"L",  severity:1 },
   POSSIBLE_OBFUSCATION:     { bg:"#fefce8", border:"#854d0e", text:"#854d0e", label:"?",  severity:1 },
   NOMINEE:                  { bg:"#fdf4ff", border:"#7e22ce", text:"#7e22ce", label:"Nm", severity:1 },
   OPAQUE_OWNERSHIP:         { bg:"#f8fafc", border:"#475569", text:"#475569", label:"O",  severity:1 },

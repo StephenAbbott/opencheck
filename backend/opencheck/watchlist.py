@@ -90,6 +90,10 @@ from .names import name_similarity
 from .secret_scrub import describe_exception
 from .verdict import VERDICT_TEMPLATE
 
+#: Mirrors ``risk.RETIRED_SIGNAL_CODES``. Not imported from ``risk`` to keep
+#: this module's import graph light; ``test_watchlist`` pins the two equal.
+RETIRED_SIGNAL_CODES: frozenset[str] = frozenset({"COMPLEX_CORPORATE_STRUCTURE"})
+
 log = logging.getLogger("opencheck.watchlist")
 
 #: Tiers, as recorded on an entry. Closed vocabulary.
@@ -430,6 +434,12 @@ def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list
         for code in sorted(set(cb) - set(ca)):
             changes.append({"kind": new_kind, "code": code, "sources": sorted(cb[code])})
         for code in sorted(set(ca) - set(cb)):
+            # Phase 272: a code the engine stopped emitting on purpose (the
+            # rule was withdrawn) vanishing from a stored baseline is not a
+            # change in the company. Reporting it as "retired" would read as
+            # an improvement nobody observed.
+            if code in RETIRED_SIGNAL_CODES:
+                continue
             producers = ca[code]
             # The Phase 146 rule: absence is a finding only when the source
             # that produced the code answered. A degraded producer, or a

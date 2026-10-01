@@ -800,3 +800,41 @@ def test_a_list_unopened_past_the_window_is_deleted(client: TestClient, env: Pat
     assert r.status_code == 404 and "90 days" in r.json()["detail"]
     assert client.get(f"/watch/{keep}").status_code == 200
     assert store.watched_leis() == {PARENT}
+
+
+# ---------------------------------------------------------------------------
+# Phase 272 — a withdrawn rule's code vanishing is not a change in the company
+# ---------------------------------------------------------------------------
+
+
+def test_retired_codes_mirror_the_risk_engine() -> None:
+    from opencheck import risk, watchlist
+
+    assert watchlist.RETIRED_SIGNAL_CODES == risk.RETIRED_SIGNAL_CODES
+
+
+def test_retired_code_disappearing_is_not_reported_as_retired() -> None:
+    from opencheck.watchlist import diff_snapshots
+
+    before = {
+        "signals": [
+            {"code": "COMPLEX_CORPORATE_STRUCTURE", "source_id": "companies_house", "kind": "risk"},
+            {"code": "NOMINEE", "source_id": "companies_house", "kind": "risk"},
+        ],
+    }
+    after = {
+        "signals": [
+            {"code": "NOMINEE", "source_id": "companies_house", "kind": "risk"},
+        ],
+    }
+    changes = diff_snapshots(before, after)
+    assert not any(c.get("code") == "COMPLEX_CORPORATE_STRUCTURE" for c in changes)
+
+
+def test_an_ordinary_code_disappearing_is_still_retired() -> None:
+    """Control: the suppression is for withdrawn rules only."""
+    from opencheck.watchlist import diff_snapshots
+
+    before = {"signals": [{"code": "NOMINEE", "source_id": "companies_house", "kind": "risk"}]}
+    changes = diff_snapshots(before, {"signals": []})
+    assert {"kind": "signal_retired", "code": "NOMINEE", "sources": ["companies_house"]} in changes

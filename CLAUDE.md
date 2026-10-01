@@ -598,9 +598,9 @@ other labels.
 - `COUNTER_SANCTIONED`, `RELATED_COUNTER_SANCTIONED` → slate (#f1f5f9 / #334155) — OpenSanctions `sanction.counter`. Deliberately **outside** the rose/amber sanctions ramp, not merely a lighter rose: the Phase 105 failure was a counter-designation by a non-democratic regime reading as a shade of "Sanctioned", and any red or amber reproduces it. Graph `SIGNAL_STYLE.severity` is **2** — below `SANCTIONS_LINKED` (3), inverting the structural ranking on purpose, since the graph stacks worst-severity-wins and a counter-listing must never outrank a signal with an actual compliance consequence. `RiskChip.test.ts` fails the build if either chip's classes match `/rose/` or `/amber/`
 - `FATF_BLACK_LIST` → red (#fee2e2 / #991b1b)
 - `PEP`, `RELATED_PEP` → violet (#f5f3ff / #6d28d9)
-- `COMPLEX_CORPORATE_STRUCTURE` → red (#fef2f2 / #b91c1c)
+- `COMPLEX_CORPORATE_STRUCTURE` → retired Phase 272; slate context palette for stored reports only
 - `FATF_GREY_LIST` → orange dark (#fff7ed / #9a3412)
-- `NON_EU_JURISDICTION` → orange (#fff7ed / #c2410c)
+- `NON_EU_JURISDICTION` → slate context palette (orange on the og share card)
 - `OFFSHORE_LEAKS` → amber (#fef3c7 / #92400e)
 - `TRUST_OR_ARRANGEMENT` → indigo (#eef2ff / #4338ca)
 - `COMPLEX_OWNERSHIP_LAYERS` → sky (#f0f9ff / #0369a1)
@@ -608,7 +608,7 @@ other labels.
 **Signal→BODS node mapping** (evidence fields) — owned by `frontend/src/lib/signalScope.ts`, **not** by `BODSGraph.tsx`. Add a new evidence shape there and every consumer picks it up:
 - `SANCTIONED`, `PEP` → `evidence.statement_id` (added in Phase 45 via `_bods_stable_id(source_id, hit_id)` in `risk.py`)
 - `RELATED_SANCTIONED`, `RELATED_PEP` → `evidence.subject_statement_id`
-- `TRUST_OR_ARRANGEMENT`, `NOMINEE`, AMLA composites, `STATE_CONTROLLED` (Phase 240) → `evidence.matches[].statement_id`
+- `TRUST_OR_ARRANGEMENT`, `NOMINEE`, `STATE_CONTROLLED` (Phase 240) → `evidence.matches[].statement_id`
 - `NON_EU_JURISDICTION`, `FATF_BLACK_LIST`, `FATF_GREY_LIST` → `evidence.jurisdictions[].statement_id`
 - `COMPLEX_OWNERSHIP_LAYERS` → `evidence.longest_path[]` (array of statementIds, subject first — the chain runs upwards from it) plus `evidence.subject_statement_id`
 
@@ -1168,7 +1168,7 @@ key before joining EITI to EITI.
 
 `EXAMPLE_LEIS` in `frontend/src/components/HomePanels.tsx` (moved out of `App.tsx` in Phase 168) contains pre-computed `signals` arrays shown on the picker cards before the user clicks. These must be kept in sync with what the risk engine actually produces for each entity. When the risk engine changes (new signals, retired signals, confidence changes), update `EXAMPLE_LEIS` to match.
 
-Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_OWNERSHIP_LAYERS`, `COMPLEX_CORPORATE_STRUCTURE`, `SANCTIONED`, `RELATED_SANCTIONED`, `NON_EU_JURISDICTION`. Confidence `"high"` renders as `●`, `"medium"` as `◐`.
+Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_OWNERSHIP_LAYERS`, `SANCTIONED`, `RELATED_SANCTIONED`, `NON_EU_JURISDICTION`. Confidence `"high"` renders as `●`, `"medium"` as `◐`.
 
 ---
 
@@ -1441,7 +1441,7 @@ filtered by `entity.legalAddress.country`.
 |---|---|
 | `backend/opencheck/routers/lookup.py` | Main lookup endpoint + SSE stream, one pipeline for both; the replay cache, gate and fold are in `lookup_replay.py`, the FullCheck expansion in `routers/expand.py` |
 | `backend/opencheck/bods/mapper.py` | GLEIF mapper + passthroughs, and the address every per-source mapper in `bods/mappers/` is re-exported from |
-| `backend/opencheck/risk.py` | Risk signal rules (PEP, SANCTIONED, AMLA, FATF, etc.) |
+| `backend/opencheck/risk.py` | Risk signal rules (PEP, SANCTIONED, structural complexity, FATF/EU, etc.) |
 | `backend/opencheck/cross_check.py` | RELATED_PEP / RELATED_SANCTIONED from cross-source name matching |
 | `frontend/src/components/BODSGraph.tsx` | Cytoscape.js ownership graph with BOVS icons, flags, edge annotations, risk overlays |
 | `frontend/src/components/risk/RiskChip.tsx` | Risk signal colours and labels |
@@ -1592,8 +1592,7 @@ Stephen's decisions (17 Sept 2026), which are what the code implements:
   when nothing ended contributed**, so a current-only signal is unchanged.
   Covered: `COMPLEX_OWNERSHIP_LAYERS` (the DFS prefers, between equally long
   paths, the one with fewer ended links; a current record for the same pair
-  makes the link current), `COMPLEX_CORPORATE_STRUCTURE` (carries the layers'
-  and the nominee condition's ended ids), `STATE_CONTROLLED` (qualified only
+  makes the link current), `STATE_CONTROLLED` (qualified only
   when a state owner has no current holding; the overlay anchors on a current
   holding first), `NON_EU_JURISDICTION` (qualified when a non-EU party is
   reachable *only* through an ended link — `_upstream_entity_ids(...,

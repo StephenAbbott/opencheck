@@ -14,7 +14,7 @@ You paste in a Legal Entity Identifier. OpenCheck queries GLEIF first, derives e
 
 Everything maps into version 0.4 of the Beneficial Ownership Data Standard (BODS), the cross-source links + risk signals are computed deterministically, and the whole bundle is one click away from a downloadable shareable export.
 
-The risk-signal layer mirrors the draft customer due diligence regulatory technical standards from the EU's Anti-Money Laundering Authority (AMLA) draft conditions for "complex corporate structures" — trust/arrangement, non-EU jurisdiction, nominee, ≥3 ownership layers, plus the composite threshold rule and an advisory mirror of the subjective obfuscation condition.
+The structural risk signals report the elements due-diligence standards use to judge ownership complexity — intermediate ownership layers, trusts and arrangements, nominees and high-risk jurisdictions on the chain — without asserting any regulatory threshold (Phase 272, following the final draft of the EU AMLA customer due diligence standards, which dropped the "complex corporate structure" definition), plus an advisory where withheld parties meet layered ownership.
 
 ### Why it earns its keep
 

@@ -205,10 +205,12 @@ _RISK_LABELS = {
     "NOMINEE": "Nominee arrangement",
     "OPAQUE_OWNERSHIP": "Opaque ownership (party withheld or unidentified)",
     "GLEIF_REPORTING_EXCEPTION": "No parent in GLEIF (permitted reporting exception)",
-    "POSSIBLE_OBFUSCATION": "Possible obfuscation (advisory)",
+    "POSSIBLE_OBFUSCATION": "Opacity with layering (advisory)",
     "SANCTIONED_SECURITY": "Sanctioned securities",
-    "COMPLEX_OWNERSHIP_LAYERS": "Complex ownership layers",
-    "COMPLEX_CORPORATE_STRUCTURE": "Complex corporate structure",
+    "COMPLEX_OWNERSHIP_LAYERS": "Layered ownership (intermediate corporate layers)",
+    "COMPLEX_CORPORATE_STRUCTURE": (
+        "Complex corporate structure (withdrawn consultation-draft rule)"
+    ),
     "STATE_CONTROLLED": "State-controlled (possible SOE)",
 }
 

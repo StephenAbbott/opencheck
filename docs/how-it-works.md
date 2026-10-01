@@ -52,7 +52,7 @@ python scripts/extract_bods_subgraphs.py \
   --max-hops 3
 ```
 
-`--max-hops` controls how many ownership layers to walk out from each LEI. The `COMPLEX_OWNERSHIP_LAYERS` AMLA rule needs ≥3, so 3 is the practical floor; 5 captures deeper offshore structures at the cost of bigger bundle files.
+`--max-hops` controls how many ownership layers to walk out from each LEI. `COMPLEX_OWNERSHIP_LAYERS` needs three entities on the chain (two intermediate layers), so 3 is the practical floor; 5 captures deeper offshore structures at the cost of bigger bundle files.
 
 ## API surface
 

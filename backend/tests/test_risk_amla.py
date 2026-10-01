@@ -1,23 +1,23 @@
-"""AMLA CDD RTS risk-signal tests.
+"""Structural complexity and jurisdiction risk-signal tests.
 
-These mirror the objective conditions of AMLA's draft CDD RTS for
-"complex corporate structures":
+Phase 272 re-based these on the FINAL draft of AMLA's CDD RTS (Art 28(1)
+AMLR, 30 Sep 2026). Article 11(4) lists four elements that may increase
+complexity — and sets no definition or threshold:
 
-  (a) trust or legal arrangement in any layer
-  (b) jurisdictions outside the EU/EEA
-  (c) nominee shareholders/directors anywhere
+  (a) the number of intermediate layers          -> COMPLEX_OWNERSHIP_LAYERS
+  (b) legal arrangements in any of those layers  -> element "arrangement"
+  (c) customer or layer entity registered in a
+      high-risk jurisdiction (FATF / EU lists)   -> element "high_risk_jurisdiction"
+  (d) nominees involved in the structure         -> element "nominee"
 
-Plus the threshold rule: ≥3 layers + **≥2** of (a)/(b)/(c) → complex
-corporate structure. Article 12(1) says "more than one of the following
-conditions", i.e. at least two; condition (b) is scoped to the layered
-path.
+(b) and (c) are path-scoped; (d) is bundle-wide. The elements ride on the
+layers signal; the consultation draft's composite COMPLEX_CORPORATE_STRUCTURE
+is retired and must never be emitted, and non-EU status feeds nothing.
 
-Plus the two list-based jurisdiction RISK signals (FATF, EU Article 29)
-and the demotion of NON_EU_JURISDICTION to kind="context".
-
-Plus the subjective ``POSSIBLE_OBFUSCATION`` advisory signal.
-
-Plus operator-tunable jurisdiction list via ``OPENCHECK_AMLA_*`` env vars.
+Plus the two list-based jurisdiction RISK signals (FATF, EU Article 29),
+NON_EU_JURISDICTION as kind="context", the ``POSSIBLE_OBFUSCATION`` advisory
+(opacity + layering), and the operator-tunable ``OPENCHECK_AMLA_*`` /
+``OPENCHECK_HIGH_RISK_JURISDICTION_LISTS`` settings.
 """
 
 from __future__ import annotations
@@ -42,10 +42,13 @@ from opencheck.risk import (
     NON_EU_JURISDICTION,
     OPAQUE_OWNERSHIP,
     POSSIBLE_OBFUSCATION,
+    RETIRED_SIGNAL_CODES,
     TRUST_OR_ARRANGEMENT,
     _eu_eea_codes,
     assess_amla,
     assess_bundle,
+    assess_structure,
+    high_risk_lists_for,
 )
 
 
@@ -127,7 +130,7 @@ def test_trust_or_arrangement_fires_on_arrangement_entity_type() -> None:
     assert TRUST_OR_ARRANGEMENT in codes
     sig = next(s for s in signals if s.code == TRUST_OR_ARRANGEMENT)
     assert sig.confidence == "high"
-    assert "AMLA" in sig.summary
+    assert "AMLA" not in sig.summary  # Phase 272: regime-neutral wording
     assert sig.evidence["matches"][0]["match"] == "entityType=arrangement"
 
 
@@ -508,7 +511,7 @@ def test_nominee_fires_on_interest_details() -> None:
     assert sig.confidence == "medium"
     assert sig.evidence["basis"] == "textual"
     assert "descriptive text" in sig.summary
-    assert "AMLA" in sig.summary
+    assert "AMLA" not in sig.summary  # Phase 272: regime-neutral wording
 
 
 def test_nominee_fires_on_interest_type_string() -> None:
@@ -543,7 +546,7 @@ def test_no_nominee_signal_for_plain_relationship() -> None:
 
 
 # ---------------------------------------------------------------------
-# Layered ownership + composite COMPLEX_CORPORATE_STRUCTURE
+# Layered ownership + complexity elements (Phase 272)
 # ---------------------------------------------------------------------
 
 
@@ -684,107 +687,145 @@ def test_layers_reports_whether_the_chain_reached_a_beneficial_owner() -> None:
     assert sig2.evidence["reaches_beneficial_owner"] is True
 
 
-def test_complex_corporate_structure_needs_two_conditions_not_one() -> None:
-    """Article 12(1) requires "MORE THAN ONE" condition — i.e. ≥2.
-
-    Three layers plus a single non-EU layer is one condition, so the
-    composite must NOT fire. This is the central proportionality fix: a
-    layered group that merely reaches outside the EU is not, on the RTS's
-    own terms, a complex corporate structure.
-    """
-    bods = _three_layer_chain()
-    bods[2]["recordDetails"]["jurisdiction"] = {
-        "code": "VG",
-        "name": "British Virgin Islands",
-    }
-    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
-    codes = {s.code for s in signals}
-    assert COMPLEX_OWNERSHIP_LAYERS in codes
-    assert NON_EU_JURISDICTION in codes  # standalone signal still reports it
-    assert COMPLEX_CORPORATE_STRUCTURE not in codes
+def _layers(signals):
+    return next(s for s in signals if s.code == COMPLEX_OWNERSHIP_LAYERS)
 
 
-def test_complex_corporate_structure_fires_on_two_conditions() -> None:
-    """Non-EU layer (b) PLUS a trust layer (a) = two conditions → fires."""
-    bods = _three_layer_chain()
-    bods[2]["recordDetails"]["jurisdiction"] = {
-        "code": "VG",
-        "name": "British Virgin Islands",
-    }
-    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
-    bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
-    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
-    codes = {s.code for s in signals}
-    assert COMPLEX_CORPORATE_STRUCTURE in codes
-    composite = next(s for s in signals if s.code == COMPLEX_CORPORATE_STRUCTURE)
-    assert set(composite.evidence["triggers"]) == {
-        "trust/arrangement",
-        "non-EU jurisdiction",
-    }
-    assert composite.evidence["layers"] == 3
+def _elements(sig) -> dict[str, dict]:
+    return {e["element"]: e for e in sig.evidence["complexity_elements"]}
 
 
-def test_complex_corporate_structure_does_not_fire_without_aggravator() -> None:
-    """Three layers, all EU, no trust, no nominee — not "complex" per AMLA."""
-    signals = assess_amla(
-        "companies_house", {"entity_id": "E1"}, _three_layer_chain()
-    )
-    codes = {s.code for s in signals}
-    assert COMPLEX_OWNERSHIP_LAYERS in codes
-    assert COMPLEX_CORPORATE_STRUCTURE not in codes
-
-
-def test_complex_corporate_structure_does_not_fire_on_trust_alone() -> None:
-    """A trust layer on its own is also only one condition."""
-    bods = _three_layer_chain()
-    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
-    bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
-    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
-    assert COMPLEX_CORPORATE_STRUCTURE not in {s.code for s in signals}
-
-
-def test_trust_condition_is_scoped_to_the_layered_path() -> None:
-    """Article 12(1)(a) says "in any of the LAYERS", like point (b).
-
-    A trust on a side branch still raises the standalone
-    TRUST_OR_ARRANGEMENT signal, but must not count towards the Article 12
-    composite — even alongside a genuine second condition on the path.
-    """
-    bods = _three_layer_chain()
-    # Condition (b) genuinely met ON the path.
-    bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG", "name": "BVI"}
-    # A trust with NO relationship edges — not on any layer.
-    bods.append(
-        _entity("E9", entity_type="arrangement", name="Unrelated Family Trust")
-    )
-    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
-    codes = {s.code for s in signals}
-    assert TRUST_OR_ARRANGEMENT in codes  # bundle-wide signal still fires
-    # …but only condition (b) is on the path, so one condition, no composite.
-    assert COMPLEX_CORPORATE_STRUCTURE not in codes
-
-
-def test_trust_on_the_path_does_count_towards_the_composite() -> None:
-    """Control: the same trust, this time on a layer, tips it to two."""
+def test_retired_composite_is_never_emitted() -> None:
+    """The consultation-draft composite is gone: three layers plus a trust
+    and a high-risk jurisdiction — every old trigger at once — still raises
+    no COMPLEX_CORPORATE_STRUCTURE. The final draft RTS sets no threshold,
+    so no chip may say a structure "meets" one."""
     bods = _three_layer_chain()
     bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG", "name": "BVI"}
     bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
-    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
-    composite = next(
-        s for s in signals if s.code == COMPLEX_CORPORATE_STRUCTURE
-    )
-    assert set(composite.evidence["triggers"]) == {
-        "trust/arrangement",
-        "non-EU jurisdiction",
+    bods.append(_entity("E9", name="Nominee Holdings"))
+    bods.append(_rel("R9", "E9", "E1", interests=[
+        {"type": "otherInfluenceOrControl", "directOrIndirect": "direct",
+         "details": "registered owner as nominee"},
+    ]))
+    signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
+    codes = {s.code for s in signals}
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
+    assert COMPLEX_CORPORATE_STRUCTURE in RETIRED_SIGNAL_CODES
+    assert not any("meets" in s.summary.lower() for s in signals)
+    assert not any("threshold" in s.summary.lower() for s in signals)
+    assert set(_elements(_layers(signals))) == {
+        "arrangement", "high_risk_jurisdiction", "nominee"
     }
 
 
-def test_nominee_condition_stays_bundle_wide() -> None:
-    """Point (c) reads "involved in the structure", not "in any of these
-    layers" — deliberately looser, so it is NOT path-scoped."""
+def test_assess_amla_is_an_alias_for_assess_structure() -> None:
+    assert assess_amla is assess_structure
+
+
+def test_layers_reports_intermediate_layers_in_its_sentence() -> None:
+    """The final draft counts *intermediate* layers; every entity above the
+    subject is one. ``layers`` keeps counting the subject (the depth
+    resolver, graph_shape and the verdict read it)."""
+    sig = _layers(assess_amla("companies_house", {"entity_id": "E1"}, _three_layer_chain()))
+    assert sig.evidence["layers"] == 3
+    assert sig.evidence["intermediate_layers"] == 2
+    assert "2 intermediate corporate layers" in sig.summary
+    assert "AMLA" not in sig.summary
+    assert "not a finding in itself" in sig.summary
+    assert sig.evidence["complexity_elements"] == []
+
+
+def test_non_eu_layer_is_not_a_complexity_element() -> None:
+    """Panama is outside the EU but on neither FATF list nor the EU list.
+    The consultation draft's "outside the EU" condition is gone: the
+    context note still fires, but no element is recorded."""
     bods = _three_layer_chain()
-    bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG", "name": "BVI"}
-    # A nominee relationship hanging off the bundle, not on the main chain.
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "PA", "name": "Panama"}
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    assert NON_EU_JURISDICTION in {s.code for s in signals}
+    assert _layers(signals).evidence["complexity_elements"] == []
+
+
+def test_high_risk_jurisdiction_element_names_its_lists() -> None:
+    bods = _three_layer_chain()
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG", "name": "British Virgin Islands"}
+    sig = _layers(assess_amla("companies_house", {"entity_id": "E1"}, bods))
+    el = _elements(sig)["high_risk_jurisdiction"]
+    assert el["jurisdictions"] == [
+        {"statement_id": "E3", "code": "VG", "name": "British Virgin Islands",
+         "lists": ["eu", "fatf_grey"]}
+    ]
+    assert "high-risk jurisdiction (VG)" in sig.summary
+
+
+def test_high_risk_element_counts_the_subject_itself() -> None:
+    """Art 11(4)(c): "the customer OR any legal entities present at any of
+    these layers". Unlike NON_EU_JURISDICTION, the subject's own
+    jurisdiction counts here."""
+    bods = _three_layer_chain()
+    bods[0]["recordDetails"]["jurisdiction"] = {"code": "IR", "name": "Iran"}
+    sig = _layers(assess_amla("companies_house", {"entity_id": "E1"}, bods))
+    el = _elements(sig)["high_risk_jurisdiction"]
+    assert [j["statement_id"] for j in el["jurisdictions"]] == ["E1"]
+    assert el["jurisdictions"][0]["lists"] == ["eu", "fatf_black"]
+
+
+def test_high_risk_element_is_scoped_to_the_layered_path() -> None:
+    """A Russian entity with no edges is on no layer. The standalone EU
+    signal still reports it (bundle-wide); the element does not."""
+    bods = _three_layer_chain()
+    bods.append(_entity("E9", name="Unrelated OOO", jurisdiction_code="RU"))
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    assert EU_HIGH_RISK_THIRD_COUNTRY in {s.code for s in signals}
+    assert "high_risk_jurisdiction" not in _elements(_layers(signals))
+
+
+def test_high_risk_lists_are_configurable(monkeypatch) -> None:
+    """OPENCHECK_HIGH_RISK_JURISDICTION_LISTS=eu narrows the element to the
+    EU list: Bulgaria (FATF grey, not EU-listed) stops counting, the BVI
+    (on both) still counts, and the standalone FATF signal is untouched."""
+    monkeypatch.setenv("OPENCHECK_HIGH_RISK_JURISDICTION_LISTS", "eu")
+    get_settings.cache_clear()
+    assert high_risk_lists_for("BG") == []
+    assert high_risk_lists_for("VG") == ["eu"]
+    bods = _three_layer_chain()
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "BG", "name": "Bulgaria"}
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    assert FATF_GREY_LIST in {s.code for s in signals}
+    assert "high_risk_jurisdiction" not in _elements(_layers(signals))
+
+
+def test_high_risk_lists_default_to_all_three() -> None:
+    assert high_risk_lists_for("BG") == ["fatf_grey"]
+    assert high_risk_lists_for("RU") == ["eu"]
+    assert high_risk_lists_for("KP") == ["eu", "fatf_black"]
+    assert high_risk_lists_for("DE") == []
+
+
+def test_trust_element_is_scoped_to_the_layered_path() -> None:
+    """Art 11(4)(b) says "in any of those layers". A trust on no layer
+    raises the standalone signal but is not an element of the chain."""
+    bods = _three_layer_chain()
+    bods.append(_entity("E9", entity_type="arrangement", name="Unrelated Family Trust"))
+    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
+    assert TRUST_OR_ARRANGEMENT in {s.code for s in signals}
+    assert "arrangement" not in _elements(_layers(signals))
+
+
+def test_trust_on_the_path_is_an_element() -> None:
+    bods = _three_layer_chain()
+    bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
+    sig = _layers(assess_amla("companies_house", {"entity_id": "E1"}, bods))
+    assert _elements(sig)["arrangement"]["statement_ids"] == ["E2"]
+    assert "a trust or arrangement on the chain" in sig.summary
+
+
+def test_nominee_element_stays_bundle_wide() -> None:
+    """Art 11(4)(d) reads "involvement … in the structure", looser than
+    "in any of those layers" — deliberately NOT path-scoped. Pins the
+    asymmetry so nobody "tidies" it into the path-scoped pair."""
+    bods = _three_layer_chain()
     bods.append(_entity("E9", name="Nominee Holdings"))
     bods.append(
         _rel("R9", "E9", "E1", interests=[
@@ -794,85 +835,68 @@ def test_nominee_condition_stays_bundle_wide() -> None:
         ])
     )
     signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
-    codes = {s.code for s in signals}
-    assert NOMINEE in codes
-    assert COMPLEX_CORPORATE_STRUCTURE in codes
+    assert NOMINEE in {s.code for s in signals}
+    el = _elements(_layers(signals))["nominee"]
+    assert el["scope"] == "structure"
+    assert "nominee arrangements in the structure" in _layers(signals).summary
 
 
-def test_non_eu_condition_is_scoped_to_the_layered_path() -> None:
-    """Article 12(1)(b) says "present at any of THESE LAYERS".
-
-    An off-path non-EU entity that is not part of the ownership chain
-    must not count towards the Article 12 composite — even alongside a
-    genuine second condition. Since Phase 153 the standalone
-    NON_EU_JURISDICTION signal walks the chain above the subject too, so
-    an entity with no edges at all raises nothing anywhere.
-    """
+def test_elements_do_not_change_confidence() -> None:
+    """No threshold, no escalation: the layers chip stays medium however
+    many elements sit on the chain."""
     bods = _three_layer_chain()
-    # A trust ON the path — condition (a) is genuinely met.
     bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
-    bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
-    # A non-EU entity with NO relationship edges — not on any layer.
-    bods.append(
-        _entity("E9", name="Unrelated Panama SA", jurisdiction_code="PA")
-    )
-    signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
-    codes = {s.code for s in signals}
-    # The Panama entity is on no chain, so neither the standalone signal…
-    assert NON_EU_JURISDICTION not in codes
-    # …nor the composite sees it: only condition (a) is met.
-    assert COMPLEX_CORPORATE_STRUCTURE not in codes
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "KP"}
+    assert _layers(assess_amla("companies_house", {"entity_id": "E1"}, bods)).confidence == "medium"
 
 
 # ---------------------------------------------------------------------
-# Subjective POSSIBLE_OBFUSCATION advisory
+# POSSIBLE_OBFUSCATION advisory — opacity with layering (Phase 272)
 # ---------------------------------------------------------------------
 
 
-def test_possible_obfuscation_fires_with_opacity_and_layered_concern() -> None:
-    """The advisory still catches what the hard composite now declines to.
-
-    Layers + a single non-EU layer is only ONE Article 12 condition, so
-    COMPLEX_CORPORATE_STRUCTURE must not fire — but combined with an
-    anonymousPerson (identity deliberately withheld, e.g. a super-secure
-    PSC) this is still worth surfacing for human review, which is exactly
-    what the low-confidence advisory is for.
-    """
-    bods = _three_layer_chain()
-    bods[2]["recordDetails"]["jurisdiction"] = {
-        "code": "PA",
-        "name": "Panama",
+def _anonymous_person() -> dict:
+    return {
+        "statementId": "P1",
+        "recordType": "person",
+        "recordDetails": {
+            "personType": "anonymousPerson",
+            "names": [{"type": "individual", "fullName": "Withheld"}],
+        },
     }
-    # …and an anonymousPerson at the bottom of the chain so opacity fires
-    # (unknownPerson no longer does — unknown-to-this-source is not the
-    # same claim as deliberately-withheld).
-    bods.append(
-        {
-            "statementId": "P1",
-            "recordType": "person",
-            "recordDetails": {
-                "personType": "anonymousPerson",
-                "names": [{"type": "individual", "fullName": "Withheld"}],
-            },
-        }
-    )
+
+
+def test_possible_obfuscation_fires_on_opacity_with_layering() -> None:
+    """Opacity (a deliberately withheld party) on a layered chain — no
+    non-EU entity, no nominee needed any more. Reframed as an EDD prompt."""
+    bods = _three_layer_chain() + [_anonymous_person()]
     signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
     codes = {s.code for s in signals}
     assert OPAQUE_OWNERSHIP in codes
-    assert COMPLEX_CORPORATE_STRUCTURE not in codes
     assert POSSIBLE_OBFUSCATION in codes
     advisory = next(s for s in signals if s.code == POSSIBLE_OBFUSCATION)
     assert advisory.confidence == "low"
-    assert "legitimate economic rationale" in advisory.summary
+    assert "legitimate economic, legal or other rationale" in advisory.summary
+    assert "enhanced due diligence" in advisory.summary
+    assert "AMLA" not in advisory.summary
+    assert advisory.evidence["triggered_by"] == [
+        COMPLEX_OWNERSHIP_LAYERS, OPAQUE_OWNERSHIP
+    ]
 
 
 def test_possible_obfuscation_does_not_fire_without_opacity() -> None:
     bods = _three_layer_chain()
-    bods[2]["recordDetails"]["jurisdiction"] = {
-        "code": "PA",
-        "name": "Panama",
-    }
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "PA", "name": "Panama"}
     signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
+    assert POSSIBLE_OBFUSCATION not in {s.code for s in signals}
+
+
+def test_possible_obfuscation_does_not_fire_without_layers() -> None:
+    """Opacity plus a non-EU owner used to be enough when paired with
+    layers; without layers it never was, and non-EU no longer counts."""
+    bods = _three_layer_chain()[:4] + [_anonymous_person()]  # two entities only
+    signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
+    assert COMPLEX_OWNERSHIP_LAYERS not in {s.code for s in signals}
     assert POSSIBLE_OBFUSCATION not in {s.code for s in signals}
 
 
@@ -885,11 +909,10 @@ def test_assess_amla_returns_empty_for_empty_bundle() -> None:
     assert assess_amla("companies_house", {"entity_id": "X"}, []) == []
 
 
-def test_assess_bundle_returns_amla_signals_inline() -> None:
-    """End-to-end: assess_bundle should expose the AMLA signals too."""
+def test_assess_bundle_returns_structural_signals_inline() -> None:
+    """End-to-end: assess_bundle exposes the structural signals too."""
     bods = _three_layer_chain()
     bods[2]["recordDetails"]["jurisdiction"] = {"code": "VG"}
-    # Second condition so the composite genuinely fires end-to-end.
     bods[1]["recordDetails"]["entityType"] = {"type": "arrangement"}
     bods[1]["recordDetails"]["name"] = "The Doe Family Trust"
     signals = assess_bundle("companies_house", {"entity_id": "E1"}, bods)
@@ -897,8 +920,10 @@ def test_assess_bundle_returns_amla_signals_inline() -> None:
     assert {
         COMPLEX_OWNERSHIP_LAYERS,
         NON_EU_JURISDICTION,
-        COMPLEX_CORPORATE_STRUCTURE,
+        TRUST_OR_ARRANGEMENT,
+        EU_HIGH_RISK_THIRD_COUNTRY,
     }.issubset(codes)
+    assert COMPLEX_CORPORATE_STRUCTURE not in codes
 
 
 # ---------------------------------------------------------------------

@@ -106,16 +106,21 @@ export const RISK_PRESENTATION: Record<
     label: "Nominee",
     classes: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
   },
+  // Phase 272: no "≥3" in the label — the count is in the summary, and no
+  // regime sets the bar. Two or more intermediate layers fire the chip.
   COMPLEX_OWNERSHIP_LAYERS: {
-    label: "≥3 layers",
+    label: "Layered ownership",
     classes: "bg-sky-50 text-sky-700 border-sky-200",
   },
+  // Retired in Phase 272: the consultation-draft AMLA composite, dropped from
+  // the final draft RTS. Never emitted now; kept so a saved report or batch
+  // row from before still renders, quietly and saying what it was.
   COMPLEX_CORPORATE_STRUCTURE: {
-    label: "Complex corporate structure (AMLA)",
-    classes: "bg-red-50 text-red-700 border-red-300 font-semibold",
+    label: "Complex structure (withdrawn draft rule)",
+    classes: CONTEXT_CLASSES,
   },
   POSSIBLE_OBFUSCATION: {
-    label: "Possible obfuscation (advisory)",
+    label: "Opacity with layering (advisory)",
     classes: "bg-yellow-50 text-yellow-800 border-yellow-300",
   },
   RELATED_PEP: {
