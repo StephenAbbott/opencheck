@@ -323,11 +323,19 @@ def _parse_extract_response(xml_text: str) -> dict[str, Any]:
             name_parts = parts  # take the last / most recent active block
     name = " ".join(name_parts).strip()
 
-    # Status from the first FI_DKZ02 AUFRECHT attribute
-    first_dkz02 = firma_el.find(".//FI_DKZ02")
-    is_active = (first_dkz02 is not None and
-                 first_dkz02.get("AUFRECHT", "true").lower() != "false")
-    status = "aktiv" if is_active else "gelöscht"
+    # Status: the firm is current while ANY FI_DKZ02 name entry is AUFRECHT.
+    # FI_DKZ02 is one entry per name the firm has carried, and a renamed
+    # firm's first entry is AUFRECHT="false" with the firm very much alive —
+    # reading only the first entry (Phases 151–267) reported every renamed
+    # company as gelöscht, which is what 16 of 119 firmenbuch|gleif liveness
+    # disagreements on /consistencystats were on 1 Oct 2026. A deleted firm
+    # has no current name entry. No FI_DKZ02 at all = status unknown.
+    dkz02s = list(firma_el.iter("FI_DKZ02"))
+    if dkz02s:
+        is_active = any(d.get("AUFRECHT", "true").lower() != "false" for d in dkz02s)
+        status = "aktiv" if is_active else "gelöscht"
+    else:
+        status = ""
 
     # ── Address (FI_DKZ03) ────────────────────────────────────────────────
     address = _parse_address(firma_el)
