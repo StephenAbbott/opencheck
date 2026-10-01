@@ -760,7 +760,9 @@ def test_graph_shape_counts_the_mapped_graph(client, tmp_path) -> None:
 
     payload = client.get("/lookup", params={"lei": lei}).json()
     shape = payload.get("graph_shape") or {}
-    assert set(shape) == {"companies", "people", "relationships", "depth"}
+    assert set(shape) == {
+        "companies", "people", "relationships", "depth", "intermediate_layers"
+    }
     assert shape["companies"] >= 1, "the subject itself is a company statement"
     for key in ("companies", "people", "relationships"):
         assert isinstance(shape[key], int) and shape[key] >= 0
@@ -886,6 +888,9 @@ def test_graph_shape_depth_only_when_measured() -> None:
         }
     ]
     assert _graph_shape([], measured)["depth"] == 4
+    # Phase 272: the same chain without the subject, for the verdict strip.
+    assert _graph_shape([], measured)["intermediate_layers"] == 3
+    assert _graph_shape([], [])["intermediate_layers"] is None
 
 
 def test_graph_shape_merge_is_transitive_across_partial_identifier_overlap() -> None:

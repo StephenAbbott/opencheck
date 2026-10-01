@@ -774,7 +774,12 @@ class Settings(BaseSettings):
     # ``anthropic_api_key``; this flag lets us disable it even when a key is set.
     narrative_enabled: bool = Field(default=True, alias="OPENCHECK_NARRATIVE_ENABLED")
 
-    # --- AMLA risk-rule tuning ---
+    # --- Jurisdiction risk-rule tuning ---
+    # The two ``OPENCHECK_AMLA_*`` names predate Phase 272 and are kept so
+    # existing deployments keep working. Since Phase 272 they affect ONLY the
+    # ``NON_EU_JURISDICTION`` context note — no risk signal keys on EU/EEA
+    # membership any more.
+    #
     # Codes added to the built-in EU+EEA set. Comma-separated ISO 3166-1
     # alpha-2 codes — e.g. ``GB,CH,US`` to suppress NON_EU_JURISDICTION
     # for those jurisdictions.
@@ -783,11 +788,18 @@ class Settings(BaseSettings):
     )
     # When set, replaces the entire EU+EEA default. Use sparingly — most
     # users will prefer the additive variable above. Useful only when
-    # someone wants strict AMLA EU-only (no EEA) or a totally custom set.
+    # someone wants strict EU-only (no EEA) or a totally custom set.
     amla_eu_eea_override: str | None = Field(
         default=None, alias="OPENCHECK_AMLA_EU_EEA_OVERRIDE"
     )
-
+    # Which lists make a jurisdiction "high-risk" for the complexity element
+    # on COMPLEX_OWNERSHIP_LAYERS (Phase 272): comma-separated ids from
+    # ``eu`` (Delegated Reg 2016/1675 as amended), ``fatf_black``,
+    # ``fatf_grey``. Empty means all three. The standalone FATF / EU
+    # high-risk signals ignore this setting.
+    high_risk_jurisdiction_lists: str = Field(
+        default="", alias="OPENCHECK_HIGH_RISK_JURISDICTION_LISTS"
+    )
 
 @lru_cache
 def get_settings() -> Settings:

@@ -148,19 +148,32 @@ def _all_tentative(signals: list[dict[str, Any]], codes: tuple[str, ...]) -> boo
     )
 
 
-def _layer_depth(signals: list[dict[str, Any]]) -> int | None:
-    """Longest corporate chain, from COMPLEX_OWNERSHIP_LAYERS' own evidence.
+def _intermediate_layers(signals: list[dict[str, Any]]) -> int | None:
+    """Intermediate corporate layers above the subject, from
+    COMPLEX_OWNERSHIP_LAYERS' own evidence — the deepest if several.
 
     Read rather than recomputed: the rule already walked the graph, and a
     second implementation here would be free to disagree with the chip.
+
+    Phase 272: the sentence now speaks of *intermediate* layers, as the chip
+    does and as AMLA's final draft RTS does ("the number of intermediate
+    layers between the customer and the beneficial owner"), so it no longer
+    counts the subject. ``evidence.intermediate_layers`` is preferred;
+    a signal from before Phase 272 (a saved report, a replayed run) carries
+    only ``layers``, which includes the subject, so ``layers - 1`` is the
+    same number.
     """
     best: int | None = None
     for s in signals:
         if s.get("code") != "COMPLEX_OWNERSHIP_LAYERS":
             continue
-        layers = (s.get("evidence") or {}).get("layers")
-        if isinstance(layers, int) and (best is None or layers > best):
-            best = layers
+        ev = s.get("evidence") or {}
+        n = ev.get("intermediate_layers")
+        if not isinstance(n, int):
+            layers = ev.get("layers")
+            n = layers - 1 if isinstance(layers, int) else None
+        if isinstance(n, int) and n >= 1 and (best is None or n > best):
+            best = n
     return best
 
 
@@ -174,9 +187,10 @@ def _structure_sentence(signals: list[dict[str, Any]]) -> str | None:
     """
     all_codes = _codes(signals)
 
-    depth = _layer_depth(signals)
-    if depth:
-        return f"Its ownership chain is {depth} layers deep."
+    intermediate = _intermediate_layers(signals)
+    if intermediate:
+        noun = "layer" if intermediate == 1 else "layers"
+        return f"Its ownership chain has {intermediate} intermediate corporate {noun}."
 
     if "GLEIF_REPORTING_EXCEPTION" in all_codes:
         # A permitted reporting exception, not a failure to disclose.
@@ -191,8 +205,10 @@ def _structure_sentence(signals: list[dict[str, Any]]) -> str | None:
 #: same template — otherwise a deploy would make every watched company report
 #: "verdict changed" on its next re-run. 1 = Phases 122–244 (one sentence),
 #: 2 = Phase 245 (risk sentence, then structure sentence), 3 = Phase 247
-#: ("possible" when every name-match signal behind a clause is medium or low).
-VERDICT_TEMPLATE = 3
+#: ("possible" when every name-match signal behind a clause is medium or low),
+#: 4 = Phase 272 ("has N intermediate corporate layers" instead of "is N+1
+#: layers deep" — the same chain, counted without the subject).
+VERDICT_TEMPLATE = 4
 
 
 def build_verdict(

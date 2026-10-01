@@ -270,7 +270,7 @@ def test_a_verdict_worded_by_an_older_template_is_not_a_change() -> None:
     with a new snapshot of the same facts it must report nothing, or every
     watched company would say "verdict changed" on its next re-run."""
     before = wl.snapshot_from_response(_resp(EASY))
-    assert before["verdict_template"] == 3
+    assert before["verdict_template"] == 4
     legacy = {k: v for k, v in before.items() if k != "verdict_template"}
     legacy["verdict"] = "Sanctions findings on the company itself."
     after = wl.snapshot_from_response(_resp(EASY))
@@ -283,6 +283,14 @@ def test_a_verdict_worded_by_an_older_template_is_not_a_change() -> None:
         verdict="The records show a politically exposed person among the parties named.",
     )
     assert wl.diff_snapshots(phase_245, after) == []
+    # Phase 272 ("has 3 intermediate corporate layers" for "is 4 layers deep"):
+    # a Phase 247 baseline worded the old way is not a change either.
+    phase_247 = dict(
+        before,
+        verdict_template=3,
+        verdict="Its ownership chain is 4 layers deep.",
+    )
+    assert wl.diff_snapshots(phase_247, after) == []
     # Between two snapshots of the same template a wording change still shows.
     changed = dict(after, verdict="Something else.")
     assert [c["kind"] for c in wl.diff_snapshots(before, changed)] == ["verdict"]
@@ -800,3 +808,41 @@ def test_a_list_unopened_past_the_window_is_deleted(client: TestClient, env: Pat
     assert r.status_code == 404 and "90 days" in r.json()["detail"]
     assert client.get(f"/watch/{keep}").status_code == 200
     assert store.watched_leis() == {PARENT}
+
+
+# ---------------------------------------------------------------------------
+# Phase 272 — a withdrawn rule's code vanishing is not a change in the company
+# ---------------------------------------------------------------------------
+
+
+def test_retired_codes_mirror_the_risk_engine() -> None:
+    from opencheck import risk, watchlist
+
+    assert watchlist.RETIRED_SIGNAL_CODES == risk.RETIRED_SIGNAL_CODES
+
+
+def test_retired_code_disappearing_is_not_reported_as_retired() -> None:
+    from opencheck.watchlist import diff_snapshots
+
+    before = {
+        "signals": [
+            {"code": "COMPLEX_CORPORATE_STRUCTURE", "source_id": "companies_house", "kind": "risk"},
+            {"code": "NOMINEE", "source_id": "companies_house", "kind": "risk"},
+        ],
+    }
+    after = {
+        "signals": [
+            {"code": "NOMINEE", "source_id": "companies_house", "kind": "risk"},
+        ],
+    }
+    changes = diff_snapshots(before, after)
+    assert not any(c.get("code") == "COMPLEX_CORPORATE_STRUCTURE" for c in changes)
+
+
+def test_an_ordinary_code_disappearing_is_still_retired() -> None:
+    """Control: the suppression is for withdrawn rules only."""
+    from opencheck.watchlist import diff_snapshots
+
+    before = {"signals": [{"code": "NOMINEE", "source_id": "companies_house", "kind": "risk"}]}
+    changes = diff_snapshots(before, {"signals": []})
+    assert {"kind": "signal_retired", "code": "NOMINEE", "sources": ["companies_house"]} in changes

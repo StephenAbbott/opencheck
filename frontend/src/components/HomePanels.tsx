@@ -288,7 +288,8 @@ const HOW_IT_WORKS_STEPS = [
     body: (
       <>
         Deterministic risk signals — sanctions, flagged jurisdictions, complex
-        ownership and more — follow the EU AMLA's draft due-diligence standards,
+        ownership and more — track the elements due-diligence standards use to
+        judge ownership complexity,
         and a plain-English AI summary explains them with every statement linked
         to its source. Take it away as an accessible PDF or raw data — or copy
         the share link, and a live summary card appears wherever you paste it.

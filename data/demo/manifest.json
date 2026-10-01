@@ -9,7 +9,6 @@
       "name": "Daily Mail and General Trust P L C",
       "ch": "00184594",
       "features": [
-        "complex_corporate_structure",
         "trust_or_arrangement"
       ],
       "note": "Complex corporate structure spanning jurisdictions",
@@ -34,7 +33,6 @@
       "features": [
         "trust_or_arrangement",
         "complex_ownership_layers",
-        "complex_corporate_structure",
         "non_eu_jurisdiction"
       ],
       "note": "Large corporate group with a complex structure spread across jurisdictions",

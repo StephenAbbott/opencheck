@@ -322,8 +322,10 @@ def _risk(report: dict[str, Any]) -> list[str]:
         "## Risk signals",
         "",
         "Risk signals are structural and jurisdictional indicators for further review, computed "
-        "deterministically across the assembled statements and aligned with the EU AMLA draft "
-        "due-diligence standards. They are not determinations of wrongdoing.",
+        "deterministically across the assembled statements. Structural signals follow the "
+        "elements due-diligence standards use to judge ownership complexity — layering, "
+        "arrangements, nominees, high-risk jurisdictions — without asserting that any "
+        "regime's threshold is met. They are not determinations of wrongdoing.",
         "",
     ]
     reg = _registry()

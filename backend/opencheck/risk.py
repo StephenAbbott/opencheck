@@ -3,8 +3,9 @@
 OpenCheck never invents risk — it surfaces what the open data already
 asserts. Every rule is keyed off either a raw source payload (topics,
 collections, positions) or BODS v0.4 statements assembled by the
-mapper, with the explicit goal of mirroring the AMLA CDD RTS (currently
-under EU consultation).
+mapper. The structural rules track the elements regulators use to judge
+ownership complexity — see "Structural complexity signals" below — without
+asserting that any one regime's threshold has been met.
 
 Source-derived signals
 ======================
@@ -75,39 +76,54 @@ Source-derived signals
   relationships record accounting consolidation, not beneficial
   ownership, and only entities (never people) are identified in them.
 
-AMLA CDD RTS signals (BODS v0.4 derived)
-========================================
+Structural complexity signals (BODS v0.4 derived)
+=================================================
 
-Mirror of the objective conditions in AMLA's draft CDD RTS for
-"complex corporate structures". Each fires independently so a UI can
-show them as discrete chips, and a composite ``COMPLEX_CORPORATE_STRUCTURE``
-fires when the AMLA "≥3 layers + ≥1 of {trust, non-EU, nominee}"
-threshold is met.
+OpenCheck's own indicators of how complex an ownership structure is. They
+are deliberately regime-neutral: each one describes something observable in
+the BODS graph, and none of them asserts that a legal threshold has been met.
+Each fires independently so a UI can show them as discrete chips.
+
+They line up with the four "elements that may increase complexity" in
+Article 11(4) of AMLA's **final draft** CDD RTS (Art 28(1) AMLR, 30 Sep
+2026) — (a) intermediate layers, (b) legal arrangements in any of those
+layers, (c) the customer or a layer entity registered in a high-risk
+jurisdiction, (d) nominees involved in the structure — but the RTS is one
+framework among several that look at the same facts, and since Phase 272
+the signal text no longer names it. The mapping lives in
+``docs/risk-signals.md`` § "Regulatory crosswalk".
+
+What the final draft removed, and OpenCheck therefore no longer claims:
+there is no definition of a "complex structure" and no threshold, so no
+composite signal says a structure "meets" one; "registered outside the EU"
+is no longer an element (being non-EU is context, never risk); and the
+subjective "obfuscation" condition left CDD for an optional enhanced due
+diligence measure (Art 21(d)).
 
 * ``TRUST_OR_ARRANGEMENT`` — any ``entityStatement`` whose entityType is
   ``arrangement``, or whose ``legalForm``/``entitySubtype``/``details``
   mentions ``trust``, ``foundation``, ``stiftung`` or ``anstalt``.
-  Maps to AMLA condition (a).
-* ``NON_EU_JURISDICTION`` — any ``entityStatement.jurisdiction.code``
-  outside the EU+EEA set. Maps to AMLA condition (b).
+* ``NON_EU_JURISDICTION`` — ``kind="context"``. An entity on the ownership
+  chain above the subject registered outside the EU+EEA set. A structural
+  observation only; it feeds no other signal.
 * ``NOMINEE`` — any ``relationshipStatement`` with an interest type or
-  ``details`` field mentioning ``nominee``, or a ``personStatement``
-  whose names/details mention nominee. Maps to AMLA condition (c).
-* ``COMPLEX_OWNERSHIP_LAYERS`` — the longest chain of entity nodes in
-  the BODS relationship graph has ≥3 corporate layers.
-* ``COMPLEX_CORPORATE_STRUCTURE`` — composite, fires when
-  ``COMPLEX_OWNERSHIP_LAYERS`` and **≥2** of AMLA conditions (a)–(c)
-  {``TRUST_OR_ARRANGEMENT``, non-EU on the layered path, ``NOMINEE``}
-  are met. Article 12(1) of the draft RTS requires "three or more
-  layers ... and, in addition, **more than one** of the following
-  conditions" — i.e. at least two. Condition (d) is deliberately not
-  counted here; see ``POSSIBLE_OBFUSCATION`` below.
-* ``POSSIBLE_OBFUSCATION`` — advisory mirror of AMLA's subjective
-  condition ("structure obfuscates or diminishes transparency of
-  ownership with no legitimate economic rationale"). Cannot be judged
-  from data alone — fires ``low`` when ``OPAQUE_OWNERSHIP`` plus
-  non-EU layer or nominee are present, with the summary explicitly
-  noting that a human should confirm legitimate rationale.
+  ``details`` field mentioning ``nominee``, a ``personStatement`` whose
+  names/details mention nominee, or a filed nominee code.
+* ``COMPLEX_OWNERSHIP_LAYERS`` — the chain of entities above the subject
+  has two or more intermediate corporate layers (three or more entities
+  counting the subject). Its evidence also records which other complexity
+  elements sit on that chain — ``evidence.complexity_elements`` — so the
+  chip can say "3 intermediate layers, with a nominee and a high-risk
+  jurisdiction on the chain" without inventing a verdict on top.
+* ``POSSIBLE_OBFUSCATION`` — advisory (``low``): withheld or unidentified
+  parties combined with layered ownership. Whether there is a legitimate
+  rationale cannot be judged from data; the summary points to an analysis
+  of the structure's rationale as an enhanced due diligence step.
+
+Retired: ``COMPLEX_CORPORATE_STRUCTURE`` (Phase 272) — the consultation
+draft's "≥3 layers and more than one condition" composite. Never emitted
+now; the constant survives so stored reports, watch snapshots and batch rows
+that carry it still resolve, and see ``RETIRED_SIGNAL_CODES``.
 
 Each signal is intentionally explained — confidence + a one-line
 ``summary`` + the ``evidence`` dict — because users want to be told
@@ -118,8 +134,8 @@ Confidence ladder
 
 * ``high`` — the source asserts it directly (e.g. ``topic == sanction``,
   ``entityType == arrangement``).
-* ``medium`` — strong proxy (e.g. ICIJ leak collection, BODS chain
-  meeting the layer threshold).
+* ``medium`` — strong proxy (e.g. ICIJ leak collection, a BODS chain with
+  two or more intermediate layers).
 * ``low`` — advisory inference, requires human review (e.g.
   ``POSSIBLE_OBFUSCATION``).
 """
@@ -173,17 +189,36 @@ GLEIF_REPORTING_EXCEPTION = "GLEIF_REPORTING_EXCEPTION"
 # database, OpenSanctions' public bodies and (Phase 240) any owner whose LEI
 # GLEIF files as a resident government entity; every one covers part of the
 # world, so its absence means nothing. One signal per lookup, one holding per
-# state (``merge_state_controlled``). Medium confidence; not part of the AMLA
-# composite.
+# state (``merge_state_controlled``). Medium confidence; not a structural
+# complexity element.
 STATE_CONTROLLED = "STATE_CONTROLLED"
 
-# Codes — AMLA CDD RTS (BODS-derived)
+# Codes — structural complexity (BODS-derived)
 TRUST_OR_ARRANGEMENT = "TRUST_OR_ARRANGEMENT"
 NON_EU_JURISDICTION = "NON_EU_JURISDICTION"
 NOMINEE = "NOMINEE"
 COMPLEX_OWNERSHIP_LAYERS = "COMPLEX_OWNERSHIP_LAYERS"
-COMPLEX_CORPORATE_STRUCTURE = "COMPLEX_CORPORATE_STRUCTURE"
 POSSIBLE_OBFUSCATION = "POSSIBLE_OBFUSCATION"
+
+#: Retired in Phase 272 and never emitted. The consultation draft of AMLA's
+#: CDD RTS defined a "complex corporate structure" (old Art 12(1)); the final
+#: draft of 30 Sep 2026 dropped the definition and the threshold, so a chip
+#: saying a structure "meets" it would assert a rule that does not exist.
+#: The constant stays because saved reports, watchlist snapshots and batch
+#: rows written before Phase 272 carry the code.
+COMPLEX_CORPORATE_STRUCTURE = "COMPLEX_CORPORATE_STRUCTURE"
+
+#: Codes the engine has stopped emitting on purpose. A stored snapshot that
+#: carries one of these did not see a company improve when it vanishes — the
+#: rule was withdrawn — so the watchlist does not report its absence as a
+#: retired finding.
+RETIRED_SIGNAL_CODES: frozenset[str] = frozenset({COMPLEX_CORPORATE_STRUCTURE})
+
+#: Complexity-element labels carried in
+#: ``COMPLEX_OWNERSHIP_LAYERS.evidence.complexity_elements[].element``.
+ELEMENT_ARRANGEMENT = "arrangement"
+ELEMENT_HIGH_RISK_JURISDICTION = "high_risk_jurisdiction"
+ELEMENT_NOMINEE = "nominee"
 
 # Codes — jurisdiction-list signals (BODS-derived).
 #
@@ -196,19 +231,22 @@ FATF_GREY_LIST = "FATF_GREY_LIST"
 EU_HIGH_RISK_THIRD_COUNTRY = "EU_HIGH_RISK_THIRD_COUNTRY"
 
 
-# Default EU + EEA member states (ISO 3166-1 alpha-2). The AMLA RTS
-# scopes "outside the European Union" — we extend with EEA (NO/IS/LI)
-# because they share AML supervisory frameworks under the EU's
-# third-country regime, which most practitioners include here. Keep this
-# list visible rather than buried so reviewers can audit it.
+# Default EU + EEA member states (ISO 3166-1 alpha-2), used ONLY by the
+# ``NON_EU_JURISDICTION`` context note. EEA (NO/IS/LI) is included because
+# those states apply the EU AML framework. Since Phase 272 nothing else reads
+# this set: AMLA's consultation-draft "registered outside the EU" condition
+# became "registered in high-risk jurisdictions" in the final draft, which
+# OpenCheck answers from the FATF and EU lists below, not from EU membership.
+# Keep this list visible rather than buried so reviewers can audit it.
 #
-# Operators can adjust this at runtime via two env vars:
+# Operators can adjust this at runtime via two env vars (legacy ``AMLA_``
+# names, kept so existing deployments keep working):
 #
 # * ``OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS`` — comma-separated codes
 #   ADDED to the default set (e.g. ``GB,CH`` for UK + Swiss equivalence).
 # * ``OPENCHECK_AMLA_EU_EEA_OVERRIDE`` — when set, REPLACES the default
-#   set entirely. Use only when you want strict AMLA EU-only or a fully
-#   custom basis.
+#   set entirely. Use only when you want strict EU-only or a fully custom
+#   basis.
 DEFAULT_EU_EEA_COUNTRY_CODES: frozenset[str] = frozenset(
     {
         # EU-27
@@ -392,6 +430,44 @@ EU_HIGH_RISK_THIRD_COUNTRY_CODES: frozenset[str] = frozenset(
 # the only section with no FATF counterpart.
 # Source: https://www.fatf-gafi.org/en/countries/detail/Russian-Federation.html
 EU_HRTC_SECTION_IV_CODES: frozenset[str] = frozenset({"RU"})
+
+#: The lists that make a jurisdiction "high-risk" for the complexity element
+#: on ``COMPLEX_OWNERSHIP_LAYERS`` (final draft RTS Art 11(4)(c), which leaves
+#: the term undefined). Phase 272 default: the EU's own Article 29 list —
+#: the legally decisive one — plus both FATF lists. Operators can narrow it
+#: with ``OPENCHECK_HIGH_RISK_JURISDICTION_LISTS`` (comma-separated
+#: ``eu``, ``fatf_black``, ``fatf_grey``). The standalone FATF / EU signals
+#: are unaffected by the setting; it only decides what the element counts.
+HIGH_RISK_LIST_EU = "eu"
+HIGH_RISK_LIST_FATF_BLACK = "fatf_black"
+HIGH_RISK_LIST_FATF_GREY = "fatf_grey"
+DEFAULT_HIGH_RISK_LISTS: tuple[str, ...] = (
+    HIGH_RISK_LIST_EU, HIGH_RISK_LIST_FATF_BLACK, HIGH_RISK_LIST_FATF_GREY,
+)
+_HIGH_RISK_LIST_CODES: dict[str, frozenset[str]] = {
+    HIGH_RISK_LIST_EU: EU_HIGH_RISK_THIRD_COUNTRY_CODES,
+    HIGH_RISK_LIST_FATF_BLACK: FATF_BLACK_LIST_CODES,
+    HIGH_RISK_LIST_FATF_GREY: FATF_GREY_LIST_CODES,
+}
+
+
+def _active_high_risk_lists() -> tuple[str, ...]:
+    """The configured list ids, in a stable order; unknown ids are ignored."""
+    raw = getattr(get_settings(), "high_risk_jurisdiction_lists", None)
+    if not raw:
+        return DEFAULT_HIGH_RISK_LISTS
+    wanted = {p.strip().lower() for p in str(raw).split(",") if p.strip()}
+    return tuple(lid for lid in DEFAULT_HIGH_RISK_LISTS if lid in wanted)
+
+
+def high_risk_lists_for(code: str) -> list[str]:
+    """Which active high-risk lists name ``code`` (empty when none do)."""
+    code = (code or "").upper()
+    return [
+        lid for lid in _active_high_risk_lists()
+        if code in _HIGH_RISK_LIST_CODES[lid]
+    ]
+
 
 # Free-text fragments that signal a trust / non-corporate arrangement
 # in legal-form / details fields. Lower-cased.
@@ -948,7 +1024,7 @@ def assess_bundle(
         signals.extend(assess_amla(source_id, raw, bods, hit_id=hit_id))
         signals.extend(_state_controlled_signals(source_id, hit_id, bods))
 
-    # Subjective AMLA "obfuscation" signal looks at the assembled
+    # The advisory opacity-with-layering signal looks at the assembled
     # signal set (after every other rule has fired) — last to run.
     obfuscation = _possible_obfuscation_signal(
         source_id, hit_id or raw.get("entity_id") or raw.get("hit_id") or "", signals
@@ -1378,7 +1454,7 @@ def _gleif_exception_signals(
                 hit_id=hit,
                 evidence={
                     "exceptions": undisclosed,
-                    # Same shape as the AMLA signals so signalScope.ts /
+                    # Same shape as the structural signals so signalScope.ts /
                     # buildSignalMap badge the bridging graph node.
                     "matches": [
                         {"statement_id": e["statement_id"]} for e in undisclosed
@@ -2131,20 +2207,30 @@ def merge_state_controlled(
 
 
 # ----------------------------------------------------------------------
-# AMLA CDD RTS rules
+# Structural complexity rules
 # ----------------------------------------------------------------------
 
 
 #: Sources whose relationship edges never count towards
-#: ``COMPLEX_OWNERSHIP_LAYERS`` (and so never seed ``COMPLEX_CORPORATE_STRUCTURE``).
+#: ``COMPLEX_OWNERSHIP_LAYERS``.
 _LAYER_COUNT_EXCLUDED: frozenset[str] = frozenset({"meip"})
 
+#: Entities on the upward chain, counting the subject, at which
+#: ``COMPLEX_OWNERSHIP_LAYERS`` fires: 3, i.e. two intermediate layers
+#: between the subject and whoever owns the top of the chain. An OpenCheck
+#: display threshold, not a legal one — the final draft RTS sets none.
+#: Two intermediate entities is also where its Art 11(2) per-layer data
+#: collection begins ("more than one legal entity or legal arrangement
+#: between the customer and their beneficial owners"), so the chip appears
+#: exactly where that information becomes relevant.
+LAYERS_MIN_ENTITIES = 3
 
-def assess_amla(
+
+def assess_structure(
     source_id: str, raw: dict[str, Any], bods: list[dict[str, Any]],
     hit_id: str = "",
 ) -> list[RiskSignal]:
-    """Run all AMLA-aligned rules over a BODS bundle.
+    """Run the structural complexity and jurisdiction rules over a BODS bundle.
 
     Called from ``assess_bundle``; broken out so callers (CLI, tests,
     a future export pipeline) can invoke it directly on a hand-built
@@ -2172,89 +2258,127 @@ def assess_amla(
         else _layers_signal(source_id, hit_id, bods)
     )
 
+    # Phase 272: the complexity elements that sit on the layered chain are
+    # reported ON the layers signal rather than combined into a verdict.
+    # The consultation draft of AMLA's CDD RTS (old Art 12(1)) declared a
+    # structure "complex" at three or more layers plus more than one of
+    # trust / non-EU / nominee, and the COMPLEX_CORPORATE_STRUCTURE chip
+    # said a structure "meets" that threshold. The final draft (30 Sep 2026,
+    # Art 11(4)) has no definition and no threshold — it lists elements
+    # that MAY increase complexity and leaves the judgement to the obliged
+    # entity — so OpenCheck reports which elements are present and stops.
+    if layers_signal is not None:
+        _attach_complexity_elements(layers_signal, bods, nominee_signal)
+
     out: list[RiskSignal] = []
     for sig in (trust_signal, non_eu_signal, nominee_signal, layers_signal):
         if sig is not None:
             out.append(sig)
 
-    # Jurisdiction-list signals — independent of the AMLA composite rule.
-    # These are the only geographic RISK claims OpenCheck makes: both come
-    # from an authoritative, externally maintained, dated list. Anything
-    # else about where a chain reaches is context, not risk.
+    # Jurisdiction-list signals. These are the only geographic RISK claims
+    # OpenCheck makes: both come from an authoritative, externally
+    # maintained, dated list. Anything else about where a chain reaches is
+    # context, not risk.
     out.extend(_fatf_jurisdiction_signals(source_id, hit_id, bods))
     out.extend(_eu_high_risk_third_country_signals(source_id, hit_id, bods))
 
-    # AMLA CDD RTS Article 12(1): treat a structure as a complex corporate
-    # structure where there are "three or more layers between the customer
-    # and the beneficial owner and, in addition, MORE THAN ONE of the
-    # following conditions is met":
-    #
-    #   (a) a legal arrangement or similar entity (e.g. a foundation) in
-    #       any of the layers                      -> _trust_condition_met
-    #   (b) the customer and any legal entities present at any of these
-    #       layers are registered outside the EU   -> _non_eu_condition_met
-    #   (c) nominee shareholders or nominee directors involved in the
-    #       structure                              -> nominee_signal
-    #
-    # (a) and (b) are scoped to the layered path because both say "in any
-    # of the(se) layers"; (c) says "involved in the structure", which is
-    # looser, so it stays bundle-wide. The standalone signals remain
-    # bundle-wide in every case — "this bundle contains a trust" and "a
-    # trust sits on the layered chain" are different claims.
-    #   (d) the structure obfuscates or diminishes transparency of
-    #       ownership with no legitimate economic rationale
-    #
-    # "More than one" means at least TWO conditions, not one. Condition
-    # (d) is NOT counted: its "no legitimate economic rationale" limb is a
-    # judgement that cannot be made from data alone, so it is surfaced
-    # separately and advisorily as POSSIBLE_OBFUSCATION rather than being
-    # allowed to push a structure over this threshold. That makes this
-    # rule deliberately conservative — it can under-fire relative to the
-    # RTS text, but it will not assert a legal conclusion we cannot
-    # evidence.
-    if layers_signal is not None:
-        path_ids = layers_signal.evidence.get("longest_path") or []
-        triggers: list[str] = []
-        if _trust_condition_met(bods, path_ids):
-            triggers.append("trust/arrangement")
-        if _non_eu_condition_met(bods, path_ids):
-            triggers.append("non-EU jurisdiction")
-        if nominee_signal is not None:
-            triggers.append("nominee")
-
-        if len(triggers) >= 2:
-            # Phase 220: an ended link on the layered path, or behind the
-            # nominee condition, is carried through — and said — here too.
-            layer_ended = list(
-                layers_signal.evidence.get("ended_relationship_statement_ids") or []
-            )
-            if nominee_signal is not None:
-                layer_ended += (
-                    nominee_signal.evidence.get("ended_relationship_statement_ids")
-                    or []
-                )
-            qualifier = f" ({INCLUDING_ENDED})" if layer_ended else ""
-            out.append(
-                RiskSignal(
-                    code=COMPLEX_CORPORATE_STRUCTURE,
-                    confidence="high",
-                    summary=(
-                        "Meets AMLA CDD RTS threshold for a complex corporate "
-                        f"structure: {layers_signal.evidence['layers']} layers "
-                        f"of ownership{qualifier} combined with "
-                        + ", ".join(triggers) + "."
-                    ),
-                    source_id=source_id,
-                    hit_id=hit_id,
-                    evidence={
-                        "layers": layers_signal.evidence["layers"],
-                        "triggers": triggers,
-                        **_ended_evidence(layer_ended),
-                    },
-                )
-            )
-
     return out
+
+
+#: Pre-Phase 272 name, kept for direct callers.
+assess_amla = assess_structure
+
+
+def _attach_complexity_elements(
+    layers_signal: RiskSignal,
+    bods: list[dict[str, Any]],
+    nominee_signal: RiskSignal | None,
+) -> None:
+    """Record, on the layers signal, which other complexity elements apply.
+
+    Scoping follows the wording the final draft RTS kept from the
+    consultation draft, and that the composite already honoured:
+
+    * **arrangement** — "in any of those layers" → path-scoped. A trust on
+      a side branch raises its own chip but is not on the chain.
+    * **high-risk jurisdiction** — "the customer or any legal entities
+      present at any of these layers" → path-scoped, and the subject
+      itself counts (it is the first node of ``longest_path``).
+    * **nominee** — "involved in the structure" → deliberately bundle-wide.
+      The looser wording is kept looser on purpose; a test pins it.
+
+    Mutates ``evidence`` (adds ``intermediate_layers`` and
+    ``complexity_elements``) and rewrites ``summary``. The evidence keys the
+    graph, ``graph_shape`` and the depth resolver read — ``layers``,
+    ``longest_path``, ``subject_statement_id`` — are left alone.
+    """
+    ev = layers_signal.evidence
+    path_ids: list[str] = list(ev.get("longest_path") or [])
+    elements: list[dict[str, Any]] = []
+
+    arrangement_ids = _trust_on_path(bods, path_ids)
+    if arrangement_ids:
+        elements.append(
+            {"element": ELEMENT_ARRANGEMENT, "statement_ids": arrangement_ids}
+        )
+
+    high_risk = _high_risk_jurisdictions_on_path(bods, path_ids)
+    if high_risk:
+        elements.append(
+            {"element": ELEMENT_HIGH_RISK_JURISDICTION, "jurisdictions": high_risk}
+        )
+
+    if nominee_signal is not None:
+        elements.append(
+            {
+                "element": ELEMENT_NOMINEE,
+                "scope": "structure",
+                "basis": nominee_signal.evidence.get("basis", ""),
+            }
+        )
+
+    ev["complexity_elements"] = elements
+    layers_signal.summary = _layers_summary(
+        int(ev.get("intermediate_layers") or 0),
+        qualified=bool(ev.get("ended_relationship_statement_ids")),
+        elements=elements,
+    )
+
+
+def _layers_summary(
+    intermediate: int, *, qualified: bool, elements: list[dict[str, Any]]
+) -> str:
+    """The layers chip's sentence: a count, then the elements on the chain."""
+    qualifier = f", {INCLUDING_ENDED}" if qualified else ""
+    noun = "layer" if intermediate == 1 else "layers"
+    text = (
+        f"Ownership chain above the subject has {intermediate} intermediate "
+        f"corporate {noun}{qualifier}."
+    )
+    clauses: list[str] = []
+    for el in elements:
+        kind = el.get("element")
+        if kind == ELEMENT_ARRANGEMENT:
+            clauses.append("a trust or arrangement on the chain")
+        elif kind == ELEMENT_HIGH_RISK_JURISDICTION:
+            codes = sorted({j["code"] for j in el.get("jurisdictions") or []})
+            clauses.append(
+                "an entity on the chain registered in a high-risk "
+                f"jurisdiction ({', '.join(codes)})"
+            )
+        elif kind == ELEMENT_NOMINEE:
+            clauses.append("nominee arrangements in the structure")
+    if clauses:
+        joined = (
+            clauses[0] if len(clauses) == 1
+            else ", ".join(clauses[:-1]) + " and " + clauses[-1]
+        )
+        text += f" Also present: {joined}."
+    text += (
+        " Layering is an indicator of structural complexity for review, "
+        "not a finding in itself."
+    )
+    return text
 
 
 def _trust_or_arrangement_signal(
@@ -2295,8 +2419,7 @@ def _trust_or_arrangement_signal(
         confidence="high",
         summary=(
             "Ownership chain includes a trust or non-corporate "
-            f"arrangement ({len(matches)} entity statement(s)). "
-            "AMLA CDD RTS condition (a)."
+            f"arrangement ({len(matches)} entity statement(s))."
         ),
         source_id=source_id,
         hit_id=hit_id,
@@ -2390,8 +2513,8 @@ def _upstream_entity_ids(
 def _non_eu_jurisdiction_signal(
     source_id: str, hit_id: str, bods: list[dict[str, Any]]
 ) -> RiskSignal | None:
-    """Fires when the *ownership chain above the subject* has an entity
-    outside the EU+EEA set.
+    """Context note: the *ownership chain above the subject* has an entity
+    outside the EU+EEA set. Feeds no other signal (Phase 272).
 
     The "EU+EEA set" is resolved at call time from settings — see
     ``_eu_eea_codes()`` and the ``OPENCHECK_AMLA_*`` env vars.
@@ -2464,11 +2587,11 @@ def _non_eu_jurisdiction_signal(
             subj, ip, _ = _relationship_endpoints(stmt, _resolve)
             if ip in via_ended_only and (subj == subject_id or subj in upstream):
                 ended_ids.append(_statement_id(stmt))
-    # NB: this is the standalone signal and stays bundle-wide — it reports
-    # "the chain touches these jurisdictions", which is a different
-    # question from AMLA Article 12(1)(b). The *condition* used by the
-    # COMPLEX_CORPORATE_STRUCTURE composite is scoped to the layered
-    # path; see ``_non_eu_condition_met``.
+    # NB: until Phase 272 non-EU status on the layered path was a condition
+    # of the COMPLEX_CORPORATE_STRUCTURE composite (consultation-draft AMLA
+    # RTS old Art 12(1)(b)). The final draft replaced it with "high-risk
+    # jurisdictions", answered from the FATF/EU lists in
+    # ``_high_risk_jurisdictions_on_path``; this note is now context only.
     return RiskSignal(
         code=NON_EU_JURISDICTION,
         confidence="low",
@@ -2500,10 +2623,10 @@ def _non_eu_summary(codes: list[str], *, qualified: bool) -> str:
         f"Ownership chain{qualifier} reaches jurisdictions outside the "
         "EU/EEA: "
         + ", ".join(codes)
-        + ". Structural context, not a risk finding — neither the AMLA "
-        "CDD RTS nor AMLR Annex III treats non-EU status as a risk "
-        "factor in itself. Contributes to AMLA Article 12(1) condition "
-        "(b) only where it appears on the layered ownership path."
+        + ". Structural context, not a risk finding — being outside the "
+        "EU/EEA is not a risk factor in itself. Jurisdiction risk comes "
+        "only from the FATF and EU high-risk lists, which have their own "
+        "signals."
     )
 
 
@@ -2552,77 +2675,81 @@ def merge_non_eu_jurisdiction(
     return merged
 
 
-def _trust_condition_met(
+def _trust_on_path(
     bods: list[dict[str, Any]], path_ids: list[str]
-) -> bool:
-    """AMLA CDD RTS Article 12(1), point (a) — scoped to the layered path.
+) -> list[str]:
+    """Statement ids of trusts / arrangements on the layered chain.
 
-    "there is a legal arrangement or a similar legal entity such as a
-    foundation **in any of the layers**". Like point (b), the wording is
-    explicitly scoped to the layers, so a trust sitting on a side branch
-    of the bundle does not satisfy it.
-
-    Point (c) is deliberately NOT scoped this way: it reads "nominee
-    shareholders or nominee directors involved **in the structure**",
-    which is looser than "in any of these layers" and is left bundle-wide.
+    Path-scoped because the element reads "the presence of legal
+    arrangements or similar legal entities **in any of those layers**". A
+    trust sitting on a side branch of the bundle is not on the chain.
 
     Reuses ``_trust_or_arrangement_signal`` rather than duplicating the
-    legal-form keyword matching, so the condition and the standalone
-    signal can never disagree about what counts as a trust.
+    legal-form keyword matching, so the element and the standalone signal
+    can never disagree about what counts as a trust.
     """
     if not path_ids:
-        return False
+        return []
     sig = _trust_or_arrangement_signal("", "", bods)
     if sig is None:
-        return False
+        return []
     on_path = set(path_ids)
-    return any(
-        m.get("statement_id") in on_path for m in sig.evidence.get("matches", [])
-    )
+    out: list[str] = []
+    for m in sig.evidence.get("matches", []):
+        sid = m.get("statement_id")
+        if sid in on_path and sid not in out:
+            out.append(sid)
+    return out
 
 
-def _non_eu_condition_met(
+def _high_risk_jurisdictions_on_path(
     bods: list[dict[str, Any]], path_ids: list[str]
-) -> bool:
-    """AMLA CDD RTS Article 12(1), point (b) — scoped to the layered path.
+) -> list[dict[str, Any]]:
+    """Entities on the layered chain registered in a high-risk jurisdiction.
 
-    The condition reads: "the customer and any legal entities present at
-    **any of these layers** are registered in jurisdictions outside the
-    EU". Two scoping choices follow from that wording.
+    Final draft RTS Art 11(4)(c): "the fact that the customer or any legal
+    entities present at any of these layers are registered in high-risk
+    jurisdictions". Two choices follow:
 
-    1. "at any of these layers" — we restrict the test to entity nodes on
-       the longest ownership path found by ``_layers_signal``, rather
-       than scanning the whole bundle. A non-EU entity hanging off a side
-       branch that is not part of the layered structure does not satisfy
-       this condition.
+    1. **Path-scoped, subject included.** Only entity nodes on
+       ``longest_path`` count, and the path starts at the subject — the
+       customer is named in the element itself.
+    2. **"High-risk" means a dated, authoritative list.** The RTS does not
+       define the term. OpenCheck reads it from the lists it already
+       maintains — the EU Article 29 list and, by default, the FATF black
+       and grey lists (``OPENCHECK_HIGH_RISK_JURISDICTION_LISTS``) — which
+       is the standing geographic-risk rule: no geographic risk claim
+       without such a list. Each hit names the lists it is on.
 
-    2. The sentence is grammatically conjunctive ("the customer **and**
-       any legal entities"), which read strictly would require *every*
-       entity on the path to be non-EU. That reading would almost never
-       be satisfied and is unlikely to be the drafters' intent, so we
-       treat the condition as met when **any** entity on the path is
-       registered outside the EU. This is the looser of the two readings;
-       revisit when the final RTS is adopted.
-
-    Returns a bool rather than a ``RiskSignal`` because this is an input
-    to the composite, not a finding in its own right.
+    This replaces the consultation draft's "registered outside the EU"
+    condition, which keyed on EU membership. ``NON_EU_JURISDICTION`` no
+    longer feeds anything.
     """
     if not path_ids:
-        return False
-    eu_eea = _eu_eea_codes()
+        return []
     on_path = set(path_ids)
+    out: list[dict[str, Any]] = []
     for stmt in bods:
         if _stmt_kind(stmt) != "entity":
             continue
-        if _statement_id(stmt) not in on_path:
+        sid = _statement_id(stmt)
+        if sid not in on_path:
             continue
         j = _entity_jurisdiction(stmt)
         if not j:
             continue
         code = (j.get("code") or "").upper()
-        if code and code not in eu_eea:
-            return True
-    return False
+        lists = high_risk_lists_for(code)
+        if lists:
+            out.append(
+                {
+                    "statement_id": sid,
+                    "code": code,
+                    "name": j.get("name") or "",
+                    "lists": lists,
+                }
+            )
+    return out
 
 
 def _structured_nominee_matches(
@@ -2672,7 +2799,7 @@ def _nominee_signal(
     bods: list[dict[str, Any]],
     raw: dict[str, Any] | None = None,
 ) -> RiskSignal | None:
-    """AMLA CDD RTS condition (c) — nominee shareholders or directors.
+    """Nominee shareholders or directors involved in the structure.
 
     Structured evidence first: where the source filed a nominee code, that is
     what the signal reports, and the code travels in the evidence so a reviewer
@@ -2749,8 +2876,7 @@ def _nominee_signal(
             summary=(
                 f"Register filed a nominee arrangement "
                 f"({len(structured)} record(s), "
-                f"{len(matched_codes)} nature-of-control code(s)). "
-                "AMLA CDD RTS condition (c)."
+                f"{len(matched_codes)} nature-of-control code(s))."
             ),
             source_id=source_id,
             hit_id=hit_id,
@@ -2775,8 +2901,7 @@ def _nominee_signal(
         summary=(
             f"Ownership chain mentions nominee shareholders/directors "
             f"({len(matches)} statement(s){qualifier}) — matched on "
-            "descriptive text, not a filed nominee code. "
-            "AMLA CDD RTS condition (c)."
+            "descriptive text, not a filed nominee code."
         ),
         source_id=source_id,
         hit_id=hit_id,
@@ -2793,9 +2918,11 @@ def _layers_signal(
 ) -> RiskSignal | None:
     """Corporate layers on the ownership chain **above the subject**.
 
-    AMLA CDD RTS Article 12(1) defines a complex corporate structure as one
-    with "three or more layers **between the customer and the beneficial
-    owner**". Two words in that phrase do all the work, and until Phase 170
+    The layers that matter are those "**between the customer and the
+    beneficial owner**" — the wording of both the consultation draft of
+    AMLA's CDD RTS (old Art 12(1)) and the final draft (Art 11(4)(a), "the
+    number of intermediate layers between the customer and the beneficial
+    owner"). Two words in that phrase do all the work, and until Phase 170
     this function honoured neither.
 
     *Between the customer* — the chain must be the subject's own. The DFS
@@ -2806,7 +2933,7 @@ def _layers_signal(
     winning path was ``BlackRock -> Royal Dutch Shell plc -> Shell Midstream
     Operating LLC``, three nodes none of which is the looked-up Shell plc.
     The verdict sentence read "over an ownership chain 3 layers deep" and the
-    US on that path also fed condition (b) of the composite.
+    US on that path also fed a condition of the (since retired) composite.
 
     *And the beneficial owner* — the BO sits **above** the customer, so the
     layers are its owners, not the companies it owns. Edge direction in BODS
@@ -2821,9 +2948,13 @@ def _layers_signal(
     follows ``subject -> interestedParty`` upwards, entity nodes only —
     persons end a chain rather than extending it, and a subsidiary is never
     on it. ``layers`` counts the entity nodes on that path **including the
-    subject**: the subject plus two holding layers is the ≥3 threshold, which
-    is the convention the previous count and the "N layers deep" phrasing
-    already used, so only the anchoring changes and not the bar.
+    subject** — the convention the depth resolver and ``graph_shape.depth``
+    read. Phase 272 adds ``intermediate_layers`` (``layers - 1``): the final
+    draft speaks of *intermediate* layers, and every entity above the subject
+    is one, since a beneficial owner is a natural person. The chip's summary,
+    the verdict sentence ("has N intermediate corporate layers") and the
+    verdict strip's network column all report that number.
+    The chip fires at ``LAYERS_MIN_ENTITIES`` — unchanged since Phase 170.
 
     The count is a **lower bound**, not a measured distance to a named BO. A
     chain that runs four entities up without reaching a person still has at
@@ -2920,20 +3051,20 @@ def _layers_signal(
 
     dfs(subject_id, [subject_id], subject_id in person_capped, [])
 
-    if longest < 3:
+    if longest < LAYERS_MIN_ENTITIES:
         return None
-    qualifier = f", {INCLUDING_ENDED}" if longest_ended else ""
+    intermediate = longest - 1
     return RiskSignal(
         code=COMPLEX_OWNERSHIP_LAYERS,
         confidence="medium",
-        summary=(
-            f"Ownership chain above the subject has {longest} corporate "
-            f"layers{qualifier} (AMLA threshold: ≥3)."
+        summary=_layers_summary(
+            intermediate, qualified=bool(longest_ended), elements=[]
         ),
         source_id=source_id,
         hit_id=hit_id,
         evidence={
             "layers": longest,
+            "intermediate_layers": intermediate,
             "longest_path": longest_path,
             "subject_statement_id": subject_id,
             "reaches_beneficial_owner": longest_reaches_bo,
@@ -3101,41 +3232,42 @@ def _eu_high_risk_third_country_signals(
 def _possible_obfuscation_signal(
     source_id: str, hit_id: str, signals: list[RiskSignal]
 ) -> RiskSignal | None:
-    """Advisory mirror of AMLA's subjective condition.
+    """Advisory: withheld or unidentified parties combined with layering.
 
-    Cannot be judged from data alone — fires ``low`` when the bundle
-    already has signals that, taken together, suggest a structure
-    "obfuscating ownership". Always notes the human-judgment caveat.
+    Fires ``low`` when ``OPAQUE_OWNERSHIP`` and ``COMPLEX_OWNERSHIP_LAYERS``
+    are both present. Phase 272 reframed it. It used to mirror condition (d)
+    of the consultation-draft AMLA RTS ("obfuscates … with no legitimate
+    economic rationale") as a CDD condition, and fired on the composite or
+    on layers plus a non-EU entity or a nominee. The final draft dropped
+    that condition from CDD; the question survives only as an optional
+    enhanced due diligence measure (Art 21(d): an analysis or expert opinion
+    on the rationale behind a structure, where its complexity contributes to
+    high risk). Non-EU status no longer counts towards anything, and
+    opacity on a layered chain is the pattern the advisory is about — so
+    the trigger is now exactly those two signals.
+
+    The code is unchanged so stored reports and watch snapshots stay
+    comparable; the label and sentence say what it now is.
     """
     codes = {s.code for s in signals}
-    has_opacity = OPAQUE_OWNERSHIP in codes
-    has_layered_concern = (
-        COMPLEX_CORPORATE_STRUCTURE in codes
-        or (COMPLEX_OWNERSHIP_LAYERS in codes and (NON_EU_JURISDICTION in codes or NOMINEE in codes))
-    )
-    if not (has_opacity and has_layered_concern):
+    if not (OPAQUE_OWNERSHIP in codes and COMPLEX_OWNERSHIP_LAYERS in codes):
         return None
     return RiskSignal(
         code=POSSIBLE_OBFUSCATION,
         confidence="low",
         summary=(
-            "Advisory: structure combines opacity (unknown/anonymous "
-            "parties) with complex layering. AMLA CDD RTS subjective "
-            "condition — confirm whether there is a legitimate "
-            "economic rationale before relying on this signal."
+            "Advisory: the structure combines withheld or unidentified "
+            "parties with layered ownership. Whether it has a legitimate "
+            "economic, legal or other rationale cannot be judged from data; "
+            "where its complexity contributes to a high-risk assessment, an "
+            "analysis of that rationale is a recognised enhanced due "
+            "diligence step."
         ),
         source_id=source_id,
         hit_id=hit_id,
         evidence={
             "triggered_by": sorted(
-                codes
-                & {
-                    OPAQUE_OWNERSHIP,
-                    COMPLEX_CORPORATE_STRUCTURE,
-                    COMPLEX_OWNERSHIP_LAYERS,
-                    NON_EU_JURISDICTION,
-                    NOMINEE,
-                }
+                codes & {OPAQUE_OWNERSHIP, COMPLEX_OWNERSHIP_LAYERS}
             )
         },
     )

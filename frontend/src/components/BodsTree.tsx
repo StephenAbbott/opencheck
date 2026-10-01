@@ -41,7 +41,7 @@ function jurisdictionCode(flagUrl: string): string {
 
 /** Human label for a risk-signal code, falling back to the code de-underscored.
  *  Carried over from BodsRelationshipTable: the canvas draws 1–3 character
- *  badges ("RSC", "≥3"), which are unreadable as text, so the equivalent must
+ *  badges ("RSC", "EU!"), which are unreadable as text, so the equivalent must
  *  spell the signal out. */
 function signalLabel(code: string): string {
   return RISK_PRESENTATION[code]?.label ?? code.replace(/_/g, " ");

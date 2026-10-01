@@ -12,11 +12,11 @@ You paste in a [Legal Entity Identifier](https://www.gleif.org/en/about-lei/intr
 
 Everything maps into [BODS v0.4](https://standard.openownership.org/en/0.4.0/). Cross-source links and risk signals are computed deterministically, and the whole bundle is one click away from a downloadable export (JSON / JSONL / XML / CSV / Excel / ZIP, plus [Senzing JSON](https://www.senzing.com/docs/entity_specification/) entity records for entity resolution, [FollowTheMoney](https://followthemoney.tech/) entities for OpenSanctions / OpenAleph investigative workflows, a [BigQuery property-graph](https://cloud.google.com/bigquery/docs/property-graphs) package queryable with GQL, [Google AML AI](https://docs.cloud.google.com/financial-services/anti-money-laundering/docs/reference/schemas/aml-input-data-model) input tables, a [Neo4j Cypher](https://neo4j.com/docs/cypher-manual/current/) script, and [BODS RDF](https://vocab.openownership.org/pages/4_convertingdata.html) as TriG for linked-data and SPARQL workflows).
 
-The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulatory technical standards](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en) conditions for "complex corporate structures" — trust/arrangement, non-EU jurisdiction, nominee, ≥3 ownership layers *above the subject*, plus the composite threshold rule and an advisory mirror of the subjective obfuscation condition.
+The structural risk signals report the elements due-diligence standards use to judge ownership complexity — intermediate ownership layers *above the subject*, trusts and arrangements on the chain, nominees, and entities in FATF- or EU-listed high-risk jurisdictions — plus an advisory where withheld parties meet layered ownership. They assert no regulatory threshold; [docs/risk-signals.md](docs/risk-signals.md#regulatory-crosswalk) maps them to the EU AMLA customer due diligence standards (final draft, September 2026) and other frameworks.
 
 ## Status
 
-**Latest: Phase 271** — New Zealand's alternative-address regime starts on 18 November 2026, so the NZ adapter now picks a director's address block by type rather than by position, the associations panel no longer describes a shared alternative address as a shared registered one, and MBIE's sandbox confirms the Entity Role Search API does not serve the alternative address at all.
+**Latest: Phase 272** — AMLA's final draft CDD standards dropped the "complex corporate structure" threshold, so OpenCheck retires that composite and instead reports intermediate ownership layers with the complexity elements on the chain — trusts, nominees and FATF- or EU-listed high-risk jurisdictions — in regime-neutral language.
 
 → [Full development history](docs/status.md)
 
@@ -61,7 +61,7 @@ The BOVS icons and country-flag SVGs are committed under `frontend/public/`, so 
 | [How it works](docs/how-it-works.md) | Step-by-step lookup flow, per-adapter detail, Open Ownership BODS bundles, API surface, project structure |
 | [Dates](docs/dates.md) | The four date clocks, which sources supply a declaration date, how precision is recorded |
 | [Sources](docs/sources.md) | Full adapter table — active sources plus inactive bulk-only adapters, license, entry point, description |
-| [Risk signals](docs/risk-signals.md) | All signal codes: source-derived, AMLA CDD RTS, FATF jurisdiction, state-controlled/SOE, cross-source name match, ICIJ Offshore Leaks |
+| [Risk signals](docs/risk-signals.md) | All signal codes: source-derived, structural complexity (with regulatory crosswalk), FATF / EU jurisdiction, state-controlled/SOE, cross-source name match, ICIJ Offshore Leaks |
 | [Subsidiary network](docs/subsidiary-network.md) | Lazy GLEIF Level-2 reveal — direct + ultimate children mapped to BODS, graph (small) or table + export (large) |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
 | [Development history](docs/status.md) | All phases |
@@ -74,7 +74,7 @@ The frontend renders ownership graphs with [Cytoscape.js](https://js.cytoscape.o
 
 ## Roadmap
 
-- **A "complex offshore" demo subject** that fires every AMLA chip simultaneously.
+- **A "complex offshore" demo subject** that fires every structural-complexity chip simultaneously.
 - **BODS RDF / SPARQL backbone** via Oxigraph — load the assembled BODS bundle into a triple store, expose `/sparql` for the published Open Ownership red-flag queries.
 
 Open issues and discussion live in the [GitHub repo](https://github.com/StephenAbbott/opencheck).
@@ -84,5 +84,5 @@ Open issues and discussion live in the [GitHub repo](https://github.com/StephenA
 - [Beneficial Ownership Data Standard (BODS)](https://standard.openownership.org/en/0.4.0/)
 - [BODS RDF vocabulary 0.4](https://vocab.openownership.org/) — the `risk.py` rules are designed to be portable to a SPARQL/Oxigraph backbone.
 - [GODIN — Global Open Data Integration Network](https://godin.gleif.org/) — the LEI-as-connector vision OpenCheck is built around.
-- [AMLA draft CDD RTS public consultation](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en).
+- [AMLA final draft CDD RTS (30 Sep 2026)](https://www.amla.europa.eu/press-release-amla-finalises-key-standards-private-sector_en); the [February 2026 consultation draft](https://www.amla.europa.eu/policy/public-consultations/consultation-draft-rts-customer-due-diligence_en) is superseded.
 - [Open Ownership red flags in BODS data](https://www.openownership.org/en/blog/spotting-red-flags-in-beneficial-ownership-datasets/) and [risk-detection across BO + procurement + sanctions](https://www.openownership.org/en/blog/spotting-risks-by-combining-beneficial-ownership-public-procurement-and-sanctions-data/).

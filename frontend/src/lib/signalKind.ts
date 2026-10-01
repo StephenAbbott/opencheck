@@ -4,7 +4,7 @@
  * The backend classifies every signal with `kind`: `"risk"` (an adverse
  * finding) or `"context"` (a structural observation that is worth showing
  * but is not a risk). The canonical example is `NON_EU_JURISDICTION` —
- * neither the AMLA CDD RTS nor AMLR Annex III treats being outside the EU
+ * no AML framework OpenCheck tracks treats being outside the EU
  * as a risk factor in itself, so reporting it as one, at high confidence,
  * next to genuine adverse findings, overstated it.
  *

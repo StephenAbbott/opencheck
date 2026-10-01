@@ -122,7 +122,7 @@ def test_context_signal_never_renders_under_risk_heading():
     # heading, the context observation after it.
     ctx_at = html.index("Structural context")
     assert html.index("Sanctioned") < ctx_at
-    assert html.index("Non-EU jurisdiction") > ctx_at
+    assert html.index("Outside EU/EEA") > ctx_at
 
 
 def test_context_only_report_still_reads_as_no_risk_signals():

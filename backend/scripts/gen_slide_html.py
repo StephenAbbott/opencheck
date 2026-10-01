@@ -196,16 +196,14 @@ def _feature_badge(feature: str) -> str:
         "sanctioned": "#be123c",
         "related_sanctioned": "#be123c",
         "complex_ownership_layers": "#0369a1",
-        "complex_corporate_structure": "#b91c1c",
         "non_eu_jurisdiction": "#c2410c",
         "trust_or_arrangement": "#4338ca",
     }
     labels = {
         "sanctioned": "SANCTIONED",
         "related_sanctioned": "RELATED SANCTIONED",
-        "complex_ownership_layers": "COMPLEX LAYERS",
-        "complex_corporate_structure": "COMPLEX STRUCTURE",
-        "non_eu_jurisdiction": "NON-EU",
+        "complex_ownership_layers": "LAYERED OWNERSHIP",
+        "non_eu_jurisdiction": "OUTSIDE EU/EEA",
         "trust_or_arrangement": "TRUST/ARRANGEMENT",
     }
     colour = colours.get(feature, "#555")
