@@ -454,6 +454,17 @@ class Settings(BaseSettings):
     nzbn_role_search_api_key: str | None = Field(
         default=None, alias="NZBN_ROLE_SEARCH_API_KEY"
     )
+    # MBIE issues *separate* keys for the sandbox environment — the production
+    # keys above are rejected against https://api.business.govt.nz/sandbox/.
+    # Used only by the opt-in live smoke tier, to check the address shape of the
+    # Companies (Address Information) Amendment Act 2025 ahead of 18 Nov 2026;
+    # no adapter reads these, so a deploy can never serve sandbox data as real.
+    nzbn_sandbox_api_key: str | None = Field(
+        default=None, alias="NZBN_SANDBOX_API_KEY"
+    )
+    nzbn_role_search_sandbox_api_key: str | None = Field(
+        default=None, alias="NZBN_ROLE_SEARCH_SANDBOX_API_KEY"
+    )
 
     # --- Corporations Canada (ISED) ---
     # Public-plan API key from the ISED API Gateway.
