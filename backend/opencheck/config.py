@@ -459,6 +459,9 @@ class Settings(BaseSettings):
     # Used only by the opt-in live smoke tier, to check the address shape of the
     # Companies (Address Information) Amendment Act 2025 ahead of 18 Nov 2026;
     # no adapter reads these, so a deploy can never serve sandbox data as real.
+    # That tier runs with OPENCHECK_DISABLE_DOTENV=1 (tests/conftest.py), so
+    # these must be exported into the environment — a value in .env alone is not
+    # picked up. See .env.example for the command.
     nzbn_sandbox_api_key: str | None = Field(
         default=None, alias="NZBN_SANDBOX_API_KEY"
     )

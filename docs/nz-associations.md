@@ -99,30 +99,59 @@ Two consequences for this panel:
   "Same registered address". Relabelling is honest at any volume; re-tiering
   would silently move counts on evidence we do not yet have.
 
-### The open question: is Role Search affected?
+### Is Role Search affected? Tested in the sandbox — no.
 
 MBIE's notice covers the NZBN v5 and Companies v2 APIs. It does **not** mention
 the **Companies Entity Role Search API (v3)**, which is the API this panel
-actually searches — and that API's `physicalAddress` block has **no
-`addressType` field at all** (verified live on 1 October 2026: the block carries
-only `addressLines`, `postCode`, `countryCode` and `pafId`, the last present on
-roughly half to two-thirds of records). So one of two things happens on
-18 November, and they fail in opposite directions:
+actually searches. Tested against MBIE's sandbox on 1 October 2026, using the
+two alternative-address test entities it named:
 
-| If Role Search… | Then… |
+| Checked | Result |
 |---|---|
-| **also switches** to the alternative address | `pafId`s still line up for the same person, but every client of one agent now shares a `pafId` → **false positives**: unrelated directors graded "address-matched" and sorted to the top of the panel, which is ranked by `address_match_count`. |
-| **keeps the residential address** | the subject's alternative-address `pafId` no longer matches Role Search's residential one → **false negatives**: genuine matches drop from high/medium to name-only, exactly for the directors who elected privacy. |
+| NZBN v5 `addressType` on a director with an alternative address | `ALTERNATIVE` — populated as documented |
+| Other directors on the same entity | `addressType` null — null *is* the residential address |
+| `PHYSICAL` ever visible to a public viewer | no — only `ALTERNATIVE` or null |
+| Does an `ALTERNATIVE` block carry a `pafId`? | **inconsistent** — absent on one test entity, present (`3161519`) on the other |
+| Does an `ALTERNATIVE` `pafId` ever equal a residential one? | no |
+| Role Search `physicalAddress` fields | `addressLines`, `postCode`, `countryCode`, `pafId` — still **no `addressType`** |
+| Does Role Search serve the alternative address? | **no** — its `pafId` for the same director at the same company is a different one |
 
-Either way the tiers shift for affected directors, and there is no way to tell
-from the Role Search payload which case applies. This is the question put to
-MBIE ahead of the **14 October 2026** feedback deadline
-(`helpdesk@mail.api.business.govt.nz`), along with whether an alternative
-address carries its own `pafId`. The sandbox
-(`https://api.business.govt.nz/sandbox/…`, released 30 September 2026, test
-NZBNs `9429050923540` and `9429050923557`) needs a **sandbox-specific
-subscription key**: the production `NZBN_API_KEY` / `NZBN_ROLE_SEARCH_API_KEY`
-return 401 against it.
+So of the two branches, the **false-negative** one is what the sandbox shows:
+for any director who elects an alternative address, the subject's NZBN address
+and the Role Search address disagree, and genuine matches fall from high/medium
+to name-only — exactly for the directors who elected privacy. The panel already
+shows name-only matches rather than hiding them (the recall fix above), so they
+are not lost, only demoted.
+
+Two caveats on that result. The sandbox is **synthetic** data, not a clone of
+production — the test entities are generated companies (`MANDATORY
+CONTEXTUALLY-BASED SUCCESS LIMITED`) with placeholder directors, and almost
+every synthetic address resolves to one Wellington `pafId`. And a sandbox index
+that has not been refreshed would look identical to an API that is deliberately
+out of scope. So this is evidence, not proof.
+
+It also raises something larger than our matching. If the address Role Search
+keeps serving is the **residential** one, then the Act's protection does not
+hold across MBIE's own APIs: a residential address withheld from the NZBN API
+would still be reachable through entity-roles v3. That is the first question in
+the feedback sent to MBIE before the **14 October 2026** deadline
+(`helpdesk@mail.api.business.govt.nz`), alongside the inconsistent `pafId` on
+alternative addresses.
+
+Because the answer is a sandbox observation rather than a commitment from MBIE,
+the **tier algorithm is left alone** and only the basis wording changes. Four
+opt-in live smoke tests in `backend/tests/test_live_smoke.py` pin each finding,
+including one that fails the day Role Search starts serving the alternative
+address — at which point the false-positive branch is live (every client of one
+agent sharing a `pafId`) and `_tier()` does need revisiting. They need the
+sandbox keys (`NZBN_SANDBOX_API_KEY`, `NZBN_ROLE_SEARCH_SANDBOX_API_KEY` — the
+production keys 401 against `/sandbox/`) **exported into the environment**, since
+the test tier runs with `OPENCHECK_DISABLE_DOTENV=1`:
+
+```
+set -a && . ./.env && set +a && cd backend \
+  && pytest --run-live -m live tests/test_live_smoke.py -k sandbox
+```
 
 ## What it returns
 
