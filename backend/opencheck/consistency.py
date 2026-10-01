@@ -51,6 +51,17 @@ For each (field, statement A, statement B) pair within a referent group:
 Pairs where neither side stated a value, and pairs excluded by a
 comparison's allowlist, produce no item at all.
 
+Phase 268 (after the 17 Sept and 1 Oct 2026 readings of ``/consistencystats``)
+tightened four things the first production counts showed: an identifier with
+no ``scheme`` key is not a register number; the identifier that *bridged*
+two statements into one group is not counted as agreement; two registers in
+one jurisdiction (ABN/ACN, CUI/J-number) are never compared with each other;
+``pending`` liveness is not a side of the liveness comparison; GLEIF and
+ANAF are excluded from ``founding_date`` and MEIP from ``jurisdiction`` as
+different concepts, with the measured reasons on each ``Comparison``. Every
+independent ``disagree`` is logged with its values, so the next reading can
+be explained rather than hypothesised.
+
 Everything fails soft: this runs inside the lookup pipeline and must never
 slow or break a lookup, so ``assess_consistency`` swallows its own errors and
 returns an empty result.
@@ -173,43 +184,115 @@ def _is_register_scheme(scheme: str) -> bool:
     return not any(seg in NON_REGISTER_SEGMENTS for seg in re.split(r"[-_]", up))
 
 
-def one_per_entity_identifiers(stmt: dict[str, Any]) -> dict[str, str]:
-    """``{scheme: value}`` for the identifiers where one entity has one value.
+def _register_key(jur: str) -> str:
+    return f"REGISTER:{jur}"
 
-    The LEI (any scheme label, recognised by shape) under the key ``LEI``,
-    and each register-like scheme under its own label. Values are
-    canonicalised the same way the merge keys are (``_identifier_keys``), so
-    ``556056-6258`` and ``5560566258`` compare equal.
+
+def _split_identifiers(stmt: dict[str, Any]) -> tuple[dict[str, str], dict[str, set[str]]]:
+    """``(labelled, by_jurisdiction)`` for a statement's one-per-entity ids.
+
+    ``labelled`` is ``{scheme: value}``: the LEI (any scheme label, recognised
+    by shape) under ``LEI``, each register-like scheme under its own label,
+    and — only for a number whose issuing register is *not* named by an
+    org-id scheme (GLEIF's ``registeredAs`` with a present-and-empty
+    ``scheme``, or a bare RA code since Phase 239) — the jurisdiction key
+    ``REGISTER:<jur>``. ``by_jurisdiction`` is every *labelled* register
+    number per jurisdiction, which is what an unlabelled number is compared
+    against.
+
+    Two shapes are deliberately not register numbers (Phase 268): an
+    identifier with **no** ``scheme`` key at all (``schemeName`` only — a
+    PermID, a DUNS, an S&P Capital IQ id on a passthrough statement), and an
+    OpenCorporates-style ``jur/number`` value. Before Phase 268 the absent
+    key read as the empty scheme and the first such id became the entity's
+    "register number", which is where every MEIP identifier clash came from.
+
+    Values are canonicalised the same way the merge keys are
+    (``_identifier_keys``), so ``556056-6258`` and ``5560566258`` compare
+    equal.
     """
     from .matching import canonical_identifier
 
-    out: dict[str, str] = {}
+    labelled: dict[str, str] = {}
+    by_jur: dict[str, set[str]] = {}
     rd = stmt.get("recordDetails") or {}
     jur = _entity_jurisdiction(rd)
     for ident in rd.get("identifiers") or []:
+        if not isinstance(ident, dict):
+            continue
         raw = str(ident.get("id") or "").strip().upper()
         if not raw:
             continue
         if _identifiers.classify_lei(raw):
-            out.setdefault("LEI", raw)
+            labelled.setdefault("LEI", raw)
+            continue
+        if "scheme" not in ident:
+            # schemeName only: a commercial or aggregator id in prose. Not a
+            # register number, whatever the jurisdiction.
             continue
         scheme = str(ident.get("scheme") or "").strip().upper()
         if "/" in raw:
             continue
         value = canonical_identifier(raw, min_len=0) or raw
-        if scheme and _is_register_scheme(scheme):
-            out.setdefault(scheme, value)
-        # Sources label the same national register differently (GLEIF: no
-        # scheme; OpenCorporates: DK-COA; CVR: DK-CVR), so the register
-        # number is also compared under a jurisdiction key — the same rule
-        # the merge uses. Two statements bridged by LEI whose register
-        # numbers differ is the clash worth finding.
-        if jur and (
-            scheme == ""
-            or is_ra_scheme(scheme)  # GLEIF's number, authority named (Phase 239)
-            or (scheme.startswith(f"{jur}-") and _is_register_scheme(scheme))
-        ):
-            out.setdefault(f"REGISTER:{jur}", value)
+        if jur and (scheme == "" or is_ra_scheme(scheme)):
+            # GLEIF's number with its register unnamed (empty scheme before
+            # Phase 239) or named only by RA code: compared under the
+            # jurisdiction against whichever labelled register carries it.
+            labelled.setdefault(_register_key(jur), value)
+        elif scheme and _is_register_scheme(scheme):
+            labelled.setdefault(scheme, value)
+            # A labelled national number is what an unlabelled copy of the
+            # same number (GLEIF before Phase 239, or an RA code with no
+            # org-id entry) is compared against. Two registers in one
+            # jurisdiction (ABN and ACN; CUI and the ONRC J-number) each keep
+            # their own label and are never compared with each other.
+            if jur and scheme.startswith(f"{jur}-"):
+                by_jur.setdefault(jur, set()).add(value)
+    return labelled, by_jur
+
+
+def one_per_entity_identifiers(stmt: dict[str, Any]) -> dict[str, str]:
+    """``{scheme: value}`` for the identifiers where one entity has one value
+    — see ``_split_identifiers``; this is its ``labelled`` half."""
+    return _split_identifiers(stmt)[0]
+
+
+def _identifier_pairs(a: dict[str, Any], b: dict[str, Any]) -> list[tuple[str, str, str, bool]]:
+    """``(scheme, value_a, value_b, same)`` for every one-per-entity scheme
+    both statements carry, plus an unlabelled register number on one side
+    against the labelled numbers of the same jurisdiction on the other.
+
+    A number carried under both its own label and the jurisdiction key is
+    one identifier, so the same ``(value_a, value_b)`` is reported once.
+    """
+    la, ja = _split_identifiers(a)
+    lb, jb = _split_identifiers(b)
+    out: list[tuple[str, str, str, bool]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(scheme: str, va: str, vb: str, same: bool) -> None:
+        if (va, vb) in seen:
+            return
+        seen.add((va, vb))
+        out.append((scheme, va, vb, same))
+
+    shared = sorted(set(la) & set(lb), key=lambda s: (s != "LEI", s))
+    for scheme in shared:
+        add(scheme, la[scheme], lb[scheme], la[scheme] == lb[scheme])
+    # Unlabelled on one side, labelled on the other: the unlabelled number
+    # agrees if any labelled register of that jurisdiction carries it.
+    for jur, values in jb.items():
+        key = _register_key(jur)
+        if key in la and key not in lb:
+            va = la[key]
+            match = va if va in values else sorted(values)[0]
+            add(key, va, match, va in values)
+    for jur, values in ja.items():
+        key = _register_key(jur)
+        if key in lb and key not in la:
+            vb = lb[key]
+            match = vb if vb in values else sorted(values)[0]
+            add(key, match, vb, vb in values)
     return out
 
 
@@ -240,8 +323,19 @@ class Comparison:
 
 
 def _extract_liveness(stmt: dict[str, Any]) -> str | None:
+    """``live`` or ``terminal``, or ``None`` when the statement did not decide.
+
+    ``pending`` (a liquidation under way) is not a side of this comparison
+    (Phase 268): a company in liquidation is ACTIVE in GLEIF until it is
+    dissolved, so pending-vs-live is the two registers describing one
+    situation at different stages, not a disagreement. The Phase C plan said
+    terminal-vs-live only; the shipped comparator compared all four classes.
+    """
     status = _liveness.read_register_status(stmt)
-    return status["liveness"] if status else None
+    if not status:
+        return None
+    cls = status["liveness"]
+    return cls if cls in (_liveness.LIVE, _liveness.TERMINAL) else None
 
 
 def _extract_jurisdiction(stmt: dict[str, Any]) -> str | None:
@@ -272,16 +366,31 @@ COMPARABLE: tuple[Comparison, ...] = (
     # was started for.
     Comparison("liveness", _extract_liveness, _eq),
     # Jurisdiction: almost never differs; when it does, the referent merge
-    # was wrong, which is worth knowing.
-    Comparison("jurisdiction", _extract_jurisdiction, _eq),
-    # Founding date: registers and GLEIF record incorporation of the legal
-    # person. Wikidata's P571 "inception" is the founding of the BUSINESS —
-    # Novo Nordisk 1923 vs 1931, Shell 1890 vs 2002 — and is never compared.
+    # was wrong, which is worth knowing. MEIP is excluded (Phase 268): the
+    # OECD's country column is the economy its group register files the
+    # entity under, and on 1 Oct 2026 it differed from GLEIF's legal
+    # jurisdiction on 7 of 58 pairs while every other pair ran at 1,327/10.
+    Comparison(
+        "jurisdiction",
+        _extract_jurisdiction,
+        _eq,
+        exclude_sources=frozenset({"meip"}),
+    ),
+    # Founding date: registers record incorporation of the legal person.
+    # Wikidata's P571 "inception" is the founding of the BUSINESS — Novo
+    # Nordisk 1923 vs 1931, Shell 1890 vs 2002 — and is never compared.
+    # GLEIF's ``entity.creationDate`` is registrant-supplied and, measured on
+    # 1 Oct 2026 across seven registers, differed from the register's date
+    # on 13–100 % of pairs (OpenCorporates 97 of 173, ARES 57 of 65, KRS 12
+    # of 12), so it is a different concept outside the UK and is excluded
+    # too. ANAF's date is the fiscal registration, not the ONRC
+    # incorporation (14 of 23 differ), so register-vs-register for Romania
+    # keeps ONRC only.
     Comparison(
         "founding_date",
         _extract_founding,
         _dates_same,
-        exclude_sources=frozenset({"wikidata"}),
+        exclude_sources=frozenset({"wikidata", "gleif", "anaf_romania"}),
     ),
 )
 
@@ -364,24 +473,57 @@ def _compare_pair(a: dict[str, Any], b: dict[str, Any]) -> list[Item]:
             continue
         items.append(Item(cmp.field, _relation(independent, cmp.same(va, vb)), ids, srcs, (va, vb)))
 
-    ida, idb = one_per_entity_identifiers(a), one_per_entity_identifiers(b)
-    for scheme in sorted(set(ida) | set(idb)):
-        va, vb = ida.get(scheme), idb.get(scheme)
-        if va is None or vb is None:
-            # One side not carrying a scheme is the normal case (each source
-            # carries its own register's number) and is not even worth a
-            # one_missing row — it would swamp the counters with nothing.
+    # One side not carrying a scheme is the normal case (each source carries
+    # its own register's number) and is not even worth a one_missing row —
+    # it would swamp the counters with nothing. Only schemes both carry.
+    pairs = _identifier_pairs(a, b)
+    # The bridge is not agreement (Phase 268). Two statements are in one
+    # referent group *because* they share an identifier, so the first
+    # identifier they agree on is the one that put them there and says
+    # nothing about the entity. It is dropped; an ``agree`` that survives
+    # means a SECOND identifier matched, which is the corroboration worth
+    # counting, and a ``disagree`` is a clash on a one-per-entity scheme
+    # between records the bridge said were the same thing.
+    bridge_dropped = False
+    for scheme, va, vb, same in pairs:
+        if same and not bridge_dropped:
+            bridge_dropped = True
             continue
         items.append(
             Item(
                 IDENTIFIER_CLASH,
-                _relation(independent, va == vb),
+                _relation(independent, same),
                 ids,
                 srcs,
                 (f"{scheme}:{va}", f"{scheme}:{vb}"),
             )
         )
     return items
+
+
+def _log_disagreements(result: ConsistencyResult) -> None:
+    """One INFO line per independent ``disagree`` (Phase 268).
+
+    The counters never carry a value, by design — but that means a row above
+    the 10 % gate cannot be diagnosed from the endpoint at all. The server log
+    is private, so the two values go there: ``grep "consistency disagree
+    field=founding_date"`` is how a semantic mismatch gets explained rather
+    than hypothesised. ``stale`` is not logged (the copy lagging its upstream
+    is known and uninteresting).
+    """
+    for item in result.items:
+        if item.relation != DISAGREE:
+            continue
+        log.info(
+            "consistency disagree field=%s sources=%s/%s statements=%s/%s values=%r/%r",
+            item.field,
+            item.sources[0],
+            item.sources[1],
+            item.statement_ids[0],
+            item.statement_ids[1],
+            item.values[0],
+            item.values[1],
+        )
 
 
 def assess_consistency(bods: Iterable[dict[str, Any]]) -> ConsistencyResult:
@@ -402,4 +544,8 @@ def assess_consistency(bods: Iterable[dict[str, Any]]) -> ConsistencyResult:
     except Exception as exc:  # noqa: BLE001
         log.warning("assess_consistency failed, returning empty: %s", exc)
         return ConsistencyResult()
+    try:
+        _log_disagreements(result)
+    except Exception:  # noqa: BLE001
+        pass
     return result

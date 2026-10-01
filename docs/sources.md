@@ -280,9 +280,30 @@ one republishes the other (counted, never shown), or `one_missing`.
 
 Nothing reaches the results page yet. `GET /consistencystats` counts outcomes per
 `field|source_a|source_b` with a `disagree_rate`, on the `/signalstats` contract
-(aggregate only, closed-vocabulary keys, resets on deploy). A comparison earns a
+(aggregate only, closed-vocabulary keys). Since Phase 268 the counters are written
+through to `OPENCHECK_CONSISTENCYSTATS_DB_FILE` on the persistent disk, so the window
+spans deploys (`persisted`, `boots`, `since` on the endpoint). A comparison earns a
 place on the page only when its measured disagree rate is under 10 % after at least
 two weeks of traffic — the base-rate gate that keeps "sources disagree" from being noise.
+
+The first two production readings (17 Sept and 1 Oct 2026) re-aligned the comparison
+table, with the measured reasons on each `Comparison` in `consistency.py`: GLEIF's
+registrant-supplied `entity.creationDate` is not the register's incorporation date
+outside the UK (it differed on 13–100 % of pairs across seven registers), so GLEIF is
+excluded from `founding_date` along with ANAF Romania (fiscal registration, not the
+ONRC incorporation); MEIP's country is the OECD's compilation, so it is excluded from
+`jurisdiction`; `pending` liveness (a liquidation under way) is not compared with
+`live`; an identifier with no `scheme` key (a PermID or S&P id on a passthrough
+statement) is not a register number; two registers in one jurisdiction (ABN/ACN,
+CUI/J-number) are never compared with each other; and the identifier that *bridged*
+two statements into one group is not counted as agreement — an identifier `agree`
+means a second identifier matched. Every independent `disagree` is logged at INFO
+with both values (`consistency disagree field=…`), so a row above the gate can be
+read from the server log; the endpoint still carries no value. OpenAleph's founding
+date differed from GLEIF's on 37 % of mirror pairs on 1 Oct 2026: its records come
+from several upstreams (a national-register collection for Czech entities, the
+`lei-*` copy for others), which the record-level lineage declared in Phase 150 does
+not distinguish.
 
 ## Notes
 
