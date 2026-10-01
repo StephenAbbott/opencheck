@@ -879,3 +879,63 @@ def test_map_firmenbuch_interest_types_valid() -> None:
     stmts = list(map_firmenbuch(_bundle()))
     invalid = check_interest_types(stmts)
     assert invalid == [], invalid
+
+
+# ---------------------------------------------------------------------------
+# Phase 268: a renamed firm is not a deleted one
+# ---------------------------------------------------------------------------
+
+_EXTRACT_XML_RENAMED = """<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
+  <env:Header/>
+  <env:Body>
+    <ns6:AUSZUG_V2_RESPONSE
+        xmlns:ns6="ns://firmenbuch.justiz.gv.at/Abfrage/v2/AuszugResponse"
+        ns6:FNR="229831 m"
+        ns6:STICHTAG="2026-01-01"
+        ns6:UMFANG="Auszug">
+      <ns6:FIRMA>
+        <ns6:FI_DKZ02 ns6:AUFRECHT="false" ns6:VNR="001">
+          <ns6:BEZEICHNUNG>Alte Bezeichnung GmbH</ns6:BEZEICHNUNG>
+        </ns6:FI_DKZ02>
+        <ns6:FI_DKZ02 ns6:AUFRECHT="true" ns6:VNR="002">
+          <ns6:BEZEICHNUNG>Neue Bezeichnung GmbH</ns6:BEZEICHNUNG>
+        </ns6:FI_DKZ02>
+        <ns6:FI_DKZ03 ns6:AUFRECHT="true">
+          <ns6:STRASSE>Musterstraße</ns6:STRASSE>
+          <ns6:HAUSNUMMER>1</ns6:HAUSNUMMER>
+          <ns6:PLZ>1010</ns6:PLZ>
+          <ns6:ORT>Wien</ns6:ORT>
+        </ns6:FI_DKZ03>
+      </ns6:FIRMA>
+    </ns6:AUSZUG_V2_RESPONSE>
+  </env:Body>
+</env:Envelope>"""
+
+_EXTRACT_XML_DELETED = _EXTRACT_XML_RENAMED.replace(
+    '<ns6:FI_DKZ02 ns6:AUFRECHT="true" ns6:VNR="002">', '<ns6:FI_DKZ02 ns6:AUFRECHT="false" ns6:VNR="002">'
+)
+
+
+def test_a_renamed_firm_is_live_under_its_current_name() -> None:
+    """The first FI_DKZ02 of a renamed firm is AUFRECHT="false"; the firm is
+    not. Reading only the first entry called every renamed company gelöscht
+    (16 of 119 firmenbuch|gleif liveness disagreements, 1 Oct 2026)."""
+    extract = _parse_extract_response(_EXTRACT_XML_RENAMED)
+    assert extract["name"] == "Neue Bezeichnung GmbH"
+    assert extract["status"] == "aktiv"
+
+
+def test_a_firm_with_no_current_name_entry_is_deleted() -> None:
+    assert _parse_extract_response(_EXTRACT_XML_DELETED)["status"] == "gelöscht"
+
+
+def test_renamed_firm_maps_to_a_live_register_status() -> None:
+    from opencheck.bods import liveness
+    from opencheck.bods.mapper import map_firmenbuch
+
+    extract = _parse_extract_response(_EXTRACT_XML_RENAMED)
+    stmts = list(map_firmenbuch({"fn": "229831 m", "extract": extract, "search": {}}))
+    entity = next(s for s in stmts if s.get("recordType") == "entity")
+    status = liveness.read_register_status(entity)
+    assert status and status["liveness"] == liveness.LIVE
