@@ -37,8 +37,20 @@ describe("networkSummary", () => {
       companies: 4,
       people: 2,
       relationships: 5,
-      depthPhrase: "four layers deep",
+      depthPhrase: "three intermediate layers",
     });
+  });
+
+  it("prefers intermediate_layers and falls back to depth − 1 (Phase 272)", () => {
+    // A run saved before Phase 272 carries only `depth`, which counts the
+    // subject; a current run carries both. Same chain, same sentence.
+    expect(networkSummary(shape({ depth: 4 }))?.depthPhrase).toBe("three intermediate layers");
+    expect(
+      networkSummary(shape({ depth: 4, intermediate_layers: 3 }))?.depthPhrase,
+    ).toBe("three intermediate layers");
+    expect(
+      networkSummary(shape({ depth: null, intermediate_layers: null }))?.depthPhrase,
+    ).toBeNull();
   });
 
   it("counts people even when only one company was mapped", () => {
@@ -70,12 +82,12 @@ describe("depthPhrase", () => {
   });
 
   it("agrees in number", () => {
-    expect(depthPhrase(1)).toBe("one layer deep");
-    expect(depthPhrase(2)).toBe("two layers deep");
+    expect(depthPhrase(1)).toBe("one intermediate layer");
+    expect(depthPhrase(2)).toBe("two intermediate layers");
   });
 
   it("switches to digits past ten rather than inventing a word", () => {
-    expect(depthPhrase(10)).toBe("ten layers deep");
-    expect(depthPhrase(14)).toBe("14 layers deep");
+    expect(depthPhrase(10)).toBe("ten intermediate layers");
+    expect(depthPhrase(14)).toBe("14 intermediate layers");
   });
 });

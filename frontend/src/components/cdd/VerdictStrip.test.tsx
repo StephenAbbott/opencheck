@@ -21,7 +21,7 @@ import { VerdictStrip } from "./VerdictStrip";
 import type { KnowabilityStatement, RiskSignal } from "../../lib/api";
 
 const VERDICT =
-  "The records show a politically exposed person among the parties named. Its ownership chain is 4 layers deep.";
+  "The records show a politically exposed person among the parties named. Its ownership chain has 3 intermediate corporate layers.";
 
 const signal = (code: string, overrides: Partial<RiskSignal> = {}): RiskSignal => ({
   code,

@@ -46,9 +46,10 @@
     {
       "id": "r2",
       "code": "NON_EU_JURISDICTION",
-      "label": "Non-EU jurisdiction",
-      "confidence": "high",
-      "rationale": "The ultimate controlling party is resident outside the EU/EEA, which the AMLA rule flags for enhanced review.",
+      "label": "Outside EU/EEA",
+      "confidence": "low",
+      "kind": "context",
+      "rationale": "The ultimate controlling party is resident outside the EU/EEA. Structural context, not a risk finding — being outside the EU/EEA is not a risk factor in itself.",
       "source_name": "OpenCheck risk engine",
       "fact_ids": ["f2"]
     }

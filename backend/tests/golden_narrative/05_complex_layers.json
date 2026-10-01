@@ -37,9 +37,9 @@
     {
       "id": "r1",
       "code": "COMPLEX_OWNERSHIP_LAYERS",
-      "label": "Complex ownership layers",
-      "confidence": "high",
-      "rationale": "The ownership chain from the subject to its ultimate parent spans three or more intermediate layers across multiple jurisdictions (Ireland, Jersey), increasing the difficulty of identifying the ultimate beneficial owner.",
+      "label": "Layered ownership (intermediate corporate layers)",
+      "confidence": "medium",
+      "rationale": "The ownership chain from the subject to its ultimate parent spans three intermediate corporate layers across multiple jurisdictions (Ireland, Jersey). Layering is an indicator of structural complexity for review, not a finding in itself.",
       "source_name": "OpenCheck risk engine",
       "fact_ids": ["f2", "f3"]
     },

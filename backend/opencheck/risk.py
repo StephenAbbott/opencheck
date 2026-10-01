@@ -2948,11 +2948,12 @@ def _layers_signal(
     follows ``subject -> interestedParty`` upwards, entity nodes only —
     persons end a chain rather than extending it, and a subsidiary is never
     on it. ``layers`` counts the entity nodes on that path **including the
-    subject** — the convention the depth resolver, ``graph_shape`` and the
-    verdict's "N layers deep" already read. Phase 272 adds
-    ``intermediate_layers`` (``layers - 1``): the final draft speaks of
-    *intermediate* layers, and every entity above the subject is one, since a
-    beneficial owner is a natural person. The summary reports that number.
+    subject** — the convention the depth resolver and ``graph_shape.depth``
+    read. Phase 272 adds ``intermediate_layers`` (``layers - 1``): the final
+    draft speaks of *intermediate* layers, and every entity above the subject
+    is one, since a beneficial owner is a natural person. The chip's summary,
+    the verdict sentence ("has N intermediate corporate layers") and the
+    verdict strip's network column all report that number.
     The chip fires at ``LAYERS_MIN_ENTITIES`` — unchanged since Phase 170.
 
     The count is a **lower bound**, not a measured distance to a named BO. A

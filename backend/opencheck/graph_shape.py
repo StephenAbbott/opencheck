@@ -97,7 +97,12 @@ def _graph_shape(
     ``depth`` is the longest ownership chain the risk layer actually measured
     (``COMPLEX_OWNERSHIP_LAYERS`` carries it as ``evidence.longest_path``), or
     ``None`` when the signal did not fire — never a guess, and never 0, which
-    would render as a flat graph.
+    would render as a flat graph. It counts the subject.
+
+    ``intermediate_layers`` (Phase 272) is the same chain without the subject
+    — what the verdict strip's network column and verdict sentence now say,
+    matching the chip and AMLA's final draft wording. ``depth`` is kept as it
+    was for every other reader.
     """
     entities = [s for s in bods if s.get("recordType") == "entity"]
     persons = [s for s in bods if s.get("recordType") == "person"]
@@ -119,4 +124,5 @@ def _graph_shape(
         "people": _count_parties(persons),
         "relationships": len(relationships),
         "depth": depth,
+        "intermediate_layers": depth - 1 if depth else None,
     }

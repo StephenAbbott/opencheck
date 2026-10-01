@@ -361,6 +361,9 @@ export interface GraphShape {
   people: number;
   relationships: number;
   depth: number | null;
+  /** Phase 272: `depth` without the subject — what the strip says. Absent on
+   *  a run saved before Phase 272; `networkSummary` falls back to depth − 1. */
+  intermediate_layers?: number | null;
 }
 
 export interface DeepenResponse {

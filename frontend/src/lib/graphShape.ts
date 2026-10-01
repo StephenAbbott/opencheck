@@ -26,7 +26,7 @@ export interface NetworkSummary {
   companies: number;
   people: number;
   relationships: number;
-  /** "four layers deep", or null when no chain was measured. */
+  /** "three intermediate layers", or null when no chain was measured. */
   depthPhrase: string | null;
 }
 
@@ -47,13 +47,29 @@ const DEPTH_WORD = [
   "ten",
 ];
 
-/** "four layers deep" — words up to ten, digits past it, so a 14-layer chain
- *  reads as "14 layers deep" rather than as an invented word. */
-export function depthPhrase(depth: number | null | undefined): string | null {
-  if (typeof depth !== "number" || !Number.isFinite(depth) || depth < 1) return null;
-  const n = Math.floor(depth);
+/** "three intermediate layers" — words up to ten, digits past it, so a
+ *  14-layer chain reads as "14 intermediate layers" rather than as an
+ *  invented word.
+ *
+ *  Phase 272: counts *intermediate* layers — the chain above the subject,
+ *  without the subject — so the column agrees with the verdict sentence and
+ *  the "Layered ownership" chip. It used to say "four layers deep" for the
+ *  same chain. */
+export function depthPhrase(intermediate: number | null | undefined): string | null {
+  if (typeof intermediate !== "number" || !Number.isFinite(intermediate) || intermediate < 1) {
+    return null;
+  }
+  const n = Math.floor(intermediate);
   const word = DEPTH_WORD[n] ?? String(n);
-  return `${word} ${n === 1 ? "layer" : "layers"} deep`;
+  return `${word} intermediate ${n === 1 ? "layer" : "layers"}`;
+}
+
+/** Intermediate layers from a graph shape: the Phase 272 field, or — on a run
+ *  saved before it — `depth` (which counts the subject) minus one. */
+function intermediateLayers(shape: GraphShape): number | null {
+  if (typeof shape.intermediate_layers === "number") return shape.intermediate_layers;
+  if (typeof shape.depth === "number") return shape.depth - 1;
+  return null;
 }
 
 /**
@@ -75,7 +91,12 @@ export function networkSummary(shape?: GraphShape | null): NetworkSummary | null
   // edge between them.
   if (companies < MIN_COMPANIES && people === 0) return null;
   if (relationships === 0) return null;
-  return { companies, people, relationships, depthPhrase: depthPhrase(shape.depth) };
+  return {
+    companies,
+    people,
+    relationships,
+    depthPhrase: depthPhrase(intermediateLayers(shape)),
+  };
 }
 
 function numberOr(value: unknown): number {

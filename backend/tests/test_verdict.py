@@ -75,14 +75,14 @@ def test_structure_is_a_second_sentence_not_asserted_as_a_finding() -> None:
     )
     assert v == (
         "The records show sanctions findings on the company itself. "
-        "Its ownership chain is 4 layers deep."
+        "Its ownership chain has 3 intermediate corporate layers."
     )
 
 
 def test_layer_count_is_read_from_the_signal_not_recomputed() -> None:
     v = build_verdict([_sig("COMPLEX_OWNERSHIP_LAYERS", layers=7)], [])
     assert v is not None
-    assert "7 layers deep" in v
+    assert "6 intermediate corporate layers" in v
 
 
 def test_deepest_layer_count_wins_when_several_are_present() -> None:
@@ -94,7 +94,7 @@ def test_deepest_layer_count_wins_when_several_are_present() -> None:
         [],
     )
     assert v is not None
-    assert "5 layers deep" in v
+    assert "4 intermediate corporate layers" in v
 
 
 def test_context_signals_never_produce_a_risk_clause() -> None:
@@ -124,7 +124,7 @@ def test_structure_only_run_with_a_failed_check_keeps_the_caveat() -> None:
         [_degraded()],
     )
     assert v is not None
-    assert "3 layers deep" in v
+    assert "2 intermediate corporate layers" in v
     assert "not a clean screen" in v
 
 
@@ -190,7 +190,7 @@ def test_shell_reads_risk_then_structure() -> None:
 def test_structure_only_run_names_the_gap_in_its_own_sentence() -> None:
     v = build_verdict([_sig("COMPLEX_OWNERSHIP_LAYERS", layers=3)], [_degraded()])
     assert v == (
-        "Its ownership chain is 3 layers deep. "
+        "Its ownership chain has 2 intermediate corporate layers. "
         "One check did not run — an empty result there is not a clean screen."
     )
 
@@ -267,3 +267,23 @@ def test_counter_sanctions_are_read_after_every_other_finding() -> None:
         "The records show a politically exposed person among the parties named "
         "and a counter-sanctions designation by a non-mainstream authority."
     )
+
+
+def test_intermediate_layers_evidence_is_preferred_and_layers_is_the_fallback() -> None:
+    """Phase 272: the sentence counts intermediate layers, as the chip does.
+    A current signal carries ``intermediate_layers``; one from a run saved
+    before Phase 272 carries only ``layers`` (subject included). Both must
+    give the same sentence for the same chain."""
+    current = _sig("COMPLEX_OWNERSHIP_LAYERS", layers=4)
+    current["evidence"]["intermediate_layers"] = 3
+    legacy = _sig("COMPLEX_OWNERSHIP_LAYERS", layers=4)
+    assert build_verdict([current], []) == build_verdict([legacy], []) == (
+        "Its ownership chain has 3 intermediate corporate layers."
+    )
+    assert "deep" not in build_verdict([current], [])
+
+
+def test_verdict_template_was_bumped_for_the_layer_wording() -> None:
+    from opencheck.verdict import VERDICT_TEMPLATE
+
+    assert VERDICT_TEMPLATE == 4
