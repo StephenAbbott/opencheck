@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 268** — The record-consistency counters now survive deploys, the bridging identifier and scheme-less ids no longer count as agreement or clash, GLEIF's creation date and MEIP's country leave the comparison table as different concepts, and every disagreement is logged with its values.
+**Latest: Phase 271** — New Zealand's alternative-address regime starts on 18 November 2026, so the NZ adapter now picks a director's address block by type rather than by position, the associations panel no longer describes a shared alternative address as a shared registered one, and MBIE's sandbox confirms the Entity Role Search API does not serve the alternative address at all.
 
 → [Full development history](docs/status.md)
 
