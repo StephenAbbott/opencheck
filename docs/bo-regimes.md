@@ -3,7 +3,8 @@
 <!-- GENERATED from backend/opencheck/bods/bo_regimes.py — edit that file, then regenerate. -->
 
 Phase B deliverable of the `beneficialOwnershipOrControl` audit (2026-08-28); entries manually
-checked by Stephen against current legislation on 2026-08-30.
+checked by Stephen against current legislation on 2026-08-30 (`companies_house`, `ariregister`
+and `rpvs_slovakia` re-verified 2026-10-01).
 BODS embeds no intrinsic definition of "beneficial owner": `beneficialOwnershipOrControl: true`
 marks an interest known to constitute beneficial ownership *under the applicable jurisdiction's
 definition*. This page records, per OpenCheck source, which definition that is.
@@ -33,6 +34,7 @@ Two levels of rule interact:
 | `rpvs_slovakia` | Slovakia | bo_register | najmenej 25 % (at least 25 %) | ultimate BO | yes |
 | `sec_edgar` | United States | securities_disclosure | more than 5 % of a class of registered voting equity securities | — | no |
 | `cac_nigeria` | Nigeria | bo_register | at least 5 % | — | no |
+| `dlcp_dc` | United States — District of Columbia | bo_register | exceeds 10 % | combined owner/controller list | no |
 | `bods_gleif` | Global (GLEIF) | consolidation | — | — | no |
 | `wikidata` | None (crowdsourced) | crowdsourced | — | — | no |
 
@@ -49,6 +51,11 @@ Two levels of rule interact:
 The AMLR moves the EU ownership test to **25 % or more** (`>=`), multiplied through each level of
 a chain and summed across chains, from **10 July 2027** — this changes the Estonian and Latvian
 operators below (currently `>`); Slovakia is already at `>=`. The UK is outside the package.
+
+On 25 September 2026 the European Commission sent letters of formal notice to 18 member states
+(AT, BE, BG, HR, CY, CZ, EE, FI, FR, DE, GR, LT, LU, NL, PL, PT, RO, ES) for not fully
+transposing parts of AMLD6 (presscorner inf_26_1834) — Estonia is included; Latvia and Slovakia
+are not.
 
 ## `companies_house` — Companies House register of People with Significant Control (PSC)
 
@@ -72,8 +79,7 @@ operators below (currently `>`); Slovakia is already at `>=`. The UK is outside 
 - **Pending changes:**
   - ECCTA is delivered through ~50 statutory instruments, many still pending (see Stephen's Notion tracker 'Track implementation of ECCTA', 1b57f3dc292880a5a6c6fef6d927638e)
   - Identity verification: voluntary from 8 Apr 2025; mandatory rollout from 18 Nov 2025 with a 12-month transition for existing directors and PSCs (~4M verified by Jun 2026); no threshold change
-  - PSC statutory guidance on 'significant influence or control' reissued 4 Mar 2026 (2026 company + LLP statutory guidance) — condition-4 interpretation source
-  - Updated 2026 PSC-reporting guidance published Jan 2026 but NOT yet in force pending parliamentary approval
+  - PSC statutory guidance on 'significant influence or control' reissued 4 Mar 2026 (2026 company + LLP statutory guidance; laid in Parliament in draft Jan 2026, formally adopted Mar 2026, superseding the June 2017 version — IN FORCE) — condition-4 interpretation source
   - Register of Overseas Entities: not to be solely relied on for verifying BO (Reg 28, ECCTA Consequential Provisions Regs 2025); ROE brought into the discrepancy-reporting regime (Reg 30A)
   - English Limited Partnership PSC loophole NOT fixed by ECCTA (BBC/Finance Uncovered, Nov 2023)
   - UK is outside the EU AML package — AMLR >=25 % does NOT apply
@@ -84,7 +90,7 @@ operators below (currently `>`); Slovakia is already at `>=`. The UK is outside 
   - <https://www.legislation.gov.uk/ukpga/2006/46/schedule/1A>
   - <https://www.gov.uk/guidance/people-with-significant-control-pscs>
   - <https://www.legislation.gov.uk/uksi/2025/1036/note/made>
-- **Last verified:** 2026-08-30 — **review status: verified**
+- **Last verified:** 2026-10-01 — **review status: verified**
 
 ## `bods_uk_psc` — Open Ownership UK PSC bulk BODS dataset (register v2 pipeline)
 
@@ -123,18 +129,19 @@ operators below (currently `>`); Slovakia is already at `>=`. The UK is outside 
   - `officer` → `omit`
   - `corporate_shareholder` → `omit`
 - **Pending changes:**
-  - Public-access restriction (legitimate-interest regime) drafted to start 10 Jul 2026; Justice Minister refused to endorse the bill 25 Jun 2026; change POSTPONED, no new date (ERR, err.ee/1610074771)
-  - EC infringement procedure opened 25 Sep 2025 over 6AMLD register-access compliance
+  - Public-access restriction (legitimate-interest regime) drafted to start 10 Jul 2026; Justice Minister refused to endorse the bill 25 Jun 2026; change POSTPONED, no new date (ERR, err.ee/1610074771). Re-confirmed 2026-10-01: still no news — register remains open and usable; Stephen has asked TEKSA how future access-rule changes will be announced
+  - EC infringement procedure opened 25 Sep 2025 over 6AMLD register-access compliance; letter of formal notice 25 Sep 2026 — EE among 18 member states cited for not fully transposing parts of AMLD6 (presscorner inf_26_1834)
   - AMLR >=25 % + chain multiplication applies from 10 Jul 2027
 - **Notes:**
   - Adapter carries include_beneficial_owners kill-switch for the day access is restricted
   - Stephen's tracking ticket: 'Track EU legitimate interest changes' (Notion 38b7f3dc...)
-  - Sheet 'EU BO LIA tracker' marks EE legitimate-interest access as in place (abiinfo.rik.ee/en/node/367) — reconcile with the postponement during the manual pass
+  - Reconciled 2026-10-01: legitimate-interest access is NOT in place — the LIA plans are on hold and the register remains public (the 'EU BO LIA tracker' sheet entry citing abiinfo.rik.ee/en/node/367 was ahead of reality)
 - **Sources:**
   - <https://www.riigiteataja.ee/akt/114032025023>
   - <https://abiinfo.rik.ee/en/node/367>
   - <https://www.err.ee/1610074771/tegelike-kasusaajate-andmete-varjamine-lukkub-edasi>
-- **Last verified:** 2026-08-30 — **review status: verified**
+  - <https://news.err.ee/1610074816/estonia-s-regulation-to-hide-beneficial-owners-postponed>
+- **Last verified:** 2026-10-01 — **review status: verified**
 
 ## `edr_ukraine` — ЄДР — Unified State Register of Legal Entities, Individual Entrepreneurs and Public Organisations
 
@@ -217,14 +224,18 @@ operators below (currently `>`); Slovakia is already at `>=`. The UK is outside 
   - `corporate_party` → `omit`
 - **Pending changes:**
   - NOTE: Slovakia's threshold is ALREADY >=25 % — it differs from UK/EE/LV (>25 %); AMLR alignment is a no-op on the operator
-  - Public access to the RPO (business-register BO data) was restricted from 10 Jul 2025 without a legitimate-interest regime; EC infringement procedure 25 Sep 2025. RPVS itself remains public by design (procurement transparency)
+  - AMLD6 legitimate-interest access rules TRANSPOSED (novela of Act 297/2008, approved Apr 2026; general effect 1 Jun 2026, register-access provisions in force 10 Jul 2026 — eur-lex transposition measure CELEX:72018L0843SVK_202604009, checked by Stephen 2026-10-01): business-register KUV data moved from the 10 Jul 2025 restriction-without-LIA (EC infringement 25 Sep 2025) to a legitimate-interest regime administered by the Ministry of Interior — response within 12 working days, 7 for requesters verified in the prior 3 years; public data limited to name + identifier. Slovakia was NOT among the 18 member states sent AMLD6 letters of formal notice on 25 Sep 2026 (presscorner inf_26_1834). RPVS itself remains public by design (procurement transparency)
+  - Same novela: stricter KUV verification from 1 Jun 2026 ('multiple reliable sources', not just formal documents); goAML registration for obliged entities and foreign-trust register filings both due by 30 Nov 2026
 - **Notes:**
   - RPVS publishes no mechanism/percentage per KUV — hence unknownInterest with true in the mapper
+  - §6a definition and the 'najmenej 25 %' threshold are UNCHANGED by the 2026 novela
 - **Sources:**
   - <https://www.slov-lex.sk/pravne-predpisy/SK/ZZ/2008/297/#paragraf-6a>
   - <https://rpvs.gov.sk/rpvs>
   - <https://www.aksamec.sk/konecny-uzivatel-vyhod/>
-- **Last verified:** 2026-08-30 — **review status: verified**
+  - <https://eur-lex.europa.eu/legal-content/SK/TXT/PDF/?uri=CELEX:72018L0843SVK_202604009>
+  - <https://ec.europa.eu/commission/presscorner/detail/en/inf_26_1834>
+- **Last verified:** 2026-10-01 — **review status: verified**
 
 ## `sec_edgar` — SEC EDGAR Schedule 13D/13G filings
 
@@ -265,6 +276,32 @@ operators below (currently `>`); Slovakia is already at `>=`. The UK is outside 
   - <https://bor.cac.gov.ng/>
   - <https://www.openownership.org/en/blog/nigeria-and-the-beneficial-ownership-data-standard/>
 - **Last verified:** 2026-08-30 — **review status: verified**
+
+## `dlcp_dc` — DC Corporations Division biennial-report owner and controller disclosure (DLCP, opendata.dc.gov)
+
+- **Jurisdiction:** United States — District of Columbia (US-DC)
+- **Regime kind:** bo_register
+- **Legal basis:**
+  - D.C. Code § 29-102.11(a)(6) (domestic entities; reports filed on or after 1 January 2020)
+  - D.C. Code § 29-102.11(a)(7) (the same test applied one level up, to each foreign entity identified under (a)(6))
+  - D.C. Code § 29-102.11(a)(8) (administrative dissolution / termination of registration for non-compliance)
+  - Form BRA-25, Item 6 (Two-Year Report for Domestic & Foreign Filing Entity)
+- **Definition:** Each person whose aggregate share of direct or indirect, legal or beneficial ownership of a GOVERNANCE or total DISTRIBUTIONAL interest exceeds 10 %; or does not exceed 10 % provided the person controls the entity's financial or operational decisions, or has the ability to direct its day-to-day operations. BRA-25 collects it as one list of 'each person (member, manager, officer, director, shareholder, partner, trustee, etc.)'.
+- **Threshold:** exceeds 10 % (`> 10 %`)
+- **Reporting basis:** A COMBINED OWNERSHIP-AND-CONTROL LIST, not a FATF-style beneficial ownership list. Because a GOVERNANCE interest qualifies on its own, nonprofit boards are filed wholesale (American University files 27 trustees, Children's National 18 — measured 2026-09-18). DLCP publishes a name and an address per row and NO role, NO percentage and NO owner type, so every interest maps to unknownInterest with directOrIndirect 'unknown' and no share. The filing is self-declared: the register performs no verification and collects no identifier.
+- **Natural person only:** no
+- **`beneficialOwnershipOrControl` policy per record kind:**
+  - `bo_person` → `assert_true`
+  - `bo_entity` → `assert_false`
+- **Notes:**
+  - Separate from, and predating, the federal Corporate Transparency Act regime — DC's disclosure is public in full, including residence addresses
+  - Filed biennially by 1 April; § 29-102.11(a)(5) separately requires the name of at least one governor, which the open dataset does not isolate
+  - Roughly 4.5 % of published owner rows are legal entities, not natural persons (178 of a random 4,000 rows, 2026-09-18)
+- **Sources:**
+  - <https://code.dccouncil.gov/us/dc/council/code/sections/29-102.11>
+  - <https://catalog.data.gov/dataset/beneficial-owners>
+  - <https://opendata.dc.gov/datasets/DCGIS::beneficial-owners/about>
+- **Last verified:** 2026-09-18 — **review status: verified**
 
 ## `bods_gleif` — GLEIF Level 2 relationship records via Open Ownership BODS 0.4 dataset
 

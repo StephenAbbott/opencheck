@@ -57,7 +57,10 @@ from dataclasses import dataclass, field
 # BE, DK, DE, EE, GR, IT, CY, HR, PL, SK and SE over comprehensive access),
 # legitimate-interest access articles (Arts 11–13, 15) from 10 July 2026,
 # full transposition by 10 July 2027.  (Dates confirmed in Stephen's manual
-# pass, 2026-08-30.)
+# pass, 2026-08-30.)  On 25 Sep 2026 the Commission sent letters of formal
+# notice to 18 member states (AT, BE, BG, HR, CY, CZ, EE, FI, FR, DE, GR,
+# LT, LU, NL, PL, PT, RO, ES) for not fully transposing parts of AMLD6
+# (presscorner inf_26_1834) — EE is in; LV and SK are NOT.
 EU_AML_PACKAGE: dict[str, str] = {
     "amlr": "Regulation (EU) 2024/1624 (AMLR), Arts 22, 51-54, 63",
     "amlr_threshold": "25 % or more (>=), multiplied through chains, summed across chains",
@@ -160,8 +163,8 @@ _add(BORegime(
         "Identity verification: voluntary from 8 Apr 2025; mandatory rollout from 18 Nov 2025 with a "
         "12-month transition for existing directors and PSCs (~4M verified by Jun 2026); no threshold change",
         "PSC statutory guidance on 'significant influence or control' reissued 4 Mar 2026 "
-        "(2026 company + LLP statutory guidance) — condition-4 interpretation source",
-        "Updated 2026 PSC-reporting guidance published Jan 2026 but NOT yet in force pending parliamentary approval",
+        "(2026 company + LLP statutory guidance; laid in Parliament in draft Jan 2026, formally "
+        "adopted Mar 2026, superseding the June 2017 version — IN FORCE) — condition-4 interpretation source",
         "Register of Overseas Entities: not to be solely relied on for verifying BO (Reg 28, ECCTA "
         "Consequential Provisions Regs 2025); ROE brought into the discrepancy-reporting regime (Reg 30A)",
         "English Limited Partnership PSC loophole NOT fixed by ECCTA (BBC/Finance Uncovered, Nov 2023)",
@@ -176,6 +179,7 @@ _add(BORegime(
         "https://www.gov.uk/guidance/people-with-significant-control-pscs",
         "https://www.legislation.gov.uk/uksi/2025/1036/note/made",
     ),
+    last_verified="2026-10-01",
 ))
 
 # The Open Ownership UK PSC bulk dataset: same regime, flag copied verbatim.
@@ -235,20 +239,27 @@ _add(BORegime(
     },
     pending_changes=(
         "Public-access restriction (legitimate-interest regime) drafted to start 10 Jul 2026; "
-        "Justice Minister refused to endorse the bill 25 Jun 2026; change POSTPONED, no new date (ERR, err.ee/1610074771)",
-        "EC infringement procedure opened 25 Sep 2025 over 6AMLD register-access compliance",
+        "Justice Minister refused to endorse the bill 25 Jun 2026; change POSTPONED, no new date (ERR, err.ee/1610074771). "
+        "Re-confirmed 2026-10-01: still no news — register remains open and usable; Stephen has asked TEKSA how "
+        "future access-rule changes will be announced",
+        "EC infringement procedure opened 25 Sep 2025 over 6AMLD register-access compliance; letter of formal "
+        "notice 25 Sep 2026 — EE among 18 member states cited for not fully transposing parts of AMLD6 "
+        "(presscorner inf_26_1834)",
         "AMLR >=25 % + chain multiplication applies from 10 Jul 2027",
     ),
     notes=(
         "Adapter carries include_beneficial_owners kill-switch for the day access is restricted",
         "Stephen's tracking ticket: 'Track EU legitimate interest changes' (Notion 38b7f3dc...)",
-        "Sheet 'EU BO LIA tracker' marks EE legitimate-interest access as in place (abiinfo.rik.ee/en/node/367) — reconcile with the postponement during the manual pass",
+        "Reconciled 2026-10-01: legitimate-interest access is NOT in place — the LIA plans are on hold and the "
+        "register remains public (the 'EU BO LIA tracker' sheet entry citing abiinfo.rik.ee/en/node/367 was ahead of reality)",
     ),
     sources=(
         "https://www.riigiteataja.ee/akt/114032025023",
         "https://abiinfo.rik.ee/en/node/367",
         "https://www.err.ee/1610074771/tegelike-kasusaajate-andmete-varjamine-lukkub-edasi",
+        "https://news.err.ee/1610074816/estonia-s-regulation-to-hide-beneficial-owners-postponed",
     ),
+    last_verified="2026-10-01",
 ))
 
 
@@ -430,17 +441,29 @@ _add(BORegime(
     },
     pending_changes=(
         "NOTE: Slovakia's threshold is ALREADY >=25 % — it differs from UK/EE/LV (>25 %); AMLR alignment is a no-op on the operator",
-        "Public access to the RPO (business-register BO data) was restricted from 10 Jul 2025 without a legitimate-interest regime; "
-        "EC infringement procedure 25 Sep 2025. RPVS itself remains public by design (procurement transparency)",
+        "AMLD6 legitimate-interest access rules TRANSPOSED (novela of Act 297/2008, approved Apr 2026; general "
+        "effect 1 Jun 2026, register-access provisions in force 10 Jul 2026 — eur-lex transposition measure "
+        "CELEX:72018L0843SVK_202604009, checked by Stephen 2026-10-01): business-register KUV data moved from the "
+        "10 Jul 2025 restriction-without-LIA (EC infringement 25 Sep 2025) to a legitimate-interest regime "
+        "administered by the Ministry of Interior — response within 12 working days, 7 for requesters verified in "
+        "the prior 3 years; public data limited to name + identifier. Slovakia was NOT among the 18 member states "
+        "sent AMLD6 letters of formal notice on 25 Sep 2026 (presscorner inf_26_1834). RPVS itself remains public "
+        "by design (procurement transparency)",
+        "Same novela: stricter KUV verification from 1 Jun 2026 ('multiple reliable sources', not just formal "
+        "documents); goAML registration for obliged entities and foreign-trust register filings both due by 30 Nov 2026",
     ),
     notes=(
         "RPVS publishes no mechanism/percentage per KUV — hence unknownInterest with true in the mapper",
+        "§6a definition and the 'najmenej 25 %' threshold are UNCHANGED by the 2026 novela",
     ),
     sources=(
         "https://www.slov-lex.sk/pravne-predpisy/SK/ZZ/2008/297/#paragraf-6a",
         "https://rpvs.gov.sk/rpvs",
         "https://www.aksamec.sk/konecny-uzivatel-vyhod/",
+        "https://eur-lex.europa.eu/legal-content/SK/TXT/PDF/?uri=CELEX:72018L0843SVK_202604009",
+        "https://ec.europa.eu/commission/presscorner/detail/en/inf_26_1834",
     ),
+    last_verified="2026-10-01",
 ))
 
 
