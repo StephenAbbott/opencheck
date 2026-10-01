@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 273** — FATF and EU high-risk jurisdiction signals now describe only the company and the owners above it; subsidiaries in listed jurisdictions move to a context note, so a group parent is no longer told its ownership chain reaches a country where it merely has a subsidiary.
+**Latest: Phase 274** — FtM addresses are filed as `alternative`, which BODS allows on people and companies alike, so OpenSanctions people with an address validate again; and the Neo4j export draws an undisclosed owner as its own placeholder node instead of dropping the chain, matching the RDF export.
 
 → [Full development history](docs/status.md)
 
