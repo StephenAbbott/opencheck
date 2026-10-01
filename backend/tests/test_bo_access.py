@@ -74,7 +74,7 @@ def test_null_date_is_restricted() -> None:
 
 def test_missing_access_url_is_none_not_error() -> None:
     # Slovakia has no announced link — the notice still renders, without a link.
-    n = notice_for("SK", date(2026, 7, 1))
+    n = notice_for("SK", date(2026, 10, 1))
     assert n is not None and n.status == "restricted"
     assert n.access_url is None
 

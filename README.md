@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 269** — The Austrian Firmenbuch adapter no longer reports a renamed firm as deleted; its status is read from whether any name entry is current, not only the first.
+**Latest: Phase 270** — Estonia, Latvia and Slovakia were re-verified and the beneficial ownership access table was re-synced from Notion, so Slovakia now reads as open on legitimate interest.
 
 → [Full development history](docs/status.md)
 
