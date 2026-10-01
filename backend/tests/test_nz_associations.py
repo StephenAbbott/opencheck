@@ -11,6 +11,7 @@ from fastapi import HTTPException
 
 from opencheck.config import get_settings
 from opencheck.nz_associations import (
+    _basis,
     _collect_role_holders,
     _extract_records,
     _role_search,
@@ -325,3 +326,110 @@ async def test_endpoint_accepts_13_digit_nzbn(monkeypatch):
     res = await nz_associations(request=None, response=None, company_number="9429040916057")
     get_settings.cache_clear()
     assert res["company_number"] == "9429040916057"  # accepted, not rejected
+
+
+# ---------------------------------------------------------------------------
+# Companies (Address Information) Amendment Act 2025 (Phase 271)
+#
+# From 18 Nov 2026 a director may publish an *alternative* physical address on
+# the public register instead of their residential one. The tiers are
+# unchanged — the panel's counts and ordering keep their meaning — but a
+# shared alternative address must not be *described* as a shared residence:
+# an alternative address is typically the office of the accountant or agent
+# who provides it, shared by every one of their clients.
+#
+# Note the asymmetry these pin down: only the NZBN side carries an
+# ``addressType``. The Role Search ``physicalAddress`` has no such field
+# (checked live against entity-roles v3 on 1 Oct 2026), so the wording is
+# graded on what the *subject* filed.
+# ---------------------------------------------------------------------------
+
+_RH_ALT = {**_RH, "address_type": "ALTERNATIVE"}
+_RH_PHYS = {**_RH, "address_type": "PHYSICAL"}
+
+
+def test_alternative_address_is_not_described_as_a_shared_residence():
+    records = [_director_rec("111", "ALPHA LTD", phys=_phys(paf="580631"))]
+    p = summarise_person(_RH_ALT, records, _SUBJECT)
+    alpha = p["companies"][0]
+    # The tier is deliberately unchanged, so counts and ordering are stable...
+    assert alpha["confidence"] == "high"
+    assert p["high_confidence_count"] == 1
+    assert p["address_match_count"] == 1
+    # ...but the basis no longer claims a shared registered address.
+    assert alpha["basis"] == "Same alternative address — may be a shared service address"
+    assert "registered" not in alpha["basis"].lower()
+
+
+def test_alternative_address_relabels_an_overlapping_match_too():
+    records = [_director_rec("444", "GAMMA LTD",
+                             phys=_phys(lines=["1 Queen St", "Auckland"], postcode="1010"))]
+    p = summarise_person(_RH_ALT, records, _SUBJECT)
+    gamma = p["companies"][0]
+    assert gamma["confidence"] == "medium"
+    assert gamma["basis"] == "Overlapping alternative address"
+
+
+def test_alternative_address_leaves_a_name_only_match_alone():
+    """A name-only match makes no address claim, so there is nothing to soften."""
+    records = [_director_rec("333", "DELTA LTD", phys=_phys(paf="999", lines=["99 Other Rd"]))]
+    p = summarise_person(_RH_ALT, records, _SUBJECT)
+    assert p["companies"][0]["confidence"] == "low"
+    assert p["companies"][0]["basis"] == "Same name — may differ"
+
+
+def test_residential_and_untyped_subjects_keep_the_original_wording():
+    """Pre-Act (untyped) and PHYSICAL subjects are unaffected — this change is
+    inert until MBIE starts returning ALTERNATIVE on 18 Nov 2026."""
+    records = [_director_rec("111", "ALPHA LTD", phys=_phys(paf="580631"))]
+    for rh in (_RH, _RH_PHYS):
+        p = summarise_person(rh, records, _SUBJECT)
+        assert p["companies"][0]["basis"] == "Same registered address"
+
+
+def test_basis_helper_is_case_insensitive_and_tolerant():
+    assert _basis("high", "alternative").startswith("Same alternative")
+    assert _basis("high", " ALTERNATIVE ").startswith("Same alternative")
+    assert _basis("high", None) == "Same registered address"
+    assert _basis("high", "PHYSICAL") == "Same registered address"
+    assert _basis("low", "ALTERNATIVE") == "Same name — may differ"
+
+
+def test_collect_role_holders_carries_the_address_type():
+    bundle = {
+        "roles": [
+            {"kind": "person", "name": "Kimberley Hetherington",
+             "search_name": "Hetherington Kimberley", "paf_id": "1",
+             "address": "Level 2, 100 Devon St", "address_type": "ALTERNATIVE"},
+        ],
+        "shareholders": [
+            {"kind": "person", "name": "Scott Hetherington",
+             "search_name": "Hetherington Scott", "paf_id": "2",
+             "address": "19 Manakohi St", "address_type": None},
+        ],
+    }
+    holders = _collect_role_holders(bundle)
+    kim = next(h for h in holders if h["name"] == "Kimberley Hetherington")
+    assert kim["address_type"] == "ALTERNATIVE"
+    scott = next(h for h in holders if h["name"] == "Scott Hetherington")
+    assert scott["address_type"] is None
+
+
+def test_address_type_is_backfilled_when_a_name_holds_two_roles():
+    """A person who is both director and shareholder is merged into one holder;
+    an address type on either filing must survive the merge."""
+    bundle = {
+        "roles": [
+            {"kind": "person", "name": "Jane Smith", "search_name": "Smith Jane",
+             "paf_id": None, "address": None, "address_type": None},
+        ],
+        "shareholders": [
+            {"kind": "person", "name": "Jane Smith", "search_name": "Smith Jane",
+             "paf_id": "7", "address": "Level 2, 100 Devon St",
+             "address_type": "ALTERNATIVE"},
+        ],
+    }
+    holders = _collect_role_holders(bundle)
+    assert len(holders) == 1
+    assert holders[0]["address_type"] == "ALTERNATIVE"
+    assert holders[0]["roles_here"] == {"director", "shareholder"}

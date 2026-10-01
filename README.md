@@ -16,7 +16,7 @@ The risk-signal layer mirrors the [EU AMLA draft customer due diligence regulato
 
 ## Status
 
-**Latest: Phase 270** — Estonia, Latvia and Slovakia were re-verified and the beneficial ownership access table was re-synced from Notion, so Slovakia now reads as open on legitimate interest.
+**Latest: Phase 271** — New Zealand's alternative-address regime starts on 18 November 2026, so the NZ adapter now picks a director's address block by type rather than by position, the associations panel no longer describes a shared alternative address as a shared registered one, and MBIE's sandbox confirms the Entity Role Search API does not serve the alternative address at all.
 
 → [Full development history](docs/status.md)
 

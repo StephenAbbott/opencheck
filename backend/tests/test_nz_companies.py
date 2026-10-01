@@ -19,6 +19,10 @@ from opencheck.sources.base import SearchKind
 from opencheck.sources.nz_companies import (
     NZ_RA_CODE,
     NzCompaniesAdapter,
+    _address_type,
+    _norm_roles,
+    _norm_shareholders,
+    _role_address,
     normalise_nz_company_number,
 )
 
@@ -259,3 +263,113 @@ def test_mapper_produces_valid_ownership_graph() -> None:
 
 def test_mapper_skips_stub() -> None:
     assert list(map_nz_companies({"is_stub": True})) == []
+
+
+# ---------------------------------------------------------------------------
+# Companies (Address Information) Amendment Act 2025 (Phase 271)
+#
+# From 18 Nov 2026 an NZBN address block carries an ``addressType`` of
+# PHYSICAL (residential), ALTERNATIVE, or null — and for an authority holder a
+# director's ``roleAddress`` can hold *both* a PHYSICAL and an ALTERNATIVE
+# block, in an order MBIE does not specify. These pin the deliberate choice.
+# ---------------------------------------------------------------------------
+
+_PHYS_BLOCK = {
+    "address1": "19 Manakohi Street", "address2": "Spotswood",
+    "address3": "New Plymouth", "postCode": "4310", "countryCode": "NZ",
+    "addressType": "PHYSICAL", "pafId": "3757810",
+}
+_ALT_BLOCK = {
+    "address1": "Level 2, 100 Devon Street", "address3": "New Plymouth",
+    "postCode": "4310", "countryCode": "NZ",
+    "addressType": "ALTERNATIVE", "pafId": "9900001",
+}
+_UNTYPED_BLOCK = {
+    "address1": "1 Queen Street", "address3": "Auckland", "postCode": "1010",
+    "countryCode": "NZ", "addressType": None, "pafId": "580631",
+}
+
+
+def test_address_type_normalises_to_upper_or_none() -> None:
+    assert _address_type({"addressType": "alternative"}) == "ALTERNATIVE"
+    assert _address_type({"addressType": " Physical "}) == "PHYSICAL"
+    assert _address_type({"addressType": None}) is None
+    assert _address_type({}) is None
+    assert _address_type("not a dict") is None
+
+
+def test_role_address_prefers_residential_over_alternative() -> None:
+    """An authority holder gets both blocks; the residential one is the one we
+    want, whichever order MBIE sends them in."""
+    role = {"roleAddress": [dict(_ALT_BLOCK), dict(_PHYS_BLOCK)]}
+    assert _role_address(role)["pafId"] == _PHYS_BLOCK["pafId"]
+    role_reversed = {"roleAddress": [dict(_PHYS_BLOCK), dict(_ALT_BLOCK)]}
+    assert _role_address(role_reversed)["pafId"] == _PHYS_BLOCK["pafId"]
+
+
+def test_role_address_public_viewer_sees_only_the_alternative() -> None:
+    """Where a director has elected an alternative address, a public viewer is
+    given that block alone — we take it, and say so via ``addressType``."""
+    chosen = _role_address({"roleAddress": [dict(_ALT_BLOCK)]})
+    assert _address_type(chosen) == "ALTERNATIVE"
+    assert chosen["pafId"] == _ALT_BLOCK["pafId"]
+
+
+def test_role_address_treats_null_type_as_residential() -> None:
+    """null is the pre-Act behaviour for a residential address, so an untyped
+    block outranks an explicit ALTERNATIVE."""
+    role = {"roleAddress": [dict(_ALT_BLOCK), dict(_UNTYPED_BLOCK)]}
+    assert _role_address(role)["pafId"] == _UNTYPED_BLOCK["pafId"]
+
+
+def test_role_address_prefers_a_current_block_to_an_ended_one() -> None:
+    ended = dict(_PHYS_BLOCK) | {"endDate": "2020-01-01T00:00:00Z"}
+    role = {"roleAddress": [ended, dict(_ALT_BLOCK)]}
+    assert _role_address(role)["pafId"] == _ALT_BLOCK["pafId"]
+
+
+def test_role_address_keeps_api_order_within_a_rank() -> None:
+    first = dict(_UNTYPED_BLOCK) | {"pafId": "111"}
+    second = dict(_UNTYPED_BLOCK) | {"pafId": "222"}
+    assert _role_address({"roleAddress": [first, second]})["pafId"] == "111"
+
+
+def test_role_address_falls_back_to_asic_then_empty() -> None:
+    asic = {"address1": "1 Collins St", "postCode": "3000"}
+    assert _role_address({"roleAsicAddress": asic}) == asic
+    assert _role_address({}) == {}
+    assert _role_address({"roleAddress": ["junk", None]}) == {}
+
+
+def test_norm_roles_carries_the_address_type() -> None:
+    roles = [
+        {"roleType": "Director", "roleStatus": "ACTIVE",
+         "rolePerson": {"firstName": "Kimberley", "lastName": "HETHERINGTON"},
+         "roleAddress": [dict(_ALT_BLOCK)]},
+        {"roleType": "Director", "roleStatus": "ACTIVE",
+         "rolePerson": {"firstName": "Scott", "lastName": "HETHERINGTON"},
+         "roleAddress": [dict(_UNTYPED_BLOCK)]},
+        {"roleType": "Director", "roleStatus": "ACTIVE",
+         "roleEntity": {"entityName": "CORPORATE TRUSTEE LIMITED"},
+         "roleAddress": [dict(_PHYS_BLOCK)]},
+    ]
+    out = _norm_roles(roles)
+    assert [r["address_type"] for r in out] == ["ALTERNATIVE", None, "PHYSICAL"]
+    # The alternative address still yields an address + pafId — it is a real
+    # address, just not a residential one.
+    assert out[0]["paf_id"] == _ALT_BLOCK["pafId"]
+
+
+def test_norm_shareholders_carries_the_address_type() -> None:
+    details = {"shareholding": {"numberOfShares": 100, "shareAllocation": [
+        {"allocation": 60, "shareholder": [{
+            "individualShareholder": {"firstName": "Jane", "lastName": "Smith"},
+            "shareholderAddress": dict(_ALT_BLOCK),
+        }]},
+        {"allocation": 40, "shareholder": [{
+            "otherShareholder": {"currentEntityName": "HOLDCO LIMITED"},
+            "shareholderAddress": dict(_UNTYPED_BLOCK),
+        }]},
+    ]}}
+    out = _norm_shareholders(details)
+    assert [s["address_type"] for s in out] == ["ALTERNATIVE", None]

@@ -14,6 +14,12 @@ Scope is deliberately limited to **open, key-free, low-sensitivity** sources:
 - **New Zealand Companies Register (NZBN)** — CC BY 4.0, but *key-gated*: this
   one runs only when ``NZBN_API_KEY`` is set, otherwise it skips.
 
+- **New Zealand sandbox (NZBN + Entity Role Search)** — MBIE's sandbox, which
+  carries the Companies (Address Information) Amendment Act 2025 address shape
+  ahead of its 18 Nov 2026 production release. Key-gated on the *separate*
+  sandbox subscriptions (``NZBN_SANDBOX_API_KEY`` /
+  ``NZBN_ROLE_SEARCH_SANDBOX_API_KEY``) and skipped without them.
+
 Licence-restricted (OpenSanctions CC-BY-NC, OpenCorporates) and PII-heavy
 sources are intentionally excluded. The NZBN smoke test is the one key-gated
 exception (the key is free and the data is CC BY 4.0), and it skips cleanly
@@ -341,3 +347,267 @@ async def test_ted_eu_live_search_confirms_orange_wins():
     bods = list(map_ted_eu(bundle))
     assert bods, "TED bundle produced no BODS statements"
     assert validate_shape(bods) == []
+
+
+# --- New Zealand sandbox — the alternative-address shape (key-gated) ----------
+#
+# The Companies (Address Information) Amendment Act 2025 reaches production on
+# 18 November 2026; MBIE's sandbox has carried the new shape since
+# 30 September 2026. These tests exist to answer, against real payloads, the
+# two questions MBIE's notice left open — whether an alternative address
+# carries its own ``pafId``, and whether the Entity Role Search API is affected
+# at all — and then to keep failing loudly if either answer changes.
+#
+# The sandbox needs its own subscription keys: the production keys return 401
+# against /sandbox/. The base URLs are derived from the production constants by
+# swapping the gateway segment, so they cannot drift apart from the adapters.
+
+_NZ_SANDBOX_DIRECTOR_NZBN = "9429050923540"   # MBIE test entity: a director
+_NZ_SANDBOX_DIRECTOR_NZBN_2 = "9429050923557"  # with an alternative address
+
+
+def _nzbn_sandbox_base() -> str:
+    from opencheck.sources.nz_companies import _API_BASE
+
+    return _API_BASE.replace("/gateway/", "/sandbox/")
+
+
+def _role_search_sandbox_url() -> str:
+    from opencheck.nz_associations import _ROLE_SEARCH_URL
+
+    return _ROLE_SEARCH_URL.replace("/gateway/", "/sandbox/")
+
+
+async def _sandbox_get(url: str, key: str):
+    from opencheck.http import build_client
+
+    async with build_client() as client:
+        resp = await client.get(url, headers={"Ocp-Apim-Subscription-Key": key})
+    assert resp.is_success, (
+        f"sandbox returned HTTP {resp.status_code} for {url} — a 401 means the "
+        "key is a production key, not a sandbox one (MBIE issues these "
+        "separately; subscribe to the Sandbox products in the portal)"
+    )
+    return resp.json()
+
+
+async def test_nzbn_sandbox_director_carries_an_alternative_address_type():
+    """MBIE's test entity has a director with an alternative address, so the
+    sandbox is where we can see `addressType` populated before 18 Nov 2026.
+
+    Asserts the shape *and* that our own selection reads it — `_role_address`
+    must return the alternative block and `_norm_roles` must surface
+    `address_type`, which is the whole point of Phase 271.
+    """
+    key = get_settings().nzbn_sandbox_api_key
+    if not key:
+        pytest.skip("NZBN_SANDBOX_API_KEY not set — skipping NZ sandbox smoke test")
+
+    from opencheck.sources.nz_companies import (
+        _address_type,
+        _norm_roles,
+        _role_address,
+    )
+
+    full = await _sandbox_get(
+        f"{_nzbn_sandbox_base()}/entities/{_NZ_SANDBOX_DIRECTOR_NZBN}", key
+    )
+    roles = full.get("roles") or []
+    assert roles, "sandbox entity returned no roles"
+
+    seen = {
+        _address_type(a)
+        for r in roles
+        for a in (r.get("roleAddress") or [])
+        if isinstance(a, dict)
+    }
+    assert "ALTERNATIVE" in seen, (
+        "no ALTERNATIVE addressType on MBIE's own alternative-address test "
+        f"entity — observed types were {sorted(str(x) for x in seen)}. Either "
+        "the sandbox data changed or the field is not populated as the "
+        "30 Sept 2026 notice described."
+    )
+
+    alt_roles = [
+        r for r in roles
+        if any(_address_type(a) == "ALTERNATIVE"
+               for a in (r.get("roleAddress") or []) if isinstance(a, dict))
+    ]
+    for r in alt_roles:
+        # A public viewer sees only the alternative block, so it is also the
+        # one `_role_address` must choose.
+        types = {_address_type(a) for a in r["roleAddress"] if isinstance(a, dict)}
+        if types == {"ALTERNATIVE"}:
+            assert _address_type(_role_address(r)) == "ALTERNATIVE"
+
+    normalised = _norm_roles(alt_roles)
+    assert normalised, "alternative-address roles normalised to nothing"
+    assert any(row.get("address_type") == "ALTERNATIVE" for row in normalised), (
+        "address_type did not survive _norm_roles — the Phase 271 passthrough "
+        "is broken against real sandbox data"
+    )
+
+
+async def test_nzbn_sandbox_alternative_address_does_not_reuse_the_residential_paf_id():
+    """The open question MBIE did not answer: does an alternative address carry
+    its own `pafId`?
+
+    The answer we must not get is "it reuses the residential one" — that would
+    make a `pafId` match look like a residential match while naming a service
+    address. If both block types are visible (an authority holder sees both for
+    a director), their `pafId`s must differ.
+    """
+    key = get_settings().nzbn_sandbox_api_key
+    if not key:
+        pytest.skip("NZBN_SANDBOX_API_KEY not set — skipping NZ sandbox smoke test")
+
+    from opencheck.sources.nz_companies import _address_type, _paf
+
+    alt_pafs: set[str] = set()
+    residential_pafs: set[str] = set()
+    for nzbn in (_NZ_SANDBOX_DIRECTOR_NZBN, _NZ_SANDBOX_DIRECTOR_NZBN_2):
+        full = await _sandbox_get(f"{_nzbn_sandbox_base()}/entities/{nzbn}", key)
+        for r in full.get("roles") or []:
+            for a in (r.get("roleAddress") or []):
+                if not isinstance(a, dict):
+                    continue
+                paf = _paf(a)
+                if not paf:
+                    continue
+                # A public viewer sees ALTERNATIVE or null; null *is* the
+                # residential address (the pre-Act spelling), so comparing
+                # against PHYSICAL would never fire at this access level.
+                if _address_type(a) == "ALTERNATIVE":
+                    alt_pafs.add(paf)
+                else:
+                    residential_pafs.add(paf)
+
+    assert alt_pafs or residential_pafs, "no pafId on any sandbox role address"
+    overlap = alt_pafs & residential_pafs
+    assert not overlap, (
+        f"an ALTERNATIVE and a residential address share a pafId ({sorted(overlap)}) "
+        "— a pafId match could then name a service address while reading as a "
+        "residential one, and _tier() in nz_associations could no longer treat a "
+        "pafId match as address corroboration at all"
+    )
+
+
+async def test_role_search_sandbox_still_has_no_address_type():
+    """Entity Role Search (v3) is the API `/nz-associations` actually searches,
+    and MBIE's notice does not mention it. As of 1 October 2026 its
+    `physicalAddress` block has no `addressType` field, so a consumer cannot
+    tell which kind of address a record carries.
+
+    This asserts that state deliberately: when MBIE adds the field, this test
+    fails and points at the decision it unblocks — whether `_tier()` should
+    demote a match on an alternative address, not merely relabel it.
+    """
+    key = get_settings().nzbn_role_search_sandbox_api_key
+    if not key:
+        pytest.skip(
+            "NZBN_ROLE_SEARCH_SANDBOX_API_KEY not set — skipping Role Search "
+            "sandbox smoke test"
+        )
+
+    from opencheck.nz_associations import _extract_records
+
+    url = (
+        f"{_role_search_sandbox_url()}?name=SMITH%20John&role-type=ALL"
+        "&page=0&page-size=20&registered-only=true"
+    )
+    payload = await _sandbox_get(url, key)
+    records = _extract_records(payload)
+    assert records, "Role Search sandbox returned no parseable records"
+
+    keys: set[str] = set()
+    for rec in records:
+        phys = rec.get("physicalAddress")
+        if isinstance(phys, dict):
+            keys |= set(phys.keys())
+    assert keys, "no physicalAddress block on any Role Search record"
+    assert "addressType" not in keys, (
+        "Entity Role Search now returns an addressType "
+        f"(physicalAddress keys: {sorted(keys)}). That answers the question put "
+        "to MBIE on 1 Oct 2026: decide whether _tier() should demote a match "
+        "on an ALTERNATIVE address rather than only relabel its basis, and "
+        "update docs/nz-associations.md."
+    )
+
+
+async def test_role_search_sandbox_does_not_serve_the_alternative_address():
+    """The question MBIE's notice left open, answered against real payloads.
+
+    For MBIE's own alternative-address test entities, the `pafId` that Entity
+    Role Search returns for the director does **not** match the `pafId` on the
+    NZBN `ALTERNATIVE` block. In other words Role Search serves a *different*
+    address — on 1 October 2026, in the sandbox, it is not the alternative one.
+
+    Two things follow, and both matter enough to pin:
+
+    * for `/nz-associations`, the subject's NZBN address and the Role Search
+      address will disagree for any director who elects an alternative address,
+      so genuine matches fall from high/medium to name-only — the false-negative
+      branch in `docs/nz-associations.md`;
+    * more seriously, if the address Role Search keeps serving is the
+      residential one, the Act's protection does not hold across MBIE's own
+      APIs. That is the question put to MBIE, and this test is the evidence.
+
+    When this fails, Role Search has started serving the alternative address:
+    the false-*positive* branch is then live (every client of one agent shares a
+    `pafId`) and `_tier()` needs revisiting, not just the basis wording.
+    """
+    nzbn_key = get_settings().nzbn_sandbox_api_key
+    rs_key = get_settings().nzbn_role_search_sandbox_api_key
+    if not (nzbn_key and rs_key):
+        pytest.skip("both NZ sandbox keys required — skipping cross-API check")
+
+    from opencheck.nz_associations import _extract_records, _paf_of
+    from opencheck.sources.nz_companies import _address_type, _paf
+
+    # The alternative-address pafIds, and the companies they sit on.
+    alt_pafs: set[str] = set()
+    company_names: set[str] = set()
+    for nzbn in (_NZ_SANDBOX_DIRECTOR_NZBN, _NZ_SANDBOX_DIRECTOR_NZBN_2):
+        full = await _sandbox_get(f"{_nzbn_sandbox_base()}/entities/{nzbn}", nzbn_key)
+        if full.get("entityName"):
+            company_names.add(str(full["entityName"]))
+        for r in full.get("roles") or []:
+            for a in (r.get("roleAddress") or []):
+                if isinstance(a, dict) and _address_type(a) == "ALTERNATIVE" and _paf(a):
+                    alt_pafs.add(_paf(a))  # type: ignore[arg-type]
+    if not alt_pafs:
+        pytest.skip("no ALTERNATIVE block carried a pafId — nothing to compare")
+    assert company_names, "sandbox entities returned no entityName"
+
+    # What Role Search serves for that director at those same companies.
+    rs_pafs: set[str] = set()
+    for page in range(7):
+        url = (
+            f"{_role_search_sandbox_url()}?name=LASTNAME%20Firstname&role-type=ALL"
+            f"&page={page}&page-size=50&registered-only=true"
+        )
+        records = _extract_records(await _sandbox_get(url, rs_key))
+        if not records:
+            break
+        for rec in records:
+            names = {rec.get("associatedCompanyName")} | {
+                s.get("associatedCompanyName") for s in (rec.get("shareholdings") or [])
+            }
+            if names & company_names:
+                paf = _paf_of(rec.get("physicalAddress"))
+                if paf:
+                    rs_pafs.add(paf)
+    if not rs_pafs:
+        pytest.skip(
+            "Role Search returned no pafId for MBIE's test entities — the "
+            "sandbox fixture data may have changed"
+        )
+
+    assert not (alt_pafs & rs_pafs), (
+        "Entity Role Search now serves the alternative address "
+        f"(shared pafId {sorted(alt_pafs & rs_pafs)}). The false-positive branch "
+        "is live: every client of one accountant or agent now shares a pafId, so "
+        "unrelated directors will grade as address-matched and sort to the top of "
+        "the panel. Revisit _tier() in nz_associations — relabelling the basis is "
+        "no longer enough — and update docs/nz-associations.md."
+    )

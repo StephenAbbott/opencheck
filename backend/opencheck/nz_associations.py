@@ -21,6 +21,21 @@ labelled, with the per-name register total as a common-name warning. This never
 asserts that a person *is* a nominee — it reports what appears under a name in
 the public register, for analyst review. Lazy and never on the main lookup.
 Separate subscription key: ``NZBN_ROLE_SEARCH_API_KEY``.
+
+**Alternative addresses (Companies (Address Information) Amendment Act 2025,
+in force 18 Nov 2026.)** A director — and a shareholder who is that director or
+lives with them — may show an *alternative* physical address on the public
+register instead of their residential one. The NZBN side says which kind it is
+(``address_type``: ``PHYSICAL`` / ``ALTERNATIVE`` / None); the Role Search
+``physicalAddress`` carries **no** ``addressType`` field at all (checked live
+against entity-roles v3 on 1 Oct 2026), so only the subject's own filing is
+known. Where the subject filed an alternative address, a shared ``pafId`` is
+still reported at the same tier — the counts and ordering keep their meaning —
+but it is *described* differently, because an alternative address is typically
+the office of the accountant or agent who provides it and is shared by every
+one of their clients. Whether Role Search itself switches to the alternative
+address is **not stated in MBIE's notice and still unconfirmed**; until it is,
+the tier algorithm is deliberately unchanged (see ``docs/nz-associations.md``).
 """
 
 from __future__ import annotations
@@ -54,6 +69,19 @@ _CONFIDENCE_BASIS = {
     "high": "Same registered address",
     "medium": "Overlapping address",
     "low": "Same name — may differ",
+}
+
+# Companies (Address Information) Amendment Act 2025 — in force 18 Nov 2026.
+# Where the subject's own filed address is an **alternative** address, a shared
+# address is much weaker evidence than it was: an alternative address is
+# typically the office of the accountant or agent who provides it, shared by
+# every one of their clients. The tier is unchanged (the counts and ordering
+# the panel is built on keep their meaning), but it must not be *described* as
+# a shared residence — "Same registered address" would read as corroboration
+# of identity when it is corroboration of a service provider.
+_ALTERNATIVE_BASIS = {
+    "high": "Same alternative address — may be a shared service address",
+    "medium": "Overlapping alternative address",
 }
 
 # Strongest → weakest, for keeping the best confidence per company and ordering.
@@ -109,6 +137,22 @@ def _tier(rec_paf: str | None, rec_addr: str | None,
         if a and b and len(a & b) / len(a | b) >= 0.6:
             return "medium"
     return "low"
+
+
+def _basis(tier: str, subj_address_type: str | None = None) -> str:
+    """Plain-English basis for a tier, honest about an alternative address.
+
+    ``subj_address_type`` is the NZBN ``addressType`` of the *subject* role
+    holder's address (``PHYSICAL`` / ``ALTERNATIVE`` / None). Only the NZBN
+    side carries it — the Role Search ``physicalAddress`` has no
+    ``addressType`` field at all (checked live, 1 Oct 2026) — so this grades
+    the wording on what the subject filed, which is what the match is against.
+    """
+    if (subj_address_type or "").strip().upper() == "ALTERNATIVE":
+        alt = _ALTERNATIVE_BASIS.get(tier)
+        if alt:
+            return alt
+    return _CONFIDENCE_BASIS[tier]
 
 
 def _entity_link(nzbn: str | None) -> str | None:
@@ -206,7 +250,7 @@ def _collect_role_holders(bundle: dict[str, Any]) -> list[dict[str, Any]]:
 
     def add(
         name: str | None, paf: str | None, addr: str | None, role_here: str,
-        search_name: str | None = None,
+        search_name: str | None = None, addr_type: str | None = None,
     ) -> None:
         name = (name or "").strip()
         if not name:
@@ -216,7 +260,8 @@ def _collect_role_holders(bundle: dict[str, Any]) -> list[dict[str, Any]]:
         if rh is None:
             rh = {
                 "name": name, "search_name": (search_name or "").strip() or name,
-                "paf_id": paf, "address": addr, "roles_here": set(),
+                "paf_id": paf, "address": addr, "address_type": addr_type,
+                "roles_here": set(),
             }
             by_name[key] = rh
         rh["roles_here"].add(role_here)
@@ -224,11 +269,15 @@ def _collect_role_holders(bundle: dict[str, Any]) -> list[dict[str, Any]]:
             rh["paf_id"] = paf
         if not rh.get("address") and addr:
             rh["address"] = addr
+        if not rh.get("address_type") and addr_type:
+            rh["address_type"] = addr_type
 
     for r in bundle.get("roles") or []:
-        add(r.get("name"), r.get("paf_id"), r.get("address"), "director", r.get("search_name"))
+        add(r.get("name"), r.get("paf_id"), r.get("address"), "director",
+            r.get("search_name"), r.get("address_type"))
     for s in bundle.get("shareholders") or []:
-        add(s.get("name"), s.get("paf_id"), s.get("address"), "shareholder", s.get("search_name"))
+        add(s.get("name"), s.get("paf_id"), s.get("address"), "shareholder",
+            s.get("search_name"), s.get("address_type"))
     return list(by_name.values())
 
 
@@ -292,6 +341,7 @@ def summarise_person(
     confidence is the strongest tier seen across that name's records.
     """
     subj_paf, subj_addr = rh.get("paf_id"), rh.get("address")
+    subj_type = rh.get("address_type")
     companies: dict[str, dict[str, Any]] = {}
 
     for rec in records:
@@ -332,7 +382,7 @@ def summarise_person(
     out_companies = [{
         "number": c["number"], "name": c["name"], "nzbn": c["nzbn"],
         "roles": sorted(c["roles"]), "share_percentage": c["share_percentage"],
-        "confidence": c["confidence"], "basis": _CONFIDENCE_BASIS[c["confidence"]],
+        "confidence": c["confidence"], "basis": _basis(c["confidence"], subj_type),
         "link": _entity_link(c["nzbn"]),
     } for c in ordered]
 

@@ -56,7 +56,102 @@ the `N address-matched, M name-only` split, the per-name register **total**
 (companies, roles, match basis), and nothing is ever asserted as a determination.
 A shared `pafId` ("same registered control point") is the strongest signal for
 nominee detection — but can also be a shared formation-agent office — so it is
-surfaced as confidence, not proof.
+surfaced as confidence, not proof. From 18 November 2026 that caveat becomes the
+common case for any director who elects an **alternative address**: see
+[Alternative addresses](#alternative-addresses-amendment-act-2025-in-force-18-november-2026)
+below.
+
+## Alternative addresses (Amendment Act 2025, in force 18 November 2026)
+
+The **Companies (Address Information) Amendment Act 2025** lets a director — and
+a shareholder who is that director or lives with them — show an **alternative
+physical address** on the public Companies Register in place of their
+residential one. It commences **18 November 2026** (the NZBN and Companies APIs
+are offline 7pm–midnight NZ time on 17 November, 06:00–11:00 UTC).
+
+The API versions do not change; the address fields do. On the NZBN v5 side,
+`roles[x].roleAddress[x].addressType` and
+`company-details.shareholding.shareAllocation[x].shareholder[x].shareholderAddress.addressType`
+become `PHYSICAL`, `ALTERNATIVE` or null. A **public viewer** (which is what
+OpenCheck is) sees `ALTERNATIVE` where one is filed and otherwise null — and
+**null means residential**, the pre-Act behaviour, not "unknown". An authority
+holder sees `PHYSICAL` and/or `ALTERNATIVE`, and for *directors* gets **both
+blocks** when both exist. OpenCheck does not read the Companies v2 API, whose
+`physicalOrPostalAddresses[x].addressType` gains `Alternative`, so that half of
+the change does not reach us.
+
+Two consequences for this panel:
+
+- **`_role_address()` chooses, it no longer takes `[0]`.** `roleAddress` can
+  hold more than one block and MBIE does not specify the order, so position is
+  a coin-flip between a home address and a service address. The adapter ranks a
+  current block before an ended one, then residential (`PHYSICAL` or null)
+  before `ALTERNATIVE`, and carries the chosen block's type through the
+  normalised role and shareholder rows as `address_type`. Pre-Act every block
+  is untyped and current, so this returns what `[0]` did.
+- **A shared alternative address is not a shared residence.** An alternative
+  address is typically the office of the accountant or agent who provides it,
+  shared by every one of their clients, so a matching `pafId` stops being
+  evidence about a *person*. The **tier is deliberately unchanged** — the
+  `address_match_count` / `name_only_count` split and the panel ordering keep
+  their meaning — but the **basis wording** changes, so the drill-down says
+  "Same alternative address — may be a shared service address" rather than
+  "Same registered address". Relabelling is honest at any volume; re-tiering
+  would silently move counts on evidence we do not yet have.
+
+### Is Role Search affected? Tested in the sandbox — no.
+
+MBIE's notice covers the NZBN v5 and Companies v2 APIs. It does **not** mention
+the **Companies Entity Role Search API (v3)**, which is the API this panel
+actually searches. Tested against MBIE's sandbox on 1 October 2026, using the
+two alternative-address test entities it named:
+
+| Checked | Result |
+|---|---|
+| NZBN v5 `addressType` on a director with an alternative address | `ALTERNATIVE` — populated as documented |
+| Other directors on the same entity | `addressType` null — null *is* the residential address |
+| `PHYSICAL` ever visible to a public viewer | no — only `ALTERNATIVE` or null |
+| Does an `ALTERNATIVE` block carry a `pafId`? | **inconsistent** — absent on one test entity, present (`3161519`) on the other |
+| Does an `ALTERNATIVE` `pafId` ever equal a residential one? | no |
+| Role Search `physicalAddress` fields | `addressLines`, `postCode`, `countryCode`, `pafId` — still **no `addressType`** |
+| Does Role Search serve the alternative address? | **no** — its `pafId` for the same director at the same company is a different one |
+
+So of the two branches, the **false-negative** one is what the sandbox shows:
+for any director who elects an alternative address, the subject's NZBN address
+and the Role Search address disagree, and genuine matches fall from high/medium
+to name-only — exactly for the directors who elected privacy. The panel already
+shows name-only matches rather than hiding them (the recall fix above), so they
+are not lost, only demoted.
+
+Two caveats on that result. The sandbox is **synthetic** data, not a clone of
+production — the test entities are generated companies (`MANDATORY
+CONTEXTUALLY-BASED SUCCESS LIMITED`) with placeholder directors, and almost
+every synthetic address resolves to one Wellington `pafId`. And a sandbox index
+that has not been refreshed would look identical to an API that is deliberately
+out of scope. So this is evidence, not proof.
+
+It also raises something larger than our matching. If the address Role Search
+keeps serving is the **residential** one, then the Act's protection does not
+hold across MBIE's own APIs: a residential address withheld from the NZBN API
+would still be reachable through entity-roles v3. That is the first question in
+the feedback sent to MBIE before the **14 October 2026** deadline
+(`helpdesk@mail.api.business.govt.nz`), alongside the inconsistent `pafId` on
+alternative addresses.
+
+Because the answer is a sandbox observation rather than a commitment from MBIE,
+the **tier algorithm is left alone** and only the basis wording changes. Four
+opt-in live smoke tests in `backend/tests/test_live_smoke.py` pin each finding,
+including one that fails the day Role Search starts serving the alternative
+address — at which point the false-positive branch is live (every client of one
+agent sharing a `pafId`) and `_tier()` does need revisiting. They need the
+sandbox keys (`NZBN_SANDBOX_API_KEY`, `NZBN_ROLE_SEARCH_SANDBOX_API_KEY` — the
+production keys 401 against `/sandbox/`) **exported into the environment**, since
+the test tier runs with `OPENCHECK_DISABLE_DOTENV=1`:
+
+```
+set -a && . ./.env && set +a && cd backend \
+  && pytest --run-live -m live tests/test_live_smoke.py -k sandbox
+```
 
 ## What it returns
 
