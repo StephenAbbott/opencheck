@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 277** — a weekly findings regression checks what production concludes for twelve golden LEIs, by failure class, and reports what changed since the last run.
+**Latest: Phase 279** — the related-party screens dedupe parties across sources, read current owners and officers first, and say when their per-lookup limit left anyone unscreened.
 
 → [Full development history](docs/status.md)
 
