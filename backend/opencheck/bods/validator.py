@@ -180,7 +180,10 @@ def address_type_issues(stmt: dict[str, Any]) -> list[str]:
     """
     if not isinstance(stmt, dict):
         return []
-    allowed = VALID_ADDRESS_TYPES_BY_RECORD.get(stmt.get("recordType"))
+    record_type = stmt.get("recordType")
+    if not isinstance(record_type, str):
+        return []
+    allowed = VALID_ADDRESS_TYPES_BY_RECORD.get(record_type)
     if allowed is None:
         return []
     rd = stmt.get("recordDetails")
@@ -191,8 +194,8 @@ def address_type_issues(stmt: dict[str, Any]) -> list[str]:
             continue
         if addr["type"] not in allowed:
             issues.append(
-                f"{stmt.get('recordType')} address type {addr['type']!r} not allowed "
-                f"on a {stmt.get('recordType')} record (allowed: {sorted(allowed)})"
+                f"{record_type} address type {addr['type']!r} not allowed "
+                f"on a {record_type} record (allowed: {sorted(allowed)})"
             )
     return issues
 
