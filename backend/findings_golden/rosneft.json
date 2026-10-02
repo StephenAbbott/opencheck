@@ -1,0 +1,42 @@
+{
+  "lei": "253400JT3MQWNDKMJE44",
+  "name": "Rosneft",
+  "role": "curated",
+  "why": "Curated example. Sanctioned Russian state oil company: findings on the company itself, related-party findings, and EU_HIGH_RISK_THIRD_COUNTRY on its own RU registration (survives the Phase 273 scope).",
+  "example_card": true,
+  "no_risk": false,
+  "risk": {
+    "SANCTIONED": "high",
+    "EXPORT_CONTROLLED": "high",
+    "DEBARMENT": "high",
+    "EU_HIGH_RISK_THIRD_COUNTRY": "high",
+    "STATE_CONTROLLED": "medium",
+    "RELATED_SANCTIONED": "high",
+    "SANCTIONED_SECURITY": "high"
+  },
+  "context": [
+    "GLEIF_REPORTING_EXCEPTION",
+    "SUBSIDIARY_LISTED_JURISDICTION"
+  ],
+  "absent": [
+    "COMPLEX_CORPORATE_STRUCTURE"
+  ],
+  "verdict": {
+    "matches": [
+      "sanctions findings on the company itself"
+    ],
+    "not_matches": []
+  },
+  "sources_found": [
+    "gleif",
+    "opensanctions",
+    "meip"
+  ],
+  "liveness": {
+    "meip": [
+      "snapshot"
+    ]
+  },
+  "lei_confirmed_min": 3,
+  "intermediate_layers_min": null
+}

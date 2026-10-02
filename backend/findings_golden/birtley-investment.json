@@ -1,0 +1,26 @@
+{
+  "lei": "254900RT9QQBQZVH8O89",
+  "name": "Birtley Investment Limited",
+  "role": "control",
+  "why": "Clean control: a small GB Ltd with no findings. Its only signal is the GLEIF reporting exception, which is context, not risk. Its LEI is LAPSED, which is the LEI record's status, not the company's.",
+  "example_card": false,
+  "no_risk": true,
+  "risk": {},
+  "context": [
+    "GLEIF_REPORTING_EXCEPTION"
+  ],
+  "absent": [],
+  "verdict": {
+    "matches": [
+      "^No risk signals surfaced"
+    ],
+    "not_matches": []
+  },
+  "sources_found": [
+    "gleif",
+    "companies_house"
+  ],
+  "liveness": {},
+  "lei_confirmed_min": 1,
+  "intermediate_layers_min": null
+}

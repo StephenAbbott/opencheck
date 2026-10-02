@@ -1,0 +1,40 @@
+{
+  "lei": "21380068P1DRHMJ8KU70",
+  "name": "Shell plc",
+  "role": "anchor",
+  "why": "The report where the three 2 Sept defects (verdict wording, MCP shaping, per-card chip duplication) sat unnoticed for weeks. Large group: its subsidiaries must not drive a list chip (Phase 273).",
+  "example_card": false,
+  "no_risk": false,
+  "risk": {
+    "RELATED_PEP": "medium"
+  },
+  "context": [
+    "GLEIF_REPORTING_EXCEPTION"
+  ],
+  "absent": [
+    "FATF_GREY_LIST",
+    "FATF_BLACK_LIST",
+    "EU_HIGH_RISK_THIRD_COUNTRY"
+  ],
+  "verdict": {
+    "matches": [
+      "politically exposed person"
+    ],
+    "not_matches": [
+      "watch list"
+    ]
+  },
+  "sources_found": [
+    "gleif",
+    "companies_house",
+    "opensanctions",
+    "meip"
+  ],
+  "liveness": {
+    "meip": [
+      "snapshot"
+    ]
+  },
+  "lei_confirmed_min": 3,
+  "intermediate_layers_min": null
+}

@@ -483,3 +483,7 @@ First run of the two index probes, 21 Sept 2026: `onrc_romania` **ok / snapshot*
 the age check doing its job, not a regression: MEIP's reference date is 31 Dec 2024 and the next
 annual edition is overdue. Widening the threshold to make it green would be the silent-green
 failure this whole file exists to prevent.
+
+## Sibling: the findings regression (Phase 277)
+
+This sweep asserts each source is alive and correctly badged. What the engine *concludes* from those sources is asserted weekly by the findings regression, against a golden set of LEIs in production. See [findings-regression.md](findings-regression.md).

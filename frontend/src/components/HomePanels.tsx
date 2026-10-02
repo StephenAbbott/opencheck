@@ -40,9 +40,12 @@ export interface ExampleLei {
 }
 
 // Signals shown on the picker cards. These are CLAIMS ABOUT PRODUCTION
-// OUTPUT and nothing fails when they drift — verify against production
-// (`/lookup?lei=…&refresh=true` on api.opencheck.world), never by reading
-// the card back.
+// OUTPUT — verify against production (`/lookup?lei=…&refresh=true` on
+// api.opencheck.world), never by reading the card back. Since Phase 277 the
+// weekly findings regression compares every card here against production
+// (`card_drift`, docs/findings-regression.md), and each curated subject has a
+// golden file in backend/findings_golden/ that must be added or removed with
+// its card.
 //
 // Last verified 2026-09-25 against production, after Phase 247 deployed.
 // Each list is EVERY distinct risk code production returned for that

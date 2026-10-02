@@ -1,0 +1,32 @@
+{
+  "lei": "549300D2K6PKKKXVNN73",
+  "name": "A.P. Møller - Mærsk A/S",
+  "role": "anchor",
+  "why": "Phase 273 anchor: its only listed-jurisdiction exposure is a BVI subsidiary, so no FATF/EU chip and no watch-list verdict clause, only the SUBSIDIARY_LISTED_JURISDICTION context note.",
+  "example_card": false,
+  "no_risk": true,
+  "risk": {},
+  "context": [
+    "SUBSIDIARY_LISTED_JURISDICTION"
+  ],
+  "absent": [
+    "FATF_GREY_LIST",
+    "FATF_BLACK_LIST",
+    "EU_HIGH_RISK_THIRD_COUNTRY"
+  ],
+  "verdict": {
+    "matches": [
+      "^No risk signals surfaced"
+    ],
+    "not_matches": [
+      "watch list"
+    ]
+  },
+  "sources_found": [
+    "gleif",
+    "cvr_denmark"
+  ],
+  "liveness": {},
+  "lei_confirmed_min": 3,
+  "intermediate_layers_min": null
+}

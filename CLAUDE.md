@@ -265,6 +265,37 @@ tone, `skipped` → Not tested in neutral — never healthy, never omitted) and
 source: the page shows the last sweep's verdict and says when it was reached.
 `OPENCHECK_SOURCE_HEALTH_FILE` points a developer at a local sweep.
 
+### Findings regression (Phase 277)
+
+The source-health sweep asserts each source is *alive*; the findings
+regression asserts what the engine *finds*. `.github/workflows/findings-regression.yml`
+(Mondays 08:30 UTC + Run workflow) runs `scripts/findings_regression.py`
+against the **deployed** API — `/lookup?refresh=true`, then the MCP
+`opencheck_lookup` replay of the same run — for the golden set in
+`backend/findings_golden/` (six curated examples, Shell, Maersk, Bank Saderat
+PLC, ASDA Stores, two clean controls). Rules that keep it honest:
+
+- **Golden files are lower bounds and shapes, never snapshots.** A genuine
+  upstream change is fixed by editing the subject's file in a reviewed PR.
+- **A curated golden file and an `EXAMPLE_LEIS` card exist together or not at
+  all** — `test_curated_golden_files_are_exactly_the_homepage_cards`. When you
+  change a card, the weekly run checks it against production (`card_drift`);
+  when you add or drop a curated example, add or drop its golden file.
+- **Every finding names its failure class** (`kind_mismatch`,
+  `structural_repeated`, `degraded_reads_clean`, `placeholder_badge`,
+  `card_drift`, …; full table in `docs/findings-regression.md`). Label-map
+  coverage is *not* here — `tests/test_signal_label_coverage.py` does it
+  offline on every PR.
+- **The diff is against the last published report** (`findings-regression-latest`
+  release), not the last successful run, and codes whose rules moved between
+  two reports are labelled "(rule change)" from the watchlist's
+  `VERDICT_TEMPLATE` / `SIGNAL_RULES` stamps. When a phase changes what a rule
+  emits, bump those stamps as the watchlist already requires, and the weekly
+  diff will say so instead of reporting drift.
+- **A hand-built signal dict must carry `kind`.** Consumers default a missing
+  one to risk, which hides the gap; the regression reports it as
+  `kind_mismatch` (it caught `SANCTIONED_SECURITY`).
+
 ### Cold start & per-source time budgets (Phase 47)
 
 - The FastAPI lifespan kicks off `climatetrace.warm_caches()` (and, since, the

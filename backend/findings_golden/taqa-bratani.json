@@ -1,0 +1,34 @@
+{
+  "lei": "213800E11LI1SCETU492",
+  "name": "Taqa Bratani Limited",
+  "role": "curated",
+  "why": "Curated example. UAE-owned UK company: related-party sanctions and export-control findings, none on the company itself.",
+  "example_card": true,
+  "no_risk": false,
+  "risk": {
+    "RELATED_SANCTIONS_CONTROLLED": "high",
+    "RELATED_EXPORT_CONTROL_LINKED": "high"
+  },
+  "context": [
+    "NON_EU_JURISDICTION"
+  ],
+  "absent": [
+    "SANCTIONED"
+  ],
+  "verdict": {
+    "matches": [
+      "parties connected to it"
+    ],
+    "not_matches": [
+      "on the company itself"
+    ]
+  },
+  "sources_found": [
+    "gleif",
+    "companies_house",
+    "opensanctions"
+  ],
+  "liveness": {},
+  "lei_confirmed_min": 3,
+  "intermediate_layers_min": null
+}

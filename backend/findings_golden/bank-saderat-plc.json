@@ -1,0 +1,33 @@
+{
+  "lei": "2138008KTNTDICZU8L25",
+  "name": "Bank Saderat PLC",
+  "role": "anchor",
+  "why": "Phase 273 anchor: FATF black list and EU_HIGH_RISK_THIRD_COUNTRY come from Bank Saderat Iran ABOVE the subject, so the upstream path must still fire. A black-listed country never also fires grey.",
+  "example_card": false,
+  "no_risk": false,
+  "risk": {
+    "FATF_BLACK_LIST": "high",
+    "EU_HIGH_RISK_THIRD_COUNTRY": "high",
+    "SANCTIONED": "high"
+  },
+  "context": [
+    "NON_EU_JURISDICTION"
+  ],
+  "absent": [
+    "FATF_GREY_LIST"
+  ],
+  "verdict": {
+    "matches": [
+      "sanctions findings on the company itself"
+    ],
+    "not_matches": []
+  },
+  "sources_found": [
+    "gleif",
+    "companies_house",
+    "opensanctions"
+  ],
+  "liveness": {},
+  "lei_confirmed_min": 2,
+  "intermediate_layers_min": null
+}
