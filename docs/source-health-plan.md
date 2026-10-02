@@ -487,3 +487,11 @@ failure this whole file exists to prevent.
 ## Sibling: the findings regression (Phase 277)
 
 This sweep asserts each source is alive and correctly badged. What the engine *concludes* from those sources is asserted weekly by the findings regression, against a golden set of LEIs in production. See [findings-regression.md](findings-regression.md).
+
+## When the monitor itself goes quiet — Phase 278 (2026-10-02)
+
+The 21 and 28 Sept checks read the published report at 10:00 UTC on a Monday, found last week's, and concluded the 07:30 cron had never fired. It had — every week. The Actions run list (event `schedule`) shows the scheduled sweep starting at 08:10 on 24 Aug, then 15:16, 13:37, 14:19, 14:26 and 15:46 on the five Mondays after. Every scheduled workflow in the repo moved the same way at the same time (drift checks, live smoke, securities refresh, PSC graph, entity-pages DB: all six to eight hours late since the end of August), which matches community reports of GitHub scheduler delays from 26–27 Aug 2026. GitHub documents `schedule` as best-effort: it can be delayed under load and dropped outright. Nothing in the workflow file was wrong. The red runs on 28 Sept were genuine source failures (`cvr_denmark` HTTP 500, `sec_edgar`), raised by the final "Fail the job if the sweep did" step after the report had published.
+
+The lesson is not about this delay but about the class: the monitor had no way to say it had stopped. `stale` on `/source-health` only ever meant "the asset could not be re-read just now". So the API now stamps every served report with `age_days`, measured at request time from `generated_at`, and `overdue: true` once that passes eight days (`OVERDUE_AFTER_DAYS`) — a week plus a day, which absorbs an eight-hour-late Monday and flags a skipped one by the Tuesday after. The age is computed outside the hourly cache, so it advances while the cached copy does not, and it depends on nothing in GitHub. The sources page shows a warn-tone line above the cards ("The weekly sweep has not published since … — N days ago") and keeps the verdicts: last month's sweep is still evidence, just labelled as old.
+
+Anything that reads the report on a clock should judge "has a sweep published this week?", not "has it published by 10:00".

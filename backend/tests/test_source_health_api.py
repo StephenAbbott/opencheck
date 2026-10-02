@@ -1,4 +1,4 @@
-"""``GET /source-health`` and the shaping behind it (Phase 161).
+"""``GET /source-health`` and the shaping behind it (Phases 161, 278).
 
 The sweep's report is read, never re-derived; what is served is a shaping of
 it; and a missing report is reported as missing rather than as healthy.
@@ -7,6 +7,7 @@ it; and a missing report is reported as missing rather than as healthy.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -231,3 +232,85 @@ def test_default_location_is_the_release_asset_and_history_sits_beside_it() -> N
         "/releases/download/source-health-latest/source-health-history.json"
     )
     assert source_health._history_location("/tmp/x/source-health.json") == "/tmp/x/source-health-history.json"
+
+
+# --- Phase 278: a monitor that has stopped running says so ------------------
+
+_GENERATED = datetime(2026, 8, 31, 7, 31, 4, tzinfo=timezone.utc)  # REPORT["generated_at"]
+
+
+def test_with_age_reports_a_fresh_sweep_as_not_overdue() -> None:
+    out = source_health.with_age(source_health.shape(REPORT, None), at=_GENERATED + timedelta(days=3))
+    assert out["age_days"] == 3.0
+    assert out["overdue"] is False
+    assert out["overdue_after_days"] == source_health.OVERDUE_AFTER_DAYS
+
+
+def test_a_scheduled_run_eight_hours_late_is_still_inside_the_window() -> None:
+    # Next Monday's run starting ~8h late, as GitHub's scheduler has done since
+    # late August 2026: 7 days 8 hours after the previous one.
+    out = source_health.with_age(
+        source_health.shape(REPORT, None), at=_GENERATED + timedelta(days=7, hours=8)
+    )
+    assert out["overdue"] is False
+
+
+def test_a_missed_week_is_overdue() -> None:
+    out = source_health.with_age(
+        source_health.shape(REPORT, None), at=_GENERATED + timedelta(days=8, hours=1)
+    )
+    assert out["overdue"] is True
+    assert out["age_days"] == 8.0
+
+
+def test_with_age_leaves_unavailable_and_undatable_payloads_alone() -> None:
+    missing = {"available": False, "reason": "no sweep report"}
+    assert source_health.with_age(missing, at=_GENERATED) is missing
+    undated = dict(source_health.shape(REPORT, None), generated_at="not a date")
+    out = source_health.with_age(undated, at=_GENERATED)
+    assert "overdue" not in out and "age_days" not in out
+
+
+def test_with_age_does_not_mutate_the_cached_payload() -> None:
+    shaped = source_health.shape(REPORT, None)
+    source_health.with_age(shaped, at=_GENERATED + timedelta(days=30))
+    assert "overdue" not in shaped and "age_days" not in shaped
+
+
+@pytest.mark.asyncio
+async def test_age_advances_while_the_cached_copy_does_not(monkeypatch, tmp_path: Path) -> None:
+    path = tmp_path / "source-health.json"
+    path.write_text(json.dumps(REPORT))
+    monkeypatch.setenv("OPENCHECK_SOURCE_HEALTH_FILE", str(path))
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+    source_health.reset_for_tests()
+    try:
+        # Same monotonic clock (the cache answers both), different wall clocks.
+        early = await source_health.load(now=0.0, at=_GENERATED + timedelta(days=1))
+        late = await source_health.load(now=1.0, at=_GENERATED + timedelta(days=20))
+        assert early["overdue"] is False and early["age_days"] == 1.0
+        assert late["overdue"] is True and late["age_days"] == 20.0
+        assert late["generated_at"] == early["generated_at"] == REPORT["generated_at"]
+    finally:
+        get_settings.cache_clear()
+        source_health.reset_for_tests()
+
+
+def test_endpoint_serves_the_age(monkeypatch, tmp_path: Path) -> None:
+    path = tmp_path / "source-health.json"
+    path.write_text(json.dumps(REPORT))
+    monkeypatch.setenv("OPENCHECK_SOURCE_HEALTH_FILE", str(path))
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+    source_health.reset_for_tests()
+    try:
+        body = TestClient(app).get("/source-health").json()
+        # REPORT is dated 31 Aug 2026, so against the real clock it is overdue.
+        assert body["available"] is True
+        assert body["overdue"] is True
+        assert body["age_days"] > source_health.OVERDUE_AFTER_DAYS
+        assert body["overdue_after_days"] == source_health.OVERDUE_AFTER_DAYS
+    finally:
+        get_settings.cache_clear()
+        source_health.reset_for_tests()

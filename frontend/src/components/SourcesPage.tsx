@@ -113,6 +113,11 @@ export function SourcesPage({
           >
             Weekly sweep on GitHub →
           </a>
+          {summary.overdueNote && (
+            <p role="status" className="basis-full m-0 text-oo-meta text-oo-warn-text">
+              {summary.overdueNote}
+            </p>
+          )}
           {summary.staleNote && (
             <p className="basis-full m-0 text-oo-meta text-oo-muted">{summary.staleNote}</p>
           )}
