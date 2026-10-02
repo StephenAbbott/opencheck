@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 277** — a weekly findings regression checks what production concludes for twelve golden LEIs, by failure class, and reports what changed since the last run.
+**Latest: Phase 278** — The source-health report now says when the weekly sweep has stopped publishing, measured from its own date rather than from GitHub's scheduler.
 
 → [Full development history](docs/status.md)
 
