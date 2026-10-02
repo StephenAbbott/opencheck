@@ -1,0 +1,76 @@
+name: Refresh ChileCompra supplier index
+
+# Rebuilds the ChileCompra (Mercado Público) supplier index from the last
+# twelve complete months of ChileCompra's open-data files and replaces the
+# `chilecompra-index` release asset the backend downloads at boot
+# (CHILECOMPRA_DB_URL). Phase 280.
+#
+# Why here and not on Render: twelve months of files are ~1.4 GB of zips and
+# ~10 GB of CSV; parsing them is several minutes of CPU-bound Python that would
+# hold the GIL against live lookups after every deploy. The result is ~13 MB
+# (~5.6 MB gzipped).
+#
+# Why a full rebuild each month rather than an append: ChileCompra regenerates
+# its whole file series as it goes (every month's file carried the same
+# Last-Modified on 2 October 2026), so an appended month would go stale.
+#
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "0 6 3 * *" # 06:00 UTC on the 3rd — the previous month is complete
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-chilecompra-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Build the index from the newest twelve complete months
+        working-directory: backend
+        run: |
+          uv sync
+          uv run python scripts/build_chilecompra_index.py \
+            --out "$RUNNER_TEMP/chilecompra.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "chilecompra.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM supplier").fetchone()[0]
+          print(f"{n} company suppliers, {meta.get('data_from')} – {meta.get('data_to')}")
+          if n < 20000:
+              sys.exit(f"Refusing to publish: only {n} suppliers — likely a source/format change.")
+          PY
+
+      - name: Replace the `chilecompra-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view chilecompra-index >/dev/null 2>&1 || gh release create chilecompra-index \
+            --title "ChileCompra supplier index" \
+            --notes "Built monthly by refresh-chilecompra-index.yml from ChileCompra's open data (Fuente: Dirección ChileCompra). Downloaded by the backend at boot (CHILECOMPRA_DB_URL)."
+          gh release upload chilecompra-index "$RUNNER_TEMP/chilecompra.sqlite.gz" --clobber
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"

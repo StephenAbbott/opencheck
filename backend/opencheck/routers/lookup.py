@@ -71,6 +71,7 @@ from .hit_builders import (  # noqa: F401
     _bh_anaf_romania,
     _bh_apr_serbia,
     _bh_asp_moldova,
+    _bh_chilecompra,
     _EITI_IDENTIFIER_KEY_BY_COUNTRY,
     _LookupCtx,
     _PERSON_CAPABLE_SOURCES,
@@ -814,6 +815,11 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         if not local_id:
             continue
         adapter = REGISTRY[spec.source_id]
+        # Phase 280: an index-backed register adapter that declares
+        # ``covers_lei`` is not announced when its index is absent. Read
+        # through the same helper as the LEI-keyed offline adapters.
+        if not _offline_index_covers(adapter, ctx.lei):
+            continue
         if spec.pass_legal_name:
             tasks.append((spec.source_id, adapter.fetch(local_id, legal_name=ctx.legal_name)))
         else:
@@ -980,6 +986,12 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     if source_id == "ted_eu":
         # A zero-notice result is a legitimate absence, not a hit.
         return _bh_ted_eu(result, ctx) if result.get("total_notice_count") else None
+    if source_id == "chilecompra":
+        # The same rule (Phase 280): a company that sold nothing to the
+        # Chilean state in the window answered, and has no card.
+        if not result.get("supplier"):
+            return None
+        return _bh_chilecompra(result, str(result.get("rut") or ""), ctx)
     if result.get("is_stub"):
         return None
     if source_id == "opencorporates":

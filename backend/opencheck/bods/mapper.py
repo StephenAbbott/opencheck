@@ -177,6 +177,10 @@ from .mappers.wikirate import (  # noqa: F401  (re-exported, Phase 246)
 from .mappers.ted import (  # noqa: F401  (re-exported, Phase 246)
     map_ted_eu,
 )
+from .mappers.chile import (  # noqa: F401  (re-exported, Phase 280)
+    _chilecompra_clp,
+    map_chilecompra,
+)
 from .mappers.estonia import (  # noqa: F401  (re-exported, Phase 246)
     _EE_BO_CONTROL_MAP,
     _EE_OFFICER_ROLE_MAP,
@@ -616,6 +620,38 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
 _GLEIF_UNLISTED_RA_CODES: frozenset[str] = frozenset({"RA999999", "RA888888"})
 
 
+#: Chilean registration authorities (Phase 280) — see gleif_registration_scheme.
+_CL_RA_CODES: frozenset[str] = frozenset(
+    {"RA000787", "RA000090", "RA000091", "RA000785", "RA000846"}
+)
+CL_RUT_SCHEME = "CL-RUT"
+CL_RUT_SCHEME_NAME = "RUT — Rol Único Tributario (Chile)"
+
+#: RA codes whose scheme is decided by the value, not the code (Phase 280) —
+#: so they are absent from ``_GLEIF_RA_TO_ORG_ID`` on purpose.
+_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES
+
+
+def chilean_rut(value: str | None) -> str | None:
+    """A valid RUT written as Chilean documents print it (``76.338.588-4``),
+    or None. The check digit is mod 11 over weights 2..7 from the right."""
+    text = re.sub(r"[.\s]", "", str(value or "")).upper()
+    match = re.fullmatch(r"(\d{6,9})-?([\dK])", text)
+    if not match:
+        return None
+    body, dv = match.group(1).lstrip("0"), match.group(2)
+    if not body:
+        return None
+    total, weight = 0, 2
+    for digit in reversed(body):
+        total += int(digit) * weight
+        weight = 2 if weight == 7 else weight + 1
+    expected = 11 - total % 11
+    if {11: "0", 10: "K"}.get(expected, str(expected)) != dv:
+        return None
+    return f"{int(body):,}".replace(",", ".") + f"-{dv}"
+
+
 def normalise_registered_as(value: Any) -> str:
     """GLEIF's ``registeredAs`` as a register writes it (Phase 239).
 
@@ -641,7 +677,13 @@ def gleif_registration_scheme(
 
     0. New Zealand's Companies Office (RA000466) files the 13-digit NZBN on
        most records and the company number on the rest; the value says
-       which (sampled live, 24 Sept 2026).
+       which (sampled live, 24 Sept 2026). Chile is the same shape (Phase
+       280): every Chilean RA files the RUT for some records, and RA000090 /
+       RA000091 file Registro de Comercio inscriptions ("fojas … número …")
+       for others, so ``CL-RUT`` is asserted only for a value that passes the
+       RUT check digit. Deliberately **not** in ``_GLEIF_RA_TO_ORG_ID``: that
+       table also drives ``register_hops``, and the one adapter keyed on the
+       RUT (``chilecompra``) is procurement, not a register to hop through.
 
     1. An RA code in ``_GLEIF_RA_TO_ORG_ID`` → its org-id scheme.
     2. An unmapped RA in a US state → the ISO 3166-2 subdivision code
@@ -657,6 +699,8 @@ def gleif_registration_scheme(
     ra = (ra_id or "").strip().upper()
     if ra == "RA000466" and re.fullmatch(r"94\d{11}", registered_as or ""):
         return "NZ-NZBN", "New Zealand Business Number"
+    if ra in _CL_RA_CODES and chilean_rut(registered_as):
+        return CL_RUT_SCHEME, CL_RUT_SCHEME_NAME
     if ra in _GLEIF_RA_TO_ORG_ID:
         return _GLEIF_RA_TO_ORG_ID[ra]
     jur = (jurisdiction_code or "").strip().upper()
@@ -1392,6 +1436,11 @@ def _gleif_entity_statement(
         org_id_scheme, org_id_name = gleif_registration_scheme(
             ra_id, jurisdiction_code, registered_at.get("other"), registered_as
         )
+        if org_id_scheme == CL_RUT_SCHEME:
+            # One written form for a RUT, so GLEIF's and ChileCompra's
+            # statements carry the same id: LEI issuers file it with and
+            # without the dots (``76.338.588-4`` / ``77299208-4``).
+            registered_as = chilean_rut(registered_as) or registered_as
         identifiers.append(
             {
                 "id": registered_as,

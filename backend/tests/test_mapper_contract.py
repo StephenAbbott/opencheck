@@ -35,6 +35,7 @@ from opencheck import bods_data, risk
 from opencheck.bods import jurisdiction as bods_jurisdiction
 from opencheck.bods.mapper import (
     _GLEIF_RA_TO_ORG_ID,
+    _GLEIF_VALUE_SCHEMED_RA,
     gleif_registration_scheme,
     map_gleif,
     normalise_registered_as,
@@ -302,8 +303,21 @@ def _adapter_ra_codes() -> dict[str, str]:
 
 
 def test_every_ra_code_an_adapter_dispatches_on_has_a_scheme() -> None:
-    missing = sorted(ra for ra in _adapter_ra_codes() if ra not in _GLEIF_RA_TO_ORG_ID)
+    # Value-schemed codes (Chile, Phase 280) get their scheme from the number
+    # itself; the test below pins that they do.
+    missing = sorted(
+        ra
+        for ra in _adapter_ra_codes()
+        if ra not in _GLEIF_RA_TO_ORG_ID and ra not in _GLEIF_VALUE_SCHEMED_RA
+    )
     assert missing == []
+
+
+@pytest.mark.parametrize("ra", sorted(_GLEIF_VALUE_SCHEMED_RA))
+def test_value_schemed_ra_codes_give_a_rut_its_scheme(ra: str) -> None:
+    assert gleif_registration_scheme(ra, "CL", None, "76.481.921-7")[0] == "CL-RUT"
+    # An inscription filed under the same code is not a RUT.
+    assert gleif_registration_scheme(ra, "CL", None, "fojas 59592 número 30591")[0] == ra
 
 
 @pytest.mark.parametrize(

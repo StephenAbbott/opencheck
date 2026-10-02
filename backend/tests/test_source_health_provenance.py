@@ -187,6 +187,7 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
     declared = {
         "onrc_romania": PROBES["onrc_romania"].requires_files,
         "meip": PROBES["meip"].requires_files,
+        "chilecompra": PROBES["chilecompra"].requires_files,
     }
     for name, _warm_fn, path_of in warm.WARMERS:
         assert declared[name], f"{name}: the probe declares no required file"

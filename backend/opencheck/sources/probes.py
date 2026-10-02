@@ -783,6 +783,31 @@ PROBES: dict[str, SourceProbe] = {
             "weekly rather than skipped weekly."
         ),
     ),
+    "chilecompra": _p(
+        tier="index",
+        subject="Siemens Healthcare Equipos Médicos SpA (CL-RUT 76.481.921-7)",
+        args=("76481921-7",),
+        kwargs={"legal_name": "Siemens Healthcare Equipos Medicos SPA"},
+        expect_fields=("supplier", "buyers", "largest_orders"),
+        # SKIP without an index (the onrc_romania shape), never allow_empty:
+        # a tolerated empty would make expect_liveness unreachable.
+        requires_files=("chilecompra.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # The window ends at the last complete month and is rebuilt monthly,
+        # so a healthy index is 30–62 days "old"; 75 means a missed rebuild.
+        snapshot_max_age_days=75,
+        anchor_lei="549300TNI6TCPI0P8860",
+        bods_mapper="map_chilecompra",
+        notes=(
+            "A steady hospital-equipment supplier — about 1,400 purchase orders "
+            "and dozens of tender wins a year — so the probe exercises orders, "
+            "awards and buyers together. The index is the chilecompra-index "
+            "release asset, rebuilt monthly by refresh-chilecompra-index.yml; "
+            "warm_bulk_stores.py downloads it before the sweep. A refresh-due "
+            "amber here means that workflow has not run, not that ChileCompra "
+            "stopped publishing."
+        ),
+    ),
     "eiti_soe": _p(
         tier="index",
         subject="Equinor Energy AS",

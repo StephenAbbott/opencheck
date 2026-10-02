@@ -543,6 +543,38 @@ def _bh_asp_moldova(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_chilecompra(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for ChileCompra (Mercado Público procurement, Phase 280).
+
+    Only reached for a supplier with a row: ``_build_result_hit`` turns a
+    company with no procurement in the window into no hit at all, the TED
+    precedent — not selling to the state is not a finding. Asserts the RUT,
+    which ChileCompra publishes on every row it files for the supplier; that
+    is the source's own key for the record, not the anchor's echoed back.
+    """
+    from ..findings import finding_chilecompra
+
+    supplier = r.get("supplier") or {}
+    rut = str(r.get("rut") or local_id)
+    orders = int(supplier.get("orders") or 0)
+    won = int(supplier.get("tenders_won") or 0)
+    bits = [f"CL-RUT {r.get('rut_display') or rut}"]
+    if orders:
+        bits.append(f"{orders:,} purchase order{'s' if orders != 1 else ''}")
+    if won:
+        bits.append(f"{won} tender{'s' if won != 1 else ''} won")
+    if r.get("window"):
+        bits.append(str(r["window"]))
+    return _hit(
+        "chilecompra", rut,
+        name=str(supplier.get("name") or ctx.legal_name or ""),
+        summary=" · ".join(bits),
+        finding=finding_chilecompra(r),
+        identifiers={"cl_rut": rut},
+        raw=r,
+    )
+
+
 def _bh_cr_hongkong(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for the Hong Kong Companies Registry.
 

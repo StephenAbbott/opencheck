@@ -108,7 +108,7 @@ jobs:
       # so a failed download skips the probe exactly as before — and the report
       # now names the assertion that skip left unevaluated, which is the half
       # that was missing.
-      - name: Warm the index-tier bulk stores (ONRC Romania, OECD-UNSD MEIP)
+      - name: Warm the index-tier bulk stores (ONRC Romania, OECD-UNSD MEIP, ChileCompra)
         continue-on-error: true
         run: uv run python scripts/warm_bulk_stores.py
         working-directory: backend
