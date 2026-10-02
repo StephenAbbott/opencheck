@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 275** — the RDF export types each date by the precision it has, so a birth date Companies House publishes as a month (`1942-12`) is an `xsd:gYearMonth` instead of an ill-typed `xsd:date` that SPARQL date filters silently skip.
+**Latest: Phase 276** — the Senzing and FtM exports keep a relationship whose owner or subject BODS leaves unspecified, as a placeholder that cannot resolve or merge with other placeholders, instead of silently dropping it.
 
 → [Full development history](docs/status.md)
 
