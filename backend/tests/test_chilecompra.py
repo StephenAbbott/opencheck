@@ -167,12 +167,13 @@ _ORDER_HEADER = [
     "ID", "Codigo", "Link", "Nombre", "Descripcion/Obervaciones", "codigoEstado",
     "Estado", "FechaEnvio", "MontoTotalOC", "MontoTotalOC_PesosChilenos",
     "CodigoOrganismoPublico", "OrganismoPublico", "RutSucursal",
-    "NombreProveedor", "IDItem",
+    "NombreProveedor", "IDItem", "ProcedenciaOC", "CodigoAbreviadoTipoOC",
 ]
 _TENDER_HEADER = [
     "Codigo", "Link", "CodigoExterno", "Nombre", "Descripcion", "CodigoOrganismo",
     "NombreOrganismo", "FechaPublicacion", "FechaAdjudicacion", "RutProveedor",
     "NombreProveedor", "RazonSocialProveedor", "Oferta seleccionada",
+    "Tipo de Adquisicion", "Estado", "MontoLineaAdjudica", "Moneda de la Oferta",
 ]
 
 
@@ -187,20 +188,25 @@ def _zip(path: Path, name: str, header: list[str], rows: list[list[str]]) -> Pat
 
 
 def _order(code: str, rut: str, value: str, buyer: str, buyer_name: str, day: str,
-           *, state: str = "6", item: str = "1", name: str = "SIEMENS HEALTHCARE EQUIPOS MEDICOS SPA") -> list[str]:
+           *, state: str = "6", item: str = "1", name: str = "SIEMENS HEALTHCARE EQUIPOS MEDICOS SPA",
+           kind: str = "SE", reason: str = "Proveniente de licitación pública",
+           title: str = "Compra") -> list[str]:
     return [
-        "1", code, f"http://www.mercadopublico.cl/x?codigoOC={code}", "Compra",
+        "1", code, f"http://www.mercadopublico.cl/x?codigoOC={code}", title,
         "Línea uno\r\r\nLínea dos", state, "Aceptada", day, "1", value, buyer,
-        buyer_name, rut, name, item,
+        buyer_name, rut, name, item, reason, kind,
     ]
 
 
 def _tender(code: str, rut: str, selected: bool, buyer: str, buyer_name: str,
-            published: str, awarded: str, name: str = "SIEMENS HEALTHCARE EQUIPOS MEDICOS SPA") -> list[str]:
+            published: str, awarded: str, name: str = "SIEMENS HEALTHCARE EQUIPOS MEDICOS SPA",
+            *, amount: str = "0", currency: str = "Peso Chileno",
+            status: str = "Adjudicada", title: str = "Equipos") -> list[str]:
     return [
         "1", f"http://www.mercadopublico.cl/fichaLicitacion.html?idLicitacion={code}",
-        code, "Equipos", "desc", buyer, buyer_name, published, awarded, rut, name, name,
+        code, title, "desc", buyer, buyer_name, published, awarded, rut, name, name,
         "Seleccionada" if selected else "No Seleccionada",
+        "Licitación Pública Mayor 1000 UTM (LP)", status, amount, currency,
     ]
 
 
@@ -211,7 +217,8 @@ def built(tmp_path: Path):
         # One order, two item rows: counted once, value once.
         _order("1-1-SE26", SIEMENS, "1000000,5", "7324", "HOSPITAL GUILLERMO GRANT", "2026-08-10"),
         _order("1-1-SE26", SIEMENS, "1000000,5", "7324", "HOSPITAL GUILLERMO GRANT", "2026-08-10", item="2"),
-        _order("1-2-SE26", SIEMENS, "250000", "7203", "SERVICIO DE SALUD SUR ORIENTE", "2026-08-11"),
+        _order("1-2-SE26", SIEMENS, "250000", "7203", "SERVICIO DE SALUD SUR ORIENTE", "2026-08-11",
+               kind="TD", reason="Emergencia, urgencia o imprevisto", title="Reparación urgente"),
         # Cancelled: not counted.
         _order("1-3-SE26", SIEMENS, "999999999", "7203", "SERVICIO DE SALUD SUR ORIENTE", "2026-08-12", state="9"),
         _order("2-1-AG26", AGUAS, "38999156", "6935", "PARQUE METROPOLITANO", "2026-08-01", name="AGUAS ANDINAS S A"),
@@ -222,8 +229,10 @@ def built(tmp_path: Path):
     ])
     aug_tenders = _zip(tmp_path / "lic-2026-08.zip", "lic_2026-8.csv", _TENDER_HEADER, [
         # Won, with two bid lines (one selected): bid once, won once.
-        _tender("1641-221-LE26", SIEMENS, True, "7324", "HOSPITAL GUILLERMO GRANT", "2026-08-01", "2026-08-20"),
-        _tender("1641-221-LE26", SIEMENS, False, "7324", "HOSPITAL GUILLERMO GRANT", "2026-08-01", "2026-08-20"),
+        _tender("1641-221-LE26", SIEMENS, True, "7324", "HOSPITAL GUILLERMO GRANT", "2026-08-01", "2026-08-20",
+                amount="301046820", title="Mantenimiento tomógrafo"),
+        _tender("1641-221-LE26", SIEMENS, False, "7324", "HOSPITAL GUILLERMO GRANT", "2026-08-01", "2026-08-20",
+                amount="5", title="Mantenimiento tomógrafo"),
         # Bid and lost.
         _tender("1057-33-LP26", SIEMENS, False, "7203", "SERVICIO DE SALUD SUR ORIENTE", "2026-08-03", ""),
         _tender("9-9-L126", SOLE_TRADER, True, "6935", "PARQUE METROPOLITANO", "2026-08-03", "2026-08-09", name="JUANA PEREZ"),
@@ -234,7 +243,8 @@ def built(tmp_path: Path):
     sep_tenders = _zip(tmp_path / "lic-2026-09.zip", "lic_2026-9.csv", _TENDER_HEADER, [
         # A tender seen again in a later month's file: still one bid.
         _tender("1057-33-LP26", SIEMENS, False, "7203", "SERVICIO DE SALUD SUR ORIENTE", "2026-08-03", ""),
-        _tender("1700-1-LE26", SIEMENS, True, "7203", "SERVICIO DE SALUD SUR ORIENTE", "2026-09-01", "2026-09-29"),
+        _tender("1700-1-LE26", SIEMENS, True, "7203", "SERVICIO DE SALUD SUR ORIENTE", "2026-09-01", "2026-09-29",
+                amount="1200", currency="Dolar"),
     ])
     out = tmp_path / "data" / "chilecompra.sqlite"
     meta = build_index(
@@ -308,6 +318,29 @@ def test_builder_meta_records_the_window(built) -> None:
     assert meta["schema_version"] == chilecompra.INDEX_SCHEMA_VERSION
 
 
+def test_builder_keeps_the_largest_orders_and_dates_bids_by_publication(tmp_path: Path) -> None:
+    # Five orders: only the three largest are kept for the card.
+    orders = _zip(tmp_path / "oc.zip", "2026-9.csv", _ORDER_HEADER, [
+        _order(f"9-{i}-SE26", SIEMENS, str(v), "7203", "SSMSO", f"2026-09-0{i}")
+        for i, v in enumerate([10, 500, 30, 400, 20], start=1)
+    ])
+    # A bid on a tender still open carries an estimated award date a year
+    # out; it must be dated by publication, not sorted ahead of real awards.
+    tenders = _zip(tmp_path / "lic.zip", "lic_2026-9.csv", _TENDER_HEADER, [
+        _tender("OPEN-1", SIEMENS, False, "7203", "SSMSO", "2026-09-02", "2027-11-09", status="Cerrada"),
+        _tender("WON-1", SIEMENS, True, "7203", "SSMSO", "2026-08-01", "2026-09-20", amount="9"),
+    ])
+    out = tmp_path / "idx.sqlite"
+    build_index([MonthInput("2026-09", tenders, orders)], out)
+    conn = sqlite3.connect(out)
+    kept = sorted(r[0] for r in conn.execute("SELECT value FROM purchase_order"))
+    assert kept == [30, 400, 500]
+    dates = dict(conn.execute("SELECT code, date FROM supplier_tender"))
+    assert dates == {"OPEN-1": "2026-09-02", "WON-1": "2026-09-20"}
+    # A tender's own fields are stored once, however many firms bid on it.
+    assert conn.execute("SELECT COUNT(*) FROM tender").fetchone()[0] == 2
+
+
 # ---------------------------------------------------------------------------
 # The adapter
 # ---------------------------------------------------------------------------
@@ -326,14 +359,40 @@ async def test_fetch_reads_a_supplier(built) -> None:
     # Buyers ranked by order value.
     assert [b["code"] for b in bundle["buyers"]] == ["7203", "7324"]
     assert bundle["buyers"][0]["name"] == "SERVICIO DE SALUD SUR ORIENTE"
-    largest = bundle["largest_orders"]
-    assert largest[0]["code"] == "1-9-SE26"
-    assert largest[0]["url"].endswith("DetailsPurchaseOrder.aspx?codigoOC=1-9-SE26")
-    awards = bundle["recent_awards"]
-    assert [a["code"] for a in awards] == ["1700-1-LE26", "1641-221-LE26"]
-    assert awards[0]["url"] == (
-        "https://www.mercadopublico.cl/fichaLicitacion.html?idLicitacion=1700-1-LE26"
+    records = bundle["records"]
+    # Newest first, tenders and orders interleaved — the TED notice list.
+    assert [(r["kind"], r["code"]) for r in records] == [
+        ("tender", "1700-1-LE26"),
+        ("order", "1-9-SE26"),
+        ("tender", "1641-221-LE26"),
+        ("order", "1-2-SE26"),
+        ("order", "1-1-SE26"),
+        ("tender", "1057-33-LP26"),
+    ]
+    by_code = {r["code"]: r for r in records}
+    won = by_code["1641-221-LE26"]
+    assert won["role"] == "won"
+    assert won["title"] == "Mantenimiento tomógrafo"
+    assert won["buyer"] == "HOSPITAL GUILLERMO GRANT"
+    # Only the selected line's amount, in the offer's currency.
+    assert (won["value"], won["currency"]) == (301046820, "CLP")
+    assert won["procedure"] == "Licitación Pública Mayor 1000 UTM (LP)"
+    assert won["status"] == "Adjudicada"
+    assert won["url"] == (
+        "https://www.mercadopublico.cl/fichaLicitacion.html?idLicitacion=1641-221-LE26"
     )
+    assert (by_code["1700-1-LE26"]["value"], by_code["1700-1-LE26"]["currency"]) == (1200, "USD")
+    lost = by_code["1057-33-LP26"]
+    assert (lost["role"], lost["value"], lost["currency"]) == ("tendered", None, "")
+    order = by_code["1-9-SE26"]
+    assert (order["role"], order["value"], order["currency"]) == ("order", 3981499477, "CLP")
+    assert order["procedure"] == "From a tender"
+    assert order["url"].endswith("DetailsPurchaseOrder.aspx?codigoOC=1-9-SE26")
+    # A direct award keeps ChileCompra's reason.
+    assert by_code["1-2-SE26"]["procedure"] == (
+        "Direct award (trato directo): Emergencia, urgencia o imprevisto"
+    )
+    assert by_code["1-2-SE26"]["title"] == "Reparación urgente"
     # Snapshot, dated from the last month the index covers — not "stub", the
     # ariregister/ONRC failure mode where real rows render as placeholder data.
     assert resolved.liveness == "snapshot"
@@ -413,13 +472,17 @@ async def test_finding_orders_only(built) -> None:
     )
 
 
-async def test_result_hit_asserts_the_rut(built) -> None:
+async def test_result_hit_is_shaped_like_ted(built) -> None:
     bundle = await REGISTRY["chilecompra"].fetch(SIEMENS)
     ctx = _LookupCtx(lei="549300TNI6TCPI0P8860", legal_name="Siemens")
     hit = _build_result_hit("chilecompra", bundle, ctx)
     assert hit is not None
-    assert hit.identifiers == {"cl_rut": "76481921-7"}
-    assert hit.summary.startswith("CL-RUT 76.481.921-7 · 3 purchase orders · 2 tenders won")
+    # No identifier asserted on the hit (the TED rule) — the records carry it.
+    assert hit.identifiers == {}
+    assert hit.summary == (
+        "3 purchase orders · 2 of 3 tenders won · Aug 2026 – Sep 2026 · CL-RUT 76.481.921-7"
+    )
+    assert len(hit.raw["records"]) == 6
 
 
 async def test_no_card_for_a_company_that_sold_nothing(built) -> None:
@@ -429,24 +492,44 @@ async def test_no_card_for_a_company_that_sold_nothing(built) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Lookup wiring: derivation and dispatch
+# Lookup wiring: the TED shape (Phase 281)
 # ---------------------------------------------------------------------------
 
 
+def test_not_a_register_adapter() -> None:
+    # A deriver made it a register in the pipeline's eyes and claimed the
+    # Chilean RA codes for itself.
+    adapter = REGISTRY["chilecompra"]
+    assert adapter.lookup_derivers == ()
+    assert adapter.lookup_keys() == ()
+
+
 @pytest.mark.parametrize(
-    ("ra", "registered_as", "expected"),
+    ("ra", "registered_as", "reached"),
     [
-        ("RA000787", "76481921-7", "76481921-7"),
-        ("RA000090", "76.646.051-8", "76646051-8"),
-        ("RA000090", "fojas 59592 número 30591", None),  # an inscription, not a RUT
-        ("RA000091", "3723619", None),  # a CBR number
-        ("RA888888", "76481921-7", None),  # the global code is not claimed
+        ("RA000787", "76481921-7", True),
+        ("RA000090", "76.481.921-7", True),  # Siemens Healthcare's real filing
+        ("RA000090", "fojas 59592 número 30591", False),  # an inscription
+        ("RA000091", "3723619", False),  # a CBR number
+        ("RA888888", "76481921-7", False),  # the global code is not Chile's
+        ("RA000787", SOLE_TRADER, False),  # a person's RUT
     ],
 )
-def test_derivation(ra: str, registered_as: str, expected: str | None) -> None:
-    ctx = _LookupCtx(lei="X", jurisdiction="CL", registered_as=registered_as)
-    _build_derived(ctx, ra)
-    assert ctx.derived.get("cl_rut") == expected
+async def test_fetch_by_identifiers(built, ra: str, registered_as: str, reached: bool) -> None:
+    result = await REGISTRY["chilecompra"].fetch_by_identifiers(
+        "549300TNI6TCPI0P8860", registered_as, ra, legal_name="Siemens"
+    )
+    if reached:
+        assert result is not None and result["supplier"]["rut"] == 76481921
+    else:
+        assert result is None
+
+
+def test_build_derived_records_the_ra_code() -> None:
+    ctx = _LookupCtx(lei="X", jurisdiction="CL", registered_as="76481921-7")
+    _build_derived(ctx, "ra000090")
+    assert ctx.registered_at == "RA000090"
+    assert "cl_rut" not in ctx.derived
 
 
 def _dispatched(ctx: _LookupCtx) -> set[str]:
@@ -460,13 +543,13 @@ def _dispatched(ctx: _LookupCtx) -> set[str]:
 
 def test_dispatched_when_the_index_is_present(built) -> None:
     ctx = _LookupCtx(lei="549300TNI6TCPI0P8860", jurisdiction="CL", registered_as=SIEMENS)
-    _build_derived(ctx, "RA000787")
+    _build_derived(ctx, "RA000090")
     assert _dispatched(ctx) == {"chilecompra"}
 
 
 def test_not_announced_without_an_index(no_index) -> None:
     ctx = _LookupCtx(lei="549300TNI6TCPI0P8860", jurisdiction="CL", registered_as=SIEMENS)
-    _build_derived(ctx, "RA000787")
+    _build_derived(ctx, "RA000090")
     assert _dispatched(ctx) == set()
 
 

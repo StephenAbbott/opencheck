@@ -585,6 +585,7 @@ _RA_DERIVERS: list[LookupDeriver] = [
 
 def _build_derived(ctx: _LookupCtx, registered_at_id: str) -> None:
     """Populate ctx.derived from the GLEIF anchor record."""
+    ctx.registered_at = (registered_at_id or "").strip().upper()
     ctx.derived["lei"] = ctx.lei
     if ctx.jurisdiction.upper() == "GB" and ctx.registered_as:
         ctx.derived["gb_coh"] = ctx.registered_as
@@ -957,6 +958,27 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
                 legal_name=ctx.legal_name,
             ),
         ))
+    # ChileCompra (Phase 281) — Chilean public procurement, reached the TED way:
+    # from the anchor's (registeredAt, registeredAs) pair, not as a register.
+    # Gated on its index being present, so a deployment without the release
+    # asset never announces it.
+    cc_adapter = REGISTRY.get("chilecompra")
+    if (
+        cc_adapter is not None
+        and hasattr(cc_adapter, "fetch_by_identifiers")
+        and ctx.registered_as
+        and _want("chilecompra")
+        and _offline_index_covers(cc_adapter, ctx.lei)
+    ):
+        tasks.append((
+            "chilecompra",
+            cc_adapter.fetch_by_identifiers(
+                ctx.lei,
+                ctx.registered_as,
+                ctx.registered_at,
+                legal_name=ctx.legal_name,
+            ),
+        ))
     return tasks
 
 
@@ -989,9 +1011,7 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     if source_id == "chilecompra":
         # The same rule (Phase 280): a company that sold nothing to the
         # Chilean state in the window answered, and has no card.
-        if not result.get("supplier"):
-            return None
-        return _bh_chilecompra(result, str(result.get("rut") or ""), ctx)
+        return _bh_chilecompra(result, ctx) if result.get("supplier") else None
     if result.get("is_stub"):
         return None
     if source_id == "opencorporates":

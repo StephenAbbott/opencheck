@@ -45,6 +45,9 @@ class _LookupCtx:
     legal_name: str = ""
     jurisdiction: str = ""
     registered_as: str = ""
+    #: GLEIF ``registeredAt.id`` — the RA code ``registered_as`` is filed
+    #: under. Set by ``_build_derived``; ChileCompra keys on it (Phase 281).
+    registered_at: str = ""
     derived: dict[str, str] = dc_field(default_factory=dict)
     ocid: str | None = None
     #: GLEIF-published S&P Global / Capital IQ id — corroborates MEIP's CapIQ id.
@@ -540,38 +543,6 @@ def _bh_asp_moldova(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
         identifiers={"md_idno": idno},
         raw=company,
         finding=finding_asp_moldova(r),
-    )
-
-
-def _bh_chilecompra(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
-    """Hit builder for ChileCompra (Mercado Público procurement, Phase 280).
-
-    Only reached for a supplier with a row: ``_build_result_hit`` turns a
-    company with no procurement in the window into no hit at all, the TED
-    precedent — not selling to the state is not a finding. Asserts the RUT,
-    which ChileCompra publishes on every row it files for the supplier; that
-    is the source's own key for the record, not the anchor's echoed back.
-    """
-    from ..findings import finding_chilecompra
-
-    supplier = r.get("supplier") or {}
-    rut = str(r.get("rut") or local_id)
-    orders = int(supplier.get("orders") or 0)
-    won = int(supplier.get("tenders_won") or 0)
-    bits = [f"CL-RUT {r.get('rut_display') or rut}"]
-    if orders:
-        bits.append(f"{orders:,} purchase order{'s' if orders != 1 else ''}")
-    if won:
-        bits.append(f"{won} tender{'s' if won != 1 else ''} won")
-    if r.get("window"):
-        bits.append(str(r["window"]))
-    return _hit(
-        "chilecompra", rut,
-        name=str(supplier.get("name") or ctx.legal_name or ""),
-        summary=" · ".join(bits),
-        finding=finding_chilecompra(r),
-        identifiers={"cl_rut": rut},
-        raw=r,
     )
 
 
@@ -1142,6 +1113,42 @@ def _bh_eiti_bo(r: dict, ctx: _LookupCtx) -> SourceHit:
         or ctx.lei,
         summary=" · ".join(parts),
         identifiers=identifiers,
+        raw=r,
+    )
+
+
+def _bh_chilecompra(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for ChileCompra (Mercado Público procurement) — the TED
+    shape since Phase 281.
+
+    Only reached for a supplier with a row: a company with no procurement in
+    the window is no hit at all (not selling to the state is not a finding).
+    The card lists the records themselves (``raw.records``); the summary
+    counts them. Like TED, no identifier is asserted on the hit: procurement
+    records are activity matched on an identifier, not a register confirming
+    one. The RUT still rides on the BODS entity statement as ``CL-RUT``.
+    """
+    from ..findings import finding_chilecompra
+
+    supplier = r.get("supplier") or {}
+    rut = str(r.get("rut") or "")
+    orders = int(supplier.get("orders") or 0)
+    won = int(supplier.get("tenders_won") or 0)
+    bid = int(supplier.get("tenders_bid") or 0)
+    parts: list[str] = []
+    if orders:
+        parts.append(f"{orders:,} purchase order{'s' if orders != 1 else ''}")
+    if bid:
+        parts.append(f"{won:,} of {bid:,} tender{'s' if bid != 1 else ''} won")
+    if r.get("window"):
+        parts.append(str(r["window"]))
+    parts.append(f"CL-RUT {r.get('rut_display') or rut}")
+    return _hit(
+        "chilecompra", rut or ctx.lei,
+        name=str(supplier.get("name") or ctx.legal_name or ctx.lei),
+        summary=" · ".join(parts),
+        finding=finding_chilecompra(r),
+        identifiers={},
         raw=r,
     )
 

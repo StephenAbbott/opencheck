@@ -786,9 +786,13 @@ PROBES: dict[str, SourceProbe] = {
     "chilecompra": _p(
         tier="index",
         subject="Siemens Healthcare Equipos Médicos SpA (CL-RUT 76.481.921-7)",
-        args=("76481921-7",),
+        # The lookup's own entry point (Phase 281), with the anchor's real
+        # (registeredAs, registeredAt) pair: GLEIF files this RUT under
+        # RA000090, the code that also carries commercial-register entries.
+        method="fetch_by_identifiers",
+        args=("549300TNI6TCPI0P8860", "76481921-7", "RA000090"),
         kwargs={"legal_name": "Siemens Healthcare Equipos Medicos SPA"},
-        expect_fields=("supplier", "buyers", "largest_orders"),
+        expect_fields=("supplier", "buyers", "records"),
         # SKIP without an index (the onrc_romania shape), never allow_empty:
         # a tolerated empty would make expect_liveness unreachable.
         requires_files=("chilecompra.sqlite",),
