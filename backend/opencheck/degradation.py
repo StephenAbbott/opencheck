@@ -51,6 +51,7 @@ REASON_UPSTREAM_ERROR = "upstream_error"
 REASON_TIMEOUT = "timeout"
 REASON_NOT_CONFIGURED = "not_configured"
 REASON_RATE_LIMITED = "rate_limited"
+REASON_TRUNCATED = "truncated"
 
 
 def reason_for_failure(failure: str) -> str:

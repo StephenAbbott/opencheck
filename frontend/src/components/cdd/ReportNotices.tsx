@@ -49,6 +49,7 @@ const DEGRADED_REASON_LABELS: Record<string, string> = {
   timeout: "the upstream service timed out",
   not_configured: "the required API credential is not configured",
   rate_limited: "the upstream service rate-limited the request",
+  truncated: "OpenCheck's per-lookup limit on related parties was reached",
 };
 
 /**
@@ -134,7 +135,9 @@ export function DegradedScreensNotice({
             </p>
           </div>
         </div>
-        {onRetry && (
+        {/* Phase 279: a truncated screen selects the same parties on a
+            re-run, so the button is offered only when re-running could help. */}
+        {onRetry && degraded.some((d) => d.reason !== "truncated") && (
           <button
             type="button"
             onClick={onRetry}

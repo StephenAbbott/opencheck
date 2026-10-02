@@ -113,7 +113,16 @@ export function VerdictStrip({
   // Nothing to say yet, and a half-finished verdict is worse than none.
   if (screening && total === 0 && !verdict) return null;
 
-  const degradedCount = new Set(degraded.map((d) => d.source_id)).size;
+  // Phase 279: a screen that ran but stopped at OpenCheck's related-party
+  // limit ("truncated") did run — counting it under "did not run" would be
+  // false, so it gets its own clause, the same split the verdict makes.
+  const notRunCount = new Set(
+    degraded.filter((d) => d.reason !== "truncated").map((d) => d.source_id),
+  ).size;
+  const cappedCount = new Set(
+    degraded.filter((d) => d.reason === "truncated").map((d) => d.check),
+  ).size;
+  const degradedCount = notRunCount + cappedCount;
   const coverage = coverageCopy({
     answered: sourcesAnswered,
     applicable: sourcesApplicable,
@@ -124,7 +133,7 @@ export function VerdictStrip({
   const network = networkSummary(graphShape);
   const showNetwork = Boolean(network && onOpenNetwork);
   const knowable = knowability ? knowabilityView(knowability) : null;
-  const gapLabel = `${degradedCount === 1 ? "One check" : `${degradedCount} checks`} did not run`;
+  const gapLabel = gapCopy(notRunCount, cappedCount);
 
   return (
     <section
@@ -323,4 +332,14 @@ export function VerdictStrip({
       </div>
     </section>
   );
+}
+
+/** "One check did not run", "One check answered only in part", or both. */
+export function gapCopy(notRun: number, capped: number): string {
+  const checks = (n: number) => (n === 1 ? "one check" : `${n} checks`);
+  const parts: string[] = [];
+  if (notRun > 0) parts.push(`${checks(notRun)} did not run`);
+  if (capped > 0) parts.push(`${checks(capped)} answered only in part`);
+  const text = parts.join(" and ");
+  return text ? text[0].toUpperCase() + text.slice(1) : text;
 }

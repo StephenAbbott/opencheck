@@ -840,6 +840,10 @@ DEGRADED_UPSTREAM_ERROR = "upstream_error"
 DEGRADED_TIMEOUT = "timeout"
 DEGRADED_NOT_CONFIGURED = "not_configured"
 DEGRADED_RATE_LIMITED = "rate_limited"
+#: Phase 279: the screen ran, but OpenCheck's own per-lookup limit left some
+#: related parties unread (``related_targets``). Not an upstream failure and
+#: not retryable — the same bundle selects the same parties again.
+DEGRADED_TRUNCATED = "truncated"
 
 #: Tie-break order when one source fails for several reasons in one run —
 #: most systemic first (a config gap explains everything else).
@@ -848,6 +852,7 @@ _DEGRADED_REASON_PRIORITY = [
     DEGRADED_RATE_LIMITED,
     DEGRADED_TIMEOUT,
     DEGRADED_UPSTREAM_ERROR,
+    DEGRADED_TRUNCATED,
 ]
 
 
@@ -890,6 +895,7 @@ DEGRADATION_REASON_LABELS: dict[str, str] = {
     DEGRADED_TIMEOUT: "the upstream service timed out",
     DEGRADED_NOT_CONFIGURED: "the required API credential is not configured",
     DEGRADED_RATE_LIMITED: "the upstream service rate-limited the request",
+    DEGRADED_TRUNCATED: "OpenCheck's per-lookup limit on related parties was reached",
 }
 
 

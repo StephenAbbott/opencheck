@@ -137,7 +137,9 @@ export function ApiPage() {
             <code className={mono}>detail</code> and a closed-vocabulary{" "}
             <code className={mono}>reason</code> (<code className={mono}>upstream_error</code>,{" "}
             <code className={mono}>timeout</code>, <code className={mono}>not_configured</code>,{" "}
-            <code className={mono}>rate_limited</code>). An empty{" "}
+            <code className={mono}>rate_limited</code>, or{" "}
+            <code className={mono}>truncated</code> when a screen read only the
+            highest-ranked related parties up to its per-lookup limit). An empty{" "}
             <code className={mono}>risk_signals</code> list alongside a non-empty{" "}
             <code className={mono}>degraded_sources</code> list is not a clean screen.
           </ApiEndpoint>
