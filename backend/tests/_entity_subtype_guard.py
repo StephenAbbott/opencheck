@@ -33,7 +33,11 @@ import pkgutil
 import types
 from typing import Any, Callable, Iterator
 
-from opencheck.bods.validator import entity_subtype_issue, jurisdiction_input_issues
+from opencheck.bods.validator import (
+    address_type_issues,
+    entity_subtype_issue,
+    jurisdiction_input_issues,
+)
 
 #: Violations recorded since the last :func:`drain`, as
 #: ``(mapper name, statementId, issue)``.
@@ -85,6 +89,11 @@ def check_statement(mapper: str, stmt: Any) -> None:
         stmt, identifier_schemes=mapper not in PUBLISHER_VERBATIM
     ):
         VIOLATIONS.append((mapper, sid, issue))
+    # Phase 274: an address type the record kind does not allow (an FtM
+    # person's ``registered``). A publisher's own BODS is theirs to fix.
+    if mapper not in PUBLISHER_VERBATIM:
+        for issue in address_type_issues(stmt):
+            VIOLATIONS.append((mapper, sid, issue))
     if stmt.get("recordType") != "entity":
         return
     issue = entity_subtype_issue(stmt.get("recordDetails") or {})

@@ -2168,6 +2168,13 @@ GLEIF mapper exported most registration numbers with `scheme: ""`.
   `test_mapper_contract.py::test_every_registered_source_mapper_was_checked`
   runs last on a full run and fails if a registered source's mapper produced
   no statement anywhere in the suite.
+- **Address types are scoped by record kind (Phase 274).** A person allows
+  `residence | service | alternative`, an entity `registered | business |
+  alternative` (`bods/validator.py::VALID_ADDRESS_TYPES_BY_RECORD`, pinned to
+  the vendored schema). The same guard runs `address_type_issues` on every
+  mapped statement (`map_meip` exempt). When a source does not say what an
+  address is for, use `alternative`, not `registered` — the FtM mapper's
+  `registered` on people reached production as a schema error.
 - **One reader for an entity's jurisdiction:** `bods/jurisdiction.py` (`read`
   accepts the v0.4 key and both v0.3 placements; `upgrade` renames in place).
   `bods_data.load_bundle` upgrades the committed `data/cache/bods_data/`

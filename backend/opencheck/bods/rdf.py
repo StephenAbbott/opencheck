@@ -284,24 +284,24 @@ def _add_person(g, rec_uri, rd: dict[str, Any]) -> None:
 
 def _add_relationship(g, rec_uri, rd: dict[str, Any]) -> None:
     g.add((rec_uri, RDF.type, BODS.Relationship))
-    # Only plain statement-id references resolve to records; an "unspecified"
-    # (unknown) party object has no record URI (same rule as neo4j.py).
-    if isinstance(rd.get("subject"), str):
-        g.add((rec_uri, BODS.subject, REC[rd["subject"]]))
-    if isinstance(rd.get("interestedParty"), str):
-        g.add((rec_uri, BODS.interestedParty, REC[rd["interestedParty"]]))
-    elif isinstance(rd.get("interestedParty"), dict):
-        # Reporting-exception form: an unspecified party {reason, description}.
-        # bods:Unspecified is the published class; reason/description keep the
-        # least-invention labels (no unspecified* properties exist in the ttl).
-        party = rd["interestedParty"]
-        node = BNode()
-        g.add((rec_uri, BODS.interestedParty, node))
-        g.add((node, RDF.type, BODS.Unspecified))
-        if party.get("reason"):
-            g.add((node, RDFS.label, Literal(party["reason"])))
-        if party.get("description"):
-            g.add((node, RDFS.comment, Literal(party["description"])))
+    # A reference (a recordId) links to its record. An unspecified party
+    # object {reason, description} — BODS v0.4 allows one on either side —
+    # becomes a bods:Unspecified node, the published class; reason and
+    # description keep the least-invention labels (no unspecified* properties
+    # exist in the ttl). Until Phase 274 only the interestedParty side was
+    # handled and an unspecified subject vanished; neo4j.py now draws both.
+    for field, prop in (("subject", BODS.subject), ("interestedParty", BODS.interestedParty)):
+        ref = rd.get(field)
+        if isinstance(ref, str):
+            g.add((rec_uri, prop, REC[ref]))
+        elif isinstance(ref, dict):
+            node = BNode()
+            g.add((rec_uri, prop, node))
+            g.add((node, RDF.type, BODS.Unspecified))
+            if ref.get("reason"):
+                g.add((node, RDFS.label, Literal(ref["reason"])))
+            if ref.get("description"):
+                g.add((node, RDFS.comment, Literal(ref["description"])))
     for interest in rd.get("interests") or []:
         node = BNode()
         g.add((rec_uri, BODS.interest, node))

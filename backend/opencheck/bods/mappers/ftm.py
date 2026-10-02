@@ -752,13 +752,27 @@ def _ftm_identifiers(
     return identifiers
 
 
+#: The BODS ``addressType`` every FtM address is filed under (Phase 274).
+#: An FtM ``address`` / ``addressEntity`` says nothing about what the address
+#: is for — a sanctions-list or leak address is neither known to be a
+#: company's registered office nor a person's home. ``alternative`` is the one
+#: v0.4 code that claims neither ("neither a service nor a registered
+#: address") and is valid on both record kinds: a person allows only
+#: ``residence | service | alternative`` and an entity only
+#: ``registered | business | alternative``. Until Phase 274 this was
+#: ``registered`` for both, which is a schema error on every person with an
+#: address (Igor Sechin on Rosneft Deutschland, 28 Sept 2026) and an
+#: unsupported claim on every entity.
+FTM_ADDRESS_TYPE = "alternative"
+
+
 def _ftm_addresses(props: dict[str, Any]) -> list[dict[str, Any]]:
     raw = props.get("address") or props.get("addressEntity") or []
     result: list[dict[str, Any]] = []
     for entry in raw:
         if isinstance(entry, str):
             # No country available — omit country key.
-            result.append({"type": "registered", "address": entry})
+            result.append({"type": FTM_ADDRESS_TYPE, "address": entry})
         elif isinstance(entry, dict):
             p = entry.get("properties") or {}
             parts = [
@@ -771,7 +785,7 @@ def _ftm_addresses(props: dict[str, Any]) -> list[dict[str, Any]]:
             joined = ", ".join([str(x) for x in parts if x])
             if joined:
                 result.append(
-                    _addr("registered", joined, (p.get("country") or [""])[0])
+                    _addr(FTM_ADDRESS_TYPE, joined, (p.get("country") or [""])[0])
                 )
     return result
 

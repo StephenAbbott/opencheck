@@ -151,6 +151,55 @@ def jurisdiction_input_issues(
     return issues
 
 
+# ---------------------------------------------------------------------------
+# Address types (Phase 274)
+# ---------------------------------------------------------------------------
+#
+# BODS v0.4 has one ``addressType`` codelist but scopes it by record kind in
+# ``person-record.json`` / ``entity-record.json``: ``registered`` is valid only
+# on an entity and ``residence`` / ``service`` only on a person. The FtM mapper
+# filed every address as ``registered`` for months, so every OpenSanctions
+# person with an address failed JSON-schema validation in production
+# (Rosneft Deutschland, 28 Sept 2026) and no test noticed.
+# ``tests/test_phase274_parties_and_addresses.py`` pins this table to the schema
+# vendored in ``libcovebods``.
+
+#: The ``addresses[].type`` values each record kind allows.
+VALID_ADDRESS_TYPES_BY_RECORD: dict[str, frozenset[str]] = {
+    "person": frozenset({"residence", "service", "alternative"}),
+    "entity": frozenset({"registered", "business", "alternative"}),
+}
+
+
+def address_type_issues(stmt: dict[str, Any]) -> list[str]:
+    """Why a statement's ``addresses[].type`` values break the v0.4 schema.
+
+    ``[]`` when every typed address is allowed on its record kind. An address
+    with no ``type`` is valid (the field is optional); relationship statements
+    carry no addresses and are not checked.
+    """
+    if not isinstance(stmt, dict):
+        return []
+    record_type = stmt.get("recordType")
+    if not isinstance(record_type, str):
+        return []
+    allowed = VALID_ADDRESS_TYPES_BY_RECORD.get(record_type)
+    if allowed is None:
+        return []
+    rd = stmt.get("recordDetails")
+    rd = rd if isinstance(rd, dict) else {}
+    issues: list[str] = []
+    for addr in rd.get("addresses") or []:
+        if not isinstance(addr, dict) or "type" not in addr:
+            continue
+        if addr["type"] not in allowed:
+            issues.append(
+                f"{record_type} address type {addr['type']!r} not allowed "
+                f"on a {record_type} record (allowed: {sorted(allowed)})"
+            )
+    return issues
+
+
 _VALID_PERSON_TYPES = {"knownPerson", "anonymousPerson", "unknownPerson"}
 # Complete BODS v0.4 interestType codelist.
 # Source: https://raw.githubusercontent.com/openownership/data-standard/main/schema/codelists/interestType.csv
