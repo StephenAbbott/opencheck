@@ -28,9 +28,26 @@ Modelling decisions
   ``percentage`` and ``ownershipType`` direct/indirect); a relationship with
   no interests listed → a single ``UnknownLink``. Multi-interest relationships
   get deterministic ids ``<statementId>-2``, ``-3``, … for the extra entities.
-* **Dropped (never fabricated):** relationships whose interested party is an
-  ``unspecified``/unknown object rather than a statement reference — there is
-  no FtM node to link.
+* **A party BODS cannot name** — an ``UnspecifiedRecord`` (``{reason,
+  description}``) in ``subject`` or ``interestedParty`` — becomes a
+  **placeholder entity**, one per relationship statement and side, so the
+  ``Ownership`` / ``Directorship`` / ``UnknownLink`` survives and the chain
+  visibly ends in an undisclosed party (Phase 276; until then the link was
+  dropped). The shape follows `bods-ftm`'s own converter — placeholder plus
+  link, with the reason and description on both — except that it is keyed per
+  statement (``<statementId>-unspecified-<side>``), never per reason, so two
+  companies' undisclosed owners are two nodes, not one hub. (Cypher's
+  ``#<side>`` suffix is not used: FtM's entity-reference grammar rejects
+  ``#``, which would silently empty the link's endpoint.)
+  FtM forces one trade-off: ``Ownership.owner`` and ``Directorship.director``
+  only accept a ``LegalEntity``, and every LegalEntity schema is *matchable*,
+  so the interested-party placeholder is a ``LegalEntity`` named after the
+  company it is unspecified for (``Unspecified interested party in Acme
+  Ltd``) — a name that will not collide across companies in Aleph xref or
+  yente. The subject-side placeholder is an ``Asset``, which is not matchable
+  (``Organization`` only when a directorship interest needs one).
+* **Dropped:** relationships with a party that is absent or references a
+  statement outside the bundle — there is no FtM node to link.
 
 Relation to ``opencheck/ftm.py`` (package root): that module converts only the
 *lookup subject* for OpenAleph's ``POST /api/2/match`` (via the bods-ftm
@@ -52,7 +69,7 @@ from typing import Any
 
 from .. import identifiers
 from .annotations import person_identifiers_from_annotations
-from .refs import resolver
+from .refs import resolver, unspecified_party
 
 # BODS entityType.type → FtM schema.
 _ENTITY_SCHEMA = {
@@ -266,48 +283,145 @@ def _interest_to_ftm(
     return {"id": link_id, "schema": "Ownership", "properties": props.as_dict()}
 
 
-def _relationship_to_ftm(
-    stmt: dict[str, Any], known_ids: set[str], resolve: Callable[[Any], str] = lambda ref: ref
-) -> list[dict[str, Any]]:
-    """FtM link entities for one BODS relationship statement.
+#: The two relationship fields that name a party.
+_PARTY_SIDES: tuple[str, ...] = ("subject", "interestedParty")
 
-    One entity per interest (extra entities get ``<statementId>-2``, ``-3``, …
-    ids, deterministically); a relationship with no interests becomes a single
-    ``UnknownLink``. Dropped when the interested party is not a statement
-    reference (``unspecified`` party — nothing to link) or either end is
-    missing from the bundle.
+
+def _display_name(stmt: dict[str, Any] | None) -> str:
+    """The name an entity or person statement goes by, or ``""``."""
+    rd = (stmt or {}).get("recordDetails") or {}
+    if (stmt or {}).get("recordType") == "person":
+        for name in rd.get("names") or []:
+            full = (name.get("fullName") or "").strip() if isinstance(name, dict) else ""
+            if full:
+                return full
+        return ""
+    return (rd.get("name") or "").strip() if isinstance(rd.get("name"), str) else ""
+
+
+def _unspecified_note(side: str, party: dict[str, str]) -> str:
+    """``Unspecified interestedParty (reason: …) — description``."""
+    text = f"Unspecified {side}"
+    if party.get("reason"):
+        text += f" (reason: {party['reason']})"
+    if party.get("description"):
+        text += f" — {party['description']}"
+    return text
+
+
+def _placeholder_to_ftm(
+    placeholder_id: str,
+    side: str,
+    party: dict[str, str],
+    other_name: str,
+    interests: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """The FtM entity standing in for one unspecified party.
+
+    ``other_name`` is the known party at the other end, so the placeholder's
+    name is specific to its company rather than a string every placeholder
+    shares — the thing that would make Aleph xref or yente pair them up.
+    """
+    props = _Props()
+    if side == "interestedParty":
+        # The only schemas Ownership.owner / Directorship.director accept.
+        schema = "LegalEntity"
+        props.add(
+            "name",
+            f"Unspecified interested party in {other_name}"
+            if other_name
+            else "Unspecified interested party",
+        )
+    else:
+        # Asset is not matchable and is Ownership.asset's (and fits
+        # UnknownLink.object's) range; Directorship.organization needs an
+        # Organization.
+        directorship = any(
+            (i.get("type") or "") in _DIRECTORSHIP_INTERESTS for i in interests
+        )
+        schema = "Organization" if directorship else "Asset"
+        props.add(
+            "name",
+            f"Unspecified subject of an interest held by {other_name}"
+            if other_name
+            else "Unspecified subject",
+        )
+    props.add("notes", _unspecified_note(side, party))
+    return {"id": placeholder_id, "schema": schema, "properties": props.as_dict()}
+
+
+def _relationship_to_ftm(
+    stmt: dict[str, Any],
+    known_ids: set[str],
+    resolve: Callable[[Any], str] = lambda ref: ref,
+    by_id: dict[str, dict[str, Any]] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """``(placeholders, links)`` for one BODS relationship statement.
+
+    One link per interest (extra links get ``<statementId>-2``, ``-3``, … ids,
+    deterministically); a relationship with no interests becomes a single
+    ``UnknownLink``. An unspecified party becomes a placeholder entity (Phase
+    276) and every link carries its reason in ``description``. Dropped when a
+    party is absent or names a statement outside the bundle.
     """
     rd = stmt.get("recordDetails") or {}
     sid = stmt.get("statementId")
-    if not sid or not isinstance(rd.get("subject"), str) or not isinstance(rd.get("interestedParty"), str):
-        return []
-    # A v0.4 reference is a recordId; the FtM ids are statementIds.
-    subject = resolve(rd.get("subject"))
-    party = resolve(rd.get("interestedParty"))
-    if subject not in known_ids or party not in known_ids:
-        return []
+    if not sid:
+        return [], []
 
     interests = [i for i in rd.get("interests") or [] if isinstance(i, dict)]
+    ends: dict[str, str] = {}
+    unspecified: dict[str, dict[str, str]] = {}
+    for side in _PARTY_SIDES:
+        raw = rd.get(side)
+        record = unspecified_party(raw)
+        if record is not None:
+            ends[side] = f"{sid}-unspecified-{side}"
+            unspecified[side] = record
+            continue
+        # A v0.4 reference is a recordId; the FtM ids are statementIds.
+        ref = resolve(raw)
+        if ref and ref in known_ids:
+            ends[side] = ref
+    if len(ends) != len(_PARTY_SIDES):
+        return [], []
+    subject = ends["subject"]
+    party = ends["interestedParty"]
+
+    placeholders: list[dict[str, Any]] = []
+    for side, record in unspecified.items():
+        other = party if side == "subject" else subject
+        # A placeholder at the other end too has no name to borrow.
+        other_name = _display_name((by_id or {}).get(other))
+        placeholders.append(_placeholder_to_ftm(ends[side], side, record, other_name, interests))
+    notes = [_unspecified_note(side, record) for side, record in unspecified.items()]
+
     if not interests:
         props = _Props()
         props.add("subject", party)
         props.add("object", subject)
         props.add("role", "interested party (no interest details disclosed)")
-        return [{"id": sid, "schema": "UnknownLink", "properties": props.as_dict()}]
+        for note in notes:
+            props.add("description", note)
+        return placeholders, [{"id": sid, "schema": "UnknownLink", "properties": props.as_dict()}]
 
-    out: list[dict[str, Any]] = []
+    links: list[dict[str, Any]] = []
     for n, interest in enumerate(interests, start=1):
         link_id = sid if n == 1 else f"{sid}-{n}"
-        out.append(_interest_to_ftm(link_id, party, subject, interest))
-    return out
+        link = _interest_to_ftm(link_id, party, subject, interest)
+        for note in notes:
+            link["properties"].setdefault("description", []).append(note)
+        links.append(link)
+    return placeholders, links
 
 
 def map_to_ftm(bods_statements: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Project a BODS v0.4 bundle into FtM entities.
 
-    Returns entity/person nodes first (insertion order preserved), then the
-    interval entities derived from relationship statements — so a streaming
-    loader always sees a link's endpoints before the link. Pure and
+    Returns entity/person nodes first (insertion order preserved), then any
+    placeholders for unspecified parties, then the interval entities derived
+    from relationship statements — so a streaming loader always sees a link's
+    endpoints before the link. Pure and
     deterministic; no network, no I/O.
     """
     nodes: list[dict[str, Any]] = []
@@ -326,11 +440,19 @@ def map_to_ftm(bods_statements: list[dict[str, Any]]) -> list[dict[str, Any]]:
         elif rtype == "relationship":
             relationships.append(stmt)
 
+    by_id = {
+        s["statementId"]: s
+        for s in bods_statements or []
+        if s.get("recordType") in ("entity", "person") and s.get("statementId")
+    }
+    placeholders: list[dict[str, Any]] = []
     links: list[dict[str, Any]] = []
     resolve = resolver(bods_statements or [])
     for stmt in relationships:
-        links.extend(_relationship_to_ftm(stmt, known_ids, resolve))
-    return nodes + links
+        made, linked = _relationship_to_ftm(stmt, known_ids, resolve, by_id)
+        placeholders.extend(made)
+        links.extend(linked)
+    return nodes + placeholders + links
 
 
 def to_ftm_jsonl(bods_statements: list[dict[str, Any]]) -> str:

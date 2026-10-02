@@ -33,9 +33,22 @@ Modelling decisions
   the *interested party's* record, pointing at the *subject's* anchor. Read as
   "interested party →(role)→ subject", e.g. an owner ``OWNER_OF`` a company. The
   ``REL_POINTER_ROLE`` is derived from the BODS interest type and share band.
-  A relationship is dropped (and counted) only when its interested party has no
-  resolvable statement (an ``unspecified`` / unknown party) — there is no record
-  to anchor the pointer to.
+* **A party BODS cannot name** — an ``UnspecifiedRecord`` (``{reason,
+  description}``) in ``subject`` or ``interestedParty`` — becomes a
+  **placeholder record**, one per relationship statement and side
+  (``RECORD_ID`` ``<statementId>#interestedParty`` / ``#subject``, the ids the
+  Cypher export uses), so the disclosed relationship survives and Senzing shows
+  that the chain ends in an undisclosed party (Phase 276; until then the
+  relationship was dropped, and an unspecified *subject* produced a
+  ``REL_POINTER`` with an empty key). A placeholder carries **only** ``REL_*``
+  features — which the Senzing spec puts in the separate "Relationship"
+  category, not used for matching — and the reason/description as payload
+  attributes. No name, no identifier, no ``RECORD_TYPE`` (the spec says omit it
+  when unknown), so two placeholders have nothing to resolve on and cannot be
+  merged into a hub that would link unrelated companies.
+* A relationship whose party is absent or names a statement outside the bundle
+  is still dropped — there is no record to anchor it on, and a pointer must
+  match an anchor.
 
 This is a pure, side-effect-free function over the BODS list; no network, no I/O.
 """
@@ -44,12 +57,11 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
 from typing import Any
 
 from .. import identifiers
 from .annotations import person_identifiers_from_annotations
-from .refs import resolver
+from .refs import resolver, unspecified_party
 from .source_ids import source_ids_of
 
 DATA_SOURCE = "OPENCHECK"
@@ -256,23 +268,23 @@ def _person_record(stmt: dict[str, Any]) -> dict[str, Any]:
     return {"DATA_SOURCE": DATA_SOURCE, "RECORD_ID": sid, "FEATURES": features}
 
 
-def _pointer_features(
-    stmt: dict[str, Any], resolve: Callable[[Any], str] = lambda ref: ref
-) -> list[dict[str, Any]]:
+def _pointer_features(stmt: dict[str, Any], subject_key: str) -> list[dict[str, Any]]:
     """REL_POINTER feature(s) for one BODS relationship statement.
 
     One pointer per interest entry (each disclosed interest is its own Senzing
     relationship), all pointing from the interested party at the subject's
-    anchor. Falls back to a single generic pointer when no interests are listed.
+    anchor ``subject_key``. Falls back to a single generic pointer when no
+    interests are listed.
     """
     rd = stmt.get("recordDetails") or {}
-    subject = rd.get("subject")
-    if not subject:
+    if not subject_key:
         return []
 
-    base = {"REL_POINTER_DOMAIN": DOMAIN, "REL_POINTER_KEY": resolve(subject)}
+    base = {"REL_POINTER_DOMAIN": DOMAIN, "REL_POINTER_KEY": subject_key}
     pointers: list[dict[str, Any]] = []
     for interest in rd.get("interests") or []:
+        if not isinstance(interest, dict):
+            continue
         pointer = dict(base)
         pointer["REL_POINTER_ROLE"] = _interest_role(interest)
         if interest.get("startDate"):
@@ -284,6 +296,34 @@ def _pointer_features(
     if not pointers:
         pointers.append({**base, "REL_POINTER_ROLE": "INTERESTED_PARTY_OF"})
     return pointers
+
+
+#: The two relationship fields that name a party.
+_PARTY_SIDES: tuple[str, ...] = ("subject", "interestedParty")
+
+
+def _placeholder_record(
+    record_id: str, side: str, rel_key: str, party: dict[str, str]
+) -> dict[str, Any]:
+    """A Senzing record standing in for one unspecified party.
+
+    Deliberately featureless for matching: the FEATURES list only ever gains
+    ``REL_ANCHOR`` / ``REL_POINTER`` entries, and everything a human needs —
+    which side, why it is unspecified, which relationship — rides as payload,
+    which Senzing stores but never compares.
+    """
+    record: dict[str, Any] = {
+        "DATA_SOURCE": DATA_SOURCE,
+        "RECORD_ID": record_id,
+        "UNSPECIFIED_PARTY": side,
+        "BODS_RELATIONSHIP_ID": rel_key,
+    }
+    if party.get("reason"):
+        record["UNSPECIFIED_REASON"] = party["reason"]
+    if party.get("description"):
+        record["UNSPECIFIED_DESCRIPTION"] = party["description"]
+    record["FEATURES"] = []
+    return record
 
 
 def _source_ids_of(stmt: dict[str, Any]) -> set[str]:
@@ -320,8 +360,10 @@ def map_to_senzing(bods_statements: list[dict[str, Any]]) -> list[dict[str, Any]
 
     Returns one record per entity/person statement (insertion order preserved),
     each with its disclosed ownership/control relationships folded in as
-    ``REL_POINTER`` features, plus ``DATA_LICENSE`` / ``ATTRIBUTION`` payload
-    attributes computed from the record's contributing sources (the most-
+    ``REL_POINTER`` features, then one featureless placeholder record per
+    unspecified party (see the module docstring), all with ``DATA_LICENSE`` /
+    ``ATTRIBUTION`` payload attributes computed from the record's contributing
+    sources (the most-
     restrictive licence wins — a record combining a permissive and a
     non-commercial source carries the non-commercial licence). Deterministic; it
     reads the source registry for licensing but does no network/IO.
@@ -345,20 +387,47 @@ def map_to_senzing(bods_statements: list[dict[str, Any]]) -> list[dict[str, Any]
             relationships.append(stmt)
 
     resolve = resolver(bods_statements or [])
+    known = set(records)
     for stmt in relationships:
         rd = stmt.get("recordDetails") or {}
-        # Only a reference resolves to a record we can anchor the pointer on;
-        # an "unspecified" (unknown owner) party object cannot. A v0.4
-        # reference is a recordId — resolved to the record's statementId.
-        if not isinstance(rd.get("interestedParty"), str):
+        rel_key = stmt.get("statementId") or stmt.get("recordId")
+        # Each side is a reference to a record in the bundle (a v0.4 recordId,
+        # resolved to the record's statementId), an unspecified party (Phase
+        # 276: a placeholder record), or nothing usable — which drops the
+        # relationship, since a pointer must land on an anchor.
+        ends: dict[str, str] = {}
+        unspecified: dict[str, dict[str, str]] = {}
+        for side in _PARTY_SIDES:
+            raw = rd.get(side)
+            party = unspecified_party(raw)
+            if party is not None and rel_key:
+                ends[side] = f"{rel_key}#{side}"
+                unspecified[side] = party
+                continue
+            ref = resolve(raw)
+            if ref and ref in known:
+                ends[side] = ref
+        if len(ends) != len(_PARTY_SIDES):
             continue
-        party = resolve(rd.get("interestedParty"))
-        target = records.get(party)
-        if target is None:
-            continue
-        target["FEATURES"].extend(_pointer_features(stmt, resolve))
+
+        rel_sources = _source_ids_of(stmt)
+        for side, party in unspecified.items():
+            pid = ends[side]
+            if pid not in records:
+                records[pid] = _placeholder_record(pid, side, str(rel_key), party)
+                if side == "subject":
+                    # The pointer below must land on an anchor, and nothing
+                    # else carries one for this key. At most one per record.
+                    records[pid]["FEATURES"].append(
+                        {"REL_ANCHOR_DOMAIN": DOMAIN, "REL_ANCHOR_KEY": pid}
+                    )
+            contributors.setdefault(pid, set()).update(rel_sources)
+
+        subject = ends["subject"]
+        party_id = ends["interestedParty"]
+        records[party_id]["FEATURES"].extend(_pointer_features(stmt, subject))
         # The folded relationship's source also contributed to this record.
-        contributors.setdefault(party, set()).update(_source_ids_of(stmt))
+        contributors.setdefault(party_id, set()).update(rel_sources)
 
     for sid, record in records.items():
         _attach_licensing(record, contributors.get(sid) or set())
