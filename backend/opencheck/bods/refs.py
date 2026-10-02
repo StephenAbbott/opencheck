@@ -52,6 +52,29 @@ def party_ref(raw: Any) -> str | None:
     return None
 
 
+def unspecified_party(raw: Any) -> dict[str, str] | None:
+    """``{reason, description}`` when a ``subject`` / ``interestedParty`` value
+    is a BODS ``UnspecifiedRecord``; ``None`` for a reference (bare or legacy
+    wrapped) and for nothing at all.
+
+    Reads the v0.4 shape (``{reason, description}``) and the older wrapped one
+    (``{"unspecified": {reason, description}}``); either key may be missing.
+    The complement of ``party_ref``: a dict it cannot read a reference out of
+    is the unspecified record. Used by the Senzing and FtM exports (Phase 276)
+    to draw a placeholder instead of dropping the relationship.
+    """
+    if not isinstance(raw, dict) or party_ref(raw) is not None:
+        return None
+    wrapped = raw.get("unspecified")
+    body: dict[str, Any] = wrapped if isinstance(wrapped, dict) else raw
+    out: dict[str, str] = {}
+    for key in ("reason", "description"):
+        value = body.get(key)
+        if isinstance(value, str) and value.strip():
+            out[key] = value.strip()
+    return out
+
+
 def statement_index(statements: Iterable[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Every entity and person statement, keyed by statementId **and**
     recordId (and ``declarationSubject`` where it differs), so a lookup by

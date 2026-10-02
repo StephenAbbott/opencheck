@@ -180,19 +180,20 @@ def test_interestless_relationship_becomes_unknown_link():
     assert link["properties"]["object"] == ["ent-1"]
 
 
-def test_unspecified_or_dangling_parties_are_dropped():
+def test_dangling_parties_are_dropped_but_unspecified_ones_are_kept():
     bods = [
         _entity("ent-1", name="Acme"),
-        # Unspecified interested party — nothing to link.
+        # Unspecified interested party — Phase 276: a placeholder owner, so the
+        # Ownership survives (test_phase276_unspecified_party_exports.py).
         _rel("rel-x", subject="ent-1",
              party={"unspecified": {"reason": "unknown"}},
              interests=[{"type": "shareholding"}]),
-        # Party references a statement that isn't in the bundle.
+        # Party references a statement that isn't in the bundle — still dropped.
         _rel("rel-y", subject="ent-1", party="ghost-1",
              interests=[{"type": "shareholding"}]),
     ]
     ids = {e["id"] for e in map_to_ftm(bods)}
-    assert ids == {"ent-1"}
+    assert ids == {"ent-1", "rel-x-unspecified-interestedParty", "rel-x"}
 
 
 def test_nodes_precede_links_for_streaming_loaders():

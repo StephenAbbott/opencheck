@@ -125,15 +125,20 @@ def test_exact_share_and_role_fallback():
     assert "VOTING_RIGHTS_IN" in roles
 
 
-def test_unspecified_interested_party_is_skipped():
+def test_unspecified_interested_party_becomes_a_placeholder_record():
     bods = [
         _entity("ent-1", name="Acme"),
         _rel("rel-x", subject="ent-1",
              party={"unspecified": {"reason": "unknown"}}, interests=[]),
     ]
-    [rec] = map_to_senzing(bods)
-    # No record to anchor a pointer on → relationship dropped, only the anchor remains.
+    # Phase 276: the relationship survives on a featureless placeholder that
+    # points at the company, instead of being dropped (see
+    # test_phase276_unspecified_party_exports.py for the full contract).
+    rec, placeholder = map_to_senzing(bods)
     assert _find(rec, "REL_POINTER_KEY") == []
+    assert placeholder["RECORD_ID"] == "rel-x#interestedParty"
+    assert placeholder["UNSPECIFIED_REASON"] == "unknown"
+    assert [f["REL_POINTER_KEY"] for f in _find(placeholder, "REL_POINTER_KEY")] == ["ent-1"]
 
 
 def test_lei_detected_by_value_shape_without_lei_scheme():
