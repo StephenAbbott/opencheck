@@ -36,7 +36,9 @@ Pure and side-effect-free, like ``senzing.py`` / ``ftm.py`` / ``neo4j.py``.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
+from datetime import date, datetime
 from typing import Any
 from urllib.parse import quote, urlsplit
 
@@ -124,9 +126,51 @@ def _uri_or_none(value: Any) -> URIRef | None:
     return URIRef(cleaned)
 
 
+_YEAR = re.compile(r"^\d{4}$")
+_YEAR_MONTH = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+_FULL_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+#: The xsd:dateTime lexical form: seconds required, optional fraction and zone.
+#: Python's ``fromisoformat`` alone also accepts ``10:00`` without seconds.
+_DATE_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$")
+
+
 def _date_lit(value: Any) -> Literal:
-    text = str(value)
-    return Literal(text, datatype=XSD.dateTime if "T" in text else XSD.date)
+    """A date literal typed by the precision the value actually has (Phase 275).
+
+    BODS allows partial dates — a person's ``birthDate`` and ``deathDate`` may
+    be ``YYYY``, ``YYYY-MM`` or ``YYYY-MM-DD``, and Companies House publishes
+    directors' and PSCs' birth dates as year and month only. This used to type
+    everything without a ``T`` as ``xsd:date``, so ``"1942-12"^^xsd:date`` went
+    out as an ill-typed literal that a SPARQL date filter silently skips. Now:
+
+    * ``YYYY`` → ``xsd:gYear``; ``YYYY-MM`` → ``xsd:gYearMonth``;
+    * a valid ``YYYY-MM-DD`` → ``xsd:date``;
+    * a valid date-time → ``xsd:dateTime``;
+    * anything else → a plain literal, rather than a datatype it does not have.
+
+    The BODS vocabulary declares ``rdfs:range xsd:dateTime`` for every date
+    property, which no partial or date-only value can satisfy without
+    inventing a time; OpenCheck types each value honestly instead, and the gap
+    is raised upstream with Open Ownership.
+    """
+    text = str(value).strip()
+    if _YEAR.match(text):
+        return Literal(text, datatype=XSD.gYear)
+    if _YEAR_MONTH.match(text):
+        return Literal(text, datatype=XSD.gYearMonth)
+    if _FULL_DATE.match(text):
+        try:
+            date.fromisoformat(text)
+        except ValueError:
+            return Literal(text)
+        return Literal(text, datatype=XSD.date)
+    if _DATE_TIME.match(text):
+        try:
+            datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return Literal(text)
+        return Literal(text, datatype=XSD.dateTime)
+    return Literal(text)
 
 
 def _code_term(value: str, *, default: URIRef | None = None) -> URIRef:
@@ -203,7 +247,7 @@ def _add_source(g, stmt_uri, stmt: dict[str, Any]) -> None:
     if src_url is not None:
         g.add((node, BODS.url, src_url))
     if src.get("retrievedAt"):
-        g.add((node, BODS.retrievedAt, Literal(src["retrievedAt"], datatype=XSD.dateTime)))
+        g.add((node, BODS.retrievedAt, _date_lit(src["retrievedAt"])))
     for sid in sorted(_source_ids_of(stmt)):
         g.add((node, OC.sourceId, Literal(sid)))
 
