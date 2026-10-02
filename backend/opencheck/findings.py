@@ -777,7 +777,7 @@ def finding_chilecompra(bundle: dict[str, Any]) -> str | None:
     buyer_clause = (
         f"from {counted(buyers, 'public body', 'public bodies')}" if buyers else None
     )
-    clauses = [c for c in (order_clause, tender_clause, buyer_clause) if c]
+    clauses: list[str | None] = [c for c in (order_clause, tender_clause, buyer_clause) if c]
     if not clauses:
         return None
     clauses[0] = f"{lead}: {clauses[0]}"

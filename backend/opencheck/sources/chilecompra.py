@@ -492,9 +492,12 @@ def build_index(months: list[MonthInput], out_path: Path | str) -> dict[str, str
             ),
         )
         ranked = sorted(sup.buyers.items(), key=lambda kv: (-kv[1][1], -kv[1][2], -kv[1][0], kv[0]))
-        for code, (n_orders, value, wins) in ranked[:TOP_BUYERS]:
-            buyers_used.add(code)
-            conn.execute("INSERT INTO supplier_buyer VALUES (?,?,?,?,?)", (body, code, n_orders, value, wins))
+        for buyer_id, (n_orders, value, wins) in ranked[:TOP_BUYERS]:
+            buyers_used.add(buyer_id)
+            conn.execute(
+                "INSERT INTO supplier_buyer VALUES (?,?,?,?,?)",
+                (body, buyer_id, n_orders, value, wins),
+            )
         for value, _code, (code, day, buyer) in sorted(sup.top_orders, reverse=True):
             if buyer is not None:
                 buyers_used.add(buyer)
