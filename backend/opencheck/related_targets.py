@@ -221,7 +221,7 @@ def fan_out(signals: list[Any], screened: list[dict[str, Any]]) -> list[Any]:
     out: list[Any] = []
     for sig in signals:
         out.append(sig)
-        sub = (getattr(sig, "evidence", None) or {}).get("subject_statement_id")
+        sub = str((getattr(sig, "evidence", None) or {}).get("subject_statement_id") or "")
         for sid in extra.get(sub, ()):
             evidence = dict(sig.evidence)
             evidence["subject_statement_id"] = sid
