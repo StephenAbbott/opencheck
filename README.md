@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 279** — the related-party screens dedupe parties across sources, read current owners and officers first, and say when their per-lookup limit left anyone unscreened.
+**Latest: Phase 280** — ChileCompra joins as a source: for a Chilean LEI, the purchase orders, tenders won and public buyers on Mercado Público over the last twelve months, matched on the RUT.
 
 → [Full development history](docs/status.md)
 
