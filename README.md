@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 274** — FtM addresses are filed as `alternative`, which BODS allows on people and companies alike, so OpenSanctions people with an address validate again; and the Neo4j export draws an undisclosed owner as its own placeholder node instead of dropping the chain, matching the RDF export.
+**Latest: Phase 275** — the RDF export types each date by the precision it has, so a birth date Companies House publishes as a month (`1942-12`) is an `xsd:gYearMonth` instead of an ill-typed `xsd:date` that SPARQL date filters silently skip.
 
 → [Full development history](docs/status.md)
 
