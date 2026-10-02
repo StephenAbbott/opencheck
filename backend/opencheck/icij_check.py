@@ -118,10 +118,11 @@ from typing import Any
 
 import httpx
 
-from . import names
+from . import names, related_targets
 from .config import get_settings
 from .http import build_client, sanitize_name_query
 from .risk import (
+    DEGRADED_TRUNCATED,
     OFFSHORE_LEAKS,
     DegradedSource,
     RiskSignal,
@@ -320,11 +321,28 @@ async def assess_icij_names(
         return []
 
     identity = subject_identity(subject_lei, bods)
-    targets = _subject_targets(identity) + _collect_targets(
-        bods, exclude=identity.statement_ids
-    )[:max_targets]
+    # Phase 279: related parties are deduped across sources and ranked
+    # (``related_targets``) before the cap, and a cap that leaves anyone
+    # unread is said out loud. The subject's own names sit outside the cap.
+    selection = related_targets.select(
+        _collect_targets(bods, exclude=identity.statement_ids),
+        bods,
+        limit=max_targets,
+        subject_ids=identity.statement_ids,
+    )
+    targets = _subject_targets(identity) + selection.screened
     if not targets:
         return []
+    if selection.truncated and degraded is not None:
+        degraded.append(
+            DegradedSource(
+                source_id="opencheck",
+                check=CHECK_NAME,
+                affected_signals=[OFFSHORE_LEAKS],
+                detail=selection.detail("Offshore Leaks screening"),
+                reason=DEGRADED_TRUNCATED,
+            )
+        )
 
     # Batch targets into groups to avoid oversized requests.
     signals: list[RiskSignal] = []
@@ -436,7 +454,10 @@ async def assess_icij_names(
                 )
             )
 
-    return _dedupe(signals)
+    # A deduped party was screened once; each of its statements gets the
+    # result (Phase 279). Subject signals carry ``statement_id`` and pass
+    # through untouched.
+    return _dedupe(related_targets.fan_out(signals, selection.screened))
 
 
 # ---------------------------------------------------------------------

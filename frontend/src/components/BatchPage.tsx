@@ -248,7 +248,7 @@ export default function BatchPage({
           {degradedCount > 0 && (
             <p className="mt-1 text-oo-meta text-oo-muted">
               Rows marked <span className="font-medium text-oo-warn-text">not fully checked</span> are
-              listed first: a screening check did not run for them, and the absence of a finding there
+              listed first: a screening check did not run, or ran only in part, for them, and the absence of a finding there
               is not a clean result.
             </p>
           )}

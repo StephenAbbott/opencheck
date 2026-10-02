@@ -125,7 +125,9 @@ export interface DegradedSource {
   affected_signals: string[];
   /** Human-readable failure summary — counts only. */
   detail: string;
-  reason: "upstream_error" | "timeout" | "not_configured" | "rate_limited";
+  /** ``truncated`` (Phase 279): the screen ran, but OpenCheck's per-lookup
+   *  limit left the lowest-ranked related parties unread. Not retryable. */
+  reason: "upstream_error" | "timeout" | "not_configured" | "rate_limited" | "truncated";
 }
 
 /** One informational related-party match from OpenAleph percolation

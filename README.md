@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 278** — The source-health report now says when the weekly sweep has stopped publishing, measured from its own date rather than from GitHub's scheduler.
+**Latest: Phase 279** — the related-party screens dedupe parties across sources, read current owners and officers first, and say when their per-lookup limit left anyone unscreened.
 
 → [Full development history](docs/status.md)
 

@@ -17,7 +17,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { VerdictStrip } from "./VerdictStrip";
+import { VerdictStrip, gapCopy } from "./VerdictStrip";
 import type { KnowabilityStatement, RiskSignal } from "../../lib/api";
 
 const VERDICT =
@@ -208,6 +208,24 @@ describe("VerdictStrip", () => {
     const link = screen.getByRole("link", { name: "One check did not run — see which" });
     await userEvent.click(link);
     expect(onShowDegraded).toHaveBeenCalledOnce();
+  });
+
+  it("says a capped related-party screen answered only in part, not that it did not run (Phase 279)", () => {
+    renderStrip({
+      degraded: [
+        { source_id: "opencheck", check: "cross_source_names", reason: "truncated", detail: "", affected_signals: [] },
+        { source_id: "opencheck", check: "icij_offshore_leaks", reason: "truncated", detail: "", affected_signals: [] },
+      ],
+      onShowDegraded: vi.fn(),
+    });
+    expect(screen.getByRole("link", { name: "2 checks answered only in part — see which" })).toBeInTheDocument();
+    expect(screen.queryByText(/did not run/)).toBeNull();
+  });
+
+  it("keeps both claims apart when one check failed and another was capped", () => {
+    expect(gapCopy(1, 1)).toBe("One check did not run and one check answered only in part");
+    expect(gapCopy(2, 0)).toBe("2 checks did not run");
+    expect(gapCopy(0, 1)).toBe("One check answered only in part");
   });
 
   it("renders no sentence at all when the backend sent none", () => {

@@ -26,10 +26,12 @@ Scope notes
 * OS and EP only for now. Wikidata SPARQL-by-name is too noisy for a
   deterministic check; revisit when the RDF/Oxigraph backbone lands.
 * Bounded by ``max_targets`` to keep the request volume sane on
-  large PSC chains. Targets are chosen by walking the bundle in
-  insertion order — for a typical UK PSC bundle that means
-  subject → PSCs → parents, which is exactly the prioritisation we
-  want.
+  large groups. Since Phase 279 the targets are deduped across sources
+  and ranked (``related_targets``: current before former, owners and
+  officers first, direct links before indirect), and a cap that leaves
+  anyone unread is reported as a ``truncated`` ``DegradedSource``.
+  Before, the first N in bundle order were read and the rest dropped
+  silently, so the result depended on which sources happened to answer.
 * Persons get checked for both ``RELATED_PEP`` and
   ``RELATED_SANCTIONED``. Entities only for ``RELATED_SANCTIONED``
   (entities can't be PEPs).
@@ -53,6 +55,7 @@ from .risk import (
     _DEBARMENT_TOPICS,
     _PEP_TOPICS,
     DEGRADED_NOT_CONFIGURED,
+    DEGRADED_TRUNCATED,
     DegradedSource,
     RiskSignal,
     classify_degradation_reason,
@@ -61,6 +64,7 @@ from .risk import (
     former_party_ids,
     pick_degradation_reason,
 )
+from . import related_targets
 from .sources import REGISTRY, SearchKind, SourceHit, source_display_name
 from .subject_identity import subject_identity
 
@@ -86,6 +90,10 @@ RELATED_EXPORT_RISK = "RELATED_EXPORT_RISK"
 
 #: Name of this derived check in ``DegradedSource.check`` records.
 CHECK_NAME = "cross_source_names"
+
+#: How many distinct related parties one lookup screens (Phase 279: after
+#: dedupe and ranking — see ``related_targets``).
+MAX_TARGETS = 25
 
 #: Which signals each upstream source contributes — the codes whose absence
 #: becomes unreliable when that source's probes fail (issue #50).
@@ -158,7 +166,7 @@ class NameScreen:
 async def assess_cross_source_names(
     bods: list[dict[str, Any]],
     *,
-    max_targets: int = 25,
+    max_targets: int = MAX_TARGETS,
     min_score: float = 0.88,
     degraded: list[DegradedSource] | None = None,
     screen: NameScreen | None = None,
@@ -200,9 +208,14 @@ async def assess_cross_source_names(
         _LOG.debug("Cross-source name screening skipped: live mode is off.")
         return []
 
-    targets = _collect_targets(
-        bods, exclude=subject_identity(subject_lei, bods).statement_ids
-    )[:max_targets]
+    identity = subject_identity(subject_lei, bods)
+    selection = related_targets.select(
+        _collect_targets(bods, exclude=identity.statement_ids),
+        bods,
+        limit=max_targets,
+        subject_ids=identity.statement_ids,
+    )
+    targets = selection.screened
     if not targets:
         return []
 
@@ -223,7 +236,7 @@ async def assess_cross_source_names(
                         affected_signals=list(affected),
                         detail=(
                             "OPENSANCTIONS_API_KEY is not configured while live "
-                            f"mode is on; {len(targets)} related-party name(s) "
+                            f"mode is on; {selection.total} related-party name(s) "
                             "were not screened."
                         ),
                         reason=DEGRADED_NOT_CONFIGURED,
@@ -236,6 +249,22 @@ async def assess_cross_source_names(
     # signals, which only exist where something matched.
     if screen is not None:
         screen.names_screened = len(targets)
+    if selection.truncated and degraded is not None:
+        # Phase 279: the cap left parties unread. The screen ran, so this is
+        # not an upstream failure — but an unread party reads exactly like a
+        # screened, clean one, which is the silent-green class issue #50
+        # exists for. Counts only; the source is OpenCheck's own limit.
+        degraded.append(
+            DegradedSource(
+                source_id="opencheck",
+                check=CHECK_NAME,
+                affected_signals=list(_AFFECTED_BY_SOURCE["opensanctions"]),
+                detail=selection.detail(
+                    "Related-party sanctions and PEP screening"
+                ),
+                reason=DEGRADED_TRUNCATED,
+            )
+        )
 
     # Run the OS + EP probes concurrently — both adapters are cheap
     # and each name yields at most ~10 hits to score.
@@ -270,15 +299,23 @@ async def assess_cross_source_names(
         signals.extend(target_signals)
         if screen is not None:
             for hit, target in ep_matches:
-                screen.matches.append(
-                    NameMatch(
-                        source_id="everypolitician",
-                        hit=hit,
-                        target_name=str(target.get("name") or ""),
-                        subject_statement_id=str(target.get("statement_id") or ""),
-                        former=bool(target.get("former")),
+                # One row per statement of the party (Phase 279 dedupe): the
+                # card for each source that named them keeps its match.
+                for sid in target.get("statement_ids") or [target.get("statement_id")]:
+                    if any(
+                        m.hit.hit_id == hit.hit_id and m.subject_statement_id == sid
+                        for m in screen.matches
+                    ):
+                        continue  # a second spelling of the party, same record
+                    screen.matches.append(
+                        NameMatch(
+                            source_id="everypolitician",
+                            hit=hit,
+                            target_name=str(target.get("name") or ""),
+                            subject_statement_id=str(sid or ""),
+                            former=bool(target.get("former")),
+                        )
                     )
-                )
         for source_id, reason in failures.items():
             by_reason = failed_by_source.setdefault(source_id, {})
             by_reason[reason] = by_reason.get(reason, 0) + 1
@@ -334,7 +371,9 @@ async def assess_cross_source_names(
                         reason=pick_degradation_reason(target_error_reasons),
                     )
                 )
-    return _dedupe(signals)
+    # A deduped party was screened once; every statement that names it gets
+    # the result (Phase 279, Stephen: attach to both).
+    return _dedupe(related_targets.fan_out(signals, targets))
 
 
 # ---------------------------------------------------------------------

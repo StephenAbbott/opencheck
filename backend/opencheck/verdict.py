@@ -297,6 +297,8 @@ def _join(*sentences: str | None) -> str | None:
 _SOURCE_FETCH = "source_fetch"
 #: Phase 241: a source that returned a record and failed while it was read.
 _SOURCE_READ = "source_read"
+#: Phase 279: ``risk.DEGRADED_TRUNCATED`` — a screen's related-party limit.
+_TRUNCATED = "truncated"
 
 
 def _incomplete_phrase(degraded: list[dict[str, Any]]) -> str:
@@ -309,7 +311,14 @@ def _incomplete_phrase(degraded: list[dict[str, Any]]) -> str:
     unreachable says nothing about whether anyone was screened. Phrasing both
     the same way over-claims on one and under-explains the other.
     """
-    screens = [d for d in degraded if d.get("check") not in (_SOURCE_FETCH, _SOURCE_READ)]
+    all_screens = [
+        d for d in degraded if d.get("check") not in (_SOURCE_FETCH, _SOURCE_READ)
+    ]
+    # Phase 279: a screen that ran but read only the highest-ranked related
+    # parties is a third claim again — it did run, so "did not run" would be
+    # false, and "not a clean screen" holds only for the parties left out.
+    capped = [d for d in all_screens if d.get("reason") == _TRUNCATED]
+    screens = [d for d in all_screens if d.get("reason") != _TRUNCATED]
     sources = [d for d in degraded if d.get("check") == _SOURCE_FETCH]
     partial = [d for d in degraded if d.get("check") == _SOURCE_READ]
 
@@ -318,6 +327,10 @@ def _incomplete_phrase(degraded: list[dict[str, Any]]) -> str:
         n = len({d.get("source_id") for d in screens if d.get("source_id")}) or len(screens)
         noun = "one check" if n == 1 else f"{n} checks"
         parts.append(f"{noun} did not run — an empty result there is not a clean screen")
+    if capped:
+        n = len({d.get("check") for d in capped if d.get("check")}) or len(capped)
+        noun = "one check" if n == 1 else f"{n} checks"
+        parts.append(f"{noun} answered only in part — not every related party was screened")
     if sources:
         n = len({d.get("source_id") for d in sources if d.get("source_id")}) or len(sources)
         noun = "one source" if n == 1 else f"{n} sources"

@@ -271,7 +271,8 @@ class ReportResponse(BaseModel):
     #: Derived risk checks that did not fully run for this result (issue
     #: #50) — empty when every screen completed. Each record carries
     #: source_id / check / affected_signals / detail / reason (closed
-    #: vocabulary: upstream_error, timeout, not_configured, rate_limited).
+    #: vocabulary: upstream_error, timeout, not_configured, rate_limited,
+    #: truncated).
     #: An empty risk_signals list with a non-empty degraded_sources list
     #: is NOT a clean screen. Never contains related-party names.
     degraded_sources: list[dict[str, Any]] = []
