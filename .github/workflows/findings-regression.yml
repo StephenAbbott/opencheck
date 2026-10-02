@@ -1,0 +1,159 @@
+name: Findings regression
+
+# Weekly check of what the risk engine FINDS for a golden set of LEIs (Phase 277).
+#
+# The source-health sweep (source-health.yml) asks whether every adapter is
+# alive. This asks what production concludes: the six curated homepage
+# examples, Shell, three anchors Phases 272/273 verified in production
+# (Maersk, Bank Saderat PLC, ASDA Stores) and two clean controls, each against
+# a checked-in file of lower bounds and shapes in backend/findings_golden/.
+# It calls the DEPLOYED API (/lookup?refresh=true, then the MCP
+# opencheck_lookup tool for the same run), because the point is what a reader
+# sees, deploy state included. See docs/findings-regression.md.
+#
+# Deliberately NOT run on push/pull_request: findings drift on live data is a
+# signal to read, never a red check on an unrelated change. The job reports
+# first and fails last, so a red run always has its report attached.
+#
+# The diff is against the last PUBLISHED report (the findings-regression-latest
+# release), not the last successful run — source-health's "last success"
+# baseline keeps a legitimate change red every week.
+#
+# Cadence: Mondays 08:30 UTC, after drift 06:00, live smoke 07:00, source
+# health 07:30 and the securities refresh 08:00. Scheduled runs are not
+# currently firing on their own for this repository (Notion ticket
+# 3ed7f3dc29288139bd64d946162bca6d); until that is fixed, use Run workflow.
+on:
+  schedule:
+    - cron: "30 8 * * 1" # Mondays 08:30 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: findings-regression
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    # Twelve subjects at one fresh lookup a minute is about fifteen minutes;
+    # a 429 or 503 waits out its Retry-After before one retry.
+    timeout-minutes: 45
+    permissions:
+      contents: write # the findings-regression-latest release assets
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: System deps for the ftm extra (bods-ftm → followthemoney → pyicu)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++ libicu-dev pkg-config
+      - name: Install backend
+        run: uv sync --extra ftm
+        working-directory: backend
+
+      # Allowed to fail: no release yet (first run) means "no comparison".
+      - name: Fetch the last published report
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh release download findings-regression-latest --repo "$REPO" --pattern findings-regression.json --dir previous
+
+      - name: Run the golden set against production
+        id: run
+        continue-on-error: true
+        run: |
+          PREV="$GITHUB_WORKSPACE/previous/findings-regression.json"
+          if [ -f "$PREV" ]; then
+            uv run python scripts/findings_regression.py --out "$GITHUB_WORKSPACE/findings-regression" --previous "$PREV"
+          else
+            uv run python scripts/findings_regression.py --out "$GITHUB_WORKSPACE/findings-regression"
+          fi
+        working-directory: backend
+
+      - name: Publish the report to the run summary
+        if: always()
+        run: cat findings-regression.md >> "$GITHUB_STEP_SUMMARY" || echo "no report produced" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: findings-regression
+          path: findings-regression.*
+          retention-days: 90
+
+      # A data slot, never marked "latest": next week's run diffs against it.
+      - name: Publish the report to the findings-regression-latest release
+        if: always() && hashFiles('findings-regression.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG=findings-regression-latest
+          if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$REPO" --latest=false \
+              --title "Findings regression (latest weekly run)" \
+              --notes "Data slot for the weekly findings regression. Assets are replaced each run; the next run diffs against them."
+          fi
+          gh release upload "$TAG" --repo "$REPO" --clobber findings-regression.json findings-regression.md
+          gh release edit "$TAG" --repo "$REPO" \
+            --notes "Weekly findings regression — last run $(date -u +%Y-%m-%dT%H:%MZ). Assets are replaced each run; the next run diffs against them."
+
+      # One rolling issue; a comment only when the set of failing subjects
+      # changes, so an unchanged red week does not train anyone to skim it.
+      - name: Update the rolling findings-regression issue
+        if: always() && hashFiles('findings-regression.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="Findings regression: weekly golden-LEI run"
+          LABEL="findings-regression"
+          gh label create "$LABEL" --description "Weekly findings regression over the golden LEIs" --color 5319E7 2>/dev/null || true
+
+          FAILING=$(python3 -c "
+          import json
+          print(' '.join(json.load(open('findings-regression.json'))['totals']['failed_leis']))
+          ")
+
+          NUMBER=$(gh issue list --repo "$REPO" --label "$LABEL" --state all --limit 1 --json number --jq '.[0].number // empty')
+          BODY_FILE=$(mktemp)
+          { cat findings-regression.md; printf '\n<!-- failing: %s -->\n[Full run](%s)\n' "$FAILING" "$RUN_URL"; } > "$BODY_FILE"
+
+          if [ -z "$FAILING" ]; then
+            if [ -n "$NUMBER" ]; then
+              PREV=$(gh issue view "$NUMBER" --repo "$REPO" --json state --jq .state)
+              gh issue edit "$NUMBER" --repo "$REPO" --body-file "$BODY_FILE"
+              if [ "$PREV" = "OPEN" ]; then
+                gh issue comment "$NUMBER" --repo "$REPO" --body "Every golden subject is back to its expectations — closing."
+                gh issue close "$NUMBER" --repo "$REPO"
+              fi
+            fi
+            exit 0
+          fi
+
+          if [ -z "$NUMBER" ]; then
+            gh issue create --repo "$REPO" --title "$TITLE" --label "$LABEL" --body-file "$BODY_FILE"
+            exit 0
+          fi
+
+          PREV_FAILING=$(gh issue view "$NUMBER" --repo "$REPO" --json body --jq .body \
+            | grep -oE '<!-- failing: [^>]* -->' | sed -E 's/<!-- failing: (.*) -->/\1/' || true)
+          gh issue edit "$NUMBER" --repo "$REPO" --body-file "$BODY_FILE"
+          gh issue reopen "$NUMBER" --repo "$REPO" 2>/dev/null || true
+          if [ "$(echo $PREV_FAILING | tr ' ' '\n' | sort -u)" != "$(echo $FAILING | tr ' ' '\n' | sort -u)" ]; then
+            gh issue comment "$NUMBER" --repo "$REPO" --body "$(printf 'The failing subjects changed.\n\n- Before: %s\n- Now: %s\n\n[Full run](%s)' "${PREV_FAILING:-none}" "$FAILING" "$RUN_URL")"
+          fi
+
+      - name: Fail the job if a subject missed its expectations
+        if: steps.run.outcome == 'failure'
+        run: |
+          echo "::error::Findings regression: at least one golden subject did not meet its expectations — see the run summary."
+          exit 1

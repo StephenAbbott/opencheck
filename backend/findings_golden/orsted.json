@@ -1,0 +1,31 @@
+{
+  "lei": "W9NG6WMZIYEU8VEDOG48",
+  "name": "Ørsted A/S",
+  "role": "curated",
+  "why": "Curated example. Danish state-controlled company: STATE_CONTROLLED (Phase 240) and board members whose only PEP role is this company, labelled context since Phase 247.",
+  "example_card": true,
+  "no_risk": false,
+  "risk": {
+    "STATE_CONTROLLED": "medium",
+    "RELATED_PEP": "medium"
+  },
+  "context": [
+    "GLEIF_REPORTING_EXCEPTION",
+    "RELATED_PEP_SUBJECT_ROLE"
+  ],
+  "absent": [],
+  "verdict": {
+    "matches": [
+      "state ownership"
+    ],
+    "not_matches": []
+  },
+  "sources_found": [
+    "gleif",
+    "cvr_denmark",
+    "opensanctions"
+  ],
+  "liveness": {},
+  "lei_confirmed_min": 3,
+  "intermediate_layers_min": null
+}

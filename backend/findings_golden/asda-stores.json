@@ -1,0 +1,37 @@
+{
+  "lei": "549300IVCS91O4IUFA35",
+  "name": "ASDA Stores Limited",
+  "role": "anchor",
+  "why": "Phase 272 anchor: a real layered chain (7 intermediate layers on 1 Oct). COMPLEX_OWNERSHIP_LAYERS fires and the verdict counts intermediate layers; the retired COMPLEX_CORPORATE_STRUCTURE must never return.",
+  "example_card": false,
+  "no_risk": false,
+  "risk": {
+    "COMPLEX_OWNERSHIP_LAYERS": "medium"
+  },
+  "context": [
+    "GLEIF_REPORTING_EXCEPTION"
+  ],
+  "absent": [
+    "COMPLEX_CORPORATE_STRUCTURE"
+  ],
+  "verdict": {
+    "matches": [
+      "intermediate corporate layers"
+    ],
+    "not_matches": [
+      "layers deep"
+    ]
+  },
+  "sources_found": [
+    "gleif",
+    "companies_house"
+  ],
+  "liveness": {
+    "companies_house": [
+      "live",
+      "cached"
+    ]
+  },
+  "lei_confirmed_min": 2,
+  "intermediate_layers_min": 2
+}

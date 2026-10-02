@@ -557,6 +557,8 @@ def test_sanctioned_securities_signal(monkeypatch, tmp_path):
     sig = svc.sanctioned_securities_signal("7ltwfzyicnsx8d621k86")  # case-insensitive
     assert sig is not None
     assert sig["code"] == "SANCTIONED_SECURITY" and sig["confidence"] == "high"
+    # Phase 277: shaped like RiskSignal.to_dict, kind included.
+    assert sig["kind"] == "risk"
     assert sig["evidence"]["isin_count"] == 2
     assert sig["evidence"]["eo_14071"] is True
     assert "US OFAC SDN" in sig["summary"]

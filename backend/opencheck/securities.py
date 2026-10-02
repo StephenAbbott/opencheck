@@ -188,6 +188,10 @@ def sanctioned_securities_signal(lei: str) -> dict[str, Any] | None:
     )
     return {
         "code": SANCTIONED_SECURITY,
+        # ``RiskSignal.to_dict`` always carries ``kind``; this hand-built dict
+        # did not, so every consumer silently defaulted it (Phase 277's
+        # findings regression caught it on Rosneft).
+        "kind": "risk",
         "confidence": "high",
         "summary": summary,
         "source_id": "opensanctions",

@@ -1,0 +1,26 @@
+{
+  "lei": "549300W96W2VKSMVDF81",
+  "name": "American Foreign Policy Council",
+  "role": "control",
+  "why": "Clean control: non-EU (US-DC, read from the DLCP register) with a GLEIF reporting exception and an LEI lapsed since 2017.",
+  "example_card": false,
+  "no_risk": true,
+  "risk": {},
+  "context": [
+    "GLEIF_REPORTING_EXCEPTION"
+  ],
+  "absent": [],
+  "verdict": {
+    "matches": [
+      "^No risk signals surfaced"
+    ],
+    "not_matches": []
+  },
+  "sources_found": [
+    "gleif",
+    "dlcp_dc"
+  ],
+  "liveness": {},
+  "lei_confirmed_min": 2,
+  "intermediate_layers_min": null
+}

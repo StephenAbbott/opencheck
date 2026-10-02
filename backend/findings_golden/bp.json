@@ -1,0 +1,34 @@
+{
+  "lei": "213800LH1BZH3DI6G760",
+  "name": "BP P.L.C.",
+  "role": "curated",
+  "why": "Curated example. UK parent with no GLEIF parent; ICIJ name match graded by the Phase 237 gates.",
+  "example_card": true,
+  "no_risk": false,
+  "risk": {
+    "OFFSHORE_LEAKS": "medium"
+  },
+  "context": [
+    "GLEIF_REPORTING_EXCEPTION"
+  ],
+  "absent": [],
+  "verdict": {
+    "matches": [
+      "offshore-leaks data"
+    ],
+    "not_matches": []
+  },
+  "sources_found": [
+    "gleif",
+    "companies_house",
+    "opensanctions",
+    "meip"
+  ],
+  "liveness": {
+    "meip": [
+      "snapshot"
+    ]
+  },
+  "lei_confirmed_min": 4,
+  "intermediate_layers_min": null
+}

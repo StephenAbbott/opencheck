@@ -1,0 +1,37 @@
+{
+  "lei": "5493005044RTLQ5RZU70",
+  "name": "Eesti Energia AS",
+  "role": "curated",
+  "why": "Curated example. Estonian state company: STATE_CONTROLLED and a related PEP; read live from the e-Business Register (the Phase 45 provenance bug's home).",
+  "example_card": true,
+  "no_risk": false,
+  "risk": {
+    "STATE_CONTROLLED": "medium",
+    "RELATED_PEP": "medium"
+  },
+  "context": [
+    "GLEIF_REPORTING_EXCEPTION"
+  ],
+  "absent": [
+    "NON_EU_JURISDICTION"
+  ],
+  "verdict": {
+    "matches": [
+      "state ownership"
+    ],
+    "not_matches": []
+  },
+  "sources_found": [
+    "gleif",
+    "ariregister",
+    "opensanctions"
+  ],
+  "liveness": {
+    "ariregister": [
+      "live",
+      "cached"
+    ]
+  },
+  "lei_confirmed_min": 2,
+  "intermediate_layers_min": null
+}

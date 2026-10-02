@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 276** — the Senzing and FtM exports keep a relationship whose owner or subject BODS leaves unspecified, as a placeholder that cannot resolve or merge with other placeholders, instead of silently dropping it.
+**Latest: Phase 277** — a weekly findings regression checks what production concludes for twelve golden LEIs, by failure class, and reports what changed since the last run.
 
 → [Full development history](docs/status.md)
 
