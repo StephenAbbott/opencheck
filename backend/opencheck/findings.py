@@ -737,6 +737,54 @@ def finding_ted_eu(bundle: dict[str, Any]) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# chilecompra (Mercado Público — Chilean public procurement, Phase 280)
+# ---------------------------------------------------------------------------
+
+
+def finding_chilecompra(bundle: dict[str, Any]) -> str | None:
+    """How much this company sold to the Chilean state, over which window.
+
+    Amounts are the files' own peso totals, summed and printed in full —
+    rule 5, no rounding to a nicer number. Tender amounts are in each
+    tender's currency and are not summed, so tenders are counted only. The
+    window leads because every figure is scoped to it.
+
+    A company with no row is not a hit at all (the TED precedent: absence of
+    procurement is not a finding), so there is no not-found sentence here.
+    """
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return None
+    supplier = bundle.get("supplier")
+    if not isinstance(supplier, dict):
+        return None
+    orders = int(supplier.get("orders") or 0)
+    value = int(supplier.get("order_value_clp") or 0)
+    bid = int(supplier.get("tenders_bid") or 0)
+    won = int(supplier.get("tenders_won") or 0)
+    buyers = int(supplier.get("buyers") or 0)
+
+    window = str(bundle.get("window") or "").strip()
+    lead = f"Chilean public procurement, {window}" if window else "Chilean public procurement"
+    def counted(n: int, one: str, many: str) -> str:
+        return f"{n:,} {one if n == 1 else many}"
+
+    order_clause = (
+        f"{counted(orders, 'purchase order', 'purchase orders')} worth CLP {value:,}"
+        if orders
+        else None
+    )
+    tender_clause = f"{won:,} of {counted(bid, 'tender', 'tenders')} bid won" if bid else None
+    buyer_clause = (
+        f"from {counted(buyers, 'public body', 'public bodies')}" if buyers else None
+    )
+    clauses: list[str | None] = [c for c in (order_clause, tender_clause, buyer_clause) if c]
+    if not clauses:
+        return None
+    clauses[0] = f"{lead}: {clauses[0]}"
+    return clauses_to_sentence(clauses)
+
+
+# ---------------------------------------------------------------------------
 # wikidata
 # ---------------------------------------------------------------------------
 

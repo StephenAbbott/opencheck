@@ -429,6 +429,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains procurement notice data from Tenders Electronic Daily (TED), © European Union, via ted.europa.eu."
 - **Entry point:** LEI + GLEIF `registeredAs` + derived national registration numbers via the `organisation-identifier-tenderer` search field
 
+## ChileCompra — Mercado Público (Chilean public procurement)
+
+- **Website:** https://www.mercadopublico.cl/ · open data at https://datos-abiertos.chilecompra.cl/descargas
+- **License:** treated as CC0 1.0 — the licence the Open Contracting Partnership's Data Registry lists for ChileCompra's OCDS publications. The monthly CSV downloads carry no licence statement of their own; confirmation was requested from ChileCompra (datosabiertos@chilecompra.cl) in October 2026. Mercado Público's API terms ask that unmodified republished data cite Dirección ChileCompra as its source.
+- **Attribution:** Fuente: Dirección ChileCompra.
+- **Data:** per-company supplier totals over the last twelve complete months — purchase orders and their peso value, tenders bid and won, top public buyers, largest orders and latest awarded tenders — built from the monthly tender (`lic-da`) and purchase-order (`oc-da`) files. Matched on the RUT.
+- **Note:** sole traders are not indexed: for a natural person the RUT is the national ID number (RUN), so rows with a RUT below 50,000,000 are dropped when the index is built.
+
 ## Global Energy Monitor (GEM) / Climate TRACE
 
 - **Data (GEM):** Ownership of fossil-fuel infrastructure assets worldwide — power plants, oil and gas fields, coal mines, pipelines, and related facilities. The ownership tracker (`all_entities.csv` and related files inside `ownership.zip`, with fresher bi-monthly copies in the Climate TRACE GCS bucket at `storage.googleapis.com/climate_trace/ownership/`) maps facility owners to named legal entities with LEI codes where known. OpenCheck downloads this data at startup and uses it to bridge LEI → GEM entity ID, enabling ESG screening by LEI.

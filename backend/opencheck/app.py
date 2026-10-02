@@ -151,6 +151,23 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # Phase 280: the ChileCompra supplier index — download the release asset
+    # when absent, replace it when the asset changed, keep it otherwise. Built
+    # monthly off-host from ChileCompra's open-data files. Until it lands
+    # ``chilecompra`` is not announced (``covers_lei``).
+    try:
+        from .sources.chilecompra import warm_index as warm_chilecompra_index
+
+        stats = await asyncio.to_thread(warm_chilecompra_index)
+        log.info("ChileCompra index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "ChileCompra index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # Phase 208: the OECD-UNSD MEIP register (BODS) — download the SQLite
     # release asset when absent, replace it when the asset changed, keep it
     # otherwise. Until it lands the ``meip`` source covers nothing and the

@@ -647,6 +647,7 @@ SOURCE_NAMES: dict[str, str] = {
     "cac_nigeria": "CAC — Corporate Affairs Commission (Nigeria) Persons with Significant Control register",
     "brreg": "Brønnøysundregistrene — Norwegian Register Centre",
     "brightquery": "BrightQuery / OpenData.org",
+    "chilecompra": "ChileCompra — Mercado Público (Chilean public procurement)",
     "climatetrace": "Global Energy Monitor / Climate TRACE",
     "companies_house": "UK Companies House",
     "corporations_canada": "Corporations Canada — ISED federal register",

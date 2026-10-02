@@ -39,6 +39,8 @@ if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
 from opencheck.cache import data_root  # noqa: E402
+from opencheck.sources.chilecompra import db_path as chilecompra_db_path  # noqa: E402
+from opencheck.sources.chilecompra import warm_index as warm_chilecompra_index  # noqa: E402
 from opencheck.meip import db_path as meip_db_path  # noqa: E402
 from opencheck.meip import warm_meip_db  # noqa: E402
 from opencheck.sources.onrc_romania import db_path as onrc_db_path  # noqa: E402
@@ -47,6 +49,7 @@ from opencheck.sources.onrc_romania import warm_index as warm_onrc_index  # noqa
 WARMERS = (
     ("onrc_romania", warm_onrc_index, onrc_db_path),
     ("meip", warm_meip_db, meip_db_path),
+    ("chilecompra", warm_chilecompra_index, chilecompra_db_path),
 )
 
 

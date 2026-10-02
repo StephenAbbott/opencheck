@@ -659,6 +659,22 @@ class Settings(BaseSettings):
         ),
         alias="ONRC_ROMANIA_DB_URL",
     )
+    # --- ChileCompra (Mercado Público procurement, CC0) — Phase 280 ---
+    # The supplier index built monthly from ChileCompra's open-data files by
+    # .github/workflows/refresh-chilecompra-index.yml. Unset: the data-root
+    # default (``chilecompra.sqlite``).
+    chilecompra_db_file: str | None = Field(default=None, alias="CHILECOMPRA_DB_FILE")
+    # Release asset downloaded at boot when absent and replaced when it
+    # changed — the ONRC / MEIP rule. Built off-host rather than on Render:
+    # a year of files is ~10 GB of CSV and fifteen-plus minutes of CPU, while
+    # the index is ~5 MB. Empty string disables the download.
+    chilecompra_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "chilecompra-index/chilecompra.sqlite.gz"
+        ),
+        alias="CHILECOMPRA_DB_URL",
+    )
     # Where a host with an ephemeral filesystem fetches the index from, on the
     # ``securities_index_url`` pattern. Unset by default: the index is ~392 MB
     # and downloading it on every cold start is not a trade worth making until
