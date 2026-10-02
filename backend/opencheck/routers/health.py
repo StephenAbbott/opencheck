@@ -144,8 +144,9 @@ async def source_health_report() -> JSONResponse:
 
     Read from the ``source-health-latest`` release asset the sweep uploads,
     refreshed at most hourly, served stale (and marked so) when the asset
-    cannot be re-read, and ``available: false`` when no sweep has published
-    one. Nothing here contacts a source: see ``opencheck/source_health.py``.
+    cannot be re-read, ``overdue`` when the sweep itself has not published
+    for more than eight days (Phase 278), and ``available: false`` when no
+    sweep has published one. Nothing here contacts a source: see ``opencheck/source_health.py``.
     Same contract as /sources: public, unauthenticated, undecorated — a
     cached dict dump.
     """

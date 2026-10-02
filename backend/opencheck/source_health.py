@@ -29,6 +29,18 @@ Three rules:
   exactly as it did before this phase. A report that cannot be *refreshed* is
   served stale and says so — last Monday's verdict is more useful than none,
   and the page prints its date.
+
+Phase 278 adds a fourth: **a monitor that has stopped running says so.**
+``stale`` above means "the asset could not be re-read"; it says nothing
+about whether the sweep is still publishing. GitHub's ``schedule`` event is
+best-effort — since late August 2026 every scheduled workflow in this repo
+has started six to eight hours late — and a sweep that stops altogether
+would leave last month's verdict on the page looking current. So every
+served report carries its own age (``age_days``) and ``overdue: true`` once
+that exceeds ``OVERDUE_AFTER_DAYS``, computed at request time from
+``generated_at`` and the wall clock — independent of GitHub's scheduler and
+of the hourly cache, so it keeps advancing while the copy it describes does
+not.
 """
 
 from __future__ import annotations
@@ -38,6 +50,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +65,12 @@ REFRESH_AFTER_S = 3600.0
 """The sweep runs weekly; re-reading the asset hourly is already generous."""
 
 FETCH_TIMEOUT_S = 20.0
+
+OVERDUE_AFTER_DAYS = 8.0
+"""A weekly sweep plus a day's grace. GitHub's scheduler has been starting
+the Monday run as much as eight hours late, which still lands well inside
+eight days of the previous one; a run that is skipped altogether shows as
+overdue by the Tuesday after."""
 
 
 @dataclass
@@ -152,6 +171,38 @@ def shape(report: dict[str, Any] | None, history: dict[str, Any] | None) -> dict
     }
 
 
+def _parse_iso(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def with_age(payload: dict[str, Any], *, at: datetime) -> dict[str, Any]:
+    """``payload`` plus ``age_days`` / ``overdue`` / ``overdue_after_days``.
+
+    A copy, never the cached dict: the age belongs to the moment of the
+    request, not to the moment of the fetch. An unavailable payload, or a
+    report whose ``generated_at`` does not parse, is returned unchanged —
+    an age that cannot be measured is not reported as fresh or as overdue.
+    """
+    if not payload.get("available"):
+        return payload
+    generated = _parse_iso(payload.get("generated_at"))
+    if generated is None:
+        return payload
+    age_days = max(0.0, (at - generated).total_seconds() / 86400.0)
+    return dict(
+        payload,
+        age_days=round(age_days, 1),
+        overdue=age_days > OVERDUE_AFTER_DAYS,
+        overdue_after_days=OVERDUE_AFTER_DAYS,
+    )
+
+
 async def _read(location: str) -> dict[str, Any] | None:
     """A JSON document from a local path or a URL; ``None`` when absent."""
     if location.startswith(("http://", "https://")):
@@ -187,8 +238,14 @@ async def _fetch() -> dict[str, Any]:
     return shape(report, history)
 
 
-async def load(*, now: float | None = None) -> dict[str, Any]:
-    """The shaped payload, refreshed at most hourly and served stale on error."""
+async def load(*, now: float | None = None, at: datetime | None = None) -> dict[str, Any]:
+    """The shaped payload, refreshed at most hourly, served stale on error,
+    and stamped with its age as of ``at`` (default: now, UTC)."""
+    wall = at if at is not None else datetime.now(timezone.utc)
+    return with_age(await _load(now=now), at=wall)
+
+
+async def _load(*, now: float | None = None) -> dict[str, Any]:
     global _cache, _lock
     if _lock is None:
         _lock = asyncio.Lock()
