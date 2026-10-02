@@ -95,6 +95,22 @@ export interface HealthSummary {
   counts: Record<SourceHealthStatus, number>;
   /** Present when the API served its last good copy because the asset could not be re-read. */
   staleNote: string | null;
+  /** Present when the sweep itself has stopped publishing (Phase 278) — a
+   *  different failure from `staleNote`: the copy is current, the monitor is not. */
+  overdueNote: string | null;
+}
+
+/** "The weekly sweep has not published since Mon 31 Aug 2026 — 12 days ago…"
+ *  The verdicts below stay on the page — last month's is still evidence —
+ *  but a monitor that has stopped must not read as one that is running. */
+export function overdueNote(report: SourceHealthReport | null | undefined): string | null {
+  if (!report || !report.available || !report.overdue) return null;
+  const days = Math.floor(report.age_days ?? 0);
+  const ago = days === 1 ? "1 day ago" : `${days} days ago`;
+  return (
+    `The weekly sweep has not published since ${formatSweepDate(report.generated_at)} — ${ago}. ` +
+    "The statuses below are from that sweep and may be out of date."
+  );
 }
 
 /** The strip under the page intro, or null when there is nothing to say —
@@ -107,6 +123,7 @@ export function healthSummary(report: SourceHealthReport | null | undefined): He
     staleNote: report.stale
       ? "The latest sweep could not be read just now; this is the last one OpenCheck holds."
       : null,
+    overdueNote: overdueNote(report),
   };
 }
 

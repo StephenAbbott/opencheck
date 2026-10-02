@@ -210,6 +210,14 @@ describe("SourcesPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("says the sweep has stopped publishing when the API marks the report overdue (Phase 278)", async () => {
+    renderPage({ ...REPORT, overdue: true, age_days: 15.2, overdue_after_days: 8 } as SourceHealthReport);
+    const note = await screen.findByRole("status");
+    expect(note).toHaveTextContent(/The weekly sweep has not published since .* — 15 days ago/);
+    // The verdicts stay: an old sweep is still evidence, just labelled as old.
+    expect(within(card("GLEIF")).getByText("Healthy")).toBeInTheDocument();
+  });
+
   it("keeps the catalogue's own facts — licence, support, live-readiness", async () => {
     renderPage();
     await screen.findByText(/Last sweep ·/);

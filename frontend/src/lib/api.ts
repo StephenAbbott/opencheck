@@ -636,6 +636,11 @@ export type SourceHealthReport =
       sources: Record<string, SourceHealthRow>;
       /** Set when the asset could not be re-read and this is the last good copy. */
       stale?: boolean;
+      /** Days since `generated_at`, measured by the API at request time (Phase 278). */
+      age_days?: number;
+      /** True once `age_days` exceeds `overdue_after_days`: the sweep has stopped publishing. */
+      overdue?: boolean;
+      overdue_after_days?: number;
     }
   | { available: false; reason: string };
 

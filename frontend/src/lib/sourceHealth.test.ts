@@ -47,11 +47,25 @@ describe("healthSummary", () => {
       sweptAt: "Mon 31 Aug 2026, 07:31 UTC",
       counts: { ok: 34, degraded: 2, fail: 0, skipped: 4 },
       staleNote: null,
+      overdueNote: null,
     });
   });
 
   it("says so when the API served its last good copy", () => {
     expect(healthSummary(report({}, { stale: true }))?.staleNote).toMatch(/could not be read just now/);
+  });
+
+  it("says the sweep has stopped when the API marks the report overdue (Phase 278)", () => {
+    const note = healthSummary(report({}, { overdue: true, age_days: 12.4, overdue_after_days: 8 }))?.overdueNote;
+    expect(note).toBe(
+      "The weekly sweep has not published since 31 Aug 2026 — 12 days ago. " +
+        "The statuses below are from that sweep and may be out of date.",
+    );
+  });
+
+  it("says nothing about age when the report is within the window or the API sent no age", () => {
+    expect(healthSummary(report({}, { overdue: false, age_days: 7.3 }))?.overdueNote).toBeNull();
+    expect(healthSummary(report({}))?.overdueNote).toBeNull();
   });
 
   it("is null when no sweep has published — the page then renders as before", () => {
