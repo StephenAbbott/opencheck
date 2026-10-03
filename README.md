@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 281** — the ChileCompra card now lists the contracts themselves, as TED's does: a company's latest tenders won or bid and its largest purchase orders on Mercado Público, each linked.
+**Latest: Phase 282** — related-party screens drop surname-mismatched person matches from the Offshore Leaks check, count each party once, and screen the same parties on every run.
 
 → [Full development history](docs/status.md)
 
