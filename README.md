@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 282** — related-party screens drop surname-mismatched person matches from the Offshore Leaks check, count each party once, and screen the same parties on every run.
+**Latest: Phase 283** — FullCheck names the frontier companies it did not reach in a step and sends them again, and shows when a screen in an expanded company did not fully run.
 
 → [Full development history](docs/status.md)
 

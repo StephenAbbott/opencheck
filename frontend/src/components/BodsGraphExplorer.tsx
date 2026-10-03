@@ -35,6 +35,7 @@ import {
   expandLayer,
   fetchExpandSchemes,
   downloadNetwork,
+  type DegradedSource,
   type RiskSignal,
   type NetworkExportFormat,
 } from "../lib/api";
@@ -43,6 +44,7 @@ import {
   frontierAnchors,
   mergeStatements,
   mergeSignals,
+  rankFrontier,
   signalsBeyond,
   type EdgeLite,
   type ExpandDirection,
@@ -55,6 +57,10 @@ import {
 } from "../lib/reconcile";
 import { buildSignalMap } from "../lib/signalScope";
 import {
+  accumulateDegraded,
+  cappedAnchors,
+  cappedSentence,
+  cappedStopSentence,
   deferredAnchors,
   deferredSentence,
   failedCountSentence,
@@ -65,6 +71,7 @@ import {
 import { independentCount } from "../lib/lineage";
 import { groupNetworkSignals, riskFindingCount } from "../lib/signalKind";
 import { RiskChip } from "./risk/RiskChip";
+import { DegradedScreensNotice } from "./cdd/ReportNotices";
 import { SourceLegend } from "./SourceLegend";
 import {
   layerControl,
@@ -132,6 +139,10 @@ export default function BodsGraphExplorer({
   // Risk signals discovered while expanding (each hop's sub-lookup screens the
   // expanded entity) — the network-wide risk beyond the subject's own screening.
   const [discoveredSignals, setDiscoveredSignals] = useState<RiskSignal[]>([]);
+  // Phase 283: what the expanded layers' hops could not fully check — a
+  // screen that timed out, a register that refused, a subsidiary list GLEIF
+  // did not answer — accumulated over the run. Counts only.
+  const [networkDegraded, setNetworkDegraded] = useState<DegradedSource[]>([]);
   // Phase 182: the identifier schemes the server can hop on without an LEI
   // (a GB-COH company number → Companies House). Loaded once; until it
   // arrives, or if it never does, the frontier is LEI-only as before.
@@ -224,6 +235,7 @@ export default function BodsGraphExplorer({
       setSelectedId(null);
       setExpandNote(null);
       setDiscoveredSignals([]);
+      setNetworkDegraded([]);
       setRunProgress(null);
       setRunDepth(null);
       setManualLayers(0);
@@ -336,9 +348,11 @@ export default function BodsGraphExplorer({
   // "Add next layer — N" count above the visible node count and re-fetching the
   // same company. Dedupe by canonical id (via the reconcile remap) so the count
   // matches what the user sees and each entity is expanded once.
+  // Phase 283: ranked before it is sent — the server expands at most 25 per
+  // call and names the rest, so the nearest companies go first.
   const frontier = useMemo(() => {
     const raw = frontierAnchors(allStatements, rawEdges, expandedIds, direction, hopSchemes);
-    return recon ? dedupeFrontier(raw, recon.remap) : raw;
+    return rankFrontier(recon ? dedupeFrontier(raw, recon.remap) : raw, rawEdges, direction);
   }, [allStatements, rawEdges, expandedIds, direction, recon, hopSchemes]);
   const noun = direction === "subsidiaries" ? "subsidiaries" : "owners and controllers";
   const registerHops = hopSchemes.size > 0;
@@ -406,6 +420,7 @@ export default function BodsGraphExplorer({
       const res = await expandLayer(frontier, direction);
       setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
       setDiscoveredSignals((prev) => mergeSignals(prev, res.risk_signals));
+      setNetworkDegraded((prev) => accumulateDegraded(prev, res.degraded_sources));
       // Phase 234: only the anchors the server answered for. A deferred node
       // (the reader's lookup budget ran out part-way) stays on the frontier,
       // so adding the layer again picks it up.
@@ -418,13 +433,16 @@ export default function BodsGraphExplorer({
       const newRels = (res.bods as Stmt[]).filter((s) => s.recordType === "relationship").length;
       const deferred = deferredSentence(res);
       const failed = failedSentence(res.failed);
+      // Phase 283: capped nodes are named, stay on the frontier, and are
+      // ranked first next time; say how many rather than "there were more".
+      const capped = cappedSentence(res);
       const parts: string[] = [];
-      if (newRels === 0 && !deferred && !failed) {
+      if (newRels === 0 && !deferred && !failed && !capped) {
         parts.push(`No further ${noun} disclosed for the companies at the edge of the network.`);
       }
       if (failed) parts.push(failed);
       if (deferred) parts.push(deferred);
-      if (res.truncated) parts.push(`Only the first ${res.count} were expanded — there were more.`);
+      if (capped) parts.push(capped);
       setExpandNote(parts.join(" ") || null);
     } catch (e) {
       setExpandNote(`Couldn't add layer: ${(e as Error).message}`);
@@ -452,8 +470,11 @@ export default function BodsGraphExplorer({
       let stop = "";
       for (let d = 0; d < depthBudget; d++) {
         if (cancelRef.current) { stop = "cancelled"; break; }
-        const front = frontierAnchors(
-          working, bodsToGraph(working).edges, expanded, direction, hopSchemes
+        const workingEdges = bodsToGraph(working).edges;
+        const front = rankFrontier(
+          frontierAnchors(working, workingEdges, expanded, direction, hopSchemes),
+          workingEdges,
+          direction
         );
         if (front.length === 0) {
           stop = registerHops && direction === "owners"
@@ -473,30 +494,45 @@ export default function BodsGraphExplorer({
         // reader's lookup budget did not cover are `deferred`. FullCheck waits
         // out `retry_after_s` and asks for just those, so a depth step still
         // means a whole layer. Bounded, and cancellable while it waits.
+        // Phase 283: the anchors past the server's per-call cap are `capped`;
+        // they are sent straight back (no wait), still in rank order, so a
+        // wide layer is finished rather than spilling into the next step.
         let pending = front;
         let waits = 0;
+        let batches = 0;
         while (pending.length > 0) {
-          if (waits > 0) {
+          if (batches > 0) {
             setRunProgress(
               `Layer ${d + 1} of ${depthBudget} — expanding the remaining ${pending.length} ${pending.length === 1 ? "company" : "companies"}…`
             );
           }
           const res = await expandLayer(pending, direction);
+          batches += 1;
           working = mergeStatements(working, res.bods as Stmt[]);
           // Only the anchors the server actually processed (it caps each batch).
           res.expanded.forEach((a) => expanded.add(a));
           setExtra((prev) => mergeStatements(prev, res.bods as Stmt[]));
           setDiscoveredSignals((prev) => mergeSignals(prev, res.risk_signals));
+          setNetworkDegraded((prev) => accumulateDegraded(prev, res.degraded_sources));
           setExpandedIds(new Set(expanded));
           failures += res.failed?.length ?? 0;
           const deferred = new Set(deferredAnchors(res));
-          if (deferred.size === 0) break;
+          const capped = new Set(cappedAnchors(res));
+          if (deferred.size === 0 && capped.size === 0) break;
+          if (capped.size > 0 && expanded.size >= MAX_EXPANDED) {
+            stop = cappedStopSentence(capped.size + deferred.size);
+            break;
+          }
+          pending = pending.filter((f) => deferred.has(f.anchor) || capped.has(f.anchor));
+          if (deferred.size === 0) {
+            if (cancelRef.current) break;
+            continue;
+          }
           if (waits >= MAX_BUDGET_WAITS) {
             stop = "your lookup budget ran out part-way through a layer — run it again in a minute to continue";
             break;
           }
           waits += 1;
-          pending = pending.filter((f) => deferred.has(f.anchor));
           for (let left = retryAfterSeconds(res); left > 0; left--) {
             if (cancelRef.current) break;
             setRunProgress(waitingSentence(pending.length, left));
@@ -528,6 +564,7 @@ export default function BodsGraphExplorer({
     setExtra([]);
     setExpandedIds(new Set());
     setDiscoveredSignals([]);
+    setNetworkDegraded([]);
     setRunProgress(null);
     setRunDepth(null);
     setManualLayers(0);
@@ -738,6 +775,16 @@ export default function BodsGraphExplorer({
           {expandNote}
         </p>
       )}
+
+      {/* Phase 283: a company whose screen failed in a hop is not a screened,
+          clean company. Same notice and labels as the report's, under the
+          network's own heading; no re-run button (a hop is not re-run). */}
+      <DegradedScreensNotice
+        degraded={networkDegraded}
+        title="Network screening incomplete"
+        id="network-screening-incomplete"
+        className="mb-2"
+      />
 
       <div className="flex flex-col gap-2">
         <div className="min-w-0">

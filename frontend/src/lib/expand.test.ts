@@ -7,6 +7,7 @@ import {
   mergeStatements,
   frontierAnchors,
   mergeSignals,
+  rankFrontier,
   signalsBeyond,
   subjectRegisterId,
   type EdgeLite,
@@ -229,5 +230,59 @@ describe("dedupeFrontier prefers the LEI-keyed anchor", () => {
       { lei: "213800W5454D8XRJ8J78", anchor: "g-vosper" },
       { scheme: "GB-COH", id: "2999029", anchor: "ch-babcock" },
     ]);
+  });
+});
+
+// Phase 283 — the frontier is ranked before it is sent, because the server
+// expands at most 25 per call and names the rest.
+describe("rankFrontier (Phase 283)", () => {
+  const own = (source: string, target: string, ended = false): EdgeLite => ({
+    source, target, category: "ownership", ended,
+  });
+
+  it("puts the nodes nearest the subject first", () => {
+    // S ← P1 ← G1, and S ← P2: P2 (one step) before G1 (two steps).
+    const edges = [own("P1", "S"), own("G1", "P1"), own("P2", "S")];
+    const ranked = rankFrontier(
+      [{ anchor: "G1", lei: "L1" }, { anchor: "P2", lei: "L2" }], edges, "owners"
+    );
+    expect(ranked.map((f) => f.anchor)).toEqual(["P2", "G1"]);
+  });
+
+  it("puts a node reached by a current link before one reached only through an ended one", () => {
+    const edges = [own("OLD", "S", true), own("NOW", "S")];
+    const ranked = rankFrontier(
+      [{ anchor: "OLD", lei: "L1" }, { anchor: "NOW", lei: "L2" }], edges, "owners"
+    );
+    expect(ranked.map((f) => f.anchor)).toEqual(["NOW", "OLD"]);
+  });
+
+  it("puts an LEI-keyed node before a register-only one at the same distance", () => {
+    const edges = [own("REG", "S"), own("LEI", "S")];
+    const ranked = rankFrontier(
+      [{ anchor: "REG", scheme: "GB-COH", id: "01234567" }, { anchor: "LEI", lei: "L1" }],
+      edges,
+      "owners"
+    );
+    expect(ranked.map((f) => f.anchor)).toEqual(["LEI", "REG"]);
+  });
+
+  it("keeps arrival order on a tie, and puts a node it cannot place last", () => {
+    const edges = [own("A", "S"), own("B", "S")];
+    const ranked = rankFrontier(
+      [{ anchor: "LOOSE", lei: "L0" }, { anchor: "B", lei: "L2" }, { anchor: "A", lei: "L1" }],
+      edges,
+      "owners"
+    );
+    expect(ranked.map((f) => f.anchor)).toEqual(["B", "A", "LOOSE"]);
+  });
+
+  it("walks up the owned edges when digging down for subsidiaries", () => {
+    // S owns C1, C1 owns G1, S owns C2 — leaves G1 and C2.
+    const edges = [own("S", "C1"), own("C1", "G1"), own("S", "C2")];
+    const ranked = rankFrontier(
+      [{ anchor: "G1", lei: "L1" }, { anchor: "C2", lei: "L2" }], edges, "subsidiaries"
+    );
+    expect(ranked.map((f) => f.anchor)).toEqual(["C2", "G1"]);
   });
 });
