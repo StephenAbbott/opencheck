@@ -28,19 +28,32 @@ RA000785    Registro de Empresas y Sociedades                 17    17      0
 
 RA000090 and RA000091 are used both for RUTs and for commercial-register
 inscriptions (``fojas 59592 número 30591``), so the RA code does not say what
-``registeredAs`` holds. The deriver therefore accepts **any Chilean RA** and
-lets the value decide: it must be RUT-shaped and pass the mod-11 check digit.
-Every one of the 1,119 RUT-shaped values in that population passes it.
-``RA888888`` (a global "other" code) is deliberately not claimed: the
-lookup pipeline lets the first deriver that names an RA code win, and a
-global code is not Chile's to take.
+``registeredAs`` holds. ``fetch_by_identifiers`` therefore accepts **any
+Chilean RA** and lets the value decide: it must be RUT-shaped and pass the
+mod-11 check digit. Every one of the 1,119 RUT-shaped values in that
+population passes it. ``RA888888`` (a global "other" code) is not treated as
+Chilean.
+
+Shaped like TED, not like a register (Phase 281)
+------------------------------------------------
+Phase 280 wired this as a register adapter — a ``lookup_derivers`` entry on
+the Chilean RA codes — so the pipeline treated it as one: dispatched in the
+register loop, always deepened, a card that read like a company record with
+a one-entity BODS diagram. Procurement is activity, not identity or
+ownership. The adapter is now reached the way ``ted_eu`` is, from
+``_dispatch`` via ``fetch_by_identifiers``, and its card lists the contracts
+themselves: the latest tenders the company bid on (won or not, with the
+amount awarded to it) and its largest purchase orders, each linked to
+Mercado Público. The BODS output is still one entity statement with the
+``CL-RUT`` identifier, as TED's is.
 
 Why the index is a release asset, not built on the host
 -------------------------------------------------------
 Twelve months of files are ~1.4 GB of zips and ~10 GB of CSV. Parsing that is
 fifteen minutes or more of CPU-bound Python; on Render it would hold the GIL
-against live lookups after every deploy. The *result* is small — about 5 MB
-for a year of company suppliers — so it is built monthly by
+against live lookups after every deploy. The *result* is small — about 29 MB
+(10.5 MB gzipped) for a year of company suppliers with their latest tenders
+and largest orders — so it is built monthly by
 ``.github/workflows/refresh-chilecompra-index.yml``
 (``scripts/build_chilecompra_index.py``), published as the release asset
 ``chilecompra-index/chilecompra.sqlite.gz``, and downloaded at boot by
@@ -95,7 +108,7 @@ from typing import Any
 
 from .. import provenance
 from ..config import get_settings
-from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.chilecompra import ChileCompraBundle
 
@@ -184,15 +197,42 @@ ORDERS_URL_TEMPLATE = "https://transparenciachc.blob.core.windows.net/oc-da/{yea
 LICENSE_ID = "CC0-1.0"
 
 #: Bumped whenever the index tables change shape.
-INDEX_SCHEMA_VERSION = "1"
+INDEX_SCHEMA_VERSION = "2"
 
 #: Purchase-order states not counted: cancelled.
 _CANCELLED_ORDER_STATES = frozenset({"9"})
 
-#: Per supplier, how many buyers and records are kept for the card.
+#: Per supplier, how many buyers and records are kept for the card. The
+#: records are what the card lists, TED-style: the latest tenders the
+#: supplier bid on (won or not) and its largest purchase orders. Largest,
+#: not latest: a reagent supplier's latest orders are a week of routine
+#: deliveries, while its largest are the contracts a reviewer asks about.
+#: Kept small on purpose — every record is a row per supplier in an index
+#: Stephen asked to stay small.
 TOP_BUYERS = 5
-TOP_ORDERS = 3
-RECENT_WINS = 3
+TENDERS_KEPT = 5
+ORDERS_KEPT = 3
+TITLE_CHARS = 100
+
+#: The files' currency words → ISO 4217 (CLF is the Unidad de Fomento).
+_CURRENCIES = {
+    "PESO CHILENO": "CLP",
+    "DOLAR": "USD",
+    "UNIDAD DE FOMENTO": "CLF",
+    "EURO": "EUR",
+    "UTM": "UTM",
+}
+
+#: Purchase-order type codes → how the order came about, in English. A
+#: direct award (``TD``) also keeps ChileCompra's own reason, because "sole
+#: supplier" or "emergency" is what a reviewer wants to see.
+_ORDER_PROCEDURES = {
+    "AG": "Compra Ágil (quick purchase)",
+    "CM": "Framework agreement (Convenio Marco)",
+    "CC": "Coordinated purchase",
+    "TD": "Direct award (trato directo)",
+    "SE": "From a tender",
+}
 
 
 def month_urls(month: str) -> tuple[str, str]:
@@ -278,12 +318,14 @@ class MonthInput:
 
 
 _ORDER_COLUMNS = (
-    "Codigo", "codigoEstado", "FechaEnvio",
+    "Codigo", "Nombre", "codigoEstado", "FechaEnvio", "ProcedenciaOC",
+    "CodigoAbreviadoTipoOC",
     "MontoTotalOC_PesosChilenos", "CodigoOrganismoPublico", "OrganismoPublico",
     "RutSucursal", "NombreProveedor",
 )
 _TENDER_COLUMNS = (
-    "CodigoExterno", "CodigoOrganismo", "NombreOrganismo",
+    "CodigoExterno", "Nombre", "Tipo de Adquisicion", "Estado",
+    "MontoLineaAdjudica", "Moneda de la Oferta", "CodigoOrganismo", "NombreOrganismo",
     "FechaAdjudicacion", "FechaPublicacion", "RutProveedor", "NombreProveedor",
     "RazonSocialProveedor", "Oferta seleccionada",
 )
@@ -365,8 +407,11 @@ class _Supplier:
     tenders_won: set[str] = field(default_factory=set)
     # buyer code → [orders, order value, tenders won]
     buyers: dict[int, list[int]] = field(default_factory=dict)
+    # The ORDERS_KEPT largest orders: a min-heap on (value, code).
     top_orders: list[tuple[int, str, tuple[Any, ...]]] = field(default_factory=list)
-    wins: dict[str, tuple[Any, ...]] = field(default_factory=dict)
+    # tender code → [won, awarded amount, currency]; the tender's own fields
+    # are held once per tender in build_index's ``tenders`` table.
+    tenders: dict[str, list[Any]] = field(default_factory=dict)
 
     def seen(self, day: str | None, name: str) -> None:
         if not day:
@@ -398,6 +443,11 @@ def build_index(months: list[MonthInput], out_path: Path | str) -> dict[str, str
     suppliers: dict[int, _Supplier] = {}
     dv_of: dict[int, str] = {}
     buyer_names: dict[int, str] = {}
+    # tender code → (published, awarded, buyer, title, procedure, status),
+    # held once: a tender is shared by every supplier that bid on it.
+    tenders: dict[str, tuple[Any, ...]] = {}
+    # A direct award's reason, held once (a few dozen distinct texts).
+    reasons: dict[str, int] = {}
 
     def supplier_for(raw_rut: str) -> tuple[int, _Supplier] | None:
         parsed = parse_rut(raw_rut)
@@ -446,10 +496,17 @@ def build_index(months: list[MonthInput], out_path: Path | str) -> dict[str, str
                     tally = sup.buyers.setdefault(buyer, [0, 0, 0])
                     tally[0] += 1
                     tally[1] += value
-                record = (code, day, buyer)
-                heapq.heappush(sup.top_orders, (value, code, record))
-                if len(sup.top_orders) > TOP_ORDERS:
-                    heapq.heappop(sup.top_orders)
+                kind = row["CodigoAbreviadoTipoOC"].strip().upper()
+                reason_text = row["ProcedenciaOC"].strip()
+                reason = None
+                if kind == "TD" and reason_text and reason_text != "NA":
+                    reason = reasons.setdefault(reason_text[:160], len(reasons) + 1)
+                record = (day, buyer, row["Nombre"].strip()[:TITLE_CHARS], kind, reason)
+                entry = (value, code, record)
+                if len(sup.top_orders) < ORDERS_KEPT:
+                    heapq.heappush(sup.top_orders, entry)
+                elif entry > sup.top_orders[0]:
+                    heapq.heapreplace(sup.top_orders, entry)
         if month.tenders_zip is not None:
             for row in _iter_rows(month.tenders_zip, _TENDER_COLUMNS, counts, "tenders"):
                 code = row["CodigoExterno"].strip()
@@ -462,16 +519,30 @@ def build_index(months: list[MonthInput], out_path: Path | str) -> dict[str, str
                 sup.tenders_bid.add(code)
                 name = (row["RazonSocialProveedor"] or row["NombreProveedor"]).strip()
                 day = _iso_date(row["FechaAdjudicacion"]) or _iso_date(row["FechaPublicacion"])
+                buyer = buyer_code(row["CodigoOrganismo"], row["NombreOrganismo"])
+                if code not in tenders:
+                    tenders[code] = (
+                        _iso_date(row["FechaPublicacion"]),
+                        _iso_date(row["FechaAdjudicacion"]),
+                        buyer,
+                        row["Nombre"].strip()[:TITLE_CHARS],
+                        row["Tipo de Adquisicion"].strip(),
+                        row["Estado"].strip(),
+                    )
+                mine = sup.tenders.setdefault(code, [False, 0, ""])
                 if row["Oferta seleccionada"].strip() != "Seleccionada":
                     sup.seen(_iso_date(row["FechaPublicacion"]), name)
                     continue
                 sup.seen(day, name)
-                buyer = buyer_code(row["CodigoOrganismo"], row["NombreOrganismo"])
+                # A won tender: the lines awarded to this supplier, summed, in
+                # the currency of its offer (a tender's own currency varies).
+                mine[0] = True
+                mine[1] += _amount_clp(row["MontoLineaAdjudica"])
+                mine[2] = _CURRENCIES.get(row["Moneda de la Oferta"].strip().upper(), "")
                 if code not in sup.tenders_won:
                     sup.tenders_won.add(code)
                     if buyer is not None:
                         sup.buyers.setdefault(buyer, [0, 0, 0])[2] += 1
-                sup.wins[code] = (code, day, buyer)
 
     tmp = out_path.with_name(out_path.name + ".building")
     if tmp.exists():
@@ -479,6 +550,7 @@ def build_index(months: list[MonthInput], out_path: Path | str) -> dict[str, str
     conn = sqlite3.connect(str(tmp))
     conn.executescript(_SCHEMA)
     buyers_used: set[int] = set()
+    tenders_used: set[str] = set()
     for body, sup in suppliers.items():
         if not (sup.orders or sup.tenders_bid):
             continue
@@ -498,21 +570,44 @@ def build_index(months: list[MonthInput], out_path: Path | str) -> dict[str, str
                 "INSERT INTO supplier_buyer VALUES (?,?,?,?,?)",
                 (body, buyer_id, n_orders, value, wins),
             )
-        for value, _code, (code, day, buyer) in sorted(sup.top_orders, reverse=True):
+        for value, code, (day, buyer, title, kind, reason) in sup.top_orders:
             if buyer is not None:
                 buyers_used.add(buyer)
             conn.execute(
-                "INSERT INTO record VALUES (?,?,?,?,?,?)",
-                (body, "order", code, day, buyer, value),
+                "INSERT INTO purchase_order VALUES (?,?,?,?,?,?,?,?)",
+                (body, code, day, buyer, title, kind, reason, value),
             )
-        latest_wins = sorted(sup.wins.values(), key=lambda w: (w[1] or "", w[0]), reverse=True)
-        for code, day, buyer in latest_wins[:RECENT_WINS]:
-            if buyer is not None:
-                buyers_used.add(buyer)
+
+        def shown_date(code: str) -> str:
+            # A won tender is dated by its award, anything else by when it was
+            # published: a bid on a tender still open carries an *estimated*
+            # award date, sometimes a year out, which would sort it first.
+            published, awarded = tenders[code][0], tenders[code][1]
+            won = sup.tenders[code][0]
+            return ((awarded if won and awarded else None) or published or "")
+
+        latest = sorted(sup.tenders, key=lambda c: (shown_date(c), c), reverse=True)
+        for code in latest[:TENDERS_KEPT]:
+            won, amount, currency = sup.tenders[code]
+            tenders_used.add(code)
             conn.execute(
-                "INSERT INTO record VALUES (?,?,?,?,?,?)",
-                (body, "award", code, day, buyer, None),
+                "INSERT INTO supplier_tender VALUES (?,?,?,?,?,?)",
+                (
+                    body, code, shown_date(code) or None, "won" if won else "tendered",
+                    amount if won and amount else None,
+                    currency if won and amount else None,
+                ),
             )
+    for code in sorted(tenders_used):
+        _pub, _award, buyer, title, procedure, status = tenders[code]
+        if buyer is not None:
+            buyers_used.add(buyer)
+        conn.execute(
+            "INSERT INTO tender VALUES (?,?,?,?,?)", (code, buyer, title, procedure, status)
+        )
+    conn.executemany(
+        "INSERT INTO order_reason VALUES (?,?)", [(i, t) for t, i in sorted(reasons.items())]
+    )
     conn.executemany(
         "INSERT INTO buyer VALUES (?,?)",
         [(c, buyer_names.get(c, "")) for c in sorted(buyers_used)],
@@ -567,15 +662,34 @@ CREATE TABLE supplier_buyer (
     tenders_won INTEGER NOT NULL,
     PRIMARY KEY (rut, buyer)
 ) WITHOUT ROWID;
-CREATE TABLE record (
+CREATE TABLE tender (
+    code TEXT PRIMARY KEY,
+    buyer INTEGER,
+    title TEXT,
+    procedure TEXT,
+    status TEXT
+) WITHOUT ROWID;
+CREATE TABLE supplier_tender (
     rut INTEGER NOT NULL,
-    kind TEXT NOT NULL,
+    code TEXT NOT NULL,
+    date TEXT,
+    role TEXT NOT NULL,
+    value INTEGER,
+    currency TEXT,
+    PRIMARY KEY (rut, code)
+) WITHOUT ROWID;
+CREATE TABLE purchase_order (
+    rut INTEGER NOT NULL,
     code TEXT NOT NULL,
     date TEXT,
     buyer INTEGER,
-    value_clp INTEGER,
-    PRIMARY KEY (rut, kind, code)
+    title TEXT,
+    kind TEXT,
+    reason INTEGER,
+    value INTEGER,
+    PRIMARY KEY (rut, code)
 ) WITHOUT ROWID;
+CREATE TABLE order_reason (id INTEGER PRIMARY KEY, text TEXT);
 """
 
 
@@ -735,15 +849,29 @@ def supplier_record(rut: str) -> dict[str, Any] | None:
     if row is None:
         return None
     supplier = dict(row)
-    names = {
-        r["code"]: r["name"]
-        for r in conn.execute(
-            "SELECT b.code, b.name FROM buyer b WHERE b.code IN ("
-            " SELECT buyer FROM supplier_buyer WHERE rut = ?"
-            " UNION SELECT buyer FROM record WHERE rut = ?)",
-            (body, body),
-        )
-    }
+    tender_rows = conn.execute(
+        "SELECT st.code, st.date, st.role, st.value, st.currency,"
+        " t.buyer, t.title, t.procedure, t.status"
+        " FROM supplier_tender st JOIN tender t ON t.code = st.code WHERE st.rut = ?",
+        (body,),
+    ).fetchall()
+    order_rows = conn.execute(
+        "SELECT po.*, r.text AS reason_text FROM purchase_order po"
+        " LEFT JOIN order_reason r ON r.id = po.reason WHERE po.rut = ?",
+        (body,),
+    ).fetchall()
+    buyer_rows = conn.execute(
+        "SELECT * FROM supplier_buyer WHERE rut = ? ORDER BY order_value_clp DESC, tenders_won DESC",
+        (body,),
+    ).fetchall()
+    wanted = {r["buyer"] for r in (*tender_rows, *order_rows, *buyer_rows) if r["buyer"] is not None}
+    names: dict[int, str] = {}
+    if wanted:
+        marks = ",".join("?" * len(wanted))
+        names = {
+            r["code"]: r["name"]
+            for r in conn.execute(f"SELECT code, name FROM buyer WHERE code IN ({marks})", list(wanted))
+        }
     buyers = [
         {
             "code": str(r["buyer"]),
@@ -752,31 +880,46 @@ def supplier_record(rut: str) -> dict[str, Any] | None:
             "order_value_clp": r["order_value_clp"],
             "tenders_won": r["tenders_won"],
         }
-        for r in conn.execute(
-            "SELECT * FROM supplier_buyer WHERE rut = ? ORDER BY order_value_clp DESC, tenders_won DESC",
-            (body,),
-        )
+        for r in buyer_rows
     ]
-    records: dict[str, list[dict[str, Any]]] = {"order": [], "award": []}
-    for r in conn.execute(
-        "SELECT * FROM record WHERE rut = ? ORDER BY kind, value_clp DESC, date DESC", (body,)
-    ):
-        records[r["kind"]].append(
+    records: list[dict[str, Any]] = [
+        {
+            "kind": "tender",
+            "code": r["code"],
+            "date": r["date"],
+            "buyer": names.get(r["buyer"]) or "",
+            "title": r["title"] or "",
+            "procedure": r["procedure"] or "",
+            "status": r["status"] or "",
+            "role": r["role"],
+            "value": r["value"],
+            "currency": r["currency"] or "",
+            "url": record_url("tender", r["code"]),
+        }
+        for r in tender_rows
+    ]
+    for r in order_rows:
+        procedure = _ORDER_PROCEDURES.get(r["kind"] or "", "")
+        if r["reason_text"]:
+            procedure = f"{procedure}: {r['reason_text']}" if procedure else r["reason_text"]
+        records.append(
             {
+                "kind": "order",
                 "code": r["code"],
                 "date": r["date"],
-                "buyer": names.get(r["buyer"]) or "" if r["buyer"] is not None else "",
-                "value_clp": r["value_clp"],
-                "url": record_url(r["kind"], r["code"]),
+                "buyer": names.get(r["buyer"]) or "",
+                "title": r["title"] or "",
+                "procedure": procedure,
+                "status": "",
+                "role": "order",
+                "value": r["value"],
+                "currency": "CLP",
+                "url": record_url("order", r["code"]),
             }
         )
-    records["award"].sort(key=lambda a: (a["date"] or "", a["code"]), reverse=True)
-    return {
-        "supplier": supplier,
-        "buyers": buyers,
-        "largest_orders": records["order"],
-        "recent_awards": records["award"],
-    }
+    # Newest first, like TED's notices; orders and tenders interleaved.
+    records.sort(key=lambda x: (x["date"] or "", x["kind"], x["code"]), reverse=True)
+    return {"supplier": supplier, "buyers": buyers, "records": records}
 
 
 # ---------------------------------------------------------------------------
@@ -789,8 +932,12 @@ class ChileCompraAdapter(SourceAdapter):
 
     id = "chilecompra"
 
-    lookup_derivers = (LookupDeriver(CL_RA_CODES, "cl_rut", normalise_rut),)
-    lookup_pass_legal_name = True
+    # Phase 281: no ``lookup_derivers``. Declaring one made this a register
+    # adapter in the pipeline's eyes — dispatched through the register loop,
+    # always deepened as a "person-capable" source, its card shaped like a
+    # register record — and it claimed the Chilean RA codes, which the
+    # pipeline lets only the first deriver have. Procurement is reached the
+    # way TED is: ``fetch_by_identifiers`` from ``_dispatch``.
 
     @property
     def info(self) -> SourceInfo:
@@ -801,10 +948,10 @@ class ChileCompraAdapter(SourceAdapter):
             description=(
                 "Chile's public procurement platform, run by the Dirección "
                 "ChileCompra, published monthly as open data. For a company "
-                "supplier: purchase orders and their value in pesos, tenders "
-                "bid and won, and the public bodies it sold to, over the last "
-                "twelve months. Matched on the RUT. Sole traders are not "
-                "indexed. Procurement activity, not ownership."
+                "supplier: its latest tenders (won or bid) and purchase orders "
+                "with buyer, value, procedure and a link to each on Mercado "
+                "Público, plus twelve-month totals. Matched on the RUT. Sole "
+                "traders are not indexed. Procurement activity, not ownership."
             ),
             license=LICENSE_ID,
             attribution=(
@@ -844,8 +991,7 @@ class ChileCompraAdapter(SourceAdapter):
             "legal_name": legal_name or "",
             "supplier": None,
             "buyers": [],
-            "largest_orders": [],
-            "recent_awards": [],
+            "records": [],
             "window": "",
             "data_from": None,
             "data_to": None,
@@ -877,4 +1023,28 @@ class ChileCompraAdapter(SourceAdapter):
         bundle = self._bundle(rut, legal_name, is_stub=False, **window, **found)
         validate_raw(self.id, ChileCompraBundle, bundle)
         return bundle
+
+    async def fetch_by_identifiers(
+        self,
+        lei: str,
+        registered_as: str,
+        registered_at: str,
+        *,
+        legal_name: str = "",
+    ) -> dict[str, Any] | None:
+        """The lookup pipeline's entry point (Phase 281), the TED shape.
+
+        The RUT comes from GLEIF's ``registeredAs`` when the record names a
+        Chilean registration authority — any of them, because RA000090 and
+        RA000091 file RUTs and commercial-register inscriptions alike — and
+        the value passes the check digit. Anything else is not this source's
+        question: ``None``, and the pipeline makes no card.
+        """
+        if registered_at not in CL_RA_CODES:
+            return None
+        try:
+            rut = normalise_rut(registered_as)
+        except ValueError:
+            return None
+        return await self.fetch(rut, legal_name=legal_name)
 

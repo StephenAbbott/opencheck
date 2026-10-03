@@ -37,12 +37,25 @@ class ChileCompraBuyer(_Base):
 
 
 class ChileCompraRecord(_Base):
-    """A purchase order or an awarded tender, with its Mercado Público link."""
+    """One tender the supplier bid on, or one purchase order it received —
+    the TED "notice" equivalent, with its Mercado Público link."""
 
+    #: "tender" | "order"
+    kind: str
     code: str
     date: str | None = None
     buyer: str = ""
-    value_clp: int | None = None
+    title: str = ""
+    #: Tender type ("Licitación Pública Mayor 1000 UTM (LP)") or how an order
+    #: came about ("Direct award (trato directo): <ChileCompra's reason>").
+    procedure: str = ""
+    #: Tender status as ChileCompra files it (Adjudicada, Cerrada, Desierta …).
+    status: str = ""
+    #: "won" | "tendered" for a tender; "order" for a purchase order.
+    role: str
+    #: Awarded amount for a won tender (its offer currency), order total in CLP.
+    value: int | None = None
+    currency: str = ""
     url: str = ""
 
 
@@ -53,8 +66,7 @@ class ChileCompraBundle(_Base):
     legal_name: str = ""
     supplier: ChileCompraSupplier | None = None
     buyers: list[ChileCompraBuyer] = Field(default_factory=list)
-    largest_orders: list[ChileCompraRecord] = Field(default_factory=list)
-    recent_awards: list[ChileCompraRecord] = Field(default_factory=list)
+    records: list[ChileCompraRecord] = Field(default_factory=list)
     window: str = ""
     data_from: str | None = None
     data_to: str | None = None

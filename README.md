@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 280** — ChileCompra joins as a source: for a Chilean LEI, the purchase orders, tenders won and public buyers on Mercado Público over the last twelve months, matched on the RUT.
+**Latest: Phase 281** — the ChileCompra card now lists the contracts themselves, as TED's does: a company's latest tenders won or bid and its largest purchase orders on Mercado Público, each linked.
 
 → [Full development history](docs/status.md)
 

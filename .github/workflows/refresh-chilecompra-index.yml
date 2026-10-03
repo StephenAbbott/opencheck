@@ -7,8 +7,8 @@ name: Refresh ChileCompra supplier index
 #
 # Why here and not on Render: twelve months of files are ~1.4 GB of zips and
 # ~10 GB of CSV; parsing them is several minutes of CPU-bound Python that would
-# hold the GIL against live lookups after every deploy. The result is ~13 MB
-# (~5.6 MB gzipped).
+# hold the GIL against live lookups after every deploy. The result is ~29 MB
+# (~10.5 MB gzipped).
 #
 # Why a full rebuild each month rather than an append: ChileCompra regenerates
 # its whole file series as it goes (every month's file carried the same

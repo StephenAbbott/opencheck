@@ -434,7 +434,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Website:** https://www.mercadopublico.cl/ · open data at https://datos-abiertos.chilecompra.cl/descargas
 - **License:** treated as CC0 1.0 — the licence the Open Contracting Partnership's Data Registry lists for ChileCompra's OCDS publications. The monthly CSV downloads carry no licence statement of their own; confirmation was requested from ChileCompra (datosabiertos@chilecompra.cl) in October 2026. Mercado Público's API terms ask that unmodified republished data cite Dirección ChileCompra as its source.
 - **Attribution:** Fuente: Dirección ChileCompra.
-- **Data:** per-company supplier totals over the last twelve complete months — purchase orders and their peso value, tenders bid and won, top public buyers, largest orders and latest awarded tenders — built from the monthly tender (`lic-da`) and purchase-order (`oc-da`) files. Matched on the RUT.
+- **Data:** for each company supplier, its latest tenders (won or bid, with title, buyer, status and the amount awarded to it) and its largest purchase orders (title, buyer, peso total and how the order came about), each linked to Mercado Público, plus totals over the last twelve complete months — built from the monthly tender (`lic-da`) and purchase-order (`oc-da`) files. Matched on the RUT.
 - **Note:** sole traders are not indexed: for a natural person the RUT is the national ID number (RUN), so rows with a RUT below 50,000,000 are dropped when the index is built.
 
 ## Global Energy Monitor (GEM) / Climate TRACE

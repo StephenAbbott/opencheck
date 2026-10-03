@@ -667,7 +667,7 @@ class Settings(BaseSettings):
     # Release asset downloaded at boot when absent and replaced when it
     # changed — the ONRC / MEIP rule. Built off-host rather than on Render:
     # a year of files is ~10 GB of CSV and fifteen-plus minutes of CPU, while
-    # the index is ~5 MB. Empty string disables the download.
+    # the index is ~29 MB (~10.5 MB gzipped). Empty string disables the download.
     chilecompra_db_url: str = Field(
         default=(
             "https://github.com/StephenAbbott/opencheck/releases/download/"

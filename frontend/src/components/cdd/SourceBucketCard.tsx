@@ -169,6 +169,10 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
       const notices = raw.notices as { url?: string }[] | undefined;
       return notices?.[0]?.url || "https://ted.europa.eu/";
     }
+    case "chilecompra": {
+      const records = raw.records as { url?: string }[] | undefined;
+      return records?.[0]?.url || "https://www.mercadopublico.cl/";
+    }
     case "zefix":
       return `https://www.zefix.ch/en/search/entity/list?name=${encodeURIComponent(id)}`;
     case "sudreg_croatia":
@@ -938,6 +942,110 @@ function TedAwardsList({ hit }: { hit: SourceHit }) {
 }
 
 /**
+ * ChileCompraRecordsList — Chilean public procurement from Mercado Público
+ * (chilecompra source), the TED card's counterpart (Phase 281).
+ *
+ * Lists the supplier's latest tenders — won, or bid and not won — and its
+ * latest purchase orders, newest first, each linked to its Mercado Público
+ * page. A won tender shows the amount awarded to this supplier in the
+ * offer's currency; an order shows its total in pesos and how it came about
+ * (a direct award keeps ChileCompra's own reason). Two disclosures: the
+ * twelve-month window, and that orders won through a subsidiary sit under
+ * the subsidiary's RUT.
+ */
+export function ChileCompraRecordsList({ hit }: { hit: SourceHit }) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+  if (hit.source_id !== "chilecompra") return null;
+  const raw = hit.raw as Record<string, unknown> | undefined;
+  const records = (raw?.records ?? []) as {
+    kind: string;
+    code: string;
+    date?: string | null;
+    buyer?: string;
+    title?: string;
+    procedure?: string;
+    status?: string;
+    role?: string;
+    value?: number | null;
+    currency?: string;
+    url?: string;
+  }[];
+  if (!records.length) return null;
+  const supplier = (raw?.supplier ?? {}) as {
+    orders?: number;
+    tenders_bid?: number;
+  };
+  const window = (raw?.window as string) || "the last twelve months";
+  const shown = expanded ? records : records.slice(0, 5);
+  // Tones by what the chip asserts: `ok` for an award, `neutral` for a bid
+  // that was not selected (which may still be open), `accent` for an order
+  // the buyer actually issued.
+  const roleChip = (role?: string) =>
+    role === "won" ? (
+      <Chip tone="ok" size="sm">won</Chip>
+    ) : role === "tendered" ? (
+      <Chip tone="neutral" size="sm">bid</Chip>
+    ) : (
+      <Chip tone="accent" size="sm">purchase order</Chip>
+    );
+  const money = (value?: number | null, currency?: string) =>
+    value ? `${Number(value).toLocaleString()} ${currency || ""}`.trim() : "";
+
+  return (
+    <RowList
+      controls={listId}
+      total={records.length}
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      moreLabel="record"
+      items={shown.map((r) => ({
+        key: `${r.kind}-${r.code}`,
+        title: (
+          <a
+            href={r.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-oo-blue hover:underline underline-offset-2"
+          >
+            {r.title || (r.kind === "order" ? `Purchase order ${r.code}` : `Tender ${r.code}`)}
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+        ),
+        meta: (
+          <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            {[
+              r.buyer,
+              money(r.value, r.currency),
+              r.date,
+              r.procedure,
+              r.kind === "tender" && r.role !== "won" && r.status ? r.status : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            {roleChip(r.role)}
+          </span>
+        ),
+      }))}
+      footnote={
+        <>
+          The latest tenders and purchase orders on Mercado Público, {window}
+          {supplier.orders || supplier.tenders_bid ? (
+            <>
+              {" "}— of {(supplier.orders ?? 0).toLocaleString()} purchase
+              orders and {(supplier.tenders_bid ?? 0).toLocaleString()} tenders
+              bid in that window
+            </>
+          ) : null}
+          . Contracts won through a subsidiary sit under the subsidiary&apos;s
+          RUT; public companies such as Codelco buy outside Mercado Público.
+        </>
+      }
+    />
+  );
+}
+
+/**
  * The finding line. Lives here rather than inline so the fallback chain is
  * testable — see `lib/sourceFinding.ts`, which is where the reasoning is.
  */
@@ -1120,6 +1228,7 @@ function HitRow({
       )}
       <MentionsBreakdown hit={hit} />
       <TedAwardsList hit={hit} />
+      <ChileCompraRecordsList hit={hit} />
       {/* Risk findings only (Phase 245). A structural observation — "No
           parent in GLEIF (exempt)" — is what the row's own sentence above
           already says, and the Risk signals section says it again with its
