@@ -2,12 +2,13 @@
   "lei": "FRDRIPF3EKNDJ2CQJL29",
   "name": "Eli Lilly and Company",
   "role": "curated",
-  "why": "Curated example. US company (GLEIF jurisdiction US-IN, a subdivision): related PEP, and an ICIJ person match low since Phase 282 (nothing corroborates it).",
+  "why": "Curated example. US company (GLEIF jurisdiction US-IN, a subdivision): related PEP, and an ICIJ person match low since Phase 282 (nothing corroborates it). RELATED_DEBARMENT medium is stable since Phase 282 (it used to come and go between runs).",
   "example_card": true,
   "no_risk": false,
   "risk": {
     "RELATED_PEP": "medium",
-    "OFFSHORE_LEAKS": "low"
+    "OFFSHORE_LEAKS": "low",
+    "RELATED_DEBARMENT": "medium"
   },
   "context": [
     "GLEIF_REPORTING_EXCEPTION"
