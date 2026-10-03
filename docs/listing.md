@@ -41,15 +41,50 @@ coverage numbers.
 |---|---|---|
 | `listed` | PermID names a primary quote | "Primary listing: London Stock Exchange · SHEL (PermID)" |
 | `not_listed` | PermID has no primary quote for the LEI | nothing — OpenCheck never says a company is unlisted |
-| `unavailable` | PermID did not answer (`reason`: `rate_limited`, `timeout`, `upstream_error`) | "Primary listing: could not be checked — PermID did not answer" |
+| `unavailable` | PermID gave no usable answer — see the table below | "Primary listing: could not be checked — …", naming the failure |
 | *(no event)* | no `PERMID_API_KEY`, or live calls off | nothing |
 
 A failure is said **on the listing line**, deliberately not in
 `degraded_sources`: the verdict, the MCP caution and the batch chip all read
 that list as "a screen did not run", and a listing lookup is not a screen.
 
-Cache: 30 days for a listing, 7 days for "no primary quote"; failures are
-never cached.
+An `unavailable` event carries a `reason`, and the line names it (Phase 285 —
+until then every failure read "PermID did not answer", which was untrue of an
+error response):
+
+| `reason` | What happened | The line |
+|---|---|---|
+| `timeout` | No answer within 10 s per request, or 25 s for the chain | "could not be checked — PermID did not answer" |
+| `rate_limited` | HTTP 429 | "could not be checked — PermID is limiting requests" |
+| `upstream_error` | Any other HTTP error, or a network failure | "could not be checked — PermID returned an error" |
+| `bad_response` | A 2xx whose body is not a JSON object | "could not be checked — PermID returned an error" |
+
+`detail` is secret-scrubbed and never carries a URL (the access token is a
+query parameter). For `bad_response` it says what PermID actually sent — the
+status, the content type and the first 120 characters of the body, e.g.
+`200 application/ld+json: "An error has occurred."`.
+
+**Why `bad_response` exists.** On 3 October 2026 PermID's organisation-record
+service failed for every entity and every format (`json-ld`, `turtle`) while
+search kept working. It answered `200`, `content-type: application/ld+json`,
+body `An error has occurred.` — every marker of success — so
+`raise_for_status()` passed it, `.json()` failed, and production reported
+`JSONDecodeError … char 0` under "PermID did not answer". permid.org also
+serves its website at any path with a `200 text/html` page (`format=json`
+lands there). Neither can be caught by status code; both are caught by
+requiring a JSON object.
+
+Search alone cannot stand in for a broken record service: a quote search
+result's `isQuoteOf` names an *instrument*, not the organisation, and quote
+search by organisation PermID returns nothing — the only link from an LEI's
+organisation to its primary quote is `hasOrganizationPrimaryQuote` on the
+record. During such an outage the line says "could not be checked".
+
+Cache: 30 days for a listing, 7 days for "no primary quote", **one hour for a
+failure** (Phase 285), under its own key (`permid/unavailable/<LEI>`) so a
+failure can never overwrite a listing. Before Phase 285 failures were never
+cached, and during the outage every lookup re-spent its calls against the
+5,000-a-day key on a chain that could not succeed.
 
 ## Venue links
 

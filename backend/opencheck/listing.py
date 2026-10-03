@@ -28,8 +28,21 @@ Decisions (Stephen, 24 Sept 2026 — the PermID Notion ticket):
   carries ``status: "unavailable"`` and the line reads "could not be checked".
   It is deliberately *not* a ``DegradedSource``: everything that reads that
   list — the verdict, the MCP caution, the batch chip — treats an entry as a
-  screen that did not run, and a listing lookup is not a screen. Never
-  cached, so the next lookup tries again.
+  screen that did not run, and a listing lookup is not a screen.
+- **A failure is remembered for an hour** (Phase 285, Stephen, 3 Oct 2026),
+  under its own cache key so it can never overwrite a listing: on 3 Oct 2026
+  PermID's record service failed for every entity while search kept
+  working, and with failures never cached every lookup re-spent its calls
+  against the 5,000-a-day key on a chain that could not succeed.
+- **A 2xx that is not JSON is a failure, not a success** (Phase 285). The
+  outage above answered ``200`` with ``content-type: application/ld+json``
+  and the body ``An error has occurred.`` — every marker of a good response.
+  It is ``reason: "bad_response"``, and ``detail`` names the status, the
+  content type and the start of the body, so production says what PermID
+  sent instead of reporting a ``JSONDecodeError``.
+- **The line says which failure it was** (Phase 285): "did not answer" only
+  for a timeout; "returned an error" for an error or an unreadable answer;
+  "is limiting requests" for a 429.
 - **Links only where the pattern was browser-verified** (24 Sept 2026): LSE,
   Nasdaq US, NYSE, TSX, ASX, Nasdaq Copenhagen/Stockholm and NGX, plus
   Euronext's ticker *search* page. Every other venue shows name and ticker
@@ -63,7 +76,7 @@ import httpx
 
 from .cache import Cache
 from .config import get_settings
-from .secret_scrub import describe_exception
+from .secret_scrub import describe_exception, scrub
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +92,12 @@ _PERMID_ID = re.compile(r"^[0-9]{6,15}$")
 LISTED_TTL_DAYS = 30.0
 UNLISTED_TTL_DAYS = 7.0
 _CACHE_NS = "permid/listing"
+#: Phase 285: how long a failure is remembered. Its own namespace, so an
+#: unavailable answer can never overwrite a listing in ``_CACHE_NS``.
+UNAVAILABLE_TTL_HOURS = 1.0
+_UNAVAILABLE_NS = "permid/unavailable"
+#: Characters of a non-JSON body kept in ``detail`` (Phase 285).
+_BODY_EXCERPT_CHARS = 120
 
 _TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 #: Wall-clock cap on the whole three-request chain.
@@ -253,6 +272,8 @@ def _str(v: Any) -> str | None:
 REASON_RATE_LIMITED = "rate_limited"
 REASON_TIMEOUT = "timeout"
 REASON_UPSTREAM_ERROR = "upstream_error"
+#: Phase 285: a 2xx whose body is not a JSON object.
+REASON_BAD_RESPONSE = "bad_response"
 
 
 def _reason(exc: BaseException) -> str:
@@ -263,13 +284,39 @@ def _reason(exc: BaseException) -> str:
     return REASON_UPSTREAM_ERROR
 
 
-async def _get(client: httpx.AsyncClient, url: str, params: dict[str, str], accept: str) -> Any:
+def _bad_response_detail(r: httpx.Response) -> str:
+    """``200 application/ld+json: "An error has occurred."`` — what PermID
+    sent, secret-scrubbed, whitespace collapsed and cut to a short excerpt.
+    Never the URL (it carries the token)."""
+    ctype = (r.headers.get("content-type") or "no content type").split(";")[0].strip()
+    try:
+        text = r.text
+    except Exception:  # noqa: BLE001 — undecodable bytes
+        text = ""
+    excerpt = " ".join(scrub(text).split())
+    if not excerpt:
+        return f"{r.status_code} {ctype}: empty body"
+    if len(excerpt) > _BODY_EXCERPT_CHARS:
+        excerpt = excerpt[:_BODY_EXCERPT_CHARS].rstrip() + "…"
+    return f'{r.status_code} {ctype}: "{excerpt}"'
+
+
+async def _get(client: httpx.AsyncClient, url: str, params: dict[str, str], accept: str) -> dict[str, Any]:
     try:
         r = await client.get(url, params=params, headers={"Accept": accept})
         r.raise_for_status()
-        return r.json()
     except Exception as exc:  # noqa: BLE001 — described, never stringified
         raise _PermIdUnavailable(describe_exception(exc), _reason(exc)) from None
+    # Phase 285: a 2xx is only a success if it carries a JSON object. PermID's
+    # record service has answered 200 with a plain-text error under a JSON-LD
+    # content type, and its website answers any path with a 200 HTML page.
+    try:
+        body = r.json()
+    except ValueError:
+        body = None
+    if not isinstance(body, dict):
+        raise _PermIdUnavailable(_bad_response_detail(r), REASON_BAD_RESPONSE)
+    return body
 
 
 def _build_client() -> httpx.AsyncClient:
@@ -389,17 +436,37 @@ async def fetch_listing(lei: str, today: date | None = None) -> dict[str, Any] |
                 age = UNLISTED_TTL_DAYS + 1
             if age <= UNLISTED_TTL_DAYS:
                 return cached
+    # Phase 285: a failure in the last hour is answered from the cache rather
+    # than re-spending the chain's calls on an upstream that just failed.
+    down_key = f"{_UNAVAILABLE_NS}/{lei}"
+    down = cache.get_payload(down_key, max_age_days=UNAVAILABLE_TTL_HOURS / 24)
+    if down is not None and isinstance(down[0], dict) and down[0].get("status") == "unavailable":
+        return down[0]
     today = today or datetime.now(timezone.utc).date()
     token = (get_settings().permid_api_key or "").strip()
     try:
         payload = await asyncio.wait_for(_fetch_from_permid(lei, token, today), _BUDGET_S)
     except _PermIdUnavailable as exc:
-        return unavailable(lei, today, exc.reason, exc.detail)
+        return _remember(cache, down_key, unavailable(lei, today, exc.reason, exc.detail))
     except asyncio.TimeoutError:
-        return unavailable(lei, today, REASON_TIMEOUT, "PermID did not answer within the time budget.")
+        return _remember(
+            cache, down_key,
+            unavailable(lei, today, REASON_TIMEOUT, "PermID did not answer within the time budget."),
+        )
     except Exception as exc:  # noqa: BLE001 — a listing is never worth a failed lookup
         logger.warning("permid listing failed for %s: %s", lei, describe_exception(exc))
-        return unavailable(lei, today, REASON_UPSTREAM_ERROR, describe_exception(exc))
+        return _remember(
+            cache, down_key, unavailable(lei, today, REASON_UPSTREAM_ERROR, describe_exception(exc))
+        )
+    try:
+        cache.put(key, payload)
+    except OSError:  # pragma: no cover — read-only cache dir
+        pass
+    return payload
+
+
+def _remember(cache: Cache, key: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Cache a failure for ``UNAVAILABLE_TTL_HOURS`` and return it."""
     try:
         cache.put(key, payload)
     except OSError:  # pragma: no cover — read-only cache dir
@@ -408,9 +475,10 @@ async def fetch_listing(lei: str, today: date | None = None) -> dict[str, Any] |
 
 
 def unavailable(lei: str, today: date, reason: str, detail: str) -> dict[str, Any]:
-    """The payload for "PermID was asked and did not answer". ``detail`` is
-    already secret-scrubbed (``describe_exception``); it names a status and a
-    host, never a URL."""
+    """The payload for "PermID was asked and gave no usable answer".
+    ``detail`` is already secret-scrubbed (``describe_exception``, or
+    ``_bad_response_detail`` for a 2xx that is not JSON); it names a status,
+    a host or a content type and a short body excerpt, never a URL."""
     out = _unlisted(lei, today, None)
     out.update(status="unavailable", reason=reason, detail=detail)
     return out
@@ -508,7 +576,23 @@ def apply_to_bods(
     return out
 
 
-UNAVAILABLE_LINE = "Could not be checked — PermID did not answer"
+#: Phase 285: the could-not-check sentence names the failure. "Did not
+#: answer" is true only of a timeout; PermID answering with an error, or with
+#: something unreadable, is "returned an error". Mirrored in
+#: ``frontend/src/lib/listing.ts`` (``unavailableText``).
+UNAVAILABLE_LINES: dict[str, str] = {
+    REASON_TIMEOUT: "Could not be checked — PermID did not answer",
+    REASON_RATE_LIMITED: "Could not be checked — PermID is limiting requests",
+    REASON_UPSTREAM_ERROR: "Could not be checked — PermID returned an error",
+    REASON_BAD_RESPONSE: "Could not be checked — PermID returned an error",
+}
+#: For a reason this module does not know (a saved report from a later
+#: version, say): claims nothing about why.
+UNAVAILABLE_LINE = "Could not be checked — PermID did not give a usable answer"
+
+
+def unavailable_line(reason: str | None) -> str:
+    return UNAVAILABLE_LINES.get(reason or "", UNAVAILABLE_LINE)
 
 
 def describe(listing: dict[str, Any] | None) -> str | None:
@@ -516,7 +600,7 @@ def describe(listing: dict[str, Any] | None) -> str | None:
     or the could-not-check sentence, or None when there is nothing to say (no
     payload, or PermID records no primary quote)."""
     if listing and listing.get("status") == "unavailable":
-        return UNAVAILABLE_LINE
+        return unavailable_line(listing.get("reason"))
     if not listing or listing.get("status") != "listed":
         return None
     q = listing.get("quote") or {}

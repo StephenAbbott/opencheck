@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { PrimaryListing } from "./api";
-import { LISTING_EXPLANATION, UNAVAILABLE_TEXT, listingView } from "./listing";
+import {
+  LISTING_EXPLANATION,
+  UNAVAILABLE_FALLBACK,
+  UNAVAILABLE_TEXTS,
+  listingView,
+  unavailableText,
+} from "./listing";
 
 function listed(over: Partial<PrimaryListing> = {}): PrimaryListing {
   return {
@@ -64,9 +70,28 @@ describe("listingView", () => {
 
   it("says a failed check on the line", () => {
     const v = listingView(listed({ status: "unavailable", quote: null, exchange: null, link: null }));
-    expect(v?.text).toBe(UNAVAILABLE_TEXT);
+    expect(v?.text).toBe(UNAVAILABLE_FALLBACK);
     expect(v?.unavailable).toBe(true);
     expect(v?.href).toBeNull();
+  });
+
+  it("names the failure: an error page is not silence (Phase 285)", () => {
+    const v = listingView(
+      listed({ status: "unavailable", quote: null, exchange: null, link: null, reason: "bad_response" }),
+    );
+    expect(v?.text).toBe("could not be checked — PermID returned an error");
+    expect(unavailableText("upstream_error")).toBe("could not be checked — PermID returned an error");
+    expect(unavailableText("rate_limited")).toBe("could not be checked — PermID is limiting requests");
+    expect(unavailableText("timeout")).toBe("could not be checked — PermID did not answer");
+    expect(unavailableText("something_new")).toBe(UNAVAILABLE_FALLBACK);
+    expect(unavailableText(undefined)).toBe(UNAVAILABLE_FALLBACK);
+  });
+
+  it("only a timeout says PermID did not answer", () => {
+    for (const [reason, text] of Object.entries(UNAVAILABLE_TEXTS)) {
+      expect(text.includes("did not answer")).toBe(reason === "timeout");
+    }
+    expect(UNAVAILABLE_FALLBACK).not.toMatch(/did not answer/);
   });
 
   it("never calls the link a filing, and says other listings are not shown", () => {

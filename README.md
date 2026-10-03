@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 284** — related-party screens put a party carrying an LEI first among ties, so a large group's own members are screened before unrelated names.
+**Latest: Phase 285** — a PermID answer that is not JSON is reported as an error rather than silence, the listing line names the failure, and failures are remembered for an hour to spare the daily quota.
 
 → [Full development history](docs/status.md)
 
