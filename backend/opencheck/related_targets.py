@@ -26,12 +26,19 @@ This module replaces "the first N" with a deliberate choice, in three steps:
    to the looked-up company before one linked further out; and among
    officers equally close, board chair, then board members, then senior
    managing officials (Phase 282).
-3. **Break ties without bundle order** (Phase 282). Bundle order is the order
-   the sources answered, so it changed between runs, and with it which
-   parties at the limit were screened (Eli Lilly, 2 Oct 2026). Ties go to the
-   party more sources name, then by name key, birth/founding year and
-   identifiers. statementIds are never used: they change between runs.
-4. **Cap**, and report what the cap left out — counts only, never names.
+3. **A party carrying an LEI first** among parties still tied (Phase 284):
+   a GLEIF-registered group member before an officer's other appointments.
+   When a whole large group shares one tier, the name order below would
+   otherwise pick an arbitrary slice — Taqa Bratani's 93 parties all tie in
+   the bottom tier, and alphabetical order pushed Taweelah Asia Power
+   Company, the sanctions-controlled group member, past the limit.
+4. **Break remaining ties without bundle order** (Phase 282). Bundle
+   order is the order the sources answered, so it changed between runs,
+   and with it which parties at the limit were screened (Eli Lilly, 2 Oct
+   2026). Ties go to the party more sources name, then by name key,
+   birth/founding year and identifiers. statementIds are never used: they
+   change between runs.
+5. **Cap**, and report what the cap left out — counts only, never names.
 
 A screen then reads one representative per cluster, and a signal it earns is
 attached to the whole party (``attach_to_party``): one signal per party per
@@ -202,6 +209,13 @@ def select(
             tier,
             0 if direct else 1,
             role,
+            # Phase 284: a party carrying an LEI before one without — a
+            # GLEIF-registered group member before an officer's other
+            # appointments. Taqa Bratani's 93 parties all tied in the bottom
+            # tier, and the name order below pushed Taweelah Asia Power
+            # Company (sanctions-controlled, export-control-linked; one of
+            # its 8 LEI-bearing group members) past the limit.
+            0 if any(k.startswith("LEI:") for k in cluster.idents) else 1,
             # Phase 282: ties without bundle order. A party more registers
             # name first, then fields that do not change between runs.
             -len({_source_key(stmts.get(m["statement_id"]) or {}) for m in members}),

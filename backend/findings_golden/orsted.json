@@ -2,7 +2,7 @@
   "lei": "W9NG6WMZIYEU8VEDOG48",
   "name": "Ørsted A/S",
   "role": "curated",
-  "why": "Curated example. Danish state-controlled company: STATE_CONTROLLED (Phase 240) and board members whose only PEP role is this company, labelled context since Phase 247.",
+  "why": "Curated example. Danish state-controlled company: STATE_CONTROLLED (Phase 240) and board members whose only PEP role is this company, labelled context since Phase 247. Since Phase 282 an ICIJ entity match (related party \"Goldman Sachs\" ↔ \"Goldman Sachs & Co\", medium) is screened on every run; the verdict reads two clauses at most and offshore leaks outranks state ownership, so the verdict no longer names state ownership — STATE_CONTROLLED stays asserted under risk.",
   "example_card": true,
   "no_risk": false,
   "risk": {
@@ -16,7 +16,7 @@
   "absent": [],
   "verdict": {
     "matches": [
-      "state ownership"
+      "politically exposed person"
     ],
     "not_matches": []
   },

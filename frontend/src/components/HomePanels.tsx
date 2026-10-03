@@ -63,6 +63,16 @@ export interface ExampleLei {
 // RELATED_PEP is now one board member (Julia King) — the other six are
 // context since Phase 247.
 //
+// Phase 284 (3 Oct 2026): since Phase 282 the related-party screens pick the
+// same parties on every run, so codes that used to come and go are stable,
+// and these cards list them as production returns them: Eli Lilly's
+// RELATED_PEP is high (Katherine Baicker) and RELATED_DEBARMENT medium;
+// Rosneft's RELATED_PEP is high (Igor Sechin) and RELATED_EXPORT_RISK high
+// (RAO Rosneftegazstroy); Ørsted's OFFSHORE_LEAKS is medium (its related
+// party "Goldman Sachs" matching ICIJ entity records "Goldman Sachs & Co"). Taqa Bratani's card is unchanged:
+// Phase 284's LEI-first ranking puts Taweelah Asia Power Company back in its
+// screened set.
+//
 // Phase 282 (3 Oct 2026): Eli Lilly's OFFSHORE_LEAKS is low. Its only ICIJ
 // hit is a person match (Juan R. Luciano ↔ ROJAS JUAN LUCIANO) with nothing
 // to corroborate it, and an uncorroborated ICIJ person match is low now.
@@ -91,6 +101,7 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "RELATED_SANCTIONS_CONTROLLED", confidence: "high" },
       { code: "EXPORT_CONTROLLED", confidence: "high" },
       { code: "RELATED_EXPORT_CONTROLLED", confidence: "high" },
+      { code: "RELATED_EXPORT_RISK", confidence: "high" },
       { code: "DEBARMENT", confidence: "high" },
       { code: "RELATED_DEBARMENT", confidence: "high" },
       { code: "EU_HIGH_RISK_THIRD_COUNTRY", confidence: "high" },
@@ -98,7 +109,7 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "RELATED_EXPORT_CONTROL_LINKED", confidence: "high" },
       { code: "EXPORT_RISK", confidence: "medium" },
       { code: "STATE_CONTROLLED", confidence: "medium" },
-      { code: "RELATED_PEP", confidence: "medium" },
+      { code: "RELATED_PEP", confidence: "high" },
     ],
   },
   {
@@ -126,6 +137,7 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     signals: [
       { code: "RELATED_PEP", confidence: "medium" },
       { code: "STATE_CONTROLLED", confidence: "medium" },
+      { code: "OFFSHORE_LEAKS", confidence: "medium" },
     ],
   },
   {
@@ -133,7 +145,8 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     name: "Eli Lilly and Company",
     hint: "American pharmaceutical giant",
     signals: [
-      { code: "RELATED_PEP", confidence: "medium" },
+      { code: "RELATED_PEP", confidence: "high" },
+      { code: "RELATED_DEBARMENT", confidence: "medium" },
       { code: "OFFSHORE_LEAKS", confidence: "low" },
     ],
   },
