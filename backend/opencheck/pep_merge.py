@@ -144,10 +144,16 @@ def merge_derived_pep(signals: list[dict[str, Any]]) -> list[dict[str, Any]]:
         winner = ranked[0]
         evidence = dict(winner.get("evidence") or {})
         evidence["upstream_record_id"] = upstream
+        # A member may already name several statements of one party
+        # (``related_targets.attach_to_party``, Phase 282); keep them all.
         statement_ids = sorted(
             {
-                str((m.get("evidence") or {}).get("subject_statement_id") or "")
+                str(sid or "")
                 for m in members
+                for sid in [
+                    (m.get("evidence") or {}).get("subject_statement_id"),
+                    *((m.get("evidence") or {}).get("subject_statement_ids") or ()),
+                ]
             }
             - {""}
         )

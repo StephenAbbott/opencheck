@@ -108,7 +108,7 @@ def _checks(findings: list[fr.Finding]) -> list[str]:
 
 def test_every_golden_file_validates() -> None:
     exps = fr.load_expectations()
-    assert len(exps) == 12
+    assert len(exps) == 13
     roles = {e["role"] for e in exps}
     assert roles == {"curated", "anchor", "control"}
     assert sum(1 for e in exps if e["role"] == "control") == 2

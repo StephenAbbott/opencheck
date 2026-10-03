@@ -371,9 +371,10 @@ async def assess_cross_source_names(
                         reason=pick_degradation_reason(target_error_reasons),
                     )
                 )
-    # A deduped party was screened once; every statement that names it gets
-    # the result (Phase 279, Stephen: attach to both).
-    return _dedupe(related_targets.fan_out(signals, targets))
+    # A deduped party was screened once; its result is one signal per record
+    # naming every statement of the party (Phase 279, Stephen: attach to
+    # both; Phase 282: one signal, not one copy per statement).
+    return _dedupe(related_targets.attach_to_party(signals, targets))
 
 
 # ---------------------------------------------------------------------

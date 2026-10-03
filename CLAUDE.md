@@ -638,7 +638,7 @@ other labels.
 
 **Signal→BODS node mapping** (evidence fields) — owned by `frontend/src/lib/signalScope.ts`, **not** by `BODSGraph.tsx`. Add a new evidence shape there and every consumer picks it up:
 - `SANCTIONED`, `PEP` → `evidence.statement_id` (added in Phase 45 via `_bods_stable_id(source_id, hit_id)` in `risk.py`)
-- `RELATED_SANCTIONED`, `RELATED_PEP` → `evidence.subject_statement_id`
+- `RELATED_SANCTIONED`, `RELATED_PEP`, and a related party's `OFFSHORE_LEAKS` (icij) → `evidence.subject_statement_id`, plus `evidence.subject_statement_ids[]` when the party spans several statements. Since Phase 282 a related-party screen emits **one signal per party per upstream record** naming every statement of the deduped party (`related_targets.attach_to_party`), never one copy per statement — a consumer that needs "which statements" reads the list, and anything counting signals counts parties
 - `TRUST_OR_ARRANGEMENT`, `NOMINEE`, `STATE_CONTROLLED` (Phase 240) → `evidence.matches[].statement_id`
 - `NON_EU_JURISDICTION`, `FATF_BLACK_LIST`, `FATF_GREY_LIST`, `EU_HIGH_RISK_THIRD_COUNTRY`, `SUBSIDIARY_LISTED_JURISDICTION` (Phase 273) → `evidence.jurisdictions[].statement_id`. Since Phase 273 the three list signals hold only the subject and its owners (`position`: `subject` / `above`); subsidiaries are in the slate context note
 - `COMPLEX_OWNERSHIP_LAYERS` → `evidence.longest_path[]` (array of statementIds, subject first — the chain runs upwards from it) plus `evidence.subject_statement_id`

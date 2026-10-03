@@ -63,6 +63,10 @@ export interface ExampleLei {
 // RELATED_PEP is now one board member (Julia King) — the other six are
 // context since Phase 247.
 //
+// Phase 282 (3 Oct 2026): Eli Lilly's OFFSHORE_LEAKS is low. Its only ICIJ
+// hit is a person match (Juan R. Luciano ↔ ROJAS JUAN LUCIANO) with nothing
+// to corroborate it, and an uncorroborated ICIJ person match is low now.
+//
 // Phase 170 removed COMPLEX_OWNERSHIP_LAYERS from BP, Rosneft, Eesti Energia
 // and Ørsted: every one of those chips was a V through the subject counted as
 // three layers above it. None of the six curated subjects reaches three
@@ -130,7 +134,7 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
     hint: "American pharmaceutical giant",
     signals: [
       { code: "RELATED_PEP", confidence: "medium" },
-      { code: "OFFSHORE_LEAKS", confidence: "medium" },
+      { code: "OFFSHORE_LEAKS", confidence: "low" },
     ],
   },
 ];

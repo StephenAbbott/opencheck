@@ -974,7 +974,10 @@ def test_clp_shape_dropped_even_when_the_extend_call_failed() -> None:
     assert sig is None
 
 
-def test_clp_shape_older_jersey_company_survives_but_jurisdiction_differs() -> None:
+def test_clp_shape_older_jersey_company_is_dropped_on_a_jurisdiction_mismatch() -> None:
+    # Phase 282 (Stephen, 3 Oct 2026): a recorded mismatch drops the match.
+    # Until then this Jersey company survived at medium against a record ICIJ
+    # holds only for Hong Kong.
     target = {
         "kind": "entity", "statement_id": "clp", "name": "CLP HOLDINGS LIMITED",
         "founded": "2009-01-01", "countries": ["JE"],
@@ -983,20 +986,7 @@ def test_clp_shape_older_jersey_company_survives_but_jurisdiction_differs() -> N
         _clp_panama_intermediary(), target, min_score=70,
         node=_CLP_NODE, details_answered=True,
     )
-    assert sig is not None
-    assert sig.confidence == "medium"
-    assert sig.evidence["jurisdiction_gate"] == {
-        "status": "differs", "party_countries": ["JE"], "record_countries": ["HK"],
-    }
-    assert sig.evidence["date_gate"] == {
-        "status": "passed", "party_date": "2009-01-01",
-        "leak_cutoff_year": 2015, "cutoff_source": "icij",
-    }
-    assert sig.evidence["gates"] == [
-        "gate passed: incorporation 2009-01-01 ≤ leak cutoff 2015",
-        "jurisdiction differs: JE ≠ HK",
-        "name-only match: capped at medium",
-    ]
+    assert sig is None
 
 
 def test_hong_kong_company_matching_a_hong_kong_record_is_high() -> None:

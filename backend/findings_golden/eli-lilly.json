@@ -2,12 +2,12 @@
   "lei": "FRDRIPF3EKNDJ2CQJL29",
   "name": "Eli Lilly and Company",
   "role": "curated",
-  "why": "Curated example. US company (GLEIF jurisdiction US-IN, a subdivision): related PEP and an ICIJ match capped at medium by the Phase 237 gates.",
+  "why": "Curated example. US company (GLEIF jurisdiction US-IN, a subdivision): related PEP, and an ICIJ person match low since Phase 282 (nothing corroborates it).",
   "example_card": true,
   "no_risk": false,
   "risk": {
     "RELATED_PEP": "medium",
-    "OFFSHORE_LEAKS": "medium"
+    "OFFSHORE_LEAKS": "low"
   },
   "context": [
     "GLEIF_REPORTING_EXCEPTION"

@@ -33,6 +33,7 @@ this phase merged, found three things nobody had reported (below).
 | anchor | Bank Saderat PLC (`2138008KTNTDICZU8L25`) | Phase 273: FATF black + EU high-risk from Bank Saderat Iran **above** the subject. The upstream path must keep firing; black never also fires grey. |
 | anchor | Maersk (`549300D2K6PKKKXVNN73`) | Phase 273: its only listed-jurisdiction exposure is a BVI subsidiary. No list chip, no watch-list verdict clause, only the `SUBSIDIARY_LISTED_JURISDICTION` context note. |
 | anchor | ASDA Stores (`549300IVCS91O4IUFA35`) | Phase 272: a real layered chain (7 intermediate layers on 1 Oct 2026). The verdict counts intermediate layers; the retired composite never returns. |
+| anchor | Regulatory DataCorp Limited (`894500LD30X1VN839203`) | Phase 282: a former director, "Mr. Robert Frederick Smith", matched Panama Papers officer "Mr. Robert Frederick White" until persons got a token gate. `OFFSHORE_LEAKS` must stay absent; the verdict must not mention offshore leaks. |
 | control | Birtley Investment Limited (`254900RT9QQBQZVH8O89`) | Small GB Ltd, no findings. Its only signal is the GLEIF reporting exception, which is context. Lapsed LEI. |
 | control | American Foreign Policy Council (`549300W96W2VKSMVDF81`) | Non-EU (US-DC, DLCP register), reporting exception, LEI lapsed since 2017, no findings. |
 
