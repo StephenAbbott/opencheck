@@ -2083,7 +2083,21 @@ and MCP had no limit at all. Things that will be re-derived otherwise:
 - **A PermID failure is `status: "unavailable"` on the event, never a
   `DegradedSource`** (Stephen, 24 Sept 2026). Every reader of
   `degraded_sources` — the verdict, the MCP CAUTION, the batch chip — treats
-  an entry as a screen that did not run. Failures are never cached.
+  an entry as a screen that did not run. **Failures are cached for one
+  hour under `permid/unavailable/<LEI>`** (Phase 285) — their own key, so a
+  failure never overwrites a listing.
+- **A 2xx is only a success if it is a JSON object** (Phase 285). On 3 Oct
+  2026 the record service answered `200 application/ld+json` with the body
+  `An error has occurred.` for every entity, and permid.org serves its
+  website as `200 text/html` at any path. Either is `reason:
+  "bad_response"` with a `detail` naming status, content type and a body
+  excerpt. **The line names the failure**: "did not answer" only for
+  `timeout`; "returned an error" for `upstream_error`/`bad_response`; "is
+  limiting requests" for `rate_limited` (`UNAVAILABLE_LINES` /
+  `UNAVAILABLE_TEXTS`, mirrored).
+- **Search cannot replace the record service.** A quote search result's
+  `isQuoteOf` is an *instrument*, and quote search by organisation PermID
+  returns nothing; only the organisation record links LEI → primary quote.
 - **Check `tr-org:hasLEI` on the organisation record** before using it: the
   search is a text search.
 - **Links only for browser-verified venue patterns** (`VENUES` in

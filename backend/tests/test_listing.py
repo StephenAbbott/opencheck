@@ -1,10 +1,15 @@
 """The primary stock-exchange listing from LSEG PermID (Phase 236).
 
 Pins the decisions on the PermID ticket (Stephen, 24 Sept 2026): no key → no
-request and no event; a PermID failure is a degraded source, never "not
-listed"; the organisation must carry the LEI itself; links only for verified
+request and no event; a PermID failure is said on the listing line, never
+"not listed" and never a degraded source; the organisation must carry the
+LEI itself; links only for verified
 venue patterns; BODS gets ``securitiesListings`` on the subject's GLEIF
 statement, copied, with a ``linking`` annotation, and never a filings URL.
+
+Phase 285 (Stephen, 3 Oct 2026): a 2xx that is not a JSON object is a
+failure (``bad_response``) whose detail says what PermID sent; a failure is
+remembered for an hour under its own key; the line names the failure.
 """
 
 from __future__ import annotations
@@ -199,13 +204,15 @@ async def test_rate_limit_is_unavailable_and_never_leaks_the_token(keyed) -> Non
     assert got["status"] == "unavailable"
     assert got["reason"] == "rate_limited"
     assert TOKEN not in got["detail"] and "access-token" not in got["detail"]
-    assert listing.describe(got) == "Could not be checked — PermID did not answer"
+    assert listing.describe(got) == "Could not be checked — PermID is limiting requests"
     # Not a screen that failed: nothing reaches degraded_sources.
     assert recorded == []
 
 
 @respx.mock
-async def test_a_server_error_is_unavailable_and_not_cached(keyed) -> None:
+async def test_a_server_error_is_remembered_for_an_hour(keyed) -> None:
+    """Phase 285: a failure is cached for UNAVAILABLE_TTL_HOURS, so a broken
+    upstream stops costing calls on every lookup."""
     route = respx.get(SEARCH).mock(return_value=httpx.Response(503))
 
     first = await listing.fetch_listing(LEI)
@@ -213,7 +220,139 @@ async def test_a_server_error_is_unavailable_and_not_cached(keyed) -> None:
 
     assert first["status"] == second["status"] == "unavailable"
     assert first["reason"] == "upstream_error"
-    assert route.call_count == 2  # a failure is retried next time, not remembered
+    assert listing.describe(first) == "Could not be checked — PermID returned an error"
+    assert second == first
+    assert route.call_count == 1  # the second lookup did not ask again
+
+
+@respx.mock
+async def test_a_remembered_failure_expires_and_is_retried(keyed, monkeypatch) -> None:
+    route = respx.get(SEARCH).mock(return_value=httpx.Response(503))
+    await listing.fetch_listing(LEI)
+
+    import time as _time
+
+    real = _time.time
+    monkeypatch.setattr(_time, "time", lambda: real() + 3600 * listing.UNAVAILABLE_TTL_HOURS + 60)
+    route.mock(return_value=httpx.Response(200, json=_search_body()))
+    respx.get(ORG).mock(return_value=httpx.Response(200, json=_ORG_RECORD))
+    respx.get(QUOTE).mock(return_value=httpx.Response(200, json=_QUOTE_RECORD))
+
+    got = await listing.fetch_listing(LEI)
+    assert got["status"] == "listed"
+    assert route.call_count == 2
+
+
+@respx.mock
+async def test_a_failure_never_overwrites_a_cached_listing(keyed) -> None:
+    """The failure lives under its own key: a listing in the cache is still
+    served, and a later failure for a different reason cannot replace it."""
+    respx.get(SEARCH).mock(return_value=httpx.Response(200, json=_search_body()))
+    respx.get(ORG).mock(return_value=httpx.Response(200, json=_ORG_RECORD))
+    respx.get(QUOTE).mock(return_value=httpx.Response(200, json=_QUOTE_RECORD))
+    assert (await listing.fetch_listing(LEI))["status"] == "listed"
+
+    listing._remember(
+        listing.Cache(), f"permid/unavailable/{LEI}",
+        listing.unavailable(LEI, __import__("datetime").date(2026, 10, 3), "bad_response", "x"),
+    )
+    assert (await listing.fetch_listing(LEI))["status"] == "listed"
+
+
+# --- Phase 285: a 2xx that is not JSON is a failure ------------------------
+
+
+@respx.mock
+async def test_a_200_error_page_on_the_record_is_bad_response(keyed) -> None:
+    """The 3 Oct 2026 outage, byte for byte: search works; the organisation
+    record answers 200, content-type application/ld+json, body
+    "An error has occurred." """
+    respx.get(SEARCH).mock(return_value=httpx.Response(200, json=_search_body()))
+    respx.get(ORG).mock(
+        return_value=httpx.Response(
+            200, content=b"An error has occurred.",
+            headers={"content-type": "application/ld+json"},
+        )
+    )
+
+    got = await listing.fetch_listing(LEI)
+
+    assert got["status"] == "unavailable"
+    assert got["reason"] == "bad_response"
+    assert got["detail"] == '200 application/ld+json: "An error has occurred."'
+    assert "JSONDecodeError" not in got["detail"]
+    assert listing.describe(got) == "Could not be checked — PermID returned an error"
+
+
+@respx.mock
+async def test_an_html_page_is_bad_response_and_excerpted(keyed) -> None:
+    page = "<!DOCTYPE html><html lang=\"en\"><head>  <title>LSEG | PermID</title>" + " x" * 400
+    respx.get(SEARCH).mock(
+        return_value=httpx.Response(200, content=page.encode(), headers={"content-type": "text/html"})
+    )
+
+    got = await listing.fetch_listing(LEI)
+
+    assert got["reason"] == "bad_response"
+    assert got["detail"].startswith('200 text/html: "<!DOCTYPE html><html lang="en"><head> <title>')
+    assert got["detail"].endswith('…"')
+    assert len(got["detail"]) < 160
+
+
+@respx.mock
+async def test_an_empty_200_is_bad_response(keyed) -> None:
+    respx.get(SEARCH).mock(return_value=httpx.Response(200, content=b""))
+
+    got = await listing.fetch_listing(LEI)
+
+    assert got["reason"] == "bad_response"
+    assert got["detail"].endswith("empty body")
+
+
+@respx.mock
+async def test_valid_json_that_is_not_an_object_is_bad_response(keyed) -> None:
+    respx.get(SEARCH).mock(return_value=httpx.Response(200, json=_search_body()))
+    respx.get(ORG).mock(return_value=httpx.Response(200, json="An error has occurred."))
+
+    got = await listing.fetch_listing(LEI)
+
+    assert got["reason"] == "bad_response"
+
+
+@respx.mock
+async def test_a_bad_response_excerpt_never_carries_the_token(keyed) -> None:
+    body = f"error for https://permid.org/1-1?access-token={TOKEN} please retry"
+    respx.get(SEARCH).mock(
+        return_value=httpx.Response(200, content=body.encode(), headers={"content-type": "text/plain"})
+    )
+
+    got = await listing.fetch_listing(LEI)
+
+    assert got["reason"] == "bad_response"
+    assert TOKEN not in got["detail"]
+
+
+@pytest.mark.parametrize(
+    ("reason", "line"),
+    [
+        ("timeout", "Could not be checked — PermID did not answer"),
+        ("rate_limited", "Could not be checked — PermID is limiting requests"),
+        ("upstream_error", "Could not be checked — PermID returned an error"),
+        ("bad_response", "Could not be checked — PermID returned an error"),
+        ("something_new", "Could not be checked — PermID did not give a usable answer"),
+        (None, "Could not be checked — PermID did not give a usable answer"),
+    ],
+)
+def test_the_line_names_the_failure(reason, line) -> None:
+    down = listing.unavailable(LEI, __import__("datetime").date(2026, 10, 3), "timeout", "x")
+    down["reason"] = reason
+    assert listing.describe(down) == line
+
+
+def test_only_a_timeout_says_did_not_answer() -> None:
+    """PermID answering with an error is not PermID not answering."""
+    for reason, line in listing.UNAVAILABLE_LINES.items():
+        assert ("did not answer" in line) == (reason == "timeout")
 
 
 def test_an_unavailable_listing_adds_nothing_to_bods() -> None:

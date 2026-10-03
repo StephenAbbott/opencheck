@@ -13,7 +13,10 @@
  * - Nothing at all when there is no payload or PermID records no quote:
  *   OpenCheck does not assert that a company is unlisted.
  * - A failure is said on the line ("could not be checked"), never as a
- *   degraded screen.
+ *   degraded screen — and the line names the failure (Phase 285): "did not
+ *   answer" only for a timeout, "returned an error" for an error or an
+ *   unreadable answer, "is limiting requests" for a 429. Mirrors
+ *   `UNAVAILABLE_LINES` in `opencheck/listing.py`.
  * - A link is a listing page or, for Euronext, a search page — never
  *   "filings".
  */
@@ -22,7 +25,20 @@ import type { PrimaryListing } from "./api";
 
 export const LISTING_LABEL = "Primary listing";
 
-export const UNAVAILABLE_TEXT = "could not be checked — PermID did not answer";
+/** The could-not-check line per `reason` (Phase 285). */
+export const UNAVAILABLE_TEXTS: Record<string, string> = {
+  timeout: "could not be checked — PermID did not answer",
+  rate_limited: "could not be checked — PermID is limiting requests",
+  upstream_error: "could not be checked — PermID returned an error",
+  bad_response: "could not be checked — PermID returned an error",
+};
+
+/** For a reason this build does not know: claims nothing about why. */
+export const UNAVAILABLE_FALLBACK = "could not be checked — PermID did not give a usable answer";
+
+export function unavailableText(reason: string | null | undefined): string {
+  return (reason && UNAVAILABLE_TEXTS[reason]) || UNAVAILABLE_FALLBACK;
+}
 
 /** The explanation behind the line's ⓘ. */
 export const LISTING_EXPLANATION =
@@ -37,7 +53,7 @@ export interface ListingView {
   href: string | null;
   /** Accessible name for the link: says where it goes. */
   linkLabel: string | null;
-  /** True when PermID was asked and did not answer. */
+  /** True when PermID was asked and gave no usable answer. */
   unavailable: boolean;
   /** The security PermID names ("Shell Ord Shs", "Petroleo Brasileiro Pref Shs"). */
   security: string | null;
@@ -47,7 +63,13 @@ export interface ListingView {
 export function listingView(listing: PrimaryListing | null | undefined): ListingView | null {
   if (!listing) return null;
   if (listing.status === "unavailable") {
-    return { text: UNAVAILABLE_TEXT, href: null, linkLabel: null, unavailable: true, security: null };
+    return {
+      text: unavailableText(listing.reason),
+      href: null,
+      linkLabel: null,
+      unavailable: true,
+      security: null,
+    };
   }
   if (listing.status !== "listed" || !listing.quote) return null;
   const q = listing.quote;

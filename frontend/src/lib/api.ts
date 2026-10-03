@@ -212,8 +212,9 @@ export interface LookupResponse {
  *  listing according to LSEG PermID, frozen with the run. PermID names one
  *  primary quote, so this is never the company's full list of listings.
  *  `status` "not_listed" = PermID records no primary quote; "unavailable" =
- *  PermID did not answer (`reason` says why) — said on the line, never a
- *  degraded screen. `link` is a verified venue page ("listing") or the
+ *  PermID gave no usable answer (`reason`: timeout, rate_limited,
+ *  upstream_error, or bad_response — a 2xx that was not JSON; `detail` says
+ *  what it sent) — said on the line, never a degraded screen. `link` is a verified venue page ("listing") or the
  *  venue's search page ("search") — never a filings page — or null. */
 export interface PrimaryListing {
   source_id: "permid";

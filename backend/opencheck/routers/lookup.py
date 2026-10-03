@@ -327,13 +327,15 @@ class ReportResponse(BaseModel):
     #: payload recorded before this field existed.
     knowability_chain: dict[str, Any] | None = None
     #: The subject's primary stock-exchange listing (Phase 236), from LSEG
-    #: PermID: ``status`` ("listed" / "not_listed"), ``quote`` (ticker, MIC,
-    #: RIC, security name, PermID ids), ``exchange`` (name + country, or None
-    #: for a venue OpenCheck has no name for), ``link`` (a verified venue
-    #: page, or None) and ``as_of`` — as the ``listing`` stream event carried
-    #: it, frozen at run time (``opencheck.listing``). None when no PermID key
-    #: is configured, when PermID did not answer (a degraded source, never
-    #: "not listed"), or for a payload recorded before this field existed.
+    #: PermID: ``status`` ("listed" / "not_listed" / "unavailable"),
+    #: ``quote`` (ticker, MIC, RIC, security name, PermID ids), ``exchange``
+    #: (name + country, or None for a venue OpenCheck has no name for),
+    #: ``link`` (a verified venue page, or None) and ``as_of`` — as the
+    #: ``listing`` stream event carried it, frozen at run time
+    #: (``opencheck.listing``). "unavailable" carries ``reason`` and a
+    #: secret-scrubbed ``detail`` and is never "not listed" nor a degraded
+    #: source. None when no PermID key is configured, or for a payload
+    #: recorded before this field existed.
     listing: dict[str, Any] | None = None
 
 

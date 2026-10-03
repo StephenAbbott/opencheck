@@ -67,8 +67,8 @@ describe("SubjectCard primary listing", () => {
   });
 
   it("says a failed check on the line, with no link", () => {
-    card({ ...LISTED, status: "unavailable", quote: null, exchange: null, link: null });
-    expect(screen.getByText("could not be checked — PermID did not answer")).toBeTruthy();
+    card({ ...LISTED, status: "unavailable", quote: null, exchange: null, link: null, reason: "bad_response" });
+    expect(screen.getByText("could not be checked — PermID returned an error")).toBeTruthy();
     expect(screen.queryByRole("link", { name: /opens in a new tab/ })).toBeNull();
   });
 
