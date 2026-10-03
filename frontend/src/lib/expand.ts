@@ -100,6 +100,8 @@ export interface EdgeLite {
   source: string;
   target: string;
   category: string;
+  /** Phase 219: the relationship has ended. Read by `rankFrontier` (Phase 283). */
+  ended?: boolean;
 }
 
 /** A frontier node and the key its hop uses. Exactly one of `lei` or
@@ -212,4 +214,93 @@ export function mergeStatements(base: Stmt[], extra: Stmt[]): Stmt[] {
     }
   }
   return out;
+}
+
+/** Rank a frontier before it is sent (Phase 283).
+ *
+ * `/expand-layer` runs at most 25 hops per call and names the rest in
+ * `capped`, so the order the frontier is sent in decides which companies are
+ * expanded first. Bundle order is arbitrary; this puts first:
+ *
+ * 1. the nodes nearest the subject — fewest ownership/control steps back
+ *    towards it (down the owned edges when digging up for owners, up them
+ *    when digging down for subsidiaries) to a node with nothing further that
+ *    way, which is where the subject sits;
+ * 2. then a node that reaches the subject along current links before one
+ *    that reaches it only through an ended one;
+ * 3. then a node keyed on an LEI (the fuller hop) before a register-only one;
+ * 4. then the order it arrived in, so the ranking is deterministic.
+ *
+ * Distances are read from the raw edges the frontier was computed on. A node
+ * the walk cannot place (no edge back towards the subject) sorts after every
+ * placed node. Pure: the logic-only suite pins it.
+ */
+export function rankFrontier(
+  anchors: FrontierAnchor[],
+  edges: EdgeLite[],
+  direction: ExpandDirection = "owners"
+): FrontierAnchor[] {
+  if (anchors.length < 2) return anchors;
+  const oc = edges.filter((e) => e.category === "ownership" || e.category === "control");
+  // The step towards the subject: owners → the company it owns; subsidiaries
+  // → the company that owns it.
+  const towards = new Map<string, { next: string; ended: boolean }[]>();
+  const nodes = new Set<string>();
+  for (const e of oc) {
+    const [from, next] = direction === "owners" ? [e.source, e.target] : [e.target, e.source];
+    nodes.add(from);
+    nodes.add(next);
+    const list = towards.get(from) ?? [];
+    list.push({ next, ended: Boolean(e.ended) });
+    towards.set(from, list);
+  }
+  // Multi-source BFS from the nodes with nothing further towards the subject.
+  // `all` counts every edge; `current` only edges that have not ended.
+  const distances = (useEnded: boolean): Map<string, number> => {
+    const back = new Map<string, string[]>();
+    for (const [from, list] of towards) {
+      for (const { next, ended } of list) {
+        if (ended && !useEnded) continue;
+        const l = back.get(next) ?? [];
+        l.push(from);
+        back.set(next, l);
+      }
+    }
+    const dist = new Map<string, number>();
+    let rank: string[] = [];
+    for (const n of nodes) {
+      if (!towards.has(n)) {
+        dist.set(n, 0);
+        rank.push(n);
+      }
+    }
+    while (rank.length) {
+      const next: string[] = [];
+      for (const n of rank) {
+        for (const from of back.get(n) ?? []) {
+          if (!dist.has(from)) {
+            dist.set(from, (dist.get(n) ?? 0) + 1);
+            next.push(from);
+          }
+        }
+      }
+      rank = next;
+    }
+    return dist;
+  };
+  const all = distances(true);
+  const current = distances(false);
+  const key = (f: FrontierAnchor, i: number): number[] => [
+    all.get(f.anchor) ?? Number.MAX_SAFE_INTEGER,
+    current.has(f.anchor) ? 0 : 1,
+    f.lei ? 0 : 1,
+    i,
+  ];
+  return anchors
+    .map((f, i) => ({ f, k: key(f, i) }))
+    .sort((a, b) => {
+      for (let j = 0; j < a.k.length; j++) if (a.k[j] !== b.k[j]) return a.k[j] - b.k[j];
+      return 0;
+    })
+    .map(({ f }) => f);
 }

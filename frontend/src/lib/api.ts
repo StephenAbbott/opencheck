@@ -500,6 +500,19 @@ export interface ExpandLayerResponse {
   retry_after_s?: number | null;
   /** Phase 234: anchors that were run and could not be expanded, with why. */
   failed?: { anchor: string; lei?: string | null; status: number; reason: string }[];
+  /** Phase 283: anchors past the per-call cap, in the order sent — not run.
+   *  Never in `expanded` or `deferred`; send them again (no wait needed). */
+  capped?: string[];
+  /** Phase 283: what the layer's hops could not fully check, merged by
+   *  (source, check, reason) with `hops` = how many expanded companies it hit.
+   *  Counts only, never names. An empty `risk_signals` beside a non-empty
+   *  list is not a clean layer. */
+  degraded_sources?: LayerDegradation[];
+}
+
+/** One merged `/expand-layer` degradation (Phase 283). */
+export interface LayerDegradation extends DegradedSource {
+  hops: number;
 }
 
 export type NetworkExportFormat =

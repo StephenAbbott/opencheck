@@ -348,3 +348,60 @@ describe("Phase 250", () => {
     expect(screen.getByText("Structural context:")).toBeInTheDocument();
   });
 });
+
+// Phase 283 — capped frontier nodes are sent again; hop degradations are shown.
+describe("an /expand-layer answer that is not the whole story (Phase 283)", () => {
+  it("Run FullCheck sends the capped companies straight back in the same layer", async () => {
+    expandLayer
+      .mockResolvedValueOnce({
+        bods: [], risk_signals: [], expanded: ["A"], capped: ["B"], count: 1, truncated: true,
+      })
+      .mockResolvedValue({ bods: [], risk_signals: [], expanded: ["B"], count: 1, truncated: false });
+    const user = userEvent.setup();
+    render(<BodsGraphExplorer statements={[A, B]} fullCheck signals={[]} />);
+    await user.click(screen.getByRole("button", { name: /Run FullCheck/ }));
+    await waitFor(() => expect(screen.getByText(/FullCheck complete/)).toBeInTheDocument());
+    expect(expandLayer).toHaveBeenCalledTimes(2);
+    const second = expandLayer.mock.calls[1][0] as { anchor: string }[];
+    expect(second.map((f) => f.anchor)).toEqual(["B"]);
+  });
+
+  it("says how many were capped when a layer is added by hand", async () => {
+    expandLayer.mockResolvedValue({
+      bods: [], risk_signals: [], expanded: ["A"], capped: ["B"], count: 1, truncated: true,
+    });
+    const user = userEvent.setup();
+    render(<BodsGraphExplorer statements={[A, B]} fullCheck signals={[]} />);
+    await user.click(screen.getByRole("button", { name: /Add the next layer/ }));
+    await waitFor(() =>
+      expect(screen.getByText(/1 company at the edge was not expanded in this step/)).toBeInTheDocument()
+    );
+  });
+
+  it("shows the hops' failed screens, and Reset clears them", async () => {
+    expandLayer.mockResolvedValue({
+      bods: [C],
+      risk_signals: [],
+      expanded: ["A", "B"],
+      count: 2,
+      truncated: false,
+      capped: [],
+      degraded_sources: [{
+        source_id: "opensanctions", check: "cross_source_names", reason: "timeout",
+        affected_signals: ["RELATED_SANCTIONED"], detail: "server sentence", hops: 2,
+      }],
+    });
+    const user = userEvent.setup();
+    renderPanel();
+    await addLayer(user);
+    const notice = screen.getByRole("status", { name: "Network screening incomplete" });
+    expect(notice).toHaveTextContent(
+      "Sanctions and PEP screening did not fully run for 2 companies expanded in this network"
+    );
+    expect(notice).toHaveTextContent("the upstream service timed out");
+    // No re-run button: a hop is not re-run from here.
+    expect(screen.queryByRole("button", { name: "Re-run screening" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.queryByRole("status", { name: "Network screening incomplete" })).not.toBeInTheDocument();
+  });
+});

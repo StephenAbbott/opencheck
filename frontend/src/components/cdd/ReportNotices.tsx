@@ -65,19 +65,29 @@ export function DegradedScreensNotice({
   degraded,
   sourceNames = {},
   onRetry,
+  title = "Screening incomplete",
+  id = "screening-incomplete",
+  className = "mt-6 mb-8",
 }: {
   degraded: DegradedSource[];
   sourceNames?: Record<string, string>;
   /** Re-runs the lookup bypassing the replay cache; absent while streaming. */
   onRetry?: () => void;
+  /** Phase 283: the FullCheck explorer reuses this notice for its expanded
+   *  layers, under its own heading and id (the report's notice keeps
+   *  `#screening-incomplete`, which the verdict links to). */
+  title?: string;
+  id?: string;
+  /** Outer spacing, so the explorer can sit it inside its own panel. */
+  className?: string;
 }) {
   if (degraded.length === 0) return null;
   return (
     <section
-      id="screening-incomplete"
+      id={id}
       role="status"
-      aria-label="Screening incomplete"
-      className="scroll-mt-4 mt-6 mb-8 rounded-oo border border-amber-300 bg-amber-50 p-5"
+      aria-label={title}
+      className={`scroll-mt-4 ${className} rounded-oo border border-amber-300 bg-amber-50 p-5`}
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-3 min-w-0">
@@ -98,7 +108,7 @@ export function DegradedScreensNotice({
           </svg>
           <div className="min-w-0">
             <p className="font-head font-bold text-oo-body text-amber-900">
-              Screening incomplete — {degraded.length} check
+              {title} — {degraded.length} check
               {degraded.length === 1 ? "" : "s"} did not fully run
             </p>
             <ul className="mt-2 space-y-1.5 text-[12.5px] leading-[1.6] text-amber-900">

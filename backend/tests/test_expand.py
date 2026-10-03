@@ -413,3 +413,170 @@ def test_anchor_replacements_seed_the_gleif_subject_only_for_an_lei():
     assert repl == {_stable_id("companies_house", "entity", _CH_SUBJECT): "ANCHOR"}
     # The parent shares no identifier value with the subject: untouched.
     assert _stable_id("companies_house", "entity", _CH_PARENT) not in repl
+
+
+# ── Phase 283: capped frontier nodes are named; hop degradations are kept ────
+
+
+def test_a_frontier_past_the_cap_names_the_capped_anchors(client, monkeypatch):
+    """A frontier of 30 runs 25 hops and names the other 5, in the order sent —
+    they used to be in neither ``expanded`` nor ``deferred``."""
+    _patch_lookup(monkeypatch)
+    items = [{"lei": f"5493001KJTIIGC8Y{n:04d}", "anchor": f"ANC-{n}"} for n in range(30)]
+    r = client.post("/expand-layer", json={"items": items})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 25
+    assert body["expanded"] == [f"ANC-{n}" for n in range(25)]
+    assert body["capped"] == [f"ANC-{n}" for n in range(25, 30)]
+    assert body["deferred"] == []
+    assert body["truncated"] is True
+
+
+def test_a_layer_within_the_cap_caps_nothing(client, monkeypatch):
+    _patch_lookup(monkeypatch)
+    r = client.post("/expand-layer", json={"items": [{"lei": _LEI_A, "anchor": "A"}]})
+    body = r.json()
+    assert body["capped"] == []
+    assert body["truncated"] is False
+    assert body["degraded_sources"] == []
+
+
+def _screen_degradation(reason="timeout", signals=("RELATED_SANCTIONED", "RELATED_PEP")):
+    from opencheck.risk import DegradedSource
+    return DegradedSource(
+        source_id="opensanctions", check="cross_source_names",
+        affected_signals=list(signals),
+        detail="2 of 3 related parties were not screened", reason=reason,
+    )
+
+
+def test_a_register_hop_whose_screen_fails_reports_it(client, monkeypatch):
+    """The register hop collected its degradation records and dropped them, so a
+    failed screen in a hop read as a screened, clean node."""
+    fetched: list[str] = []
+    screened: list[list[dict]] = []
+    _patch_register_hop(monkeypatch, fetched=fetched, screened=screened)
+
+    async def _failing_screen(bods, *, degraded=None, **kwargs):
+        degraded.append(_screen_degradation())
+        return []
+
+    monkeypatch.setattr("opencheck.routers.expand.assess_cross_source_names", _failing_screen)
+    r = client.post("/expand-layer", json={
+        "items": [{"anchor": "NODE-1", "scheme": "GB-COH", "id": _CH_SUBJECT}],
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["risk_signals"] == []
+    [deg] = body["degraded_sources"]
+    assert deg["source_id"] == "opensanctions"
+    assert deg["check"] == "cross_source_names"
+    assert deg["reason"] == "timeout"
+    assert deg["affected_signals"] == ["RELATED_SANCTIONED", "RELATED_PEP"]
+    assert deg["hops"] == 1
+    assert deg["detail"] == (
+        "Sanctions and PEP screening did not fully run for 1 of 1 company expanded in this layer"
+    )
+
+
+def test_a_register_that_refused_is_reported_not_drawn_as_empty(client, monkeypatch):
+    """A register that recorded a refusal and returned a stub yields no BODS — and,
+    since Phase 283, the refusal, rather than a node that looks owner-less."""
+    from opencheck import degradation
+
+    fetched: list[str] = []
+    _patch_register_hop(monkeypatch, fetched=fetched, screened=[])
+
+    async def _refusing_fetch(adapter, hit_id, **kwargs):
+        degradation.record("companies_house", "the register refused the request",
+                           reason="rate_limited")
+        return {"source_id": "companies_house", "is_stub": True}, None
+
+    monkeypatch.setattr("opencheck.routers.expand._fetch_with_provenance", _refusing_fetch)
+    r = client.post("/expand-layer", json={
+        "items": [{"anchor": "NODE-1", "scheme": "GB-COH", "id": _CH_SUBJECT}],
+    })
+    body = r.json()
+    assert body["bods"] == []
+    [deg] = body["degraded_sources"]
+    assert (deg["source_id"], deg["check"], deg["reason"]) == (
+        "companies_house", "source_fetch", "rate_limited"
+    )
+    assert deg["detail"].startswith("The register did not fully run for 1 of 1")
+
+
+def test_an_lei_hop_reports_only_its_screening_degradations(client, monkeypatch):
+    """An LEI hop is a full lookup; FullCheck reports whether the companies it
+    reached were screened, not which of forty sources did not answer."""
+    def _degraded(lei):
+        return [
+            _screen_degradation().to_dict(),
+            {"source_id": "icij", "check": "icij_offshore_leaks",
+             "affected_signals": ["OFFSHORE_LEAKS"], "detail": "x", "reason": "upstream_error"},
+            {"source_id": "jar_lithuania", "check": "source_fetch",
+             "affected_signals": [], "detail": "did not answer", "reason": "upstream_error"},
+            {"source_id": "openaleph", "check": "source_read",
+             "affected_signals": [], "detail": "partial", "reason": "timeout"},
+        ]
+
+    async def _fake_lookup(*, lei, deepen_top=3):
+        return SimpleNamespace(lei=lei, bods=_layer(lei), bods_issues=[], risk_signals=[],
+                               degraded_sources=_degraded(lei))
+
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake_lookup)
+    r = client.post("/expand-layer", json={"items": [{"lei": _LEI_A, "anchor": "A"}]})
+    checks = sorted(d["check"] for d in r.json()["degraded_sources"])
+    assert checks == ["cross_source_names", "icij_offshore_leaks"]
+
+
+def test_layer_degradations_are_merged_across_hops(client, monkeypatch):
+    """One record per (source, check, reason), counting the companies it hit,
+    with the affected signals unioned — counts only, never names."""
+    by_lei = {
+        _LEI_A: [_screen_degradation(signals=("RELATED_SANCTIONED",)).to_dict()],
+        _LEI_B: [_screen_degradation(signals=("RELATED_PEP",)).to_dict(),
+                 _screen_degradation(signals=("RELATED_PEP",)).to_dict()],
+        "5493001KJTIIGC8Y9999": [],
+    }
+
+    async def _fake_lookup(*, lei, deepen_top=3):
+        return SimpleNamespace(lei=lei, bods=_layer(lei), bods_issues=[], risk_signals=[],
+                               degraded_sources=by_lei[lei])
+
+    monkeypatch.setattr("opencheck.routers.lookup._lookup_impl", _fake_lookup)
+    r = client.post("/expand-layer", json={"items": [
+        {"lei": lei, "anchor": f"A-{n}"} for n, lei in enumerate(by_lei)
+    ]})
+    [deg] = r.json()["degraded_sources"]
+    assert deg["hops"] == 2
+    assert deg["affected_signals"] == ["RELATED_SANCTIONED", "RELATED_PEP"]
+    assert deg["detail"] == (
+        "Sanctions and PEP screening did not fully run for 2 of 3 companies expanded in this layer"
+    )
+    # No party name from any hop's bundle reaches the detail.
+    assert "Owner" not in deg["detail"] and "HoldCo" not in deg["detail"]
+
+
+def test_a_subsidiaries_hop_reports_what_gleif_did_not_answer(client, monkeypatch):
+    async def _fake_subs(lei, *, include_bods=False):
+        return {"bods": [], "degraded_detail": "GLEIF refused the ultimate children.",
+                "unavailable_reason": "rate_limited", "truncated": True}
+
+    monkeypatch.setattr("opencheck.subsidiaries.assemble_subsidiaries", _fake_subs)
+    r = client.post("/expand-layer", json={
+        "items": [{"lei": _LEI_A, "anchor": "LEAF-A"}], "direction": "subsidiaries",
+    })
+    degs = {(d["check"], d["reason"]) for d in r.json()["degraded_sources"]}
+    assert degs == {("gleif_subsidiaries", "rate_limited"), ("gleif_subsidiaries", "truncated")}
+
+
+def test_a_complete_subsidiaries_hop_reports_nothing(client, monkeypatch):
+    async def _fake_subs(lei, *, include_bods=False):
+        return {"bods": [], "degraded_detail": None, "truncated": False}
+
+    monkeypatch.setattr("opencheck.subsidiaries.assemble_subsidiaries", _fake_subs)
+    r = client.post("/expand-layer", json={
+        "items": [{"lei": _LEI_A, "anchor": "LEAF-A"}], "direction": "subsidiaries",
+    })
+    assert r.json()["degraded_sources"] == []
