@@ -13,21 +13,32 @@ This module replaces "the first N" with a deliberate choice, in three steps:
 
 1. **Dedupe across sources.** The same person often arrives two or three times
    (Wikidata and OpenCorporates both describe a director). Targets of the same
-   kind merge when they share an identifier, or when their normalised names
-   are identical and their birth years (founding years, for entities) do not
+   kind merge when they share an identifier, or when their name keys are
+   identical and their birth years (founding years, for entities) do not
    conflict — a year missing on one side is not a conflict (Stephen, 2 Oct
    2026). An entity additionally must not have conflicting jurisdictions. A
    cluster never holds two different years, so a year-less record cannot
-   chain two dated namesakes together.
+   chain two dated namesakes together. A person's name key ignores word
+   order and honorifics (Phase 282): "FIORE, Norman Benito" and "NORMAN
+   BENITO FIORE" are one director, not two.
 2. **Rank.** Current before former; within each, owners and controllers, then
-   board members and senior managing officials, then everyone else; within
-   each tier, a party linked directly to the looked-up company before one
-   linked further out. Ties keep bundle order, so the result is deterministic.
-3. **Cap**, and report what the cap left out — counts only, never names.
+   officers, then everyone else; within each tier, a party linked directly
+   to the looked-up company before one linked further out; and among
+   officers equally close, board chair, then board members, then senior
+   managing officials (Phase 282).
+3. **Break ties without bundle order** (Phase 282). Bundle order is the order
+   the sources answered, so it changed between runs, and with it which
+   parties at the limit were screened (Eli Lilly, 2 Oct 2026). Ties go to the
+   party more sources name, then by name key, birth/founding year and
+   identifiers. statementIds are never used: they change between runs.
+4. **Cap**, and report what the cap left out — counts only, never names.
 
-A screen then reads one representative per cluster and hands any signal back
-to **every** statement in the cluster (``fan_out``), so the per-source cards
-keep their badges exactly as when each copy was screened on its own. A cluster
+A screen then reads one representative per cluster, and a signal it earns is
+attached to the whole party (``attach_to_party``): one signal per party per
+record, carrying **every** statement of the cluster in
+``evidence.subject_statement_ids`` so each per-source card keeps its badge
+(Phase 282; until then each statement got its own copy, and one party
+counted once per source that named it). A cluster
 held together by an identifier can carry genuinely different spellings —
 GLEIF's Cyrillic legal name and OpenSanctions' English one — and a name
 screen matches on the spelling, so each distinct normalised name is read once
@@ -44,6 +55,7 @@ from typing import Any
 
 from . import names
 from .bods.refs import resolver
+from .bods.source_ids import source_id_of
 from .reconcile import _identifier_keys
 from .risk import (
     _ended_relationship_ids,
@@ -89,6 +101,11 @@ MAX_NAMES_PER_PARTY = 3
 TIER_OWNER_CONTROL = 0
 TIER_ROLE = 1
 TIER_OTHER = 2
+
+#: Order of officer roles inside ``TIER_ROLE`` (Phase 282), best first.
+_ROLE_RANK = {"boardChair": 0, "boardMember": 1, "seniorManagingOfficial": 2}
+#: Rank of a party with no officer role (any tier other than ``TIER_ROLE``).
+_NO_ROLE_RANK = len(_ROLE_RANK)
 
 
 @dataclass
@@ -167,18 +184,33 @@ def select(
     stmts = {_statement_id(s): s for s in bods if _statement_id(s)}
     clusters = _cluster(targets, stmts)
     facts = _party_facts(bods, subject_ids)
-    position = {id(t): i for i, t in enumerate(targets)}
 
-    ranked: list[tuple[tuple[int, int, int, int], list[dict[str, Any]]]] = []
-    for members in clusters:
+    ranked: list[tuple[tuple[Any, ...], list[dict[str, Any]]]] = []
+    for cluster in clusters:
+        members = sorted(cluster.members, key=lambda m: _member_order(m, stmts))
         reps = _representatives(members)
         rep = reps[0]
-        tier, direct = min(
-            (facts.get(m["statement_id"], (TIER_OTHER, False)) for m in members),
-            key=lambda f: (f[0], not f[1]),
+        tier, role, direct = min(
+            (
+                facts.get(m["statement_id"], (TIER_OTHER, _NO_ROLE_RANK, False))
+                for m in members
+            ),
+            key=lambda f: (f[0], not f[2], f[1]),
         )
-        first_seen = min(position[id(m)] for m in members)
-        key = (1 if rep["former"] else 0, tier, 0 if direct else 1, first_seen)
+        key = (
+            1 if rep["former"] else 0,
+            tier,
+            0 if direct else 1,
+            role,
+            # Phase 282: ties without bundle order. A party more registers
+            # name first, then fields that do not change between runs.
+            -len({_source_key(stmts.get(m["statement_id"]) or {}) for m in members}),
+            min(cluster.names) if cluster.names else "",
+            min(cluster.years) if cluster.years else 0,
+            tuple(sorted(cluster.idents)),
+            tuple(sorted(cluster.jurisdictions)),
+            tuple(sorted(names.normalise_name(m.get("name") or "") for m in members)),
+        )
         ranked.append((key, reps))
     ranked.sort(key=lambda kr: kr[0])
 
@@ -198,34 +230,45 @@ def select(
     return out
 
 
-def fan_out(signals: list[Any], screened: list[dict[str, Any]]) -> list[Any]:
-    """Give every member of a cluster the signals its representative earned.
+def attach_to_party(signals: list[Any], screened: list[dict[str, Any]]) -> list[Any]:
+    """Attach each signal a representative earned to its whole party.
 
-    A signal is attributed to the representative's statement through
-    ``evidence.subject_statement_id``; each other member gets a copy carrying
-    its own statementId (Stephen, 2 Oct 2026: attach to both). Copies are
-    ``dataclasses.replace`` of the original with a fresh evidence dict, so
-    nothing is shared between them. Signals of any other shape — a subject
-    signal keyed on ``statement_id`` — pass through untouched.
+    A signal names the representative it was screened as through
+    ``evidence.subject_statement_id``. When that representative's cluster
+    holds several statements, the signal is re-anchored on the party's first
+    representative and lists every member in
+    ``evidence.subject_statement_ids`` — the shape ``signalScope`` already
+    reads (Phase 247), so the card for each source that named the party
+    keeps its badge (Stephen, 2 Oct 2026: attach to both).
+
+    Phase 282 replaced one copy per statement with this. The copies made one
+    party count once per source that named it — Moody's Corporation was two
+    ``RELATED_EXPORT_RISK`` signals on Risk First Limited — in the API, the
+    exports, batch screening and ``/signalstats``. Two spellings of one party
+    that match the same record now share an anchor, so each screen's own
+    ``_dedupe`` collapses them to one. Signals of any other shape — a subject
+    signal keyed on ``statement_id`` — pass through untouched. Each changed
+    signal is a ``dataclasses.replace`` with a fresh evidence dict.
     """
-    extra: dict[str, list[str]] = {}
+    party: dict[str, tuple[str, list[str]]] = {}
     for rep in screened:
-        sids = [s for s in rep.get("statement_ids") or [] if s != rep["statement_id"]]
-        if sids:
-            extra[rep["statement_id"]] = sids
-    # Two spellings of one party can match the same record; their copies then
-    # coincide on (code, source, record, statement), which each screen's own
-    # ``_dedupe`` collapses.
-    if not extra:
-        return list(signals)
+        sids = list(rep.get("statement_ids") or [rep["statement_id"]])
+        anchor = rep.get("party_anchor") or rep["statement_id"]
+        party[rep["statement_id"]] = (anchor, sids)
     out: list[Any] = []
     for sig in signals:
-        out.append(sig)
-        sub = str((getattr(sig, "evidence", None) or {}).get("subject_statement_id") or "")
-        for sid in extra.get(sub, ()):
-            evidence = dict(sig.evidence)
-            evidence["subject_statement_id"] = sid
-            out.append(dataclasses.replace(sig, evidence=evidence))
+        evidence = getattr(sig, "evidence", None) or {}
+        sub = str(evidence.get("subject_statement_id") or "")
+        hit = party.get(sub)
+        if hit is None or (len(hit[1]) < 2 and hit[0] == sub):
+            out.append(sig)
+            continue
+        anchor, sids = hit
+        new_evidence = dict(evidence)
+        new_evidence["subject_statement_id"] = anchor
+        if len(sids) > 1:
+            new_evidence["subject_statement_ids"] = sorted(set(sids))
+        out.append(dataclasses.replace(sig, evidence=new_evidence))
     return out
 
 
@@ -252,14 +295,23 @@ class _Cluster:
     jurisdictions: set[str] = field(default_factory=set)
 
 
+def _name_key(name: str | None, kind: str) -> str:
+    """What two targets must share to merge on name: a person's name key is
+    order- and honorific-insensitive (``names.person_name_key``, Phase 282);
+    an entity's is its normalised name, where word order is meaningful."""
+    if kind == "person":
+        return names.person_name_key(name)
+    return names.normalise_name(name or "")
+
+
 def _cluster(
     targets: list[dict[str, Any]], stmts: dict[str, dict[str, Any]]
-) -> list[list[dict[str, Any]]]:
+) -> list[_Cluster]:
     clusters: list[_Cluster] = []
     for t in targets:
         stmt = stmts.get(t["statement_id"]) or {}
         rd = stmt.get("recordDetails") or {}
-        name = names.normalise_name(t.get("name") or "")
+        name = _name_key(t.get("name"), t["kind"])
         idents = _identifier_keys(stmt) if stmt else set()
         year = _year(rd, t["kind"])
         juris = _jurisdiction(rd) if t["kind"] == "entity" else None
@@ -290,7 +342,7 @@ def _cluster(
             home.years.add(year)
         if juris is not None:
             home.jurisdictions.add(juris)
-    return [c.members for c in clusters]
+    return clusters
 
 
 def _year(rd: dict[str, Any], kind: str) -> int | None:
@@ -308,6 +360,27 @@ def _jurisdiction(rd: dict[str, Any]) -> str | None:
     return None
 
 
+def _source_key(stmt: dict[str, Any]) -> str:
+    """Which source a statement came from, for counting distinct sources:
+    the registered adapter id, else the source description as published."""
+    sid = source_id_of(stmt) if stmt else None
+    if sid:
+        return sid
+    return str((stmt.get("source") or {}).get("description") or "")
+
+
+def _member_order(m: dict[str, Any], stmts: dict[str, dict[str, Any]]) -> tuple[str, ...]:
+    """A cluster's members in an order that does not depend on bundle order
+    (Phase 282): by spelling, then source. The representative — whose
+    spelling is screened first and whose facts lead — is the first of these.
+    """
+    return (
+        names.normalise_name(m.get("name") or ""),
+        _source_key(stmts.get(m["statement_id"]) or {}),
+        str(m.get("name") or ""),
+    )
+
+
 def _representatives(members: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """One target per distinct spelling in the cluster, all carrying its facts.
 
@@ -316,10 +389,14 @@ def _representatives(members: list[dict[str, Any]]) -> list[dict[str, Any]]:
     the statementId of the member it was spelled from.
     """
     base = _representative(members)
+    base["party_anchor"] = base["statement_id"]
     out = [base]
-    seen = {names.normalise_name(base.get("name") or "")}
+    kind = base.get("kind") or ""
+    # Spellings that differ only in word order or honorifics are one spelling
+    # to a name screen (Phase 282), so a person is not read twice for them.
+    seen = {_name_key(base.get("name"), kind)}
     for m in members[1:]:
-        key = names.normalise_name(m.get("name") or "")
+        key = _name_key(m.get("name"), kind)
         if not key or key in seen or len(out) >= MAX_NAMES_PER_PARTY:
             continue
         seen.add(key)
@@ -328,16 +405,17 @@ def _representatives(members: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _representative(members: list[dict[str, Any]]) -> dict[str, Any]:
-    """The first member in bundle order, with the cluster's facts pooled.
+    """The first member (``_member_order``), with the cluster's facts pooled.
 
     A year one source omits is taken from another (the same person, by the
     merge rule); nationalities and countries are unioned; a cluster is former
     only when **every** member is — one current role is a current party.
     """
     rep = dict(members[0])
-    for key in ("birth_year", "founded"):
-        if key in rep and not rep[key]:
-            rep[key] = next((m.get(key) for m in members if m.get(key)), rep[key])
+    if "birth_year" in rep:
+        years = sorted(m["birth_year"] for m in members if m.get("birth_year"))
+        if years:
+            rep["birth_year"] = years[0]
     if "founded" in rep:
         dated = sorted(str(m["founded"]) for m in members if m.get("founded"))
         if dated:
@@ -364,8 +442,12 @@ def _representative(members: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _party_facts(
     bods: list[dict[str, Any]], subject_ids: frozenset[str] | set[str]
-) -> dict[str, tuple[int, bool]]:
-    """statementId → (best role tier, linked directly to the subject?).
+) -> dict[str, tuple[int, int, bool]]:
+    """statementId → (best role tier, officer rank, linked directly?).
+
+    The officer rank orders chair, board member and senior managing official
+    inside ``TIER_ROLE`` (Phase 282); it is ``_NO_ROLE_RANK`` in every other
+    tier, so it never reorders owners or "other" parties.
 
     Read from **current** relationships only: an ended directorship says why a
     party is former, not that it is an officer now. A party that is only ever
@@ -374,22 +456,24 @@ def _party_facts(
     """
     ended = _ended_relationship_ids(bods)
     resolve = resolver(bods)
-    out: dict[str, tuple[int, bool]] = {}
+    out: dict[str, tuple[int, int, bool]] = {}
 
-    def _note(sid: str, tier: int, direct: bool) -> None:
+    def _note(sid: str, tier: int, role: int, direct: bool) -> None:
         if not sid:
             return
         cur = out.get(sid)
         if cur is None:
-            out[sid] = (tier, direct)
+            out[sid] = (tier, role, direct)
         else:
-            out[sid] = (min(cur[0], tier), cur[1] or direct)
+            best = min((cur[0], cur[1]), (tier, role))
+            out[sid] = (best[0], best[1], cur[2] or direct)
 
     for stmt in bods:
         if _stmt_kind(stmt) != "relationship" or _statement_id(stmt) in ended:
             continue
         subj, ip, _ = _relationship_endpoints(stmt, resolve)
         tier = TIER_OTHER
+        role = _NO_ROLE_RANK
         for interest in _interests(stmt):
             if not isinstance(interest, dict):
                 continue
@@ -401,6 +485,9 @@ def _party_facts(
                 break
             if itype in _ROLE_INTERESTS:
                 tier = TIER_ROLE
-        _note(ip, tier, subj in subject_ids)
-        _note(subj, TIER_OTHER, ip in subject_ids)
+                role = min(role, _ROLE_RANK[itype])
+        if tier != TIER_ROLE:
+            role = _NO_ROLE_RANK
+        _note(ip, tier, role, subj in subject_ids)
+        _note(subj, TIER_OTHER, _NO_ROLE_RANK, ip in subject_ids)
     return out

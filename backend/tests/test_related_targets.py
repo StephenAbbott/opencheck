@@ -104,7 +104,7 @@ def test_same_name_one_year_missing_merges_and_pools_the_year() -> None:
     sel = _select(bods)
     assert sel.total == 1 and sel.statements == 2
     rep = sel.screened[0]
-    assert rep["statement_ids"] == ["wd", "oc"]
+    assert sorted(rep["statement_ids"]) == ["oc", "wd"]
     assert rep["birth_year"] == 1971
 
 
@@ -204,8 +204,10 @@ def test_beneficial_ownership_flag_ranks_as_owner_whatever_the_type() -> None:
     assert [r["statement_id"] for r in sel.screened] == ["b", "a"]
 
 
-def test_without_an_anchor_bundle_order_breaks_ties() -> None:
-    sel = _select([_person(f"p{i}", f"Person Number{i}") for i in range(5)])
+def test_without_an_anchor_name_breaks_ties_not_bundle_order() -> None:
+    # Phase 282: bundle order is the order sources answered, so it is no
+    # longer a tie-break. Reversed bundle, same order out.
+    sel = _select([_person(f"p{i}", f"Person Number{i}") for i in reversed(range(5))])
     assert [r["statement_id"] for r in sel.screened] == [f"p{i}" for i in range(5)]
 
 
@@ -246,7 +248,7 @@ def test_dedupe_happens_before_the_cap() -> None:
 
 
 # ---------------------------------------------------------------------
-# Fan-out
+# Attaching a signal to the whole party (Phase 282)
 # ---------------------------------------------------------------------
 
 
@@ -256,20 +258,43 @@ def _sig(sub: str, **extra: Any) -> RiskSignal:
                       evidence={"subject_statement_id": sub, **extra})
 
 
-def test_fan_out_gives_each_statement_its_own_copy() -> None:
-    reps = [{"statement_id": "wd", "statement_ids": ["wd", "oc"]}]
-    out = related_targets.fan_out([_sig("wd", score=1.0)], reps)
-    assert [s.evidence["subject_statement_id"] for s in out] == ["wd", "oc"]
-    assert out[1].evidence["score"] == 1.0
-    out[1].evidence["score"] = 0
-    assert out[0].evidence["score"] == 1.0  # not shared
+def test_one_signal_per_party_naming_every_statement() -> None:
+    # Phase 282: one signal carrying both statements, not one copy each —
+    # Moody's Corporation counted twice on Risk First Limited.
+    reps = [{"statement_id": "wd", "party_anchor": "wd", "statement_ids": ["wd", "oc"]}]
+    sig = _sig("wd", score=1.0)
+    out = related_targets.attach_to_party([sig], reps)
+    assert len(out) == 1
+    assert out[0].evidence["subject_statement_id"] == "wd"
+    assert out[0].evidence["subject_statement_ids"] == ["oc", "wd"]
+    assert out[0].evidence["score"] == 1.0
+    assert "subject_statement_ids" not in sig.evidence  # original untouched
 
 
-def test_fan_out_leaves_subject_signals_alone() -> None:
+def test_second_spelling_shares_the_party_anchor() -> None:
+    # Two spellings of one party read separately; a match on the second is
+    # re-anchored on the first, so the screen's own dedupe collapses them.
+    reps = [
+        {"statement_id": "gleif", "party_anchor": "gleif", "statement_ids": ["gleif", "os"]},
+        {"statement_id": "os", "party_anchor": "gleif", "statement_ids": ["gleif", "os"]},
+    ]
+    out = related_targets.attach_to_party([_sig("gleif"), _sig("os")], reps)
+    assert {s.evidence["subject_statement_id"] for s in out} == {"gleif"}
+    from opencheck.cross_check import _dedupe
+    assert len(_dedupe(out)) == 1
+
+
+def test_single_statement_party_is_untouched() -> None:
+    reps = [{"statement_id": "a", "party_anchor": "a", "statement_ids": ["a"]}]
+    sig = _sig("a")
+    assert related_targets.attach_to_party([sig], reps) == [sig]
+
+
+def test_attach_leaves_subject_signals_alone() -> None:
     sig = RiskSignal(code="OFFSHORE_LEAKS", confidence="low", summary="x",
                      source_id="icij", hit_id="n", evidence={"statement_id": "s", "subject": True})
     reps = [{"statement_id": "s", "statement_ids": ["s", "t"]}]
-    assert related_targets.fan_out([sig], reps) == [sig]
+    assert related_targets.attach_to_party([sig], reps) == [sig]
 
 
 # ---------------------------------------------------------------------
@@ -333,9 +358,10 @@ async def test_cross_check_screens_the_current_director_and_reports_the_cap(
     assert os_adapter.queries[0] == "Katherine Baicker"
     assert os_adapter.queries.count("Katherine Baicker") == 1
     assert len(os_adapter.queries) == 25
-    # The signal is on both statements that name her.
+    # One signal, naming both statements that name her (Phase 282).
     peps = [s for s in signals if s.code == RELATED_PEP]
-    assert sorted(s.evidence["subject_statement_id"] for s in peps) == ["oc", "wd"]
+    assert len(peps) == 1
+    assert peps[0].evidence["subject_statement_ids"] == ["oc", "wd"]
     # And the cap is said out loud, counts only.
     capped = [d for d in degraded if d.reason == DEGRADED_TRUNCATED]
     assert len(capped) == 1

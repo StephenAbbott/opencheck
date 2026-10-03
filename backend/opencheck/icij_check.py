@@ -92,11 +92,15 @@ already passed the name gates. Two gates follow (``_gate``):
 * **Jurisdiction.** The party's own country — the BODS ``jurisdiction`` code
   and its address countries — among the node's ``country_codes`` is the one
   corroboration an ICIJ match can carry. Only a corroborated *entity* match
-  is ``high``; every other match, and every person match (Stephen, 24 Sept
-  2026: a common name in a country is not corroboration), is ``medium``.
+  is ``high``; an uncorroborated entity match is ``medium``. A person match
+  is ``medium`` when corroborated (Stephen, 24 Sept 2026: a common name in a
+  country is not corroboration enough for ``high``) and ``low`` when not
+  (Phase 282). Countries on both sides with none in common is a mismatch,
+  and the match is dropped (Phase 282).
 
 A failed extend call degrades nothing: the date gate still runs off the
-table, and the matches stay at ``medium`` — the safe direction.
+table, entity matches stay at ``medium`` and person matches at ``low`` —
+the safe direction.
 
 Two more v0.2 shape changes, confirmed live 2026-07-30: the node type moved
 from ``type`` to ``types`` (both are read), and ``description`` is now a
@@ -454,10 +458,10 @@ async def assess_icij_names(
                 )
             )
 
-    # A deduped party was screened once; each of its statements gets the
-    # result (Phase 279). Subject signals carry ``statement_id`` and pass
-    # through untouched.
-    return _dedupe(related_targets.fan_out(signals, selection.screened))
+    # A deduped party was screened once; its result is one signal per record
+    # naming every statement of the party (Phases 279, 282). Subject signals
+    # carry ``statement_id`` and pass through untouched.
+    return _dedupe(related_targets.attach_to_party(signals, selection.screened))
 
 
 # ---------------------------------------------------------------------
@@ -583,7 +587,8 @@ def _party_facts(rd: dict[str, Any], kind: str) -> tuple[str | None, set[str]]:
     ``birthDate`` of a person (as published — ``YYYY``, ``YYYY-MM`` or a full
     date; only the year is compared), and the ISO 3166-1 alpha-2 countries of
     its ``jurisdiction`` (an entity's; ``US-DE`` counts as ``US``) and of its
-    addresses. Used by the Phase 237 gates in ``_gate``.
+    addresses — for a person, not its ``service`` addresses (Phase 282).
+    Used by the Phase 237 gates in ``_gate``.
     """
     raw_date = rd.get("foundingDate") if kind == _KIND_ENTITY else rd.get("birthDate")
     date = str(raw_date).strip() if raw_date else None
@@ -602,6 +607,15 @@ def _party_facts(rd: dict[str, Any], kind: str) -> tuple[str | None, set[str]]:
             _add(juris.get("code"))
     for addr in rd.get("addresses") or []:
         if isinstance(addr, dict):
+            # Phase 282 (Stephen, 3 Oct 2026): a person's SERVICE address is
+            # usually the company's own office, so it says where the company
+            # is, not the person — it neither corroborates nor contradicts.
+            # Ann Godbehere's only country was Shell Centre, London; it
+            # "contradicted" a Switzerland-only Appleby record that is very
+            # likely her (she was Swiss Re's CFO in Zürich). Companies House
+            # publishes only service addresses for officers.
+            if kind == _KIND_PERSON and addr.get("type") == "service":
+                continue
             country = addr.get("country")
             _add(country.get("code") if isinstance(country, dict) else country)
     return date, countries
@@ -776,7 +790,8 @@ async def _fetch_node_details(
     except Exception as exc:  # noqa: BLE001
         _LOG.warning(
             "ICIJ Offshore Leaks node details unavailable: %s: %s — "
-            "matches kept at medium confidence, date gate on the table.",
+            "entity matches kept at medium and person matches at low, date gate "
+            "on the table.",
             type(exc).__name__,
             exc,
         )
@@ -829,9 +844,12 @@ def _passes_name_gates(
       distinctive tokens (``names.distinctive_token_agreement``) — the
       Phase 120 gate. Character similarity cannot tell "BIFFA CORPORATE
       HOLDINGS LTD" (true) from "Barb Holdco Limited" (false): the shared
-      filler dominates the comparison. Person names carry no legal forms
-      and every token is distinctive, so persons rely on the similarity
-      threshold alone.
+      filler dominates the comparison.
+    * The target is a PERSON and the names disagree token by token
+      (``names.person_token_agreement``) — the Phase 282 gate. Before it,
+      persons relied on similarity alone, and "Robert Frederick Smith"
+      passed as "Robert Frederick White". Persons are also compared without
+      honorifics.
     """
     score = int(match.get("score") or 0)
     if score < min_score:
@@ -841,8 +859,24 @@ def _passes_name_gates(
     if not matched_name:
         return False
 
-    # Secondary name-similarity sanity check.
-    if _name_sim(target["name"], matched_name) < min_name_sim:
+    entityish = (
+        target["kind"] != _KIND_PERSON
+        or names.has_org_form_tokens(target["name"])
+        or names.has_org_form_tokens(matched_name)
+    )
+
+    # Secondary name-similarity sanity check. A person's honorifics are
+    # filler that lifts a short name over the bar (Phase 282: "Mr. Robert
+    # Frederick Smith" vs "Mr. Robert Frederick White" is 0.880 with "Mr."
+    # and 0.864 without), so persons are compared without them.
+    if entityish:
+        sim = _name_sim(target["name"], matched_name)
+    else:
+        sim = _name_sim(
+            names.strip_person_prefixes(target["name"]),
+            names.strip_person_prefixes(matched_name),
+        )
+    if sim < min_name_sim:
         return False
 
     # Distinctive-token gate. ICIJ's own scorer rated the ENERGEN/BIOGAS
@@ -852,16 +886,12 @@ def _passes_name_gates(
     # corporate officers and those are organisations for matching purposes.
     # Real personal names ("NICHOLAS PAUL RATCLIFFE") are all distinctive
     # tokens and rely on the similarity threshold alone.
-    entityish = (
-        target["kind"] != _KIND_PERSON
-        or names.has_org_form_tokens(target["name"])
-        or names.has_org_form_tokens(matched_name)
-    )
-    if entityish and not names.distinctive_token_agreement(
-        target["name"], matched_name
-    ):
-        return False
-    return True
+    if entityish:
+        return names.distinctive_token_agreement(target["name"], matched_name)
+    # Person token gate (Phase 282). Shared given names dominate a character
+    # score, so a different surname could pass on similarity alone; every
+    # name token of the shorter name must agree with one of the longer.
+    return names.person_token_agreement(target["name"], matched_name)
 
 
 def _leak_cutoff(
@@ -903,7 +933,10 @@ def _gate(
     * **Jurisdiction** — the party's countries (``_party_facts``) among the
       node's ``country_codes``. The only corroboration an ICIJ match carries,
       so the only way to ``high``, and for entities only: a person match is
-      ``medium`` whatever the countries say (Stephen, 24 Sept 2026).
+      at most ``medium`` (Stephen, 24 Sept 2026). Phase 282: a person match
+      the jurisdiction does not corroborate is ``low``, and a recorded
+      mismatch — both sides have countries, none shared — drops the match
+      for any party (Stephen, 3 Oct 2026).
 
     The evidence records each gate's inputs, outcome and one sentence
     (``gates``), so a reader can see why a match stands at its confidence.
@@ -948,14 +981,31 @@ def _gate(
         juris_status = "not_checked"
         notes.append("jurisdiction not checked: ICIJ record carries no country")
     else:
-        juris_status = "differs"
-        notes.append(
-            f"jurisdiction differs: {'/'.join(party_countries)} ≠ "
-            f"{'/'.join(record_countries)}"
-        )
+        # Phase 282 (Stephen, 3 Oct 2026): a recorded mismatch drops the
+        # match. The party's own countries and every country ICIJ holds for
+        # the node are both known and share nothing — the positive evidence
+        # that this is someone else. Before, it only annotated, and a Quantexa
+        # director (GB) still matched an Italy-only Pandora Papers officer at
+        # medium.
+        return False, "", {}
 
-    corroborated = juris_status == "corroborated" and kind != _KIND_PERSON
-    if not corroborated:
+    if kind == _KIND_PERSON:
+        # Phase 282 (Stephen, 3 Oct 2026): a person match with nothing to
+        # corroborate it is ``low``. ICIJ person nodes carry no birth date, so
+        # the jurisdiction is the only corroborator there is; without it a
+        # common name ("Christopher Jones") matches on spelling alone. With
+        # it, ``medium`` — never ``high`` (24 Sept 2026: a common name in a
+        # country is not corroboration enough for that).
+        if juris_status == "corroborated":
+            confidence = "medium"
+            notes.append("person match: capped at medium")
+        else:
+            confidence = "low"
+            notes.append("name-only person match: capped at low")
+    elif juris_status == "corroborated":
+        confidence = "high"
+    else:
+        confidence = "medium"
         notes.append("name-only match: capped at medium")
 
     evidence = {
@@ -972,7 +1022,7 @@ def _gate(
             "record_countries": record_countries,
         },
     }
-    return True, ("high" if corroborated else "medium"), evidence
+    return True, confidence, evidence
 
 
 def _signal_from_match(

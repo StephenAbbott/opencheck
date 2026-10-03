@@ -62,6 +62,7 @@ import unicodedata
 
 try:  # pragma: no cover - exercised via the ftm extra in CI/prod
     from rigour.names import remove_org_types as _rigour_remove_org_types
+    from rigour.names import remove_person_prefixes as _rigour_remove_person_prefixes
     from rigour.names import replace_org_types_compare as _rigour_org_compare
     from rigour.text import levenshtein_similarity as _rigour_lev_sim
     from rigour.text.scripts import is_dense_script as _rigour_is_dense
@@ -70,6 +71,7 @@ try:  # pragma: no cover - exercised via the ftm extra in CI/prod
     _HAS_RIGOUR_NAMES = True
 except ImportError:  # pragma: no cover - base install without the ftm extra
     _rigour_remove_org_types = None  # type: ignore[assignment]
+    _rigour_remove_person_prefixes = None  # type: ignore[assignment]
     _rigour_org_compare = None  # type: ignore[assignment]
     _rigour_lev_sim = None  # type: ignore[assignment]
     _rigour_is_dense = None  # type: ignore[assignment]
@@ -490,6 +492,92 @@ def distinctive_token_agreement(a: str | None, b: str | None) -> bool:
         return False
     small, large = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
     return all(_token_agrees(t, large) for t in small)
+
+
+# --- Phase 282: person names --------------------------------------------------
+
+#: Honorifics stripped when rigour is not installed (base install). rigour's
+#: ``remove_person_prefixes`` is the real list; this covers the forms the UK
+#: registers actually print, so dev and prod agree on the common cases.
+_FALLBACK_PERSON_PREFIXES = re.compile(
+    r"^(?:(?:mr|mrs|ms|miss|mx|dr|prof|sir|dame|lord|lady|rev)\.?\s+)+",
+    re.IGNORECASE,
+)
+
+
+def strip_person_prefixes(name: str | None) -> str:
+    """The person's name without leading honorifics ("Mr.", "Dame", "Dr").
+
+    Honorifics are shared filler, and in a short name they carry real weight
+    in a character score: "Mr. Robert Frederick Smith" vs "Mr. Robert
+    Frederick White" scores 0.880 (over the ICIJ bar of 0.87) where the same
+    names without "Mr." score 0.864 (Phase 282, Regulatory DataCorp).
+    """
+    text = (name or "").strip()
+    if not text:
+        return ""
+    if _rigour_remove_person_prefixes is not None:
+        stripped = _rigour_remove_person_prefixes(text).strip()
+    else:
+        stripped = _FALLBACK_PERSON_PREFIXES.sub("", text).strip()
+    return stripped or text
+
+
+def person_name_key(name: str | None) -> str:
+    """An order-invariant comparable key for a person's name.
+
+    Registers print the same person surname-first ("FIORE, Norman Benito",
+    Companies House) or given-name-first ("NORMAN BENITO FIORE",
+    OpenCorporates); a key that kept the order split one director into two
+    parties and doubled every signal (Phase 282, Quantexa). Honorifics are
+    dropped, the rest normalised and the tokens sorted.
+    """
+    return " ".join(sorted(normalise_name(strip_person_prefixes(name)).split()))
+
+
+def _person_token_agrees(token: str, candidates: list[str]) -> bool:
+    """Exact, or within rigour's default edit budget (≤20% of the shorter
+    token) for tokens of four or more characters. Looser than the
+    organisation rule's single edit on purpose: transliterated given names
+    differ by two ("Mohammed"/"Muhammad", 8 characters), while different
+    surnames differ by far more ("Smith"/"White" is four edits). Without
+    rigour, exact match only."""
+    if token in candidates:
+        return True
+    if _HAS_RIGOUR_NAMES and len(token) >= 4:
+        return any(_rigour_lev_sim(token, c) > 0.0 for c in candidates)
+    return False
+
+
+def person_token_agreement(a: str | None, b: str | None) -> bool:
+    """Do two PERSON names agree token by token?
+
+    The person counterpart of ``distinctive_token_agreement``. A character
+    score cannot see that "Robert Frederick Smith" and "Robert Frederick
+    White" are different people: the shared given names dominate the
+    comparison. This asks the question directly — every name token of the
+    shorter name must agree with a token of the longer one.
+
+    * Honorifics are stripped first (``strip_person_prefixes``).
+    * Single letters (initials) are ignored on both sides, so "Michael
+      Gordon" and "Michael R. Gordon" agree. Whether initials conflict is
+      left to the caller's other gates.
+    * Order does not matter: "FIORE, Norman Benito" agrees with "NORMAN
+      BENITO FIORE", and "JONES, Christopher Paul" with "CHRISTOPHER JONES"
+      (the shorter name's tokens are a subset).
+    * A name with no token of two or more letters agrees with nothing.
+    """
+    def tokens(name: str | None) -> list[str]:
+        return [
+            t for t in normalise_name(strip_person_prefixes(name)).split()
+            if len(t) > 1
+        ]
+
+    ta, tb = tokens(a), tokens(b)
+    if not ta or not tb:
+        return False
+    small, large = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    return all(_person_token_agrees(t, large) for t in small)
 
 
 def despace(comparable: str) -> str:
