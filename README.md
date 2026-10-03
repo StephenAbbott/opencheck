@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 283** — FullCheck names the frontier companies it did not reach in a step and sends them again, and shows when a screen in an expanded company did not fully run.
+**Latest: Phase 284** — related-party screens put a party carrying an LEI first among ties, so a large group's own members are screened before unrelated names.
 
 → [Full development history](docs/status.md)
 
