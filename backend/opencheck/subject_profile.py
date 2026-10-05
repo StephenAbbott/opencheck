@@ -17,7 +17,8 @@ the API and the MCP surface read the same profile:
 * **Register status: the worst class wins.** A dissolved company with an
   ACTIVE LEI is the case Phase 151 was started for, so ``terminal`` outranks
   ``pending`` outranks ``live`` whichever source said it, and the source that
-  said it is the one named.
+  said it is the one named. GLEIF's ACTIVE on an LEI no issuer maintains is
+  ``declared`` (Phase 291) and ranks last of the stated classes.
 * **Everything else: the register first.** A national register's legal form,
   founding date and registered address are preferred to GLEIF's, and GLEIF's
   to an aggregator's; the sources that state the same value are listed with
@@ -32,14 +33,29 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import lei_registration as _lei_reg
 from .bods import liveness as _liveness
 from .consistency import referent_groups, source_id_of
 from .matching import canonical_identifier
 from .reconcile import _entity_jurisdiction, _identifier_keys
 from .sources.lineage import independent_count, national_register_ids
 
-#: Liveness classes, worst first.
-_LIVENESS_RANK = {_liveness.TERMINAL: 0, _liveness.PENDING: 1, _liveness.LIVE: 2}
+#: Phase 291: GLEIF's entity status when no issuer re-checks it any more —
+#: the LEI is lapsed, retired, annulled and so on. A profile-only class, not
+#: a BODS one: the GLEIF statement still says what GLEIF says (ACTIVE), and
+#: ``bods.liveness`` and ``consistency`` read it unchanged. It is neither live
+#: nor dissolved; it is the last declaration, dated by the missed renewal.
+DECLARED = "declared"
+
+#: Liveness classes, worst first. ``declared`` ranks after ``live`` so any
+#: source that actually reads the register — Companies House, OpenCorporates —
+#: is shown before GLEIF's last declaration, whichever class it reports.
+_LIVENESS_RANK = {
+    _liveness.TERMINAL: 0,
+    _liveness.PENDING: 1,
+    _liveness.LIVE: 2,
+    DECLARED: 3,
+}
 
 
 def _rd(stmt: dict[str, Any]) -> dict[str, Any]:
@@ -212,7 +228,9 @@ def build_subject_profile(
         {
           "legal_form":  {"value", "sources", "independent_sources", "other_values"} | None,
           "register_status": {"liveness", "since", "raw", "source_id", "sources",
-                              "independent_sources"} | None,
+                              "independent_sources", "other_values"} | None,
+              # liveness "declared" (Phase 291) adds "lei_registration_status"
+              # and "sentence"; "since" is then the missed renewal date.
           "founding_date": {...} | None,
           "registered_address": {"value", "country", "sources", ...} | None,
           "jurisdiction": "GB" | None,
@@ -222,8 +240,11 @@ def build_subject_profile(
 
     ``lei_registration`` (Phase 242) is the LEI record's own status —
     ``opencheck.lei_registration`` — passed in from the GLEIF anchor, because
-    BODS has no field for it. It sits beside ``register_status`` and never
-    changes it: a lapsed LEI says nothing about whether the company exists.
+    BODS has no field for it. It sits beside ``register_status``, and a lapsed
+    LEI is never read as a dissolved company — but since Phase 291 it does
+    stop GLEIF's own ACTIVE reading as ``live``: with no issuer re-checking
+    it, that status is ``declared``, the last thing the company told its
+    issuer. A register or OpenCorporates status is unaffected and outranks it.
     """
     stmts = subject_statements(lei, bods)
     if not stmts:
@@ -255,6 +276,19 @@ def build_subject_profile(
         if not jurisdiction:
             jurisdiction = _entity_jurisdiction(_rd(stmt)) or None
 
+    # Phase 291: GLEIF's ACTIVE on an LEI nobody maintains is the last thing
+    # the company declared to its issuer, not a live reading. Only ``live`` is
+    # demoted — a GLEIF INACTIVE stays terminal, and a lapse is never read as
+    # dissolution (Phase 242).
+    declared = _lei_reg.entity_status_is_declared(lei_registration)
+    if declared:
+        statuses = [
+            (sid, {**st, "liveness": DECLARED})
+            if sid == "gleif" and st.get("liveness") == _liveness.LIVE
+            else (sid, st)
+            for sid, st in statuses
+        ]
+
     register_status: dict[str, Any] | None = None
     if statuses:
         # Worst class first; within a class, the register before GLEIF before
@@ -281,6 +315,14 @@ def build_subject_profile(
                 if st["liveness"] != status["liveness"]
             ],
         }
+        if status["liveness"] == DECLARED and lei_registration:
+            # Dated by the renewal GLEIF says was missed (LAPSED only), never
+            # by ``lastUpdateDate``; the sentence is frozen with the run.
+            register_status["since"] = lei_registration.get("since")
+            register_status["lei_registration_status"] = lei_registration.get("status")
+            register_status["sentence"] = _lei_reg.declared_sentence(
+                status.get("raw"), lei_registration
+            )
 
     address = _pick(
         addresses, registers, same=lambda a, b: _norm_text(a) == _norm_text(b)

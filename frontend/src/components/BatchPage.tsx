@@ -354,6 +354,7 @@ function RegisterStatus({
             since: row.register_status.since ?? null,
             raw: row.register_status.raw ?? null,
             source_id: row.register_status.source_id ?? "",
+            sentence: row.register_status.sentence ?? null,
             sources: [],
             independent_sources: 1,
             other_values: [],

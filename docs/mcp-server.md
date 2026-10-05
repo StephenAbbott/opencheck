@@ -86,7 +86,8 @@ minutes; a re-run inside the 15-minute replay window is free.
   de-duplicated; every rejection carries a reason; valid LEIs beyond the cap of
   20 are counted in `overflow`, never silently dropped.
 - **`rows[]`** in paste order: `lei`, `legal_name`, `jurisdiction`,
-  `register_status` (Phase 151 liveness, from the subject profile),
+  `register_status` (Phase 151 liveness, from the subject profile; `declared`
+  with its `sentence` since Phase 291),
   `lei_registration` (`{status, since}` — the LEI record's GLEIF status,
   Phase 242; null when the anchor carried none, never read as ISSUED),
   `verdict`, `risk_count` / `risk_codes` and `context_count` / `context_codes`
@@ -127,8 +128,8 @@ fetch `/batch-export` directly.
 - **`verdict`** — the deterministic one-line sentence the results page opens
   with (`opencheck.verdict`).
 - **`profile`** — what the registers say the company *is* (Phase 154):
-  `legal_form`, `register_status` (`liveness` live / pending / terminal, the
-  register that said it, its date and raw label), `founding_date` and
+  `legal_form`, `register_status` (`liveness` live / pending / terminal /
+  declared, the register that said it, its date and raw label), `founding_date` and
   `registered_address`, each listing the sources that state the value and
   how many of them are independent. Facts, never findings — a dissolved
   company is reported as dissolved; whether that matters is the reader's call.
@@ -137,10 +138,16 @@ fetch `/batch-export` directly.
   RETIRED / MERGED / ANNULLED / …, `flag` when not ISSUED, `since` — for a
   lapse, the renewal date that was missed — `next_renewal_date`,
   `last_update_date`, `initial_registration_date`, `managing_lou` and a
-  `sentence`). It is not the company's status and never changes
-  `register_status`; GLEIF publishes no "last validated" date, so none is
-  given. A status other than ISSUED is also said in `summary`, right after
-  the LEI.
+  `sentence`). It is not the company's status, and a lapse is never read as
+  dissolution; GLEIF publishes no "last validated" date, so none is given. A
+  status other than ISSUED is also said in `summary`, right after the LEI.
+  **Phase 291:** when GLEIF's own `entity.status` is the status shown and no
+  issuer maintains the LEI (any registration status but ISSUED,
+  PENDING_TRANSFER and PENDING_ARCHIVAL), `register_status.liveness` is
+  `declared` rather than `live` — the last status the company declared to its
+  issuer, neither live nor dissolved — with `since` set to the missed renewal
+  date (lapses only), `lei_registration_status`, and a `sentence` that `summary`
+  repeats. A register or OpenCorporates status outranks it either way.
 - **`licensing`** — the composite licence verdict over the sources that
   returned data (`commercial_use`, `attribution_required`, `share_alike`,
   `headline`, `warnings`), computed by the same `licensing.assess` the web

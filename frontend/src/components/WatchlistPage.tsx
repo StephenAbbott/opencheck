@@ -308,7 +308,13 @@ function WatchRow({
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {status?.liveness && (
             <Chip tone={status.liveness === "live" ? "ok" : status.liveness === "terminal" ? "warn" : "neutral"} size="sm">
-              {status.liveness === "live" ? "Active" : status.liveness === "terminal" ? "Dissolved" : status.liveness}
+              {status.liveness === "live"
+                ? "Active"
+                : status.liveness === "terminal"
+                  ? "Dissolved"
+                  : status.liveness === "declared"
+                    ? "Last declared active"
+                    : status.liveness}
               {status.source_id ? ` · ${label(status.source_id)}` : ""}
             </Chip>
           )}

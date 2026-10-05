@@ -337,10 +337,20 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         if lei_reg and lei_reg.get("flag") and lei_reg.get("line")
         else ""
     )
+    # Phase 291: when GLEIF's ACTIVE is the only status and no issuer
+    # re-checks it, say so beside the lapse — an AI reader of the profile
+    # would otherwise quote "ACTIVE" as the company's current status.
+    profile = getattr(payload, "subject_profile", None) or {}
+    status = profile.get("register_status") if isinstance(profile, dict) else None
+    declared_note = (
+        f"Register status: {status['sentence']} "
+        if isinstance(status, dict) and status.get("liveness") == "declared" and status.get("sentence")
+        else ""
+    )
     summary = (
         f"{payload.legal_name or 'Entity'} (LEI {payload.lei}"
         f"{', ' + payload.jurisdiction if payload.jurisdiction else ''}). "
-        f"{lei_reg_note}"
+        f"{lei_reg_note}{declared_note}"
         f"Risk signals: {risk_codes}.{context_note} "
         f"{coverage_sentence(coverage)}; "
         f"{len(bods)} BODS statements ({relationships} ownership/control relationships)."
@@ -456,7 +466,7 @@ def shape_batch_row(payload: Any) -> dict[str, Any]:
         "register_status": (
             {
                 k: status.get(k)
-                for k in ("liveness", "since", "raw", "source_id")
+                for k in ("liveness", "since", "raw", "source_id", "sentence")
                 if status.get(k) is not None
             }
             if status

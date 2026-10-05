@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 290** — A company with no LEI can be looked up by its register number: `/lookup-register` and the MCP tool `opencheck_register_lookup(scheme, id)` run the screens, risk engine and verdict on the register's own bundle.
+**Latest: Phase 291** — GLEIF's entity status on an LEI no issuer maintains now reads as declared, dated by the missed renewal, instead of as a live register status.
 
 → [Full development history](docs/status.md)
 

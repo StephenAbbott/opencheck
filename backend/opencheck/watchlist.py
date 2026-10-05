@@ -424,6 +424,18 @@ def _coverage_view(cov: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
+def _status_class(liveness: Any) -> Any:
+    """The register-status class a change is judged on.
+
+    Phase 291 split GLEIF's unmaintained ACTIVE out of ``live`` as
+    ``declared``. The entity status is the same claim either way; what moved
+    is the LEI registration, which ``gleif_field`` already reports. Without
+    this every watched lapsed LEI would log a "register status changed" entry
+    on its first re-check after the deploy — a reclassification, not news.
+    """
+    return "live" if liveness == "declared" else liveness
+
+
 def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list[dict[str, Any]]:
     """Name every difference between two snapshots. Empty when nothing the
     feed reports about has changed. ``before`` may be ``None`` (first run):
@@ -443,8 +455,8 @@ def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list
     _scalar("legal_form", "legal_form")
     _scalar("dissolution_date", "dissolution_date")
 
-    rs_a = (before.get("register_status") or {}).get("liveness")
-    rs_b = (after.get("register_status") or {}).get("liveness")
+    rs_a = _status_class((before.get("register_status") or {}).get("liveness"))
+    rs_b = _status_class((after.get("register_status") or {}).get("liveness"))
     if rs_a != rs_b:
         changes.append(
             {

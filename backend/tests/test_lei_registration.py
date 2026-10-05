@@ -148,11 +148,18 @@ def _afpc_bods() -> list[dict]:
     return list(map_gleif({"source_id": "gleif", "lei": AFPC, "record": AFPC_RECORD}))
 
 
-def test_a_lapsed_lei_leaves_register_status_live() -> None:
-    """The ticket's "do not change liveness": entity.status ACTIVE stays live."""
+def test_a_lapsed_lei_is_never_read_as_dissolution() -> None:
+    """Phase 242's rule, still true: a lapse never makes the company terminal.
+
+    Phase 291 narrowed the original "leaves register status live": with no
+    issuer re-checking it, GLEIF's ACTIVE is the last declaration, not a live
+    reading — ``declared``, which is neither live nor dissolved.
+    """
     reg = lr.from_gleif_record(AFPC_RECORD)
     profile = build_subject_profile(AFPC, _afpc_bods(), lei_registration=reg)
-    assert profile["register_status"]["liveness"] == liveness.LIVE
+    assert profile["register_status"]["liveness"] == "declared"
+    assert profile["register_status"]["liveness"] != liveness.TERMINAL
+    assert "dissolutionDate" not in str(profile)
     assert profile["lei_registration"] == reg
     assert build_subject_profile(AFPC, _afpc_bods())["lei_registration"] is None
 
@@ -198,7 +205,7 @@ def test_mcp_summary_is_silent_on_an_issued_lei() -> None:
 def test_batch_row_carries_status_and_date() -> None:
     row = shape_batch_row(_Payload(lr.from_gleif_record(AFPC_RECORD)))
     assert row["lei_registration"] == {"status": "LAPSED", "since": "2017-10-19"}
-    assert row["register_status"]["liveness"] == liveness.LIVE
+    assert row["register_status"]["liveness"] == "declared"  # Phase 291
     assert shape_batch_row(_Payload(None))["lei_registration"] is None
 
 
@@ -260,7 +267,8 @@ def test_the_pipeline_freezes_the_status_into_subject_profile(afpc_client) -> No
     profile = dict(events)["subject_profile"]["profile"]
     assert profile["lei_registration"]["status"] == "LAPSED"
     assert profile["lei_registration"]["since"] == "2017-10-19"
-    assert profile["register_status"]["liveness"] == liveness.LIVE
+    assert profile["register_status"]["liveness"] == "declared"  # Phase 291
+    assert profile["register_status"]["since"] == "2017-10-19"
 
     sync = afpc_client.get("/lookup", params={"lei": AFPC}).json()
     assert sync["subject_profile"]["lei_registration"] == profile["lei_registration"]
