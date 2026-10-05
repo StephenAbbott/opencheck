@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 287** — The screening-incomplete notice collapses to a thin amber bar carrying the count of checks that did not run, with the detail and re-run behind Show more.
+**Latest: Phase 288** — The Azerbaijani Laundromat as a dataset release: the entities in Paco Nathan's thesaurus run through OpenCheck's pipeline and written out in every export format, with a manifest, licence notes and a subjects table, for the Connected Data London masterclass.
 
 → [Full development history](docs/status.md)
 
@@ -64,6 +64,7 @@ The BOVS icons and country-flag SVGs are committed under `frontend/public/`, so 
 | [Risk signals](docs/risk-signals.md) | All signal codes: source-derived, structural complexity (with regulatory crosswalk), FATF / EU jurisdiction, state-controlled/SOE, cross-source name match, ICIJ Offshore Leaks |
 | [Subsidiary network](docs/subsidiary-network.md) | Lazy GLEIF Level-2 reveal — direct + ultimate children mapped to BODS, graph (small) or table + export (large) |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |
+| [Datasets](docs/datasets.md) | Bulk releases — Estonia, MEIP, the Azerbaijani Laundromat — and how to rebuild them |
 | [Development history](docs/status.md) | All phases |
 
 ## Licensing

@@ -1,0 +1,2100 @@
+{
+  "dataset": "azerbaijani-laundromat",
+  "source": {
+    "repo": "https://github.com/DerwenAI/azeri_laverie",
+    "file": "data/thesaurus.json",
+    "commit": "f15d38e3a2645aae7ce97b9f9438b09307435f05",
+    "retrieved": "2026-10-05",
+    "records": 347
+  },
+  "subjects": [
+    {
+      "key": "GB-COH:SL012725",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL012725",
+      "name": "POLUX MANAGEMENT LP",
+      "class": "core"
+    },
+    {
+      "key": "GB-COH:SL012732",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL012732",
+      "name": "HILUX SERVICES LP",
+      "class": "core"
+    },
+    {
+      "key": "GB-COH:OC372263",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC372263",
+      "name": "LCM ALLIANCE LLP",
+      "class": "core"
+    },
+    {
+      "key": "GB-COH:OC346224",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC346224",
+      "name": "METASTAR INVEST LLP",
+      "class": "core"
+    },
+    {
+      "key": "GB-COH:08281918",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "08281918",
+      "name": "EURO TELECOM LTD",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:02879801",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "02879801",
+      "name": "ACCESS TECHNOLOGIES LIMITED",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC375797",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC375797",
+      "name": "ADANA TRADE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:07552812",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07552812",
+      "name": "AGI GLOBAL LOGISTICS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:07743949",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07743949",
+      "name": "ALENTER TRADING LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC381687",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC381687",
+      "name": "ALLYSON SOLUTIONS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:05887499",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05887499",
+      "name": "ALPS VENTURES LIMITED",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC370896",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC370896",
+      "name": "ALSATEC LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL015505",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL015505",
+      "name": "AMBERLOT INVEST LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC361271",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC361271",
+      "name": "ARBA MANAGEMENT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SO303059",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SO303059",
+      "name": "ARIONA TRADING LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:LP014442",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "LP014442",
+      "name": "ARMA STEEL TRADING LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:SL008049",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL008049",
+      "name": "ASTON GLOBAL L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:07871639",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07871639",
+      "name": "ATROPATENA LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC378279",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC378279",
+      "name": "AVROMED COMPANY LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:FC018764",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "FC018764",
+      "name": "AZERBAIJAN INTERNATIONAL OPERATING COMPANY",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:01368178",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01368178",
+      "name": "BALLY SUNGLASS & OPTICAL COMPANY LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC353233",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC353233",
+      "name": "BENARDO SOLUTIONS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "lei:54930007FGRO3F0RZ382",
+      "kind": "lei",
+      "lei": "54930007FGRO3F0RZ382",
+      "name": "BENTCARD IMPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC369315",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC369315",
+      "name": "BENTCARD IMPORT LLP",
+      "class": "shell",
+      "lei": "54930007FGRO3F0RZ382"
+    },
+    {
+      "key": "GB-COH:OC372748",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC372748",
+      "name": "BERGFOX ALLIANCE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:07982544",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07982544",
+      "name": "BEWHHART LTD.",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC368144",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC368144",
+      "name": "BHW PROJECTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:03458514",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "03458514",
+      "name": "BOLDCROSS LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:04125136",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "04125136",
+      "name": "BONAS MACFARLANE TUITION LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC371790",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371790",
+      "name": "BONDWEST LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC371947",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371947",
+      "name": "BONWEST INDUSTRIAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC380720",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC380720",
+      "name": "BONWILL PROJECTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC384555",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC384555",
+      "name": "BRANDHOLD ALLIANCE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL010012",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL010012",
+      "name": "BRENTON BUSINESS L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC360814",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC360814",
+      "name": "BRIGHT LINE MARITIME LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC334604",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC334604",
+      "name": "BSMAX LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SC365914",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SC365914",
+      "name": "BTS INT LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC389052",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC389052",
+      "name": "BUILDCO SUPPLIES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:07929011",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07929011",
+      "name": "ACRS HEAT PUMPS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC324779",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC324779",
+      "name": "CAMBELL UNIVERSAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC373296",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC373296",
+      "name": "CAPTRON MERCHANTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC359528",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC359528",
+      "name": "CARLEX TECHNOLOGY LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC388023",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC388023",
+      "name": "CARLPOOL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL008371",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL008371",
+      "name": "CARTFIELD TRADE L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC365542",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC365542",
+      "name": "CAYREST EXPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC350705",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC350705",
+      "name": "CENTROEXPERT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL013108",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL013108",
+      "name": "CITYPORT CONTRACTS L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:07805986",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07805986",
+      "name": "CLAMOSA LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:05239730",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05239730",
+      "name": "CLIMBFREE SOLUTIONS LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:08507743",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "08507743",
+      "name": "CLYDY LTD",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC380296",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC380296",
+      "name": "CNL UNIVERSAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:03817036",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "03817036",
+      "name": "CONTINENTAL TRADING (UK) LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC371955",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371955",
+      "name": "CONTRATECH SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:02010274",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "02010274",
+      "name": "COOPERS FIRE LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:08662999",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "08662999",
+      "name": "CREATD SOFTWARE LTD",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC370953",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC370953",
+      "name": "CREDILEX LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC365095",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC365095",
+      "name": "CROFTLINK EXPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC381424",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC381424",
+      "name": "CROSSPARK LINES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC362754",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC362754",
+      "name": "DALLAS IMPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC371965",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371965",
+      "name": "DANBELL IMPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC371557",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371557",
+      "name": "DARTLEY CAPITAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC379963",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC379963",
+      "name": "DATEMILE ALLIANCE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC381414",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC381414",
+      "name": "DATVILLE UNITED LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:06885638",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "06885638",
+      "name": "DAVID KOMA LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC381830",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC381830",
+      "name": "DAYFORD SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC380736",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC380736",
+      "name": "DELFRONT IMPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC365055",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC365055",
+      "name": "DELLWOOD SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC373853",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC373853",
+      "name": "DELMOORE EXPRESS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:FC013038",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "FC013038",
+      "name": "DENTSPLY LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC371949",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371949",
+      "name": "DEXPORT UNIVERSAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC371956",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371956",
+      "name": "DIGIMARK MERCHANTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:05128694",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05128694",
+      "name": "DIGIPOS STORE SOLUTIONS INTERNATIONAL LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC365663",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC365663",
+      "name": "DOCKWOOD ALLIANCE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC371985",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371985",
+      "name": "DREAM CAPITAL INDUSTRIES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:01256046",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01256046",
+      "name": "ELECTROCOIN AUTOMATICS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:SL008938",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL008938",
+      "name": "ENTERTOWN L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC387794",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC387794",
+      "name": "EURAS BRIDGE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC383246",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC383246",
+      "name": "EUROEX COMMERCIAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL011768",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL011768",
+      "name": "EVERMAIR PROJECTS LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC379332",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC379332",
+      "name": "EXTRAFIELD LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:06596875",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "06596875",
+      "name": "F.S. MACKENZIE INTERNATIONAL LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:05145471",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05145471",
+      "name": "FC USSR LTD",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC334605",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC334605",
+      "name": "FEELGOOD PRODUCTION LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC339081",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC339081",
+      "name": "FERROTEC STEEL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC378268",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC378268",
+      "name": "FESTIVAL SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:04110906",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "04110906",
+      "name": "FINE DECOR WALLCOVERINGS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:SL011146",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL011146",
+      "name": "FIRST IMPORTS/EXPORTS L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:SL012522",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL012522",
+      "name": "FIRST MARINE L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC357935",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC357935",
+      "name": "FIRSTWOOD ALLIANCE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:01680058",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01680058",
+      "name": "FOXTONS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC355905",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC355905",
+      "name": "FRONTWELL COMPANY LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:06739202",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "06739202",
+      "name": "GAELIC INT'L HOLD LTD",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:SC375222",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SC375222",
+      "name": "GEBA INDUSTRIES LTD",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL013329",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL013329",
+      "name": "GENERAL TRADE L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:05000509",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05000509",
+      "name": "GENTLEMEN'S TONIC LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC372307",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC372307",
+      "name": "GFG EXPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC318294",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC318294",
+      "name": "GILSON UNIVERSAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL009161",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL009161",
+      "name": "GLOBECOM TRADE L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC332480",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC332480",
+      "name": "GLOBETOWN LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:09164637",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "09164637",
+      "name": "GM LEADER LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:05355242",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05355242",
+      "name": "GPEG INTERNATIONAL LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC367024",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC367024",
+      "name": "GRANSTON SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL011758",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL011758",
+      "name": "GRAY KENT INVESTMENTS LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC381686",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC381686",
+      "name": "GREENOUGH TRADE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC380730",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC380730",
+      "name": "GTW EXPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:02832555",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "02832555",
+      "name": "H.R. OWEN DEALERSHIPS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC381762",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC381762",
+      "name": "HARDWARE SYSTEM LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC351187",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC351187",
+      "name": "HIGHCORP WORLDWIDE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC371958",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371958",
+      "name": "HILLSTAR COMPLEX LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC363732",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC363732",
+      "name": "INFOCAR TRADE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC363823",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC363823",
+      "name": "INFOCREST LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL014294",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL014294",
+      "name": "INTERLINE EUROPE L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:SL013313",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL013313",
+      "name": "INTERWEST L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:SO301493",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SO301493",
+      "name": "INTERWEST PROJECT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC368550",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC368550",
+      "name": "INTRAWAY ALLIANCE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:03128992",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "03128992",
+      "name": "JENGATE LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC345090",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC345090",
+      "name": "JETMAX CONTRACTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC361954",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC361954",
+      "name": "JLS PRODUCTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL008100",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL008100",
+      "name": "KEYLORD INVESTMENTS L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC366180",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC366180",
+      "name": "LAKEMONT PROJECTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC336651",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC336651",
+      "name": "LATFORM INDUSTRIES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL007720",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL007720",
+      "name": "LEWIS CORPORATION L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC374025",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC374025",
+      "name": "LEYBURN SYSTEMS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC374029",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC374029",
+      "name": "LIGHTFOLD EXPERTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:02066629",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "02066629",
+      "name": "LINX PRINTING TECHNOLOGIES LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC362274",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC362274",
+      "name": "LOGILUX LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC336653",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC336653",
+      "name": "LOTA SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL011661",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL011661",
+      "name": "LUXBORG L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC362371",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC362371",
+      "name": "LUXOR COMMUNICATION LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:06506182",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "06506182",
+      "name": "LYSOFORM LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC353235",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC353235",
+      "name": "MALAMO CAPITAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:05899296",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05899296",
+      "name": "MARINE SOURCING SERVICES LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC385369",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC385369",
+      "name": "MARTEX SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL007885",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL007885",
+      "name": "MAXWISE TECHNOLOGY L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC375688",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC375688",
+      "name": "METREX PROJECTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC370951",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC370951",
+      "name": "MOBILA LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC380013",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC380013",
+      "name": "MOLONEY TRADE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC364075",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC364075",
+      "name": "MONDOTECH LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC355521",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC355521",
+      "name": "MOYA ENGINEERING LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC339672",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC339672",
+      "name": "MUROVA SYSTEMS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC382392",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC382392",
+      "name": "MX TRADE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC384548",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC384548",
+      "name": "NEXTMARK SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC377009",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC377009",
+      "name": "NORDLAND DEVELOPMENT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SC271444",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SC271444",
+      "name": "NORTHBURGH LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:05826105",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05826105",
+      "name": "ONLINE AUTOMOTIVE LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC348612",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC348612",
+      "name": "ORDERVILLE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC372260",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC372260",
+      "name": "OVERMOND LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC374243",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC374243",
+      "name": "OVERTON SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:06661308",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "06661308",
+      "name": "PARKVIEW ESTATES MANAGEMENT LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:01947282",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01947282",
+      "name": "PEERMAN INVESTMENTS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:05355307",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05355307",
+      "name": "PETRO-CANADA EUROPE LUBRICANTS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC364495",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC364495",
+      "name": "PILOTEX IMPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC369182",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC369182",
+      "name": "PLASTEX PROJECTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:01107372",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01107372",
+      "name": "POLAR FURS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:00743538",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "00743538",
+      "name": "POLYFLOR LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC369253",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC369253",
+      "name": "POLYWIND TRADE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL012749",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL012749",
+      "name": "RASMUS LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:05614674",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05614674",
+      "name": "REK VALVES LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC380109",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC380109",
+      "name": "RESTCODE CAPITAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC367031",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC367031",
+      "name": "RICHBORO PROJECTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL014304",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL014304",
+      "name": "RICHFIELD TRADING L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:SL017142",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL017142",
+      "name": "RICHMAR LOGISTIC AND CHARTERING UK LP",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:SL009166",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL009166",
+      "name": "RICHSTONE EXPERTS L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC373851",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC373851",
+      "name": "RIDER IMPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC343392",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC343392",
+      "name": "RIKAS EXPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC376578",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC376578",
+      "name": "RONLEX MERCHANTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC376796",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC376796",
+      "name": "RUSMEDIZD TRADE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:06427895",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "06427895",
+      "name": "SAGE PARTS GSE LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC367115",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC367115",
+      "name": "SAMITEX TRADING LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL014411",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL014411",
+      "name": "SANBERG EUROTRADE L.P.",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:SL011078",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL011078",
+      "name": "SANTRAL ELEKTRIK LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC380307",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC380307",
+      "name": "SDT TRADE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:02890928",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "02890928",
+      "name": "SEA SOTRA (LONDON) LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:06026625",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "06026625",
+      "name": "SEABON LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:02979210",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "02979210",
+      "name": "SECURO LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:06567091",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "06567091",
+      "name": "SEVEN MILE SHIPPING LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:09025416",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "09025416",
+      "name": "SHANDONG YONGSHENG RUBBER GROUP CO., LTD",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:01827661",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01827661",
+      "name": "SIZEROY LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:05950064",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05950064",
+      "name": "SKN ELECTRICAL SERVICES LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC365120",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC365120",
+      "name": "SOLIDSTAR WORLDWIDE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC356255",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC356255",
+      "name": "SOLITEX SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:01717864",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01717864",
+      "name": "SONIFEX LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC338564",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC338564",
+      "name": "SOVER DEVELOPMENT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:02844990",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "02844990",
+      "name": "STAMFORD POWER SYSTEMS LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:SL009619",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL009619",
+      "name": "STAMPTONE SERVICES LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:OC374026",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC374026",
+      "name": "STANDLINE SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:07943313",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07943313",
+      "name": "STARGLOBE LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC364496",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC364496",
+      "name": "STARGOLD PROJECTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC329416",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC329416",
+      "name": "STREAMTRADE INDUSTRIES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC331259",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC331259",
+      "name": "STYLEMAX COMPANY LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC374505",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC374505",
+      "name": "SUPRAMARK EXPORT LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:01504448",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01504448",
+      "name": "SWIFT PLANT SPARES LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC368263",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC368263",
+      "name": "TABRIOL SALES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL010189",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL010189",
+      "name": "TAYLORD FIELD LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:06722330",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "06722330",
+      "name": "TECHNIKON LTD",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC372455",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC372455",
+      "name": "TEOLINE BUSINESS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC351904",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC351904",
+      "name": "TEREACH TRADING LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:04863962",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "04863962",
+      "name": "THORNTON BREGAZZI LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC360305",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC360305",
+      "name": "TIM ENERGY LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC358881",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC358881",
+      "name": "TIM RESOURCES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC371962",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC371962",
+      "name": "TOOLMARK PRODUCTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC393459",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC393459",
+      "name": "TOWNMARK LOGISTICS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC380308",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC380308",
+      "name": "TRONLUX VENTURES LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:00320293",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "00320293",
+      "name": "TURNOCK LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC368151",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC368151",
+      "name": "UNICONT INDUSTRIAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC365686",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC365686",
+      "name": "UNIONSTAR TRADE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC372459",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC372459",
+      "name": "VASSA IMPEX LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC377721",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC377721",
+      "name": "WAYCONT UNITED LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC356258",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC356258",
+      "name": "WDC PROJECTS LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SC265387",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SC265387",
+      "name": "WESTBURN ENTERPRISES LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC368133",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC368133",
+      "name": "WIDEMARK CAPITAL LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL012653",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL012653",
+      "name": "WILDPARK SALES L.P.",
+      "class": null
+    },
+    {
+      "key": "GB-COH:OC365293",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC365293",
+      "name": "WILLROCK UNITED LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:04137466",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "04137466",
+      "name": "WORLD OF TATA-NAKA LTD",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:02714019",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "02714019",
+      "name": "WORTHY TECHNOLOGIES LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:SL012733",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL012733",
+      "name": "ZELMER PARTNERS LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:SO300935",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SO300935",
+      "name": "WEST SPORT ALLIANCE LIMITED LIABILITY PARTNERSHIP",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:03858674",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "03858674",
+      "name": "EXPA (UK) LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:07296626",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07296626",
+      "name": "PEDERSEN & PARTNERS INTERNATIONAL LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:01125371",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01125371",
+      "name": "PENSUM LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:02573843",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "02573843",
+      "name": "QUEEN ETHELBURGA'S COLLEGE LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:OC366899",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC366899",
+      "name": "ULTRA CORPORATION LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC363814",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC363814",
+      "name": "BONINVEST LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC381681",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC381681",
+      "name": "CARGOSTAR LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC376597",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC376597",
+      "name": "RIVERLANE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:OC372326",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "OC372326",
+      "name": "KG COMMERCE LLP",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:07792400",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07792400",
+      "name": "PRESTIGE CAPITAL PROPERTIES LIMITED",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:07105739",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "07105739",
+      "name": "ADANA INVESTMENTS LTD",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:05716053",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "05716053",
+      "name": "EUROILGAS INDUSTRIES PLC",
+      "class": "shell"
+    },
+    {
+      "key": "GB-COH:SL012728",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL012728",
+      "name": "SL012728 LP",
+      "class": "dormant"
+    },
+    {
+      "key": "GB-COH:SC185690",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SC185690",
+      "name": "Q-FREE (BRISTOL) UK LIMITED",
+      "class": "operating"
+    },
+    {
+      "key": "GB-COH:00191031",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "00191031",
+      "name": "ALFRED DUNHILL LIMITED",
+      "class": null
+    },
+    {
+      "key": "GB-COH:04582919",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "04582919",
+      "name": "ROTRACK LIMITED",
+      "class": null
+    },
+    {
+      "key": "GB-COH:SL012842",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "SL012842",
+      "name": "SL012842 LP",
+      "class": null
+    },
+    {
+      "key": "lei:5493000SA3K24EQKA103",
+      "kind": "lei",
+      "lei": "5493000SA3K24EQKA103",
+      "name": "MASHREQBANK PSC",
+      "class": "bank"
+    },
+    {
+      "key": "GB-COH:BR001223",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "BR001223",
+      "name": "MASHREQBANK PSC",
+      "class": "bank",
+      "lei": "5493000SA3K24EQKA103"
+    },
+    {
+      "key": "lei:G5GSEF7VJP5I7OUK5573",
+      "kind": "lei",
+      "lei": "G5GSEF7VJP5I7OUK5573",
+      "name": "BARCLAYS BANK PLC",
+      "class": "bank"
+    },
+    {
+      "key": "GB-COH:01026167",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "01026167",
+      "name": "BARCLAYS BANK PLC",
+      "class": "bank",
+      "lei": "G5GSEF7VJP5I7OUK5573"
+    },
+    {
+      "key": "lei:579100KKDIKDFIBKB034",
+      "kind": "lei",
+      "lei": "579100KKDIKDFIBKB034",
+      "name": "MUFG BANK, LTD.",
+      "class": "bank"
+    },
+    {
+      "key": "GB-COH:BR002013",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "BR002013",
+      "name": "MUFG BANK, LTD.",
+      "class": "bank",
+      "lei": "579100KKDIKDFIBKB034"
+    },
+    {
+      "key": "lei:MLU0ZO3ML4LN2LL2TL39",
+      "kind": "lei",
+      "lei": "MLU0ZO3ML4LN2LL2TL39",
+      "name": "HSBC HOLDINGS PLC",
+      "class": "bank"
+    },
+    {
+      "key": "GB-COH:00617987",
+      "kind": "register",
+      "scheme": "GB-COH",
+      "id": "00617987",
+      "name": "HSBC HOLDINGS PLC",
+      "class": "bank",
+      "lei": "MLU0ZO3ML4LN2LL2TL39"
+    },
+    {
+      "key": "lei:VDYMYTQGZZ6DU0912C88",
+      "kind": "lei",
+      "lei": "VDYMYTQGZZ6DU0912C88",
+      "name": "BAYERISCHE LANDESBANK MUNICH",
+      "class": "bank"
+    },
+    {
+      "key": "lei:213800DXECSXBR79QK58",
+      "kind": "lei",
+      "lei": "213800DXECSXBR79QK58",
+      "name": "BANK OF CHINA",
+      "class": "bank"
+    },
+    {
+      "key": "lei:8EWQ2UQKS07AKK8ANH81",
+      "kind": "lei",
+      "lei": "8EWQ2UQKS07AKK8ANH81",
+      "name": "DEUTSCHE BANK TRUST COMPANY AMERICAS",
+      "class": "bank"
+    },
+    {
+      "key": "lei:7LTWFZYICNSX8D621K86",
+      "kind": "lei",
+      "lei": "7LTWFZYICNSX8D621K86",
+      "name": "DEUTSCHE BANK AG",
+      "class": "bank"
+    },
+    {
+      "key": "lei:MAES062Z21O4RZ2U7M96",
+      "kind": "lei",
+      "lei": "MAES062Z21O4RZ2U7M96",
+      "name": "DANSKE BANK A/S",
+      "class": "bank"
+    },
+    {
+      "key": "lei:3RV7W250LTUQH12INJ88",
+      "kind": "lei",
+      "lei": "3RV7W250LTUQH12INJ88",
+      "name": "DENIZBANK A.S.",
+      "class": "bank"
+    },
+    {
+      "key": "lei:5493009Z5F07LWZYMK62",
+      "kind": "lei",
+      "lei": "5493009Z5F07LWZYMK62",
+      "name": "HANG SENG BANK LIMITED",
+      "class": "bank"
+    },
+    {
+      "key": "lei:529900XB6RQ3XCELQO62",
+      "kind": "lei",
+      "lei": "529900XB6RQ3XCELQO62",
+      "name": "BENDURA BANK AG",
+      "class": "bank"
+    },
+    {
+      "key": "lei:549300XWZ7BG5G23OF51",
+      "kind": "lei",
+      "lei": "549300XWZ7BG5G23OF51",
+      "name": "ISRAEL DISCOUNT BANK LTD.",
+      "class": "bank"
+    },
+    {
+      "key": "lei:5493009SXBGGW7I37Y31",
+      "kind": "lei",
+      "lei": "5493009SXBGGW7I37Y31",
+      "name": "YAPI KREDI BANK NEDERLAND N.V.",
+      "class": "bank"
+    },
+    {
+      "key": "lei:B85ZYWEZ5IZCZ2WNIO12",
+      "kind": "lei",
+      "lei": "B85ZYWEZ5IZCZ2WNIO12",
+      "name": "YAPI VE KREDI BANKASI A.S.",
+      "class": "bank"
+    },
+    {
+      "key": "lei:529900WMBOJTFWCJ6Z71",
+      "kind": "lei",
+      "lei": "529900WMBOJTFWCJ6Z71",
+      "name": "NORISBANK GMBH",
+      "class": "bank"
+    },
+    {
+      "key": "lei:549300WOIFUSNYH0FL22",
+      "kind": "lei",
+      "lei": "549300WOIFUSNYH0FL22",
+      "name": "UBS SWITZERLAND AG",
+      "class": "bank"
+    },
+    {
+      "key": "lei:529900UHDH7QLRMEJQ86",
+      "kind": "lei",
+      "lei": "529900UHDH7QLRMEJQ86",
+      "name": "SIGMA BANK AG",
+      "class": "bank"
+    },
+    {
+      "key": "lei:254900CDNPJRAT391Y16",
+      "kind": "lei",
+      "lei": "254900CDNPJRAT391Y16",
+      "name": "NATIONAL BANK OF RAS AL KHAIMAH P.S.C",
+      "class": "bank"
+    },
+    {
+      "key": "lei:300300C1031031001330",
+      "kind": "lei",
+      "lei": "300300C1031031001330",
+      "name": "SHANGHAI PUDONG DEVELOPMENT BANK CO., LTD.",
+      "class": "bank"
+    },
+    {
+      "key": "lei:529900N90QS8ARRHWY83",
+      "kind": "lei",
+      "lei": "529900N90QS8ARRHWY83",
+      "name": "OWH SE I.L.",
+      "class": "bank"
+    },
+    {
+      "key": "lei:529900C4ED1UQX2LSR90",
+      "kind": "lei",
+      "lei": "529900C4ED1UQX2LSR90",
+      "name": "PASHA BANK OJSC",
+      "class": "bank"
+    },
+    {
+      "key": "lei:ES7IP3U3RHIGC71XBU11",
+      "kind": "lei",
+      "lei": "ES7IP3U3RHIGC71XBU11",
+      "name": "ROYAL BANK OF CANADA",
+      "class": "bank"
+    },
+    {
+      "key": "lei:PT3QB789TSUIDF371261",
+      "kind": "lei",
+      "lei": "PT3QB789TSUIDF371261",
+      "name": "THE TORONTO-DOMINION BANK",
+      "class": "bank"
+    },
+    {
+      "key": "lei:549300WE6TAF5EEWQS81",
+      "kind": "lei",
+      "lei": "549300WE6TAF5EEWQS81",
+      "name": "SBERBANK OF RUSSIA",
+      "class": "bank"
+    }
+  ],
+  "skipped": {
+    "GB-COH": 1,
+    "RU-FNS": 42,
+    "no identifier": 46
+  }
+}
