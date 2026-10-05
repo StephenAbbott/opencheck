@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 287** — The screening-incomplete notice collapses to a thin amber bar carrying the count of checks that did not run, with the detail and re-run behind Show more.
+**Latest: Phase 288** — The Azerbaijani Laundromat as a dataset release: the entities in Paco Nathan's thesaurus run through OpenCheck's pipeline and written out in every export format, with a manifest, licence notes and a subjects table, for the Connected Data London masterclass.
 
 → [Full development history](docs/status.md)
 
