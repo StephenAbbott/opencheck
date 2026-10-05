@@ -64,7 +64,7 @@ from .risk import (
     former_party_ids,
     pick_degradation_reason,
 )
-from . import related_targets
+from . import related_targets, risk as _risk
 from .sources import REGISTRY, SearchKind, SourceHit, source_display_name
 from .subject_identity import subject_identity
 
@@ -87,6 +87,24 @@ RELATED_DEBARMENT = "RELATED_DEBARMENT"
 RELATED_EXPORT_CONTROLLED = "RELATED_EXPORT_CONTROLLED"
 RELATED_EXPORT_CONTROL_LINKED = "RELATED_EXPORT_CONTROL_LINKED"
 RELATED_EXPORT_RISK = "RELATED_EXPORT_RISK"
+
+#: Phase 290: the subject-level code each related-party code becomes when
+#: the match is the looked-up company's own name. A subject anchored on a
+#: register number has no LEI-keyed OpenSanctions record to be screened
+#: through, so its names are screened here once and worded as the company's
+#: own — the same arrangement ``icij_check`` has always needed, because ICIJ
+#: has no subject-level adapter for anyone. ``RELATED_PEP`` has no entry:
+#: entities are never PEPs, and the subject is an entity.
+_SUBJECT_CODE: dict[str, str] = {
+    RELATED_SANCTIONED: _risk.SANCTIONED,
+    RELATED_COUNTER_SANCTIONED: _risk.COUNTER_SANCTIONED,
+    RELATED_SANCTIONS_CONTROLLED: _risk.SANCTIONS_CONTROLLED,
+    RELATED_SANCTIONS_LINKED: _risk.SANCTIONS_LINKED,
+    RELATED_DEBARMENT: _risk.DEBARMENT,
+    RELATED_EXPORT_CONTROLLED: _risk.EXPORT_CONTROLLED,
+    RELATED_EXPORT_CONTROL_LINKED: _risk.EXPORT_CONTROL_LINKED,
+    RELATED_EXPORT_RISK: _risk.EXPORT_RISK,
+}
 
 #: Name of this derived check in ``DegradedSource.check`` records.
 CHECK_NAME = "cross_source_names"
@@ -171,6 +189,7 @@ async def assess_cross_source_names(
     degraded: list[DegradedSource] | None = None,
     screen: NameScreen | None = None,
     subject_lei: str | None = None,
+    screen_subject: bool = False,
 ) -> list[RiskSignal]:
     """Return scoped ``RELATED_*`` risk signals for related parties in
     the BODS bundle that match an OpenSanctions / EveryPolitician
@@ -183,6 +202,16 @@ async def assess_cross_source_names(
     here counted its own listing a second time as third-party exposure.
     ``None`` keeps the old behaviour, for callers screening a bundle whose
     anchor is not the looked-up company (the register hop in ``/expand-layer``).
+
+    ``screen_subject`` (Phase 290) is for a subject that has no LEI — a
+    lookup anchored on a register number, ``subject_lei`` written
+    ``<SCHEME>:<id>``. No LEI-keyed adapter screens such a subject, so its
+    own names are screened here once (``_subject_targets``), outside the
+    related-party cap, and a match carries the subject-level code
+    (``SANCTIONED``, not ``RELATED_SANCTIONED``) and is worded as the
+    company's own, anchored on ``evidence.statement_id`` like every subject
+    finding. ``EveryPolitician`` is not consulted for it: the subject is an
+    entity, and entities are never PEPs.
 
     ``degraded`` is an optional out-collector (issue #50): when the screen
     could not fully run — missing API key in live mode, upstream errors,
@@ -215,7 +244,8 @@ async def assess_cross_source_names(
         limit=max_targets,
         subject_ids=identity.statement_ids,
     )
-    targets = selection.screened
+    subject_targets = _subject_targets(identity) if screen_subject else []
+    targets = subject_targets + selection.screened
     if not targets:
         return []
 
@@ -842,6 +872,33 @@ def _make_signal(
     this is the same field, so a consumer reads one shape from both screens.
     """
     corroboration = corroborating_attributes(target, hit.raw or {})
+    if target.get("subject"):
+        # Phase 290: the looked-up company's own name (``_subject_targets``).
+        # A subject-level code, anchored on ``statement_id`` the way the
+        # LEI-keyed adapters' SANCTIONED / PEP signals are, and a sentence
+        # that says whose name matched — never "Related entity".
+        return RiskSignal(
+            code=_SUBJECT_CODE.get(code, code),
+            confidence=match_confidence(target, score, corroboration),
+            summary=(
+                f"The looked-up company's name '{target['name']}' matches a "
+                f"record on {source_display_name(hit.source_id)}: "
+                f"{summary_extra}."
+            ),
+            source_id=hit.source_id,
+            hit_id=hit.hit_id,
+            evidence={
+                "statement_id": target["statement_id"],
+                "subject": True,
+                "matched_name": hit.name,
+                "search_name": target["name"],
+                "score": round(score, 3),
+                "kind": target["kind"],
+                "corroboration": list(corroboration),
+                "name_match_only": False,
+                **({"topics": list(topics)} if topics else {}),
+            },
+        )
     return RiskSignal(
         code=code,
         confidence=match_confidence(target, score, corroboration),
@@ -992,14 +1049,49 @@ def _birth_year_compatible(year: int | None, hit: SourceHit) -> bool:
     return any(abs(y - year) <= 1 for y in hit_years)
 
 
+def _subject_targets(identity: Any) -> list[dict[str, Any]]:
+    """The looked-up company's own names as entity targets (Phase 290) —
+    one per distinct normalised name among the subject's statements, every
+    one attributed to the anchor statement, flagged ``subject`` so
+    ``_make_signal`` words and codes the match as the company's own."""
+    if not identity:
+        return []
+    anchor = identity.anchor_statement_id()
+    ordered = sorted(
+        identity.statements, key=lambda s: 0 if s.get("statementId") == anchor else 1
+    )
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for stmt in ordered:
+        name = str((stmt.get("recordDetails") or {}).get("name") or "").strip()
+        key = _normalise(name)
+        if not name or not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {
+                "kind": _KIND_ENTITY,
+                "statement_id": anchor,
+                "name": name,
+                "birth_year": None,
+                "nationalities": (),
+                "former": False,
+                "subject": True,
+            }
+        )
+    return out
+
+
 def _dedupe(signals: list[RiskSignal]) -> list[RiskSignal]:
     """Two probes (OS + EP) on the same target may both flag the same
     upstream record id. Keep the highest-confidence single instance per
-    ``(code, source_id, hit_id, subject_statement_id)``."""
+    ``(code, source_id, hit_id, subject_statement_id)`` — for a subject
+    match (Phase 290), per ``statement_id``, so two spellings of the
+    company's name that hit one record are one signal."""
     rank = {"high": 3, "medium": 2, "low": 1}
     keyed: dict[tuple, RiskSignal] = {}
     for sig in signals:
-        sub = sig.evidence.get("subject_statement_id", "")
+        sub = sig.evidence.get("subject_statement_id") or sig.evidence.get("statement_id", "")
         key = (sig.code, sig.source_id, sig.hit_id, sub)
         existing = keyed.get(key)
         if existing is None or rank.get(sig.confidence, 0) > rank.get(

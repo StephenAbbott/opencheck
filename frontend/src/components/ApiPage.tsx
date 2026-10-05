@@ -150,6 +150,19 @@ export function ApiPage() {
             The <code className={mono}>risk_signals</code> event carries the same{" "}
             <code className={mono}>degraded_sources</code> field as <code className={mono}>/lookup</code>.
           </ApiEndpoint>
+          <ApiEndpoint path="/lookup-register?scheme=<SCHEME>&id=<number>">
+            Due diligence for a company with no LEI, anchored on its register number
+            (any scheme <code className={mono}>/expand-schemes</code> lists —{" "}
+            <code className={mono}>GB-COH</code>, <code className={mono}>NL-KVK</code>, …). The register that
+            owns the scheme is the one source read; its bundle is then screened and assessed as{" "}
+            <code className={mono}>/lookup</code>’s is. Same shape with <code className={mono}>lei</code> null,{" "}
+            <code className={mono}>scheme</code> and <code className={mono}>id</code> added, no{" "}
+            <code className={mono}>listing</code>; the company’s own name is screened by name. Same rate tier and
+            lookup budget as <code className={mono}>/lookup</code>; replay cache keyed on{" "}
+            <code className={mono}>scheme:id</code>. <code className={mono}>/lookup-register-stream</code> is the
+            SSE form (<code className={mono}>register_done</code> where <code className={mono}>/lookup-stream</code>{" "}
+            says <code className={mono}>gleif_done</code>).
+          </ApiEndpoint>
           <ApiEndpoint path="/lookup-source?lei=<LEI>&source_id=<id>">
             Re-run a single source for an existing lookup (the per-source “retry” in the UI).
           </ApiEndpoint>
@@ -198,6 +211,7 @@ export function ApiPage() {
               ["opencheck_search", "Find a company’s LEI from a name or free text."],
               ["opencheck_resolve_national_id", "Resolve a national company-registration number to its LEI."],
               ["opencheck_lookup", "Due diligence by LEI: identity, identifiers, risk signals, source coverage."],
+              ["opencheck_register_lookup", "The same for a company with no LEI, by its register number (scheme + id from a search candidate’s identifiers)."],
               ["opencheck_batch_lookup", "Up to 20 LEIs at once: one compact row each, with failed rows kept apart."],
               ["opencheck_export_bods", "The full ownership-and-control graph as BODS v0.4 statements; include_subsidiaries folds in the GLEIF subsidiary network."],
               ["opencheck_subsidiaries", "What a company consolidates: its GLEIF subsidiary network as counts, rows or BODS, optionally with the MEIP, EITI and GEM lists kept apart."],

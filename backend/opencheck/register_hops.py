@@ -44,6 +44,18 @@ class RegisterHop:
     #: The adapter's ``fetch`` takes ``legal_name=`` (some registers search
     #: by name behind the number).
     pass_legal_name: bool
+    #: The lookup pipeline's dispatch key for this register (``gb_coh``,
+    #: ``kvk_number``) — what the key would be named in a GLEIF-anchored
+    #: lookup's ``derived_identifiers``, so a register-anchored lookup (Phase
+    #: 289) builds the same hit the LEI path does.
+    derived_key: str = ""
+
+    @property
+    def country(self) -> str:
+        """The register's country, from the scheme: ``GB-COH`` → ``GB``,
+        ``US-DC`` → ``US`` (the canonical scheme, never a ``REG-`` alias —
+        the alias resolves to its register's own hop)."""
+        return self.scheme.split("-", 1)[0]
 
 
 #: Schemes that must never stand in for their whole country in the
@@ -86,12 +98,15 @@ def hop_schemes() -> dict[str, RegisterHop]:
                         source_id=adapter.id,
                         normalise=deriver.normalise,
                         pass_legal_name=adapter.lookup_pass_legal_name,
+                        derived_key=deriver.derived_key,
                     )
                     break
             if scheme in hops:
                 break
     if "companies_house" in REGISTRY:
-        hops["GB-COH"] = RegisterHop("GB-COH", "companies_house", _ch_normalise, False)
+        hops["GB-COH"] = RegisterHop(
+            "GB-COH", "companies_house", _ch_normalise, False, derived_key="gb_coh"
+        )
     # ``REG-<country>`` is the mappers' fallback scheme for "a number on that
     # country's company register" when the filing does not name the register
     # — the Companies House mapper emits ``REG-GB`` for a PSC whose

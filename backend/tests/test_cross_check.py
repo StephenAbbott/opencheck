@@ -860,3 +860,78 @@ async def test_a_clean_screen_still_reports_the_names_it_read(monkeypatch) -> No
     )
     assert screen.names_screened == 2
     assert screen.matches == []
+
+
+# ---------------------------------------------------------------------
+# Phase 290 — the subject's own name, screened at subject level
+# ---------------------------------------------------------------------
+
+
+def _os_entity_hit(hit_id: str, name: str, topics: list[str]) -> SourceHit:
+    return SourceHit(
+        source_id="opensanctions",
+        hit_id=hit_id,
+        kind=SearchKind.ENTITY,
+        name=name,
+        summary="",
+        identifiers={"opensanctions_id": hit_id},
+        raw={"id": hit_id, "schema": "Company", "properties": {"name": [name], "topics": topics}, "topics": topics},
+        is_stub=False,
+    )
+
+
+def _register_subject_bundle() -> list[dict[str, Any]]:
+    subj = {
+        "statementId": "ch-metastar",
+        "recordType": "entity",
+        "recordDetails": {
+            "entityType": {"type": "registeredEntity"},
+            "name": "METASTAR INVEST LLP",
+            "jurisdiction": {"code": "GB"},
+            "identifiers": [{"scheme": "GB-COH", "id": "OC346224"}],
+        },
+        "source": {"description": "UK Companies House"},
+    }
+    return [subj, _person("p1", "Vladimir Putin", birth="1952-10-07")]
+
+
+async def test_screen_subject_words_and_codes_the_match_as_the_companys_own(monkeypatch) -> None:
+    """A subject anchored on a register number has no LEI-keyed OpenSanctions
+    record to be screened through. With ``screen_subject`` its own name is
+    screened once: the match carries the subject-level code, is anchored on
+    ``evidence.statement_id`` with ``subject: True``, and never reads
+    "Related entity". The related person is still screened as before."""
+    _stub(monkeypatch, "opensanctions", [
+        _os_entity_hit("NK-metastar", "METASTAR INVEST LLP", ["sanction"]),
+    ])
+    _stub(monkeypatch, "everypolitician", [])
+    bundle = _register_subject_bundle()
+
+    signals = await assess_cross_source_names(
+        bundle, subject_lei="GB-COH:OC346224", screen_subject=True
+    )
+    by_code = {s.code: s for s in signals}
+    assert "SANCTIONED" in by_code and "RELATED_SANCTIONED" not in by_code
+    subject_sig = by_code["SANCTIONED"]
+    assert subject_sig.evidence["statement_id"] == "ch-metastar"
+    assert subject_sig.evidence["subject"] is True
+    assert "subject_statement_id" not in subject_sig.evidence
+    assert subject_sig.summary.lower().startswith(
+        "the looked-up company's name 'metastar invest llp' matches a record on opensanctions"
+    )
+    assert "Related entity" not in subject_sig.summary
+
+
+async def test_without_screen_subject_the_register_subject_is_simply_excluded(monkeypatch) -> None:
+    """Phase 235's exclusion holds for a register reference: the subject's
+    statement is not a related party, and without ``screen_subject`` it is
+    not screened at all here (the hop's bundle anchor, say)."""
+    _stub(monkeypatch, "opensanctions", [
+        _os_entity_hit("NK-metastar", "METASTAR INVEST LLP", ["sanction"]),
+    ])
+    _stub(monkeypatch, "everypolitician", [])
+    signals = await assess_cross_source_names(
+        _register_subject_bundle(), subject_lei="GB-COH:OC346224"
+    )
+    assert all(s.evidence.get("subject_statement_id") != "ch-metastar" for s in signals)
+    assert "SANCTIONED" not in {s.code for s in signals}

@@ -27,8 +27,9 @@ def descriptor() -> dict[str, Any]:
         "name": "opencheck",
         "displayName": "OpenCheck MCP Server",
         "description": (
-            "LEI-driven customer due diligence: search a company to its LEI, "
-            "resolve owners/controllers and sanctions/PEP/debarment risk, and "
+            "LEI-driven customer due diligence: search a company to its LEI "
+            "(or its register number when it has none), resolve "
+            "owners/controllers and sanctions/PEP/debarment risk, and "
             "export the beneficial-ownership graph as BODS v0.4."
         ),
         "version": __version__,

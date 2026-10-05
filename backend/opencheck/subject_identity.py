@@ -42,11 +42,13 @@ from typing import Any
 
 from .bods.refs import resolver
 from .reconcile import _identifier_keys
-from .subject_profile import subject_statements
+from .subject_profile import subject_keys, subject_statements
 
 
 def _carries_lei(stmt: dict[str, Any], lei: str) -> bool:
-    return f"LEI:{lei}" in _identifier_keys(stmt)
+    """Does the statement carry the subject reference — an LEI, or (Phase
+    289) a ``<SCHEME>:<id>`` register reference — as an identifier key?"""
+    return bool(_identifier_keys(stmt) & subject_keys(lei))
 
 
 @dataclass(frozen=True)
@@ -90,8 +92,11 @@ EMPTY = SubjectIdentity()
 def subject_identity(lei: str | None, bods: list[dict[str, Any]]) -> SubjectIdentity:
     """The subject identity set for ``lei`` in ``bods``.
 
-    Empty when there is no LEI or no statement carries it — the screens then
-    behave exactly as before, screening everything.
+    ``lei`` is a subject reference: an LEI, or — Phase 290, for a lookup
+    anchored on a register number — ``<SCHEME>:<id>`` such as
+    ``GB-COH:OC346224`` (``subject_profile.subject_keys``). Empty when there
+    is no reference or no statement carries it — the screens then behave
+    exactly as before, screening everything.
     """
     norm = (lei or "").strip().upper()
     if not norm or not bods:
@@ -100,7 +105,7 @@ def subject_identity(lei: str | None, bods: list[dict[str, Any]]) -> SubjectIden
     if not seed:
         return EMPTY
 
-    keys: set[str] = {f"LEI:{norm}"}
+    keys: set[str] = set(subject_keys(norm))
     for stmt in seed:
         keys |= _identifier_keys(stmt)
 

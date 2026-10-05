@@ -361,7 +361,17 @@ async def _run_flight(
             # imports this one, and a test replaces ``lookup._lookup_pipeline``.
             from .routers import lookup as _lookup
 
-            async for event in _lookup._lookup_pipeline(lei, deepen_top=deepen_top):
+            # Phase 290: a subject key with a colon is a register-anchored
+            # run (``SCHEME:id``); an LEI never carries one. Same flight,
+            # same gate, same cache — a different pipeline behind it.
+            if ":" in lei:
+                scheme, ident = lei.split(":", 1)
+                pipeline = _lookup._register_lookup_pipeline(
+                    scheme, ident, deepen_top=deepen_top
+                )
+            else:
+                pipeline = _lookup._lookup_pipeline(lei, deepen_top=deepen_top)
+            async for event in pipeline:
                 name, payload = event
                 if name in ("source_completed", "source_error") and isinstance(payload, dict):
                     _pipelinestats.record_source(
@@ -501,7 +511,11 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     cannot drift from the live ones. A ``hit`` payload may be a ``SourceHit``
     (live, in-process) or its JSON dict (read back from a saved report).
     """
-    norm_lei = lei.strip().upper()
+    # A subject reference: an LEI, or ``SCHEME:id`` for a register-anchored
+    # run (Phase 290) — ``listing.apply_to_bods`` finds no LEI statement for
+    # the latter and leaves the bundle alone, which is right: there is no
+    # listing event to apply.
+    norm_lei = lei.strip().upper() if ":" not in lei else lei.strip()
     hits: list[Any] = []
     errors: dict[str, str] = {}
     links: list[dict[str, Any]] = []
@@ -537,7 +551,9 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             raise HTTPException(
                 status_code=payload["status"], detail=payload["detail"]
             )
-        elif event == "gleif_done":
+        elif event in ("gleif_done", "register_done"):
+            # ``register_done`` (Phase 290): the register-anchored run's
+            # anchor event — same three fields, no LEI among the derived ids.
             legal_name = payload["legal_name"]
             jurisdiction = payload["jurisdiction"]
             derived = payload["derived_identifiers"]

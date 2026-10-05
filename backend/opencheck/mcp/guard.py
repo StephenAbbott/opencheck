@@ -15,6 +15,7 @@ for every ``tools/call`` in it, spends the tier the equivalent REST route is on:
 tool                           tier        REST counterpart
 =============================  ==========  ===========================
 opencheck_lookup               lookup      ``GET /lookup``
+opencheck_register_lookup      lookup      ``GET /lookup-register``
 opencheck_export_bods          lookup      ``GET /export``
 opencheck_search               lookup      ``GET /search``
 opencheck_person_check         lookup      ``GET /person-check``
@@ -55,6 +56,7 @@ _HEAVY = Quota("mcp:heavy", lambda: get_settings().rate_limit_heavy)
 
 TOOL_TIERS: dict[str, Quota] = {
     "opencheck_lookup": _LOOKUP,
+    "opencheck_register_lookup": _LOOKUP,
     "opencheck_export_bods": _LOOKUP,
     "opencheck_search": _LOOKUP,
     "opencheck_person_check": _LOOKUP,

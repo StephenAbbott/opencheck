@@ -34,7 +34,8 @@ from typing import Any
 
 from .bods import liveness as _liveness
 from .consistency import referent_groups, source_id_of
-from .reconcile import _entity_jurisdiction
+from .matching import canonical_identifier
+from .reconcile import _entity_jurisdiction, _identifier_keys
 from .sources.lineage import independent_count, national_register_ids
 
 #: Liveness classes, worst first.
@@ -54,22 +55,62 @@ def _is_subject_lei(stmt: dict[str, Any], lei: str) -> bool:
     return False
 
 
-def subject_statements(lei: str, bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """The entity statements that describe the looked-up LEI.
+def subject_keys(ref: str) -> frozenset[str]:
+    """The identifier-merge keys (``reconcile._identifier_keys``) that name
+    the subject ``ref`` refers to.
 
-    The referent group containing a statement that carries the LEI as an
-    ``XI-LEI`` identifier; when no group has formed (one source only), the
-    statements carrying the LEI themselves.
+    A subject reference (Phase 290) is either an LEI — ``LEI:<lei>`` — or a
+    register-scoped identifier written ``<SCHEME>:<id>`` (``GB-COH:OC346224``),
+    which an entity statement carries under that scheme, as the mappers'
+    ``REG-<country>`` fallback for an unnamed register (``REG-GB:OC346224``,
+    what OpenAleph's UK records and a PSC filed as registered in "England And
+    Wales" carry), or as the jurisdiction-scoped bare register number
+    (``JUR:GB:OC346224``).
+    One function, so ``subject_statements``, ``subject_identity`` and the
+    screens agree on what "the subject" is without an LEI.
+    """
+    ref = (ref or "").strip().upper()
+    if not ref:
+        return frozenset()
+    if ":" not in ref:
+        return frozenset({f"LEI:{ref}"})
+    scheme, raw = ref.split(":", 1)
+    value = canonical_identifier(raw, min_len=0) or raw
+    keys = {f"{scheme}:{value}"}
+    country = scheme[4:] if scheme.startswith("REG-") else scheme.split("-", 1)[0]
+    if country and len(country) == 2:
+        keys.add(f"JUR:{country}:{value}")
+        keys.add(f"REG-{country}:{value}")
+    return frozenset(keys)
+
+
+def is_subject(stmt: dict[str, Any], ref: str) -> bool:
+    """Does this entity statement carry the subject reference ``ref``?"""
+    if not ref:
+        return False
+    if ":" not in ref:
+        return _is_subject_lei(stmt, ref.strip().upper())
+    return bool(_identifier_keys(stmt) & subject_keys(ref))
+
+
+def subject_statements(lei: str, bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The entity statements that describe the looked-up subject.
+
+    ``lei`` is a subject reference: an LEI, or — Phase 290, for a lookup
+    anchored on a register number — ``<SCHEME>:<id>`` (see ``subject_keys``).
+    The referent group containing a statement that carries the reference;
+    when no group has formed (one source only), the statements carrying it
+    themselves.
     """
     lei = lei.strip().upper()
     if not lei:
         return []
     for group in referent_groups(bods):
-        if any(_is_subject_lei(s, lei) for s in group):
+        if any(is_subject(s, lei) for s in group):
             return group
     return [
         s for s in bods
-        if s.get("recordType") == "entity" and _is_subject_lei(s, lei)
+        if s.get("recordType") == "entity" and is_subject(s, lei)
     ]
 
 

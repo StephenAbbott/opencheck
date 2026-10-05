@@ -31,7 +31,10 @@ _INSTRUCTIONS = (
     "company name, call opencheck_search to get its LEI (or "
     "opencheck_resolve_national_id if you have a national registration number); "
     "then call opencheck_lookup with the LEI for owners, controllers and risk "
-    "signals; call opencheck_export_bods for the full machine-readable ownership "
+    "signals. A company with no LEI — most UK LLPs, most small companies "
+    "anywhere — is looked up by its register number instead: pass a search "
+    "candidate's identifiers[].scheme and id (e.g. GB-COH, OC346224) to "
+    "opencheck_register_lookup; call opencheck_export_bods for the full machine-readable ownership "
     "graph in BODS v0.4 (include_subsidiaries=true folds in the GLEIF subsidiary "
     "network), or opencheck_subsidiaries for what the company consolidates. "
     "For a list of companies call opencheck_batch_lookup "
@@ -74,7 +77,9 @@ async def opencheck_search(query: str, kind: str = "entity") -> dict[str, Any]:
         kind: "entity" (default) or "person".
 
     Returns candidate matches with their LEIs — feed a candidate's ``lei`` to
-    ``opencheck_lookup``.
+    ``opencheck_lookup``. A candidate with ``lei: null`` and an entry in
+    ``identifiers`` (a register scheme and number, e.g. GB-COH OC346224) is
+    looked up with ``opencheck_register_lookup`` instead.
     """
     from ..sources import SearchKind
     from ..routers.search import _search_impl as _search
@@ -129,6 +134,37 @@ async def opencheck_lookup(lei: str, deepen_top: int = 5) -> dict[str, Any]:
     except HTTPException as exc:
         return _err(exc)
     return shaping.shape_lookup(resp)
+
+
+@mcp.tool()
+async def opencheck_register_lookup(
+    scheme: str, id: str, deepen_top: int = 5
+) -> dict[str, Any]:
+    """Run due diligence on a company that has no LEI, by its register number.
+
+    The register that owns the scheme (UK Companies House for GB-COH, the
+    Dutch KvK for NL-KVK, …) is read for the company's record, officers and
+    beneficial owners / PSCs; that bundle is then screened and assessed as
+    opencheck_lookup's is — sanctions / PEP / debarment / offshore-leaks
+    signals, the verdict, the register profile and what is knowable in the
+    jurisdiction. There is no GLEIF anchor: ``lei`` is null, no listing line,
+    and the company's own name is screened by name rather than through an
+    LEI-keyed record. Same rate limits and lookup budget as opencheck_lookup.
+
+    Args:
+        scheme: Register identifier scheme, as a search candidate's
+            ``identifiers[].scheme`` gives it (e.g. "GB-COH", "NL-KVK",
+            "REG-GB"); the full list is GET /expand-schemes.
+        id: The company's number on that register (e.g. "OC346224").
+        deepen_top: How many top sources to deepen (0-10, default 5).
+    """
+    from ..routers.lookup import _register_lookup_impl as _lookup
+
+    try:
+        resp = await _lookup(scheme=scheme, ident=id, deepen_top=deepen_top)
+    except HTTPException as exc:
+        return _err(exc)
+    return shaping.shape_register_lookup(resp)
 
 
 @mcp.tool()
@@ -446,6 +482,7 @@ TOOL_NAMES = [
     "opencheck_search",
     "opencheck_resolve_national_id",
     "opencheck_lookup",
+    "opencheck_register_lookup",
     "opencheck_batch_lookup",
     "opencheck_export_bods",
     "opencheck_subsidiaries",
