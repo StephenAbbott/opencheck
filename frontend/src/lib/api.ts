@@ -306,7 +306,10 @@ export interface SubjectProfileFact {
 }
 
 export interface SubjectProfileStatus {
-  liveness: "live" | "pending" | "terminal";
+  /** `declared` (Phase 291): GLEIF's entity status on an LEI no issuer
+   *  maintains any more — the last thing the company declared, neither live
+   *  nor dissolved. `since` is then the renewal GLEIF says was missed. */
+  liveness: "live" | "pending" | "terminal" | "declared";
   since: string | null;
   raw: string | null;
   /** The source whose status is shown — the register before GLEIF. */
@@ -314,6 +317,10 @@ export interface SubjectProfileStatus {
   sources: string[];
   independent_sources: number;
   other_values: { source_id: string; value: string }[];
+  /** Phase 291, `declared` only: GLEIF's registration status behind it. */
+  lei_registration_status?: string | null;
+  /** Phase 291, `declared` only: the server's sentence, frozen with the run. */
+  sentence?: string | null;
 }
 
 /** The LEI record's own registration status (Phase 242), from the GLEIF
@@ -1839,10 +1846,12 @@ export interface BatchRow {
   legal_name: string | null;
   jurisdiction: string | null;
   register_status: {
-    liveness: "live" | "pending" | "terminal";
+    liveness: "live" | "pending" | "terminal" | "declared";
     since?: string | null;
     raw?: string | null;
     source_id?: string;
+    /** Phase 291: present for `declared`. */
+    sentence?: string | null;
   } | null;
   /** Phase 242: the LEI record's status; absent on rows served before it. */
   lei_registration?: { status: string; since?: string | null } | null;

@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import type { LeiRegistration, SubjectProfile } from "./api";
 import {
   LEI_NOT_ENTITY_STATUS,
+  declaredSentence,
   formatProfileDate,
   leiRegistrationChip,
   leiRegistrationLine,
@@ -235,5 +236,78 @@ describe("the LEI registration row", () => {
     expect(leiRegistrationLine(issued)).toBe("Issued — renews 21 Mar 2027");
     expect(profileRows(shell(), NAMES).some((r) => r.label === "LEI registration")).toBe(false);
     expect(profileRows(shell({ lei_registration: null }), NAMES).some((r) => r.label === "LEI registration")).toBe(false);
+  });
+});
+
+// Phase 291: GLEIF's ACTIVE on an LEI no issuer maintains. Bentcard Import LLP
+// (54930007FGRO3F0RZ382) — LAPSED since 5 Feb 2015, dissolved by Companies
+// House in 2016 — read "Active · GLEIF".
+const BENTCARD_SENTENCE =
+  "GLEIF holds the entity status as ACTIVE, last declared to the LEI issuer before " +
+  "5 Feb 2015; the LEI has not been renewed since, so no issuer has re-checked it. " +
+  "This is not a current register reading.";
+
+const bentcard = (sentence: string | null = BENTCARD_SENTENCE): SubjectProfile =>
+  shell({
+    register_status: {
+      liveness: "declared",
+      since: "2015-02-05",
+      raw: "ACTIVE",
+      source_id: "gleif",
+      sources: ["gleif"],
+      independent_sources: 1,
+      other_values: [],
+      lei_registration_status: "LAPSED",
+      sentence,
+    },
+  });
+
+describe("a declared status (Phase 291)", () => {
+  it("is never labelled Active, carries the 2015 date, and stays neutral — not dissolved, not a risk", () => {
+    const chip = statusChip(bentcard(), NAMES);
+    expect(chip).toEqual({
+      label: "Last declared active (before 5 Feb 2015) · GLEIF",
+      tone: "neutral",
+      detail: BENTCARD_SENTENCE,
+    });
+    expect(chip?.label.startsWith("Active")).toBe(false);
+  });
+
+  it("puts the server's sentence in the Register status row", () => {
+    const row = profileRows(bentcard(), NAMES).find((r) => r.label === "Register status");
+    expect(row).toEqual({
+      label: "Register status",
+      value: BENTCARD_SENTENCE,
+      sources: "Source: GLEIF",
+    });
+  });
+
+  it("builds the same sentence the server does when a payload kept only liveness and date", () => {
+    expect(declaredSentence({ raw: "ACTIVE", since: "2015-02-05", sentence: null })).toBe(BENTCARD_SENTENCE);
+    expect(statusChip(bentcard(null), NAMES)?.detail).toBe(BENTCARD_SENTENCE);
+  });
+
+  it("gives no date where GLEIF publishes none", () => {
+    const text = declaredSentence({ raw: "ACTIVE", since: null, sentence: null });
+    expect(text).not.toMatch(/\d{4}/);
+    expect(text.endsWith("This is not a current register reading.")).toBe(true);
+  });
+
+  it("leaves a live GLEIF status on an issued LEI exactly as it was", () => {
+    const chip = statusChip(
+      shell({
+        register_status: {
+          liveness: "live",
+          since: null,
+          raw: "ACTIVE",
+          source_id: "gleif",
+          sources: ["gleif"],
+          independent_sources: 1,
+          other_values: [],
+        },
+      }),
+      NAMES,
+    );
+    expect(chip).toEqual({ label: "Active · GLEIF", tone: "neutral", detail: "GLEIF records this company as active." });
   });
 });

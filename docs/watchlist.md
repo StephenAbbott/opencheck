@@ -91,7 +91,7 @@ difference with a closed vocabulary (`CHANGE_KINDS`):
 |---|---|
 | `gleif_field` | A material GLEIF field (Tier 1's own facts) |
 | `legal_name`, `jurisdiction`, `founding_date`, `legal_form`, `dissolution_date` | The profile facts |
-| `register_status` | The register's liveness class changed |
+| `register_status` | The register's liveness class changed (`live` ↔ `declared` is not a change: the entity status is the same and the LEI registration move behind it is already a `gleif_field` change — Phase 291) |
 | `identifier` | A one-per-entity identifier now has a different value |
 | `signal_new` / `context_new` | A code appeared |
 | `signal_retired` / `context_retired` | A code is gone **and the source that produced it answered** |

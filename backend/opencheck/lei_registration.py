@@ -187,3 +187,77 @@ def report_value(report: dict[str, Any] | None) -> str | None:
     if not isinstance(reg, dict) or not reg.get("status"):
         return None
     return sentence(reg) if reg.get("flag") else short_line(reg)
+
+
+# ---------------------------------------------------------------------------
+# Phase 291: GLEIF's entity status, as last declared
+# ---------------------------------------------------------------------------
+#
+# Phase 242 kept the two statuses apart, and that stays: a lapsed LEI is never
+# read as a dissolved company. What it left wrong was the other direction.
+# GLEIF's ``entity.status`` is reference data the LEI holder declares to its
+# issuer, and the issuer re-checks it only at renewal. Once the LEI is no
+# longer maintained, ACTIVE is the last thing the company told the issuer —
+# for Bentcard Import LLP (``54930007FGRO3F0RZ382``) a declaration from before
+# 5 Feb 2015, about a UK LLP Companies House dissolved on 19 Apr 2016 — and
+# the profile showed it as a live register status. ``subject_profile`` now
+# shows such a status as ``declared``: neither live nor dissolved, dated by
+# the renewal that was missed, never by ``lastUpdateDate``.
+
+#: Registration statuses under which an issuer holds and re-checks the
+#: record. The two pending-transfer states are a change of issuer, not an
+#: abandoned record, so GLEIF's entity status is still a maintained reading.
+MAINTAINED: frozenset[str] = frozenset({"ISSUED", "PENDING_TRANSFER", "PENDING_ARCHIVAL"})
+
+#: Clause after "the LEI is <label>, so" for statuses other than LAPSED.
+_UNMAINTAINED_CLAUSE: dict[str, str] = {
+    "PENDING_VALIDATION": "no issuer has checked it yet",
+    "CANCELLED": "no issuer ever checked it",
+}
+
+
+def entity_status_is_declared(reg: dict[str, Any] | None) -> bool:
+    """True when GLEIF's entity status is no longer re-checked by an issuer.
+
+    ``None`` (no registration block, or a payload recorded before Phase 242)
+    is never read as unmaintained — absence is not a lapse, just as it is
+    never ISSUED.
+    """
+    if not isinstance(reg, dict):
+        return False
+    status = str(reg.get("status") or "").strip().upper()
+    return bool(status) and status not in MAINTAINED
+
+
+def declared_sentence(raw: str | None, reg: dict[str, Any]) -> str:
+    """The profile sentence for an entity status GLEIF no longer re-checks.
+
+    "GLEIF holds the entity status as ACTIVE, last declared to the LEI issuer
+    before 5 Feb 2015; the LEI has not been renewed since, so no issuer has
+    re-checked it. This is not a current register reading."
+    """
+    word = " ".join(str(raw or "").split()) or "ACTIVE"
+    status = str(reg.get("status") or "").upper()
+    label = str(reg.get("label") or LABELS.get(status, status)).lower()
+    renewal = reg.get("next_renewal_date")
+    if status == "LAPSED" and renewal:
+        first = (
+            f"GLEIF holds the entity status as {word}, last declared to the LEI issuer "
+            f"before {format_date(renewal)}; the LEI has not been renewed since, so no "
+            "issuer has re-checked it."
+        )
+    elif status == "LAPSED":
+        first = (
+            f"GLEIF holds the entity status as {word}, as last declared to the LEI issuer; "
+            "the LEI has not been renewed, so no issuer has re-checked it."
+        )
+    else:
+        clause = _UNMAINTAINED_CLAUSE.get(status, "no issuer re-checks it")
+        first = (
+            f"GLEIF holds the entity status as {word}, as last declared to the LEI issuer; "
+            f"the LEI is {label}, so {clause}."
+        )
+        updated = reg.get("last_update_date")
+        if updated:
+            first += f" GLEIF last updated the record on {format_date(updated)}."
+    return f"{first} This is not a current register reading."

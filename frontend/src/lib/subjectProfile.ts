@@ -59,13 +59,28 @@ const STATUS_WORD: Record<SubjectProfileStatus["liveness"], string> = {
   live: "Active",
   pending: "Terminal process under way",
   terminal: "Dissolved",
+  declared: "Last declared active",
 };
 
 const STATUS_TONE: Record<SubjectProfileStatus["liveness"], StatusChipTone> = {
   live: "neutral",
   pending: "warn",
   terminal: "terminal",
+  declared: "neutral",
 };
+
+/** Phase 291: GLEIF's ACTIVE on an LEI no issuer maintains. The server's
+ *  sentence when the payload carries one (`opencheck/lei_registration.py`
+ *  `declared_sentence`); otherwise the same claim built here, for a payload
+ *  that kept only liveness and date. Never "live", never "dissolved". */
+export function declaredSentence(status: Pick<SubjectProfileStatus, "raw" | "since" | "sentence">): string {
+  if (status.sentence) return status.sentence;
+  const word = status.raw || "ACTIVE";
+  const head = status.since
+    ? `GLEIF holds the entity status as ${word}, last declared to the LEI issuer before ${formatProfileDate(status.since)}; the LEI has not been renewed since, so no issuer has re-checked it.`
+    : `GLEIF holds the entity status as ${word}, as last declared to the LEI issuer; no issuer re-checks it.`;
+  return `${head} This is not a current register reading.`;
+}
 
 export function statusChip(
   profile: SubjectProfile | null | undefined,
@@ -75,6 +90,14 @@ export function statusChip(
   if (!status) return null;
   const source = sourceLabel(status.source_id, names);
   const word = STATUS_WORD[status.liveness];
+  if (status.liveness === "declared") {
+    const before = status.since ? ` (before ${formatProfileDate(status.since)})` : "";
+    return {
+      label: `${word}${before} · ${source}`,
+      tone: STATUS_TONE.declared,
+      detail: declaredSentence(status),
+    };
+  }
   const since =
     status.since && status.liveness !== "live" ? ` since ${formatProfileDate(status.since)}` : "";
   return {
@@ -194,7 +217,13 @@ export function profileRows(
   if (!profile) return [];
   const rows: (ProfileRow | null)[] = [
     factRow("Legal form", profile.legal_form, (v) => v, names),
-    profile.register_status
+    profile.register_status?.liveness === "declared"
+      ? {
+          label: "Register status",
+          value: declaredSentence(profile.register_status),
+          sources: `Source: ${sourceList(profile.register_status.sources, names)}`,
+        }
+      : profile.register_status
       ? {
           label: "Register status",
           value:
