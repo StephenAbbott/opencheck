@@ -53,9 +53,20 @@ What the build does, and what the bundle therefore is:
 - Entities the thesaurus identifies only by a Russian tax id or an Azerbaijani name
   have no register OpenCheck reads, so they are counted in the seed's `skipped` and
   are not in the bundle. The release notes say so.
+- The build runs in **three paced passes**: LEI lookups one at a time
+  (`--lei-concurrency 1`, `--lei-pause 5`), then each LEI's subsidiary network, then
+  register hops. Everything that touches GLEIF shares one process-wide throttle of
+  50 calls a minute (GLEIF allows 60 per address); a lookup's anchor costs about
+  eight and a bank's subsidiary network one call per child. The first keyed run
+  (5 Oct 2026) fetched subsidiaries inline, two lookups at a time, and 21 of 26 LEI
+  subjects failed on the resulting 429s while every register hop succeeded. A
+  lookup refused as momentary (GLEIF 429/503, lookup budget) is retried after
+  `--retry-wait` (70 s), up to `--retries` (2) times; `--skip-subsidiaries` leaves
+  the costliest GLEIF calls out altogether.
 - Raw results are cached per subject under `<out>/raw/`, so an interrupted run
   resumes, `--retry-degraded` refetches only the subjects that failed, returned
-  nothing or had a screen that did not fully run, and `--assemble-only` rewrites the
+  nothing or had a screen that did not fully run, the subsidiaries pass covers any
+  cached lookup that does not have a network yet, and `--assemble-only` rewrites the
   artefacts without fetching. Register hops run one at a time with
   `--register-pause` (default 3 s) because Companies House allows 600 calls per
   five minutes per key and a hop costs about four plus its PSC walk.
