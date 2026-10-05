@@ -48,6 +48,16 @@ which Aleph indexes as keywords and supports exact-match via ``filter:properties
 
 API keys are optional and per-user; when set, they unlock additional
 collections.
+
+Mirror collections are dropped (Phase 286). OpenAleph republishes the GLEIF
+Concatenated Data File as a collection of its own (``foreign_id: gleif``,
+collection 404 on the flagship). A record from it is GLEIF read twice — the
+lookup already queries GLEIF directly — so letting it through made OpenAleph
+count as a second answering source for subjects it knows only from GLEIF
+(NIPPON SUISAN (U.S.A.), INC, 549300I5BCFMO2W0QI94, reached through
+``/match``). ``_without_mirrors`` removes those records at every point
+results enter the adapter, so a strategy that finds only the mirror returns
+nothing and the cascade moves on.
 """
 
 from __future__ import annotations
@@ -92,6 +102,31 @@ _MENTION_FACET_SIZE = 10
 # 1.x into the runtime, so Phase 266 dropped it and pinned the value it read.
 _OA_VERSION = "1.1.3"
 _OA_USER_AGENT = f"openaleph/{_OA_VERSION}"
+
+# Collections that republish a dataset OpenCheck already queries at source,
+# keyed on the collection's ``foreign_id`` — stable and readable, where the
+# numeric collection id is an accident of one instance's database (the GLEIF
+# file is 404 on the flagship). Only the GLEIF Concatenated Data File today:
+# the ESMA/FCA FIRDS and ESMA SARIS collections also carry ``leiCode`` but are
+# original data and stay. A live smoke test pins the foreign_id, because a
+# rename upstream would reopen the double count without failing anything else.
+_MIRROR_COLLECTIONS: frozenset[str] = frozenset({"gleif"})
+
+
+def _is_mirror(item: dict[str, Any]) -> bool:
+    """True when ``item`` belongs to a collection in ``_MIRROR_COLLECTIONS``."""
+    collection = item.get("collection") or {}
+    foreign_id = str(collection.get("foreign_id") or "").strip().lower()
+    return foreign_id in _MIRROR_COLLECTIONS
+
+
+def _without_mirrors(results: Any) -> list[dict[str, Any]]:
+    """The result items that do not come from a mirror collection."""
+    return [
+        item
+        for item in (results or [])
+        if isinstance(item, dict) and not _is_mirror(item)
+    ]
 
 
 def _slug(text: str) -> str:
@@ -216,7 +251,10 @@ class OpenAlephAdapter(SourceAdapter):
             f"/entities?q={quote(q)}&filter:schema={schema}&limit=10",
             cache_key=cache_key,
         )
-        return [self._hit(item, kind) for item in payload.get("results", [])]
+        return [
+            self._hit(item, kind)
+            for item in _without_mirrors(payload.get("results"))
+        ]
 
     # ------------------------------------------------------------------
     # Identifier-keyed lookups (LEI-anchored flow)
@@ -239,7 +277,7 @@ class OpenAlephAdapter(SourceAdapter):
         )
         return [
             self._hit(item, SearchKind.ENTITY)
-            for item in payload.get("results", [])
+            for item in _without_mirrors(payload.get("results"))
         ]
 
     async def fetch_by_oc_url(self, ocid: str) -> list[SourceHit]:
@@ -260,7 +298,7 @@ class OpenAlephAdapter(SourceAdapter):
         )
         return [
             self._hit(item, SearchKind.ENTITY)
-            for item in payload.get("results", [])
+            for item in _without_mirrors(payload.get("results"))
         ]
 
     async def fetch_by_name(self, legal_name: str) -> list[SourceHit]:
@@ -295,7 +333,7 @@ class OpenAlephAdapter(SourceAdapter):
         wanted = _normalise_name(legal_name)
         return [
             self._hit(item, SearchKind.ENTITY)
-            for item in payload.get("results", [])
+            for item in _without_mirrors(payload.get("results"))
             if _bears_name(item, wanted)
         ]
 
@@ -323,7 +361,7 @@ class OpenAlephAdapter(SourceAdapter):
         )
         return [
             self._hit(item, SearchKind.ENTITY)
-            for item in payload.get("results", [])
+            for item in _without_mirrors(payload.get("results"))
         ]
 
     # ------------------------------------------------------------------
@@ -422,7 +460,9 @@ class OpenAlephAdapter(SourceAdapter):
                 return []
             self._cache.put(cache_key, payload)
 
-        results = (payload.get("results") or [])[:limit]
+        # Mirrors go before the cutoff: a dropped GLEIF top hit must not set
+        # the bar the remaining records are measured against.
+        results = _without_mirrors(payload.get("results"))[:limit]
         subject_props = ftm_entity.get("properties") or {}
         top_score = max(
             (item.get("score") or 0.0 for item in results), default=0.0
@@ -547,7 +587,7 @@ class OpenAlephAdapter(SourceAdapter):
                 return None
             self._cache.put(cache_key, payload)
 
-        return list(payload.get("results") or [])
+        return _without_mirrors(payload.get("results"))
 
     async def fetch_by_name_percolate(self, legal_name: str) -> list[SourceHit]:
         """Resolve the subject by name via percolation instead of Lucene.

@@ -611,3 +611,35 @@ async def test_role_search_sandbox_does_not_serve_the_alternative_address():
         "the panel. Revisit _tier() in nz_associations — relabelling the basis is "
         "no longer enough — and update docs/nz-associations.md."
     )
+
+
+# --- OpenAleph GLEIF mirror (Phase 286; public, no key) ----------------------
+
+
+async def test_openaleph_gleif_mirror_still_keyed_as_gleif():
+    """OpenAleph drops its republished GLEIF Concatenated Data File by the
+    collection's ``foreign_id``. If OpenAleph renames that collection, the
+    mirror slips back in silently and every subject it knows only from GLEIF
+    (NIPPON SUISAN (U.S.A.), INC, 549300I5BCFMO2W0QI94) counts OpenAleph as a
+    second answering source again. This pins the key the rule depends on."""
+    import httpx
+
+    from opencheck.sources.openaleph import _API_BASE, _OA_USER_AGENT, _is_mirror
+
+    lei = "549300I5BCFMO2W0QI94"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(
+            f"{_API_BASE}/entities",
+            params={"filter:properties.leiCode": lei, "limit": 10},
+            headers={"User-Agent": _OA_USER_AGENT},
+        )
+    response.raise_for_status()
+    results = response.json().get("results") or []
+    if not results:
+        pytest.skip(f"OpenAleph no longer indexes {lei} at all — pick another LEI")
+    assert any(_is_mirror(item) for item in results), (
+        "OpenAleph's GLEIF record for this LEI is no longer recognised as the "
+        "mirror. Collections seen: "
+        f"{sorted({str((i.get('collection') or {}).get('foreign_id')) for i in results})}. "
+        "Update _MIRROR_COLLECTIONS in sources/openaleph.py."
+    )
