@@ -94,7 +94,7 @@ async def test_match_entity_parses_scored_results(httpx_mock: HTTPXMock) -> None
             "status": "ok",
             "results": [
                 {
-                    "id": "lei-213800LH1BZH3DI6G760.abc",
+                    "id": "eu-esma-firds-213800LH1BZH3DI6G760",
                     "schema": "Company",
                     "score": 98.51607,
                     "properties": {
@@ -102,7 +102,12 @@ async def test_match_entity_parses_scored_results(httpx_mock: HTTPXMock) -> None
                         "leiCode": [_LEI],
                         "registrationNumber": ["00102498"],
                     },
-                    "collection": {"label": "GLEIF", "foreign_id": "gleif"},
+                    # Not the GLEIF mirror — that collection is dropped by
+                    # design (Phase 286; see test_openaleph_mirrors.py).
+                    "collection": {
+                        "label": "EU Financial Instruments Reference Data System (FIRDS)",
+                        "foreign_id": "eu_esma_firds",
+                    },
                 }
             ],
         },

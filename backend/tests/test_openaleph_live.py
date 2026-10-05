@@ -309,7 +309,7 @@ async def test_fetch_by_name_strips_quotes_that_break_aleph(httpx_mock: HTTPXMoc
         "schema": "Company",
         "caption": raw_name,
         "properties": {"name": [raw_name]},
-        "collection": {"id": 1, "foreign_id": "gleif", "label": "GLEIF"},
+        "collection": {"id": 1, "foreign_id": "ru_rupep", "label": "Russian PEPs"},
     }
     httpx_mock.add_response(
         url=f"{_API}/entities?q={quote(sanitised)}&filter:schema=LegalEntity&limit=5",
