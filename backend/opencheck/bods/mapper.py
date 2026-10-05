@@ -1196,11 +1196,30 @@ def map_gleif_subsidiaries(
     return out
 
 
+def _gleif_rr_periods(rr: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """The ``periods`` of an RR record as a list of dicts, whatever GLEIF sent.
+
+    GLEIF normally serialises ``periods`` as a JSON array, but at least one
+    live record (the ultimate-parent relationship of ``213800XGI5VTUFBD4932``
+    under HSBC Holdings, seen 5 Oct 2026) arrives as an object keyed
+    ``"0"``, ``"2"``, ``"1"`` — an array with a gap, written as a map.
+    Iterating that yields the keys, and one such child took HSBC's whole
+    465-child network down with ``'str' object has no attribute 'get'``.
+    Anything that is not a dict is dropped rather than guessed at.
+    """
+    rel = ((rr or {}).get("attributes") or {}).get("relationship") or {}
+    raw = rel.get("periods")
+    if isinstance(raw, dict):
+        raw = [raw[k] for k in sorted(raw, key=lambda k: (len(str(k)), str(k)))]
+    if not isinstance(raw, list):
+        return []
+    return [p for p in raw if isinstance(p, dict)]
+
+
 def _gleif_rr_period(rr: dict[str, Any] | None) -> tuple[str | None, str | None]:
     """``(startDate, endDate)`` of an RR record's ``RELATIONSHIP_PERIOD``."""
-    rel = ((rr or {}).get("attributes") or {}).get("relationship") or {}
-    for period in rel.get("periods") or []:
-        if (period or {}).get("type") == "RELATIONSHIP_PERIOD":
+    for period in _gleif_rr_periods(rr):
+        if period.get("type") == "RELATIONSHIP_PERIOD":
             start = (period.get("startDate") or "")[:10] or None
             end = (period.get("endDate") or "")[:10] or None
             return start, end
