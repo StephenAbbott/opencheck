@@ -51,7 +51,8 @@ tier and the shared per-client lookup budget; the replay cache is keyed on
 | Param | Description |
 |---|---|
 | `lei` | ISO 17442 Legal Entity Identifier (20 chars). Required on `/lookup`. |
-| `scheme`, `id` | Register scheme and number. Required on `/lookup-register`; `400` names the known schemes when the scheme is unknown or the value is not a number of that register. |
+| `scheme`, `id` | Register scheme and number. Required on `/lookup-register`; `400` names the known schemes when the scheme is unknown or the value is not a number of that register; the register's own "no such number" is `404`. |
+| `name` | Optional on `/lookup-register`: the company's name as the caller knows it, handed to registers that search by name behind the number (as the FullCheck hop hands them the PSC filing's). KvK's open data publishes no names at all: without one its record is returned with a `source_read` degradation saying so, and the verdict reads as incomplete rather than clean. A named run and a nameless one are separate replay-cache entries. |
 | `deepen_top` | How many top hits to deepen + map + assess (default 5; clamped to 0–10). |
 | `refresh` | Bypass the short-lived replay cache. |
 

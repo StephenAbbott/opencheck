@@ -6,6 +6,8 @@ import asyncio
 import json
 import logging
 import re
+
+import httpx
 from dataclasses import dataclass, field as dc_field
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator
@@ -1984,8 +1986,24 @@ def _register_anchor(scheme: str, ident: str) -> tuple[Any, str]:
     return hop, local_id
 
 
+#: Separates the caller's ``name`` from the number inside a flight key
+#: (``GB-COH:OC346224#Metastar Invest LLP``): the name is a hint to the
+#: register, never part of the subject reference the screens and the profile
+#: read, but a run made with it can map what a nameless run could not, so the
+#: two must not replay each other. An LEI or a register number never carries
+#: ``#``.
+_NAME_SEP = "#"
+
+
+def _split_subject_key(key: str) -> tuple[str, str, str]:
+    """``SCHEME:id[#name]`` → ``(scheme, ident, name)``."""
+    scheme, rest = key.split(":", 1)
+    ident, _, name = rest.partition(_NAME_SEP)
+    return scheme, ident, name
+
+
 async def _register_lookup_pipeline(
-    scheme: str, ident: str, deepen_top: int = 5
+    scheme: str, ident: str, deepen_top: int = 5, *, name: str = ""
 ) -> AsyncIterator[LookupEvent]:
     """The register-anchored lookup (Phase 290), as a stream of the same
     events ``_lookup_pipeline`` yields — ``register_done`` where the LEI
@@ -1993,7 +2011,11 @@ async def _register_lookup_pipeline(
 
     ``scheme`` is a canonical hop scheme and ``ident`` the register's
     canonical number (``_register_anchor`` has already resolved both), so a
-    replay key is one subject, however the caller spelled it.
+    replay key is one subject, however the caller spelled it. ``name`` is
+    the company's name as the caller knows it (a search candidate's, say),
+    handed to a register whose ``fetch`` takes ``legal_name=`` exactly as the
+    FullCheck hop hands it the PSC filing's: KvK's open data publishes no
+    names at all, so without one its record maps to nothing.
     """
     from .. import register_hops
 
@@ -2021,9 +2043,11 @@ async def _register_lookup_pipeline(
     errors: dict[str, str] = {}
     provenances: dict[str, Provenance] = {}
     raw: Any = None
+    kwargs = {"legal_name": name} if hop.pass_legal_name and name else {}
     try:
         raw, prov = await asyncio.wait_for(
-            _fetch_with_provenance(adapter, local_id), timeout=_source_budget(hop.source_id)
+            _fetch_with_provenance(adapter, local_id, **kwargs),
+            timeout=_source_budget(hop.source_id),
         )
     except asyncio.TimeoutError:
         yield ("error", {
@@ -2034,13 +2058,27 @@ async def _register_lookup_pipeline(
             ),
         })
         return
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            # The register said so itself: no company under that number. Its
+            # answer, not a failure of ours — a 404, never a 502.
+            yield ("error", {
+                "status": 404,
+                "detail": f"No {src_name} record found for {hop.scheme} {local_id}.",
+            })
+            return
+        yield ("error", {
+            "status": 502,
+            "detail": f"{src_name} fetch failed for {hop.scheme} {local_id}: {describe_exception(exc)}",
+        })
+        return
     except Exception as exc:  # noqa: BLE001
         yield ("error", {
             "status": 502,
             "detail": f"{src_name} fetch failed for {hop.scheme} {local_id}: {describe_exception(exc)}",
         })
         return
-    if not isinstance(raw, dict) or raw.get("is_stub") or not raw:
+    if not isinstance(raw, dict) or raw.get("is_stub") or not raw or raw.get("not_found"):
         yield ("error", {
             "status": 404,
             "detail": (
@@ -2065,6 +2103,24 @@ async def _register_lookup_pipeline(
     ctx.legal_name, ctx.jurisdiction = _subject_name_and_jurisdiction(
         subject_stmts, raw, hop.country
     )
+    if not ctx.legal_name and name:
+        ctx.legal_name = name.strip()
+    if not subject_stmts and not ctx.legal_name:
+        # The register answered — a legal form, a founding date — but
+        # published no name, and the mapper emits nothing without one (KvK's
+        # open data is the case). Nothing was screened, so the verdict must
+        # not read "nothing surfaced": a source_read degradation says the
+        # record could not be read as a subject, and the detail says what
+        # would let it be.
+        _degradation.record(
+            hop.source_id,
+            (
+                f"{src_name} answered for this {hop.scheme} number but publishes no "
+                "company name, so its record could not be mapped or screened. "
+                "Pass name= (a search candidate's name, say) to map it."
+            ),
+            check=_degradation.CHECK_SOURCE_READ,
+        )
 
     hit = _build_result_hit(hop.source_id, raw, ctx)
     if hit is None:
@@ -2257,17 +2313,30 @@ def _subject_name_and_jurisdiction(
     return name, jurisdiction or country
 
 
+def _register_flight_key(scheme: str, ident: str, name: str = "") -> str:
+    """The replay / flight key: the subject reference, plus the caller's
+    name when there is one (see ``_NAME_SEP``)."""
+    key = register_subject(scheme, ident)
+    name = (name or "").strip()
+    return f"{key}{_NAME_SEP}{name}" if name else key
+
+
 async def _register_lookup_impl(
-    scheme: str, ident: str, deepen_top: int = 5, refresh: bool = False
+    scheme: str,
+    ident: str,
+    deepen_top: int = 5,
+    refresh: bool = False,
+    name: str = "",
 ) -> RegisterLookupResponse:
     """Body of ``/lookup-register``, callable in-process (the MCP tool)
     without the rate-limited route — and, like ``_lookup_impl``, charged to
     the caller's lookup budget (Phase 234) when the run is fresh."""
     hop, local_id = _register_anchor(scheme, ident)
-    subject = register_subject(hop.scheme, local_id)
     events: list[LookupEvent] = []
     async for event in _lookup_pipeline_cached(
-        subject, deepen_top=deepen_top, refresh=refresh
+        _register_flight_key(hop.scheme, local_id, name),
+        deepen_top=deepen_top,
+        refresh=refresh,
     ):
         if event[0] == "error":
             retry = event[1].get("retry_after_s")
@@ -2307,15 +2376,23 @@ async def lookup_register(
     id: str = Query(..., description="The company's number on that register (e.g. OC346224)."),
     deepen_top: int = Query(5, ge=0, le=10),
     refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
+    name: str = Query(
+        "",
+        description=(
+            "The company's name as you know it (optional). Handed to registers "
+            "that search by name behind the number — KvK's open data publishes "
+            "no names, so without one its record cannot be mapped."
+        ),
+    ),
 ) -> RegisterLookupResponse:
     """Due diligence on a company by its register number, for a subject
     with no LEI (Phase 290). The register that owns the scheme is the one
     source read; its bundle is then screened and assessed as a ``/lookup``
     bundle is. Same rate tier and lookup budget as ``/lookup``; replay cache
-    keyed on ``scheme:id``.
+    keyed on ``scheme:id`` (plus ``name`` when given).
     """
     return await _register_lookup_impl(
-        scheme=scheme, ident=id, deepen_top=deepen_top, refresh=refresh
+        scheme=scheme, ident=id, deepen_top=deepen_top, refresh=refresh, name=name
     )
 
 
@@ -2327,6 +2404,7 @@ async def lookup_register_stream(
     id: str = Query(..., description="The company's number on that register."),
     deepen_top: int = Query(5, ge=0, le=10),
     refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
+    name: str = Query("", description="The company's name as you know it (optional)."),
 ) -> Response:
     """``/lookup-register`` streamed as SSE — same pipeline, same events as
     ``/lookup-stream`` with ``register_done`` for ``gleif_done``. Gated against
@@ -2347,7 +2425,9 @@ async def lookup_register_stream(
     hop, local_id = _register_anchor(scheme, id)
     return EventSourceResponse(
         _lookup_sse_events(
-            register_subject(hop.scheme, local_id), deepen_top=deepen_top, refresh=refresh
+            _register_flight_key(hop.scheme, local_id, name),
+            deepen_top=deepen_top,
+            refresh=refresh,
         )
     )
 

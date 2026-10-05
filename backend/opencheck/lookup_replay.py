@@ -70,7 +70,7 @@ _REPLAY_CACHE: dict[str, _ReplayEntry] = {}
 
 
 def _invalidate_replay(lei: str) -> None:
-    prefix = f"{lei.strip().upper()}:"
+    prefix = f"{_subject_key(lei)}:"
     for key in [k for k in _REPLAY_CACHE if k.startswith(prefix)]:
         _REPLAY_CACHE.pop(key, None)
 
@@ -365,9 +365,9 @@ async def _run_flight(
             # run (``SCHEME:id``); an LEI never carries one. Same flight,
             # same gate, same cache — a different pipeline behind it.
             if ":" in lei:
-                scheme, ident = lei.split(":", 1)
+                scheme, ident, name = _lookup._split_subject_key(lei)
                 pipeline = _lookup._register_lookup_pipeline(
-                    scheme, ident, deepen_top=deepen_top
+                    scheme, ident, deepen_top=deepen_top, name=name
                 )
             else:
                 pipeline = _lookup._lookup_pipeline(lei, deepen_top=deepen_top)
@@ -414,8 +414,15 @@ async def _run_flight(
         await flight.finish()
 
 
+def _subject_key(lei: str) -> str:
+    """An LEI, upper-cased; or a register subject key (Phase 290,
+    ``SCHEME:id[#name]``) as given — its number is already the register's
+    canonical form and its name is the caller's, neither to be re-cased."""
+    return lei.strip().upper() if ":" not in lei else lei.strip()
+
+
 def _replay_key(lei: str, deepen_top: int) -> str:
-    return f"{lei.strip().upper()}:{clamp_deepen_top(deepen_top)}"
+    return f"{_subject_key(lei)}:{clamp_deepen_top(deepen_top)}"
 
 
 async def _lookup_pipeline_cached(
@@ -467,7 +474,7 @@ async def _lookup_pipeline_cached(
             _IN_FLIGHT[key] = flight
             flight.task = asyncio.create_task(
                 _run_flight(
-                    key, lei.strip().upper(), deepen_top, flight, time.monotonic(), charged
+                    key, _subject_key(lei), deepen_top, flight, time.monotonic(), charged
                 )
             )
 
@@ -515,7 +522,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     # run (Phase 290) — ``listing.apply_to_bods`` finds no LEI statement for
     # the latter and leaves the bundle alone, which is right: there is no
     # listing event to apply.
-    norm_lei = lei.strip().upper() if ":" not in lei else lei.strip()
+    norm_lei = lei.strip().upper() if ":" not in lei else lei.strip().split("#", 1)[0]
     hits: list[Any] = []
     errors: dict[str, str] = {}
     links: list[dict[str, Any]] = []

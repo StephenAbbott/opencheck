@@ -389,3 +389,112 @@ def test_search_candidates_carry_structured_identifiers_to_chain_on():
         {"scheme": "GB-COH", "id": "00102498"},
     ]  # an OpenCorporates id is not something a tool can act on
     assert "opencheck_register_lookup" in out["hint"]
+
+
+# ---------------------------------------------------------------------------
+# Follow-up (5 Oct 2026, production checks): the register's own 404, and a
+# register that answers without a name
+# ---------------------------------------------------------------------------
+
+
+def test_the_registers_own_404_is_a_404_not_a_502(client, monkeypatch):
+    """Companies House raises on an unknown number; in production that read
+    as "fetch failed … HTTP 404" with status 502. The register's answer is a
+    404 of ours."""
+    import httpx
+
+    async def _raise_404(adapter, hit_id, **kwargs):
+        req = httpx.Request("GET", "https://api.company-information.service.gov.uk/company/00000001")
+        raise httpx.HTTPStatusError("404", request=req, response=httpx.Response(404, request=req))
+
+    monkeypatch.setattr(lk, "_fetch_with_provenance", _raise_404)
+    r = client.get("/lookup-register", params={"scheme": "GB-COH", "id": "00000001"})
+    assert r.status_code == 404
+    assert "00000001" in r.json()["detail"] and "fetch failed" not in r.json()["detail"]
+
+
+def _patch_nameless_register(monkeypatch, *, fetched: list[tuple[str, str]]):
+    """A KvK-shaped register: answers with a record that carries no name, and
+    whose mapper emits nothing without one — unless the caller supplied it."""
+
+    async def _fake_fetch(adapter, hit_id, **kwargs):
+        fetched.append((hit_id, kwargs.get("legal_name", "")))
+        return (
+            {"source_id": "kvk", "kvk_number": hit_id,
+             "company": {"rechtsvormCode": "NV", "datumAanvang": "18730127", "actief": "J"},
+             "legal_name": kwargs.get("legal_name", ""), "is_stub": False},
+            None,
+        )
+
+    def _fake_mapper(source_id):
+        def _map(raw):
+            if not raw.get("legal_name"):
+                return []
+            return [{
+                "statementId": _stable_id("kvk", "entity", raw["kvk_number"]),
+                "recordType": "entity",
+                "recordDetails": {
+                    "entityType": {"type": "registeredEntity"},
+                    "name": raw["legal_name"],
+                    "jurisdiction": {"code": "NL"},
+                    "identifiers": [{"id": raw["kvk_number"], "scheme": "NL-KVK"}],
+                },
+            }]
+        return _map
+
+    async def _no_signals(bods, **kw):
+        return []
+
+    monkeypatch.setattr(lk, "_fetch_with_provenance", _fake_fetch)
+    monkeypatch.setattr(lk, "_mapper_for", _fake_mapper)
+    monkeypatch.setattr(lk, "assess_cross_source_names", _no_signals)
+    monkeypatch.setattr(lk, "assess_icij_names", _no_signals)
+    monkeypatch.setattr(lk, "assess_openaleph_names", _no_signals)
+
+
+def test_a_register_that_answers_without_a_name_is_degraded_not_clean(client, monkeypatch):
+    fetched: list[tuple[str, str]] = []
+    _patch_nameless_register(monkeypatch, fetched=fetched)
+    r = client.get("/lookup-register", params={"scheme": "NL-KVK", "id": "33011433"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["legal_name"] is None and body["bods"] == []
+    assert fetched == [("33011433", "")]
+    # Nothing was mapped or screened, and the response says so where every
+    # reader looks for it — never "no risk signals surfaced".
+    degraded = body["degraded_sources"]
+    assert [(d["source_id"], d["check"]) for d in degraded] == [("kvk", "source_read")]
+    assert "name=" in degraded[0]["detail"]
+    assert body["risk_signals"] == []
+    assert body["verdict"] == "No risk signals surfaced, but one source answered only in part."
+
+
+def test_a_name_from_the_caller_reaches_the_register_and_the_mapper(client, monkeypatch):
+    fetched: list[tuple[str, str]] = []
+    _patch_nameless_register(monkeypatch, fetched=fetched)
+    r = client.get(
+        "/lookup-register",
+        params={"scheme": "NL-KVK", "id": "33011433", "name": "Heineken N.V."},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert fetched == [("33011433", "Heineken N.V.")]
+    assert body["legal_name"] == "Heineken N.V." and body["jurisdiction"] == "NL"
+    assert [s["recordDetails"]["name"] for s in body["bods"]] == ["Heineken N.V."]
+    assert body["degraded_sources"] == []
+    assert body["subject_profile"] is not None
+    # A named run and a nameless one are different runs: neither replays the other.
+    assert "NL-KVK:33011433#Heineken N.V.:5" in _REPLAY_CACHE
+    nameless = client.get("/lookup-register", params={"scheme": "NL-KVK", "id": "33011433"}).json()
+    assert nameless["replayed"] is False and nameless["legal_name"] is None
+    assert len(fetched) == 2
+
+
+def test_mcp_register_lookup_passes_the_name_through(monkeypatch):
+    from opencheck.mcp.server import opencheck_register_lookup
+
+    fetched: list[tuple[str, str]] = []
+    _patch_nameless_register(monkeypatch, fetched=fetched)
+    out = asyncio.run(opencheck_register_lookup("NL-KVK", "33011433", name="Heineken N.V."))
+    assert fetched == [("33011433", "Heineken N.V.")]
+    assert out["legal_name"] == "Heineken N.V." and out["lei"] is None
