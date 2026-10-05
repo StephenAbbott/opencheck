@@ -138,7 +138,7 @@ async def opencheck_lookup(lei: str, deepen_top: int = 5) -> dict[str, Any]:
 
 @mcp.tool()
 async def opencheck_register_lookup(
-    scheme: str, id: str, deepen_top: int = 5
+    scheme: str, id: str, deepen_top: int = 5, name: str = ""
 ) -> dict[str, Any]:
     """Run due diligence on a company that has no LEI, by its register number.
 
@@ -157,11 +157,15 @@ async def opencheck_register_lookup(
             "REG-GB"); the full list is GET /expand-schemes.
         id: The company's number on that register (e.g. "OC346224").
         deepen_top: How many top sources to deepen (0-10, default 5).
+        name: The company's name as you know it (a search candidate's name),
+            optional. Some registers search by name behind the number, and
+            the Dutch KvK open data publishes no names at all — pass it when
+            you have it.
     """
     from ..routers.lookup import _register_lookup_impl as _lookup
 
     try:
-        resp = await _lookup(scheme=scheme, ident=id, deepen_top=deepen_top)
+        resp = await _lookup(scheme=scheme, ident=id, deepen_top=deepen_top, name=name)
     except HTTPException as exc:
         return _err(exc)
     return shaping.shape_register_lookup(resp)

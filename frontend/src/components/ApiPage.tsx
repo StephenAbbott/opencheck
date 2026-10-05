@@ -159,7 +159,8 @@ export function ApiPage() {
             <code className={mono}>scheme</code> and <code className={mono}>id</code> added, no{" "}
             <code className={mono}>listing</code>; the company’s own name is screened by name. Same rate tier and
             lookup budget as <code className={mono}>/lookup</code>; replay cache keyed on{" "}
-            <code className={mono}>scheme:id</code>. <code className={mono}>/lookup-register-stream</code> is the
+            <code className={mono}>scheme:id</code>. Optional <code className={mono}>name</code> for registers that
+            search by name behind the number (KvK publishes none). <code className={mono}>/lookup-register-stream</code> is the
             SSE form (<code className={mono}>register_done</code> where <code className={mono}>/lookup-stream</code>{" "}
             says <code className={mono}>gleif_done</code>).
           </ApiEndpoint>

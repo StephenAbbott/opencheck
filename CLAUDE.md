@@ -2788,6 +2788,15 @@ otherwise:
   in `derived_identifiers`, no `listing` event, `lei_registration` null, and
   the MCP summary says "no LEI — anchored on the register, the company itself
   screened by name".
+- **A register that publishes no name is said, not hidden.** KvK's open
+  data carries no names (the LEI path gets one from GLEIF; the hop from the
+  PSC filing), and the mapper emits nothing without one. The route and the
+  tool take an optional `name` for exactly that, handed to
+  `pass_legal_name` registers as the hop hands them the filing's; a nameless
+  answer records a `source_read` degradation so the verdict reads incomplete
+  rather than clean. The flight key carries the name after `#`
+  (`_NAME_SEP`), never the subject reference. The register's own 404 is a
+  404 of ours, not a 502 (follow-up, 5 Oct 2026).
 - **`opencheck_search` candidates carry `identifiers: [{scheme, id}]`** —
   the LEI as `XI-LEI` plus every register number a hop exists for, mapped
   from the hit's derived keys through `RegisterHop.derived_key`; a key no
