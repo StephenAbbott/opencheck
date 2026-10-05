@@ -24,13 +24,16 @@ def _subject_identifiers(bods: list[dict[str, Any]], lei: str) -> list[dict[str,
     set (LEI, BIC, MIC, ISIN, OpenCorporates, S&P CIQ, QCC, national register id)
     — the "LEI as a connector" payload. Find that statement by matching an
     ``XI-LEI`` identifier equal to ``lei``; fall back to any entity statement
-    that contains the LEI.
+    that contains the LEI. ``lei`` may also be a ``SCHEME:id`` register
+    reference (Phase 290), matched through ``subject_profile.is_subject``.
     """
+    from ..subject_profile import is_subject
+
     for stmt in bods:
         if stmt.get("recordType") != "entity":
             continue
         idents = (stmt.get("recordDetails") or {}).get("identifiers") or []
-        if any(i.get("scheme") == "XI-LEI" and i.get("id") == lei for i in idents):
+        if is_subject(stmt, lei):
             return [
                 {
                     k: v
@@ -394,6 +397,39 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
     }
 
 
+def shape_register_lookup(payload: Any) -> dict[str, Any]:
+    """Flatten a ``RegisterLookupResponse`` (Phase 290) — ``shape_lookup``
+    with the anchor said as the register number it is, and the two things a
+    GLEIF anchor would have added named as absent rather than left to be
+    inferred: no LEI, and the company's own name screened by name."""
+    from ..routers.lookup import register_subject
+
+    subject = register_subject(payload.scheme, payload.id)
+    shaped = shape_lookup(payload)
+    header = f"{payload.legal_name or 'Entity'} ({payload.scheme} {payload.id}"
+    shaped["summary"] = (
+        f"{header}{', ' + payload.jurisdiction if payload.jurisdiction else ''}; "
+        "no LEI — anchored on the register, the company itself screened by "
+        "name). " + shaped["summary"].split("). ", 1)[-1]
+    )
+    shaped.update(
+        {
+            "lei": None,
+            "scheme": payload.scheme,
+            "id": payload.id,
+            "identifiers": _subject_identifiers(payload.bods or [], subject),
+            "hint": (
+                shaped["hint"]
+                + " This company has no LEI: there is no GLEIF record, no "
+                "listing line and no LEI-keyed sanctions record — its own "
+                "name was screened by name (signals carry evidence.subject). "
+                "Call opencheck_search again if you need its LEI confirmed."
+            ),
+        }
+    )
+    return shaped
+
+
 def shape_batch_row(payload: Any) -> dict[str, Any]:
     """One table row for the batch screen (Phase 164) from a ``LookupResponse``.
 
@@ -469,6 +505,29 @@ def shape_batch_row(payload: Any) -> dict[str, Any]:
     }
 
 
+def _candidate_identifiers(hit: Any) -> list[dict[str, str]]:
+    """The structured identifiers a search candidate carries that an agent can
+    chain on (Phase 290): the LEI as ``XI-LEI``, and every register number
+    ``opencheck_register_lookup`` can look up, under its scheme. A key that
+    no tool can act on is left out, so every row here is a next step."""
+    from ..register_hops import hop_schemes
+
+    by_key = {
+        hop.derived_key: hop.scheme
+        for scheme, hop in hop_schemes().items()
+        if hop.derived_key and not scheme.startswith("REG-")
+    }
+    out: list[dict[str, str]] = []
+    lei = hit.identifiers.get("lei") or (hit.hit_id if hit.source_id == "gleif" else None)
+    if lei:
+        out.append({"scheme": "XI-LEI", "id": str(lei)})
+    for key, value in hit.identifiers.items():
+        scheme = by_key.get(key)
+        if scheme and value:
+            out.append({"scheme": scheme, "id": str(value)})
+    return out
+
+
 def shape_search(payload: Any) -> dict[str, Any]:
     """Flatten a ``SearchResponse`` into a ranked candidate list with LEIs."""
     candidates: list[dict[str, Any]] = []
@@ -479,6 +538,7 @@ def shape_search(payload: Any) -> dict[str, Any]:
             {
                 "name": h.name,
                 "lei": h.identifiers.get("lei") or (h.hit_id if h.source_id == "gleif" else None),
+                "identifiers": _candidate_identifiers(h),
                 "source": h.source_id,
                 "summary": h.summary,
             }
@@ -488,7 +548,11 @@ def shape_search(payload: Any) -> dict[str, Any]:
         "kind": payload.kind.value if hasattr(payload.kind, "value") else str(payload.kind),
         "count": len(candidates),
         "candidates": candidates,
-        "hint": "Pass a candidate's lei to opencheck_lookup to run due diligence.",
+        "hint": (
+            "Pass a candidate's lei to opencheck_lookup to run due diligence. "
+            "A candidate with lei null and an identifiers entry (e.g. scheme "
+            "GB-COH) is looked up with opencheck_register_lookup(scheme, id)."
+        ),
     }
 
 

@@ -1903,6 +1903,454 @@ async def _lookup_pipeline(
     })
 
 
+# --- register-anchored lookup (Phase 290) ------------------------------------
+#
+# ``opencheck_search("Metastar Invest")`` returns the exact Companies House
+# match — METASTAR INVEST LLP, OC346224 — with ``lei: null``, and the tool
+# hint then says "pass a candidate's lei to opencheck_lookup": a dead end.
+# Most UK LLPs, and most laundromat vehicles anywhere, have no LEI. The
+# backend could already read such a company — Phase 182's register hop
+# fetches the register bundle, maps it, assesses it and screens it — but only
+# as a *neighbour* of an LEI-anchored subject in FullCheck. This section makes
+# the register number an anchor in its own right.
+#
+# The run is deliberately the *register* lookup, not the forty-source one: the
+# register that owns the scheme is the only source dispatched (Companies House
+# for ``GB-COH``: profile, officers, PSCs, PSC statements and its own PSC
+# walk), then the same derived screens the LEI pipeline runs over its bundle
+# — OpenSanctions and EveryPolitician by name, ICIJ Offshore Leaks, OpenAleph
+# percolation — and the risk engine, the verdict, the profile and the
+# knowability statements. What a GLEIF anchor would add and this cannot is
+# said rather than faked: no LEI, so ``derived_identifiers`` carries no
+# ``lei``; no ``listing`` line (PermID is keyed on the LEI); no LEI-keyed
+# OpenSanctions or OpenAleph record of the subject, so the subject's own name
+# is screened by name (``screen_subject=True``) and the summary says so.
+#
+# Events use the LEI pipeline's vocabulary — the replay cache, the flights and
+# the gate (``lookup_replay``), the budget (Phase 234), ``fold_lookup_events``
+# and the SSE serialiser all run unchanged — with one new event,
+# ``register_done``, in place of ``gleif_done``.
+
+#: The replay-cache / flight key of a register-anchored run: ``SCHEME:id``.
+#: An LEI has no colon, so the two kinds of subject can never collide, and
+#: ``lookup_replay`` tells them apart by the colon.
+_REGISTER_SUBJECT = re.compile(r"^([A-Z][A-Z0-9_]*(?:-[A-Z0-9_]+)*):(.+)$")
+
+
+def register_subject(scheme: str, ident: str) -> str:
+    """The subject reference of a register-anchored lookup — the canonical
+    scheme and the register's own canonical number, joined by a colon. This
+    is the replay key, and the ``subject_lei`` the screens and the profile
+    read (``subject_profile.subject_keys``)."""
+    return f"{scheme.strip().upper()}:{ident.strip()}"
+
+
+class RegisterLookupResponse(LookupResponse):
+    """``/lookup-register``: the ``/lookup`` shape for a subject anchored on a
+    register number (Phase 290). ``lei`` is ``None`` — the whole point is
+    that there is none — and ``scheme`` / ``id`` say what the anchor was.
+    Everything else is as ``/lookup`` returns it, so every reader of a
+    ``LookupResponse`` (exports, the MCP shaping, saved reports) reads this
+    one unchanged."""
+
+    lei: str | None = None  # type: ignore[assignment]
+    scheme: str
+    id: str
+
+
+def _register_anchor(scheme: str, ident: str) -> tuple[Any, str]:
+    """Resolve ``(scheme, ident)`` to ``(hop, canonical id)`` or raise the
+    400 that says why not. Pure — no network, so nothing is charged for a
+    request that can never run."""
+    from .. import register_hops
+
+    hop = register_hops.hop_for(scheme)
+    if hop is None:
+        known = ", ".join(sorted(register_hops.hop_schemes()))
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{scheme!r} is not a register scheme OpenCheck can look up. "
+                f"Known schemes (see GET /expand-schemes): {known}."
+            ),
+        )
+    try:
+        local_id = hop.normalise(ident)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{ident!r} is not a valid {hop.scheme} number: {exc}",
+        ) from exc
+    return hop, local_id
+
+
+async def _register_lookup_pipeline(
+    scheme: str, ident: str, deepen_top: int = 5
+) -> AsyncIterator[LookupEvent]:
+    """The register-anchored lookup (Phase 290), as a stream of the same
+    events ``_lookup_pipeline`` yields — ``register_done`` where the LEI
+    pipeline says ``gleif_done``.
+
+    ``scheme`` is a canonical hop scheme and ``ident`` the register's
+    canonical number (``_register_anchor`` has already resolved both), so a
+    replay key is one subject, however the caller spelled it.
+    """
+    from .. import register_hops
+
+    _degradation.begin()
+    _outbound_rate.begin()
+    hop = register_hops.hop_for(scheme)
+    if hop is None:
+        yield ("error", {"status": 400, "detail": f"{scheme!r} is not a register scheme."})
+        return
+    local_id = ident
+    adapter = REGISTRY.get(hop.source_id)
+    if adapter is None:
+        yield ("error", {
+            "status": 503,
+            "detail": f"The {hop.scheme} register ({hop.source_id}) is not available.",
+        })
+        return
+    subject = register_subject(hop.scheme, local_id)
+    src_name = adapter.info.name
+    yield ("source_started", {"source_id": hop.source_id, "source_name": src_name})
+
+    # Phase 184: the register's walk counters file this under "lookup" — this
+    # is the subject's own lookup, not a hop from someone else's.
+    hits: list[SourceHit] = []
+    errors: dict[str, str] = {}
+    provenances: dict[str, Provenance] = {}
+    raw: Any = None
+    try:
+        raw, prov = await asyncio.wait_for(
+            _fetch_with_provenance(adapter, local_id), timeout=_source_budget(hop.source_id)
+        )
+    except asyncio.TimeoutError:
+        yield ("error", {
+            "status": 504,
+            "detail": (
+                f"{src_name} exceeded its {_source_budget(hop.source_id):.0f}s time "
+                f"budget answering {hop.scheme} {local_id}."
+            ),
+        })
+        return
+    except Exception as exc:  # noqa: BLE001
+        yield ("error", {
+            "status": 502,
+            "detail": f"{src_name} fetch failed for {hop.scheme} {local_id}: {describe_exception(exc)}",
+        })
+        return
+    if not isinstance(raw, dict) or raw.get("is_stub") or not raw:
+        yield ("error", {
+            "status": 404,
+            "detail": (
+                f"No {src_name} record found for {hop.scheme} {local_id}. Either the "
+                "number is not on the register, the register did not answer, or "
+                "live mode is disabled."
+            ),
+        })
+        return
+    if isinstance(prov, Provenance):
+        provenances[hop.source_id] = prov
+
+    # The subject's identity from the register's own bundle — the mapper is
+    # the one reading of it OpenCheck has, and the same one FullCheck's hop
+    # and the LEI pipeline's deepen use.
+    ctx = _LookupCtx(lei="")
+    ctx.derived = {hop.derived_key: local_id} if hop.derived_key else {}
+    ctx.provenance = prov
+    deep = await _safe_deepen(hop.source_id, local_id, fetched=(raw, prov))
+    bods_all: list[dict[str, Any]] = unique_statements(deep["bods"]) if deep else []
+    subject_stmts = _subject_statements_for(subject, bods_all)
+    ctx.legal_name, ctx.jurisdiction = _subject_name_and_jurisdiction(
+        subject_stmts, raw, hop.country
+    )
+
+    hit = _build_result_hit(hop.source_id, raw, ctx)
+    if hit is None:
+        # The builder saw nothing it recognised as a record — a stub in all
+        # but name. Said as the register's answer, not as a crash.
+        yield ("error", {
+            "status": 404,
+            "detail": f"No {src_name} record found for {hop.scheme} {local_id}.",
+        })
+        return
+    _stamp(hit, prov)
+    hits.append(hit)
+    yield ("register_done", {
+        "scheme": hop.scheme,
+        "id": local_id,
+        "legal_name": ctx.legal_name or None,
+        "jurisdiction": ctx.jurisdiction or None,
+        "derived_identifiers": dict(ctx.derived),
+    })
+    if ctx.jurisdiction:
+        yield ("knowability", _knowability_payload(ctx.jurisdiction))
+    yield ("hit", hit)
+    yield ("source_completed", {"source_id": hop.source_id, "hit_count": 1})
+
+    ep_applicable = _name_screen_can_run()
+    applicable_ids = [hop.source_id] + (["everypolitician"] if ep_applicable else [])
+    yield ("sources_applicable", {"source_ids": applicable_ids})
+    if ep_applicable:
+        yield ("source_started", {
+            "source_id": "everypolitician",
+            "source_name": REGISTRY["everypolitician"].info.name,
+        })
+
+    yield ("cross_source_links", {"links": [link.to_dict() for link in reconcile(hits)]})
+    search_signals = [s.to_dict() for s in assess_hits(hits)]
+
+    bods_issues: list[str] = list(deep["bods_issues"]) if deep else []
+    deepen_signals: list[dict[str, Any]] = list(deep["risk_signals"]) if deep else []
+    license_notices: list[dict[str, str]] = []
+    if deep and deep.get("license_notice"):
+        license_notices.append({
+            "source_id": hop.source_id, "hit_id": local_id, "notice": deep["license_notice"],
+        })
+    key = f"{hop.source_id}:{local_id}"
+    bods_counts = {key: len(bods_all)}
+    bods_breakdown = {
+        key: {
+            "entities": sum(1 for s in bods_all if s.get("recordType") == "entity"),
+            "persons": sum(1 for s in bods_all if s.get("recordType") == "person"),
+            "relationships": sum(1 for s in bods_all if s.get("recordType") == "relationship"),
+        }
+    }
+    _dinfo = adapter.info
+    yield ("deepen_result", {
+        "source_id": hop.source_id, "hit_id": local_id, "bods": bods_all,
+        "bods_issues": bods_issues,
+        "risk_signals": deepen_signals,
+        "license": _dinfo.license,
+        "license_notice": deep.get("license_notice") if deep else None,
+    })
+    yield ("bods_counts", {"counts": bods_counts, "breakdown": bods_breakdown})
+
+    # No ``listing`` event: PermID is keyed on the LEI, and there is none.
+    yield (
+        "subject_profile",
+        {"profile": build_subject_profile(subject, bods_all)},
+    )
+    yield ("knowability_chain", knowability_chain_for_lei(subject, bods_all))
+    yield (
+        "possibly_same_entities",
+        {"pairs": [p.to_dict() for p in possibly_same_entities(bods_all)]},
+    )
+
+    degraded: list[DegradedSource] = _degradation.collect()
+    _degradation.add_source_errors(
+        degraded, errors, with_data={h.source_id for h in hits if not h.is_stub}
+    )
+    _outbound_rate.end()
+    oa_screening: list[dict[str, Any]] = []
+    name_screen = NameScreen()
+    cross_raw, icij_raw, oa_raw = await asyncio.gather(
+        # The subject's own statements are not related parties (Phase 235) —
+        # and, having no LEI, the subject is screened by name here, once,
+        # worded as the company's own (Phase 290).
+        assess_cross_source_names(
+            bods_all,
+            degraded=degraded,
+            screen=name_screen,
+            subject_lei=subject,
+            screen_subject=True,
+        ),
+        assess_icij_names(bods_all, degraded=degraded, subject_lei=subject),
+        assess_openaleph_names(
+            bods_all, degraded=degraded, screening=oa_screening, subject_lei=subject
+        ),
+    )
+    if ep_applicable:
+        seen_ep: set[str] = set()
+        ep_count = 0
+        for match in name_screen.matches:
+            if match.source_id != "everypolitician" or match.hit.hit_id in seen_ep:
+                continue
+            seen_ep.add(match.hit.hit_id)
+            ep_count += 1
+            yield ("hit", match.hit.model_copy(update={
+                "finding": finding_everypolitician(
+                    match.hit.summary, match.target_name, former=match.former
+                ),
+            }))
+        yield ("source_completed", {
+            "source_id": "everypolitician",
+            "hit_count": ep_count,
+            "names_screened": name_screen.names_screened,
+        })
+
+    identity = subject_identity(subject, bods_all)
+    related = await _pep_merge.consolidate_pep_signals(
+        [s.to_dict() for s in cross_raw] + [s.to_dict() for s in oa_raw],
+        subject_names=_pep_merge.subject_names_from(
+            bods_all, identity.statement_ids, ctx.legal_name
+        ),
+        subject_record_ids=[],
+    )
+    merged = _merge_signals(
+        search_signals,
+        deepen_signals,
+        related,
+        [s.to_dict() for s in icij_raw],
+        record_as="lookup",
+    )
+    degraded_dicts = [d.to_dict() for d in degraded]
+    signalstats.record_degraded(degraded_dicts)
+    signalstats.record_lookup()
+    consistencystats.record(consistency.assess_consistency(bods_all))
+    yield (
+        "risk_signals",
+        {
+            "signals": merged,
+            "degraded_sources": degraded_dicts,
+            "verdict": build_verdict(merged, degraded_dicts),
+            "openaleph_screening": oa_screening,
+            "source_liveness": {
+                sid: p.to_dict() for sid, p in sorted(provenances.items())
+            },
+            "graph_shape": _graph_shape(bods_all, merged),
+        },
+    )
+    yield ("done", {
+        "lei": None,
+        "scheme": hop.scheme,
+        "id": local_id,
+        "bods_issues": bods_issues,
+        "license_notices": license_notices,
+    })
+
+
+def _subject_statements_for(subject: str, bods: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    from ..subject_profile import subject_statements
+
+    return subject_statements(subject, bods)
+
+
+def _subject_name_and_jurisdiction(
+    stmts: list[dict[str, Any]], raw: dict[str, Any], country: str
+) -> tuple[str, str]:
+    """The subject's legal name and jurisdiction: from its own entity
+    statement when the mapper produced one, else from the register's raw
+    profile, else the scheme's country. The jurisdiction falls back to the
+    scheme's country because a number on the GB register is a GB company
+    whatever the statement says — and the knowability strip needs a code."""
+    name = ""
+    jurisdiction = ""
+    for stmt in stmts:
+        rd = stmt.get("recordDetails") or {}
+        if not name:
+            name = str(rd.get("name") or "").strip()
+        if not jurisdiction:
+            jur = rd.get("jurisdiction") or rd.get("incorporatedInJurisdiction") or {}
+            if isinstance(jur, dict):
+                jurisdiction = str(jur.get("code") or "").strip().upper()
+            elif isinstance(jur, str):
+                jurisdiction = jur.strip().upper()
+    if not name:
+        profile = raw.get("profile") if isinstance(raw.get("profile"), dict) else raw
+        for k in ("company_name", "legal_name", "name", "naam", "denomination"):
+            v = profile.get(k) if isinstance(profile, dict) else None
+            if isinstance(v, str) and v.strip():
+                name = v.strip()
+                break
+    return name, jurisdiction or country
+
+
+async def _register_lookup_impl(
+    scheme: str, ident: str, deepen_top: int = 5, refresh: bool = False
+) -> RegisterLookupResponse:
+    """Body of ``/lookup-register``, callable in-process (the MCP tool)
+    without the rate-limited route — and, like ``_lookup_impl``, charged to
+    the caller's lookup budget (Phase 234) when the run is fresh."""
+    hop, local_id = _register_anchor(scheme, ident)
+    subject = register_subject(hop.scheme, local_id)
+    events: list[LookupEvent] = []
+    async for event in _lookup_pipeline_cached(
+        subject, deepen_top=deepen_top, refresh=refresh
+    ):
+        if event[0] == "error":
+            retry = event[1].get("retry_after_s")
+            raise HTTPException(
+                status_code=event[1]["status"],
+                detail=event[1]["detail"],
+                headers={"Retry-After": str(retry)} if retry else None,
+            )
+        events.append(event)
+    return fold_register_lookup_events(hop.scheme, local_id, events)
+
+
+def fold_register_lookup_events(
+    scheme: str, ident: str, events: list[LookupEvent]
+) -> RegisterLookupResponse:
+    """``fold_lookup_events`` for a register-anchored run: the same fold,
+    then the ``/lookup`` response re-stamped as a ``RegisterLookupResponse``
+    with no LEI."""
+    folded = fold_lookup_events(register_subject(scheme, ident), events)
+    data = folded.model_dump()
+    data.update({"lei": None, "scheme": scheme, "id": ident, "query": f"{scheme} {ident}"})
+    return RegisterLookupResponse(**data)
+
+
+@router.get("/lookup-register", response_model=RegisterLookupResponse)
+@limiter.limit(lookup_tier)
+async def lookup_register(
+    request: Request,
+    response: Response,
+    scheme: str = Query(
+        ...,
+        description=(
+            "Register identifier scheme — one of GET /expand-schemes "
+            "(e.g. GB-COH, NL-KVK, REG-GB)."
+        ),
+    ),
+    id: str = Query(..., description="The company's number on that register (e.g. OC346224)."),
+    deepen_top: int = Query(5, ge=0, le=10),
+    refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
+) -> RegisterLookupResponse:
+    """Due diligence on a company by its register number, for a subject
+    with no LEI (Phase 290). The register that owns the scheme is the one
+    source read; its bundle is then screened and assessed as a ``/lookup``
+    bundle is. Same rate tier and lookup budget as ``/lookup``; replay cache
+    keyed on ``scheme:id``.
+    """
+    return await _register_lookup_impl(
+        scheme=scheme, ident=id, deepen_top=deepen_top, refresh=refresh
+    )
+
+
+@router.get("/lookup-register-stream")
+@limiter.limit(lookup_tier)
+async def lookup_register_stream(
+    request: Request,
+    scheme: str = Query(..., description="Register identifier scheme (see /expand-schemes)."),
+    id: str = Query(..., description="The company's number on that register."),
+    deepen_top: int = Query(5, ge=0, le=10),
+    refresh: bool = Query(False, description="Bypass the short-lived replay cache."),
+) -> Response:
+    """``/lookup-register`` streamed as SSE — same pipeline, same events as
+    ``/lookup-stream`` with ``register_done`` for ``gleif_done``. Gated against
+    declared automated clients exactly as ``/lookup-stream`` is (Phase 144):
+    the JSON route is the one for scripts and agents."""
+    if get_settings().bot_gate_lookup_stream and is_bot(
+        request.headers.get("user-agent")
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "/lookup-register-stream serves the interactive OpenCheck app and "
+                "is disallowed for automated clients (see /robots.txt). Use the "
+                "JSON API at /lookup-register?scheme=<SCHEME>&id=<number> "
+                "(rate-limited)."
+            ),
+        )
+    hop, local_id = _register_anchor(scheme, id)
+    return EventSourceResponse(
+        _lookup_sse_events(
+            register_subject(hop.scheme, local_id), deepen_top=deepen_top, refresh=refresh
+        )
+    )
+
 # --- endpoints ---------------------------------------------------------------
 
 
@@ -2267,8 +2715,19 @@ async def _count_only(source_id: str, hit_id: str) -> dict[str, Any] | None:
     }
 
 
-async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
-    """Internal helper — does what /deepen does, returns plain dict."""
+async def _safe_deepen(
+    source_id: str,
+    hit_id: str,
+    *,
+    fetched: tuple[Any, Provenance | None] | None = None,
+) -> dict[str, Any] | None:
+    """Internal helper — does what /deepen does, returns plain dict.
+
+    ``fetched`` (Phase 290) is a ``(raw, provenance)`` pair the caller has
+    already fetched: the register-anchored lookup reads its one register
+    once and maps that, rather than fetching again (a replay from the
+    adapter cache in production, a second real call in anything without
+    one)."""
     adapter = REGISTRY.get(source_id)
     if adapter is None:
         return None
@@ -2277,12 +2736,15 @@ async def _safe_deepen(source_id: str, hit_id: str) -> dict[str, Any] | None:
     # output, so a live-fetch failure must not sink the deepen — the bundle
     # stands in for the (unavailable) live record.
     override = _bods_data_override(source_id, hit_id)
-    try:
-        raw, prov = await _fetch_with_provenance(adapter, hit_id)
-    except Exception:
-        if override is None:
-            raise
-        raw, prov = {"is_stub": True}, _provenance.STUB_PROVENANCE
+    if fetched is not None:
+        raw, prov = fetched
+    else:
+        try:
+            raw, prov = await _fetch_with_provenance(adapter, hit_id)
+        except Exception:
+            if override is None:
+                raise
+            raw, prov = {"is_stub": True}, _provenance.STUB_PROVENANCE
 
     bods: list[dict[str, Any]] = []
     issues: list[str] = []

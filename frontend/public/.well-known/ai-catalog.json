@@ -76,7 +76,7 @@
         "SanctionsScreening",
         "BODSExport"
       ],
-      "description": "Model Context Protocol server (streamable HTTP at https://api.opencheck.world/mcp) exposing OpenCheck as agent-native tools: opencheck_search and opencheck_resolve_national_id to obtain an LEI, opencheck_lookup for owners/controllers and sanctions/PEP/debarment risk, opencheck_export_bods for the BODS v0.4 ownership graph, opencheck_subsidiaries for the GLEIF subsidiary network, and opencheck_list_sources. The most directly invocable surface for AI agents.",
+      "description": "Model Context Protocol server (streamable HTTP at https://api.opencheck.world/mcp) exposing OpenCheck as agent-native tools: opencheck_search and opencheck_resolve_national_id to obtain an LEI, opencheck_lookup for owners/controllers and sanctions/PEP/debarment risk (opencheck_register_lookup for a company with no LEI, by its register number), opencheck_export_bods for the BODS v0.4 ownership graph, opencheck_subsidiaries for the GLEIF subsidiary network, and opencheck_list_sources. The most directly invocable surface for AI agents.",
       "representativeQueries": [
         "check who owns and controls this company",
         "is this entity sanctioned, a PEP, or debarred",

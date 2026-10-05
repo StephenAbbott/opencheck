@@ -1,6 +1,6 @@
 # Endpoints
 
-* [Lookup](/api/lookup.md) - `/lookup` and `/lookup-stream`: the LEI-anchored synthesis (GLEIF → adapters → BODS).
+* [Lookup](/api/lookup.md) - `/lookup` and `/lookup-stream`: the LEI-anchored synthesis (GLEIF → adapters → BODS); `/lookup-register` and `/lookup-register-stream`: the same for a company with no LEI, anchored on its register number.
 * [Search & report](/api/search-report.md) - `/search` and `/report`: free-text search and one-shot synthesis.
 * [Person check](/api/person-check.md) - `/person-check`: on-demand screening of one named person (BackgroundCheck).
 * [Deepen](/api/deepen.md) - `/deepen` and `/lookup-source`: fetch + map a single source's record.

@@ -503,3 +503,58 @@ def test_export_network_publishes_each_statement_once() -> None:
     )
     assert r.status_code == 200, r.text
     assert [s["statementId"] for s in r.json()] == ["opencheck-x"]
+
+
+# ---------------------------------------------------------------------
+# Phase 290 — a register number as the subject reference
+# ---------------------------------------------------------------------
+
+
+def _metastar_bundle() -> list[dict[str, Any]]:
+    return [
+        _entity(
+            "ch-metastar",
+            "METASTAR INVEST LLP",
+            source="UK Companies House",
+            identifiers=[("GB-COH", "OC346224")],
+            jurisdiction="GB",
+        ),
+        _entity(
+            "oa-metastar",
+            "Metastar Invest LLP",
+            source="OpenAleph",
+            identifiers=[("REG-GB", "OC346224")],
+            jurisdiction="GB",
+        ),
+        _entity(
+            "ch-hilux",
+            "HILUX SERVICES LP",
+            source="UK Companies House",
+            identifiers=[("REG-SC", "123")],
+            jurisdiction="SC",
+        ),
+        _rel("r-member", "ch-metastar", "ch-hilux"),
+        _person("p-officer", "Example Officer"),
+    ]
+
+
+def test_a_register_reference_names_the_subject_like_an_lei() -> None:
+    """``GB-COH:OC346224`` seeds the set from the Companies House statement
+    and pulls in the OpenAleph statement that carries the same number as a
+    bare ``REG-GB`` register number; the member and the officer stay out."""
+    from opencheck.subject_profile import subject_keys, subject_statements
+
+    assert subject_keys("GB-COH:OC346224") == frozenset(
+        {"GB-COH:OC346224", "REG-GB:OC346224", "JUR:GB:OC346224"}
+    )
+    assert subject_keys("213800LH1BZH3DI6G760") == frozenset({"LEI:213800LH1BZH3DI6G760"})
+    bundle = _metastar_bundle()
+    assert {s["statementId"] for s in subject_statements("GB-COH:OC346224", bundle)} == {
+        "ch-metastar", "oa-metastar"
+    }
+    identity = subject_identity("GB-COH:OC346224", bundle)
+    assert identity.statement_ids == frozenset({"ch-metastar", "oa-metastar"})
+    assert identity.anchor_statement_id() == "ch-metastar"
+    # The alias spelling and the canonical one are the same subject.
+    assert subject_identity("REG-GB:OC346224", bundle).statement_ids == identity.statement_ids
+    assert not subject_identity("GB-COH:00000000", bundle)

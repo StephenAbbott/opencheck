@@ -2746,3 +2746,51 @@ stamped. Things that will be re-derived otherwise:
   **Left as they were:** `subject_identity.py`, `reconcile.py`,
   `liveness.py` and `rdf.py`'s anchor check still compare descriptions — to
   prefer the GLEIF statement or to label a row, not to decide a licence.
+
+## A register number can be the subject (Phase 290)
+
+`GET /lookup-register?scheme=&id=`, `/lookup-register-stream` and the MCP
+tool `opencheck_register_lookup(scheme, id)` run due diligence on a company
+with no LEI — most UK LLPs, most laundromat vehicles anywhere — anchored on
+its number on a national register. One register read (the hop that owns the
+scheme, `register_hops.hop_for`), then the same screens, risk engine, verdict,
+profile and knowability the LEI pipeline runs. Things that will be re-derived
+otherwise:
+
+- **A subject reference is an LEI or `SCHEME:id`** (`GB-COH:OC346224`),
+  everywhere a `lei` / `subject_lei` string names the subject:
+  `subject_profile.subject_statements` / `build_subject_profile`,
+  `subject_identity`, `knowability.chain_for_lei`, the three screens'
+  `subject_lei=`, `shaping._subject_identifiers`. `subject_keys(ref)` is the
+  one place the reference becomes identifier-merge keys: the scheme key, the
+  mappers' `REG-<country>` fallback and the `JUR:<country>:` bare-number key
+  — so a Companies House `GB-COH` statement and OpenAleph's `REG-GB` one
+  are one subject. A `REG-` alias in the reference resolves to the country
+  too. The pipeline always builds the reference from `_register_anchor`'s
+  canonical scheme and `hop.normalise`d number (`register_subject`), so one
+  spelling is one replay key.
+- **The replay cache, the flight, the gate and the lookup budget are shared.**
+  `lookup_replay._run_flight` picks `_register_lookup_pipeline` when the
+  subject key has a colon; an LEI never does. `fold_lookup_events` reads
+  `register_done` as it reads `gleif_done`. `RegisterLookupResponse` is
+  `LookupResponse` with `lei: None` and `scheme` / `id` — every reader of a
+  `LookupResponse` reads it unchanged.
+- **The subject's own name is screened by name.** No LEI means no LEI-keyed
+  OpenSanctions or OpenAleph record of the subject, so
+  `assess_cross_source_names(..., subject_lei=ref, screen_subject=True)`
+  screens the subject's names once, outside the related-party cap, with the
+  subject-level code (`_SUBJECT_CODE`: `SANCTIONED`, not
+  `RELATED_SANCTIONED`), anchored on `evidence.statement_id` with
+  `evidence.subject: true` — the arrangement `icij_check._subject_targets`
+  already had. Without `screen_subject` (the FullCheck hop) a register
+  reference just excludes the subject, as an LEI does.
+- **What a GLEIF anchor would add is said as absent, never faked:** no `lei`
+  in `derived_identifiers`, no `listing` event, `lei_registration` null, and
+  the MCP summary says "no LEI — anchored on the register, the company itself
+  screened by name".
+- **`opencheck_search` candidates carry `identifiers: [{scheme, id}]`** —
+  the LEI as `XI-LEI` plus every register number a hop exists for, mapped
+  from the hit's derived keys through `RegisterHop.derived_key`; a key no
+  tool can act on is left out, so every row is a next step. `mcp/guard.py`
+  `TOOL_TIERS` must name every tool that runs a pipeline; a tool missing
+  from it spends only the default request tier.

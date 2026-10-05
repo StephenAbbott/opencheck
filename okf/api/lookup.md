@@ -4,7 +4,7 @@ title: Lookup
 description: The LEI-anchored synthesis — resolve a company across sources and return a unified BODS v0.4 view.
 tags: [api, lookup, bods, sse]
 method: GET
-path: /lookup, /lookup-stream
+path: /lookup, /lookup-stream, /lookup-register, /lookup-register-stream
 timestamp: 2026-06-14
 ---
 
@@ -20,11 +20,38 @@ Events** — `gleif_done`, per-source `hit` / `source_error`, and a final `done`
 event — so a UI can render progressively. Both paths share one generator and
 cannot diverge.
 
+## Without an LEI: `/lookup-register` (Phase 290)
+
+`GET /lookup-register?scheme=<SCHEME>&id=<number>` is the same synthesis for a
+company that has no LEI — most UK LLPs, most small companies anywhere —
+anchored on its number on a national register. `scheme` is any identifier
+scheme `GET /expand-schemes` lists (`GB-COH`, `NL-KVK`, `FR-INSEE`, …, and
+the `REG-<country>` aliases); the register that owns it is the one source
+read, and its bundle is then screened and assessed as `/lookup`'s is: the
+related-party sanctions / PEP screen, Offshore Leaks, OpenAleph, the risk
+engine, the verdict, the register profile and the knowability statements.
+
+The response is the `/lookup` shape with `lei` null and `scheme` / `id`
+added. What a GLEIF anchor would add is said as absent rather than faked:
+`derived_identifiers` carries no `lei`, there is no `listing` line (PermID is
+keyed on the LEI), and — with no LEI-keyed OpenSanctions record of the
+subject — the company's own name is screened by name, once, with a
+subject-level code (`SANCTIONED`, never `RELATED_SANCTIONED`) anchored on
+`evidence.statement_id` with `evidence.subject: true`.
+
+`GET /lookup-register-stream` is the SSE form, with `register_done`
+(`scheme`, `id`, `legal_name`, `jurisdiction`, `derived_identifiers`) where
+`/lookup-stream` says `gleif_done`; it is gated against declared automated
+clients exactly as `/lookup-stream` is. Both routes sit on the lookup rate
+tier and the shared per-client lookup budget; the replay cache is keyed on
+`scheme:id`.
+
 # Parameters
 
 | Param | Description |
 |---|---|
-| `lei` | ISO 17442 Legal Entity Identifier (20 chars). Required. |
+| `lei` | ISO 17442 Legal Entity Identifier (20 chars). Required on `/lookup`. |
+| `scheme`, `id` | Register scheme and number. Required on `/lookup-register`; `400` names the known schemes when the scheme is unknown or the value is not a number of that register. |
 | `deepen_top` | How many top hits to deepen + map + assess (default 5; clamped to 0–10). |
 | `refresh` | Bypass the short-lived replay cache. |
 
