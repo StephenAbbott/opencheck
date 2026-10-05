@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 286** — OpenAleph drops its republished copy of the GLEIF Concatenated Data File, so a company OpenAleph knows only from GLEIF no longer counts it as a second source.
+**Latest: Phase 287** — The screening-incomplete notice collapses to a thin amber bar carrying the count of checks that did not run, with the detail and re-run behind Show more.
 
 → [Full development history](docs/status.md)
 
