@@ -1,3 +1,7 @@
+import { useState } from "react";
+
+import { Button } from "../ui";
+
 import type { DegradedSource } from "../../lib/api";
 import { panelLabel, type PanelError } from "../../lib/panelErrors";
 import { RISK_PRESENTATION } from "../risk/RiskChip";
@@ -60,6 +64,18 @@ const DEGRADED_REASON_LABELS: Record<string, string> = {
  * signals, which is precisely the case that must not pass for a clean
  * screen. Details are counts only; the backend never sends the
  * related-party names that were being screened.
+ *
+ * Collapsed by default to one thin amber bar. A multi-source subject (Ørsted,
+ * two gaps with signal chips and a re-run) filled a screen with the box,
+ * pushing the report itself below the fold. The bar keeps the one sentence
+ * that must not be missed — the count of checks that did not run — always
+ * visible, in the same place and the same amber; the per-check detail, the
+ * closing principle and the re-run sit behind "Show more", the same
+ * disclosure pattern as the "Is this the right company?" band.
+ *
+ * Uncontrolled unless `open` is passed. The report controls it so the verdict
+ * strip's "see which" link can open it on the way there — a link promising
+ * "which" must not land on a bar that hides which.
  */
 export function DegradedScreensNotice({
   degraded,
@@ -68,6 +84,8 @@ export function DegradedScreensNotice({
   title = "Screening incomplete",
   id = "screening-incomplete",
   className = "mt-6 mb-8",
+  open,
+  onToggle,
 }: {
   degraded: DegradedSource[];
   sourceNames?: Record<string, string>;
@@ -80,17 +98,28 @@ export function DegradedScreensNotice({
   id?: string;
   /** Outer spacing, so the explorer can sit it inside its own panel. */
   className?: string;
+  /** Controlled disclosure state. Omit to let the notice manage its own. */
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
 }) {
+  const [ownOpen, setOwnOpen] = useState(false);
   if (degraded.length === 0) return null;
+  const expanded = open ?? ownOpen;
+  const toggle = () => {
+    if (open === undefined) setOwnOpen(!expanded);
+    onToggle?.(!expanded);
+  };
+  const bodyId = `${id}-detail`;
+  const canRetry = onRetry && degraded.some((d) => d.reason !== "truncated");
   return (
     <section
       id={id}
       role="status"
       aria-label={title}
-      className={`scroll-mt-4 ${className} rounded-oo border border-amber-300 bg-amber-50 p-5`}
+      className={`scroll-mt-4 ${className} rounded-oo border border-oo-warn-border bg-oo-warn-bg`}
     >
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3 min-w-0">
+      <div className="flex items-center justify-between gap-3 py-0.5 pl-4 pr-1">
+        <div className="flex items-center gap-2.5 min-w-0">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -99,19 +128,44 @@ export function DegradedScreensNotice({
             strokeWidth="1.75"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
+            className="h-4 w-4 shrink-0 text-amber-600"
             aria-hidden="true"
           >
             <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
             <path d="M12 9v4" />
             <path d="M12 17h.01" />
           </svg>
-          <div className="min-w-0">
-            <p className="font-head font-bold text-oo-body text-amber-900">
-              {title} — {degraded.length} check
-              {degraded.length === 1 ? "" : "s"} did not fully run
-            </p>
-            <ul className="mt-2 space-y-1.5 text-[12.5px] leading-[1.6] text-amber-900">
+          <p className="font-head font-bold text-oo-small text-amber-900 min-w-0">
+            {title} — {degraded.length} check
+            {degraded.length === 1 ? "" : "s"} did not fully run
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-expanded={expanded}
+          aria-controls={bodyId}
+          onClick={toggle}
+          className="shrink-0 gap-1"
+        >
+          {expanded ? "Show less" : "Show more"}
+          <svg
+            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            aria-hidden="true"
+            className={`shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </Button>
+      </div>
+      {expanded && (
+        <div
+          id={bodyId}
+          className="flex items-start justify-between gap-4 flex-wrap border-t border-oo-warn-border px-4 pb-4 pt-3 sm:pl-[42px]"
+        >
+          <div className="min-w-0 flex-1">
+            <ul className="space-y-1.5 text-[12.5px] leading-[1.6] text-amber-900">
               {degraded.map((d, i) => (
                 <li key={`${d.source_id}:${d.check}:${i}`}>
                   <span className="font-semibold">
@@ -144,19 +198,15 @@ export function DegradedScreensNotice({
               an empty result here is not a clean screen.
             </p>
           </div>
+          {/* Phase 279: a truncated screen selects the same parties on a
+              re-run, so the button is offered only when re-running could help. */}
+          {canRetry && (
+            <Button variant="warn" size="sm" onClick={onRetry} className="shrink-0">
+              Re-run screening
+            </Button>
+          )}
         </div>
-        {/* Phase 279: a truncated screen selects the same parties on a
-            re-run, so the button is offered only when re-running could help. */}
-        {onRetry && degraded.some((d) => d.reason !== "truncated") && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="shrink-0 rounded border border-amber-400 px-3 py-1.5 text-oo-meta font-semibold text-amber-900 transition-colors hover:bg-amber-100"
-          >
-            Re-run screening
-          </button>
-        )}
-      </div>
+      )}
     </section>
   );
 }

@@ -14,7 +14,7 @@
  * draws it. What the control says is pinned in `lib/fullCheckHeader.test.ts`.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const expandLayer = vi.fn();
@@ -395,6 +395,9 @@ describe("an /expand-layer answer that is not the whole story (Phase 283)", () =
     renderPanel();
     await addLayer(user);
     const notice = screen.getByRole("status", { name: "Network screening incomplete" });
+    // The notice is a one-line bar; the per-check detail is behind Show more.
+    expect(notice).toHaveTextContent("Network screening incomplete — 1 check did not fully run");
+    await user.click(within(notice).getByRole("button", { name: /Show more/ }));
     expect(notice).toHaveTextContent(
       "Sanctions and PEP screening did not fully run for 2 companies expanded in this network"
     );
