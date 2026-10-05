@@ -166,6 +166,10 @@ export default function App() {
    *  identifier badge. Reset per lookup, like everything else about a
    *  result. */
   const [identityOpen, setIdentityOpen] = useState(false);
+  /** The screening-incomplete notice is a thin bar with its detail behind
+   *  "Show more". Held here, not in the notice, so the verdict strip's
+   *  "see which" link can open it; reset per lookup like identityOpen. */
+  const [degradedOpen, setDegradedOpen] = useState(false);
   /** Which risk chip the reader selected, if any. Null means "the worst one",
    *  which is what the Risk signals section opens on. Declared with the other
    *  per-entity state because the lookup reset clears it. */
@@ -279,6 +283,7 @@ export default function App() {
     stream.reset();
     setPanelErrors([]);
     setIdentityOpen(false);
+    setDegradedOpen(false);
     // A chip selection belongs to the entity it was made on. Carried into
     // the next lookup it either explains a signal the new subject does not
     // have, or — worse — silently lands on a code it does, so the box
@@ -937,6 +942,7 @@ export default function App() {
     stream.reset();
     setPanelErrors([]);
     setIdentityOpen(false);
+    setDegradedOpen(false);
     setExportError(null);
     setExportPayload({ narrative: null, dispositions: null });
     lookupMutation.reset();
@@ -978,7 +984,10 @@ export default function App() {
       // Not on the FullCheck tab: an invitation to the page the reader is on.
       onOpenNetwork={mode === "full" ? undefined : () => selectMode("full")}
       onShowSignals={showRiskSignals}
-      onShowDegraded={() => goToElement("screening-incomplete")}
+      onShowDegraded={() => {
+        setDegradedOpen(true);
+        goToElement("screening-incomplete");
+      }}
       screening={streaming}
       saved={Boolean(savedReport)}
     />
@@ -1248,6 +1257,8 @@ export default function App() {
           <DegradedScreensNotice
             degraded={degradedSources}
             sourceNames={sourceNameIndex}
+            open={degradedOpen}
+            onToggle={setDegradedOpen}
             onRetry={
               streamingLei && !streaming && !savedReport
                 ? () => lookupLei(streamingLei, { refresh: true })

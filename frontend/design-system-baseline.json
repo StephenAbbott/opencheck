@@ -185,8 +185,8 @@
     "hex": 0,
     "text": 2,
     "vocab": 0,
-    "palette": 12,
-    "button": 1
+    "palette": 7,
+    "button": 0
   },
   "src/components/cdd/SavedReportBanner.tsx": {
     "hex": 0,
