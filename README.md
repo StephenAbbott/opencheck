@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 289** — A GLEIF relationship record whose periods arrive as a JSON object no longer empties a subsidiary network; HSBC Holdings returns its 465 children again.
+**Latest: Phase 290** — A company with no LEI can be looked up by its register number: `/lookup-register` and the MCP tool `opencheck_register_lookup(scheme, id)` run the screens, risk engine and verdict on the register's own bundle.
 
 → [Full development history](docs/status.md)
 
