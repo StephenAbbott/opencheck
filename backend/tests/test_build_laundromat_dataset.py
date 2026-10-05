@@ -323,3 +323,88 @@ def test_write_release_without_nc_sources_does_not_claim_non_commercial(tmp_path
 def test_cli_requires_its_arguments(argv: list[str]) -> None:
     with pytest.raises(SystemExit):
         bld.main(argv)
+
+
+def test_run_lei_retries_a_momentary_refusal_then_succeeds(monkeypatch) -> None:
+    """GLEIF rate-limiting (503) and the lookup budget (429) are timing, not
+    answers: the lookup is retried after the wait; a 404 is not."""
+    import asyncio
+
+    from fastapi import HTTPException
+
+    import opencheck.routers.lookup as lookup_mod
+
+    calls: list[int] = []
+
+    class _Resp:
+        bods = [_ent("e-x", "X")]
+        risk_signals: list = []
+        degraded_sources: list = []
+        license_notices: list = []
+        possibly_same_entities: list = []
+        hits: list = []
+        source_liveness: dict = {}
+
+    async def fake_lookup(lei, deepen_top=5, refresh=False):
+        calls.append(1)
+        if len(calls) < 3:
+            raise HTTPException(status_code=503, detail="GLEIF is rate-limiting")
+        return _Resp()
+
+    sleeps: list[float] = []
+
+    async def fake_sleep(s):
+        sleeps.append(s)
+
+    monkeypatch.setattr(lookup_mod, "_lookup_impl", fake_lookup)
+    monkeypatch.setattr("opencheck.mcp.shaping.shape_batch_row", lambda r: {"legal_name": "X"})
+    monkeypatch.setattr(bld.asyncio, "sleep", fake_sleep)
+
+    raw = asyncio.run(
+        bld._run_lei({"key": f"lei:{LEI}", "lei": LEI}, deepen_top=1, retries=2, retry_wait=7)
+    )
+    assert raw["status"] == "done" and raw["attempts"] == 3
+    assert sleeps == [7, 7]
+    assert "subsidiaries" not in raw  # fetched in the second pass, never inline
+
+    calls.clear()
+
+    async def not_found(lei, deepen_top=5, refresh=False):
+        calls.append(1)
+        raise HTTPException(status_code=404, detail="unknown LEI")
+
+    monkeypatch.setattr(lookup_mod, "_lookup_impl", not_found)
+    raw = asyncio.run(
+        bld._run_lei({"key": f"lei:{LEI}", "lei": LEI}, deepen_top=1, retries=2, retry_wait=0)
+    )
+    assert raw["status"] == "failed" and raw["retryable"] is False and len(calls) == 1
+
+
+def test_run_subsidiaries_folds_new_statements_and_records_partial(monkeypatch) -> None:
+    import asyncio
+
+    import opencheck.subsidiaries as subs
+
+    async def fake_assemble(lei, include_bods=False):
+        return {
+            "bods": [_ent("e-x", "X"), _ent("e-child", "CHILD"), _rel("r-c", "e-child", "e-x")],
+            "children": [{"lei": "C"}],
+            "direct_available": False,
+            "ultimate_available": True,
+            "snapshot_date": None,
+        }
+
+    monkeypatch.setattr(subs, "assemble_subsidiaries", fake_assemble)
+    raw = {"status": "done", "bods": [_ent("e-x", "X")]}
+    raw = asyncio.run(bld._run_subsidiaries(raw, LEI))
+    assert [s["statementId"] for s in raw["bods"]] == ["e-x", "e-child", "r-c"]
+    assert raw["subsidiaries"]["statements"] == 2
+    assert raw["subsidiaries"]["direct_available"] is False  # partial, recorded not hidden
+
+    async def boom(lei, include_bods=False):
+        raise RuntimeError("throttled")
+
+    monkeypatch.setattr(subs, "assemble_subsidiaries", boom)
+    raw = asyncio.run(bld._run_subsidiaries({"status": "done", "bods": []}, LEI))
+    assert raw["subsidiaries"]["error"].startswith("RuntimeError")
+    assert raw["status"] == "done"

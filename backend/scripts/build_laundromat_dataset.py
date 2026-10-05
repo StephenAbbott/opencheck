@@ -38,6 +38,11 @@ What the build does
   walk, and the sanctions / PEP name screen over everything it brought
   back. A subject that also carries an LEI is hopped *onto* its GLEIF node,
   as "+1 layer" in FullCheck does.
+* The build runs in three paced passes — LEI lookups one at a time, then
+  their subsidiary networks, then register hops — because everything that
+  touches GLEIF shares one 50-calls-a-minute throttle and a bank's
+  subsidiary network costs one call per child. A lookup refused as momentary
+  (429/503) is retried after ``--retry-wait`` seconds.
 * Raw results are cached per subject under ``<out>/raw/`` so an interrupted
   run resumes where it stopped and a rate-capped register can be retried with
   ``--retry-degraded`` without re-running the rest.
@@ -208,26 +213,48 @@ def _is_degraded(raw: dict[str, Any]) -> bool:
     return raw.get("status") in ("failed", "stub") or bool(raw.get("degraded_sources"))
 
 
-async def _run_lei(subject: dict[str, Any], *, deepen_top: int) -> dict[str, Any]:
-    """One LEI through the lookup pipeline, plus its GLEIF subsidiary network."""
+async def _run_lei(
+    subject: dict[str, Any], *, deepen_top: int, retries: int = 2, retry_wait: float = 70.0
+) -> dict[str, Any]:
+    """One LEI through the lookup pipeline.
+
+    A momentary refusal (GLEIF rate-limited the shared connection, 503; the
+    lookup budget, 429) is retried after ``retry_wait`` seconds, up to
+    ``retries`` times, because in a batch the only thing wrong is timing.
+    The subsidiary network is NOT fetched here: that fan-out costs one GLEIF
+    call per child, and done inline it starves the next lookup's anchor —
+    see :func:`_run_subsidiaries`, which runs after every lookup is cached.
+    """
     from fastapi import HTTPException
 
     from opencheck.mcp.shaping import shape_batch_row
     from opencheck.routers.lookup import _lookup_impl
-    from opencheck.subsidiaries import assemble_subsidiaries
 
     lei = subject["lei"]
-    try:
-        resp = await _lookup_impl(lei, deepen_top=deepen_top, refresh=True)
-    except HTTPException as exc:
-        return {
-            "key": subject["key"], "status": "failed", "http_status": exc.status_code,
-            "reason": str(exc.detail), "retryable": exc.status_code in (429, 503),
-        }
+    attempt = 0
+    while True:
+        try:
+            resp = await _lookup_impl(lei, deepen_top=deepen_top, refresh=True)
+            break
+        except HTTPException as exc:
+            retryable = exc.status_code in (429, 503)
+            if retryable and attempt < retries:
+                attempt += 1
+                log.warning(
+                    "lei %s refused (%s) — retry %d/%d in %.0fs",
+                    lei, exc.status_code, attempt, retries, retry_wait,
+                )
+                await asyncio.sleep(retry_wait)
+                continue
+            return {
+                "key": subject["key"], "status": "failed", "http_status": exc.status_code,
+                "reason": str(exc.detail), "retryable": retryable, "attempts": attempt + 1,
+            }
     row = shape_batch_row(resp)
-    out: dict[str, Any] = {
+    return {
         "key": subject["key"],
         "status": "done",
+        "attempts": attempt + 1,
         "row": row,
         "bods": list(resp.bods or []),
         "risk_signals": list(resp.risk_signals or []),
@@ -236,25 +263,38 @@ async def _run_lei(subject: dict[str, Any], *, deepen_top: int) -> dict[str, Any
         "possibly_same_entities": list(resp.possibly_same_entities or []),
         "contributing_ids": sorted({h.source_id for h in (resp.hits or []) if not h.is_stub}),
         "source_liveness": dict(resp.source_liveness or {}),
-        "subsidiaries": {"statements": 0, "children": 0, "available": None},
     }
+
+
+async def _run_subsidiaries(raw: dict[str, Any], lei: str) -> dict[str, Any]:
+    """Fold the GLEIF subsidiary network into a cached lookup result.
+
+    Deduplicated by ``statementId`` as ``GET /export?subsidiaries=true`` does.
+    Best effort: a failure or a throttled GLEIF leaves the lookup intact and
+    is recorded under ``subsidiaries`` — ``direct_available`` /
+    ``ultimate_available`` false means the list is partial, not empty.
+    """
+    from opencheck.subsidiaries import assemble_subsidiaries
+
     try:
         data = await assemble_subsidiaries(lei, include_bods=True)
     except Exception as exc:  # noqa: BLE001 — best effort, as /export does
-        out["subsidiaries"]["error"] = f"{type(exc).__name__}: {exc}"
-        return out
+        raw["subsidiaries"] = {
+            "statements": 0, "children": 0, "error": f"{type(exc).__name__}: {exc}",
+        }
+        return raw
     sub = (data or {}).get("bods") or []
-    existing = {s.get("statementId") for s in out["bods"]}
+    existing = {s.get("statementId") for s in raw.get("bods") or []}
     added = [s for s in sub if s.get("statementId") not in existing]
-    out["bods"].extend(added)
-    out["subsidiaries"] = {
+    raw.setdefault("bods", []).extend(added)
+    raw["subsidiaries"] = {
         "statements": len(added),
         "children": len((data or {}).get("children") or []),
         "direct_available": (data or {}).get("direct_available"),
         "ultimate_available": (data or {}).get("ultimate_available"),
         "snapshot_date": (data or {}).get("snapshot_date"),
     }
-    return out
+    return raw
 
 
 async def _run_register(subject: dict[str, Any]) -> dict[str, Any]:
@@ -304,11 +344,25 @@ async def _build_raw(
     out: Path,
     deepen_top: int,
     lei_concurrency: int,
+    lei_pause: float,
     register_pause: float,
+    retries: int,
+    retry_wait: float,
     force: bool,
     retry_degraded: bool,
+    skip_subsidiaries: bool,
 ) -> None:
-    """Fetch every subject not already cached under ``out/raw``."""
+    """Fetch every subject not already cached under ``out/raw``, in three passes:
+    LEI lookups, then their subsidiary networks, then register hops.
+
+    Everything that touches GLEIF is paced: the process-wide throttle allows
+    50 calls a minute and GLEIF itself 60 per address, a lookup's anchor costs
+    about eight, and a bank's subsidiary network one per child. The first
+    keyed run (5 Oct 2026) fetched subsidiaries inline, two lookups at a
+    time, and 21 of 26 LEI subjects failed on the resulting 429s while every
+    register hop succeeded — hence the passes, the default concurrency of
+    one, and the retries.
+    """
     (out / "raw").mkdir(parents=True, exist_ok=True)
 
     def _needs(subject: dict[str, Any]) -> bool:
@@ -331,34 +385,66 @@ async def _build_raw(
     leis = [s for s in todo if s["kind"] == "lei"]
     regs = [s for s in todo if s["kind"] == "register"]
 
+    # Pass 1 — LEI lookups.
     sem = asyncio.Semaphore(max(1, lei_concurrency))
 
-    async def _one_lei(s: dict[str, Any]) -> None:
+    async def _one_lei(i: int, s: dict[str, Any]) -> None:
         async with sem:
             started = time.monotonic()
-            raw = await _run_lei(s, deepen_top=deepen_top)
+            raw = await _run_lei(s, deepen_top=deepen_top, retries=retries, retry_wait=retry_wait)
             raw["elapsed_s"] = round(time.monotonic() - started, 1)
             _write_json(_raw_path(out, s["key"]), raw)
             log.info(
-                "lei %s %s — %s in %.1fs (%d statements)",
-                s["lei"], s.get("name", "")[:40], raw["status"], raw["elapsed_s"],
+                "[lei %d/%d] %s %s — %s in %.1fs (%d statements%s)",
+                i, len(leis), s["lei"], s.get("name", "")[:40], raw["status"], raw["elapsed_s"],
                 len(raw.get("bods") or []),
+                ", degraded" if raw.get("degraded_sources") else "",
             )
+            if lei_pause > 0 and i < len(leis):
+                await asyncio.sleep(lei_pause)
 
     if leis:
-        await asyncio.gather(*(_one_lei(s) for s in leis))
+        await asyncio.gather(*(_one_lei(i, s) for i, s in enumerate(leis, 1)))
 
-    # Register hops run one at a time with a pause: Companies House allows
-    # 600 calls per 5 minutes per key and a hop costs about four, plus the PSC
-    # walk. The outbound-rate scope degrades a capped register rather than
-    # failing, and --retry-degraded picks those up on the next run.
+    # Pass 2 — subsidiary networks for every cached, successful LEI lookup
+    # that does not have one yet (a re-run picks up where it stopped).
+    if not skip_subsidiaries:
+        pending = []
+        for s in subjects:
+            if s["kind"] != "lei":
+                continue
+            p = _raw_path(out, s["key"])
+            if not p.exists():
+                continue
+            raw = json.loads(p.read_text(encoding="utf-8"))
+            if raw.get("status") == "done" and (force or "subsidiaries" not in raw):
+                pending.append((s, raw))
+        for i, (s, raw) in enumerate(pending, 1):
+            started = time.monotonic()
+            raw = await _run_subsidiaries(raw, s["lei"])
+            _write_json(_raw_path(out, s["key"]), raw)
+            sub = raw.get("subsidiaries") or {}
+            log.info(
+                "[subsidiaries %d/%d] %s %s — %d children, %d statements added%s in %.1fs",
+                i, len(pending), s["lei"], s.get("name", "")[:40], sub.get("children", 0),
+                sub.get("statements", 0),
+                " (partial)" if sub.get("error") or sub.get("direct_available") is False else "",
+                time.monotonic() - started,
+            )
+            if lei_pause > 0 and i < len(pending):
+                await asyncio.sleep(lei_pause)
+
+    # Pass 3 — register hops, one at a time with a pause: Companies House
+    # allows 600 calls per 5 minutes per key and a hop costs about four, plus
+    # the PSC walk. The outbound-rate scope degrades a capped register rather
+    # than failing, and --retry-degraded picks those up on the next run.
     for i, s in enumerate(regs, 1):
         started = time.monotonic()
         raw = await _run_register(s)
         raw["elapsed_s"] = round(time.monotonic() - started, 1)
         _write_json(_raw_path(out, s["key"]), raw)
         log.info(
-            "[%d/%d] %s %s — %s in %.1fs (%d statements%s)",
+            "[register %d/%d] %s %s — %s in %.1fs (%d statements%s)",
             i, len(regs), s["key"], (s.get("name") or "")[:40], raw["status"], raw["elapsed_s"],
             len(raw.get("bods") or []),
             ", degraded" if raw.get("degraded_sources") else "",
@@ -790,8 +876,10 @@ def cmd_build(args: argparse.Namespace) -> int:
         asyncio.run(
             _build_raw(
                 subjects, out=out, deepen_top=args.deepen_top,
-                lei_concurrency=args.lei_concurrency, register_pause=args.register_pause,
-                force=args.force, retry_degraded=args.retry_degraded,
+                lei_concurrency=args.lei_concurrency, lei_pause=args.lei_pause,
+                register_pause=args.register_pause, retries=args.retries,
+                retry_wait=args.retry_wait, force=args.force,
+                retry_degraded=args.retry_degraded, skip_subsidiaries=args.skip_subsidiaries,
             )
         )
     raws = _load_raw(out, subjects)
@@ -834,7 +922,23 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--only", choices=["lei", "register"], default=None)
     b.add_argument("--limit", type=int, default=0, help="first N subjects only (smoke runs)")
     b.add_argument("--deepen-top", type=int, default=5)
-    b.add_argument("--lei-concurrency", type=int, default=2)
+    b.add_argument(
+        "--lei-concurrency", type=int, default=1,
+        help="LEI lookups in flight (default 1: an anchor costs ~8 GLEIF calls of the 50/min)",
+    )
+    b.add_argument(
+        "--lei-pause", type=float, default=5.0,
+        help="seconds between LEI lookups and between subsidiary fetches",
+    )
+    b.add_argument(
+        "--retries", type=int, default=2,
+        help="retries of a lookup refused as momentary (GLEIF 429/503, lookup budget)",
+    )
+    b.add_argument("--retry-wait", type=float, default=70.0, help="seconds before a retry")
+    b.add_argument(
+        "--skip-subsidiaries", action="store_true",
+        help="do not fetch GLEIF subsidiary networks (the costliest GLEIF calls)",
+    )
     b.add_argument(
         "--register-pause", type=float, default=3.0, help="seconds between register hops"
     )
