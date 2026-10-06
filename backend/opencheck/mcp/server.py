@@ -69,14 +69,19 @@ def _err(exc: HTTPException) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def opencheck_search(query: str, kind: str = "entity") -> dict[str, Any]:
+async def opencheck_search(
+    query: str, kind: str = "entity", limit: int = 15
+) -> dict[str, Any]:
     """Find a company's Legal Entity Identifier (LEI) from a name or free text.
 
     Args:
         query: Company name or free-text query (e.g. "Rosneft").
         kind: "entity" (default) or "person".
+        limit: How many ranked candidates to return (default 15, max 50).
 
-    Returns candidate matches with their LEIs — feed a candidate's ``lei`` to
+    Returns candidate matches ranked best-first across every source — exact
+    name matches first, each tagged with ``match`` — with ``total`` and
+    ``truncated`` saying whether more were found. Feed a candidate's ``lei`` to
     ``opencheck_lookup``. A candidate with ``lei: null`` and an entry in
     ``identifiers`` (a register scheme and number, e.g. GB-COH OC346224) is
     looked up with ``opencheck_register_lookup`` instead.
@@ -89,7 +94,7 @@ async def opencheck_search(query: str, kind: str = "entity") -> dict[str, Any]:
     except ValueError:
         return {"error": f"kind must be 'entity' or 'person', got {kind!r}"}
     resp = await _search(q=query, kind=k)
-    return shaping.shape_search(resp)
+    return shaping.shape_search(resp, limit=limit)
 
 
 @mcp.tool()

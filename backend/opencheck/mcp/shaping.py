@@ -538,8 +538,26 @@ def _candidate_identifiers(hit: Any) -> list[dict[str, str]]:
     return out
 
 
-def shape_search(payload: Any) -> dict[str, Any]:
-    """Flatten a ``SearchResponse`` into a ranked candidate list with LEIs."""
+#: Phase 292: how many ranked candidates ``opencheck_search`` returns by
+#: default, and the most a caller may ask for. The REST ``/search`` response
+#: is not capped.
+SEARCH_DEFAULT_LIMIT = 15
+SEARCH_MAX_LIMIT = 50
+
+
+def shape_search(payload: Any, *, limit: int = SEARCH_DEFAULT_LIMIT) -> dict[str, Any]:
+    """Flatten a ``SearchResponse`` into a ranked candidate list with LEIs.
+
+    ``payload.hits`` arrives ranked best-first across sources
+    (``opencheck.search_rank``, Phase 292); each candidate says which rung
+    of that ladder it reached as ``match``. The list is cut at ``limit`` and
+    the cut is stated — ``total``, ``truncated`` — never silent.
+    """
+    from ..search_rank import match_label
+    from ..sources import SearchKind
+
+    person = getattr(payload, "kind", None) == SearchKind.PERSON
+    limit = max(1, min(int(limit), SEARCH_MAX_LIMIT))
     candidates: list[dict[str, Any]] = []
     for h in payload.hits:
         if h.is_stub:
@@ -549,20 +567,34 @@ def shape_search(payload: Any) -> dict[str, Any]:
                 "name": h.name,
                 "lei": h.identifiers.get("lei") or (h.hit_id if h.source_id == "gleif" else None),
                 "identifiers": _candidate_identifiers(h),
+                "match": match_label(payload.query, h.name, person=person),
                 "source": h.source_id,
                 "summary": h.summary,
             }
         )
+    total = len(candidates)
+    shown = candidates[:limit]
+    hint = (
+        "Candidates are ranked best-first across sources; match says how "
+        "closely the name matches the query (exact, same_name, all_tokens, "
+        "distinctive_tokens, fuzzy). Pass a candidate's lei to "
+        "opencheck_lookup to run due diligence. A candidate with lei null "
+        "and an identifiers entry (e.g. scheme GB-COH) is looked up with "
+        "opencheck_register_lookup(scheme, id)."
+    )
+    if total > len(shown):
+        hint += (
+            f" Showing the top {len(shown)} of {total}; call again with a "
+            f"higher limit (up to {SEARCH_MAX_LIMIT}) or a more specific query."
+        )
     return {
         "query": payload.query,
         "kind": payload.kind.value if hasattr(payload.kind, "value") else str(payload.kind),
-        "count": len(candidates),
-        "candidates": candidates,
-        "hint": (
-            "Pass a candidate's lei to opencheck_lookup to run due diligence. "
-            "A candidate with lei null and an identifiers entry (e.g. scheme "
-            "GB-COH) is looked up with opencheck_register_lookup(scheme, id)."
-        ),
+        "count": len(shown),
+        "total": total,
+        "truncated": total > len(shown),
+        "candidates": shown,
+        "hint": hint,
     }
 
 

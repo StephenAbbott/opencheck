@@ -243,8 +243,11 @@ export function ApiPage() {
 
         <BtsCard title="Search &amp; drill-down">
           <ApiEndpoint path="/search?q=<query>&kind=<entity|person>">
-            Free-text fan-out search across every source. Power-user / debugging path;
-            the LEI-anchored <code className={mono}>/lookup</code> is the precise one.
+            Free-text fan-out search across every source, ranked best-first across
+            sources: exact name matches first, then same name with another legal form,
+            then partial matches; ties go to live companies and to rows with an LEI.
+            Power-user / debugging path; the LEI-anchored{" "}
+            <code className={mono}>/lookup</code> is the precise one.
           </ApiEndpoint>
           <ApiEndpoint path="/stream?q=<query>&kind=<...>">
             The same search, streamed as Server-Sent Events.
