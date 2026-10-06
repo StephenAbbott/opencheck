@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 291** — GLEIF's entity status on an LEI no issuer maintains now reads as declared, dated by the missed renewal, instead of as a live register status.
+**Latest: Phase 292** — Search results are ranked across every source with exact name matches first, so an agent sees the company it asked for at the top of the list.
 
 → [Full development history](docs/status.md)
 
