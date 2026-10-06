@@ -18,6 +18,7 @@ import type {
 } from "../lib/api";
 import { answeredCount, settledCount } from "../lib/lookupProgress";
 import { runCompletedAtFrom } from "../lib/savedReport";
+import type { RegisterRecord } from "../lib/registerLinks";
 
 /*
  * Everything one lookup run puts on the page, and the handlers that put it
@@ -45,6 +46,7 @@ export function useLookupStream() {
   const [knowability, setKnowability] = useState<KnowabilityStatement | null>(null);
   // Phase 236: the primary listing from PermID, as the `listing` event carried it.
   const [primaryListing, setPrimaryListing] = useState<PrimaryListing | null>(null);
+  const [registerRecord, setRegisterRecord] = useState<RegisterRecord | null>(null);
   const [knowabilityChain, setKnowabilityChain] = useState<KnowabilityChain | null>(null);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   // Derived checks that did not fully run (issue #50) — rendered as a
@@ -143,6 +145,7 @@ export function useLookupStream() {
     setKnowability(null);
     setKnowabilityChain(null);
     setPrimaryListing(null);
+    setRegisterRecord(null);
     setRiskSignals([]);
     setDegradedSources([]);
     setVerdict(null);
@@ -186,6 +189,7 @@ export function useLookupStream() {
         setStreamingLei(e.lei);
         setLegalName(e.legal_name);
         setSubjectJurisdiction(e.jurisdiction);
+        setRegisterRecord(e.register_record ?? null);
         setStreaming(true);
         cb.onAnchor({ lei: e.lei, legal_name: e.legal_name });
       },
@@ -259,6 +263,7 @@ export function useLookupStream() {
     subjectProfile,
     knowability,
     primaryListing,
+    registerRecord,
     knowabilityChain,
     riskSignals,
     degradedSources,

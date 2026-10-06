@@ -8,6 +8,7 @@
 import { trackEvent } from "./analytics";
 import type { Liveness, SourceLiveness } from "../components/cdd/LivenessBadge";
 import type { WatchlistPayload } from "./watchlist";
+import type { RegisterRecord } from "./registerLinks";
 
 export type { Liveness, SourceLiveness };
 
@@ -168,6 +169,8 @@ export interface LookupResponse {
   legal_name: string | null;
   jurisdiction: string | null;
   derived_identifiers: Record<string, string>;
+  /** Phase 296 — see LookupGleifDoneEvent.register_record. */
+  register_record?: RegisterRecord | null;
   query: string;
   kind: SearchKind;
   hits: SourceHit[];
@@ -1615,6 +1618,9 @@ export interface LookupGleifDoneEvent {
   legal_name: string | null;
   jurisdiction: string | null;
   derived_identifiers: Record<string, string>;
+  /** Phase 296: the subject's own page on its home register, built from the
+   *  LEI record's RA code and number. Absent from events recorded earlier. */
+  register_record?: RegisterRecord | null;
 }
 
 /** Emitted right after gleif_done; lists every source_id that will be queried.

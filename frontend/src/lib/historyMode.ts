@@ -28,6 +28,7 @@
  */
 
 import type { HistoryEntry, HistoryRawChange, HistoryResponse } from "./api";
+import { registerHistoryUrl } from "./registerLinks";
 
 /** Every source that can emit change events, in the order the tab names them.
  *  `backend/tests/test_frontend_parity.py` (Phase 266) fails unless this is
@@ -81,39 +82,17 @@ export function recordUrl(
   lei: string,
   registryNumbers: Record<string, string> = {},
 ): string | null {
-  const n = registryNumbers[sourceId];
-  switch (sourceId) {
-    case "gleif":
-      return `https://search.gleif.org/#/record/${encodeURIComponent(lei)}`;
-    case "companies_house":
-      return n
-        ? `https://find-and-update.company-information.service.gov.uk/company/${encodeURIComponent(n)}/filing-history`
-        : null;
-    case "nz_companies":
-      // The company number GLEIF publishes for RA000466 addresses the record
-      // directly. It must NOT be handed to the register's `/search?q=` path:
-      // that page runs its query in the browser, so the server returns an
-      // empty search form with HTTP 200 — a link that looks like it worked
-      // and shows the reader nothing about the company. Verified against
-      // Fonterra Commodities Limited (2288120), whose record this URL
-      // returns and whose search URL does not mention it at all.
-      return n
-        ? `https://app.companiesoffice.govt.nz/companies/app/ui/pages/companies/${encodeURIComponent(n)}`
-        : null;
-    case "ariregister":
-      return n ? `https://ariregister.rik.ee/eng/company/${encodeURIComponent(n)}` : null;
-    case "cvr_denmark":
-      return n ? `https://datacvr.virk.dk/enhed/virksomhed/${encodeURIComponent(n)}` : null;
-    case "ny_dos":
-      // DOS's own public inquiry is a form with no per-entity address, so the
-      // row links to the open-data query for the entity's filings — the rows
-      // the History tab was built from.
-      return n
-        ? `https://data.ny.gov/resource/63wc-4exh.json?corpid_num=${encodeURIComponent(n)}`
-        : null;
-    default:
-      return null;
+  if (sourceId === "gleif") {
+    return `https://search.gleif.org/#/record/${encodeURIComponent(lei)}`;
   }
+  // Phase 296: every register's address comes from the one register-link table
+  // (lib/registerLinks.ts). The History tab reads its `history` entry where
+  // there is one — Companies House's filing history; New York's open-data
+  // query, since DOS's own inquiry has no per-entity address — and the
+  // record page otherwise. The NZ caution that lived here holds in the table:
+  // the company number addresses the record directly and must never go to
+  // the register's `/search?q=` page, which renders an empty form.
+  return registerHistoryUrl(sourceId, registryNumbers[sourceId]);
 }
 
 /** Earliest and latest dated year across entries, or `null` when none is dated. */

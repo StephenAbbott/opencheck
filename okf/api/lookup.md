@@ -83,7 +83,12 @@ the sources stating it — facts, never findings; Phase 154 — plus
 `lei_registration`, the LEI record's own GLEIF status and dates, which is not
 the company's status; Phase 242), and `listing`
 (the primary stock-exchange listing from LSEG PermID — venue, ticker, MIC and a
-verified venue link — or null when no PermID key is configured; Phase 236).
+verified venue link — or null when no PermID key is configured; Phase 236),
+and `register_record` (the subject's own page on its home register —
+`register`, `identifier`, `url` and `ra_code` — built from the LEI record's
+registration authority and number alone, so present even when that register's
+adapter did not answer; null where OpenCheck has no per-company address for
+the register; Phase 296).
 
 # Citations
 

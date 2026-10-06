@@ -543,6 +543,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     legal_name: str | None = None
     jurisdiction: str | None = None
     derived: dict[str, str] = {}
+    register_record: dict[str, Any] | None = None
     replayed = False
     fetched_at: str | None = None
     sources_applicable: list[str] = []
@@ -564,6 +565,8 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             legal_name = payload["legal_name"]
             jurisdiction = payload["jurisdiction"]
             derived = payload["derived_identifiers"]
+            # Phase 296; absent from events recorded before it.
+            register_record = payload.get("register_record")
         elif event == "hit":
             hits.append(payload)
         elif event == "source_error":
@@ -625,6 +628,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         knowability=knowability,
         knowability_chain=knowability_chain,
         listing=listing,
+        register_record=register_record,
         lei=norm_lei,
         legal_name=legal_name,
         jurisdiction=jurisdiction,

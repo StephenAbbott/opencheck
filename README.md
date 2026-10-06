@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 295** — Corporate officers are published as companies wherever the register says an officer is a legal person, management roles are screened as officers, and no corporate officer carries a country its register did not file.
+**Latest: Phase 296** — Every link to a company's own register page now comes from one table, and the subject card links the official register record from the LEI record alone, even when that register's source did not answer.
 
 → [Full development history](docs/status.md)
 
