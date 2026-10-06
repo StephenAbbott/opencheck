@@ -13,7 +13,7 @@ import { ICON_NAMES, ICON_PATHS } from "./Icon";
 
 describe("buttonClasses", () => {
   it("always carries the focus ring and the radius", () => {
-    for (const v of ["primary", "secondary", "ghost", "warn", "danger"] as const) {
+    for (const v of ["primary", "secondary", "ghost", "warn", "warnGhost", "danger"] as const) {
       const cls = buttonClasses(v);
       expect(cls).toContain("focus-visible:ring-oo-blue");
       expect(cls).toContain("rounded-oo");
@@ -30,6 +30,15 @@ describe("buttonClasses", () => {
     expect(buttonClasses("primary")).not.toContain("oo-burst");
   });
 
+  it("hovers a control inside an amber notice in amber, not blue", () => {
+    // Phase 294: the screening-incomplete bar's Show more lit up oo-soft blue.
+    const cls = buttonClasses("warnGhost", "sm");
+    expect(cls).toContain("text-oo-warn-text");
+    expect(cls).toContain("hover:bg-oo-warn-border/40");
+    expect(cls).not.toContain("oo-soft");
+    expect(cls).not.toContain("text-oo-blue");
+  });
+
   it("appends caller classes last so they win", () => {
     expect(buttonClasses("primary", "md", "w-full")).toMatch(/w-full$/);
   });
@@ -38,7 +47,7 @@ describe("buttonClasses", () => {
     // The two darkened primary hover steps are the only literals allowed,
     // because Tailwind has no darker step of oo-blue to reference.
     const allowed = new Set(["#3529b8", "#2e2399"]);
-    for (const v of ["primary", "secondary", "ghost", "warn", "danger"] as const) {
+    for (const v of ["primary", "secondary", "ghost", "warn", "warnGhost", "danger"] as const) {
       for (const hex of buttonClasses(v).match(/#[0-9a-f]{3,8}/gi) ?? []) {
         expect(allowed.has(hex.toLowerCase())).toBe(true);
       }

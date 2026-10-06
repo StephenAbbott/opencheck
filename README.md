@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 293** — Corporate officers on Companies House are published and screened as companies, a name-only offshore-leaks lead no longer reads as a finding in the verdict, and the dataset build names any subsidiary network it did not fully obtain.
+**Latest: Phase 294** — The screening-incomplete bar's Show more / Show less toggle hovers in the notice's own amber instead of light blue.
 
 → [Full development history](docs/status.md)
 

@@ -14,7 +14,14 @@
  * duplication is how the styles diverged the first time.
  */
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "warn" | "danger" | "person";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "warn"
+  | "warnGhost"
+  | "danger"
+  | "person";
 export type ButtonSize = "sm" | "md";
 
 /** Shared by every variant: the hit target, the focus ring, the radius. */
@@ -44,6 +51,12 @@ const VARIANTS: Record<ButtonVariant, string> = {
     "bg-transparent border-transparent text-oo-blue font-medium hover:bg-oo-soft",
   // Incomplete, not failed: the re-run affordance on a degraded check.
   warn: "bg-white border-oo-warn-border text-oo-warn-text font-bold hover:bg-oo-warn-bg",
+  // Phase 294: a quiet control that sits *inside* an amber notice (the
+  // screening-incomplete bar's Show more / Show less). `ghost` hovered to
+  // oo-soft, a light blue that read as a foreign object on the amber; this
+  // hovers within the notice's own hue, a tint of its border.
+  warnGhost:
+    "bg-transparent border-transparent text-oo-warn-text font-semibold hover:bg-oo-warn-border/40",
   // Reserved for a failure the user must act on. Not for empty results.
   danger: "bg-white border-rose-300 text-rose-700 font-bold hover:bg-rose-50",
   // Phase 241: an action on a person — BackgroundCheck's accent, the node
