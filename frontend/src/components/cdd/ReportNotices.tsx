@@ -141,7 +141,7 @@ export function DegradedScreensNotice({
           </p>
         </div>
         <Button
-          variant="ghost"
+          variant="warnGhost"
           size="sm"
           aria-expanded={expanded}
           aria-controls={bodyId}
