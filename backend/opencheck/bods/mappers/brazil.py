@@ -6,7 +6,13 @@ re-exports every name defined here.
 
 from __future__ import annotations
 
+import gettext
+import re
+import unicodedata
+from functools import lru_cache
 from typing import Any, Iterable
+
+import pycountry
 
 from .. import liveness as _liveness
 from ..statements import (
@@ -24,6 +30,54 @@ from ..statements import (
 # ``shareholding``; management & representation roles map to
 # ``seniorManagingOfficial``.
 _BR_OWNER_KEYWORDS = ("socio", "sócio", "acionista", "quotista", "cotista", "titular")
+
+
+def _br_fold(text: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", text.lower()) if not unicodedata.combining(c)
+    ).strip()
+
+
+@lru_cache(maxsize=1)
+def _br_country_index() -> dict[str, str]:
+    """Folded Portuguese (pt_BR) country name → ISO alpha-2, from pycountry's
+    own translations. Receita Federal writes a partner's ``pais`` in
+    Portuguese — "Países Baixos (Holanda)", "ESPANHA" — and nothing else."""
+    try:
+        tr = gettext.translation("iso3166-1", pycountry.LOCALES_DIR, languages=["pt_BR"])
+    except OSError:  # pragma: no cover - translations ship with pycountry
+        return {}
+    index: dict[str, str] = {}
+    for c in pycountry.countries:
+        for attr in ("name", "common_name", "official_name"):
+            value = getattr(c, attr, None)
+            if value:
+                index.setdefault(_br_fold(tr.gettext(value)), c.alpha_2)
+    return index
+
+
+def _br_country_code(text: str | None) -> str:
+    """ISO alpha-2 for the country Receita files on a QSA partner, or ``""``.
+    The name as filed first, then without its parenthetical gloss
+    ("Países Baixos (Holanda)" → "Países Baixos")."""
+    if not text or not str(text).strip():
+        return ""
+    folded = _br_fold(str(text))
+    index = _br_country_index()
+    if folded in index:
+        return index[folded]
+    bare = re.sub(r"\s*\(.*?\)\s*", " ", folded).strip()
+    return index.get(bare, "")
+
+
+def _br_partner_is_entity(p: dict[str, Any]) -> bool:
+    """A QSA partner is a legal person when Receita types it PJ, or when it is
+    a foreign partner whose qualification says so (code 37, "Sócio Pessoa
+    Jurídica Domiciliado no Exterior")."""
+    if p.get("kind") == "entity":
+        return True
+    role = _br_fold(p.get("role") or "")
+    return p.get("kind") == "foreign" and "pessoa juridica" in role
 
 
 def _br_interest_type(qualificacao: str | None) -> str:
@@ -121,16 +175,31 @@ def map_cnpj_brazil(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         if p.get("entry_date"):
             interest["startDate"] = p["entry_date"]
 
-        if p.get("kind") == "entity":
+        if _br_partner_is_entity(p):
             partner_cnpj = p.get("cnpj")
             local_id = partner_cnpj or f"{cnpj}:pj:{idx}"
             ip_type = "entity"
+            # Jurisdiction from the register's own ``pais`` for a partner
+            # domiciled abroad — SHELL BRAZIL HOLDING BV is filed with
+            # "Países Baixos (Holanda)" and was being published as Brazilian
+            # (follow-up to Phase 293). A partner with no country filed is a
+            # Brazilian PJ, as before; one whose country does not resolve
+            # gets none rather than a guess.
+            country_text = (p.get("country") or "").strip()
+            country_code = _br_country_code(country_text)
+            if not country_text or country_code == "BR":
+                jurisdiction: tuple[str, str] | None = ("Brazil", "BR")
+            elif country_code:
+                country = pycountry.countries.get(alpha_2=country_code)
+                jurisdiction = (getattr(country, "name", country_code), country_code)
+            else:
+                jurisdiction = None
             if local_id not in seen:
                 yield make_entity_statement(
                     source_id="cnpj_brazil",
                     local_id=local_id,
                     name=pname,
-                    jurisdiction=("Brazil", "BR"),
+                    jurisdiction=jurisdiction,
                     identifiers=[_cnpj_id(partner_cnpj)] if partner_cnpj else [],
                     source_url=source_url,
                 )

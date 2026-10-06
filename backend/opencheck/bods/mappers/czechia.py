@@ -308,8 +308,12 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
         yield dir_stmt
 
+        # A member of the statutory body manages the company. BODS reserves
+        # appointmentOfBoard for the *power to appoint* directors, so this
+        # was the wrong type; seniorManagingOfficial since Phase 295, which
+        # also brings a corporate member under the Phase 293 officer gate.
         dir_interest: dict[str, Any] = {
-            "type": "appointmentOfBoard",
+            "type": "seniorManagingOfficial",
             "directOrIndirect": "direct",
             "beneficialOwnershipOrControl": False,
             "details": role_label,

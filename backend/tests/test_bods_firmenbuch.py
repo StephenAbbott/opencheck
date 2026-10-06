@@ -497,13 +497,13 @@ def test_map_firmenbuch_officer_relationship_statements() -> None:
 def test_map_firmenbuch_officer_interest_type_gf() -> None:
     stmts = list(map_firmenbuch(_bundle()))
     rels = [s for s in stmts if s["recordType"] == "relationship"]
-    # At least one relationship should be otherInfluenceOrControl (GF)
+    # The Geschäftsführer is a senior managing official (Phase 295).
     types = {
         i["type"]
         for r in rels
         for i in r["recordDetails"]["interests"]
     }
-    assert "otherInfluenceOrControl" in types
+    assert "seniorManagingOfficial" in types
 
 
 def test_map_firmenbuch_officer_not_beneficial_owner() -> None:
@@ -837,7 +837,7 @@ def test_map_firmenbuch_kurzinfo_gf_interest_type() -> None:
     stmts = list(map_firmenbuch(_kurzinfo_bundle()))
     rels = [s for s in stmts if s["recordType"] == "relationship"]
     all_types = {i["type"] for r in rels for i in r["recordDetails"]["interests"]}
-    assert "otherInfluenceOrControl" in all_types
+    assert "seniorManagingOfficial" in all_types
 
 
 def test_map_firmenbuch_kurzinfo_pr_mapped_label() -> None:

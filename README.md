@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 294** — The screening-incomplete bar's Show more / Show less toggle hovers in the notice's own amber instead of light blue.
+**Latest: Phase 295** — Corporate officers are published as companies wherever the register says an officer is a legal person, management roles are screened as officers, and no corporate officer carries a country its register did not file.
 
 → [Full development history](docs/status.md)
 

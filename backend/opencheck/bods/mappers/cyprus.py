@@ -141,11 +141,15 @@ def map_cyprus_drcor(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
         if party_local not in seen:
             if is_org:
+                # DRCOR files no country for an official, so none is
+                # published: a corporate secretary or director is often a
+                # BVI or UK company, and an assumed CY would corroborate a
+                # Cypriot name match it has no right to (Phase 295).
                 party_stmt = make_entity_statement(
                     source_id="cyprus_drcor",
                     local_id=party_local,
                     name=full_name,
-                    jurisdiction=("Cyprus", "CY"),
+                    jurisdiction=None,
                     source_url=source_url,
                 )
             else:

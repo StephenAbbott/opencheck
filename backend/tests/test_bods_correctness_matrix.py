@@ -835,8 +835,8 @@ class TestBrreg:
         stmts = _stmts(map_brreg, bundle)
         assert _interest_types(stmts) == ["boardMember"]
 
-    def test_dagl_produces_other_influence(self):
-        """DAGL (Daglig leder / CEO) → otherInfluenceOrControl."""
+    def test_dagl_produces_senior_managing_official(self):
+        """DAGL (Daglig leder / CEO) → seniorManagingOfficial (Phase 295)."""
         from opencheck.bods.mapper import map_brreg
         bundle = self._make_bundle([{
             "type": {"kode": "DAGL", "beskrivelse": "Daglig leder"},
@@ -844,7 +844,7 @@ class TestBrreg:
             "fratraadt": None,
         }])
         stmts = _stmts(map_brreg, bundle)
-        assert _interest_types(stmts) == ["otherInfluenceOrControl"]
+        assert _interest_types(stmts) == ["seniorManagingOfficial"]
 
     def test_terminated_role_is_skipped(self):
         """Roles with fratraadt set to a date are not emitted."""
@@ -1201,13 +1201,12 @@ influence/control roles in the way that CH or Corporations Canada do.
     def test_at_least_one_relationship(self, stmts):
         assert len(_relationships(stmts)) >= 1
 
-    def test_officer_interest_type_other_influence(self, stmts):
-        """GmbH Geschäftsführer/Prokurist → otherInfluenceOrControl.
-        The Firmenbuch mapper uses otherInfluenceOrControl for Austrian officer
-        roles (GF, Prokurist) because the register doesn't provide a
-        seniorManagingOfficial-specific designation."""
+    def test_officer_interest_type_senior_managing_official(self, stmts):
+        """GmbH Geschäftsführer/Prokurist → seniorManagingOfficial (Phase 295;
+        otherInfluenceOrControl before, which kept a corporate holder out of
+        the Phase 293 officer screening gate)."""
         types = set(_interest_types(stmts))
-        assert "otherInfluenceOrControl" in types
+        assert "seniorManagingOfficial" in types
 
     def test_shareholder_interest_type_shareholding(self, stmts):
         types = set(_interest_types(stmts))
@@ -1216,7 +1215,7 @@ influence/control roles in the way that CH or Corporations Canada do.
     def test_officer_beneficial_ownership_false(self, stmts):
         gf_rels = [
             r for r in _relationships(stmts)
-            if any(i.get("type") == "otherInfluenceOrControl" for i in _interests(r))
+            if any(i.get("type") == "seniorManagingOfficial" for i in _interests(r))
         ]
         assert len(gf_rels) >= 1
         for rel in gf_rels:
