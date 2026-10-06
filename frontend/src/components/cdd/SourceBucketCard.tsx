@@ -23,6 +23,7 @@ import { isRiskFinding } from "../../lib/signalKind";
 import { NzAssociations } from "./NzAssociations";
 import { useSavedReport } from "./savedReportContext";
 import { NOT_DEEPENED_IN_SAVED, RAW_NOT_SAVED } from "../../lib/savedReport";
+import { hitRegisterUrl, registerRecordUrl } from "../../lib/registerLinks";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
 // bundle) but only renders when a user clicks "Visualise". Code-split it so
@@ -114,6 +115,15 @@ function LicenseChip({ license }: { license: string }) {
 // ---------------------------------------------------------------------
 
 function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
+  // Phase 296: a national register's own page comes from the one register-link
+  // table (lib/registerLinks.ts, mirrored from backend/opencheck/register_links.py)
+  // and wins over an adapter's raw.link — several of those pointed at pages
+  // that no longer show the company (ARES's or.justice.cz, the old Latvian
+  // portal). A register the table has no per-company address for gets no
+  // link here rather than a search page that renders empty.
+  const registerUrl = hitRegisterUrl(sourceId, hit);
+  if (registerUrl) return registerUrl;
+
   const raw = hit.raw;
 
   // Many adapters set raw.link directly
@@ -133,38 +143,17 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
     case "gleif":
     case "bods_gleif":
       return `https://search.gleif.org/#/record/${id}`;
-    case "companies_house":
     case "bods_uk_psc":
-      return `https://find-and-update.company-information.service.gov.uk/company/${id}`;
+      return registerRecordUrl("companies_house", id);
     case "wikidata":
       return `https://www.wikidata.org/wiki/${(raw.qid as string) || id}`;
     case "opensanctions":
     case "everypolitician":
       return `https://www.opensanctions.org/entities/${id}`;
-    case "brreg":
-      return `https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr=${id}`;
-    case "prh":
-      return `https://tietopalvelu.ytj.fi/yritystiedot.aspx?yavain=${id}`;
-    case "kvk":
-      return `https://www.kvk.nl/zoeken/?source=all&q=${id}`;
-    case "ur_latvia":
-      return `https://www.latvija.lv/lv/bizness/uznemumu-registrs/${id}`;
-    case "firmenbuch":
-      return `https://justizonline.gv.at/jop/web/firmenbuchabfrage?firmennummer=${encodeURIComponent(id)}`;
-    case "corporations_canada":
-      return `https://ised-isde.canada.ca/cc/lgcy/fdrlCrpDtls.html?corpId=${id}`;
-    case "cro":
-      return `https://core.cro.ie/company/${id}`;
-    case "bolagsverket": {
-      const orgNo = (raw.org_number as string) || id;
-      return `https://webbotjanster.bolagsverket.se/foretag-och-foreningar/foreningsregistret/SokOrganisationsnummer?q=${orgNo}`;
-    }
     case "sec_edgar": {
       const cik = (raw.cik as string) || id;
       return `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik}`;
     }
-    case "inpi":
-      return `https://data.inpi.fr/entreprises/${id}`;
     case "ted_eu": {
       const notices = raw.notices as { url?: string }[] | undefined;
       return notices?.[0]?.url || "https://ted.europa.eu/";
@@ -173,10 +162,6 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
       const records = raw.records as { url?: string }[] | undefined;
       return records?.[0]?.url || "https://www.mercadopublico.cl/";
     }
-    case "zefix":
-      return `https://www.zefix.ch/en/search/entity/list?name=${encodeURIComponent(id)}`;
-    case "sudreg_croatia":
-      return `https://sudreg.pravosudje.hr/registar/f?p=150:28:0::NO:RP,28:P28_SBT_MBS:${id}`;
     default:
       return null;
   }

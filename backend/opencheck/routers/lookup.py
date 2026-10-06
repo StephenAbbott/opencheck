@@ -51,6 +51,8 @@ from .. import lei_registration as _lei_registration
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
 from .. import listing as _listing
+from .. import ra_codes as _ra_codes
+from .. import register_links as _register_links
 from .. import pep_merge as _pep_merge
 from ..subject_identity import subject_identity
 from ..verdict import build_verdict
@@ -339,6 +341,14 @@ class ReportResponse(BaseModel):
     #: source. None when no PermID key is configured, or for a payload
     #: recorded before this field existed.
     listing: dict[str, Any] | None = None
+    #: The subject's own page on its home register (Phase 296): ``source_id``,
+    #: ``register``, ``identifier``, ``url`` and, on an LEI run, ``ra_code`` —
+    #: as the anchor event carried it, built from the LEI record's
+    #: registration authority and number alone (``opencheck.register_links``),
+    #: so it is present even when that register's adapter did not answer.
+    #: None when OpenCheck has no per-company address for the register, or for
+    #: a payload recorded before this field existed.
+    register_record: dict[str, Any] | None = None
 
 
 class LookupResponse(ReportResponse):
@@ -585,6 +595,31 @@ _RA_DERIVERS: list[LookupDeriver] = [
     for adapter in REGISTRY.values()
     for deriver in adapter.lookup_derivers
 ]
+
+# Phase 296: RA code → the derived key its register's number is stored under,
+# for the subject header's register link. Read off the same deriver table the
+# dispatch uses (first deriver wins, as in _build_derived), plus Companies
+# House's three authorities from ra_codes — so no RA code is copied here.
+_IDENTIFIER_KEY_BY_RA: dict[str, str] = {}
+for _deriver in _RA_DERIVERS:
+    for _ra in _deriver.ra_codes:
+        _IDENTIFIER_KEY_BY_RA.setdefault(_ra, _deriver.derived_key)
+for _ra in (
+    _ra_codes.RA_BY_COUNTRY["GB"],
+    *(sub.ra_code for sub in _ra_codes.SUB_REGISTRIES["GB"]),
+):
+    _IDENTIFIER_KEY_BY_RA.setdefault(_ra, "gb_coh")
+
+
+def _register_record(ctx: "_LookupCtx") -> dict[str, str] | None:
+    """The subject's own page on its home register (Phase 296), or None.
+
+    From the anchor's RA code and derived number alone, so the header can link
+    to the register whether or not that register's adapter answered.
+    """
+    return _register_links.register_record_for_anchor(
+        ctx.registered_at, ctx.derived, _IDENTIFIER_KEY_BY_RA
+    )
 
 
 def _build_derived(ctx: _LookupCtx, registered_at_id: str) -> None:
@@ -1406,6 +1441,9 @@ async def _lookup_pipeline(
         "legal_name": ctx.legal_name or None,
         "jurisdiction": ctx.jurisdiction or None,
         "derived_identifiers": ctx.derived,
+        # Phase 296: frozen into the event, so a saved report replays the link
+        # it showed on the day.
+        "register_record": _register_record(ctx),
     })
 
     # Phase 224: what is knowable about a company *here*, as soon as "here" is
@@ -2139,6 +2177,8 @@ async def _register_lookup_pipeline(
         "legal_name": ctx.legal_name or None,
         "jurisdiction": ctx.jurisdiction or None,
         "derived_identifiers": dict(ctx.derived),
+        # Phase 296: the register was named by the caller, so no RA code.
+        "register_record": _register_links.register_record(hop.source_id, local_id),
     })
     if ctx.jurisdiction:
         yield ("knowability", _knowability_payload(ctx.jurisdiction))

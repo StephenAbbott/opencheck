@@ -5,6 +5,11 @@ import { trackEvent } from "../../lib/analytics";
 import { BASE_URL, type PrimaryListing } from "../../lib/api";
 import { LISTING_EXPLANATION, LISTING_LABEL, listingView } from "../../lib/listing";
 import { Explain } from "../ui/Explain";
+import {
+  REGISTER_RECORD_EXPLANATION,
+  REGISTER_RECORD_LABEL,
+  type RegisterRecord,
+} from "../../lib/registerLinks";
 import type { LeiRegistrationChip, StatusChip } from "../../lib/subjectProfile";
 import { chipClasses } from "../ui/Chip";
 
@@ -48,6 +53,7 @@ export function SubjectCard({
   save,
   notice,
   listing = null,
+  registerRecord = null,
 }: {
   lei: string;
   legalName: string | null;
@@ -109,6 +115,11 @@ export function SubjectCard({
    *  `listing` event carried it. Null renders nothing — OpenCheck never
    *  says a company is unlisted. */
   listing?: PrimaryListing | null;
+  /** Phase 296: the subject's own page on its home register, as the anchor
+   *  event carried it — built from the LEI record's registration authority and
+   *  number, so it renders whether or not that register's adapter answered.
+   *  Null renders nothing. */
+  registerRecord?: RegisterRecord | null;
 }) {
   const [copied, setCopied] = useState(false);
   const shareUrl = savedShare?.url ?? `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
@@ -177,6 +188,24 @@ export function SubjectCard({
               line under the identity row — in the min-w-0 column, so it wraps
               rather than crushing the name. Underlined: a link must not be
               told apart by colour alone. */}
+          {/* Phase 296: the official register record. Its own line, like the
+              listing below it; underlined so the link is not told apart by
+              colour alone. */}
+          {registerRecord && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-oo-meta text-oo-muted">
+              <span>{REGISTER_RECORD_LABEL}:</span>
+              <a
+                href={registerRecord.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${registerRecord.register} record ${registerRecord.identifier} (opens in a new tab)`}
+                className="text-oo-blue underline underline-offset-2 hover:text-oo-ink break-words"
+              >
+                {registerRecord.register} · <span className="font-mono">{registerRecord.identifier}</span>
+              </a>
+              <Explain label="About the register record">{REGISTER_RECORD_EXPLANATION}</Explain>
+            </p>
+          )}
           {listed && (
             <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-oo-meta text-oo-muted">
               <span>{LISTING_LABEL}:</span>

@@ -134,6 +134,7 @@ export default function App() {
     subjectProfile,
     knowability,
     primaryListing,
+    registerRecord,
     knowabilityChain,
     riskSignals,
     degradedSources,
@@ -1193,6 +1194,7 @@ export default function App() {
             save={saveItem}
             notice={saveNotice}
             listing={primaryListing}
+            registerRecord={registerRecord}
           />
         {/* ── The answer-first layer (Phase 122) ─────────────────────────
             Subject, then what the check found and how much of it ran, then

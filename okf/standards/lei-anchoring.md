@@ -36,9 +36,25 @@ identifier. Examples:
 |---|---|
 | UK Companies House | `RA000585` |
 | Norway (Brønnøysundregistrene) | `RA000472` |
-| France (INPI) | `RA000580` |
+| France (Sirene / INSEE; read by the INPI adapter) | `RA000189` |
 | Netherlands (KvK) | `RA000463` |
 | Estonia (e-Äriregister) | `RA000181` |
+
+France is the case worth knowing: GLEIF files most French companies under
+`RA000189` (Sirene), some under `RA000192` (Infogreffe), and the INPI adapter
+derives the SIREN from all three of those and `RA001129` (the RNE). `RA000580`,
+which this table once gave for France, belongs to an authority in the United
+Arab Emirates.
+
+# The subject's register record
+
+The same RA code and `registeredAs` also give the subject's own page on its
+home register — the `register_record` on the `gleif_done` event and the lookup
+response (Phase 296). It comes from one table, `opencheck.register_links`
+(mirrored in `frontend/src/lib/registerLinks.ts`), keyed by the derived key the
+adapter's `LookupDeriver` already stores the number under, so it is present
+whether or not that register's adapter answered. A register with no
+per-company page gets no link rather than a search page.
 
 A local id can appear under `entity.registeredAs`,
 `registration.validatedAs`, or `registration.otherValidationAuthorities`, so

@@ -84,7 +84,18 @@ def test_every_history_source_has_a_label_and_a_record_link() -> None:
     labelled = set(re.findall(r"^\s*([a-z_]+):", labels.group(1), flags=re.M))
     body = re.search(r"export function recordUrl\((.*?)\n\}", src, flags=re.S)
     assert body
-    linked = set(re.findall(r'case "([a-z_]+)":', body.group(1)))
+    # Phase 296: recordUrl handles GLEIF itself and reads every register from
+    # the one register-link table (registerLinks.ts, pinned equal to
+    # opencheck.register_links by tests/test_register_links.py).
+    linked = set(re.findall(r'sourceId === "([a-z_]+)"', body.group(1)))
+    if "registerHistoryUrl(" in body.group(1):
+        from opencheck.register_links import REGISTER_LINKS
+
+        linked |= {
+            source_id
+            for source_id, link in REGISTER_LINKS.items()
+            if link.history or link.record
+        }
     emitters = _backend_emitters()
     assert emitters <= labelled, f"no label for {sorted(emitters - labelled)}"
     assert emitters <= linked, f"no recordUrl case for {sorted(emitters - linked)}"
