@@ -391,3 +391,48 @@ def test_shape_lookup_knowability_is_null_for_an_older_payload() -> None:
     assert shaped["knowability"] is None
     assert "What can be known" not in shaped["summary"]
 
+
+
+# --------------------------------------------------------------------------
+# Phase 292: ranked, capped search candidates with structured identifiers
+# --------------------------------------------------------------------------
+
+
+async def test_search_tool_ranks_caps_and_carries_identifiers(monkeypatch) -> None:
+    """Non-LEI candidates from three registers each carry the scheme and
+    number ``opencheck_register_lookup`` takes — not only the summary prose —
+    and the tool passes ``limit`` through to an honest cap."""
+    from opencheck.routers import search as search_router
+    from opencheck.sources import SearchKind as SK
+
+    def _h(source, hit_id, name, summary, **ids):
+        return SourceHit(source_id=source, hit_id=hit_id, kind=SK.ENTITY, name=name,
+                         summary=summary, identifiers=ids, raw={}, is_stub=False)
+
+    async def _fake_run(q, kind):
+        return {
+            "abr_australia": [_h("abr_australia", "51000000001", "M GROW INVEST",
+                                 "AU-ABN 51000000001", au_abn="51000000001")],
+            "brreg": [_h("brreg", "923000001", "METASTAR INVEST AS",
+                         "NO-ORGNR 923000001 · AS", no_orgnr="923000001")],
+            "companies_house": [_h("companies_house", "OC346224", "METASTAR INVEST LLP",
+                                   "Company OC346224 · active", gb_coh="OC346224")],
+        }, {}
+
+    monkeypatch.setattr(search_router, "_run_adapters", _fake_run)
+    out = await mcp_server.opencheck_search(query="Metastar Invest", limit=2)
+    assert out["total"] == 3 and out["count"] == 2 and out["truncated"] is True
+    by_name = {c["name"]: c for c in out["candidates"]}
+    assert set(by_name) == {"METASTAR INVEST AS", "METASTAR INVEST LLP"}
+    assert by_name["METASTAR INVEST LLP"]["identifiers"] == [
+        {"scheme": "GB-COH", "id": "OC346224"}
+    ]
+    assert by_name["METASTAR INVEST AS"]["identifiers"] == [
+        {"scheme": "NO-BRC", "id": "923000001"}
+    ]
+    assert all(c["match"] == "same_name" for c in out["candidates"])
+
+    full = await mcp_server.opencheck_search(query="Metastar Invest")
+    abr = next(c for c in full["candidates"] if c["source"] == "abr_australia")
+    assert abr["identifiers"] == [{"scheme": "AU-ABN", "id": "51000000001"}]
+    assert abr["match"] == "fuzzy" and full["candidates"][-1] is abr

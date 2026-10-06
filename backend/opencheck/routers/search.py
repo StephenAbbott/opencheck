@@ -14,6 +14,7 @@ from ..ra_codes import ch_ra_code
 from ..ratelimit import limiter, lookup_tier
 from ..reconcile import reconcile
 from ..risk import assess_hits
+from ..search_rank import rank_hits
 from ..secret_scrub import describe_exception, scrub
 from ..sources import REGISTRY, SearchKind, SourceHit
 from ..sources.schemas import SourceSchemaError
@@ -82,7 +83,17 @@ async def _search_impl(q: str, kind: SearchKind) -> SearchResponse:
     """Body of ``/search``, callable in-process (MCP tool) without going
     through the rate-limited route."""
     results, errors = await _run_adapters(q, kind)
-    hits = [hit for adapter_hits in results.values() for hit in adapter_hits]
+    # Phase 292: rank across sources (exact → same name → all tokens →
+    # distinctive tokens → fuzzy; ties by register status, then LEI) rather
+    # than returning hits grouped by source in registry order. The web
+    # picker does not read /search (it queries GLEIF directly), so this
+    # orders the REST response and the MCP tool, which is where the
+    # grouped order buried exact matches. See ``opencheck.search_rank``.
+    hits = rank_hits(
+        q,
+        [hit for adapter_hits in results.values() for hit in adapter_hits],
+        person=kind == SearchKind.PERSON,
+    )
     links = [link.to_dict() for link in reconcile(hits)]
     signals = [s.to_dict() for s in assess_hits(hits)]
     return SearchResponse(

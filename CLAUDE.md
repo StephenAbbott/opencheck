@@ -2803,3 +2803,17 @@ otherwise:
   tool can act on is left out, so every row is a next step. `mcp/guard.py`
   `TOOL_TIERS` must name every tool that runs a pipeline; a tool missing
   from it spends only the default request tier.
+- **`/search` is ranked across sources, not grouped by source (Phase
+  292).** `opencheck.search_rank.rank_hits` orders every hit by a match tier
+  measured from the QUERY's side — `exact` (`org_comparable_name` or its
+  despaced form), `same_name` (equal `org_name_residue`), `all_tokens`,
+  `distinctive_tokens` (query-directed; NOT the symmetric
+  `distinctive_token_agreement`, which would pass ":-) INVEST AS" against
+  "Metastar Invest"), `fuzzy` — then register status read from the hit's
+  `summary` segments (unrecognised ranks with live, never guessed), then
+  LEI, then similarity, then original order. The web picker does not read
+  `/search` (it queries GLEIF directly), so this orders the REST response
+  and the MCP tool. `opencheck_search` cuts at `limit` (default 15, max 50)
+  and says so with `total`/`truncated` — a silent cap is the Phase 279
+  defect. A new adapter whose summary prints a status label the
+  vocabularies in `search_rank` do not know ranks it with live.
