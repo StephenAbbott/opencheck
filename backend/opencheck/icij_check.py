@@ -540,6 +540,7 @@ def _collect_targets(
     "former".
     """
     former = former_party_ids(bods)
+    officers = related_targets.officer_only_entity_ids(bods)
     out: list[dict[str, Any]] = []
     for stmt in bods:
         record_type = stmt.get("recordType") or ""
@@ -575,7 +576,8 @@ def _collect_targets(
             out.append(
                 {"kind": _KIND_ENTITY, "statement_id": sid, "name": name,
                  "former": sid in former, "founded": founded,
-                 "countries": sorted(countries)}
+                 "countries": sorted(countries),
+                 "officer_entity": sid in officers}
             )
     return out
 
@@ -1004,6 +1006,13 @@ def _gate(
             notes.append("name-only person match: capped at low")
     elif juris_status == "corroborated":
         confidence = "high"
+    elif target.get("officer_entity"):
+        # Phase 293 (Stephen, 6 Oct 2026): a company named only as an officer
+        # — a laundromat LLP's Belize designated member — carries a generic
+        # name ("CORPORATE SOLUTIONS LIMITED") and nothing else distinctive,
+        # so without a country in common it stays ``low``.
+        confidence = "low"
+        notes.append("corporate officer with no country in common: capped at low")
     else:
         confidence = "medium"
         notes.append("name-only match: capped at medium")

@@ -95,12 +95,15 @@ from .mappers.wikidata import (  # noqa: F401  (re-exported: see the module docs
 )
 
 from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
+    _COUNTRY_TEXT_ALIASES,
     _ChCompany,
     _ChPscHop,
     _MANAGING_OFFICIAL_ROLES,
     _PSC_STATEMENT_NO_BO,
     _PSC_STATEMENT_REASON,
     _annotate_verified_people,
+    _ch_corporate_officer_entity,
+    _ch_corporate_officer_statements,
     _ch_director_statements,
     _ch_officer_grouping_note,
     _ch_officer_id,
@@ -108,6 +111,10 @@ from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _ch_officer_person_local_id,
     _ch_officer_url,
     _ch_psc_statement_statements,
+    _corporate_officer_registration_number,
+    _country_in_text,
+    _country_name,
+    _country_text_index,
     _emit_company_statements,
     _map_companies_house_officer,
     _map_corporate_psc,

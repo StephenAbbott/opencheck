@@ -215,6 +215,7 @@ def test_a_lookup_that_meets_its_expectations_passes() -> None:
         "confidence": "high",
         "sources": ["opensanctions"],
         "count": 1,
+        "leads": 0,
     }
     assert summary["lei_confirmed_by"] == ["gleif", "wikidata"]
 

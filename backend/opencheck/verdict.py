@@ -199,6 +199,60 @@ def _structure_sentence(signals: list[dict[str, Any]]) -> str | None:
     return None
 
 
+def is_name_only_lead(signal: dict[str, Any]) -> bool:
+    """A low-confidence, name-only offshore-leaks match on a related PERSON.
+
+    Phase 293 (Stephen, 6 Oct 2026). Phase 282 caps a person match that
+    nothing corroborates at ``low`` — ICIJ person nodes carry no birth date,
+    so the jurisdiction is the only corroborator, and without it a match
+    rests on spelling alone. Such a match stays on the card as a lead to
+    review, but no longer makes the verdict say the records show an
+    offshore-leaks appearance. A.P. Møller - Mærsk read "The records show a
+    possible appearance in offshore-leaks data" on the strength of former
+    chair Michael Pram Rasmussen against "MICHAEL RASMUSSEN" in two Paradise
+    Papers registries; the same shape is DMGT's adjudicated true match
+    NICHOLAS PAUL RATCLIFFE → "NICHOLAS RATCLIFFE", so the match is kept
+    rather than dropped — only its weight in the sentence changes.
+
+    A corroborated person match (``medium``), a match on the company's own
+    name, and any entity match keep driving the verdict.
+    """
+    if signal.get("code") != "OFFSHORE_LEAKS":
+        return False
+    if (signal.get("kind") or "risk") != "risk":
+        return False
+    if str(signal.get("confidence") or "").lower() != "low":
+        return False
+    evidence = signal.get("evidence") or {}
+    if evidence.get("kind") != "person" or evidence.get("subject"):
+        return False
+    gate = evidence.get("jurisdiction_gate") or {}
+    return gate.get("status") != "corroborated"
+
+
+def _lead_sentence(leads: list[dict[str, Any]]) -> str | None:
+    """"A possible name-only offshore-leaks match on one related party is
+    listed for review." — said only where the verdict would otherwise claim
+    nothing surfaced. Counted by party: one person against two registries'
+    records is one lead."""
+    if not leads:
+        return None
+    parties = {
+        str((s.get("evidence") or {}).get("subject_statement_id")
+            or (s.get("evidence") or {}).get("search_name") or i)
+        for i, s in enumerate(leads)
+    }
+    if len(parties) == 1:
+        return (
+            "A possible name-only offshore-leaks match on one related party "
+            "is listed for review."
+        )
+    return (
+        f"Possible name-only offshore-leaks matches on {len(parties)} related "
+        "parties are listed for review."
+    )
+
+
 #: Bumped whenever the wording of ``build_verdict`` changes without the
 #: facts behind it changing. The watchlist stores it beside each snapshot's
 #: verdict and only reports a verdict change between snapshots written by the
@@ -207,8 +261,10 @@ def _structure_sentence(signals: list[dict[str, Any]]) -> str | None:
 #: 2 = Phase 245 (risk sentence, then structure sentence), 3 = Phase 247
 #: ("possible" when every name-match signal behind a clause is medium or low),
 #: 4 = Phase 272 ("has N intermediate corporate layers" instead of "is N+1
-#: layers deep" — the same chain, counted without the subject).
-VERDICT_TEMPLATE = 4
+#: layers deep" — the same chain, counted without the subject), 5 = Phase
+#: 293 (a low name-only offshore-leaks person match is a lead to review, not
+#: a finding in the sentence).
+VERDICT_TEMPLATE = 5
 
 
 def build_verdict(
@@ -218,6 +274,10 @@ def build_verdict(
     legal_name: str | None = None,
 ) -> str | None:
     """At most two short sentences: what was found, then the company's shape.
+
+    Phase 293: where the first sentence would say nothing surfaced but a low
+    name-only offshore-leaks person match is on the card, one more short
+    sentence names it as a lead to review (``is_name_only_lead``).
 
     ``signals`` is the merged signal list exactly as it crosses the wire
     (dicts from ``RiskSignal.to_dict``), ``degraded`` the ``DegradedSource``
@@ -237,6 +297,14 @@ def build_verdict(
     """
     signals = signals or []
     degraded = degraded or []
+
+    # Phase 293: low name-only offshore-leaks person matches are leads, read
+    # out of the sentence and named after it only where it would otherwise
+    # say nothing surfaced (``is_name_only_lead``).
+    leads = [s for s in signals if is_name_only_lead(s)]
+    if leads:
+        signals = [s for s in signals if not is_name_only_lead(s)]
+    lead = _lead_sentence(leads)
 
     risk_codes = _codes(signals, kind="risk")
 
@@ -283,8 +351,8 @@ def build_verdict(
         if degraded:
             gap = _incomplete_phrase(degraded)
             tail = f"{gap[0].upper()}{gap[1:]}."
-        return _join(structure, tail)
-    return _join(first, structure)
+        return _join(structure, lead, tail)
+    return _join(first, lead, structure)
 
 
 def _join(*sentences: str | None) -> str | None:

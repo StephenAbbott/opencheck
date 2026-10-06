@@ -7,12 +7,16 @@ re-exports every name defined here.
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Any
+
+import pycountry
 
 from ...identifiers import ch_identification_is_uk, normalise_ch_company_number
 from .. import identity_verification as _idv, liveness as _liveness
-from ..annotations import annotate, identifying, pointer, transformation
+from ..annotations import annotate, commenting, identifying, pointer, transformation
 from ..ch_constants import describe_company_type, describe_officer_role
 from ..psc_natures import describe_statement, describe_super_secure
 from ..statements import (
@@ -469,6 +473,10 @@ def _ch_director_statements(
 
     Already-seen ``statementId``\\s are skipped so duplicates are suppressed
     when the same director appears across the root + related-company passes.
+
+    A ``corporate-*`` role (a corporate director, LLP member, general partner
+    …) is a company, not a person, and becomes an ``entityStatement``
+    (Phase 293, :func:`_ch_corporate_officer_statements`).
     """
     stmts: list[dict[str, Any]] = []
     items = officers_payload.get("items") or []
@@ -481,6 +489,16 @@ def _ch_director_statements(
         if role not in _MANAGING_OFFICIAL_ROLES:
             continue
         role_label = describe_officer_role(role) or "Managing official"
+        if role.startswith("corporate-"):
+            # Phase 293: a corporate director, LLP member or general partner
+            # is a company, and is published as one — see
+            # :func:`_ch_corporate_officer_statements`.
+            stmts.extend(
+                _ch_corporate_officer_statements(
+                    company_number, officer, entity_sid, company_url, seen_sids, role_label
+                )
+            )
+            continue
 
         name: str = officer.get("name") or "Unknown director"
 
@@ -595,6 +613,291 @@ def _ch_director_statements(
             seen_sids.add(rel_sid)
 
     return stmts
+
+
+# --- Corporate officers (Phase 293) ----------------------------------------
+#
+# METASTAR INVEST LLP (OC346224), an Azerbaijani Laundromat vehicle, has two
+# designated members, ADVANCE DEVELOPMENTS LIMITED and CORPORATE SOLUTIONS
+# LIMITED — Belize IBCs. Until Phase 293 both were mapped as people, so they
+# were screened as people, the knowability chain stopped at GB, the graph read
+# "1 company, 2 people", and every export carried a company as a Person.
+# Laundromat LLPs and SLPs are run through corporate members almost without
+# exception, so that was the shape of the whole dataset.
+#
+# The officers register files a corporate officer's ``identification`` block
+# as ``identification_type`` (``uk-limited-company``, ``eea``, ``non-eea``,
+# ``other-corporate-body-or-firm``, …), ``legal_authority``, ``legal_form``,
+# ``place_registered`` and ``registration_number`` — and, unlike a corporate
+# PSC, **no** ``country_registered``. The country is read from the free text,
+# in this order (Stephen, 6 Oct 2026): the law it is governed by, then the
+# place it is registered, then the service address. Only a country read from
+# the registration fields keys a ``REG-<country>`` identifier; an address says
+# where the company receives post, not which register holds the number.
+
+#: Free-text names the officers register uses for a country that pycountry's
+#: names do not cover. Matched as whole words; the longest match wins, which is
+#: what keeps "New South Wales" and "New Jersey" from reading as Wales/Jersey.
+_COUNTRY_TEXT_ALIASES: dict[str, str] = {
+    "united kingdom": "GB",
+    "great britain": "GB",
+    "england": "GB",
+    "england and wales": "GB",
+    "scotland": "GB",
+    "wales": "GB",
+    "northern ireland": "GB",
+    "new south wales": "AU",
+    "new jersey": "US",
+    "british virgin islands": "VG",
+    "bvi": "VG",
+    "nevis": "KN",
+    "st kitts": "KN",
+    "st. kitts": "KN",
+    "st vincent": "VC",
+    "st. vincent": "VC",
+    "st lucia": "LC",
+    "st. lucia": "LC",
+    "usa": "US",
+    "uae": "AE",
+    "hong kong": "HK",
+    "macau": "MO",
+    "taiwan": "TW",
+    "russia": "RU",
+    "south korea": "KR",
+    "czech republic": "CZ",
+    "turkey": "TR",
+    "moldova": "MD",
+    "iran": "IR",
+    "syria": "SY",
+    "laos": "LA",
+    "vietnam": "VN",
+    "bolivia": "BO",
+    "venezuela": "VE",
+    "tanzania": "TZ",
+}
+
+
+@lru_cache(maxsize=1)
+def _country_text_index() -> tuple[tuple[str, str], ...]:
+    """(lower-case name, alpha-2) pairs for every name pycountry knows plus
+    the aliases, longest first — so a scan takes the longest match."""
+    pairs: dict[str, str] = {}
+    for c in pycountry.countries:
+        for attr in ("name", "official_name", "common_name"):
+            value = getattr(c, attr, None)
+            if value:
+                pairs.setdefault(value.lower(), c.alpha_2)
+    pairs.update(_COUNTRY_TEXT_ALIASES)
+    return tuple(sorted(pairs.items(), key=lambda kv: -len(kv[0])))
+
+
+def _country_in_text(text: str | None) -> str:
+    """The ISO 3166-1 alpha-2 country a free-text registration field names, or
+    ``""``. ``INTERNATIONAL BUSINESS COMPANIES ACT 1990, BELIZE`` → ``BZ``,
+    ``REG INTL BUS COMP BELIZE`` → ``BZ``, ``COMMONWEALTH OF DOMINICA`` →
+    ``DM``; ``REGISTRAR OF INTERNATIONAL BUSINESS COMPANIES`` (no country) →
+    ``""``. Whole words only, longest name first, and two names that resolve
+    to different countries are ambiguous and read as none."""
+    if not text or not str(text).strip():
+        return ""
+    raw = str(text).strip()
+    whole = _country_code(raw)
+    if whole:
+        return whole
+    lowered = re.sub(r"\s+", " ", raw.lower())
+    found: list[tuple[int, int, str]] = []
+    for name, code in _country_text_index():
+        for m in re.finditer(r"(?<![a-z])" + re.escape(name) + r"(?![a-z])", lowered):
+            span = (m.start(), m.end())
+            # A shorter name inside a longer match already taken ("wales" in
+            # "new south wales") is part of that name, not a second country.
+            if any(s <= span[0] and span[1] <= e for s, e, _ in found):
+                continue
+            found.append((span[0], span[1], code))
+    codes = {code for _s, _e, code in found}
+    return codes.pop() if len(codes) == 1 else ""
+
+
+def _country_name(code: str) -> str:
+    country = pycountry.countries.get(alpha_2=code)
+    return getattr(country, "name", None) or code
+
+
+def _corporate_officer_registration_number(value: Any) -> str | None:
+    """The filed number with display grouping removed (``36,265`` → ``36265``);
+    leading zeros are part of the number (``096479``) and stay."""
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if re.fullmatch(r"\d{1,3}(,\d{3})+", text):
+        text = text.replace(",", "")
+    return text
+
+
+def _ch_corporate_officer_entity(
+    company_number: str, officer: dict[str, Any], company_url: str
+) -> dict[str, Any]:
+    """Map one corporate officer to a BODS ``entityStatement``.
+
+    * **UK company** (``identification_type`` ``uk-limited-company``, or the
+      registration text names the UK register): jurisdiction GB and a
+      ``GB-COH`` identifier with the canonical eight-character number, keyed
+      on that number — the same ``statementId`` the related-company pass and a
+      corporate PSC produce for it, and an identifier the FullCheck frontier
+      can hop on (Phase 182).
+    * **Elsewhere**: the country from ``legal_authority`` then
+      ``place_registered`` keys ``REG-<country>``; with neither naming one,
+      the service address gives the jurisdiction only and the number is
+      published under ``REG``. Keyed on the register's officer id, so one
+      corporate member of ten LLPs is one entity with ten appointments.
+
+    Either way an inferred jurisdiction carries a ``commenting`` annotation
+    quoting what the register filed, because the register files no country.
+    """
+    ident = officer.get("identification") or {}
+    name = (officer.get("name") or "").strip() or "Unknown corporate officer"
+    ident_type = str(ident.get("identification_type") or "").strip().lower()
+    reg_number = _corporate_officer_registration_number(ident.get("registration_number"))
+    place = str(ident.get("place_registered") or "").strip()
+    authority = str(ident.get("legal_authority") or "").strip()
+    legal_form = str(ident.get("legal_form") or "").strip()
+
+    address_block = officer.get("address") or {}
+    addresses: list[dict[str, Any]] = []
+    address_country_text = str(address_block.get("country") or "").strip()
+    if address_block:
+        parts = [
+            address_block.get("premises"),
+            address_block.get("address_line_1"),
+            address_block.get("address_line_2"),
+            address_block.get("locality"),
+            address_block.get("region"),
+            address_block.get("postal_code"),
+            address_block.get("country"),
+        ]
+        joined = ", ".join([p for p in parts if p])
+        if joined:
+            # BODS allows registered, business or alternative for an entity;
+            # the register calls this a correspondence address, which is none
+            # of its registered office, so it is published as "alternative".
+            addresses.append(_addr("alternative", joined, address_country_text))
+
+    uk_number = (
+        normalise_ch_company_number(reg_number)
+        if reg_number
+        and (ident_type == "uk-limited-company" or ch_identification_is_uk(ident))
+        else None
+    )
+    identifiers: list[dict[str, str]] = []
+    jurisdiction: tuple[str, str | None] | None = None
+    note: str | None = None
+    if uk_number:
+        identifiers.append(
+            {"id": uk_number, "scheme": "GB-COH", "schemeName": "UK Companies House"}
+        )
+        jurisdiction = ("United Kingdom", "GB")
+        local_id = uk_number
+    else:
+        code, field_name, field_text = "", "", ""
+        for key, text in (("legal authority", authority), ("place registered", place)):
+            code = _country_in_text(text)
+            if code:
+                field_name, field_text = key, text
+                break
+        if code:
+            jurisdiction = (_country_name(code), code)
+            note = (
+                "Companies House files no country for this corporate officer; "
+                f"the jurisdiction is read from its {field_name}, '{field_text}'."
+            )
+            if reg_number:
+                identifiers.append({
+                    "id": reg_number,
+                    "scheme": f"REG-{code}",
+                    "schemeName": place or f"{_country_name(code)} company register",
+                })
+        else:
+            addr_code = _country_code(address_country_text) if address_country_text else ""
+            if addr_code:
+                jurisdiction = (_country_name(addr_code), addr_code)
+                note = (
+                    "Companies House files no country for this corporate officer and "
+                    "its registration details name none; the jurisdiction is inferred "
+                    f"from its service address ('{address_country_text}'), which says "
+                    "where it receives post, not which register holds it."
+                )
+            if reg_number:
+                identifiers.append({
+                    "id": reg_number,
+                    "scheme": "REG",
+                    "schemeName": place or "Company register",
+                })
+        local_id = _ch_officer_person_local_id(company_number, officer)
+
+    details = [
+        f"Legal form: {legal_form}" if legal_form else "",
+        f"Governed by: {authority}" if authority else "",
+    ]
+    entity = make_entity_statement(
+        source_id="companies_house",
+        local_id=local_id,
+        name=name,
+        jurisdiction=jurisdiction,
+        identifiers=identifiers,
+        addresses=addresses,
+        entity_details="; ".join(d for d in details if d) or None,
+        source_url=_ch_officer_url(_ch_officer_id(officer), company_url),
+    )
+    if note:
+        annotate(entity, commenting(pointer("recordDetails", "jurisdiction"), note))
+    return entity
+
+
+def _ch_corporate_officer_statements(
+    company_number: str,
+    officer: dict[str, Any],
+    entity_sid: str,
+    company_url: str,
+    seen_sids: set[str],
+    role_label: str,
+) -> list[dict[str, Any]]:
+    """The entity and appointment statements for one corporate officer.
+
+    The relationship is the natural-person one with an entity interested
+    party: ``seniorManagingOfficial`` with the role detail and ``startDate``,
+    no ``beneficialOwnershipOrControl`` (the officers register is not a BO
+    declaration). Identity verification (Phase 203) is a natural person's,
+    so it is not read here; neither is the officer-id grouping annotation,
+    which is worded for people.
+    """
+    out: list[dict[str, Any]] = []
+    entity = _ch_corporate_officer_entity(company_number, officer, company_url)
+    party_sid = entity["statementId"]
+    if party_sid not in seen_sids:
+        out.append(entity)
+        seen_sids.add(party_sid)
+
+    appointed_on = officer.get("appointed_on")
+    interest: dict[str, Any] = {
+        "type": "seniorManagingOfficial",
+        "directOrIndirect": "direct",
+        "details": role_label + (f", from {appointed_on}" if appointed_on else ""),
+    }
+    if appointed_on:
+        interest["startDate"] = appointed_on
+    rel = make_relationship_statement(
+        source_id="companies_house",
+        local_id=f"{_ch_officer_local_id(company_number, officer)}:rel",
+        subject_statement_id=entity_sid,
+        interested_party_statement_id=party_sid,
+        interested_party_type="entity",
+        interests=[interest],
+        source_url=company_url,
+    )
+    if rel["statementId"] not in seen_sids:
+        out.append(rel)
+        seen_sids.add(rel["statementId"])
+    return out
 
 
 # CH PSC statement code → BODS unspecifiedReason. Only codes that represent

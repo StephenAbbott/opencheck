@@ -2,7 +2,7 @@
   "lei": "254900RT9QQBQZVH8O89",
   "name": "Birtley Investment Limited",
   "role": "control",
-  "why": "Clean control: a small GB Ltd with no findings. Its only signal is the GLEIF reporting exception, which is context, not risk. Its LEI is LAPSED, which is the LEI record's status, not the company's.",
+  "why": "Clean control: a small GB Ltd with no findings. Its only signal is the GLEIF reporting exception, which is context, not risk. Its LEI is LAPSED, which is the LEI record's status, not the company's. Companies House publishes no LEIs and GLEIF records no OpenCorporates id for it, so no source but GLEIF carries its LEI (floor lowered to 0 in Phase 293, 6 Oct 2026).",
   "example_card": false,
   "no_risk": true,
   "risk": {},
@@ -21,6 +21,6 @@
     "companies_house"
   ],
   "liveness": {},
-  "lei_confirmed_min": 1,
+  "lei_confirmed_min": 0,
   "intermediate_layers_min": null
 }
