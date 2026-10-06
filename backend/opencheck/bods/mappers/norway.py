@@ -30,22 +30,26 @@ from ..statements import (
 #   each role      → relationshipStatement (OOC) using interest type:
 #
 # Brreg role codes → BODS interest type:
-#   DAGL  Daglig leder (CEO/MD)        → otherInfluenceOrControl
+#   DAGL  Daglig leder (CEO/MD)        → seniorManagingOfficial
 #   INNH  Innehaver (Proprietor)       → otherInfluenceOrControl
 #   REPR  Representant                 → otherInfluenceOrControl
-#   FFØR  Forretningsfører (manager)   → otherInfluenceOrControl
+#   FFØR  Forretningsfører (manager)   → seniorManagingOfficial
 #   LEDE  Styrets leder (Chair)        → boardChair
 #   NEST  Nestleder (Vice-chair)       → boardMember
 #   MEDL  Styremedlem (Board member)   → boardMember
 #   VARA  Varamedlem (Deputy member)   → boardMember
 #   DTHO  Delta i st. f. st.           → boardMember
 # All other codes (KONT, SOBSERV, KREV, BOBE, etc.) are skipped.
+# DAGL and FFØR are the management of the company, which is what
+# seniorManagingOfficial means; they were otherInfluenceOrControl until
+# Phase 295, which kept a corporate forretningsfører out of the Phase 293
+# screening gate for officers (Stephen, 6 Oct 2026).
 
 _BRREG_ROLE_MAP: dict[str, tuple[str, str]] = {
-    "DAGL": ("otherInfluenceOrControl", "CEO / Daglig leder"),
+    "DAGL": ("seniorManagingOfficial", "CEO / Daglig leder"),
     "INNH": ("otherInfluenceOrControl", "Proprietor / Innehaver"),
     "REPR": ("otherInfluenceOrControl", "Representative / Representant"),
-    "FFØR": ("otherInfluenceOrControl", "Manager / Forretningsfører"),
+    "FFØR": ("seniorManagingOfficial", "Manager / Forretningsfører"),
     "LEDE": ("boardChair", "Chair / Styrets leder"),
     "NEST": ("boardMember", "Vice-chair / Nestleder"),
     "MEDL": ("boardMember", "Board member / Styremedlem"),
@@ -92,6 +96,77 @@ def _brreg_full_name(person: dict[str, Any]) -> str:
     return etternavn or fornavn or ""
 
 
+def _brreg_unit_role_statements(
+    orgnr: str,
+    idx: int,
+    role: dict[str, Any],
+    unit: dict[str, Any],
+    interest_type: str,
+    display_label: str,
+    company_stmt_id: str,
+    source_url: str,
+    seen: set[str],
+) -> list[dict[str, Any]]:
+    """Entity + relationship statements for a role held by an ``enhet``.
+
+    Keyed on the holder's organisasjonsnummer — the same key the company
+    itself gets — so OBOS as forretningsfører of forty cooperatives is one
+    entity. Jurisdiction NO and a ``NO-BRC`` identifier come from the
+    register's own record of the holder; without a number the holder is
+    company-scoped and carries neither.
+    """
+    out: list[dict[str, Any]] = []
+    names = unit.get("navn") or []
+    if isinstance(names, str):
+        names = [names]
+    name = " ".join(str(n).strip() for n in names if str(n).strip())
+    unit_orgnr = str(unit.get("organisasjonsnummer") or "").strip()
+    if (not name and not unit_orgnr) or unit_orgnr == orgnr:
+        return out
+    form = (unit.get("organisasjonsform") or {}).get("beskrivelse") or None
+    local_id = unit_orgnr or f"{orgnr}:role-entity:{idx}"
+    role_last_changed = role.get("_group_last_changed") or None
+    entity = make_entity_statement(
+        source_id="brreg",
+        local_id=local_id,
+        name=name or f"Org.nr. {unit_orgnr}",
+        jurisdiction=("Norway", "NO") if unit_orgnr else None,
+        identifiers=(
+            [{
+                "id": unit_orgnr,
+                "scheme": "NO-BRC",
+                "schemeName": "Brønnøysundregistrene Enhetsregisteret",
+            }]
+            if unit_orgnr
+            else []
+        ),
+        entity_details=form,
+        source_url=_company_url_brreg(unit_orgnr) if unit_orgnr else source_url,
+        statement_date=role_last_changed,
+    )
+    if entity["statementId"] not in seen:
+        out.append(entity)
+        seen.add(entity["statementId"])
+    out.append(
+        make_relationship_statement(
+            source_id="brreg",
+            local_id=f"{orgnr}:role:{idx}:{local_id}",
+            subject_statement_id=company_stmt_id,
+            interested_party_statement_id=entity["statementId"],
+            interested_party_type="entity",
+            interests=[{
+                "type": interest_type,
+                "directOrIndirect": "direct",
+                "beneficialOwnershipOrControl": False,
+                "details": display_label,
+            }],
+            source_url=source_url,
+            statement_date=role_last_changed,
+        )
+    )
+    return out
+
+
 def _company_url_brreg(orgnr: str) -> str:
     return f"https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr={orgnr}"
 
@@ -101,7 +176,8 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     Yields:
     * One entityStatement for the Norwegian company.
-    * One personStatement per unique role-holder.
+    * One personStatement per unique role-holder, or an entityStatement
+      where the register files the holder as an ``enhet``.
     * One relationshipStatement (OOC) per role record.
     """
     if not bundle or bundle.get("is_stub"):
@@ -195,6 +271,21 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
         interest_type, role_label = _BRREG_ROLE_MAP[role_code]
         display_label = role_label_raw or role_label
+
+        # A role is held by either a ``person`` or an ``enhet`` (an entity in
+        # Enhetsregisteret, with its organisasjonsnummer) — a housing
+        # cooperative's forretningsfører is usually OBOS, TOBB or another
+        # boligbyggelag. Before this, an ``enhet`` holder had no person name
+        # and was dropped. It is a company and is published as one
+        # (follow-up to Phase 293).
+        unit: dict[str, Any] = role.get("enhet") or {}
+        if unit and not role.get("person"):
+            unit_stmts = _brreg_unit_role_statements(
+                orgnr, idx, role, unit, interest_type, role_label_raw or role_label,
+                company_stmt_id, source_url, seen_person_ids,
+            )
+            yield from unit_stmts
+            continue
 
         person: dict[str, Any] = role.get("person") or {}
         full_name = _brreg_full_name(person)

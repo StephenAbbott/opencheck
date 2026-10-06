@@ -270,14 +270,28 @@ def _parse_officers(html: str) -> list[dict[str, Any]]:
             logger.debug("ariregister: unknown officer role %r — skipping", row[2])
             continue
 
-        first, last = _split_name(name)
+        # The code column says what kind of person holds the role: an
+        # 11-digit personal code for a human, the 8-digit registry code for a
+        # legal person — "2C Ventures Fund 1 GP OÜ (16769949), General
+        # partner" of 2C Ventures Fund I usaldusfond, live 6 Oct 2026. The
+        # same rule the shareholders table already uses. Anything else (a
+        # foreign person's date of birth, a blank) stays a natural person:
+        # the column does not say otherwise.
+        id_code = id_code.strip()
+        if _is_registry_code(id_code):
+            isiku_tyyp, first, last = "J", "", name.strip()
+            code_field = id_code
+        else:
+            isiku_tyyp = "F"
+            first, last = _split_name(name)
+            code_field = id_code if _is_estonian_personal_code(id_code) else ""
         officers.append({
             "kirje_id": str(idx + 1),
             "eesnimi": first,
             "nimi_arinimi": last,
             "isiku_roll": role_code,
-            "isiku_tyyp": "F",
-            "isikukood_registrikood": id_code if _is_estonian_personal_code(id_code) else "",
+            "isiku_tyyp": isiku_tyyp,
+            "isikukood_registrikood": code_field,
             "algus_kpv": _parse_date(start_raw) or start_raw or None,
             "lopp_kpv": _parse_date(end_raw) or end_raw or None,
             "synniaeg": None,

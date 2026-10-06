@@ -415,7 +415,7 @@ class TestMapAres:
         assert len(rel_stmts) == 2
         types = {r["recordDetails"]["interests"][0]["type"] for r in rel_stmts}
         assert "shareholding" in types
-        assert "appointmentOfBoard" in types
+        assert "seniorManagingOfficial" in types  # statutory body (Phase 295)
 
     def test_relationships_reference_subject_entity(self) -> None:
         stmts = list(map_ares(self._alza_bundle()))

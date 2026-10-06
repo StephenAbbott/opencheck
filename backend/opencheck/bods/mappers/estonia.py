@@ -199,6 +199,7 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     # ── 2. Shareholders ──────────────────────────────────────────────────
     seen_person_ids: set[str] = set()
+    seen_entity_ids: set[str] = set()
 
     for sh in bundle.get("shareholders") or []:
         isiku_tyyp = sh.get("isiku_tyyp") or "F"
@@ -258,7 +259,9 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                     else None
                 ),
             )
-            yield corp_stmt
+            if corp_stmt["statementId"] not in seen_entity_ids:
+                yield corp_stmt
+                seen_entity_ids.add(corp_stmt["statementId"])
             yield make_relationship_statement(
                 source_id="ariregister",
                 local_id=f"sh-{kirje_id}",
@@ -329,6 +332,51 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests[0]["startDate"] = start_date
         if end_date:
             interests[0]["endDate"] = end_date
+
+        if (officer.get("isiku_tyyp") or "F") == "J":
+            # A legal person in the role — a fund's general partner, a fund
+            # manager, a corporate liquidator — is a company and is published
+            # as one (follow-up to Phase 293). Keyed on its registry code,
+            # the key a corporate shareholder gets, so a GP that is also a
+            # partner is one entity.
+            corp_code = (officer.get("isikukood_registrikood") or "").strip()
+            corp_name = (officer.get("nimi_arinimi") or "").strip()
+            if not corp_name:
+                continue
+            corp_local_id = corp_code or f"off-corp-{kirje_id}"
+            corp_stmt = make_entity_statement(
+                source_id="ariregister",
+                local_id=corp_local_id,
+                name=corp_name,
+                jurisdiction=("Estonia", "EE") if corp_code else None,
+                identifiers=(
+                    [{
+                        "id": corp_code,
+                        "scheme": "EE-ARIREGISTER",
+                        "schemeName": "Estonian e-Business Register",
+                    }]
+                    if corp_code
+                    else []
+                ),
+                source_url=(
+                    f"https://ariregister.rik.ee/eng/company/{corp_code}"
+                    if corp_code
+                    else None
+                ),
+            )
+            if corp_stmt["statementId"] not in seen_entity_ids:
+                yield corp_stmt
+                seen_entity_ids.add(corp_stmt["statementId"])
+            yield make_relationship_statement(
+                source_id="ariregister",
+                local_id=f"off-{kirje_id}",
+                subject_statement_id=company_stmt_id,
+                interested_party_statement_id=corp_stmt["statementId"],
+                interested_party_type="entity",
+                interests=interests,
+                source_url=source_url,
+            )
+            continue
 
         person_id = _ee_person_id(officer)
         full_name = _ee_full_name(officer)

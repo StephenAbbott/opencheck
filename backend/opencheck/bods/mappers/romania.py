@@ -6,9 +6,14 @@ re-exports every name defined here.
 
 from __future__ import annotations
 
+import gettext
 import re
+import unicodedata
 from dataclasses import field
+from functools import lru_cache
 from typing import Any, Iterable
+
+import pycountry
 
 from .. import liveness as _liveness
 from ..statements import (
@@ -78,6 +83,50 @@ RO_CUI_SCHEME_NAME = (
 #:   special administrator is elected by the *shareholders* to represent their
 #:   interests during the procedure, so it is a company appointment like any
 #:   other.
+def _ro_fold(text: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", text.lower()) if not unicodedata.combining(c)
+    ).strip()
+
+
+@lru_cache(maxsize=1)
+def _ro_country_index() -> dict[str, str]:
+    """Folded country name → ISO alpha-2, in Romanian (pycountry's ``ro``
+    translations — ONRC writes "ROMANIA", "CIPRU", "REGATUL UNIT") and in
+    English, plus the alpha-2 and alpha-3 codes themselves."""
+    try:
+        tr = gettext.translation("iso3166-1", pycountry.LOCALES_DIR, languages=["ro"])
+    except OSError:  # pragma: no cover - translations ship with pycountry
+        tr = None
+    index: dict[str, str] = {}
+    for c in pycountry.countries:
+        index.setdefault(c.alpha_2.lower(), c.alpha_2)
+        index.setdefault(c.alpha_3.lower(), c.alpha_2)
+        for attr in ("name", "common_name", "official_name"):
+            value = getattr(c, attr, None)
+            if not value:
+                continue
+            index.setdefault(_ro_fold(value), c.alpha_2)
+            if tr is not None:
+                index.setdefault(_ro_fold(tr.gettext(value)), c.alpha_2)
+    return index
+
+
+def _ro_country_code(text: str | None) -> str:
+    """ISO alpha-2 for a country ONRC files, or ``""`` when none is filed or it
+    does not resolve."""
+    if not text or not str(text).strip():
+        return ""
+    folded = _ro_fold(str(text))
+    index = _ro_country_index()
+    return index.get(folded) or index.get(re.sub(r"\s*\(.*?\)\s*", " ", folded).strip(), "")
+
+
+def _ro_country_name(code: str) -> str:
+    country = pycountry.countries.get(alpha_2=code)
+    return getattr(country, "name", None) or code
+
+
 RO_ROLE_INTEREST: dict[str, str] = {
     # Company-appointed management.
     "administrator": "seniorManagingOfficial",
@@ -224,11 +273,18 @@ def map_onrc_romania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
         party_local = f"{number}:{index}:{rep_name}"
         if rep.get("is_entity"):
+            # The country ONRC files for the representative (TARA), when it
+            # files one; nothing otherwise. An assumed RO would corroborate a
+            # Romanian name match for a foreign corporate administrator
+            # (Phase 295).
+            rep_country = _ro_country_code(rep.get("country"))
             party = make_entity_statement(
                 source_id="onrc_romania",
                 local_id=party_local,
                 name=rep_name,
-                jurisdiction=("Romania", "RO"),
+                jurisdiction=(
+                    (_ro_country_name(rep_country), rep_country) if rep_country else None
+                ),
                 entity_type="registeredEntity",
                 source_url=bundle.get("link"),
             )

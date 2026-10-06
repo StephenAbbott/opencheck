@@ -102,6 +102,7 @@ from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _PSC_STATEMENT_NO_BO,
     _PSC_STATEMENT_REASON,
     _annotate_verified_people,
+    _ch_appointments_are_corporate,
     _ch_corporate_officer_entity,
     _ch_corporate_officer_statements,
     _ch_director_statements,
@@ -219,6 +220,7 @@ from .mappers.norway import (  # noqa: F401  (re-exported, Phase 246)
     _brreg_address,
     _brreg_full_name,
     _brreg_person_local_id,
+    _brreg_unit_role_statements,
     _company_url_brreg,
     map_brreg,
 )
@@ -236,7 +238,11 @@ from .mappers.hong_kong import (  # noqa: F401  (re-exported, Phase 246)
 )
 from .mappers.brazil import (  # noqa: F401  (re-exported, Phase 246)
     _BR_OWNER_KEYWORDS,
+    _br_country_code,
+    _br_country_index,
+    _br_fold,
     _br_interest_type,
+    _br_partner_is_entity,
     map_cnpj_brazil,
 )
 from .mappers.new_zealand import (  # noqa: F401  (re-exported, Phase 246)
@@ -361,6 +367,10 @@ from .mappers.romania import (  # noqa: F401  (re-exported, Phase 246)
     _anaf_address,
     _anaf_date,
     _ro_address,
+    _ro_country_code,
+    _ro_country_index,
+    _ro_country_name,
+    _ro_fold,
     _ro_liveness,
     map_anaf_romania,
     map_onrc_romania,

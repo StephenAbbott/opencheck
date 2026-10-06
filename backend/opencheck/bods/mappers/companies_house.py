@@ -1324,10 +1324,26 @@ def _map_individual_psc(
     )
 
 
+def _ch_appointments_are_corporate(
+    appointments: dict[str, Any], items: list[dict[str, Any]]
+) -> bool:
+    """Whether an officer-appointments list belongs to a corporate officer.
+
+    The register says so twice: ``is_corporate_officer`` on the list, and a
+    ``corporate-*`` ``officer_role`` on each appointment. Either is enough;
+    the flag is absent from some cached payloads, the roles never are.
+    """
+    if appointments.get("is_corporate_officer") is True:
+        return True
+    roles = [str(a.get("officer_role") or "").lower() for a in items]
+    return bool(roles) and all(r.startswith("corporate-") for r in roles)
+
+
 def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
     """Map a Companies House officer-appointments bundle to BODS.
 
-    The officer becomes a single ``personStatement``; each appointment
+    The officer becomes a single ``personStatement`` — or, for a corporate
+    officer, an ``entityStatement`` (follow-up to Phase 293); each appointment
     becomes an ``entityStatement`` (the company appointed-to) plus a
     ``relationship`` statement with a ``boardMember`` interest. Resigned
     appointments carry ``endDate`` so consumers can distinguish current
@@ -1364,20 +1380,40 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
         f"{officer_id}/appointments"
     )
 
-    person = make_person_statement(
-        source_id="companies_house",
-        local_id=f"officer:{officer_id}",
-        full_name=full_name,
-        person_type="knownPerson",
-        nationalities=nationalities,
-        birth_date=birth_date,
-        source_url=person_url,
-    )
-    annotate(
-        person,
-        _birth_date_precision_note(birth_date),
-        _ch_officer_grouping_note(officer_id),
-    )
+    corporate = _ch_appointments_are_corporate(appointments, items)
+    if corporate:
+        # A corporate officer looked up by its officer id is a company, as it
+        # is when reached through a company's officers list (Phase 293). It is
+        # built by the same function, from the identification block of its
+        # first appointment that carries one, so the two paths produce the
+        # same statementId: the canonical GB-COH number for a UK company, the
+        # register's officer id otherwise.
+        first = next((a for a in items if a.get("identification")), items[0] if items else {})
+        officer_like = {
+            "name": full_name,
+            "identification": first.get("identification") or {},
+            "address": first.get("address") or {},
+            "links": {"officer": {"appointments": f"/officers/{officer_id}/appointments"}},
+        }
+        anchor_number = str((first.get("appointed_to") or {}).get("company_number") or "")
+        person = _ch_corporate_officer_entity(anchor_number, officer_like, person_url)
+        party_type = "entity"
+    else:
+        person = make_person_statement(
+            source_id="companies_house",
+            local_id=f"officer:{officer_id}",
+            full_name=full_name,
+            person_type="knownPerson",
+            nationalities=nationalities,
+            birth_date=birth_date,
+            source_url=person_url,
+        )
+        annotate(
+            person,
+            _birth_date_precision_note(birth_date),
+            _ch_officer_grouping_note(officer_id),
+        )
+        party_type = "person"
     result.statements.append(person)
     person_sid = person["statementId"]
 
@@ -1443,11 +1479,11 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
             local_id=f"officer-rel:{officer_id}:{company_number}:{idx}",
             subject_statement_id=entity_sid,
             interested_party_statement_id=person_sid,
-            interested_party_type="person",
+            interested_party_type=party_type,
             interests=[interest],
             source_url=person_url,
         )
-        if not appointment.get("resigned_on"):
+        if not corporate and not appointment.get("resigned_on"):
             verification = _idv.read_verification(appointment)
             if verification:
                 annotate(

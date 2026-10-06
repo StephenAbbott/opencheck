@@ -601,21 +601,24 @@ def _text(el: ET.Element, path: str) -> str:
 # Role code → BODS interest type mapping
 # ---------------------------------------------------------------------------
 
-# Austrian Firmenbuch Funktion codes → BODS interest type + label
+# Austrian Firmenbuch Funktion codes → BODS interest type + label.
+# Geschäftsführer and Prokurist manage and sign for the company:
+# seniorManagingOfficial (Phase 295; otherInfluenceOrControl until then, which
+# kept a corporate holder out of the Phase 293 officer screening gate).
 _AT_ROLE_MAP: dict[str, tuple[str, str]] = {
-    "GF":   ("otherInfluenceOrControl", "Geschäftsführer (Managing Director)"),
-    "GFI":  ("otherInfluenceOrControl", "Geschäftsführerin (Managing Director)"),
+    "GF":   ("seniorManagingOfficial", "Geschäftsführer (Managing Director)"),
+    "GFI":  ("seniorManagingOfficial", "Geschäftsführerin (Managing Director)"),
     "VW":   ("boardMember",             "Vorstandsmitglied (Board Member)"),
     "VWV":  ("boardMember",             "Vorstandsvorsitzender (Chair of Board)"),
     "VWI":  ("boardMember",             "Vorstandsmitglied (Board Member)"),
     "AR":   ("boardMember",             "Aufsichtsratsmitglied (Supervisory Board)"),
     "ARV":  ("boardMember",             "Aufsichtsratsvorsitzender (Supervisory Board Chair)"),
-    "PK":   ("otherInfluenceOrControl", "Prokurist (Authorised Signatory)"),
-    "PKI":  ("otherInfluenceOrControl", "Prokuristin (Authorised Signatory)"),
+    "PK":   ("seniorManagingOfficial", "Prokurist (Authorised Signatory)"),
+    "PKI":  ("seniorManagingOfficial", "Prokuristin (Authorised Signatory)"),
     # Live API returns FKEN="PR"/"PRI" for Prokurist/Prokuristin — the "PK"/"PKI"
     # codes match the DKZ fallback path; both must be mapped.
-    "PR":   ("otherInfluenceOrControl", "Prokurist (Authorised Signatory)"),
-    "PRI":  ("otherInfluenceOrControl", "Prokuristin (Authorised Signatory)"),
+    "PR":   ("seniorManagingOfficial", "Prokurist (Authorised Signatory)"),
+    "PRI":  ("seniorManagingOfficial", "Prokuristin (Authorised Signatory)"),
     "LI":   ("otherInfluenceOrControl", "Liquidator"),
     "LII":  ("otherInfluenceOrControl", "Liquidatorin"),
     "GES":  ("otherInfluenceOrControl", "Gesellschafter (Partner/Shareholder)"),
@@ -632,13 +635,13 @@ def _role_to_interest(role_code: str, role_name: str) -> tuple[str, str]:
     # Fallback: infer from role name
     name_lower = role_name.lower()
     if "geschäftsführ" in name_lower:
-        return ("otherInfluenceOrControl", role_name)
+        return ("seniorManagingOfficial", role_name)
     if "vorstand" in name_lower:
         return ("boardMember", role_name)
     if "aufsichtsrat" in name_lower:
         return ("boardMember", role_name)
     if "prokurist" in name_lower:
-        return ("otherInfluenceOrControl", role_name)
+        return ("seniorManagingOfficial", role_name)
     if "liquidator" in name_lower:
         return ("otherInfluenceOrControl", role_name)
     return ("otherInfluenceOrControl", role_name or role_code)
