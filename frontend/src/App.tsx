@@ -1071,7 +1071,7 @@ export default function App() {
         {!streamingLei && (
         <div className="mb-3">
           <HeroHeading className="font-head font-bold text-oo-ink leading-tight text-[20px] sm:text-oo-display">
-            Conduct due diligence on <span className="text-oo-blue">3 million</span> companies, starting from a single ID
+            Conduct due diligence on <span className="text-oo-blue">3.4 million</span> companies, starting from a single ID
           </HeroHeading>
           <p className="text-oo-small sm:text-sm text-oo-muted leading-snug mt-2">
             With a Legal Entity Identifier, OpenCheck pulls open corporate data from 51 sources into one graph using the Beneficial Ownership Data Standard

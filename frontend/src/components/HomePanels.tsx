@@ -260,7 +260,7 @@ const HOW_IT_WORKS_STEPS = [
         >
           Legal Entity Identifier
         </a>{" "}
-        — the single key to 3 million+ entities worldwide.
+        — the single key to 3.4 million+ entities worldwide.
       </>
     ),
     badges: null,
