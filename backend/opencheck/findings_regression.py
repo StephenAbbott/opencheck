@@ -88,6 +88,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .verdict import is_name_only_lead
+
 BACKEND = Path(__file__).resolve().parent.parent
 GOLDEN_DIR = BACKEND / "findings_golden"
 EXAMPLE_CARDS_TSX = BACKEND.parent / "frontend" / "src" / "components" / "HomePanels.tsx"
@@ -286,7 +288,8 @@ def summarise(payload: Mapping[str, Any], lei: str) -> dict[str, Any]:
         if not code:
             continue
         row = signals.setdefault(
-            str(code), {"kinds": [], "confidence": None, "sources": [], "count": 0}
+            str(code),
+            {"kinds": [], "confidence": None, "sources": [], "count": 0, "leads": 0},
         )
         if _kind(sig) not in row["kinds"]:
             row["kinds"].append(_kind(sig))
@@ -295,6 +298,10 @@ def summarise(payload: Mapping[str, Any], lei: str) -> dict[str, Any]:
         if sid and sid not in row["sources"]:
             row["sources"].append(sid)
         row["count"] += 1
+        # Phase 293: a low name-only offshore-leaks person match is a lead the
+        # verdict does not count as a finding (``verdict.is_name_only_lead``).
+        if is_name_only_lead(sig):
+            row["leads"] += 1
     for row in signals.values():
         row["kinds"].sort()
         row["sources"].sort()
@@ -345,6 +352,18 @@ class Rules:
             structural_codes=frozenset(_STRUCTURAL_SIGNAL_CODES),
             retired_codes=frozenset(getattr(risk, "RETIRED_SIGNAL_CODES", frozenset())),
         )
+
+
+def _finding_codes(summary: Mapping[str, Any]) -> dict[str, str]:
+    """``_risk_codes`` without a code whose every signal is a name-only lead
+    (Phase 293) — what the verdict counts as a finding. A clean control may
+    carry a lead; it may not carry a finding. A row from a report written
+    before Phase 293 has no ``leads`` count, and every signal counts."""
+    return {
+        code: conf
+        for code, conf in _risk_codes(summary).items()
+        if summary["signals"][code].get("leads", 0) < summary["signals"][code]["count"]
+    }
 
 
 def _risk_codes(summary: Mapping[str, Any]) -> dict[str, str]:
@@ -417,7 +436,7 @@ def evaluate(
     for code in sorted(rules.retired_codes & set(sig)):
         fail("unexpected_signal", f"retired code {code} is emitted again")
     if exp["no_risk"]:
-        risky = sorted(_risk_codes(summary))
+        risky = sorted(_finding_codes(summary))
         if risky:
             fail("unexpected_signal", f"clean subject carries risk finding(s): {', '.join(risky)}")
 
@@ -435,7 +454,7 @@ def evaluate(
     # ("we found X" stays true whatever else failed; ``verdict.build_verdict``),
     # so the check applies when no non-structural risk finding was made.
     verdict = summary["verdict"] or ""
-    findings_made = set(_risk_codes(summary)) - rules.structural_codes
+    findings_made = set(_finding_codes(summary)) - rules.structural_codes
     if summary["degraded"] and not findings_made and not _INCOMPLETE_VERDICT.search(verdict):
         fail(
             "degraded_reads_clean",

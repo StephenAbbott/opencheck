@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 292** — Search results are ranked across every source with exact name matches first, so an agent sees the company it asked for at the top of the list.
+**Latest: Phase 293** — Corporate officers on Companies House are published and screened as companies, a name-only offshore-leaks lead no longer reads as a finding in the verdict, and the dataset build names any subsidiary network it did not fully obtain.
 
 → [Full development history](docs/status.md)
 

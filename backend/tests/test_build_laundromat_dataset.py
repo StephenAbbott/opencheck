@@ -408,3 +408,203 @@ def test_run_subsidiaries_folds_new_statements_and_records_partial(monkeypatch) 
     raw = asyncio.run(bld._run_subsidiaries({"status": "done", "bods": []}, LEI))
     assert raw["subsidiaries"]["error"].startswith("RuntimeError")
     assert raw["status"] == "done"
+
+
+# ----------------------------------------------------------------------
+# Phase 293 — partial subsidiary networks are surfaced and retryable
+# ----------------------------------------------------------------------
+
+def _with_network(raw: dict, **sub) -> dict:
+    return {**raw, "subsidiaries": {"statements": 0, "children": 0, **sub}}
+
+
+def test_subsidiaries_partial_reads_the_flags_and_the_error() -> None:
+    assert bld.subsidiaries_partial({"status": "done"}) == (False, None)
+    ok = {"subsidiaries": {"children": 3, "direct_available": True, "ultimate_available": True}}
+    assert bld.subsidiaries_partial(ok) == (False, None)
+    # GLEIF lists none, and said so: not partial.
+    assert bld.subsidiaries_partial({"subsidiaries": {"children": 0}}) == (False, None)
+    assert bld.subsidiaries_partial(
+        {"subsidiaries": {"direct_available": False, "ultimate_available": True}}
+    ) == (True, "GLEIF direct list unavailable")
+    assert bld.subsidiaries_partial(
+        {"subsidiaries": {"direct_available": True, "ultimate_available": False}}
+    ) == (True, "GLEIF ultimate list unavailable")
+    assert bld.subsidiaries_partial(
+        {"subsidiaries": {"direct_available": False, "ultimate_available": False}}
+    ) == (True, "GLEIF direct and ultimate lists unavailable")
+    assert bld.subsidiaries_partial(
+        {"subsidiaries": {"error": "GleifRateLimitedError: throttled"}}
+    ) == (True, "GleifRateLimitedError: throttled")
+
+
+def test_assemble_flags_a_partial_and_an_errored_network_as_degraded() -> None:
+    raws = dict(RAWS)
+    # Bentcard: a clean lookup whose direct list GLEIF refused.
+    raws[f"lei:{LEI}"] = _with_network(
+        RAWS[f"lei:{LEI}"], direct_available=False, ultimate_available=True
+    )
+    # Danske: the network fetch errored outright.
+    raws[f"lei:{BANK_LEI}"] = _with_network(
+        RAWS[f"lei:{BANK_LEI}"], error="RuntimeError: GLEIF throttle"
+    )
+    out = bld.assemble(SUBJECTS, raws)
+    rows = {r["key"]: r for r in out["rows"]}
+    bent = rows[f"lei:{LEI}"]
+    assert bent["subsidiaries_partial"] is True
+    assert bent["subsidiaries_note"] == "GLEIF direct list unavailable"
+    # No screening check degraded — the partial network alone makes it degraded.
+    assert bent["degraded"] is True
+    assert bent["degraded_checks"] == ["subsidiaries:partial"]
+    bank = rows[f"lei:{BANK_LEI}"]
+    assert bank["subsidiaries_note"] == "RuntimeError: GLEIF throttle"
+    assert bank["degraded_checks"] == ["cross_source_names:truncated", "subsidiaries:partial"]
+    assert out["networks"] == {"fetched": 2, "partial": 1, "errored": 1, "children_total": 0}
+    # Register subjects carry no network and no flag.
+    assert "subsidiaries_partial" not in rows["GB-COH:OC369315"]
+
+
+def test_assemble_a_complete_empty_network_is_not_degraded() -> None:
+    out = bld.assemble(SUBJECTS[1:2], {f"lei:{LEI}": RAWS[f"lei:{LEI}"]})
+    row = out["rows"][0]
+    assert row["subsidiary_children"] == 0
+    assert row["subsidiaries_partial"] is False and row["subsidiaries_note"] is None
+    assert row["degraded"] is False
+    assert out["networks"] == {"fetched": 1, "partial": 0, "errored": 0, "children_total": 0}
+
+
+def test_subjects_csv_and_manifest_carry_the_partial_network(tmp_path: Path) -> None:
+    raws = dict(RAWS)
+    raws[f"lei:{LEI}"] = _with_network(
+        RAWS[f"lei:{LEI}"], direct_available=False, ultimate_available=True
+    )
+    assembled = bld.assemble(SUBJECTS, raws)
+    manifest = bld.write_release(
+        assembled, out=tmp_path, seed={"source": {}, "skipped": {}}, stamp="2026-10-06",
+        formats=("bods",),
+    )
+    with (tmp_path / "azerbaijani-laundromat-2026-10-06.subjects.csv").open(encoding="utf-8") as fh:
+        table = {r["key"]: r for r in csv.DictReader(fh)}
+    bent = table[f"lei:{LEI}"]
+    assert bent["subsidiaries_partial"] == "True"
+    assert bent["subsidiaries_note"] == "GLEIF direct list unavailable"
+    assert bent["degraded"] == "True"
+    assert table[f"lei:{BANK_LEI}"]["subsidiaries_partial"] == "False"
+    assert table["GB-COH:OC369315"]["subsidiaries_partial"] == ""
+    subj = manifest["subjects"]
+    assert subj["networks"] == {"fetched": 2, "partial": 1, "errored": 0, "children_total": 1}
+    assert subj["partial_networks"] == [
+        {"key": f"lei:{LEI}", "note": "GLEIF direct list unavailable"}
+    ]
+    # Bentcard (partial), Danske (truncated screen), the failed register subject.
+    assert subj["degraded"] == 3
+    notes = (tmp_path / "RELEASE_NOTES.md").read_text(encoding="utf-8")
+    assert f"1 partial and 0 errored (lei:{LEI})." in notes
+
+
+def test_select_subsidiary_fetches_picks_new_and_only_partial_on_retry() -> None:
+    subjects = [
+        {"key": "lei:A", "kind": "lei", "lei": "A"},
+        {"key": "lei:B", "kind": "lei", "lei": "B"},
+        {"key": "lei:C", "kind": "lei", "lei": "C"},
+        {"key": "lei:D", "kind": "lei", "lei": "D"},
+        {"key": "lei:E", "kind": "lei", "lei": "E"},
+        {"key": "GB-COH:X", "kind": "register", "scheme": "GB-COH", "id": "X"},
+    ]
+    raws = {
+        "lei:A": {"status": "done"},  # no network yet
+        "lei:B": {"status": "done", "subsidiaries": {"children": 4, "direct_available": True,
+                                                     "ultimate_available": True}},
+        "lei:C": {"status": "done", "subsidiaries": {"children": 0, "direct_available": False,
+                                                     "ultimate_available": True}},
+        "lei:D": {"status": "done", "subsidiaries": {"error": "RuntimeError: x"}},
+        "lei:E": {"status": "failed", "reason": "503"},
+        "GB-COH:X": {"status": "done"},
+    }
+
+    def keys(picked):
+        return [(s["key"], retry) for s, _raw, retry in picked]
+
+    assert keys(bld.select_subsidiary_fetches(subjects, raws)) == [("lei:A", False)]
+    assert keys(bld.select_subsidiary_fetches(subjects, raws, retry_partial=True)) == [
+        ("lei:A", False), ("lei:C", True), ("lei:D", True),
+    ]
+    assert keys(bld.select_subsidiary_fetches(subjects, raws, force=True)) == [
+        ("lei:A", False), ("lei:B", False), ("lei:C", False), ("lei:D", False),
+    ]
+
+
+def test_retry_keeps_statements_an_earlier_partial_network_added(monkeypatch) -> None:
+    import asyncio
+
+    import opencheck.subsidiaries as subs
+
+    async def complete(lei, include_bods=False):
+        return {
+            "bods": [_ent("e-child", "CHILD"), _rel("r-c", "e-child", "e-x"),
+                     _ent("e-child2", "CHILD 2"), _rel("r-c2", "e-child2", "e-x")],
+            "children": [{"lei": "C"}, {"lei": "C2"}],
+            "direct_available": True, "ultimate_available": True, "snapshot_date": None,
+        }
+
+    monkeypatch.setattr(subs, "assemble_subsidiaries", complete)
+    raw = {
+        "status": "done",
+        "bods": [_ent("e-x", "X"), _ent("e-child", "CHILD"), _rel("r-c", "e-child", "e-x")],
+        "subsidiaries": {"statements": 2, "children": 1, "direct_available": False,
+                         "ultimate_available": True},
+    }
+    raw = asyncio.run(bld._run_subsidiaries(raw, LEI))
+    assert raw["subsidiaries"]["statements"] == 4  # 2 kept + 2 new
+    assert raw["subsidiaries"]["children"] == 2
+    assert bld.subsidiaries_partial(raw) == (False, None)
+
+    async def boom(lei, include_bods=False):
+        raise RuntimeError("throttled again")
+
+    monkeypatch.setattr(subs, "assemble_subsidiaries", boom)
+    raw = asyncio.run(bld._run_subsidiaries(raw, LEI))
+    # A failed retry keeps what is already in the bundle and says it errored.
+    assert raw["subsidiaries"]["statements"] == 4 and raw["subsidiaries"]["children"] == 2
+    assert bld.subsidiaries_partial(raw) == (True, "RuntimeError: throttled again")
+
+
+def test_build_raw_retry_subsidiaries_refetches_only_partial_and_paces(
+    monkeypatch, tmp_path: Path
+) -> None:
+    import asyncio
+
+    import opencheck.subsidiaries as subs
+
+    subjects = [
+        {"key": "lei:A", "kind": "lei", "lei": "A", "name": "A"},
+        {"key": "lei:B", "kind": "lei", "lei": "B", "name": "B"},
+    ]
+    bld._write_json(bld._raw_path(tmp_path, "lei:A"), {
+        "status": "done", "bods": [],
+        "subsidiaries": {"statements": 0, "children": 5, "direct_available": True,
+                         "ultimate_available": True},
+    })
+    bld._write_json(bld._raw_path(tmp_path, "lei:B"), {
+        "status": "done", "bods": [],
+        "subsidiaries": {"statements": 0, "children": 0, "error": "RuntimeError: x"},
+    })
+    asked: list[str] = []
+
+    async def fake(lei, include_bods=False):
+        asked.append(lei)
+        return {"bods": [], "children": [{"lei": "K"}], "direct_available": True,
+                "ultimate_available": True, "snapshot_date": None}
+
+    monkeypatch.setattr(subs, "assemble_subsidiaries", fake)
+    monkeypatch.setattr(subs, "_PARENT_LOOKUP_CONCURRENCY", 4)
+    asyncio.run(bld._build_raw(
+        subjects, out=tmp_path, deepen_top=0, lei_concurrency=1, lei_pause=0,
+        register_pause=0, retries=0, retry_wait=0, force=False, retry_degraded=False,
+        skip_subsidiaries=False, retry_subsidiaries=True, subsidiary_concurrency=1,
+    ))
+    assert asked == ["B"]
+    assert subs._PARENT_LOOKUP_CONCURRENCY == 1
+    b = json.loads(bld._raw_path(tmp_path, "lei:B").read_text(encoding="utf-8"))
+    assert bld.subsidiaries_partial(b) == (False, None)
+    assert b["subsidiaries"]["children"] == 1

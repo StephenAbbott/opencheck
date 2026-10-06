@@ -436,6 +436,7 @@ def _collect_targets(
     17 Sept 2026). The signal says "former" instead.
     """
     former = former_party_ids(bods)
+    officers = related_targets.officer_only_entity_ids(bods)
     out: list[dict[str, Any]] = []
     for stmt in bods:
         record_type = stmt.get("recordType") or stmt.get("statementType", "").replace(
@@ -473,17 +474,43 @@ def _collect_targets(
             name = rd.get("name") or stmt.get("name")
             if not name:
                 continue
-            out.append(
-                {
-                    "kind": _KIND_ENTITY,
-                    "statement_id": sid,
-                    "name": name.strip(),
-                    "birth_year": None,
-                    "nationalities": (),
-                    "former": sid in former,
-                }
-            )
+            target = {
+                "kind": _KIND_ENTITY,
+                "statement_id": sid,
+                "name": name.strip(),
+                "birth_year": None,
+                "nationalities": (),
+                "former": sid in former,
+            }
+            if sid in officers:
+                # Phase 293: a company named only as an officer must share a
+                # country with the record to count for more than ``low``;
+                # its jurisdiction and address countries are what it offers.
+                target["officer_entity"] = True
+                target["countries"] = sorted(_entity_countries(rd))
+            out.append(target)
     return out
+
+
+def _entity_countries(rd: dict[str, Any]) -> set[str]:
+    """Lower-case alpha-2 codes of an entity's jurisdiction and of every
+    address it carries (for an entity, a correspondence address does say
+    where it is — unlike a person's service address, Phase 282)."""
+    found: set[str] = set()
+
+    def _add(code: Any) -> None:
+        text = str(code or "").strip()
+        if re.match(r"^[A-Za-z]{2}(-|$)", text):
+            found.add(text[:2].lower())
+
+    juris = rd.get("jurisdiction")
+    if isinstance(juris, dict):
+        _add(juris.get("code"))
+    for addr in rd.get("addresses") or []:
+        if isinstance(addr, dict):
+            country = addr.get("country")
+            _add(country.get("code") if isinstance(country, dict) else country)
+    return found
 
 
 def _person_full_name(rd: dict[str, Any]) -> str:
@@ -788,6 +815,10 @@ def match_confidence(
     """
     if target["kind"] == _KIND_PERSON and not corroboration:
         return "medium" if score >= 0.95 else "low"
+    if target.get("officer_entity") and not corroboration:
+        # Phase 293 (Stephen, 6 Oct 2026): a company named only as an officer
+        # needs a country in common before it counts for more than ``low``.
+        return "low"
     return "high" if score >= 0.95 else "medium"
 
 
@@ -830,6 +861,13 @@ def match_summary(
             f"or nationality in common to confirm they are the same person "
             f"— {summary_extra}."
         )
+    if target.get("officer_entity") and not corroboration:
+        return (
+            f"Possible name match only: {relation.lower()} '{target['name']}' "
+            f"(named as an officer) shares a name with a record on {source}, "
+            f"with no country in common to confirm they are the same company "
+            f"— {summary_extra}."
+        )
     via = f" ({_agreement_clause(corroboration)})" if corroboration else ""
     return (
         f"{relation} '{target['name']}' matches a record "
@@ -839,7 +877,7 @@ def match_summary(
 
 #: The attribute names `corroborating_attributes` returns, as English. They are
 #: field names, and "confirmed on birth_year" read like a log line.
-_ATTRIBUTE_WORDS = {"birth_year": "birth year", "nationality": "nationality"}
+_ATTRIBUTE_WORDS = {"birth_year": "birth year", "nationality": "nationality", "country": "country"}
 
 
 def _agreement_clause(corroboration: tuple[str, ...]) -> str:
@@ -918,7 +956,8 @@ def _make_signal(
             "kind": target["kind"],
             "corroboration": list(corroboration),
             "name_match_only": bool(
-                target["kind"] == _KIND_PERSON and not corroboration
+                (target["kind"] == _KIND_PERSON or target.get("officer_entity"))
+                and not corroboration
             ),
             **({"topics": list(topics)} if topics else {}),
             **former_evidence(target),
@@ -1029,6 +1068,18 @@ def corroborating_attributes(
         theirs = _hit_countries(raw)
         if theirs and (ours & theirs):
             found.append("nationality")
+    # Phase 293: a corporate officer's jurisdiction / address countries
+    # against the record's country and jurisdiction. Read only for those
+    # targets, so no other entity's evidence or prose changes.
+    if target.get("officer_entity"):
+        mine = {c.lower() for c in (target.get("countries") or ()) if c}
+        theirs = _hit_countries(raw) | {
+            v.strip().lower()[:2]
+            for v in _prop_values(raw, "jurisdiction", "mainCountry")
+            if v.strip()
+        }
+        if mine and theirs and (mine & theirs):
+            found.append("country")
     return tuple(found)
 
 

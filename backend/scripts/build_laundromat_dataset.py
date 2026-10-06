@@ -46,6 +46,11 @@ What the build does
 * Raw results are cached per subject under ``<out>/raw/`` so an interrupted
   run resumes where it stopped and a rate-capped register can be retried with
   ``--retry-degraded`` without re-running the rest.
+* A subsidiary network GLEIF did not fully answer (a list refused, or the
+  fetch errored) is flagged ``subsidiaries_partial`` in the subjects table and
+  counted as degraded — ``0 children`` with the flag false means GLEIF lists
+  none; with it true, the network was not obtained. ``--retry-subsidiaries``
+  refetches only those networks (Phase 293).
 * The assembled bundle is deduplicated by ``statementId`` across subjects
   (two banks in one group share the parent's entity statement), converted to
   each format, and described by ``manifest.json`` (counts, checksums, which
@@ -213,6 +218,32 @@ def _is_degraded(raw: dict[str, Any]) -> bool:
     return raw.get("status") in ("failed", "stub") or bool(raw.get("degraded_sources"))
 
 
+def subsidiaries_partial(raw: dict[str, Any]) -> tuple[bool, str | None]:
+    """``(partial, note)`` for a cached result's subsidiary network.
+
+    Partial when the fetch errored or GLEIF refused the direct or the ultimate
+    children list (``direct_available`` / ``ultimate_available`` false). A
+    result with no ``subsidiaries`` block (a register subject, a failed
+    lookup, ``--skip-subsidiaries``) has no network to be partial about. A
+    list the Golden Copy snapshot stood in for counts as available: its rows
+    are real, and ``snapshot_date`` says they are not live.
+    """
+    sub = raw.get("subsidiaries")
+    if not isinstance(sub, dict):
+        return False, None
+    if sub.get("error"):
+        return True, str(sub["error"])
+    direct_missing = sub.get("direct_available") is False
+    ultimate_missing = sub.get("ultimate_available") is False
+    if direct_missing and ultimate_missing:
+        return True, "GLEIF direct and ultimate lists unavailable"
+    if direct_missing:
+        return True, "GLEIF direct list unavailable"
+    if ultimate_missing:
+        return True, "GLEIF ultimate list unavailable"
+    return False, None
+
+
 async def _run_lei(
     subject: dict[str, Any], *, deepen_top: int, retries: int = 2, retry_wait: float = 70.0
 ) -> dict[str, Any]:
@@ -276,11 +307,18 @@ async def _run_subsidiaries(raw: dict[str, Any], lei: str) -> dict[str, Any]:
     """
     from opencheck.subsidiaries import assemble_subsidiaries
 
+    # A retry (``--retry-subsidiaries``) refetches onto a result that already
+    # holds the statements an earlier partial network added: they stay, and
+    # the count is cumulative, so the row does not under-report them.
+    previous = raw.get("subsidiaries") if isinstance(raw.get("subsidiaries"), dict) else {}
+    prior_statements = int(previous.get("statements") or 0)
     try:
         data = await assemble_subsidiaries(lei, include_bods=True)
     except Exception as exc:  # noqa: BLE001 — best effort, as /export does
         raw["subsidiaries"] = {
-            "statements": 0, "children": 0, "error": f"{type(exc).__name__}: {exc}",
+            "statements": prior_statements,
+            "children": int(previous.get("children") or 0),
+            "error": f"{type(exc).__name__}: {exc}",
         }
         return raw
     sub = (data or {}).get("bods") or []
@@ -288,7 +326,7 @@ async def _run_subsidiaries(raw: dict[str, Any], lei: str) -> dict[str, Any]:
     added = [s for s in sub if s.get("statementId") not in existing]
     raw.setdefault("bods", []).extend(added)
     raw["subsidiaries"] = {
-        "statements": len(added),
+        "statements": prior_statements + len(added),
         "children": len((data or {}).get("children") or []),
         "direct_available": (data or {}).get("direct_available"),
         "ultimate_available": (data or {}).get("ultimate_available"),
@@ -351,6 +389,8 @@ async def _build_raw(
     force: bool,
     retry_degraded: bool,
     skip_subsidiaries: bool,
+    retry_subsidiaries: bool = False,
+    subsidiary_concurrency: int = 1,
 ) -> None:
     """Fetch every subject not already cached under ``out/raw``, in three passes:
     LEI lookups, then their subsidiary networks, then register hops.
@@ -407,28 +447,33 @@ async def _build_raw(
         await asyncio.gather(*(_one_lei(i, s) for i, s in enumerate(leis, 1)))
 
     # Pass 2 — subsidiary networks for every cached, successful LEI lookup
-    # that does not have one yet (a re-run picks up where it stopped).
+    # that does not have one yet (a re-run picks up where it stopped), plus,
+    # with --retry-subsidiaries or --retry-degraded, every cached network that
+    # came back partial or errored.
     if not skip_subsidiaries:
-        pending = []
-        for s in subjects:
-            if s["kind"] != "lei":
-                continue
-            p = _raw_path(out, s["key"])
-            if not p.exists():
-                continue
-            raw = json.loads(p.read_text(encoding="utf-8"))
-            if raw.get("status") == "done" and (force or "subsidiaries" not in raw):
-                pending.append((s, raw))
-        for i, (s, raw) in enumerate(pending, 1):
+        # Script-side pacing (Phase 293): the per-child direct-parent calls
+        # inside a network fan out four at a time, and the GLEIF throttle's
+        # bounded wait is what turns a large network into a partial one. The
+        # build sets this module constant for its own process only, so the
+        # Subsidiaries tab keeps its concurrency.
+        import opencheck.subsidiaries as _subsidiaries
+
+        _subsidiaries._PARENT_LOOKUP_CONCURRENCY = max(1, subsidiary_concurrency)
+        retry_partial = retry_subsidiaries or retry_degraded
+        pending = select_subsidiary_fetches(
+            subjects, _load_raw(out, subjects), force=force, retry_partial=retry_partial
+        )
+        for i, (s, raw, retry) in enumerate(pending, 1):
             started = time.monotonic()
             raw = await _run_subsidiaries(raw, s["lei"])
             _write_json(_raw_path(out, s["key"]), raw)
             sub = raw.get("subsidiaries") or {}
+            partial, note = subsidiaries_partial(raw)
             log.info(
-                "[subsidiaries %d/%d] %s %s — %d children, %d statements added%s in %.1fs",
-                i, len(pending), s["lei"], s.get("name", "")[:40], sub.get("children", 0),
-                sub.get("statements", 0),
-                " (partial)" if sub.get("error") or sub.get("direct_available") is False else "",
+                "[subsidiaries%s %d/%d] %s %s — %d children, %d statements%s in %.1fs",
+                " retry" if retry else "", i, len(pending), s["lei"], s.get("name", "")[:40],
+                sub.get("children", 0), sub.get("statements", 0),
+                f" (partial: {note})" if partial else "",
                 time.monotonic() - started,
             )
             if lei_pause > 0 and i < len(pending):
@@ -451,6 +496,34 @@ async def _build_raw(
         )
         if register_pause > 0 and i < len(regs):
             await asyncio.sleep(register_pause)
+
+
+def select_subsidiary_fetches(
+    subjects: list[dict[str, Any]],
+    raws: dict[str, dict[str, Any]],
+    *,
+    force: bool = False,
+    retry_partial: bool = False,
+) -> list[tuple[dict[str, Any], dict[str, Any], bool]]:
+    """``(subject, raw, is_retry)`` for every LEI network pass 2 should fetch.
+
+    A successful lookup with no network yet is always fetched; ``force``
+    refetches every one; ``retry_partial`` refetches those whose network is
+    partial or errored (:func:`subsidiaries_partial`) and leaves complete
+    ones alone. A failed or missing lookup is pass 1's business.
+    """
+    out: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
+    for s in subjects:
+        if s["kind"] != "lei":
+            continue
+        raw = raws.get(s["key"])
+        if not raw or raw.get("status") != "done":
+            continue
+        if force or "subsidiaries" not in raw:
+            out.append((s, raw, False))
+        elif retry_partial and subsidiaries_partial(raw)[0]:
+            out.append((s, raw, True))
+    return out
 
 
 def _write_json(path: Path, obj: Any) -> None:
@@ -498,6 +571,7 @@ def assemble(subjects: list[dict[str, Any]], raws: dict[str, dict[str, Any]]) ->
     sig_seen: set[str] = set()
     sources: set[str] = set()
     notices: dict[str, dict[str, Any]] = {}
+    networks = {"fetched": 0, "partial": 0, "errored": 0, "children_total": 0}
     # LEI subjects first: a register subject anchored on an LEI stitches its
     # record onto the GLEIF node, so that node's entity statement must already
     # be in the bundle when the register's relationships reference it (BODS
@@ -545,8 +619,15 @@ def assemble(subjects: list[dict[str, Any]], raws: dict[str, dict[str, Any]]) ->
         for n in raw.get("license_notices") or []:
             notices.setdefault(json.dumps(n, sort_keys=True, default=str), n)
         degraded = raw.get("degraded_sources") or []
-        row["degraded"] = bool(degraded)
-        row["degraded_checks"] = sorted({f"{d.get('check')}:{d.get('reason')}" for d in degraded})
+        degraded_checks = {f"{d.get('check')}:{d.get('reason')}" for d in degraded}
+        # A partial network is a check that did not fully run: without the
+        # flag, "0 children" reads as "GLEIF lists none" (HSBC and Deutsche
+        # Bank in the first keyed run, 5 Oct 2026).
+        partial, note = subsidiaries_partial(raw)
+        if partial:
+            degraded_checks.add("subsidiaries:partial")
+        row["degraded"] = bool(degraded) or partial
+        row["degraded_checks"] = sorted(degraded_checks)
         if raw.get("row"):
             r = raw["row"]
             row.update({
@@ -572,6 +653,14 @@ def assemble(subjects: list[dict[str, Any]], raws: dict[str, dict[str, Any]]) ->
         if sub:
             row["subsidiary_statements"] = sub.get("statements", 0)
             row["subsidiary_children"] = sub.get("children", 0)
+            row["subsidiaries_partial"] = partial
+            row["subsidiaries_note"] = note
+            networks["fetched"] += 1
+            networks["children_total"] += int(sub.get("children") or 0)
+            if sub.get("error"):
+                networks["errored"] += 1
+            elif partial:
+                networks["partial"] += 1
         rows.append(row)
 
     counts: Counter[str] = Counter(st.get("recordType") or "?" for st in statements)
@@ -586,6 +675,7 @@ def assemble(subjects: list[dict[str, Any]], raws: dict[str, dict[str, Any]]) ->
         "node_counts": dict(counts),
         "subject_status": dict(status_counts),
         "degraded_subjects": sum(1 for r in rows if r.get("degraded")),
+        "networks": networks,
     }
 
 
@@ -705,7 +795,8 @@ def write_release(
     cols = [
         "key", "kind", "lei", "scheme", "id", "name", "class", "status", "legal_name",
         "jurisdiction", "register_status", "verdict", "risk_codes", "context_codes",
-        "statements", "subsidiary_children", "subsidiary_statements", "sources_with_data",
+        "statements", "subsidiary_children", "subsidiary_statements", "subsidiaries_partial",
+        "subsidiaries_note", "sources_with_data",
         "degraded", "degraded_checks", "reason",
     ]
     with subjects_path.open("w", newline="", encoding="utf-8") as fh:
@@ -754,6 +845,12 @@ def write_release(
             "by_kind": dict(Counter(r["kind"] for r in rows)),
             "by_status": assembled["subject_status"],
             "degraded": assembled["degraded_subjects"],
+            "networks": assembled["networks"],
+            "partial_networks": [
+                {"key": r["key"], "note": r.get("subsidiaries_note")}
+                for r in rows
+                if r.get("subsidiaries_partial")
+            ],
             "failed": [
                 {"key": r["key"], "reason": r.get("reason")}
                 for r in rows
@@ -773,7 +870,9 @@ def write_release(
         "note": (
             "A subject with status failed or missing was NOT checked and contributes no "
             "statements; one with degraded=true had a screening check that did not fully run "
-            "(see degraded_checks in the subjects file). Neither is a clean result. Register "
+            "(see degraded_checks in the subjects file). Neither is a clean result. A "
+            "subsidiaries_partial=true row did not obtain its whole GLEIF subsidiary network, "
+            "so its subsidiary_children is a floor, not a count. Register "
             "subjects (GB-COH) carry the register's record and the sanctions/PEP name screen "
             "over it, not the full source fan-out an LEI subject gets."
         ),
@@ -824,6 +923,14 @@ def release_notes(manifest: dict[str, Any], licensing: Any) -> str:
         f"skipped: {m.get('seed_skipped')}.",
         f"- Subject status: {subj['by_status']}; {subj['degraded']} with at least one check "
         "that did not fully run.",
+        f"- GLEIF subsidiary networks: {subj['networks']['fetched']} fetched, "
+        f"{subj['networks']['children_total']:,} children; "
+        f"{subj['networks']['partial']} partial and {subj['networks']['errored']} errored"
+        + (
+            " (" + ", ".join(p["key"] for p in subj["partial_networks"]) + ")."
+            if subj["partial_networks"]
+            else "."
+        ),
         f"- {m['bods_statement_count']:,} BODS statements ({m['node_counts']}); "
         f"{m['duplicate_statements_collapsed']} duplicates collapsed across subjects.",
         f"- {m['signal_count']} signals: {m['signal_codes']}.",
@@ -880,6 +987,8 @@ def cmd_build(args: argparse.Namespace) -> int:
                 register_pause=args.register_pause, retries=args.retries,
                 retry_wait=args.retry_wait, force=args.force,
                 retry_degraded=args.retry_degraded, skip_subsidiaries=args.skip_subsidiaries,
+                retry_subsidiaries=args.retry_subsidiaries,
+                subsidiary_concurrency=args.subsidiary_concurrency,
             )
         )
     raws = _load_raw(out, subjects)
@@ -947,7 +1056,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     b.add_argument(
         "--retry-degraded", action="store_true",
-        help="refetch cached subjects that failed or degraded",
+        help=(
+            "refetch cached subjects that failed or degraded, and every partial or errored "
+            "subsidiary network"
+        ),
+    )
+    b.add_argument(
+        "--retry-subsidiaries", action="store_true",
+        help="refetch only the cached subsidiary networks that came back partial or errored",
+    )
+    b.add_argument(
+        "--subsidiary-concurrency", type=int, default=1,
+        help=(
+            "direct-parent calls in flight inside one subsidiary network (default 1; the "
+            "Subsidiaries tab uses 4) — lower keeps a large network under the GLEIF throttle"
+        ),
     )
     b.add_argument("--assemble-only", action="store_true", help="skip fetching; assemble from raw/")
     b.add_argument("--stamp", default=None, help="release stamp (default: today, YYYY-MM-DD)")

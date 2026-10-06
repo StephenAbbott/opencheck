@@ -286,4 +286,6 @@ def test_intermediate_layers_evidence_is_preferred_and_layers_is_the_fallback() 
 def test_verdict_template_was_bumped_for_the_layer_wording() -> None:
     from opencheck.verdict import VERDICT_TEMPLATE
 
-    assert VERDICT_TEMPLATE == 4
+    # 4 = Phase 272 (intermediate layers); 5 = Phase 293 (name-only
+    # offshore-leaks person matches are leads, not findings).
+    assert VERDICT_TEMPLATE >= 4

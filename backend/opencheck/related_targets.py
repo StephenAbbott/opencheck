@@ -244,6 +244,40 @@ def select(
     return out
 
 
+def officer_only_entity_ids(bods: list[dict[str, Any]]) -> set[str]:
+    """statementIds of **corporate officers**: entities that are the interested
+    party of at least one relationship, and whose every relationship as
+    interested party carries only officer interests (board member, chair,
+    senior managing official) — none of ownership or control.
+
+    Phase 293. A company sitting on a board — the Belize IBCs that are the
+    designated members of an Azerbaijani Laundromat LLP — is named by the
+    register for its role, not for anything that would distinguish it, and its
+    name is usually generic ("CORPORATE SOLUTIONS LIMITED"). The screens use
+    this to require a corroborating country before such a match counts for
+    more than ``low`` (Stephen, 6 Oct 2026). Ended relationships count too: a
+    former corporate director is still only an officer.
+    """
+    resolve = resolver(bods)
+    entities = {_statement_id(s) for s in bods if _stmt_kind(s) == "entity"}
+    officer: set[str] = set()
+    other: set[str] = set()
+    for stmt in bods:
+        if _stmt_kind(stmt) != "relationship":
+            continue
+        _subj, ip, _ = _relationship_endpoints(stmt, resolve)
+        if not ip or ip not in entities:
+            continue
+        types = {
+            i.get("type") for i in _interests(stmt) if isinstance(i, dict)
+        }
+        if types and types <= _ROLE_INTERESTS:
+            officer.add(ip)
+        else:
+            other.add(ip)
+    return officer - other
+
+
 def attach_to_party(signals: list[Any], screened: list[dict[str, Any]]) -> list[Any]:
     """Attach each signal a representative earned to its whole party.
 
@@ -445,6 +479,10 @@ def _representative(members: list[dict[str, Any]]) -> dict[str, Any]:
                 sorted(pooled) if key == "countries" else pooled
             )
     rep["former"] = all(bool(m.get("former")) for m in members)
+    # Phase 293: a party is a corporate officer only when every statement of
+    # it is — one source that records it as an owner makes it an owner.
+    if "officer_entity" in rep:
+        rep["officer_entity"] = all(bool(m.get("officer_entity")) for m in members)
     rep["statement_ids"] = [m["statement_id"] for m in members]
     return rep
 

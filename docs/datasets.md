@@ -70,6 +70,28 @@ What the build does, and what the bundle therefore is:
   artefacts without fetching. Register hops run one at a time with
   `--register-pause` (default 3 s) because Companies House allows 600 calls per
   five minutes per key and a hop costs about four plus its PSC walk.
+- **Partial subsidiary networks are named, not hidden (Phase 293).** The first
+  keyed release showed HSBC Holdings and Deutsche Bank with 0 subsidiary children
+  and nothing said why (one a pipeline bug, Phase 289; one the GLEIF throttle). The
+  subjects table now carries `subsidiaries_partial` and `subsidiaries_note`: `true`
+  when GLEIF refused the direct or the ultimate children list or the fetch errored,
+  with the error or the list that was refused. A `0` in `subsidiary_children` with
+  `subsidiaries_partial=false` means GLEIF lists no children; with `true` it means
+  the network was not obtained, and the count is a floor. A partial network adds
+  `subsidiaries:partial` to `degraded_checks` and makes the row `degraded`, so the
+  manifest's `degraded` count includes it; the manifest also carries
+  `subjects.networks` (`fetched`, `partial`, `errored`, `children_total`) and
+  `subjects.partial_networks`, and the release notes name them. A list the Golden
+  Copy snapshot stood in for counts as obtained (its rows are real; they are not
+  live).
+- `--retry-subsidiaries` refetches only the cached networks that came back partial
+  or errored, logged as `[subsidiaries retry i/n]`, keeping the statements an
+  earlier partial fetch added; `--retry-degraded` includes them too. Inside a
+  network the per-child direct-parent calls run one at a time
+  (`--subsidiary-concurrency 1`; the Subsidiaries tab keeps four), because the
+  throttle's bounded wait is what turns a large network into a partial one. After
+  a run, `build … --retry-subsidiaries` and re-reading `manifest.json` should show
+  `partial: 0`, or name the networks that are still partial.
 - Work started by the script has no HTTP client, so it is never charged to the
   Phase 234 lookup budget; the process-wide GLEIF throttle and every adapter's
   outbound-rate scope still apply, and a capped register degrades rather than fails.

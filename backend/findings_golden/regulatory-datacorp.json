@@ -2,7 +2,7 @@
   "lei": "894500LD30X1VN839203",
   "name": "Regulatory DataCorp Limited",
   "role": "anchor",
-  "why": "Phase 282 anchor: a small GB Moody's subsidiary. Until Phase 282 a former director, 'Mr. Robert Frederick Smith', matched Panama Papers officer 'Mr. Robert Frederick White' — the person name gate looked at similarity only, and 'Mr.' lifted the pair over it. OFFSHORE_LEAKS must stay absent. RELATED_EXPORT_RISK is the parent, Moody's Corporation, on OpenSanctions' copy of the Iran UANI Business Registry.",
+  "why": "Phase 282 anchor: a small GB Moody's subsidiary. Until Phase 282 a former director, 'Mr. Robert Frederick Smith', matched Panama Papers officer 'Mr. Robert Frederick White' — the person name gate looked at similarity only, and 'Mr.' lifted the pair over it. OFFSHORE_LEAKS must stay absent. RELATED_EXPORT_RISK is the parent, Moody's Corporation, on OpenSanctions' copy of the Iran UANI Business Registry. Companies House publishes no LEIs and GLEIF records no OpenCorporates id for it, so no source but GLEIF carries its LEI (floor lowered to 0 in Phase 293, 6 Oct 2026).",
   "example_card": false,
   "no_risk": false,
   "risk": {
@@ -27,6 +27,6 @@
     "companies_house"
   ],
   "liveness": {},
-  "lei_confirmed_min": 1,
+  "lei_confirmed_min": 0,
   "intermediate_layers_min": null
 }
