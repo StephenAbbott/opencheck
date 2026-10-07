@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 300** — The watchlist treats the register identifier, successor names, address countries, category and conformity flag as material GLEIF fields, and upgrades a baseline that predates a field instead of alerting on it.
+**Latest: Phase 301** — The watchlist treats GLEIF's Legal Entity Events — a liquidation, dissolution or merger opened or completed — as material changes, and re-reads every watch once when the GLEIF mirror is rebuilt.
 
 → [Full development history](docs/status.md)
 
