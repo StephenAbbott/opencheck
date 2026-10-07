@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 302** — A watched company now hears when a direct subsidiary joins or leaves its group, and the monthly GLEIF mirror rebuild swaps its release asset in without ever deleting the old one first.
+**Latest: Phase 303** — A GLEIF-triggered watchlist entry now carries GLEIF's own field-by-field modification log for the record, and each watched company shows what that log recorded in the 30 days before it was watched.
 
 → [Full development history](docs/status.md)
 
