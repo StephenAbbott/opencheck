@@ -1811,7 +1811,18 @@ Things that will be re-derived otherwise:
 - **`GLEIF_MATERIAL_FIELDS` deliberately omits `NextRenewalDate` and
   `LastUpdateDate`.** Most of a day's 16,000 delta rows are renewal churn;
   the digest of the material fields is what filters it. Adding either
-  column re-runs every watched LEI once a year for nothing.
+  column re-runs every watched LEI once a year for nothing. Address lines,
+  managing LOU and validation sources stay out for the same reason; the
+  address *countries*, the register identifier, successors (with names),
+  category and conformity flag are in (Phase 300).
+- **Adding a material field needs the baseline-shape rule, not a migration.**
+  `diff_gleif_facts` compares only fields both sides carry, and
+  `on_gleif_delta` digests the new facts projected onto the baseline's keys
+  (`facts_on_baseline_shape`); a churn row whose baseline predates the field
+  is upgraded in place (`upgrade_facts`, `gleif_rebaselined`) with no entry.
+  Widening the set must never write "— → value" entries for every watched
+  LEI. Keep `FIELD_WORDS` in `routers/watch.py` and `lib/watchlist.ts` in
+  step with the tuple — a test pins the backend one.
 - **Absence is a finding only when the producer answered.** `diff_snapshots`
   emits `signal_unchecked` (not `signal_retired`) when the source that
   produced a code is in `degraded_sources`, and `coverage_unchecked` when

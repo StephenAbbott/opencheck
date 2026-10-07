@@ -27,11 +27,39 @@ nothing against the throttled window. After each applied delta,
 `watchlist.on_gleif_delta`, which intersects them with the watched set. A
 watched LEI in the delta is read back from the mirror and its **material**
 fields digested: legal name, entity status, LEI registration status,
-jurisdiction, legal form, successor, direct and ultimate parent, the two
-reporting exceptions, creation and expiration. `NextRenewalDate` and
+jurisdiction, legal form, successors, direct and ultimate parent, the two
+reporting exceptions, creation and expiration — and, since Phase 300, the
+register identifier (`registered_at`, `registered_as`, `validated_at`), the
+legal and headquarters address *countries*, entity category and
+sub-category, and the policy conformity flag. `NextRenewalDate` and
 `LastUpdateDate` are deliberately not in that set — a row whose only change
 is one of those is renewal churn, and it changes no digest and queues
 nothing. Only a changed digest queues a re-run.
+
+**Why those nine (Phase 300).** GLEIF's own "what changed" tooling — the
+7 Oct 2026 *Metric in Motion* post and its DataAlerts notebook — compares
+every column of a delta row against the Golden Copy, and reading the 7 Oct
+LastDay delta (29,665 rows) with that lens showed what the thirteen-field
+set was treating as churn. The register number is the key every
+identifier-dispatched adapter hangs off, so a change to it changes every
+downstream fetch. `successors` carries the names GLEIF publishes without an
+LEI (36 of 61 M&A rows that day had a `SuccessorEntityName` and no
+`SuccessorLEI`); it reads as a list of `LEI — name` / `name` labels. The
+address countries catch a headquarters moving jurisdiction; nothing below
+country level joins, because an LOU re-keying a care-of address on renewal
+(Birtley's annual Wimborne/Cranleigh ping-pong in GLEIF's field-modification
+log) is exactly the noise the filter exists for. Managing LOU, validation
+sources, other names and address lines stay out.
+
+**A baseline that predates a field is not a change.** `diff_gleif_facts`
+compares only the fields both sides carry, and `on_gleif_delta` digests the
+new facts *projected onto the baseline's keys*. A watch stored under the
+thirteen-field set that a churn-only delta names is upgraded to the current
+shape in place (`WatchlistStore.upgrade_facts`, counted as
+`gleif_rebaselined` on `/watchstats`) — no re-run, no entry, and
+`last_checked_at` untouched, because the company did not change; OpenCheck's
+field set did. The same reasoning as `verdict_template` and `signal_rules`
+on the lookup snapshot, applied to Tier 1's own facts.
 
 **Tier 2 — OpenSanctions.** They publish an entity-level delta per version:
 `https://data.opensanctions.org/artifacts/default/<version>/entities.delta.json`,

@@ -855,3 +855,150 @@ def test_an_ordinary_code_disappearing_is_still_retired() -> None:
     before = {"signals": [{"code": "NOMINEE", "source_id": "companies_house", "kind": "risk"}]}
     changes = diff_snapshots(before, {"signals": []})
     assert {"kind": "signal_retired", "code": "NOMINEE", "sources": ["companies_house"]} in changes
+
+
+# ---- Phase 300: the widened material set and the baseline-shape rule --------
+
+
+def test_gleif_facts_carry_the_register_identifier_countries_and_classification(env: Path) -> None:
+    """Phase 300: the register identifier, both address countries, category and
+    conformity flag are read off the detail the mirror already keeps."""
+    from tests.test_gleif_mirror_store import ORPHAN, TOP
+
+    mirror = ep.get_store()
+    assert mirror is not None
+    facts = wl.gleif_facts(mirror, EASY)
+    assert facts is not None
+    assert facts["registered_at"] == "RA000685"
+    assert facts["registered_as"] == "007132601000"
+    assert facts["validated_at"] == "RA000685"
+    assert facts["legal_address_country"] == "GR" and facts["hq_address_country"] == "GR"
+    assert facts["category"] == "GENERAL"
+    assert facts["conformity_flag"] == "CONFORMING"
+    assert facts["successors"] is None
+    assert "successor_lei" not in facts and "next_renewal_date" not in facts
+    # A successor GLEIF names with an LEI reads "LEI — name".
+    orphan = wl.gleif_facts(mirror, ORPHAN)
+    assert orphan is not None and orphan["successors"] == [f"{TOP} — Mirror Top plc"]
+    assert set(wl.GLEIF_MATERIAL_FIELDS) <= set(facts)
+
+
+def test_a_register_number_change_is_material(client: TestClient, env: Path, tmp_path: Path) -> None:
+    """The register number is the key every identifier-dispatched adapter
+    hangs off; before Phase 300 a change to it read as churn."""
+    _watch(client, EASY)
+    store = wl.get_store()
+    assert store is not None
+    publish = _delta(tmp_path, [_easy_row(**{
+        "Entity.RegistrationAuthority.RegistrationAuthorityEntityID": "999999999000",
+    })])
+    assert mr.refresh_once(publish=publish) == "applied"
+    pending = store.take_pending(10)
+    assert [p["lei"] for p in pending] == [EASY]
+    assert pending[0]["trigger"]["fields"] == ["registered_as"]
+    assert wl.state()["gleif_churn"] == 0
+
+
+def test_a_successor_named_without_an_lei_is_material(client: TestClient, env: Path, tmp_path: Path) -> None:
+    """36 of 61 M&A rows in the 7 Oct 2026 LastDay delta named their successor
+    by name only; ``successor_lei`` could not see them."""
+    _watch(client, EASY)
+    store = wl.get_store()
+    assert store is not None
+    publish = _delta(tmp_path, [_easy_row(**{
+        "Entity.SuccessorEntity.1.SuccessorEntityName": "EASY POWER HOLDINGS A.E.",
+    })])
+    assert mr.refresh_once(publish=publish) == "applied"
+    pending = store.take_pending(10)
+    assert [p["lei"] for p in pending] == [EASY]
+    assert pending[0]["trigger"]["fields"] == ["successors"]
+    facts = wl.gleif_facts(ep.get_store(), EASY)  # type: ignore[arg-type]
+    assert facts is not None and facts["successors"] == ["EASY POWER HOLDINGS A.E."]
+
+
+def test_an_address_line_change_is_churn_but_a_country_move_is_material(client: TestClient, env: Path, tmp_path: Path) -> None:
+    """Street-level address changes (an LOU re-keying a care-of address on
+    renewal) must trigger nothing; the headquarters moving country must."""
+    _watch(client, EASY)
+    store = wl.get_store()
+    assert store is not None
+    street = _delta(tmp_path, [_easy_row(**{
+        "Entity.HeadquartersAddress.FirstAddressLine": "1 Cedar Office Park",
+        "Entity.HeadquartersAddress.City": "PIRAEUS",
+        "Entity.HeadquartersAddress.PostalCode": "18531",
+    })])
+    assert mr.refresh_once(publish=street) == "applied"
+    assert store.pending_count() == 0
+    assert wl.state()["gleif_churn"] == 1
+    country = _delta(tmp_path, [_easy_row(**{"Entity.HeadquartersAddress.Country": "CY"})])
+    country["publish_date"] = "2026-09-08 08:00:00"
+    assert mr.refresh_once(publish=country) == "applied"
+    pending = store.take_pending(10)
+    assert [p["lei"] for p in pending] == [EASY]
+    assert pending[0]["trigger"]["fields"] == ["hq_address_country"]
+
+
+def test_diff_compares_only_the_fields_both_sides_carry() -> None:
+    """A baseline from before a field was material has no value for it;
+    'OpenCheck started watching this field' is not a company change."""
+    before = {f: None for f in wl.GLEIF_MATERIAL_FIELDS if f not in ("registered_as", "hq_address_country")}
+    before["legal_name"] = "A"
+    after = {f: None for f in wl.GLEIF_MATERIAL_FIELDS} | {"legal_name": "A", "registered_as": "123", "hq_address_country": "GB"}
+    assert wl.diff_gleif_facts(before, after) == []
+    assert wl.facts_on_baseline_shape(after, before) == before
+    after["legal_name"] = "B"
+    assert wl.diff_gleif_facts(before, after) == [{"kind": "gleif_field", "field": "legal_name", "old": "A", "new": "B"}]
+
+
+def test_a_baseline_from_before_phase_300_is_upgraded_silently(client: TestClient, env: Path, tmp_path: Path) -> None:
+    """A production watch stored under the thirteen-field set, named by a
+    churn-only delta: no re-run, no entry, and the baseline now carries the
+    current fields so the next delta compares like with like."""
+    _watch(client, EASY)
+    store = wl.get_store()
+    assert store is not None
+    # Rewrite the stored baseline to the pre-Phase-300 shape.
+    with sqlite3.connect(env.parent / "watchlist.sqlite") as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT gleif_facts_json, last_checked_at FROM watches WHERE lei = ?", (EASY,)).fetchone()
+        old_facts = {
+            k: v for k, v in json.loads(row["gleif_facts_json"]).items()
+            if k not in ("registered_at", "registered_as", "validated_at", "legal_address_country",
+                         "hq_address_country", "category", "sub_category", "conformity_flag", "successors")
+        }
+        old_facts["successor_lei"] = None
+        conn.execute(
+            "UPDATE watches SET gleif_facts_json = ?, gleif_digest = ? WHERE lei = ?",
+            (json.dumps(old_facts), wl.digest(old_facts), EASY),
+        )
+        checked_before = row["last_checked_at"]
+    publish = _delta(tmp_path, [_easy_row()])
+    assert mr.refresh_once(publish=publish) == "applied"
+    assert store.pending_count() == 0
+    s = wl.state()
+    assert s["gleif_touched"] == 1 and s["gleif_churn"] == 1 and s["gleif_queued"] == 0
+    assert s["gleif_rebaselined"] == 1
+    watch = store.rows_for_lei(EASY)[0]
+    assert watch["gleif_facts"]["registered_as"] == "007132601000"
+    assert "successor_lei" not in watch["gleif_facts"]
+    assert watch["last_checked_at"] == checked_before  # an upgrade is not a check
+    # …and a real change against the upgraded baseline is still seen.
+    later = _delta(tmp_path, [_easy_row(**{"Registration.RegistrationStatus": "LAPSED"})])
+    later["publish_date"] = "2026-09-08 08:00:00"
+    assert mr.refresh_once(publish=later) == "applied"
+    assert [p["trigger"]["fields"] for p in store.take_pending(10)] == [["registration_status"]]
+
+
+def test_feed_words_the_new_fields_and_lists() -> None:
+    from opencheck.routers import watch as rw
+
+    assert rw.field_words("hq_address_country") == "headquarters country"
+    assert rw.field_words("registered_as") == "register number"
+    assert rw.field_words(None) == "a field"
+    assert rw.field_words("something_else") == "something else"
+    sentence = rw._describe({
+        "kind": "gleif_field", "field": "successors",
+        "old": None, "new": ["2138000000000000T178 — Mirror Top plc", "Other Successor Ltd"],
+    })
+    assert sentence == "GLEIF successor entities: — → 2138000000000000T178 — Mirror Top plc; Other Successor Ltd."
+    assert set(rw.FIELD_WORDS) == set(wl.GLEIF_MATERIAL_FIELDS)

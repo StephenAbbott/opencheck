@@ -353,13 +353,54 @@ TIER_SENTENCE = {
 }
 
 
+#: How the feed names a material GLEIF field. The web page carries the same
+#: words in ``lib/watchlist.ts`` (``FIELD_WORDS``); keep the two in step.
+FIELD_WORDS: dict[str, str] = {
+    "legal_name": "legal name",
+    "entity_status": "entity status",
+    "registration_status": "LEI registration status",
+    "jurisdiction": "jurisdiction",
+    "legal_form": "legal form",
+    "successors": "successor entities",
+    "direct_parent_lei": "direct parent",
+    "ultimate_parent_lei": "ultimate parent",
+    "direct_exception": "direct-parent reporting exception",
+    "ultimate_exception": "ultimate-parent reporting exception",
+    "creation_date": "entity creation date",
+    "expiration_date": "entity expiration date",
+    "expiration_reason": "entity expiration reason",
+    "registered_at": "registration authority",
+    "registered_as": "register number",
+    "validated_at": "validation authority",
+    "legal_address_country": "legal address country",
+    "hq_address_country": "headquarters country",
+    "category": "entity category",
+    "sub_category": "entity sub-category",
+    "conformity_flag": "policy conformity flag",
+}
+
+
+def field_words(field: str | None) -> str:
+    if not field:
+        return "a field"
+    return FIELD_WORDS.get(field, field.replace("_", " "))
+
+
+def _value_words(value: Any) -> str:
+    """A GLEIF value for a sentence: a list (successors) joined with
+    semicolons, an absence as an em dash."""
+    if isinstance(value, list):
+        return "; ".join(str(v) for v in value) or "—"
+    return str(value) if value not in (None, "") else "—"
+
+
 def _describe(change: dict[str, Any]) -> str:
     """One sentence per change, in the feed's own words. The web page has
     its own wording (``lib/watchlist.ts``); both read the same kinds."""
     k = change.get("kind")
     old, new = change.get("old"), change.get("new")
     if k == "gleif_field":
-        return f"GLEIF {change.get('field', '').replace('_', ' ')}: {old or '—'} → {new or '—'}."
+        return f"GLEIF {field_words(change.get('field'))}: {_value_words(old)} → {_value_words(new)}."
     if k == "register_status":
         o = (old or {}).get("liveness") if isinstance(old, dict) else old
         n = (new or {}).get("liveness") if isinstance(new, dict) else new
@@ -429,7 +470,7 @@ def _entry_content(entry: dict[str, Any]) -> str:
     if entry["tier"] == wl.TIER_GLEIF and trig.get("publish"):
         lines[0] = f"GLEIF published a change to this record in the {trig['publish']} Golden Copy delta."
         if trig.get("fields"):
-            lines.append("Fields that changed: " + ", ".join(f.replace("_", " ") for f in trig["fields"]) + ".")
+            lines.append("Fields that changed: " + ", ".join(field_words(f) for f in trig["fields"]) + ".")
     if entry["tier"] == wl.TIER_OPENSANCTIONS:
         lines[0] = (
             f"OpenSanctions version {trig.get('version')} {str(trig.get('op') or 'changed').lower()}ed an entity "
