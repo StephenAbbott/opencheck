@@ -1280,6 +1280,49 @@ def finding_eiti_soe(bundle: dict[str, Any]) -> str | None:
 
 
 
+
+# --------------------------------------------------------------------------
+# Zambia EITI data portal
+# --------------------------------------------------------------------------
+
+
+def finding_eiti_zambia(bundle: dict[str, Any]) -> str | None:
+    """One sentence for the Zambia EITI portal.
+
+    A WARMA water-permit offence listing leads when there is one: it is the
+    only thing here that can change a decision, and it is stated as the list
+    states it ("listed by WARMA: …", its wording verbatim), never as a judgement (rule 7). The
+    most recent year of ZRA tax payments comes next, as a **count of payment
+    records** — the portal's tables are summed by OpenCheck, and rule 4 keeps
+    OpenCheck's arithmetic off this sentence (the totals are on the card,
+    labelled). The mining-rights count comes last.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+    clauses: list[str | None] = []
+
+    offences = [o for o in bundle.get("water_offences") or [] if (o.get("offence") or "").strip()]
+    if offences:
+        # WARMA's own wording, verbatim (rule 5).
+        clauses.append(f"listed by WARMA: {offences[0]['offence']}")
+
+    tax = bundle.get("zra_tax") or []
+    if tax:
+        latest = tax[0]
+        n = int(latest.get("payments") or 0)
+        clauses.append(
+            f"{plural(n, 'tax payment')} recorded by the Zambia Revenue Authority in {latest['year']}"
+        )
+
+    licences = bundle.get("licences") or []
+    if licences:
+        clauses.append(f"{plural(len(licences), 'mining right')} in the cadastre")
+    elif tax:
+        clauses.append("no mining rights matched in the cadastre")
+
+    return clauses_to_sentence(clauses)
+
+
 # --------------------------------------------------------------------------
 # Hong Kong Companies Registry
 # --------------------------------------------------------------------------

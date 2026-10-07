@@ -1003,6 +1003,33 @@ def _bh_eiti_soe(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_eiti_zambia(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Zambia EITI portal card — the summary is an identifier fragment.
+
+    ``zm_tpin`` is asserted: the portal files it on every row it returns for
+    the company. The LEI is OpenCheck's name match and is not.
+    """
+    from ..findings import finding_eiti_zambia
+
+    tpins = r.get("tpins") or []
+    parts = [f"ZM-TPIN {tpins[0]}"] if tpins else ["Zambia EITI portal"]
+    tax = r.get("zra_tax") or []
+    if tax:
+        years = sorted({str(t.get("year")) for t in tax if t.get("year")})
+        parts.append(f"ZRA tax {years[0]}" + (f"–{years[-1]}" if len(years) > 1 else ""))
+    licences = r.get("licences") or []
+    if licences:
+        parts.append(f"{len(licences)} mining right{'s' if len(licences) != 1 else ''}")
+    return _hit(
+        "eiti_zambia", ctx.lei,
+        name=r.get("gleif_legal_name") or ctx.legal_name or ctx.lei,
+        summary=" · ".join(parts),
+        finding=finding_eiti_zambia(r),
+        identifiers=dict(r.get("identifiers") or {}),
+        raw=r,
+    )
+
+
 def _psc_filings_phrase(pscs: list[dict]) -> str:
     """Say "N PSC filings", plus "· M current" when some are not — shared by
     the cac_nigeria and eiti_bo cards so one report cannot count them two ways.

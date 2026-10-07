@@ -171,12 +171,16 @@ from .mappers.eiti import (  # noqa: F401  (re-exported, Phase 246)
     _EITI_MATCH_METHODS,
     _EITI_SCHEME_BY_COUNTRY,
     _EITI_SOE_URL,
+    _EITI_ZAMBIA_PORTAL,
     _eiti_assessment_latest_year,
     _eiti_assessment_lei_match,
     _norm_for_compare,
+    _zmw,
+    ZM_TPIN_SCHEME,
     map_eiti,
     map_eiti_assessment,
     map_eiti_soe,
+    map_eiti_zambia,
 )
 from .mappers.wikirate import (  # noqa: F401  (re-exported, Phase 246)
     _WIKIRATE_IDENTIFIER_SCHEMES,

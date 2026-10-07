@@ -31,6 +31,13 @@ export const ESG_SOURCE_META: Record<string, EsgSourceMeta> = {
     href: "https://eiti-database.eiti.org/",
     licence: "EITI content-use policy, attribution",
   },
+  eiti_zambia: {
+    // Zambia's own EITI portal, not EITI International: named for the
+    // publisher so its tile is told apart from the two EITI tiles above.
+    org: "Zambia EITI portal",
+    href: "https://portal.zambiaeiti.org/",
+    licence: "ZEITI open data policy",
+  },
   wikirate: {
     org: "Wikirate",
     href: "https://wikirate.org/",

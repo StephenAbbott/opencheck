@@ -684,6 +684,7 @@ SOURCE_NAMES: dict[str, str] = {
     "ny_dos": "New York Department of State — Division of Corporations",
     "eiti_assessment": "EITI Company Assessment",
     "eiti_soe": "EITI State-Owned Enterprises Database",
+    "eiti_zambia": "Zambia EITI data portal (ZEITI)",
     "meip": "OECD-UNSD Multinational Enterprise Information Platform (MEIP)",
     "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
     "ares": "ARES — Czech Administrativní registr ekonomických subjektů",

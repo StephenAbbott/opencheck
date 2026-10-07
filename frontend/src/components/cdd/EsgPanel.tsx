@@ -8,6 +8,8 @@ import PanelSection from "../ui/PanelSection";
 import { Chip } from "../ui/Chip";
 import { EitiAssessmentCard } from "./EitiAssessmentCard";
 import { ESG_SOURCE_META } from "./esgSources";
+import { EitiZambiaCard } from "./EitiZambiaCard";
+import { zambiaTile, type EitiZambiaBundle } from "../../lib/eitiZambia";
 import { assessmentTile } from "../../lib/eitiAssessment";
 import type { EitiAssessmentBundle } from "../../lib/eitiAssessment";
 import type { PanelError, PanelId } from "../../lib/panelErrors";
@@ -839,6 +841,9 @@ function tileStats(hit: SourceHit): { stat: string; unit: string; sub: string } 
     // vanishing from a grid that is meant to show what each source published.
     return assessmentTile(hit.raw as unknown as EitiAssessmentBundle);
   }
+  if (hit.source_id === "eiti_zambia") {
+    return zambiaTile(hit.raw as unknown as EitiZambiaBundle);
+  }
   if (hit.source_id === "wikirate") {
     const raw = hit.raw as unknown as WikirateBundle;
     return {
@@ -1000,7 +1005,17 @@ export function EsgPanel({
                 EITI
                 <span className="sr-only"> (opens in new tab)</span>
               </a>{" "}
-              (open data, attribution) and{" "}
+              (open data, attribution), the{" "}
+              <a
+                href="https://portal.zambiaeiti.org/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-oo-esg-strong"
+              >
+                Zambia EITI portal
+                <span className="sr-only"> (opens in new tab)</span>
+              </a>{" "}
+              (ZEITI open data policy) and{" "}
               <a
                 href="https://wikirate.org/"
                 target="_blank"
@@ -1048,6 +1063,8 @@ export function EsgPanel({
                     onRecovered={onRecovered}
                     onOpenSubsidiaries={onOpenSubsidiaries}
                   />
+                ) : hit.source_id === "eiti_zambia" ? (
+                  <EitiZambiaCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
                 ) : hit.source_id === "wikirate" ? (
                   <WikirateCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
                 ) : (

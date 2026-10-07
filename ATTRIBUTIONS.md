@@ -486,6 +486,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** subject LEI matched against the committed pooled index
 - **Category:** CDD — register-published beneficial ownership (BODS v0.4) for extractive companies; asserts only register-published identifiers (`am_regnum`, `am_tin`, `ng_cac_rc`, `cd_nif`), never the derived LEI
 
+## Zambia EITI data portal
+
+- **Data:** Zambia Revenue Authority (ZRA) tax receipts by year and tax type (2022–2024), the EITI reconciliation payment report (2021–2023), company employment (2022–2023), the mining-rights cadastre (2023 – Q2 2025) and the Water Resources Management Authority (WARMA) water-permit offences list, from the Zambia EITI (ZEITI) portal at <https://portal.zambiaeiti.org/> (keyless JSON API at `/api/public/v1`). Every row is keyed on the ZRA Taxpayer Identification Number (TPIN), while GLEIF files the PACRA registration number for Zambian LEIs, so `backend/scripts/build_eiti_zambia_index.py` matches each Zambian LEI to the ZRA tables by normalised legal name to find its TPIN, then joins every other table on the TPIN. Output: the committed, LEI-keyed `backend/opencheck/data/eiti_zambia_index.json.gz` (12 of 69 Zambian LEIs, 7 October 2026). ZRA receipts are taken one table per payment year — the portal's tables overlap — and never summed across tables.
+- **License:** ZEITI Open Data Policy (2016) — <https://eiti.org/sites/default/files/attachments/zambia_open_data_policy.pdf>. The policy adopts the Open Definition (data "freely used, modified, and shared by anyone for any purpose") but names no specific licence; the 2026 EITI Validation scores Zambia "Very good" on Requirement 7.2 and notes the policy permits unrestricted publication and use.
+- **Attribution:** "Zambia Extractive Industries Transparency Initiative (ZEITI) — portal.zambiaeiti.org"; underlying data from the Zambia Revenue Authority, the Ministry of Mines and Minerals Development and WARMA
+- **Entry point:** subject LEI matched against the committed index
+- **Category:** ESG — payments, employment, mining rights and water-permit offences; asserts the portal-published TPIN (`zm_tpin`, BODS scheme `ZM-TPIN`), never the name-matched LEI
+
 ## Wikirate
 
 - **Data:** Open, community-researched corporate ESG metric answers (environment, human rights, supply chains, governance) from metric designers such as the World Benchmarking Alliance, Net Zero Tracker, Fashion Revolution and the Business & Human Rights Resource Centre. OpenCheck shows the total number of data points plus a sample of the most recent researched answers (sorted most-recent-year-first) and links out to wikirate.org for the full record. Wikirate Company cards independently publish LEI, Wikidata QID, OpenCorporates ID, UK company number, SEC CIK, ABN/ACN and ISIN identifiers, making Wikirate a strong cross-source corroborator. Wikirate is a GODIN member.
