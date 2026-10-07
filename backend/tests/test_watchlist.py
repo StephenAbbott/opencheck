@@ -14,6 +14,7 @@ seam the batch tests use, so no adapter is dispatched.
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 import sqlite3
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
@@ -44,6 +45,9 @@ from tests.test_gleif_mirror_store import (
 from tests.test_mirror_refresh import NEW_LEI, WATERMARK, _build_mirror
 
 ATOM = "{http://www.w3.org/2005/Atom}"
+
+#: (lei, since) for every GLEIF modification-log fetch the stub saw (Phase 303).
+GLEIF_LOG_CALLS: list[tuple[str, "datetime"]] = []
 
 
 def _with_check_digits(base18: str) -> str:
@@ -120,6 +124,18 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     mr.reset_for_tests()
     mirrorstats.reset_for_tests()
     wl.reset_for_tests()
+    # Phase 303: live is allowed here, so GLEIF's modification log would be
+    # fetched for real on every add and every GLEIF re-run. Stub it with an
+    # empty log; tests about the log override this.
+    from opencheck import gleif_log
+
+    GLEIF_LOG_CALLS.clear()
+
+    async def _no_log(lei: str, since: datetime) -> dict:
+        GLEIF_LOG_CALLS.append((lei, since))
+        return gleif_log.summarise([], since)
+
+    monkeypatch.setattr(gleif_log, "fetch_since", _no_log)
     yield db
     get_settings.cache_clear()
     ep.reset_store_for_tests()
@@ -1301,3 +1317,141 @@ def test_entries_name_the_subsidiaries_that_moved(env: Path) -> None:
     assert rw._entry_title(entry) == "Mirror Parent: direct subsidiaries changed"
     both = {**entry, "changes": [named, {"kind": "gleif_field", "field": "legal_name", "old": "A", "new": "B"}]}
     assert rw._entry_title(both) == "Mirror Parent: GLEIF record changed"
+
+
+# ---- Phase 303: GLEIF's own modification log ---------------------------------
+
+from opencheck import gleif_log as _gl  # noqa: E402
+
+
+def _log_lines(*dated: tuple[str, str, str, str]) -> list[dict]:
+    """(date, field, old, new) → raw API attribute dicts."""
+    return [
+        {"recordType": "LEI", "modificationType": "UPDATE", "date": f"{d}T00:00:00Z",
+         "field": f"/lei:LEIData/lei:LEIRecords/lei:LEIRecord/lei:{f}", "valueOld": o, "valueNew": n}
+        for d, f, o, n in dated
+    ]
+
+
+async def test_a_gleif_rerun_fetches_the_log_once_and_gives_each_list_its_share(
+    client: TestClient, env: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _flag_events(env)
+    a = _watch(client, EASY)["token"]
+    b = _watch(client, EASY)["token"]
+    store = wl.get_store()
+    assert store is not None
+    with sqlite3.connect(env.parent / "watchlist.sqlite") as conn:
+        conn.execute("UPDATE watches SET gleif_watermark = ? WHERE token_hash = ?", ("2026-09-20 00:00:00", wl.token_hash(b)))
+        conn.execute("UPDATE watches SET gleif_watermark = ? WHERE token_hash = ?", ("2026-09-07 16:00:00", wl.token_hash(a)))
+    raw = _log_lines(
+        ("2026-10-06", "Registration/lei:RegistrationStatus", "ISSUED", "LAPSED"),
+        ("2026-09-10", "Entity/lei:LegalName", "EASY POWER", "EASY POWER S.A."),
+        ("2026-09-07", "Entity/lei:LegalForm/lei:EntityLegalFormCode", "A", "B"),
+    )
+    calls: list[datetime] = []
+
+    async def _fetch(lei: str, since: datetime) -> dict:
+        calls.append(since)
+        return _gl.summarise(raw, since)
+
+    monkeypatch.setattr(_gl, "fetch_since", _fetch)
+    calls_before = wl.state()["gleif_log_calls"]
+    publish = _delta(tmp_path, [_easy_row(**_LIQ)])
+    assert mr.refresh_once(publish=publish) == "applied"
+    await wl.tick()
+    assert calls == [datetime(2026, 9, 7, 16, 0, tzinfo=UTC)]  # one call, the oldest baseline
+    assert wl.state()["gleif_log_calls"] == calls_before + 1
+    log_a = store.entries(wl.token_hash(a), limit=5)[0]["gleif_log"]
+    log_b = store.entries(wl.token_hash(b), limit=5)[0]["gleif_log"]
+    assert [i["date"] for i in log_a["items"]] == ["2026-10-06", "2026-09-10"]
+    assert [i["date"] for i in log_b["items"]] == ["2026-10-06"]
+    assert log_b["since"] == "2026-09-20T00:00:00Z"
+    feed = client.get(f"/watch/{a}.atom").text
+    assert "GLEIF&#x27;s own modification log since 2026-09-07:" in feed or "GLEIF's own modification log since 2026-09-07:" in feed
+    assert "2026-10-06: registration status ISSUED → LAPSED" in feed
+
+
+async def test_an_opensanctions_rerun_does_not_read_the_log(client: TestClient, env: Path) -> None:
+    _watch(client, EASY)
+    GLEIF_LOG_CALLS.clear()
+    out = await wl.rerun(EASY, wl.TIER_OPENSANCTIONS, {"tier": wl.TIER_OPENSANCTIONS, "version": "v2", "op": "MOD"})
+    assert out["entries"] == 1
+    assert GLEIF_LOG_CALLS == []
+    store = wl.get_store()
+    assert store is not None
+    assert store.entries(store.rows_for_lei(EASY, with_hash=True)[0]["token_hash"], limit=1)[0]["gleif_log"] is None
+
+
+def test_a_new_watch_keeps_the_30_days_before_it_once(client: TestClient, env: Path) -> None:
+    before = datetime.now(UTC)
+    added = _watch(client, EASY)
+    assert len(GLEIF_LOG_CALLS) == 1
+    lei, since = GLEIF_LOG_CALLS[0]
+    assert lei == EASY and 29.9 <= (before - since).total_seconds() / 86400 <= 30.1
+    assert added["watch"]["gleif_history"]["available"] is True
+    listed = client.get(f"/watch/{added['token']}").json()
+    assert listed["watches"][0]["gleif_history"]["since"][:10] == since.strftime("%Y-%m-%d")
+    # Re-adding the LEI refreshes the baseline but costs no second call.
+    _watch(client, EASY, added["token"])
+    assert len(GLEIF_LOG_CALLS) == 1
+
+
+def test_an_unreadable_log_never_blocks_a_watch(client: TestClient, env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _down(lei: str, since: datetime) -> dict:
+        return _gl.unavailable("GLEIF's API was rate-limited", since)
+
+    monkeypatch.setattr(_gl, "fetch_since", _down)
+    added = _watch(client, EASY)
+    history = client.get(f"/watch/{added['token']}").json()["watches"][0]["gleif_history"]
+    assert history["available"] is False and history["reason"] == "GLEIF's API was rate-limited"
+    assert wl.state()["gleif_log_unavailable"] >= 1
+
+
+def test_a_version_1_file_gains_the_columns_and_keeps_its_rows(tmp_path: Path) -> None:
+    from opencheck import sqlite_schema as ss
+
+    path = tmp_path / "watchlist.sqlite"
+    conn = sqlite3.connect(path)
+    ss.migrate(conn, path, wl.MIGRATIONS[:1])
+    conn.execute("INSERT INTO lists VALUES ('h', '2026-09-16T00:00:00Z', '2026-09-16T00:00:00Z')")
+    conn.execute(
+        "INSERT INTO watches (token_hash, lei, added_at) VALUES ('h', ?, '2026-09-16T00:00:00Z')", (EASY,)
+    )
+    conn.execute(
+        "INSERT INTO entries (token_hash, lei, created_at, tier, trigger_json, changes_json, checked_json, degraded_json) "
+        "VALUES ('h', ?, '2026-09-17T00:00:00Z', 'gleif', '{}', '[]', '[]', '[]')", (EASY,)
+    )
+    conn.commit()
+    conn.close()
+    store = wl.WatchlistStore(path, wl.Caps(10, 10))
+    assert store.schema_version == 2
+    assert store.watches("h")[0]["gleif_history"] is None
+    assert store.entries("h", limit=1)[0]["gleif_log"] is None
+    store.set_prewatch_log("h", EASY, _gl.unavailable("x"))
+    assert store.prewatch_log("h", EASY)["reason"] == "x"
+
+
+def test_the_feed_words_the_log() -> None:
+    from opencheck.routers import watch as rw
+
+    since = datetime(2026, 9, 1, tzinfo=UTC)
+    raw = _log_lines(*[(f"2026-09-{d:02d}", "Entity/lei:LegalName", f"N{d}", f"N{d + 1}") for d in range(2, 15)])
+    raw += [{"recordType": "LEI", "modificationType": "INITIAL", "date": "2026-09-30T00:00:00Z",
+             "field": "/lei:Entity/lei:LegalEntityEvents/lei:LegalEntityEvent/lei:LegalEntityEventType",
+             "valueOld": None, "valueNew": "LIQUIDATION"}]
+    lines = rw.gleif_log_lines(_gl.summarise(raw, since))
+    assert lines[0] == "GLEIF's own modification log since 2026-09-01:"
+    assert lines[1] == " - 2026-09-30: legal entity event type set to LIQUIDATION"
+    assert lines[2] == " - 2026-09-14: legal name N14 → N15"
+    assert lines[-1] == " - and 4 more." and len(lines) == 12
+    assert rw.gleif_log_lines(_gl.summarise([], since)) == [
+        "GLEIF's own modification log has no change to this record since 2026-09-01 other than renewal dates."
+    ]
+    assert rw.gleif_log_lines(_gl.unavailable("GLEIF's API was rate-limited", since)) == [
+        "GLEIF's own modification log could not be read since 2026-09-01: GLEIF's API was rate-limited."
+    ]
+    assert rw.gleif_log_lines(None) == []
+    assert rw.log_line_words({"date": "2026-09-30", "type": "DELETE", "label": "other name", "old": "X"}) == (
+        "2026-09-30: other name removed (was X)"
+    )

@@ -167,10 +167,10 @@ def test_a_backup_of_a_live_wal_file_restores_with_its_rows(configured: dict[str
     work = tmp_path / "work"
     work.mkdir()
     enc, version = bk.build_backup(src, work, PASS)
-    assert version == 1
+    assert version == len(wl.MIGRATIONS)  # 2 since Phase 303
     out = tmp_path / "restored" / "watchlist.sqlite"
     with enc.open("rb") as fh:
-        assert bk.restore(fh, out, PASS) == 1
+        assert bk.restore(fh, out, PASS) == len(wl.MIGRATIONS)
     restored = wl.WatchlistStore(out, wl.Caps(10, 10))
     assert restored.get_meta("in_the_wal") == "yes"
     assert restored.get_meta("opensanctions_version") == "20260928125339-kkd"
@@ -195,7 +195,9 @@ def test_run_once_backs_up_both_files_and_they_restore(configured: dict[str, Pat
     assert [r["action"] for r in results] == ["uploaded", "uploaded"]
     names = sorted(a["name"] for a in gh.assets.values())
     assert names[0].startswith("saved_reports-") and names[1].startswith("watchlist-")
-    assert all(a["label"].endswith("schema v1") for a in gh.assets.values())
+    labels = {a["name"].split("-")[0]: a["label"] for a in gh.assets.values()}
+    assert labels["saved_reports"].endswith("schema v1")
+    assert labels["watchlist"].endswith(f"schema v{len(wl.MIGRATIONS)}")  # 2 since Phase 303
     state = bk.state()
     assert state["files"]["watchlist"]["last_ok_at"] and state["files"]["saved_reports"]["schema_version"] == 1
 
@@ -273,7 +275,7 @@ def test_watchstats_reports_backups_without_the_repository(configured: dict[str,
 
     bk.run_once(client=FakeGitHub().client())
     body = TestClient(app).get("/watchstats").json()
-    assert body["backups"]["files"]["watchlist"]["schema_version"] == 1
+    assert body["backups"]["files"]["watchlist"]["schema_version"] == len(wl.MIGRATIONS)
     assert REPO not in json.dumps(body) and "tok" not in json.dumps(body["backups"])
 
 

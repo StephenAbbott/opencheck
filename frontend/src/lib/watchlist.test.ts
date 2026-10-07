@@ -14,6 +14,8 @@ import {
   describeChildren,
   describeEvents,
   fieldWords,
+  gleifLogLines,
+  logLineWords,
   entryHeadline,
   tierChip,
   tierSentence,
@@ -303,5 +305,42 @@ describe("describeChildren (Phase 302)", () => {
     expect(entryHeadline(entry({ changes }))).toBe("Vosper Ltd: direct subsidiaries changed");
     const mixed = [...changes, { kind: "gleif_field", field: "legal_name" }] as WatchEntry["changes"];
     expect(entryHeadline(entry({ changes: mixed }))).toBe("Vosper Ltd: GLEIF record changed");
+  });
+});
+
+describe("gleifLogLines (Phase 303)", () => {
+  const item = (date: string, label: string, old: string | null, nw: string | null, type = "UPDATE") => ({
+    date, record: "LEI", label, type, old, new: nw,
+  });
+
+  it("words the feed's lines, word for word", () => {
+    expect(logLineWords(item("2026-09-16", "registration status", "ISSUED", "LAPSED"))).toBe(
+      "2026-09-16: registration status ISSUED → LAPSED",
+    );
+    expect(logLineWords(item("2026-09-30", "legal entity event type", null, "LIQUIDATION", "INITIAL"))).toBe(
+      "2026-09-30: legal entity event type set to LIQUIDATION",
+    );
+    expect(logLineWords(item("2026-09-30", "other name", "X", null, "DELETE"))).toBe("2026-09-30: other name removed (was X)");
+  });
+
+  it("leads with the span, caps at ten lines and counts the rest", () => {
+    const items = Array.from({ length: 13 }, (_, i) => item(`2026-09-${String(14 - i).padStart(2, "0")}`, "legal name", "A", "B"));
+    const out = gleifLogLines({ available: true, since: "2026-09-01T00:00:00Z", items, more: 1 });
+    expect(out?.lead).toBe("GLEIF's own modification log since 2026-09-01:");
+    expect(out?.items.length).toBe(11);
+    expect(out?.items[10]).toBe("and 4 more.");
+  });
+
+  it("says when GLEIF had nothing, or could not be read, and nothing when no log was fetched", () => {
+    expect(gleifLogLines({ available: true, since: "2026-09-01T00:00:00Z", items: [], more: 0 })?.lead).toBe(
+      "GLEIF's own modification log has no change to this record since 2026-09-01 other than renewal dates.",
+    );
+    expect(
+      gleifLogLines({ available: false, reason: "GLEIF's API was rate-limited", since: "2026-09-01T00:00:00Z", items: [], more: 0 })?.lead,
+    ).toBe("GLEIF's own modification log could not be read since 2026-09-01: GLEIF's API was rate-limited.");
+    expect(gleifLogLines(null)).toBeNull();
+    expect(gleifLogLines({ available: true, since: null, items: [], more: 0 }, "GLEIF's log")?.lead).toBe(
+      "GLEIF's log has no change to this record other than renewal dates.",
+    );
   });
 });

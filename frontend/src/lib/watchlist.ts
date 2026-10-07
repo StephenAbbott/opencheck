@@ -49,6 +49,60 @@ export interface CheckedSource {
   retrieved_at: string | null;
 }
 
+/** Phase 303 — GLEIF's own field-modification log, as stored on an entry
+ *  (since that list's baseline) or on a watch (the 30 days before it). */
+export interface GleifLogItem {
+  date: string | null;
+  record: string;
+  label: string;
+  type: string;
+  old: string | null;
+  new: string | null;
+  relationship?: { type?: string | null; end_node?: string | null };
+}
+export interface GleifLog {
+  available: boolean;
+  reason?: string;
+  since: string | null;
+  items: GleifLogItem[];
+  more: number;
+}
+
+const LOG_LIMIT = 10;
+
+function logValue(v: unknown): string {
+  return v === null || v === undefined || v === "" ? "—" : String(v);
+}
+
+/** One line of GLEIF's log — the same words as `log_line_words` on the feed. */
+export function logLineWords(i: GleifLogItem): string {
+  const kind = String(i.type || "UPDATE").toUpperCase();
+  const what = i.label || "a field";
+  let body: string;
+  if (kind === "INITIAL" || kind === "INSERT") body = `${what} set to ${logValue(i.new)}`;
+  else if (kind === "DELETE") body = `${what} removed (was ${logValue(i.old)})`;
+  else body = `${what} ${logValue(i.old)} → ${logValue(i.new)}`;
+  return `${i.date || "undated"}: ${body}`;
+}
+
+/** The feed's `gleif_log_lines`, split for the page: a lead sentence and
+ *  the lines under it. `null` when no log was fetched. */
+export function gleifLogLines(
+  log: GleifLog | null | undefined,
+  heading = "GLEIF's own modification log",
+): { lead: string; items: string[] } | null {
+  if (!log) return null;
+  const since = String(log.since ?? "").slice(0, 10);
+  const span = since ? ` since ${since}` : "";
+  if (!log.available) return { lead: `${heading} could not be read${span}: ${log.reason || "unavailable"}.`, items: [] };
+  const items = log.items ?? [];
+  if (!items.length) return { lead: `${heading} has no change to this record${span} other than renewal dates.`, items: [] };
+  const shown = items.slice(0, LOG_LIMIT).map(logLineWords);
+  const rest = items.length - shown.length + (log.more || 0);
+  if (rest > 0) shown.push(`and ${rest} more.`);
+  return { lead: `${heading}${span}:`, items: shown };
+}
+
 export interface Watch {
   lei: string;
   added_at: string;
@@ -59,6 +113,8 @@ export interface Watch {
   snapshot_at: string | null;
   last_checked_at: string | null;
   baseline: WatchBaseline;
+  /** Phase 303: GLEIF's log for the 30 days before this list started watching. */
+  gleif_history?: GleifLog | null;
 }
 
 /** Phase 260: ``catch_up`` = every watched company re-run because
@@ -105,6 +161,8 @@ export interface WatchEntry {
     before?: string | null;
   };
   changes: Change[];
+  /** Phase 303: GLEIF's own log since this list's baseline (GLEIF-triggered entries). */
+  gleif_log?: GleifLog | null;
   checked: CheckedSource[];
   degraded: { source_id: string; check?: string; affected_signals?: string[] }[];
 }
