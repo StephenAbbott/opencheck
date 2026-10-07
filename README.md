@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 299** — The EveryPolitician card shows its first five rows and folds the rest behind a "Show more" chip.
+**Latest: Phase 300** — The watchlist treats the register identifier, successor names, address countries, category and conformity flag as material GLEIF fields, and upgrades a baseline that predates a field instead of alerting on it.
 
 → [Full development history](docs/status.md)
 
