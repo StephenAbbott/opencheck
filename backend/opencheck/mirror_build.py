@@ -28,7 +28,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .entity_pages import (
-    DETAIL_EVENTS_META_KEY,
     DETAIL_ZDICT_META_KEY,
     EXCEPTION_CATEGORIES,
     RR_STANDING_REGISTRATION_STATUSES,
@@ -239,6 +238,28 @@ def _iso_utc(value: str | None) -> str | None:
     if parsed.tzinfo is None:
         return raw
     return parsed.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def previous_direct_parents(conn: sqlite3.Connection, child_leis: set[str]) -> set[str]:
+    """The direct parents ``child_leis`` have in the mirror *now* — read
+    before an RR delta is applied (Phase 302). A delta row carries only the
+    child and its new parent, so when a subsidiary moves from parent A to
+    parent B, A appears nowhere in the file; this is how the watchlist learns
+    A lost a child. Chunked to stay inside SQLite's variable limit."""
+    from .entity_pages import RR_DIRECT
+
+    out: set[str] = set()
+    leis = sorted(child_leis)
+    for i in range(0, len(leis), 500):
+        chunk = leis[i : i + 500]
+        marks = ",".join("?" * len(chunk))
+        for (parent,) in conn.execute(
+            f"SELECT parent_lei FROM relationships WHERE relationship_type = ? AND child_lei IN ({marks})",
+            (RR_DIRECT, *chunk),
+        ):
+            if parent:
+                out.add(parent)
+    return out
 
 
 def leis_in_csv(path: Path, column: str) -> set[str]:

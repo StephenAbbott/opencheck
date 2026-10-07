@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkedSentence,
   describeChange,
+  describeChildren,
   describeEvents,
   fieldWords,
   entryHeadline,
@@ -279,5 +280,28 @@ describe("feedHelp (Phase 234)", () => {
     const { feedHelp } = await import("./watchlist");
     expect(feedHelp()).toContain("90 days is deleted");
     expect(feedHelp()).toContain("feed reader");
+  });
+});
+
+describe("describeChildren (Phase 302)", () => {
+  const names = { A: "Alpha Ltd", B: "Beta GmbH" };
+
+  it("words the feed's sentences, word for word", () => {
+    expect(describeChildren([], ["A"], names)).toBe("GLEIF lists a new direct subsidiary: Alpha Ltd (A).");
+    expect(describeChildren(["A"], ["B", "C"], names)).toBe(
+      "GLEIF lists 2 new direct subsidiaries: Beta GmbH (B); C. GLEIF no longer lists a direct subsidiary: Alpha Ltd (A).",
+    );
+    expect(describeChildren(["A"], ["A"], names)).toBe("GLEIF direct subsidiaries changed.");
+  });
+
+  it("is what describeChange says, and headlines a subsidiaries-only entry", () => {
+    expect(describeChange({ kind: "gleif_field", field: "direct_children", old: [], new: ["A"], names })).toBe(
+      "GLEIF lists a new direct subsidiary: Alpha Ltd (A).",
+    );
+    expect(fieldWords("direct_children")).toBe("direct subsidiaries");
+    const changes = [{ kind: "gleif_field", field: "direct_children" }] as WatchEntry["changes"];
+    expect(entryHeadline(entry({ changes }))).toBe("Vosper Ltd: direct subsidiaries changed");
+    const mixed = [...changes, { kind: "gleif_field", field: "legal_name" }] as WatchEntry["changes"];
+    expect(entryHeadline(entry({ changes: mixed }))).toBe("Vosper Ltd: GLEIF record changed");
   });
 });
