@@ -94,36 +94,52 @@ describe("knowabilityBadge (Phase 224)", () => {
 });
 
 describe("knowabilityRows", () => {
-  it("lists the fields behind the sentence, dropping empty ones", () => {
-    const rows = knowabilityRows(GB);
-    const byLabel = Object.fromEntries(rows.map((r) => [r.label, r.value]));
-    expect(byLabel["Beneficial ownership register"]).toBe(GB.fields.register);
-    expect(byLabel["Who can see it"]).toBe("Public");
-    expect(byLabel["Threshold wording"]).toBe("more than 25 %");
-    expect(byLabel["Fields published"]).toBe("names, month year of birth, percentage bands");
-    expect(byLabel["Reporting basis"]).toBe("first qualifying link (not the ultimate person)");
-    expect(byLabel["Verification of filings"]).toBe("identities verified");
-    expect(byLabel["Company register"]).toBe("Companies House; public: yes; publishes officers, filings history");
-    expect(byLabel["OpenCheck reads"]).toBe(
-      "Companies House (beneficial owners) (API key); UK PSC (BODS) (beneficial owners)",
+  it("shows only the public subset for a non-EU jurisdiction", () => {
+    expect(knowabilityRows(GB)).toEqual([
+      { label: "Beneficial ownership register", value: GB.fields.register },
+      { label: "Who can see it", value: "Public" },
+    ]);
+  });
+
+  it("never shows the internal tracker fields", () => {
+    const labels = knowabilityRows({ ...GB, fields: { ...GB.fields, eu_eea: true, amld6_lia: "Yes" } }).map(
+      (r) => r.label,
     );
-    expect(byLabel["Next FATF / FSRB assessment"]).toBe("FATF; onsite 1 Mar 2027");
-    // Empty fields are absent, not dashes.
-    expect(byLabel["Pending changes"]).toBeUndefined();
-    expect(byLabel["Current arrangement since"]).toBeUndefined();
-    expect(byLabel["Notes"]).toBeUndefined();
+    for (const hidden of [
+      "Threshold wording",
+      "Fields published",
+      "Reporting basis",
+      "Verification of filings",
+      "6AMLD details",
+      "BORIS interconnection",
+      "Company register",
+      "OpenCheck reads",
+      "Next FATF / FSRB assessment",
+      "Pending changes",
+      "Current arrangement since",
+      "Notes",
+    ]) {
+      expect(labels).not.toContain(hidden);
+    }
+  });
+
+  it("adds the 6AMLD legitimate-interest answer for EU/EEA countries only", () => {
+    const eu = { ...GB, code: "DE", name: "Germany", fields: { ...GB.fields, eu_eea: true, amld6_lia: "Yes" } };
+    expect(knowabilityRows(eu).at(-1)).toEqual({ label: "6AMLD legitimate-interest access", value: "Yes" });
+    const euNo = { ...eu, fields: { ...eu.fields, amld6_lia: "No" } };
+    expect(knowabilityRows(euNo).at(-1)?.value).toBe("No");
+    // Outside the EU the field is dropped even when the table has a value.
+    const nonEu = { ...GB, fields: { ...GB.fields, amld6_lia: "Yes" } };
+    expect(knowabilityRows(nonEu).map((r) => r.label)).not.toContain("6AMLD legitimate-interest access");
+    // Inside the EU, only Yes / No are shown.
+    const euNa = { ...eu, fields: { ...eu.fields, amld6_lia: "Not applicable" } };
+    expect(knowabilityRows(euNa).map((r) => r.label)).not.toContain("6AMLD legitimate-interest access");
   });
 
   it("spells out the lower rungs of the access ladder with the AMLD floor", () => {
-    const rows = knowabilityRows({ ...GB, access: "legitimate_interest", access_since: "2025-09-01" });
+    const rows = knowabilityRows({ ...GB, access: "legitimate_interest" });
     const byLabel = Object.fromEntries(rows.map((r) => [r.label, r.value]));
     expect(byLabel["Who can see it"]).toBe("Authorities, obliged entities, and others on legitimate interest");
-    expect(byLabel["Current arrangement since"]).toBe("1 Sept 2025");
-  });
-
-  it("says when OpenCheck reads no register there", () => {
-    const rows = knowabilityRows({ ...GB, name: "Cayman Islands", opencheck_reads: [] });
-    expect(rows.find((r) => r.label === "OpenCheck reads")?.value).toBe("no Cayman Islands register");
   });
 
   it("has nothing to list for a stated absence", () => {

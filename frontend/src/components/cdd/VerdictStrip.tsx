@@ -188,7 +188,7 @@ export function VerdictStrip({
           ) : null}
         </div>
 
-        <div className="flex flex-col items-start gap-2.5 sm:pl-6 sm:border-l border-oo-rule">
+        <div className="flex min-w-0 flex-col items-start gap-2.5 sm:pl-6 sm:border-l border-oo-rule">
           <SectionLabel as="h2">Coverage</SectionLabel>
           <p className="text-oo-small text-oo-ink">
             <span className="font-head font-bold text-oo-stat">{coverage.answered}</span> of{" "}
@@ -219,7 +219,7 @@ export function VerdictStrip({
 
           {knowable && (
             <div
-              className="mt-1 flex w-full flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-oo-rule pt-3"
+              className="mt-1 flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-oo-rule pt-3"
               data-testid="knowability-band"
             >
               {/* Phase 245: the band that sat full-width under the columns,
@@ -237,11 +237,14 @@ export function VerdictStrip({
               >
                 <span className="block text-oo-small">{knowable.sentence}</span>
                 {knowable.rows.length > 0 && (
-                  <dl className="mt-1.5 grid grid-cols-1 gap-y-1 sm:grid-cols-[max-content_1fr] sm:gap-x-4">
+                  // Stacked label-over-value: this column is a third of the
+                  // strip at lg, and a max-content label track pushed the
+                  // values out under the Ownership network card.
+                  <dl className="mt-1.5 flex flex-col gap-1.5">
                     {knowable.rows.map((row) => (
-                      <div key={row.label} className="contents">
+                      <div key={row.label} className="min-w-0">
                         <dt className="font-semibold text-oo-muted">{row.label}</dt>
-                        <dd>{row.value}</dd>
+                        <dd className="break-words">{row.value}</dd>
                       </div>
                     ))}
                   </dl>

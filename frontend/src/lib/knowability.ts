@@ -63,19 +63,6 @@ const ACCESS_LABEL: Record<string, string> = {
   in_progress: "Register being set up",
 };
 
-const REPORTING_BASIS_LABEL: Record<string, string> = {
-  first_qualifying_link: "first qualifying link (not the ultimate person)",
-  ultimate_natural_person: "ultimate natural person",
-  unknown: "not recorded",
-};
-
-const VERIFICATION_LABEL: Record<string, string> = {
-  self_declared: "self-declared filings",
-  identity_verified: "identities verified",
-  cross_checked_against_registers: "cross-checked against other registers",
-  unknown: "not recorded",
-};
-
 /** ISO date → "18 Sep 2026", UTC so the day never shifts with the viewer's zone. */
 export function formatKnowabilityDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
@@ -93,11 +80,6 @@ function humanise(code: string): string {
   return code.replace(/_/g, " ");
 }
 
-function list(v: unknown): string | null {
-  if (!Array.isArray(v) || v.length === 0) return null;
-  return v.map((x) => humanise(String(x))).join(", ");
-}
-
 function text(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const t = v.trim();
@@ -111,85 +93,35 @@ export function knowabilityBadge(st: KnowabilityStatement): KnowabilityBadge {
   return { label: "Unverified draft", tone: "neutral" };
 }
 
-/** The per-field list behind the sentence. Empty fields are dropped rather
- *  than shown as "—": the sentence already said what is known, and a list of
- *  dashes reads as "nothing recorded" for the whole jurisdiction. */
+/** The per-field list behind the sentence — the public subset.
+ *
+ * The jurisdiction table carries far more than a reader of one company's
+ * check needs (threshold wording, reporting basis, BORIS, FATF dates,
+ * pending changes, notes…): those are Stephen's working notes, maintained in
+ * Notion, and on the results page they buried the two facts the band exists
+ * to state. What a reader sees is: the register, who can see it, and — for
+ * EU/EEA countries only, where the 6AMLD question means something — whether
+ * the legitimate-interest route exists in law. Sources and the as-of line are
+ * rendered by the caller from `KnowabilityView`.
+ *
+ * Empty fields are dropped rather than shown as "—": a list of dashes reads
+ * as "nothing recorded" for the whole jurisdiction. */
 export function knowabilityRows(st: KnowabilityStatement): KnowabilityRow[] {
   if (st.stated_absence) return [];
   const f = st.fields ?? {};
-  const rows: (KnowabilityRow | null)[] = [];
+  const rows: KnowabilityRow[] = [];
   const push = (label: string, value: string | null | undefined) => {
-    rows.push(value ? { label, value } : null);
+    if (value) rows.push({ label, value });
   };
 
   push("Beneficial ownership register", text(f.register));
   push("Who can see it", st.access ? ACCESS_LABEL[st.access] ?? humanise(st.access) : null);
-  push("Current arrangement since", formatKnowabilityDate(st.access_since));
-  push("Next change announced", formatKnowabilityDate(st.next_change_expected));
-  push("Threshold wording", text(f.threshold_wording));
-  push("Fields published", list(f.fields_published));
-  const basis = text(f.reporting_basis);
-  push("Reporting basis", basis ? REPORTING_BASIS_LABEL[basis] ?? humanise(basis) : null);
-  push("Covers", list(f.covers));
-  const verification = text(f.verification);
-  const verificationNote = text(f.verification_note);
-  push(
-    "Verification of filings",
-    verification
-      ? `${VERIFICATION_LABEL[verification] ?? humanise(verification)}${
-          verificationNote ? ` — ${verificationNote}` : ""
-        }`
-      : verificationNote,
-  );
-  push("6AMLD legitimate-interest access", text(f.amld6_lia));
-  push("6AMLD details", text(f.amld6_details));
-  push("BORIS interconnection", text(f.boris));
-  if (f.amlr_alignment_watch === true) {
-    push("AMLR alignment watch", 'threshold wording must move to "25 % or more" by 10 July 2027');
+  if (f.eu_eea === true) {
+    const lia = text(f.amld6_lia);
+    // Yes / No only — "Not applicable" says nothing inside the EU/EEA.
+    push("6AMLD legitimate-interest access", lia === "Yes" || lia === "No" ? lia : null);
   }
-  push("Pending changes", text(f.pending_changes));
-
-  const company = (f.company_register ?? null) as Record<string, unknown> | null;
-  if (company) {
-    const name = text(company.name);
-    const publishes = list(company.publishes);
-    const isPublic = text(company.public);
-    const parts = [
-      name,
-      isPublic ? `public: ${isPublic.toLowerCase()}` : null,
-      publishes ? `publishes ${publishes}` : null,
-    ].filter(Boolean);
-    push("Company register", parts.length ? parts.join("; ") : null);
-  }
-
-  const reads = st.opencheck_reads ?? [];
-  push(
-    "OpenCheck reads",
-    reads.length
-      ? reads
-          .map(
-            (r) =>
-              `${r.name}${r.reads_beneficial_owners ? " (beneficial owners)" : ""}${
-                r.requires_api_key ? " (API key)" : ""
-              }`,
-          )
-          .join("; ")
-      : `no ${st.name} register`,
-  );
-
-  const fatf = (f.fatf ?? null) as Record<string, unknown> | null;
-  if (fatf) {
-    const body = text(fatf.body);
-    const onsite = formatKnowabilityDate(text(fatf.onsite));
-    const plenary = formatKnowabilityDate(text(fatf.plenary));
-    const parts = [body, onsite ? `onsite ${onsite}` : null, plenary ? `plenary ${plenary}` : null].filter(
-      Boolean,
-    );
-    push("Next FATF / FSRB assessment", parts.length ? parts.join("; ") : null);
-  }
-
-  push("Notes", text(f.notes));
-  return rows.filter((r): r is KnowabilityRow => r !== null);
+  return rows;
 }
 
 export function knowabilityView(st: KnowabilityStatement): KnowabilityView {

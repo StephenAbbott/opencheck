@@ -103,9 +103,13 @@ describe("VerdictStrip — what can be known (Phase 224, folded into Coverage in
     await user.click(button);
     expect(button).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByText(KNOWABILITY.sentence)).toHaveLength(1);
-    expect(screen.getByText("Threshold wording")).toBeInTheDocument();
-    expect(screen.getByText("25 % or more")).toBeInTheDocument();
-    expect(screen.getByText("no Cayman Islands register")).toBeInTheDocument();
+    expect(screen.getByText("Beneficial ownership register")).toBeInTheDocument();
+    expect(screen.getByText("Cayman Islands General Registry")).toBeInTheDocument();
+    expect(screen.getByText("Who can see it")).toBeInTheDocument();
+    // Internal tracker fields stay out of the public view.
+    expect(screen.queryByText("Threshold wording")).toBeNull();
+    expect(screen.queryByText("25 % or more")).toBeNull();
+    expect(screen.queryByText("OpenCheck reads")).toBeNull();
     expect(screen.getByRole("link", { name: "www.ciregistry.ky/beneficial-ownership" })).toHaveAttribute(
       "href",
       "https://www.ciregistry.ky/beneficial-ownership",
