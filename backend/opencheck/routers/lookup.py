@@ -1862,6 +1862,9 @@ async def _lookup_pipeline(
     # card headed with the subject's name is otherwise an invitation to read
     # it as one. Deduplicated by hit id: two related parties sharing a name
     # match the same record, and the same politician twice is not two findings.
+    # Insertion-ordered: the rows' hit ids, counted for the diagram button
+    # once the PEP role check below has read their records.
+    ep_hit_ids: list[str] = []
     if ep_applicable:
         seen_ep: set[str] = set()
         ep_count = 0
@@ -1869,6 +1872,7 @@ async def _lookup_pipeline(
             if match.source_id != "everypolitician" or match.hit.hit_id in seen_ep:
                 continue
             seen_ep.add(match.hit.hit_id)
+            ep_hit_ids.append(match.hit.hit_id)
             ep_count += 1
             yield ("hit", match.hit.model_copy(update={
                 "finding": finding_everypolitician(
@@ -1903,6 +1907,15 @@ async def _lookup_pipeline(
             h.hit_id for h in hits if h.source_id == "opensanctions" and not h.is_stub
         ],
     )
+
+    # The EveryPolitician rows' statement counts, as a second ``bods_counts``
+    # event (the UI merges it into the first). A row whose record maps to a
+    # single person statement has no diagram to open, so its button is not
+    # shown (see ``_everypolitician_row_counts``).
+    if ep_hit_ids:
+        ep_counts, ep_breakdown = await _everypolitician_row_counts(ep_hit_ids)
+        if ep_counts:
+            yield ("bods_counts", {"counts": ep_counts, "breakdown": ep_breakdown})
 
     merged = _merge_signals(
         search_signals,
@@ -2270,6 +2283,9 @@ async def _register_lookup_pipeline(
             bods_all, degraded=degraded, screening=oa_screening, subject_lei=subject
         ),
     )
+    # Insertion-ordered: the rows' hit ids, counted for the diagram button
+    # once the PEP role check below has read their records.
+    ep_hit_ids: list[str] = []
     if ep_applicable:
         seen_ep: set[str] = set()
         ep_count = 0
@@ -2277,6 +2293,7 @@ async def _register_lookup_pipeline(
             if match.source_id != "everypolitician" or match.hit.hit_id in seen_ep:
                 continue
             seen_ep.add(match.hit.hit_id)
+            ep_hit_ids.append(match.hit.hit_id)
             ep_count += 1
             yield ("hit", match.hit.model_copy(update={
                 "finding": finding_everypolitician(
@@ -2297,6 +2314,15 @@ async def _register_lookup_pipeline(
         ),
         subject_record_ids=[],
     )
+
+    # The EveryPolitician rows' statement counts, as a second ``bods_counts``
+    # event (the UI merges it into the first). A row whose record maps to a
+    # single person statement has no diagram to open, so its button is not
+    # shown (see ``_everypolitician_row_counts``).
+    if ep_hit_ids:
+        ep_counts, ep_breakdown = await _everypolitician_row_counts(ep_hit_ids)
+        if ep_counts:
+            yield ("bods_counts", {"counts": ep_counts, "breakdown": ep_breakdown})
     merged = _merge_signals(
         search_signals,
         deepen_signals,
@@ -2846,6 +2872,62 @@ async def _count_only(source_id: str, hit_id: str) -> dict[str, Any] | None:
         # freshness note, next to rows reading "Checked today".
         "provenance": prov,
     }
+
+
+async def _everypolitician_row_counts(
+    hit_ids: list[str],
+) -> tuple[dict[str, int], dict[str, dict[str, int]]]:
+    """BODS statement counts for EveryPolitician rows, for the ``bods_counts`` event.
+
+    EveryPolitician rows come from the related-party name screen, which runs
+    after the dispatch-stage ``bods_counts`` event, so the rows reached the UI
+    with no count and every one showed a Diagram button. Almost every
+    politician maps to one person statement and no relationships, so the
+    button opened onto nothing and then vanished.
+
+    Counted, not assumed: ``map_everypolitician`` is ``map_ftm``, which does
+    emit ownership and directorship edges when the record carries them, and a
+    politician who owns a company should keep the diagram. The record is read
+    through the OpenSanctions adapter's cached ``fetch`` — the same
+    ``/entities/{id}`` record EveryPolitician's own fetch returns (same API,
+    same canonical ids), and the one the PEP role check
+    (``pep_merge.label_subject_role_peps``) has just read for every PEP match,
+    so this is normally a cache hit. A record that cannot be read gets no count,
+    which leaves the row as it was before: the button shown until opened.
+    """
+    adapter = REGISTRY.get("opensanctions")
+    mapper = _mapper_for("everypolitician")
+    if adapter is None or mapper is None or not hit_ids:
+        return {}, {}
+    # The role check's own concurrency, for the same upstream service.
+    gate = asyncio.Semaphore(_pep_merge._ROLE_CHECK_CONCURRENCY)
+
+    async def read(hit_id: str) -> Any:
+        async with gate:
+            return await adapter.fetch(hit_id)
+
+    raws = await asyncio.gather(*[read(h) for h in hit_ids], return_exceptions=True)
+    counts: dict[str, int] = {}
+    breakdown: dict[str, dict[str, int]] = {}
+    for hit_id, raw in zip(hit_ids, raws):
+        if isinstance(raw, BaseException) or not isinstance(raw, dict):
+            continue
+        if raw.get("is_stub") or not isinstance(raw.get("entity"), dict):
+            continue
+        try:
+            stmts = unique_statements(mapper(raw))
+        except Exception:  # noqa: BLE001 — a display hint; never fail the lookup
+            continue
+        key = f"everypolitician:{hit_id}"
+        counts[key] = len(stmts)
+        breakdown[key] = {
+            "entities": sum(1 for s in stmts if s.get("recordType") == "entity"),
+            "persons": sum(1 for s in stmts if s.get("recordType") == "person"),
+            "relationships": sum(
+                1 for s in stmts if s.get("recordType") == "relationship"
+            ),
+        }
+    return counts, breakdown
 
 
 async def _safe_deepen(
