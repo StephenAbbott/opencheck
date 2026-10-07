@@ -1362,6 +1362,22 @@ export function SkeletonSourceCard() {
 // under a heading that implied otherwise and with no URL to any of them. The
 // merged timeline is the History tab now, fetched once.
 
+/**
+ * How many rows a source card shows before folding the rest behind a "Show
+ * more" chip, per source. A source with no entry shows every row — which is
+ * every source but one, because almost every card has one or two rows.
+ *
+ * EveryPolitician is the exception: it is screened once per related person,
+ * so a large company's card carries a row per name that matched a politician
+ * (twelve for Equinor), and the list pushed every card below it off the
+ * screen. The limit counts rendered rows — after `groupHitsForDisplay` has
+ * collapsed identical records — so "Show N more" is a promise about rows the
+ * reader will actually see.
+ */
+export const COLLAPSED_ROW_LIMIT: Readonly<Record<string, number>> = {
+  everypolitician: 5,
+};
+
 export function SourceBucketCard({
   bucket,
   riskByHit,
@@ -1406,6 +1422,17 @@ export function SourceBucketCard({
     bucket.sourceId === "nz_companies" && !bucket.error
       ? (bucket.hits.find((h) => !h.is_stub) ?? bucket.hits[0])?.hit_id
       : undefined;
+  // Rows past the source's limit stay folded until asked for. Every row is
+  // still rendered once expanded, and the risk signals for the folded ones
+  // are in the Risk signals section regardless — folding hides nothing that
+  // is not said elsewhere on the page.
+  const [rowsExpanded, setRowsExpanded] = useState(false);
+  const rowListId = useId();
+  const groups = groupHitsForDisplay(bucket.hits);
+  const rowLimit = COLLAPSED_ROW_LIMIT[bucket.sourceId];
+  const foldable = rowLimit !== undefined && groups.length > rowLimit;
+  const shownGroups = foldable && !rowsExpanded ? groups.slice(0, rowLimit) : groups;
+  const hiddenRows = groups.length - shownGroups.length;
 
   return (
     <>
@@ -1460,8 +1487,8 @@ export function SourceBucketCard({
       {/* One row per distinct rendering, not per record. A live BP lookup put
           four identical OpenAleph rows here — four real PSC records whose
           only difference is not on the record. See lib/hitGroups.ts. */}
-      <ul className="divide-y divide-oo-rule">
-        {groupHitsForDisplay(bucket.hits).map((group) => (
+      <ul id={rowListId} className="divide-y divide-oo-rule">
+        {shownGroups.map((group) => (
           <HitRow
             key={`${group.lead.source_id}:${group.lead.hit_id}`}
             hit={group.lead}
@@ -1473,6 +1500,17 @@ export function SourceBucketCard({
           />
         ))}
       </ul>
+      {foldable && (
+        <div className="px-5 pb-4">
+          <ActionChip
+            onClick={() => setRowsExpanded((v) => !v)}
+            expanded={rowsExpanded}
+            controls={rowListId}
+          >
+            {rowsExpanded ? "Show fewer" : `Show ${hiddenRows} more`}
+          </ActionChip>
+        </div>
+      )}
       {nzCompanyNumber && !savedReport && (
         <div className="px-5 pb-4">
           <NzAssociations companyNumber={nzCompanyNumber} />
