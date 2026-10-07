@@ -947,6 +947,13 @@ def _bh_eiti(r: dict, ctx: _LookupCtx) -> SourceHit:
             parts.append(f"${total_usd / 1_000_000:.1f}M USD to governments")
         else:
             parts.append(f"${total_usd:,.0f} USD to governments")
+    truncated = [str(y) for y in (r.get("truncated_years") or []) if y]
+    if truncated:
+        # The revenue API pages at 50 rows; the adapter reads a bounded number
+        # of pages. A year that outran the bound is summed short, and a
+        # summary that said "$X to governments" without this would be
+        # presenting a partial sum as the total.
+        parts.append(f"payment rows incomplete for {', '.join(truncated)}")
     ident_key = _EITI_IDENTIFIER_KEY_BY_COUNTRY.get(country, "eiti_identification")
     return _hit(
         "eiti", f"{country}:{ident}",

@@ -10,6 +10,8 @@ import gzip
 import json
 
 import pytest
+import respx
+from httpx import Response
 
 from opencheck.sources import eiti_soe
 from opencheck.sources.base import SearchKind
@@ -205,7 +207,12 @@ async def test_mapper_emits_state_control_shape(adapter):
     rel = rels[0]
     assert rel["recordDetails"]["subject"] == soe["statementId"]
     assert rel["recordDetails"]["interestedParty"] == state_body["statementId"]
-    assert rel["recordDetails"]["interests"][0]["type"] == "controlByLegalFramework"
+    interest = rel["recordDetails"]["interests"][0]
+    assert interest["type"] == "controlByLegalFramework"
+    # The roster asserts state ownership, not the chain it runs through
+    # (Equinor Energy AS is held via Equinor ASA), so direct/indirect is
+    # unknown — never "direct" by default.
+    assert interest["directOrIndirect"] == "unknown"
 
     # Corroboration rule: **no identifiers at all**, not merely no LEI. The
     # `XI-EITI` scheme this used to emit carried `eiti_id_company`, and every
@@ -413,12 +420,19 @@ async def test_mapper_names_the_state_when_eiti_does_not_name_the_body(adapter):
     statements = list(map_eiti_soe(bundle))
     assert len(statements) == 3
 
-    state_body = next(
+    # The sovereign is a `state` in the v0.4 codelist ("a country, nation or
+    # community with legal sovereignty"); `stateBody` is a unit *within* the
+    # state's apparatus, which only applies when EITI names one.
+    state = next(
         s for s in statements
         if s["recordType"] == "entity"
-        and s["recordDetails"]["entityType"]["type"] == "stateBody"
+        and s["recordDetails"]["entityType"]["type"] == "state"
     )
-    assert state_body["recordDetails"]["name"] == "Government of Ghana"
+    assert state["recordDetails"]["name"] == "Government of Ghana"
+    assert not any(
+        s["recordDetails"].get("entityType", {}).get("type") == "stateBody"
+        for s in statements if s["recordType"] == "entity"
+    )
 
     rel = next(s for s in statements if s["recordType"] == "relationship")
     details = rel["recordDetails"]["interests"][0]["details"]
@@ -441,3 +455,88 @@ async def test_mapper_prefers_the_body_eiti_names(adapter):
         "State-owned enterprise controlled by Ministry of Energy "
         "(EITI SOE database)."
     )
+    # A body EITI names IS a unit within the state's apparatus: `stateBody`.
+    body = next(
+        s for s in map_eiti_soe(bundle)
+        if s["recordType"] == "entity" and s["recordDetails"]["name"] == "Ministry of Energy"
+    )
+    assert body["recordDetails"]["entityType"]["type"] == "stateBody"
+
+
+# ---------------------------------------------------------------------------
+# Live payments (HTTP mocked) — the Datasette parameter key and the currency
+# ---------------------------------------------------------------------------
+
+
+class _LiveSettings:
+    allow_live = True
+
+
+_DATASETTE_ROW = {
+    "year": 2021,
+    "revenue_stream_name": "Versement forfaitaire sur les salaires",
+    "payment_value": 1101457.0,
+    "payment_value_usd": 114.22229366075224,
+    "currency_code": "GNF",
+    "project_name": None,
+    "gov_entity_name": "Direction Général des Impôts (DGI)",
+}
+
+
+async def test_payments_query_binds_the_datasette_parameter(
+    adapter, monkeypatch, tmp_path
+):
+    """The query-string key is ``cid`` — not ``:cid``.
+
+    Datasette binds a named SQL parameter ``:cid`` from the query-string key
+    ``cid``. A ``:cid`` key is silently ignored: the placeholder stays empty,
+    the query answers zero rows, HTTP 200, no exception, no degradation. That
+    is what production did from 7 Sep to 7 Oct 2026 — every SOE card said "no
+    payments" while ``view_payments_detailed`` held 31 rows for Equinor Energy
+    AS. Measured 7 Oct 2026: ``cid=`` → 31 rows, ``:cid=`` → 0.
+
+    This test looks at the request the adapter actually sends, and fails on
+    the colon form specifically, because that is the form that passed every
+    other check.
+    """
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setattr(eiti_soe, "get_settings", lambda: _LiveSettings())
+    with respx.mock:
+        route = respx.get(url__startswith=eiti_soe._QUERY_URL).mock(
+            return_value=Response(200, json={"ok": True, "rows": [_DATASETTE_ROW]})
+        )
+        bundle = await adapter.fetch_by_lei(_LEI_MATCH)
+    assert route.called
+    params = route.calls.last.request.url.params
+    assert params.get("cid") == "eiti-co-123"
+    assert ":cid" not in params, "Datasette never binds a ':cid' key"
+    assert ":cid" in params["sql"], "the SQL still names the placeholder"
+    assert params.get("_shape") == "objects"
+    # And the rows came through, which the unbound form never delivered.
+    assert len(bundle["payments"]) == 1
+    EitiSoeBundle.model_validate(bundle)
+
+
+async def test_payments_prefer_usd_and_say_so(adapter, monkeypatch, tmp_path):
+    """A USD-normalised amount is labelled USD, not with the filed currency.
+
+    The view carries both the filed amount (``payment_value`` in
+    ``currency_code``) and ``payment_value_usd``. Taking the USD figure and
+    pairing it with ``currency_code`` printed a Guinea row as "114.22 GNF".
+    """
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setattr(eiti_soe, "get_settings", lambda: _LiveSettings())
+    filed_only = {**_DATASETTE_ROW, "payment_value_usd": None, "year": 2020}
+    with respx.mock:
+        respx.get(url__startswith=eiti_soe._QUERY_URL).mock(
+            return_value=Response(
+                200, json={"ok": True, "rows": [_DATASETTE_ROW, filed_only]}
+            )
+        )
+        bundle = await adapter.fetch_by_lei(_LEI_MATCH)
+    usd_row, filed_row = bundle["payments"]
+    assert usd_row["revenue_value"] == pytest.approx(114.2222936)
+    assert usd_row["currency"] == "USD"
+    # Without a USD figure the filed amount is carried in its filed currency.
+    assert filed_row["revenue_value"] == 1101457.0
+    assert filed_row["currency"] == "GNF"

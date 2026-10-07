@@ -31,7 +31,10 @@ How the lookup works
 2. **Payments (live)**: for the most recent reporting years, payment rows
    come from ``GET /api/v2.0/revenue?organisation={id}`` — the one
    server-side filter verified to work — and are aggregated per year and
-   per GFS revenue stream.
+   per GFS revenue stream. The endpoint pages at 50 rows regardless of
+   ``limit``; the adapter follows ``next`` for a bounded number of pages
+   and marks a year ``truncated`` when the API's ``count`` exceeds what was
+   read, so a bounded sum is never presented as the year's total.
 
 No API key required. Licence: EITI content-use policy — free republication
 with credit to "EITI International Secretariat, eiti.org".
@@ -64,6 +67,17 @@ _INDEX_PATH = Path(__file__).resolve().parent.parent / "data" / "eiti_organisati
 
 #: How many of the most recent reporting years to fetch live payments for.
 _MAX_REVENUE_YEARS = 4
+
+#: The revenue endpoint serves at most 50 rows per page whatever ``limit``
+#: says (``limit=500`` still returns 50, verified 2026-10-07) and paginates
+#: through a ``next`` link. Most organisation-years are well under 50 rows,
+#: but a project-level filer is not: Harbour Energy Plc's 2021 record carries
+#: 130 rows, and until this bound existed the adapter read the first page and
+#: reported its sum as the year's total. Four pages is 200 rows — enough for
+#: every organisation-year seen so far; anything beyond is recorded as
+#: ``truncated`` rather than silently summed short.
+_REVENUE_PAGE_SIZE = 50
+_MAX_REVENUE_PAGES = 4
 
 #: LEI -> EITI US federal EIN, built by ``scripts/build_eiti_us_ein_index.py``.
 _US_EIN_PATH = Path(__file__).resolve().parent.parent / "data" / "eiti_us_ein_by_lei.json"
@@ -354,6 +368,12 @@ class EitiAdapter(SourceAdapter):
             ),
             "total_usd": total_usd,
             "years": sorted({o.get("year") for o in orgs if o.get("year")}, reverse=True),
+            # Reporting years whose payment rows exceeded the page bound, so
+            # ``total_usd`` and ``streams`` understate them. Empty is the norm.
+            "truncated_years": [
+                str(ry.get("year") or ry.get("organisation_id"))
+                for ry in revenue_years if ry.get("truncated")
+            ],
             "is_stub": False,
         }
         validate_raw("eiti", EitiBundle, bundle)
@@ -373,13 +393,7 @@ class EitiAdapter(SourceAdapter):
             else:
                 try:
                     async with build_client() as client:
-                        response = await client.get(
-                            f"{_API_BASE}/revenue",
-                            params={"organisation": org_id, "limit": 50},
-                            headers={"Accept": "application/json"},
-                        )
-                        response.raise_for_status()
-                        payload = response.json()
+                        payload = await self._fetch_revenue_pages(client, org_id)
                     self._cache.put(cache_key, payload)
                 except Exception as exc:  # noqa: BLE001
                     log.warning("EITI revenue fetch failed for %s: %s", org_id, exc)
@@ -415,11 +429,52 @@ class EitiAdapter(SourceAdapter):
                 rows.append(row)
                 if r.get("currency") == "USD":
                     total += amount
+            count = payload.get("count")
+            try:
+                count_int = int(count) if count is not None else None
+            except (TypeError, ValueError):
+                count_int = None
             return {
                 "year": org.get("year"),
                 "organisation_id": org_id,
                 "total_usd": total,
                 "rows": rows,
+                # What the API says it holds for this organisation-year, and
+                # whether the pages read reached it. A consumer that sums
+                # ``rows`` can tell a complete year from a bounded one.
+                "rows_available": count_int,
+                "truncated": bool(count_int is not None and count_int > len(rows)),
             }
 
         return list(await asyncio.gather(*[one(o) for o in orgs]))
+
+    async def _fetch_revenue_pages(self, client: Any, org_id: str) -> dict[str, Any]:
+        """Read an organisation's revenue rows across up to ``_MAX_REVENUE_PAGES``.
+
+        Page one is the documented filter form; later pages follow the
+        ``next.href`` the API returns verbatim. Returns one payload in the
+        single-page shape — ``data`` merged across pages, ``count`` as the API
+        reported it — so the cache and the aggregation above see no difference
+        between a one-page and a four-page organisation.
+        """
+        response = await client.get(
+            f"{_API_BASE}/revenue",
+            params={"organisation": org_id, "limit": _REVENUE_PAGE_SIZE},
+            headers={"Accept": "application/json"},
+        )
+        response.raise_for_status()
+        first = response.json()
+        data = list(first.get("data") or [])
+        count = first.get("count")
+        pages = 1
+        next_href = ((first.get("next") or {}).get("href") or "").strip()
+        while next_href and pages < _MAX_REVENUE_PAGES:
+            response = await client.get(
+                next_href, headers={"Accept": "application/json"}
+            )
+            response.raise_for_status()
+            page = response.json()
+            data.extend(page.get("data") or [])
+            pages += 1
+            next_href = ((page.get("next") or {}).get("href") or "").strip()
+        return {"data": data, "count": count}

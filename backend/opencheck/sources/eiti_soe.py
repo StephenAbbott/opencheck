@@ -297,9 +297,20 @@ class EitiSoeAdapter(SourceAdapter):
     async def _fetch_payments(self, eiti_id_company: str) -> list[dict[str, Any]]:
         """Best-effort live payment/context rows for one SOE (Datasette API).
 
-        Uses the documented Datasette filter form
-        ``…/companies.json?eiti_id_company__exact=<id>&_shape=array&_size=max``.
-        Failures are swallowed — the offline match is the source of truth.
+        A parameterised ``select`` against ``view_payments_detailed`` on the
+        new global database. Failures are swallowed — the offline match is the
+        source of truth.
+
+        The parameter is bound from the query-string key ``cid`` — **without**
+        the colon that names it inside the SQL. Datasette reads named
+        parameters from ``?name=value``; a ``?:name=value`` key is not an
+        error, it is simply never bound, the placeholder stays empty, and the
+        query answers ``0`` rows with HTTP 200. From 7 Sep to 7 Oct 2026 this
+        adapter sent ``:cid`` and every SOE card in production said "no
+        payments" while the view held 31 rows for Equinor Energy AS alone — no
+        exception, no degradation, nothing for the sweep to see.
+        ``tests/test_eiti_soe.py::test_payments_query_binds_the_datasette_parameter``
+        pins the key.
         """
         cache_key = f"{_CACHE_NS}/companies/{eiti_id_company}"
         cached = self._cache.get_payload(cache_key)
@@ -321,7 +332,7 @@ class EitiSoeAdapter(SourceAdapter):
                             "where eiti_id_company = :cid "
                             "order by year desc limit 200"
                         ),
-                        ":cid": eiti_id_company,
+                        "cid": eiti_id_company,
                         "_shape": "objects",
                     },
                     headers={"Accept": "application/json"},
@@ -344,12 +355,21 @@ class EitiSoeAdapter(SourceAdapter):
             rows = []
         out: list[dict[str, Any]] = []
         for r in rows if isinstance(rows, list) else []:
+            # The view carries the filed amount in its filed currency and a
+            # USD-normalised copy. Prefer USD, and then SAY it is USD: pairing
+            # ``payment_value_usd`` with ``currency_code`` printed a Guinea
+            # row as "114.22 GNF" when the filed figure was 1,101,457 GNF.
+            usd = r.get("payment_value_usd")
+            if usd is not None and usd != "":
+                value, currency = usd, "USD"
+            else:
+                value, currency = r.get("payment_value"), r.get("currency_code")
             out.append(
                 {
                     "year": r.get("year"),
                     "revenue_stream": r.get("revenue_stream_name"),
-                    "revenue_value": r.get("payment_value_usd") or r.get("payment_value"),
-                    "currency": r.get("currency_code"),
+                    "revenue_value": value,
+                    "currency": currency,
                     "project": r.get("project_name"),
                 }
             )
