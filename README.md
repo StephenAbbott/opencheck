@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 298** — The Zambia EITI data portal as an ESG source: ZRA tax receipts, EITI reconciliation payments, employment, mining rights and WARMA water offences for the 12 Zambian LEIs that can be matched to it by name.
+**Latest: Phase 299** — The EveryPolitician card shows its first five rows and folds the rest behind a "Show more" chip.
 
 → [Full development history](docs/status.md)
 
