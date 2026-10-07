@@ -61,6 +61,63 @@ shape in place (`WatchlistStore.upgrade_facts`, counted as
 field set did. The same reasoning as `verdict_template` and `signal_rules`
 on the lookup snapshot, applied to Tier 1's own facts.
 
+**Legal Entity Events (Phase 301).** GLEIF records corporate events on the
+LEI record itself — a liquidation or dissolution opened or completed, a
+merger, an absorption, a legal name or form change with its effective date.
+On the 7 Oct 2026 LastDay delta, 19 liquidations, 7 dissolutions and a
+merger were recorded as *in progress* on records whose entity status was
+still ACTIVE and whose registration status had not moved, so the thirteen
+original fields could not see them; across the whole Golden Copy that day,
+20,287 material events were in progress. The mirror's `detail_json` now
+keeps every event the CSV carries (up to five per record: type, status,
+group, effective and recorded dates in UTC, validation documents and
+reference; affected fields are not held), `gleif_record_from_row` serves
+them in the live API's `entity.eventGroups` shape, and the material fact
+`corporate_events` is the record's events as `{type, status, effective,
+recorded}`, ordered by recorded date — a new event or a status moving
+(IN_PROGRESS → COMPLETED, WITHDRAWN_CANCELLED) changes it. Every type is
+material except `CHANGE_LEGAL_ADDRESS`, `CHANGE_HQ_ADDRESS` and
+`CHANGE_OTHER_NAMES` (`CORPORATE_EVENT_EXCLUDED`), which are the same
+renewal-time re-keying as the address lines — 145,000 of the LastMonth
+delta's events. A type GLEIF adds later is material by default.
+
+Three rules keep the change honest:
+
+- **Only a full build may claim events.** A delta applied by this code
+  writes events for the rows it touches, but only a full build makes "no
+  events" mean "GLEIF published none" for every row. The build script sets
+  `meta.detail_events` on a full build; `EntityStore.carries_events` reads
+  it, and `gleif_facts` omits `corporate_events` entirely on a file without
+  it — absent, not `None` — so the rebuild cannot look like a new event on
+  every watched LEI.
+- **The since-rule.** A watch taken before the mirror held events has no
+  `corporate_events` in its baseline, but it has the mirror watermark it was
+  read at (`gleif_watermark`). `diff_gleif_facts(…, since=)` reports the
+  events GLEIF *recorded* after that watermark as new — they happened while
+  the company was watched — and ignores those recorded earlier, which were
+  already true when the watch began. Anything else is upgraded silently, as
+  in Phase 300. The decision is now taken on the diff, not on a digest of
+  the projected facts, so a key retired from the set (Phase 300's
+  `successor_lei`) cannot queue a re-run that names no field.
+- **A rebuilt mirror is re-read once.** A new file arrives by asset
+  replacement at boot, never through `on_gleif_delta`, so a liquidation
+  recorded last week on a watched company would otherwise wait for GLEIF's
+  next touch of the record. The worker's tick calls `resync_after_rebuild()`
+  before draining: on a file that carries events, once per `meta.built_at`
+  (kept in the watchlist's `meta` as `gleif_resync_built_at`), it runs the
+  hook over every watched LEI with `resync=True`. Hits queue with
+  `trigger.resync`, and the entry opens "OpenCheck's GLEIF mirror was
+  rebuilt from the … Golden Copy and now reads legal entity events" rather
+  than claiming a delta; `gleif_resyncs` counts runs on `/watchstats`, and
+  `gleif_deltas_seen` is not moved. Each monthly rebuild re-reads again,
+  which is otherwise renewal churn.
+
+An entry for an event reads "GLEIF recorded a legal entity event:
+liquidation (in progress), effective 2026-10-05", a status move on the same
+type "liquidation: in progress → completed", and its headline is "legal
+entity event recorded" — above a register-status change, since it is the
+more specific fact.
+
 **Tier 2 — OpenSanctions.** They publish an entity-level delta per version:
 `https://data.opensanctions.org/artifacts/default/<version>/entities.delta.json`,
 JSON-lines of `{"op": "ADD|MOD|DEL", "entity": {…}}`, about 11 MB, roughly

@@ -57,7 +57,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Phase 180: the loading code lives in the package so the in-process delta
 # refresh shares it; everything the tests and this CLI used is re-exported.
-from opencheck.entity_pages import SCHEMA_VERSION  # noqa: E402
+from opencheck.entity_pages import DETAIL_EVENTS_META_KEY, SCHEMA_VERSION  # noqa: E402
 from opencheck.mirror_build import (  # noqa: E402, F401
     ADDR_EXTRA_COLS,
     ADDR_HQ,
@@ -188,6 +188,10 @@ def main() -> None:
             mode=args.delta or "full",
             schema_version=SCHEMA_VERSION,
             detail_encoding="zlib+zdict",
+            # Phase 301: every row's detail now carries GLEIF's Legal Entity
+            # Events, so "no events" means GLEIF published none. Only a full
+            # build may say so — a delta-only file keeps whatever it had.
+            **({DETAIL_EVENTS_META_KEY: "1"} if not args.delta else {}),
             record_count=_count("entities"),
             relationship_count=_count("relationships"),
             exception_count=_count("reporting_exceptions"),

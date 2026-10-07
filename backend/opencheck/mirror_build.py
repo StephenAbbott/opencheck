@@ -28,6 +28,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .entity_pages import (
+    DETAIL_EVENTS_META_KEY,
     DETAIL_ZDICT_META_KEY,
     EXCEPTION_CATEGORIES,
     RR_STANDING_REGISTRATION_STATUSES,
@@ -101,6 +102,24 @@ COL_OVA_ENTITY_ID = (
     ".ValidationAuthorityEntityID"
 )
 COL_CONFORMITY = "ConformityFlag"
+
+# Phase 301: GLEIF's Legal Entity Events. The CSV carries up to five per
+# record (``_REPEATS``); the JSON/XML files can carry more, but the mirror is
+# built from the CSV, so a sixth event is not held.
+COL_EVENT = "Entity.LegalEntityEvents.LegalEntityEvent.{n}."
+EVENT_COLS: tuple[tuple[str, str], ...] = (
+    ("LegalEntityEventType", "type"),
+    ("event_status", "status"),
+    ("group_type", "groupType"),
+    ("group_id", "groupId"),
+    ("group_sequence_no", "groupSequenceNo"),
+    ("ValidationDocuments", "validationDocuments"),
+    ("ValidationReference", "validationReference"),
+)
+EVENT_DATE_COLS: tuple[tuple[str, str], ...] = (
+    ("LegalEntityEventEffectiveDate", "effectiveDate"),
+    ("LegalEntityEventRecordedDate", "recordedDate"),
+)
 # The two address blocks share a column layout under different prefixes.
 ADDR_LEGAL = "Entity.LegalAddress"
 ADDR_HQ = "Entity.HeadquartersAddress"
@@ -368,7 +387,34 @@ def entity_detail(row: dict[str, str]) -> dict:
             others.append(entry)
     if others:
         d["otherValidationAuthorities"] = others
+    events = _events_detail(row)
+    if events:
+        d["events"] = events
     return d
+
+
+def _events_detail(row: dict[str, str]) -> list[dict]:
+    """GLEIF's Legal Entity Events on one LEI2 row, in file order (Phase 301)
+    — type, status, group, dates (UTC, as the live API shows them) and the
+    validation reference. Affected fields are left out: the watchlist does
+    not read them and they would carry whole address blocks per event."""
+    out: list[dict] = []
+    for n in _REPEATS:
+        prefix = COL_EVENT.format(n=n)
+        etype = _v(row, prefix + "LegalEntityEventType")
+        if not etype:
+            continue
+        event: dict = {}
+        for col, key in EVENT_COLS:
+            value = _v(row, prefix + col)
+            if value:
+                event[key] = value
+        for col, key in EVENT_DATE_COLS:
+            value = _iso_utc(_v(row, prefix + col))
+            if value:
+                event[key] = value
+        out.append(event)
+    return out
 
 
 def _entity_tuple(row: dict[str, str], zdict: bytes | None = None) -> tuple:

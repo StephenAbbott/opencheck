@@ -240,7 +240,56 @@ GLEIF_MATERIAL_FIELDS: tuple[str, ...] = (
     "category",
     "sub_category",
     "conformity_flag",
+    "corporate_events",
 )
+
+#: Legal Entity Event types that are *not* material (Phase 301). Measured on
+#: GLEIF's 7 Oct 2026 LastMonth delta (386,447 rows): 72,427 legal-address and
+#: 71,181 headquarters-address events and 1,660 other-name events — the same
+#: renewal-time re-keying the address fields are kept out for. Every other
+#: type is material, including types GLEIF adds later: liquidation,
+#: dissolution, bankruptcy, insolvency, voluntary arrangement, mergers and
+#: acquisitions, absorption, demerger, breakup, spin-off, the fund
+#: transformations, and the legal name and legal form changes (which carry
+#: the effective date the plain ``legal_name`` / ``legal_form`` fields lack).
+CORPORATE_EVENT_EXCLUDED: frozenset[str] = frozenset(
+    {"CHANGE_LEGAL_ADDRESS", "CHANGE_HQ_ADDRESS", "CHANGE_OTHER_NAMES"}
+)
+
+
+def _corporate_events(detail: dict[str, Any]) -> list[dict[str, Any]] | None:
+    """The material Legal Entity Events on a mirror row, as
+    ``{"type", "status", "effective", "recorded"}`` dicts ordered by recorded
+    date. A status moving (IN_PROGRESS → COMPLETED) or a new event changes
+    the list, and so the digest. ``None`` when GLEIF lists none."""
+    out: list[dict[str, Any]] = []
+    for e in detail.get("events") or []:
+        etype = str(e.get("type") or "").upper()
+        if not etype or etype in CORPORATE_EVENT_EXCLUDED:
+            continue
+        out.append({
+            "type": etype,
+            "status": e.get("status") or None,
+            "effective": e.get("effectiveDate") or None,
+            "recorded": e.get("recordedDate") or None,
+        })
+    out.sort(key=lambda x: (x["recorded"] or "", x["type"], x["effective"] or "", x["status"] or ""))
+    return out or None
+
+
+def _parse_utc(value: Any) -> datetime | None:
+    """A mirror watermark (``2026-09-16 00:00:00``) or a CDF timestamp
+    (``2026-10-06T09:12:00Z``) as an aware UTC datetime."""
+    if not value:
+        return None
+    raw = str(value).strip().replace("Z", "+00:00")
+    if "T" not in raw and " " in raw:
+        raw = raw.replace(" ", "T", 1)
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
 def _successor_labels(detail: dict[str, Any], row_successor: str | None) -> list[str] | None:
@@ -313,6 +362,15 @@ def gleif_facts(store: Any, lei: str) -> dict[str, Any] | None:
         "category": detail.get("category") or None,
         "sub_category": detail.get("subCategory") or None,
         "conformity_flag": detail.get("conformityFlag") or None,
+        # Phase 301 — only from a mirror whose full build carried events. On
+        # an older file the key is absent rather than None: "the mirror does
+        # not hold events" must never read as "GLEIF lists none", or the
+        # rebuild would look like a new event on every watched LEI.
+        **(
+            {"corporate_events": _corporate_events(detail)}
+            if getattr(store, "carries_events", False)
+            else {}
+        ),
     }
 
 
@@ -323,7 +381,12 @@ def digest(obj: Any) -> str:
     ).hexdigest()
 
 
-def diff_gleif_facts(before: dict[str, Any] | None, after: dict[str, Any] | None) -> list[dict[str, Any]]:
+def diff_gleif_facts(
+    before: dict[str, Any] | None,
+    after: dict[str, Any] | None,
+    *,
+    since: str | None = None,
+) -> list[dict[str, Any]]:
     """The material GLEIF fields that differ, as ``gleif_field`` changes.
 
     Only a field **both** sides carry is compared. A baseline stored before a
@@ -338,11 +401,31 @@ def diff_gleif_facts(before: dict[str, Any] | None, after: dict[str, Any] | None
     out = []
     for name in GLEIF_MATERIAL_FIELDS:
         if name not in before or name not in after:
+            if name == "corporate_events" and name in after:
+                change = _events_since(after.get(name), since)
+                if change:
+                    out.append(change)
             continue
         a, b = before.get(name), after.get(name)
         if a != b:
             out.append({"kind": "gleif_field", "field": name, "old": a, "new": b})
     return out
+
+
+def _events_since(events: list[dict[str, Any]] | None, since: str | None) -> dict[str, Any] | None:
+    """Phase 301's one exception to the both-sides rule. A baseline taken
+    before the mirror carried events has no ``corporate_events``, but it does
+    have the watermark it was read at, and an event GLEIF *recorded* after
+    that watermark happened while the company was being watched. Those are
+    reported as new (old = none); anything recorded earlier was already true
+    when the watch began."""
+    start = _parse_utc(since)
+    if start is None or not events:
+        return None
+    new = [e for e in events if (_parse_utc(e.get("recorded")) or start) > start]
+    if not new:
+        return None
+    return {"kind": "gleif_field", "field": "corporate_events", "old": None, "new": new}
 
 
 def facts_on_baseline_shape(facts: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:
@@ -1171,6 +1254,7 @@ class WatcherState:
     gleif_churn: int = 0  # …whose material digest did not change
     gleif_queued: int = 0
     gleif_rebaselined: int = 0  # …churn rows whose baseline predated a field and was upgraded (Phase 300)
+    gleif_resyncs: int = 0  # full re-reads of every watch after a mirror rebuild (Phase 301)
     gleif_last_publish: str | None = None
     os_versions_seen: int = 0
     os_last_version: str | None = None
@@ -1208,7 +1292,9 @@ def _bump(**fields: Any) -> None:
                 setattr(_state, k, getattr(_state, k) + v)
 
 
-def on_gleif_delta(changed_leis: Iterable[str], publish_label: str) -> dict[str, int]:
+def on_gleif_delta(
+    changed_leis: Iterable[str], publish_label: str, *, resync: bool = False
+) -> dict[str, int]:
     """Called by ``mirror_refresh.apply_delta`` after a delta landed, with
     the LEIs the delta's three files named. Runs on the refresh thread.
 
@@ -1238,16 +1324,24 @@ def on_gleif_delta(changed_leis: Iterable[str], publish_label: str) -> dict[str,
             for row in rows:
                 baseline = row.get("gleif_facts")
                 if facts is None or baseline is None:
+                    if resync:
+                        # A rebuild resync re-reads every watch; one with no
+                        # baseline yet is not news about the company.
+                        continue
                     # No baseline (or no mirror row) — the delta named it, so
                     # a re-run is the honest response; the re-run stores one.
                     material = True
                     continue
-                # Compare on the fields the baseline recorded (Phase 300): a
-                # baseline from before a field was material cannot have
-                # "changed" in it.
-                if digest(facts_on_baseline_shape(facts, baseline)) != digest(baseline):
+                # Compare on the material fields both sides carry (Phase 300),
+                # plus events recorded since the baseline's watermark when the
+                # baseline predates them (Phase 301). Phase 301 also decides
+                # on the diff rather than a digest of the projection, so a key
+                # retired from the set (``successor_lei``) cannot queue a
+                # re-run that names no field.
+                diff = diff_gleif_facts(baseline, facts, since=row.get("gleif_watermark"))
+                if diff:
                     material = True
-                    changed_fields = diff_gleif_facts(baseline, facts)
+                    changed_fields = diff
                 elif set(baseline) != set(facts):
                     # Churn, but the baseline predates the current field set:
                     # move it on silently so the next delta compares like
@@ -1255,26 +1349,32 @@ def on_gleif_delta(changed_leis: Iterable[str], publish_label: str) -> dict[str,
                     store.upgrade_facts(row["token_hash"], lei, facts, watermark)
                     rebaselined += 1
             if material:
-                if store.enqueue(
-                    lei,
-                    TIER_GLEIF,
-                    {
-                        "tier": TIER_GLEIF,
-                        "publish": publish_label,
-                        "fields": [c["field"] for c in changed_fields],
-                    },
-                ):
+                trigger: dict[str, Any] = {
+                    "tier": TIER_GLEIF,
+                    "publish": publish_label,
+                    "fields": [c["field"] for c in changed_fields],
+                }
+                if resync:
+                    trigger["resync"] = True
+                if store.enqueue(lei, TIER_GLEIF, trigger):
                     queued += 1
             else:
                 churn += 1
-        _bump(
-            gleif_deltas_seen=1,
-            gleif_touched=len(touched),
-            gleif_churn=churn,
-            gleif_queued=queued,
-            gleif_rebaselined=rebaselined,
-            gleif_last_publish=publish_label,
-        )
+        if resync:
+            _bump(
+                gleif_resyncs=1,
+                gleif_queued=queued,
+                gleif_rebaselined=rebaselined,
+            )
+        else:
+            _bump(
+                gleif_deltas_seen=1,
+                gleif_touched=len(touched),
+                gleif_churn=churn,
+                gleif_queued=queued,
+                gleif_rebaselined=rebaselined,
+                gleif_last_publish=publish_label,
+            )
         if touched:
             log.info(
                 "watchlist: GLEIF delta %s named %d watched LEI(s) — %d queued, %d renewal churn",
@@ -1592,7 +1692,7 @@ def _write_rerun(
     all_changes: list[dict[str, Any]] = []
     for row in rows:
         th = row["token_hash"]
-        gleif_changes = diff_gleif_facts(row.get("gleif_facts"), facts)
+        gleif_changes = diff_gleif_facts(row.get("gleif_facts"), facts, since=row.get("gleif_watermark"))
         changes = gleif_changes + diff_snapshots(row.get("snapshot"), snapshot)
         all_changes = changes
         store.update_baseline(
@@ -1626,6 +1726,40 @@ def _write_rerun(
 # ---------------------------------------------------------------------------
 
 
+#: ``meta`` key holding the ``built_at`` of the last mirror file every watch
+#: was re-read against (Phase 301).
+RESYNC_META_KEY = "gleif_resync_built_at"
+
+
+def resync_after_rebuild() -> dict[str, int] | None:
+    """Re-read every watch once against a newly built mirror (Phase 301).
+
+    A rebuilt file arrives by asset replacement at boot, never through
+    :func:`on_gleif_delta`, so a company whose liquidation GLEIF recorded
+    last week — read as churn before events were material — would otherwise
+    wait until GLEIF next touched its record. Runs only on a file that
+    carries events, once per ``built_at``; on a file with nothing new it is
+    renewal churn and baseline upgrades. Returns the hook's counts, or
+    ``None`` when there was nothing to do."""
+    from . import entity_pages as ep
+
+    store = get_store()
+    mirror = ep.get_store()
+    if store is None or mirror is None or not getattr(mirror, "carries_events", False):
+        return None
+    built = mirror.meta().get("built_at") or ""
+    if not built or store.get_meta(RESYNC_META_KEY) == built:
+        return None
+    watched = store.watched_leis()
+    result: dict[str, int] = {"touched": 0, "queued": 0, "churn": 0}
+    if watched:
+        wm = mirror.watermark()
+        label = wm.strftime("%Y-%m-%d %H:%M:%S") if wm else built
+        result = on_gleif_delta(watched, label, resync=True)
+    store.set_meta(RESYNC_META_KEY, built)
+    return result
+
+
 async def tick() -> dict[str, Any]:
     """One pass: drain queued re-runs (bounded), catch up on OpenSanctions
     when due, prune empty lists."""
@@ -1638,6 +1772,7 @@ async def tick() -> dict[str, Any]:
         return out
     _bump(last_tick_at=_now_iso())
     try:
+        out["resync"] = await asyncio.to_thread(resync_after_rebuild)
         for item in await asyncio.to_thread(store.take_pending, settings.watchlist_reruns_per_tick):
             await rerun(item["lei"], item["tier"], item["trigger"])
             out["reruns"] += 1
