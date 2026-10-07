@@ -426,3 +426,100 @@ def _eiti_assessment_latest_year(bundle: dict[str, Any]) -> str | None:
 def _norm_for_compare(value: str) -> str:
     """Loose name comparison for 'did the matched name differ' only."""
     return "".join(ch for ch in (value or "").lower() if ch.isalnum())
+
+
+# ----------------------------------------------------------------------
+# Zambia EITI data portal (eiti_zambia)
+# ----------------------------------------------------------------------
+
+#: OpenCheck's scheme for the Zambia Revenue Authority TPIN. org-id.guide lists
+#: PACRA (``ZM-PCR``) but no Zambian tax number, so the code is coined here, as
+#: ``AM-TIN`` and ``CD-NIF`` are for Armenia and the DRC.
+ZM_TPIN_SCHEME = ("ZM-TPIN", "Taxpayer Identification Number — Zambia Revenue Authority")
+
+_EITI_ZAMBIA_PORTAL = "https://portal.zambiaeiti.org/"
+
+
+def _zmw(value: float) -> str:
+    """Kwacha in words a reader can scan — ``ZMW 14.0 billion``."""
+    v = float(value or 0)
+    if v >= 1e9:
+        return f"ZMW {v / 1e9:.1f} billion"
+    if v >= 1e6:
+        return f"ZMW {v / 1e6:.1f} million"
+    return f"ZMW {v:,.0f}"
+
+
+def map_eiti_zambia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a Zambia EITI portal bundle to one BODS entity statement.
+
+    Tax receipts, payments, employment, mining rights and water offences
+    describe activity, not ownership or control, so nothing else is emitted —
+    the ``eiti`` and TED precedent. A mining-rights holder share is a share in
+    a licence, not in the company, and is never a relationship.
+
+    Identifier corroboration: the portal publishes the TPIN on every row it
+    files for the company, so ``ZM-TPIN`` is asserted. The LEI is OpenCheck's
+    name match and rides as an ``identifying`` annotation, not an identifier.
+
+    No ``jurisdiction``: a ZRA taxpayer number says the company pays tax in
+    Zambia, not where it is incorporated.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return
+    lei = str(bundle.get("lei") or "").strip().upper()
+    if not lei:
+        return
+    tpins = [str(t) for t in bundle.get("tpins") or [] if t]
+    filed = [n for n in bundle.get("names_as_filed") or [] if n]
+    gleif_name = str(bundle.get("gleif_legal_name") or "").strip()
+    name = gleif_name or (filed[0] if filed else lei)
+
+    parts: list[str] = []
+    tax = bundle.get("zra_tax") or []
+    summed = [t for t in tax if t.get("amounts_summed") and t.get("total_zmw")]
+    if summed:
+        latest = summed[0]
+        parts.append(f"ZRA tax receipts {latest['year']}: {_zmw(latest['total_zmw'])}")
+    elif tax:
+        parts.append(f"{tax[0]['payments']} ZRA tax payment records in {tax[0]['year']}")
+    licences = bundle.get("licences") or []
+    if licences:
+        parts.append(f"{len(licences)} mining right{'s' if len(licences) != 1 else ''} in the cadastre")
+    if bundle.get("water_offences"):
+        parts.append("listed by WARMA for a water-permit offence")
+
+    identifiers = [
+        {"id": tpins[0], "scheme": ZM_TPIN_SCHEME[0], "schemeName": ZM_TPIN_SCHEME[1]}
+    ] if tpins else []
+
+    stmt = make_entity_statement(
+        source_id="eiti_zambia",
+        local_id=tpins[0] if tpins else lei,
+        name=name,
+        identifiers=identifiers,
+        alternate_names=[n for n in filed if _norm_for_compare(n) != _norm_for_compare(name)],
+        entity_details="; ".join(parts) or "Zambia EITI data portal",
+        source_url=_EITI_ZAMBIA_PORTAL,
+    )
+
+    match = bundle.get("match") or {}
+    basis = (
+        "its legal name in GLEIF matched, after normalisation, the name the "
+        "Zambia Revenue Authority files beside this TPIN"
+        if match.get("method") == "tpin_via_name"
+        else "its legal name in GLEIF matched, after normalisation, the holder "
+        "name in the Zambia EITI mining-rights cadastre (no TPIN is filed)"
+    )
+    link = identifying(
+        pointer("recordDetails"),
+        (
+            f"OpenCheck links this Zambia EITI portal record to LEI {lei}: {basis}. "
+            "GLEIF files the PACRA registration number and the portal the ZRA "
+            "TPIN, so no shared identifier exists; the LEI is OpenCheck's match, "
+            "not an identifier the portal asserts."
+        ),
+    )
+    link["url"] = f"https://search.gleif.org/#/record/{lei}"
+    annotate(stmt, link)
+    yield stmt

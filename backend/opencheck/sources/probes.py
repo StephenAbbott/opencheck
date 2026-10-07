@@ -905,6 +905,19 @@ PROBES: dict[str, SourceProbe] = {
         snapshot_max_age_days=240,
         bods_mapper="map_eiti_bo",
     ),
+    "eiti_zambia": _p(
+        tier="curated",
+        subject="Kansanshi Mining PLC (Zambia EITI portal)",
+        method="fetch_by_lei",
+        args=("2549008ZVFBSUO8W2L37",),
+        expect_fields=("lei", "tpins", "zra_tax", "match"),
+        expect_liveness=frozenset({"curated"}),
+        anchor_lei="2549008ZVFBSUO8W2L37",
+        # The portal's payment tables end in 2024 and ZEITI refreshes them
+        # about yearly; a harvest older than this is due a re-run.
+        snapshot_max_age_days=400,
+        bods_mapper="map_eiti_zambia",
+    ),
     # --- registered but env-gated ----------------------------------------
     "bce_belgium": _p(
         tier="inactive",

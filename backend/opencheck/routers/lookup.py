@@ -104,6 +104,7 @@ from .hit_builders import (  # noqa: F401
     _bh_eiti,
     _bh_eiti_bo,
     _bh_eiti_soe,
+    _bh_eiti_zambia,
     _bh_firmenbuch,
     _bh_gemi_greece,
     _bh_inpi,
@@ -962,6 +963,16 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         and _offline_index_covers(eiti_bo_adapter, ctx.lei)
     ):
         tasks.append(("eiti_bo", eiti_bo_adapter.fetch_by_lei(ctx.lei)))
+    # Zambia EITI portal — LEI-keyed offline index, name-matched at build time
+    # (the portal keys on the ZRA TPIN, GLEIF on the PACRA number).
+    zm_adapter = REGISTRY.get("eiti_zambia")
+    if (
+        zm_adapter is not None
+        and hasattr(zm_adapter, "fetch_by_lei")
+        and _want("eiti_zambia")
+        and _offline_index_covers(zm_adapter, ctx.lei)
+    ):
+        tasks.append(("eiti_zambia", zm_adapter.fetch_by_lei(ctx.lei)))
     # EITI Company Assessment — LEI-keyed offline match against the committed
     # snapshot of EITI's assessment of its supporting companies. A hit means
     # the LEI is one of the ~99 companies EITI assesses; the bundle carries
@@ -1042,6 +1053,8 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_eiti_assessment(result, ctx) if result.get("assessments") else None
     if source_id == "eiti_bo":
         return _bh_eiti_bo(result, ctx) if result.get("record") else None
+    if source_id == "eiti_zambia":
+        return _bh_eiti_zambia(result, ctx) if result.get("lei") else None
     if source_id == "wikirate":
         return _bh_wikirate(result, ctx) if result.get("card_id") else None
     if source_id == "ted_eu":
