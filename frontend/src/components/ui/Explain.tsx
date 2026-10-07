@@ -73,7 +73,7 @@ export function Explain({
       {open && (
         <span
           id={id}
-          className="mt-1.5 block basis-full text-oo-meta text-oo-ink bg-white border border-oo-rule rounded-oo px-2.5 py-1.5 leading-[1.5]"
+          className="mt-1.5 block min-w-0 max-w-full basis-full break-words text-oo-meta text-oo-ink bg-white border border-oo-rule rounded-oo px-2.5 py-1.5 leading-[1.5]"
         >
           {children}
         </span>
