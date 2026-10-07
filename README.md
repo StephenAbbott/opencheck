@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 301** — The watchlist treats GLEIF's Legal Entity Events — a liquidation, dissolution or merger opened or completed — as material changes, and re-reads every watch once when the GLEIF mirror is rebuilt.
+**Latest: Phase 302** — A watched company now hears when a direct subsidiary joins or leaves its group, and the monthly GLEIF mirror rebuild swaps its release asset in without ever deleting the old one first.
 
 → [Full development history](docs/status.md)
 
