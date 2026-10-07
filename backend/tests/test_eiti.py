@@ -204,6 +204,109 @@ async def test_live_revenue_failure_degrades_to_empty_rows(
     get_settings.cache_clear()
 
 
+async def test_live_revenue_follows_next_pages(
+    monkeypatch, httpx_mock: HTTPXMock, tmp_path
+) -> None:
+    """The revenue endpoint pages at 50 rows whatever ``limit`` says, and
+    paginates through ``next``. Harbour Energy Plc's 2021 record (organisation
+    226920) holds 130 rows; reading page one and summing it reported $249.9M
+    as the year's total when page two alone added $4.1M more. The adapter
+    follows ``next`` and the year is marked complete.
+    """
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+
+    import opencheck.sources.eiti as eiti_mod
+
+    index, _ = eiti_mod._get_index()
+    orgs = index["GB"]["01285743"][:4]
+    paged, *rest = orgs
+    page1 = f"{_API}/revenue?organisation={paged['id']}&limit=50"
+    page2 = f"{_API}/revenue?organisation={paged['id']}&limit=50&page=2"
+    page3 = f"{_API}/revenue?organisation={paged['id']}&limit=50&page=3"
+
+    def _row(amount: float) -> dict:
+        return {"label": "Royalties", "revenue": str(amount), "currency": "USD",
+                "gfs.label": "Royalties", "gfs.code": "1415E1"}
+
+    httpx_mock.add_response(
+        url=page1,
+        json={"count": 130, "next": {"title": "Next", "href": page2},
+              "data": [_row(1.0)] * 50},
+    )
+    httpx_mock.add_response(
+        url=page2,
+        json={"count": 130, "previous": {"href": page1}, "next": {"href": page3},
+              "data": [_row(2.0)] * 50},
+    )
+    httpx_mock.add_response(
+        url=page3,
+        json={"count": 130, "previous": {"href": page2}, "data": [_row(4.0)] * 30},
+    )
+    for o in rest:
+        httpx_mock.add_response(
+            url=f"{_API}/revenue?organisation={o['id']}&limit=50",
+            json={"count": 1, "data": [_row(10.0)]},
+        )
+
+    bundle = await EitiAdapter().fetch_by_registration("GB", "01285743")
+    assert bundle is not None
+    year = next(ry for ry in bundle["revenue_years"] if ry["organisation_id"] == paged["id"])
+    assert len(year["rows"]) == 130
+    assert year["rows_available"] == 130
+    assert year["truncated"] is False
+    assert year["total_usd"] == pytest.approx(50 * 1.0 + 50 * 2.0 + 30 * 4.0)
+    assert bundle["truncated_years"] == []
+    assert bundle["total_usd"] == pytest.approx(270.0 + 10.0 * len(rest))
+    get_settings.cache_clear()
+
+
+async def test_live_revenue_beyond_the_page_bound_is_marked_truncated(
+    monkeypatch, httpx_mock: HTTPXMock, tmp_path
+) -> None:
+    """Past ``_MAX_REVENUE_PAGES`` the adapter stops, says so on the year and
+    on the bundle, and the hit summary says so too — a bounded sum is never
+    presented as the total."""
+    from opencheck.routers.hit_builders import _bh_eiti, _LookupCtx
+
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setattr("opencheck.sources.eiti._MAX_REVENUE_PAGES", 2)
+    get_settings.cache_clear()
+
+    import opencheck.sources.eiti as eiti_mod
+
+    index, _ = eiti_mod._get_index()
+    orgs = index["GB"]["01285743"][:4]
+    paged, *rest = orgs
+    page1 = f"{_API}/revenue?organisation={paged['id']}&limit=50"
+    page2 = f"{_API}/revenue?organisation={paged['id']}&limit=50&page=2"
+    page3 = f"{_API}/revenue?organisation={paged['id']}&limit=50&page=3"
+    row = {"label": "Royalties", "revenue": "1.0", "currency": "USD",
+           "gfs.label": "Royalties", "gfs.code": "1415E1"}
+    httpx_mock.add_response(url=page1, json={"count": 130, "next": {"href": page2}, "data": [row] * 50})
+    httpx_mock.add_response(url=page2, json={"count": 130, "next": {"href": page3}, "data": [row] * 50})
+    # page3 is deliberately NOT registered: the bound stops the adapter first.
+    for o in rest:
+        httpx_mock.add_response(
+            url=f"{_API}/revenue?organisation={o['id']}&limit=50",
+            json={"count": 0, "data": []},
+        )
+
+    bundle = await EitiAdapter().fetch_by_registration("GB", "01285743")
+    assert bundle is not None
+    year = next(ry for ry in bundle["revenue_years"] if ry["organisation_id"] == paged["id"])
+    assert len(year["rows"]) == 100
+    assert year["rows_available"] == 130
+    assert year["truncated"] is True
+    assert bundle["truncated_years"] == [str(paged["year"])]
+
+    hit = _bh_eiti(bundle, _LookupCtx(lei="X", legal_name="Y"))
+    assert f"payment rows incomplete for {paged['year']}" in hit.summary
+    get_settings.cache_clear()
+
+
 # ---------------------------------------------------------------------------
 # Lookup wiring
 # ---------------------------------------------------------------------------

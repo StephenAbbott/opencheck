@@ -334,6 +334,9 @@ from .mappers.india import (  # noqa: F401  (re-exported, Phase 246)
     map_mca_india,
 )
 from .mappers.eiti_bo import (  # noqa: F401  (re-exported, Phase 246)
+    _AM_ENTITY_SCHEMES,
+    _AM_REGISTER_SCHEME,
+    _AM_TIN_SCHEME,
     _BODS02_INTEREST_TYPES,
     _DRC_HONORIFIC_RE,
     _DRC_NATIONALITIES,

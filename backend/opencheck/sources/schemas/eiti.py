@@ -44,6 +44,10 @@ class EitiRevenueYear(_Base):
     organisation_id: str
     total_usd: float = 0.0
     rows: list[EitiRevenueRow] = Field(default_factory=list)
+    #: The API's ``count`` for this organisation-year (None when it gave none).
+    rows_available: int | None = None
+    #: True when ``rows`` stopped short of ``rows_available`` at the page bound.
+    truncated: bool = False
 
 
 class EitiBundle(_Base):
@@ -57,3 +61,4 @@ class EitiBundle(_Base):
     streams: dict[str, float] = Field(default_factory=dict)
     total_usd: float = 0.0
     years: list[str] = Field(default_factory=list)
+    truncated_years: list[str] = Field(default_factory=list)

@@ -393,12 +393,21 @@ async def test_armenia_subject_identifiers_and_provenance(adapter):
         s for s in stmts
         if s["recordType"] == "entity"
         and any(
-            i.get("scheme") == "AM-REG"
+            i.get("scheme") == "AM-SRALE"
             for i in s["recordDetails"].get("identifiers", [])
         )
     )
-    schemes = {i["scheme"] for i in subject["recordDetails"]["identifiers"]}
-    assert {"ARM-TAXID", "AM-REG", "AM-TIN"} <= schemes
+    idents = subject["recordDetails"]["identifiers"]
+    schemes = [i["scheme"] for i in idents]
+    # Entity identifiers carry org-id.guide codes, not the register's
+    # {ISO3}-TAXID person-document shape: the registration number is
+    # AM-SRALE (State Register Agency of Legal Entities) and the TIN is
+    # AM-TIN once, whether it came from the declaration or the company page.
+    assert "AM-SRALE" in schemes
+    assert schemes.count("AM-TIN") == 1
+    assert "ARM-TAXID" not in schemes and "AM-REG" not in schemes
+    tin = next(i for i in idents if i["scheme"] == "AM-TIN")
+    assert "ARM-TAXID" in tin["schemeName"]
     assert subject["recordDetails"]["jurisdiction"]["code"] == "AM"
     # The upconversion is recorded, naming the original v0.2 statement.
     assert any(
@@ -408,14 +417,127 @@ async def test_armenia_subject_identifiers_and_provenance(adapter):
     assert "declaration" in subject["source"]["url"]
 
 
+async def test_armenia_foreign_parent_carries_an_org_id_scheme(adapter):
+    """The Russian parent's ``RUS-TAXID`` becomes org-id.guide ``RU-INN``,
+    with the register's code kept in ``schemeName``."""
+    stmts = list(map_eiti_bo(await adapter.fetch_by_lei(_LEI_AM)))
+    parent = next(
+        s for s in stmts
+        if s["recordType"] == "entity" and s["recordDetails"]["name"] == "ՀՈԼԴԻՆԳ ԹԵՍԹ"
+    )
+    assert parent["recordDetails"]["identifiers"] == [{
+        "id": "7700000000",
+        "scheme": "RU-INN",
+        "schemeName": "Russian INN (RUS-TAXID in the Armenian register)",
+    }]
+
+
 async def test_armenia_person_keeps_register_transliteration_and_pep(adapter):
+    """The register's transliteration is the ONLY Latin name, right after the
+    legal one.
+
+    ``make_person_statement`` machine-transliterates Armenian script. For the
+    Zangezur owners that produced "Svetlana Ersova" ahead of the register's
+    "Svetlana Ershova" (likewise Musaxanov/Musakhanov, Gorskova/Gorshkova) —
+    three names per person, the wrong Latin one first. The register's form
+    replaces the machine one rather than sitting beside it.
+    """
     stmts = list(map_eiti_bo(await adapter.fetch_by_lei(_LEI_AM)))
     person = next(s for s in stmts if s["recordType"] == "person")
     names = person["recordDetails"]["names"]
-    assert any(
-        n["type"] == "transliteration" and n["fullName"] == "Test Anun" for n in names
-    )
+    assert names[0] == {"type": "legal", "fullName": "Թեստ Անուն"}
+    translits = [n for n in names if n["type"] == "transliteration"]
+    assert translits == [{"type": "transliteration", "fullName": "Test Anun"}]
     assert person["recordDetails"]["politicalExposure"]["status"] == "isPep"
+
+
+async def test_armenia_person_without_register_transliteration_keeps_machine_one(
+    adapter, monkeypatch
+):
+    """Where the register supplies no Latin form, the factory's machine
+    transliteration is the best available and is kept — the fix above drops
+    it only in favour of something better, never for nothing."""
+    import copy
+
+    stripped = copy.deepcopy(eiti_bo._index)
+    for s in stripped[_LEI_AM]["armenia"]["bods_v02"]:
+        if s.get("statementType") == "personStatement":
+            s["names"] = [n for n in s["names"] if n.get("type") != "transliteration"]
+    monkeypatch.setattr(eiti_bo, "_index", stripped)
+    stmts = list(map_eiti_bo(await adapter.fetch_by_lei(_LEI_AM)))
+    person = next(s for s in stmts if s["recordType"] == "person")
+    names = person["recordDetails"]["names"]
+    assert names[0]["type"] == "legal"
+    translits = [n for n in names if n["type"] == "transliteration"]
+    assert len(translits) == 1
+    assert translits[0]["fullName"] != "Թեստ Անուն"
+
+
+async def test_committed_zangezur_duplicate_parent_collapses_to_one_record():
+    """The register's Zangezur declaration names the Russian parent twice
+    (INN 7728392155, two statementIDs). One record is published, every
+    relationship resolves to it, no relationship is filed twice, and the
+    record says the register carried it more than once."""
+    eiti_bo._reset_index_for_tests()
+    bundle = await eiti_bo.EitiBoAdapter().fetch_by_lei("5299002F95S2G0AA4Q25")
+    stmts = list(map_eiti_bo(bundle))
+    entities = [s for s in stmts if s["recordType"] == "entity"]
+    by_inn = [
+        e for e in entities
+        if any(i.get("id") == "7728392155" for i in e["recordDetails"].get("identifiers", []))
+    ]
+    assert len(by_inn) == 1, [e["recordDetails"]["name"] for e in by_inn]
+    parent = by_inn[0]
+    assert parent["recordDetails"]["identifiers"][0]["scheme"] == "RU-INN"
+    assert any(
+        "separate statements with the same identifiers" in a["description"]
+        for a in parent.get("annotations", [])
+    )
+    rels = [s for s in stmts if s["recordType"] == "relationship"]
+    rel_ids = {s["statementId"] for s in stmts}
+    for r in rels:
+        assert r["recordDetails"]["subject"] in rel_ids
+        ip = r["recordDetails"]["interestedParty"]
+        if isinstance(ip, str):
+            assert ip in rel_ids
+    keys = [
+        (r["recordDetails"]["subject"], r["recordDetails"].get("interestedParty"))
+        for r in rels
+    ]
+    assert len(keys) == len(set(keys)), "a relationship was published twice"
+    # The parent still holds Zangezur and Urbanevent Plus, and is held by Neo Metals.
+    held_by_parent = [r for r in rels if r["recordDetails"].get("interestedParty") == parent["statementId"]]
+    assert len(held_by_parent) == 2
+    holding_parent = [r for r in rels if r["recordDetails"]["subject"] == parent["statementId"]]
+    assert len(holding_parent) == 1
+    # 1 subject + 1 parent + Urbanevent + Neo Metals = 4 entities (was 5).
+    assert len(entities) == 4
+    eiti_bo._reset_index_for_tests()
+
+
+async def test_committed_zangezur_owners_carry_the_registers_latin_names():
+    """Pinned against the shipped index: the five Zangezur owners get the
+    register's transliteration (Ershova, Musakhanov, Trunov, Vasileva,
+    Gorshkova) and nothing machine-made beside it."""
+    eiti_bo._reset_index_for_tests()
+    adapter = eiti_bo.EitiBoAdapter()
+    bundle = await adapter.fetch_by_lei("5299002F95S2G0AA4Q25")
+    assert bundle is not None, "Zangezur is in the committed pooled index"
+    people = [s for s in map_eiti_bo(bundle) if s["recordType"] == "person"]
+    assert len(people) == 5
+    latin = set()
+    for p in people:
+        translits = [
+            n["fullName"] for n in p["recordDetails"]["names"]
+            if n["type"] == "transliteration"
+        ]
+        assert len(translits) == 1, p["recordDetails"]["names"]
+        latin.add(translits[0])
+    assert latin == {
+        "Svetlana Ershova", "Mirzaaziz Musakhanov", "Aleksandr Trunov",
+        "Evgeniia Vasileva", "Irina Gorshkova",
+    }
+    eiti_bo._reset_index_for_tests()
 
 
 # ---------------------------------------------------------------------------

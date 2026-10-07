@@ -172,12 +172,19 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         return
 
     gov_local = f"{lei}:gov:{(bundle.get('eiti_id_government') or gov_name)}"
+    # The codelist draws a line the fallback used to cross: `stateBody` is "a
+    # core administrative or legislative unit within a state's apparatus" — a
+    # ministry, a fund — and `state` is "a country, nation or community with
+    # legal sovereignty within a territory". "Government of Norway" is the
+    # latter. So a body EITI names is a `stateBody`; the sovereign the fallback
+    # names is a `state`. `risk._state_controlled_signals` reads both
+    # (`_STATE_ENTITY_TYPES`), so STATE_CONTROLLED is unchanged either way.
     government = make_entity_statement(
         source_id="eiti_soe",
         local_id=gov_local,
         name=gov_name,
         jurisdiction=jur_tuple,
-        entity_type="stateBody",
+        entity_type="stateBody" if named_by_eiti else "state",
         entity_details=(
             None
             if named_by_eiti
@@ -197,7 +204,12 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         interests=[
             {
                 "type": "controlByLegalFramework",
-                "directOrIndirect": "direct",
+                # EITI's roster says the enterprise is state-owned and nothing
+                # about the chain it is owned through. Equinor Energy AS is
+                # held via Equinor ASA; ZCCM-IH via the IDC. Asserting
+                # "direct" for every row was a guess the data does not make,
+                # and "unknown" is the codelist value for exactly that.
+                "directOrIndirect": "unknown",
                 "beneficialOwnershipOrControl": True,
                 "details": (
                     f"State-owned enterprise controlled by {gov_name} "

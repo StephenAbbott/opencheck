@@ -6,6 +6,7 @@ re-exports every name defined here.
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any, Iterable
 
@@ -48,6 +49,28 @@ _DRC_NATIONALITIES: dict[str, str] = {
 }
 
 _DRC_HONORIFIC_RE = re.compile(r"^(?:MR|MRS|MS|MME|M|HON|DR)\s*\.?\s+", re.I)
+
+#: Entity identifier schemes as the Armenian register publishes them →
+#: org-id.guide codes. The register writes every entity identifier in the
+#: ``{ISO3}-TAXID`` shape BODS reserves for a *person's* identity documents;
+#: an entity's scheme should be an org-id.guide list code. Checked against
+#: org-id.guide 2026-10-07: ``RU-INN`` is the Russian legal-entity INN (the
+#: 10-digit form the register carries — a 12-digit INN is a person's, and
+#: ``annotations.PERSON_TAXID_SCHEMES`` handles that direction); ``AM-SRALE``
+#: is the State Register Agency of Legal Entities, which issues the
+#: registration number the company page publishes; org-id.guide has no code
+#: for an Armenian taxpayer number (ՀՎՀՀ) or a UAE tax id, so ``ARM-TAXID``
+#: is carried as OpenCheck's ``AM-TIN`` and an unmapped scheme passes through
+#: unchanged. The register's own code is kept in ``schemeName``.
+_AM_ENTITY_SCHEMES: dict[str, tuple[str, str]] = {
+    "RUS-TAXID": ("RU-INN", "Russian INN (RUS-TAXID in the Armenian register)"),
+    "ARM-TAXID": ("AM-TIN", "Armenia taxpayer identification number (ՀՎՀՀ; ARM-TAXID in the register)"),
+}
+
+#: The registration number from the company's register page.
+_AM_REGISTER_SCHEME = ("AM-SRALE", "State Register Agency of Legal Entities of Armenia")
+#: The taxpayer number from the same page.
+_AM_TIN_SCHEME = ("AM-TIN", "Armenia taxpayer identification number (ՀՎՀՀ)")
 
 #: BODS v0.2 interest types (as published by the Armenian register) → v0.4
 #: codelist. Identity for codes that survived unchanged; renames per the
@@ -273,6 +296,35 @@ def _eiti_bo_map_armenia(
     decl_date = (arm.get("declaration_date") or "")[:10] or None
     decl_uuid = arm.get("declaration_uuid")
 
+    # The register can carry one entity as several statements. Zangezur's
+    # declaration (June 2026) names its Russian parent twice — two
+    # statementIDs, the same INN, the same registered address, alternate
+    # names differing by a double space — and a 1:1 upconvert published
+    # two records for one company. Entity statements with an identical,
+    # non-empty identifier set collapse onto the first one seen: the later
+    # ids map to the first record, so every relationship that referenced
+    # either resolves to it, and the kept record says the register filed it
+    # more than once. Statements with no identifier never collapse — a name
+    # is not an identity.
+    canon: dict[str, str] = {}  # duplicate orig id -> canonical orig id
+    duplicates_of: dict[str, list[str]] = {}
+    seen_by_idents: dict[tuple[tuple[str, str], ...], str] = {}
+    for s in statements:
+        if s.get("statementType") != "entityStatement":
+            continue
+        orig = str(s.get("statementID") or "")
+        key = tuple(sorted(
+            (str(i.get("scheme")).upper(), str(i.get("id")).strip())
+            for i in (s.get("identifiers") or [])
+            if i.get("id") and i.get("scheme")
+        ))
+        if not orig or not key:
+            continue
+        first = seen_by_idents.setdefault(key, orig)
+        if first != orig:
+            canon[orig] = first
+            duplicates_of.setdefault(first, []).append(orig)
+
     # Map original v0.2 statementIDs → upconverted v0.4 statementIds so
     # relationship references stay intact.
     id_map: dict[str, str] = {}
@@ -282,9 +334,10 @@ def _eiti_bo_map_armenia(
         if not orig:
             continue
         if kind == "entityStatement":
-            id_map[orig] = _stable_id("eiti_bo", "entity", f"am:{orig}")
+            id_map[orig] = _stable_id("eiti_bo", "entity", f"am:{canon.get(orig, orig)}")
         elif kind == "personStatement":
             id_map[orig] = _stable_id("eiti_bo", "person", f"am:{orig}")
+    emitted_relationships: set[tuple[str, str, str]] = set()
 
     regnum = (record.get("local_ids") or {}).get("am_regnum")
     tin = (record.get("local_ids") or {}).get("am_tin")
@@ -296,14 +349,23 @@ def _eiti_bo_map_armenia(
         stmt_date = (s.get("statementDate") or "")[:10] or decl_date
 
         if kind == "entityStatement":
+            if orig in canon:
+                continue  # collapsed onto the first statement with these identifiers
             names = [s.get("name") or ""] + list(s.get("alternateNames") or [])
             names = [n for n in names if n]
             primary = names[0] if names else f"AM-{orig[:8]}"
-            identifiers = [
-                {"id": str(i.get("id")), "scheme": str(i.get("scheme"))}
-                for i in (s.get("identifiers") or [])
-                if i.get("id") and i.get("scheme")
-            ]
+            identifiers = []
+            for i in s.get("identifiers") or []:
+                if not (i.get("id") and i.get("scheme")):
+                    continue
+                scheme = str(i["scheme"])
+                mapped = _AM_ENTITY_SCHEMES.get(scheme.upper())
+                ident: dict[str, str] = {"id": str(i["id"])}
+                if mapped:
+                    ident["scheme"], ident["schemeName"] = mapped
+                else:
+                    ident["scheme"] = scheme
+                identifiers.append(ident)
             addresses = [
                 _addr(
                     str(a.get("type") or "registered"),
@@ -324,14 +386,20 @@ def _eiti_bo_map_armenia(
                 if regnum:
                     identifiers.append({
                         "id": str(regnum),
-                        "scheme": "AM-REG",
-                        "schemeName": "Armenia State Register registration number",
+                        "scheme": _AM_REGISTER_SCHEME[0],
+                        "schemeName": _AM_REGISTER_SCHEME[1],
                     })
-                if tin:
+                # The declaration's own ARM-TAXID (when populated) maps to
+                # AM-TIN above; the company page's TIN is the same number
+                # and must not appear twice.
+                if tin and not any(
+                    x.get("scheme") == _AM_TIN_SCHEME[0] and x.get("id") == str(tin)
+                    for x in identifiers
+                ):
                     identifiers.append({
                         "id": str(tin),
-                        "scheme": "AM-TIN",
-                        "schemeName": "Armenia taxpayer identification number (ՀՎՀՀ)",
+                        "scheme": _AM_TIN_SCHEME[0],
+                        "schemeName": _AM_TIN_SCHEME[1],
                     })
             stmt = make_entity_statement(
                 source_id="eiti_bo",
@@ -353,6 +421,19 @@ def _eiti_bo_map_armenia(
                     f"approved {decl_date}).",
                 ),
             )
+            if orig in duplicates_of:
+                dups = duplicates_of[orig]
+                annotate(
+                    stmt,
+                    commenting(
+                        pointer("recordDetails"),
+                        "The register's declaration carries this entity as "
+                        f"{1 + len(dups)} separate statements with the same "
+                        f"identifiers ({orig}, {', '.join(dups)}); OpenCheck "
+                        "publishes one record and resolves every relationship "
+                        "to it.",
+                    ),
+                )
             if is_subject:
                 subject_annotated = True
             yield stmt
@@ -388,17 +469,30 @@ def _eiti_bo_map_armenia(
                 statement_date=stmt_date,
                 political_exposure=pep_exposure,
             )
-            # Preserve the register's own transliteration entries (the factory
-            # only auto-transliterates Cyrillic/Greek, not Armenian script).
-            existing = {
-                n.get("fullName") for n in stmt["recordDetails"].get("names", [])
-            }
-            for n in names02:
-                if n.get("type") == "transliteration" and n.get("fullName") not in existing:
-                    stmt["recordDetails"]["names"].append({
-                        "type": "transliteration",
-                        "fullName": str(n.get("fullName")),
-                    })
+            # The register publishes its own Latin transliteration of every
+            # name, and it beats the factory's. ``make_person_statement``
+            # machine-transliterates Armenian script (since the rigour
+            # adoption — it is not limited to Cyrillic/Greek), and for these
+            # mostly Russian owners that produced "Svetlana Ersova",
+            # "Mirzaaziz Musaxanov", "Irina Gorskova" — sitting FIRST, ahead of
+            # the register's "Ershova", "Musakhanov", "Gorshkova". A screening
+            # pass that reads names in order took the wrong one. So where the
+            # register supplies a transliteration, the machine entry is dropped
+            # and the register's stands alone; where it supplies none, the
+            # factory's entry is the best available and stays.
+            register_translits = [
+                str(n.get("fullName")).strip()
+                for n in names02
+                if n.get("type") == "transliteration" and (n.get("fullName") or "").strip()
+            ]
+            names_out = stmt["recordDetails"]["names"]
+            if register_translits:
+                names_out[:] = [n for n in names_out if n.get("type") != "transliteration"]
+                seen = {n.get("fullName") for n in names_out}
+                for full in register_translits:
+                    if full not in seen:
+                        names_out.append({"type": "transliteration", "fullName": full})
+                        seen.add(full)
             if birth and birth_out != birth:
                 annotate(
                     stmt,
@@ -456,6 +550,14 @@ def _eiti_bo_map_armenia(
                 if i.get("details"):
                     out["details"] = str(i["details"])
                 interests_out.append(out)
+
+            # A relationship the register filed once per duplicate entity
+            # statement is one relationship: same subject, same party, same
+            # interests after collapsing.
+            rel_key = (subject_id, ip_id or "", json.dumps(interests_out, sort_keys=True))
+            if rel_key in emitted_relationships:
+                continue
+            emitted_relationships.add(rel_key)
 
             kwargs: dict[str, Any] = {}
             if ip_id:
