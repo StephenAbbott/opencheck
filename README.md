@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 297** — Six EITI data quality fixes: the SOE payments query that silently bound nothing, the revenue API's 50-row page cap, the Armenian register's own transliterations and org-id.guide identifier schemes, duplicate entity statements collapsed, and the sovereign fallback typed `state`.
+**Latest: Phase 298** — The Zambia EITI data portal as an ESG source: ZRA tax receipts, EITI reconciliation payments, employment, mining rights and WARMA water offences for the 12 Zambian LEIs that can be matched to it by name.
 
 → [Full development history](docs/status.md)
 
