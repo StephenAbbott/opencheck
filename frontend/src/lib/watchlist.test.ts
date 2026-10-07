@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkedSentence,
   describeChange,
+  fieldWords,
   entryHeadline,
   tierChip,
   tierSentence,
@@ -106,6 +107,16 @@ describe("describeChange", () => {
     expect(describeChange({ kind: "register_status", old: { liveness: "live" }, new: { liveness: "terminal", source_id: "companies_house" } }, (id) => id)).toBe(
       "Register status: live → terminal (companies_house).",
     );
+  });
+
+  it("names the Phase 300 fields and joins list values", () => {
+    expect(fieldWords("registered_as")).toBe("register number");
+    expect(fieldWords("hq_address_country")).toBe("headquarters country");
+    expect(fieldWords("conformity_flag")).toBe("policy conformity flag");
+    expect(
+      describeChange({ kind: "gleif_field", field: "successors", old: null, new: ["2138000000000000T178 — Mirror Top plc", "Other Ltd"] }),
+    ).toBe("GLEIF successor entities: — → 2138000000000000T178 — Mirror Top plc; Other Ltd.");
+    expect(describeChange({ kind: "gleif_field", field: "successors", old: [], new: null })).toBe("GLEIF successor entities: — → —.");
   });
 });
 

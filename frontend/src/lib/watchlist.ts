@@ -182,6 +182,7 @@ const FIELD_WORDS: Record<string, string> = {
   jurisdiction: "jurisdiction",
   legal_form: "legal form",
   successor_lei: "successor entity",
+  successors: "successor entities",
   direct_parent_lei: "direct parent",
   ultimate_parent_lei: "ultimate parent",
   direct_exception: "direct-parent reporting exception",
@@ -189,6 +190,17 @@ const FIELD_WORDS: Record<string, string> = {
   creation_date: "entity creation date",
   expiration_date: "entity expiration date",
   expiration_reason: "entity expiration reason",
+  // Phase 300 — the register identifier, the address countries and the
+  // record's classification joined the material set. Keep in step with
+  // FIELD_WORDS in routers/watch.py.
+  registered_at: "registration authority",
+  registered_as: "register number",
+  validated_at: "validation authority",
+  legal_address_country: "legal address country",
+  hq_address_country: "headquarters country",
+  category: "entity category",
+  sub_category: "entity sub-category",
+  conformity_flag: "policy conformity flag",
 };
 
 export function fieldWords(field: string | undefined): string {
@@ -198,6 +210,8 @@ export function fieldWords(field: string | undefined): string {
 
 function v(x: unknown): string {
   if (x === null || x === undefined || x === "") return "—";
+  // A list value (successor entities) reads as one clause per item.
+  if (Array.isArray(x)) return x.length ? x.map((i) => String(i)).join("; ") : "—";
   if (typeof x === "object") {
     const o = x as { liveness?: unknown; answered?: unknown; applicable?: unknown };
     if ("liveness" in o) return String(o.liveness ?? "—");

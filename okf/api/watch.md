@@ -30,7 +30,9 @@ published deltas names it:
 * **GLEIF** — the Golden Copy delta the mirror already applies hourly
   ([GLEIF](/sources/gleif.md)). Only a change to a *material* field
   (name, statuses, jurisdiction, legal form, parents, reporting exceptions,
-  successor, expiry) counts; renewal churn does not.
+  successors, expiry, the register identifier, the legal and headquarters
+  address countries, category and conformity flag — Phase 300) counts;
+  renewal churn and street-level address changes do not.
 * **OpenSanctions** — their entity-level delta per version
   ([OpenSanctions](/sources/opensanctions.md)), matched against the
   watched company's own names or LEI. A backlog is read oldest first, a

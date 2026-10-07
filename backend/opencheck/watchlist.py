@@ -15,8 +15,10 @@ Two delta feeds, one shape
   ``api.gleif.org``: the download costs nothing against the throttled
   window, regardless of watchlist size. A watched LEI in the delta is then
   read back from the mirror and its **material** fields — name, statuses,
-  jurisdiction, legal form, parents, reporting exceptions, successor, expiry
-  — are digested. A row whose only change is ``NextRenewalDate`` or
+  jurisdiction, legal form, parents, reporting exceptions, successors, expiry,
+  the register identifier, the two address countries, category and
+  conformity flag (Phase 300) — are digested. A row whose only change is
+  ``NextRenewalDate`` or
   ``LastUpdateDate`` has the same digest, so renewal churn (most of the
   16,000 rows a day) triggers nothing. Only a changed digest queues a re-run.
 * **Tier 2 — OpenSanctions.** They publish an entity-level delta per
@@ -203,13 +205,26 @@ def new_token() -> str:
 #: The GLEIF fields whose change is material. ``Registration.NextRenewalDate``
 #: and ``Registration.LastUpdateDate`` are deliberately absent: a row whose
 #: only change is one of those is renewal churn and must trigger nothing.
+#:
+#: Phase 300 widened the set after reading GLEIF's own "what changed" tooling
+#: (the 7 Oct 2026 "Metric in Motion" post and its DataAlerts notebook)
+#: against the 7 Oct LastDay delta: the register identifier
+#: (``registered_at`` / ``registered_as`` / ``validated_at``) is the key every
+#: identifier-dispatched adapter hangs off, so a change to it changes every
+#: downstream fetch; ``successors`` carries the names GLEIF publishes without
+#: an LEI (36 of 61 M&A rows that day); the two address *countries* catch a
+#: headquarters moving jurisdiction without any street-level noise (Birtley's
+#: annual Wimborne/Cranleigh ping-pong is exactly what must stay out);
+#: ``category`` / ``sub_category`` and ``conformity_flag`` are published facts
+#: about how the record should be read. Nothing below country level, and no
+#: event, address line, managing LOU or validation source.
 GLEIF_MATERIAL_FIELDS: tuple[str, ...] = (
     "legal_name",
     "entity_status",
     "registration_status",
     "jurisdiction",
     "legal_form",
-    "successor_lei",
+    "successors",
     "direct_parent_lei",
     "ultimate_parent_lei",
     "direct_exception",
@@ -217,7 +232,40 @@ GLEIF_MATERIAL_FIELDS: tuple[str, ...] = (
     "creation_date",
     "expiration_date",
     "expiration_reason",
+    "registered_at",
+    "registered_as",
+    "validated_at",
+    "legal_address_country",
+    "hq_address_country",
+    "category",
+    "sub_category",
+    "conformity_flag",
 )
+
+
+def _successor_labels(detail: dict[str, Any], row_successor: str | None) -> list[str] | None:
+    """GLEIF's successor entities as ``"LEI — name"`` / ``"LEI"`` / ``"name"``
+    labels, in file order. The detail carries up to five with their names;
+    a v1 mirror row (no detail) still has the first successor LEI as a
+    column. ``None`` when GLEIF names no successor."""
+    out: list[str] = []
+    for s in detail.get("successorEntities") or []:
+        lei, name = (s.get("lei") or "").strip(), (s.get("name") or "").strip()
+        if lei and name:
+            out.append(f"{lei} — {name}")
+        elif lei or name:
+            out.append(lei or name)
+    if not out and row_successor:
+        out.append(row_successor)
+    return out or None
+
+
+def _authority_id(block: Any) -> str | None:
+    """``registeredAt`` / ``validatedAt`` as one string: the RA code, or the
+    free-text ``other`` when GLEIF has no code for the register."""
+    if not isinstance(block, dict):
+        return None
+    return block.get("id") or block.get("other") or None
 
 
 def gleif_facts(store: Any, lei: str) -> dict[str, Any] | None:
@@ -238,13 +286,15 @@ def gleif_facts(store: Any, lei: str) -> dict[str, Any] | None:
         ex = exceptions.get(kind)
         return getattr(ex, "reason", None) if ex is not None else None
 
+    legal_addr = detail.get("legalAddress") or {}
+    hq_addr = detail.get("headquartersAddress") or {}
     return {
         "legal_name": row.name or None,
         "entity_status": row.entity_status or None,
         "registration_status": row.registration_status or None,
         "jurisdiction": row.jurisdiction or None,
         "legal_form": row.legal_form or None,
-        "successor_lei": row.successor_lei or None,
+        "successors": _successor_labels(detail, row.successor_lei or None),
         "direct_parent_lei": row.direct_parent_lei or None,
         "ultimate_parent_lei": row.ultimate_parent_lei or None,
         "direct_exception": _reason("direct"),
@@ -252,6 +302,17 @@ def gleif_facts(store: Any, lei: str) -> dict[str, Any] | None:
         "creation_date": detail.get("creationDate") or None,
         "expiration_date": expiration.get("date") or None,
         "expiration_reason": expiration.get("reason") or None,
+        # Phase 300 — the register identifier, the address countries and the
+        # record's own classification. All read off the detail the mirror
+        # already keeps; nothing new is fetched.
+        "registered_at": _authority_id(detail.get("registeredAt")),
+        "registered_as": detail.get("registeredAs") or None,
+        "validated_at": _authority_id(detail.get("validatedAt")),
+        "legal_address_country": legal_addr.get("country") or row.country or None,
+        "hq_address_country": hq_addr.get("country") or None,
+        "category": detail.get("category") or None,
+        "sub_category": detail.get("subCategory") or None,
+        "conformity_flag": detail.get("conformityFlag") or None,
     }
 
 
@@ -263,15 +324,32 @@ def digest(obj: Any) -> str:
 
 
 def diff_gleif_facts(before: dict[str, Any] | None, after: dict[str, Any] | None) -> list[dict[str, Any]]:
-    """The material GLEIF fields that differ, as ``gleif_field`` changes."""
+    """The material GLEIF fields that differ, as ``gleif_field`` changes.
+
+    Only a field **both** sides carry is compared. A baseline stored before a
+    field joined :data:`GLEIF_MATERIAL_FIELDS` (Phase 300 added nine) has no
+    value for it, and "OpenCheck started watching this field" is not a
+    change to the company — the same rule as the verdict template and the
+    signal-rules version on the lookup snapshot. :func:`on_gleif_delta`
+    upgrades such a baseline to the current shape without an entry.
+    """
     if before is None or after is None:
         return []
     out = []
     for name in GLEIF_MATERIAL_FIELDS:
+        if name not in before or name not in after:
+            continue
         a, b = before.get(name), after.get(name)
         if a != b:
             out.append({"kind": "gleif_field", "field": name, "old": a, "new": b})
     return out
+
+
+def facts_on_baseline_shape(facts: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:
+    """``facts`` projected onto the keys ``baseline`` knows, so a digest
+    comparison asks "did anything the baseline recorded change?" rather than
+    "does the baseline have today's shape?"."""
+    return {k: facts.get(k) for k in baseline}
 
 
 # ---------------------------------------------------------------------------
@@ -814,6 +892,20 @@ class WatchlistStore:
             out.append(d)
         return out
 
+    def upgrade_facts(
+        self, th: str, lei: str, facts: dict[str, Any], watermark: str | None
+    ) -> None:
+        """Rewrite a watch's GLEIF facts to the current shape without
+        touching ``last_checked_at`` (Phase 300: a churn row whose baseline
+        predates a material field). Nothing is logged — the company did not
+        change, OpenCheck's field set did."""
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE watches SET gleif_facts_json = ?, gleif_digest = ?, gleif_watermark = ? "
+                "WHERE token_hash = ? AND lei = ?",
+                (json.dumps(facts), digest(facts), watermark, th, lei),
+            )
+
     def update_baseline(
         self,
         th: str,
@@ -1078,6 +1170,7 @@ class WatcherState:
     gleif_touched: int = 0  # watched LEIs present in a delta
     gleif_churn: int = 0  # …whose material digest did not change
     gleif_queued: int = 0
+    gleif_rebaselined: int = 0  # …churn rows whose baseline predated a field and was upgraded (Phase 300)
     gleif_last_publish: str | None = None
     os_versions_seen: int = 0
     os_last_version: str | None = None
@@ -1132,22 +1225,35 @@ def on_gleif_delta(changed_leis: Iterable[str], publish_label: str) -> dict[str,
         mirror = ep.get_store()
         watched = store.watched_leis()
         touched = sorted(watched & {str(x).strip().upper() for x in changed_leis})
-        queued = churn = 0
+        queued = churn = rebaselined = 0
+        watermark: str | None = None
+        if mirror is not None:
+            wm = mirror.watermark()
+            watermark = wm.strftime("%Y-%m-%d %H:%M:%S") if wm else None
         for lei in touched:
             facts = gleif_facts(mirror, lei) if mirror is not None else None
-            new_digest = digest(facts) if facts is not None else None
-            rows = store.rows_for_lei(lei)
+            rows = store.rows_for_lei(lei, with_hash=True)
             changed_fields: list[dict[str, Any]] = []
             material = False
             for row in rows:
-                if facts is None or row.get("gleif_facts") is None:
+                baseline = row.get("gleif_facts")
+                if facts is None or baseline is None:
                     # No baseline (or no mirror row) — the delta named it, so
                     # a re-run is the honest response; the re-run stores one.
                     material = True
                     continue
-                if new_digest != digest(row["gleif_facts"]):
+                # Compare on the fields the baseline recorded (Phase 300): a
+                # baseline from before a field was material cannot have
+                # "changed" in it.
+                if digest(facts_on_baseline_shape(facts, baseline)) != digest(baseline):
                     material = True
-                    changed_fields = diff_gleif_facts(row["gleif_facts"], facts)
+                    changed_fields = diff_gleif_facts(baseline, facts)
+                elif set(baseline) != set(facts):
+                    # Churn, but the baseline predates the current field set:
+                    # move it on silently so the next delta compares like
+                    # with like. Not a check, so ``last_checked_at`` stays.
+                    store.upgrade_facts(row["token_hash"], lei, facts, watermark)
+                    rebaselined += 1
             if material:
                 if store.enqueue(
                     lei,
@@ -1166,6 +1272,7 @@ def on_gleif_delta(changed_leis: Iterable[str], publish_label: str) -> dict[str,
             gleif_touched=len(touched),
             gleif_churn=churn,
             gleif_queued=queued,
+            gleif_rebaselined=rebaselined,
             gleif_last_publish=publish_label,
         )
         if touched:
