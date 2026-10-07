@@ -378,7 +378,31 @@ FIELD_WORDS: dict[str, str] = {
     "sub_category": "entity sub-category",
     "conformity_flag": "policy conformity flag",
     "corporate_events": "legal entity events",
+    "direct_children": "direct subsidiaries",
 }
+
+
+def _child_words(lei: str, names: dict[str, str]) -> str:
+    name = names.get(lei)
+    return f"{name} ({lei})" if name else lei
+
+
+def describe_children(old: Any, new: Any, names: dict[str, str] | None = None) -> str:
+    """One sentence for a ``direct_children`` change (Phase 302): the
+    subsidiaries GLEIF now lists as directly consolidated by this company
+    that it did not, then those it no longer lists. Names are the ones the
+    re-run read from the mirror; an LEI alone when it had none."""
+    names = names or {}
+    before, after = set(old or []), set(new or [])
+    added, removed = sorted(after - before), sorted(before - after)
+    parts: list[str] = []
+    if added:
+        noun = "a new direct subsidiary" if len(added) == 1 else f"{len(added)} new direct subsidiaries"
+        parts.append(f"GLEIF lists {noun}: " + "; ".join(_child_words(x, names) for x in added) + ".")
+    if removed:
+        noun = "a direct subsidiary" if len(removed) == 1 else f"{len(removed)} direct subsidiaries"
+        parts.append(f"GLEIF no longer lists {noun}: " + "; ".join(_child_words(x, names) for x in removed) + ".")
+    return " ".join(parts) or "GLEIF direct subsidiaries changed."
 
 #: GLEIF Legal Entity Event types in words (Phase 301). An unlisted type is
 #: lower-cased with its underscores dropped. Keep in step with
@@ -466,6 +490,8 @@ def _describe(change: dict[str, Any]) -> str:
     if k == "gleif_field":
         if change.get("field") == "corporate_events":
             return describe_events(old, new)
+        if change.get("field") == "direct_children":
+            return describe_children(old, new, change.get("names"))
         return f"GLEIF {field_words(change.get('field'))}: {_value_words(old)} → {_value_words(new)}."
     if k == "register_status":
         o = (old or {}).get("liveness") if isinstance(old, dict) else old
@@ -525,6 +551,10 @@ def _entry_title(entry: dict[str, Any]) -> str:
         head = "register status changed"
     elif any(k == "signal_new" for k in kinds):
         head = "new risk signal"
+    elif all(
+        c.get("field") == "direct_children" for c in changes if c.get("kind") == "gleif_field"
+    ) and any(k == "gleif_field" for k in kinds):
+        head = "direct subsidiaries changed"
     elif any(k == "gleif_field" for k in kinds):
         head = "GLEIF record changed"
     else:

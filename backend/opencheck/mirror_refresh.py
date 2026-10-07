@@ -297,6 +297,11 @@ def apply_delta(db_path: Path, publish: dict, delta: str) -> dict[str, int]:
         try:
             mb.ensure_schema(conn)
             zdict = mb.stored_zdict(conn)
+            # Phase 302: a delta child's direct parent *before* the upsert —
+            # the parent it may be leaving. Read now; after load_rr the row
+            # names only the new parent.
+            rr_children = mb.leis_in_csv(paths["rr"], mb.RR_START)
+            former_parents = mb.previous_direct_parents(conn, rr_children)
             counts = {
                 "entities": mb.load_lei2(conn, paths["lei2"], zdict=zdict),
                 "relationships": mb.load_rr(conn, paths["rr"], full=False),
@@ -308,9 +313,14 @@ def apply_delta(db_path: Path, publish: dict, delta: str) -> dict[str, int]:
             # Phase 215: which LEIs this delta named, for the watchlist. Read
             # before the watermark is written and handed over after it, so
             # the watcher reads a mirror that already carries the delta.
+            # Phase 302 adds the parent side — the RR rows' end nodes and the
+            # parents those children had before — so a watched parent hears
+            # about a subsidiary joining or leaving its group.
             named = (
                 mb.leis_in_csv(paths["lei2"], mb.COL_LEI)
-                | mb.leis_in_csv(paths["rr"], mb.RR_START)
+                | rr_children
+                | mb.leis_in_csv(paths["rr"], mb.RR_END)
+                | former_parents
                 | mb.leis_in_csv(paths["repex"], mb.REPEX_LEI)
             )
             mb.write_meta(

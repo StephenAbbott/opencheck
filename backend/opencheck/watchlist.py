@@ -17,7 +17,8 @@ Two delta feeds, one shape
   read back from the mirror and its **material** fields — name, statuses,
   jurisdiction, legal form, parents, reporting exceptions, successors, expiry,
   the register identifier, the two address countries, category and
-  conformity flag (Phase 300) — are digested. A row whose only change is
+  conformity flag (Phase 300), legal entity events (Phase 301) and the
+  standing direct subsidiaries (Phase 302) — are digested. A row whose only change is
   ``NextRenewalDate`` or
   ``LastUpdateDate`` has the same digest, so renewal churn (most of the
   16,000 rows a day) triggers nothing. Only a changed digest queues a re-run.
@@ -241,6 +242,7 @@ GLEIF_MATERIAL_FIELDS: tuple[str, ...] = (
     "sub_category",
     "conformity_flag",
     "corporate_events",
+    "direct_children",
 )
 
 #: Legal Entity Event types that are *not* material (Phase 301). Measured on
@@ -369,6 +371,14 @@ def gleif_facts(store: Any, lei: str) -> dict[str, Any] | None:
         **(
             {"corporate_events": _corporate_events(detail)}
             if getattr(store, "carries_events", False)
+            else {}
+        ),
+        # Phase 302 — the standing direct subsidiaries, as sorted LEIs. LEIs
+        # only: a child renaming itself is not a change to the parent. Absent
+        # (not empty) on a file without the relationships table.
+        **(
+            {"direct_children": store.direct_child_leis(lei)}
+            if getattr(store, "has_relationships", False)
             else {}
         ),
     }
@@ -1676,6 +1686,28 @@ def _mirror_facts(lei: str) -> tuple[dict[str, Any] | None, str | None]:
     return facts, (wm.strftime("%Y-%m-%d %H:%M:%S") if wm else None)
 
 
+def name_children(changes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Attach the names of the subsidiaries a ``direct_children`` change
+    added or removed, read from the mirror at entry-write time (Phase 302),
+    so the entry can say who joined or left without the fact carrying names
+    a rename would disturb."""
+    from . import entity_pages as ep
+
+    for c in changes:
+        if c.get("kind") != "gleif_field" or c.get("field") != "direct_children":
+            continue
+        old, new = set(c.get("old") or []), set(c.get("new") or [])
+        moved = sorted(old ^ new)
+        mirror = ep.get_store()
+        names: dict[str, str] = {}
+        if mirror is not None and moved:
+            for lei, row in mirror.get_many(moved).items():
+                if row.name:
+                    names[lei] = row.name
+        c["names"] = names
+    return changes
+
+
 def _write_rerun(
     store: "WatchlistStore",
     rows: list[dict[str, Any]],
@@ -1692,7 +1724,9 @@ def _write_rerun(
     all_changes: list[dict[str, Any]] = []
     for row in rows:
         th = row["token_hash"]
-        gleif_changes = diff_gleif_facts(row.get("gleif_facts"), facts, since=row.get("gleif_watermark"))
+        gleif_changes = name_children(
+            diff_gleif_facts(row.get("gleif_facts"), facts, since=row.get("gleif_watermark"))
+        )
         changes = gleif_changes + diff_snapshots(row.get("snapshot"), snapshot)
         all_changes = changes
         store.update_baseline(

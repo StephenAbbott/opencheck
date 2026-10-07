@@ -121,12 +121,17 @@ jobs:
           ls -l /tmp/entity_pages.sqlite.gz
 
       - name: Replace the `entity-pages-latest` release asset
+        # Phase 302: upload under a staging name, check its size, then delete
+        # the old asset and rename — every call retried, delete and rename
+        # idempotent. `gh release upload --clobber` deleted first and retried
+        # only the upload; run #5 (7 Oct 2026) died on an unretried call.
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          gh release upload entity-pages-latest /tmp/entity_pages.sqlite.gz --clobber
-          gh release edit entity-pages-latest \
-            --notes "$(cat summary.txt) Rebuilt automatically by refresh-entity-pages-db on $(date -u +%Y-%m-%d)."
+          bash backend/scripts/replace_release_asset.sh entity-pages-latest \
+            /tmp/entity_pages.sqlite.gz entity_pages.sqlite.gz \
+            "$(cat summary.txt) Rebuilt automatically by refresh-entity-pages-db on $(date -u +%Y-%m-%d)."
 
       - name: Trigger a Render redeploy (optional)
         env:

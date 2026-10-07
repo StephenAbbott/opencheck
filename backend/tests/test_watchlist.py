@@ -41,7 +41,7 @@ from tests.test_gleif_mirror_store import (
     _lei2_row,
     _write_csv,
 )
-from tests.test_mirror_refresh import WATERMARK, _build_mirror
+from tests.test_mirror_refresh import NEW_LEI, WATERMARK, _build_mirror
 
 ATOM = "{http://www.w3.org/2005/Atom}"
 
@@ -1213,3 +1213,91 @@ def test_feed_and_titles_word_events() -> None:
     content = rw._entry_content(entry)
     assert content.startswith("OpenCheck's GLEIF mirror was rebuilt from the 2026-10-08 00:00:00 Golden Copy")
     assert "Fields that changed: legal entity events." in content
+
+
+# ---- Phase 302: a watched parent hears about its subsidiaries ----------------
+
+from tests.test_gleif_mirror_store import RETIRED_CHILD, TOP, _rr_row  # noqa: E402
+
+DIRECT = "IS_DIRECTLY_CONSOLIDATED_BY"
+
+
+def test_the_children_fact_is_the_standing_direct_relationships(env: Path) -> None:
+    mirror = ep.get_store()
+    assert mirror is not None
+    assert wl.gleif_facts(mirror, PARENT)["direct_children"] == [EASY]  # type: ignore[index]
+    # TOP's direct children: PARENT standing; RETIRED_CHILD's record is RETIRED.
+    assert mirror.direct_child_leis(TOP) == [PARENT]
+    assert RETIRED_CHILD not in mirror.direct_child_leis(TOP)
+    assert wl.gleif_facts(mirror, EASY)["direct_children"] == []  # type: ignore[index]
+
+
+def test_a_new_subsidiary_reaches_a_watched_parent(client: TestClient, env: Path, tmp_path: Path) -> None:
+    """The RR row names the child and the new parent; the parent's own LEI2
+    record is not in the delta, so before Phase 302 it was never touched."""
+    _watch(client, PARENT)
+    store = wl.get_store()
+    assert store is not None
+    publish = _delta(tmp_path, [], rr=[_rr_row(NEW_LEI, PARENT, DIRECT, reg="PUBLISHED")])
+    assert mr.refresh_once(publish=publish) == "applied"
+    pending = store.take_pending(10)
+    assert [p["lei"] for p in pending] == [PARENT]
+    assert pending[0]["trigger"]["fields"] == ["direct_children"]
+
+
+def test_a_subsidiary_moving_to_another_parent_reaches_the_one_it_left(client: TestClient, env: Path, tmp_path: Path) -> None:
+    """EASY moves from PARENT to TOP: the delta row names EASY and TOP only.
+    PARENT is found as EASY's direct parent before the delta was applied."""
+    _watch(client, PARENT)
+    store = wl.get_store()
+    assert store is not None
+    publish = _delta(tmp_path, [], rr=[_rr_row(EASY, TOP, DIRECT, reg="PUBLISHED")])
+    assert mr.refresh_once(publish=publish) == "applied"
+    pending = store.take_pending(10)
+    assert [p["lei"] for p in pending] == [PARENT]
+    assert pending[0]["trigger"]["fields"] == ["direct_children"]
+    diff = wl.diff_gleif_facts(store.rows_for_lei(PARENT)[0]["gleif_facts"], wl.gleif_facts(ep.get_store(), PARENT))  # type: ignore[arg-type]
+    assert diff == [{"kind": "gleif_field", "field": "direct_children", "old": [EASY], "new": []}]
+
+
+def test_a_renewed_relationship_record_is_churn_for_the_parent(client: TestClient, env: Path, tmp_path: Path) -> None:
+    _watch(client, PARENT)
+    store = wl.get_store()
+    assert store is not None
+    renewed = _rr_row(EASY, PARENT, DIRECT, reg="PUBLISHED")
+    publish = _delta(tmp_path, [], rr=[renewed])
+    assert mr.refresh_once(publish=publish) == "applied"
+    assert store.pending_count() == 0
+    s = wl.state()
+    assert s["gleif_touched"] >= 1 and s["gleif_churn"] >= 1 and s["gleif_queued"] == 0
+
+
+def test_a_baseline_from_before_phase_302_is_upgraded_without_an_entry(client: TestClient, env: Path, tmp_path: Path) -> None:
+    _watch(client, PARENT)
+    store = wl.get_store()
+    assert store is not None
+    with sqlite3.connect(env.parent / "watchlist.sqlite") as conn:
+        facts = json.loads(conn.execute("SELECT gleif_facts_json FROM watches WHERE lei = ?", (PARENT,)).fetchone()[0])
+        facts.pop("direct_children")
+        conn.execute("UPDATE watches SET gleif_facts_json = ? WHERE lei = ?", (json.dumps(facts), PARENT))
+    publish = _delta(tmp_path, [], rr=[_rr_row(EASY, PARENT, DIRECT, reg="PUBLISHED")])
+    assert mr.refresh_once(publish=publish) == "applied"
+    assert store.pending_count() == 0 and wl.state()["gleif_rebaselined"] >= 1
+    assert store.rows_for_lei(PARENT)[0]["gleif_facts"]["direct_children"] == [EASY]
+
+
+def test_entries_name_the_subsidiaries_that_moved(env: Path) -> None:
+    from opencheck.routers import watch as rw
+
+    change = {"kind": "gleif_field", "field": "direct_children", "old": [EASY], "new": [PARENT, TOP]}
+    named = wl.name_children([change])[0]
+    assert set(named["names"]) == {EASY, PARENT, TOP}
+    sentence = rw._describe(named)
+    assert sentence.startswith("GLEIF lists 2 new direct subsidiaries: ")
+    assert f"({PARENT})" in sentence and f"({TOP})" in sentence
+    assert f"GLEIF no longer lists a direct subsidiary: {named['names'][EASY]} ({EASY})." in sentence
+    assert rw.describe_children([], ["X"], {}) == "GLEIF lists a new direct subsidiary: X."
+    entry = {"lei": PARENT, "legal_name": "Mirror Parent", "tier": wl.TIER_GLEIF, "changes": [named], "trigger": {}}
+    assert rw._entry_title(entry) == "Mirror Parent: direct subsidiaries changed"
+    both = {**entry, "changes": [named, {"kind": "gleif_field", "field": "legal_name", "old": "A", "new": "B"}]}
+    assert rw._entry_title(both) == "Mirror Parent: GLEIF record changed"

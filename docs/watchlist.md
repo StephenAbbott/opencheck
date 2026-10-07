@@ -118,6 +118,34 @@ type "liquidation: in progress → completed", and its headline is "legal
 entity event recorded" — above a register-status change, since it is the
 more specific fact.
 
+**Subsidiaries (Phase 302).** A watched parent now hears about its group.
+`direct_children` is the sorted list of LEIs whose RR record says they are
+directly consolidated by the watched company, read from the mirror's
+`relationships` table (`EntityStore.direct_child_leis`) with the record's
+own standing — relationship ACTIVE, registration PUBLISHED or LAPSED — so a
+child whose *own* LEI lapses has not left the group. LEIs only: a
+subsidiary renaming itself is not a change to its parent. Uncapped, by
+decision: a large group re-runs whenever a subsidiary joins or leaves, and
+the cost still tracks the deltas.
+
+Two changes to which LEIs a delta names make it reach the parent at all.
+The hook's set now includes the RR rows' **end nodes** (the parents), not
+only their start nodes (the children) — the parent's own LEI2 record is
+usually not in the delta when a child joins. And it includes each delta
+child's **previous** direct parent, read from the mirror *before* the RR
+file is applied (`mirror_build.previous_direct_parents`): when a subsidiary
+moves from A to B the row names only the child and B, so without this A
+would never learn it lost one. A renewed relationship record names the
+parent too; its children are unchanged, so it is churn.
+
+A baseline from before Phase 302 has no `direct_children`; the both-sides
+rule upgrades it silently on its first touch, as Phase 300 does for every
+new field. The entry names who moved, with names read from the mirror when
+the entry is written (`name_children`, carried as `names` on the change):
+"GLEIF lists a new direct subsidiary: Alpha Ltd (LEI)", "GLEIF no longer
+lists a direct subsidiary: …", and a subsidiaries-only entry is headlined
+"direct subsidiaries changed".
+
 **Tier 2 — OpenSanctions.** They publish an entity-level delta per version:
 `https://data.opensanctions.org/artifacts/default/<version>/entities.delta.json`,
 JSON-lines of `{"op": "ADD|MOD|DEL", "entity": {…}}`, about 11 MB, roughly

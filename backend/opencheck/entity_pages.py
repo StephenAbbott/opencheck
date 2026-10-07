@@ -730,6 +730,26 @@ class EntityStore:
         return [self._row(r) for r in rows], int(total)
 
     # -- Level 2 (Phase 178) --------------------------------------------------
+    def direct_child_leis(self, lei: str) -> list[str]:
+        """Every LEI whose standing RR record says it is directly consolidated
+        by ``lei``, sorted (Phase 302, the watchlist's subsidiaries fact).
+        Read from the relationships table, not the entities' parent column,
+        so it is the relationship record's standing that counts: a child
+        whose own LEI lapses has not left the group. Uncapped — the
+        watchlist digests the whole set."""
+        if not self.has_relationships:
+            return []
+        marks = ",".join("?" * len(RR_STANDING_REGISTRATION_STATUSES))
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT child_lei FROM relationships WHERE parent_lei = ? AND relationship_type = ? "
+                "AND UPPER(COALESCE(relationship_status, 'ACTIVE')) = 'ACTIVE' "
+                f"AND UPPER(COALESCE(registration_status, 'PUBLISHED')) IN ({marks}) "
+                "ORDER BY child_lei",
+                (lei, RR_DIRECT, *sorted(RR_STANDING_REGISTRATION_STATUSES)),
+            ).fetchall()
+        return [r[0] for r in rows]
+
     def relationship(self, lei: str, kind: str) -> RelationshipRow | None:
         """The RR record for ``lei``'s direct or ultimate parent, standing or
         not (callers check :attr:`RelationshipRow.standing`), or ``None`` when

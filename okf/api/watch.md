@@ -33,7 +33,8 @@ published deltas names it:
   successors, expiry, the register identifier, the legal and headquarters
   address countries, category and conformity flag — Phase 300 — and GLEIF's
   Legal Entity Events such as a liquidation, dissolution or merger opened or
-  completed — Phase 301) counts; renewal churn, street-level address
+  completed — Phase 301 — and a direct subsidiary joining or leaving the
+  group — Phase 302) counts; renewal churn, street-level address
   changes and address-change events do not. When OpenCheck's GLEIF mirror is
   rebuilt, every watched company is re-read once against it.
 * **OpenSanctions** — their entity-level delta per version

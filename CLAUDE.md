@@ -1824,6 +1824,20 @@ Things that will be re-derived otherwise:
   "— → value" entries for every watched LEI. Keep `FIELD_WORDS` in
   `routers/watch.py` and `lib/watchlist.ts` in step with the tuple — a test
   pins the backend one.
+- **A delta names parents too (Phase 302).** `apply_delta`'s `named` set
+  holds the RR end nodes and each delta child's *previous* direct parent
+  (`previous_direct_parents`, read before `load_rr`). Drop either and a
+  watched parent stops hearing about subsidiaries joining or leaving.
+  `direct_children` is LEIs only, from the relationships table's own
+  standing — never the entities' parent column, never names.
+- **Replace a release asset with `scripts/replace_release_asset.sh`, not
+  `gh release upload --clobber`** (Phase 302). `--clobber` deletes first and
+  retries only the upload, so one unretried API error fails the job (run #5,
+  7 Oct 2026) and a failed upload after the delete leaves the release
+  empty. The script stages `NAME.new`, checks its size, then deletes and
+  renames idempotently with retries; `tests/test_replace_release_asset.py`
+  drives it against a fake `gh`. `refresh-entity-pages-db` uses it; the
+  other release-uploading workflows still use `--clobber`.
 - **Legal Entity Events (Phase 301) are read only from a full build.**
   `gleif_facts` omits `corporate_events` (absent, not `None`) unless
   `EntityStore.carries_events` — `meta.detail_events`, set by the build

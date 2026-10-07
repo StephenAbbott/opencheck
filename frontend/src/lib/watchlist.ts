@@ -75,6 +75,8 @@ export interface Change {
   degraded?: string[];
   missing?: string[];
   old?: unknown;
+  /** Phase 302: names of the subsidiaries a `direct_children` change moved. */
+  names?: Record<string, string>;
   new?: unknown;
 }
 
@@ -204,7 +206,29 @@ const FIELD_WORDS: Record<string, string> = {
   sub_category: "entity sub-category",
   conformity_flag: "policy conformity flag",
   corporate_events: "legal entity events",
+  direct_children: "direct subsidiaries",
 };
+
+/** One sentence for a `direct_children` change (Phase 302) — the same
+ *  reading as `describe_children` on the feed. */
+export function describeChildren(oldValue: unknown, newValue: unknown, names?: Record<string, string> | null): string {
+  const n = names ?? {};
+  const before = new Set((Array.isArray(oldValue) ? oldValue : []).map(String));
+  const after = new Set((Array.isArray(newValue) ? newValue : []).map(String));
+  const added = [...after].filter((x) => !before.has(x)).sort();
+  const removed = [...before].filter((x) => !after.has(x)).sort();
+  const words = (lei: string) => (n[lei] ? `${n[lei]} (${lei})` : lei);
+  const parts: string[] = [];
+  if (added.length) {
+    const noun = added.length === 1 ? "a new direct subsidiary" : `${added.length} new direct subsidiaries`;
+    parts.push(`GLEIF lists ${noun}: ${added.map(words).join("; ")}.`);
+  }
+  if (removed.length) {
+    const noun = removed.length === 1 ? "a direct subsidiary" : `${removed.length} direct subsidiaries`;
+    parts.push(`GLEIF no longer lists ${noun}: ${removed.map(words).join("; ")}.`);
+  }
+  return parts.join(" ") || "GLEIF direct subsidiaries changed.";
+}
 
 // Phase 301 — GLEIF Legal Entity Events in words. Keep in step with
 // EVENT_TYPE_WORDS / EVENT_STATUS_WORDS in routers/watch.py.
@@ -302,6 +326,7 @@ export function describeChange(c: Change, sourceLabel: (id: string) => string = 
   switch (c.kind) {
     case "gleif_field":
       if (c.field === "corporate_events") return describeEvents(c.old, c.new);
+      if (c.field === "direct_children") return describeChildren(c.old, c.new, c.names);
       return `GLEIF ${fieldWords(c.field)}: ${v(c.old)} → ${v(c.new)}.`;
     case "legal_name":
       return `Legal name: ${v(c.old)} → ${v(c.new)}.`;
@@ -387,7 +412,11 @@ export function entryHeadline(e: WatchEntry): string {
   }
   if (kinds.has("register_status") || kinds.has("dissolution_date")) return `${name}: register status changed`;
   if (kinds.has("signal_new")) return `${name}: new risk signal`;
-  if (kinds.has("gleif_field")) return `${name}: GLEIF record changed`;
+  if (kinds.has("gleif_field")) {
+    const gleif = e.changes.filter((c) => c.kind === "gleif_field");
+    if (gleif.every((c) => c.field === "direct_children")) return `${name}: direct subsidiaries changed`;
+    return `${name}: GLEIF record changed`;
+  }
   const n = e.changes.length;
   return `${name}: ${n} change${n === 1 ? "" : "s"}`;
 }
