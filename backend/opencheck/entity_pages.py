@@ -152,6 +152,13 @@ SCHEMA_V2_ENTITY_COLUMNS = ("detail_json",)
 #: without it holds no compressed rows.
 DETAIL_ZDICT_META_KEY = "detail_zdict"
 
+#: Set by a full build whose ``detail_json`` carries GLEIF's Legal Entity
+#: Events (Phase 301). A delta applied by newer code writes events for the
+#: rows it touches, but only a full build makes "no events" mean "GLEIF
+#: published none" for every row — so the watchlist reads events only from a
+#: file carrying this key, and an older file is treated as not holding them.
+DETAIL_EVENTS_META_KEY = "detail_events"
+
 #: zlib's window is 32 KiB, so a longer dictionary is never consulted.
 _ZDICT_MAX = 32 * 1024
 
@@ -353,6 +360,38 @@ def _address_block(block: dict | None, *, city: str | None = None,
     return out
 
 
+_EVENT_API_KEYS: tuple[str, ...] = (
+    "validationDocuments",
+    "validationReference",
+    "effectiveDate",
+    "recordedDate",
+    "type",
+    "status",
+)
+
+
+def _event_groups(events: list[dict]) -> list[dict]:
+    """The mirror's flat event list (Phase 301) in the live API's
+    ``entity.eventGroups`` shape: events sharing a ``groupId`` form one
+    group in ``groupSequenceNo`` order; an event with no group id is a group
+    of its own. Affected fields are not held, so they are not rendered."""
+    groups: dict[str, dict] = {}
+    order: list[str] = []
+    for i, e in enumerate(events):
+        key = e.get("groupId") or f"_standalone_{i}"
+        if key not in groups:
+            groups[key] = {"groupType": e.get("groupType") or "STANDALONE", "events": []}
+            order.append(key)
+        groups[key]["events"].append(e)
+    out: list[dict] = []
+    for key in order:
+        g = groups[key]
+        g["events"].sort(key=lambda e: int(e.get("groupSequenceNo") or 0))
+        g["events"] = [{k: e[k] for k in _EVENT_API_KEYS if e.get(k)} for e in g["events"]]
+        out.append(g)
+    return out
+
+
 def gleif_record_from_row(row: EntityRow) -> dict:
     """An :class:`EntityRow` shaped as a GLEIF Level-1 ``data`` object.
 
@@ -417,6 +456,9 @@ def gleif_record_from_row(row: EntityRow) -> dict:
         entity["successorEntities"] = [dict(x) for x in successors]
         # The live API also carries the first successor in the singular field.
         entity["successorEntity"] = dict(successors[0])
+    event_groups = _event_groups(d.get("events") or [])
+    if event_groups:
+        entity["eventGroups"] = event_groups
 
     attributes: dict = {"lei": row.lei, "entity": entity}
     registration: dict = {}
@@ -611,6 +653,12 @@ class EntityStore:
     def schema_version(self) -> str:
         """``meta.schema_version``, or ``"1"`` for a file built before it existed."""
         return self.meta().get("schema_version") or "1"
+
+    @property
+    def carries_events(self) -> bool:
+        """Whether every row's detail carries GLEIF's Legal Entity Events —
+        a full build from Phase 301 on (:data:`DETAIL_EVENTS_META_KEY`)."""
+        return self.has_detail and bool(self.meta().get(DETAIL_EVENTS_META_KEY))
 
     @property
     def is_mirror(self) -> bool:

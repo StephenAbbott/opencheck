@@ -880,7 +880,10 @@ def test_gleif_facts_carry_the_register_identifier_countries_and_classification(
     # A successor GLEIF names with an LEI reads "LEI — name".
     orphan = wl.gleif_facts(mirror, ORPHAN)
     assert orphan is not None and orphan["successors"] == [f"{TOP} — Mirror Top plc"]
-    assert set(wl.GLEIF_MATERIAL_FIELDS) <= set(facts)
+    # The fixture mirror is not a Phase 301 full build, so it does not claim
+    # to hold events: the key is absent, not None.
+    assert "corporate_events" not in facts
+    assert set(wl.GLEIF_MATERIAL_FIELDS) - {"corporate_events"} <= set(facts)
 
 
 def test_a_register_number_change_is_material(client: TestClient, env: Path, tmp_path: Path) -> None:
@@ -1002,3 +1005,211 @@ def test_feed_words_the_new_fields_and_lists() -> None:
     })
     assert sentence == "GLEIF successor entities: — → 2138000000000000T178 — Mirror Top plc; Other Successor Ltd."
     assert set(rw.FIELD_WORDS) == set(wl.GLEIF_MATERIAL_FIELDS)
+
+
+# ---- Phase 301: Legal Entity Events -----------------------------------------
+
+EV = "Entity.LegalEntityEvents.LegalEntityEvent.{n}."
+
+
+def _event(n: int, etype: str, status: str, *, effective: str, recorded: str, group: str = "", gtype: str = "STANDALONE") -> dict[str, str]:
+    p = EV.format(n=n)
+    out = {
+        p + "LegalEntityEventType": etype,
+        p + "event_status": status,
+        p + "group_type": gtype,
+        p + "LegalEntityEventEffectiveDate": effective,
+        p + "LegalEntityEventRecordedDate": recorded,
+        p + "ValidationDocuments": "SUPPORTING_DOCUMENTS",
+    }
+    if group:
+        out[p + "group_id"] = group
+        out[p + "group_sequence_no"] = str(n)
+    return out
+
+
+def _flag_events(db: Path, built_at: str = "2026-10-08T03:00:00+00:00") -> None:
+    """Mark the test mirror as a Phase 301 full build (and give it a new
+    built_at, as a rebuilt asset has)."""
+    with sqlite3.connect(db) as conn:
+        conn.executemany(
+            "INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            [(ep.DETAIL_EVENTS_META_KEY, "1"), ("built_at", built_at)],
+        )
+    ep.reset_store_for_tests()
+
+
+_LIQ = _event(1, "LIQUIDATION", "IN_PROGRESS", effective="2026-10-06T00:00:00+01:00", recorded="2026-10-06T09:00:00+01:00")
+
+
+def test_the_mirror_holds_events_and_serves_them_as_event_groups(env: Path, tmp_path: Path) -> None:
+    from opencheck import mirror_build as mb
+
+    row = dict(zip(LEI2_HEADER, _easy_row(**{
+        **_event(1, "CHANGE_LEGAL_FORM", "COMPLETED", effective="2026-09-01T00:00:00Z", recorded="2026-09-01T10:00:00Z", group="G1", gtype="CHANGE_LEGAL_FORM_AND_NAME"),
+        **_event(2, "CHANGE_LEGAL_NAME", "COMPLETED", effective="2026-09-01T00:00:00Z", recorded="2026-09-01T10:00:00Z", group="G1", gtype="CHANGE_LEGAL_FORM_AND_NAME"),
+        **_event(3, "LIQUIDATION", "IN_PROGRESS", effective="2026-10-06T00:00:00+01:00", recorded="2026-10-06T09:00:00+01:00"),
+    })))
+    events = mb.entity_detail(row)["events"]
+    assert [e["type"] for e in events] == ["CHANGE_LEGAL_FORM", "CHANGE_LEGAL_NAME", "LIQUIDATION"]
+    # Dates in UTC, as the live API serialises them.
+    assert events[2]["effectiveDate"] == "2026-10-05T23:00:00Z" and events[2]["recordedDate"] == "2026-10-06T08:00:00Z"
+    publish = _delta(tmp_path, [list(row.values())])
+    assert mr.refresh_once(publish=publish) == "applied"
+    record = ep.gleif_record_from_row(ep.get_store().get(EASY))  # type: ignore[union-attr]
+    groups = record["attributes"]["entity"]["eventGroups"]
+    assert [g["groupType"] for g in groups] == ["CHANGE_LEGAL_FORM_AND_NAME", "STANDALONE"]
+    assert [e["type"] for e in groups[0]["events"]] == ["CHANGE_LEGAL_FORM", "CHANGE_LEGAL_NAME"]
+    assert groups[1]["events"][0] == {
+        "validationDocuments": "SUPPORTING_DOCUMENTS",
+        "effectiveDate": "2026-10-05T23:00:00Z",
+        "recordedDate": "2026-10-06T08:00:00Z",
+        "type": "LIQUIDATION",
+        "status": "IN_PROGRESS",
+    }
+
+
+def test_events_are_read_only_from_a_full_phase_301_build(env: Path, tmp_path: Path) -> None:
+    publish = _delta(tmp_path, [_easy_row(**_LIQ)])
+    assert mr.refresh_once(publish=publish) == "applied"
+    mirror = ep.get_store()
+    assert mirror is not None and mirror.carries_events is False
+    assert "corporate_events" not in wl.gleif_facts(mirror, EASY)  # type: ignore[operator]
+    _flag_events(env)
+    mirror = ep.get_store()
+    assert mirror is not None and mirror.carries_events is True
+    facts = wl.gleif_facts(mirror, EASY)
+    assert facts is not None
+    assert facts["corporate_events"] == [{
+        "type": "LIQUIDATION", "status": "IN_PROGRESS",
+        "effective": "2026-10-05T23:00:00Z", "recorded": "2026-10-06T08:00:00Z",
+    }]
+
+
+def test_a_liquidation_on_an_active_issued_record_is_material(client: TestClient, env: Path, tmp_path: Path) -> None:
+    """The 7 Oct 2026 case: 19 liquidations in progress on ACTIVE records,
+    neither status moved, so the thirteen-field digest called them churn."""
+    _flag_events(env)
+    _watch(client, EASY)
+    store = wl.get_store()
+    assert store is not None
+    assert store.rows_for_lei(EASY)[0]["gleif_facts"]["corporate_events"] is None
+    publish = _delta(tmp_path, [_easy_row(**_LIQ)])
+    assert mr.refresh_once(publish=publish) == "applied"
+    pending = store.take_pending(10)
+    assert [p["lei"] for p in pending] == [EASY]
+    assert pending[0]["trigger"]["fields"] == ["corporate_events"]
+    assert "resync" not in pending[0]["trigger"]
+
+
+def test_an_event_status_move_is_material_but_an_address_event_is_churn(client: TestClient, env: Path, tmp_path: Path) -> None:
+    _flag_events(env)
+    _watch(client, EASY)
+    store = wl.get_store()
+    assert store is not None
+    addr = _delta(tmp_path, [_easy_row(**_event(1, "CHANGE_HQ_ADDRESS", "COMPLETED", effective="2026-10-01T00:00:00Z", recorded="2026-10-01T00:00:00Z"))])
+    assert mr.refresh_once(publish=addr) == "applied"
+    assert store.pending_count() == 0 and wl.state()["gleif_churn"] == 1
+    # The liquidation lands (material), the baseline moves on with the re-run…
+    liq = _delta(tmp_path, [_easy_row(**_LIQ)])
+    liq["publish_date"] = "2026-09-08 08:00:00"
+    assert mr.refresh_once(publish=liq) == "applied"
+    assert [p["trigger"]["fields"] for p in store.take_pending(10)] == [["corporate_events"]]
+    facts = wl.gleif_facts(ep.get_store(), EASY)  # type: ignore[arg-type]
+    th = store.rows_for_lei(EASY, with_hash=True)[0]["token_hash"]
+    store.update_baseline(th, EASY, gleif_facts=facts, gleif_watermark="2026-09-08 08:00:00")
+    # …and completing it is a change in its own right.
+    done = _delta(tmp_path, [_easy_row(**_event(1, "LIQUIDATION", "COMPLETED", effective="2026-10-05T23:00:00Z", recorded="2026-10-06T08:00:00Z"))])
+    done["publish_date"] = "2026-09-08 16:00:00"
+    assert mr.refresh_once(publish=done) == "applied"
+    assert [p["trigger"]["fields"] for p in store.take_pending(10)] == [["corporate_events"]]
+
+
+def test_a_baseline_from_before_events_reports_only_what_was_recorded_since(client: TestClient, env: Path, tmp_path: Path) -> None:
+    """The since-rule: a watch taken before the mirror held events has the
+    watermark it was read at. An event recorded after it happened while the
+    company was watched; one recorded before was already true."""
+    _watch(client, EASY)  # baseline at WATERMARK 2026-09-07 16:00, no events key
+    store = wl.get_store()
+    assert store is not None
+    assert "corporate_events" not in store.rows_for_lei(EASY)[0]["gleif_facts"]
+    _flag_events(env)
+    old_event = _event(1, "CHANGE_LEGAL_NAME", "COMPLETED", effective="2020-01-01T00:00:00Z", recorded="2020-01-02T00:00:00Z")
+    publish = _delta(tmp_path, [_easy_row(**old_event)])
+    assert mr.refresh_once(publish=publish) == "applied"
+    assert store.pending_count() == 0
+    assert wl.state()["gleif_rebaselined"] == 1
+    assert store.rows_for_lei(EASY)[0]["gleif_facts"]["corporate_events"][0]["type"] == "CHANGE_LEGAL_NAME"
+    # A second watch, again pre-events, and an event recorded after its watermark.
+    with sqlite3.connect(env.parent / "watchlist.sqlite") as conn:
+        conn.row_factory = sqlite3.Row
+        facts = json.loads(conn.execute("SELECT gleif_facts_json FROM watches WHERE lei = ?", (EASY,)).fetchone()[0])
+        facts.pop("corporate_events")
+        conn.execute("UPDATE watches SET gleif_facts_json = ?, gleif_watermark = ? WHERE lei = ?", (json.dumps(facts), WATERMARK, EASY))
+    later = _delta(tmp_path, [_easy_row(**{**old_event, **_event(2, "LIQUIDATION", "IN_PROGRESS", effective="2026-10-06T00:00:00Z", recorded="2026-10-06T08:00:00Z")})])
+    later["publish_date"] = "2026-09-08 08:00:00"
+    assert mr.refresh_once(publish=later) == "applied"
+    pending = store.take_pending(10)
+    assert [p["trigger"]["fields"] for p in pending] == [["corporate_events"]]
+    diff = wl.diff_gleif_facts(facts, wl.gleif_facts(ep.get_store(), EASY), since=WATERMARK)  # type: ignore[arg-type]
+    assert diff == [{"kind": "gleif_field", "field": "corporate_events", "old": None, "new": [
+        {"type": "LIQUIDATION", "status": "IN_PROGRESS", "effective": "2026-10-06T00:00:00Z", "recorded": "2026-10-06T08:00:00Z"},
+    ]}]
+
+
+def test_a_rebuilt_mirror_resyncs_every_watch_once(client: TestClient, env: Path, tmp_path: Path) -> None:
+    """A liquidation recorded while EASY was watched, read as churn before
+    events were material, is picked up when the rebuilt file lands — not
+    left until GLEIF next touches the record."""
+    _watch(client, EASY)
+    store = wl.get_store()
+    assert store is not None
+    publish = _delta(tmp_path, [_easy_row(**_LIQ)])
+    assert mr.refresh_once(publish=publish) == "applied"
+    assert store.pending_count() == 0  # the old file does not claim events
+    assert wl.resync_after_rebuild() is None
+    _flag_events(env)
+    deltas_before = wl.state()["gleif_deltas_seen"]
+    result = wl.resync_after_rebuild()
+    assert result is not None and result["queued"] == 1
+    pending = store.take_pending(10)
+    assert [p["lei"] for p in pending] == [EASY]
+    assert pending[0]["trigger"]["resync"] is True and pending[0]["trigger"]["fields"] == ["corporate_events"]
+    s = wl.state()
+    assert s["gleif_resyncs"] == 1 and s["gleif_deltas_seen"] == deltas_before
+    assert wl.resync_after_rebuild() is None  # once per built_at
+    _flag_events(env, built_at="2026-11-08T03:00:00+00:00")
+    assert wl.resync_after_rebuild() is not None  # the next monthly build re-reads again
+
+
+@pytest.mark.asyncio
+async def test_the_tick_runs_the_resync_before_draining(client: TestClient, env: Path, tmp_path: Path) -> None:
+    _watch(client, EASY)
+    publish = _delta(tmp_path, [_easy_row(**_LIQ)])
+    assert mr.refresh_once(publish=publish) == "applied"
+    _flag_events(env)
+    out = await wl.tick()
+    assert out["resync"]["queued"] == 1 and out["reruns"] == 1
+
+
+def test_feed_and_titles_word_events() -> None:
+    from opencheck.routers import watch as rw
+
+    liq = {"type": "LIQUIDATION", "status": "IN_PROGRESS", "effective": "2026-10-05T23:00:00Z", "recorded": "2026-10-06T08:00:00Z"}
+    done = {**liq, "status": "COMPLETED"}
+    ma = {"type": "MERGERS_AND_ACQUISITIONS", "status": "COMPLETED", "effective": "2026-10-01T00:00:00Z", "recorded": "2026-10-01T00:00:00Z"}
+    assert rw.describe_events(None, [liq]) == "GLEIF recorded a legal entity event: liquidation (in progress), effective 2026-10-05."
+    assert rw.describe_events([liq], [done]) == "GLEIF recorded a legal entity event: liquidation: in progress → completed, effective 2026-10-05."
+    assert rw.describe_events([], [liq, ma]) == (
+        "GLEIF recorded legal entity events: liquidation (in progress), effective 2026-10-05; "
+        "merger or acquisition (completed), effective 2026-10-01."
+    )
+    assert rw.describe_events([liq], None) == "GLEIF no longer lists: liquidation (in progress), effective 2026-10-05."
+    change = {"kind": "gleif_field", "field": "corporate_events", "old": None, "new": [liq]}
+    assert rw._describe(change).startswith("GLEIF recorded a legal entity event")
+    entry = {"lei": EASY, "legal_name": "EASY POWER", "tier": wl.TIER_GLEIF, "changes": [change],
+             "trigger": {"publish": "2026-10-08 00:00:00", "fields": ["corporate_events"], "resync": True}}
+    assert rw._entry_title(entry) == "EASY POWER: legal entity event recorded"
+    content = rw._entry_content(entry)
+    assert content.startswith("OpenCheck's GLEIF mirror was rebuilt from the 2026-10-08 00:00:00 Golden Copy")
+    assert "Fields that changed: legal entity events." in content

@@ -1817,12 +1817,25 @@ Things that will be re-derived otherwise:
   category and conformity flag are in (Phase 300).
 - **Adding a material field needs the baseline-shape rule, not a migration.**
   `diff_gleif_facts` compares only fields both sides carry, and
-  `on_gleif_delta` digests the new facts projected onto the baseline's keys
-  (`facts_on_baseline_shape`); a churn row whose baseline predates the field
-  is upgraded in place (`upgrade_facts`, `gleif_rebaselined`) with no entry.
-  Widening the set must never write "— → value" entries for every watched
-  LEI. Keep `FIELD_WORDS` in `routers/watch.py` and `lib/watchlist.ts` in
-  step with the tuple — a test pins the backend one.
+  `on_gleif_delta` decides on that diff (Phase 301 — not a digest of the
+  projection, which a retired key could trip); a churn row whose baseline
+  predates the field is upgraded in place (`upgrade_facts`,
+  `gleif_rebaselined`) with no entry. Widening the set must never write
+  "— → value" entries for every watched LEI. Keep `FIELD_WORDS` in
+  `routers/watch.py` and `lib/watchlist.ts` in step with the tuple — a test
+  pins the backend one.
+- **Legal Entity Events (Phase 301) are read only from a full build.**
+  `gleif_facts` omits `corporate_events` (absent, not `None`) unless
+  `EntityStore.carries_events` — `meta.detail_events`, set by the build
+  script on a full build only. Do not set it from a delta, and do not make
+  the key `None` on an older file: either would make the rebuild read as a
+  new event on every watched LEI. The one exception to the both-sides rule
+  is the since-rule — events *recorded* after a pre-events baseline's
+  `gleif_watermark` are new. `resync_after_rebuild()` re-reads every watch
+  once per `meta.built_at`, because a replaced file never passes through
+  the delta hook. Address and other-name events are excluded
+  (`CORPORATE_EVENT_EXCLUDED`); every other type, including future ones, is
+  material.
 - **Absence is a finding only when the producer answered.** `diff_snapshots`
   emits `signal_unchecked` (not `signal_retired`) when the source that
   produced a code is in `degraded_sources`, and `coverage_unchecked` when

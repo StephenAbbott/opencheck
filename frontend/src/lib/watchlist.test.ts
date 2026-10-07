@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkedSentence,
   describeChange,
+  describeEvents,
   fieldWords,
   entryHeadline,
   tierChip,
@@ -144,6 +145,42 @@ describe("triggerSentence and headline", () => {
     expect(entryHeadline(entry({ legal_name: null, changes: [{ kind: "verdict" }, { kind: "legal_form" }] }))).toBe(
       "213800LH1BZH3DI6G760: 2 changes",
     );
+  });
+
+  it("headlines a legal entity event above everything else", () => {
+    const changes = [{ kind: "register_status" }, { kind: "gleif_field", field: "corporate_events" }] as WatchEntry["changes"];
+    expect(entryHeadline(entry({ changes }))).toBe("Vosper Ltd: legal entity event recorded");
+  });
+
+  it("opens a resync entry with the rebuild, not a delta", () => {
+    const e = entry({ trigger: { tier: "gleif", publish: "2026-10-08 00:00:00", fields: ["corporate_events"], resync: true } });
+    expect(triggerSentence(e)).toBe(
+      "OpenCheck's GLEIF mirror was rebuilt from the 2026-10-08 00:00:00 Golden Copy and now reads legal entity events; GLEIF's record changed after this company was first watched (legal entity events).",
+    );
+  });
+});
+
+describe("describeEvents", () => {
+  const liq = { type: "LIQUIDATION", status: "IN_PROGRESS", effective: "2026-10-05T23:00:00Z", recorded: "2026-10-06T08:00:00Z" };
+  const done = { ...liq, status: "COMPLETED" };
+  const ma = { type: "MERGERS_AND_ACQUISITIONS", status: "COMPLETED", effective: "2026-10-01T00:00:00Z", recorded: "2026-10-01T00:00:00Z" };
+
+  it("words the feed's sentences, word for word", () => {
+    expect(describeEvents(null, [liq])).toBe("GLEIF recorded a legal entity event: liquidation (in progress), effective 2026-10-05.");
+    expect(describeEvents([liq], [done])).toBe(
+      "GLEIF recorded a legal entity event: liquidation: in progress → completed, effective 2026-10-05.",
+    );
+    expect(describeEvents([], [liq, ma])).toBe(
+      "GLEIF recorded legal entity events: liquidation (in progress), effective 2026-10-05; merger or acquisition (completed), effective 2026-10-01.",
+    );
+    expect(describeEvents([liq], null)).toBe("GLEIF no longer lists: liquidation (in progress), effective 2026-10-05.");
+  });
+
+  it("is what describeChange says for a corporate_events change", () => {
+    expect(describeChange({ kind: "gleif_field", field: "corporate_events", old: null, new: [liq] })).toBe(
+      "GLEIF recorded a legal entity event: liquidation (in progress), effective 2026-10-05.",
+    );
+    expect(fieldWords("corporate_events")).toBe("legal entity events");
   });
 });
 

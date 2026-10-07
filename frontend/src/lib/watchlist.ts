@@ -88,6 +88,8 @@ export interface WatchEntry {
     tier?: Tier;
     publish?: string;
     fields?: string[];
+    /** Phase 301: queued by the one-shot re-read after a mirror rebuild. */
+    resync?: boolean;
     version?: string;
     op?: string;
     caption?: string | null;
@@ -201,7 +203,77 @@ const FIELD_WORDS: Record<string, string> = {
   category: "entity category",
   sub_category: "entity sub-category",
   conformity_flag: "policy conformity flag",
+  corporate_events: "legal entity events",
 };
+
+// Phase 301 — GLEIF Legal Entity Events in words. Keep in step with
+// EVENT_TYPE_WORDS / EVENT_STATUS_WORDS in routers/watch.py.
+const EVENT_TYPE_WORDS: Record<string, string> = {
+  CHANGE_LEGAL_NAME: "legal name change",
+  CHANGE_LEGAL_FORM: "legal form change",
+  MERGERS_AND_ACQUISITIONS: "merger or acquisition",
+  SPINOFF: "spin-off",
+  TRANSFORMATION_UMBRELLA_TO_STANDALONE: "fund transformation (umbrella to standalone)",
+};
+const EVENT_STATUS_WORDS: Record<string, string> = {
+  COMPLETED: "completed",
+  IN_PROGRESS: "in progress",
+  WITHDRAWN_CANCELLED: "withdrawn or cancelled",
+};
+
+export interface CorporateEvent {
+  type?: string | null;
+  status?: string | null;
+  effective?: string | null;
+  recorded?: string | null;
+}
+
+function eventTypeWords(t: string | null | undefined): string {
+  const k = String(t ?? "");
+  return EVENT_TYPE_WORDS[k] ?? (k.toLowerCase().replace(/_/g, " ") || "event");
+}
+
+function eventStatusWords(st: string | null | undefined): string {
+  const k = String(st ?? "");
+  return EVENT_STATUS_WORDS[k] ?? (k.toLowerCase().replace(/_/g, " ") || "status not given");
+}
+
+function eventWords(e: CorporateEvent): string {
+  const when = String(e.effective ?? "").slice(0, 10);
+  return `${eventTypeWords(e.type)} (${eventStatusWords(e.status)})${when ? `, effective ${when}` : ""}`;
+}
+
+function sameEvent(a: CorporateEvent, b: CorporateEvent): boolean {
+  return a.type === b.type && a.status === b.status && a.effective === b.effective && a.recorded === b.recorded;
+}
+
+/** One sentence for a `corporate_events` change — the same reading as
+ *  `describe_events` on the feed: what GLEIF now lists that it did not, a
+ *  status move on an event of the same type worded as one. */
+export function describeEvents(oldValue: unknown, newValue: unknown): string {
+  const before = (Array.isArray(oldValue) ? oldValue : []).filter((e) => e && typeof e === "object") as CorporateEvent[];
+  const after = (Array.isArray(newValue) ? newValue : []).filter((e) => e && typeof e === "object") as CorporateEvent[];
+  const added = after.filter((e) => !before.some((b) => sameEvent(b, e)));
+  const removed = before.filter((e) => !after.some((a) => sameEvent(a, e)));
+  const parts: string[] = [];
+  for (const e of added) {
+    const i = removed.findIndex((r) => r.type === e.type);
+    if (i >= 0) {
+      const prior = removed.splice(i, 1)[0];
+      const when = String(e.effective ?? "").slice(0, 10);
+      parts.push(
+        `${eventTypeWords(e.type)}: ${eventStatusWords(prior.status)} → ${eventStatusWords(e.status)}${when ? `, effective ${when}` : ""}`,
+      );
+    } else {
+      parts.push(eventWords(e));
+    }
+  }
+  if (parts.length) {
+    return `GLEIF recorded ${parts.length === 1 ? "a legal entity event" : "legal entity events"}: ${parts.join("; ")}.`;
+  }
+  if (removed.length) return `GLEIF no longer lists: ${removed.map(eventWords).join("; ")}.`;
+  return "GLEIF legal entity events changed.";
+}
 
 export function fieldWords(field: string | undefined): string {
   if (!field) return "a field";
@@ -229,6 +301,7 @@ function list(xs: string[] | undefined, sourceLabel: (id: string) => string): st
 export function describeChange(c: Change, sourceLabel: (id: string) => string = (s) => s): string {
   switch (c.kind) {
     case "gleif_field":
+      if (c.field === "corporate_events") return describeEvents(c.old, c.new);
       return `GLEIF ${fieldWords(c.field)}: ${v(c.old)} → ${v(c.new)}.`;
     case "legal_name":
       return `Legal name: ${v(c.old)} → ${v(c.new)}.`;
@@ -274,6 +347,9 @@ export function triggerSentence(e: WatchEntry): string {
   const t = e.trigger ?? {};
   if (e.tier === "gleif") {
     const fields = t.fields?.length ? ` (${t.fields.map(fieldWords).join(", ")})` : "";
+    if (t.resync) {
+      return `OpenCheck's GLEIF mirror was rebuilt from the ${t.publish ?? "latest"} Golden Copy and now reads legal entity events; GLEIF's record changed after this company was first watched${fields}.`;
+    }
     return t.publish
       ? `GLEIF published a change to this record in its ${t.publish} delta${fields}.`
       : `GLEIF published a change to this record${fields}.`;
@@ -306,6 +382,9 @@ export function entryHeadline(e: WatchEntry): string {
   const name = e.legal_name || e.lei;
   const kinds = new Set(e.changes.map((c) => c.kind));
   if (!e.changes.length) return `${name}: re-run found no difference`;
+  if (e.changes.some((c) => c.kind === "gleif_field" && c.field === "corporate_events")) {
+    return `${name}: legal entity event recorded`;
+  }
   if (kinds.has("register_status") || kinds.has("dissolution_date")) return `${name}: register status changed`;
   if (kinds.has("signal_new")) return `${name}: new risk signal`;
   if (kinds.has("gleif_field")) return `${name}: GLEIF record changed`;

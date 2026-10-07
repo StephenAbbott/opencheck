@@ -377,7 +377,71 @@ FIELD_WORDS: dict[str, str] = {
     "category": "entity category",
     "sub_category": "entity sub-category",
     "conformity_flag": "policy conformity flag",
+    "corporate_events": "legal entity events",
 }
+
+#: GLEIF Legal Entity Event types in words (Phase 301). An unlisted type is
+#: lower-cased with its underscores dropped. Keep in step with
+#: ``EVENT_TYPE_WORDS`` in ``lib/watchlist.ts``.
+EVENT_TYPE_WORDS: dict[str, str] = {
+    "CHANGE_LEGAL_NAME": "legal name change",
+    "CHANGE_LEGAL_FORM": "legal form change",
+    "MERGERS_AND_ACQUISITIONS": "merger or acquisition",
+    "SPINOFF": "spin-off",
+    "TRANSFORMATION_UMBRELLA_TO_STANDALONE": "fund transformation (umbrella to standalone)",
+}
+EVENT_STATUS_WORDS: dict[str, str] = {
+    "COMPLETED": "completed",
+    "IN_PROGRESS": "in progress",
+    "WITHDRAWN_CANCELLED": "withdrawn or cancelled",
+}
+
+
+def _event_type_words(t: str | None) -> str:
+    t = str(t or "")
+    return EVENT_TYPE_WORDS.get(t, t.lower().replace("_", " ") or "event")
+
+
+def _event_status_words(st: str | None) -> str:
+    st = str(st or "")
+    return EVENT_STATUS_WORDS.get(st, st.lower().replace("_", " ") or "status not given")
+
+
+def _event_words(e: dict[str, Any]) -> str:
+    """``liquidation (in progress), effective 2026-10-06``."""
+    when = str(e.get("effective") or "")[:10]
+    return f"{_event_type_words(e.get('type'))} ({_event_status_words(e.get('status'))})" + (
+        f", effective {when}" if when else ""
+    )
+
+
+def describe_events(old: Any, new: Any) -> str:
+    """One sentence for a ``corporate_events`` change: the events GLEIF now
+    lists that it did not, with a status move on an event of the same type
+    worded as one (``liquidation: in progress → completed``); an event GLEIF
+    stopped listing only when nothing was added."""
+    before = [e for e in (old or []) if isinstance(e, dict)]
+    after = [e for e in (new or []) if isinstance(e, dict)]
+    added = [e for e in after if e not in before]
+    removed = [e for e in before if e not in after]
+    parts: list[str] = []
+    for e in added:
+        prior = next((r for r in removed if r.get("type") == e.get("type")), None)
+        if prior is not None:
+            removed.remove(prior)
+            when = str(e.get("effective") or "")[:10]
+            parts.append(
+                f"{_event_type_words(e.get('type'))}: {_event_status_words(prior.get('status'))} → "
+                f"{_event_status_words(e.get('status'))}" + (f", effective {when}" if when else "")
+            )
+        else:
+            parts.append(_event_words(e))
+    if parts:
+        noun = "a legal entity event" if len(parts) == 1 else "legal entity events"
+        return f"GLEIF recorded {noun}: {'; '.join(parts)}."
+    if removed:
+        return "GLEIF no longer lists: " + "; ".join(_event_words(e) for e in removed) + "."
+    return "GLEIF legal entity events changed."
 
 
 def field_words(field: str | None) -> str:
@@ -400,6 +464,8 @@ def _describe(change: dict[str, Any]) -> str:
     k = change.get("kind")
     old, new = change.get("old"), change.get("new")
     if k == "gleif_field":
+        if change.get("field") == "corporate_events":
+            return describe_events(old, new)
         return f"GLEIF {field_words(change.get('field'))}: {_value_words(old)} → {_value_words(new)}."
     if k == "register_status":
         o = (old or {}).get("liveness") if isinstance(old, dict) else old
@@ -453,6 +519,8 @@ def _entry_title(entry: dict[str, Any]) -> str:
     if not changes:
         return f"{name}: {TIER_SENTENCE.get(entry['tier'], entry['tier'])}; the re-run found no difference"
     kinds = [c.get("kind") for c in changes]
+    if any(c.get("kind") == "gleif_field" and c.get("field") == "corporate_events" for c in changes):
+        return f"{name}: legal entity event recorded"
     if any(k in ("register_status", "dissolution_date") for k in kinds):
         head = "register status changed"
     elif any(k == "signal_new" for k in kinds):
@@ -467,7 +535,14 @@ def _entry_title(entry: dict[str, Any]) -> str:
 def _entry_content(entry: dict[str, Any]) -> str:
     lines = [TIER_SENTENCE.get(entry["tier"], entry["tier"]) + "."]
     trig = entry.get("trigger") or {}
-    if entry["tier"] == wl.TIER_GLEIF and trig.get("publish"):
+    if entry["tier"] == wl.TIER_GLEIF and trig.get("resync"):
+        lines[0] = (
+            f"OpenCheck's GLEIF mirror was rebuilt from the {trig.get('publish')} Golden Copy and now reads "
+            "legal entity events; GLEIF's record changed after this company was first watched."
+        )
+        if trig.get("fields"):
+            lines.append("Fields that changed: " + ", ".join(field_words(f) for f in trig["fields"]) + ".")
+    elif entry["tier"] == wl.TIER_GLEIF and trig.get("publish"):
         lines[0] = f"GLEIF published a change to this record in the {trig['publish']} Golden Copy delta."
         if trig.get("fields"):
             lines.append("Fields that changed: " + ", ".join(field_words(f) for f in trig["fields"]) + ".")
