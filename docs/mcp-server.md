@@ -33,7 +33,7 @@ would `421` in production.
 
 | Tool | Purpose |
 |---|---|
-| `opencheck_search(query, kind="entity", limit=15)` | Name → candidate entities with LEIs, ranked best-first across every source (Phase 292): exact name → same name under any legal form → every query token present → every distinctive token agrees → fuzzy, ties broken by register status (live or unstated before in a terminal process before dissolved) and then by whether the row carries an LEI. Each candidate says which rung it reached as `match` and carries `identifiers: [{scheme, id}]` for `opencheck_register_lookup`. Cut at `limit` (max 50), with `total` and `truncated` saying so |
+| `opencheck_search(query, kind="entity", limit=15)` | Name → candidate entities with LEIs, ranked best-first across every source (Phase 292): exact name → same name under any legal form → every query token present → every distinctive token agrees → fuzzy, ties broken by register status (live or unstated before in a terminal process before dissolved) and then by whether the row carries an LEI. Each candidate says which rung it reached as `match` and carries `identifiers: [{scheme, id}]` for `opencheck_register_lookup`. Since Phase 309 the rungs are measured against the current name **or any former legal name** the source files (GLEIF's `PREVIOUS_LEGAL_NAME`, a register's previous names): a candidate carries `former_names[]` when it has any and `matched_former_name` when that, not the current name, is what the query matched — "Barrick Gold Corporation" ranks BARRICK MINING CORPORATION `exact` and says why. Cut at `limit` (max 50), with `total` and `truncated` saying so |
 | `opencheck_resolve_national_id(number, country="", ra_code="")` | National registration number → LEI(s) |
 | `opencheck_lookup(lei, deepen_top=5)` | Identity, identifiers, risk signals, source coverage |
 | `opencheck_register_lookup(scheme, id, deepen_top=5, name="")` | The same for a company with **no LEI**, anchored on its register number — `GET /lookup-register` (Phase 290): the register that owns the scheme (`GB-COH` → Companies House, `NL-KVK` → KvK, …; every scheme `GET /expand-schemes` lists, `REG-<country>` aliases included) is the one source read, then the same screens, risk engine, verdict, profile and knowability. `lei` is null, there is no listing line, and the company's own name is screened by name (signals carry `evidence.subject`). A search candidate's `identifiers[]` gives the `scheme` and `id` to pass; `name` (the candidate's) is handed to registers that search by name behind the number — KvK's open data publishes no names, so without one its record is answered as a `source_read` degradation, never a clean screen |
@@ -171,6 +171,17 @@ fetch `/batch-export` directly.
   sentence "GLEIF names no successor on this LEI record.", said in `summary`
   too; a live company with none named still carries null. The page's leads
   for such a record (`GET /leads`) are UI-only and never in this result.
+  **Phase 309:** `former_names` — every former *legal* name the sources
+  file for the subject, merged across sources on a folded name:
+  `[{name, until, from, sources[]}]`, dated only where the register dates
+  the name itself (Companies House's `ceased_on` / `effective_from`; GLEIF
+  dates no name, so its entries carry null), dated rows first, most recent
+  change first. Read from the mappers' former-name annotations (GLEIF's
+  `PREVIOUS_LEGAL_NAME`, Companies House's `previous_company_names`) and
+  never from untyped `alternateNames`, so a trading name or a translation is
+  never called former. `name_changed_on` is the day of GLEIF's latest
+  completed `CHANGE_LEGAL_NAME` event, or null. `[]` for a company with
+  none.
 - **`licensing`** — the composite licence verdict over the sources that
   returned data (`commercial_use`, `attribution_required`, `share_alike`,
   `headline`, `warnings`), computed by the same `licensing.assess` the web

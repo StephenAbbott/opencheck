@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { searchByNationalId, type GleifSearchResult } from "../lib/gleifNationalId";
+import { parseOtherNames, searchByNationalId, type GleifSearchResult } from "../lib/gleifNationalId";
 import { validateNationalId } from "../lib/raCodes";
 
 /*
@@ -39,13 +39,16 @@ export function useSearchForm() {
   const [nationalIdTouched, setNationalIdTouched] = useState(false);
 
   // ── Name-search mutation ──────────────────────────────────────────────────
-  // Queries GLEIF's public API by legal name. Returns a list of matching
-  // entities for the user to pick from; selection hands off to lookupMutation.
+  // Queries GLEIF's public API on `entity.names` — every name a record
+  // carries, former legal names included (Phase 309: `entity.legalName`
+  // could not find a renamed company under its old name at all). Returns a
+  // list of matching entities for the user to pick from; selection hands
+  // off to lookupMutation.
   const nameSearchMutation = useMutation<GleifSearchResult[], Error, string>({
     mutationFn: async (q: string) => {
       const url =
         `https://api.gleif.org/api/v1/lei-records` +
-        `?filter[entity.legalName]=${encodeURIComponent(q)}&page[size]=10`;
+        `?filter[entity.names]=${encodeURIComponent(q)}&page[size]=10`;
       const resp = await fetch(url, { headers: { Accept: "application/vnd.api+json" } });
       if (!resp.ok) throw new Error(`GLEIF API returned ${resp.status}`);
       const json = await resp.json();
@@ -62,6 +65,7 @@ export function useSearchForm() {
             attrs.lei,
           country: entity.legalAddress?.country ?? "—",
           status: reg.status ?? "—",
+          otherNames: parseOtherNames(entity.otherNames),
         } satisfies GleifSearchResult;
       });
     },

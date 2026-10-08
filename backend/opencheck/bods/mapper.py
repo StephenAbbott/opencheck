@@ -18,6 +18,7 @@ from typing import Any
 import pycountry
 
 from ..elf import resolve_elf
+from . import former_names as _former_names
 from . import gleif_events as _gleif_events
 from . import liveness as _liveness
 from .unique import unique_statements
@@ -1561,6 +1562,10 @@ def _gleif_entity_statement(
     # deduplicating and excluding the primary legal name.
     seen_names: set[str] = {legal_name}
     alternate_names: list[str] = []
+    # Phase 309: GLEIF types its other names; a PREVIOUS_LEGAL_NAME is said
+    # as former on the statement (an annotation on its alternateNames entry),
+    # a trading or translated name stays a plain alternate.
+    former_legal_names: list[tuple[str, Any, Any]] = []
     for name_block in (
         *(entity_block.get("otherNames") or []),
         *(entity_block.get("transliteratedOtherNames") or []),
@@ -1569,6 +1574,8 @@ def _gleif_entity_statement(
         if n and n not in seen_names:
             seen_names.add(n)
             alternate_names.append(n)
+            if str(name_block.get("type") or "").upper() == "PREVIOUS_LEGAL_NAME":
+                former_legal_names.append((n, None, None))
 
     # GLEIF's registration.lastUpdateDate is when GLEIF last asserted this
     # record's contents — the source's own declaration date, so it is a
@@ -1658,6 +1665,7 @@ def _gleif_entity_statement(
     # Phase 305: one annotation per material Legal Entity Event, any status —
     # an IN_PROGRESS liquidation is visible without asserting dissolution.
     annotate(stmt, *_gleif_events.event_annotations(gleif_events, dissolution=ended_by))
+    annotate(stmt, *_former_names.former_name_annotations(alternate_names, former_legal_names))
 
     return stmt
 

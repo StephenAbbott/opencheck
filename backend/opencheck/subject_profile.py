@@ -34,7 +34,10 @@ from __future__ import annotations
 from typing import Any
 
 from . import lei_registration as _lei_reg
+from .bods import former_names as _former_names
+from .bods import gleif_events as _gleif_events
 from .bods import liveness as _liveness
+from .names import display_name_key
 from .consistency import referent_groups, source_id_of
 from .matching import canonical_identifier
 from .reconcile import _entity_jurisdiction, _identifier_keys
@@ -237,6 +240,8 @@ def build_subject_profile(
           "jurisdiction": "GB" | None,
           "lei_registration": {...} | None,
           "lei_successor": {...} | None,
+          "former_names": [{"name", "until", "from", "sources"}],   # Phase 309
+          "name_changed_on": "2025-05-06" | None,                   # Phase 309
           "statement_ids": [...],
         }
 
@@ -247,6 +252,15 @@ def build_subject_profile(
     stop GLEIF's own ACTIVE reading as ``live``: with no issuer re-checking
     it, that status is ``declared``, the last thing the company told its
     issuer. A register or OpenCorporates status is unaffected and outranks it.
+
+    ``former_names`` (Phase 309) are the names the registers say the company
+    *had* — read back from the mappers' former-name annotations
+    (``bods.former_names``), never from the untyped ``alternateNames`` list,
+    so a trading name is never called former. Deduplicated across sources on
+    case and spacing, dated ones first (latest first), each naming the
+    sources that state it. ``name_changed_on`` is the day of the latest
+    completed legal-name change GLEIF records (the Phase 305 annotation) —
+    the change is dated, which former name it closed is not.
 
     ``lei_successor`` (Phase 307) is the successor GLEIF names on the anchor,
     followed through the Golden Copy mirror — ``opencheck.lei_successor`` —
@@ -338,6 +352,9 @@ def build_subject_profile(
     if address:
         address["country"] = address_country.get(address["value"], "")
 
+    former_names = _former_names_across(stmts)
+    name_changed_on = _latest_name_change(stmts)
+
     return {
         "legal_form": _pick(
             legal_forms, registers, same=lambda a, b: _norm_text(a) == _norm_text(b)
@@ -348,5 +365,54 @@ def build_subject_profile(
         "jurisdiction": jurisdiction,
         "lei_registration": lei_registration,
         "lei_successor": lei_successor,
+        "former_names": former_names,
+        "name_changed_on": name_changed_on,
         "statement_ids": [str(s.get("statementId") or "") for s in stmts],
     }
+
+
+def _former_names_across(stmts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Former names from every subject statement, merged on case and spacing
+    (``display_name_key``): the first spelling seen is kept, every source that
+    states the name is listed, and a date from any source fills a gap. Dated
+    names first, latest ``until`` first, then file order."""
+    merged: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    for stmt in stmts:
+        sid = source_id_of(stmt)
+        for entry in _former_names.former_names_of(stmt):
+            key = display_name_key(entry["name"])
+            if not key:
+                continue
+            if key not in merged:
+                merged[key] = {"name": entry["name"], "until": entry.get("until"), "from": entry.get("from"), "sources": []}
+                order.append(key)
+            row = merged[key]
+            if sid and sid not in row["sources"]:
+                row["sources"].append(sid)
+            for field in ("until", "from"):
+                if not row.get(field) and entry.get(field):
+                    row[field] = entry[field]
+    rows = [merged[k] for k in order]
+    dated = sorted((r for r in rows if r.get("until")), key=lambda r: str(r["until"]), reverse=True)
+    undated = [r for r in rows if not r.get("until")]
+    return dated + undated
+
+
+def _latest_name_change(stmts: list[dict[str, Any]]) -> str | None:
+    """The latest completed CHANGE_LEGAL_NAME day GLEIF records on the
+    subject (Phase 305's annotations), or ``None``."""
+    best: str | None = None
+    for stmt in stmts:
+        for annotation in stmt.get("annotations") or []:
+            event = annotation.get(_gleif_events.EVENT_PROPERTY)
+            if not isinstance(event, dict):
+                continue
+            if str(event.get("type") or "").upper() != "CHANGE_LEGAL_NAME":
+                continue
+            if str(event.get("status") or "").upper() != "COMPLETED":
+                continue
+            day = event.get("effectiveDay")
+            if day and (best is None or day > best):
+                best = day
+    return best

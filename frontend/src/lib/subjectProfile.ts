@@ -256,6 +256,31 @@ function factRow(
   };
 }
 
+/** Phase 309: the "Former names" row — every former legal name the registers
+ *  file, dated where they date it, with the sources that state them. */
+export function formerNamesRow(
+  profile: Pick<SubjectProfile, "former_names" | "name_changed_on"> | null | undefined,
+  names?: Record<string, string>,
+): ProfileRow | null {
+  const former = profile?.former_names ?? [];
+  if (former.length === 0) return null;
+  const value = former
+    .map((f) => {
+      if (f.from && f.until) return `${f.name} (${formatProfileDate(f.from)} – ${formatProfileDate(f.until)})`;
+      if (f.until) return `${f.name} (until ${formatProfileDate(f.until)})`;
+      return f.name;
+    })
+    .join("; ");
+  const sources = Array.from(new Set(former.flatMap((f) => f.sources)));
+  return {
+    label: "Former names",
+    value: profile?.name_changed_on
+      ? `${value} · legal name changed ${formatProfileDate(profile.name_changed_on)}`
+      : value,
+    sources: `Source: ${sourceList(sources.length ? sources : ["gleif"], names)}`,
+  };
+}
+
 /** The rows for the identity band, in reading order. A fact no source
  *  stated is simply absent — the band says what is known, not what is not. */
 export function profileRows(
@@ -295,6 +320,7 @@ export function profileRows(
         }
       : null,
     leiSuccessorRow(profile.lei_successor, names),
+    formerNamesRow(profile, names),
     factRow("Incorporated", profile.founding_date, formatProfileDate, names),
     factRow("Registered address", profile.registered_address, (v) => v, names),
   ];

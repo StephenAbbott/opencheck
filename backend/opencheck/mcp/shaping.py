@@ -577,7 +577,7 @@ def shape_search(payload: Any, *, limit: int = SEARCH_DEFAULT_LIMIT) -> dict[str
     of that ladder it reached as ``match``. The list is cut at ``limit`` and
     the cut is stated — ``total``, ``truncated`` — never silent.
     """
-    from ..search_rank import match_label
+    from ..search_rank import MATCH_TIERS, best_match, former_names_of_hit
     from ..sources import SearchKind
 
     person = getattr(payload, "kind", None) == SearchKind.PERSON
@@ -586,22 +586,32 @@ def shape_search(payload: Any, *, limit: int = SEARCH_DEFAULT_LIMIT) -> dict[str
     for h in payload.hits:
         if h.is_stub:
             continue
-        candidates.append(
-            {
-                "name": h.name,
-                "lei": h.identifiers.get("lei") or (h.hit_id if h.source_id == "gleif" else None),
-                "identifiers": _candidate_identifiers(h),
-                "match": match_label(payload.query, h.name, person=person),
-                "source": h.source_id,
-                "summary": h.summary,
-            }
-        )
+        tier, matched_former = best_match(payload.query, h, person=person)
+        candidate: dict[str, Any] = {
+            "name": h.name,
+            "lei": h.identifiers.get("lei") or (h.hit_id if h.source_id == "gleif" else None),
+            "identifiers": _candidate_identifiers(h),
+            "match": MATCH_TIERS[tier],
+            "source": h.source_id,
+            "summary": h.summary,
+        }
+        # Phase 309: the names the source says the company had, and which
+        # of them the query matched when the current name did not — so a
+        # renamed company is found under its old name and the row says why.
+        former = former_names_of_hit(h)
+        if former:
+            candidate["former_names"] = former
+        if matched_former:
+            candidate["matched_former_name"] = matched_former
+        candidates.append(candidate)
     total = len(candidates)
     shown = candidates[:limit]
     hint = (
         "Candidates are ranked best-first across sources; match says how "
         "closely the name matches the query (exact, same_name, all_tokens, "
-        "distinctive_tokens, fuzzy). Pass a candidate's lei to "
+        "distinctive_tokens, fuzzy) — measured against the current name or, "
+        "where a candidate carries matched_former_name, against that former "
+        "legal name the source files. Pass a candidate's lei to "
         "opencheck_lookup to run due diligence. A candidate with lei null "
         "and an identifiers entry (e.g. scheme GB-COH) is looked up with "
         "opencheck_register_lookup(scheme, id)."

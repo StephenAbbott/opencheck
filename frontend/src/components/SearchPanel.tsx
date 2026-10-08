@@ -1,4 +1,5 @@
 import { COUNTRY_OPTIONS, RA_CODES, raCodeFor } from "../lib/raCodes";
+import { formerlyMatchedLine, matchedFormerName } from "../lib/formerNames";
 import { leiInputMessage } from "../lib/api";
 import { PERSON_VERB, resultCount } from "../lib/vocab";
 import type { SearchForm } from "../hooks/useSearchForm";
@@ -273,6 +274,14 @@ export function SearchPanel({
                         <div className="font-head font-bold text-oo-body text-oo-ink leading-snug">
                           {r.legalName}
                         </div>
+                        {/* Phase 309: a renamed company found under the name it
+                            had says so, or the reader cannot see why it matched. */}
+                        {(() => {
+                          const former = matchedFormerName(nameQuery, r.legalName, r.otherNames);
+                          return former ? (
+                            <div className="mt-0.5 text-oo-meta text-oo-muted">{formerlyMatchedLine(former)}</div>
+                          ) : null;
+                        })()}
                         <div className="flex items-center gap-3 mt-1">
                           <span className="font-mono text-[11px] text-oo-blue">
                             {r.lei}

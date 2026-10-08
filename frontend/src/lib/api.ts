@@ -379,6 +379,15 @@ export interface LeiSuccessor {
   sentence: string | null;
 }
 
+/** A former legal name as a register filed it (Phase 309). */
+export interface FormerName {
+  name: string;
+  /** The day it ceased to be the name, where the register dates it. */
+  until: string | null;
+  from: string | null;
+  sources: string[];
+}
+
 /** The subject's profile, assembled by `opencheck/subject_profile.py` from
  *  the subject's own entity statements: facts, never findings. */
 export interface SubjectProfile {
@@ -393,6 +402,13 @@ export interface SubjectProfile {
   /** Phase 307. Absent on payloads recorded before it, null when GLEIF
    *  names no successor. */
   lei_successor?: LeiSuccessor | null;
+  /** Phase 309: the names the registers say the company had — from the
+   *  mappers' former-name annotations, never untyped alternates. Dated ones
+   *  first, latest first; each names the sources that state it. */
+  former_names?: FormerName[];
+  /** Phase 309: the day of the latest completed legal-name change GLEIF
+   *  records; the change is dated, which former name it closed is not. */
+  name_changed_on?: string | null;
   statement_ids: string[];
 }
 
