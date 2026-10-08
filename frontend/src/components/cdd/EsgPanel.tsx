@@ -9,7 +9,13 @@ import { Chip } from "../ui/Chip";
 import { EitiAssessmentCard } from "./EitiAssessmentCard";
 import { ESG_SOURCE_META } from "./esgSources";
 import { EitiZambiaCard } from "./EitiZambiaCard";
-import { zambiaTile, type EitiZambiaBundle } from "../../lib/eitiZambia";
+import {
+  eitiIdentLine,
+  eitiLinkNote,
+  twoEitiPublishersNote,
+  zambiaTile,
+  type EitiZambiaBundle,
+} from "../../lib/eitiZambia";
 import { assessmentTile } from "../../lib/eitiAssessment";
 import type { EitiAssessmentBundle } from "../../lib/eitiAssessment";
 import type { PanelError, PanelId } from "../../lib/panelErrors";
@@ -213,6 +219,8 @@ interface EitiBundle {
   streams: Record<string, number>;
   total_usd: number;
   years: string[];
+  /** Which key joined the subject (Phase 306); absent on a deepen read. */
+  matched_via?: string | null;
 }
 
 function formatUsd(v: number): string {
@@ -235,8 +243,11 @@ function EitiCard({ hit }: { hit: SourceHit }) {
           {hit.name}
         </h3>
         <div className="text-[11px] font-mono text-oo-esg-text mt-0.5">
-          {raw.country} · national ID {raw.identification}
+          {eitiIdentLine(raw.country, raw.identification)}
         </div>
+        {eitiLinkNote(raw.matched_via) && (
+          <p className="text-oo-meta text-oo-esg-text mt-1">{eitiLinkNote(raw.matched_via)}</p>
+        )}
 
         <div className="mt-4">
           <div className="text-[10px] font-semibold tracking-oo-eyebrow uppercase text-oo-esg-text mb-1">
@@ -1031,6 +1042,13 @@ export function EsgPanel({
               community-researched — not a beneficial ownership or
               sanctions check.
             </p>
+
+            {/* Phase 306: a Zambian company can carry both EITI cards. */}
+            {twoEitiPublishersNote(allHits.map((h) => h.source_id)) && (
+              <p className="rounded-oo border border-oo-esg-border bg-oo-esg-bg/40 px-4 py-3 text-oo-small text-oo-esg-strong">
+                {twoEitiPublishersNote(allHits.map((h) => h.source_id))}
+              </p>
+            )}
 
             {/* Summary tiles — one per hit, each naming its data origin.
                 Clicking a tile expands the full card below the grid. */}

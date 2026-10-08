@@ -27,6 +27,10 @@ _EITI_SCHEME_BY_COUNTRY: dict[str, tuple[str, str]] = {
     "GB": ("GB-COH", "Companies House"),
     "NO": ("NO-BRC", "Brønnøysundregistrene"),
     "NL": ("NL-KVK", "Kamer van Koophandel"),
+    # Phase 306: EITI files a Zambian company's ZRA TPIN. The same scheme the
+    # Zambia EITI portal mapper writes (ZM_TPIN_SCHEME below), so the two
+    # EITI publishers' statements carry one identifier.
+    "ZM": ("ZM-TPIN", "Taxpayer Identification Number — Zambia Revenue Authority"),
 }
 
 

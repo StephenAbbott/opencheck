@@ -116,6 +116,27 @@ def _load_and_declare() -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
     return index, meta
 
 
+def tpin_for_lei(lei: str) -> str:
+    """The ZRA TPIN this index ties to an LEI, or ``""`` when there is none.
+
+    Phase 306: the ``eiti`` adapter holds EITI International's Zambian
+    identifications keyed by TPIN, while GLEIF files a Zambian company's PACRA
+    number, so ``registeredAs`` never joins it. This index already resolved
+    the TPIN for each name-matched LEI; ``routers/lookup.py::_build_derived``
+    reads it into ``ctx.derived["zm_tpin"]``, as ``us_ein_for_lei`` does for
+    the US. Read from this index rather than a second committed crosswalk so
+    the two cannot drift.
+
+    The link LEI → TPIN is the build's name match (graded medium); the TPIN
+    itself is the portal's own key. A ``name_only`` record has no TPIN and
+    gives ``""``. Declares no provenance: nothing is fetched.
+    """
+    index, _ = _load()
+    record = index.get((lei or "").strip().upper()) or {}
+    tpins = [str(t).strip() for t in record.get("tpins") or [] if str(t).strip()]
+    return tpins[0] if tpins else ""
+
+
 def _reset_index_for_tests() -> None:
     """Test helper — drop the cached singletons so a fresh index is loaded."""
     global _index, _meta

@@ -134,3 +134,47 @@ export function womenShare(share: number | null | undefined): string | null {
   if (share == null) return null;
   return `${Math.round(share * 1000) / 10}%`;
 }
+
+// ---------------------------------------------------------------------
+// Two EITI publishers, one company (Phase 306)
+// ---------------------------------------------------------------------
+
+/**
+ * Said once above the ESG tiles when a Zambian company has both an `eiti`
+ * card (EITI International's summary data) and an `eiti_zambia` card (the
+ * Zambia EITI portal). They overlap in subject, not in figures: different
+ * publishers, currencies and years. Null when only one is present.
+ */
+export function twoEitiPublishersNote(sourceIds: readonly string[]): string | null {
+  const ids = new Set(sourceIds);
+  if (!ids.has("eiti") || !ids.has("eiti_zambia")) return null;
+  return (
+    "Two EITI publications cover this company. EITI International's summary data " +
+    "gives payments to governments in US dollars, classified by revenue stream, " +
+    "for the years Zambia reported to it; the Zambia EITI portal gives Zambia " +
+    "Revenue Authority receipts in kwacha and the national reconciliation report. " +
+    "Different publishers, currencies and years, so the figures are not added " +
+    "together or compared line by line."
+  );
+}
+
+/** The identifier line under the EITI card's heading. A Zambian
+ *  identification is the ZRA TPIN, so it is named as one. */
+export function eitiIdentLine(country: string, identification: string): string {
+  return country === "ZM"
+    ? `${country} · ZRA TPIN ${identification}`
+    : `${country} · national ID ${identification}`;
+}
+
+/** How the EITI card was tied to this LEI, when it was not GLEIF's own
+ *  register number. Null for a registeredAs match, which needs no note. */
+export function eitiLinkNote(matchedVia: string | null | undefined): string | null {
+  if (matchedVia === "zm_tpin") {
+    return (
+      "Linked through the TPIN the Zambia EITI portal files under this company's " +
+      "name. GLEIF files the PACRA number, which EITI does not publish, so the " +
+      "link rests on a name match."
+    );
+  }
+  return null;
+}

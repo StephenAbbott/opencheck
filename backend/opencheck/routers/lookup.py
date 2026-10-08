@@ -65,6 +65,7 @@ from ..bods.state_bodies import classify_government_entities
 from ..ratelimit import default_tier, limiter, lookup_tier
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 from ..sources.eiti import us_ein_for_lei as eiti_us_ein_for_lei
+from ..sources.eiti_zambia import tpin_for_lei as eiti_zambia_tpin_for_lei
 from ..sources.schemas import SourceSchemaError
 
 # Phase 168: the per-source hit builders and the context they read moved to
@@ -642,6 +643,14 @@ def _build_derived(ctx: _LookupCtx, registered_at_id: str) -> None:
         us_ein = eiti_us_ein_for_lei(ctx.lei)
         if us_ein:
             ctx.derived["us_ein"] = us_ein
+    # Zambia ZRA TPIN (Phase 306), the same shape as the EIN: EITI's Zambian
+    # identifications are TPINs and GLEIF files the PACRA number, so the TPIN
+    # comes from the Zambia EITI portal index, which tied each Zambian LEI to
+    # its TPIN by name. No key at all when the index has none.
+    if ctx.jurisdiction.upper().startswith("ZM"):
+        zm_tpin = eiti_zambia_tpin_for_lei(ctx.lei)
+        if zm_tpin:
+            ctx.derived["zm_tpin"] = zm_tpin
     if ctx.registered_as and registered_at_id:
         for deriver in _RA_DERIVERS:
             if registered_at_id in deriver.ra_codes:
@@ -900,7 +909,11 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     if (
         eiti_adapter is not None
         and hasattr(eiti_adapter, "fetch_by_registration")
-        and (ctx.registered_as or ctx.derived.get("us_ein"))
+        and (
+            ctx.registered_as
+            or ctx.derived.get("us_ein")
+            or ctx.derived.get("zm_tpin")
+        )
         and ctx.jurisdiction
         and _want("eiti")
     ):
@@ -911,6 +924,7 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
                 ctx.registered_as,
                 legal_name=ctx.legal_name,
                 us_ein=ctx.derived.get("us_ein", ""),
+                zm_tpin=ctx.derived.get("zm_tpin", ""),
             ),
         ))
     bg_adapter = REGISTRY.get("bods_gleif")
