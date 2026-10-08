@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 304** — EveryPolitician rows whose record maps to a single person statement no longer offer a Diagram button that opens onto nothing.
+**Latest: Phase 305** — GLEIF's Legal Entity Events now date an inactive entity's dissolution in its BODS statement and appear as one annotation per material event, read on the filer's local calendar day.
 
 → [Full development history](docs/status.md)
 
