@@ -287,7 +287,7 @@ def _lei_successor(payload: Any) -> dict[str, Any] | None:
     """
     profile = getattr(payload, "subject_profile", None) or {}
     succ = profile.get("lei_successor") if isinstance(profile, dict) else None
-    if not isinstance(succ, dict) or not succ.get("named"):
+    if not isinstance(succ, dict) or not succ.get("relation"):
         return None
     return {**succ, "follow_forward": _lei_succ.final(succ)}
 

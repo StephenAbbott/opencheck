@@ -123,9 +123,19 @@ class _Store:
 def test_the_ordinary_dissolved_company_names_no_successor() -> None:
     """Barrick Gold Inc.: dissolved 26 Nov 2025, LEI retired, GLEIF names
     nothing — 192,528 INACTIVE records look like this and 0.3 % of them
-    carry a successor. No payload, no sentence, nothing invented."""
-    assert ls.from_gleif_record(BARRICK_RECORD) is None
+    carry a successor. Since Phase 308 the absence is said in one sentence
+    (``relation: none``) and nothing is invented: no name, no link, no walk."""
+    out = ls.from_gleif_record(BARRICK_RECORD)
+    assert out["relation"] == "none" and out["named"] == [] and out["chain"] == []
+    assert out["sentence"] == ls.NONE_NAMED == "GLEIF names no successor on this LEI record."
+    assert out["event"]["type"] == "DISSOLUTION" and out["event"]["effective_day"] == "2025-11-26"
+    assert ls.follow(out, _Store({})) == out
+    assert ls.final(out) is None
     assert ls.follow(None, _Store({})) is None
+    # A live company with no successor named is simply not the subject.
+    live = copy.deepcopy(BARRICK_RECORD)
+    live["attributes"]["entity"]["status"] = "ACTIVE"
+    assert ls.from_gleif_record(live) is None
 
 
 def test_a_merger_names_its_successor_with_the_event_that_explains_it() -> None:
@@ -409,6 +419,17 @@ def test_mcp_is_silent_when_gleif_names_none() -> None:
     out = shape_lookup(_Payload(None))
     assert out["lei_successor"] is None
     assert "successor" not in out["summary"].lower()
+
+
+def test_mcp_and_reports_say_none_named_for_an_ended_company() -> None:
+    none = ls.from_gleif_record(BARRICK_RECORD)
+    out = shape_lookup(_Payload(none))
+    assert out["lei_successor"]["relation"] == "none"
+    assert out["lei_successor"]["follow_forward"] is None
+    assert ls.NONE_NAMED in out["summary"]
+    assert "| Successor (GLEIF) | GLEIF names no successor on this LEI record. |" in "\n".join(
+        md_identifiers(_report(none), None)
+    )
 
 
 def _report(succ: dict | None) -> dict:

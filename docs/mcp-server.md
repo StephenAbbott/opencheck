@@ -165,6 +165,12 @@ fetch `/batch-export` directly.
   chain, else the one LEI named, null for a name-only or several successors.
   Its sentence is said in `summary` right after the LEI registration status.
   GLEIF's assertion, never a finding; nothing here changes `register_status`.
+  **Phase 308:** a company GLEIF records as INACTIVE with no successor named
+  — three-quarters of all INACTIVE records — carries `relation: "none"`,
+  `named: []`, the terminal `event`, `follow_forward: null` and the
+  sentence "GLEIF names no successor on this LEI record.", said in `summary`
+  too; a live company with none named still carries null. The page's leads
+  for such a record (`GET /leads`) are UI-only and never in this result.
 - **`licensing`** — the composite licence verdict over the sources that
   returned data (`commercial_use`, `attribution_required`, `share_alike`,
   `headline`, `warnings`), computed by the same `licensing.assess` the web

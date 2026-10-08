@@ -16,6 +16,7 @@ import { coverageCopy, type SettledCount } from "../../lib/lookupProgress";
 import { scrollBehavior } from "../../lib/motion";
 import type { PanelError, PanelId } from "../../lib/panelErrors";
 import { evidenceForCode } from "../../lib/signalEvidence";
+import { leadsEligible } from "../../lib/leads";
 import { profileRows } from "../../lib/subjectProfile";
 import { sourceLabel } from "../../lib/vocab";
 import { ExportPanel } from "../export/ExportPanel";
@@ -30,6 +31,7 @@ import { ModeBlurb } from "./ModeTabs";
 import { NarrativePanel, type ReportExportPayload } from "./NarrativePanel";
 import { OpenAlephArchiveMatches } from "./OpenAlephArchiveMatches";
 import { PossiblySameTable } from "./PossiblySameTable";
+import { RetiredLeiLeads } from "./RetiredLeiLeads";
 import { SecuritiesSection } from "./SecuritiesSection";
 import { SkeletonSourceCard, SourceBucketCard, type SourceBucket } from "./SourceBucketCard";
 
@@ -417,6 +419,11 @@ export default function QuickCheckPanel({
                     </div>
                   ))}
                 </dl>
+                {/* Phase 308: an ended company GLEIF names no successor for
+                    gets leads — never a successor — under its profile rows. */}
+                {leadsEligible(subjectProfile) && (
+                  <RetiredLeiLeads lei={lei} legalName={legalName} />
+                )}
               </div>
             )}
 

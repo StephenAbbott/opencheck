@@ -46,7 +46,7 @@ ROUTES = frozenset(
     {
         "stream", "api", "batch", "expand", "export", "narrative", "watch", "mcp",
         "securities", "subsidiaries", "share", "national_id", "search", "history",
-        "entity", "other", "server",
+        "entity", "leads", "other", "server",
     }
 )
 
@@ -60,6 +60,7 @@ _PATH_ROUTES = (
     ("/search", "search"),
     ("/history", "history"),
     ("/entity", "entity"),
+    ("/leads", "leads"),
 )
 
 #: GLEIF endpoints, from the request path. Order matters: the most specific

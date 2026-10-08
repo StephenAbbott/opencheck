@@ -42,7 +42,7 @@ from .config import get_settings
 from .lookup_budget import ClientScopeMiddleware
 from .ratelimit import limiter, rate_limit_exceeded_handler
 from .secret_scrub import safe_message
-from .routers import health, search, lookup, expand, national_id, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports, knowability
+from .routers import health, search, lookup, expand, national_id, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports, knowability, leads
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
 log = logging.getLogger(__name__)
@@ -401,6 +401,7 @@ app.include_router(batch.router)
 app.include_router(watch.router)
 app.include_router(saved_reports.router)
 app.include_router(knowability.router)
+app.include_router(leads.router)
 
 
 # ---------------------------------------------------------------------------

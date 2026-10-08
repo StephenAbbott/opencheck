@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 307** — A retired LEI now says who took its place: the successor GLEIF names on the record, followed through the Golden Copy mirror to the record a reader should open next, on the page, in the MCP summary and in the reports.
+**Latest: Phase 308** — A retired LEI that names no successor now says so, and the identity band offers leads for where to look next — the parent GLEIF last filed and active records with a similar name, including through a former legal name — never a successor.
 
 → [Full development history](docs/status.md)
 
