@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 304** — EveryPolitician rows whose record maps to a single person statement no longer offer a Diagram button that opens onto nothing.
+**Latest: Phase 306** — EITI International's Zambian payment records now reach Zambian LEIs through the TPIN the Zambia EITI portal index ties to each LEI, and an EITI card reads every spelling EITI files of a company's number.
 
 → [Full development history](docs/status.md)
 
