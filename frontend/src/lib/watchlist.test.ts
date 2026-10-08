@@ -13,6 +13,7 @@ import {
   describeChange,
   describeChildren,
   describeEvents,
+  eventDay,
   fieldWords,
   gleifLogLines,
   logLineWords,
@@ -163,25 +164,52 @@ describe("triggerSentence and headline", () => {
   });
 });
 
+// Phase 305: the same table as EVENT_DAY_CASES in backend/tests/test_gleif_events.py.
+describe("eventDay", () => {
+  const cases: [string | null, string][] = [
+    ["2024-10-24T22:00:00Z", "2024-10-25"],
+    ["2026-10-05T23:00:00Z", "2026-10-06"],
+    ["2026-10-06T00:00:00Z", "2026-10-06"],
+    ["2023-06-30T18:30:00Z", "2023-07-01"],
+    ["2023-06-30T16:00:00Z", "2023-07-01"],
+    ["2024-01-31T10:59:19Z", "2024-01-31"],
+    ["2024-01-31T11:59:59Z", "2024-01-31"],
+    ["2024-01-31T12:00:00Z", "2024-02-01"],
+    ["2024-12-31T23:00:00Z", "2025-01-01"],
+    ["2024-02-28T22:00:00Z", "2024-02-29"],
+    ["2026-10-05T23:00:00+00:00", "2026-10-06"],
+    ["2026-10-05T23:00:00+02:00", "2026-10-05"],
+    ["2026-10-06T01:00:00-05:00", "2026-10-06"],
+    ["2026-10-06", "2026-10-06"],
+    ["2026-13-01T00:00:00Z", ""],
+    ["not a date", ""],
+    ["", ""],
+    [null, ""],
+  ];
+  it.each(cases)("%s → %s", (input, expected) => {
+    expect(eventDay(input)).toBe(expected);
+  });
+});
+
 describe("describeEvents", () => {
   const liq = { type: "LIQUIDATION", status: "IN_PROGRESS", effective: "2026-10-05T23:00:00Z", recorded: "2026-10-06T08:00:00Z" };
   const done = { ...liq, status: "COMPLETED" };
   const ma = { type: "MERGERS_AND_ACQUISITIONS", status: "COMPLETED", effective: "2026-10-01T00:00:00Z", recorded: "2026-10-01T00:00:00Z" };
 
   it("words the feed's sentences, word for word", () => {
-    expect(describeEvents(null, [liq])).toBe("GLEIF recorded a legal entity event: liquidation (in progress), effective 2026-10-05.");
+    expect(describeEvents(null, [liq])).toBe("GLEIF recorded a legal entity event: liquidation (in progress), effective 2026-10-06.");
     expect(describeEvents([liq], [done])).toBe(
-      "GLEIF recorded a legal entity event: liquidation: in progress → completed, effective 2026-10-05.",
+      "GLEIF recorded a legal entity event: liquidation: in progress → completed, effective 2026-10-06.",
     );
     expect(describeEvents([], [liq, ma])).toBe(
-      "GLEIF recorded legal entity events: liquidation (in progress), effective 2026-10-05; merger or acquisition (completed), effective 2026-10-01.",
+      "GLEIF recorded legal entity events: liquidation (in progress), effective 2026-10-06; merger or acquisition (completed), effective 2026-10-01.",
     );
-    expect(describeEvents([liq], null)).toBe("GLEIF no longer lists: liquidation (in progress), effective 2026-10-05.");
+    expect(describeEvents([liq], null)).toBe("GLEIF no longer lists: liquidation (in progress), effective 2026-10-06.");
   });
 
   it("is what describeChange says for a corporate_events change", () => {
     expect(describeChange({ kind: "gleif_field", field: "corporate_events", old: null, new: [liq] })).toBe(
-      "GLEIF recorded a legal entity event: liquidation (in progress), effective 2026-10-05.",
+      "GLEIF recorded a legal entity event: liquidation (in progress), effective 2026-10-06.",
     );
     expect(fieldWords("corporate_events")).toBe("legal entity events");
   });

@@ -289,7 +289,9 @@ export function describeChildren(oldValue: unknown, newValue: unknown, names?: R
 }
 
 // Phase 301 — GLEIF Legal Entity Events in words. Keep in step with
-// EVENT_TYPE_WORDS / EVENT_STATUS_WORDS in routers/watch.py.
+// EVENT_TYPE_WORDS / EVENT_STATUS_WORDS in bods/gleif_events.py (Phase 305;
+// routers/watch.py reads them from there). test_gleif_events.py parses this
+// table and fails if the two differ.
 const EVENT_TYPE_WORDS: Record<string, string> = {
   CHANGE_LEGAL_NAME: "legal name change",
   CHANGE_LEGAL_FORM: "legal form change",
@@ -320,8 +322,26 @@ function eventStatusWords(st: string | null | undefined): string {
   return EVENT_STATUS_WORDS[k] ?? (k.toLowerCase().replace(/_/g, " ") || "status not given");
 }
 
+/** The calendar day a GLEIF event timestamp stands for (Phase 305) — the
+ *  rule of `event_day` in bods/gleif_events.py, which the BODS
+ *  `dissolutionDate` uses too. GLEIF stores the filer's local midnight as
+ *  UTC (`2024-10-24T22:00:00Z` is 25 Oct in Europe), so a UTC time at or
+ *  after 12:00 is the next day; any other offset keeps its own date; a bare
+ *  date is itself; anything unreadable is "". */
+export function eventDay(value: string | null | undefined): string {
+  const raw = String(value ?? "").trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/.exec(raw);
+  if (!m) return "";
+  const [, y, mo, d, hh, , zone] = m;
+  const day = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d)));
+  if (day.getUTCFullYear() !== Number(y) || day.getUTCMonth() !== Number(mo) - 1 || day.getUTCDate() !== Number(d)) return "";
+  const utc = zone === undefined || zone === "Z" || /^[+-]00:?00$/.test(zone);
+  if (hh !== undefined && utc && Number(hh) >= 12) day.setUTCDate(day.getUTCDate() + 1);
+  return day.toISOString().slice(0, 10);
+}
+
 function eventWords(e: CorporateEvent): string {
-  const when = String(e.effective ?? "").slice(0, 10);
+  const when = eventDay(e.effective);
   return `${eventTypeWords(e.type)} (${eventStatusWords(e.status)})${when ? `, effective ${when}` : ""}`;
 }
 
@@ -342,7 +362,7 @@ export function describeEvents(oldValue: unknown, newValue: unknown): string {
     const i = removed.findIndex((r) => r.type === e.type);
     if (i >= 0) {
       const prior = removed.splice(i, 1)[0];
-      const when = String(e.effective ?? "").slice(0, 10);
+      const when = eventDay(e.effective);
       parts.push(
         `${eventTypeWords(e.type)}: ${eventStatusWords(prior.status)} → ${eventStatusWords(e.status)}${when ? `, effective ${when}` : ""}`,
       );

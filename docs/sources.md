@@ -230,7 +230,7 @@ terminal statuses only; an active status is not a finding.
 | Source | Status field(s) read | Notes |
 |--------|----------------------|-------|
 | `companies_house` | `company_status`, `date_of_cessation` | dissolved / converted-closed / closed / removed → terminal; liquidation, receivership, administration, voluntary-arrangement, insolvency-proceedings → pending |
-| `gleif` | `entity.status` (ACTIVE / INACTIVE), `entity.expiration.date` + `.reason` | `registration.status` (LAPSED / RETIRED) is about the LEI record, not the entity, and is **not** read as liveness in the BODS. Since Phase 291 the subject profile shows GLEIF's ACTIVE on an unmaintained LEI as `declared`, not `live` |
+| `gleif` | `entity.status` (ACTIVE / INACTIVE), `entity.expiration.date` + `.reason`; since Phase 305, when GLEIF gives no expiration date (it no longer fills it), the latest COMPLETED terminal Legal Entity Event's effective day on an INACTIVE record | `registration.status` (LAPSED / RETIRED) is about the LEI record, not the entity, and is **not** read as liveness in the BODS. Since Phase 291 the subject profile shows GLEIF's ACTIVE on an unmaintained LEI as `declared`, not `live` |
 | `opencorporates` | `inactive` (OC's normalised bool), `dissolution_date`, `current_status` (verbatim label) | previously the dissolution date was dropped |
 | `cvr_denmark` | normalised status (`_STATUS_MAP`) + `virksomhedOphoersdato` | an end date outranks the label |
 | `gemi_greece` | codelist `isActive` + `lastStatusChange` | unknown codelist entry stays unknown |

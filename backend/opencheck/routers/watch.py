@@ -28,6 +28,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .. import watchlist as wl
+from ..bods import gleif_events as _gleif_events
 from ..config import get_settings
 from ..ratelimit import default_tier, heavy_tier, limiter, lookup_tier
 from ..sqlite_schema import SchemaTooNewError
@@ -409,36 +410,19 @@ def describe_children(old: Any, new: Any, names: dict[str, str] | None = None) -
         parts.append(f"GLEIF no longer lists {noun}: " + "; ".join(_child_words(x, names) for x in removed) + ".")
     return " ".join(parts) or "GLEIF direct subsidiaries changed."
 
-#: GLEIF Legal Entity Event types in words (Phase 301). An unlisted type is
-#: lower-cased with its underscores dropped. Keep in step with
-#: ``EVENT_TYPE_WORDS`` in ``lib/watchlist.ts``.
-EVENT_TYPE_WORDS: dict[str, str] = {
-    "CHANGE_LEGAL_NAME": "legal name change",
-    "CHANGE_LEGAL_FORM": "legal form change",
-    "MERGERS_AND_ACQUISITIONS": "merger or acquisition",
-    "SPINOFF": "spin-off",
-    "TRANSFORMATION_UMBRELLA_TO_STANDALONE": "fund transformation (umbrella to standalone)",
-}
-EVENT_STATUS_WORDS: dict[str, str] = {
-    "COMPLETED": "completed",
-    "IN_PROGRESS": "in progress",
-    "WITHDRAWN_CANCELLED": "withdrawn or cancelled",
-}
-
-
-def _event_type_words(t: str | None) -> str:
-    t = str(t or "")
-    return EVENT_TYPE_WORDS.get(t, t.lower().replace("_", " ") or "event")
-
-
-def _event_status_words(st: str | None) -> str:
-    st = str(st or "")
-    return EVENT_STATUS_WORDS.get(st, st.lower().replace("_", " ") or "status not given")
+#: GLEIF Legal Entity Event types in words (Phase 301). Since Phase 305 the
+#: tables live in ``bods/gleif_events.py``, which words the BODS annotations
+#: too; ``lib/watchlist.ts`` keeps a copy, pinned by a test.
+EVENT_TYPE_WORDS = _gleif_events.EVENT_TYPE_WORDS
+EVENT_STATUS_WORDS = _gleif_events.EVENT_STATUS_WORDS
+_event_type_words = _gleif_events.type_words
+_event_status_words = _gleif_events.status_words
 
 
 def _event_words(e: dict[str, Any]) -> str:
-    """``liquidation (in progress), effective 2026-10-06``."""
-    when = str(e.get("effective") or "")[:10]
+    """``liquidation (in progress), effective 2026-10-06`` — the day read
+    with :func:`gleif_events.event_day` (Phase 305), as the BODS reads it."""
+    when = _gleif_events.event_day(e.get("effective")) or ""
     return f"{_event_type_words(e.get('type'))} ({_event_status_words(e.get('status'))})" + (
         f", effective {when}" if when else ""
     )
@@ -458,7 +442,7 @@ def describe_events(old: Any, new: Any) -> str:
         prior = next((r for r in removed if r.get("type") == e.get("type")), None)
         if prior is not None:
             removed.remove(prior)
-            when = str(e.get("effective") or "")[:10]
+            when = _gleif_events.event_day(e.get("effective")) or ""
             parts.append(
                 f"{_event_type_words(e.get('type'))}: {_event_status_words(prior.get('status'))} → "
                 f"{_event_status_words(e.get('status'))}" + (f", effective {when}" if when else "")
