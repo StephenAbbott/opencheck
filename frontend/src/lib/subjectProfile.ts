@@ -27,6 +27,7 @@
 
 import type {
   LeiRegistration,
+  LeiSuccessor,
   SubjectProfile,
   SubjectProfileFact,
   SubjectProfileStatus,
@@ -192,6 +193,50 @@ export interface ProfileRow {
    *  it, "Source: GLEIF". Never a count: two sources that copy each other
    *  would read as two. */
   sources: string;
+  /** Phase 307: a lookup the row points forward to, with its link text —
+   *  only the successor row carries one. */
+  href?: string;
+  hrefLabel?: string;
+}
+
+// ---------------------------------------------------------------------------
+// The successor GLEIF names (Phase 307)
+// ---------------------------------------------------------------------------
+//
+// A retired LEI's record can name the entity that took its place; the band
+// says what GLEIF named, in GLEIF's own sentence, and offers one link: the
+// record a reader should open next — the END of a followed chain (2,734
+// INACTIVE records name a successor that is itself retired), never an
+// intermediate hop. A successor named by name alone gets no link: matching
+// it would be OpenCheck's assertion. Mirrors `opencheck/lei_successor.py`.
+
+/** Label for the follow-forward link, shared with GEM's banner wording. */
+export const SUCCESSOR_FOLLOW_LABEL = "Open the successor's record";
+
+/** Where the successor row links: the last record of a followed chain, else
+ *  the one LEI GLEIF named; null for a name only or several successors. */
+export function leiSuccessorHref(succ: LeiSuccessor | null | undefined): string | null {
+  if (!succ || !succ.named || succ.named.length === 0) return null;
+  const last = succ.chain && succ.chain.length > 0 ? succ.chain[succ.chain.length - 1] : null;
+  if (last?.lei) return `/?lei=${last.lei}`;
+  if (succ.named.length === 1 && succ.named[0].lei) return `/?lei=${succ.named[0].lei}`;
+  return null;
+}
+
+/** The identity-band row for a named successor, or null when GLEIF names
+ *  none. The value is the server's frozen sentence. */
+export function leiSuccessorRow(
+  succ: LeiSuccessor | null | undefined,
+  names?: Record<string, string>,
+): ProfileRow | null {
+  if (!succ || !succ.named || succ.named.length === 0 || !succ.sentence) return null;
+  const href = leiSuccessorHref(succ);
+  return {
+    label: succ.relation === "duplicate" ? "Duplicate LEI" : "Successor",
+    value: succ.sentence,
+    sources: `Source: ${sourceList([succ.source_id || "gleif"], names)}`,
+    ...(href ? { href, hrefLabel: SUCCESSOR_FOLLOW_LABEL } : {}),
+  };
 }
 
 function factRow(
@@ -246,6 +291,7 @@ export function profileRows(
           sources: `Source: ${sourceList([profile.lei_registration.source_id || "gleif"], names)}`,
         }
       : null,
+    leiSuccessorRow(profile.lei_successor, names),
     factRow("Incorporated", profile.founding_date, formatProfileDate, names),
     factRow("Registered address", profile.registered_address, (v) => v, names),
   ];

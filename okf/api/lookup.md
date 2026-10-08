@@ -81,7 +81,9 @@ sentence) and `subject_profile` (what the registers say the company *is*:
 legal form, register status, founding date and registered address, each with
 the sources stating it — facts, never findings; Phase 154 — plus
 `lei_registration`, the LEI record's own GLEIF status and dates, which is not
-the company's status; Phase 242), and `listing`
+the company's status; Phase 242; and `lei_successor`, the successor GLEIF
+names on the record, followed through the Golden Copy mirror to the record a
+reader should open next, or null when GLEIF names none; Phase 307), and `listing`
 (the primary stock-exchange listing from LSEG PermID — venue, ticker, MIC and a
 verified venue link — or null when no PermID key is configured; Phase 236),
 and `register_record` (the subject's own page on its home register —

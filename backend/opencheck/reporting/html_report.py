@@ -24,6 +24,7 @@ from ..bods.refs import statement_index
 from ..knowability import report_statements
 from ..coverage import coverage_sentence, report_coverage
 from ..lei_registration import report_value as lei_registration_value
+from ..lei_successor import report_value as lei_successor_value
 from ..listing import describe as listing_line
 from .diagram import source_diagram
 
@@ -176,7 +177,7 @@ def _name(stmt: dict[str, Any]) -> str:
 
 #: Identifier-table rows whose value is a sentence, set in the body face
 #: rather than the monospace one used for identifiers.
-_PROSE_ROWS = frozenset({"LEI registration (GLEIF)"})
+_PROSE_ROWS = frozenset({"LEI registration (GLEIF)", "Successor (GLEIF)"})
 _MONO = ' class="mono"'
 
 
@@ -188,6 +189,10 @@ def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> str:
     lei_reg = lei_registration_value(report)
     if lei_reg:
         rows.append(("LEI registration (GLEIF)", lei_reg))
+    # Phase 307: the successor GLEIF names, from the same frozen profile.
+    lei_succ = lei_successor_value(report)
+    if lei_succ:
+        rows.append(("Successor (GLEIF)", lei_succ))
     for k, v in (report.get("derived_identifiers") or {}).items():
         # The derived set carries the LEI too; it is already the first row.
         if not v or v == report.get("lei"):

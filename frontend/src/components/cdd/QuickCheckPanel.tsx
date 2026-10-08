@@ -399,7 +399,20 @@ export default function QuickCheckPanel({
                       <dt className="font-body text-oo-meta font-bold uppercase tracking-oo-eyebrow text-oo-muted">
                         {row.label}
                       </dt>
-                      <dd className="m-0 text-oo-small text-oo-ink break-words">{row.value}</dd>
+                      <dd className="m-0 text-oo-small text-oo-ink break-words">
+                        {row.value}
+                        {row.href && (
+                          <>
+                            {" "}
+                            <a
+                              href={row.href}
+                              className="font-semibold underline underline-offset-2 whitespace-nowrap"
+                            >
+                              {row.hrefLabel} →
+                            </a>
+                          </>
+                        )}
+                      </dd>
                       <dd className="m-0 text-oo-meta text-oo-muted">{row.sources}</dd>
                     </div>
                   ))}

@@ -6,13 +6,16 @@
  */
 import { describe, expect, it } from "vitest";
 
-import type { LeiRegistration, SubjectProfile } from "./api";
+import type { LeiRegistration, LeiSuccessor, SubjectProfile } from "./api";
 import {
   LEI_NOT_ENTITY_STATUS,
+  SUCCESSOR_FOLLOW_LABEL,
   declaredSentence,
   formatProfileDate,
   leiRegistrationChip,
   leiRegistrationLine,
+  leiSuccessorHref,
+  leiSuccessorRow,
   profileRows,
   statusChip,
 } from "./subjectProfile";
@@ -309,5 +312,93 @@ describe("a declared status (Phase 291)", () => {
       NAMES,
     );
     expect(chip).toEqual({ label: "Active · GLEIF", tone: "neutral", detail: "GLEIF records this company as active." });
+  });
+});
+
+// Phase 307: the successor GLEIF names on the LEI record. Diamond Bank PLC
+// (029200738G7T8AI6H992) merged into Access Bank PLC (029200328C3N9YI2D660)
+// on 17 April 2020 — the shape GLEIF publishes, as read on 8 Oct 2026.
+const ACCESS = "029200328C3N9YI2D660";
+const successor = (overrides: Partial<LeiSuccessor> = {}): LeiSuccessor => ({
+  relation: "successor",
+  named: [{ lei: ACCESS, name: "ACCESS BANK PLC" }],
+  event: { type: "MERGERS_AND_ACQUISITIONS", status: "COMPLETED", effective_day: "2020-04-17" },
+  chain: [{ lei: ACCESS, name: "ACCESS BANK PLC", entity_status: "ACTIVE", registration_status: "ISSUED" }],
+  chain_source: "mirror",
+  chain_complete: true,
+  hops: 1,
+  source_id: "gleif",
+  sentence:
+    "GLEIF names ACCESS BANK PLC (029200328C3N9YI2D660) as this entity's successor, on a merger or acquisition completed on 17 April 2020. Its LEI is issued.",
+  ...overrides,
+});
+
+describe("the successor row (Phase 307)", () => {
+  it("carries the server's sentence and one link, to the record to open next", () => {
+    const rows = profileRows(shell({ lei_successor: successor() }), NAMES);
+    const i = rows.findIndex((r) => r.label === "Successor");
+    expect(i).toBeGreaterThan(0);
+    expect(rows[i]).toEqual({
+      label: "Successor",
+      value: successor().sentence,
+      sources: "Source: GLEIF",
+      href: `/?lei=${ACCESS}`,
+      hrefLabel: SUCCESSOR_FOLLOW_LABEL,
+    });
+    // After the LEI registration row, before the incorporation date.
+    expect(rows.map((r) => r.label).indexOf("Successor")).toBeLessThan(
+      rows.map((r) => r.label).indexOf("Incorporated"),
+    );
+  });
+
+  it("links to the END of a followed chain, never an intermediate hop", () => {
+    const end = "549300BBBBBBBBBBBBB2";
+    const chained = successor({
+      chain: [
+        { lei: ACCESS, name: "ACCESS BANK PLC", entity_status: "INACTIVE", registration_status: "RETIRED" },
+        { lei: end, name: "END", entity_status: "ACTIVE", registration_status: "LAPSED" },
+      ],
+      hops: 2,
+    });
+    expect(leiSuccessorHref(chained)).toBe(`/?lei=${end}`);
+  });
+
+  it("still links to the one LEI GLEIF named when the trail was not followed", () => {
+    expect(leiSuccessorHref(successor({ chain: [], chain_source: null, chain_complete: false, hops: 0 }))).toBe(
+      `/?lei=${ACCESS}`,
+    );
+  });
+
+  it("gives a name-only successor, or several, no link", () => {
+    const nameOnly = successor({
+      named: [{ lei: null, name: "CONOCOPHILLIPS CANADA FUNDING COMPANY I" }],
+      chain: [],
+      chain_source: null,
+      chain_complete: false,
+      hops: 0,
+      sentence: "GLEIF names CONOCOPHILLIPS CANADA FUNDING COMPANY I as this entity's successor, with no LEI.",
+    });
+    expect(leiSuccessorHref(nameOnly)).toBeNull();
+    expect(leiSuccessorRow(nameOnly, NAMES)?.href).toBeUndefined();
+    const several = successor({
+      named: [{ lei: ACCESS, name: "A" }, { lei: null, name: "B" }],
+      chain: [],
+      chain_source: null,
+      chain_complete: false,
+      hops: 0,
+    });
+    expect(leiSuccessorHref(several)).toBeNull();
+  });
+
+  it("labels a duplicate registration as such, and omits the row when GLEIF names none", () => {
+    const dup = successor({
+      relation: "duplicate",
+      event: null,
+      sentence: "GLEIF records this LEI as a duplicate: the same entity is registered as STANBIC IBTC BANK PLC (549300NIVXF92ZIOVW61). This is the status of the LEI record, not of the company.",
+    });
+    expect(leiSuccessorRow(dup, NAMES)?.label).toBe("Duplicate LEI");
+    expect(profileRows(shell(), NAMES).some((r) => r.label === "Successor")).toBe(false);
+    expect(profileRows(shell({ lei_successor: null }), NAMES).some((r) => r.label === "Successor")).toBe(false);
+    expect(leiSuccessorRow(successor({ named: [] }), NAMES)).toBeNull();
   });
 });

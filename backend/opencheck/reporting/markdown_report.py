@@ -23,6 +23,7 @@ from ..bods.refs import statement_index
 from ..knowability import report_statements
 from ..coverage import coverage_sentence, report_coverage
 from ..lei_registration import report_value as lei_registration_value
+from ..lei_successor import report_value as lei_successor_value
 from ..listing import describe as listing_line
 from .diagram import source_diagram
 from .html_report import (
@@ -88,6 +89,10 @@ def _identifiers(report: dict[str, Any], subject: dict[str, Any] | None) -> list
     lei_reg = lei_registration_value(report)
     if lei_reg:
         rows.append(["LEI registration (GLEIF)", lei_reg])
+    # Phase 307: the successor GLEIF names, from the same frozen profile.
+    lei_succ = lei_successor_value(report)
+    if lei_succ:
+        rows.append(["Successor (GLEIF)", lei_succ])
     for k, v in (report.get("derived_identifiers") or {}).items():
         # The derived set carries the LEI too; it is already the first row.
         if not v or v == report.get("lei"):

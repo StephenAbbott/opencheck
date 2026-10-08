@@ -71,6 +71,10 @@ class _LookupCtx:
     #: ``registration`` block — ``lei_registration.from_gleif_record``. Rides
     #: on the ``subject_profile`` event; ``None`` when the anchor carried none.
     lei_registration: dict[str, Any] | None = None
+    #: The successor GLEIF names on the anchor (Phase 307), followed through
+    #: the Golden Copy mirror — ``lei_successor.from_gleif_record`` +
+    #: ``follow``. Rides on ``subject_profile``; ``None`` when none is named.
+    lei_successor: dict[str, Any] | None = None
 
 
 def _hit(
