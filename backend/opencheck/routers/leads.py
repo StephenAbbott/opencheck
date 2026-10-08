@@ -61,6 +61,9 @@ class LeadCandidate(BaseModel):
 class LeadsResponse(BaseModel):
     lei: str
     searched_name: str | None = None
+    #: What was sent to GLEIF's fulltext search: the name with its legal-form
+    #: words removed (Phase 310), so a reader can see why a candidate came up.
+    search_terms: str | None = None
     #: The direct parent the Golden Copy mirror last held for the record, or
     #: null — no mirror, or none filed.
     parent: LeadParent | None = None
