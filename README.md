@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 306** — EITI International's Zambian payment records now reach Zambian LEIs through the TPIN the Zambia EITI portal index ties to each LEI, and an EITI card reads every spelling EITI files of a company's number.
+**Latest: Phase 307** — A retired LEI now says who took its place: the successor GLEIF names on the record, followed through the Golden Copy mirror to the record a reader should open next, on the page, in the MCP summary and in the reports.
 
 → [Full development history](docs/status.md)
 
