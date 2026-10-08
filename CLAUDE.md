@@ -2865,3 +2865,43 @@ otherwise:
   and says so with `total`/`truncated` — a silent cap is the Phase 279
   defect. A new adapter whose summary prints a status label the
   vocabularies in `search_rank` do not know ranks it with live.
+
+## GLEIF Legal Entity Events in the BODS (Phase 305)
+
+`opencheck/bods/gleif_events.py`, read by `_gleif_entity_statement`. Stephen's
+decisions (8 Oct 2026) and the measurements behind them (7 Oct 2026 Golden
+Copy), which will be re-derived otherwise:
+
+- **GLEIF no longer fills `entity.expiration`** — null on all 254,762
+  INACTIVE records in the mirror and on the live API. Before this phase no
+  GLEIF statement carried a `dissolutionDate`. An `expiration.date` GLEIF
+  does give still wins.
+- **`dissolutionDate` comes from the latest COMPLETED event in
+  `TERMINAL_TYPES`, and only when `entity.status` is INACTIVE.** The status
+  gate is the rule, not a precaution: 2,825 ACTIVE records carry a completed
+  merger (the acquirer's side), 456 an absorption, 864 a dissolution. An
+  IN_PROGRESS or withdrawn event never sets it. 253,926 of 254,762 INACTIVE
+  records are dated; the 836 left have no completed terminal event with a date.
+- **The calendar day is `event_day`, not a `[:10]` trim.** GLEIF stores the
+  filer's local midnight as UTC (22:00Z 319k, 23:00Z 210k, 18:30Z 58k,
+  16:00Z 53k); a UTC time at or after 12:00 is the next day. Westlake
+  Pharmacy Services: GLEIF `2024-10-24T22:00:00Z`, Companies House 25 October
+  2024. The watchlist feed words events with the same rule (`event_day` in
+  `routers/watch.py`, `eventDay` in `lib/watchlist.ts`, one case table pinned
+  on both sides by `test_gleif_events.py`). Never trim an event timestamp.
+- **One `commenting` annotation per material event, any status** — every type
+  except `EXCLUDED_TYPES` (address and other-name changes; the watchlist's
+  `CORPORATE_EVENT_EXCLUDED` is the same object). The sentence states type,
+  status and day, with GLEIF's exact timestamp beside it; the
+  `gleifLegalEntityEvent` property carries GLEIF's fields plus `effectiveDay`.
+  Target: `/recordDetails/dissolutionDate` for the event that dated it,
+  `/recordDetails/name` for a legal name change (v0.4 names are plain
+  strings, so a dated name is impossible), `/recordDetails` otherwise.
+- **The watchlist absorbs the newly read date once.** Snapshots carry
+  `dissolution_reading` (2); a baseline without it, with no date, compared
+  with a date on or before the day it was taken, is not a change. Bump it if
+  the reading changes again.
+- Event type/status words live in `gleif_events.EVENT_TYPE_WORDS` /
+  `EVENT_STATUS_WORDS`; `routers/watch.py` re-exports them and
+  `lib/watchlist.ts` keeps a copy the test parses.
+

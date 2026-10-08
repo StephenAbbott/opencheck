@@ -89,6 +89,7 @@ from pathlib import Path
 from typing import Any
 
 from . import identifiers, sqlite_schema
+from .bods import gleif_events as _gleif_events
 from .names import name_similarity
 from .secret_scrub import describe_exception
 from .verdict import VERDICT_TEMPLATE
@@ -120,6 +121,32 @@ SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
         }
     ),
 }
+
+
+#: Phase 305 — how a snapshot's ``dissolution_date`` was read. Version 2 reads
+#: GLEIF's Legal Entity Events, which date an INACTIVE entity that GLEIF's
+#: empty ``expiration`` left undated. A snapshot written before it carries no
+#: number: it was version 1.
+DISSOLUTION_READING = 2
+
+
+def _dissolution_newly_read(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    """True when ``after``'s dissolution date is one the old reading could
+    not see rather than news: the baseline predates :data:`DISSOLUTION_READING`,
+    had no date, and the new date is on or before the day the baseline was
+    taken (its latest source retrieval; no retrieval recorded counts as
+    before). A dissolution dated after the baseline is still reported, and
+    once the baseline moves on every later change is compared as usual. The
+    Phase 291 pattern: a reclassification, not a change in the company."""
+    if int(before.get("dissolution_reading") or 1) >= DISSOLUTION_READING:
+        return False
+    if before.get("dissolution_date") or not after.get("dissolution_date"):
+        return False
+    taken = max(
+        (str(c.get("retrieved_at") or "")[:10] for c in before.get("checked") or [] if isinstance(c, dict)),
+        default="",
+    )
+    return not taken or str(after["dissolution_date"]) <= taken
 
 
 def _rule_moved_codes(before: dict[str, Any], after: dict[str, Any]) -> frozenset[str]:
@@ -254,9 +281,8 @@ GLEIF_MATERIAL_FIELDS: tuple[str, ...] = (
 #: acquisitions, absorption, demerger, breakup, spin-off, the fund
 #: transformations, and the legal name and legal form changes (which carry
 #: the effective date the plain ``legal_name`` / ``legal_form`` fields lack).
-CORPORATE_EVENT_EXCLUDED: frozenset[str] = frozenset(
-    {"CHANGE_LEGAL_ADDRESS", "CHANGE_HQ_ADDRESS", "CHANGE_OTHER_NAMES"}
-)
+#: Phase 305: the one list, shared with the BODS event annotations.
+CORPORATE_EVENT_EXCLUDED: frozenset[str] = _gleif_events.EXCLUDED_TYPES
 
 
 def _corporate_events(detail: dict[str, Any]) -> list[dict[str, Any]] | None:
@@ -525,6 +551,8 @@ def snapshot_from_response(resp: Any) -> dict[str, Any]:
         # Phase 273: which risk-rules version produced ``signals`` (see
         # SIGNAL_RULES), so a rule change is not reported as a company change.
         "signal_rules": SIGNAL_RULES,
+        # Phase 305: which reading produced ``dissolution_date``.
+        "dissolution_reading": DISSOLUTION_READING,
         # Which sources were actually reached, and when (Phase 99/100: the
         # retrieval clock, per source). The feed says "these sources were
         # checked on that date as a result".
@@ -624,7 +652,8 @@ def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list
     _scalar("jurisdiction", "jurisdiction")
     _scalar("founding_date", "founding_date")
     _scalar("legal_form", "legal_form")
-    _scalar("dissolution_date", "dissolution_date")
+    if not _dissolution_newly_read(before, after):
+        _scalar("dissolution_date", "dissolution_date")
 
     rs_a = _status_class((before.get("register_status") or {}).get("liveness"))
     rs_b = _status_class((after.get("register_status") or {}).get("liveness"))
