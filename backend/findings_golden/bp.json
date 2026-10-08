@@ -1,9 +1,9 @@
 {
   "lei": "213800LH1BZH3DI6G760",
   "name": "BP P.L.C.",
-  "role": "curated",
-  "why": "Curated example. UK parent with no GLEIF parent; ICIJ name match graded by the Phase 237 gates.",
-  "example_card": true,
+  "role": "anchor",
+  "why": "Anchor since Phase 312 (a curated card until then). UK parent with no GLEIF parent; ICIJ name match graded by the Phase 237 gates — the only subject that exercises them.",
+  "example_card": false,
   "no_risk": false,
   "risk": {
     "OFFSHORE_LEAKS": "medium"

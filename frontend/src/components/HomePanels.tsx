@@ -18,10 +18,10 @@ import { buttonClasses } from "./ui";
 import { cardChips, moreFindingsLabel } from "../lib/exampleCards";
 
 /**
- * Curated demo subjects that have a pre-extracted Open Ownership BODS
- * bundle on disk (``data/cache/bods_data/``) — clicking any of them
- * resolves entirely offline. The list is small + opinionated; users
- * can paste any other LEI into the input.
+ * Curated demo subjects. Since Phase 94 these are live lookups like any
+ * other LEI (Rosneft and Taqa Bratani also have a pre-extracted Open
+ * Ownership BODS bundle on disk under ``data/cache/bods_data/``). The list
+ * is small + opinionated; users can paste any other LEI into the input.
  *
  * ``signals`` are every risk code production returns for the subject,
  * checked by hand (see the note above ``EXAMPLE_LEIS``), so the picker
@@ -77,17 +77,26 @@ export interface ExampleLei {
 // hit is a person match (Juan R. Luciano ↔ ROJAS JUAN LUCIANO) with nothing
 // to corroborate it, and an uncorroborated ICIJ person match is low now.
 //
+// Phase 312 (8 Oct 2026): Equinor ASA replaces BP P.L.C. as the first card.
+// Its two codes were read from production on 8 Oct 2026: STATE_CONTROLLED
+// medium (Norway holds 67% through the Ministry of Trade, Industry and
+// Fisheries, per OpenSanctions and Wikidata) and RELATED_PEP high (a board
+// member on OpenAleph's Norway state-owned-enterprise leadership list). BP
+// stays in the weekly findings regression as an anchor (its golden file
+// still exercises the Phase 237 ICIJ name-match gates), just not on a card.
+//
 // Phase 170 removed COMPLEX_OWNERSHIP_LAYERS from BP, Rosneft, Eesti Energia
 // and Ørsted: every one of those chips was a V through the subject counted as
 // three layers above it. None of the six curated subjects reaches three
 // layers; finding an example with a real layered chain is an open follow-up.
 export const EXAMPLE_LEIS: ExampleLei[] = [
   {
-    lei: "213800LH1BZH3DI6G760",
-    name: "BP P.L.C.",
-    hint: "UK oil major",
+    lei: "OW6OFBNCKXC4US5C7523",
+    name: "Equinor ASA",
+    hint: "Norwegian state-majority energy company",
     signals: [
-      { code: "OFFSHORE_LEAKS", confidence: "high" },
+      { code: "STATE_CONTROLLED", confidence: "medium" },
+      { code: "RELATED_PEP", confidence: "high" },
     ],
   },
   {

@@ -108,7 +108,7 @@ def _checks(findings: list[fr.Finding]) -> list[str]:
 
 def test_every_golden_file_validates() -> None:
     exps = fr.load_expectations()
-    assert len(exps) == 13
+    assert len(exps) == 14
     roles = {e["role"] for e in exps}
     assert roles == {"curated", "anchor", "control"}
     assert sum(1 for e in exps if e["role"] == "control") == 2
@@ -178,7 +178,7 @@ def test_load_expectations_rejects_a_duplicate_lei(tmp_path: Path) -> None:
 def test_parse_example_cards_reads_the_real_file() -> None:
     cards = fr.load_example_cards()
     assert len(cards) == 6
-    assert cards["213800LH1BZH3DI6G760"]["OFFSHORE_LEAKS"] in fr.CONFIDENCE_RANK
+    assert cards["OW6OFBNCKXC4US5C7523"]["STATE_CONTROLLED"] in fr.CONFIDENCE_RANK
     assert all(cards.values()), "every curated card lists at least one risk code"
 
 
