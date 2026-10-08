@@ -229,7 +229,10 @@ export function leiSuccessorRow(
   succ: LeiSuccessor | null | undefined,
   names?: Record<string, string>,
 ): ProfileRow | null {
-  if (!succ || !succ.named || succ.named.length === 0 || !succ.sentence) return null;
+  if (!succ || !succ.sentence) return null;
+  // Phase 308: an ended company GLEIF names no successor for still gets the
+  // row — the sentence stops a reader looking for a link GLEIF never filed.
+  if ((!succ.named || succ.named.length === 0) && succ.relation !== "none") return null;
   const href = leiSuccessorHref(succ);
   return {
     label: succ.relation === "duplicate" ? "Duplicate LEI" : "Successor",

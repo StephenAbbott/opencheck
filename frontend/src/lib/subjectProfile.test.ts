@@ -390,6 +390,24 @@ describe("the successor row (Phase 307)", () => {
     expect(leiSuccessorHref(several)).toBeNull();
   });
 
+  it("states that GLEIF names none for an ended company, with no link (Phase 308)", () => {
+    const none = successor({
+      relation: "none",
+      named: [],
+      chain: [],
+      chain_source: null,
+      chain_complete: true,
+      hops: 0,
+      sentence: "GLEIF names no successor on this LEI record.",
+    });
+    expect(leiSuccessorHref(none)).toBeNull();
+    expect(leiSuccessorRow(none, NAMES)).toEqual({
+      label: "Successor",
+      value: "GLEIF names no successor on this LEI record.",
+      sources: "Source: GLEIF",
+    });
+  });
+
   it("labels a duplicate registration as such, and omits the row when GLEIF names none", () => {
     const dup = successor({
       relation: "duplicate",

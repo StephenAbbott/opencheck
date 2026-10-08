@@ -83,6 +83,12 @@ BANNED_WORDS: tuple[str, ...] = (
 
 _LEI_SHAPE = re.compile(r"^[A-Z0-9]{20}$")
 
+#: The sentence for an INACTIVE record that names no successor (Phase 308) —
+#: 192,528 dissolutions and 15,344 liquidations in the 7 Oct 2026 Golden
+#: Copy, the ordinary ending. Stated so a reader stops looking for a link
+#: GLEIF never filed; the page offers unasserted leads beneath it instead.
+NONE_NAMED = "GLEIF names no successor on this LEI record."
+
 
 def _clean_lei(value: Any) -> str | None:
     lei = str(value or "").strip().upper()
@@ -171,9 +177,25 @@ def from_gleif_record(record: dict[str, Any] | None) -> dict[str, Any] | None:
     if not isinstance(entity, dict):
         return None
     named = _named(entity)
-    if not named:
-        return None
     registration = str(((attrs.get("registration") or {}).get("status")) or "").upper()
+    if not named:
+        # Phase 308: for a company GLEIF records as ended, the absence is a
+        # fact worth a sentence — "retired" alone sends the reader looking
+        # for a successor GLEIF never named. A live company gets nothing.
+        if str(entity.get("status") or "").upper() != "INACTIVE":
+            return None
+        out = {
+            "relation": "none",
+            "named": [],
+            "event": _explaining_event(entity),
+            "chain": [],
+            "chain_source": None,
+            "chain_complete": True,
+            "hops": 0,
+            "source_id": "gleif",
+        }
+        out["sentence"] = NONE_NAMED
+        return out
     out: dict[str, Any] = {
         "relation": "duplicate" if registration == "DUPLICATE" else "successor",
         "named": named,
@@ -201,6 +223,8 @@ def follow(payload: dict[str, Any] | None, store: Any = None) -> dict[str, Any] 
     """
     if not payload:
         return payload
+    if not payload.get("named"):
+        return dict(payload)
     out = {**payload, "chain": [], "chain_source": None, "chain_complete": False, "hops": 0}
     named = out.get("named") or []
     leis = [n["lei"] for n in named if n.get("lei")]
@@ -297,8 +321,10 @@ def sentence(payload: dict[str, Any] | None) -> str | None:
     * several: "GLEIF names X (LEI) and Y as this entity's successors, on a
       demerger completed on …."
     """
-    if not payload or not payload.get("named"):
+    if not payload:
         return None
+    if not payload.get("named"):
+        return NONE_NAMED if payload.get("relation") == "none" else None
     named: list[dict[str, Any]] = payload["named"]
     labels = [_label(n) for n in named]
     if payload.get("relation") == "duplicate":
@@ -359,6 +385,6 @@ def report_value(report: dict[str, Any] | None) -> str | None:
     the frozen profile's sentence, never re-fetched."""
     profile = (report or {}).get("subject_profile") or {}
     succ = profile.get("lei_successor") if isinstance(profile, dict) else None
-    if not isinstance(succ, dict) or not succ.get("named"):
+    if not isinstance(succ, dict) or not succ.get("relation"):
         return None
     return succ.get("sentence") or sentence(succ)

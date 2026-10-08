@@ -362,7 +362,9 @@ export interface LeiSuccessorHop {
  *  which is the ordinary dissolved company. A `duplicate` relation is the
  *  same entity under another LEI, not a merger. */
 export interface LeiSuccessor {
-  relation: "successor" | "duplicate";
+  /** `none` (Phase 308): the company has ended and GLEIF names no successor
+   *  — `named` is empty and `sentence` says so. Absent for a live company. */
+  relation: "successor" | "duplicate" | "none";
   /** As GLEIF files them: an LEI, a name, or both. */
   named: { lei: string | null; name: string | null }[];
   event: { type: string; status: string; effective_day: string | null } | null;
@@ -655,6 +657,54 @@ export function fetchKnowability(codes: string[]): Promise<KnowabilityResponse> 
 
 export function fetchSources(): Promise<{ sources: SourceInfo[] }> {
   return getJson("/sources");
+}
+
+// --- Leads for a retired LEI (Phase 308) ------------------------------------
+/** The direct parent the Golden Copy mirror last held for a retired record. */
+export interface LeadParent {
+  lei: string;
+  name: string | null;
+  entity_status: string | null;
+  registration_status: string | null;
+  relationship_status: string | null;
+  /** Whether GLEIF still serves the relationship — usually false for a
+   *  retired record, whose relationships retire with it. */
+  standing: boolean;
+}
+
+/** An active LEI record whose name matches the retired subject's. */
+export interface LeadCandidate {
+  lei: string;
+  name: string;
+  jurisdiction: string | null;
+  registration_status: string | null;
+  /** `search_rank.MATCH_TIERS` word: exact / same_name / all_tokens / distinctive_tokens. */
+  match: string;
+  /** The other name GLEIF files that the match rests on — a former legal
+   *  name, most often — and GLEIF's type for it; null when the legal name
+   *  itself matched. The Barrick case: "Barrick Gold Inc." finds BARRICK
+   *  MINING CORPORATION through its PREVIOUS_LEGAL_NAME. */
+  matched_name: string | null;
+  matched_name_type: string | null;
+  /** Always true — only the name agrees, which is not an identity match. */
+  name_only: boolean;
+}
+
+/** `GET /leads` — leads, never a successor; UI-only, never in a saved report. */
+export interface LeadsResponse {
+  lei: string;
+  searched_name: string | null;
+  parent: LeadParent | null;
+  candidates: LeadCandidate[];
+  /** `held_for_lookups` / `rate_limited` / `unreachable`, or null when GLEIF
+   *  answered — an empty list with null here means nothing similar exists. */
+  gleif_unavailable_reason: string | null;
+  note: string;
+}
+
+export function getLeads(lei: string, name: string): Promise<LeadsResponse> {
+  const params = new URLSearchParams({ lei, name });
+  return getJson(`/leads?${params.toString()}`);
 }
 
 // --- Source health (Phase 161) ---------------------------------------------
