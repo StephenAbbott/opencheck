@@ -148,6 +148,23 @@ fetch `/batch-export` directly.
   issuer, neither live nor dissolved — with `since` set to the missed renewal
   date (lapses only), `lei_registration_status`, and a `sentence` that `summary`
   repeats. A register or OpenCorporates status outranks it either way.
+  **Phase 307:** `lei_successor` — the successor GLEIF names on the LEI
+  record (`entity.successorEntities`), or null when it names none, which is
+  the ordinary dissolved company (0.3 % of dissolutions carry one; 99.6 % of
+  mergers and every absorption do). `relation` is `successor`, or
+  `duplicate` when the registration status is DUPLICATE — the same entity
+  under another LEI, never a merger; `named[]` is what GLEIF filed (an LEI,
+  a name, or both); `event` is the completed event that explains it (type,
+  status, `effective_day`); `chain[]` follows one named LEI through the
+  Golden Copy mirror to the record that names no further successor
+  (`chain_complete`, `hops`; `chain_source` null when no mirror was there,
+  in which case the trail was not followed, not ended); `sentence` is what
+  the page and the report say. The same object is repeated at the top level
+  as **`lei_successor`** with `follow_forward` — `{lei, name,
+  registration_status}` of the record to look up next: the end of a followed
+  chain, else the one LEI named, null for a name-only or several successors.
+  Its sentence is said in `summary` right after the LEI registration status.
+  GLEIF's assertion, never a finding; nothing here changes `register_status`.
 - **`licensing`** — the composite licence verdict over the sources that
   returned data (`commercial_use`, `attribution_required`, `share_alike`,
   `headline`, `warnings`), computed by the same `licensing.assess` the web

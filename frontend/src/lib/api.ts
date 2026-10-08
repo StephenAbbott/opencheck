@@ -347,6 +347,36 @@ export interface LeiRegistration {
   sentence: string | null;
 }
 
+/** One record on a successor chain (Phase 307) — the Golden Copy mirror's
+ *  row for an LEI GLEIF named as a successor. */
+export interface LeiSuccessorHop {
+  lei: string;
+  name: string | null;
+  entity_status: string | null;
+  registration_status: string | null;
+}
+
+/** The successor GLEIF names on the LEI record (Phase 307), followed
+ *  through the Golden Copy mirror — `opencheck/lei_successor.py`. GLEIF's
+ *  assertion, frozen with the run; absent or null when GLEIF names none,
+ *  which is the ordinary dissolved company. A `duplicate` relation is the
+ *  same entity under another LEI, not a merger. */
+export interface LeiSuccessor {
+  relation: "successor" | "duplicate";
+  /** As GLEIF files them: an LEI, a name, or both. */
+  named: { lei: string | null; name: string | null }[];
+  event: { type: string; status: string; effective_day: string | null } | null;
+  /** The mirror's rows from the first hop to the last followed. */
+  chain: LeiSuccessorHop[];
+  chain_source: "mirror" | null;
+  /** True when the last record on the chain names no further successor. */
+  chain_complete: boolean;
+  hops: number;
+  source_id: string;
+  /** The server's sentence, frozen with the run. */
+  sentence: string | null;
+}
+
 /** The subject's profile, assembled by `opencheck/subject_profile.py` from
  *  the subject's own entity statements: facts, never findings. */
 export interface SubjectProfile {
@@ -358,6 +388,9 @@ export interface SubjectProfile {
   /** Phase 242. Absent on payloads recorded before it, null when the anchor
    *  carried no registration block — never read either as ISSUED. */
   lei_registration?: LeiRegistration | null;
+  /** Phase 307. Absent on payloads recorded before it, null when GLEIF
+   *  names no successor. */
+  lei_successor?: LeiSuccessor | null;
   statement_ids: string[];
 }
 

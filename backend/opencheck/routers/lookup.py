@@ -48,6 +48,7 @@ from ..icij_check import assess_icij_names
 from ..names import normalise_name
 from ..openaleph_check import assess_openaleph_names
 from .. import lei_registration as _lei_registration
+from .. import lei_successor as _lei_successor
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
 from .. import listing as _listing
@@ -1323,6 +1324,11 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
             ctx.lei_registration = _lei_registration.from_gleif_record(
                 gleif_bundle.get("record")
             )
+            # Phase 307: the successor GLEIF names, followed through the
+            # mirror (a local read) — None for the ordinary dissolved company.
+            ctx.lei_successor = _lei_successor.follow(
+                _lei_successor.from_gleif_record(gleif_bundle.get("record"))
+            )
     except _LookupAbort:
         raise
     except GleifRateLimitedError as exc:
@@ -1371,6 +1377,10 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
                     # block; the live call is the one place it can come from.
                     ctx.lei_registration = _lei_registration.from_gleif_record(
                         gleif_src.get("record")
+                    )
+                if ctx.lei_successor is None:
+                    ctx.lei_successor = _lei_successor.follow(
+                        _lei_successor.from_gleif_record(gleif_src.get("record"))
                     )
                 attrs = (gleif_src.get("record") or {}).get("attributes") or {}
                 ctx.ocid = attrs.get("ocid") or None
@@ -1822,7 +1832,10 @@ async def _lookup_pipeline(
         "subject_profile",
         {
             "profile": build_subject_profile(
-                ctx.lei, bods_all, lei_registration=ctx.lei_registration
+                ctx.lei,
+                bods_all,
+                lei_registration=ctx.lei_registration,
+                lei_successor=ctx.lei_successor,
             )
         },
     )

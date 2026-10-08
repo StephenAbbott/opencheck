@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Any
 
 from .. import lei_registration as _lei_reg
+from .. import lei_successor as _lei_succ
 from ..coverage import coverage_sentence, source_coverage
 from ..sources import REGISTRY
 
@@ -279,6 +280,18 @@ def _lei_registration(payload: Any) -> dict[str, Any] | None:
     return {**reg, "line": _lei_reg.short_line(reg)}
 
 
+def _lei_successor(payload: Any) -> dict[str, Any] | None:
+    """The profile's ``lei_successor`` (Phase 307) plus ``follow_forward`` —
+    the record a reader should open next — or ``None`` when GLEIF names no
+    successor. Read from the frozen ``subject_profile``, never re-fetched.
+    """
+    profile = getattr(payload, "subject_profile", None) or {}
+    succ = profile.get("lei_successor") if isinstance(profile, dict) else None
+    if not isinstance(succ, dict) or not succ.get("named"):
+        return None
+    return {**succ, "follow_forward": _lei_succ.final(succ)}
+
+
 def shape_lookup(payload: Any) -> dict[str, Any]:
     """Flatten a ``LookupResponse`` into a compact MCP tool result."""
     bods = payload.bods or []
@@ -347,10 +360,15 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         if isinstance(status, dict) and status.get("liveness") == "declared" and status.get("sentence")
         else ""
     )
+    # Phase 307: the successor GLEIF names, said beside the registration
+    # status — an AI reader of a retired LEI needs the record to open next
+    # before anything else. GLEIF's assertion, never a finding.
+    lei_succ = _lei_successor(payload)
+    successor_note = f"{lei_succ['sentence']} " if lei_succ and lei_succ.get("sentence") else ""
     summary = (
         f"{payload.legal_name or 'Entity'} (LEI {payload.lei}"
         f"{', ' + payload.jurisdiction if payload.jurisdiction else ''}). "
-        f"{lei_reg_note}{declared_note}"
+        f"{lei_reg_note}{successor_note}{declared_note}"
         f"Risk signals: {risk_codes}.{context_note} "
         f"{coverage_sentence(coverage)}; "
         f"{len(bods)} BODS statements ({relationships} ownership/control relationships)."
@@ -369,6 +387,12 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         # status, founding date, registered address — with the sources that
         # state each (Phase 154). Facts, never findings.
         "profile": getattr(payload, "subject_profile", None),
+        # Phase 307: the successor GLEIF names on this LEI record, followed
+        # through the Golden Copy mirror, with ``follow_forward`` — the LEI
+        # to look up next — or null when GLEIF names none (the ordinary
+        # dissolved company). GLEIF's assertion; a ``duplicate`` relation is
+        # the same entity under another LEI, not a merger.
+        "lei_successor": lei_succ,
         # What is knowable in the subject's jurisdiction and along the
         # ownership path (Phase 226): dated register facts, never findings.
         # Null on a payload recorded before the fields existed.

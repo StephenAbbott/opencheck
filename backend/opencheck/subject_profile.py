@@ -220,6 +220,7 @@ def build_subject_profile(
     bods: list[dict[str, Any]],
     *,
     lei_registration: dict[str, Any] | None = None,
+    lei_successor: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """The four profile fields for ``lei``, or ``None`` with no subject statement.
 
@@ -235,6 +236,7 @@ def build_subject_profile(
           "registered_address": {"value", "country", "sources", ...} | None,
           "jurisdiction": "GB" | None,
           "lei_registration": {...} | None,
+          "lei_successor": {...} | None,
           "statement_ids": [...],
         }
 
@@ -245,6 +247,12 @@ def build_subject_profile(
     stop GLEIF's own ACTIVE reading as ``live``: with no issuer re-checking
     it, that status is ``declared``, the last thing the company told its
     issuer. A register or OpenCorporates status is unaffected and outranks it.
+
+    ``lei_successor`` (Phase 307) is the successor GLEIF names on the anchor,
+    followed through the Golden Copy mirror — ``opencheck.lei_successor`` —
+    passed in the same way and for the same reason. ``None`` when GLEIF names
+    none, which is the ordinary dissolved company; it is carried as GLEIF's
+    assertion and never read as the company's status.
     """
     stmts = subject_statements(lei, bods)
     if not stmts:
@@ -339,5 +347,6 @@ def build_subject_profile(
         "registered_address": address,
         "jurisdiction": jurisdiction,
         "lei_registration": lei_registration,
+        "lei_successor": lei_successor,
         "statement_ids": [str(s.get("statementId") or "") for s in stmts],
     }
