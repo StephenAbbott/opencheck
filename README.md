@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 311** — A renamed company's former legal names now appear once, in the "Is this the right company?" band, and no longer crowd the subject card, so the check modes stay in view on a phone.
+**Latest: Phase 312** — Equinor ASA replaces BP P.L.C. as a curated homepage example; its card lists the state-control and related-PEP findings production returns, and its golden file joins the weekly findings regression (BP stays in the set as an anchor).
 
 → [Full development history](docs/status.md)
 
