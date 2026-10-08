@@ -23,7 +23,6 @@ import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { useIsPhone } from "./lib/viewport";
 import { Button } from "./components/ui";
-import { formerlyLine } from "./lib/formerNames";
 import { leiRegistrationChip, statusChip } from "./lib/subjectProfile";
 import PanelSection, { PanelCard } from "./components/ui/PanelSection";
 import { setSourceNames } from "./lib/vocab";
@@ -1196,7 +1195,6 @@ export default function App() {
             notice={saveNotice}
             listing={primaryListing}
             registerRecord={registerRecord}
-            formerly={formerlyLine(subjectProfile)}
           />
         {/* ── The answer-first layer (Phase 122) ─────────────────────────
             Subject, then what the check found and how much of it ran, then
