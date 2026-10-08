@@ -45,10 +45,12 @@ def test_a_watchlist_file_from_before_260_is_stamped_and_keeps_its_rows(tmp_path
     assert _ver(path) == 0
 
     store = wl.WatchlistStore(path, wl.Caps(10, 10))
-    assert store.schema_version == 1 and _ver(path) == 1
+    # Stamped 1, then every later step applied (Phase 303 added step 2).
+    latest = len(wl.MIGRATIONS)
+    assert store.schema_version == latest and _ver(path) == latest
     assert store.list_exists("h") and store.get_meta("opensanctions_version") == "v1"
     # Opening again is a no-op.
-    assert wl.WatchlistStore(path, wl.Caps(10, 10)).schema_version == 1
+    assert wl.WatchlistStore(path, wl.Caps(10, 10)).schema_version == latest
 
 
 def test_a_saved_reports_file_from_before_260_is_stamped(tmp_path: Path) -> None:

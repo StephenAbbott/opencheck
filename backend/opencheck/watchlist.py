@@ -785,6 +785,18 @@ CREATE TABLE IF NOT EXISTS meta (
 #: is stamped 1 and nothing else changes. Append; never edit a shipped step.
 MIGRATIONS: tuple[sqlite_schema.Migration, ...] = (
     sqlite_schema.Migration(1, "Phase 215 schema", sqlite_schema.statements(SCHEMA)),
+    # Phase 303: GLEIF's own field-modification log — on an entry, the lines
+    # since that list's baseline; on a watch, the 30 days before it began.
+    # Both nullable: a NULL is "not fetched", distinct from a fetched log
+    # that GLEIF could not serve ({"available": false}).
+    sqlite_schema.Migration(
+        2,
+        "Phase 303 GLEIF modification log",
+        (
+            "ALTER TABLE entries ADD COLUMN gleif_log_json TEXT",
+            "ALTER TABLE watches ADD COLUMN prewatch_log_json TEXT",
+        ),
+    ),
 )
 
 
@@ -999,6 +1011,23 @@ class WatchlistStore:
                 (json.dumps(facts), digest(facts), watermark, th, lei),
             )
 
+    def prewatch_log(self, th: str, lei: str) -> dict[str, Any] | None:
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT prewatch_log_json FROM watches WHERE token_hash = ? AND lei = ?", (th, lei)
+            ).fetchone()
+        return json.loads(row[0]) if row and row[0] else None
+
+    def set_prewatch_log(self, th: str, lei: str, log_: dict[str, Any]) -> None:
+        """Store what GLEIF's log showed for the days before this list
+        started watching ``lei`` (Phase 303). Written once, when the watch is
+        new; re-adding a watched LEI keeps it."""
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE watches SET prewatch_log_json = ? WHERE token_hash = ? AND lei = ?",
+                (json.dumps(log_), th, lei),
+            )
+
     def update_baseline(
         self,
         th: str,
@@ -1042,14 +1071,15 @@ class WatchlistStore:
         checked: list[dict[str, Any]],
         degraded: list[dict[str, Any]],
         legal_name: str | None,
+        gleif_log: dict[str, Any] | None = None,
     ) -> int:
         assert tier in TIERS, tier
         with self._conn() as conn:
             cur = conn.execute(
                 """
                 INSERT INTO entries (token_hash, lei, created_at, tier, trigger_json, changes_json,
-                    checked_json, degraded_json, legal_name)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    checked_json, degraded_json, legal_name, gleif_log_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     th,
@@ -1061,6 +1091,7 @@ class WatchlistStore:
                     json.dumps(checked),
                     json.dumps(degraded),
                     legal_name,
+                    json.dumps(gleif_log) if gleif_log is not None else None,
                 ),
             )
             return int(cur.lastrowid or 0)
@@ -1198,7 +1229,15 @@ def _watch_dict(row: sqlite3.Row) -> dict[str, Any]:
         "snapshot": json.loads(row["snapshot_json"]) if row["snapshot_json"] else None,
         "snapshot_at": row["snapshot_at"],
         "last_checked_at": row["last_checked_at"],
+        "gleif_history": _json_col(row, "prewatch_log_json"),
     }
+
+
+def _json_col(row: sqlite3.Row, name: str) -> Any:
+    """A nullable JSON column, or ``None`` when the row predates it."""
+    if name not in row.keys() or not row[name]:
+        return None
+    return json.loads(row[name])
 
 
 def _entry_dict(row: sqlite3.Row) -> dict[str, Any]:
@@ -1212,6 +1251,7 @@ def _entry_dict(row: sqlite3.Row) -> dict[str, Any]:
         "changes": json.loads(row["changes_json"]),
         "checked": json.loads(row["checked_json"]),
         "degraded": json.loads(row["degraded_json"]),
+        "gleif_log": _json_col(row, "gleif_log_json"),
     }
 
 
@@ -1265,6 +1305,8 @@ class WatcherState:
     gleif_queued: int = 0
     gleif_rebaselined: int = 0  # …churn rows whose baseline predated a field and was upgraded (Phase 300)
     gleif_resyncs: int = 0  # full re-reads of every watch after a mirror rebuild (Phase 301)
+    gleif_log_calls: int = 0  # GLEIF field-modification log reads (Phase 303)
+    gleif_log_unavailable: int = 0  # …that came back without a log
     gleif_last_publish: str | None = None
     os_versions_seen: int = 0
     os_last_version: str | None = None
@@ -1659,8 +1701,11 @@ async def rerun(lei: str, tier: str, trigger: dict[str, Any], *, only_token_hash
 
     facts, watermark = await asyncio.to_thread(_mirror_facts, lei)
     snapshot = snapshot_from_response(resp)
+    # Phase 303: on a GLEIF-triggered re-run, GLEIF's own log since the
+    # oldest baseline among these lists — one call for all of them.
+    glog = await fetch_gleif_log(lei, rows) if tier == TIER_GLEIF else None
     written, all_changes = await asyncio.to_thread(
-        _write_rerun, store, rows, lei, tier, trigger, resp, facts, watermark, snapshot
+        _write_rerun, store, rows, lei, tier, trigger, resp, facts, watermark, snapshot, glog
     )
     _bump(entries_written=written)
     return {
@@ -1708,6 +1753,30 @@ def name_children(changes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return changes
 
 
+def baseline_cutoff(row: dict[str, Any]) -> datetime | None:
+    """When a list's baseline for this LEI was taken, for GLEIF's log: the
+    mirror watermark it was read at (a log line dated at that publish is
+    already in it), else when it was last checked or added."""
+    for key in ("gleif_watermark", "last_checked_at", "added_at"):
+        when = _parse_utc(row.get(key))
+        if when is not None:
+            return when
+    return None
+
+
+async def fetch_gleif_log(lei: str, rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """GLEIF's field-modification log since the oldest of ``rows``'
+    baselines (Phase 303). Counted; never raises."""
+    from . import gleif_log
+
+    cutoffs = [c for c in (baseline_cutoff(r) for r in rows) if c is not None]
+    if not cutoffs:
+        return None
+    result = await gleif_log.fetch_since(lei, min(cutoffs))
+    _bump(gleif_log_calls=1, gleif_log_unavailable=0 if result.get("available") else 1)
+    return result
+
+
 def _write_rerun(
     store: "WatchlistStore",
     rows: list[dict[str, Any]],
@@ -1718,12 +1787,16 @@ def _write_rerun(
     facts: dict[str, Any] | None,
     watermark: str | None,
     snapshot: dict[str, Any],
+    glog: dict[str, Any] | None = None,
 ) -> tuple[int, list[dict[str, Any]]]:
     """Move each list's baseline on and write its entry. Runs on a thread."""
     written = 0
     all_changes: list[dict[str, Any]] = []
+    from . import gleif_log
+
     for row in rows:
         th = row["token_hash"]
+        row_log = gleif_log.after(glog, baseline_cutoff(row))
         gleif_changes = name_children(
             diff_gleif_facts(row.get("gleif_facts"), facts, since=row.get("gleif_watermark"))
         )
@@ -1750,6 +1823,7 @@ def _write_rerun(
                 checked=snapshot["checked"],
                 degraded=snapshot["degraded_sources"],
                 legal_name=resp.legal_name,
+                gleif_log=row_log,
             )
             written += 1
     return written, all_changes
@@ -1791,6 +1865,26 @@ def resync_after_rebuild() -> dict[str, int] | None:
         label = wm.strftime("%Y-%m-%d %H:%M:%S") if wm else built
         result = on_gleif_delta(watched, label, resync=True)
     store.set_meta(RESYNC_META_KEY, built)
+    return result
+
+
+async def record_prewatch_log(th: str, lei: str) -> dict[str, Any] | None:
+    """When a list starts watching ``lei``, keep what GLEIF's log showed in
+    the :data:`gleif_log.PREWATCH_DAYS` before (Phase 303). Only for a watch
+    with no history yet, so re-adding an LEI costs no call. Never raises."""
+    from datetime import timedelta
+
+    from . import gleif_log
+
+    store = await asyncio.to_thread(get_store)
+    if store is None:
+        return None
+    if await asyncio.to_thread(store.prewatch_log, th, lei) is not None:
+        return None
+    since = datetime.now(UTC) - timedelta(days=gleif_log.PREWATCH_DAYS)
+    result = await gleif_log.fetch_since(lei, since)
+    _bump(gleif_log_calls=1, gleif_log_unavailable=0 if result.get("available") else 1)
+    await asyncio.to_thread(store.set_prewatch_log, th, lei, result)
     return result
 
 

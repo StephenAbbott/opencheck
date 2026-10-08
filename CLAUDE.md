@@ -1838,6 +1838,16 @@ Things that will be re-derived otherwise:
   renames idempotently with retries; `tests/test_replace_release_asset.py`
   drives it against a fake `gh`. `refresh-entity-pages-db` uses it; the
   other release-uploading workflows still use `--clobber`.
+- **GLEIF's field-modification log (Phase 303) is read once per hit, never
+  per watch.** One call on a GLEIF-tier re-run (since the oldest baseline;
+  each list keeps its own share via `gleif_log.after`) and one when a list
+  first watches an LEI (the 30 days before). Never on a schedule, never for
+  OpenSanctions or catch-up re-runs, never through a client other than
+  `build_client()` (the throttle). `fetch_since` never raises. The watchlist
+  test fixture stubs it, because the fixture allows live calls; a new test
+  that adds watches outside that fixture must stub it too or the network
+  guard fails it. `watchlist.sqlite` is at migration 2 — never edit step 1
+  or 2, append.
 - **Legal Entity Events (Phase 301) are read only from a full build.**
   `gleif_facts` omits `corporate_events` (absent, not `None`) unless
   `EntityStore.carries_events` — `meta.detail_events`, set by the build

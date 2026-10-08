@@ -37,6 +37,11 @@ published deltas names it:
   group — Phase 302) counts; renewal churn, street-level address
   changes and address-change events do not. When OpenCheck's GLEIF mirror is
   rebuilt, every watched company is re-read once against it.
+- A GLEIF-triggered entry also carries GLEIF's own modification log for the
+  record since the list's last check (`gleif_log`), and each watched company
+  carries what that log showed in the 30 days before it was watched
+  (`gleif_history`). Both are `{available, since, items, more}`, with
+  `available: false` and a `reason` when GLEIF's API could not serve them.
 * **OpenSanctions** — their entity-level delta per version
   ([OpenSanctions](/sources/opensanctions.md)), matched against the
   watched company's own names or LEI. A backlog is read oldest first, a

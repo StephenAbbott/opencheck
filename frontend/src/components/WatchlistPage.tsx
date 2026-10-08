@@ -30,6 +30,7 @@ import { sourceLabel } from "../lib/vocab";
 import {
   checkedSentence,
   describeChange,
+  gleifLogLines,
   entryHeadline,
   feedHelp,
   forgetToken,
@@ -338,6 +339,15 @@ function WatchRow({
           Watching since {day(w.added_at)} · last checked {day(w.last_checked_at)}
           {w.gleif_watermark ? ` · GLEIF record as of ${w.gleif_watermark.slice(0, 10)}` : ""}
         </p>
+        {w.gleif_history && (
+          <details className="mt-1 text-oo-meta text-oo-muted">
+            <summary className="cursor-pointer hover:text-oo-ink">
+              GLEIF's log in the 30 days before you started watching
+              {w.gleif_history.available ? ` (${w.gleif_history.items.length + (w.gleif_history.more || 0)})` : ""}
+            </summary>
+            <GleifLogBlock lines={gleifLogLines(w.gleif_history, "GLEIF's log")} />
+          </details>
+        )}
       </div>
       <div className="flex shrink-0 gap-2 md:flex-col md:items-end">
         <Button variant="warn" size="sm" onClick={onRecheck} disabled={busy}>
@@ -401,6 +411,7 @@ function EntryView({
       ) : (
         <p className="mt-2 text-oo-small text-oo-muted">A full re-run found no difference from the last check.</p>
       )}
+      {e.gleif_log && <GleifLogBlock lines={gleifLogLines(e.gleif_log)} />}
       <p className="mt-2 text-oo-meta text-oo-muted">
         {checked}
         {degraded.length > 0 && (
@@ -410,6 +421,27 @@ function EntryView({
           </span>
         )}
       </p>
+    </div>
+  );
+}
+
+/** Phase 303 — GLEIF's own field-modification log: a lead sentence and
+ *  its lines, the same words the Atom feed uses. */
+function GleifLogBlock({ lines }: { lines: { lead: string; items: string[] } | null }) {
+  if (!lines) return null;
+  return (
+    <div className="mt-2 text-oo-meta text-oo-muted">
+      <p>{lines.lead}</p>
+      {lines.items.length > 0 && (
+        <ul className="mt-1 space-y-0.5" aria-label="GLEIF's modification log">
+          {lines.items.map((line, i) => (
+            <li key={i} className="flex gap-2">
+              <span aria-hidden="true">–</span>
+              <span className="break-words">{line}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

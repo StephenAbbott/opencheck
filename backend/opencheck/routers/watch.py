@@ -237,6 +237,11 @@ async def add_item(request: Request, response: Response, body: AddItem) -> dict[
     except wl.CapExceededError as exc:
         raise _cap_refusal(exc) from exc
     watch.pop("snapshot", None)
+    # Phase 303: what GLEIF's own log showed in the 30 days before this list
+    # started watching — one throttled call, only for a new watch, fail-soft.
+    history = await wl.record_prewatch_log(th, lei)
+    if history is not None:
+        watch["gleif_history"] = history
     payload = await _db(_list_payload, store, th, token, request)
     return {"token": token, "watch": watch, **payload}
 
@@ -562,6 +567,47 @@ def _entry_title(entry: dict[str, Any]) -> str:
     return f"{name}: {head}"
 
 
+_MODIFICATION_LIMIT = 10
+
+
+def _log_value(v: Any) -> str:
+    return str(v) if v not in (None, "") else "—"
+
+
+def log_line_words(item: dict[str, Any]) -> str:
+    """One line of GLEIF's log: ``2026-09-16: registration status ISSUED → LAPSED``."""
+    kind = str(item.get("type") or "UPDATE").upper()
+    what = item.get("label") or "a field"
+    if kind in ("INITIAL", "INSERT"):
+        body = f"{what} set to {_log_value(item.get('new'))}"
+    elif kind == "DELETE":
+        body = f"{what} removed (was {_log_value(item.get('old'))})"
+    else:
+        body = f"{what} {_log_value(item.get('old'))} → {_log_value(item.get('new'))}"
+    return f"{item.get('date') or 'undated'}: {body}"
+
+
+def gleif_log_lines(glog: dict[str, Any] | None, *, heading: str = "GLEIF's own modification log") -> list[str]:
+    """The feed's account of GLEIF's log (Phase 303): its lines since the
+    baseline, renewal dates left out; or that GLEIF had none; or that the
+    log could not be read. Nothing when no log was fetched."""
+    if glog is None:
+        return []
+    since = str(glog.get("since") or "")[:10]
+    span = f" since {since}" if since else ""
+    if not glog.get("available"):
+        return [f"{heading} could not be read{span}: {glog.get('reason') or 'unavailable'}."]
+    items = glog.get("items") or []
+    if not items:
+        return [f"{heading} has no change to this record{span} other than renewal dates."]
+    shown = items[:_MODIFICATION_LIMIT]
+    out = [f"{heading}{span}:"] + [" - " + log_line_words(i) for i in shown]
+    rest = len(items) - len(shown) + int(glog.get("more") or 0)
+    if rest > 0:
+        out.append(f" - and {rest} more.")
+    return out
+
+
 def _entry_content(entry: dict[str, Any]) -> str:
     lines = [TIER_SENTENCE.get(entry["tier"], entry["tier"]) + "."]
     trig = entry.get("trigger") or {}
@@ -591,6 +637,7 @@ def _entry_content(entry: dict[str, Any]) -> str:
         lines += [" - " + _describe(c) for c in changes]
     else:
         lines.append("A full re-run found no difference from the last check.")
+    lines += gleif_log_lines(entry.get("gleif_log"))
     checked = entry.get("checked") or []
     if checked:
         reached = [c for c in checked if c.get("liveness") in ("live", "cached", "snapshot", "curated")]

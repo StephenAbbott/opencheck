@@ -146,6 +146,45 @@ the entry is written (`name_children`, carried as `names` on the change):
 lists a direct subsidiary: …", and a subsidiaries-only entry is headlined
 "direct subsidiaries changed".
 
+**GLEIF's own log (Phase 303).** `GET /api/v1/lei-records/{lei}/field-modifications`
+is GLEIF's record of what changed, field by field: the XPath, `INITIAL` /
+`INSERT` / `UPDATE` / `DELETE`, old and new values, and the date of the
+Golden Copy publish that carried it (day granularity). Relationship changes
+are logged under the *child* LEI with `context.relationshipType` and
+`context.endNode`. The watchlist reads it in exactly two places, never on a
+schedule and never per watched LEI:
+
+- **On a GLEIF-triggered re-run** (`fetch_gleif_log`), one call fetches the
+  log since the *oldest* baseline among the lists watching that LEI; each
+  list's entry stores only the lines after its own baseline
+  (`gleif_log.after`, keyed on the watch's `gleif_watermark`, so a line
+  dated at the baseline's own publish is already in it). The feed and page
+  show it under "What a re-run found" as "GLEIF's own modification log
+  since …", ten lines then "and N more".
+- **When a list first watches an LEI** (`record_prewatch_log`), one call
+  fetches the 30 days before, stored on the watch and shown with it ("GLEIF's
+  log in the 30 days before you started watching") — not in the feed, since
+  it is not news. Re-adding a watched LEI costs no call.
+
+Facts measured on 7 Oct 2026 shape `opencheck/gleif_log.py`: the date
+filter accepts only an exact timestamp, so the log is read newest first
+(`sort=-date`) in pages of 200 (the ceiling) until a line is no newer than
+the cut-off, at most three pages — almost always one request; the XPath
+strings are inconsistent (truncated, or missing the leading slash), so
+labels come from the trailing element names; and renewal clocks and
+re-keyed validation references (`NOISE_ELEMENTS`) are dropped, as the
+digest drops them. Every request goes through `build_client()`, so through
+the 50/min GLEIF throttle. Nothing raises: a failure is stored as
+`{"available": false, "reason": …}` and worded as "could not be read", and
+never blocks a watch or an entry. `/watchstats` counts `gleif_log_calls` and
+`gleif_log_unavailable`.
+
+The two columns arrive by `watchlist.sqlite` migration 2
+(`entries.gleif_log_json`, `watches.prewatch_log_json`, both nullable; NULL
+is "not fetched", distinct from a fetched log GLEIF could not serve). As
+with every Phase 260 step, a build older than Phase 303 refuses to open a
+file this one has migrated.
+
 **Tier 2 — OpenSanctions.** They publish an entity-level delta per version:
 `https://data.opensanctions.org/artifacts/default/<version>/entities.delta.json`,
 JSON-lines of `{"op": "ADD|MOD|DEL", "entity": {…}}`, about 11 MB, roughly
