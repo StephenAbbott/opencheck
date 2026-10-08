@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 310** — The leads block for a retired LEI now searches GLEIF on the company name without its legal-form words, so "Barrick Gold Inc." finds Barrick Mining Corporation through its former name instead of returning nothing.
+**Latest: Phase 311** — A renamed company's former legal names now appear once, in the "Is this the right company?" band, and no longer crowd the subject card, so the check modes stay in view on a phone.
 
 → [Full development history](docs/status.md)
 
