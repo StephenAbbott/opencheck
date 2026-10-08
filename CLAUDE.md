@@ -272,8 +272,8 @@ regression asserts what the engine *finds*. `.github/workflows/findings-regressi
 (Mondays 08:30 UTC + Run workflow) runs `scripts/findings_regression.py`
 against the **deployed** API — `/lookup?refresh=true`, then the MCP
 `opencheck_lookup` replay of the same run — for the golden set in
-`backend/findings_golden/` (six curated examples, Shell, Maersk, Bank Saderat
-PLC, ASDA Stores, two clean controls). Rules that keep it honest:
+`backend/findings_golden/` (six curated examples, BP, Shell, Maersk, Bank
+Saderat PLC, ASDA Stores, Regulatory DataCorp, two clean controls). Rules that keep it honest:
 
 - **Golden files are lower bounds and shapes, never snapshots.** A genuine
   upstream change is fixed by editing the subject's file in a reviewed PR.

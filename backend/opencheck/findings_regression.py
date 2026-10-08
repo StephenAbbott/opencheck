@@ -16,9 +16,9 @@ run from the server's cache at no cost. The point is to test what a reader
 sees, deploy state included.
 
 The golden set is ``backend/findings_golden/*.json``, one file per LEI: the
-six curated homepage examples, Shell, three anchors that Phases 272/273
-verified in production (Maersk, Bank Saderat PLC, ASDA Stores), Phase 282's
-Regulatory DataCorp (a person false positive that must stay gone) and two
+six curated homepage examples, Shell, BP (a card until Phase 312), three
+anchors that Phases 272/273 verified in production (Maersk, Bank Saderat PLC,
+ASDA Stores), Phase 282's Regulatory DataCorp (a person false positive that must stay gone) and two
 clean controls. Each file states **lower bounds and shapes**, never a snapshot —
 upstream data legitimately changes, and a genuine change updates the file in
 a reviewed PR, which is itself the audit trail.

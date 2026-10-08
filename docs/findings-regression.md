@@ -28,7 +28,8 @@ this phase merged, found three things nobody had reported (below).
 
 | Role | Subjects | Why |
 |---|---|---|
-| curated | BP, Rosneft, Taqa Bratani, Eesti Energia, Ørsted, Eli Lilly | The homepage example cards. Their `EXAMPLE_LEIS` claims are checked here (see card drift below). |
+| curated | Equinor, Rosneft, Taqa Bratani, Eesti Energia, Ørsted, Eli Lilly | The homepage example cards. Their `EXAMPLE_LEIS` claims are checked here (see card drift below). |
+| anchor | BP (`213800LH1BZH3DI6G760`) | A curated card until Phase 312. UK parent with no GLEIF parent; the only subject whose ICIJ name match is graded by the Phase 237 gates, so it stays in the set without a card. |
 | anchor | Shell | The report where the 2 Sept defects sat. A large group whose subsidiaries must not drive a list chip. |
 | anchor | Bank Saderat PLC (`2138008KTNTDICZU8L25`) | Phase 273: FATF black + EU high-risk from Bank Saderat Iran **above** the subject. The upstream path must keep firing; black never also fires grey. |
 | anchor | Maersk (`549300D2K6PKKKXVNN73`) | Phase 273: its only listed-jurisdiction exposure is a BVI subsidiary. No list chip, no watch-list verdict clause, only the `SUBSIDIARY_LISTED_JURISDICTION` context note. |

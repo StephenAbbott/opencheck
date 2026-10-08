@@ -19,7 +19,7 @@ import { CHECK_MODES } from "../src/lib/checkMode";
  * screenshot.
  */
 
-/** The homepage examples; BP is the cheapest complete one — bulk BODS, no keys. */
+/** BP: the cheapest complete report — bulk BODS, no keys (a homepage card until Phase 312). */
 const BP = "213800LH1BZH3DI6G760";
 
 /**
