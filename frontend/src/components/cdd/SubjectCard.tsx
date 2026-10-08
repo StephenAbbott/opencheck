@@ -54,6 +54,7 @@ export function SubjectCard({
   notice,
   listing = null,
   registerRecord = null,
+  formerly = null,
 }: {
   lei: string;
   legalName: string | null;
@@ -120,6 +121,9 @@ export function SubjectCard({
    *  number, so it renders whether or not that register's adapter answered.
    *  Null renders nothing. */
   registerRecord?: RegisterRecord | null;
+  /** Phase 309: "Formerly X (until …)" from `lib/formerNames.formerlyLine`,
+   *  or null when the registers file no former legal name. */
+  formerly?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
   const shareUrl = savedShare?.url ?? `${BASE_URL || "https://api.opencheck.world"}/share/${lei}`;
@@ -184,6 +188,13 @@ export function SubjectCard({
             <LeiRegistrationBadge chip={leiRegistration} className="hidden sm:inline-flex" />
             <RegisterStatusChip status={status} className="hidden sm:inline-flex" />
           </p>
+          {/* Phase 309: the names the registers say the company had — the
+              reader who searched an old name sees at once why this is the
+              right company. The identity band's "Former names" row carries
+              every one with its sources; this line is the short form. */}
+          {formerly && (
+            <p className="mt-1 text-oo-meta text-oo-muted break-words">{formerly}</p>
+          )}
           {/* Phase 236: the primary listing, attributed to PermID. Its own
               line under the identity row — in the min-w-0 column, so it wraps
               rather than crushing the name. Underlined: a link must not be

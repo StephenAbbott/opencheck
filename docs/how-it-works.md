@@ -63,7 +63,7 @@ python scripts/extract_bods_subgraphs.py \
 | `GET /lookup?lei=<LEI>` | **Primary entry point**. LEI-anchored synthesis; returns a complete `LookupResponse` once all sources resolve. |
 | `GET /lookup-stream?lei=<LEI>` | Same pipeline as `/lookup`, streamed as SSE events (`gleif_done`, `source_hit`, `source_error`, `risk`, `done`). The frontend uses this for progressive rendering. |
 | `GET /lookup-source?lei=<LEI>&source_id=<id>` | Re-runs a single source adapter and invalidates the replay cache for that LEI. Used by the "Retry source" button on failed source cards. |
-| `GET /search?q=<q>&kind=<entity\|person>` | Free-text fan-out search. Power-user / debugging. |
+| `GET /search?q=<q>&kind=<entity\|person>` | Free-text fan-out search, ranked best-first across sources (Phase 292). Since Phase 309 a hit's former legal names (GLEIF `PREVIOUS_LEGAL_NAME`, a register's previous names) count for the match tier, so a renamed company ranks `exact` under its old name; the web picker searches GLEIF on `entity.names` for the same reason and says "Formerly X — matched your search" on the row. Power-user / debugging. |
 | `GET /stream?q=<q>&kind=<...>` | Same fan-out, streamed as SSE. |
 | `GET /deepen?source=<id>&hit_id=<id>` | Full record + BODS statements + risk signals for a single hit. |
 | `GET /report?q=<q>&kind=<...>` | Free-text synthesis (the pre-LEI flow). |

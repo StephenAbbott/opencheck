@@ -183,13 +183,64 @@ def _has_lei(hit: Any) -> bool:
     return bool(hit.identifiers.get("lei") or hit.source_id == "gleif")
 
 
+def former_names_of_hit(hit: Any) -> list[str]:
+    """The former legal names a search hit's own payload carries (Phase 309):
+    GLEIF's ``otherNames`` of type ``PREVIOUS_LEGAL_NAME`` (the hit's ``raw``
+    is the ``lei-records`` item), or a register's ``previous_company_names``
+    / ``former_names`` list when its raw payload has one. Trading names and
+    translations are never former. ``[]`` for a person hit or a raw payload
+    with no such list."""
+    raw = getattr(hit, "raw", None)
+    if not isinstance(raw, dict):
+        return []
+    out: list[str] = []
+    entity = ((raw.get("attributes") or {}).get("entity") or {}) if "attributes" in raw else raw.get("entity") or {}
+    for other in (entity.get("otherNames") or []) if isinstance(entity, dict) else []:
+        if isinstance(other, dict) and str(other.get("type") or "").upper() == "PREVIOUS_LEGAL_NAME":
+            name = " ".join(str(other.get("name") or "").split())
+            if name:
+                out.append(name)
+    for key in ("previous_company_names", "former_names"):
+        for prev in raw.get(key) or []:
+            value = prev.get("name") if isinstance(prev, dict) else prev
+            name = " ".join(str(value or "").split())
+            if name:
+                out.append(name)
+    seen: set[str] = set()
+    unique: list[str] = []
+    for name in out:
+        key = names.display_name_key(name)
+        if key and key not in seen:
+            seen.add(key)
+            unique.append(name)
+    return unique
+
+
+def best_match(query: str, hit: Any, *, person: bool = False) -> tuple[int, str | None]:
+    """The best tier across the hit's name and its former names (Phase 309),
+    with the former name that won — ``None`` when the current name matched
+    at least as well. The Barrick case: "Barrick Gold Corporation" reaches
+    BARRICK MINING CORPORATION only through its PREVIOUS_LEGAL_NAME, and the
+    row must say so rather than show a fuzzy match."""
+    tier = match_tier(query, hit.name, person=person)
+    matched: str | None = None
+    if not person:
+        for former in former_names_of_hit(hit):
+            candidate = match_tier(query, former, person=False)
+            if candidate < tier:
+                tier, matched = candidate, former
+    return tier, matched
+
+
 def rank_key(query: str, hit: Any, position: int, *, person: bool = False) -> RankKey:
+    tier, matched = best_match(query, hit, person=person)
+    compared = matched or hit.name
     return RankKey(
         stub=1 if getattr(hit, "is_stub", False) else 0,
-        tier=match_tier(query, hit.name, person=person),
+        tier=tier,
         status=status_rank(hit.summary),
         no_lei=0 if _has_lei(hit) else 1,
-        neg_similarity=-round(names.name_similarity(query, hit.name), 4),
+        neg_similarity=-round(names.name_similarity(query, compared), 4),
         position=position,
     )
 

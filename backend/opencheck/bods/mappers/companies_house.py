@@ -15,7 +15,7 @@ from typing import Any
 import pycountry
 
 from ...identifiers import ch_identification_is_uk, normalise_ch_company_number
-from .. import identity_verification as _idv, liveness as _liveness
+from .. import former_names as _former_names, identity_verification as _idv, liveness as _liveness
 from ..annotations import annotate, commenting, identifying, pointer, transformation
 from ..ch_constants import describe_company_type, describe_officer_role
 from ..psc_natures import describe_statement, describe_super_secure
@@ -1017,11 +1017,15 @@ def _emit_company_statements(
     # as ``[{"name": ..., "effective_from": ..., "ceased_on": ...}, ...]``.
     seen_names: set[str] = {company_name}
     alternate_names: list[str] = []
+    # Phase 309: each is a former legal name, dated by the register itself
+    # (``ceased_on`` / ``effective_from``) — said so on the statement.
+    former_legal_names: list[tuple[str, Any, Any]] = []
     for prev in profile.get("previous_company_names") or []:
         prev_name = (prev.get("name") or "").strip()
         if prev_name and prev_name not in seen_names:
             seen_names.add(prev_name)
             alternate_names.append(prev_name)
+            former_legal_names.append((prev_name, prev.get("ceased_on"), prev.get("effective_from")))
 
     entity = make_entity_statement(
         source_id="companies_house",
@@ -1040,6 +1044,7 @@ def _emit_company_statements(
         alternate_names=alternate_names,
         source_url=company_url,
     )
+    annotate(entity, *_former_names.former_name_annotations(alternate_names, former_legal_names))
     # Register status → liveness (Phase 151). The Companies House
     # ``company_status`` codelist (constants.yml) distinguishes the closed
     # states from the insolvency processes; only the former end the company.

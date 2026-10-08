@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 308** — A retired LEI that names no successor now says so, and the identity band offers leads for where to look next — the parent GLEIF last filed and active records with a similar name, including through a former legal name — never a successor.
+**Latest: Phase 309** — Former legal names are now said as such: a renamed company is found under its old name from the picker, `/search` and the MCP tool, ranked exact with the former name it matched, and the subject card and identity band say what the company was called before and when its legal name changed.
 
 → [Full development history](docs/status.md)
 

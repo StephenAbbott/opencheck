@@ -18,6 +18,9 @@ export interface GleifSearchResult {
   legalName: string;
   country: string;
   status: string;
+  /** Phase 309: GLEIF's other names with their type, so the picker can say
+   *  which former legal name a search matched. */
+  otherNames?: { name: string; type: string }[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,7 +36,21 @@ function parseRecord(item: any): GleifSearchResult {
       attrs.lei,
     country: entity.legalAddress?.country ?? "—",
     status: reg.status ?? "—",
+    otherNames: parseOtherNames(entity.otherNames),
   };
+}
+
+/** GLEIF's `otherNames[]` as `{name, type}` pairs; anything malformed dropped. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function parseOtherNames(raw: any): { name: string; type: string }[] {
+  if (!Array.isArray(raw)) return [];
+  const out: { name: string; type: string }[] = [];
+  for (const item of raw) {
+    const name = typeof item?.name === "string" ? item.name.trim() : "";
+    if (!name) continue;
+    out.push({ name, type: typeof item?.type === "string" ? item.type : "" });
+  }
+  return out;
 }
 
 async function gleifFilter(

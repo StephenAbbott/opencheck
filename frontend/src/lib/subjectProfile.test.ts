@@ -12,6 +12,7 @@ import {
   SUCCESSOR_FOLLOW_LABEL,
   declaredSentence,
   formatProfileDate,
+  formerNamesRow,
   leiRegistrationChip,
   leiRegistrationLine,
   leiSuccessorHref,
@@ -418,5 +419,47 @@ describe("the successor row (Phase 307)", () => {
     expect(profileRows(shell(), NAMES).some((r) => r.label === "Successor")).toBe(false);
     expect(profileRows(shell({ lei_successor: null }), NAMES).some((r) => r.label === "Successor")).toBe(false);
     expect(leiSuccessorRow(successor({ named: [] }), NAMES)).toBeNull();
+  });
+});
+
+describe("formerNamesRow (Phase 309)", () => {
+  const barrick = () =>
+    shell({
+      former_names: [
+        { name: "Barrick Gold Corporation", until: "2025-05-06", from: null, sources: ["gleif", "companies_house"] },
+        { name: "American Barrick Resources Corporation", until: null, from: null, sources: ["gleif"] },
+      ],
+      name_changed_on: "2025-05-06",
+    });
+
+  it("lists every former name, dated where the register dates it, and names the sources", () => {
+    expect(formerNamesRow(barrick(), NAMES)).toEqual({
+      label: "Former names",
+      value:
+        "Barrick Gold Corporation (until 6 May 2025); American Barrick Resources Corporation · legal name changed 6 May 2025",
+      sources: "Source: GLEIF and UK Companies House",
+    });
+  });
+
+  it("brackets a from–until pair as Companies House files it", () => {
+    const row = formerNamesRow(
+      shell({
+        former_names: [
+          { name: "THE ARSENAL FOOTBALL CLUB PUBLIC LIMITED COMPANY", until: "2019-03-29", from: "1991-08-23", sources: ["companies_house"] },
+        ],
+      }),
+      NAMES,
+    );
+    expect(row?.value).toBe("THE ARSENAL FOOTBALL CLUB PUBLIC LIMITED COMPANY (23 Aug 1991 – 29 Mar 2019)");
+    expect(row?.sources).toBe("Source: UK Companies House");
+  });
+
+  it("sits after the successor row and before the incorporation date, and is absent with none", () => {
+    const labels = profileRows(barrick(), NAMES).map((r) => r.label);
+    expect(labels.indexOf("Former names")).toBeGreaterThan(labels.indexOf("LEI registration"));
+    expect(labels.indexOf("Former names")).toBeLessThan(labels.indexOf("Incorporated"));
+    expect(formerNamesRow(shell(), NAMES)).toBeNull();
+    expect(formerNamesRow(shell({ former_names: [] }), NAMES)).toBeNull();
+    expect(profileRows(shell(), NAMES).some((r) => r.label === "Former names")).toBe(false);
   });
 });
