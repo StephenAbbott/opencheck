@@ -25,6 +25,12 @@ How the lookup works
    ``registeredAs`` can never match. The lookup pipeline therefore also
    passes a derived ``us_ein``, which ``us_ein_for_lei()`` reads from the
    committed ``eiti_us_ein_by_lei.json`` crosswalk (issue #26).
+
+   **Zambia is the same shape** (Phase 306): EITI's 94 Zambian
+   identifications are ZRA TPINs and GLEIF files the PACRA number, so the
+   pipeline passes a derived ``zm_tpin`` read from the Zambia EITI portal
+   index (``eiti_zambia.tpin_for_lei``), which joined each Zambian LEI to its
+   TPIN by name.
    Identifications carrying no digit at all are dropped at load: EITI's US
    bucket ships literal ``Private`` and ``Foreign`` sentinel rows where the
    company gave no number, and those are not identifiers.
@@ -85,6 +91,8 @@ _US_EIN_PATH = Path(__file__).resolve().parent.parent / "data" / "eiti_us_ein_by
 # Lazy module-level singletons.
 _index: dict[str, dict[str, list[dict[str, Any]]]] | None = None
 _norm_index: dict[str, dict[str, str]] | None = None  # cc -> normform -> ident
+#: cc -> ident -> every spelling of the same number in that bucket (Phase 306).
+_variants: dict[str, dict[str, list[str]]] | None = None
 _us_ein_by_lei: dict[str, str] | None = None
 
 
@@ -119,7 +127,7 @@ def _get_index() -> tuple[
     dict[str, dict[str, list[dict[str, Any]]]], dict[str, dict[str, str]]
 ]:
     """Load the committed organisation index (and its normalised lookup)."""
-    global _index, _norm_index
+    global _index, _norm_index, _variants
     if _index is None or _norm_index is None:
         try:
             with gzip.open(_INDEX_PATH, "rt", encoding="utf-8") as f:
@@ -144,12 +152,73 @@ def _get_index() -> tuple[
             for ident in [i for i in idents if not _DIGITS_RE.sub("", i or "")]:
                 log.debug("EITI %s: ignoring non-identifier %r", cc, ident)
                 idents.pop(ident, None)
+            # Exact spellings first, derived forms after, so a value EITI
+            # files verbatim resolves to that spelling rather than to whichever
+            # variant happened to come first in the file (Phase 306: EITI files
+            # Kansanshi's TPIN as both "1,001,602,517" and "1001602517").
             bucket: dict[str, str] = {}
             for ident in idents:
-                for form in _norm_forms(ident):
+                bucket.setdefault(_norm_forms(ident)[0], ident)
+            for ident in idents:
+                for form in _norm_forms(ident)[1:]:
                     bucket.setdefault(form, ident)
             _norm_index[cc] = bucket
+        _variants = _build_variants(_index)
     return _index, _norm_index
+
+
+def _variant_key(ident: str) -> str:
+    """The key under which two spellings of one number are the same record.
+
+    Digits without leading zeros, for an identification that is digits plus
+    punctuation (``1,001,602,517`` / ``1001602517``, ``00245717`` /
+    ``245717``, ``400 182 426`` / ``400182426``). An identification carrying
+    any letter keys on itself: ``SC123456`` and ``123456`` are two different
+    Companies House companies.
+    """
+    value = (ident or "").strip().upper()
+    if any(ch.isalpha() for ch in value):
+        return value
+    return _DIGITS_RE.sub("", value).lstrip("0") or value
+
+
+def _build_variants(
+    index: dict[str, dict[str, list[dict[str, Any]]]],
+) -> dict[str, dict[str, list[str]]]:
+    """cc -> ident -> all spellings of it in that country's bucket.
+
+    EITI files one company's number in several spellings across reporting
+    years -- 212 numbers in 16 country buckets of the committed index, from
+    thousands separators (IQ, ZM), dropped leading zeros (GB, AM, GY) and
+    spaced groups (MZ, KZ). The organisation records of every spelling are one
+    company's, so a match reads them all; before Phase 306 a card showed only
+    the years filed under the spelling that matched.
+    """
+    out: dict[str, dict[str, list[str]]] = {}
+    for cc, idents in index.items():
+        groups: dict[str, list[str]] = {}
+        for ident in idents:
+            groups.setdefault(_variant_key(ident), []).append(ident)
+        out[cc] = {
+            ident: group for group in groups.values() for ident in group
+        }
+    return out
+
+
+def _organisations(cc: str, ident: str) -> list[dict[str, Any]]:
+    """Every organisation record EITI files under any spelling of ``ident``."""
+    index, _ = _get_index()
+    bucket = index.get(cc) or {}
+    spellings = ((_variants or {}).get(cc) or {}).get(ident) or [ident]
+    seen: set[str] = set()
+    orgs: list[dict[str, Any]] = []
+    for spelling in spellings:
+        for org in bucket.get(spelling) or []:
+            key = str(org.get("id") or id(org))
+            if key not in seen:
+                seen.add(key)
+                orgs.append(org)
+    return orgs
 
 
 def us_ein_for_lei(lei: str) -> str:
@@ -190,9 +259,10 @@ def us_ein_for_lei(lei: str) -> str:
 
 def _reset_caches_for_tests() -> None:
     """Drop the module-level singletons so a test can point at a fixture."""
-    global _index, _norm_index, _us_ein_by_lei
+    global _index, _norm_index, _us_ein_by_lei, _variants
     _index = None
     _norm_index = None
+    _variants = None
     _us_ein_by_lei = None
 
 
@@ -289,14 +359,18 @@ class EitiAdapter(SourceAdapter):
         registered_as: str,
         legal_name: str = "",
         us_ein: str = "",
+        zm_tpin: str = "",
     ) -> dict[str, Any] | None:
         """Match a company against the EITI index.
 
         Tries the GLEIF anchor's ``registeredAs`` first, then a derived
         ``us_ein`` (EITI's US identifications are federal EINs, not the
         state-registry numbers GLEIF publishes as ``registeredAs``, so US
-        subjects only join via the EIN). Matching is country-scoped and
-        punctuation-insensitive (``42-1638663`` == ``421638663``).
+        subjects only join via the EIN), then a derived ``zm_tpin`` (EITI's
+        Zambian identifications are ZRA TPINs; GLEIF files the PACRA number).
+        Matching is country-scoped and punctuation-insensitive
+        (``42-1638663`` == ``421638663``), so a TPIN can only ever join the
+        ZM bucket. The bundle's ``matched_via`` names the key that joined.
 
         Returns ``None`` when the company is not in the EITI data. On a
         match, returns the bundle: organisation records from the artifact
@@ -309,12 +383,24 @@ class EitiAdapter(SourceAdapter):
         # a bundle stamped "US-NJ" would miss _EITI_IDENTIFIER_KEY_BY_COUNTRY
         # and lose the us_ein corroboration key on the way to the report.
         cc = _country_code(jurisdiction)
-        ident = _match_identification(cc, registered_as)
-        if ident is None and us_ein:
-            ident = _match_identification(cc, us_ein)
+        ident: str | None = None
+        matched_via: str | None = None
+        for via, value in (
+            ("registered_as", registered_as),
+            ("us_ein", us_ein),
+            ("zm_tpin", zm_tpin),
+        ):
+            if not value:
+                continue
+            ident = _match_identification(cc, value)
+            if ident is not None:
+                matched_via = via
+                break
         if ident is None:
             return None
-        return await self._build_bundle(cc, ident, legal_name=legal_name)
+        return await self._build_bundle(
+            cc, ident, legal_name=legal_name, matched_via=matched_via
+        )
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
         """Fetch by ``CC:identification`` hit id (deepen / retry path)."""
@@ -329,10 +415,13 @@ class EitiAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def _build_bundle(
-        self, cc: str, ident: str, legal_name: str = ""
+        self,
+        cc: str,
+        ident: str,
+        legal_name: str = "",
+        matched_via: str | None = None,
     ) -> dict[str, Any] | None:
-        index, _ = _get_index()
-        orgs = list((index.get(cc) or {}).get(ident) or [])
+        orgs = _organisations(cc, ident)
         if not orgs:
             return None
         # Most recent reporting years first; undated records last.
@@ -376,6 +465,8 @@ class EitiAdapter(SourceAdapter):
             ],
             "is_stub": False,
         }
+        if matched_via:
+            bundle["matched_via"] = matched_via
         validate_raw("eiti", EitiBundle, bundle)
         return bundle
 

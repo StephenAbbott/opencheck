@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  eitiIdentLine,
+  eitiLinkNote,
   formatZmw,
   latestSummedYear,
   matchBasis,
+  twoEitiPublishersNote,
   womenShare,
   zambiaTile,
   type EitiZambiaBundle,
@@ -70,5 +73,31 @@ describe("matchBasis and womenShare", () => {
   it("keeps an absent share absent", () => {
     expect(womenShare(0.083)).toBe("8.3%");
     expect(womenShare(null)).toBeNull();
+  });
+});
+
+describe("two EITI publishers (Phase 306)", () => {
+  it("speaks only when both EITI cards are present", () => {
+    expect(twoEitiPublishersNote(["eiti", "eiti_zambia", "climatetrace"])).toMatch(/not added/);
+    expect(twoEitiPublishersNote(["eiti"])).toBeNull();
+    expect(twoEitiPublishersNote(["eiti_zambia"])).toBeNull();
+    expect(twoEitiPublishersNote([])).toBeNull();
+  });
+
+  it("names the units of each publication", () => {
+    const note = twoEitiPublishersNote(["eiti", "eiti_zambia"]) ?? "";
+    expect(note).toContain("US dollars");
+    expect(note).toContain("kwacha");
+  });
+
+  it("names a Zambian identification as the ZRA TPIN", () => {
+    expect(eitiIdentLine("ZM", "1001602517")).toBe("ZM · ZRA TPIN 1001602517");
+    expect(eitiIdentLine("GB", "01285743")).toBe("GB · national ID 01285743");
+  });
+
+  it("says when the link rests on the portal's name match", () => {
+    expect(eitiLinkNote("zm_tpin")).toMatch(/name match/);
+    expect(eitiLinkNote("registered_as")).toBeNull();
+    expect(eitiLinkNote(undefined)).toBeNull();
   });
 });

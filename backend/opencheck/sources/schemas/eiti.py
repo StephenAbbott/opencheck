@@ -62,3 +62,9 @@ class EitiBundle(_Base):
     total_usd: float = 0.0
     years: list[str] = Field(default_factory=list)
     truncated_years: list[str] = Field(default_factory=list)
+    #: Which key joined the subject to ``identification`` (Phase 306):
+    #: ``registered_as`` (GLEIF's registeredAs), ``us_ein`` (the committed EIN
+    #: crosswalk) or ``zm_tpin`` (the TPIN the Zambia EITI portal index ties to
+    #: the LEI by name). Absent on the deepen / retry path, which is keyed on
+    #: the identification itself.
+    matched_via: str | None = None

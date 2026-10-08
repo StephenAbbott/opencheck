@@ -27,6 +27,16 @@ from opencheck.sources.eiti import (
 _API = "https://eiti.org/api/v2.0"
 
 
+def _equinor_recent_orgs() -> list[dict]:
+    """The four organisation-years the adapter fetches revenue for: the most
+    recent across EVERY spelling of Equinor UK's number. EITI files 2023
+    under ``1285743`` and 2018-2021 under ``01285743`` (Phase 306)."""
+    import opencheck.sources.eiti as eiti_mod
+
+    orgs = eiti_mod._organisations("GB", "01285743")
+    return sorted(orgs, key=lambda o: o.get("year") or "", reverse=True)[:4]
+
+
 @pytest.fixture(autouse=True)
 def _isolated(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
@@ -51,8 +61,12 @@ def test_norm_forms_variants() -> None:
 def test_committed_artifact_matches_equinor_uk() -> None:
     """The shipped artifact resolves Equinor UK's Companies House number
     (GLEIF registeredAs for its LEI) in several formatting variants."""
-    for variant in ("01285743", "1285743", "01-28-5743"):
-        assert _match_identification("GB", variant) == "01285743", variant
+    # EITI files both "01285743" and "1285743" (Phase 306): a spelling it
+    # files verbatim resolves to itself, any other to one of the two, and
+    # the adapter reads the records of both either way.
+    assert _match_identification("GB", "01285743") == "01285743"
+    assert _match_identification("GB", "1285743") == "1285743"
+    assert _match_identification("GB", "01-28-5743") in {"01285743", "1285743"}
     assert _match_identification("GB", "99999999") is None
     assert _match_identification("ZZ", "01285743") is None
 
@@ -164,7 +178,7 @@ async def test_live_revenue_aggregation(monkeypatch, httpx_mock: HTTPXMock, tmp_
     import opencheck.sources.eiti as eiti_mod
 
     index, _ = eiti_mod._get_index()
-    org_ids = [o["id"] for o in index["GB"]["01285743"]][:4]
+    org_ids = [o["id"] for o in _equinor_recent_orgs()]
     for i, org_id in enumerate(org_ids):
         httpx_mock.add_response(
             url=f"{_API}/revenue?organisation={org_id}&limit=50",
@@ -192,7 +206,7 @@ async def test_live_revenue_failure_degrades_to_empty_rows(
     import opencheck.sources.eiti as eiti_mod
 
     index, _ = eiti_mod._get_index()
-    for o in index["GB"]["01285743"][:4]:
+    for o in _equinor_recent_orgs():
         httpx_mock.add_response(
             url=f"{_API}/revenue?organisation={o['id']}&limit=50", status_code=500
         )
@@ -220,7 +234,7 @@ async def test_live_revenue_follows_next_pages(
     import opencheck.sources.eiti as eiti_mod
 
     index, _ = eiti_mod._get_index()
-    orgs = index["GB"]["01285743"][:4]
+    orgs = _equinor_recent_orgs()
     paged, *rest = orgs
     page1 = f"{_API}/revenue?organisation={paged['id']}&limit=50"
     page2 = f"{_API}/revenue?organisation={paged['id']}&limit=50&page=2"
@@ -278,7 +292,7 @@ async def test_live_revenue_beyond_the_page_bound_is_marked_truncated(
     import opencheck.sources.eiti as eiti_mod
 
     index, _ = eiti_mod._get_index()
-    orgs = index["GB"]["01285743"][:4]
+    orgs = _equinor_recent_orgs()
     paged, *rest = orgs
     page1 = f"{_API}/revenue?organisation={paged['id']}&limit=50"
     page2 = f"{_API}/revenue?organisation={paged['id']}&limit=50&page=2"
@@ -391,7 +405,7 @@ def test_bh_eiti_us_emits_us_ein_identifier() -> None:
 def test_eiti_identifier_key_map_is_conservative() -> None:
     """Only countries with verified format equivalence map to OpenCheck
     identifier keys; everything else uses the neutral eiti_identification."""
-    assert set(_EITI_IDENTIFIER_KEY_BY_COUNTRY) == {"GB", "NO", "NL", "US"}
+    assert set(_EITI_IDENTIFIER_KEY_BY_COUNTRY) == {"GB", "NO", "NL", "US", "ZM"}
 
 
 # ---------------------------------------------------------------------------
@@ -631,3 +645,226 @@ async def test_fetch_by_hit_id_accepts_a_subdivision() -> None:
     bundle = await adapter.fetch(f"US-NJ:{_EXXON_EIN}")
     assert bundle.get("is_stub") is not True
     assert bundle["country"] == "US"
+
+
+# ---------------------------------------------------------------------------
+# Zambia (Phase 306). EITI's 94 Zambian identifications are ZRA TPINs; GLEIF
+# files a Zambian company's PACRA number, so registeredAs never joined the ZM
+# bucket and the source could not hit for any Zambian LEI. The Zambia EITI
+# portal index (Phase 298) already tied each Zambian LEI to its TPIN by name;
+# these pin the TPIN it supplies as a derived key, the US EIN pattern above.
+# ---------------------------------------------------------------------------
+
+#: Kansanshi Mining PLC: GLEIF files PACRA 119970037529 (RA000652) under jurisdiction ZM;
+#: EITI files TPIN 1001602517 for "Kansanshi Mining Plc".
+_KANSANSHI_LEI = "2549008ZVFBSUO8W2L37"
+_KANSANSHI_PACRA = "119970037529"
+_KANSANSHI_TPIN = "1001602517"
+
+#: The Zambian LEIs whose portal TPIN EITI International also holds, as of the
+#: Phase 298 build and the committed EITI index. A lower bound: either index
+#: can grow, but a rebuild that drops one of these is a silent loss.
+_ZM_LEIS_IN_EITI = {
+    "213800ATOLDC9CX44W14": "1001594184",  # Maamba Collieries
+    "213800ZIJ5Y4FXZMPD33": "1001862964",  # FQM Trident (EITI: Kalumbila Minerals)
+    "2549008ZVFBSUO8W2L37": "1001602517",  # Kansanshi Mining
+    "254900SRGQ7I4WMQOC08": "1001772785",  # Konkola Copper Mines
+    "5493005OY00M9G3XSY51": "1001761145",  # ZCCM Investments Holdings
+    "549300YDL92W1M757708": "1001591709",  # CNMC Luanshya Copper Mines
+    "9845008756E7B43CDE48": "1001831030",  # Chambishi Copper Smelter
+}
+
+
+def test_pacra_number_alone_never_joins_the_zm_bucket() -> None:
+    """The gap this phase closes: GLEIF's registeredAs for a Zambian LEI is a
+    PACRA number, and nothing in EITI's ZM bucket is one."""
+    assert _match_identification("ZM", _KANSANSHI_PACRA) is None
+    assert _match_identification("ZM", _KANSANSHI_TPIN) == _KANSANSHI_TPIN
+
+
+def test_zambia_index_tpins_join_the_eiti_zm_bucket() -> None:
+    """Every pinned LEI's portal TPIN still matches EITI's ZM bucket. The two
+    indexes are rebuilt by different scripts; this is what notices a rebuild
+    that silently breaks the join."""
+    from opencheck.sources.eiti_zambia import tpin_for_lei
+
+    for lei, tpin in _ZM_LEIS_IN_EITI.items():
+        assert tpin_for_lei(lei) == tpin, lei
+        assert _match_identification("ZM", tpin) == tpin, lei
+
+
+def test_tpin_for_lei_is_empty_off_the_index_and_for_a_name_only_record() -> None:
+    from opencheck.sources.eiti_zambia import tpin_for_lei
+
+    assert tpin_for_lei(_KANSANSHI_LEI.lower()) == _KANSANSHI_TPIN
+    assert tpin_for_lei("X" * 20) == ""
+    assert tpin_for_lei("") == ""
+    # Blaze Metals is in the portal index by cadastre name only -- no TPIN.
+    assert tpin_for_lei("984500ECC4F4DF950B64") == ""
+
+
+def test_build_derived_populates_zm_tpin_for_a_zambian_lei() -> None:
+    ctx = _LookupCtx(lei=_KANSANSHI_LEI)
+    ctx.jurisdiction = "ZM"
+    ctx.registered_as = _KANSANSHI_PACRA
+    _build_derived(ctx, "RA000652")
+    assert ctx.derived["zm_tpin"] == _KANSANSHI_TPIN
+    # The PACRA number is what GLEIF publishes; it is not reused as a TPIN.
+    assert ctx.derived["zm_tpin"] != ctx.registered_as
+
+
+def test_build_derived_omits_zm_tpin_off_the_index_or_outside_zambia() -> None:
+    """No key at all rather than an empty string, as for us_ein."""
+    ctx = _LookupCtx(lei="X" * 20)
+    ctx.jurisdiction = "ZM"
+    _build_derived(ctx, "")
+    assert "zm_tpin" not in ctx.derived
+
+    ctx2 = _LookupCtx(lei=_KANSANSHI_LEI)
+    ctx2.jurisdiction = "GB"
+    ctx2.registered_as = "01285743"
+    _build_derived(ctx2, "")
+    assert "zm_tpin" not in ctx2.derived
+
+
+def test_dispatch_includes_eiti_via_derived_zm_tpin() -> None:
+    ctx = _LookupCtx(lei="X" * 20)
+    ctx.jurisdiction = "ZM"
+    ctx.registered_as = ""
+    ctx.derived = {"zm_tpin": _KANSANSHI_TPIN}
+    tasks = _dispatch(ctx, only="eiti")
+    assert [sid for sid, _ in tasks] == ["eiti"]
+    for _, coro in tasks:
+        coro.close()
+
+
+async def test_fetch_by_registration_matches_via_zm_tpin() -> None:
+    adapter = EitiAdapter()
+    bundle = await adapter.fetch_by_registration(
+        "ZM", _KANSANSHI_PACRA, legal_name="Kansanshi Mining PLC",
+        zm_tpin=_KANSANSHI_TPIN,
+    )
+    assert bundle is not None
+    assert bundle["country"] == "ZM"
+    assert bundle["identification"] == _KANSANSHI_TPIN
+    assert bundle["matched_via"] == "zm_tpin"
+
+
+async def test_a_tpin_never_matches_outside_the_zm_bucket() -> None:
+    """Matching is country-scoped: a TPIN handed over with another
+    jurisdiction cannot borrow a ZM record."""
+    adapter = EitiAdapter()
+    assert await adapter.fetch_by_registration(
+        "GB", "", zm_tpin=_KANSANSHI_TPIN
+    ) is None
+    assert await adapter.fetch_by_registration(
+        "ZM", "", zm_tpin="9999999999"
+    ) is None
+
+
+async def test_registered_as_still_wins_and_says_so() -> None:
+    adapter = EitiAdapter()
+    bundle = await adapter.fetch_by_registration("GB", "01285743")
+    assert bundle is not None
+    assert bundle["matched_via"] == "registered_as"
+
+
+async def test_zambian_subject_matches_eiti_end_to_end() -> None:
+    """Derive -> dispatch -> match -> corroborate, with the production
+    jurisdiction and registeredAs, nothing hand-fed."""
+    ctx = _LookupCtx(lei=_KANSANSHI_LEI)
+    ctx.jurisdiction = "ZM"
+    ctx.registered_as = _KANSANSHI_PACRA
+    ctx.legal_name = "Kansanshi Mining PLC"
+    _build_derived(ctx, "RA000652")
+
+    tasks = _dispatch(ctx, only="eiti")
+    assert [sid for sid, _ in tasks] == ["eiti"]
+    bundle = await tasks[0][1]
+    assert bundle is not None
+    assert bundle["country"] == "ZM"
+    assert bundle["identification"] == _KANSANSHI_TPIN
+    assert bundle["matched_via"] == "zm_tpin"
+    # Every spelling's records are read: 2012-13 are filed as
+    # "1,001,602,517", 2014-18 as "1001602517".
+    assert bundle["years"] == ["2018", "2017", "2016", "2015", "2014", "2013", "2012"]
+
+    # Corroboration: EITI publishes the TPIN, so it is asserted under the
+    # same key the Zambia portal card asserts. The LEI is never asserted.
+    hit = _bh_eiti(bundle, ctx)
+    assert hit.hit_id == f"ZM:{_KANSANSHI_TPIN}"
+    assert hit.identifiers == {"zm_tpin": _KANSANSHI_TPIN}
+
+
+def test_eiti_and_eiti_zambia_hits_assert_the_same_tpin_key() -> None:
+    """The two EITI publishers corroborate on one key, so the reconciler can
+    say both file the number -- and neither asserts the LEI."""
+    from opencheck.routers.hit_builders import _bh_eiti_zambia
+    from opencheck.sources.eiti_zambia import EitiZambiaAdapter, _load
+
+    ctx = _LookupCtx(lei=_KANSANSHI_LEI)
+    index, meta = _load()
+    zm_bundle = EitiZambiaAdapter()._build_bundle(
+        _KANSANSHI_LEI, index[_KANSANSHI_LEI], meta
+    )
+    zm_hit = _bh_eiti_zambia(zm_bundle, ctx)
+    eiti_hit = _bh_eiti(
+        {
+            "country": "ZM", "identification": _KANSANSHI_TPIN,
+            "entity_name": "Kansanshi Mining Plc", "years": ["2018"],
+            "total_usd": 0.0,
+        },
+        ctx,
+    )
+    assert zm_hit.identifiers == eiti_hit.identifiers == {"zm_tpin": _KANSANSHI_TPIN}
+    assert "lei" not in eiti_hit.identifiers
+
+
+def test_map_eiti_zambia_identification_carries_the_tpin_scheme() -> None:
+    """The BODS identifier uses the scheme the portal mapper writes, so the
+    two publishers' entity statements share it."""
+    from opencheck.bods.mappers.eiti import ZM_TPIN_SCHEME
+
+    stmts = list(map_eiti({
+        "source_id": "eiti", "country": "ZM", "identification": _KANSANSHI_TPIN,
+        "entity_name": "Kansanshi Mining Plc", "organisations": [],
+        "revenue_years": [], "streams": {}, "total_usd": 0.0, "years": ["2018"],
+        "is_stub": False,
+    }))
+    entity = next(s for s in stmts if s.get("recordType") == "entity")
+    ids = entity["recordDetails"]["identifiers"]
+    assert {"id": _KANSANSHI_TPIN, "scheme": ZM_TPIN_SCHEME[0]}.items() <= ids[0].items()
+    assert entity["recordDetails"]["jurisdiction"]["code"] == "ZM"
+
+
+# ---------------------------------------------------------------------------
+# One number, several spellings (Phase 306). EITI files the same company's
+# number differently across reporting years; the card read only the years
+# under the spelling that matched.
+# ---------------------------------------------------------------------------
+
+
+def test_exact_spelling_wins_over_a_punctuated_variant() -> None:
+    assert _match_identification("ZM", "1001602517") == "1001602517"
+    assert _match_identification("ZM", "1,001,602,517") == "1,001,602,517"
+
+
+def test_organisations_reads_every_spelling_of_a_number() -> None:
+    from opencheck.sources.eiti import _organisations
+
+    years = sorted(o["year"] for o in _organisations("ZM", "1001602517"))
+    assert years == ["2012", "2013", "2014", "2015", "2016", "2017", "2018"]
+    assert _organisations("ZM", "1,001,602,517") == _organisations("ZM", "1001602517")
+    # Equinor UK: 2023 is filed without the leading zero.
+    gb_years = {o["year"] for o in _organisations("GB", "01285743")}
+    assert {"2023", "2021", "2018"} <= gb_years
+
+
+def test_a_lettered_number_is_never_merged_with_its_digits() -> None:
+    """SC123456 (Scotland) and 00123456 (England & Wales) are different
+    companies; the variant grouping keys a lettered number on itself."""
+    from opencheck.sources.eiti import _variant_key
+
+    assert _variant_key("SC123456") == "SC123456"
+    assert _variant_key("00123456") == _variant_key("123,456") == "123456"
+    assert _variant_key("400 182 426") == _variant_key("400182426")

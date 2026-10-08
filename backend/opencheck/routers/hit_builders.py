@@ -928,6 +928,9 @@ _EITI_IDENTIFIER_KEY_BY_COUNTRY = {
     # US EITI identifications are federal EINs; matching a US subject means an
     # EIN was derived for it, so the corroboration key is that EIN.
     "US": "us_ein",
+    # Zambian EITI identifications are ZRA TPINs (Phase 306) -- the key the
+    # Zambia EITI portal card asserts too, since both publish the number.
+    "ZM": "zm_tpin",
 }
 
 

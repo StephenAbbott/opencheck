@@ -1185,6 +1185,20 @@ OpenCorporates id in the new database at all, and `metadata_company_id_reference
 holds one row (GB / Companies House). So an EITI `identification` value being a
 national registry number is an *assumption*, not something the data states.
 
+### EITI International's Zambian identifications are TPINs (Phase 306)
+
+GLEIF files a Zambian company's PACRA number; EITI files its ZRA TPIN, so
+`registeredAs` never joins the ZM bucket. `_build_derived` reads `zm_tpin`
+from the `eiti_zambia` portal index (`tpin_for_lei` — the Phase 298 name
+match, read from that index rather than a second crosswalk so the two cannot
+drift), the `us_ein` pattern. The hit asserts `zm_tpin`, the key the
+`eiti_zambia` card asserts; the bundle's `matched_via` says which key joined.
+**One number, several spellings:** EITI files `1,001,602,517` and
+`1001602517` for Kansanshi, `01285743` and `1285743` for Equinor UK (212
+numbers in 16 buckets). `_organisations()` reads every spelling's records —
+grouped on digits for an all-digit number, on itself for a lettered one
+(`SC123456` ≠ `00123456`) — and an exact spelling wins the match.
+
 ### One more, learned the hard way
 
 EITI spells the same company differently in its own two sheets and the UUIDv5
