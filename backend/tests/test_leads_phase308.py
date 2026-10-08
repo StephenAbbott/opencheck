@@ -190,7 +190,27 @@ async def test_assemble_searches_once_and_never_asserts(monkeypatch, gleif) -> N
     assert out["note"] == leads.NOTE and "not a successor" in leads.NOTE
     get.assert_awaited_once()
     path = get.await_args.args[0]
-    assert "filter[entity.status]=ACTIVE" in path and "BARRICK" in path
+    assert "filter[entity.status]=ACTIVE" in path
+    # Phase 310: the query is the name's residue — GLEIF's fulltext search
+    # requires every token, and "INC" is on no active Barrick record.
+    assert "filter[fulltext]=barrick%20gold&" in path and "INC" not in path
+    assert out["search_terms"] == "barrick gold"
+
+
+@pytest.mark.parametrize(
+    "name, terms",
+    [
+        ("BARRICK GOLD INC.", "barrick gold"),
+        ("Diamond Bank PLC", "diamond bank"),
+        ("BG GROUP LIMITED", "bg group"),
+        ("  Barrick   Gold  Inc.  ", "barrick gold"),
+        # Nothing but form words: the whole name, never an empty query.
+        ("INC.", "INC."),
+        ("", ""),
+    ],
+)
+def test_search_terms_drop_the_legal_form_but_never_empty(name: str, terms: str) -> None:
+    assert leads.search_terms(name) == terms
 
 
 @pytest.mark.parametrize(
@@ -213,7 +233,7 @@ async def test_no_name_means_no_search(monkeypatch, gleif) -> None:
     get = AsyncMock(return_value=SEARCH)
     monkeypatch.setattr(GleifAdapter, "_get", get)
     out = await leads.assemble_leads(BARRICK, "   ", store=_Store(None, {}))
-    assert out["candidates"] == [] and out["searched_name"] is None
+    assert out["candidates"] == [] and out["searched_name"] is None and out["search_terms"] is None
     get.assert_not_awaited()
 
 
@@ -227,7 +247,7 @@ def test_route_answers_with_the_shape_and_rejects_a_bad_lei(monkeypatch, gleif) 
         r = client.get("/leads", params={"lei": BARRICK, "name": NAME})
         assert r.status_code == 200, r.text
         body: dict[str, Any] = r.json()
-        assert set(body) == {"lei", "searched_name", "parent", "candidates", "gleif_unavailable_reason", "note"}
+        assert set(body) == {"lei", "searched_name", "search_terms", "parent", "candidates", "gleif_unavailable_reason", "note"}
         assert body["candidates"][0]["name_only"] is True
         assert r.headers["cache-control"] == "public, max-age=3600"
         assert client.get("/leads", params={"lei": "NOT-AN-LEI"}).status_code == 400

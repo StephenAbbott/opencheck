@@ -710,6 +710,8 @@ export interface LeadCandidate {
 export interface LeadsResponse {
   lei: string;
   searched_name: string | null;
+  /** What was sent to GLEIF: the name without its legal-form words (Phase 310). */
+  search_terms?: string | null;
   parent: LeadParent | null;
   candidates: LeadCandidate[];
   /** `held_for_lookups` / `rate_limited` / `unreachable`, or null when GLEIF

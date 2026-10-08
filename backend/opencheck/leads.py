@@ -12,7 +12,8 @@ GLEIF's own data can say, as **leads, never assertions**:
   relationships are usually retired with it). A local read; no mirror, no
   parent, said as such.
 * **Active LEI records with a similar name** — one GLEIF fulltext search for
-  the legal name, filtered to ``entity.status=ACTIVE``, the subject excluded,
+  the legal name **with its legal-form words removed** (:func:`search_terms`,
+  Phase 310), filtered to ``entity.status=ACTIVE``, the subject excluded,
   ranked by :mod:`search_rank`'s query-side match tier, fuzzy matches
   dropped, at most :data:`MAX_CANDIDATES`. Each candidate carries its tier in
   words and the ``name_only`` flag that is always true here: only the name
@@ -30,6 +31,15 @@ successors and former names - October 2026*):
   234): refused at once when the reserve for lookups is short, and the
   response says why (``gleif_unavailable_reason``) rather than showing an
   empty list as "nothing similar exists".
+* **The query is the name's residue, not the name** (Phase 310, found by
+  the post-deploy check of Phase 308). GLEIF's ``filter[fulltext]`` requires
+  *every* token to appear somewhere on the record, and a legal-form word
+  rarely survives a rename or a reincorporation: ``BARRICK GOLD INC.`` found
+  nothing live (``INC`` is on no active Barrick record), ``BARRICK GOLD``
+  found four, led by BARRICK MINING CORPORATION through its former name. So
+  the query is :func:`names.org_name_residue` — ``barrick gold`` — and the
+  full name only when nothing is left once the form words go. The *match* is
+  still measured against the full name, so the tiers mean what they did.
 * **A name match is OpenCheck's reading, not GLEIF's**, so the tier words
   come from the one place the search ranking already defines them
   (:data:`search_rank.MATCH_TIERS`), and the chip is always "Name only".
@@ -44,7 +54,7 @@ from urllib.parse import quote
 
 import httpx
 
-from . import search_rank
+from . import names, search_rank
 from .gleif_throttle import GleifRateLimitedError, unavailable_reason
 from .sources import REGISTRY
 from .sources.gleif import GleifAdapter
@@ -175,6 +185,15 @@ def rank_candidates(name: str, items: list[dict[str, Any]], *, exclude: str) -> 
     return [c for _, _, c in out[:MAX_CANDIDATES]]
 
 
+def search_terms(name: str) -> str:
+    """What is sent to GLEIF's fulltext search for ``name``: the name with
+    its legal-form words removed (``BARRICK GOLD INC.`` → ``barrick gold``),
+    or the whole name when nothing else is left (``INC`` alone, say)."""
+    name = " ".join(str(name or "").split())
+    residue = " ".join(names.org_name_residue(name).split())
+    return residue or name
+
+
 async def assemble_leads(lei: str, name: str, *, store: Any = None) -> dict[str, Any]:
     """The ``/leads`` response for ``lei``: the last filed parent, the
     similar-name candidates, and the reasons for whatever could not be
@@ -183,6 +202,7 @@ async def assemble_leads(lei: str, name: str, *, store: Any = None) -> dict[str,
     out: dict[str, Any] = {
         "lei": lei,
         "searched_name": name or None,
+        "search_terms": search_terms(name) if name else None,
         "parent": last_filed_parent(lei, store),
         "candidates": [],
         "gleif_unavailable_reason": None,
@@ -194,12 +214,13 @@ async def assemble_leads(lei: str, name: str, *, store: Any = None) -> dict[str,
     if not isinstance(gleif, GleifAdapter) or not gleif.info.live_available:
         out["gleif_unavailable_reason"] = "unreachable"
         return out
+    terms = search_terms(name)
     path = (
-        f"/lei-records?filter[fulltext]={quote(name)}"
+        f"/lei-records?filter[fulltext]={quote(terms)}"
         "&filter[entity.status]=ACTIVE&page[size]=10"
     )
     try:
-        payload = await gleif._get(path, cache_key=f"{_CACHE_NS}/leads/{_slug(name)}")
+        payload = await gleif._get(path, cache_key=f"{_CACHE_NS}/leads-v2/{_slug(terms)}")
     except (GleifRateLimitedError, httpx.HTTPError) as exc:
         out["gleif_unavailable_reason"] = unavailable_reason(exc)
         return out
