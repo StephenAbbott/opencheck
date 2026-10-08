@@ -184,7 +184,7 @@ def from_gleif_record(record: dict[str, Any] | None) -> dict[str, Any] | None:
         # for a successor GLEIF never named. A live company gets nothing.
         if str(entity.get("status") or "").upper() != "INACTIVE":
             return None
-        out = {
+        return {
             "relation": "none",
             "named": [],
             "event": _explaining_event(entity),
@@ -193,9 +193,8 @@ def from_gleif_record(record: dict[str, Any] | None) -> dict[str, Any] | None:
             "chain_complete": True,
             "hops": 0,
             "source_id": "gleif",
+            "sentence": NONE_NAMED,
         }
-        out["sentence"] = NONE_NAMED
-        return out
     out: dict[str, Any] = {
         "relation": "duplicate" if registration == "DUPLICATE" else "successor",
         "named": named,

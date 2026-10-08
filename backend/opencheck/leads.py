@@ -47,6 +47,7 @@ import httpx
 from . import search_rank
 from .gleif_throttle import GleifRateLimitedError, unavailable_reason
 from .sources import REGISTRY
+from .sources.gleif import GleifAdapter
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ def _best_name_tier(
     """The best match tier across the legal name and GLEIF's ``otherNames``
     (and ``transliteratedOtherNames``), with the other name and its type when
     one of those is what matched. The legal name wins a tie."""
-    best = (search_rank.match_tier(query, legal_name), None, None)
+    best: tuple[int, str | None, str | None] = (search_rank.match_tier(query, legal_name), None, None)
     for key in ("otherNames", "transliteratedOtherNames"):
         for other in entity.get(key) or []:
             if not isinstance(other, dict):
@@ -190,7 +191,7 @@ async def assemble_leads(lei: str, name: str, *, store: Any = None) -> dict[str,
     if not name:
         return out
     gleif = REGISTRY.get("gleif")
-    if gleif is None or not gleif.info.live_available:
+    if not isinstance(gleif, GleifAdapter) or not gleif.info.live_available:
         out["gleif_unavailable_reason"] = "unreachable"
         return out
     path = (
