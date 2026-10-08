@@ -321,6 +321,32 @@ def test_a_verdict_worded_by_an_older_template_is_not_a_change() -> None:
     assert [c["kind"] for c in wl.diff_snapshots(before, changed)] == ["verdict"]
 
 
+def test_a_dissolution_date_newly_read_from_gleif_events_is_not_a_change() -> None:
+    """Phase 305 reads GLEIF's Legal Entity Events, which date an INACTIVE
+    entity GLEIF's empty ``expiration`` left undated. A baseline taken before
+    it has no date; the first re-run after deploy finds one dated years
+    before the baseline. That is the reading changing, not the company."""
+    before = wl.snapshot_from_response(_resp(EASY))
+    assert before["dissolution_reading"] == wl.DISSOLUTION_READING == 2
+    assert before["dissolution_date"] is None
+    legacy = {k: v for k, v in before.items() if k != "dissolution_reading"}
+    taken = max(c["retrieved_at"][:10] for c in legacy["checked"] if c.get("retrieved_at"))
+    newly_read = dict(before, dissolution_date="2018-11-08")
+    assert newly_read["dissolution_date"] <= taken
+    assert wl.diff_snapshots(legacy, newly_read) == []
+    # A dissolution dated after the baseline was taken is news, whatever the reading.
+    later = dict(before, dissolution_date="2999-01-01")
+    assert [c["kind"] for c in wl.diff_snapshots(legacy, later)] == ["dissolution_date"]
+    # A baseline that already had a date still reports a different one.
+    dated = dict(legacy, dissolution_date="2018-11-07")
+    assert [c["kind"] for c in wl.diff_snapshots(dated, newly_read)] == ["dissolution_date"]
+    # Once the baseline carries the new reading, a date appearing is reported.
+    assert [c["kind"] for c in wl.diff_snapshots(before, newly_read)] == ["dissolution_date"]
+    # A legacy baseline with no retrieval recorded absorbs it too.
+    unknown = dict(legacy, checked=[])
+    assert wl.diff_snapshots(unknown, newly_read) == []
+
+
 def test_new_signal_status_and_name_changes_are_named() -> None:
     before = wl.snapshot_from_response(_resp(EASY))
     after = wl.snapshot_from_response(
@@ -1214,13 +1240,13 @@ def test_feed_and_titles_word_events() -> None:
     liq = {"type": "LIQUIDATION", "status": "IN_PROGRESS", "effective": "2026-10-05T23:00:00Z", "recorded": "2026-10-06T08:00:00Z"}
     done = {**liq, "status": "COMPLETED"}
     ma = {"type": "MERGERS_AND_ACQUISITIONS", "status": "COMPLETED", "effective": "2026-10-01T00:00:00Z", "recorded": "2026-10-01T00:00:00Z"}
-    assert rw.describe_events(None, [liq]) == "GLEIF recorded a legal entity event: liquidation (in progress), effective 2026-10-05."
-    assert rw.describe_events([liq], [done]) == "GLEIF recorded a legal entity event: liquidation: in progress → completed, effective 2026-10-05."
+    assert rw.describe_events(None, [liq]) == "GLEIF recorded a legal entity event: liquidation (in progress), effective 2026-10-06."
+    assert rw.describe_events([liq], [done]) == "GLEIF recorded a legal entity event: liquidation: in progress → completed, effective 2026-10-06."
     assert rw.describe_events([], [liq, ma]) == (
-        "GLEIF recorded legal entity events: liquidation (in progress), effective 2026-10-05; "
+        "GLEIF recorded legal entity events: liquidation (in progress), effective 2026-10-06; "
         "merger or acquisition (completed), effective 2026-10-01."
     )
-    assert rw.describe_events([liq], None) == "GLEIF no longer lists: liquidation (in progress), effective 2026-10-05."
+    assert rw.describe_events([liq], None) == "GLEIF no longer lists: liquidation (in progress), effective 2026-10-06."
     change = {"kind": "gleif_field", "field": "corporate_events", "old": None, "new": [liq]}
     assert rw._describe(change).startswith("GLEIF recorded a legal entity event")
     entry = {"lei": EASY, "legal_name": "EASY POWER", "tier": wl.TIER_GLEIF, "changes": [change],

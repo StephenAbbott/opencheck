@@ -18,6 +18,7 @@ from typing import Any
 import pycountry
 
 from ..elf import resolve_elf
+from . import gleif_events as _gleif_events
 from . import liveness as _liveness
 from .unique import unique_statements
 from .source_ids import SOURCE_ID_KEY
@@ -1591,6 +1592,18 @@ def _gleif_entity_statement(
     expiration_date = expiration_date_raw[:10] if expiration_date_raw else None
     entity_status = str(entity_block.get("status") or "")
 
+    # Phase 305: GLEIF's Legal Entity Events. GLEIF no longer fills
+    # ``expiration`` (null on every INACTIVE record, 7 Oct 2026), so a
+    # COMPLETED terminal event is the only date it gives for an entity
+    # ceasing — read only when GLEIF itself says INACTIVE, and never over an
+    # ``expiration.date`` it does give. See ``bods/gleif_events.py``.
+    gleif_events = _gleif_events.events_of(entity_block)
+    ended_by: dict[str, Any] | None = None
+    if not expiration_date and entity_status.upper() == "INACTIVE":
+        found = _gleif_events.dissolution_event(gleif_events)
+        if found:
+            expiration_date, ended_by = found
+
     stmt = make_entity_statement(
         source_id="gleif",
         local_id=lei,
@@ -1641,6 +1654,10 @@ def _gleif_entity_statement(
     lei_reg = from_gleif_record({"attributes": attrs or {}})
     if lei_reg and lei_reg.get("flag"):
         annotate(stmt, commenting(pointer("recordDetails"), lei_reg["sentence"]))
+
+    # Phase 305: one annotation per material Legal Entity Event, any status —
+    # an IN_PROGRESS liquidation is visible without asserting dissolution.
+    annotate(stmt, *_gleif_events.event_annotations(gleif_events, dissolution=ended_by))
 
     return stmt
 
