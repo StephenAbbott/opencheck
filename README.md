@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 309** — Former legal names are now said as such: a renamed company is found under its old name from the picker, `/search` and the MCP tool, ranked exact with the former name it matched, and the subject card and identity band say what the company was called before and when its legal name changed.
+**Latest: Phase 310** — The leads block for a retired LEI now searches GLEIF on the company name without its legal-form words, so "Barrick Gold Inc." finds Barrick Mining Corporation through its former name instead of returning nothing.
 
 → [Full development history](docs/status.md)
 
