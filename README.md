@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 303** — A GLEIF-triggered watchlist entry now carries GLEIF's own field-by-field modification log for the record, and each watched company shows what that log recorded in the 30 days before it was watched.
+**Latest: Phase 304** — EveryPolitician rows whose record maps to a single person statement no longer offer a Diagram button that opens onto nothing.
 
 → [Full development history](docs/status.md)
 

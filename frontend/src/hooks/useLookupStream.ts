@@ -31,6 +31,19 @@ import type { RegisterRecord } from "../lib/registerLinks";
  * page state that is not the run's (the selected chip, the open identity
  * band, exports, the save controls) is App's to reset beside it.
  */
+/**
+ * Fold a `bods_counts` event into what earlier ones said. A lookup sends one
+ * after the register stage and another for the EveryPolitician rows the
+ * related-party screen adds later (Phase 300); a later event adds keys and
+ * never removes the earlier ones.
+ */
+export function mergeBodsCounts<T>(
+  prev: Record<string, T>,
+  next: Record<string, T>,
+): Record<string, T> {
+  return { ...prev, ...next };
+}
+
 export function useLookupStream() {
   // streamingLei is set once GLEIF resolves (replaces the old `result !== null` guard).
   const [streamingLei, setStreamingLei] = useState<string | null>(null);
@@ -226,9 +239,13 @@ export function useLookupStream() {
         setOaScreening(e.openaleph_screening ?? []);
         setGraphShape(e.graph_shape ?? null);
       },
+      // Merged, not replaced: a lookup sends a second event for the rows the
+      // related-party screen adds after the first (EveryPolitician), and
+      // replacing would wipe every other source's counts.
       onBodsCounts: (e: BodsCountsEvent) => {
-        setBodsCountMap(e.counts);
-        if (e.breakdown) setBodsBreakdownMap(e.breakdown);
+        setBodsCountMap((prev) => mergeBodsCounts(prev, e.counts));
+        const breakdown = e.breakdown;
+        if (breakdown) setBodsBreakdownMap((prev) => mergeBodsCounts(prev, breakdown));
       },
       onDone: (e) => {
         setStreaming(false);
