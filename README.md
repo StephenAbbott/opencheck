@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 314** — Bulk data now carries two clocks, so a register's cut dates the statement and OpenCheck's download is the only retrieval time; and statements from 41 sources, which were being dated today with no retrieval time on deepen, are now built with the provenance their fetch recorded.
+**Latest: Phase 315** — Statements are dated by the sources' own record dates (OpenSanctions changes, register filings and last-modified stamps, beneficial ownership declarations) instead of the day OpenCheck read them, and the Finnish and Irish registers map again after upstream format changes.
 
 → [Full development history](docs/status.md)
 
