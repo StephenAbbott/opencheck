@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import time
 from typing import Any
 from urllib.parse import quote
 
@@ -50,6 +51,11 @@ from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInf
 # CRO Open Data Portal — CKAN endpoint (no auth).
 _CKAN_BASE = "https://opendata.cro.ie/api/3/action"
 _COMPANIES_RESOURCE_ID = "3fef41bc-b8f4-4b10-8434-ce51c29b1bba"
+
+#: ``(monotonic time read, resource last_modified)`` — see
+#: ``CroAdapter._extract_modified``.
+_extract_meta: tuple[float, str | None] | None = None
+_EXTRACT_META_TTL_S = 86_400.0
 
 # CRO Open Services — authenticated REST API.
 _OPEN_SERVICES_BASE = "https://services.cro.ie/cws"
@@ -221,7 +227,39 @@ class CroAdapter(SourceAdapter):
             "company": company,
             "legal_name": legal_name,
             "is_stub": False,
+            "extract_modified": await self._extract_modified(),
         }
+
+    async def _extract_modified(self) -> str | None:
+        """When CRO last refreshed the Company Records resource (Phase 315).
+
+        The datastore is a periodic extract (refreshed 30 Sep 2026 at the
+        time of writing), so a row is CRO's claim as of that refresh, not of
+        the moment OpenCheck queried it. Read from CKAN's ``resource_show``
+        and held in memory for a day — deliberately not in the response
+        cache, whose read would record a ``cached`` observation and downgrade
+        the record's own live fetch. ``None`` if it cannot be read, so the row
+        falls back to the retrieval date rather than failing the fetch.
+        """
+        global _extract_meta
+        now = time.monotonic()
+        if _extract_meta is not None and now - _extract_meta[0] < _EXTRACT_META_TTL_S:
+            return _extract_meta[1]
+        if not self.info.live_available:
+            return None
+        try:
+            async with build_client() as client:
+                response = await client.get(
+                    f"{_CKAN_BASE}/resource_show?id={_COMPANIES_RESOURCE_ID}"
+                )
+            if not response.is_success:
+                return None
+            result = (response.json() or {}).get("result") or {}
+        except Exception:  # noqa: BLE001 — a missing date must not cost the record
+            return None
+        value = result.get("last_modified")
+        _extract_meta = (now, value if isinstance(value, str) else None)
+        return _extract_meta[1]
 
     # ------------------------------------------------------------------
     # CKAN search helper

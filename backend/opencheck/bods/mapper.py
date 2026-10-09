@@ -183,6 +183,8 @@ from .mappers.eiti import (  # noqa: F401  (re-exported, Phase 246)
     map_eiti_assessment,
     map_eiti_soe,
     map_eiti_zambia,
+    _map_eiti_soe,
+    _map_eiti_assessment,
 )
 from .mappers.wikirate import (  # noqa: F401  (re-exported, Phase 246)
     _WIKIRATE_IDENTIFIER_SCHEMES,
@@ -261,6 +263,9 @@ from .mappers.finland import (  # noqa: F401  (re-exported, Phase 246)
     _prh_current_name,
     _prh_entity_type,
     map_prh,
+    _prh_post_office,
+    _prh_company_form,
+    _prh_business_lines,
 )
 from .mappers.latvia import (  # noqa: F401  (re-exported, Phase 246)
     _LV_ENTITY_TYPES,
@@ -383,6 +388,7 @@ from .mappers.romania import (  # noqa: F401  (re-exported, Phase 246)
     _ro_liveness,
     map_anaf_romania,
     map_onrc_romania,
+    _map_onrc_romania,
 )
 from .mappers.moldova import (  # noqa: F401  (re-exported, Phase 246)
     MD_IDNO_SCHEME,
@@ -390,10 +396,12 @@ from .mappers.moldova import (  # noqa: F401  (re-exported, Phase 246)
     _MD_JURISDICTION,
     _md_person_key,
     map_asp_moldova,
+    _map_asp_moldova,
 )
 from .mappers.serbia import (  # noqa: F401  (re-exported, Phase 246)
     _RS_JURISDICTION,
     map_apr_serbia,
+    _map_apr_serbia,
 )
 from .mappers.us_dc import (  # noqa: F401  (re-exported, Phase 246)
     _DC_INTEREST_DETAILS,

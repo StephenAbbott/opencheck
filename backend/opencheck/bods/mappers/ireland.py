@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
-from ..statements import SOURCE_NAMES, _addr, make_entity_statement
+from ..statements import SOURCE_NAMES, _addr, make_entity_statement, record_date
 
 
 # ----------------------------------------------------------------------
@@ -52,13 +52,13 @@ def _cro_entity_type(company_type: str) -> str:
 def _cro_address(rec: dict[str, Any]) -> dict[str, str] | None:
     """Build a BODS address dict from CRO company_address_1..4 fields."""
     lines = [
-        (rec.get(f"company_address_{i}") or "").strip()
+        str(rec.get(f"company_address_{i}") or "").strip()
         for i in range(1, 5)
     ]
     non_empty = [l for l in lines if l]
     if not non_empty:
         return None
-    eircode = (rec.get("eircode") or "").strip()
+    eircode = str(rec.get("eircode") or "").strip()
     if eircode:
         non_empty.append(eircode)
     return _addr("registered", ", ".join(non_empty), "IE")
@@ -78,7 +78,7 @@ def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     company: dict[str, Any] = bundle.get("company") or {}
 
     name: str = (
-        (company.get("company_name") or "").strip()
+        str(company.get("company_name") or "").strip()
         or bundle.get("legal_name")
         or f"IE-CRN {crn}"
     )
@@ -91,7 +91,7 @@ def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     reg_date_raw = company.get("company_reg_date") or ""
     founding_date = reg_date_raw[:10] if reg_date_raw else None
 
-    company_type = (company.get("company_type") or "").strip()
+    company_type = str(company.get("company_type") or "").strip()
     entity_type = _cro_entity_type(company_type)
 
     identifiers: list[dict[str, str]] = [
@@ -102,7 +102,7 @@ def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         }
     ]
 
-    nace = (company.get("nace_v2_code") or "").strip()
+    nace = str(company.get("nace_v2_code") or "").strip()
     if nace:
         identifiers.append({
             "id": nace,
@@ -115,6 +115,9 @@ def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     cro_entity = make_entity_statement(
         source_id="cro",
         local_id=crn,
+        # Phase 315: the CKAN resource refresh the row was served from — CRO's
+        # periodic extract — not the moment OpenCheck queried it.
+        statement_date=record_date(bundle.get("extract_modified")),
         name=name,
         jurisdiction=("Ireland", "IE"),
         identifiers=identifiers,
@@ -126,7 +129,7 @@ def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     # CRO ``company_status`` (Phase 151): "Normal" is live; the insolvency
     # and strike-off-listed states are pending; dissolved / struck off end
     # the company. ``company_status_date`` when the open-data row has it.
-    cro_status = (company.get("company_status") or "").strip()
+    cro_status = str(company.get("company_status") or "").strip()
     cro_liveness = _liveness.classify(
         cro_status,
         live=("Normal",),

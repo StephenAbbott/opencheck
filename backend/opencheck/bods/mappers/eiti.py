@@ -11,6 +11,8 @@ from typing import Any, Iterable
 from ..annotations import annotate, commenting, identifying, pointer
 from ..statements import (
     _country_obj,
+    dated_by_cut,
+    latest_record_date,
     make_entity_statement,
     make_relationship_statement,
 )
@@ -88,6 +90,11 @@ _EITI_SOE_URL = "https://eiti-database.eiti.org/eiti_database/view_soeList"
 
 
 def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Every statement dated by the EITI SOE database snapshot (Phase 315). See ``_map_eiti_soe`` for the mapping."""
+    yield from dated_by_cut(_map_eiti_soe(bundle), (bundle or {}).get("source_snapshot"))
+
+
+def _map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an EITI SOE Database bundle to BODS v0.4 statements.
 
     Emits the state-owned enterprise as an entity, the controlling government
@@ -239,6 +246,11 @@ def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
 
 def map_eiti_assessment(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Every statement dated by the EITI assessment harvest (Phase 315). See ``_map_eiti_assessment`` for the mapping."""
+    yield from dated_by_cut(_map_eiti_assessment(bundle), (bundle or {}).get("source_snapshot"))
+
+
+def _map_eiti_assessment(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an EITI Company Assessment bundle to BODS v0.4 statements.
 
     Emits **one entity statement for the subject company and nothing else** —
@@ -500,6 +512,12 @@ def map_eiti_zambia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     stmt = make_entity_statement(
         source_id="eiti_zambia",
         local_id=tpins[0] if tpins else lei,
+        # Phase 315: the latest portal update among the datasets this record
+        # was drawn from — the portal's own date for the data — rather than
+        # the day OpenCheck built its index.
+        statement_date=latest_record_date(
+            (d or {}).get("last_updated") for d in (bundle.get("datasets") or {}).values()
+        ),
         name=name,
         identifiers=identifiers,
         alternate_names=[n for n in filed if _norm_for_compare(n) != _norm_for_compare(name)],

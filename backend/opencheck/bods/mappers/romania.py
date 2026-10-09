@@ -19,6 +19,7 @@ from .. import liveness as _liveness
 from ..statements import (
     SOURCE_NAMES,
     _country_obj,
+    dated_by_cut,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
@@ -196,6 +197,11 @@ def _ro_address(row: dict[str, Any]) -> dict[str, str] | None:
 
 
 def map_onrc_romania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Every statement dated by the ONRC monthly export (Phase 315). See ``_map_onrc_romania`` for the mapping."""
+    yield from dated_by_cut(_map_onrc_romania(bundle), (bundle or {}).get("export_date"))
+
+
+def _map_onrc_romania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an OnrcRomaniaAdapter bundle to BODS v0.4 statements.
 
     Yields the company, then — for every legal representative the register
@@ -382,6 +388,9 @@ def map_anaf_romania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     stmt = make_entity_statement(
         source_id="anaf_romania",
         local_id=cui,
+        # Phase 315: ANAF answers "as of" the date it was asked for, and says
+        # so in ``date_generale.data`` — its claim's date, stated explicitly.
+        statement_date=_anaf_date(general.get("data")),
         name=name,
         jurisdiction=("Romania", "RO"),
         identifiers=identifiers,

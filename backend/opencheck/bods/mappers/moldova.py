@@ -13,6 +13,7 @@ from ..annotations import annotate, pointer, transformation
 from ..statements import (
     SOURCE_NAMES,
     _today,
+    dated_by_cut,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
@@ -49,6 +50,11 @@ def _md_person_key(idno: str, name: str) -> str:
 
 
 def map_asp_moldova(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Every statement dated by the ASP weekly export it came from (Phase 315). See ``_map_asp_moldova`` for the mapping."""
+    yield from dated_by_cut(_map_asp_moldova(bundle), (bundle or {}).get("snapshot_date"))
+
+
+def _map_asp_moldova(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an AspMoldovaAdapter bundle to BODS v0.4 statements.
 
     Yields the company; then each director and founder as a person or entity

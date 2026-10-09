@@ -12,6 +12,7 @@ from .. import liveness as _liveness
 from ..statements import (
     SOURCE_NAMES,
     _addr,
+    latest_record_date,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
@@ -178,6 +179,11 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 kuv_ico = raw_ico
 
         is_legal_person: bool = bool(kuv.get("ObchodneMeno") and not kuv.get("Meno"))
+        # Phase 315: an RPVS entry is versioned by its validity window — a
+        # change closes the old entry and opens a new one — so the latest of
+        # its own dates is when the register last asserted it: the end for an
+        # ended entry, else the start. (RPVS publishes no separate entry date.)
+        kuv_dated = latest_record_date((kuv.get("PlatnostOd"), kuv.get("PlatnostDo")))
 
         # --- 2. Interested party statement (person or entity) ---
         if is_legal_person:
@@ -193,6 +199,7 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             ip_stmt = make_entity_statement(
                 source_id="rpvs_slovakia",
                 local_id=f"kuv_entity:{kuv_id_raw}",
+                statement_date=kuv_dated,
                 name=lp_name,
                 jurisdiction=("Slovakia", "SK"),
                 identifiers=ip_identifiers,
@@ -236,6 +243,7 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             ip_stmt = make_person_statement(
                 source_id="rpvs_slovakia",
                 local_id=f"kuv_person:{kuv_id_raw}",
+                statement_date=kuv_dated,
                 full_name=full_name,
                 person_type="knownPerson",
                 nationalities=nationalities,
@@ -276,6 +284,7 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         rel_stmt = make_relationship_statement(
             source_id="rpvs_slovakia",
             local_id=f"rel:{kuv_id_raw}",
+            statement_date=kuv_dated,
             subject_statement_id=entity_sid,
             interested_party_statement_id=ip_sid,
             interested_party_type=ip_type,

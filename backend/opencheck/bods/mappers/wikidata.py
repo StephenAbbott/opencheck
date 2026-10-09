@@ -17,9 +17,11 @@ from ..statements import (
     SOURCE_NAMES,
     BODSBundle,
     _stable_id,
+    latest_record_date,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
+    record_date,
     set_beneficial_ownership,
 )
 
@@ -124,6 +126,10 @@ def _emit_wikidata_owner(
 
     relationship = make_relationship_statement(
         source_id="wikidata",
+        # Phase 315: the latest P813 "retrieved" on the claim's references —
+        # the day an editor last checked the cited source for it. The claim's
+        # own date, where Wikidata records one; the retrieval otherwise.
+        statement_date=latest_record_date(r.get("retrieved") for r in refs),
         local_id=f"{subject_qid}-owner-{oqid}",
         subject_statement_id=subject_statement_id,
         interested_party_statement_id=owner_stmt["statementId"],
@@ -884,6 +890,10 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
     subject_stmt = make_entity_statement(
         source_id="opencorporates",
         local_id=ocid or company_number,
+        # Phase 315: OpenCorporates' ``updated_at`` — when OC's record last
+        # changed "in any way". OC is the claimant here, so its record's date
+        # is the claim's, however long ago it last read the register.
+        statement_date=record_date(company.get("updated_at")),
         name=name,
         jurisdiction=jurisdiction,
         identifiers=identifiers,

@@ -288,6 +288,9 @@ class EitiSoeAdapter(SourceAdapter):
             "match_method": match_method,
             "match_confidence": match_confidence,
             "payments": payments,
+            # EITI's snapshot of the SOE database, dating every statement
+            # (Phase 315).
+            "source_snapshot": _index_snapshot,
             "is_stub": False,
         }
         validate_raw("eiti_soe", EitiSoeBundle, bundle)

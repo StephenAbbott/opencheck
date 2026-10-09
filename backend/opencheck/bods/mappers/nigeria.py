@@ -13,6 +13,7 @@ from ..statements import (
     SOURCE_NAMES,
     _country_obj,
     _stable_id,
+    latest_record_date,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
@@ -184,6 +185,13 @@ def _cac_owner_statements(
         interests = _cac_merge_interests([
             _cac_interests(r, record_kind=record_kind) for r in rows
         ])
+        # Phase 315: a current owner is dated by the latest PSC notification
+        # among its current filings — the day the register received the
+        # declaration. A departed owner has no dated departure, so it keeps
+        # the caller's date (or falls back to the harvest it was seen in).
+        owner_date = statement_date or (
+            None if closed else latest_record_date(r.get("notified") for r in rows)
+        )
 
         if not owner:
             local_id = f"{id_prefix}entity:{key}:{rc}"
@@ -195,7 +203,7 @@ def _cac_owner_statements(
                     entity_type="unknownEntity",
                     entity_details=_CAC_UNNAMED_DETAILS,
                     source_url=source_url,
-                    statement_date=statement_date,
+                    statement_date=owner_date,
                 )
                 emitted.add(local_id)
             ip_id = _stable_id(source_id, "entity", local_id)
@@ -213,7 +221,7 @@ def _cac_owner_statements(
                     full_name=owner,
                     nationalities=nationalities,
                     source_url=source_url,
-                    statement_date=statement_date,
+                    statement_date=owner_date,
                 )
                 emitted.add(local_id)
             ip_id = _stable_id(source_id, "person", local_id)
@@ -239,7 +247,7 @@ def _cac_owner_statements(
                     identifiers=idents,
                     entity_type=entity_type,
                     source_url=source_url,
-                    statement_date=statement_date,
+                    statement_date=owner_date,
                 )
                 emitted.add(local_id)
             ip_id = _stable_id(source_id, "entity", local_id)
@@ -257,7 +265,7 @@ def _cac_owner_statements(
             interested_party_type="person" if kind == "person" else "entity",
             interests=interests,
             source_url=source_url,
-            statement_date=statement_date,
+            statement_date=owner_date,
             record_status="closed" if closed else "new",
         )
 

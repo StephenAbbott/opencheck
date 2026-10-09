@@ -109,6 +109,7 @@ def map_ny_dos(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     subject_stmt = make_entity_statement(
         source_id="ny_dos",
         local_id=dos_id,
+        statement_date=summary.get("last_filed_on"),  # Phase 315
         name=name,
         jurisdiction=jurisdiction,
         identifiers=[{"id": dos_id, "scheme": NY_DOS_SCHEME, "schemeName": NY_DOS_SCHEME_NAME}],
@@ -146,6 +147,8 @@ def map_ny_dos(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield make_person_statement(
             source_id="ny_dos",
             local_id=local_id,
+            # The filing that names the current CEO declares them (Phase 315).
+            statement_date=summary.get("ceos_filed_on"),
             full_name=person,
             source_url=ceo_url,
         )
@@ -160,6 +163,7 @@ def map_ny_dos(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield make_relationship_statement(
             source_id="ny_dos",
             local_id=local_id,
+            statement_date=summary.get("ceos_filed_on"),
             subject_statement_id=subject_id,
             interested_party_statement_id=_stable_id("ny_dos", "person", local_id),
             interested_party_type="person",

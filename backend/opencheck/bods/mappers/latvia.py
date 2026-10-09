@@ -198,11 +198,15 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         nationalities = _lv_nationality(nationality_code)
         birth_date = _lv_date(bo.get("birth_date"))
         registered_on = _lv_date(bo.get("registered_on"))
+        # Phase 315: dated as the officers are — UR's last revision of the BO
+        # record, else its entry date. Was the retrieval date.
+        bo_dated = _lv_date(bo.get("last_modified_at")) or registered_on
 
         person_local_id = f"bo-{regcode}-{bo_id or full_name}"
         person_stmt = make_person_statement(
             source_id="ur_latvia",
             local_id=person_local_id,
+            statement_date=bo_dated,
             full_name=full_name,
             nationalities=nationalities,
             birth_date=birth_date or None,
@@ -228,6 +232,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield make_relationship_statement(
             source_id="ur_latvia",
             local_id=rel_local_id,
+            statement_date=bo_dated,
             subject_statement_id=entity_stmt_id,
             interested_party_statement_id=person_stmt["statementId"],
             interested_party_type="person",
@@ -332,6 +337,9 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         nominal_value = member.get("share_nominal_value")
         currency = (member.get("share_currency") or "").strip()
         date_from = _lv_date(member.get("date_from"))
+        member_dated = _lv_date(member.get("last_modified_at")) or _lv_date(
+            member.get("registered_on")
+        )  # Phase 315, as for officers and BOs
 
         mem_local_id = f"member-{regcode}-{mem_id or mem_name}"
 
@@ -339,6 +347,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             mem_stmt = make_person_statement(
                 source_id="ur_latvia",
                 local_id=mem_local_id,
+                statement_date=member_dated,
                 full_name=mem_name,
                 source_url=source_url,
             )
@@ -355,6 +364,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             mem_stmt = make_entity_statement(
                 source_id="ur_latvia",
                 local_id=f"corp-member-{regcode}-{mem_id}",
+                statement_date=member_dated,
                 name=mem_name,
                 jurisdiction=("Latvia", "LV") if corp_regcode else None,
                 identifiers=corp_identifiers_m,
@@ -387,6 +397,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield make_relationship_statement(
             source_id="ur_latvia",
             local_id=rel_local_id,
+            statement_date=member_dated,
             subject_statement_id=entity_stmt_id,
             interested_party_statement_id=mem_stmt["statementId"],
             interested_party_type=ip_type,

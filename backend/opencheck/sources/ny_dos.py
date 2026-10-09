@@ -471,6 +471,13 @@ def summarise(bundle: dict[str, Any]) -> dict[str, Any]:
                 ceo_dates[film] = iso_date(row.get("date_filed")) or ""
         elif kind == ADDR_PRINCIPAL_OFFICE:
             office = row
+    # The latest filing of any kind (Phase 315): every change DOS records is a
+    # filing, so this is when the entity's record last moved — its
+    # ``statementDate``. Not claimed from a truncated response, whose newest
+    # filings are the ones cut off (the query orders by date_filed).
+    filed = [d for d in (iso_date(f.get("date_filed")) for f in filings) if d]
+    last_filed_on = max(filed) if filed and not bundle.get("truncated") else None
+
     ceos: list[str] = []
     ceos_filed_on = None
     if ceo_filings:
@@ -496,6 +503,7 @@ def summarise(bundle: dict[str, Any]) -> dict[str, Any]:
         "status_document": status_document,
         "ceos": ceos,
         "ceos_filed_on": ceos_filed_on,
+        "last_filed_on": last_filed_on,
         "principal_office": office,
         "filing_count": len(filings),
     }

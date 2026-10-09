@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
-from ..statements import SOURCE_NAMES, _addr, make_entity_statement
+from ..statements import SOURCE_NAMES, _addr, make_entity_statement, record_date
 
 
 # ----------------------------------------------------------------------
@@ -52,6 +52,39 @@ def _prh_current_name(names: list[dict[str, Any]]) -> str:
     return ""
 
 
+def _prh_post_office(addr: dict[str, Any]) -> str:
+    """The city from YTJ v3's ``postOffices`` list, Finnish first."""
+    offices = [o for o in addr.get("postOffices") or [] if isinstance(o, dict)]
+    offices.sort(key=lambda o: o.get("languageCode") != "1")
+    return str((offices[0].get("city") if offices else "") or "").strip()
+
+
+def _prh_company_form(company: dict[str, Any]) -> str:
+    """The company form: the legacy ``companyForm`` code, else the English
+    description of the current entry in YTJ v3's ``companyForms`` list."""
+    legacy = company.get("companyForm")
+    if isinstance(legacy, str):
+        return legacy.strip()
+    for form in company.get("companyForms") or []:
+        if not isinstance(form, dict) or form.get("endDate"):
+            continue
+        descriptions = [d for d in form.get("descriptions") or [] if isinstance(d, dict)]
+        english = [d for d in descriptions if d.get("languageCode") == "3"]
+        chosen = english or descriptions
+        return str((chosen[0].get("description") if chosen else "") or form.get("type") or "").strip()
+    return ""
+
+
+def _prh_business_lines(company: dict[str, Any]) -> list[dict[str, Any]]:
+    """``mainBusinessLine`` as a list: YTJ v3 returns one object (with the
+    code in ``type``), the earlier API a list (code in ``code``). Reading the
+    object as a list raised in production from 2026 until Phase 315."""
+    raw = company.get("mainBusinessLine")
+    if isinstance(raw, dict):
+        return [raw]
+    return [b for b in raw or [] if isinstance(b, dict)]
+
+
 def _prh_address(company: dict[str, Any]) -> dict[str, str] | None:
     """Build a BODS address dict from PRH address fields.
 
@@ -64,9 +97,15 @@ def _prh_address(company: dict[str, Any]) -> dict[str, str] | None:
             if addr.get("endDate"):
                 continue
             parts = [
-                (addr.get("street") or "").strip(),
-                (addr.get("postCode") or "").strip(),
-                (addr.get("city") or addr.get("postOffice") or "").strip(),
+                " ".join(
+                    p for p in (
+                        str(addr.get("street") or "").strip(),
+                        str(addr.get("buildingNumber") or "").strip(),
+                    ) if p
+                ),
+                str(addr.get("postCode") or "").strip(),
+                (str(addr.get("city") or addr.get("postOffice") or "").strip()
+                 or _prh_post_office(addr)),
             ]
             non_empty = [p for p in parts if p]
             if non_empty:
@@ -98,7 +137,7 @@ def map_prh(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     source_url = f"https://tietopalvelu.ytj.fi/yritystiedot.aspx?yavain={ytunnus}"
 
-    company_form = (company.get("companyForm") or "").strip()
+    company_form = _prh_company_form(company)
     entity_type = _prh_entity_type(company_form)
 
     # Registration date — look in businessId block.
@@ -114,11 +153,10 @@ def map_prh(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     ]
 
     # Business line code (TOL/NACE equivalent).
-    biz_lines = company.get("mainBusinessLine") or []
-    for bl in biz_lines:
+    for bl in _prh_business_lines(company):
         if bl.get("endDate"):
             continue
-        code = (bl.get("code") or "").strip()
+        code = str(bl.get("code") or bl.get("type") or "").strip()
         if code:
             identifiers.append({
                 "id": code,
@@ -132,6 +170,9 @@ def map_prh(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     prh_entity = make_entity_statement(
         source_id="prh",
         local_id=ytunnus,
+        # Phase 315: YTJ's ``lastModified`` — when the register last changed
+        # this company's record.
+        statement_date=record_date(company.get("lastModified")),
         name=name,
         jurisdiction=("Finland", "FI"),
         identifiers=identifiers,

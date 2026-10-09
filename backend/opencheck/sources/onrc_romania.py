@@ -923,5 +923,9 @@ class OnrcRomaniaAdapter(SourceAdapter):
             "link": _PORTAL_URL,
             "is_stub": False,
         }
+        # The export's own cut, for the mapper to date every statement by
+        # (Phase 315) — the same value the snapshot declares as source_as_of.
+        cut = _slug_date(snapshot_meta())
+        bundle["export_date"] = cut.date().isoformat() if cut else None
         validate_raw("onrc_romania", OnrcRomaniaBundle, bundle)
         return bundle

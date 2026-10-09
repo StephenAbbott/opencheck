@@ -32,7 +32,7 @@ import hashlib
 import re
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 import pycountry
 
@@ -772,6 +772,57 @@ def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     if source_url:
         block["url"] = source_url
     return block
+
+
+def record_date(value: Any) -> str | None:
+    """A source's own record date as ``YYYY-MM-DD``, or ``None`` (Phase 315).
+
+    For the ``statement_date=`` a mapper passes: an ISO date or datetime
+    string (``2026-09-02``, ``2026-09-02T02:22:05``, ``…Z``, ``…+02:00``) is
+    cut to its calendar day; anything else — empty, partial ("2026-09"), a
+    local format — is ``None``, so the statement falls back to the source's
+    cut or the retrieval rather than carrying a half-read date. Local formats
+    (epoch milliseconds, ``DD.MM.YYYY``) are the mapper's own helper's job.
+    A date after today is ``None`` too.
+    """
+    text = str(value or "").strip()
+    if len(text) < 10:
+        return None
+    day = text[:10]
+    try:
+        parsed = date.fromisoformat(day)
+    except ValueError:
+        return None
+    # A declaration cannot postdate the day it is read: a future "date" is a
+    # due date or a validity horizon, never a claim (DLCP's next report due,
+    # RPVS validity running to a set day).
+    if parsed > date.today():
+        return None
+    return day
+
+
+def latest_record_date(values: Iterable[Any]) -> str | None:
+    """The latest of several record dates (see :func:`record_date`)."""
+    days = [d for d in (record_date(v) for v in values) if d]
+    return max(days) if days else None
+
+
+def dated_by_cut(
+    statements: Iterable[dict[str, Any]], cut: Any
+) -> Iterator[dict[str, Any]]:
+    """Every statement of a single-snapshot mapper, dated by that snapshot.
+
+    For bulk sources whose every statement comes from one register cut
+    (Phase 315): the cut is the claim's date, stated explicitly on the
+    statement rather than left to the ``source_as_of`` fallback, so the date
+    survives a mapper being called outside a provenance scope. With no
+    readable cut the statements keep whatever the factories gave them.
+    """
+    day = record_date(cut)
+    for statement in statements:
+        if day:
+            statement["statementDate"] = day
+        yield statement
 
 
 def _statement_date(explicit: str | None = None) -> str:

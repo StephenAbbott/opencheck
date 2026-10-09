@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
-from ..statements import SOURCE_NAMES, _addr, make_entity_statement
+from ..statements import SOURCE_NAMES, _addr, latest_record_date, make_entity_statement
 
 
 # ----------------------------------------------------------------------
@@ -120,6 +120,12 @@ def map_zefix(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     entity = make_entity_statement(
         source_id="zefix",
         local_id=uid_raw,
+        # Phase 315: every Swiss register change is published in the SOGC
+        # (SHAB), so the latest SOGC publication is when the record last moved.
+        statement_date=latest_record_date(
+            [company.get("sogcDate")]
+            + [(p or {}).get("sogcDate") for p in company.get("sogcPub") or [] if isinstance(p, dict)]
+        ),
         name=name,
         jurisdiction=(jur_name, jur_code),
         identifiers=identifiers,
