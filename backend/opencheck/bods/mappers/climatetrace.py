@@ -514,4 +514,13 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
                         identifier
                     )
 
+    # Phase 313: every statement above is mapped from one GEM ownership
+    # release, so each is dated by it — GEM's claim, not the day OpenCheck
+    # read the file or called the Climate TRACE API. The release date is
+    # GEM's own (the dated CSV filename); with none known the factories'
+    # fallback (the retrieval date) stands.
+    release_date = bundle.get("gem_release")
+    if release_date:
+        for statement in result.statements:
+            statement["statementDate"] = release_date
     return result

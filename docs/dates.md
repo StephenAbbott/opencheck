@@ -36,7 +36,7 @@ else.
 
 | Source | Field |
 |--------|-------|
-| `gleif` | `registration.lastUpdateDate` |
+| `gleif` | `registration.lastUpdateDate` of each Level 1 record; for a Level 2 relationship, the relationship (RR) record's own `registration.lastUpdateDate` |
 | `companies_house` | PSC `notified_on`, or `ceased_on` for a closed record |
 | `sec_edgar` | 13D/13G filing date |
 | `bods_gleif`, `bods_uk_psc` | Open Ownership's own `statementDate`, passed through verbatim |
@@ -45,6 +45,7 @@ else.
 | `ares` | `datumAktualizace` |
 | `brreg` | `rollegrupper[].sistEndret` |
 | `ted_eu` | latest notice `publication-date` |
+| `climatetrace` | the GEM ownership release date (the dated CSV filename) |
 
 Everything else falls back to the retrieval date, then to today.
 
@@ -53,6 +54,33 @@ question does not get re-opened: **Estonia** publishes only a founding date,
 **Denmark**'s bitemporal CVR is queried for validity time rather than
 transaction time, and **Brazil** — probed live against both OpenCNPJ and
 BrasilAPI — returns no update stamp at all.
+
+## GLEIF Level 2: dated by the relationship record (Phase 313)
+
+GLEIF's `/direct-parent`, `/ultimate-parent` and `/direct-children` endpoints
+return the *other party's* Level 1 record, which says nothing about the
+relationship. A relationship's own update date and its `RELATIONSHIP_PERIOD`
+are only on the relationship (RR) record. Until Phase 313 OpenCheck never read
+it, so every Level 2 statement carried the looked-up subject's date and no
+period — 107 of 107 relationships in Shell plc's export read the same day.
+
+Now the adapter attaches the RR record behind each edge: from the Golden Copy
+mirror first (a local read), else from `/{kind}-parent-relationship` and
+`/direct-child-relationships`, inside the discretionary GLEIF budget so the
+reads never cost a lookup its anchor. The relationship's `statementDate` is
+the RR's `registration.lastUpdateDate` and its `RELATIONSHIP_PERIOD` becomes
+`interests[].startDate` / `endDate`. Where no RR record could be read the edge
+falls back to the **reporter's** own Level 1 date — the subject for a parent
+edge, the child for a child edge, because the child is the start node that
+files the relationship — and only past that to the retrieval date. The
+reporting-exception bridge party is dated like the exception it stands for.
+
+This follows Open Ownership's GLEIF convention
+([data-standard#464](https://github.com/openownership/data-standard/issues/464)):
+GLEIF is the claimant, so `statementDate` is GLEIF's date; OpenCheck is the
+publisher, so `publicationDate` is OpenCheck's. A GLEIF renewal that changes
+nothing still moves `lastUpdateDate`, and so moves `statementDate` — which the
+information-updates modelling treats as a confirmation, and is intended.
 
 ## Precision, and how it is recorded
 

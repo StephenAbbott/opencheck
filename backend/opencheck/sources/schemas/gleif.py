@@ -96,3 +96,10 @@ class GLEIFBundle(_Base):
     # First page of direct subsidiaries (≤ 100 records) + GLEIF total count.
     direct_children: list[Any] = Field(default_factory=list)
     direct_children_total: int = 0
+    # Phase 313: the Level 2 relationship (RR) records behind those edges —
+    # the relationship's own ``registration.lastUpdateDate`` and
+    # ``RELATIONSHIP_PERIOD``. Absent where neither the mirror nor GLEIF gave
+    # one; the mapper then dates the edge from the reporter's Level 1 record.
+    direct_parent_relationship: dict[str, Any] | None = None
+    ultimate_parent_relationship: dict[str, Any] | None = None
+    direct_child_relationships: dict[str, Any] = Field(default_factory=dict)

@@ -91,6 +91,7 @@ from typing import Any
 
 import httpx
 
+from .. import provenance
 from ..cache import Cache, data_root
 from ..config import get_settings
 from ..http import build_client
@@ -151,6 +152,133 @@ def _gleif_gem_zip_path() -> Path:
     return data_root() / "gem" / "gleif-gem-lei.zip"
 
 
+def _gem_release_path() -> Path:
+    """Sidecar recording which GEM release the cached CSVs are (Phase 313)."""
+    return data_root() / "gem" / "release.json"
+
+
+#: GEM dates its CSVs ``…_DDMMYY.csv`` (``ownership_all_entities_050826.csv``
+#: is the 5 August 2026 release).
+_GEM_DATED_NAME = re.compile(r"_(\d{2})(\d{2})(\d{2})\.csv$")
+
+
+def _release_date_from_name(name: str | None) -> str | None:
+    """The ISO release date in a dated GEM filename, or ``None``."""
+    from datetime import date
+
+    m = _GEM_DATED_NAME.search(name or "")
+    if not m:
+        return None
+    day, month, year = (int(g) for g in m.groups())
+    try:
+        return date(2000 + year, month, day).isoformat()
+    except ValueError:
+        return None
+
+
+def _write_gem_release(name: str, gcs_updated: str | None) -> None:
+    """Remember the dated release the entities CSV was saved from. The local
+    path drops the date from the name, and the date is what the statements
+    mapped from it are true as of."""
+    from datetime import datetime, timezone
+
+    record = {
+        "file": name,
+        "release_date": _release_date_from_name(name)
+        or ((gcs_updated or "")[:10] or None),
+        "gcs_updated": gcs_updated,
+        "downloaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    try:
+        _gem_release_path().write_text(json.dumps(record), encoding="utf-8")
+    except OSError as exc:
+        log.warning("Could not record the GEM release: %s", exc)
+
+
+def gem_release() -> dict[str, Any] | None:
+    """Which GEM ownership release is in use: ``{"release_date",
+    "downloaded_at", "file"}``, any of them ``None`` when unknown; ``None``
+    when no GEM data is on disk (Phase 313).
+
+    ``release_date`` is GEM's own date for the release — from the dated
+    filename (sidecar for the GCS CSVs, member name for the zip), else the
+    bucket's ``updated`` stamp. ``downloaded_at`` is when OpenCheck saved the
+    file: the sidecar's stamp, else the file's mtime. Neither is guessed.
+    """
+    from datetime import datetime, timezone
+
+    def _mtime(path: Path) -> str:
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat(
+            timespec="seconds"
+        )
+
+    csv_path = _gem_csv_path("entities")
+    if csv_path.exists():
+        sidecar: dict[str, Any] = {}
+        try:
+            sidecar = json.loads(_gem_release_path().read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            sidecar = {}
+        return {
+            "file": sidecar.get("file"),
+            "release_date": sidecar.get("release_date"),
+            "downloaded_at": sidecar.get("downloaded_at") or _mtime(csv_path),
+        }
+    zip_path = _gem_zip_path()
+    if zip_path.exists():
+        member = None
+        try:
+            with zipfile.ZipFile(zip_path) as zf:
+                member = next(
+                    (
+                        n for n in zf.namelist()
+                        if "all_entities" in n and n.endswith(".csv")
+                        and not n.startswith("__MACOSX")
+                    ),
+                    None,
+                )
+        except (OSError, zipfile.BadZipFile):
+            member = None
+        return {
+            "file": member,
+            "release_date": _release_date_from_name(member),
+            "downloaded_at": _mtime(zip_path),
+        }
+    return None
+
+
+def _declare_gem_snapshot(release: dict[str, Any] | None) -> None:
+    """Record the GEM CSVs as a snapshot (Phase 313).
+
+    Until Phase 313 nothing was recorded for them, so ownership rows from a
+    release months old inherited the Climate TRACE API call's live timestamp
+    as their ``retrievedAt`` and ``statementDate``. Dated by GEM's release
+    where it is known, else by when OpenCheck downloaded the file.
+    """
+    from datetime import datetime, timezone
+
+    if release is None:
+        return
+    moment: datetime | None = None
+    for key in ("release_date", "downloaded_at"):
+        value = release.get(key)
+        if not value:
+            continue
+        try:
+            moment = datetime.fromisoformat(str(value))
+        except ValueError:
+            continue
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        break
+    label = release.get("release_date")
+    provenance.record_snapshot(
+        moment,
+        "Global Energy Monitor ownership data"
+        + (f" (release of {label})" if label else ""),
+    )
+
+
 def _csv_age_days(path: Path) -> float:
     import time
 
@@ -190,6 +318,7 @@ def _download_gem_csvs_from_gcs() -> bool:
                 log.info("GEM %s CSV saved from GCS: %s (%d bytes)",
                          kind, latest["name"], len(r.content))
                 if kind == "entities":
+                    _write_gem_release(latest["name"], latest.get("updated"))
                     ok = True
             return ok
     except Exception as exc:
@@ -586,6 +715,27 @@ def _get_geot_data() -> dict[str, Any]:
     return _geot_data
 
 
+def _declare_geot_snapshot(meta: dict[str, Any]) -> None:
+    """Record the committed GEOT artifact as a snapshot, dated by the day it
+    was built from GEM's release (``meta.generated``); the release itself is
+    named only by month ("August 2026"), which is not a date (Phase 313)."""
+    from datetime import datetime, timezone
+
+    generated = meta.get("generated")
+    moment = None
+    if generated:
+        try:
+            moment = datetime.fromisoformat(str(generated)).replace(tzinfo=timezone.utc)
+        except ValueError:
+            moment = None
+    release = meta.get("release")
+    provenance.record_snapshot(
+        moment,
+        "Global Energy Ownership Tracker artifact"
+        + (f" ({release} release)" if release else ""),
+    )
+
+
 def _geot_projects(entity_id: str) -> dict[str, Any] | None:
     """Project-portfolio summary for a GEM entity, or None when not a parent.
 
@@ -882,8 +1032,18 @@ class ClimateTRACEAdapter(SourceAdapter):
         """Fetch full GEM + Climate TRACE data for a GEM entity ID."""
         _, ent_idx = await asyncio.to_thread(_get_indexes)
         await asyncio.to_thread(_get_relationship_indexes)
-        await asyncio.to_thread(_get_geot_data)
+        geot = await asyncio.to_thread(_get_geot_data)
         gem_row = ent_idx.get(entity_id) or {}
+        # Phase 313: every statement this bundle maps comes from GEM's CSVs
+        # (and, for project counts and lifecycle, the committed GEOT
+        # artifact) — say how old they are rather than letting the Climate
+        # TRACE emissions call below stand in for them.
+        release = await asyncio.to_thread(gem_release)
+        _declare_gem_snapshot(release)
+        if entity_id in (geot.get("entities") or {}) or entity_id in (
+            geot.get("entity_status") or {}
+        ):
+            _declare_geot_snapshot(geot.get("meta") or {})
 
         # Aggregate emissions (2024, CO2e 100-year GWP)
         emissions_payload: dict[str, Any] = {}
@@ -928,6 +1088,8 @@ class ClimateTRACEAdapter(SourceAdapter):
             "ownership": _ownership_summary(entity_id),
             "projects": _geot_projects(entity_id),
             "entity_status": _entity_status(entity_id, gem_row),
+            # Phase 313: GEM's release date — the statements' statementDate.
+            "gem_release": (release or {}).get("release_date"),
             "is_stub": False,
         }
         self._cache.put(cache_key, bundle)

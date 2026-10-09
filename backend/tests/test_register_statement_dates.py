@@ -105,9 +105,10 @@ class TestGleifRegistrationDate:
         assert stmt["statementDate"] == TODAY
 
     def test_level_2_relationship_uses_the_subject_record_date(self):
-        """GLEIF's parent endpoints return the parent's Level 1 record, not the
-        relationship record, so the RR's own update date is not available. The
-        subject's is — and the Level 2 relationship is reported by the subject."""
+        """With no relationship (RR) record in the bundle, a parent edge falls
+        back to the subject's Level 1 date — the subject is the start node
+        that reports the relationship (Phase 313; before it this was the only
+        date available, because the RR record was never fetched)."""
         bundle = _gleif_bundle()
         bundle["direct_parent"] = {
             "attributes": {
@@ -126,6 +127,107 @@ class TestGleifRegistrationDate:
         # The parent's own entity statement still carries the parent's date.
         parent = [e for e in _entities(out) if e["recordDetails"]["name"] == "PARENT HOLDINGS"]
         assert parent and parent[0]["statementDate"] == "2020-01-02"
+
+    def test_level_2_parent_relationship_uses_its_own_rr_record(self):
+        """Phase 313: the RR record's own lastUpdateDate dates the edge, and its
+        RELATIONSHIP_PERIOD becomes the interest's startDate/endDate."""
+        bundle = _gleif_bundle()
+        bundle["direct_parent"] = _gleif_l1("5493001KJTIIGC8Y1R12", "PARENT", "2020-01-02")
+        bundle["direct_parent_relationship"] = _gleif_rr(
+            "213800LH1BZH3DI6G760", "5493001KJTIIGC8Y1R12",
+            last_update="2025-11-03T09:12:44Z", start="2014-01-01T00:00:00Z",
+        )
+        rel = _rels(map_gleif(bundle))[0]
+        assert rel["statementDate"] == "2025-11-03"
+        assert rel["recordDetails"]["interests"][0]["startDate"] == "2014-01-01"
+        assert "endDate" not in rel["recordDetails"]["interests"][0]
+
+    def test_level_2_child_relationship_uses_its_rr_record_or_the_childs_date(self):
+        """A direct-child edge is reported by the child. Its RR record dates it;
+        without one, the CHILD's Level 1 date does — never the looked-up
+        parent's, which said nothing about the child's filing (Phase 313)."""
+        bundle = _gleif_bundle()
+        bundle["direct_children"] = [
+            _gleif_l1("CHILDAAAAAAAAAAAAA01", "CHILD ONE", "2024-02-05"),
+            _gleif_l1("CHILDBBBBBBBBBBBBB02", "CHILD TWO", "2022-07-19"),
+        ]
+        bundle["direct_child_relationships"] = {
+            "CHILDAAAAAAAAAAAAA01": _gleif_rr(
+                "CHILDAAAAAAAAAAAAA01", "213800LH1BZH3DI6G760",
+                last_update="2026-01-15T00:00:00Z", start="2019-06-30T00:00:00Z",
+            )
+        }
+        rels = {r["recordDetails"]["subject"]: r for r in _rels(map_gleif(bundle))}
+        by_child = {
+            e["recordDetails"]["name"]: rels[e["statementId"]]
+            for e in _entities(map_gleif(bundle))
+            if e["statementId"] in rels
+        }
+        assert by_child["CHILD ONE"]["statementDate"] == "2026-01-15"
+        assert by_child["CHILD ONE"]["recordDetails"]["interests"][0]["startDate"] == "2019-06-30"
+        assert by_child["CHILD TWO"]["statementDate"] == "2022-07-19"
+        assert "startDate" not in by_child["CHILD TWO"]["recordDetails"]["interests"][0]
+
+    def test_level_2_statement_ids_do_not_move(self):
+        """Dating an edge from its RR record must not re-key it: a saved report
+        or watchlist baseline holding the old statementId still matches."""
+        plain = _gleif_bundle()
+        plain["direct_parent"] = _gleif_l1("5493001KJTIIGC8Y1R12", "PARENT", "2020-01-02")
+        dated = dict(plain)
+        dated["direct_parent_relationship"] = _gleif_rr(
+            "213800LH1BZH3DI6G760", "5493001KJTIIGC8Y1R12", last_update="2025-11-03T00:00:00Z",
+        )
+        assert [s["statementId"] for s in map_gleif(plain)] == [
+            s["statementId"] for s in map_gleif(dated)
+        ]
+
+    def test_reporting_exception_bridge_carries_the_subject_date(self):
+        """The bridge party and its relationship are one claim filed with the
+        subject's record, so both carry its date (Phase 313; the bridge used to
+        fall to the day it was read)."""
+        bundle = _gleif_bundle()
+        bundle["direct_parent_exception"] = {
+            "attributes": {"category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+                           "reason": "NATURAL_PERSONS"}
+        }
+        out = map_gleif(bundle)
+        bridge = [s for s in out if s["recordType"] == "person"]
+        assert bridge and bridge[0]["statementDate"] == "2023-03-31"
+        assert _rels(out)[0]["statementDate"] == "2023-03-31"
+
+
+def _gleif_l1(lei: str, name: str, last_update: str) -> dict:
+    return {
+        "attributes": {
+            "lei": lei,
+            "registration": {"lastUpdateDate": f"{last_update}T00:00:00Z"},
+            "entity": {"legalName": {"name": name}, "jurisdiction": "GB"},
+        }
+    }
+
+
+def _gleif_rr(child: str, parent: str, *, last_update: str, start: str | None = None,
+              end: str | None = None) -> dict:
+    periods = []
+    if start or end:
+        period = {"type": "RELATIONSHIP_PERIOD"}
+        if start:
+            period["startDate"] = start
+        if end:
+            period["endDate"] = end
+        periods.append(period)
+    return {
+        "type": "relationship-records",
+        "attributes": {
+            "relationship": {
+                "startNode": {"id": child, "type": "LEI"},
+                "endNode": {"id": parent, "type": "LEI"},
+                "type": "IS_DIRECTLY_CONSOLIDATED_BY",
+                "periods": periods,
+            },
+            "registration": {"lastUpdateDate": last_update},
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +382,16 @@ class TestSecEdgarFilingDates:
         assert rel["statementDate"] == TODAY
 
 
+def _gleif_rr_bundle() -> dict:
+    """A GLEIF bundle whose parent edge carries its relationship record."""
+    bundle = _gleif_bundle()
+    bundle["direct_parent"] = _gleif_l1("5493001KJTIIGC8Y1R12", "PARENT", "2020-01-02")
+    bundle["direct_parent_relationship"] = _gleif_rr(
+        "213800LH1BZH3DI6G760", "5493001KJTIIGC8Y1R12", last_update="2025-11-03T09:12:44Z",
+    )
+    return bundle
+
+
 # ---------------------------------------------------------------------------
 # Cross-source canary
 # ---------------------------------------------------------------------------
@@ -289,6 +401,7 @@ class TestSecEdgarFilingDates:
     "mapper,bundle,expected",
     [
         (map_gleif, _gleif_bundle(), "2023-03-31"),
+        (map_gleif, _gleif_rr_bundle(), "2025-11-03"),
         (map_companies_house, _ch_bundle(), "2016-04-06"),
         (map_sec_edgar, _sec_bundle(), "2025-02-14"),
     ],
@@ -309,6 +422,7 @@ def test_register_date_never_leaks_into_publication_date(mapper, bundle, expecte
     "mapper,bundle,expected",
     [
         (map_gleif, _gleif_bundle(), "2023-03-31"),
+        (map_gleif, _gleif_rr_bundle(), "2025-11-03"),
         (map_companies_house, _ch_bundle(), "2016-04-06"),
         (map_sec_edgar, _sec_bundle(), "2025-02-14"),
     ],

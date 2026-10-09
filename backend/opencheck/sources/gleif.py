@@ -34,6 +34,7 @@ from .. import mirrorstats, provenance
 from ..cache import Cache
 from ..config import get_settings
 from ..gleif_throttle import GleifRateLimitedError, get_throttle
+from ..gleif_throttle import discretionary as gleif_discretionary
 from ..http import build_client
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
@@ -89,6 +90,61 @@ _RELATIONSHIP_CACHE_MAX_AGE_DAYS = 1.0
 #: Phase 255: at most this many pages of 100 direct children in the lookup
 #: (the subsidiaries network reads the same cap, ``subsidiaries._PAGE_CAP``).
 _DIRECT_CHILDREN_PAGE_CAP = 10
+
+
+def _record_lei(record: dict[str, Any] | None) -> str | None:
+    """The LEI of a Level 1 record data object, or ``None``."""
+    if not isinstance(record, dict):
+        return None
+    attrs = record.get("attributes") or {}
+    return (attrs.get("lei") or record.get("id") or "").strip().upper() or None
+
+
+def _rr_node(rr: dict[str, Any] | None, node: str) -> str | None:
+    rel = ((rr or {}).get("attributes") or {}).get("relationship") or {}
+    return ((rel.get(node) or {}).get("id") or "").strip().upper() or None
+
+
+def _rr_start_lei(rr: dict[str, Any] | None) -> str | None:
+    """The reporting child (start node) of a relationship record."""
+    return _rr_node(rr, "startNode")
+
+
+def _rr_end_lei(rr: dict[str, Any] | None) -> str | None:
+    """The parent (end node) of a relationship record."""
+    return _rr_node(rr, "endNode")
+
+
+def _store_relationship_records(
+    lei: str,
+    parents: dict[str, str | None],
+    child_leis: list[str],
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    """``({kind: RR}, {child_lei: RR})`` from the Golden Copy mirror (Phase 313).
+
+    A record is used only when it names the same parent the bundle does and
+    still stands — a mirror a few hours behind must not date an edge GLEIF has
+    since re-pointed. Empty when no store, or no ``relationships`` table, is
+    configured.
+    """
+    from ..entity_pages import get_store, gleif_relationship_record
+
+    store = get_store()
+    if store is None or not getattr(store, "has_relationships", False):
+        return {}, {}
+    parent_rrs: dict[str, dict[str, Any]] = {}
+    for kind, parent in parents.items():
+        if not parent:
+            continue
+        held = store.relationship(lei, kind)
+        if held is not None and held.parent_lei == parent and held.standing:
+            parent_rrs[kind] = gleif_relationship_record(held)
+    child_rrs: dict[str, dict[str, Any]] = {}
+    for child in child_leis:
+        held = store.relationship(child, "direct")
+        if held is not None and held.parent_lei == lei and held.standing:
+            child_rrs[child] = gleif_relationship_record(held)
+    return parent_rrs, child_rrs
 
 # Main LEI record (entity name, address, registration status).  These change
 # less frequently than relationships but can be updated when an entity renews
@@ -325,8 +381,107 @@ class GleifAdapter(SourceAdapter):
             "direct_children": direct_children,
             "direct_children_total": direct_children_total,
         }
+        await self._attach_relationship_records(lei, bundle)
         validate_raw("gleif", GLEIFBundle, bundle)
         return bundle
+
+    # ------------------------------------------------------------------
+    # Phase 313 — the relationship records behind the Level 2 edges
+    # ------------------------------------------------------------------
+
+    async def _attach_relationship_records(
+        self, lei: str, bundle: dict[str, Any]
+    ) -> None:
+        """Put the RR records behind the bundle's parents and children on it.
+
+        ``/{kind}-parent`` and ``/direct-children`` return Level 1 records —
+        the other party — and say nothing about the relationship. Its own
+        ``registration.lastUpdateDate`` (BODS ``statementDate``: when GLEIF
+        last asserted the relationship) and ``RELATIONSHIP_PERIOD`` (the
+        interest's ``startDate``/``endDate``) are only on the relationship
+        record. Until Phase 313 every Level 2 statement was dated with the
+        subject's Level 1 date and carried no period (the dates audit, 9 Oct
+        2026: all 107 of Shell plc's relationships read 2026-05-12).
+
+        The Golden Copy mirror is read first — it holds the RR file, and a
+        local read costs no GLEIF call. Whatever it lacks is read live, inside
+        the Phase 234 discretionary scope: enrichment never spends a slot a
+        lookup's anchor needs, and any refusal or failure simply leaves that
+        edge on the reporter's own Level 1 date (the mapper's fallback).
+        """
+        parents = {
+            kind: _record_lei(bundle.get(f"{kind}_parent"))
+            for kind in ("direct", "ultimate")
+        }
+        child_leis = [
+            c for c in (_record_lei(r) for r in bundle.get("direct_children") or []) if c
+        ]
+        parent_rrs, child_rrs = _store_relationship_records(lei, parents, child_leis)
+
+        missing_parents = [k for k, p in parents.items() if p and k not in parent_rrs]
+        missing_children = [c for c in child_leis if c not in child_rrs]
+        if (missing_parents or missing_children) and self.info.live_available:
+            with gleif_discretionary():
+                for kind in missing_parents:
+                    rr = await self._live_parent_relationship(lei, kind)
+                    if rr is not None and _rr_end_lei(rr) == parents[kind]:
+                        parent_rrs[kind] = rr
+                if missing_children:
+                    for child, rr in (
+                        await self._live_child_relationships(lei, len(child_leis))
+                    ).items():
+                        if child in missing_children and _rr_end_lei(rr) == lei:
+                            child_rrs[child] = rr
+
+        for kind in ("direct", "ultimate"):
+            if kind in parent_rrs:
+                bundle[f"{kind}_parent_relationship"] = parent_rrs[kind]
+        if child_rrs:
+            bundle["direct_child_relationships"] = child_rrs
+
+    async def _live_parent_relationship(
+        self, lei: str, kind: str
+    ) -> dict[str, Any] | None:
+        """``/{kind}-parent-relationship``'s RR record, or ``None`` on any miss."""
+        try:
+            payload = await self._get_optional(
+                f"/lei-records/{quote(lei)}/{kind}-parent-relationship",
+                cache_key=f"{_CACHE_NS}/lei/{lei}/{kind}-parent-relationship",
+                max_age_days=_RELATIONSHIP_CACHE_MAX_AGE_DAYS,
+            )
+        except Exception:  # noqa: BLE001 — enrichment never fails the anchor
+            return None
+        data = (payload or {}).get("data")
+        return data if isinstance(data, dict) else None
+
+    async def _live_child_relationships(
+        self, lei: str, expected: int
+    ) -> dict[str, dict[str, Any]]:
+        """``{child_lei: RR}`` from ``/direct-child-relationships``, paged as the
+        children are and never past the pages the children themselves filled.
+        A page that fails ends the walk and keeps what arrived."""
+        out: dict[str, dict[str, Any]] = {}
+        pages = min(_DIRECT_CHILDREN_PAGE_CAP, max(1, -(-expected // 100)))
+        for page in range(1, pages + 1):
+            try:
+                payload = await self._get_optional(
+                    f"/lei-records/{quote(lei)}/direct-child-relationships"
+                    f"?page[size]=100&page[number]={page}",
+                    cache_key=(
+                        f"{_CACHE_NS}/lei/{lei}/direct-child-relationships-p{page}-s100"
+                    ),
+                    max_age_days=_RELATIONSHIP_CACHE_MAX_AGE_DAYS,
+                )
+            except Exception:  # noqa: BLE001 — keep the pages that arrived
+                break
+            data = (payload or {}).get("data") or []
+            for rr in data:
+                if isinstance(rr, dict) and (child := _rr_start_lei(rr)):
+                    out[child] = rr
+            last = (((payload or {}).get("meta") or {}).get("pagination") or {}).get("lastPage")
+            if not data or not last or page >= int(last):
+                break
+        return out
 
     async def fetch_entity(self, lei: str) -> dict[str, Any]:
         """The Level 1 ``entity`` block alone — one request, no relationships.
@@ -558,6 +713,19 @@ class GleifAdapter(SourceAdapter):
 
         direct_parent = _parent(row.direct_parent_lei)
         ultimate_parent = _parent(row.ultimate_parent_lei)
+        # Phase 313: the RR records the store holds for these edges — the
+        # relationship's own date and period. Local reads only; a snapshot
+        # bundle never goes live for them.
+        parent_rrs, child_rrs = _store_relationship_records(
+            lei,
+            {"direct": row.direct_parent_lei, "ultimate": row.ultimate_parent_lei},
+            [r.lei for r in children_rows],
+        )
+        extra: dict[str, Any] = {
+            f"{kind}_parent_relationship": rr for kind, rr in parent_rrs.items()
+        }
+        if child_rrs:
+            extra["direct_child_relationships"] = child_rrs
         return {
             "source_id": self.id,
             "lei": lei,
@@ -568,6 +736,7 @@ class GleifAdapter(SourceAdapter):
             "ultimate_parent_exception": _exception("ultimate", ultimate_parent),
             "direct_children": [_record(r) for r in children_rows],
             "direct_children_total": children_total,
+            **extra,
             # Not schema fields (extra="allow") — let tests and logs tell a
             # snapshot-served anchor from a live one, and a chosen mirror read
             # (Phase 179) from a forced fallback (Phase 143).

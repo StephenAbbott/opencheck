@@ -711,6 +711,11 @@ PROBES: dict[str, SourceProbe] = {
         requires_files=("gem/ownership.zip",),
         anchor_lei="7437006ZZI1F7CUA5518",
         bods_mapper="map_climatetrace",
+        # Phase 313: the GEM CSVs every statement is mapped from are declared
+        # as a snapshot dated by GEM's release, so the bundle resolves to
+        # `snapshot` (worst wins) even though the emissions call is live.
+        # Before it the live emissions timestamp stood in for months-old CSVs.
+        expect_liveness=frozenset({"snapshot"}),
         notes=(
             "data/gem/ is gitignored, so this skips on a fresh CI checkout until the artifacts are "
             "fetched. Subject moved off BP P.L.C. after the first sweep to run against Phase 169: GEM "

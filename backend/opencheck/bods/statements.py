@@ -694,54 +694,65 @@ SOURCE_NAMES: dict[str, str] = {
 }
 
 
+#: Sources whose statements carry ``source.type: ["officialRegister"]``;
+#: every other source is ``thirdParty``. Phase 313 (the dates audit, decided
+#: by Stephen on 9 Oct 2026): ``gleif`` joins — GLEIF is the official register
+#: of LEIs, and it now agrees with ``bods_gleif`` — and ``opencorporates``
+#: leaves, because it aggregates registers rather than being one.
+OFFICIAL_REGISTER_SOURCES: frozenset[str] = frozenset({
+    "abr_australia",
+    "acra_singapore",
+    "apr_serbia",
+    "anaf_romania",
+    "ariregister",
+    "asp_moldova",
+    "bce_belgium",
+    "bods_gleif",
+    "bods_uk_psc",
+    "bolagsverket",
+    "brreg",
+    "cac_nigeria",
+    "companies_house",
+    "corporations_canada",
+    "cyprus_drcor",
+    "edr_ukraine",
+    "cnpj_brazil",
+    "cr_hongkong",
+    "cro",
+    "cvr_denmark",
+    "dlcp_dc",
+    "ny_dos",
+    "eiti_bo",
+    "firmenbuch",
+    "gemi_greece",
+    "gleif",
+    "onrc_romania",
+    "inpi",
+    "jar_lithuania",
+    "krs_poland",
+    "kvk",
+    "malta_mbr",
+    "mca_india",
+    "nz_companies",
+    "prh",
+    "rpo_slovakia",
+    "rpvs_slovakia",
+    "sec_edgar",
+    "sudreg_croatia",
+    "ur_latvia",
+    "ares",
+    "zefix",
+})
+
+
 def _source_block(source_id: str, source_url: str | None) -> dict[str, Any]:
     source_names = SOURCE_NAMES
-    _official_registers = {
-        "abr_australia",
-        "acra_singapore",
-        "apr_serbia",
-        "anaf_romania",
-        "ariregister",
-        "asp_moldova",
-        "bce_belgium",
-        "bods_gleif",
-        "bods_uk_psc",
-        "bolagsverket",
-        "brreg",
-        "cac_nigeria",
-        "companies_house",
-        "corporations_canada",
-        "cyprus_drcor",
-        "edr_ukraine",
-        "cnpj_brazil",
-        "cr_hongkong",
-        "cro",
-        "cvr_denmark",
-        "dlcp_dc",
-        "ny_dos",
-        "eiti_bo",
-        "firmenbuch",
-        "gemi_greece",
-        "onrc_romania",
-        "inpi",
-        "jar_lithuania",
-        "krs_poland",
-        "kvk",
-        "malta_mbr",
-        "mca_india",
-        "nz_companies",
-        "opencorporates",
-        "prh",
-        "rpo_slovakia",
-        "rpvs_slovakia",
-        "sec_edgar",
-        "sudreg_croatia",
-        "ur_latvia",
-        "ares",
-        "zefix",
-    }
     block: dict[str, Any] = {
-        "type": ["officialRegister"] if source_id in _official_registers else ["thirdParty"],
+        "type": (
+            ["officialRegister"]
+            if source_id in OFFICIAL_REGISTER_SOURCES
+            else ["thirdParty"]
+        ),
         "description": source_names.get(source_id, source_id),
         # Phase 267: the adapter id itself, so licence lookups never have to
         # recover it from the display name above (``bods/source_ids.py``).

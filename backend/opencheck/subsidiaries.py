@@ -668,7 +668,11 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
     if not settings.allow_live:
         return {"lei": lei, "reason": "live mode disabled", **_EMPTY}
 
-    data = await _build(lei)
+    # Phase 313: a provenance scope of our own, so the GLEIF calls and cache
+    # reads `_build` makes are what the exported statements' `retrievedAt`
+    # says — before it the mapper ran with no scope at all, and every
+    # live or cached network claimed no retrieval and was dated today.
+    data, fetched = await _build_with_provenance(lei)
     children = data["children"]
     direct_total = data["direct_total"]
     ultimate_total = data["ultimate_total"]
@@ -760,8 +764,29 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
                     lei, data["subject_attrs"], children
                 )
         else:
-            result["bods"] = map_gleif_subsidiaries(lei, data["subject_attrs"], children)
+            with provenance.mapping_provenance(fetched):
+                result["bods"] = map_gleif_subsidiaries(
+                    lei, data["subject_attrs"], children
+                )
     return result
+
+
+async def _build_with_provenance(
+    lei: str,
+) -> tuple[dict[str, Any], provenance.Provenance]:
+    """``_build`` inside its own provenance scope (Phase 313).
+
+    A caller may already hold a scope (a FullCheck hop inside a lookup); what
+    was recorded here is handed on to it too, so opening this one never hides
+    a retrieval from an outer claim.
+    """
+    outer = provenance.current_recorder()
+    with provenance.recording() as recorder:
+        data = await _build(lei)
+    if outer is not None:
+        for obs in recorder.observations:
+            outer.record(obs.liveness, obs.retrieved_at, obs.detail)
+    return data, recorder.resolve()
 
 
 def _snapshot_datetime(publish: str | None) -> datetime | None:

@@ -963,8 +963,11 @@ def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
         return result
 
     subject_url = f"https://www.gleif.org/lei/{lei}"
-    # The subject record's own last-update date, reused for the Level 2
-    # relationship statements it reports.
+    # The subject record's own last-update date. Since Phase 313 a Level 2
+    # relationship is dated by its own RR record; this is the fallback for a
+    # parent edge (the subject reports it) when no RR record was read, and the
+    # date of the reporting-exception statements, which have no record of
+    # their own.
     subject_statement_date = _gleif_registration_date(subject_attrs)
     subject_statement = _gleif_entity_statement(
         lei, subject_entity_block, subject_url, attrs=subject_attrs
@@ -987,7 +990,8 @@ def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
         if parent:
             result.extend(
                 _gleif_parent_statements(
-                    lei, subject_sid, kind, parent, subject_statement_date
+                    lei, subject_sid, kind, parent, subject_statement_date,
+                    rr=bundle.get(f"{kind}_parent_relationship"),
                 )
             )
         elif exception:
@@ -997,9 +1001,14 @@ def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
                 )
             )
 
+    child_rrs = bundle.get("direct_child_relationships") or {}
     for child in bundle.get("direct_children") or []:
+        child_attrs = child.get("attributes") or child
+        child_lei = (child_attrs.get("lei") or child.get("id") or "").upper()
         result.extend(
-            _gleif_child_statements(lei, subject_sid, child, subject_statement_date)
+            _gleif_child_statements(
+                lei, subject_sid, child, rr=child_rrs.get(child_lei)
+            )
         )
 
     # When the direct and the ultimate parent are the same LEI (John Swire &
@@ -1018,14 +1027,18 @@ def _gleif_parent_statements(
     kind: str,
     parent: dict[str, Any],
     subject_statement_date: str | None = None,
+    *,
+    rr: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Emit entity + relationship statements for one GLEIF Level 2 parent.
 
-    ``subject_statement_date`` is the subject LEI record's
-    ``registration.lastUpdateDate``. GLEIF's parent endpoints return the
-    *parent's* Level 1 record, not the relationship (RR) record, so the RR's own
-    update date is not available to us; the subject's is the closest thing we
-    genuinely hold, since the Level 2 relationship is reported by the subject.
+    ``rr`` is the relationship (RR) record (Phase 313): its
+    ``registration.lastUpdateDate`` dates the statement and its
+    ``RELATIONSHIP_PERIOD`` the interest. GLEIF's parent endpoints return the
+    *parent's* Level 1 record, which says nothing about the relationship, so
+    without an RR record the statement falls back to
+    ``subject_statement_date`` — the subject's own Level 1 date, since the
+    subject is the start node that reports the relationship.
     """
     parent_attrs = parent.get("attributes") or parent
     parent_entity_block = parent_attrs.get("entity") or {}
@@ -1037,24 +1050,15 @@ def _gleif_parent_statements(
     parent_statement = _gleif_entity_statement(
         parent_lei, parent_entity_block, parent_url, attrs=parent_attrs
     )
-    rel = make_relationship_statement(
-        source_id="gleif",
+    rel = _gleif_child_relationship(
         local_id=f"{lei}:{kind}-parent:{parent_lei}",
-        subject_statement_id=subject_sid,
-        interested_party_statement_id=parent_statement["statementId"],
-        interested_party_type="entity",
-        interests=[
-            {
-                "type": "otherInfluenceOrControl",
-                "directOrIndirect": "direct" if kind == "direct" else "indirect",
-                "beneficialOwnershipOrControl": False,
-                "details": (
-                    f"GLEIF Level 2 {kind}-parent (accounting consolidation)"
-                ),
-            }
-        ],
+        child_sid=subject_sid,
+        parent_sid=parent_statement["statementId"],
+        direct=kind == "direct",
+        details=f"GLEIF Level 2 {kind}-parent (accounting consolidation)",
+        rr=rr,
         source_url=parent_url,
-        statement_date=subject_statement_date,
+        fallback_statement_date=subject_statement_date,
     )
     return [parent_statement, rel]
 
@@ -1063,13 +1067,19 @@ def _gleif_child_statements(
     lei: str,
     subject_sid: str,
     child: dict[str, Any],
-    subject_statement_date: str | None = None,
+    *,
+    rr: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Emit entity + relationship statements for one GLEIF direct subsidiary.
 
     Relationship direction (mirrors the parent case but inverted):
     * ``subject``           = child entity  (the one being controlled)
     * ``interestedParty``   = queried entity (the one doing the controlling)
+
+    Dated by the child's RR record when one was read (Phase 313), else by the
+    **child's** own Level 1 ``lastUpdateDate``: the child is the start node
+    that reports the relationship. Until Phase 313 these statements carried
+    the looked-up parent's date, which says nothing about the child's filing.
 
     Only the first page of children is passed in here; the total count is
     surfaced separately via the bundle's ``direct_children_total`` field
@@ -1085,22 +1095,15 @@ def _gleif_child_statements(
     child_statement = _gleif_entity_statement(
         child_lei, child_entity_block, child_url, attrs=child_attrs
     )
-    rel = make_relationship_statement(
-        source_id="gleif",
+    rel = _gleif_child_relationship(
         local_id=f"{lei}:direct-child:{child_lei}",
-        subject_statement_id=child_statement["statementId"],
-        interested_party_statement_id=subject_sid,
-        interested_party_type="entity",
-        interests=[
-            {
-                "type": "otherInfluenceOrControl",
-                "directOrIndirect": "direct",
-                "beneficialOwnershipOrControl": False,
-                "details": "GLEIF Level 2 direct-child (accounting consolidation)",
-            }
-        ],
+        child_sid=child_statement["statementId"],
+        parent_sid=subject_sid,
+        direct=True,
+        details="GLEIF Level 2 direct-child (accounting consolidation)",
+        rr=rr,
         source_url=child_url,
-        statement_date=subject_statement_date,
+        fallback_statement_date=_gleif_registration_date(child_attrs),
     )
     return [child_statement, rel]
 
@@ -1136,8 +1139,9 @@ def map_gleif_subsidiaries(
     **Dates come from the relationship record.** ``statementDate`` is the RR
     registration's ``lastUpdateDate`` and the interest carries
     ``startDate``/``endDate`` from its ``RELATIONSHIP_PERIOD``. Without an RR
-    record the statement is as it was: undated interests, publication-date
-    ``statementDate``.
+    record the interests are undated and ``statementDate`` is the child's own
+    Level 1 ``lastUpdateDate`` (Phase 313) — the child reports the
+    relationship — rather than the day OpenCheck read it.
     """
     if not subject_lei:
         return []
@@ -1154,6 +1158,7 @@ def map_gleif_subsidiaries(
     subj_sid = subj["statementId"]
     seen: set[str] = set()
     child_sids: dict[str, str] = {}
+    child_dates: dict[str, str | None] = {}
     deferred: list[tuple[str, str, dict[str, Any]]] = []
     for c in children:
         rec = c.get("record") or {}
@@ -1168,6 +1173,8 @@ def map_gleif_subsidiaries(
         )
         out.append(child_stmt)
         child_sids[child_lei] = child_stmt["statementId"]
+        child_date = _gleif_registration_date(attrs)
+        child_dates[child_lei] = child_date
         relations = set(c.get("relations") or [])
         rels = c.get("rels") or {}
         if "direct" in relations:
@@ -1182,6 +1189,7 @@ def map_gleif_subsidiaries(
                 details=details,
                 rr=rels.get("direct"),
                 source_url=child_url,
+                fallback_statement_date=child_date,
             ))
         elif "ultimate" in relations:
             rel = _gleif_child_relationship(
@@ -1192,6 +1200,7 @@ def map_gleif_subsidiaries(
                 details="GLEIF Level 2 ultimate-child (accounting consolidation)",
                 rr=rels.get("ultimate"),
                 source_url=child_url,
+                fallback_statement_date=child_date,
             )
             out.append(rel)
             if c.get("direct_parent"):
@@ -1211,6 +1220,7 @@ def map_gleif_subsidiaries(
                 details="GLEIF Level 2 direct-child (accounting consolidation)",
                 rr=dp.get("rel"),
                 source_url=child_url,
+                fallback_statement_date=child_dates.get(child_lei),
             ))
         elif parent_lei and parent_lei != subject_lei:
             annotate(dp["_rel"], commenting(
@@ -1261,8 +1271,15 @@ def _gleif_child_relationship(
     details: str,
     rr: dict[str, Any] | None,
     source_url: str,
+    fallback_statement_date: str | None = None,
 ) -> dict[str, Any]:
-    """One GLEIF Level 2 consolidation relationship, dated from its RR record."""
+    """One GLEIF Level 2 consolidation relationship, dated from its RR record.
+
+    ``statementDate`` is the RR's ``registration.lastUpdateDate``; without an
+    RR record (or one GLEIF filed with no date) it is
+    ``fallback_statement_date`` — the reporting child's Level 1 date — and
+    only past that the retrieval date.
+    """
     interest: dict[str, Any] = {
         "type": "otherInfluenceOrControl",
         "directOrIndirect": "direct" if direct else "indirect",
@@ -1282,7 +1299,10 @@ def _gleif_child_relationship(
         interested_party_type="entity",
         interests=[interest],
         source_url=source_url,
-        statement_date=_gleif_registration_date((rr or {}).get("attributes")),
+        statement_date=(
+            _gleif_registration_date((rr or {}).get("attributes"))
+            or fallback_statement_date
+        ),
     )
 
 
@@ -1339,6 +1359,9 @@ def _gleif_exception_statements(
             full_name=bridge_name,
             person_type=ip_subtype,
             source_url=f"https://www.gleif.org/lei/{lei}",
+            # Phase 313: the bridge and its relationship are one claim, filed
+            # with the subject's record — dated the same, never the day read.
+            statement_date=subject_statement_date,
         )
     else:
         bridge = make_entity_statement(
@@ -1347,6 +1370,7 @@ def _gleif_exception_statements(
             name=bridge_name,
             entity_type=ip_subtype,
             source_url=f"https://www.gleif.org/lei/{lei}",
+            statement_date=subject_statement_date,
         )
     annotate(bridge, dict(exception_note))
 
