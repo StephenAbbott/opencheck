@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 312** — Equinor ASA replaces BP P.L.C. as a curated homepage example; its card lists the state-control and related-PEP findings production returns, and its golden file joins the weekly findings regression (BP stays in the set as an anchor).
+**Latest: Phase 313** — GLEIF Level 2 relationships are dated by their own relationship records, the subsidiary network and person-appointments views say when their data was read, ClimateTRACE statements carry the GEM release date, and GLEIF and OpenCorporates carry the right BODS source type.
 
 → [Full development history](docs/status.md)
 

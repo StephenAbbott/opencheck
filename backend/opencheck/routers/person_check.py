@@ -44,6 +44,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+from .. import provenance
 from ..bods import map_companies_house
 from ..cross_check import (
     _birth_year_compatible,
@@ -278,7 +279,12 @@ async def _person_appointments_impl(officer_id: str) -> PersonAppointmentsRespon
     if adapter is None:  # pragma: no cover — registry always has CH
         raise HTTPException(status_code=503, detail="Companies House adapter unavailable")
 
-    bundle = await adapter.fetch(officer_id)
+    # Phase 313: recorded like every other fetch, so the statements below say
+    # when Companies House was read. Without the scope they claimed no
+    # retrieval and were dated today, even on a live answer.
+    with provenance.recording() as recorder:
+        bundle = await adapter.fetch(officer_id)
+    fetched = recorder.resolve(is_stub=bool(bundle.get("is_stub")))
     if bundle.get("is_stub"):
         return PersonAppointmentsResponse(
             officer_id=officer_id,
@@ -323,6 +329,9 @@ async def _person_appointments_impl(officer_id: str) -> PersonAppointmentsRespon
             )
         )
 
+    with provenance.mapping_provenance(fetched):
+        bods = list(map_companies_house(bundle))
+
     return PersonAppointmentsResponse(
         officer_id=officer_id,
         name=envelope.get("name"),
@@ -331,7 +340,7 @@ async def _person_appointments_impl(officer_id: str) -> PersonAppointmentsRespon
         total_results=envelope.get("total_results"),
         active_count=sum(1 for i in items if not i.resigned_on),
         appointments=items,
-        bods=list(map_companies_house(bundle)),
+        bods=bods,
         attribution=adapter.info.attribution,
         caveat=_APPOINTMENTS_CAVEAT,
     )

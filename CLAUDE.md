@@ -1474,7 +1474,7 @@ filtered by `entity.legalAddress.country`.
 - `_stable_id(*parts)` — deterministic SHA-256-based ID; format `"opencheck-" + 24 hex chars`. Used as both `statementId` and `recordId` for entity/person statements.
 - `make_entity_statement()`, `make_person_statement()`, `make_relationship_statement()` — factory functions in `mapper.py`. Always use these; never hand-build BODS statements.
 - `_source_block(source_id, url)` — builds the `source` field (`bods/statements.py`). Every source_id must be in `SOURCE_NAMES` (6 were missing, fixed in Phase 43). Since Phase 267 it also writes `opencheckSourceId` — see "A statement names its source by id" below.
-- `_official_registers` set in mapper.py — source IDs that get `"type": ["officialRegister"]` instead of `"thirdParty"]`.
+- `OFFICIAL_REGISTER_SOURCES` in `bods/statements.py` — source IDs that get `"type": ["officialRegister"]` instead of `["thirdParty"]`. Since Phase 313 `gleif` is in it (the official register of LEIs, matching `bods_gleif`) and `opencorporates` is not (an aggregator). `narrative/packet.py` rates an `officialRegister` claim `high`, so moving a source changes the AI narrative's evidence confidence — run the curated-narrative regen after.
 - Relationship statements: `statementId != recordId` (unlike entity/person where they're equal).
 - Risk signal `statement_id` in evidence: `_bods_stable_id(source_id, hit_id)` — added to SANCTIONED/PEP evidence in `risk.py` in Phase 45 so frontend can look up which node to overlay.
 
@@ -2919,3 +2919,36 @@ Copy), which will be re-derived otherwise:
   `EVENT_STATUS_WORDS`; `routers/watch.py` re-exports them and
   `lib/watchlist.ts` keeps a copy the test parses.
 
+
+## Every dated claim names its own record (Phase 313)
+
+From the BODS dates audit (Notion "📆 Audit of dates captured across
+OpenCheck", 9 Oct 2026; `docs/dates.md`). Things that will be re-derived
+otherwise:
+
+- **A GLEIF Level 2 edge is dated by its relationship (RR) record**, never by
+  the other party's Level 1 record. `GleifAdapter._attach_relationship_records`
+  puts `direct_parent_relationship` / `ultimate_parent_relationship` /
+  `direct_child_relationships` on the bundle — Golden Copy mirror first
+  (`_store_relationship_records`, accepted only when it names the same parent
+  and still stands), then live `/{kind}-parent-relationship` and
+  `/direct-child-relationships` inside `gleif_throttle.discretionary()`. Any
+  refusal or failure leaves the edge on the reporter's own Level 1 date (the
+  subject for a parent edge, the **child** for a child edge). Every Level 2
+  relationship goes through `_gleif_child_relationship`; `statementId`s did not
+  move. A new GLEIF test that mocks `/direct-parent` with pytest-httpx must
+  also mock (or 404) `/direct-parent-relationship`.
+- **A mapper never runs outside `mapping_provenance`.** Outside it,
+  `_source_block` reads `STUB_PROVENANCE`: no `retrievedAt`, and
+  `statementDate` falls to today however live the fetch was.
+  `test_phase313_dates.py::test_every_mapper_call_runs_inside_a_provenance_scope`
+  AST-scans the package (bods/ excepted) and fails on a new unscoped call; the
+  one allowlisted site only counts statements. A function opening its own
+  `recording()` under a caller's must forward the observations
+  (`subsidiaries._build_with_provenance`).
+- **ClimateTRACE's statements are GEM's, dated by GEM's release.**
+  `_write_gem_release` keeps the dated GCS filename in `data/gem/release.json`
+  (the local CSV path drops it); `gem_release()` reads it, or the zip member
+  name; `_declare_gem_snapshot` records it, so the bundle resolves `snapshot`
+  and the probe expects `snapshot`. The GEOT artifact is declared by its
+  `meta.generated` day, never its month-only `release` label.

@@ -154,7 +154,7 @@ Sources publishing a declaration date OpenCheck uses today:
 
 | Source | Field | Note |
 |--------|-------|------|
-| `gleif` | `registration.lastUpdateDate` | Moves with each LEI record update; also used for the Level 2 relationship statements the subject reports |
+| `gleif` | `registration.lastUpdateDate` | Moves with each LEI record update. A Level 2 relationship uses its own relationship record's `lastUpdateDate` and `RELATIONSHIP_PERIOD` (Phase 313), falling back to the reporting child's Level 1 date — see [Dates](dates.md#gleif-level-2-dated-by-the-relationship-record-phase-313) |
 | `companies_house` | PSC `notified_on`, or `ceased_on` for a closed record | A closed record asserts "this ended", declared at cessation |
 | `sec_edgar` | 13D/13G filing date | Issuer details use the most recent filing |
 | `bods_gleif`, `bods_uk_psc` | Open Ownership's own `statementDate` | Passed through verbatim from the bulk Parquet — re-deriving it would replace a real declaration date with our processing date |
@@ -164,6 +164,7 @@ Sources publishing a declaration date OpenCheck uses today:
 | `brreg` | `rollegrupper[].sistEndret` | When Enhetsregisteret last changed that group of roles |
 | `ted_eu` | latest notice `publication-date` | TED's publication of the notice is the declaration |
 | `chilecompra` | the supplier's latest dated activity in the window | ChileCompra's own filing; the snapshot is dated from the last month the index covers |
+| `climatetrace` | GEM ownership release date | From the dated CSV filename (`…_050826.csv` = 5 Aug 2026), recorded when the CSVs are downloaded; the bundle is declared a `snapshot` of that release (Phase 313) rather than inheriting the live Climate TRACE API call's timestamp |
 
 Everything else falls back to the retrieval date.
 

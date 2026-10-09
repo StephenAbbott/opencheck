@@ -112,10 +112,13 @@ def test_deepen_emits_amla_non_eu_signal_for_offshore_gleif_record(
             }
         },
     )
-    # No ultimate parent — 404 for it and its exception probe.
+    # No ultimate parent — 404 for it and its exception probe. Phase 313: the
+    # direct parent's relationship record 404s too, so the edge falls back
+    # to the subject's own date.
     for path in (
         "ultimate-parent",
         "ultimate-parent-reporting-exception",
+        "direct-parent-relationship",
     ):
         httpx_mock.add_response(
             url=f"{api}/lei-records/{lei_a}/{path}", status_code=404

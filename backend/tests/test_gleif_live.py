@@ -113,6 +113,12 @@ async def test_fetch_lei_bundle_with_parents(httpx_mock: HTTPXMock) -> None:
         url=f"{_API}/lei-records/{lei}/direct-children?page[size]=100&page[number]=1",
         json={"data": [], "meta": {"pagination": {"total": 0}}},
     )
+    # Phase 313: the relationship record behind the parent edge — its own
+    # update date and period, which the parent's Level 1 record lacks.
+    httpx_mock.add_response(
+        url=f"{_API}/lei-records/{lei}/direct-parent-relationship",
+        json={"data": _rr(lei, parent_lei)},
+    )
 
     adapter = GleifAdapter()
     bundle = await adapter.fetch(lei)
@@ -122,6 +128,35 @@ async def test_fetch_lei_bundle_with_parents(httpx_mock: HTTPXMock) -> None:
     assert bundle["direct_parent"]["id"] == parent_lei
     assert bundle["ultimate_parent"] is None
     assert bundle["ultimate_parent_exception"] is None
+    assert bundle["direct_parent_relationship"] == _rr(lei, parent_lei)
+    # No ultimate parent, so no relationship record is asked for.
+    assert "ultimate_parent_relationship" not in bundle
+
+
+def _rr(child: str, parent: str, kind: str = "IS_DIRECTLY_CONSOLIDATED_BY") -> dict:
+    """A relationship-records data object in GLEIF's live shape."""
+    return {
+        "type": "relationship-records",
+        "id": f"{child}|LEI|{kind}",
+        "attributes": {
+            "relationship": {
+                "startNode": {"id": child, "type": "LEI"},
+                "endNode": {"id": parent, "type": "LEI"},
+                "type": kind,
+                "status": "ACTIVE",
+                "periods": [
+                    {
+                        "startDate": "2014-01-01T00:00:00Z",
+                        "type": "RELATIONSHIP_PERIOD",
+                    }
+                ],
+            },
+            "registration": {
+                "status": "PUBLISHED",
+                "lastUpdateDate": "2025-11-03T09:12:44Z",
+            },
+        },
+    }
 
 
 async def test_fetch_surfaces_reporting_exception(httpx_mock: HTTPXMock) -> None:
@@ -307,6 +342,10 @@ async def test_fresh_parent_cache_is_served_without_refetch(
     cache.put(f"gleif/lei/{_LEI}/ultimate-parent", None)
     cache.put(f"gleif/lei/{_LEI}/ultimate-parent-exception", None)
     cache.put(f"gleif/lei/{_LEI}/direct-children-p1-s100", {"data": [], "meta": {"pagination": {"total": 0}}})
+    cache.put(
+        f"gleif/lei/{_LEI}/direct-parent-relationship",
+        {"data": _rr(_LEI, _PARENT_LEI)},
+    )
 
     # Only the main record fetch hits the network; parent/children come from cache.
     httpx_mock.add_response(url=f"{_API}/lei-records/{_LEI}", json=_RECORD_FIXTURE)
