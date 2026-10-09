@@ -12,14 +12,16 @@ Reference: https://standard.openownership.org/en/0.4.0/
 
 from __future__ import annotations
 
+import copy
 import re
-from typing import Any
+from typing import Any, Iterator
 
 import pycountry
 
 from ..elf import resolve_elf
 from . import former_names as _former_names
 from . import gleif_events as _gleif_events
+from . import lifecycle as _lifecycle
 from . import liveness as _liveness
 from .unique import unique_statements
 from .source_ids import SOURCE_ID_KEY
@@ -1771,22 +1773,106 @@ def _gleif_address(block: dict[str, Any], *, address_type: str) -> dict[str, Any
 # ----------------------------------------------------------------------
 
 
-def map_bods_gleif(bundle: dict[str, Any]) -> BODSBundle:
-    """Passthrough mapper for the Open Ownership GLEIF bulk data adapter.
+_OO_RECORD_TYPES = {
+    "entityStatement": "entity",
+    "personStatement": "person",
+    "relationshipStatement": "relationship",
+}
 
-    The adapter returns ``{"bods_statements": [...], ...}`` directly from
-    its Parquet reconstruction step; we just yield those statements.
+
+def _oo_reference(value: Any) -> Any:
+    """A v0.3-style ``{"describedBy…Statement": id}`` reference as the plain
+    recordId v0.4 uses; anything else unchanged."""
+    if isinstance(value, dict):
+        for key in ("describedByEntityStatement", "describedByPersonStatement"):
+            if value.get(key):
+                return value[key]
+    return value
+
+
+def _oo_republish(statements: Any, source_id: str) -> Iterator[dict[str, Any]]:
+    """Open Ownership bulk statements, republished by OpenCheck (Phase 317).
+
+    Stephen's decision on the dates audit (Q3): the ``bods_gleif`` and
+    ``bods_uk_psc`` passthroughs are an **OpenCheck publication** of Open
+    Ownership's data, not a verbatim republication (that is what the curated
+    ``data/cache/bods_data`` override is). Until this phase they were neither:
+    OO's ``publicationDate`` beside an OpenCheck publisher, no
+    ``publicationDate`` at all on relationships, a hand-built ``source`` with
+    no ``retrievedAt``, and v0.3 shapes (``statementType``,
+    ``describedByEntityStatement``) the v0.4 schema rejects.
+
+    Each statement now:
+
+    * is a new statement — OpenCheck is its publisher, so it has its own
+      ``statementId`` (stable, from OO's) while keeping OO's ``recordId``,
+      which is what relationships reference;
+    * keeps OO's ``statementDate`` (the claim's date) and ``recordDetails``;
+    * gets OpenCheck's ``publicationDetails`` and ``source`` block (with the
+      ``retrievedAt`` of the local Parquet extract and ``opencheckSourceId``);
+    * is ``closed`` when every interest has ended, as every relationship is;
+    * says where it came from, in a ``commenting`` annotation naming OO's
+      statementId and publication date — the republication chain (#464).
     """
-    return iter(bundle.get("bods_statements", []))
+    for st in statements or []:
+        if not isinstance(st, dict):
+            continue
+        record_type = st.get("recordType") or _OO_RECORD_TYPES.get(str(st.get("statementType") or ""))
+        if record_type not in ("entity", "person", "relationship"):
+            continue
+        oo_statement_id = str(st.get("statementId") or "")
+        oo_published = (st.get("publicationDetails") or {}).get("publicationDate")
+        record_id = str(st.get("recordId") or oo_statement_id)
+        details = copy.deepcopy(st.get("recordDetails") or {})
+        status = str(st.get("recordStatus") or "new")
+        if record_type == "relationship":
+            for key in ("subject", "interestedParty"):
+                details[key] = _oo_reference(details.get(key))
+            interests = [i for i in details.get("interests") or [] if isinstance(i, dict)]
+            if status == "new" and _lifecycle.relationship_lifecycle(interests, False).ended:
+                status = "closed"
+        statement_id = (
+            _stable_id(source_id, record_type, oo_statement_id)
+            if status == "new"
+            else _stable_id(source_id, record_type, oo_statement_id, status)
+        )
+        out: dict[str, Any] = {
+            "statementId": statement_id,
+            "declarationSubject": (
+                details.get("subject") if record_type == "relationship" else record_id
+            ),
+            "recordId": record_id,
+            "recordType": record_type,
+            "recordStatus": status,
+            "statementDate": _statement_date(st.get("statementDate")),
+            "publicationDetails": _publication_details_block(),
+            "recordDetails": details,
+            "source": _source_block(source_id, (st.get("source") or {}).get("url")),
+        }
+        annotate(out, commenting(
+            pointer("source"),
+            "Republished by OpenCheck from Open Ownership's bulk BODS data"
+            + (f": Open Ownership statement {oo_statement_id}" if oo_statement_id else "")
+            + (f", published {str(oo_published)[:10]}" if oo_published else "")
+            + ".",
+        ))
+        yield out
 
 
-def map_bods_uk_psc(bundle: dict[str, Any]) -> BODSBundle:
-    """Passthrough mapper for the Open Ownership UK PSC bulk data adapter.
+def map_bods_gleif(bundle: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """The Open Ownership GLEIF bulk data, republished by OpenCheck.
 
-    Same pattern as map_bods_gleif — statements are pre-built by the
-    adapter; this function makes them visible to the _MAPPERS dispatch.
+    The adapter reconstructs Open Ownership's statements from its Parquet
+    extract under ``bods_statements``; :func:`_oo_republish` makes each a v0.4
+    OpenCheck statement (Phase 317).
     """
-    return iter(bundle.get("bods_statements", []))
+    return _oo_republish(bundle.get("bods_statements", []), "bods_gleif")
+
+
+def map_bods_uk_psc(bundle: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """The Open Ownership UK PSC bulk data, republished by OpenCheck — the
+    same republication as :func:`map_bods_gleif` (Phase 317)."""
+    return _oo_republish(bundle.get("bods_statements", []), "bods_uk_psc")
 
 
 def _with_meip_source_id(statement: Any) -> Any:

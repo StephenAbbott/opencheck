@@ -30,7 +30,7 @@ def _stmt(**over: Any) -> dict[str, Any]:
         "statementId": "s1",
         "recordType": "entity",
         "statementDate": "2026-09-01",
-        "publicationDetails": {"publicationDate": TODAY},
+        "publicationDetails": {"publicationDate": TODAY, "publisher": {"name": "OpenCheck"}},
         "source": {
             "type": ["officialRegister"],
             "opencheckSourceId": "companies_house",
@@ -115,6 +115,19 @@ class TestProvenanceRules:
     def test_the_publisher_verbatim_source_is_exempt(self):
         st = _stmt(source={"type": ["thirdParty"], "opencheckSourceId": "meip"})
         assert _run([st], liveness={"meip": "snapshot"}) == []
+
+    def test_another_publishers_verbatim_statement_keeps_its_own_block(self):
+        """Open Ownership's stored bundles: BODS statements are immutable, so
+        their source block is OO's, not OpenCheck's to patch (Phase 317)."""
+        st = _stmt(
+            publicationDetails={"publicationDate": TODAY,
+                                "publisher": {"name": "Open Ownership"}},
+            source={"type": ["officialRegister"], "description": "GLEIF"},
+        )
+        assert _run([st], liveness={"gleif": "snapshot"}) == []
+        # The date rules still apply to everything published.
+        st["statementDate"] = "2027-01-01"
+        assert "date_in_future" in _checks(_run([st]))
 
     def test_a_source_block_without_an_opencheck_id_warns(self):
         st = _stmt(source={"type": ["officialRegister"], "description": "GLEIF",

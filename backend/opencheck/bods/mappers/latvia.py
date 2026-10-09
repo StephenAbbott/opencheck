@@ -11,6 +11,7 @@ from typing import Any, Iterable
 import pycountry
 
 from .. import liveness as _liveness
+from ..annotations import annotate, entry_date_as_start
 from ..statements import (
     SOURCE_NAMES,
     _addr,
@@ -229,7 +230,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             )
         ]
         rel_local_id = f"bo-rel-{regcode}-{bo_id or full_name}"
-        yield make_relationship_statement(
+        bo_rel = make_relationship_statement(
             source_id="ur_latvia",
             local_id=rel_local_id,
             statement_date=bo_dated,
@@ -239,6 +240,9 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=interests,
             source_url=source_url,
         )
+        if registered_on:
+            annotate(bo_rel, entry_date_as_start("The Latvian Register of Enterprises", "registered_on"))
+        yield bo_rel
 
     # ------------------------------------------------------------------
     # 3.  Officers (board members, representatives, liquidators, etc.)
@@ -310,7 +314,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             }
         ]
         rel_local_id = f"officer-rel-{regcode}-{off_id or off_name}"
-        yield make_relationship_statement(
+        officer_rel = make_relationship_statement(
             source_id="ur_latvia",
             local_id=rel_local_id,
             subject_statement_id=entity_stmt_id,
@@ -320,6 +324,9 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_url=source_url,
             statement_date=last_modified or registered_on,
         )
+        if registered_on:
+            annotate(officer_rel, entry_date_as_start("The Latvian Register of Enterprises", "registered_on"))
+        yield officer_rel
 
     # ------------------------------------------------------------------
     # 4.  SIA shareholders / members

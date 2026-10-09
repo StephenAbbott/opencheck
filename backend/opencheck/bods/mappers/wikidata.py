@@ -13,6 +13,7 @@ from typing import Any
 import pycountry
 
 from .. import liveness as _liveness
+from ..annotations import annotate, commenting, pointer
 from ..statements import (
     SOURCE_NAMES,
     BODSBundle,
@@ -124,12 +125,13 @@ def _emit_wikidata_owner(
         detail += f"; source: {ref_src}"
     interest["details"] = detail
 
+    reference_retrieved = latest_record_date(r.get("retrieved") for r in refs)
     relationship = make_relationship_statement(
         source_id="wikidata",
         # Phase 315: the latest P813 "retrieved" on the claim's references —
         # the day an editor last checked the cited source for it. The claim's
         # own date, where Wikidata records one; the retrieval otherwise.
-        statement_date=latest_record_date(r.get("retrieved") for r in refs),
+        statement_date=reference_retrieved,
         local_id=f"{subject_qid}-owner-{oqid}",
         subject_statement_id=subject_statement_id,
         interested_party_statement_id=owner_stmt["statementId"],
@@ -137,6 +139,12 @@ def _emit_wikidata_owner(
         interests=[interest],
         source_url=(ref0.get("url") or subject_source_url),
     )
+    if reference_retrieved:
+        annotate(relationship, commenting(
+            pointer("statementDate"),
+            "statementDate is the latest date a cited reference for this "
+            f"ownership claim was retrieved on Wikidata (P813): {reference_retrieved}.",
+        ))
     result.statements.append(relationship)
 
 
@@ -641,7 +649,8 @@ def _oc_parse_network_relationships(
           "end_date": str | None,
         }
 
-    Relationships with ``end_date`` set are skipped (historical only).
+    Relationships with ``end_date`` set are kept, with it (Phase 317): an
+    ended holding is closed, not dropped.
     """
 
     def _extract_company(obj: dict[str, Any]) -> dict[str, str]:
@@ -684,9 +693,9 @@ def _oc_parse_network_relationships(
         if not isinstance(rel, dict):
             continue
 
+        # Phase 317: an ended network relationship is ownership that ended,
+        # carried with its end date (and so closed) rather than dropped.
         end_date = rel.get("end_date")
-        if end_date:
-            continue  # skip historical relationships
 
         rel_type = (rel.get("relationship_type") or rel.get("type") or "").strip()
 
@@ -802,6 +811,14 @@ def _oc_build_interests_from_relationship(rel: dict[str, Any]) -> list[dict[str,
             entry["startDate"] = start
         interests.append(entry)
 
+    # Every interest carries the relationship's dates (Phase 317): an ended
+    # relationship's interests end with it, which is what closes the record.
+    end = rel.get("end_date")
+    for entry in interests:
+        if start and "startDate" not in entry:
+            entry["startDate"] = start
+        if end:
+            entry["endDate"] = end
     return interests
 
 
@@ -901,6 +918,20 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
         entity_type="registeredEntity",
         source_url=oc_url,
     )
+    # Phase 317: the republication chain (#464). OpenCorporates is itself a
+    # republisher; its ``source.retrieved_at`` is when OC last read the
+    # register, which BODS has no field for, so it travels as a comment.
+    raw_source = company.get("source")
+    oc_source: dict[str, Any] = raw_source if isinstance(raw_source, dict) else {}
+    oc_retrieved = record_date(oc_source.get("retrieved_at"))
+    if oc_retrieved:
+        publisher = str(oc_source.get("publisher") or "").strip()
+        annotate(subject_stmt, commenting(
+            pointer("source"),
+            "OpenCorporates last retrieved this record"
+            + (f" from {publisher}" if publisher else " from the register")
+            + f" on {oc_retrieved}.",
+        ))
     # OpenCorporates normalises every register's status into ``inactive``
     # (bool) and carries the register's own words in ``current_status`` and,
     # where published, a ``dissolution_date``. The bool is OC's classification
@@ -1076,6 +1107,10 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
                 f"{tgt.get('company_number','?')}/"
                 f"{rel.get('relationship_type','?')}"
             )
+            if rel.get("end_date"):
+                # An ended holding is its own record (Phase 317), so a later
+                # holding between the same pair is not its reopening.
+                rel_local_id += f"/ended/{rel['end_date']}"
             network_rel_stmt = make_relationship_statement(
                 source_id="opencorporates",
                 local_id=rel_local_id,

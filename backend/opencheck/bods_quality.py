@@ -59,8 +59,7 @@ Every finding names its class, its source and the statement it is about.
     conflation. Lookups only — a deepen carries no liveness detail.
 ``no_retrieved_at``
     A statement from a source that was read (not a stub) with no
-    ``source.retrievedAt``. Publisher-verbatim sources (``meip``) are exempt;
-    the Open Ownership passthroughs are dates-audit Phase D.
+    ``source.retrievedAt``.
 ``no_source_id``
     A ``source`` block without ``opencheckSourceId`` (Phase 267's licence
     lookup falls through on it).
@@ -68,7 +67,13 @@ Every finding names its class, its source and the statement it is about.
     ``source.type`` disagrees with ``OFFICIAL_REGISTER_SOURCES``.
 ``ended_not_closed``
     A relationship whose every interest has ended, still ``recordStatus``
-    other than ``closed`` (dates-audit Phase D).
+    other than ``closed`` — the Phase 317 lifecycle rule, which the factory
+    now applies.
+
+The warnings are checked only on statements OpenCheck publishes
+(``publicationDetails.publisher.name`` "OpenCheck"): another publisher's
+statement handed on verbatim — MEIP's, Open Ownership's stored bundles —
+keeps its own source block, since a BODS statement is immutable (Phase 317).
 
 Per source, the report also carries the shape of its dating — how many
 statements, how many carry ``retrievedAt``, how many are dated by the
@@ -156,6 +161,11 @@ def _day(value: Any) -> str | None:
     return text[:10]
 
 
+def _published_by_opencheck(statement: Mapping[str, Any]) -> bool:
+    publisher = (statement.get("publicationDetails") or {}).get("publisher") or {}
+    return str(publisher.get("name") or "").startswith("OpenCheck")
+
+
 def _dates_in(statement: Mapping[str, Any]) -> list[tuple[str, str]]:
     """``(label, day)`` for every date a statement asserts about the world."""
     out: list[tuple[str, str]] = []
@@ -234,7 +244,13 @@ def check_statements(
                 f"a {read_as} source dated today — it declared neither its cut nor its build",
             )
 
-        if sid in PUBLISHER_VERBATIM:
+        # The provenance rules below are about what OpenCheck publishes. A
+        # statement another publisher wrote and OpenCheck hands on verbatim
+        # (the OECD's MEIP file, Open Ownership's stored GLEIF and UK PSC
+        # bundles) keeps its publisher's source block: BODS statements are
+        # immutable, so its gaps are the publisher's, not ours to patch
+        # (Phase 317).
+        if sid in PUBLISHER_VERBATIM or not _published_by_opencheck(st):
             continue
         if (
             read_as == "snapshot"

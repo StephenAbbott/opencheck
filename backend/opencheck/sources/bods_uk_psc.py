@@ -602,15 +602,7 @@ def _fetch_relationship_statements(
         # ----- interests sub-table -----
         interests: list[dict[str, Any]] = []
         if rel_interests_url and rel_link:
-            int_rows = duck.execute(
-                """
-                SELECT directOrIndirect, type, beneficialOwnershipOrControl,
-                       details, startDate, share_minimum, share_maximum
-                FROM read_parquet(?)
-                WHERE _link_relationship_statement = ?
-                """,
-                [rel_interests_url, rel_link],
-            ).fetchall()
+            int_rows = _interest_rows(duck, rel_interests_url, rel_link)
             for ir in int_rows:
                 interest: dict[str, Any] = {}
                 if ir[0]:
@@ -631,6 +623,8 @@ def _fetch_relationship_statements(
                         share["maximum"] = float(ir[6])
                     if share:
                         interest["share"] = share
+                if len(ir) > 7 and ir[7]:
+                    interest["endDate"] = str(ir[7])[:10]
                 if interest:
                     interests.append(interest)
 
@@ -690,6 +684,23 @@ def _fetch_relationship_statements(
 # ---------------------------------------------------------------------------
 
 
+def _interest_rows(duck: Any, url: str, link: str) -> list[tuple[Any, ...]]:
+    """A relationship's interest rows, with ``endDate`` (eighth column) where
+    the extract has it (Phase 317); an older extract without the column falls
+    back to the original seven."""
+    base = (
+        "SELECT directOrIndirect, type, beneficialOwnershipOrControl, details, "
+        "startDate, share_minimum, share_maximum{extra} "
+        "FROM read_parquet(?) WHERE _link_relationship_statement = ?"
+    )
+    for extra in (", endDate", ""):
+        try:
+            return list(duck.execute(base.format(extra=extra), [url, link]).fetchall())
+        except Exception:  # noqa: BLE001 — a missing column or file
+            continue
+    return []
+
+
 def _build_entity_statement_psc(
     row: dict[str, Any],
     identifiers: list[dict[str, str]],
@@ -730,7 +741,7 @@ def _build_entity_statement_psc(
 
     stmt: dict[str, Any] = {
         "statementId": statementid,
-        "recordId": statementid,
+        "recordId": row.get("recordid") or statementid,  # OO's, which relationships reference
         "statementType": "entityStatement",
         "recordDetails": record_details,
         "publicationDetails": {
@@ -821,7 +832,7 @@ def _build_person_statement_psc(
 
     stmt: dict[str, Any] = {
         "statementId": statementid,
-        "recordId": statementid,
+        "recordId": row.get("recordid") or statementid,
         "statementType": "personStatement",
         "recordDetails": record_details,
         "publicationDetails": {

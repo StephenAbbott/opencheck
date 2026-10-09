@@ -558,18 +558,7 @@ class BODSGleifAdapter(SourceAdapter):
                     rel_link = rel_link_row[0] if rel_link_row else ""
                     interests: list[dict[str, Any]] = []
                     if rel_interests_url and rel_link:
-                        try:
-                            int_rows = duck.execute(
-                                """
-                                SELECT directOrIndirect, type, beneficialOwnershipOrControl,
-                                       details, startDate
-                                FROM read_parquet(?)
-                                WHERE _link_relationship_statement = ?
-                                """,
-                                [rel_interests_url, rel_link],
-                            ).fetchall()
-                        except Exception:
-                            int_rows = []
+                        int_rows = _interest_rows(duck, rel_interests_url, rel_link)
                         for ir in int_rows:
                             interest: dict[str, Any] = {}
                             if ir[0]: interest["directOrIndirect"] = str(ir[0])
@@ -577,6 +566,7 @@ class BODSGleifAdapter(SourceAdapter):
                             if ir[2] is not None: interest["beneficialOwnershipOrControl"] = bool(ir[2])
                             if ir[3]: interest["details"] = str(ir[3])
                             if ir[4]: interest["startDate"] = str(ir[4])[:10]
+                            if len(ir) > 5 and ir[5]: interest["endDate"] = str(ir[5])[:10]
                             if interest:
                                 interests.append(interest)
                     relationship_stmts.append(
@@ -631,6 +621,22 @@ class BODSGleifAdapter(SourceAdapter):
 # ---------------------------------------------------------------------------
 
 
+def _interest_rows(duck: Any, url: str, link: str) -> list[tuple[Any, ...]]:
+    """A relationship's interest rows, with ``endDate`` where the extract has
+    the column (Phase 317: an ended interest closes its record). An older
+    extract without it falls back to the original five columns."""
+    base = (
+        "SELECT directOrIndirect, type, beneficialOwnershipOrControl, details, startDate{extra} "
+        "FROM read_parquet(?) WHERE _link_relationship_statement = ?"
+    )
+    for extra in (", endDate", ""):
+        try:
+            return list(duck.execute(base.format(extra=extra), [url, link]).fetchall())
+        except Exception:  # noqa: BLE001 — a missing column or file
+            continue
+    return []
+
+
 def _build_entity_statement(
     row: dict[str, Any],
     identifiers: list[dict[str, str]],
@@ -680,7 +686,9 @@ def _build_entity_statement(
 
     stmt: dict[str, Any] = {
         "statementId": statementid,
-        "recordId": statementid,
+        # Open Ownership's recordId, which its relationships reference; the
+        # statementId stands in on an extract that does not carry it.
+        "recordId": row.get("recordid") or statementid,
         "statementType": "entityStatement",
         "recordDetails": record_details,
         "publicationDetails": {

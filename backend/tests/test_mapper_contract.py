@@ -159,7 +159,8 @@ def test_open_ownership_adapters_write_the_v04_key(build, mapper) -> None:
     assert "incorporatedInJurisdiction" not in rd
     # Through the (guarded) passthrough mapper too, so the registry-wide
     # contract sees what these adapters build, not only this assertion.
-    assert list(getattr(mapper_mod, mapper)({"bods_statements": [stmt]})) == [stmt]
+    (out,) = list(getattr(mapper_mod, mapper)({"bods_statements": [stmt]}))
+    assert out["recordDetails"] == stmt["recordDetails"]
 
 
 def test_the_reader_accepts_every_spelling_ever_written() -> None:

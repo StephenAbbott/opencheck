@@ -11,6 +11,7 @@ from typing import Any, Iterable
 import pycountry
 
 from .. import liveness as _liveness
+from ..annotations import annotate, entry_date_as_start
 from ..statements import (
     SOURCE_NAMES,
     _addr,
@@ -139,7 +140,14 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     # ----------------------------------------------------------------
 
     owners: list[dict[str, Any]] = bundle.get("owners") or []
-    for idx, owner in enumerate(owners):
+    # Phase 317: shareholders and partners the register has struck off
+    # (``datumVymazu``) are ended ownership, emitted closed with their end date
+    # rather than dropped. Their own local-id prefix keeps every current
+    # owner's statementId exactly what it was.
+    former: list[dict[str, Any]] = bundle.get("former_owners") or []
+    for prefix, idx, owner in [("owner", i, o) for i, o in enumerate(owners)] + [
+        ("former-owner", i, o) for i, o in enumerate(former)
+    ]:
         o_name: str = (owner.get("name") or "").strip()
         if not o_name:
             continue
@@ -162,7 +170,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 except Exception:  # noqa: BLE001
                     pass
 
-            person_local_id = f"owner-person-{ico}-{idx}"
+            person_local_id = f"{prefix}-person-{ico}-{idx}"
             person_stmt = make_person_statement(
                 source_id="ares",
                 local_id=person_local_id,
@@ -203,7 +211,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 except Exception:  # noqa: BLE001
                     o_jur = (o_country, o_country)
 
-            entity_local_id = f"owner-entity-{ico}-{idx}"
+            entity_local_id = f"{prefix}-entity-{ico}-{idx}"
             o_entity_stmt = make_entity_statement(
                 source_id="ares",
                 local_id=entity_local_id,
@@ -229,10 +237,12 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interest["details"] = f"Stake: {stake}%"
         if start_date:
             interest["startDate"] = start_date
+        if owner.get("end_date"):
+            interest["endDate"] = owner["end_date"]
         interests.append(interest)
 
-        rel_local_id = f"owner-rel-{ico}-{idx}"
-        yield make_relationship_statement(
+        rel_local_id = f"{prefix}-rel-{ico}-{idx}"
+        owner_rel = make_relationship_statement(
             source_id="ares",
             local_id=rel_local_id,
             subject_statement_id=entity_stmt_id,
@@ -242,6 +252,9 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_url=source_url,
             statement_date=ares_last_updated,
         )
+        if start_date:
+            annotate(owner_rel, entry_date_as_start("The Czech public register (ARES)", "datumZapisu"))
+        yield owner_rel
 
     # ----------------------------------------------------------------
     # 3.  Directors
@@ -322,7 +335,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             dir_interest["startDate"] = start_date_d
 
         dir_rel_local_id = f"director-rel-{ico}-{idx}"
-        yield make_relationship_statement(
+        director_rel = make_relationship_statement(
             source_id="ares",
             local_id=dir_rel_local_id,
             subject_statement_id=entity_stmt_id,
@@ -332,3 +345,6 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_url=source_url,
             statement_date=ares_last_updated,
         )
+        if start_date_d:
+            annotate(director_rel, entry_date_as_start("The Czech public register (ARES)", "datumZapisu"))
+        yield director_rel

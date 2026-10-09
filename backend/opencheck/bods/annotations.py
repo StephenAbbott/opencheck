@@ -139,6 +139,25 @@ def commenting(
     return annotation
 
 
+def entry_date_as_start(
+    register: str, field: str, interest_index: int = 0
+) -> dict[str, Any]:
+    """The ``startDate`` of an interest is the register's entry date (Phase 317).
+
+    Some registers publish no date on which an interest began, only the day
+    they entered the record (ARES ``datumZapisu``, UR ``registered_on``).
+    OpenCheck uses that day as ``startDate`` — the closest the register comes —
+    and says so, because it can be later than the interest itself (a
+    shareholder since 1995 entered in a 2003 migration).
+    """
+    return transformation(
+        pointer("recordDetails", "interests", interest_index, "startDate"),
+        f"{register} publishes no date on which this interest began. startDate "
+        f"is the date the register entered the record ({field}), which can be "
+        "later than the interest itself.",
+    )
+
+
 def annotate(
     statement: dict[str, Any], *annotations: dict[str, Any] | None
 ) -> dict[str, Any]:

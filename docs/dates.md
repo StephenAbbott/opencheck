@@ -184,6 +184,78 @@ publisher, so `publicationDate` is OpenCheck's. A GLEIF renewal that changes
 nothing still moves `lastUpdateDate`, and so moves `statementDate` — which the
 information-updates modelling treats as a confirmation, and is intended.
 
+## Ended relationships (Phase 317)
+
+BODS says a relationship has ended in two places: the record
+(`recordStatus: "closed"`) and each interest (`endDate`). OpenCheck now uses
+both, by one rule that lives in `make_relationship_statement`:
+
+> A relationship whose every interest has an `endDate` on or before today is
+> published `closed`, keeping its `recordId` and taking a new `statementId`.
+
+A future `endDate` is a scheduled end (a director's term), so it stays open; a
+relationship with one interest still running stays open. A mapper that knows a
+relationship ended without a date passes `record_status="closed"` itself (CAC
+Nigeria's INACTIVE rows). The rule is the same one the graph and the exports
+read (`bods/lifecycle.py`, `relationshipStatus.ts`), so a closed edge is drawn
+dashed and treated as a former party by the risk engine.
+
+### Ownership yes, officers no
+
+Ended **ownership and control** is published, not dropped: the
+OpenCorporates network, ARES shareholders and partners struck off the register
+(`datumVymazu`), NZ Companies, RPVS, SEC EDGAR, Wikidata and Estonia. Someone
+who held a company until last year is part of its ownership history and a due
+diligence reader needs to see them.
+
+**Officer and board-role lists stay limited to people serving now**: Companies
+House officers, OpenCorporates officers, brreg roles (`fratraadt`,
+`avregistrert`) and ARES directors. That is a deliberate scope choice (Phase
+192, reaffirmed with Stephen on 9 Oct 2026), not a missing date: a former
+director is not an owner, the lists would grow by an order of magnitude for
+long-lived companies, and the registers already publish the history for anyone
+who needs it. The tests in `tests/test_phase317_lifecycle.py` pin both halves.
+
+An ended OpenCorporates network edge is its own record (`…/ended/<date>` on the
+local id), so a later holding between the same two companies is a new
+relationship rather than the old one reopened.
+
+### When a startDate is an entry date
+
+Some registers publish no date on which an interest began, only the day they
+entered the record: ARES `datumZapisu` and UR Latvia `registered_on`. OpenCheck
+uses that day as `startDate` — the closest the register comes — and annotates
+it (motivation `transformation`, `bods/annotations.py::entry_date_as_start`),
+because it can be later than the interest itself: a shareholder since 1995
+entered in a 2003 migration.
+
+### Another publisher's clock
+
+When OpenCheck reads a republisher, the chain has a clock BODS has no field
+for. Those dates travel as `commenting` annotations rather than being forced
+into `statementDate` or `retrievedAt`:
+
+- **OpenCorporates** `company.source.retrieved_at` — when OpenCorporates last
+  read the register — on the subject entity's `/source`.
+- **Wikidata** P813 "retrieved" on a claim's references, which since Phase 315
+  dates the ownership edge's `statementDate`; the annotation says that is what
+  the date is.
+
+### Open Ownership's bulk data
+
+Open Ownership publishes BODS itself, and its statements are immutable: their
+`statementId`, `publicationDetails` and `source` describe OO's publication.
+OpenCheck does not patch them. The stored OO bundles served for GLEIF and UK
+PSC lookups are OO's statements verbatim, and the BODS quality sweep holds
+OpenCheck's provenance rules only to statements OpenCheck published.
+
+Where OpenCheck re-maps OO's bulk rows (the `bods_gleif` and `bods_uk_psc`
+adapters, currently not registered), it publishes **its own** statements:
+a new `statementId`, OO's `recordId` kept so the two link, OpenCheck's
+`publicationDetails` and `source`, interest `endDate` from OO's data (so ended
+ownership closes by the rule above), and a `commenting` annotation on `/source`
+naming the OO statement and its publication date.
+
 ## Precision, and how it is recorded
 
 BODS treats date precision differently depending on the field, and it is right
@@ -246,6 +318,10 @@ memory-bound. Currently annotated:
 - Companies House nature-of-control codes, whose code identity is otherwise
   recoverable only from an English prose descriptor
 - Imprecise `birthDate` values, as above
+- A `startDate` that is the register's entry date (ARES, UR Latvia), and
+  another publisher's clock (OpenCorporates' retrieval, Wikidata P813, an Open
+  Ownership statement OpenCheck republishes) — see
+  [Ended relationships](#ended-relationships-phase-317)
 
 ## See also
 

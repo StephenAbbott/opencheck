@@ -52,15 +52,19 @@ defects in production, fixed in the same phase (below).
 | `bulk_dated_today` | A statement from a `snapshot` or `curated` source dated the day of the run — the Phase 314 conftest rule, applied to production. |
 | `lookup_failed`, `deepen_failed` | The API returned an error for a subject that should map — the Phase 315 PRH/CRO class. |
 
-**Warnings** — honest but weaker than it should be, or a known backlog:
+**Warnings** — honest but weaker than it should be, or a known backlog. Since
+Phase 317 the provenance warnings apply only to statements **OpenCheck
+published** (`publicationDetails.publisher.name` starting "OpenCheck"):
+another publisher's statements served verbatim — the stored Open Ownership
+bundles, `meip` — are immutable and keep their own blocks.
 
 | Class | Meaning |
 |---|---|
 | `cut_as_retrieval` | `retrievedAt` at midnight on the statement's own date, for a snapshot source that declared no separate `source_as_of`: the pre-Phase-314 conflation. Lookups only. |
-| `no_retrieved_at` | A statement from a source that was read, with no `source.retrievedAt`. `meip` (publisher verbatim) is exempt. |
-| `no_source_id` | A `source` block without `opencheckSourceId`. On the first run, all from the stored Open Ownership bundles (dates-audit Phase D). |
+| `no_retrieved_at` | A statement from a source that was read, with no `source.retrievedAt`. |
+| `no_source_id` | A `source` block without `opencheckSourceId`. |
 | `source_type` | `source.type` disagrees with `OFFICIAL_REGISTER_SOURCES`. |
-| `ended_not_closed` | Every interest of a relationship has ended, but `recordStatus` is not `closed` (dates-audit Phase D). |
+| `ended_not_closed` | Every interest of a relationship has ended, but `recordStatus` is not `closed`. Since Phase 317 the relationship factory closes these itself, so any count here is a mapper building statements by hand. |
 
 The report also carries, per source, how many statements it published, how
 many carry `retrievedAt`, how many are dated by the retrieval day, and how many
@@ -101,9 +105,7 @@ A Claude scheduled task reads the published report every Tuesday and:
 5. writes a short dated note to the project (`claude/bods-quality-check-<date>.md`)
    with what was new, what was resolved and what it did.
 
-Known backlog classes (`ended_not_closed`, `no_source_id` on the Open
-Ownership bundles) are tracked as counts against the dates-audit Phase D
-ticket rather than ticketed one by one.
+There is no known backlog since Phase 317: a warning that appears is new.
 
 ## First run (9 Oct 2026, before merge)
 
@@ -127,3 +129,9 @@ ticket rather than ticketed one by one.
 Left as warnings for dates-audit Phase D: `ended_not_closed` on NZ Companies
 (42), RPVS (14), SEC EDGAR (1) and Wikidata, and `no_source_id` on the stored
 Open Ownership GLEIF and UK PSC bundles (519).
+
+**Resolved in Phase 317** (dates-audit Phase D): `ended_not_closed` closes in
+`make_relationship_statement` (NZ Companies 42, RPVS 14 and SEC EDGAR 1, checked
+against the production payloads), and the 519 `no_source_id` warnings on the
+Open Ownership bundles are out of scope — they are OO's statements, not
+OpenCheck's. See [Ended relationships](dates.md#ended-relationships-phase-317).
