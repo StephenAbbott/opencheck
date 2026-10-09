@@ -709,7 +709,13 @@ class GleifAdapter(SourceAdapter):
         # Dated to the Golden Copy publish the file reflects — the full
         # timestamp since Phase 178 (three publishes a day), the date on an
         # older file — so the badge says how old the mirror actually is.
-        provenance.record_snapshot(store.watermark(), SNAPSHOT_DETAIL[reason])
+        # Phase 314: two clocks — the Golden Copy publish the file reflects
+        # (GLEIF's) and when OpenCheck last refreshed the file (ours).
+        provenance.record_snapshot(
+            retrieved_at=store.retrieved_at(),
+            source_as_of=store.watermark(),
+            detail=SNAPSHOT_DETAIL[reason],
+        )
 
         direct_parent = _parent(row.direct_parent_lei)
         ultimate_parent = _parent(row.ultimate_parent_lei)

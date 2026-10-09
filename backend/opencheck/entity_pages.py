@@ -689,6 +689,27 @@ class EntityStore:
                 continue
         return None
 
+    def retrieved_at(self) -> datetime | None:
+        """When OpenCheck last brought this file up to date from GLEIF — the
+        last delta applied (``meta.refreshed_at``, Phase 180) or the full
+        build (``meta.built_at``) — as an aware UTC datetime, else ``None``.
+
+        The other clock from :meth:`watermark` (Phase 314): the watermark is
+        the Golden Copy publish the file reflects, GLEIF's date; this is
+        ours, and is what a statement's ``source.retrievedAt`` names.
+        """
+        meta = self.meta()
+        for key in ("refreshed_at", "built_at"):
+            raw = meta.get(key) or ""
+            if not raw:
+                continue
+            try:
+                moment = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
+        return None
+
     def _row(self, cursor_row: sqlite3.Row) -> EntityRow:
         return _row(cursor_row, self._zdict)
 

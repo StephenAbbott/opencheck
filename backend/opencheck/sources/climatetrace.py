@@ -248,33 +248,21 @@ def gem_release() -> dict[str, Any] | None:
 
 
 def _declare_gem_snapshot(release: dict[str, Any] | None) -> None:
-    """Record the GEM CSVs as a snapshot (Phase 313).
+    """Record the GEM CSVs as a snapshot on its two clocks (Phases 313/314).
 
     Until Phase 313 nothing was recorded for them, so ownership rows from a
-    release months old inherited the Climate TRACE API call's live timestamp
-    as their ``retrievedAt`` and ``statementDate``. Dated by GEM's release
-    where it is known, else by when OpenCheck downloaded the file.
+    release months old inherited the Climate TRACE API call's live timestamp.
+    GEM's release date is GEM's clock (``source_as_of`` → ``statementDate``);
+    when OpenCheck downloaded the file is ours (``retrieved_at`` →
+    ``source.retrievedAt``). Neither stands in for the other.
     """
-    from datetime import datetime, timezone
-
     if release is None:
         return
-    moment: datetime | None = None
-    for key in ("release_date", "downloaded_at"):
-        value = release.get(key)
-        if not value:
-            continue
-        try:
-            moment = datetime.fromisoformat(str(value))
-        except ValueError:
-            continue
-        if moment.tzinfo is None:
-            moment = moment.replace(tzinfo=timezone.utc)
-        break
     label = release.get("release_date")
     provenance.record_snapshot(
-        moment,
-        "Global Energy Monitor ownership data"
+        retrieved_at=provenance.parse_moment(release.get("downloaded_at")),
+        source_as_of=provenance.parse_moment(label),
+        detail="Global Energy Monitor ownership data"
         + (f" (release of {label})" if label else ""),
     )
 
@@ -716,22 +704,15 @@ def _get_geot_data() -> dict[str, Any]:
 
 
 def _declare_geot_snapshot(meta: dict[str, Any]) -> None:
-    """Record the committed GEOT artifact as a snapshot, dated by the day it
-    was built from GEM's release (``meta.generated``); the release itself is
-    named only by month ("August 2026"), which is not a date (Phase 313)."""
-    from datetime import datetime, timezone
-
-    generated = meta.get("generated")
-    moment = None
-    if generated:
-        try:
-            moment = datetime.fromisoformat(str(generated)).replace(tzinfo=timezone.utc)
-        except ValueError:
-            moment = None
+    """Record the committed GEOT artifact as a snapshot. ``meta.generated`` is
+    the day OpenCheck built it from GEM's release — our clock. The release is
+    named only by month ("August 2026"), which is not a date, so no source
+    date is claimed (Phases 313/314)."""
     release = meta.get("release")
     provenance.record_snapshot(
-        moment,
-        "Global Energy Ownership Tracker artifact"
+        retrieved_at=provenance.parse_moment(meta.get("generated")),
+        source_as_of=None,
+        detail="Global Energy Ownership Tracker artifact"
         + (f" ({release} release)" if release else ""),
     )
 

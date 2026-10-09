@@ -393,7 +393,8 @@ async def test_fetch_returns_the_record_and_records_the_snapshot(index: Path) ->
     assert bundle["snapshot_date"] == "2026-09-14"
     resolved = observed.resolve()
     assert resolved.liveness == "snapshot"
-    assert resolved.retrieved_at.date() == date(2026, 9, 14)
+    assert resolved.source_as_of.date() == date(2026, 9, 14)  # the export (Phase 314)
+    assert resolved.retrieved_at is not None  # the build: OpenCheck's clock
 
 
 async def test_fetch_not_in_export_is_an_answer_not_a_stub(index: Path) -> None:

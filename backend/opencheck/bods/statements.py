@@ -779,20 +779,24 @@ def _statement_date(explicit: str | None = None) -> str:
 
     Precedence:
 
-    1. A date the source itself supplies (a filing or last-update date),
-       passed in by the individual mapper where it has one.
-    2. The date OpenCheck retrieved the payload. For a months-old bulk
-       snapshot this is far closer to the truth than today's date, and the
-       BODS dates guidance's consolidation reading — "the date on which
-       several sources of information were resolved to make a coherent
-       claim" — covers using it.
-    3. Today, for stub and curated payloads where neither exists.
+    1. A date the source itself supplies for this record (a filing or
+       last-update date), passed in by the individual mapper.
+    2. The source's own cut date for the payload (``source_as_of``: a bulk
+       extract date, a monthly cut, a publish watermark — Phase 314). The
+       record was true as of the cut; that is the source's claim.
+    3. The date OpenCheck retrieved the payload. For a live or cached read
+       this is the honest consolidation date — "the date on which several
+       sources of information were resolved to make a coherent claim".
+    4. Today, only where nothing at all was recorded (a stub). A snapshot or
+       curated payload reaching this branch is a source that forgot to
+       declare its dates; ``tests/conftest.py`` fails the test that maps one.
     """
     if explicit:
         return explicit
-    retrieved = _provenance.current_mapping_provenance().retrieved_at
-    if retrieved is not None:
-        return retrieved.date().isoformat()
+    prov = _provenance.current_mapping_provenance()
+    for moment in (prov.source_as_of, prov.retrieved_at):
+        if moment is not None:
+            return moment.date().isoformat()
     return _today()
 
 

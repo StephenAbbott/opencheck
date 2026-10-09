@@ -19,7 +19,8 @@ public access will be restricted to users with a demonstrable need, in
 line with AMLD6 implementation.
 
 This adapter queries a pre-built SQLite database that is populated by
-``scripts/extract_bce.py`` from the three CSV files above.
+``scripts/extract_bce.py`` from the three CSV files above, plus KBO's
+``meta.csv`` (its ``SnapshotDate`` dates every statement — Phase 314).
 
 GLEIF bridge:
   GLEIF records for Belgian entities carry:
@@ -45,6 +46,7 @@ from __future__ import annotations
 import logging
 import re
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -88,22 +90,52 @@ def format_enterprise_number(raw: str) -> str:
     return digits
 
 
-def _record_db_provenance() -> None:
-    """Declare that this answer came from the committed KBO Open Data extract.
+def _kbo_date(raw: str | None) -> datetime | None:
+    """KBO's ``SnapshotDate`` as an aware UTC datetime.
 
-    The adapter reads a local SQLite build of Belgium's KBO Open Data, and
-    recorded nothing at all — so an answer resolved ``stub`` and would have
-    been badged "Placeholder data" the day the source was switched on. Same
-    defect as the Ariregister bug (PR #153), caught by the AST guard before it
-    could reach anyone.
-
-    No retrieval time is claimed: ``scripts/extract_bce.py`` treats KBO's
-    ``meta.csv`` as informational and does not persist its extract date into
-    the database, and the file's mtime records when the DB was built locally,
-    which says nothing about when the data left the register. Persisting KBO's
-    own extract date in a meta table would let this carry a real date.
+    KBO writes it day-first (``04-10-2026``); an ISO value is accepted too so a
+    future format change still dates the answer rather than dropping it.
     """
-    provenance.record_snapshot(None, "KBO Open Data extract (local SQLite build)")
+    value = (raw or "").strip()
+    if not value:
+        return None
+    for fmt in ("%d-%m-%Y", "%d/%m/%Y", "%d-%m-%Y %H:%M:%S"):
+        try:
+            return datetime.strptime(value, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return provenance.parse_moment(value)
+
+
+def _record_db_provenance(
+    meta: dict[str, str], db_path: str | Path | None = None
+) -> None:
+    """Declare that this answer came from the local KBO Open Data extract.
+
+    Two clocks, kept apart (Phase 314):
+
+    * ``source_as_of`` — KBO's own ``SnapshotDate`` from ``meta.csv``, the day
+      the register cut the extract. It becomes the statements'
+      ``statementDate``.
+    * ``retrieved_at`` — when OpenCheck built the database from the ZIP
+      (``meta.built_at``), falling back to the DB file's mtime on a build that
+      predates the meta table. It becomes ``source.retrievedAt``.
+
+    A pre-314 DB therefore still carries a retrieval time but no cut; the
+    statement then dates from the retrieval, which is the latest moment the
+    data is known to have been true.
+    """
+    retrieved_at = provenance.parse_moment(meta.get("built_at"))
+    if retrieved_at is None and db_path:
+        try:
+            retrieved_at = datetime.fromtimestamp(Path(db_path).stat().st_mtime, tz=timezone.utc)
+        except OSError:
+            retrieved_at = None
+    provenance.record_snapshot(
+        retrieved_at=retrieved_at,
+        source_as_of=_kbo_date(meta.get("SnapshotDate")),
+        detail="KBO Open Data extract (local SQLite build)",
+    )
 
 
 class BceBelgiumAdapter(SourceAdapter):
@@ -119,6 +151,7 @@ class BceBelgiumAdapter(SourceAdapter):
 
     def __init__(self) -> None:
         self._db: sqlite3.Connection | None = None
+        self._meta: dict[str, str] = {}
 
     # ------------------------------------------------------------------
     # Metadata
@@ -168,6 +201,7 @@ class BceBelgiumAdapter(SourceAdapter):
             conn = sqlite3.connect(str(path), check_same_thread=False)
             conn.row_factory = sqlite3.Row
             self._db = conn
+            self._meta = provenance.index_meta(conn)
         return self._db
 
     def _query_by_number(self, enterprise_number: str) -> dict[str, Any] | None:
@@ -235,7 +269,7 @@ class BceBelgiumAdapter(SourceAdapter):
         if not rows:
             return []
 
-        _record_db_provenance()
+        _record_db_provenance(self._meta, get_settings().bce_belgium_db_file)
         hits: list[SourceHit] = []
         for row in rows:
             num = row.get("enterprise_number") or ""
@@ -296,7 +330,7 @@ class BceBelgiumAdapter(SourceAdapter):
         row = self._query_by_number(enterprise_number)
         if row is None:
             return stub_bundle
-        _record_db_provenance()
+        _record_db_provenance(self._meta, get_settings().bce_belgium_db_file)
 
         name = (
             row.get("name_nl")

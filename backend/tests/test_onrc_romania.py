@@ -923,8 +923,11 @@ async def test_the_snapshot_is_dated_from_the_export_not_the_build(index: Path) 
         await onrc_romania.OnrcRomaniaAdapter().fetch("J40/1116/1991")
         resolved = recorder.resolve()
 
+    # Two clocks (Phase 314): the slug is ONRC's cut, ``built_at`` is ours.
+    assert resolved.source_as_of is not None
+    assert resolved.source_as_of.date().isoformat() == "2026-09-02"
     assert resolved.retrieved_at is not None
-    assert resolved.retrieved_at.date().isoformat() == "2026-09-02"
+    assert resolved.retrieved_at.date().isoformat() == "2026-09-15"
     assert "firme-02-09-2026" in (resolved.detail or "")
 
 
@@ -974,7 +977,13 @@ async def test_an_index_with_no_meta_still_declares_a_snapshot(
             await onrc_romania.OnrcRomaniaAdapter().fetch("J40/1116/1991")
             resolved = recorder.resolve()
         assert resolved.liveness == "snapshot"
-        assert resolved.retrieved_at is None, "no date is better than a made-up one"
+        # No cut is invented (Phase 314) ...
+        assert resolved.source_as_of is None, "no date is better than a made-up one"
+        # ... but the file on disk was written by OpenCheck — the boot download
+        # or the local build — so when it landed is a real retrieval time, and
+        # the statements fall back to it rather than to today.
+        assert resolved.retrieved_at is not None
+        assert resolved.retrieved_at.timestamp() == pytest.approx(path.stat().st_mtime, abs=1)
     finally:
         os.environ.pop("ONRC_ROMANIA_DB_FILE", None)
         get_settings.cache_clear()

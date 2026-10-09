@@ -741,7 +741,9 @@ PROBES: dict[str, SourceProbe] = {
         allow_empty=True,
         method="fetch_by_registration",
         args=("GB", "01285743"),
-        expect_liveness=LIVE_OR_CACHED,
+        # The organisation match is the committed index (Phase 314), so the
+        # bundle resolves snapshot whatever the revenue calls did.
+        expect_liveness=frozenset({"snapshot"}),
         bods_mapper="map_eiti",
         known_gap=(
             "eiti.org sits behind Cloudflare, which returns HTTP 403 to the CI runner this "

@@ -84,7 +84,7 @@ component.
 |------|---------------|---------------|
 | `live` | Fetched from the source during this lookup | the HTTP fetch time |
 | `cached` | Served from OpenCheck's response cache (`data/cache/live/`) | when the cache entry was written |
-| `snapshot` | Read from a bulk dataset (`bods_uk_psc`, `bods_gleif`, and pre-extracted Open Ownership subgraphs) | the dataset's own publication date, or the local extract's date |
+| `snapshot` | Read from a bulk dataset or local index (the Golden Copy mirror, `bods_uk_psc`, `bods_gleif`, the register indexes, pre-extracted Open Ownership subgraphs) | when OpenCheck downloaded or built it (`meta.built_at`, the asset download) — never the register's cut, which is `source_as_of` and dates the statement instead |
 | `curated` | A fixture committed to the repository (`cac_nigeria`, `eiti_bo`, `eiti_zambia`, demo fixtures) | the declared harvest date, else **omitted** |
 | `stub` | Placeholder data — no source was contacted | **omitted entirely** |
 
@@ -95,6 +95,14 @@ when git wrote it to that machine, which says nothing about when the data left
 the register. `cac_nigeria` and `eiti_bo` are the exceptions that prove the rule: their
 indexes declare genuine harvest dates (`meta.harvested` / `meta.built`), so
 they report one.
+
+**Two clocks for bulk data (Phase 314).** A snapshot's `source_liveness`
+entry carries `source_as_of` — the register's own cut (an extract date, a
+monthly cut, the Golden Copy watermark) — beside `retrieved_at`. The cut
+becomes the statements' fallback `statementDate`; `retrieved_at` alone
+becomes `retrievedAt`. The source card's chip and the sweep's age check read
+the cut where there is one. Per-source values are in
+[Dates](dates.md#bulk-datasets-carry-two-clocks-phase-314).
 
 Sources that are structurally never live: `cac_nigeria` (curated example set —
 the CAC's official API is restricted to Nigerian government agencies),

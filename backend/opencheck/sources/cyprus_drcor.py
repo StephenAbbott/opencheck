@@ -61,6 +61,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .. import provenance
 from ..config import get_settings
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
@@ -140,6 +141,22 @@ class CyprusDrcorAdapter(SourceAdapter):
 
     def __init__(self) -> None:
         self._db: sqlite3.Connection | None = None
+        self._meta: dict[str, str] = {}
+
+    def _record_index_provenance(self) -> None:
+        """Declare the answer came from the local DRCOR index (Phase 314).
+
+        ``retrieved_at`` is when OpenCheck built the index (``meta.built_at``);
+        ``source_as_of`` is the data.gov.cy release the CSVs came from
+        (``meta.release_date``, passed to ``scripts/extract_cyprus.py``), so
+        ``statementDate`` is the register's date rather than the lookup's. An
+        index built without one carries a retrieval time and no cut.
+        """
+        provenance.record_snapshot(
+            retrieved_at=provenance.parse_moment(self._meta.get("built_at")),
+            source_as_of=provenance.parse_moment(self._meta.get("release_date")),
+            detail="data.gov.cy DRCOR CSV release (local SQLite index)",
+        )
 
     # ------------------------------------------------------------------
     # Metadata
@@ -193,6 +210,7 @@ class CyprusDrcorAdapter(SourceAdapter):
         conn = sqlite3.connect(str(path), check_same_thread=False)
         conn.row_factory = sqlite3.Row
         self._db = conn
+        self._meta = provenance.index_meta(conn)
         return self._db
 
     @staticmethod
@@ -278,6 +296,7 @@ class CyprusDrcorAdapter(SourceAdapter):
         rows = self._search_by_name(query)
         if not rows:
             return []
+        self._record_index_provenance()
         hits: list[SourceHit] = []
         for org in rows:
             reg = normalise_he_number(_field(org, "reg_no"))
@@ -329,6 +348,7 @@ class CyprusDrcorAdapter(SourceAdapter):
         if organisation is None:
             return self._stub(reg_no, legal_name)
 
+        self._record_index_provenance()
         address = self._query_one("registered_office", reg_no)
         officials = self._query_many("officials", reg_no)
 

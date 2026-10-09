@@ -272,7 +272,12 @@ class BODSGleifAdapter(SourceAdapter):
                 detail += f", local extract of {built_at.date().isoformat()}"
         except Exception:  # noqa: BLE001 - provenance must never sink a fetch
             built_at = None
-        provenance.record_snapshot(built_at, detail)
+        # Phase 314: the extract's mtime is when OpenCheck downloaded or
+        # built it — our clock. Open Ownership's own publication date is not
+        # read here; each statement carries OO's statementDate verbatim.
+        provenance.record_snapshot(
+            retrieved_at=built_at, source_as_of=None, detail=detail
+        )
 
     def _parquet_available(self) -> bool:
         """True if at least one Parquet source (local or S3) is configured."""

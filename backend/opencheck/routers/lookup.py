@@ -9,7 +9,6 @@ import re
 
 import httpx
 from dataclasses import dataclass, field as dc_field
-from datetime import datetime, timezone
 from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -24,7 +23,7 @@ from .. import outbound_rate as _outbound_rate
 from .. import provenance as _provenance
 from .. import consistency, consistencystats, signalstats
 from ..provenance import Provenance
-from ..bods import BODSBundle, unique_statements, validate_shape
+from ..bods import unique_statements, validate_shape
 from ..sources.base import LookupDeriver, raw_redaction_notice
 from .. import bods_data
 from ..config import get_settings
@@ -415,7 +414,12 @@ async def deepen(
         mapper = _mapper_for(source)
         if mapper and not raw.get("is_stub"):
             with _provenance.mapping_provenance(prov):
-                bundle: BODSBundle = mapper(raw)
+                # Materialised INSIDE the scope (Phase 314). Most mappers are
+                # generators: assigned bare, the statements were only built
+                # when ``unique_statements`` drained them below, after the
+                # scope had closed, so every one was dated today with no
+                # ``retrievedAt`` whatever the fetch had recorded.
+                bundle: list[dict[str, Any]] = list(mapper(raw))
             # One statement per statementId (Phase 235).
             bods = unique_statements(bundle)
             issues = validate_shape(bods)
@@ -2819,15 +2823,13 @@ def _stored_bundle_provenance(source_id: str, key: str | None = None) -> Provena
                 published = candidate
     except Exception:  # noqa: BLE001 - provenance must never sink a lookup
         published = None
-    retrieved: datetime | None = None
-    if published:
-        try:
-            retrieved = datetime.fromisoformat(published).replace(tzinfo=timezone.utc)
-        except ValueError:
-            retrieved = None
+    # Open Ownership's publication date is the dataset's cut, not a moment
+    # OpenCheck downloaded anything (Phase 314): it is ``source_as_of``. No
+    # ``retrieved_at`` is claimed — the bundle was extracted offline and
+    # committed, and a checked-out file's mtime says nothing about either.
     return Provenance(
         liveness="snapshot",
-        retrieved_at=retrieved,
+        source_as_of=_provenance.parse_moment(published),
         detail="Open Ownership bulk dataset"
         + (f", published {published}" if published else ""),
     )
@@ -2998,7 +3000,12 @@ async def _safe_deepen(
         mapper = _mapper_for(source_id)
         if mapper and not raw.get("is_stub"):
             with _provenance.mapping_provenance(prov):
-                bundle: BODSBundle = mapper(raw)
+                # Materialised INSIDE the scope (Phase 314). Most mappers are
+                # generators: assigned bare, the statements were only built
+                # when ``unique_statements`` drained them below, after the
+                # scope had closed, so every one was dated today with no
+                # ``retrievedAt`` whatever the fetch had recorded.
+                bundle: list[dict[str, Any]] = list(mapper(raw))
             # One statement per statementId (Phase 235).
             bods = unique_statements(bundle)
             issues = validate_shape(bods)

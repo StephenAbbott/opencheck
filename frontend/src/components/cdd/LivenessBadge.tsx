@@ -20,7 +20,18 @@ export interface SourceLiveness {
   liveness: Liveness;
   label: string;
   retrieved_at: string | null;
+  /** The source's own cut — an extract date, a monthly cut, a publish
+   *  watermark — when it declared one (Phase 314). Distinct from
+   *  `retrieved_at`, which is when OpenCheck downloaded or built the data.
+   *  Optional so a payload from before the split still renders. */
+  source_as_of?: string | null;
   detail: string | null;
+}
+
+/** The date the data describes: the source's cut where it declared one, else
+ *  when OpenCheck obtained it. Rebuilding an old dump does not make it new. */
+export function dataAsOf(info: SourceLiveness): string | null {
+  return info.source_as_of ?? info.retrieved_at ?? null;
 }
 
 /** Short, absolute date — "3 Jun 2026". Absolute beats relative here: "2 months
@@ -42,12 +53,12 @@ export function livenessLabel(info: SourceLiveness, now: Date = new Date()): str
       ? "Checked today"
       : `Checked ${formatDate(info.retrieved_at)}`;
   }
-  if (info.liveness === "snapshot" && info.retrieved_at)
-    return `Snapshot · ${formatDate(info.retrieved_at)}`;
+  const asOf = dataAsOf(info);
+  if (info.liveness === "snapshot" && asOf) return `Snapshot · ${formatDate(asOf)}`;
   if (info.liveness === "cached" && info.retrieved_at)
     return `Cached · ${formatDateTime(info.retrieved_at)}`;
   if (info.liveness === "curated")
-    return info.retrieved_at ? `Curated set · ${formatDate(info.retrieved_at)}` : "Curated set";
+    return asOf ? `Curated set · ${formatDate(asOf)}` : "Curated set";
   if (info.liveness === "stub") return "Placeholder data";
   return info.label;
 }
@@ -108,6 +119,7 @@ const STALE_STYLE = "border-orange-300 bg-orange-50 text-orange-800";
 export function livenessTitle(info: SourceLiveness): string {
   const parts: string[] = [];
   if (info.detail) parts.push(info.detail);
+  if (info.source_as_of) parts.push(`Data as of ${formatDate(info.source_as_of)}`);
   if (info.retrieved_at) {
     parts.push(`Retrieved ${formatDate(info.retrieved_at)}`);
   } else if (info.liveness === "stub") {
@@ -127,7 +139,9 @@ export function LivenessBadge({
 }) {
   if (!info) return null;
 
-  const days = ageInDays(info.retrieved_at);
+  // Aged by the data's own date (Phase 314): a register cut months ago is stale
+  // however recently OpenCheck rebuilt the index from it.
+  const days = ageInDays(dataAsOf(info));
   const stale =
     (info.liveness === "snapshot" || info.liveness === "cached") &&
     days !== null &&

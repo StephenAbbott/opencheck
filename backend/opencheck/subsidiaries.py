@@ -756,17 +756,21 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
             with provenance.mapping_provenance(
                 provenance.Provenance(
                     liveness="snapshot",
-                    retrieved_at=_snapshot_datetime(snapshot_date),
+                    # Phase 314: two clocks — the Golden Copy publish the
+                    # rows reflect (GLEIF's), and when OpenCheck last
+                    # refreshed the file (ours, the only retrievedAt).
+                    retrieved_at=_store_retrieved_at(),
+                    source_as_of=_snapshot_datetime(snapshot_date),
                     detail=SNAPSHOT_DETAIL[snapshot_source or "fallback"],
                 )
             ):
-                result["bods"] = map_gleif_subsidiaries(
-                    lei, data["subject_attrs"], children
+                result["bods"] = list(
+                    map_gleif_subsidiaries(lei, data["subject_attrs"], children)
                 )
         else:
             with provenance.mapping_provenance(fetched):
-                result["bods"] = map_gleif_subsidiaries(
-                    lei, data["subject_attrs"], children
+                result["bods"] = list(
+                    map_gleif_subsidiaries(lei, data["subject_attrs"], children)
                 )
     return result
 
@@ -785,8 +789,16 @@ async def _build_with_provenance(
         data = await _build(lei)
     if outer is not None:
         for obs in recorder.observations:
-            outer.record(obs.liveness, obs.retrieved_at, obs.detail)
+            outer.record(obs.liveness, obs.retrieved_at, obs.detail, obs.source_as_of)
     return data, recorder.resolve()
+
+
+def _store_retrieved_at() -> datetime | None:
+    """When OpenCheck last refreshed the Golden Copy file, or ``None``."""
+    from .entity_pages import get_store
+
+    store = get_store()
+    return store.retrieved_at() if store is not None else None
 
 
 def _snapshot_datetime(publish: str | None) -> datetime | None:

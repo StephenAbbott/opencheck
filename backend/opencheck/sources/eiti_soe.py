@@ -67,7 +67,6 @@ import json
 import logging
 import os
 from pathlib import Path
-from datetime import datetime, timezone
 from typing import Any
 
 from .. import degradation, provenance
@@ -101,11 +100,13 @@ _index: dict[str, dict[str, Any]] | None = None
 #: Upstream extract date of the committed index (``meta.source_snapshot``),
 #: recorded as the snapshot's retrieval time on every match.
 _index_snapshot: str | None = None
+#: When OpenCheck built the index (``meta.built``) — the retrieval clock.
+_index_built: str | None = None
 
 
 def _get_index() -> dict[str, dict[str, Any]]:
     """Load the committed LEI-keyed SOE index (cached in a module singleton)."""
-    global _index, _index_snapshot
+    global _index, _index_snapshot, _index_built
     if _index is None:
         try:
             with gzip.open(_INDEX_PATH, "rt", encoding="utf-8") as f:
@@ -119,6 +120,7 @@ def _get_index() -> dict[str, dict[str, Any]]:
             }
             meta = data.get("meta") or {}
             _index_snapshot = meta.get("source_snapshot") or meta.get("built")
+            _index_built = meta.get("built")
             log.info(
                 "EITI SOE index loaded: %s SOEs resolved to LEI (%s source snapshot)",
                 meta.get("resolved_lei", len(_index)),
@@ -141,15 +143,12 @@ def _record_index_provenance() -> None:
     what makes the bundle report itself as only as fresh as its stalest part.
     (The mirror image of the Ariregister bug in PR #153, which under-claimed.)
     """
-    built_at: datetime | None = None
-    if _index_snapshot:
-        try:
-            built_at = datetime.fromisoformat(_index_snapshot).replace(tzinfo=timezone.utc)
-        except ValueError:
-            built_at = None
+    # Phase 314: the SOE database's own snapshot date is EITI's clock; the
+    # index build (``meta.built``) is ours.
     provenance.record_snapshot(
-        built_at,
-        "EITI SOE Database index committed to the repository",
+        retrieved_at=provenance.parse_moment(_index_built),
+        source_as_of=provenance.parse_moment(_index_snapshot),
+        detail="EITI SOE Database index committed to the repository",
     )
 
 

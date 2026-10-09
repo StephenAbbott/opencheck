@@ -1297,12 +1297,16 @@ class AspMoldovaAdapter(SourceAdapter):
         if age is None or age > REFRESH_AFTER_DAYS:
             _start_background_sync()
         snapshot = meta.get("snapshot_date") or None
-        built = None
-        if snapshot:
-            built = datetime.fromisoformat(snapshot).replace(tzinfo=timezone.utc)
+        # Phase 314: the weekly export date is ASP's clock; when this index
+        # was built from it is ours. With no export date recorded the build
+        # time still dates the statements — never today.
         provenance.record_snapshot(
-            built,
-            f"ASP weekly open-data export of {snapshot}" if snapshot else "ASP weekly open-data export",
+            retrieved_at=provenance.parse_moment(meta.get("built_at")),
+            source_as_of=provenance.parse_moment(snapshot),
+            detail=(
+                f"ASP weekly open-data export of {snapshot}"
+                if snapshot else "ASP weekly open-data export"
+            ),
         )
 
         row = conn.execute("SELECT * FROM company WHERE idno = ?", (idno,)).fetchone()

@@ -12,7 +12,9 @@ Files consumed from the ZIP:
   enterprise.csv      — status, juridical form, start date          (~1.5 M rows)
   denomination.csv    — NL / FR / DE names, official + commercial   (~3.8 M rows)
   address.csv         — registered-office and branch addresses       (~2.3 M rows)
-  meta.csv            — version / last-update metadata (informational only)
+  meta.csv            — KBO's own extract metadata (SnapshotDate, ExtractTimestamp,
+                        ExtractNumber, …), kept verbatim in the ``meta`` table so the
+                        adapter can date its answers by the register's cut (Phase 314)
 
 Files that are NOT consumed (not needed for entity-level data):
   activity.csv, branch.csv, code.csv, contact.csv, establishment.csv
@@ -80,6 +82,7 @@ import re
 import sqlite3
 import sys
 import zipfile
+from datetime import datetime, timezone
 from io import TextIOWrapper
 from pathlib import Path
 from typing import Iterator
@@ -128,6 +131,11 @@ CREATE TABLE IF NOT EXISTS entities (
     name_de           TEXT,
     address           TEXT,
     link              TEXT
+);
+
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5 (
@@ -388,6 +396,32 @@ def _load_addresses(
 # Phase 4 — Build FTS5 index
 # ---------------------------------------------------------------------------
 
+def _load_meta(conn: sqlite3.Connection, rows: Iterator[dict[str, str]]) -> None:
+    """Persist KBO's ``meta.csv`` key/value pairs verbatim, plus ``built_at``.
+
+    KBO publishes ``meta.csv`` as two columns (``Variable``, ``Value``) holding
+    the extract's ``SnapshotDate``, ``ExtractTimestamp``, ``ExtractType`` and
+    ``ExtractNumber``. The values are stored exactly as published — the
+    adapter parses ``SnapshotDate`` as the register's cut (``source_as_of``) —
+    and ``built_at`` records when this database was built, which is when
+    OpenCheck retrieved the data (``retrievedAt``). The two are kept apart on
+    purpose: one is the register's clock, the other is ours.
+    """
+    pairs: dict[str, str] = {}
+    for row in rows:
+        values = [str(v or "").strip() for v in row.values()]
+        if len(values) >= 2 and values[0]:
+            pairs[values[0]] = values[1]
+    pairs["built_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace(
+        "+00:00", "Z"
+    )
+    conn.executemany(
+        "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", sorted(pairs.items())
+    )
+    conn.commit()
+    logger.info("meta: %s", ", ".join(f"{k}={v}" for k, v in sorted(pairs.items())))
+
+
 def _build_fts(conn: sqlite3.Connection) -> None:
     """Populate the FTS5 index from the entities table."""
     logger.info("Building FTS5 index …")
@@ -492,6 +526,9 @@ def main() -> None:
 
     logger.info("Phase 3: Loading address.csv …")
     _load_addresses(conn, _iter_csv(zip_path, data_dir, "address.csv"))
+
+    logger.info("Phase 4: Loading meta.csv …")
+    _load_meta(conn, _iter_csv(zip_path, data_dir, "meta.csv"))
 
     if not args.no_fts:
         _build_fts(conn)

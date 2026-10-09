@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from .. import provenance
@@ -53,19 +53,21 @@ from .schemas.meip import MeipBundle
 log = logging.getLogger(__name__)
 
 
-def _declare(edition: str) -> None:
+def _declare(edition: str, built_at: datetime | None = None) -> None:
     """The store is a published bulk dataset with a reference date, not a
     call to a register — declare it as a snapshot of that date so the card
-    says "31 Dec 2024 register", not "live"."""
-    built_at: datetime | None = None
-    if edition:
-        try:
-            built_at = datetime.fromisoformat(edition).replace(tzinfo=UTC)
-        except ValueError:
-            built_at = None
+    says "31 Dec 2024 register", not "live".
+
+    Phase 314: the edition is the OECD's clock (``source_as_of``); when
+    OpenCheck built the store from the OECD's files is ours (``retrieved_at``).
+    """
     provenance.record_snapshot(
-        built_at,
-        f"OECD-UNSD MEIP Global Register, {edition or 'undated'} edition, BODS v0.4 release",
+        retrieved_at=built_at,
+        source_as_of=provenance.parse_moment(edition),
+        detail=(
+            f"OECD-UNSD MEIP Global Register, {edition or 'undated'} edition, "
+            "BODS v0.4 release"
+        ),
     )
 
 
@@ -141,6 +143,6 @@ class MeipAdapter(SourceAdapter):
         bundle = st.bundle_for_lei(lei)
         if bundle is None:
             return None
-        _declare(bundle.get("edition") or "")
+        _declare(bundle.get("edition") or "", st.built_at)
         validate_raw(self.id, MeipBundle, bundle)
         return bundle

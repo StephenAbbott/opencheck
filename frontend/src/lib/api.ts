@@ -738,6 +738,8 @@ export interface SourceHealthRow {
   known_gap: string;
   liveness: "live" | "cached" | "snapshot" | "curated" | "stub" | null;
   retrieved_at: string | null;
+  /** The register's cut, where the source declared one (Phase 314). */
+  source_as_of?: string | null;
   latency_ms: number | null;
   attempts: number;
   /** Entity + person + relationship statements the probe subject mapped to. */
