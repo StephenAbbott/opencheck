@@ -314,8 +314,9 @@ async def test_429_falls_back_to_entity_store_snapshot(
     assert bundle["direct_children"][0]["attributes"]["lei"] == _CHILD_LEI
     # Honest badge: snapshot, dated to the Golden Copy publish — the full
     # timestamp since Phase 179 (three publishes a day), not the date alone.
+    # Since Phase 314 that publish is the source's cut, not our retrieval.
     assert resolved.liveness == "snapshot"
-    assert resolved.retrieved_at_iso() == "2026-08-03T08:00:00Z"
+    assert resolved.source_as_of_iso() == "2026-08-03T08:00:00Z"
     assert resolved.detail == "GLEIF Golden Copy snapshot (live API rate-limited)"
     assert bundle["snapshot_source"] == "fallback"
 

@@ -885,12 +885,15 @@ class AprSerbiaAdapter(SourceAdapter):
         if age is None or age > REFRESH_AFTER_DAYS:
             _start_background_sync()
         snapshot = meta.get("snapshot_date") or None
-        built = None
-        if snapshot:
-            built = datetime.fromisoformat(snapshot).replace(tzinfo=timezone.utc)
+        # Phase 314: APR's monthly cut (DatumPreseka) is APR's clock; the
+        # index build is ours.
         provenance.record_snapshot(
-            built,
-            f"APR open-data company register, cut {snapshot}" if snapshot else "APR open-data company register",
+            retrieved_at=provenance.parse_moment(meta.get("built_at")),
+            source_as_of=provenance.parse_moment(snapshot),
+            detail=(
+                f"APR open-data company register, cut {snapshot}"
+                if snapshot else "APR open-data company register"
+            ),
         )
 
         row = conn.execute("SELECT * FROM company WHERE mb = ?", (mb,)).fetchone()

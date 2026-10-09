@@ -160,6 +160,8 @@ class Result:
     reason: str = ""
     liveness: str | None = None
     retrieved_at: str | None = None
+    #: The register's cut, where the source declared one (Phase 314).
+    source_as_of: str | None = None
     latency_ms: int | None = None
     result_size: int | None = None
     observed_fields: list[str] = field(default_factory=list)
@@ -245,6 +247,7 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
         statement_counts=statement_counts(source_id, probe, result),
         liveness=prov.liveness,
         retrieved_at=prov.retrieved_at_iso(),
+        source_as_of=prov.source_as_of_iso(),
         latency_ms=latency_ms,
         result_size=_size_of(result),
         observed_fields=_observed_fields(result),
@@ -307,8 +310,11 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
 
     # 3b. Snapshot ageing — the failure mode of a committed index is silence,
     #     not an error. Uses the date the index declares, never a file mtime.
-    if probe.snapshot_max_age_days is not None and prov.retrieved_at is not None:
-        age_days = (datetime.now(timezone.utc) - prov.retrieved_at).days
+    # The data's age is the register's cut where the source declared one
+    # (Phase 314), else the build: rebuilding an old dump does not freshen it.
+    data_as_of = prov.source_as_of or prov.retrieved_at
+    if probe.snapshot_max_age_days is not None and data_as_of is not None:
+        age_days = (datetime.now(timezone.utc) - data_as_of).days
         if age_days > probe.snapshot_max_age_days:
             out.status = DEGRADED
             out.reason = (
@@ -316,7 +322,7 @@ async def _run_probe(source_id: str, probe: SourceProbe, timeout: float) -> Resu
                 "— refresh due"
             )
             return out
-    if probe.snapshot_max_age_days is not None and prov.retrieved_at is None:
+    if probe.snapshot_max_age_days is not None and data_as_of is None:
         out.status = DEGRADED
         out.reason = "snapshot declares no build date, so its age cannot be checked"
         return out

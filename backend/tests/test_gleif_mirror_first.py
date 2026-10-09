@@ -22,6 +22,7 @@ import json
 import sqlite3
 import sys
 import time
+from datetime import date as _date
 from pathlib import Path
 
 import httpx
@@ -249,7 +250,9 @@ async def test_mirror_serves_the_anchor_with_one_call_for_the_cross_references(
     assert bundle["snapshot_source"] == "mirror"
     assert bundle["snapshot_fallback"] is False
     assert resolved.liveness == "snapshot"
-    assert resolved.retrieved_at_iso() == "2026-09-07T16:00:00Z"
+    # Two clocks (Phase 314): the watermark is GLEIF's publish, the cut the
+    # mirror reflects; it is no longer passed off as OpenCheck's retrieval.
+    assert resolved.source_as_of_iso() == "2026-09-07T16:00:00Z"
     assert resolved.detail == "GLEIF Golden Copy mirror"
     counts = _counts()
     assert counts["anchor.mirror"] == 1 and counts["anchor.miss_live"] == 0
@@ -396,8 +399,9 @@ async def test_the_lookup_pipeline_anchor_comes_from_the_mirror(
     gleif_hits = [h for h in response.json()["hits"] if h["source_id"] == "gleif"]
     assert len(gleif_hits) == 1
     assert gleif_hits[0]["liveness"] == "snapshot"
-    assert gleif_hits[0]["retrieved_at"] == "2026-09-07T16:00:00Z"
     body = response.json()
+    # Dated to the watermark — as the source's cut (Phase 314).
+    assert body["source_liveness"]["gleif"]["source_as_of"] == "2026-09-07T16:00:00Z"
     assert body["source_liveness"]["gleif"]["detail"] == "GLEIF Golden Copy mirror"
     assert not any("api.gleif.org" in str(r.url) for r in httpx_mock.get_requests())
 
@@ -491,8 +495,13 @@ async def test_subsidiary_network_from_the_mirror(
     assert result["snapshot_date"] == "2026-09-07"
     assert result["degraded_detail"] is None
     # The exported statements carry the snapshot provenance, not "live now".
+    # Phase 314: the watermark day is the claim's date (statementDate); the
+    # fixture's meta records no build or refresh time, so no retrievedAt is
+    # claimed — the watermark is GLEIF's clock, not OpenCheck's.
     sources = [s.get("source") for s in result["bods"] if s.get("source")]
-    assert sources and all(src.get("retrievedAt") == "2026-09-07T00:00:00Z" for src in sources)
+    assert sources and not any("retrievedAt" in src for src in sources)
+    rels = [s for s in result["bods"] if s["recordType"] == "relationship"]
+    assert rels and all(s["statementDate"] != _date.today().isoformat() for s in rels)
     assert _counts()["subsidiaries.mirror"] == 1
     # Not written to the response cache: the mirror is the cache.
     assert subs._cache.get_payload(f"{subs._CACHE_NS}/{TOP}") is None

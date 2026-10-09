@@ -2952,3 +2952,42 @@ otherwise:
   name; `_declare_gem_snapshot` records it, so the bundle resolves `snapshot`
   and the probe expects `snapshot`. The GEOT artifact is declared by its
   `meta.generated` day, never its month-only `release` label.
+
+## Two clocks on `Provenance`, and statements built in scope (Phase 314)
+
+Phase B of the dates audit. Things that will be re-derived otherwise:
+
+- **`retrieved_at` is OpenCheck's clock; `source_as_of` is the source's.**
+  `provenance.record_snapshot(*, retrieved_at=, source_as_of=, detail=)` is
+  keyword-only so the two cannot be swapped by position. `retrieved_at` is the
+  download / build / refresh time (`meta.built_at`, the asset download, the
+  mirror's `refreshed_at`; a file's write time only for a file OpenCheck
+  itself downloaded or built, never a git checkout) and is the only thing
+  `_source_block` writes as `retrievedAt`. `source_as_of` is the register's
+  cut (extract date, monthly cut, Golden Copy watermark, GEM release, OO
+  `publicationDate`) and is `_statement_date`'s second tier, ahead of
+  `retrieved_at`. `resolve()` takes the oldest of each separately. Read either
+  from an index's meta with `provenance.index_meta(conn)` /
+  `provenance.parse_moment(value)` — never guess one.
+- **New bulk builders persist the cut.** `extract_bce.py` keeps KBO's
+  `meta.csv` verbatim (`SnapshotDate` is day-first); `build_edr_ukraine_index.py`
+  stores `export_date` from `UO.xml`'s ZIP timestamp (override
+  `--export-date`); `extract_cyprus.py` takes `--release-date`. Each writes
+  `built_at`. A DB built before this still loads and declares a retrieval with
+  no cut.
+- **A mapper's output is consumed inside `mapping_provenance`.** Most mappers
+  are generators: `bundle = mapper(raw)` in the `with` block builds nothing,
+  and draining it after the block maps every statement under the stub default.
+  That was live in `/deepen` and the lookup deepen pass for 41 sources until
+  this phase. `test_phase314_provenance_clocks.py::test_every_mapper_call_is_consumed_where_it_is_made`
+  requires each mapper call's parent node to be a call (`list(...)`,
+  `unique_statements(...)`), and the conftest mapper guard flags a generator
+  created under a real provenance and drained under the stub.
+- **The conftest guard also fails a snapshot/curated statement dated today.**
+  A bulk adapter that reaches tier 4 of `_statement_date` declared neither
+  clock. A test fixture that genuinely builds its index today must set a cut.
+- **The `eiti` organisation match is a snapshot** (`meta.generated`), whatever
+  the live revenue calls do, and its probe expects `snapshot`.
+- **Frontend:** `SourceLiveness.source_as_of` is optional; `dataAsOf()` in
+  `LivenessBadge.tsx` (cut, else retrieval) drives the chip date and the
+  `STALE_AFTER_DAYS` check, and the tooltip names both dates.

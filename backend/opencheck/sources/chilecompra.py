@@ -790,9 +790,15 @@ def data_through(meta: dict[str, str]) -> datetime | None:
 def declare_snapshot(meta: dict[str, str] | None = None) -> None:
     meta = read_meta() if meta is None else meta
     label = window_label(meta)
+    # Phase 314: the month the files cover is ChileCompra's clock; when the
+    # index was built from them is ours.
     provenance.record_snapshot(
-        data_through(meta),
-        f"ChileCompra monthly open-data files, {label}" if label else "ChileCompra monthly open-data files",
+        retrieved_at=provenance.parse_moment(meta.get("built_at")),
+        source_as_of=data_through(meta),
+        detail=(
+            f"ChileCompra monthly open-data files, {label}"
+            if label else "ChileCompra monthly open-data files"
+        ),
     )
 
 

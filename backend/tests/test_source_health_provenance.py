@@ -44,7 +44,7 @@ class _Adapter:
         if self._records == "live":
             provenance.record_live("test")
         elif self._records == "snapshot":
-            provenance.record_snapshot(None, "test")
+            provenance.record_snapshot(retrieved_at=None, source_as_of=None, detail="test")
         return self._result
 
 

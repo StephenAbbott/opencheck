@@ -27,12 +27,14 @@ bad statement from each return shape.
 from __future__ import annotations
 
 import collections.abc
+import datetime as _dt
 import functools
 import importlib
 import pkgutil
 import types
 from typing import Any, Callable, Iterator
 
+from opencheck import provenance as _provenance
 from opencheck.bods.validator import (
     address_type_issues,
     entity_subtype_issue,
@@ -101,9 +103,51 @@ def check_statement(mapper: str, stmt: Any) -> None:
         VIOLATIONS.append((mapper, sid, issue))
 
 
-def _checked(mapper: str, gen: Iterator[Any]) -> Iterator[Any]:
+#: Liveness values that describe a bulk or committed dataset: data that was
+#: true on some earlier day, never "this morning" (Phase 314).
+_DATED_LIVENESS = frozenset({"snapshot", "curated"})
+
+
+def check_dates(mapper: str, stmt: Any, created_under: str) -> None:
+    """The two Phase 314 date rules, checked as each statement is built.
+
+    1. A statement mapped under a ``snapshot`` / ``curated`` provenance must
+       not be dated today: the dataset was cut, built or harvested on an
+       earlier day, and the two-clock model always has one of those to fall
+       back to. ``statementDate`` == today here means a bulk adapter declared
+       neither clock.
+    2. A generator must be drained inside the scope it was created in. Created
+       under a real provenance and drained under the stub default means the
+       caller closed ``mapping_provenance`` before consuming the statements —
+       the Phase 314 ``/deepen`` defect, which dated 41 sources' statements
+       today with no ``retrievedAt`` in production.
+    """
+    if not isinstance(stmt, dict):
+        return
+    sid = str(stmt.get("statementId") or "?")
+    liveness = _provenance.current_mapping_provenance().liveness
+    if created_under != "stub" and liveness == "stub":
+        VIOLATIONS.append((
+            mapper, sid,
+            f"built outside the provenance scope it was created in "
+            f"({created_under} at the call, stub when drained) — materialise "
+            f"the mapper's output inside mapping_provenance",
+        ))
+    if liveness in _DATED_LIVENESS:
+        today = _dt.datetime.now(_dt.timezone.utc).date().isoformat()
+        if stmt.get("statementDate") == today:
+            VIOLATIONS.append((
+                mapper, sid,
+                f"statementDate is today under {liveness} provenance — a bulk "
+                f"dataset must be dated by its cut (source_as_of) or its build "
+                f"(retrieved_at), never by the day it was read",
+            ))
+
+
+def _checked(mapper: str, gen: Iterator[Any], created_under: str) -> Iterator[Any]:
     for stmt in gen:
         check_statement(mapper, stmt)
+        check_dates(mapper, stmt, created_under)
         yield stmt
 
 
@@ -115,20 +159,23 @@ def wrap(fn: Callable[..., Any]) -> Callable[..., Any]:
 
     @functools.wraps(fn)
     def guarded(*args: Any, **kwargs: Any) -> Any:
+        created_under = _provenance.current_mapping_provenance().liveness
         result = fn(*args, **kwargs)
         # Any iterator, not only a generator: the passthrough mappers
         # (``map_bods_gleif``, ``map_bods_uk_psc``, ``map_meip``) return
         # ``iter(list)``, which went through this guard unchecked until
         # Phase 239's coverage test noticed.
         if isinstance(result, collections.abc.Iterator):
-            return _checked(fn.__name__, result)
+            return _checked(fn.__name__, result, created_under)
         statements = getattr(result, "statements", None)
         if isinstance(statements, list):
             for stmt in statements:
                 check_statement(fn.__name__, stmt)
+                check_dates(fn.__name__, stmt, created_under)
         elif isinstance(result, list):
             for stmt in result:
                 check_statement(fn.__name__, stmt)
+                check_dates(fn.__name__, stmt, created_under)
         return result
 
     setattr(guarded, _MARK, True)

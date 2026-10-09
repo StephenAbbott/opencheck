@@ -176,7 +176,22 @@ def resolve_winners(
     return winner, targets, duplicates, blanks
 
 
-def build(zip_path: Path, out_path: Path, tier: str) -> dict[str, int]:
+def export_date_of(zip_path: Path) -> str:
+    """The day data.gov.ua cut this export, as ``YYYY-MM-DD``.
+
+    The ZIP carries no metadata file, so the cut is read from the XML member's
+    own timestamp — written when the Ministry generated ``UO.xml``, not when
+    OpenCheck downloaded the ZIP. It dates every statement the index yields
+    (``statementDate``); ``built_at`` is OpenCheck's retrieval (Phase 314).
+    """
+    with zipfile.ZipFile(str(zip_path)) as zf:
+        year, month, day, *_ = zf.infolist()[0].date_time
+    return f"{year:04d}-{month:02d}-{day:02d}"
+
+
+def build(
+    zip_path: Path, out_path: Path, tier: str, export_date: str | None = None
+) -> dict[str, int]:
     if out_path.exists():
         out_path.unlink()
     con = sqlite3.connect(str(out_path))
@@ -338,6 +353,7 @@ def build(zip_path: Path, out_path: Path, tier: str) -> dict[str, int]:
         [
             ("source", "data.gov.ua ЄДР UO.zip"),
             ("source_file", zip_path.name),
+            ("export_date", export_date or export_date_of(zip_path)),
             ("tier", tier),
             ("built_at", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())),
             ("licence", "CC-BY-4.0 — Ministry of Justice of Ukraine"),
@@ -363,11 +379,17 @@ def main() -> None:
         default="graph",
         help="graph = ownership-bearing entities only (default); full = all 2.0M",
     )
+    ap.add_argument(
+        "--export-date",
+        metavar="YYYY-MM-DD",
+        help="the register's cut date, when the ZIP member's timestamp is wrong "
+        "(default: read from UO.xml inside the ZIP)",
+    )
     args = ap.parse_args()
     if not args.zip.exists():
         raise SystemExit(f"not found: {args.zip}")
 
-    stats = build(args.zip, args.out, args.tier)
+    stats = build(args.zip, args.out, args.tier, args.export_date)
     log.info("wrote %s (%s MB, %ss)", args.out, stats["megabytes"], stats["seconds"])
     for key in (
         "subjects", "entities", "duplicate_edrpou", "blank_edrpou",

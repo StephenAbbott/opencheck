@@ -199,6 +199,7 @@ class TestGleifRelationshipRecords:
         store.children = lambda lei, limit=100: ([child_row], 1)
         store.exceptions = lambda lei: {}
         store.watermark = lambda: datetime(2026, 10, 9, tzinfo=timezone.utc)
+        store.retrieved_at = lambda: None
         monkeypatch.setattr(entity_pages, "get_store", lambda: store)
         monkeypatch.setattr(entity_pages, "gleif_record_from_row", lambda r: _l1(r.lei))
         bundle = GleifAdapter()._snapshot_bundle(SUBJECT, reason="mirror")
@@ -381,7 +382,9 @@ class TestGemRelease:
             )
         (obs,) = rec.observations
         assert obs.liveness == "snapshot"
-        assert obs.retrieved_at == datetime(2026, 8, 5, tzinfo=timezone.utc)
+        # Two clocks (Phase 314): GEM's release is the cut, the download ours.
+        assert obs.source_as_of == datetime(2026, 8, 5, tzinfo=timezone.utc)
+        assert obs.retrieved_at == datetime(2026, 9, 1, tzinfo=timezone.utc)
 
     def test_without_a_release_date_the_download_time_is_declared(self):
         with provenance.recording() as rec:
@@ -391,6 +394,7 @@ class TestGemRelease:
         assert rec.observations[0].retrieved_at == datetime(
             2026, 9, 1, 12, tzinfo=timezone.utc
         )
+        assert rec.observations[0].source_as_of is None
 
     def test_every_gem_statement_is_dated_by_the_release(self):
         from tests.test_bods_climatetrace import _entity_with_parent_bundle
@@ -435,5 +439,5 @@ def test_climatetrace_bundle_resolves_to_a_snapshot(monkeypatch, tmp_path):
         get_settings.cache_clear()
     resolved = rec.resolve()
     assert resolved.liveness == "snapshot"
-    assert resolved.retrieved_at == datetime(2026, 8, 5, tzinfo=timezone.utc)
+    assert resolved.source_as_of == datetime(2026, 8, 5, tzinfo=timezone.utc)
     assert bundle["gem_release"] == "2026-08-05"

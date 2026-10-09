@@ -345,7 +345,10 @@ async def test_snapshot_stands_in_for_the_direct_relation(_live):
     # The rows are real, so they are exported — as snapshot-dated statements.
     assert res["bods"] is not None
     subject = [s for s in res["bods"] if s["recordType"] == "entity"][0]
-    assert subject["source"]["retrievedAt"].startswith("2026-08-01")
+    # Phase 314: the Golden Copy publish is GLEIF's clock — the claim's date —
+    # not OpenCheck's retrieval, which no store is configured to report here.
+    assert subject["statementDate"] == "2026-08-01"
+    assert "retrievedAt" not in subject["source"]
 
 
 async def test_snapshot_children_reads_the_entity_store(_live, monkeypatch):

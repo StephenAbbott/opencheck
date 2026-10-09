@@ -32,6 +32,16 @@ retrieval time is reported.
 The recorder lives in a ``ContextVar``, so concurrent source dispatch (each
 source runs in its own ``asyncio`` task, which copies the context on creation)
 cannot bleed one source's provenance into another's.
+
+**Two clocks, never one (Phase 313/314).** A bulk dataset has two dates: when
+the register cut it (``source_as_of`` — the GLEIF Golden Copy publish, an APR
+monthly cut, a GEM release) and when OpenCheck downloaded or built it
+(``retrieved_at``). Until Phase 314 both went into ``retrieved_at``, so a
+snapshot's ``source.retrievedAt`` named the register's extract date — a claim
+about the *register's* clock in the field that describes *ours*. Now
+``retrieved_at`` only ever holds an OpenCheck retrieval, and BODS
+``statementDate`` falls back to ``source_as_of`` before it (see
+``bods/statements.py::_statement_date``).
 """
 
 from __future__ import annotations
@@ -40,7 +50,7 @@ import contextvars
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Iterator, Literal
+from typing import Any, Iterator, Literal
 
 Liveness = Literal["live", "cached", "snapshot", "curated", "stub"]
 
@@ -83,8 +93,16 @@ class Provenance:
     """Resolved provenance for one source's contribution to a lookup."""
 
     liveness: Liveness = "stub"
+    #: When OpenCheck itself obtained the payload: a live fetch, a cache
+    #: write, or the download/build of a bulk artifact. Feeds BODS
+    #: ``source.retrievedAt``, and nothing else may.
     retrieved_at: datetime | None = None
     detail: str | None = None
+    #: When the *source* cut the data this payload is a copy of — a bulk
+    #: extract's date, a register's monthly cut, a publish watermark. Feeds
+    #: BODS ``statementDate`` when the mapper has no record-level date, and
+    #: the age a snapshot badge shows. ``None`` for live, cached and stub.
+    source_as_of: datetime | None = None
 
     @property
     def is_live(self) -> bool:
@@ -96,25 +114,60 @@ class Provenance:
 
     def retrieved_at_iso(self) -> str | None:
         """UTC ISO-8601 with a trailing Z, or None when we never fetched."""
-        if self.retrieved_at is None:
-            return None
-        moment = self.retrieved_at
-        if moment.tzinfo is None:
-            moment = moment.replace(tzinfo=timezone.utc)
-        return (
-            moment.astimezone(timezone.utc)
-            .replace(microsecond=0)
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
+        return _iso(self.retrieved_at)
+
+    def source_as_of_iso(self) -> str | None:
+        """The source's own cut date, UTC ISO-8601 with a trailing Z."""
+        return _iso(self.source_as_of)
 
     def to_dict(self) -> dict[str, object]:
         return {
             "liveness": self.liveness,
             "label": self.label,
             "retrieved_at": self.retrieved_at_iso(),
+            "source_as_of": self.source_as_of_iso(),
             "detail": self.detail,
         }
+
+
+def parse_moment(value: object) -> datetime | None:
+    """An ISO date or datetime string (``2026-08-31``, ``2026-08-31T07:01:00Z``)
+    as an aware UTC datetime, else ``None``. For the dates bulk indexes keep
+    in their ``meta`` — never guessed, never defaulted."""
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        moment = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def index_meta(conn: Any) -> dict[str, str]:
+    """The ``meta`` key/value table a local SQLite index carries, or ``{}``
+    when the index predates it. Bulk adapters read their two clocks from it:
+    ``built_at`` (OpenCheck's retrieval) and the register's own cut date."""
+    try:
+        rows = conn.execute("SELECT key, value FROM meta").fetchall()
+    except Exception:  # sqlite3.OperationalError on an index with no meta table
+        return {}
+    return {str(r[0]): str(r[1] or "") for r in rows}
+
+
+def _iso(moment: datetime | None) -> str | None:
+    if moment is None:
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return (
+        moment.astimezone(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 STUB_PROVENANCE = Provenance()
@@ -127,6 +180,7 @@ class Observation:
     liveness: Liveness
     retrieved_at: datetime | None
     detail: str | None
+    source_as_of: datetime | None = None
 
 
 #: Historical name, kept because it reads better inside this module's internals.
@@ -158,8 +212,9 @@ class Recorder:
         liveness: Liveness,
         retrieved_at: datetime | None = None,
         detail: str | None = None,
+        source_as_of: datetime | None = None,
     ) -> None:
-        self._entries.append(_Entry(liveness, retrieved_at, detail))
+        self._entries.append(_Entry(liveness, retrieved_at, detail, source_as_of))
 
     def resolve(self, *, is_stub: bool = False) -> Provenance:
         """Collapse the observations into one claim.
@@ -172,8 +227,11 @@ class Recorder:
 
         worst = max(self._entries, key=lambda e: _SEVERITY.get(e.liveness, 4))
         moments = [e.retrieved_at for e in self._entries if e.retrieved_at is not None]
-        # The bundle is only as fresh as its stalest component.
+        # The bundle is only as fresh as its stalest component — on both
+        # clocks, each resolved on its own.
         oldest = min(moments) if moments else None
+        cuts = [e.source_as_of for e in self._entries if e.source_as_of is not None]
+        oldest_cut = min(cuts) if cuts else None
 
         detail = worst.detail
         if detail is None:
@@ -183,7 +241,10 @@ class Recorder:
                     break
 
         return Provenance(
-            liveness=worst.liveness, retrieved_at=oldest, detail=detail
+            liveness=worst.liveness,
+            retrieved_at=oldest,
+            detail=detail,
+            source_as_of=oldest_cut,
         )
 
 
@@ -218,12 +279,13 @@ def record(
     liveness: Liveness,
     retrieved_at: datetime | None = None,
     detail: str | None = None,
+    source_as_of: datetime | None = None,
 ) -> None:
     """Record an observation. A no-op outside a scope, so adapters, scripts and
     tests can call cache/HTTP helpers without having to open one."""
     recorder = _CURRENT.get()
     if recorder is not None:
-        recorder.record(liveness, retrieved_at, detail)
+        recorder.record(liveness, retrieved_at, detail, source_as_of)
 
 
 def record_live(detail: str | None = None) -> None:
@@ -235,7 +297,10 @@ def record_cached(retrieved_at: datetime | None, detail: str | None = None) -> N
 
 
 def record_curated(
-    detail: str | None = None, harvested_at: datetime | None = None
+    detail: str | None = None,
+    harvested_at: datetime | None = None,
+    *,
+    source_as_of: datetime | None = None,
 ) -> None:
     """A fixture committed to the repository.
 
@@ -247,15 +312,27 @@ def record_curated(
     would be exactly the invented-precision problem this module exists to
     remove.
     """
-    record("curated", harvested_at, detail)
+    record("curated", harvested_at, detail, source_as_of)
 
 
 def record_snapshot(
-    built_at: datetime | None, detail: str | None = None
+    *,
+    retrieved_at: datetime | None,
+    source_as_of: datetime | None,
+    detail: str | None = None,
 ) -> None:
-    """A bulk dataset. ``built_at`` should be the upstream extract date where it
-    is known, not merely when the local artifact file was written."""
-    record("snapshot", built_at, detail)
+    """A bulk dataset, on its two clocks (Phase 314).
+
+    ``retrieved_at`` is when OpenCheck downloaded or built the artifact — the
+    asset download, the index build, the file's own write time — and becomes
+    BODS ``source.retrievedAt``. ``source_as_of`` is the date the source cut
+    the data (an extract date, a monthly cut, a publish watermark) and becomes
+    the fallback ``statementDate``. Either may be ``None`` when genuinely
+    unknown; neither is ever filled in with the other. Keyword-only, so a
+    caller cannot put a register date in the retrieval slot by position,
+    which is how every snapshot source did it until Phase 314.
+    """
+    record("snapshot", retrieved_at, detail, source_as_of)
 
 
 # ----------------------------------------------------------------------

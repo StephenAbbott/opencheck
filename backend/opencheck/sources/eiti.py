@@ -56,7 +56,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .. import degradation
+from .. import degradation, provenance
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -94,6 +94,10 @@ _norm_index: dict[str, dict[str, str]] | None = None  # cc -> normform -> ident
 #: cc -> ident -> every spelling of the same number in that bucket (Phase 306).
 _variants: dict[str, dict[str, list[str]]] | None = None
 _us_ein_by_lei: dict[str, str] | None = None
+#: ``meta.generated`` of the committed index — the day OpenCheck harvested the
+#: EITI API into it (Phase 314). Declared on every match, because the match
+#: itself is offline data however fresh the live revenue calls are.
+_index_generated: str | None = None
 
 
 _DIGITS_RE = re.compile(r"\D+")
@@ -127,12 +131,13 @@ def _get_index() -> tuple[
     dict[str, dict[str, list[dict[str, Any]]]], dict[str, dict[str, str]]
 ]:
     """Load the committed organisation index (and its normalised lookup)."""
-    global _index, _norm_index, _variants
+    global _index, _norm_index, _variants, _index_generated
     if _index is None or _norm_index is None:
         try:
             with gzip.open(_INDEX_PATH, "rt", encoding="utf-8") as f:
                 data = json.load(f)
             _index = data.get("index") or {}
+            _index_generated = (data.get("meta") or {}).get("generated")
             log.info(
                 "EITI organisation index loaded: %s identifications, %s countries",
                 data.get("meta", {}).get("identifications"),
@@ -424,6 +429,16 @@ class EitiAdapter(SourceAdapter):
         orgs = _organisations(cc, ident)
         if not orgs:
             return None
+        # The organisation match comes from the committed index, harvested on
+        # ``meta.generated``. Without this the bundle took its date from the
+        # live revenue call alone — a July index badged live — and resolved
+        # stub (dated today) whenever live mode was off. EITI publishes no
+        # cut of its own for the organisation list, so no ``source_as_of``.
+        provenance.record_snapshot(
+            retrieved_at=provenance.parse_moment(_index_generated),
+            source_as_of=None,
+            detail="EITI organisation index (committed artefact)",
+        )
         # Most recent reporting years first; undated records last.
         orgs.sort(key=lambda o: (o.get("year") or ""), reverse=True)
         entity_name = next(

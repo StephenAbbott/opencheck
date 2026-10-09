@@ -396,7 +396,10 @@ async def test_fetch_reads_a_supplier(built) -> None:
     # Snapshot, dated from the last month the index covers — not "stub", the
     # ariregister/ONRC failure mode where real rows render as placeholder data.
     assert resolved.liveness == "snapshot"
-    assert resolved.retrieved_at == datetime(2026, 9, 1, tzinfo=UTC)
+    # Two clocks (Phase 314): the month the data runs to is the source's cut;
+    # the build is OpenCheck's retrieval.
+    assert resolved.source_as_of == datetime(2026, 9, 1, tzinfo=UTC)
+    assert resolved.retrieved_at is not None
 
 
 async def test_fetch_a_company_that_sold_nothing(built) -> None:

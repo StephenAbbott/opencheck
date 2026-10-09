@@ -55,6 +55,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .. import provenance
 from ..config import get_settings
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
@@ -401,6 +402,22 @@ class EdrUkraineAdapter(SourceAdapter):
 
     def __init__(self) -> None:
         self._db: sqlite3.Connection | None = None
+        self._meta: dict[str, str] = {}
+
+    def _record_index_provenance(self) -> None:
+        """Declare the answer came from the local ЄДР index (Phase 314).
+
+        ``retrieved_at`` is when OpenCheck built the index (``meta.built_at``);
+        ``source_as_of`` is the day data.gov.ua cut the export
+        (``meta.export_date``), so ``statementDate`` is the register's date and
+        not the day of the lookup. An index built before the export date was
+        persisted carries a retrieval time and no cut.
+        """
+        provenance.record_snapshot(
+            retrieved_at=provenance.parse_moment(self._meta.get("built_at")),
+            source_as_of=provenance.parse_moment(self._meta.get("export_date")),
+            detail="data.gov.ua ЄДР bulk export (local SQLite index)",
+        )
 
     @property
     def info(self) -> SourceInfo:
@@ -448,6 +465,7 @@ class EdrUkraineAdapter(SourceAdapter):
         conn = sqlite3.connect(str(path), check_same_thread=False)
         conn.row_factory = sqlite3.Row
         self._db = conn
+        self._meta = provenance.index_meta(conn)
         return self._db
 
     def _rows(self, table: str, edrpou: str) -> list[dict[str, Any]]:
@@ -489,8 +507,11 @@ class EdrUkraineAdapter(SourceAdapter):
             )
         except sqlite3.OperationalError:
             return []
+        rows = cur.fetchall()
+        if rows:
+            self._record_index_provenance()
         hits: list[SourceHit] = []
-        for row in cur.fetchall():
+        for row in rows:
             hits.append(
                 SourceHit(
                     source_id=self.id,
@@ -535,6 +556,7 @@ class EdrUkraineAdapter(SourceAdapter):
         if entity is None:
             return self._stub(edrpou, legal_name)
 
+        self._record_index_provenance()
         exec_rows = self._rows("executive_power", edrpou)
         bundle: dict[str, Any] = {
             "source_id": self.id,

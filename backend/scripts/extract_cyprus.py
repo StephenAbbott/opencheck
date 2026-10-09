@@ -44,6 +44,7 @@ import logging
 import re
 import sqlite3
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -152,6 +153,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--office-csv", type=Path)
     ap.add_argument("--officials-csv", type=Path)
     ap.add_argument("--output", required=True, type=Path)
+    ap.add_argument(
+        "--release-date",
+        metavar="YYYY-MM-DD",
+        help="the data.gov.cy distribution's release date (its 'last modified' "
+        "on the dataset page). Dates every statement (statementDate); without "
+        "it the index carries only OpenCheck's build time.",
+    )
     args = ap.parse_args(argv)
 
     if args.output.exists():
@@ -184,6 +192,19 @@ def main(argv: list[str] | None = None) -> int:
         )
     except sqlite3.OperationalError as exc:
         log.warning("FTS5 unavailable (%s) — name search will use LIKE fallback", exc)
+    # Two clocks (Phase 314): built_at is OpenCheck's retrieval
+    # (source.retrievedAt); release_date is the register's cut (statementDate).
+    meta = [
+        (
+            "built_at",
+            datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        ),
+        ("organisations_csv", args.organisations_csv.name),
+    ]
+    if args.release_date:
+        meta.append(("release_date", args.release_date))
+    conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+    conn.executemany("INSERT INTO meta (key, value) VALUES (?, ?)", meta)
     conn.commit()
     conn.close()
 

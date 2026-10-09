@@ -153,11 +153,15 @@ export interface CardHealth {
 }
 
 /** How fresh the source's *data* was, as distinct from when it was checked. */
-export function freshnessPhrase(row: Pick<SourceHealthRow, "liveness" | "retrieved_at">): string {
+export function freshnessPhrase(
+  row: Pick<SourceHealthRow, "liveness" | "retrieved_at" | "source_as_of">,
+): string {
   if (!row.liveness) return "—";
   const phrase = LIVENESS_PHRASE[row.liveness];
   if (row.liveness === "snapshot" || row.liveness === "curated" || row.liveness === "cached") {
-    return row.retrieved_at ? `${phrase} · ${formatSweepDate(row.retrieved_at)}` : phrase;
+    // The data's own date where the source declared a cut (Phase 314).
+    const asOf = row.source_as_of ?? row.retrieved_at;
+    return asOf ? `${phrase} · ${formatSweepDate(asOf)}` : phrase;
   }
   return phrase;
 }

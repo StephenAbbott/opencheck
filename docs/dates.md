@@ -13,8 +13,8 @@ wrong, because four different questions all have date-shaped answers.
 | Field | Question it answers | Where OpenCheck gets it |
 |-------|---------------------|--------------------------|
 | `interests[].startDate` / `endDate` | When was it true? | The register |
-| `statementDate` | When did the source declare it? | The register's own declaration date where published, else the retrieval date, else today |
-| `source.retrievedAt` | When did OpenCheck download it? | Observed at fetch time — see [Data currency](sources.md#data-currency) |
+| `statementDate` | When did the source declare it? | The register's own declaration date where published, else the source's cut date for a bulk dataset, else the retrieval date, else (stubs only) today |
+| `source.retrievedAt` | When did OpenCheck download it? | Observed at fetch time, or the download / build time of a bulk index — never the register's cut. See [Data currency](sources.md#data-currency) |
 | `publicationDetails.publicationDate` | When did OpenCheck publish this statement? | Today |
 
 They are genuinely different, and until Phase 99 they were all `date.today()`.
@@ -32,6 +32,65 @@ from OO — and so does OpenCheck now.
 notification date. `appointed_on` belongs on `interests[].startDate` and nowhere
 else.
 
+## Bulk datasets carry two clocks (Phase 314)
+
+A bulk source has two dates and they answer different questions. The
+register's **cut** — KBO's `SnapshotDate`, ONRC's export slug, the Golden Copy
+publish, GEM's release, data.gov.ua's export — is when the data was true:
+that is `statementDate` material. OpenCheck's **download or build** — the
+index's `meta.built_at`, the asset download, a delta refresh — is when we
+obtained it: that is `source.retrievedAt`.
+
+Until Phase 314 one provenance slot held both, so the cut was published as
+`retrievedAt` (a 31 May extract claimed OpenCheck downloaded it on 31 May).
+Now `Provenance` has `source_as_of` (the cut) beside `retrieved_at` (ours),
+and every bulk adapter declares both by name:
+
+```python
+provenance.record_snapshot(
+    retrieved_at=<meta.built_at / download time>,
+    source_as_of=<the register's cut date>,
+    detail="…",
+)
+```
+
+Either may be `None` where it is genuinely unknown — an index built before
+its build time was recorded, a dataset that publishes no cut — and neither is
+ever guessed. Resolution takes the oldest of each clock separately. The
+source card's chip, and the weekly sweep's snapshot-age check, read the cut
+where there is one: rebuilding an old dump does not make it new.
+
+| Source | `source_as_of` (cut) | `retrieved_at` (ours) |
+|--------|----------------------|------------------------|
+| `gleif` mirror, subsidiaries mirror | Golden Copy publish watermark | `meta.refreshed_at`, else `meta.built_at` |
+| `bce_belgium` | KBO `meta.csv` `SnapshotDate` (persisted by `extract_bce.py`) | `meta.built_at`, else the DB file's write time |
+| `edr_ukraine` | `UO.xml`'s own timestamp inside the ZIP (`meta.export_date`) | `meta.built_at` |
+| `cyprus_drcor` | `--release-date` passed to `extract_cyprus.py` | `meta.built_at` |
+| `onrc_romania` | the export slug date | `meta.built_at`, else the downloaded file's write time |
+| `asp_moldova` | the weekly export date from the title | `meta.built_at` |
+| `apr_serbia` | `DatumPreseka` | `meta.built_at` |
+| `chilecompra` | first day of the latest month covered | `meta.built_at` |
+| `meip` | the OECD edition | the asset build |
+| `eiti_soe` | `meta.source_snapshot` | `meta.built` |
+| `eiti` (organisation index) | — (EITI publishes no cut) | `meta.generated` |
+| `climatetrace` (GEM / GEOT) | GEM release date; — for GEOT | asset download; GEOT `meta.generated` |
+| `bods_gleif`, `bods_uk_psc` | — | the extract directory's write time |
+| Open Ownership stored bundles | OO `publicationDate` | — |
+
+`tests/conftest.py`'s mapper guard fails any test in which a mapper, running
+under a snapshot or curated provenance, dates a statement today.
+
+### Statements are built inside their provenance scope
+
+Most mappers are generators. The phase also found that `/deepen` and the
+lookup's deepen pass assigned the generator inside `mapping_provenance` and
+drained it after the scope had closed, so the statements of 41 sources were
+built under the stub default: dated today, with no `retrievedAt`, whatever
+the fetch had recorded. Every call site now consumes the mapper's output
+inside the scope, and two guards pin it: a static check that each mapper call
+is consumed by the expression that makes it, and the conftest guard, which
+flags a generator created under a real provenance and drained under none.
+
 ## Which sources supply their own declaration date
 
 | Source | Field |
@@ -47,7 +106,8 @@ else.
 | `ted_eu` | latest notice `publication-date` |
 | `climatetrace` | the GEM ownership release date (the dated CSV filename) |
 
-Everything else falls back to the retrieval date, then to today.
+Everything else falls back to the source's cut date (bulk datasets — see
+above), then the retrieval date, then, for a stub only, today.
 
 Three registers were investigated and have nothing usable, recorded so the
 question does not get re-opened: **Estonia** publishes only a founding date,

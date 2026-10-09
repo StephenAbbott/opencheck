@@ -494,6 +494,29 @@ def export_date(meta: dict[str, str] | None = None) -> datetime | None:
         return None
 
 
+def _slug_date(meta: dict[str, str]) -> datetime | None:
+    """The export date in the CKAN ``dataset`` slug alone — ONRC's clock,
+    never the build time (Phase 314)."""
+    match = _DATASET_DATE_RE.search(meta.get("dataset") or "")
+    if not match:
+        return None
+    day, month, year = (int(p) for p in match.groups())
+    try:
+        return datetime(year, month, day, tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def _index_written_at() -> datetime | None:
+    """When the index file on disk was written — the boot download or the
+    local build, OpenCheck's own retrieval. Used only when the index carries
+    no ``built_at`` (the asset shipped before Phase 207's stamp)."""
+    try:
+        return datetime.fromtimestamp(db_path().stat().st_mtime, tz=UTC)
+    except OSError:
+        return None
+
+
 def declare_snapshot() -> None:
     """Declare an index read as a snapshot of the ONRC monthly export.
 
@@ -510,11 +533,17 @@ def declare_snapshot() -> None:
     """
     meta = snapshot_meta()
     dataset = meta.get("dataset") or ""
+    # Phase 314: the export date in the dataset slug is ONRC's clock; when
+    # the index was packed (``built_at``, else the index file's own write
+    # time) is ours.
     provenance.record_snapshot(
-        export_date(meta),
-        f"ONRC monthly open-data export {dataset}".strip()
-        if dataset
-        else "ONRC monthly open-data export",
+        retrieved_at=provenance.parse_moment(meta.get("built_at")) or _index_written_at(),
+        source_as_of=_slug_date(meta),
+        detail=(
+            f"ONRC monthly open-data export {dataset}".strip()
+            if dataset
+            else "ONRC monthly open-data export"
+        ),
     )
 
 

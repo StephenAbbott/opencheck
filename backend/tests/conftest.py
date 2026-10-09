@@ -180,7 +180,7 @@ def _entity_subtype_guard_check():
             "A mapper broke the BODS v0.4 mapper contract — an invalid "
             "entityType.subtype (local wording belongs in entityType.details), "
             "or a jurisdiction / identifier input the risk engine cannot read "
-            "(Phase 239):\n" + lines,
+            "(Phase 239), or a date rule (Phase 314):\n" + lines,
             pytrace=False,
         )
 
