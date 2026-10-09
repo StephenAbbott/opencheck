@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 313** — GLEIF Level 2 relationships are dated by their own relationship records, the subsidiary network and person-appointments views say when their data was read, ClimateTRACE statements carry the GEM release date, and GLEIF and OpenCorporates carry the right BODS source type.
+**Latest: Phase 314** — Bulk data now carries two clocks, so a register's cut dates the statement and OpenCheck's download is the only retrieval time; and statements from 41 sources, which were being dated today with no retrieval time on deepen, are now built with the provenance their fetch recorded.
 
 → [Full development history](docs/status.md)
 
