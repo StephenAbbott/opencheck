@@ -221,7 +221,13 @@ def _map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 # "direct" for every row was a guess the data does not make,
                 # and "unknown" is the codelist value for exactly that.
                 "directOrIndirect": "unknown",
-                "beneficialOwnershipOrControl": True,
+                # The interested party is a state body, and an entity is
+                # never the beneficial owner (BODS; the rule that gives UK
+                # corporate RLEs false). ``true`` here failed lib-cove-bods'
+                # interest_beneficial_ownership_interested_party_not_person in
+                # production (Phase 316). STATE_CONTROLLED reads the
+                # controlByLegalFramework shape, not this flag.
+                "beneficialOwnershipOrControl": False,
                 "details": (
                     f"State-owned enterprise controlled by {gov_name} "
                     "(EITI SOE database)."

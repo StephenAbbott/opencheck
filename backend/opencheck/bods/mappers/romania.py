@@ -18,6 +18,7 @@ import pycountry
 from .. import liveness as _liveness
 from ..statements import (
     SOURCE_NAMES,
+    _addr,
     _country_obj,
     dated_by_cut,
     make_entity_statement,
@@ -189,10 +190,10 @@ def _ro_address(row: dict[str, Any]) -> dict[str, str] | None:
     text = ", ".join(p for p in parts if p)
     if not text:
         return None
-    address: dict[str, str] = {"type": "registered", "address": text}
+    address: dict[str, Any] = {"type": "registered", "address": text}
     country = _country_obj((row.get("country") or "").strip())
     if country and country.get("code"):
-        address["country"] = country["code"]
+        address["country"] = country  # a jurisdiction object, not a code (Phase 316)
     return address
 
 
@@ -380,10 +381,10 @@ def map_anaf_romania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     addresses: list[dict[str, str]] = []
     seat = _anaf_address(record.get("adresa_sediu_social") or {}, "s")
     if seat:
-        addresses.append({"type": "registered", "address": seat, "country": "RO"})
+        addresses.append(_addr("registered", seat, "RO"))
     fiscal = _anaf_address(record.get("adresa_domiciliu_fiscal") or {}, "d")
     if fiscal and fiscal != seat:
-        addresses.append({"type": "business", "address": fiscal, "country": "RO"})
+        addresses.append(_addr("business", fiscal, "RO"))
 
     stmt = make_entity_statement(
         source_id="anaf_romania",

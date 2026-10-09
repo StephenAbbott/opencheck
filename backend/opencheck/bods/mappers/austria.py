@@ -6,11 +6,13 @@ re-exports every name defined here.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
     SOURCE_NAMES,
+    _addr,
     _stable_id,
     make_entity_statement,
     make_person_statement,
@@ -24,7 +26,13 @@ from ..statements import (
 
 
 def _at_date_iso(raw: str) -> str | None:
-    """Convert Austrian DD.MM.YYYY date to ISO 8601 (YYYY-MM-DD), or None."""
+    """An Austrian date as ISO 8601, or None.
+
+    ``DD.MM.YYYY`` and ``YYYYMMDD`` become ``YYYY-MM-DD``; ``MM.YYYY`` the
+    partial ``YYYY-MM``; ISO passes through. Anything else is ``None`` — until
+    Phase 316 it passed through verbatim and reached ``birthDate``, which the
+    BODS schema rejects.
+    """
     raw = (raw or "").strip()
     if not raw:
         return None
@@ -35,7 +43,20 @@ def _at_date_iso(raw: str) -> str | None:
             return f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
         except ValueError:
             pass
-    return raw  # already ISO or unrecognised — pass through
+    if len(parts) == 2 and all(p.isdigit() for p in parts) and len(parts[1]) == 4:
+        mm = int(parts[0])
+        if 1 <= mm <= 12:
+            return f"{parts[1]}-{mm:02d}"  # MM.YYYY: a partial date, kept partial
+    # The JustizOnline extract writes dates of birth as YYYYMMDD ("19700301"),
+    # which failed the BODS schema in production until Phase 316.
+    if re.fullmatch(r"\d{8}", raw):
+        yyyy, mm, dd = int(raw[:4]), int(raw[4:6]), int(raw[6:])
+        if 1 <= mm <= 12 and 1 <= dd <= 31:
+            return f"{yyyy:04d}-{mm:02d}-{dd:02d}"
+        return None
+    if re.fullmatch(r"\d{4}(-\d{2}){0,2}", raw):
+        return raw  # already ISO (full or partial)
+    return None  # unrecognised: no date rather than a schema-invalid one
 
 
 def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
@@ -76,7 +97,8 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         )
 
     # ── 1. Subject entity statement ────────────────────────────────────────
-    addresses = [{"address": address_str, "country": "AT", "type": "registered"}] if address_str else []
+    # BODS v0.4 ``country`` is a jurisdiction object, not a code (Phase 316).
+    addresses = [_addr("registered", address_str, "AT")] if address_str else []
 
     company_stmt = make_entity_statement(
         source_id="firmenbuch",

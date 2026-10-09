@@ -298,13 +298,19 @@ class TestAtDateIso:
         """YYYY-MM-DD has no '.' so it falls through to the return raw clause."""
         assert _at_date_iso("2010-03-01") == "2010-03-01"
 
-    def test_unrecognised_string_passes_through(self):
-        """The function documents 'already ISO or unrecognised — pass through'."""
-        assert _at_date_iso("bogus") == "bogus"
+    def test_unrecognised_string_is_no_date(self):
+        """Phase 316: an unrecognised value is no date, never a schema-invalid
+        one (the old pass-through put "19700301" into birthDate)."""
+        assert _at_date_iso("bogus") is None
 
-    def test_two_dot_parts_passes_through(self):
-        """Only exactly 3 dot-separated parts trigger DD.MM.YYYY parsing."""
-        assert _at_date_iso("03.2010") == "03.2010"
+    def test_month_year_is_kept_partial(self):
+        assert _at_date_iso("03.2010") == "2010-03"
+        assert _at_date_iso("13.2010") is None
+
+    def test_compact_yyyymmdd(self):
+        """The JustizOnline extract's date-of-birth form (Phase 316)."""
+        assert _at_date_iso("19700301") == "1970-03-01"
+        assert _at_date_iso("19701301") is None
 
     # --- Parametrized round-trip ------------------------------------------------
 

@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 315** — Statements are dated by the sources' own record dates (OpenSanctions changes, register filings and last-modified stamps, beneficial ownership declarations) instead of the day OpenCheck read them, and the Finnish and Irish registers map again after upstream format changes.
+**Latest: Phase 316** — A weekly sweep now validates the BODS that production publishes against the standard and OpenCheck's own date rules; its first run found and fixed four live defects (address countries, Austrian birth dates, Greek directors' term expiries, a state body marked as a beneficial owner).
 
 → [Full development history](docs/status.md)
 

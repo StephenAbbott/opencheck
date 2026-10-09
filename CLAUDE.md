@@ -3020,3 +3020,29 @@ Phase C of the dates audit. Things that will be re-derived otherwise:
   and `companyForms` as a list; the mapper took the first as a list and 500'd
   in production until this phase. CRO's CKAN types `nace_v2_code` as a
   number: `str()` every CKAN field before `.strip()`.
+
+## The BODS quality sweep (Phase 316)
+
+`opencheck/bods_quality.py` + `scripts/bods_quality.py` +
+`.github/workflows/bods-quality.yml`; see `docs/bods-quality.md`. Things that
+will be re-derived otherwise:
+
+- **It reads production, not the pipeline**: `/lookup?refresh=true` for the
+  findings golden set and `/deepen` for every probe subject `/deepen` can
+  address (`deepen_subjects`). The defects it exists for only showed there.
+- **Adding a check**: a `Finding(check, severity, source_id, message,
+  statement_id)` in `check_statements`, documented in the module docstring and
+  the doc's table, with a test in `tests/test_bods_quality.py`. `fail` means
+  the statement is invalid or false; a known backlog is `warn`.
+- **`cut_as_retrieval` needs a declared absence of a cut** (`no_cut`, from
+  `source_liveness` with no `source_as_of`): a date-only build stamp beside a
+  separate cut (EITI SOE) is not the defect.
+- **Report → release `bods-quality-latest`** (json, md, 26-run history). The
+  weekly Claude triage task reads it on Tuesdays and files Notion tickets; it
+  never pushes. If the asset names change, change the task's prompt too.
+- **GitHub runs this repo's Monday crons hours late** (13:37–17:16 UTC for
+  07:30–08:30 slots, Aug–Oct 2026). Anything reading a Monday report waits
+  until Tuesday.
+- **BODS v0.4 `address.country` is a jurisdiction object** — build addresses
+  with `_addr(type, text, code)`, never `{"country": "XX"}`.
+

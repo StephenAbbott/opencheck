@@ -175,10 +175,17 @@ def _gemi_interests(person: dict[str, Any], source_id: str) -> list[dict[str, An
             interest["share"] = {"exact": share}
         if start:
             interest["startDate"] = start
-        if end:
+        # A future ``dtTo`` is the term's scheduled expiry, not an end: BODS
+        # ``endDate`` says the interest ended, so only a past one is carried
+        # there and a future one is said in the details (Phase 316 — the BODS
+        # quality sweep found 2028 end dates on sitting directors).
+        details = [role] if role else []
+        if end and _gemi_is_past(end):
             interest["endDate"] = end
-        if role:
-            interest["details"] = role
+        elif end:
+            details.append(f"term runs to {end}")
+        if details:
+            interest["details"] = "; ".join(details)
         return set_beneficial_ownership(interest, source_id, asserted=None)
 
     interests: list[dict[str, Any]] = []
