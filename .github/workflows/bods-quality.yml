@@ -1,0 +1,132 @@
+name: BODS quality sweep
+
+# Weekly check of the BODS statements production PUBLISHES (Phase 316).
+#
+# The source-health sweep (source-health.yml) asks whether every adapter
+# answers; the findings regression (findings-regression.yml) what the risk
+# engine concludes. This asks whether the data itself is valid and honest BODS:
+# lib-cove-bods schema and additional checks on every statement, plus
+# OpenCheck's own date and provenance rules (no claim dated after its
+# publication, no bulk dataset dated the day it was read, no register cut
+# published as OpenCheck's download, retrievedAt on every read). It reads the
+# DEPLOYED API — /lookup?refresh=true for the findings golden set, /deepen for
+# every source-health probe subject — because the defects it exists for
+# (Phases 314 and 315) only showed in production. See docs/bods-quality.md.
+#
+# Deliberately NOT run on push/pull_request: live data drifting is a signal to
+# read, never a red check on an unrelated change. The job reports first and
+# fails last, so a red run always has its report attached. There is no rolling
+# issue: a weekly Claude scheduled task reads the published report, triages
+# what is new into Notion and drafts fixes (docs/bods-quality.md).
+#
+# Cadence: Mondays, after source health and the findings regression. GitHub
+# runs this repository's Monday schedules hours late (07:30 has started
+# between 13:37 and 16:17 UTC since August), so nothing downstream reads the
+# report before Tuesday.
+on:
+  schedule:
+    - cron: "17 9 * * 1" # Mondays 09:17 UTC (expect it to start hours later)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bods-quality
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    # Fourteen fresh lookups a minute apart plus ~45 deepens a few seconds
+    # apart is about twenty minutes; Retry-After waits come on top.
+    timeout-minutes: 60
+    permissions:
+      contents: write # the bods-quality-latest release assets
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: System deps for the ftm extra (bods-ftm → followthemoney → pyicu)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++ libicu-dev pkg-config
+      - name: Install backend (with the dev group, which carries lib-cove-bods)
+        run: uv sync --extra ftm
+        working-directory: backend
+
+      # Allowed to fail: no release yet (first run) means "no comparison".
+      - name: Fetch the last published report
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh release download bods-quality-latest --repo "$REPO" --pattern bods-quality.json --dir previous
+
+      - name: Sweep production's BODS
+        id: sweep
+        continue-on-error: true
+        run: |
+          PREV="$GITHUB_WORKSPACE/previous/bods-quality.json"
+          if [ -f "$PREV" ]; then
+            uv run python scripts/bods_quality.py --out "$GITHUB_WORKSPACE/bods-quality" --previous "$PREV"
+          else
+            uv run python scripts/bods_quality.py --out "$GITHUB_WORKSPACE/bods-quality"
+          fi
+        working-directory: backend
+
+      - name: Publish the report to the run summary
+        if: always()
+        run: cat bods-quality.md >> "$GITHUB_STEP_SUMMARY" || echo "no report produced" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: bods-quality
+          path: bods-quality.*
+          retention-days: 90
+
+      # The release is the data slot the weekly Claude check reads, with a
+      # rolling history of per-class counts so a trend is one file away.
+      - name: Publish the report to the bods-quality-latest release
+        if: always() && hashFiles('bods-quality.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG=bods-quality-latest
+          if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$REPO" --latest=false \
+              --title "BODS quality (latest weekly sweep)" \
+              --notes "Data slot for the weekly BODS quality sweep. Assets are replaced every run."
+          fi
+          gh release download "$TAG" --repo "$REPO" --pattern bods-quality-history.json --dir previous-release 2>/dev/null || true
+          python3 - <<'PY'
+          import json, pathlib
+          report = json.load(open("bods-quality.json"))
+          prev = pathlib.Path("previous-release/bods-quality-history.json")
+          history = json.load(open(prev)) if prev.exists() else {"runs": []}
+          runs = [r for r in history.get("runs", []) if r.get("generated_at") != report["generated_at"]]
+          t = report["totals"]
+          runs.append({
+              "generated_at": report["generated_at"],
+              "commit": report.get("commit"),
+              "fail": t["fail"],
+              "warn": t["warn"],
+              "statements": t["statements"],
+              "by_check_source": t["by_check_source"],
+          })
+          history = {"runs": runs[-26:]}
+          pathlib.Path("bods-quality-history.json").write_text(json.dumps(history, indent=1))
+          print(f"history: {len(history['runs'])} runs")
+          PY
+          gh release upload "$TAG" --repo "$REPO" --clobber \
+            bods-quality.json bods-quality.md bods-quality-history.json
+          gh release edit "$TAG" --repo "$REPO" \
+            --notes "Weekly BODS quality sweep — last run $(date -u +%Y-%m-%dT%H:%MZ). Read by the weekly Claude BODS quality check."
+
+      - name: Fail the job if the sweep found failures
+        if: steps.sweep.outcome == 'failure'
+        run: |
+          echo "::error::The BODS quality sweep found failing findings — see the run summary."
+          exit 1

@@ -20,9 +20,11 @@ name: Findings regression
 # baseline keeps a legitimate change red every week.
 #
 # Cadence: Mondays 08:30 UTC, after drift 06:00, live smoke 07:00, source
-# health 07:30 and the securities refresh 08:00. Scheduled runs are not
-# currently firing on their own for this repository (Notion ticket
-# 3ed7f3dc29288139bd64d946162bca6d); until that is fixed, use Run workflow.
+# health 07:30 and the securities refresh 08:00. The schedule does fire, but
+# hours late: the Actions run list (read 9 Oct 2026, Phase 316) shows this
+# repository's Monday schedules starting between 13:37 and 17:16 UTC since
+# August, never at the cron time. Anything reading the published report should
+# wait until Tuesday (Notion ticket 3ed7f3dc29288139bd64d946162bca6d).
 on:
   schedule:
     - cron: "30 8 * * 1" # Mondays 08:30 UTC
