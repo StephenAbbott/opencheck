@@ -72,13 +72,21 @@ where there is one: rebuilding an old dump does not make it new.
 | `chilecompra` | first day of the latest month covered | `meta.built_at` |
 | `meip` | the OECD edition | the asset build |
 | `eiti_soe` | `meta.source_snapshot` | `meta.built` |
-| `eiti` (organisation index) | — (EITI publishes no cut) | `meta.generated` |
+| `eiti` (organisation index) | — (EITI publishes no cut) | `meta.generated`, the moment the crawl started, in UTC to the second (Phase 318; a bare day before) |
 | `climatetrace` (GEM / GEOT) | GEM release date; — for GEOT | asset download; GEOT `meta.generated` |
 | `bods_gleif`, `bods_uk_psc` | — | the extract directory's write time |
 | Open Ownership stored bundles | OO `publicationDate` | — |
 
 `tests/conftest.py`'s mapper guard fails any test in which a mapper, running
 under a snapshot or curated provenance, dates a statement today.
+
+**A retrieval is a moment, not a day.** `source.retrievedAt` is a date-time,
+so a build stamp kept as a bare day is published as midnight — and midnight on
+the statement's own date is exactly what a register cut published as the
+download looks like. The BODS quality sweep cannot tell them apart, and nor
+can a reader. Index builders record when they read the source to the second:
+the EITI organisation index did not until Phase 318 (`2026-07-07`, flagged
+`cut_as_retrieval` in production on 9 Oct 2026).
 
 ### Statements are built inside their provenance scope
 

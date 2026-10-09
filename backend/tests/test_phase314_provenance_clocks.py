@@ -383,7 +383,9 @@ class TestEitiOrganisationIndex:
         resolved = rec.resolve()
         assert resolved.liveness == "snapshot"
         assert resolved.retrieved_at is not None
-        assert resolved.retrieved_at.date().isoformat() == eiti._index_generated
+        # Since Phase 318 the harvest is a moment, not a day.
+        assert resolved.retrieved_at == provenance.parse_moment(eiti._index_generated)
+        assert resolved.retrieved_at.time() != dt.time(0, 0)
 
     def test_the_sweep_expects_a_snapshot(self):
         from opencheck.sources.probes import PROBES

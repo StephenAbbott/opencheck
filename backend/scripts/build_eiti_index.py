@@ -31,12 +31,19 @@ import concurrent.futures
 import datetime as dt
 import gzip
 import json
+import time
 import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
 API = "https://eiti.org/api/v2.0/organisation"
 PAGE_SIZE = 50
+# EITI's Cloudflare zone answers 403 to urllib's default User-Agent (9 Oct
+# 2026); the adapter's own one (opencheck/http.py) is let through.
+HEADERS = {
+    "Accept": "application/json",
+    "User-Agent": "OpenCheck/1.0 (+https://github.com/StephenAbbott/opencheck)",
+}
 
 # Template noise observed in the identification field.
 _JUNK_MARKERS = (
@@ -61,18 +68,42 @@ def _clean_identification(raw: str | None) -> str | None:
     return ident
 
 
-def _fetch_page(page: int) -> list[dict]:
+def _fetch_page(page: int, attempts: int = 4) -> list[dict]:
+    """One page, retried with backoff: a 1,600-page crawl that dies on one
+    slow TLS handshake throws away minutes of work (seen 9 Oct 2026)."""
     url = f"{API}?page={page}&limit={PAGE_SIZE}"
-    req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        payload = json.load(resp)
-    return payload.get("data") or []
+    for attempt in range(1, attempts + 1):
+        try:
+            req = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                payload = json.load(resp)
+            return payload.get("data") or []
+        except (OSError, ValueError):
+            if attempt == attempts:
+                raise
+            time.sleep(2 ** attempt)
+    return []
+
+
+def _stamp(moment: dt.datetime) -> str:
+    """``meta.generated``: when OpenCheck read EITI, to the second, in UTC.
+
+    It becomes ``source.retrievedAt`` on every EITI match (Phase 314). Until
+    Phase 318 it was a bare day (``2026-07-07``), which reads as midnight —
+    indistinguishable from a register cut published as the download, the
+    defect the BODS quality sweep's ``cut_as_retrieval`` check exists for.
+    """
+    return moment.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace(
+        "+00:00", "Z"
+    )
 
 
 def build(max_pages: int | None, workers: int) -> dict:
+    # The harvest starts now: the oldest moment any page was read.
+    started = dt.datetime.now(dt.timezone.utc)
     # Page 0 also carries the total count.
     req = urllib.request.Request(
-        f"{API}?page=0&limit={PAGE_SIZE}", headers={"Accept": "application/json"}
+        f"{API}?page=0&limit={PAGE_SIZE}", headers=HEADERS
     )
     with urllib.request.urlopen(req, timeout=30) as resp:
         first = json.load(resp)
@@ -120,7 +151,7 @@ def build(max_pages: int | None, workers: int) -> dict:
     return {
         "meta": {
             "source": "EITI API v2.0 (https://eiti.org/api) — EITI International Secretariat, eiti.org",
-            "generated": dt.date.today().isoformat(),
+            "generated": _stamp(started),
             "total_rows": rows_seen,
             "countries": len(index),
             "identifications": identifications,
@@ -139,6 +170,12 @@ def build_from_dir(pages_dir: Path) -> dict:
     index: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
     rows_seen = companies = kept = 0
     files = sorted(pages_dir.glob("page_*.json"))
+    # Harvested when the first page was downloaded, not when this rebuild ran.
+    started = (
+        min(dt.datetime.fromtimestamp(f.stat().st_mtime, dt.timezone.utc) for f in files)
+        if files
+        else dt.datetime.now(dt.timezone.utc)
+    )
     for path in files:
         try:
             rows = json.loads(path.read_text()).get("data") or []
@@ -170,7 +207,7 @@ def build_from_dir(pages_dir: Path) -> dict:
     return {
         "meta": {
             "source": "EITI API v2.0 (https://eiti.org/api) — EITI International Secretariat, eiti.org",
-            "generated": dt.date.today().isoformat(),
+            "generated": _stamp(started),
             "total_rows": rows_seen,
             "countries": len(index),
             "identifications": identifications,
