@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 316** — A weekly sweep now validates the BODS that production publishes against the standard and OpenCheck's own date rules; its first run found and fixed four live defects (address countries, Austrian birth dates, Greek directors' term expiries, a state body marked as a beneficial owner).
+**Latest: Phase 317** — Ownership that has ended is now published as closed, with its end date, instead of being left open or dropped (New Zealand, Slovakia, the US SEC, OpenCorporates' network, Czech shareholders and others), while officer lists stay limited to people serving now.
 
 → [Full development history](docs/status.md)
 
