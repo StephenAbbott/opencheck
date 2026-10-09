@@ -308,8 +308,12 @@ class TestBuildBundle:
         assert entity["vat_number"] == "CZ27082440"
 
     def test_alza_current_shareholder_only(self) -> None:
-        """Historic akcionari (with datumVymazu) should be excluded."""
+        """Historic akcionari (with datumVymazu) are kept apart as former
+        owners, with their deletion date (Phase 317)."""
         bundle = self.adapter._build_bundle("27082440", AGGREGATE_ALZA, VR_ALZA)
+        (former,) = bundle["former_owners"]
+        assert former["name"] == "Aleš Zavoral"
+        assert former["end_date"] == "2006-07-17"
         owners = bundle["owners"]
         assert len(owners) == 1
         owner = owners[0]
@@ -403,19 +407,47 @@ class TestMapAres:
 
     def test_alza_director_person_statement(self) -> None:
         stmts = list(map_ares(self._alza_bundle()))
-        person_stmts = [s for s in stmts if s["recordType"] == "person"]
-        assert len(person_stmts) == 1
-        person = person_stmts[0]
-        assert person["recordDetails"]["names"][0]["fullName"] == "Ondřej Šmída"
+        names = sorted(
+            s["recordDetails"]["names"][0]["fullName"]
+            for s in stmts if s["recordType"] == "person"
+        )
+        # The director, and the struck-off 2004-2006 shareholder (Phase 317).
+        assert names == ["Aleš Zavoral", "Ondřej Šmída"]
 
     def test_alza_relationship_statements(self) -> None:
         stmts = list(map_ares(self._alza_bundle()))
         rel_stmts = [s for s in stmts if s["recordType"] == "relationship"]
-        # One for shareholder, one for director
-        assert len(rel_stmts) == 2
+        # The current shareholder, the director, and the former shareholder.
+        assert len(rel_stmts) == 3
         types = {r["recordDetails"]["interests"][0]["type"] for r in rel_stmts}
         assert "shareholding" in types
         assert "seniorManagingOfficial" in types  # statutory body (Phase 295)
+
+    def test_alza_former_shareholder_is_closed_with_its_end_date(self) -> None:
+        """Phase 317: ended ownership is emitted closed, not dropped."""
+        stmts = list(map_ares(self._alza_bundle()))
+        closed = [s for s in stmts if s["recordType"] == "relationship"
+                  and s["recordStatus"] == "closed"]
+        assert len(closed) == 1
+        interest = closed[0]["recordDetails"]["interests"][0]
+        assert (interest["startDate"], interest["endDate"]) == ("2004-07-08", "2006-07-17")
+        # The current owners' statementIds are untouched by the former ones.
+        current = [s for s in stmts if s["recordType"] == "relationship"
+                   and s["recordStatus"] == "new"]
+        assert len(current) == 2
+
+    def test_alza_start_dates_are_annotated_as_the_register_entry_date(self) -> None:
+        """Phase 317: ARES publishes datumZapisu, the day it entered the
+        record, not the day the interest began — the startDate says so."""
+        stmts = list(map_ares(self._alza_bundle()))
+        for rel in (s for s in stmts if s["recordType"] == "relationship"):
+            if not rel["recordDetails"]["interests"][0].get("startDate"):
+                continue
+            notes = [a for a in rel.get("annotations") or []
+                     if a["statementPointerTarget"] == "/recordDetails/interests/0/startDate"]
+            assert len(notes) == 1
+            assert notes[0]["motivation"] == "transformation"
+            assert "datumZapisu" in notes[0]["description"]
 
     def test_relationships_reference_subject_entity(self) -> None:
         stmts = list(map_ares(self._alza_bundle()))

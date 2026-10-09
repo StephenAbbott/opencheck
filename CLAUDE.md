@@ -3046,3 +3046,34 @@ will be re-derived otherwise:
 - **BODS v0.4 `address.country` is a jurisdiction object** — build addresses
   with `_addr(type, text, code)`, never `{"country": "XX"}`.
 
+
+## Ended relationships close, by one rule (Phase 317)
+
+Dates-audit Phase D; see `docs/dates.md#ended-relationships-phase-317`. Things
+that will be re-derived otherwise:
+
+- **The rule is in `make_relationship_statement`**: `record_status="new"` with
+  every interest's `endDate` ≤ today becomes `closed` (stable `recordId`, varied
+  `statementId`). Mappers do not decide it; they put the `endDate` on every
+  interest. A future `endDate` stays open. Closing with no date is still the
+  caller's job (`record_status="closed"`, the CAC rule).
+- **Ownership yes, officers no** (Stephen, 9 Oct 2026). Ended ownership/control
+  is emitted, never dropped: OC network (an ended edge's local id gets
+  `/ended/<date>` so a later holding is a new record), ARES `former_owners`
+  (`datumVymazu`, local ids prefixed `former-owner-` so current owners' IDs are
+  unchanged), NZ, RPVS, SEC, Wikidata, Estonia. Officer/board lists — CH
+  officers, OC officers, brreg `fratraadt`/`avregistrert`, ARES directors — stay
+  serving-only (Phase 192). `tests/test_phase317_lifecycle.py` pins both; change
+  the scope on purpose, not by removing a `continue`.
+- **Entry date as `startDate`** (ARES `datumZapisu`, UR `registered_on`) carries
+  `annotations.entry_date_as_start(register, field)`.
+- **Another publisher's clock is a `commenting` annotation**: OC
+  `company.source.retrieved_at` on the subject's `/source`; Wikidata P813 on the
+  owner edge's `/statementDate`.
+- **Never patch another publisher's statements.** The stored Open Ownership
+  bundles are OO's, verbatim; `bods_quality` holds provenance warnings only to
+  statements whose publisher name starts "OpenCheck". Re-mapping OO bulk rows
+  (`mapper._oo_republish`, used by the unregistered `bods_gleif`/`bods_uk_psc`
+  adapters) publishes OpenCheck's own statements: new `statementId`, OO's
+  `recordId`, OpenCheck's publication/source blocks, a comment naming the OO
+  statement.

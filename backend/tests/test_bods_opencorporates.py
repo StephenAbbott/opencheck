@@ -290,7 +290,9 @@ def test_parse_network_style_b_flat() -> None:
     assert parsed[0]["source"]["company_number"] == "12345"
 
 
-def test_parse_network_skips_historical_relationships() -> None:
+def test_parse_network_keeps_historical_relationships_with_their_end() -> None:
+    """Phase 317: an ended network relationship is ended ownership — kept
+    with its end date (so the factory closes it), never dropped."""
     network = {
         "relationships": [
             {
@@ -312,8 +314,9 @@ def test_parse_network_skips_historical_relationships() -> None:
         ]
     }
     parsed = _oc_parse_network_relationships(network, "gb/BBB")
-    assert len(parsed) == 1
-    assert parsed[0]["source"]["company_number"] == "CCC"
+    assert [p["source"]["company_number"] for p in parsed] == ["AAA", "CCC"]
+    assert parsed[0]["end_date"] == "2020-01-01"
+    assert parsed[1]["end_date"] is None
 
 
 def test_parse_network_empty_returns_empty() -> None:

@@ -471,6 +471,10 @@ class AresAdapter(SourceAdapter):
         }
 
         owners: list[dict[str, Any]] = []
+        #: Struck-off shareholders and partners (Phase 317): ended ownership,
+        #: kept with the register's deletion date. Directors struck off stay
+        #: out — the graph draws serving officers only (Phase 192).
+        former_owners: list[dict[str, Any]] = []
         directors: list[dict[str, Any]] = []
 
         if vr_data:
@@ -484,27 +488,28 @@ class AresAdapter(SourceAdapter):
 
             # --- Shareholders: a.s. akcionari ---
             for group in zaznam.get("akcionari", []):
-                if "datumVymazu" in group:
-                    continue  # historic group
+                group_ended = group.get("datumVymazu")
                 for member in group.get("clenoveOrganu", []):
-                    if "datumVymazu" in member:
-                        continue
                     if member.get("typAngazma") != "AKCIONAR":
                         continue
                     person = _extract_person(member)
-                    if person:
-                        owners.append({
-                            **person,
-                            "role": "shareholder",
-                            "role_label": "Akcionář",
-                            "start_date": member.get("datumZapisu"),
-                        })
+                    if not person:
+                        continue
+                    ended = member.get("datumVymazu") or group_ended
+                    row = {
+                        **person,
+                        "role": "shareholder",
+                        "role_label": "Akcionář",
+                        "start_date": member.get("datumZapisu"),
+                    }
+                    if ended:
+                        former_owners.append({**row, "end_date": ended})
+                    else:
+                        owners.append(row)
 
             # --- Partners: s.r.o. spolecnici ---
             for group in zaznam.get("spolecnici", []):
                 for sp in group.get("spolecnik", []):
-                    if "datumVymazu" in sp:
-                        continue
                     osoba = sp.get("osoba", {})
                     person = _extract_person(osoba)
                     if person:
@@ -519,13 +524,17 @@ class AresAdapter(SourceAdapter):
                                 elif vp.get("typObnos") == "TEXT":
                                     stake = vp.get("hodnota")
                                 break
-                        owners.append({
+                        row = {
                             **person,
                             "role": "partner",
                             "role_label": "Společník",
                             "stake_percent": stake,
                             "start_date": sp.get("datumZapisu"),
-                        })
+                        }
+                        if sp.get("datumVymazu"):
+                            former_owners.append({**row, "end_date": sp["datumVymazu"]})
+                        else:
+                            owners.append(row)
 
             # --- Directors: statutarniOrgany ---
             for organ in zaznam.get("statutarniOrgany", []):
@@ -553,6 +562,7 @@ class AresAdapter(SourceAdapter):
             "is_stub": False,
             "entity": entity,
             "owners": owners,
+            "former_owners": former_owners,
             "directors": directors,
         }
         validate_raw("ares", AresBundle, bundle)

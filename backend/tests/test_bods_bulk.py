@@ -160,10 +160,21 @@ def test_map_bods_gleif_passthrough_empty() -> None:
     assert result == []
 
 
-def test_map_bods_gleif_passthrough_statements() -> None:
-    stmts = [{"statementType": "entityStatement", "statementId": "abc"}]
-    result = list(map_bods_gleif({"bods_statements": stmts}))
-    assert result == stmts
+def test_map_bods_gleif_republishes_statements() -> None:
+    """Phase 317 (dates-audit Q3): an OpenCheck publication of Open Ownership's
+    data — v0.4 shapes, OpenCheck's publication block, OO's recordId and
+    statementDate kept, the OO statement named in an annotation."""
+    stmts = [{"statementType": "entityStatement", "statementId": "abc",
+              "statementDate": "2025-02-28",
+              "publicationDetails": {"publicationDate": "2025-03-01"}}]
+    (out,) = list(map_bods_gleif({"bods_statements": stmts}))
+    assert out["recordType"] == "entity" and "statementType" not in out
+    assert out["recordId"] == "abc" and out["statementId"] != "abc"
+    assert out["statementDate"] == "2025-02-28"
+    assert out["publicationDetails"]["publisher"] == {"name": "OpenCheck"}
+    assert out["source"]["opencheckSourceId"] == "bods_gleif"
+    assert "abc" in out["annotations"][0]["description"]
+    assert "2025-03-01" in out["annotations"][0]["description"]
 
 
 def test_map_bods_uk_psc_passthrough_empty() -> None:
@@ -178,7 +189,27 @@ def test_map_bods_uk_psc_passthrough_statements() -> None:
         {"statementType": "relationshipStatement", "statementId": "rel-1"},
     ]
     result = list(map_bods_uk_psc({"bods_statements": stmts}))
-    assert result == stmts
+    assert [r["recordType"] for r in result] == ["entity", "person", "relationship"]
+    assert [r["recordId"] for r in result] == ["ent-1", "per-1", "rel-1"]
+
+
+def test_republished_relationships_take_v04_references_and_close_when_ended() -> None:
+    rel = {
+        "statementType": "relationshipStatement", "statementId": "rel-1",
+        "recordDetails": {
+            "isComponent": False,
+            "subject": {"describedByEntityStatement": "ent-1"},
+            "interestedParty": {"describedByPersonStatement": "per-1"},
+            "interests": [{"type": "shareholding", "startDate": "2016-04-06",
+                           "endDate": "2019-01-01"}],
+        },
+    }
+    (out,) = list(map_bods_uk_psc({"bods_statements": [rel]}))
+    assert out["recordDetails"]["subject"] == "ent-1"
+    assert out["recordDetails"]["interestedParty"] == "per-1"
+    assert out["declarationSubject"] == "ent-1"
+    assert out["recordStatus"] == "closed"
+    assert out["publicationDetails"]["publicationDate"]
 
 
 # ---------------------------------------------------------------------------

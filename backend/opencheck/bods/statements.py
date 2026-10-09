@@ -45,6 +45,7 @@ from .annotations import (
     pointer,
     transformation,
 )
+from . import lifecycle as _lifecycle
 from .psc_natures import describe_nature
 
 # ----------------------------------------------------------------------
@@ -595,7 +596,20 @@ def make_relationship_statement(
     changelog "Removed" section): supersession is expressed solely through the
     shared, stable ``recordId``, so this factory does not emit
     ``replacesStatements``.
+
+    **One lifecycle rule (Phase 317).** A relationship whose every interest
+    has an ``endDate`` on or before today is ``closed``, whatever the caller
+    passed: an ended relationship carries both signals BODS offers, the dated
+    interest and the closed record. A mapper that knows a relationship ended
+    without a date passes ``record_status="closed"`` itself (the CAC rule);
+    one with a future ``endDate`` — a scheduled end — stays open. Ended
+    relationships are emitted, never dropped (Phase 219).
     """
+    interests = list(interests)
+    if record_status == "new" and _lifecycle.relationship_lifecycle(
+        [i for i in interests if isinstance(i, dict)], False
+    ).ended:
+        record_status = "closed"
     record_id = _stable_id(source_id, "relationship-record", local_id)
     if record_status == "new":
         statement_id = _stable_id(source_id, "relationship", local_id)
@@ -620,7 +634,7 @@ def make_relationship_statement(
                 if interested_party_unspecified is not None
                 else interested_party_statement_id
             ),
-            "interests": list(interests),
+            "interests": interests,
         },
         "source": _source_block(source_id, source_url),
     }
