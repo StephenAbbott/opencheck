@@ -3077,3 +3077,27 @@ that will be re-derived otherwise:
   adapters) publishes OpenCheck's own statements: new `statementId`, OO's
   `recordId`, OpenCheck's publication/source blocks, a comment naming the OO
   statement.
+
+## Retrievals are moments; the dates guide is linked (Phase 318)
+
+Dates-audit Phase E plus the one warning the Phase 317 post-deploy sweep found.
+
+- **Index builders stamp `meta.generated` / `built_at` to the second, in UTC.**
+  `source.retrievedAt` is a date-time, so a bare day publishes as midnight —
+  which is what a cut published as the download looks like, and the sweep's
+  `cut_as_retrieval` flags it. `build_eiti_index.py` now writes
+  `_stamp(started)` (the crawl's start; for `--from-dir`, the oldest page's
+  mtime). Copy that pattern in any new builder.
+- **The EITI crawl needs a User-Agent** (`HEADERS`): EITI's Cloudflare zone
+  403s urllib's default. Pages are retried with backoff.
+- **Refreshing the EITI index**: check the US bucket is unchanged (else rebuild
+  `build_eiti_us_ein_index.py`, which needs EDGAR) and the ZM bucket (the
+  `eiti_zambia` TPIN join). The 9 Oct 2026 refresh added 41 keys (CD 34, CM 7),
+  removed none, and picked up 21 Mozambique 2022 organisation ids EITI had
+  regenerated.
+- **A snapshot read on the day the sweep runs is `bulk_dated_today`** — the
+  check cannot tell a harvest today from a mapping-time fallback. Sweep a
+  refreshed index from the next day.
+- **`docs/dates.md` is linked from /about** (the BODS spine card and the
+  reading list), with the standard's dates guidance at the pinned 0.4.0 URL;
+  `BehindTheScenesPage.test.tsx` pins both.

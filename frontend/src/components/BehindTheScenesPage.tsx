@@ -136,6 +136,21 @@ export function BehindTheScenesPage() {
             so re-running a lookup always produces the same IDs — stable for
             deduplication and graph visualisation.
           </p>
+          <p className="text-oo-small text-oo-muted mt-3 leading-[1.7]">
+            Every statement carries four dates that answer different questions:
+            when an interest was true, when the source declared it, when
+            OpenCheck read it and when OpenCheck published it. Which date each
+            source supplies, and how ended ownership is marked, is set out in{" "}
+            <a
+              href="https://github.com/StephenAbbott/opencheck/blob/main/docs/dates.md"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              how OpenCheck dates its BODS statements
+            </a>
+            .
+          </p>
         </BtsCard>
 
         {/* GLEIF + LEI */}
@@ -242,6 +257,8 @@ export function BehindTheScenesPage() {
             {[
               ["OpenCheck on GitHub", "https://github.com/StephenAbbott/opencheck"],
               ["BODS v0.4 documentation", "https://standard.openownership.org/en/0.4.0/"],
+              ["How OpenCheck dates its BODS statements", "https://github.com/StephenAbbott/opencheck/blob/main/docs/dates.md"],
+              ["BODS dates guidance (Open Ownership)", "https://standard.openownership.org/en/0.4.0/standard/modelling/dates-guidance.html"],
               ["Open Ownership", "https://www.openownership.org/"],
               ["GLEIF — Global LEI Foundation", "https://www.gleif.org/"],
               ["GODIN — Global Open Data Integration Network", "https://godin.gleif.org/"],

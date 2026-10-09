@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 317** — Ownership that has ended is now published as closed, with its end date, instead of being left open or dropped (New Zealand, Slovakia, the US SEC, OpenCorporates' network, Czech shareholders and others), while officer lists stay limited to people serving now.
+**Latest: Phase 318** — The about page now links OpenCheck's guide to how it dates its ownership data, and EITI matches record exactly when OpenCheck read EITI rather than a bare day.
 
 → [Full development history](docs/status.md)
 
