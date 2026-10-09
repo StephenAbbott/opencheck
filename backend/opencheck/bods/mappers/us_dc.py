@@ -146,9 +146,16 @@ def map_dlcp_dc(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     source_url = record_url(0, f"FILE_NUMBER = '{file_number}'")
     model_type = clean_field(company.get("MODELTYPE"))
 
+    # Phase 315: the company record's own modification stamp dates the
+    # entity; the owners are what the latest biennial report declared, so
+    # they carry that report's filing date.
+    record_modified = _dc_epoch_to_date(company.get("DCS_LAST_MOD_DTTM"))
+    report_filed = _dc_epoch_to_date(company.get("DATE_LAST_REPORT_FILED"))
+
     subject_stmt = make_entity_statement(
         source_id="dlcp_dc",
         local_id=file_number,
+        statement_date=record_modified,
         name=name,
         jurisdiction=_DC_JURISDICTION,
         identifiers=[
@@ -207,6 +214,7 @@ def map_dlcp_dc(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             yield make_person_statement(
                 source_id="dlcp_dc",
                 local_id=local_id,
+                statement_date=report_filed,
                 full_name=_DC_UNNAMED_OWNER,
                 person_type="unknownPerson",
                 addresses=addresses,
@@ -220,6 +228,7 @@ def map_dlcp_dc(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             yield make_entity_statement(
                 source_id="dlcp_dc",
                 local_id=local_id,
+                statement_date=report_filed,
                 name=owner_name,
                 addresses=addresses,
                 entity_type="registeredEntity",
@@ -238,6 +247,7 @@ def map_dlcp_dc(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             yield make_person_statement(
                 source_id="dlcp_dc",
                 local_id=local_id,
+                statement_date=report_filed,
                 full_name=owner_name,
                 addresses=addresses,
                 source_url=owners_url,
@@ -258,6 +268,7 @@ def map_dlcp_dc(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield make_relationship_statement(
             source_id="dlcp_dc",
             local_id=local_id,
+            statement_date=report_filed,
             subject_statement_id=subject_id,
             interested_party_statement_id=party_id,
             interested_party_type=party_type,

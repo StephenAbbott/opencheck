@@ -14,6 +14,7 @@ from ..statements import (
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
+    record_date,
 )
 
 
@@ -291,9 +292,15 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         f"https://registre-national-entreprises.inpi.fr/api/companies/{siren}"
     )
 
+    # Phase 315: the RNE record's own ``updatedAt`` — when the register last
+    # changed this company's record, representatives included — dates every
+    # statement built from it.
+    record_dated = record_date(company.get("updatedAt"))
+
     entity = make_entity_statement(
         source_id="inpi",
         local_id=siren,
+        statement_date=record_dated,
         name=name,
         jurisdiction=("France", "FR"),
         identifiers=identifiers,
@@ -313,7 +320,9 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         if pouvoir.get("beneficiaireEffectif") is True:
             # BO record — redistribution restricted; skip.
             continue
-        for stmt in _inpi_individu_statements(siren, pouvoir, entity_sid, source_url, seen_sids):
+        for stmt in _inpi_individu_statements(
+            siren, pouvoir, entity_sid, source_url, seen_sids, record_dated
+        ):
             seen_sids.add(stmt["statementId"])
             yield stmt
 
@@ -324,6 +333,7 @@ def _inpi_individu_statements(
     entity_sid: str,
     source_url: str,
     seen_sids: set[str],
+    record_dated: str | None = None,
 ) -> list[dict[str, Any]]:
     """Emit person + relationship statements for one non-BO INDIVIDU pouvoir.
 
@@ -381,6 +391,7 @@ def _inpi_individu_statements(
     person = make_person_statement(
         source_id="inpi",
         local_id=person_local_id,
+        statement_date=record_dated,
         full_name=full_name,
         person_type="knownPerson",
         nationalities=nationalities,
@@ -421,6 +432,7 @@ def _inpi_individu_statements(
     rel = make_relationship_statement(
         source_id="inpi",
         local_id=rel_local_id,
+        statement_date=record_dated,
         subject_statement_id=entity_sid,
         interested_party_statement_id=person_sid,
         interested_party_type="person",

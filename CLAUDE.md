@@ -2991,3 +2991,32 @@ Phase B of the dates audit. Things that will be re-derived otherwise:
 - **Frontend:** `SourceLiveness.source_as_of` is optional; `dataAsOf()` in
   `LivenessBadge.tsx` (cut, else retrieval) drives the chip date and the
   `STALE_AFTER_DAYS` check, and the tooltip names both dates.
+
+## Sources date their own claims (Phase 315)
+
+Phase C of the dates audit. Things that will be re-derived otherwise:
+
+- **Pass a source's own date with `record_date()` / `latest_record_date()`**
+  (`bods/statements.py`): a full ISO day only, and `None` for a date after
+  today. Local formats (epoch ms, `DD.MM.YYYY`) go through the mapper's own
+  helper first.
+- **Only record-level dates.** A last-modified stamp, the latest filing, or
+  the declaration that names the party. Never a periodic declaration that a
+  later register change can postdate — that is why Companies House's
+  `confirmation_statement.last_made_up_to` and CRO's `last_ar_date` are not
+  used (CRO's name changed after its last AR on the record checked).
+- **FtM: each record its own `last_change`** — subject, nested party and edge
+  entity separately; `last_seen` is a crawl. OpenAleph has none.
+- **Single-snapshot mappers state the cut**: `map_asp_moldova`,
+  `map_apr_serbia`, `map_onrc_romania`, `map_eiti_soe` and
+  `map_eiti_assessment` are `dated_by_cut(_map_x(bundle), bundle[cut])`
+  wrappers; the inner `_map_x` holds the mapping (re-exported from
+  `bods/mapper.py`, as `test_mapper_modules` requires). The ONRC and EITI SOE
+  bundles carry their cut (`export_date`, `source_snapshot`) for this.
+- **CRO's extract date is held in memory, not the response cache**
+  (`CroAdapter._extract_modified`): a cache read records `cached` and would
+  downgrade the record's own live fetch.
+- **PRH reads both YTJ shapes.** v3 returns `mainBusinessLine` as an object
+  and `companyForms` as a list; the mapper took the first as a list and 500'd
+  in production until this phase. CRO's CKAN types `nace_v2_code` as a
+  number: `str()` every CKAN field before `.strip()`.

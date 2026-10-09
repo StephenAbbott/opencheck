@@ -105,9 +105,51 @@ flags a generator created under a real provenance and drained under none.
 | `brreg` | `rollegrupper[].sistEndret` |
 | `ted_eu` | latest notice `publication-date` |
 | `climatetrace` | the GEM ownership release date (the dated CSV filename) |
+| `opensanctions`, `everypolitician` | each FtM record's own `last_change` — the subject, every nested party and every edge entity separately (`last_seen` is a crawl, never used) |
+| `opencorporates` | the company record's `updated_at` (OpenCorporates is the claimant) |
+| `wikidata` | an ownership edge: the latest P813 *retrieved* on the claim's references |
+| `dlcp_dc` | the entity: `DCS_LAST_MOD_DTTM`; owners: `DATE_LAST_REPORT_FILED`, the biennial report that declares them |
+| `ny_dos` | the entity: its latest filing of any kind (none from a truncated history); the CEO: the filing that names them |
+| `cac_nigeria` | a current owner: its latest PSC `notified` date; a departed owner keeps the harvest date (no cessation date is published) |
+| `ur_latvia` | officers, beneficial owners and members: `last_modified_at`, else `registered_on` |
+| `rpvs_slovakia` | each KUV: the latest of its `PlatnostOd` / `PlatnostDo` (RPVS versions an entry by closing it and opening another) |
+| `inpi` | the RNE record's `updatedAt`, for the company and its representatives |
+| `prh` | YTJ's `lastModified` |
+| `zefix` | the latest SOGC (SHAB) publication — every Swiss register change is published there |
+| `cro` | the CKAN resource's `last_modified`: the extract the row was served from |
+| `eiti_zambia` | the latest portal `last_updated` among the datasets the record was drawn from |
+| `anaf_romania` | ANAF's own as-of date (`date_generale.data`) |
+| `asp_moldova`, `apr_serbia`, `onrc_romania`, `eiti_soe`, `eiti_assessment` | the snapshot's cut, stated on every statement (`dated_by_cut`) rather than left to the fallback |
 
 Everything else falls back to the source's cut date (bulk datasets — see
 above), then the retrieval date, then, for a stub only, today.
+
+### The rule for a source's own date (Phase 315)
+
+A source date becomes `statementDate` only when it is a **record-level** date
+the source keeps for the record itself: a last-modified stamp, the latest
+filing, or the declaration that names the party. A periodic declaration that
+later register changes can postdate is not used for the whole record, because
+it would date the current picture to before some of it was true. The two
+cases the audit raised and this phase declined:
+
+- **Companies House `confirmation_statement.last_made_up_to`** for the
+  entity. A change of name or office filed after the confirmation statement
+  is already in the profile, so the profile as served is Companies House's
+  claim today. PSC statements keep `notified_on` / `ceased_on`.
+- **CRO `last_ar_date`**. On the record checked, the company's name changed
+  in May 2026, after its 2025 annual return. The resource refresh dates the
+  row instead.
+
+The helpers: `bods/statements.record_date()` reads a full ISO day and nothing looser, and
+returns `None` for a date after today (a due date or validity horizon is never
+a declaration); `latest_record_date()` takes the latest of several.
+
+Checked against production payloads on 9 Oct 2026 and found to carry no
+usable record date: **OpenAleph** (dataset-level timestamps only),
+**Firmenbuch** (no entry date in the extract), **CVR** (only *virkning*
+effect dates; `registreringFra` is not in the query), **MCA India** (not
+configured in production). They keep the retrieval date.
 
 Three registers were investigated and have nothing usable, recorded so the
 question does not get re-opened: **Estonia** publishes only a founding date,

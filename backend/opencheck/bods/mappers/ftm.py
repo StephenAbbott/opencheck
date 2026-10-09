@@ -23,6 +23,7 @@ from ..statements import (
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
+    record_date,
 )
 
 # ----------------------------------------------------------------------
@@ -420,6 +421,10 @@ def _ftm_edge_relationships(
                         interested_party_type=ip_type,
                         interests=[dict(interest)],
                         source_url=subject_url,
+                        # The edge is its own FtM record with its own
+                        # ``last_change`` (Phase 315); the subject's only
+                        # where yente omits the edge's.
+                        statement_date=_ftm_last_change(entry) or _ftm_last_change(payload),
                     )
                     result.statements.append(rel)
 
@@ -505,6 +510,7 @@ def map_ftm(
                 legacy_interest["beneficialOwnershipOrControl"] = True
             rel = make_relationship_statement(
                 source_id=source_id,
+                statement_date=_ftm_last_change(related) or _ftm_last_change(payload),
                 local_id=f"{payload.get('id', '?')}:{key}:{related.get('id', '?')}",
                 subject_statement_id=rel_subject_sid,
                 interested_party_statement_id=rel_ip_sid,
@@ -532,6 +538,20 @@ def map_ftm(
     # (Phase 235 — Rosneft's OpenSanctions record repeated 13 ids).
     result.statements = unique_statements(result.statements)
     return result
+
+
+def _ftm_last_change(record: dict[str, Any]) -> str | None:
+    """The day the FtM publisher last changed this record (Phase 315).
+
+    OpenSanctions (and EveryPolitician, its subset) stamp every entity —
+    nested parties and edge entities included — with ``first_seen``,
+    ``last_seen`` and ``last_change``. ``last_change`` is the publisher's
+    assertion date: when the record's content last moved. ``last_seen`` is
+    only the latest crawl that saw it unchanged, and ``first_seen`` when it
+    appeared, so neither is used. OpenAleph entities carry none of the three
+    and fall back to the retrieval date.
+    """
+    return record_date(record.get("last_change"))
 
 
 def _ftm_statement(
@@ -618,6 +638,7 @@ def _ftm_entity_statement(
     stmt = make_entity_statement(
         source_id=source_id,
         local_id=ftm_id,
+        statement_date=_ftm_last_change(payload),
         name=name,
         entity_type="stateBody" if state_basis else "registeredEntity",
         entity_details=state_basis,
@@ -665,6 +686,7 @@ def _ftm_person_statement(
     return make_person_statement(
         source_id=source_id,
         local_id=ftm_id,
+        statement_date=_ftm_last_change(payload),
         full_name=full_name,
         nationalities=nationalities,
         birth_date=birth_date,
