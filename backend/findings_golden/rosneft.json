@@ -2,7 +2,7 @@
   "lei": "253400JT3MQWNDKMJE44",
   "name": "Rosneft",
   "role": "curated",
-  "why": "Curated example. Sanctioned Russian state oil company: findings on the company itself, related-party findings, and EU_HIGH_RISK_THIRD_COUNTRY on its own RU registration (survives the Phase 273 scope).",
+  "why": "Curated example. Sanctioned Russian state oil company: findings on the company itself, related-party findings, and EU_HIGH_RISK_THIRD_COUNTRY on its own RU registration (survives the Phase 273 scope); since Phase 319 also EU_TAX_NON_COOPERATIVE, Russia being on Annex I of the EU tax list too.",
   "example_card": true,
   "no_risk": false,
   "risk": {
@@ -10,6 +10,7 @@
     "EXPORT_CONTROLLED": "high",
     "DEBARMENT": "high",
     "EU_HIGH_RISK_THIRD_COUNTRY": "high",
+    "EU_TAX_NON_COOPERATIVE": "medium",
     "STATE_CONTROLLED": "medium",
     "RELATED_SANCTIONED": "high",
     "SANCTIONED_SECURITY": "high"

@@ -102,7 +102,7 @@ RETIRED_SIGNAL_CODES: frozenset[str] = frozenset({"COMPLEX_CORPORATE_STRUCTURE"}
 #: Phase 245's ``verdict_template``. Bump it whenever a rule change moves which
 #: codes fire for an unchanged company, and record the codes it moved below.
 #: A snapshot written before Phase 273 carries no number: it was version 1.
-SIGNAL_RULES = 2
+SIGNAL_RULES = 3
 
 #: version -> the codes whose firing that rules version changed. Comparing a
 #: baseline from an older version, appearances and disappearances of these
@@ -111,6 +111,9 @@ SIGNAL_RULES = 2
 #:
 #: 2 = Phase 273: the FATF / EU list signals stopped reading subsidiaries and
 #: side branches, and subsidiaries moved to SUBSIDIARY_LISTED_JURISDICTION.
+#: 3 = Phase 319: EU_TAX_NON_COOPERATIVE is new, and the subsidiary note
+#: reads Annex I of the EU tax list too, so it can appear for a company with
+#: a subsidiary in, say, Anguilla and nothing else listed.
 SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
     2: frozenset(
         {
@@ -120,6 +123,7 @@ SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
             "SUBSIDIARY_LISTED_JURISDICTION",
         }
     ),
+    3: frozenset({"EU_TAX_NON_COOPERATIVE", "SUBSIDIARY_LISTED_JURISDICTION"}),
 }
 
 

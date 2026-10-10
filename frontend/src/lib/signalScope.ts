@@ -40,7 +40,9 @@ type Stmt = Record<string, unknown>;
  *     (+ `evidence.subject_statement_ids[]` when a PEP signal was merged
  *     across several statements for one person, Phase 247)
  *   - `evidence.matches[].statement_id`  — TRUST_OR_ARRANGEMENT, NOMINEE, AMLA
- *   - `evidence.jurisdictions[].statement_id` — FATF_*, NON_EU_JURISDICTION
+ *   - `evidence.jurisdictions[].statement_id` — FATF_*, NON_EU_JURISDICTION,
+ *     EU_HIGH_RISK_THIRD_COUNTRY, EU_TAX_NON_COOPERATIVE (Phase 319),
+ *     SUBSIDIARY_LISTED_JURISDICTION
  *   - `evidence.longest_path[]`          — COMPLEX_OWNERSHIP_LAYERS
  *
  * Order is not meaningful and duplicates are not removed: callers either

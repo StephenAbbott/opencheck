@@ -56,6 +56,9 @@
   --oo-info-bg: #f0f9ff;
   --oo-info-border: #bae6fd;
   --oo-info-text: #0369a1;
+  --oo-taxlist-bg: #ecfeff; /* Phase 319 -- the EU tax-list chip */
+  --oo-taxlist-border: #a5f3fc;
+  --oo-taxlist-text: #155e75;
 
   /* Ownership-graph relation palette (Phase 122). Ownership and role take
      the FullCheck / BackgroundCheck node colours; control keeps its orange.

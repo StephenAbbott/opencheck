@@ -296,9 +296,11 @@ export default function QuickCheckPanel({
                   in the EU Anti-Money Laundering Authority's customer due
                   diligence standards; none of them asserts that a legal
                   threshold is met. Jurisdiction signals come from the FATF
-                  (Financial Action Task Force) and EU high-risk lists. A
-                  signal is a pointer to a record, not a conclusion about the
-                  company.
+                  (Financial Action Task Force) and EU high-risk lists, and
+                  from the EU list of non-cooperative jurisdictions for tax
+                  purposes — a tax list, which carries no anti-money-laundering
+                  obligation of its own. A signal is a pointer to a record,
+                  not a conclusion about the company.
                 </Explain>
               </p>
             </>

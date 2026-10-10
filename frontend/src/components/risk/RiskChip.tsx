@@ -99,7 +99,7 @@ export const RISK_PRESENTATION: Record<
     classes: CONTEXT_CLASSES,
   },
   // Context, not risk (Phase 273): subsidiaries in FATF- or EU-listed
-  // jurisdictions. Until Phase 273 they fired the red list chips themselves,
+  // jurisdictions (the EU tax list too, since Phase 319). Until Phase 273 they fired the red list chips themselves,
   // worded as the company's ownership chain.
   SUBSIDIARY_LISTED_JURISDICTION: {
     label: "Subsidiaries in listed jurisdictions",
@@ -184,6 +184,14 @@ export const RISK_PRESENTATION: Record<
   FATF_GREY_LIST: {
     label: "FATF grey list",
     classes: "bg-orange-50 text-orange-800 border-orange-400",
+  },
+  // Phase 319: Annex I of the EU list of non-cooperative jurisdictions for
+  // tax purposes. A risk chip, but a tax-governance list with no AML
+  // enhanced-due-diligence obligation — so its own cyan token tier, outside
+  // the rose/red/orange ramp the AML lists wear (RiskChip.test pins that).
+  EU_TAX_NON_COOPERATIVE: {
+    label: "EU tax list",
+    classes: "bg-oo-taxlist-bg text-oo-taxlist-text border-oo-taxlist-border",
   },
 };
 

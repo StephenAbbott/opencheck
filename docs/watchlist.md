@@ -266,6 +266,8 @@ and disappearances of those codes — and the verdict, which is built from them
 like with like, and every other code (a new sanctions listing, say) still
 reports on the same re-run. Version 2 is Phase 273: the FATF / EU list signals
 stopped reading subsidiaries, which moved to `SUBSIDIARY_LISTED_JURISDICTION`.
+Version 3 is Phase 319: `EU_TAX_NON_COOPERATIVE` is new, and the subsidiary
+note reads Annex I of the EU tax list too.
 Bump `SIGNAL_RULES` and add an entry whenever a rule change moves which codes
 fire for an unchanged company.
 

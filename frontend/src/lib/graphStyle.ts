@@ -70,6 +70,10 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   // Retired in Phase 272 (never emitted) — kept quiet for stored reports.
   COMPLEX_CORPORATE_STRUCTURE: { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"CC", severity:0 },
   FATF_GREY_LIST:           { bg:"#fff7ed", border:"#9a3412", text:"#9a3412", label:"Fg", severity:2 },
+  // Phase 319 — Annex I of the EU tax list. Severity 1, below FATF grey (2):
+  // a tax-governance listing never outranks an AML list on a node. Cyan,
+  // the RiskChip's oo.taxlist tier, outside the AML lists' red/orange.
+  EU_TAX_NON_COOPERATIVE:   { bg:"#ecfeff", border:"#0e7490", text:"#155e75", label:"Tx", severity:1 },
   // Context, not risk — slate, and the LOWEST severity, so a node is
   // never ranked by the graph on the strength of being non-EU alone.
   NON_EU_JURISDICTION:      { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"N",  severity:0 },

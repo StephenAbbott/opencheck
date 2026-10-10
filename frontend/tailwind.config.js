@@ -93,6 +93,16 @@ export default {
             border: "#fb7185", // rose-400
             text: "#9f1239",   // rose-800   (4.5:1+ on risk.bg)
           },
+          // Phase 319: the EU tax-list chip's own tier. A tax-governance
+          // listing, not an AML finding, so it stays out of the rose/red/
+          // orange ramp the AML lists and sanctions wear, and out of sky
+          // (structural context) and teal (ESG). Cyan-50/200/800; the text
+          // is 4.5:1+ on taxlist.bg.
+          taxlist: {
+            bg: "#ecfeff",     // cyan-50
+            border: "#a5f3fc", // cyan-200
+            text: "#155e75",   // cyan-800
+          },
           info: {
             bg: "#f0f9ff",     // sky-50     -- structural context
             border: "#bae6fd", // sky-200

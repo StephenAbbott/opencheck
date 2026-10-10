@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 318** — The about page now links OpenCheck's guide to how it dates its ownership data, and EITI matches record exactly when OpenCheck read EITI rather than a bare day.
+**Latest: Phase 319** — Annex I of the EU list of non-cooperative jurisdictions for tax purposes is now its own risk signal, weighted below the AML lists and saying it carries no AML obligation.
 
 → [Full development history](docs/status.md)
 

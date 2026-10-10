@@ -199,9 +199,14 @@ _RISK_LABELS = {
     "FATF_BLACK_LIST": "FATF black-list jurisdiction",
     "EU_HIGH_RISK_THIRD_COUNTRY": "EU high-risk third country",
     "FATF_GREY_LIST": "FATF grey-list jurisdiction",
+    "EU_TAX_NON_COOPERATIVE": (
+        "EU tax non-cooperative jurisdiction (a tax-governance list; "
+        "no AML enhanced-due-diligence obligation)"
+    ),
     "NON_EU_JURISDICTION": "Outside EU/EEA",
     "SUBSIDIARY_LISTED_JURISDICTION": (
-        "Subsidiaries in FATF- or EU-listed jurisdictions (context, not a finding)"
+        "Subsidiaries in FATF-, EU AML- or EU tax-listed jurisdictions "
+        "(context, not a finding)"
     ),
     "OFFSHORE_LEAKS": "Offshore Leaks match",
     "TRUST_OR_ARRANGEMENT": "Trust / arrangement",

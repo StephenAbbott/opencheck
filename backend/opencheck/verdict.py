@@ -60,6 +60,12 @@ _RELATED_EXPORT = (
 _DEBARMENT = ("DEBARMENT", "RELATED_DEBARMENT")
 _PEP = ("PEP", "RELATED_PEP")
 _JURISDICTION = ("FATF_BLACK_LIST", "FATF_GREY_LIST", "EU_HIGH_RISK_THIRD_COUNTRY")
+#: Phase 319 — Annex I of the EU tax list. A clause of its own, never folded
+#: into the watch-list clause above: that one stands for the AML lists, and a
+#: tax-governance listing carries no AML obligation. Read after the AML
+#: clause and after state ownership, so it only reaches the two-clause
+#: sentence when little else did.
+_TAX_LIST = ("EU_TAX_NON_COOPERATIVE",)
 _LEAKS = ("OFFSHORE_LEAKS",)
 _OPACITY = ("OPAQUE_OWNERSHIP", "NOMINEE", "TRUST_OR_ARRANGEMENT", "POSSIBLE_OBFUSCATION")
 _STATE = ("STATE_CONTROLLED",)
@@ -116,6 +122,7 @@ _RISK_CLAUSES: tuple[tuple[tuple[str, ...], str, str | None], ...] = (
     ),
     (_OPACITY, "ownership recorded in a form that obscures who benefits", None),
     (_STATE, "state ownership recorded on the company", None),
+    (_TAX_LIST, "a jurisdiction on the EU's tax non-cooperation list", None),
     (
         _COUNTER_SANCTIONS,
         "a counter-sanctions designation by a non-mainstream authority",

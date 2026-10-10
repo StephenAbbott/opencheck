@@ -229,6 +229,12 @@ ELEMENT_NOMINEE = "nominee"
 FATF_BLACK_LIST = "FATF_BLACK_LIST"
 FATF_GREY_LIST = "FATF_GREY_LIST"
 EU_HIGH_RISK_THIRD_COUNTRY = "EU_HIGH_RISK_THIRD_COUNTRY"
+#: Phase 319 — Annex I of the EU list of non-cooperative jurisdictions for
+#: tax purposes. A tax-governance list, not an AML one: it is a risk signal
+#: (Stephen, 10 Oct 2026) but at medium confidence and the lowest graph
+#: severity of the four lists, and its summary says it carries no AML
+#: enhanced-due-diligence obligation. See ``EU_TAX_NON_COOPERATIVE_CODES``.
+EU_TAX_NON_COOPERATIVE = "EU_TAX_NON_COOPERATIVE"
 
 #: Phase 273 — ``kind="context"``. Subsidiaries (entities BELOW the subject)
 #: registered in a jurisdiction on one of the three lists above. Until Phase
@@ -441,23 +447,99 @@ EU_HIGH_RISK_THIRD_COUNTRY_CODES: frozenset[str] = frozenset(
 # Source: https://www.fatf-gafi.org/en/countries/detail/Russian-Federation.html
 EU_HRTC_SECTION_IV_CODES: frozenset[str] = frozenset({"RU"})
 
+# Phase 319 — the EU list of non-cooperative jurisdictions for tax purposes,
+# ANNEX I ONLY, as revised by the Council conclusions of 9 October 2026
+# (doc. 13854/26, ECOFIN 4158th meeting). A different instrument from the
+# AML list above, and it must never be folded into it: the Council's tax
+# list attaches no enhanced-due-diligence obligation, and Russia and Vanuatu
+# are on both today — one code for the two would leave the summary unable
+# to say which instrument applies.
+#
+# Annex II (the "state of play": jurisdictions with open commitments) is
+# deliberately NOT read (Stephen, 10 Oct 2026). It is a list of promises,
+# not a listing; carrying it would put a chip on the British Virgin Islands,
+# Panama or Türkiye for commitments they have made. As of 9 Oct 2026 it
+# names Türkiye, Jordan, Montenegro, Panama, Viet Nam, the British Virgin
+# Islands, Eswatini, Brunei Darussalam, Greenland and Morocco.
+#
+# GLEIF codes the three US territories as ISO 3166-1 (``GU`` 30 records,
+# ``AS`` 3, ``VI`` 66 on 10 Oct 2026; none under ``US-GU`` / ``US-AS`` /
+# ``US-VI``). The ISO 3166-2 spellings are folded to the territory code by
+# ``_list_code`` in case another source writes them.
+#
+# The Council revises the list twice a year (February and October); the
+# next revision is due in February 2027. Re-check the Annex against the
+# Council's own conclusions, not a press summary, and add the Official
+# Journal reference once the conclusions are published there.
+# Sources: https://www.consilium.europa.eu/en/press/press-releases/2026/10/09/taxation-council-updates-the-eu-list-of-non-cooperative-jurisdictions-for-tax-purposes/
+#          https://data.consilium.europa.eu/doc/document/ST-13854-2026-INIT/en/pdf
+EU_TAX_LIST_INSTRUMENT = (
+    "Council conclusions of 9 October 2026 on the revised EU list of "
+    "non-cooperative jurisdictions for tax purposes, Annex I"
+)
+
+EU_TAX_NON_COOPERATIVE_CODES: frozenset[str] = frozenset(
+    {
+        "AS",  # American Samoa
+        "AI",  # Anguilla
+        "GU",  # Guam
+        "PW",  # Palau
+        "RU",  # Russian Federation
+        "TC",  # Turks and Caicos Islands
+        "VI",  # US Virgin Islands
+        "VU",  # Vanuatu
+    }
+)
+
+#: ISO 3166-2 subdivision spellings of territories that ISO 3166-1 also codes
+#: on their own. A list names the territory; a source may write either.
+_TERRITORY_SUBDIVISIONS: dict[str, str] = {
+    "US-AS": "AS",
+    "US-GU": "GU",
+    "US-MP": "MP",
+    "US-PR": "PR",
+    "US-UM": "UM",
+    "US-VI": "VI",
+}
+
+
+def _list_code(code: str | None) -> str:
+    """A jurisdiction code as the external lists spell it (upper case, with a
+    territory's subdivision code folded to its own ISO 3166-1 code)."""
+    code = (code or "").upper()
+    return _TERRITORY_SUBDIVISIONS.get(code, code)
+
 #: The lists that make a jurisdiction "high-risk" for the complexity element
 #: on ``COMPLEX_OWNERSHIP_LAYERS`` (final draft RTS Art 11(4)(c), which leaves
 #: the term undefined). Phase 272 default: the EU's own Article 29 list —
 #: the legally decisive one — plus both FATF lists. Operators can narrow it
 #: with ``OPENCHECK_HIGH_RISK_JURISDICTION_LISTS`` (comma-separated
-#: ``eu``, ``fatf_black``, ``fatf_grey``). The standalone FATF / EU signals
-#: are unaffected by the setting; it only decides what the element counts.
+#: ``eu``, ``fatf_black``, ``fatf_grey``, ``eu_tax``). The standalone list
+#: signals are unaffected by the setting; it only decides what the element
+#: counts.
+#:
+#: Phase 319: ``eu_tax`` (Annex I of the EU tax list) is a known id but is
+#: NOT in the default — opt-in only (Stephen, 10 Oct 2026). It is a
+#: tax-governance list, and "registered in high-risk jurisdictions" in the
+#: RTS is an AML judgement. An operator who wants it names it alongside the
+#: others: ``eu,fatf_black,fatf_grey,eu_tax``.
 HIGH_RISK_LIST_EU = "eu"
 HIGH_RISK_LIST_FATF_BLACK = "fatf_black"
 HIGH_RISK_LIST_FATF_GREY = "fatf_grey"
+HIGH_RISK_LIST_EU_TAX = "eu_tax"
 DEFAULT_HIGH_RISK_LISTS: tuple[str, ...] = (
     HIGH_RISK_LIST_EU, HIGH_RISK_LIST_FATF_BLACK, HIGH_RISK_LIST_FATF_GREY,
+)
+#: Every list id OpenCheck knows, in display order — the default plus the
+#: opt-in ones.
+KNOWN_HIGH_RISK_LISTS: tuple[str, ...] = DEFAULT_HIGH_RISK_LISTS + (
+    HIGH_RISK_LIST_EU_TAX,
 )
 _HIGH_RISK_LIST_CODES: dict[str, frozenset[str]] = {
     HIGH_RISK_LIST_EU: EU_HIGH_RISK_THIRD_COUNTRY_CODES,
     HIGH_RISK_LIST_FATF_BLACK: FATF_BLACK_LIST_CODES,
     HIGH_RISK_LIST_FATF_GREY: FATF_GREY_LIST_CODES,
+    HIGH_RISK_LIST_EU_TAX: EU_TAX_NON_COOPERATIVE_CODES,
 }
 
 
@@ -467,12 +549,12 @@ def _active_high_risk_lists() -> tuple[str, ...]:
     if not raw:
         return DEFAULT_HIGH_RISK_LISTS
     wanted = {p.strip().lower() for p in str(raw).split(",") if p.strip()}
-    return tuple(lid for lid in DEFAULT_HIGH_RISK_LISTS if lid in wanted)
+    return tuple(lid for lid in KNOWN_HIGH_RISK_LISTS if lid in wanted)
 
 
 def high_risk_lists_for(code: str) -> list[str]:
     """Which active high-risk lists name ``code`` (empty when none do)."""
-    code = (code or "").upper()
+    code = _list_code(code)
     return [
         lid for lid in _active_high_risk_lists()
         if code in _HIGH_RISK_LIST_CODES[lid]
@@ -2297,6 +2379,7 @@ def assess_structure(
     # context, not risk.
     out.extend(_fatf_jurisdiction_signals(source_id, hit_id, bods))
     out.extend(_eu_high_risk_third_country_signals(source_id, hit_id, bods))
+    out.extend(_eu_tax_non_cooperative_signals(source_id, hit_id, bods))
     subsidiary_note = _subsidiary_listed_jurisdiction_signal(source_id, hit_id, bods)
     if subsidiary_note is not None:
         out.append(subsidiary_note)
@@ -2380,11 +2463,25 @@ def _layers_summary(
         if kind == ELEMENT_ARRANGEMENT:
             clauses.append("a trust or arrangement on the chain")
         elif kind == ELEMENT_HIGH_RISK_JURISDICTION:
-            codes = sorted({j["code"] for j in el.get("jurisdictions") or []})
-            clauses.append(
-                "an entity on the chain registered in a high-risk "
-                f"jurisdiction ({', '.join(codes)})"
-            )
+            # Phase 319: an operator may opt the EU tax list into the element.
+            # A jurisdiction that is on it alone is named as what it is, never
+            # as "high-risk" — the tax list carries no AML weight.
+            hits = el.get("jurisdictions") or []
+            aml = sorted({
+                j["code"] for j in hits
+                if set(j.get("lists") or [HIGH_RISK_LIST_EU]) - {HIGH_RISK_LIST_EU_TAX}
+            })
+            tax_only = sorted({j["code"] for j in hits} - set(aml))
+            if aml:
+                clauses.append(
+                    "an entity on the chain registered in a high-risk "
+                    f"jurisdiction ({', '.join(aml)})"
+                )
+            if tax_only:
+                clauses.append(
+                    "an entity on the chain registered in a jurisdiction on "
+                    f"the EU tax list ({', '.join(tax_only)})"
+                )
         elif kind == ELEMENT_NOMINEE:
             clauses.append("nominee arrangements in the structure")
     if clauses:
@@ -2644,8 +2741,8 @@ def _non_eu_summary(codes: list[str], *, qualified: bool) -> str:
         + ", ".join(codes)
         + ". Structural context, not a risk finding — being outside the "
         "EU/EEA is not a risk factor in itself. Jurisdiction risk comes "
-        "only from the FATF and EU high-risk lists, which have their own "
-        "signals."
+        "only from the FATF lists, the EU high-risk list and the EU tax "
+        "list, which have their own signals."
     )
 
 
@@ -2757,7 +2854,7 @@ def _high_risk_jurisdictions_on_path(
         j = _entity_jurisdiction(stmt)
         if not j:
             continue
-        code = (j.get("code") or "").upper()
+        code = _list_code(j.get("code"))
         lists = high_risk_lists_for(code)
         if lists:
             out.append(
@@ -3198,7 +3295,7 @@ def _listed_entity_hits(
         j = _entity_jurisdiction(stmt)
         if not j:
             continue
-        code = (j.get("code") or "").upper()
+        code = _list_code(j.get("code"))
         if code and code in codes:
             out.append({"statement_id": sid, "code": code, "name": j.get("name") or ""})
     return out
@@ -3434,22 +3531,73 @@ def _eu_high_risk_third_country_signals(
     ]
 
 
-#: Every jurisdiction on any of the three lists, for the subsidiary note.
+def _eu_tax_non_cooperative_signals(
+    source_id: str, hit_id: str, bods: list[dict[str, Any]]
+) -> list[RiskSignal]:
+    """Fire EU_TAX_NON_COOPERATIVE for Annex I of the EU tax list (Phase 319).
+
+    Scoped like the FATF and EU AML signals since Phase 273: the subject and
+    the chain above it; subsidiaries go to ``SUBSIDIARY_LISTED_JURISDICTION``,
+    labelled "EU tax list". Ended links are kept and said (Phase 220).
+
+    Its own code and instrument, never a widening of
+    ``EU_HIGH_RISK_THIRD_COUNTRY`` — see ``EU_TAX_NON_COOPERATIVE_CODES``.
+    A jurisdiction on both lists (Russia, Vanuatu) fires both, each naming
+    its instrument. Confidence is ``medium``: the listing is an EU Council
+    decision, but on tax cooperation, and it creates no AML obligation, so
+    the summary says so in as many words.
+    """
+    scope = _chain_scope(hit_id, bods)
+    if scope is None:
+        return []
+    hits, ended_ids = _chain_list_hits(bods, scope, EU_TAX_NON_COOPERATIVE_CODES)
+    if not hits:
+        return []
+    summary = (
+        f"{_chain_location(hits, qualified=bool(ended_ids))}, on the EU list of "
+        f"non-cooperative jurisdictions for tax purposes ({EU_TAX_LIST_INSTRUMENT}). "
+        "This is a tax-governance list: it does not by itself require AML "
+        "enhanced due diligence."
+    )
+    return [
+        RiskSignal(
+            code=EU_TAX_NON_COOPERATIVE,
+            confidence="medium",
+            summary=summary,
+            source_id=source_id,
+            hit_id=hit_id,
+            evidence={
+                "jurisdictions": hits,
+                "instrument": EU_TAX_LIST_INSTRUMENT,
+                "annex": "I",
+                **_ended_evidence(ended_ids),
+            },
+        )
+    ]
+
+
+#: Every jurisdiction on any of the four lists, for the subsidiary note.
 #: Not narrowed by ``OPENCHECK_HIGH_RISK_JURISDICTION_LISTS`` — that setting
 #: governs the Phase 272 complexity element only, like the standalone signals.
+#: Phase 319 added Annex I of the EU tax list (Stephen, 10 Oct 2026), named
+#: "EU tax list" beside the AML lists.
 _ALL_LISTED_CODES: frozenset[str] = (
-    EU_HIGH_RISK_THIRD_COUNTRY_CODES | FATF_BLACK_LIST_CODES | FATF_GREY_LIST_CODES
+    EU_HIGH_RISK_THIRD_COUNTRY_CODES
+    | FATF_BLACK_LIST_CODES
+    | FATF_GREY_LIST_CODES
+    | EU_TAX_NON_COOPERATIVE_CODES
 )
 
 _LIST_DISPLAY = {
     HIGH_RISK_LIST_EU: "EU high-risk list",
     HIGH_RISK_LIST_FATF_BLACK: "FATF black list",
     HIGH_RISK_LIST_FATF_GREY: "FATF grey list",
+    HIGH_RISK_LIST_EU_TAX: "EU tax list",
 }
 
 
 def _all_lists_for(code: str) -> list[str]:
-    return [lid for lid in DEFAULT_HIGH_RISK_LISTS if code in _HIGH_RISK_LIST_CODES[lid]]
+    return [lid for lid in KNOWN_HIGH_RISK_LISTS if code in _HIGH_RISK_LIST_CODES[lid]]
 
 
 def _subsidiary_listed_summary(
@@ -3473,7 +3621,7 @@ def _subsidiary_listed_summary(
 def _subsidiary_listed_jurisdiction_signal(
     source_id: str, hit_id: str, bods: list[dict[str, Any]]
 ) -> RiskSignal | None:
-    """Context note for subsidiaries in FATF- or EU-listed jurisdictions.
+    """Context note for subsidiaries in FATF-, EU AML- or EU tax-listed jurisdictions.
 
     Below the subject only — never the subject, never an owner (those are the
     list signals' business), never a side branch. Each hit names every list it
