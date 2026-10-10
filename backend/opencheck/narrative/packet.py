@@ -16,7 +16,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from ..bods.refs import statement_index
+from ..bods.refs import party_ref, statement_index
 
 # Confidence is a small, ordered vocabulary used for both facts and risks.
 Confidence = str  # "high" | "medium" | "low"
@@ -400,8 +400,12 @@ def build_evidence_packet(
     def _is_person_rel(s: dict[str, Any]) -> bool:
         if s.get("recordType") != "relationship":
             return False
-        ip = (s.get("recordDetails") or {}).get("interestedParty")
-        return (by_id.get(ip) or {}).get("recordType") == "person"
+        # A BODS v0.4 UnspecifiedRecord ({reason, description}) is a dict, not
+        # a reference — GEM files Rosneft's small shareholders that way — and
+        # used as a key it raised "unhashable type: 'dict'", failing the whole
+        # summary. party_ref returns None for it; it names no person.
+        ip = party_ref((s.get("recordDetails") or {}).get("interestedParty"))
+        return ip is not None and (by_id.get(ip) or {}).get("recordType") == "person"
 
     has_person_rel = any(_is_person_rel(s) for s in bods)
     if not has_person_rel:
