@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 319** — Annex I of the EU list of non-cooperative jurisdictions for tax purposes is now its own risk signal, weighted below the AML lists and saying it carries no AML obligation.
+**Latest: Phase 320** — An owner that a source files as unspecified no longer stops the AI summary from being generated.
 
 → [Full development history](docs/status.md)
 
