@@ -12,6 +12,11 @@ The bundle is assembled from three Wikirate REST calls (Decko card JSON):
   — researched-only answers, most recent year first (sample; per the
   Wikirate team, 2026-07-24).
 
+The resolved company comes as a flat list item, the ``fetch()`` path as a
+card whose every field is nested (``{"content": …}``); the adapter flattens
+both before this schema sees them (Phase 321), so ``headquarters`` and
+``website`` stay plain strings here.
+
 Only fields the BODS mapper and the frontend card read are declared;
 everything else passes through via ``extra="allow"``.
 """
@@ -41,6 +46,9 @@ class WikirateBundle(_Base):
     card_id: int
     name: str
     wikirate_url: str  # HTML page on wikirate.org (stable ~id form)
+    # The company on Wikirate 2.0 (platform.wikirate.org/company/{card_id},
+    # same ids; Phase 321). Absent on bundles built before it.
+    platform_url: str | None = None
     matched_by: str  # "lei" | "wikidata_qid" | "card"
     identifiers: dict[str, Any] = Field(default_factory=dict)
     headquarters: str | None = None

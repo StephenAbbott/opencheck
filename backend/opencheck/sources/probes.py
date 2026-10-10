@@ -684,13 +684,22 @@ PROBES: dict[str, SourceProbe] = {
     ),
     "wikirate": _p(
         tier="live",
-        subject="BP P.L.C. on Wikirate",
-        allow_empty=True,
-        method="fetch_by_lei",
-        args=("213800LH1BZH3DI6G760", "Q152057"),
+        subject="BP plc. on Wikirate (card ~637)",
+        method="fetch",
+        args=("637",),
+        expect_fields=("name", "headquarters", "website", "identifiers", "total_answers"),
         requires_env=("WIKIRATE_API_KEY",),
         anchor_lei="213800LH1BZH3DI6G760",
         bods_mapper="map_wikirate",
+        notes=(
+            "Phase 321: probes the card path (``/~637.json``), not ``fetch_by_lei``. Every lookup's "
+            "deepen pass and every retry read the card, which nests each field as ``{content: …}``; "
+            "the LEI resolution reads the flat ``/Companies.json`` item, which never broke and is "
+            "pinned offline by real fixtures in tests/fixtures/wikirate/. The old probe allowed an "
+            "empty answer on the list path, so the card shape failed in production (Eli Lilly, "
+            "Rosneft, 10 Oct 2026) with the sweep green. BP's card is a company that exists: an "
+            "empty or stub answer is a failure, and expect_fields asserts the two fields that broke."
+        ),
     ),
     "ted_eu": _p(
         tier="live",
