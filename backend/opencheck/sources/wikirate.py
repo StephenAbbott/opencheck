@@ -36,6 +36,35 @@ Hard-won API constraints (verified live 2026-07-07)
   returned one answer per metric) and the earlier finding that sort
   params were ignored.
 * Rate limit: 60 requests/minute; this adapter spends 3 per lookup.
+
+Two shapes for one company (verified live 2026-10-10, Phase 321)
+----------------------------------------------------------------
+* ``/Companies.json`` list items carry each field **flat**:
+  ``"headquarters": "United Kingdom"``, ``"legal_entity_identifier":
+  "213800LH1BZH3DI6G760"``.
+* The card itself, ``/~{card_id}.json`` — what ``fetch()`` reads, so every
+  lookup's deepen pass and every per-source retry — wraps **every** field
+  as a nested card: ``{"id", "name", "type": "Pointer", "url", "content":
+  ["United Kingdom"]}``; the identifiers too (``"content":
+  ["213800LH1BZH3DI6G760"]``). Until Phase 321 the adapter read the card
+  as if it were a list item: ``headquarters`` / ``website`` failed the
+  bundle schema (production, Eli Lilly and Rosneft, 10 Oct 2026), and the
+  identifier dicts would have been stringified into asserted identifiers.
+  ``_flatten_card`` reads both shapes; it is the only place either is read.
+
+The new platform (Wikirate 2.0, launching 1 Nov 2026)
+-----------------------------------------------------
+Wikirate's legacy platform went read-only on 1 Oct 2026 and stays
+available read-only after the 1 Nov launch "for a transitional period"
+with no end date; the legacy (Decko) API keeps working through it, which
+is what this adapter still calls. ``platform.wikirate.org`` keeps the
+legacy card ids (BP is 637 on both), and ``/company/{card_id}`` redirects
+to the company's slugged page there, so the bundle carries that link as
+``platform_url``. The new platform reads its data from a Supabase back end
+(``data.wikirate.org/rest/v1/rpc/c_get_company?p_company_id=…``) — its own
+front end's API, not the public REST API Wikirate has announced for
+October 2026 with documentation to follow. Move to that one when it is
+published, not to the RPCs.
 """
 
 from __future__ import annotations
@@ -54,6 +83,8 @@ from .schemas.wikirate import WikirateBundle
 log = logging.getLogger(__name__)
 
 _API_BASE = "https://wikirate.org"
+#: Wikirate 2.0 — same card ids; ``/company/{id}`` redirects to the slug.
+_PLATFORM_BASE = "https://platform.wikirate.org"
 _CACHE_NS = "wikirate"
 
 #: How many latest-per-metric answers to include in the bundle.
@@ -88,6 +119,23 @@ def _first(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _card_content(value: Any) -> Any:
+    """A card-JSON field → its value; a flat list-item field is unchanged.
+
+    ``/~{id}.json`` nests each field as ``{"id", "name", "type", "url",
+    "content": …}``. Only a dict carrying ``content`` is unwrapped — the
+    card's own ``type`` object has none and is left alone.
+    """
+    if isinstance(value, dict) and "content" in value:
+        return value["content"]
+    return value
+
+
+def _flatten_card(item: dict[str, Any]) -> dict[str, Any]:
+    """Either company shape (list item or card JSON) → the flat list shape."""
+    return {key: _card_content(value) for key, value in item.items()}
 
 
 def _html_url(json_url: str | None) -> str | None:
@@ -204,8 +252,9 @@ class WikirateAdapter(SourceAdapter):
     async def _build_bundle(
         self, item: dict[str, Any], matched_by: str
     ) -> dict[str, Any] | None:
+        item = _flatten_card(item)
         card_id = item.get("id")
-        name = (item.get("name") or "").strip()
+        name = _first(item.get("name")) or ""
         if not card_id or not name:
             return None
 
@@ -227,10 +276,13 @@ class WikirateAdapter(SourceAdapter):
             # ~id form is stable against renames and slug-encoding traps
             # (e.g. trailing dots in "BP plc.").
             "wikirate_url": f"{_API_BASE}/~{card_id}",
+            "platform_url": f"{_PLATFORM_BASE}/company/{card_id}",
             "matched_by": matched_by,
             "identifiers": identifiers,
-            "headquarters": item.get("headquarters"),
-            "website": item.get("website"),
+            # A Pointer card's content is a list ("Indiana (United States)"
+            # inside one); a Phrase card's is a string.
+            "headquarters": _first(item.get("headquarters")),
+            "website": _first(item.get("website")),
             "total_answers": total,
             "latest_answers": latest,
             "is_stub": False,

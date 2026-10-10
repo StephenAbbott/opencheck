@@ -324,6 +324,8 @@ interface WikirateBundle {
   card_id: number;
   name: string;
   wikirate_url: string;
+  // Wikirate 2.0 company page (same card id); absent on pre-Phase-321 runs.
+  platform_url?: string | null;
   matched_by: string;
   identifiers: Record<string, unknown>;
   total_answers: number;
@@ -440,6 +442,18 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
           View all {total.toLocaleString()} data points on wikirate.org →
           <span className="sr-only"> (opens in new tab)</span>
         </a>
+
+        {raw.platform_url && (
+          <a
+            href={raw.platform_url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 block text-oo-meta font-semibold text-oo-esg-text underline underline-offset-2 hover:text-oo-esg-strong"
+          >
+            Company page on the new Wikirate platform →
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+        )}
 
         <p className="mt-3 text-[10px] text-oo-esg-text">
           Open ESG metric answers researched by the Wikirate community ·

@@ -1,0 +1,83 @@
+{
+  "id": null,
+  "name": "BP plc.+Answer",
+  "type": {
+    "id": 30,
+    "name": "Search",
+    "type": "Cardtype",
+    "url": "https://wikirate.org/Search.json",
+    "codename": "search_type"
+  },
+  "url": "https://wikirate.org/~637+Answer.json?filter%5Bmetric_type%5D%5B%5D=researched&sort_by=year&sort_dir=desc&limit=3",
+  "items": [
+    {
+      "id": 24069551,
+      "name": "World Benchmarking Alliance+Annual Workforce Redundancy Rate+BP plc.+2025",
+      "type": "Answer",
+      "url": "https://wikirate.org/World_Benchmarking_Alliance+Annual_Workforce_Redundancy_Rate+BP_plc+2025.json",
+      "metric": "World Benchmarking Alliance+Annual Workforce Redundancy Rate",
+      "company": "BP plc.",
+      "year": 2025,
+      "value": "No",
+      "sources": [
+        "Source_000250311"
+      ],
+      "comments": "Although the company reports the total turnover rate, no evidence was found that the company reports the involuntary turnover rate or rate of redundancy. Assessment Source Url(s): https://www.bp.com/en/global/corporate/sustainability/getting-to-net-zero.html",
+      "answer_url": "https://wikirate.org/World_Benchmarking_Alliance+Annual_Workforce_Redundancy_Rate+BP_plc.json"
+    },
+    {
+      "id": 23309237,
+      "name": "World Benchmarking Alliance+Assessing Human Rights Risks and Impacts Processes (Own Operations)+BP plc.+2025",
+      "type": "Answer",
+      "url": "https://wikirate.org/World_Benchmarking_Alliance+Assessing_Human_Rights_Risks_and_Impacts_Processes_Own_Operations+BP_plc+2025.json",
+      "metric": "World Benchmarking Alliance+Assessing Human Rights Risks and Impacts Processes (Own Operations)",
+      "company": "BP plc.",
+      "year": 2025,
+      "value": "No",
+      "sources": [
+        "Source-000250238"
+      ],
+      "comments": "Although the company describes the process of salient human rights risk assessment in its operations, no evidence was found that that it describes how relevant factors are taken into account, such as geographical, economic, social and other factors. Assessment Source Url(s): https://www.bp.com/en/global/corporate/sustainability/reporting-centre-and-archive.html",
+      "answer_url": "https://wikirate.org/World_Benchmarking_Alliance+Assessing_Human_Rights_Risks_and_Impacts_Processes_Own_Operations+BP_plc.json"
+    },
+    {
+      "id": 23312452,
+      "name": "World Benchmarking Alliance+Assessing Human Rights Risks and Impacts Processes (Supply Chain)+BP plc.+2025",
+      "type": "Answer",
+      "url": "https://wikirate.org/World_Benchmarking_Alliance+Assessing_Human_Rights_Risks_and_Impacts_Processes_Supply_Chain+BP_plc+2025.json",
+      "metric": "World Benchmarking Alliance+Assessing Human Rights Risks and Impacts Processes (Supply Chain)",
+      "company": "BP plc.",
+      "year": 2025,
+      "value": "No",
+      "sources": [
+        "Source-000250238"
+      ],
+      "comments": "Although the company discloses its process to assess some human rights (labour rights & modern slavery) risks and impacts in its business relationships, no evidence was found that it discloses a clear process to assess all human rights risks in its business relationships, including its supply chain. Assessment Source Url(s): https://www.bp.com/en/global/corporate/sustainability/improving-peoples-lives/human-rights.html",
+      "answer_url": "https://wikirate.org/World_Benchmarking_Alliance+Assessing_Human_Rights_Risks_and_Impacts_Processes_Supply_Chain+BP_plc.json"
+    }
+  ],
+  "links": [],
+  "ancestors": [
+    {
+      "id": 637,
+      "name": "BP plc.",
+      "type": "Company",
+      "url": "https://wikirate.org/BP_plc.json"
+    },
+    {
+      "id": 43678,
+      "name": "Answer",
+      "type": "Cardtype",
+      "url": "https://wikirate.org/Answer.json",
+      "codename": "answer"
+    }
+  ],
+  "html_url": "https://wikirate.org/BP_plc+Answer",
+  "created_at": null,
+  "updated_at": null,
+  "paging": {
+    "next": "https://wikirate.org/BP_plc+Answer.json?filter%5Bmetric_type%5D%5B%5D=researched&item=name&limit=3&offset=3&sort_by=year"
+  },
+  "requested_at": "2026-10-10 11:21:33 UTC",
+  "license": "Wikirate.org, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0). See https://wikirate.org/Attribution_Guide."
+}

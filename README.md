@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 320** — An owner that a source files as unspecified no longer stops the AI summary from being generated.
+**Latest: Phase 321** — Wikirate company records are read in full again after its platform change, and the Climate & ESG card links to the company on the new Wikirate platform.
 
 → [Full development history](docs/status.md)
 
