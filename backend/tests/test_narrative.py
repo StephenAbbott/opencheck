@@ -443,3 +443,41 @@ def test_golden_packets_validate(path):
     for r in packet.risks:
         for fid in r.fact_ids:
             assert fid in known, f"{path.name}: risk {r.id} cites missing {fid}"
+
+
+# --- Phase 320: an unspecified interested party is not a key ----------------
+
+
+def _with_unspecified_owner(report: dict, *, drop_person: bool = False) -> dict:
+    bods = [s for s in report["bods"] if not (drop_person and s["statementId"] in {"per-1", "rel-1"})]
+    bods.append(
+        {
+            "statementId": "rel-gem",
+            "recordType": "relationship",
+            "recordDetails": {
+                "subject": "ent-1",
+                # The BODS v0.4 UnspecifiedRecord shape, as GEM files
+                # Rosneft's small shareholders.
+                "interestedParty": {
+                    "reason": "informationUnknownToPublisher",
+                    "description": "Small shareholders, not individually identified by Global Energy Monitor",
+                },
+                "interests": [{"type": "shareholding", "share": {"exact": 10.5}}],
+            },
+            "source": {"description": "Global Energy Monitor / Climate TRACE", "type": ["thirdParty"]},
+        }
+    )
+    return {**report, "bods": bods}
+
+
+def test_an_unspecified_interested_party_does_not_break_the_packet():
+    """Rosneft's summary answered 500 "unhashable type: 'dict'" on 10 Oct 2026:
+    the person-relationship check used the {reason, description} record as a
+    dictionary key."""
+    packet = build_evidence_packet(_with_unspecified_owner(_report()))
+    assert not any("No beneficial owner" in g.statement for g in packet.gaps)
+
+
+def test_an_unspecified_interested_party_alone_is_not_a_disclosed_person():
+    packet = build_evidence_packet(_with_unspecified_owner(_report(), drop_person=True))
+    assert any("No beneficial owner" in g.statement for g in packet.gaps)
