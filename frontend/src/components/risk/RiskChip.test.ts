@@ -180,4 +180,22 @@ describe("RiskChip accessible name and description", () => {
     );
     expect(bare.match(/Related PEP/g)).toHaveLength(1);
   });
+
+  it("keeps the EU tax list below the AML lists and out of their palette", () => {
+    // Phase 319. Annex I of the EU list of non-cooperative jurisdictions for
+    // tax purposes is a tax-governance list with no AML enhanced-due-
+    // diligence obligation: it must never outrank an AML list on a node, and
+    // must never wear the red/rose/orange/amber the AML lists and sanctions do.
+    const tax = RISK_PRESENTATION.EU_TAX_NON_COOPERATIVE;
+    expect(tax).toBeDefined();
+    expect(tax.label).toBe("EU tax list");
+    expect(tax.classes).not.toMatch(/red|rose|orange|amber/);
+    expect(SIGNAL_STYLE.EU_TAX_NON_COOPERATIVE.severity).toBeLessThan(
+      SIGNAL_STYLE.FATF_GREY_LIST.severity,
+    );
+    expect(SIGNAL_STYLE.EU_TAX_NON_COOPERATIVE.severity).toBeGreaterThan(0);
+    expect(SIGNAL_STYLE.EU_HIGH_RISK_THIRD_COUNTRY.severity).toBeGreaterThan(
+      SIGNAL_STYLE.EU_TAX_NON_COOPERATIVE.severity,
+    );
+  });
 });

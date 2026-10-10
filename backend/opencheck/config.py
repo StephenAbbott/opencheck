@@ -811,8 +811,9 @@ class Settings(BaseSettings):
     # Which lists make a jurisdiction "high-risk" for the complexity element
     # on COMPLEX_OWNERSHIP_LAYERS (Phase 272): comma-separated ids from
     # ``eu`` (Delegated Reg 2016/1675 as amended), ``fatf_black``,
-    # ``fatf_grey``. Empty means all three. The standalone FATF / EU
-    # high-risk signals ignore this setting.
+    # ``fatf_grey``, and the opt-in ``eu_tax`` (Annex I of the EU tax list,
+    # Phase 319). Empty means the three AML lists — never ``eu_tax``. The
+    # standalone list signals ignore this setting.
     high_risk_jurisdiction_lists: str = Field(
         default="", alias="OPENCHECK_HIGH_RISK_JURISDICTION_LISTS"
     )

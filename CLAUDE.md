@@ -631,6 +631,7 @@ other labels.
 - `PEP`, `RELATED_PEP` → violet (#f5f3ff / #6d28d9)
 - `COMPLEX_CORPORATE_STRUCTURE` → retired Phase 272; slate context palette for stored reports only
 - `FATF_GREY_LIST` → orange dark (#fff7ed / #9a3412)
+- `EU_TAX_NON_COOPERATIVE` (Phase 319) → cyan, the `oo.taxlist` token tier (#ecfeff / #155e75), graph severity 1 — Annex I of the EU tax list; a tax-governance list with no AML EDD obligation, so deliberately outside the rose/red/orange AML ramp. Annex II is not read. See `docs/risk-signals.md`
 - `NON_EU_JURISDICTION` → slate context palette (orange on the og share card)
 - `OFFSHORE_LEAKS` → amber (#fef3c7 / #92400e)
 - `TRUST_OR_ARRANGEMENT` → indigo (#eef2ff / #4338ca)
@@ -640,7 +641,7 @@ other labels.
 - `SANCTIONED`, `PEP` → `evidence.statement_id` (added in Phase 45 via `_bods_stable_id(source_id, hit_id)` in `risk.py`)
 - `RELATED_SANCTIONED`, `RELATED_PEP`, and a related party's `OFFSHORE_LEAKS` (icij) → `evidence.subject_statement_id`, plus `evidence.subject_statement_ids[]` when the party spans several statements. Since Phase 282 a related-party screen emits **one signal per party per upstream record** naming every statement of the deduped party (`related_targets.attach_to_party`), never one copy per statement — a consumer that needs "which statements" reads the list, and anything counting signals counts parties
 - `TRUST_OR_ARRANGEMENT`, `NOMINEE`, `STATE_CONTROLLED` (Phase 240) → `evidence.matches[].statement_id`
-- `NON_EU_JURISDICTION`, `FATF_BLACK_LIST`, `FATF_GREY_LIST`, `EU_HIGH_RISK_THIRD_COUNTRY`, `SUBSIDIARY_LISTED_JURISDICTION` (Phase 273) → `evidence.jurisdictions[].statement_id`. Since Phase 273 the three list signals hold only the subject and its owners (`position`: `subject` / `above`); subsidiaries are in the slate context note
+- `NON_EU_JURISDICTION`, `FATF_BLACK_LIST`, `FATF_GREY_LIST`, `EU_HIGH_RISK_THIRD_COUNTRY`, `EU_TAX_NON_COOPERATIVE` (Phase 319), `SUBSIDIARY_LISTED_JURISDICTION` (Phase 273) → `evidence.jurisdictions[].statement_id`. Since Phase 273 the list signals hold only the subject and its owners (`position`: `subject` / `above`); subsidiaries are in the slate context note
 - `COMPLEX_OWNERSHIP_LAYERS` → `evidence.longest_path[]` (array of statementIds, subject first — the chain runs upwards from it) plus `evidence.subject_statement_id`
 
 **Signal scoping across render sites (Phase 109)** — `RELATED_*` signals are assessed against the **merged** bundle late in `_lookup_pipeline` and ride on the top-level `risk_signals` event; a `/deepen` response carries only that source's own findings. So the three `BodsGraphExplorer` render sites see different lists, and the two per-bundle ones saw no cross-source signals at all: a node the risk panel called sanctions-linked rendered unbadged, i.e. as "checked and clean".
@@ -1213,7 +1214,7 @@ key before joining EITI to EITI.
 
 `EXAMPLE_LEIS` in `frontend/src/components/HomePanels.tsx` (moved out of `App.tsx` in Phase 168) contains pre-computed `signals` arrays shown on the picker cards before the user clicks. These must be kept in sync with what the risk engine actually produces for each entity. When the risk engine changes (new signals, retired signals, confidence changes), update `EXAMPLE_LEIS` to match.
 
-Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_OWNERSHIP_LAYERS`, `SANCTIONED`, `RELATED_SANCTIONED`, `NON_EU_JURISDICTION`. Confidence `"high"` renders as `●`, `"medium"` as `◐`.
+Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_OWNERSHIP_LAYERS`, `SANCTIONED`, `RELATED_SANCTIONED`, `NON_EU_JURISDICTION`. Since Phase 319 Rosneft's card also carries `EU_TAX_NON_COOPERATIVE` (medium). Confidence `"high"` renders as `●`, `"medium"` as `◐`.
 
 ---
 

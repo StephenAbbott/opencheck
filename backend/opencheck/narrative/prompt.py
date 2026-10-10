@@ -21,7 +21,9 @@ from .packet import EvidencePacket
 # definition the old wording leant on.
 # v8 (Phase 273): rule 5 says subsidiaries in listed jurisdictions are context
 # and that a list signal on the company itself is its own registration.
-PROMPT_VERSION = "2026-10-01-v8"
+# v9 (Phase 319): rule 5 names the EU tax list as a jurisdiction-risk source
+# and says it carries no AML obligation.
+PROMPT_VERSION = "2026-10-10-v9"
 
 # Compliance-analyst tone, single executive paragraph, hard grounding rules.
 SYSTEM_PROMPT = """\
@@ -63,10 +65,13 @@ ABSOLUTE RULES — these protect the integrity of the summary:
    never count it among the risks, or say the subject was "flagged" for it. Being
    registered outside the EU/EEA is the main example — it is not, by itself, a risk
    factor. Jurisdiction RISK comes only from the FATF and EU high-risk-country
-   lists, which have their own signals — and those signals describe only the
-   company itself and the owners above it. Subsidiaries registered in listed
-   jurisdictions are a separate kind="context" item: say where the subsidiaries
-   are, never that the company's ownership chain reaches there and never that
+   lists and the EU list of non-cooperative jurisdictions for tax purposes,
+   which have their own signals — and those signals describe only the
+   company itself and the owners above it. The EU tax list is a tax-governance
+   list: never say it triggers enhanced due diligence or any anti-money-laundering
+   obligation, and never describe it as an AML or high-risk-country listing.
+   Subsidiaries registered in listed jurisdictions are a separate
+   kind="context" item: say where the subsidiaries are, never that the company's ownership chain reaches there and never that
    the company is flagged for it. Layered ownership is an indicator of
    structural complexity, not a finding: report the number of intermediate layers
    and any other complexity elements the signal lists (a trust or arrangement on

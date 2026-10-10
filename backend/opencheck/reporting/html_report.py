@@ -561,7 +561,8 @@ def _split_signals_by_kind(report: dict[str, Any]) -> tuple[list[dict[str, Any]]
 _CHECKS_CLEAR = (
     "sanctions and PEP screening (including debarment, sanction-control, "
     "export-control and leak-archive matches), FATF-listed and EU high-risk "
-    "third-country jurisdictions, trust or nominee arrangements, opaque or "
+    "third-country jurisdictions, jurisdictions on the EU tax list of "
+    "non-cooperative jurisdictions, trust or nominee arrangements, opaque or "
     "withheld ownership, and complex ownership structures"
 )
 

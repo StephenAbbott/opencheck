@@ -114,6 +114,7 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "DEBARMENT", confidence: "high" },
       { code: "RELATED_DEBARMENT", confidence: "high" },
       { code: "EU_HIGH_RISK_THIRD_COUNTRY", confidence: "high" },
+      { code: "EU_TAX_NON_COOPERATIVE", confidence: "medium" },
       { code: "RELATED_SANCTIONS_LINKED", confidence: "high" },
       { code: "RELATED_EXPORT_CONTROL_LINKED", confidence: "high" },
       { code: "EXPORT_RISK", confidence: "medium" },

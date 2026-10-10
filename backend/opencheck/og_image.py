@@ -87,6 +87,8 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     "FATF_BLACK_LIST": ("FATF black list", "#fee2e2", "#991b1b"),
     "EU_HIGH_RISK_THIRD_COUNTRY": ("EU high-risk country", "#fee2e2", "#b91c1c"),
     "FATF_GREY_LIST": ("FATF grey list", "#fff7ed", "#9a3412"),
+    # Phase 319 — a tax-governance list; cyan, outside the AML red/orange.
+    "EU_TAX_NON_COOPERATIVE": ("EU tax list", "#ecfeff", "#155e75"),
 }
 _DEFAULT_STYLE = ("#f1f5f9", "#334155")
 
