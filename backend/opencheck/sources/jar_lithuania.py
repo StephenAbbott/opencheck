@@ -398,7 +398,10 @@ class JarLithuaniaAdapter(SourceAdapter):
                 "register_unavailable": True,
                 "register_unavailable_detail": failure,
             }
-            self._cache.put(bundle_cache_key, result)
+            # Never cached (Phase 262's rule). This branch used to put the
+            # card under ``bundle_cache_key``, which step 1 above reads first,
+            # so one refusal was served as the company's record on every
+            # later lookup without asking JAR again.
             return result
 
         records = _parse_jar_html(html)

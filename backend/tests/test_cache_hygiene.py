@@ -391,3 +391,48 @@ async def test_the_inpi_mapper_still_emits_the_non_bo_officer():
         for n in s["recordDetails"].get("names", [])
     ]
     assert names and all("OWNER" not in (n or "") for n in names)
+
+
+# ---------------------------------------------------------------------------
+# jar_lithuania: the register-unavailable card was cached as the answer
+# ---------------------------------------------------------------------------
+
+_JAR_ROW_HTML = (
+    "<table><tr><td>301844044 <a href='#'>x</a></td>"
+    "<td>AB &quot;Ignitis grupė&quot;<br>Vilnius, Laisvės pr. 10, LT-04215</td>"
+    "<td>AB<br>Veikiantis</td></tr></table>"
+)
+
+
+async def test_a_jar_refusal_is_not_cached_as_the_answer(monkeypatch):
+    """One 403 must not become the company's record until the next deploy.
+
+    JAR's ``html is None`` branch built the GLEIF-name card marked
+    ``register_unavailable`` and then put it under the bundle key, which
+    ``fetch`` reads first on every later call. So a single refusal was served
+    from the cache forever after, without asking JAR again, even once JAR
+    answered — the Phase 262 rule ("a failure is never cached as no record")
+    broken for the card rather than for an absence.
+    """
+    from opencheck.sources.jar_lithuania import JarLithuaniaAdapter
+
+    answers: list[str | None] = [None, _JAR_ROW_HTML]
+
+    async def _fetch_html(self, url, *, cache_key):
+        html = answers.pop(0)
+        self._last_failure = None if html else "HTTP 403"
+        return html
+
+    monkeypatch.setattr(JarLithuaniaAdapter, "_fetch_html", _fetch_html)
+
+    degradation.begin()
+    refused = await JarLithuaniaAdapter().fetch("301844044", legal_name="Ignitis grupe")
+    recorded = degradation.collect()
+    assert refused["register_unavailable"] is True
+    assert [d.source_id for d in recorded] == ["jar_lithuania"]
+
+    answered = await JarLithuaniaAdapter().fetch("301844044", legal_name="Ignitis grupe")
+    assert not answered.get("register_unavailable")
+    assert answered["status"] == "Veikiantis"
+    assert answered["address"] == "Vilnius, Laisvės pr. 10, LT-04215"
+    assert answers == [], "the second fetch must have asked JAR again"
