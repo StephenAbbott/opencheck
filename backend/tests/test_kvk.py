@@ -11,6 +11,7 @@ rather than surfacing the raw ``HTTPStatusError`` as a broken source card.
 
 from __future__ import annotations
 
+import httpx
 import pytest
 import respx
 from httpx import Response
@@ -105,4 +106,60 @@ async def test_hit_builder_surfaces_coverage_note(adapter, monkeypatch, tmp_path
     hit = _bh_kvk(bundle, "33011433", ctx)
     assert hit.name == "Heineken N.V."
     assert "coverage_note" in hit.raw
+    get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# Phase 324: an unanswered request degrades instead of raising
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("response", "exc", "reason", "detail"),
+    [
+        (Response(429), None, "rate_limited", "HTTP 429"),
+        (Response(503), None, "upstream_error", "HTTP 503"),
+        (None, httpx.ReadTimeout("timed out"), "timeout", "ReadTimeout"),
+        (None, httpx.ConnectError("refused"), "upstream_error", "ConnectError"),
+    ],
+)
+async def test_an_unanswered_request_degrades_instead_of_raising(
+    adapter, monkeypatch, tmp_path, response, exc, reason, detail
+):
+    # The BODS quality sweep of 12 Oct 2026: KvK's 429 outlasted the three
+    # retries, raise_for_status() sent it out of fetch(), and /deepen answered
+    # HTTP 500 for ASML Holding.
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    from opencheck import degradation
+    from opencheck.config import get_settings
+    from opencheck.sources import kvk as kvk_module
+
+    async def no_sleep(_: float) -> None:
+        return None
+
+    monkeypatch.setattr(kvk_module.asyncio, "sleep", no_sleep)
+    get_settings.cache_clear()
+    puts: list[str] = []
+    monkeypatch.setattr(adapter._cache, "put", lambda key, *a, **k: puts.append(key))
+    with respx.mock:
+        route = respx.get(f"{_URL}/17085815")
+        if exc is not None:
+            route.mock(side_effect=exc)
+        else:
+            route.mock(return_value=response)
+        with degradation.recording() as recorded:
+            bundle = await adapter.fetch("17085815", legal_name="ASML Holding N.V.")
+
+    assert bundle["company"] is None
+    assert bundle["is_stub"] is True
+    assert "coverage_note" not in bundle  # not the 404 "not in the open set" note
+    assert puts == []  # a failure is never cached as "no record"
+    [entry] = [d for d in recorded if d.source_id == "kvk"]
+    assert entry.reason == reason
+    assert detail in entry.detail
+    assert "17085815" not in entry.detail
+    if response is not None and response.status_code == 429:
+        assert route.call_count == kvk_module._MAX_RETRIES + 1
     get_settings.cache_clear()

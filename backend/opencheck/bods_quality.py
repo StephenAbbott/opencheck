@@ -44,8 +44,11 @@ Every finding names its class, its source and the statement it is about.
     An interest that ends before it starts.
 ``bulk_dated_today``
     A statement from a ``snapshot`` or ``curated`` source dated the day of the
-    run: a bulk dataset that declared neither its cut nor its build (the
-    Phase 314 conftest rule, applied to production).
+    run that no cut can have dated: no ``source.retrievedAt`` (it declared
+    neither its cut nor its build — the Phase 314 conftest rule, applied to
+    production), or, on a lookup, a source whose ``source_liveness`` declared
+    no ``source_as_of``. A deepen dated today *with* a ``retrievedAt`` may be
+    a cut the register published today, and is not flagged (Phase 324).
 ``deepen_failed``
     ``/deepen`` returned an HTTP error for a probe subject that should map —
     the PRH / CRO 500 class.
@@ -238,11 +241,23 @@ def check_statements(
             start, end = _day(interest.get("startDate")), _day(interest.get("endDate"))
             if start and end and start > end:
                 add("start_after_end", FAIL, f"interest starts {start} and ends {end}")
+        # Dated today is only the defect when no cut can have dated it: no
+        # ``retrievedAt`` at all (tier 4 of ``_statement_date`` — nothing
+        # declared; ``_source_block`` writes it from the build), or a lookup
+        # whose ``source_liveness`` declared no ``source_as_of`` (dated by the
+        # build alone). A register that published a cut today — ASP Moldova
+        # exports on Mondays, the sweep's day — is dated correctly (Phase 324).
         if read_as in _BULK and statement_day == today:
-            add(
-                "bulk_dated_today", FAIL,
-                f"a {read_as} source dated today — it declared neither its cut nor its build",
-            )
+            if not retrieved_raw:
+                add(
+                    "bulk_dated_today", FAIL,
+                    f"a {read_as} source dated today — it declared neither its cut nor its build",
+                )
+            elif sid in no_cut:
+                add(
+                    "bulk_dated_today", FAIL,
+                    f"a {read_as} source dated today by its build — it declared no cut",
+                )
 
         # The provenance rules below are about what OpenCheck publishes. A
         # statement another publisher wrote and OpenCheck hands on verbatim

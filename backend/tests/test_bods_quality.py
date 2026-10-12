@@ -87,10 +87,30 @@ class TestDateRules:
         assert "start_after_end" in _checks(_run([st]))
 
     def test_a_bulk_source_dated_today_fails_only_under_bulk_liveness(self):
-        st = _stmt(statementDate=TODAY)
+        # No retrievedAt: nothing was declared, so today is the tier-4 fallback.
+        st = _stmt(statementDate=TODAY, source={
+            "type": ["officialRegister"], "opencheckSourceId": "companies_house"})
         assert "bulk_dated_today" in _checks(_run([st], liveness={"companies_house": "snapshot"}))
         assert "bulk_dated_today" in _checks(_run([st], liveness={"companies_house": "curated"}))
         assert "bulk_dated_today" not in _checks(_run([st], liveness={"companies_house": "live"}))
+
+    def test_a_cut_published_today_is_not_bulk_dated_today(self):
+        # Phase 324: ASP Moldova published its 12 Oct 2026 export that morning;
+        # the sweep ran the same Monday and flagged nine correctly dated
+        # statements. A retrievedAt means a clock was declared, and with no
+        # word that the cut is missing, today may be the register's own date.
+        st = _stmt(statementDate=TODAY, source={
+            "type": ["officialRegister"], "opencheckSourceId": "companies_house",
+            "retrievedAt": f"{TODAY}T22:01:18Z"})
+        assert "bulk_dated_today" not in _checks(_run([st], liveness={"companies_house": "snapshot"}))
+
+    def test_a_lookup_source_without_a_cut_dated_today_by_its_build_fails(self):
+        st = _stmt(statementDate=TODAY)  # retrievedAt today, from the build
+        found = _run([st], liveness={"companies_house": "snapshot"},
+                     no_cut=frozenset({"companies_house"}))
+        assert [f.message for f in found if f.check == "bulk_dated_today"] == [
+            "a snapshot source dated today by its build — it declared no cut"
+        ]
 
 
 class TestProvenanceRules:

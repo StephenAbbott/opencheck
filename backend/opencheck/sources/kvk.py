@@ -36,6 +36,7 @@ from typing import Any
 
 import httpx
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -164,35 +165,30 @@ class KvKAdapter(SourceAdapter):
                 "is_stub": True,
             }
         else:
-            async with build_client() as client:
-                url = f"{_API_BASE}/basisbedrijfsgegevens/kvknummer/{kvk_number}"
-                delay = _RETRY_BACKOFF_BASE
-                for attempt in range(_MAX_RETRIES + 1):
-                    response = await client.get(url)
-                    if response.status_code != 429:
-                        break
-                    if attempt == _MAX_RETRIES:
-                        # Exhausted retries — let raise_for_status surface the 429.
-                        break
-                    # Honour Retry-After if present; otherwise use exponential backoff.
-                    retry_after = response.headers.get("Retry-After")
-                    if retry_after is not None:
-                        try:
-                            wait = min(float(retry_after), _RETRY_BACKOFF_MAX)
-                        except ValueError:
-                            wait = delay
-                    else:
-                        wait = min(delay, _RETRY_BACKOFF_MAX)
-                    await asyncio.sleep(wait)
-                    delay *= 2
-                if response.status_code == 404:
-                    # The KvK number is not in the open-data set (BV/NV-only).
-                    # Cache the miss so we don't re-hit the 1-req/minute limit,
-                    # and degrade gracefully rather than surfacing a 404 error.
-                    data = None
-                else:
-                    response.raise_for_status()
+            try:
+                async with build_client() as client:
+                    response = await self._get_with_retries(
+                        client, f"{_API_BASE}/basisbedrijfsgegevens/kvknummer/{kvk_number}"
+                    )
+            except httpx.HTTPError as exc:
+                return self._unanswered(kvk_number, type(exc).__name__)
+            if response.status_code == 404:
+                # The KvK number is not in the open-data set (BV/NV-only).
+                # Cache the miss so we don't re-hit the 1-req/minute limit,
+                # and degrade gracefully rather than surfacing a 404 error.
+                data = None
+            elif not 200 <= response.status_code < 300:
+                # Phase 324: a 429 that outlasted the retries, or a 5xx, used
+                # to go through raise_for_status() and out of fetch() —
+                # /deepen answered HTTP 500 (BODS quality sweep, 12 Oct 2026).
+                # It is an unanswered question, never "no record": degrade,
+                # return an empty bundle, cache nothing (the Phase 262 rule).
+                return self._unanswered(kvk_number, f"HTTP {response.status_code}")
+            else:
+                try:
                     data = response.json()
+                except ValueError:
+                    return self._unanswered(kvk_number, "a non-JSON body")
             self._cache.put(cache_key, data)
 
         bundle: dict[str, Any] = {
@@ -207,3 +203,47 @@ class KvKAdapter(SourceAdapter):
             bundle["coverage_note"] = _COVERAGE_404
         validate_raw("kvk", KvKBundle, bundle)
         return bundle
+
+    async def _get_with_retries(self, client: httpx.AsyncClient, url: str) -> httpx.Response:
+        """GET ``url``, waiting out up to ``_MAX_RETRIES`` 429s.
+
+        Returns the last response, which is still a 429 when the retries ran
+        out — the caller decides what that means.
+        """
+        delay = _RETRY_BACKOFF_BASE
+        for attempt in range(_MAX_RETRIES + 1):
+            response = await client.get(url)
+            if response.status_code != 429:
+                break
+            if attempt == _MAX_RETRIES:
+                break
+            # Honour Retry-After if present; otherwise use exponential backoff.
+            retry_after = response.headers.get("Retry-After")
+            if retry_after is not None:
+                try:
+                    wait = min(float(retry_after), _RETRY_BACKOFF_MAX)
+                except ValueError:
+                    wait = delay
+            else:
+                wait = min(delay, _RETRY_BACKOFF_MAX)
+            await asyncio.sleep(wait)
+            delay *= 2
+        return response
+
+    def _unanswered(self, kvk_number: str, failure: str) -> dict[str, Any]:
+        """Record that KvK did not answer and return an empty, uncached bundle.
+
+        The detail names the failure only, never the KvK number.
+        """
+        degradation.record(
+            self.id,
+            f"KvK open data did not answer ({failure})",
+            reason=degradation.reason_for_failure(failure),
+        )
+        return {
+            "source_id": self.id,
+            "kvk_number": kvk_number,
+            "company": None,
+            "legal_name": self._names.get(kvk_number, ""),
+            "is_stub": True,
+        }

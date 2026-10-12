@@ -49,7 +49,7 @@ defects in production, fixed in the same phase (below).
 | `date_in_future` | `statementDate`, a founding/dissolution/birth date or an interest date after the day of the run. |
 | `statement_after_publication`, `retrieved_after_publication` | The claim, or OpenCheck's download, dated after the statement was published. |
 | `start_after_end` | An interest that ends before it starts. |
-| `bulk_dated_today` | A statement from a `snapshot` or `curated` source dated the day of the run — the Phase 314 conftest rule, applied to production. A bulk index rebuilt that same day trips it too; sweep a refresh from the next day. |
+| `bulk_dated_today` | A statement from a `snapshot` or `curated` source dated the day of the run that no cut can have dated: no `source.retrievedAt` (nothing declared — the Phase 314 conftest rule, applied to production), or, on a lookup, a source that declared no `source_as_of` (dated by its build alone). A deepen dated today with a `retrievedAt` may be a cut the register published that morning — ASP Moldova exports on Mondays, the sweep's day — and is not flagged (Phase 324). |
 | `lookup_failed`, `deepen_failed` | The API returned an error for a subject that should map — the Phase 315 PRH/CRO class. |
 
 **Warnings** — honest but weaker than it should be, or a known backlog. Since
