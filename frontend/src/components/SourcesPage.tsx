@@ -231,14 +231,17 @@ function CardStatus({ health }: { health: CardHealth | null }) {
             </dd>
           </div>
           {health.rows.map((r) => (
-            <div key={r.label} className="flex items-baseline gap-2">
+            // min-w-0 + overflow-wrap: a value can carry an unbroken token —
+            // "interest:seniorManagingOfficial 3 → 0" on a collapsed source
+            // pushed the page sideways at 320px (12 Oct 2026 sweep).
+            <div key={r.label} className="flex items-baseline gap-2 min-w-0">
               <dt className="text-oo-muted whitespace-nowrap">{r.label}</dt>
-              <dd className="m-0 text-oo-ink">{r.value}</dd>
+              <dd className="m-0 min-w-0 text-oo-ink [overflow-wrap:anywhere]">{r.value}</dd>
             </div>
           ))}
         </dl>
         {health.notes.map((note) => (
-          <p key={note} className={`mt-2 mb-0 text-oo-meta ${NOTE_COLOUR[health.status]}`}>
+          <p key={note} className={`mt-2 mb-0 text-oo-meta [overflow-wrap:anywhere] ${NOTE_COLOUR[health.status]}`}>
             {note}
           </p>
         ))}

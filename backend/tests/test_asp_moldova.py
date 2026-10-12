@@ -720,3 +720,193 @@ def test_sync_failure_keeps_the_old_index(built: tuple[Path, dict[str, str]], mo
         os.environ.pop("OPENCHECK_ALLOW_LIVE", None)
         get_settings.cache_clear()
         asp_moldova.reset_connection()
+
+
+# ---------------------------------------------------------------------------
+# The 12 October 2026 export shape (Phase 322)
+# ---------------------------------------------------------------------------
+# From that week ASP writes EVERY cell as a shared string: dates as
+# "DD.MM.YYYY" text, and the liquidation column present on every row, an
+# empty string for an active company. Until then an active company's
+# liquidation cell was absent and dates were Excel serials. The builder read
+# "has a shared-string index" as "has a liquidation date" and dropped all
+# 303,482 rows, so the weekly sweep found no company at all. openpyxl writes
+# inline strings, so this fixture writes the package by hand.
+
+_X_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+
+
+def _col_letter(index: int) -> str:
+    letters = ""
+    index += 1
+    while index:
+        index, rem = divmod(index - 1, 26)
+        letters = chr(65 + rem) + letters
+    return letters
+
+
+def _write_shared_string_workbook(path: Path) -> Path:
+    from xml.sax.saxutils import escape
+    import zipfile
+
+    strings: list[str] = []
+    index_of: dict[str, int] = {}
+
+    def sst(text: str) -> int:
+        if text not in index_of:
+            index_of[text] = len(strings)
+            strings.append(text)
+        return index_of[text]
+
+    liquidation_col = len(_HEADER) - 1
+    title = (
+        "Date din Registrul de stat al unităţilor de drept privind\n"
+        "întreprinderile înregistrate în Republica Moldova\n (starea pînă la 12.10.2026)"
+    )
+    sheet_rows = [{3: title}, dict(enumerate(_HEADER))]
+    for row in _rows():
+        cells: dict[int, Any] = {}
+        for col, value in enumerate(row):
+            if isinstance(value, date):
+                cells[col] = value.strftime("%d.%m.%Y")
+            elif value is None or value == "":
+                if col == liquidation_col:
+                    cells[col] = ""  # present and empty, as ASP now writes it
+            else:
+                cells[col] = value
+        sheet_rows.append(cells)
+
+    xml_rows = []
+    for r, cells in enumerate(sheet_rows, start=1):
+        parts = []
+        for col, value in sorted(cells.items()):
+            ref = f"{_col_letter(col)}{r}"
+            if isinstance(value, int):
+                parts.append(f'<c r="{ref}"><v>{value}</v></c>')
+            else:
+                parts.append(f'<c r="{ref}" t="s"><v>{sst(str(value))}</v></c>')
+        xml_rows.append(f'<row r="{r}">{"".join(parts)}</row>')
+    sheet = (
+        f'<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="{_X_NS}">'
+        f'<sheetData>{"".join(xml_rows)}</sheetData></worksheet>'
+    )
+    shared = (
+        f'<?xml version="1.0" encoding="UTF-8"?><sst xmlns="{_X_NS}" count="{len(strings)}" '
+        f'uniqueCount="{len(strings)}">'
+        + "".join(f'<si><t xml:space="preserve">{escape(s)}</t></si>' for s in strings)
+        + "</sst>"
+    )
+    rel_ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    pkg_ns = "http://schemas.openxmlformats.org/package/2006/relationships"
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(
+            "[Content_Types].xml",
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>',
+        )
+        zf.writestr(
+            "xl/workbook.xml",
+            f'<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="{_X_NS}" xmlns:r="{rel_ns}">'
+            '<sheets><sheet name="Company" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        )
+        zf.writestr(
+            "xl/_rels/workbook.xml.rels",
+            f'<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="{pkg_ns}">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+            'relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+        )
+        zf.writestr("xl/worksheets/sheet1.xml", sheet)
+        zf.writestr("xl/sharedStrings.xml", shared)
+    return path
+
+
+def test_build_index_reads_the_october_2026_shared_string_export(tmp_path: Path) -> None:
+    workbook = _write_shared_string_workbook(tmp_path / "company_2026.10.12.xlsx")
+    meta = build_index(workbook, tmp_path / "out.sqlite")
+    # The same rows as the serial-date fixture, so the same verdicts.
+    assert meta["companies"] == "10"
+    assert meta["excluded_liquidated"] == "1"
+    assert meta["excluded_sole_traders_and_farms"] == "1"
+    assert meta["snapshot_date"] == "2026-10-12"
+    conn = sqlite3.connect(tmp_path / "out.sqlite")
+    row = conn.execute(
+        "SELECT name, registered_on FROM company WHERE idno = ?", (KAUFLAND,)
+    ).fetchone()
+    assert row is not None
+    assert row[1] is not None and len(row[1]) == 10  # DD.MM.YYYY text read as an ISO day
+    assert conn.execute("SELECT 1 FROM company WHERE idno = ?", (LIQUIDATED,)).fetchone() is None
+
+
+def test_build_index_refuses_an_export_below_the_floor(
+    built: tuple[Path, dict[str, str]], workbook: Path
+) -> None:
+    path, _ = built
+    before = path.read_bytes()
+    with pytest.raises(asp_moldova.IndexBuildError, match="below the floor of 11"):
+        build_index(workbook, path, min_companies=11)
+    # The index in place is untouched and nothing is left half-built.
+    assert path.read_bytes() == before
+    assert not path.with_name(path.name + ".building").exists()
+    assert not path.with_name(path.name + ".strings").exists()
+
+
+def test_build_index_refuses_an_export_with_no_companies(tmp_path: Path) -> None:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Company"
+    ws.append(_HEADER)
+    ws.append([int(KAUFLAND), date(2001, 1, 1), "KAUFLAND", SRL, "", 120, "", "", "", "", date(2020, 1, 1)])
+    wb.save(tmp_path / "all_liquidated.xlsx")
+    with pytest.raises(asp_moldova.IndexBuildError, match="0 companies"):
+        build_index(tmp_path / "all_liquidated.xlsx", tmp_path / "out.sqlite")
+    assert not (tmp_path / "out.sqlite").exists()
+
+
+def test_min_companies_is_half_the_index_it_replaces() -> None:
+    assert asp_moldova._min_companies_for({}) == 1
+    assert asp_moldova._min_companies_for({"companies": "0"}) == 1
+    assert asp_moldova._min_companies_for({"companies": "not a number"}) == 1
+    assert asp_moldova._min_companies_for({"companies": "119258"}) == 59629
+
+
+def test_sync_keeps_the_old_index_when_the_new_export_collapses(
+    built: tuple[Path, dict[str, str]], tmp_path: Path, monkeypatch
+) -> None:
+    path, meta = built
+    collapsed = tmp_path / "collapsed.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Company"
+    ws.append(_HEADER)
+    ws.append([int(KAUFLAND), date(2001, 1, 1), "KAUFLAND", SRL, "", 120,
+               "A B [Administrator]", "", "", "", None])
+    wb.save(collapsed)
+    get_settings.cache_clear()
+    os.environ["ASP_MOLDOVA_DB_FILE"] = str(path)
+    os.environ["OPENCHECK_ALLOW_LIVE"] = "true"
+    asp_moldova.reset_connection()
+    asp_moldova._STATE["last_check"] = None
+
+    def fake_download(url: str, dest: Path) -> int:
+        dest.write_bytes(collapsed.read_bytes())
+        return dest.stat().st_size
+
+    monkeypatch.setattr(
+        asp_moldova,
+        "latest_resource",
+        lambda package=None: {"url": "https://x/company_2026.10.12.xlsx", "snapshot_date": "2026-10-12", "name": "n"},
+    )
+    monkeypatch.setattr(asp_moldova, "_download", fake_download)
+    monkeypatch.setattr(asp_moldova, "snapshot_age_days", lambda m: 30)
+    try:
+        outcome = asp_moldova.sync_index()
+        assert outcome["asp_moldova"] == "failed"
+        assert "below the floor of 5" in outcome["error"]
+        # Still the old index, with all ten companies.
+        assert asp_moldova.read_meta(path)["companies"] == meta["companies"] == "10"
+        assert asp_moldova.index_available()
+    finally:
+        os.environ.pop("ASP_MOLDOVA_DB_FILE", None)
+        os.environ.pop("OPENCHECK_ALLOW_LIVE", None)
+        get_settings.cache_clear()
+        asp_moldova.reset_connection()

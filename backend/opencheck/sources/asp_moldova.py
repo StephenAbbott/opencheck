@@ -124,7 +124,7 @@ CKAN_PACKAGE_URL = f"https://dataset.gov.md/api/3/action/package_show?id={_DATAS
 _HOMEPAGE = "https://www.asp.gov.md/"
 
 #: Bumped whenever the index tables change shape, so an old file is rebuilt.
-INDEX_SCHEMA_VERSION = "1"
+INDEX_SCHEMA_VERSION = "2"
 
 #: A snapshot older than this prompts a check for a newer one.
 REFRESH_AFTER_DAYS = 7
@@ -674,12 +674,14 @@ def build_index(
     snapshot_date: str | None = None,
     source_url: str | None = None,
     sheet_name: str | None = "Company",
+    min_companies: int = 1,
 ) -> dict[str, Any]:
     """Build the SQLite index from one weekly company export.
 
     Written beside ``out_path`` and renamed into place at the end, so a
     lookup never reads a half-built file. Returns the counts recorded in the
-    ``meta`` table.
+    ``meta`` table. Raises :class:`IndexBuildError`, leaving ``out_path``
+    untouched, when the export yields fewer than ``min_companies`` companies.
     """
     xlsx_path = Path(xlsx_path)
     out_path = Path(out_path)
@@ -728,10 +730,21 @@ def build_index(
                     continue
                 counts["rows_seen"] += 1
 
+                # Read the liquidation date as text before testing it. Until
+                # 5 Oct 2026 an active company's cell was simply absent; from
+                # the 12 Oct 2026 export ASP writes every cell of the column as
+                # a shared string, an EMPTY one for an active company, so
+                # "has a shared-string index" no longer means "has a date".
                 liquidated = cells.get(header["liquidated_on"])
-                if liquidated is not None and (liquidated.shared is not None or (liquidated.text or "").strip()):
-                    counts["excluded_liquidated"] += 1
-                    continue
+                if liquidated is not None:
+                    liquidated_text = (
+                        strings.get_cached(liquidated.shared)
+                        if liquidated.shared is not None
+                        else (liquidated.text or "")
+                    )
+                    if liquidated_text.strip():
+                        counts["excluded_liquidated"] += 1
+                        continue
                 form_cell = cells.get(header["legal_form"])
                 form = ""
                 if form_cell is not None:
@@ -829,6 +842,20 @@ def build_index(
                     counts["founders"] += 1
             if header is None:
                 raise IndexBuildError("no header row starting with IDNO was found")
+            if counts["companies"] < min_companies:
+                # A file that parses but yields (almost) nothing is a changed
+                # export, not a register that emptied overnight. Refuse it so
+                # the index already in place keeps answering: on 12 Oct 2026
+                # every one of 303,482 rows read as liquidated and the build
+                # replaced 119,258 companies with none.
+                conn.close()
+                tmp.unlink()
+                raise IndexBuildError(
+                    f"export yielded {counts['companies']} companies, below the "
+                    f"floor of {min_companies} (rows seen {counts['rows_seen']}, "
+                    f"excluded as liquidated {counts['excluded_liquidated']}); "
+                    "the export has probably changed shape"
+                )
         finally:
             strings.close()
             if scratch.exists():
@@ -1075,6 +1102,21 @@ def _download(url: str, target: Path) -> int:
     return size
 
 
+#: A weekly rebuild must keep at least this share of the companies the index
+#: it replaces. The register moves by a few hundred companies a week out of
+#: ~119,000, so a halving is a changed export, not news.
+MIN_KEEP_RATIO = 0.5
+
+
+def _min_companies_for(meta: dict[str, str]) -> int:
+    """The floor a rebuild must reach to replace the index described by ``meta``."""
+    try:
+        previous = int(meta.get("companies") or 0)
+    except ValueError:
+        previous = 0
+    return max(1, int(previous * MIN_KEEP_RATIO))
+
+
 def sync_index(*, force: bool = False) -> dict[str, Any]:
     """Make sure the index holds the newest weekly snapshot. Blocking.
 
@@ -1108,6 +1150,7 @@ def sync_index(*, force: bool = False) -> dict[str, Any]:
                 path,
                 snapshot_date=resource["snapshot_date"],
                 source_url=resource["url"],
+                min_companies=_min_companies_for(meta if current else {}),
             )
             reset_connection()
             return _outcome("built", path, new_meta)
