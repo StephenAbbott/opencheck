@@ -259,7 +259,7 @@ stale. Probe subjects need checking against the live register once.
 
 ### Current state — 21 ok · 1 failed · 17 skipped
 
-The one failure is Lithuania, still genuine and still unresolved (see above).
+The one failure is Lithuania, still genuine and still unresolved (see above). *Resolved in Phase 325 (12 Oct 2026): the 403 was a Cloudflare challenge on every datacentre address, production included, and the national portal's copy is geo-fenced to Lithuania; `jar_lithuania` now reads a weekly index of the register's open data built off-datacentre, on the `index` tier with `requires_files`.*
 
 ## Third pass — 2026-08-22 (Phase C)
 

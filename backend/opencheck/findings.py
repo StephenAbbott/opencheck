@@ -1614,6 +1614,54 @@ def finding_onrc_romania(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence([lead, form or None, rep_clause])
 
 
+def finding_jar_lithuania(bundle: dict[str, Any]) -> str | None:
+    """What Lithuania's Register of Legal Entities says: whether the entity is
+    still registered and in what state, and its legal form (Phase 325).
+
+    * **Not in the index** says so, in both of the register's files, rather
+      than that the entity does not exist (rule 6).
+    * A **deregistered** entity leads with the date, because it changes a
+      decision; so does a liquidation, bankruptcy or reorganisation, in the
+      register's status with its English gloss.
+    * Where the register **withholds the name** (sole proprietorships and
+      partnerships) the sentence says so: the name on the card is GLEIF's.
+
+    Deliberately **not** said: that no officers or owners are on file. The
+    open data carries neither for any entity, so the clause would be the same
+    on every row and read as a finding about this one (the ACRA precedent).
+    """
+    from .sources.jar_lithuania import STATUSES, form_label
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        return (
+            "Not in the Register of Legal Entities' open data as indexed, among "
+            "either registered or deregistered entities."
+        )
+    form = form_label(bundle.get("legal_form"), bundle.get("legal_form_code"))
+    registered = str(bundle.get("registered_on") or "").strip()
+    if bundle.get("deregistered"):
+        when = str(bundle.get("deregistered_on") or "").strip()
+        lead = f"Deregistered on {when}" if when else "Deregistered"
+    else:
+        cls, gloss, _rank = STATUSES.get(str(bundle.get("status_code") or ""), ("unknown", None, None))
+        status = str(bundle.get("status") or "").strip()
+        since = str(bundle.get("status_since") or "").strip()
+        if cls == "live":
+            lead = f"On the register since {registered}" if registered else "On the register"
+        elif status:
+            words = gloss or status
+            lead = f"{words[0].upper()}{words[1:]}" + (f" since {since}" if since else "")
+        else:
+            lead = f"On the register since {registered}" if registered else "On the register"
+    withheld = (
+        "the open data publishes no name for this legal form"
+        if bundle.get("name_withheld") else None
+    )
+    return clauses_to_sentence([lead, form, withheld])
+
+
 def finding_asp_moldova(bundle: dict[str, Any]) -> str | None:
     """What Moldova's State Register says: whether a liquidator is on file,
     the legal form, and who runs and founded the company.

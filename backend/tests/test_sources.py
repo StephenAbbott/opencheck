@@ -125,6 +125,10 @@ _IDENTIFIER_KEYED = {
     # chilecompra: reached from the RUT GLEIF files; procurement records are
     # not name-searchable here.
     "chilecompra",
+    # jar_lithuania (Phase 325): name search is a LIKE over the local index,
+    # the onrc_romania case. The scraper it replaced returned an invented
+    # "<query> (stub)" row naming a real company's code; nothing does now.
+    "jar_lithuania",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "eiti_zambia", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "meip", "nz_companies", "opencorporates", "inpi", "kvk",

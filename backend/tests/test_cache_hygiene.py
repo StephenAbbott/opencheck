@@ -397,42 +397,25 @@ async def test_the_inpi_mapper_still_emits_the_non_bo_officer():
 # jar_lithuania: the register-unavailable card was cached as the answer
 # ---------------------------------------------------------------------------
 
-_JAR_ROW_HTML = (
-    "<table><tr><td>301844044 <a href='#'>x</a></td>"
-    "<td>AB &quot;Ignitis grupė&quot;<br>Vilnius, Laisvės pr. 10, LT-04215</td>"
-    "<td>AB<br>Veikiantis</td></tr></table>"
-)
 
-
-async def test_a_jar_refusal_is_not_cached_as_the_answer(monkeypatch):
-    """One 403 must not become the company's record until the next deploy.
-
-    JAR's ``html is None`` branch built the GLEIF-name card marked
-    ``register_unavailable`` and then put it under the bundle key, which
-    ``fetch`` reads first on every later call. So a single refusal was served
-    from the cache forever after, without asking JAR again, even once JAR
-    answered — the Phase 262 rule ("a failure is never cached as no record")
-    broken for the card rather than for an absence.
+async def test_jar_never_writes_to_the_response_cache(tmp_path):
+    """Until Phase 325 a single 403 from JAR's search page put a GLEIF-name
+    card under the bundle key, served from then on without asking JAR again
+    (fixed first, in the commit before the index replaced the scraper). The
+    index adapter keeps the rule by construction: a record, a miss and a
+    missing index all leave the response cache untouched, so a miss belongs
+    to one build of the index and never outlives it.
     """
-    from opencheck.sources.jar_lithuania import JarLithuaniaAdapter
+    from opencheck.sources import jar_lithuania
+    from tests.test_jar_lithuania import ABSENT, IGNITIS, _build, _point_at
 
-    answers: list[str | None] = [None, _JAR_ROW_HTML]
-
-    async def _fetch_html(self, url, *, cache_key):
-        html = answers.pop(0)
-        self._last_failure = None if html else "HTTP 403"
-        return html
-
-    monkeypatch.setattr(JarLithuaniaAdapter, "_fetch_html", _fetch_html)
-
-    degradation.begin()
-    refused = await JarLithuaniaAdapter().fetch("301844044", legal_name="Ignitis grupe")
-    recorded = degradation.collect()
-    assert refused["register_unavailable"] is True
-    assert [d.source_id for d in recorded] == ["jar_lithuania"]
-
-    answered = await JarLithuaniaAdapter().fetch("301844044", legal_name="Ignitis grupe")
-    assert not answered.get("register_unavailable")
-    assert answered["status"] == "Veikiantis"
-    assert answered["address"] == "Vilnius, Laisvės pr. 10, LT-04215"
-    assert answers == [], "the second fetch must have asked JAR again"
+    out, _ = _build(tmp_path)
+    _point_at(out)
+    try:
+        adapter = jar_lithuania.JarLithuaniaAdapter()
+        assert (await adapter.fetch(IGNITIS))["is_stub"] is False
+        assert (await adapter.fetch(ABSENT))["not_found"] is True
+    finally:
+        _point_at(None)
+    assert (await jar_lithuania.JarLithuaniaAdapter().fetch(IGNITIS))["is_stub"] is True
+    assert not (Cache()._live() / "jar_lithuania").exists()

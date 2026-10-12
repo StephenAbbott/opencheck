@@ -94,13 +94,12 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
 ## JAR — Juridinių Asmenų Registras (Lithuanian Register of Legal Entities)
 
-- **Data:** entity name, code, address, legal form, and registration status for all entities registered in Lithuania — sourced from the public JAR search interface maintained by Registrų centras (Centre of Registers)
-- **Interface:** Public HTML search at <https://www.registrucentras.lt/jar/p/>
-- **Bulk download:** CC BY 4.0 daily CSV at <https://www.registrucentras.lt/aduomenys/?byla=JAR_IREGISTRUOTI.csv> (key fields: `jaAsm_Kodas`, `jaAsm_Pavadinimas`, `jaAsm_Adresas`, `jaAsm_FormKodas`, `jaAsm_StatusKodas`, `jaAsm_Reg`)
+- **Data:** entity name, code, registered address, legal form, registration date, legal status and deregistration date for every entity registered or deregistered in Lithuania — from the open data published by Registrų centras (Centre of Registers). The register withholds the names of sole proprietorships and partnerships; for those OpenCheck shows the name GLEIF holds and says so.
+- **Source:** the daily CC BY 4.0 files `JAR_IREGISTRUOTI.csv` and `JAR_ISREGISTRUOTI.csv` listed at <https://www.registrucentras.lt/atviri-duomenys-ir-statistika/jar-pirminiai-duomenys-raw-data> (fields `ja_kodas`, `ja_pavadinimas`, `adresas`, `ja_reg_data`, `form_kodas`, `form_pavadinimas`, `stat_kodas`, `stat_pavadinimas`, `stat_data_nuo` / `isreg_data`, `formavimo_data`)
+- **How OpenCheck reads it (Phase 325):** re-keyed, unchanged, into a SQLite index by `backend/scripts/build_jar_lithuania_index.py`, rebuilt weekly off-datacentre (the files are behind a Cloudflare challenge datacentres receive) and published as the `jar-lithuania-index` release asset. Each statement is dated by the register's cut.
 - **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Attribution:** "Contains data from the Lithuanian Register of Legal Entities (JAR), published by Registrų centras, available under CC BY 4.0. Source: registrucentras.lt."
 - **Entry point:** `lt_code` (9-digit Lithuanian entity code) derived from GLEIF RA code `RA000430` (Registrų centras)
-- **Rate limit:** 100 public queries per IP address per day via the HTML search interface. Results are cached to stay within this limit.
 - **Note on beneficial ownership:** Participant and shareholder data was formerly available via the JADIS open data system but is being migrated to JANGIS, a restricted sub-system accessible only to those with legitimate interest and not available as open data. This adapter covers entity data only; BO data is intentionally excluded.
 
 ## ARES — Administrativní registr ekonomických subjektů (Czechia)
