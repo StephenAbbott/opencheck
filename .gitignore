@@ -147,5 +147,7 @@ data/meip_head_warnings.json
 # rule above), and the raw monthly dump it is built from. Never committed.
 data/onrc_romania.sqlite
 data/onrc_romania.sqlite.gz
+data/chilecompra.sqlite
+data/chilecompra.sqlite.gz
 data/onrc_romania.sqlite-journal
 data/onrc/
