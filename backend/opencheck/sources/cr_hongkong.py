@@ -71,6 +71,14 @@ All observed live on 2026-09-10:
 * The non-Hong Kong companies endpoint (``/json/foreign/search``) rejects every
   name search; it is not used here.
 
+Observed on 2026-10-12 (Phase 323): the register had slowed from 0.4–5 s to
+about 36 s for an exact ``Brn`` lookup and 64 s for a name prefix search, while
+a miss still came back in about 5 s. The shared client's 15 s read timeout
+then raised ``ReadTimeout`` out of ``fetch`` and ``/deepen`` answered 500. A
+request now has ``_REQUEST_TIMEOUT`` and the lookup budget is
+``lookup_timeout_s``; a network failure of any kind is a degradation, never
+an exception, and never cached.
+
 License: DATA.GOV.HK Terms and Conditions of Use — free reuse for commercial
 and non-commercial purposes, with attribution to the Government, the Relevant
 Organisations and DATA.GOV.HK. https://data.gov.hk/en/terms-and-conditions
@@ -86,6 +94,8 @@ from functools import lru_cache
 from typing import Any
 from urllib.parse import urlencode
 
+import httpx
+
 from .. import degradation, names
 from ..cache import Cache
 from ..config import get_settings
@@ -98,6 +108,15 @@ _LOG = logging.getLogger(__name__)
 
 _API_BASE = "https://data.cr.gov.hk/cr/api/api/v1/api_builder/json"
 _CACHE_NS = "cr_hongkong"
+
+#: Per-request timeout. The shared client's 15 s read timeout is too short for
+#: the register as measured on 2026-10-12 (36 s for an exact BRN lookup), so
+#: reads get 60 s — the CVR pattern. A name search slower than that degrades.
+_REQUEST_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
+
+#: The lookup pipeline's wall-clock budget for this source: one read at the
+#: request timeout, plus headroom.
+_LOOKUP_TIMEOUT_S = 75.0
 
 #: GLEIF Registration Authority codes whose ``registeredAs`` is a Hong Kong
 #: BRN. Verified live 2026-09-10 against 600 active HK LEI records:
@@ -269,6 +288,7 @@ class CrHongKongAdapter(SourceAdapter):
         LookupDeriver(HK_RA_CODES, "hk_brn", normalise_hk_brn),
     )
     lookup_pass_legal_name = True
+    lookup_timeout_s = _LOOKUP_TIMEOUT_S
 
     def __init__(self) -> None:
         self._cache = Cache()
@@ -314,8 +334,25 @@ class CrHongKongAdapter(SourceAdapter):
             "query[0][key2]": operator,
             "query[0][key3]": value,
         }
-        async with build_client() as client:
-            response = await client.get(f"{_API_BASE}/local/search", params=params)
+        try:
+            async with build_client() as client:
+                response = await client.get(
+                    f"{_API_BASE}/local/search", params=params, timeout=_REQUEST_TIMEOUT
+                )
+        except httpx.HTTPError as exc:
+            # A timeout or a dropped connection is an unanswered question, not
+            # "no such company": degrade, return None (never cached), and let
+            # the caller build an empty bundle. Raising here made /deepen
+            # answer 500 (BODS quality sweep, 12 Oct 2026). The detail names
+            # the exception type only — the URL carries the BRN.
+            kind = type(exc).__name__
+            _LOG.warning("Companies Registry did not answer: %s", kind)
+            degradation.record(
+                self.id,
+                f"Companies Registry did not answer ({kind})",
+                reason=degradation.reason_for_failure(kind),
+            )
+            return None
 
         if response.status_code == 400:
             message = _error_message(response)

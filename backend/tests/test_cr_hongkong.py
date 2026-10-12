@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
 from opencheck import degradation
@@ -35,6 +36,7 @@ from opencheck.sources.base import SearchKind
 from opencheck.sources.cr_hongkong import (
     HK_BRN_SCHEME,
     HK_RA_CODES,
+    _REQUEST_TIMEOUT,
     CrHongKongAdapter,
     clean_field,
     names_agree,
@@ -356,6 +358,59 @@ def test_upstream_failure_degrades(status: int) -> None:
     result, recorded, _ = _run_fetch(_response(status, {}))
     assert result["company"] is None
     assert any(d.source_id == "cr_hongkong" and str(status) in d.detail for d in recorded)
+
+
+@pytest.mark.parametrize(
+    ("exc", "reason"),
+    [
+        (httpx.ReadTimeout("timed out"), degradation.REASON_TIMEOUT),
+        (httpx.ConnectError("refused"), degradation.REASON_UPSTREAM_ERROR),
+    ],
+)
+def test_a_network_failure_degrades_instead_of_raising(exc: Exception, reason: str) -> None:
+    # Phase 323: on 12 Oct 2026 the register took ~36 s per lookup, the shared
+    # client gave up at 15 s, and the ReadTimeout escaped fetch() — /deepen
+    # answered HTTP 500 and the BODS quality sweep failed on it.
+    adapter = CrHongKongAdapter()
+    settings = MagicMock(allow_live=True)
+    with patch("opencheck.sources.cr_hongkong.get_settings", return_value=settings), \
+         patch.object(adapter._cache, "has", return_value=False), \
+         patch.object(adapter._cache, "get_payload", return_value=None), \
+         patch.object(adapter._cache, "put") as put, \
+         patch("opencheck.sources.cr_hongkong.build_client") as client:
+        client.return_value.__aenter__.return_value.get = AsyncMock(side_effect=exc)
+        with degradation.recording() as recorded:
+            result = asyncio.run(adapter.fetch("00173611"))
+    assert result["company"] is None
+    assert result["is_stub"] is True
+    put.assert_not_called()  # a failure is never cached as "no record"
+    [entry] = [d for d in recorded if d.source_id == "cr_hongkong"]
+    assert entry.reason == reason
+    assert type(exc).__name__ in entry.detail
+    assert "00173611" not in entry.detail
+
+
+def test_a_network_failure_on_search_returns_no_hits() -> None:
+    adapter = CrHongKongAdapter()
+    settings = MagicMock(allow_live=True)
+    with patch("opencheck.sources.cr_hongkong.get_settings", return_value=settings), \
+         patch.object(adapter._cache, "has", return_value=False), \
+         patch.object(adapter._cache, "get_payload", return_value=None), \
+         patch.object(adapter._cache, "put") as put, \
+         patch("opencheck.sources.cr_hongkong.build_client") as client:
+        client.return_value.__aenter__.return_value.get = AsyncMock(
+            side_effect=httpx.ReadTimeout("timed out")
+        )
+        hits = asyncio.run(adapter.search("HSBC", SearchKind.ENTITY))
+    assert hits == []
+    put.assert_not_called()
+
+
+def test_requests_carry_the_longer_timeout_and_the_lookup_budget_covers_it() -> None:
+    _, _, get = _run_fetch(_response(200, [_company("mtr")]))
+    timeout = get.await_args.kwargs["timeout"]
+    assert timeout.read == _REQUEST_TIMEOUT.read == 60.0
+    assert CrHongKongAdapter.lookup_timeout_s > _REQUEST_TIMEOUT.read
 
 
 def test_an_unexpected_400_degrades_with_the_registers_message() -> None:
