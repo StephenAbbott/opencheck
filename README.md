@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 322** — Moldova's register index reads the new weekly export shape again, and a rebuild that would empty it now keeps the previous week's index instead.
+**Latest: Phase 323** — A slow Hong Kong Companies Registry now degrades the source with a longer timeout instead of failing the lookup with a server error.
 
 → [Full development history](docs/status.md)
 
