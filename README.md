@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 321** — Wikirate company records are read in full again after its platform change, and the Climate & ESG card links to the company on the new Wikirate platform.
+**Latest: Phase 322** — Moldova's register index reads the new weekly export shape again, and a rebuild that would empty it now keeps the previous week's index instead.
 
 → [Full development history](docs/status.md)
 
