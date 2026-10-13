@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 324** — The BODS quality sweep no longer flags a register cut published on the day it runs, and a rate-limited KvK register degrades the source instead of failing the lookup.
+**Latest: Phase 326** — `/deepen` takes an optional legal name, so the BODS quality sweep can check the KvK register's statements.
 
 → [Full development history](docs/status.md)
 
