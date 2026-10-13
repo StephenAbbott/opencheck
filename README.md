@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 327** — The BODS quality sweep warns when a source answers with no statements, instead of reading it as clean.
+**Latest: Phase 328** — MCA India's health probe is switched off until a data.gov.in API key is configured, so the weekly sweeps stop warning about a gap that is already known.
 
 → [Full development history](docs/status.md)
 
