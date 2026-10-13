@@ -65,6 +65,7 @@ bundles, `meip` — are immutable and keep their own blocks.
 | `no_source_id` | A `source` block without `opencheckSourceId`. |
 | `source_type` | `source.type` disagrees with `OFFICIAL_REGISTER_SOURCES`. |
 | `ended_not_closed` | Every interest of a relationship has ended, but `recordStatus` is not `closed`. Since Phase 317 the relationship factory closes these itself, so any count here is a mapper building statements by hand. |
+| `deepen_empty` | `/deepen` answered 200 for a probe subject with **no** statements, so no other rule saw anything and the source would read clean unchecked (Phase 327). The message says why, from the response's `raw`: not read (`is_stub` — no key, no live access, or it did not answer), the register's own "no record", a record dropped by the name check, or answered but mapped nothing. MCA India warns every week until `DATA_GOV_IN_API_KEY` is configured; a rate-limited KvK warns the week it happens. |
 
 The report also carries, per source, how many statements it published, how
 many carry `retrievedAt`, how many are dated by the retrieval day, and how many
