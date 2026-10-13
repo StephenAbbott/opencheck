@@ -149,5 +149,9 @@ data/onrc_romania.sqlite
 data/onrc_romania.sqlite.gz
 data/chilecompra.sqlite
 data/chilecompra.sqlite.gz
+# Phase 325: the Lithuanian JAR index, a release asset downloaded at boot.
+data/jar_lithuania.sqlite
+data/jar_lithuania.sqlite.gz
+data/jar_lithuania.sqlite.building
 data/onrc_romania.sqlite-journal
 data/onrc/

@@ -260,46 +260,6 @@ def test_degradation_reasons_mirror_risk():
     assert degradation.reason_for_failure("ConnectTimeout") == risk.DEGRADED_TIMEOUT
 
 
-async def test_jar_lithuania_marks_an_unanswered_register(monkeypatch, tmp_path):
-    """A register that refuses us must not look like one that answered.
-
-    This is the shape that made Lithuania read as healthy: a bundle carrying
-    only the GLEIF legal name, with `is_stub: False` and every register field
-    null, is indistinguishable from a successful lookup of a company the
-    register says little about.
-    """
-    from opencheck import degradation
-    from opencheck.config import get_settings
-    from opencheck.sources.jar_lithuania import JarLithuaniaAdapter
-
-    # A clean data root: a cached bundle from an earlier real fetch would
-    # short-circuit the path under test and quietly pass.
-    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
-    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
-    get_settings.cache_clear()
-
-    adapter = JarLithuaniaAdapter()
-
-    async def _refuse(self, url, *, cache_key):
-        self._last_failure = "HTTP 403"
-        return None
-
-    monkeypatch.setattr(JarLithuaniaAdapter, "_fetch_html", _refuse, raising=True)
-
-    degradation.begin()
-    bundle = await adapter.fetch("301844044", legal_name="AB Ignitis grupė")
-    recorded = degradation.collect()
-
-    assert bundle["register_unavailable"] is True
-    assert bundle["register_unavailable_detail"] == "HTTP 403"
-    assert bundle["status"] is None
-    assert [d.source_id for d in recorded] == ["jar_lithuania"]
-    assert "403" in recorded[0].detail
-    # Privacy: the detail names the source and the failure, never the subject.
-    assert "Ignitis" not in recorded[0].detail
-    get_settings.cache_clear()
-
-
 def test_identical_degradations_collapse():
     """An adapter that loops must not report the same gap once per iteration.
 

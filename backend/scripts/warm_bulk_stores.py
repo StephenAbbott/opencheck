@@ -11,6 +11,9 @@ the sweep exists to make, was evaluated by nobody.
 
 The sweep runs on a GitHub runner and the assets are on GitHub's own CDN
 (1.3 MB gzipped for the ONRC index, 29 MB for MEIP), so this is one step.
+``chilecompra`` (Phase 280) and ``jar_lithuania`` (Phase 325) joined later on
+the same terms; the JAR index in particular can be read from a runner only as
+this asset, because the register's own files are challenged there.
 
 Deliberately the production path, not a ``curl``
 ------------------------------------------------
@@ -43,6 +46,8 @@ from opencheck.sources.chilecompra import db_path as chilecompra_db_path  # noqa
 from opencheck.sources.chilecompra import warm_index as warm_chilecompra_index  # noqa: E402
 from opencheck.meip import db_path as meip_db_path  # noqa: E402
 from opencheck.meip import warm_meip_db  # noqa: E402
+from opencheck.sources.jar_lithuania import db_path as jar_db_path  # noqa: E402
+from opencheck.sources.jar_lithuania import warm_index as warm_jar_index  # noqa: E402
 from opencheck.sources.onrc_romania import db_path as onrc_db_path  # noqa: E402
 from opencheck.sources.onrc_romania import warm_index as warm_onrc_index  # noqa: E402
 
@@ -50,6 +55,7 @@ WARMERS = (
     ("onrc_romania", warm_onrc_index, onrc_db_path),
     ("meip", warm_meip_db, meip_db_path),
     ("chilecompra", warm_chilecompra_index, chilecompra_db_path),
+    ("jar_lithuania", warm_jar_index, jar_db_path),
 )
 
 

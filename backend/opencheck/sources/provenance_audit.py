@@ -425,7 +425,6 @@ OFFLINE_COMPARED = frozenset(
         "eiti_bo",
         "eiti_soe",
         "eiti_zambia",
-        "jar_lithuania",
     }
 )
 

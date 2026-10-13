@@ -659,6 +659,23 @@ class Settings(BaseSettings):
         ),
         alias="ONRC_ROMANIA_DB_URL",
     )
+    # --- Lithuania JAR (Register of Legal Entities, CC BY 4.0) — Phase 325 ---
+    # The index packed by scripts/build_jar_lithuania_index.py from the
+    # register's daily open-data files. They sit behind a Cloudflare challenge
+    # every datacentre receives, so the index is built off-datacentre
+    # (scripts/refresh_jar_lithuania_index.sh) and shipped in as a release
+    # asset. Unset: the data-root default (``jar_lithuania.sqlite``).
+    jar_lithuania_db_file: str | None = Field(default=None, alias="JAR_LITHUANIA_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed —
+    # the ONRC / ChileCompra rule. ~58 MB on disk, ~17.6 MB gzipped. Empty
+    # string disables the download.
+    jar_lithuania_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "jar-lithuania-index/jar_lithuania.sqlite.gz"
+        ),
+        alias="JAR_LITHUANIA_DB_URL",
+    )
     # --- ChileCompra (Mercado Público procurement, CC0) — Phase 280 ---
     # The supplier index built monthly from ChileCompra's open-data files by
     # .github/workflows/refresh-chilecompra-index.yml. Unset: the data-root

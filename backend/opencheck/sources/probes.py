@@ -474,19 +474,30 @@ PROBES: dict[str, SourceProbe] = {
         ),
     ),
     "jar_lithuania": _p(
-        tier="live",
-        subject="AB Ignitis grupė",
+        tier="index",
+        subject="AB Ignitis grupė (LT-JAR 301844044)",
         args=("301844044",),
         kwargs={"legal_name": "Ignitis grupe"},
-        expect_fields=("status",),
+        expect_fields=("register_name", "legal_form", "registered_on", "status"),
+        # SKIP without an index (the onrc_romania / chilecompra shape), never
+        # allow_empty: a tolerated empty would make expect_liveness
+        # unreachable. warm_bulk_stores.py downloads the asset first.
+        requires_files=("jar_lithuania.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt weekly by hand-run refresh_jar_lithuania_index.sh (the
+        # files cannot be fetched from a runner); three weeks means a missed
+        # rebuild or two, not a broken source.
+        snapshot_max_age_days=21,
         anchor_lei="5493005RZJHJT5PNHY10",
         bods_mapper="map_jar_lithuania",
         notes=(
-            "expect_fields is load-bearing here: when JAR refuses the request "
-            "the adapter still returns a non-stub bundle carrying the GLEIF "
-            "name and null register fields, which looks like an answer. "
-            "Asserting a register-only field is what separates 'the register "
-            "replied' from 'we fell back to what GLEIF already told us'."
+            "Phase 325: an index of the register's daily open data, built "
+            "off-datacentre because the register's site and files are behind "
+            "a Cloudflare challenge every datacentre receives (the live "
+            "scraper this replaced answered HTTP 403 from production and CI "
+            "every week from 3 Sept 2026). A refresh-due amber means "
+            "refresh_jar_lithuania_index.sh has not been run, not that "
+            "Registrų centras stopped publishing."
         ),
     ),
     "krs_poland": _p(

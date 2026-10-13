@@ -391,3 +391,31 @@ async def test_the_inpi_mapper_still_emits_the_non_bo_officer():
         for n in s["recordDetails"].get("names", [])
     ]
     assert names and all("OWNER" not in (n or "") for n in names)
+
+
+# ---------------------------------------------------------------------------
+# jar_lithuania: the register-unavailable card was cached as the answer
+# ---------------------------------------------------------------------------
+
+
+async def test_jar_never_writes_to_the_response_cache(tmp_path):
+    """Until Phase 325 a single 403 from JAR's search page put a GLEIF-name
+    card under the bundle key, served from then on without asking JAR again
+    (fixed first, in the commit before the index replaced the scraper). The
+    index adapter keeps the rule by construction: a record, a miss and a
+    missing index all leave the response cache untouched, so a miss belongs
+    to one build of the index and never outlives it.
+    """
+    from opencheck.sources import jar_lithuania
+    from tests.test_jar_lithuania import ABSENT, IGNITIS, _build, _point_at
+
+    out, _ = _build(tmp_path)
+    _point_at(out)
+    try:
+        adapter = jar_lithuania.JarLithuaniaAdapter()
+        assert (await adapter.fetch(IGNITIS))["is_stub"] is False
+        assert (await adapter.fetch(ABSENT))["not_found"] is True
+    finally:
+        _point_at(None)
+    assert (await jar_lithuania.JarLithuaniaAdapter().fetch(IGNITIS))["is_stub"] is True
+    assert not (Cache()._live() / "jar_lithuania").exists()
