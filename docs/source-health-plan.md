@@ -484,6 +484,70 @@ the age check doing its job, not a regression: MEIP's reference date is 31 Dec 2
 annual edition is overdue. Widening the threshold to make it green would be the silent-green
 failure this whole file exists to prevent.
 
+## Silent green, case 4: a rebuild that is refused — Phase 329 (2026-10-13)
+
+Phase 322 fixed `asp_moldova` and, in fixing it, created the fourth instance of this file's
+recurring shape: **a source that is functional and still produces misleading output.**
+
+What happened first is the ordinary kind of break. From the 12 Oct 2026 export ASP writes the
+liquidation column on every row, empty for an active company; the builder read any value there as a
+liquidation date, excluded all 303,482 rows, and wrote an index holding no companies. Production
+replaced a 119,258-company index with the empty one and told every Moldovan lookup the company was
+not in the register's export. The sweep caught it the same morning — `fail`, *missing/empty expected
+field(s): company, officers, founders*, with a BODS collapse to zero on all five statement types.
+Assertions 4 and 5 both fired, which is the system working.
+
+The fix added a floor: a rebuild yielding fewer than half the companies it would replace is refused,
+and the index already in place goes on answering. That is right for a reader — last week's Moldova
+beats none — and it moves this failure out of the sweep's reach:
+
+| | Before Phase 322 | After Phase 322 |
+|---|---|---|
+| A changed export | index emptied | rebuild refused, previous index kept |
+| What a lookup returns | "not in the export" | last week's real answer |
+| Resolved liveness | `snapshot` | `snapshot` |
+| `expect_fields` | all three empty → **fail** | all three present → **ok** |
+| BODS counts | 2/3/4 → 0 → **collapse** | unchanged → **no signal** |
+| Only remaining alarm | — | `snapshot_max_age_days=21`, up to three weeks later |
+
+Every assertion the probe makes is satisfied by a source whose every subsequent export is being
+refused. The register moves on, the answers do not, and nothing says so until the age check trips —
+by which time three Mondays of refusals have gone unremarked. A tolerated empty and a tolerated
+stale are the same trap in different clothes; this file has the first three cases and this is the
+fourth.
+
+**The fix is the degradation channel, and it needs no sweep wiring at all** — the point of the
+Phase 229/230 design. `sync_index` now distinguishes `refused` (the export was read and not
+believed) from `failed` (it could not be fetched or read), carrying `IndexCollapsed`, a subclass so
+that callers catching `IndexBuildError` are unaffected. `fetch` and `search` read that outcome back
+and record a degradation when the answer comes from an index that was kept, so the sweep reports
+amber automatically and `degraded_sources` says plainly that the answer predates the newest export.
+Provenance still says `snapshot`, which is true, and the two channels keep answering their separate
+questions: how current the payload is, and whether the source actually answered.
+
+**What the sweep can and cannot see here, stated precisely.** The sweep starts cold: no index to
+keep, so `_min_companies_for({})` is a floor of one company and a collapsed export still fails
+outright, exactly as on 12 Oct. The refusal path belongs to a warm instance — production, or any
+process with last week's file — so the degradation is the only way that state reaches a report. This
+is the fresh-process blindness above in a new place: the sweep validates adapter ↔ upstream in a
+process seconds old, and "the rebuild has been refused for three weeks" is a fact about elapsed
+state, not about the adapter or the upstream. Reading a green `asp_moldova` row still does not mean
+production rebuilt this week; the amber row is what says it did not.
+
+**The same idea arrived twice in the same week, which is worth noticing.** Phase 325 gave the new
+`jar_lithuania` builder `MIN_ROWS` and `BuildRefused` — a file with fewer than 150,000 registered or
+200,000 deregistered records is refused rather than written. Same reasoning, different exposure:
+that builder is hand-run (`refresh_jar_lithuania_index.sh`, off-datacentre because the register
+challenges every datacentre address), so its refusal is read by a person at the moment it happens,
+and a stale index after one shows up as the probe's own `snapshot_max_age_days=21` amber. ASP's floor
+sits inside an automatic weekly `sync_index` with nobody watching, which is why it needed a channel
+of its own. Two floors, one visible by who runs it and one visible because it now says so.
+
+**Not done, and deliberately.** `onrc_romania`, `chilecompra` and `meip` rebuild from bulk stores
+with no row-count floor at all, so each can still replace a good index with a collapsed one — which
+is the 12 Oct failure, not this one. Worth a look, and a different piece of work from making a
+refusal visible.
+
 ## Sibling: the findings regression (Phase 277)
 
 This sweep asserts each source is alive and correctly badged. What the engine *concludes* from those sources is asserted weekly by the findings regression, against a golden set of LEIs in production. See [findings-regression.md](findings-regression.md).

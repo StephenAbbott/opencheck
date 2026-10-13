@@ -900,7 +900,9 @@ def test_sync_keeps_the_old_index_when_the_new_export_collapses(
     monkeypatch.setattr(asp_moldova, "snapshot_age_days", lambda m: 30)
     try:
         outcome = asp_moldova.sync_index()
-        assert outcome["asp_moldova"] == "failed"
+        # "refused", not "failed": the export was read and not believed, and
+        # the distinction is what Phase 329 reports (below).
+        assert outcome["asp_moldova"] == "refused"
         assert "below the floor of 5" in outcome["error"]
         # Still the old index, with all ten companies.
         assert asp_moldova.read_meta(path)["companies"] == meta["companies"] == "10"
@@ -910,3 +912,100 @@ def test_sync_keeps_the_old_index_when_the_new_export_collapses(
         os.environ.pop("OPENCHECK_ALLOW_LIVE", None)
         get_settings.cache_clear()
         asp_moldova.reset_connection()
+
+
+# ---------------------------------------------------------------------------
+# A refused rebuild is visible (Phase 329)
+# ---------------------------------------------------------------------------
+# Phase 322 keeps the previous index when a rebuild collapses, which is right
+# for a reader and invisible to the source-health sweep: the kept index
+# answers, resolves snapshot and carries every expected field, so all five
+# probe assertions pass while every later export is refused the same way. The
+# degradation channel is what says so, and the sweep already reads it.
+
+
+def test_a_collapsed_export_raises_the_build_error_subclass(tmp_path: Path) -> None:
+    """``IndexCollapsed`` is an ``IndexBuildError``, so old callers still catch it."""
+    assert issubclass(asp_moldova.IndexCollapsed, asp_moldova.IndexBuildError)
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Company"
+    ws.append(_HEADER)
+    ws.append([int(KAUFLAND), date(2001, 1, 1), "KAUFLAND", SRL, "", 120,
+               "A B [Administrator]", "", "", "", None])
+    wb.save(tmp_path / "collapsed.xlsx")
+    with pytest.raises(asp_moldova.IndexCollapsed, match="below the floor of 5"):
+        build_index(tmp_path / "collapsed.xlsx", tmp_path / "out.sqlite", min_companies=5)
+
+
+async def test_fetch_from_a_kept_back_index_degrades(index: Path, monkeypatch) -> None:
+    """A real answer, and a degradation saying it predates the newest export."""
+    get_settings.cache_clear()
+    os.environ["ASP_MOLDOVA_SYNC"] = "true"
+    os.environ["OPENCHECK_ALLOW_LIVE"] = "true"
+    monkeypatch.setitem(asp_moldova._STATE, "last_outcome", {"asp_moldova": "refused"})
+    monkeypatch.setattr(asp_moldova, "_start_background_sync", lambda: None)
+    try:
+        with degradation.recording() as degraded:
+            bundle = await AspMoldovaAdapter().fetch(KAUFLAND)
+        # The answer is unchanged — that is the whole problem this reports.
+        assert bundle["is_stub"] is False
+        assert bundle["company"] and bundle["officers"] and bundle["founders"]
+        assert [d.source_id for d in degraded] == ["asp_moldova"]
+        detail = degraded[0].detail
+        assert "too few companies to replace it" in detail
+        # Sources only, never the subject looked up, and count-free so that a
+        # second lookup in the same scope collapses into this one.
+        assert KAUFLAND not in detail
+        assert "kaufland" not in detail.lower()
+        assert not any(ch.isdigit() for ch in detail)
+    finally:
+        os.environ["ASP_MOLDOVA_SYNC"] = "false"
+        os.environ.pop("OPENCHECK_ALLOW_LIVE", None)
+        get_settings.cache_clear()
+
+
+async def test_search_from_a_kept_back_index_degrades(index: Path, monkeypatch) -> None:
+    from opencheck.sources.base import SearchKind
+
+    get_settings.cache_clear()
+    os.environ["ASP_MOLDOVA_SYNC"] = "true"
+    os.environ["OPENCHECK_ALLOW_LIVE"] = "true"
+    monkeypatch.setitem(asp_moldova._STATE, "last_outcome", {"asp_moldova": "refused"})
+    try:
+        with degradation.recording() as degraded:
+            hits = await AspMoldovaAdapter().search("kaufland", SearchKind.ENTITY)
+        assert hits
+        assert [d.source_id for d in degraded] == ["asp_moldova"]
+    finally:
+        os.environ["ASP_MOLDOVA_SYNC"] = "false"
+        os.environ.pop("OPENCHECK_ALLOW_LIVE", None)
+        get_settings.cache_clear()
+
+
+async def test_an_ordinary_week_records_nothing(index: Path, monkeypatch) -> None:
+    """The guard against a false amber: 'built' and 'kept' are silent."""
+    get_settings.cache_clear()
+    os.environ["ASP_MOLDOVA_SYNC"] = "true"
+    os.environ["OPENCHECK_ALLOW_LIVE"] = "true"
+    monkeypatch.setattr(asp_moldova, "_start_background_sync", lambda: None)
+    try:
+        for kind in ("built", "kept", "failed", None):
+            monkeypatch.setitem(asp_moldova._STATE, "last_outcome", {"asp_moldova": kind})
+            with degradation.recording() as degraded:
+                bundle = await AspMoldovaAdapter().fetch(KAUFLAND)
+            assert bundle["is_stub"] is False
+            assert degraded == [], f"{kind!r} should not degrade a healthy answer"
+    finally:
+        os.environ["ASP_MOLDOVA_SYNC"] = "false"
+        os.environ.pop("OPENCHECK_ALLOW_LIVE", None)
+        get_settings.cache_clear()
+
+
+async def test_a_refused_rebuild_is_silent_with_sync_off(index: Path, monkeypatch) -> None:
+    """An instance that never syncs cannot have had a rebuild refused."""
+    monkeypatch.setitem(asp_moldova._STATE, "last_outcome", {"asp_moldova": "refused"})
+    with degradation.recording() as degraded:
+        bundle = await AspMoldovaAdapter().fetch(KAUFLAND)
+    assert bundle["is_stub"] is False
+    assert degraded == []

@@ -389,7 +389,18 @@ PROBES: dict[str, SourceProbe] = {
             "5 s and 45 s measured), so a timeout on the first run of a fresh "
             "process means the build outran the sweep's per-source budget, not "
             "that the register moved. The snapshot is weekly; 21 days means two "
-            "missed Mondays."
+            "missed Mondays. "
+            "Phase 322: the 12 Oct 2026 fail here — all three fields empty, "
+            "every BODS edge gone — was the export's shape, not the register. "
+            "ASP began writing the liquidation column on every row, empty for "
+            "an active company, and the builder read all 303,482 rows as "
+            "liquidated. Read this row with Phase 329 in mind: a collapsed "
+            "rebuild is now refused and the previous index keeps answering, so "
+            "on a warm instance this failure is amber from the degradation "
+            "channel rather than a fail here. The sweep itself starts cold, "
+            "with no index to keep and a floor of one company, so it still "
+            "reaches the fail — the two readings are different states, not a "
+            "disagreement."
         ),
     ),
     "cr_hongkong": _p(
