@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 323** — A slow Hong Kong Companies Registry now degrades the source with a longer timeout instead of failing the lookup with a server error.
+**Latest: Phase 324** — The BODS quality sweep no longer flags a register cut published on the day it runs, and a rate-limited KvK register degrades the source instead of failing the lookup.
 
 → [Full development history](docs/status.md)
 

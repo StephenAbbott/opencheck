@@ -317,8 +317,12 @@ async def test_kvk_fetch_retries_on_429_then_succeeds(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_kvk_fetch_raises_after_max_retries(monkeypatch) -> None:
-    """All attempts return 429 — should raise HTTPStatusError after exhausting retries."""
+async def test_kvk_fetch_degrades_after_max_retries(monkeypatch) -> None:
+    """All attempts return 429 — after the retries the source degrades.
+
+    Until Phase 324 this raised ``HTTPStatusError`` out of ``fetch()``, and
+    ``/deepen`` answered HTTP 500 (BODS quality sweep, 12 Oct 2026).
+    """
     resp_429 = _make_response(429, headers={"Retry-After": "0"})
 
     monkeypatch.setattr(
@@ -338,11 +342,12 @@ async def test_kvk_fetch_raises_after_max_retries(monkeypatch) -> None:
         adapter._cache.get_payload = MagicMock(return_value=None)
         adapter._cache.put = MagicMock()
 
-        with pytest.raises(httpx.HTTPStatusError):
-            await adapter.fetch("35000363")
+        bundle = await adapter.fetch("35000363")
 
     # 4 total attempts (_MAX_RETRIES=3, so initial + 3)
     assert mock_client.get.call_count == 4
+    assert bundle["company"] is None and bundle["is_stub"] is True
+    adapter._cache.put.assert_not_called()
 
 
 @pytest.mark.asyncio
