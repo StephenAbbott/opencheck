@@ -189,7 +189,13 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         "meip": PROBES["meip"].requires_files,
         "chilecompra": PROBES["chilecompra"].requires_files,
         "jar_lithuania": PROBES["jar_lithuania"].requires_files,
+        # Two tiers, one source (Phase 330): the probe deliberately declares
+        # no required file — without the index the page answers, and that is
+        # the adapter working, not a skip — so the file the warm-up must
+        # write is named here instead.
+        "ariregister": ("ariregister.sqlite",),
     }
+    assert PROBES["ariregister"].requires_files == ()
     for name, _warm_fn, path_of in warm.WARMERS:
         assert declared[name], f"{name}: the probe declares no required file"
         assert path_of() == root / declared[name][0], (

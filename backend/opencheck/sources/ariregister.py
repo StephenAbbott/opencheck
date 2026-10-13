@@ -1,30 +1,40 @@
-"""Estonian e-Business Register (e-Äriregister) adapter — public web scraper.
+"""Estonian e-Business Register (e-Äriregister) adapter — index first, page second.
 
-Fetches data from the public printable page at ariregister.rik.ee without
-any authentication.  The printable-page endpoint is a server-rendered HTML
-page that contains all the data the website shows: general company info,
-board members, shareholders, and beneficial owners.
+Two tiers, one source id (Phase 330, Stephen's decision of 13 Oct 2026):
 
-Endpoints used:
-  /eng/company/{reg_code}/company_print_json — full company printable page (HTML)
-  /eng/api/autocomplete?q={query}            — JSON search (name / reg code)
+1. **The index** — a SQLite file packed daily by
+   ``scripts/build_ariregister_index.py`` from RIK's open-data files
+   (``avaandmed.ariregister.rik.ee``, CC BY 4.0): every company that is
+   entered, in liquidation or in bankruptcy (≈380,000), with the persons on
+   its registry card, its register of shareholders and its declared
+   beneficial owners. Shipped as the ``ariregister-index`` release asset and
+   downloaded at boot by :func:`warm_index`. It answers whenever it holds the
+   code, as a ``snapshot`` dated by the files' cut.
+2. **The printable page** — ``ariregister.rik.ee/eng/company/{code}/company_print_json``,
+   a server-rendered HTML page with the same data, read without
+   authentication. Used only when the index does not hold the code (a company
+   newer than the cut, or one deleted from the register — the page can say
+   "Deleted from the register"; the files hold no deleted companies) or when
+   there is no index at all. RIK neither documents nor supports it, and it
+   rate-limits datacentre callers (HTTP 429, Cloudflare ``Error code: 1015``).
 
-No API key or contract required.  RIK confirmed (May 2026) that the
-ariregister.rik.ee public portal is freely accessible.
+Why the index leads: the page is not richer — it lists shareholders only for
+an OÜ, exactly as the files do (Eesti Energia AS reads 0 shareholders on
+either) — and it republishes 11-digit personal identification codes that the
+open data dropped in November 2024 for a pseudonymous ``isikukood_hash``.
+The page path now strips those codes from the bundle it returns; the hash
+is a cross-role join key (director = shareholder = owner within a company)
+and never an identifier (the Phase 255 rule moves it to an annotation).
 
-GLEIF RA code: RA000181
+Both tiers return the bundle shape ``map_ariregister`` has read since the
+SOAP days: ``registry_code, name, legal_form, vat_number, status,
+registration_date, address, link, shareholders, officers, beneficial_owners,
+is_stub`` — plus ``cut`` / ``tier`` / ``index_miss`` and, for a note card,
+``not_found`` / ``coverage_note``.
 
-The flow with GLEIF:
-  1. GLEIF returns registeredAt.id == "RA000181" for Estonian entities
-     and registeredAs = "<registry_code>".
-  2. lookup.py extracts derived["ee_registry_code"] and calls fetch().
-  3. We GET the printable HTML page and parse the Bootstrap label/value
-     pairs plus the officers, shareholders and beneficial-owners tables.
-
-Output bundle keys (same as the previous SOAP adapter so map_ariregister
-in bods/mapper.py needs no changes):
-  registry_code, name, legal_form, vat_number, status, registration_date,
-  address, link, shareholders, officers, beneficial_owners, is_stub
+GLEIF RA code: RA000181. Nothing here touches the response
+:class:`~opencheck.cache.Cache`: a miss on the index is an answer about one
+build of it and must not outlive it (the Phase 325 rule).
 """
 
 from __future__ import annotations
@@ -32,13 +42,19 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import sqlite3
+import uuid
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
 
-from .. import provenance
+from .. import degradation, provenance
 from ..config import get_settings
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.ariregister import AriregisterBundle
 
 logger = logging.getLogger(__name__)
 
@@ -277,6 +293,10 @@ def _parse_officers(html: str) -> list[dict[str, Any]]:
         # same rule the shareholders table already uses. Anything else (a
         # foreign person's date of birth, a blank) stays a natural person:
         # the column does not say otherwise.
+        # A natural person's 11-digit personal code is used only to tell a
+        # person from a company and is then dropped (Phase 330): the open
+        # data stopped publishing it in November 2024, and nothing downstream
+        # reads it. The 8-digit registry code of a legal person is kept.
         id_code = id_code.strip()
         if _is_registry_code(id_code):
             isiku_tyyp, first, last = "J", "", name.strip()
@@ -284,7 +304,7 @@ def _parse_officers(html: str) -> list[dict[str, Any]]:
         else:
             isiku_tyyp = "F"
             first, last = _split_name(name)
-            code_field = id_code if _is_estonian_personal_code(id_code) else ""
+            code_field = ""
         officers.append({
             "kirje_id": str(idx + 1),
             "eesnimi": first,
@@ -320,11 +340,12 @@ def _parse_shareholders(html: str) -> list[dict[str, Any]]:
 
         amount, currency = _parse_contribution(contribution_str)
 
-        # Determine if legal entity or natural person
+        # Determine if legal entity or natural person. The personal code is
+        # dropped once it has said "person" (Phase 330, see _parse_officers).
         if _is_estonian_personal_code(code):
             isiku_tyyp = "F"
             reg_code_field = ""
-            personal_code = code
+            personal_code = ""
             first, last = _split_name(name)
         else:
             isiku_tyyp = "J"
@@ -375,13 +396,12 @@ def _parse_beneficial_owners(html: str) -> list[dict[str, Any]]:
         control_code = control_code or "M"
 
         first, last = _split_name(full_name)
-        personal_code = id_code if _is_estonian_personal_code(id_code) else ""
-
+        # The personal code column is never carried (Phase 330).
         bos.append({
             "kirje_id": str(idx + 1),
             "eesnimi": first,
             "nimi": last,
-            "isikukood": personal_code,
+            "isikukood": "",
             "kontrolli_teostamise_viis": control_code,
             "algus_kpv": _parse_date(start_raw) or start_raw or None,
             "lopp_kpv": _parse_date(end_raw) or end_raw or None,
@@ -401,6 +421,314 @@ def _parse_beneficial_owners(html: str) -> list[dict[str, Any]]:
 def normalise_registry_code(raw: str) -> str:
     """Estonian registry codes are 8 digits; GLEIF may drop leading zeros."""
     return raw.strip().zfill(8)
+
+
+# ---------------------------------------------------------------------------
+# The index (Phase 330)
+# ---------------------------------------------------------------------------
+
+#: The table layout this adapter reads. ``scripts/build_ariregister_index.py``
+#: writes the same value into ``meta``; a test pins the two equal, and an
+#: index carrying any other value is ignored rather than misread.
+INDEX_SCHEMA_VERSION = "1"
+
+#: Where the open data is published — the page a reader can follow.
+DATASET_URL = "https://avaandmed.ariregister.rik.ee/en/downloading-open-data"
+
+#: ``ettevotja_staatus`` → the English status label the printable page shows,
+#: so ``map_ariregister``'s liveness classification reads both tiers alike.
+STATUS_LABELS: dict[str, str] = {
+    "R": "Entered into the register",
+    "L": "In liquidation",
+    "N": "Bankrupt",
+}
+
+COVERAGE_NOT_IN_REGISTER = (
+    "Not in the e-Business Register's open data as of {cut} (which holds "
+    "every company entered, in liquidation or in bankruptcy, and no deleted "
+    "company), and the register's page holds no record under this code."
+)
+COVERAGE_PAGE_UNREACHABLE = (
+    "Not in the e-Business Register's open data as of {cut} (which holds "
+    "every company entered, in liquidation or in bankruptcy, and no deleted "
+    "company); the register's page could not be read ({why}). This is not a "
+    "confirmation that the register holds nothing — a company newer than "
+    "the cut, or deleted, is answered by the page."
+)
+
+_TABLE_COLUMNS: dict[str, tuple[str, ...]] = {
+    "officer": (
+        "kirje_id", "kaardi_tyyp", "isiku_tyyp", "isiku_roll", "eesnimi",
+        "nimi_arinimi", "isikukood_hash", "isikukood_registrikood", "valis_kood",
+        "valis_kood_riik", "synniaeg", "osamaks", "osamaksu_valuuta", "aadress_riik",
+        "algus_kpv", "lopp_kpv",
+    ),
+    "shareholder": (
+        "kirje_id", "isiku_tyyp", "isiku_roll", "eesnimi", "nimi_arinimi",
+        "isikukood_hash", "isikukood_registrikood", "valis_kood", "valis_kood_riik",
+        "synniaeg", "aadress_riik", "osaluse_protsent", "osaluse_suurus",
+        "osaluse_valuuta", "osaluse_omandiliik", "osaluse_murdosa_lugeja",
+        "osaluse_murdosa_nimetaja", "kontrolli_allikas", "kontrolli_allika_kpv",
+        "algus_kpv", "lopp_kpv", "grupp",
+    ),
+    "beneficial_owner": (
+        "kirje_id", "algus_kpv", "lopp_kpv", "eesnimi", "nimi", "isikukood_hash",
+        "valis_kood", "valis_kood_riik", "synniaeg", "aadress_riik",
+        "kontrolli_teostamise_viis", "lahknevusteade_esitatud",
+    ),
+}
+
+#: ``(code column, vocab kind, text column the mapper reads)`` — the Estonian
+#: wording stored once in ``vocab`` is put back beside each code, as the
+#: JSON files carry it.
+_TEXT_COLUMNS: dict[str, tuple[tuple[str, str, str], ...]] = {
+    "officer": (
+        ("isiku_roll", "role", "isiku_roll_tekstina"),
+        ("valis_kood_riik", "country", "valis_kood_riik_tekstina"),
+        ("aadress_riik", "country", "aadress_riik_tekstina"),
+    ),
+    "shareholder": (
+        ("isiku_roll", "role", "isiku_roll_tekstina"),
+        ("valis_kood_riik", "country", "valis_kood_riik_tekstina"),
+        ("aadress_riik", "country", "aadress_riik_tekstina"),
+        ("osaluse_omandiliik", "ownership_kind", "osaluse_omandiliik_tekstina"),
+        ("kontrolli_allikas", "control_source", "kontrolli_allikas_tekstina"),
+    ),
+    "beneficial_owner": (
+        ("valis_kood_riik", "country", "valis_kood_riik_tekstina"),
+        ("aadress_riik", "country", "aadress_riik_tekstina"),
+        ("kontrolli_teostamise_viis", "control", "kontrolli_teostamise_viis_tekstina"),
+    ),
+}
+
+
+def db_path() -> Path:
+    """``ARIREGISTER_DB_FILE`` or the data-root default — one function, so
+    the reader, the boot download and the sweep's ``requires_files`` agree
+    (the ONRC lesson)."""
+    from ..cache import data_root
+
+    configured = get_settings().ariregister_db_file
+    return Path(configured) if configured else data_root() / "ariregister.sqlite"
+
+
+_SHARED: dict[str, sqlite3.Connection | None] = {}
+_VOCAB: dict[str, dict[tuple[str, str], str]] = {}
+
+
+def _connect() -> sqlite3.Connection | None:
+    path = db_path()
+    if not path.exists():
+        if get_settings().ariregister_db_file:
+            logger.warning("ariregister: index not found at %s", path)
+        return None
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    try:
+        version = conn.execute(
+            "SELECT value FROM meta WHERE key = 'schema_version'"
+        ).fetchone()
+    except sqlite3.Error:
+        version = None
+    if not version or version[0] != INDEX_SCHEMA_VERSION:
+        logger.warning("ariregister: index at %s has an unexpected schema; ignoring", path)
+        conn.close()
+        return None
+    return conn
+
+
+def _shared_conn() -> sqlite3.Connection | None:
+    if _SHARED.get("conn") is None:
+        _SHARED["conn"] = _connect()
+    return _SHARED.get("conn")
+
+
+def reset_connection() -> None:
+    """Forget the cached connection (after a download, or in tests)."""
+    _VOCAB.clear()
+    conn = _SHARED.pop("conn", None)
+    if conn is not None:
+        try:
+            conn.close()
+        except sqlite3.Error:  # pragma: no cover - best effort
+            pass
+
+
+def index_available() -> bool:
+    """True when a readable index of the expected schema is present."""
+    return _shared_conn() is not None
+
+
+def read_meta() -> dict[str, str]:
+    """The index's ``meta`` table, or ``{}`` when there is no index."""
+    conn = _shared_conn()
+    if conn is None:
+        return {}
+    try:
+        return {str(k): str(v) for k, v in conn.execute("SELECT key, value FROM meta")}
+    except sqlite3.Error:  # pragma: no cover
+        return {}
+
+
+def _vocab() -> dict[tuple[str, str], str]:
+    """``(kind, code) → text``, read once per connection."""
+    if "v" not in _VOCAB:
+        conn = _shared_conn()
+        table: dict[tuple[str, str], str] = {}
+        if conn is not None:
+            try:
+                for kind, code, text in conn.execute("SELECT kind, code, text FROM vocab"):
+                    table[(str(kind), str(code))] = str(text or "")
+            except sqlite3.Error:  # pragma: no cover
+                pass
+        _VOCAB["v"] = table
+    return _VOCAB["v"]
+
+
+def vocab_text(kind: str, code: str | None) -> str | None:
+    """The register's own wording for a code, or None."""
+    if not code:
+        return None
+    return _vocab().get((kind, str(code))) or None
+
+
+def cut_date(meta: dict[str, str] | None = None) -> datetime | None:
+    """The day the files were generated (their ``Last-Modified``) — the day
+    the data is "as of". Never the build time."""
+    meta = read_meta() if meta is None else meta
+    try:
+        return datetime.strptime(meta.get("cut") or "", "%Y-%m-%d").replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def declare_snapshot(meta: dict[str, str] | None = None) -> None:
+    """Declare an index read as a snapshot of the register's open data.
+
+    Without this the provenance recorder collects nothing and resolves to its
+    ``stub`` default, and real register rows badge as "Placeholder data" —
+    this adapter's own Phase 45 bug. The cut is the register's clock;
+    ``built_at`` is ours (Phase 314).
+    """
+    meta = read_meta() if meta is None else meta
+    cut = meta.get("cut") or ""
+    provenance.record_snapshot(
+        retrieved_at=provenance.parse_moment(meta.get("built_at")),
+        source_as_of=cut_date(meta),
+        detail=(
+            f"e-Business Register open data, cut {cut}"
+            if cut else "e-Business Register open data"
+        ),
+    )
+
+
+def warm_index() -> dict[str, Any]:
+    """Download the index at boot when absent; replace it when the release
+    asset changed; keep it otherwise. Never raises — no index is a state this
+    module models (the page answers instead, as it did before Phase 330)."""
+    from ..entity_pages import (
+        ASSET_STAMP_KEY,
+        asset_check,
+        download_db,
+        read_meta as read_file_meta,
+        record_asset_stamp,
+    )
+
+    settings = get_settings()
+    path = db_path()
+    url = settings.ariregister_db_url
+    if not url:
+        state = "present" if path.exists() else "absent"
+        return {"ariregister": f"{state}: {path} (no URL)"}
+    try:
+        last_modified: str | None = None
+        if path.exists():
+            decision, last_modified = asset_check(url, path)
+            if decision == "keep":
+                if last_modified and read_file_meta(path).get(ASSET_STAMP_KEY) is None:
+                    record_asset_stamp(path, last_modified)
+                return {"ariregister": f"already present: {path}"}
+            outcome = "replaced"
+        else:
+            outcome = "downloaded"
+        downloaded, elapsed = download_db(url, path, last_modified=last_modified)
+        reset_connection()
+        return {"ariregister": f"{outcome}: {path} ({downloaded} bytes in {elapsed:.1f}s)"}
+    except Exception as exc:  # noqa: BLE001 — no index is a state, not a crash
+        logger.warning("ariregister: asset check/download failed: %s", exc)
+        return {"ariregister": f"failed: {exc}"}
+
+
+def _people_rows(conn: sqlite3.Connection, table: str, code: str) -> list[dict[str, Any]]:
+    """One table's rows for a code, in the JSON files' shape: the hash back
+    as a UUID string, the code's Estonian wording beside it, empties absent."""
+    columns = _TABLE_COLUMNS[table]
+    rows = conn.execute(
+        f"SELECT {', '.join(columns)} FROM {table} WHERE code = ? ORDER BY kirje_id",
+        (code,),
+    ).fetchall()
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        item: dict[str, Any] = {}
+        for column in columns:
+            value = row[column]
+            if value is None:
+                continue
+            if column == "isikukood_hash":
+                value = str(uuid.UUID(bytes=bytes(value)))
+            elif column == "lahknevusteade_esitatud":
+                value = bool(value)
+            elif column in ("kirje_id", "grupp"):
+                value = str(value)
+            item[column] = value
+        for code_column, kind, text_column in _TEXT_COLUMNS[table]:
+            text = vocab_text(kind, item.get(code_column))
+            if text:
+                item[text_column] = text
+        out.append(item)
+    return out
+
+
+def entity_record(code: str) -> dict[str, Any] | None:
+    """The index's record for one registry code — the entity row with its
+    three people lists — or None when the index does not hold it (or there
+    is no index)."""
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    row = conn.execute(
+        "SELECT code, name, legal_form, legal_form_subtype, vat_number, status_code,"
+        " first_entry_on, address FROM entity WHERE code = ?",
+        (code,),
+    ).fetchone()
+    if row is None:
+        return None
+    record = dict(row)
+    record["status_text"] = vocab_text("status", record.get("status_code"))
+    record["officers"] = _people_rows(conn, "officer", code)
+    record["shareholders"] = _people_rows(conn, "shareholder", code)
+    record["beneficial_owners"] = _people_rows(conn, "beneficial_owner", code)
+    return record
+
+
+def search_index(query: str, *, limit: int = 10) -> list[dict[str, Any]]:
+    """Entities whose name contains ``query`` (case-insensitive), from the
+    index; ``[]`` without one."""
+    conn = _shared_conn()
+    if conn is None:
+        return []
+    needle = " ".join(query.split()).casefold()
+    if not needle:
+        return []
+    try:
+        rows = conn.execute(
+            "SELECT code, name, legal_form, status_code, address FROM entity"
+            " WHERE name_key LIKE ? ESCAPE '\\' LIMIT ?",
+            ("%" + needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%", limit),
+        ).fetchall()
+    except sqlite3.Error:
+        return []
+    return [dict(r) for r in rows]
 
 class AriregisterAdapter(SourceAdapter):
     """Source adapter for the Estonian e-Business Register (e-Äriregister).
@@ -423,9 +751,13 @@ class AriregisterAdapter(SourceAdapter):
             name="Estonian e-Business Register (e-Äriregister)",
             homepage="https://ariregister.rik.ee/eng",
             description=(
-                "Estonian company data including entity details, shareholders "
-                "(with ownership percentages), board members, and beneficial "
-                "owners, from the public e-Business Register portal (RIK)."
+                "Estonian company data — entity details, the persons on the "
+                "registry card (board members, procurists, liquidators, "
+                "partners), the register of shareholders with ownership "
+                "percentages, and declared beneficial owners with their manner "
+                "of control — read from a daily index of RIK's open-data files, "
+                "with the public e-Business Register page as the fallback for "
+                "a company the files do not hold."
             ),
             license="CC-BY-4.0",
             attribution=(
@@ -441,7 +773,16 @@ class AriregisterAdapter(SourceAdapter):
         )
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
-        """Name or registry-code search via the autocomplete JSON endpoint."""
+        """Name search — from the index when there is one, else the
+        autocomplete JSON endpoint (live mode only)."""
+        if kind != SearchKind.ENTITY or not (query or "").strip():
+            return []
+        if index_available():
+            rows = search_index(query)
+            if not rows:
+                return []
+            declare_snapshot()
+            return [self._index_search_hit(row) for row in rows]
         # Every other adapter's search answers nothing unless live mode is on;
         # this one called ariregister.rik.ee regardless, which is how the
         # search fan-out tests reached the network (Phase 266).
@@ -490,23 +831,34 @@ class AriregisterAdapter(SourceAdapter):
             ))
         return hits
 
-    async def fetch(
-        self,
-        hit_id: str,
-        *,
-        legal_name: str = "",
-    ) -> dict[str, Any]:
-        """Fetch company data from the public printable page.
+    @staticmethod
+    def _index_search_hit(row: dict[str, Any]) -> SourceHit:
+        code = row["code"]
+        segments = [f"EE-ARIREGISTER {code}"]
+        form = (row.get("legal_form") or "").strip()
+        if form:
+            segments.append(form)
+        status = str(row.get("status_code") or "")
+        if status == "L":
+            segments.append("in liquidation")
+        elif status == "N":
+            segments.append("bankrupt")
+        return SourceHit(
+            source_id="ariregister",
+            hit_id=code,
+            kind=SearchKind.ENTITY,
+            name=row.get("name") or f"EE {code}",
+            summary=" · ".join(segments),
+            identifiers={"ee_registry_code": code},
+            raw={"reg_code": code, "name": row.get("name"), "status": status,
+                 "address": row.get("address"), "url": f"{_BASE_URL}/eng/company/{code}"},
+            is_stub=False,
+            liveness="snapshot",
+        )
 
-        ``hit_id`` is the 8-digit Estonian registry code.
-        """
-        # Normalise registry code (strip leading zeros for display; keep 8 digits)
-        code = hit_id.strip()
-        if code.isdigit():
-            code = code.lstrip("0") or code
-        registry_code = code
-
-        stub: dict[str, Any] = {
+    def _stub(self, registry_code: str, legal_name: str) -> dict[str, Any]:
+        """Nothing was read. Dropped by the pipeline."""
+        return {
             "source_id": self.id,
             "registry_code": registry_code,
             "name": legal_name,
@@ -522,7 +874,117 @@ class AriregisterAdapter(SourceAdapter):
             "is_stub": True,
         }
 
-        url = _PRINT_URL.format(reg_code=registry_code)
+    def _note_card(
+        self, registry_code: str, legal_name: str, meta: dict[str, str], note: str,
+    ) -> dict[str, Any]:
+        """The index answered without the code and the page could not add to
+        it — a note card, the INPI / JAR shape: ``is_stub`` False and
+        ``not_found`` True, so the source is announced and the row says why
+        it is empty. Not cached: a miss belongs to one build of the index."""
+        bundle = self._stub(registry_code, legal_name)
+        bundle.update({
+            "is_stub": False,
+            "not_found": True,
+            "coverage_note": note,
+            "cut": meta.get("cut"),
+            "tier": "index",
+        })
+        return bundle
+
+    @staticmethod
+    def _index_bundle(code: str, record: dict[str, Any], meta: dict[str, str]) -> dict[str, Any]:
+        status_code = str(record.get("status_code") or "") or None
+        return {
+            "source_id": "ariregister",
+            "registry_code": code,
+            "name": record.get("name") or "",
+            "legal_form": record.get("legal_form"),
+            "legal_form_subtype": record.get("legal_form_subtype"),
+            "vat_number": record.get("vat_number"),
+            "status": STATUS_LABELS.get(status_code or "", record.get("status_text")),
+            "status_code": status_code,
+            "status_text": record.get("status_text"),
+            "registration_date": record.get("first_entry_on"),
+            "address": record.get("address"),
+            "link": f"{_BASE_URL}/eng/company/{code}",
+            "shareholders": record.get("shareholders") or [],
+            "officers": record.get("officers") or [],
+            "beneficial_owners": record.get("beneficial_owners") or [],
+            "cut": meta.get("cut"),
+            "tier": "index",
+            "is_stub": False,
+        }
+
+    async def fetch(
+        self,
+        hit_id: str,
+        *,
+        legal_name: str = "",
+    ) -> dict[str, Any]:
+        """Return the company's record: from the index when it holds the
+        code, else from the printable page.
+
+        ``hit_id`` is the 8-digit Estonian registry code (GLEIF's
+        ``registeredAs``, or a register-hop / ``opencheck_register_lookup``
+        caller's).
+        """
+        registry_code = normalise_registry_code(hit_id)
+        index_present = index_available()
+        meta = read_meta() if index_present else {}
+        if index_present:
+            try:
+                record = entity_record(registry_code)
+            except sqlite3.Error as exc:
+                degradation.record(
+                    self.id,
+                    "The e-Business Register index could not be read; the page "
+                    "was asked instead.",
+                    reason=degradation.reason_for_failure(type(exc).__name__),
+                )
+                record = None
+            if record is not None:
+                # Declared only once a row is in hand: a miss is not a read.
+                declare_snapshot(meta)
+                bundle = self._index_bundle(registry_code, record, meta)
+                validate_raw(self.id, AriregisterBundle, bundle)
+                return bundle
+
+        page, outcome = await self._read_page(registry_code, legal_name)
+        if page is not None:
+            page["tier"] = "page"
+            if index_present:
+                page["index_miss"] = True
+                page["cut"] = meta.get("cut")
+            validate_raw(self.id, AriregisterBundle, page)
+            return page
+        if not index_present:
+            return self._stub(registry_code, legal_name)
+        cut = meta.get("cut") or "the last build"
+        if outcome == "not_found":
+            return self._note_card(
+                registry_code, legal_name, meta, COVERAGE_NOT_IN_REGISTER.format(cut=cut),
+            )
+        why = outcome or "no answer"
+        degradation.record(
+            self.id,
+            f"The e-Business Register page did not answer ({why}) for a code "
+            "the open-data index does not hold; the card shows nothing from "
+            "the register. This is not a confirmation that the register "
+            "holds nothing.",
+            reason=degradation.reason_for_failure(why),
+        )
+        return self._note_card(
+            registry_code, legal_name, meta,
+            COVERAGE_PAGE_UNREACHABLE.format(cut=cut, why=why),
+        )
+
+    async def _read_page(
+        self, registry_code: str, legal_name: str,
+    ) -> tuple[dict[str, Any] | None, str]:
+        """The printable page as a bundle, or ``(None, outcome)`` — outcome
+        ``not_found`` when the site redirected away from the company, else
+        the failure (``HTTP 429``, ``timeout``…)."""
+        url = _PRINT_URL.format(reg_code=registry_code.lstrip("0") or registry_code)
         # See the comment in search() — this bypasses build_client(), so the
         # live observation has to be recorded by hand. Recorded unconditionally
         # before the request, same as build_client(): a bundle that ends up
@@ -535,17 +997,17 @@ class AriregisterAdapter(SourceAdapter):
                 r = await client.get(url, headers=_HEADERS, follow_redirects=True)
         except Exception as exc:
             logger.error("ariregister: fetch error for %s: %s", registry_code, exc)
-            return stub
+            return None, type(exc).__name__
 
         if r.status_code != 200:
             logger.info("ariregister: HTTP %s for %s", r.status_code, registry_code)
-            return stub
+            return None, f"HTTP {r.status_code}"
 
         # If the page redirected to a "not found" search page, bail out.
         final_url = str(r.url)
         if "/eng/company/" not in final_url:
             logger.info("ariregister: no company found for %s", registry_code)
-            return stub
+            return None, "not_found"
 
         html = r.text
 
@@ -568,7 +1030,7 @@ class AriregisterAdapter(SourceAdapter):
 
         if not name:
             logger.info("ariregister: could not determine company name for %s", registry_code)
-            return stub
+            return None, "unparseable page"
 
         officers           = _parse_officers(html)
         shareholders       = _parse_shareholders(html)
@@ -588,7 +1050,7 @@ class AriregisterAdapter(SourceAdapter):
             "officers": officers,
             "beneficial_owners": beneficial_owners,
             "is_stub": False,
-        }
+        }, "ok"
 
     # ------------------------------------------------------------------
     # Time Machine — historical data via the credentialed SOAP API

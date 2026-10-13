@@ -1,6 +1,6 @@
 {
   "_comment": "mypy errors per module (non-strict config in pyproject.toml). A module may never carry more than this; see scripts/mypy_ratchet.py.",
-  "total": 134,
+  "total": 133,
   "errors": {
     "opencheck/app.py": 1,
     "opencheck/backups.py": 1,
@@ -9,7 +9,6 @@
     "opencheck/bods/mapper.py": 1,
     "opencheck/bods/mappers/climatetrace.py": 1,
     "opencheck/bods/mappers/companies_house.py": 2,
-    "opencheck/bods/mappers/estonia.py": 1,
     "opencheck/bods/mappers/greece.py": 1,
     "opencheck/bods/mappers/moldova.py": 1,
     "opencheck/bods/mappers/new_zealand.py": 5,

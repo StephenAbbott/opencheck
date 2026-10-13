@@ -201,10 +201,21 @@ from .mappers.chile import (  # noqa: F401  (re-exported, Phase 280)
 )
 from .mappers.estonia import (  # noqa: F401  (re-exported, Phase 246)
     _EE_BO_CONTROL_MAP,
+    _EE_COUNTRY_FIXUPS,
+    _EE_NO_COUNTRY,
     _EE_OFFICER_ROLE_MAP,
+    _EE_STATE_BODY_FORMS,
+    _ee_country,
+    _ee_country_entry,
     _ee_date,
+    _ee_foreign_entity,
     _ee_full_name,
+    _ee_nationalities,
     _ee_person_id,
+    _ee_person_identifiers,
+    _ee_residence,
+    _ee_status,
+    _map_ariregister,
     map_ariregister,
 )
 from .mappers.brightquery import (  # noqa: F401  (re-exported, Phase 246)

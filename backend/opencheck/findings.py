@@ -1662,6 +1662,67 @@ def finding_jar_lithuania(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence([lead, form, withheld])
 
 
+def finding_ariregister(bundle: dict[str, Any]) -> str | None:
+    """What the Estonian e-Business Register says: the company's status and
+    legal form, and how many shareholders, persons on the registry card and
+    declared beneficial owners it lists — each count in the same voice when
+    it is zero (rule 6), because an OÜ with no shareholder on file and an AS
+    whose shareholders sit at Nasdaq CSD both read "no shareholders on file",
+    and silence would read as "nothing to see" (Phase 330).
+
+    * **Not in the register** says so, with the open data's cut and that
+      the page holds no record either, rather than that the company does not
+      exist.
+    * A **liquidation or bankruptcy** leads, because it changes a decision.
+    * Which tier answered is said only where it matters: the page, for a
+      code the index lacked.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        cut = human_date(bundle.get("cut"))
+        return clauses_to_sentence([
+            "Not in the e-Business Register's open data"
+            + (f" of {cut}" if cut else "")
+            + ", and the register's page holds no record under this code",
+        ])
+    status = str(bundle.get("status") or "").strip()
+    registered = human_date(bundle.get("registration_date"))
+    lower = status.lower()
+    lead: str | None
+    if "liquidat" in lower:
+        lead = "In liquidation"
+    elif "bankrupt" in lower:
+        lead = "Bankrupt"
+    elif "deleted" in lower or "removed" in lower:
+        lead = "Deleted from the register"
+    elif registered:
+        lead = f"In the register since {registered}"
+    else:
+        lead = "In the register" if status else None
+    form = str(bundle.get("legal_form") or "").strip() or None
+
+    def _count(items: Any, singular: str, plural: str, none: str) -> str:
+        n = len(items or [])
+        if n == 0:
+            return none
+        return f"{n} {singular if n == 1 else plural}"
+
+    counts = ", ".join([
+        _count(bundle.get("shareholders"), "shareholder", "shareholders", "no shareholders on file"),
+        _count(bundle.get("officers"), "on the registry card", "on the registry card", "no one on the registry card"),
+        _count(bundle.get("beneficial_owners"), "beneficial owner", "beneficial owners", "no beneficial owner declared"),
+    ])
+    tier = (
+        "read from the page, not the open data"
+        if bundle.get("index_miss") else None
+    )
+    # Counts before the legal form: the cap drops trailing clauses, and what
+    # the register lists matters more than what kind of company it is. The
+    # tier, when it is worth saying, is worth more than the form too.
+    return clauses_to_sentence([lead, counts, tier, form], sep="; ")
+
+
 def finding_asp_moldova(bundle: dict[str, Any]) -> str | None:
     """What Moldova's State Register says: whether a liquidator is on file,
     the legal form, and who runs and founded the company.

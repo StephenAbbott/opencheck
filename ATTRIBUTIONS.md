@@ -114,12 +114,13 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
 ## Ariregister — Estonian e-Business Register
 
-- **Data:** company profiles, shareholders, officers, and beneficial owners from the e-Business Register (äriregister) open data bulk files
-- **Portal:** <https://avaandmed.ariregister.rik.ee/en>
-- **License:** Open Data (PSI Directive / Estonian Public Information Act)
-- **Attribution:** "Contains data from the Estonian e-Business Register (Äriregister), open data published by the Centre of Registers and Information Systems (RIK)."
-- **Entry point:** Estonian registry code (8-digit) derived from GLEIF RA code `RA000181`
-- **Note:** OpenCheck loads a local SQLite database built from the RIK bulk files. Activated when `ARIREGISTER_DB_FILE` is set.
+- **Data:** company profiles (name, registry code, legal form, VAT number, status, first entry date, address), the persons on the registry card (board members, procurists, liquidators, partners…), the register of shareholders with ownership percentages, and declared beneficial owners with their manner of control — from the e-Business Register (e-Äriregister) open-data files
+- **Source:** the daily CC BY 4.0 files `ettevotja_rekvisiidid__lihtandmed.csv.zip`, `ettevotja_rekvisiidid__kaardile_kantud_isikud.json.zip`, `ettevotja_rekvisiidid__osanikud.json.zip` and `ettevotja_rekvisiidid__kasusaajad.json.zip` listed at <https://avaandmed.ariregister.rik.ee/en/downloading-open-data> (terms: <https://avaandmed.ariregister.rik.ee/en/terms-service>)
+- **How OpenCheck reads it (Phase 330):** re-keyed, unchanged, into a SQLite index by `backend/scripts/build_ariregister_index.py`, rebuilt daily by `.github/workflows/refresh-ariregister-index.yml` and published as the `ariregister-index` release asset, which the backend downloads at boot. Each statement is dated by the files' cut. The index carries no personal identification codes (the files stopped publishing them in November 2024) and none of the people's street or e-mail addresses the files hold; a natural person is identified only by the files' pseudonymous `isikukood_hash`, which OpenCheck publishes as an annotation, never as an identifier. For a company the files do not hold (one newer than the cut, or deleted — the files hold no deleted company) the public page `ariregister.rik.ee/eng/company/{code}` is read instead, with its personal identification codes stripped.
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Data from the Estonian e-Business Register (e-Äriregister), published by the Centre of Registers and Information Systems (RIK), CC BY 4.0."
+- **Entry point:** `ee_registry_code` (8-digit Estonian registry code) derived from GLEIF RA code `RA000181`; also the `EE-ARIREGISTER` register hop and `opencheck_register_lookup`
+- **Note:** Estonia's switch to legitimate-interest access to beneficial-owner data was postponed on its 10 July 2026 start date; the `kasusaajad` file was still published daily on 13 October 2026. When it stops, the beneficial-owner list stops with it.
 
 ## INPI — Registre National des Entreprises (France)
 

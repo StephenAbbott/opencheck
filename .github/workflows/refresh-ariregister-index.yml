@@ -1,0 +1,84 @@
+name: Refresh Estonian e-Business Register index
+
+# Rebuilds the Estonian e-Business Register (e-Äriregister) index from RIK's
+# four daily open-data files — companies, persons on the registry card,
+# shareholders, beneficial owners (CC BY 4.0) — and replaces the
+# `ariregister-index` release asset the backend downloads at boot
+# (ARIREGISTER_DB_URL). Phase 330.
+#
+# Daily, because the files are: RIK regenerates them every morning by
+# ~09:30 GMT, and the index's cut is what every Estonian card is dated by.
+# GitHub runs this repository's crons late (hours, for the Monday sweeps),
+# so the slot is only a floor. ~130 MB of zips in, ~85 MB gzipped out, a
+# few minutes of standard-library Python — nothing that belongs on Render.
+#
+# The builder downloads the four files fifteen seconds apart: Cloudflare in
+# front of avaandmed.ariregister.rik.ee answers HTTP 429 (Error code 1015)
+# to back-to-back requests from one address, and the builder retries a 429
+# with a minute's wait. A refusal (wrong header, short file, a code in a
+# people file the companies file lacks, mismatched cut days) exits 2 and
+# publishes nothing; the previous asset stays.
+#
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "20 10 * * *" # 10:20 UTC, after RIK's ~09:30 GMT regeneration
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-ariregister-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - name: Build the index from today's open-data files
+        working-directory: backend
+        run: |
+          python3 scripts/build_ariregister_index.py \
+            --out "$RUNNER_TEMP/ariregister.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "ariregister.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = int(meta.get("entities", 0))
+          bo = int(meta.get("beneficial_owners", 0))
+          print(f"{n} entities, {meta.get('officers')} officers, {meta.get('shareholders')} shareholders, {bo} beneficial owners, cut {meta.get('cut')}")
+          if n < 300000 or bo < 300000:
+              sys.exit("Refusing to publish: counts far below the register's — likely a source/format change.")
+          with open("summary.txt", "w") as fh:
+              fh.write(f"{n} entities, {bo} beneficial owners, cut {meta.get('cut')}.")
+          PY
+
+      - name: Replace the `ariregister-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view ariregister-index >/dev/null 2>&1 || gh release create ariregister-index \
+            --title "Estonian e-Business Register index" \
+            --notes "Built daily by refresh-ariregister-index.yml from RIK's open-data files (CC BY 4.0, avaandmed.ariregister.rik.ee). Downloaded by the backend at boot (ARIREGISTER_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh ariregister-index \
+            "$RUNNER_TEMP/ariregister.sqlite.gz" ariregister.sqlite.gz \
+            "$(cat summary.txt) Rebuilt automatically by refresh-ariregister-index on $(date -u +%Y-%m-%d)."
+
+      # No Render redeploy here, unlike the monthly jobs: a restart a day for
+      # a data refresh would clear every replay cache and cold-start the
+      # service daily. The backend compares the asset's Last-Modified at boot
+      # (ariregister.warm_index) and picks a newer index up on its next start.
