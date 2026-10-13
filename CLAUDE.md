@@ -168,7 +168,7 @@ Format validation is advisory (non-blocking). The amber border + warning fires o
 
 **Risk signal overlays**: BOVS Option C implemented. `buildSignalMap()` in BODSGraph.tsx reads `evidence.statement_id` (SANCTIONED/PEP), `evidence.subject_statement_id` (RELATED_*), `evidence.matches[].statement_id` (TRUST/AMLA), `evidence.jurisdictions[].statement_id` (FATF/NON_EU), `evidence.longest_path[]` (COMPLEX_OWNERSHIP_LAYERS). Single signal → labelled pill at 315° NW; multiple → "N ⚠" stack badge.
 
-**Estonian adapter**: `ariregister.py` is now a public web scraper — `GET ariregister.rik.ee/eng/company/{reg}/company_print_json`. No credentials. The previous SOAP/X-Road approach (Phase 37) used `ariregxmlv6.rik.ee` with `ARIREGISTER_USERNAME`/`ARIREGISTER_PASSWORD` credentials from a paid RIK contract that turned out not to grant data access. Do NOT revert to SOAP. The HTML parser extracts officers (→ Estonian role codes), shareholders (person vs entity from ID code length), and BOs — Estonia's legitimate-interest access restriction was postponed on its 2026-07-10 start date, so BO data remains available (degradation for the eventual switch is pinned by `_HTML_BO_WITHDRAWN` tests). `map_ariregister()` in mapper.py is unchanged.
+**Estonian adapter**: since Phase 330 `ariregister.py` reads a daily SQLite index of RIK's open-data files first and the public print page (`GET ariregister.rik.ee/eng/company/{reg}/company_print_json`) only for a code the index lacks — see "Estonia is an index first, the page second (Phase 330)" below. The previous SOAP/X-Road approach (Phase 37) used `ariregxmlv6.rik.ee` with `ARIREGISTER_USERNAME`/`ARIREGISTER_PASSWORD` credentials from a paid RIK contract that turned out not to grant data access. Do NOT route the lookup through SOAP. Estonia's legitimate-interest access restriction was postponed on its 2026-07-10 start date, so BO data remains available (degradation for the eventual switch is pinned by `_HTML_BO_WITHDRAWN` tests).
 
 **GLEIF RA code for Estonia**: `RA000181` (confirmed from live GLEIF data — the CLAUDE.md table below has a typo: RA000198 is wrong, RA000181 is correct).
 
@@ -762,10 +762,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Twenty** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
+**Twenty-one** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`, `ariregister`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -1079,6 +1079,97 @@ Things that will be re-derived otherwise:
 
 ---
 
+## Estonia is an index first, the page second (Phase 330)
+
+`sources/ariregister.py`, `scripts/build_ariregister_index.py`,
+`.github/workflows/refresh-ariregister-index.yml`, `bods/mappers/estonia.py`,
+`sources/schemas/ariregister.py`. Stephen's decisions (13 Oct 2026): one
+source id, index first with the print page as the fallback for a code the
+index lacks (not the ticket's "two sources" option — the page is not richer:
+Eesti Energia AS reads 0 shareholders on either, because both list
+shareholders only for an OÜ); strip personal identification codes from the
+page path; a daily GitHub-workflow rebuild. Things that will be re-derived
+otherwise:
+
+- **Four files, one snapshot, streamed.** `lihtandmed.csv` (companies) and
+  the `kaardile_kantud_isikud` / `osanikud` / `kasusaajad` JSON arrays
+  (officers, shareholders, beneficial owners), ≈2.2 GB unzipped. The JSON is
+  read with `raw_decode` over a rolling buffer **by cursor, never by slicing
+  the buffer per object** (that is O(n²): 380,000 × 1 MB copies, ten minutes
+  to never finishing). On 13 Oct 2026: 379,664 entities, 525,454 / 392,472 /
+  410,543 rows; every people file held exactly the CSV's entity set, and the
+  builder refuses a code the CSV lacks. ≈195 MB SQLite, ≈85 MB gzipped —
+  relational tables with a `vocab` table for the Estonian wording of every
+  code and the hash as 16 bytes; per-row zlib blobs made it 388 MB / 247 MB
+  because gzip cannot compress compressed rows.
+- **The host rate-limits back-to-back downloads**: Cloudflare HTTP 429,
+  body `Error code: 1015`, on the second file. `download_all` spaces the four
+  by `DOWNLOAD_SPACING_S` and retries a 429 after a minute; the body must
+  start with `PK` whatever the status. The same 17 bytes are what the print
+  page answers when it rate-limits.
+- **The cut is the files' `Last-Modified` day** (kept beside each download as
+  a `.last-modified` sidecar; `--cut` overrides, the zip member stamp is the
+  last resort), and the four must agree — a download that straddles the
+  ~09:30 GMT regeneration would pair yesterday's owners with today's
+  companies. **A fixture cut of today reads as "no cut" to the conftest
+  guard**; test indexes use a past day.
+- **`lopp_kpv` is empty on every row of every file**: the files are current
+  rows only. Ended holdings exist only on the page path; the mapper still
+  puts `endDate` on every interest and `make_relationship_statement` closes
+  it (Phase 317).
+- **The shareholders file does carry Nasdaq CSD entries** (`kontrolli_allikas`
+  `V1` "NASDAQ andmed", 10,823 rows) — said in the interest's `details` as the
+  entry's source, with its date. `osaluse_omandiliik` `Y`/`K`/`KY` (joint /
+  common ownership of one share) is said there too.
+- **Country codes are alpha-3 with IOC-style strays** (`DEN`, `GER`, `LAT`,
+  `NED`, `POR`, `SUI`, `MON`, `BUL`, `IVB`, `UAE`, `SLO`, `ROM`, `SIN`,
+  `CHI`, `LIB`, `ISV`, `SKN`) — `_EE_COUNTRY_FIXUPS`; `XXK` (Kosovo), `ANT`,
+  `XXX`, `~` resolve to nothing and the row keeps the register's country
+  name alone, never a stand-in. The pre-330 mapper would have written the
+  raw alpha-3 into `nationalities[].code`; it never fired because the page
+  gives no country.
+- **`isikukood_hash` is the person's local id, never an identifier.** It is
+  the same UUID for the same person on all three lists of one company, so a
+  director-shareholder-owner is one node (passed as `EE-ARIREGISTER-HASH`,
+  which `make_person_statement` moves to an `identifying` annotation — Phase
+  255). The page path has no hash, so there the same person is three nodes,
+  as before. A foreign legal person's `valis_kood` has no stated scheme: it
+  keys the entity (`foreign-<country>-<code>`) and is said in a `commenting`
+  annotation, not asserted; its country becomes the entity's jurisdiction.
+- **BO manner-of-control codes** (`_EE_BO_CONTROL_MAP`): `O` direct and `K`
+  indirect participation → `shareholding` with `directOrIndirect`; `X` →
+  `votingRights` indirect; `Y` → `appointmentOfBoard`; `J` / `C` (a board or
+  council member named because no owner reaches the threshold) →
+  `seniorManagingOfficial`; `S` beneficiary → `rightsToProfitOrIncome`; `Z`
+  founder's-rights holder and `F` other means → `otherInfluenceOrControl`.
+  The register's Estonian text rides in `details`. `lahknevusteade_esitatud`
+  (a discrepancy report filed, 460 rows) is a `commenting` annotation on the
+  interest — the register publishes the flag, not the report.
+- **Registry-card roles that are no interest are skipped**: `KISIK` contact
+  person, `ORP` / `ARP` share registrar (Nasdaq CSD), `MDKPI`, `DOKH`.
+  `KOAS` (a state agency's superior authority, a legal person) is mapped —
+  it is the control relationship a `stateBody` has. The three public-body
+  legal forms are `stateBody` (`_EE_STATE_BODY_FORMS`); state enterprises
+  stay `registeredEntity` (Phase 240).
+- **A miss on the index goes to the page, and the three outcomes differ**:
+  the page answers → `tier: page`, `index_miss: true`, dated live, the
+  finding says so; the page redirects away → a note card (`not_found`,
+  `COVERAGE_NOT_IN_REGISTER`), no degradation; the page fails (429, timeout)
+  → a note card **and** a degradation. Without an index the page behaves as
+  it did before Phase 330 (a failure is a stub). Nothing touches the response
+  `Cache` (the Phase 325 rule). The probe expects `snapshot` **or** `live`
+  with no `requires_files`: either tier answering is the adapter working, and
+  the provenance audit's record_live fence (PR #153) still bites on the page
+  path in a test environment with no index.
+- **No daily Render redeploy.** The workflow replaces the asset; the backend
+  compares its `Last-Modified` at boot (`warm_index`) — on Render's free tier
+  that is most days. `snapshot_max_age_days=10`.
+- The index holds no people's street or e-mail addresses (the files do), and
+  the page path's personal codes are stripped once they have said "person";
+  `AriregisterBundle` refuses a bundle carrying one.
+
+---
+
 ## Datafordeler CVR API (Denmark) — hard-won constraints
 
 These are non-obvious and cost significant debugging time. Do not deviate from them.
@@ -1155,17 +1246,17 @@ that returns the RNE payload without going through `_make_bundle`.
 - **BO access restriction POSTPONED on its 2026-07-10 start date** (https://news.err.ee/1610074816/ — the Ministry of Finance is revising the draft regulation; current public access remains, no new date announced). BO events stay deliberately isolated in `_bo_events()` in `timeline/ariregister.py` so the whole branch can be dropped when the restriction eventually lands (issues #22/#28 track it; a first removal shipped in `77e7b65` and was reverted when the postponement was announced — the revert commit shows exactly what to re-apply).
 - **Render**: the Time Machine Estonia branch only lights up when `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` are set on Render (in addition to `.env` locally). Without them, `fetch_timeline_data()` returns `None` and the timeline silently omits Estonian events.
 
-**Current lookup approach (Phase 45)**: Public web scraper. No credentials needed.
+**Current lookup approach (Phase 330)**: an index of RIK's open-data files first, the public print page second — one source id, one mapper. The page details that still apply to the fallback:
 - **Main endpoint**: `GET https://ariregister.rik.ee/eng/company/{reg_code}/company_print_json`
-- **Search endpoint**: `GET https://ariregister.rik.ee/eng/api/autocomplete?q={query}` → JSON
+- **Search endpoint**: `GET https://ariregister.rik.ee/eng/api/autocomplete?q={query}` → JSON — used only when there is no index (the index answers name searches itself)
 - **GLEIF RA code**: `RA000181` (NOT RA000198 — the table below has a typo, RA000181 is confirmed from live GLEIF data)
 - **HTML structure**: Bootstrap label/value rows (`col-md-4 text-muted` / `col font-weight-bold`). Tables identified by header keywords.
 - **Officer role mapping**: English labels → Estonian codes (e.g. "Management board member" → `JUHL`, "Procurist" → `PROK`, "Liquidator" → `LIKV`)
-- **Person type detection**: 11-digit code starting with 3-6 = natural person (F); 8-digit = legal entity (J)
+- **Person type detection**: 11-digit code starting with 1-6 = natural person (F); 8-digit = legal entity (J). **The personal code is then dropped** (Phase 330) — it never leaves the adapter.
 - **BO control mapping**: "Indirect ownership" → `K`, "Direct ownership" → `O`, "Voting rights" → `H`
-- **Not found detection**: If `str(r.url)` does not contain `/eng/company/`, the server redirected away (company not found) → return stub bundle
-- **Bundle format**: Unchanged from Phase 37 — `map_ariregister()` in `bods/mapper.py` needs no changes
-- `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` are NOT used by the live-lookup scraper, but ARE read by `fetch_timeline_data()` for the SOAP history path (see the narrowed-ban note above)
+- **Not found detection**: If `str(r.url)` does not contain `/eng/company/`, the server redirected away (company not found)
+- **The page rate-limits datacentre callers**: HTTP 429 with the 17-byte body `Error code: 1015` (Cloudflare), 2 of 4 requests from the cloud on 13 Oct 2026. The weekly sweep from GitHub Actions still reads it.
+- `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` are NOT used by the lookup, but ARE read by `fetch_timeline_data()` for the SOAP history path (see the narrowed-ban note above)
 
 ---
 

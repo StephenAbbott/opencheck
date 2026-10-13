@@ -195,10 +195,32 @@ def _bh_bolagsverket(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
 
 
 def _bh_ariregister(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Estonian e-Business Register (Phase 330).
+
+    * **A record** — from the daily index or the printable page; the
+      finding says which and, for the page, that the index lacked the code.
+      Asserts the registry code the register published.
+    * **Not in the register** — a note card in the KvK / INPI / JAR shape:
+      the row sentence says so, no identifier is asserted (the register
+      published no record), and it is a degradation only when the page
+      failed (the adapter records that itself).
+    """
+    from ..findings import finding_ariregister
+
+    if r.get("not_found"):
+        return _hit(
+            "ariregister", local_id,
+            name=ctx.legal_name or "",
+            summary=f"EE-ARIREGISTER {local_id} · not in the register",
+            finding=finding_ariregister(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note"), "cut": r.get("cut")},
+        )
     return _hit(
         "ariregister", local_id,
         name=r.get("name") or ctx.legal_name or "",
         summary=f"EE-ARIREGISTER {local_id}",
+        finding=finding_ariregister(r),
         identifiers={"ee_registry_code": local_id}, raw=r,
     )
 

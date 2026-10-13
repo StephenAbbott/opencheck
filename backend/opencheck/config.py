@@ -716,6 +716,22 @@ class Settings(BaseSettings):
     # License: KBO reuse licence (attribution required, no API key needed).
     bce_belgium_db_file: str | None = Field(default=None, alias="BCE_BELGIUM_DB_FILE")
 
+    # --- Estonian e-Business Register (ariregister) — the index, Phase 330 ---
+    # The index packed daily by scripts/build_ariregister_index.py from RIK's
+    # open-data files (.github/workflows/refresh-ariregister-index.yml) and
+    # shipped in as a release asset; the printable page is the fallback for a
+    # code the index lacks. Unset: the data-root default (``ariregister.sqlite``).
+    ariregister_db_file: str | None = Field(default=None, alias="ARIREGISTER_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed —
+    # the ONRC / ChileCompra rule. ~195 MB on disk, ~85 MB gzipped. Empty
+    # string disables the download.
+    ariregister_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "ariregister-index/ariregister.sqlite.gz"
+        ),
+        alias="ARIREGISTER_DB_URL",
+    )
     # --- Estonian e-Business Register (ariregister) ---
     # No credentials required — the adapter uses the public printable-page
     # endpoint at ariregister.rik.ee without authentication.

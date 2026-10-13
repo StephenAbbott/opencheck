@@ -143,7 +143,8 @@ def test_parse_beneficial_owners():
     b = bos[0]
     assert b["eesnimi"] == "Anne-Liis"
     assert b["nimi"] == "Theisen"
-    assert b["isikukood"] == "49103275238"
+    # Phase 330: the personal identification code is never carried.
+    assert b["isikukood"] == ""
     assert b["kontrolli_teostamise_viis"] == "K"
     assert b["algus_kpv"] == "2026-02-20"
 

@@ -168,6 +168,17 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # Phase 330: the Estonian e-Business Register index — the same arrangement.
+    # Until it lands the printable page answers, as it did before Phase 330.
+    try:
+        from .sources.ariregister import warm_index as warm_ariregister_index
+
+        stats = await asyncio.to_thread(warm_ariregister_index)
+        log.info("ariregister index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("ariregister index warm-up failed (the page answers instead): %s", exc)
     # Phase 325: the Lithuanian Register of Legal Entities index — download the
     # release asset when absent, replace it when the asset changed, keep it
     # otherwise. It cannot be built here: the register's open-data files sit

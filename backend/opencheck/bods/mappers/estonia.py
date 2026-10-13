@@ -1,18 +1,60 @@
 """Estonia — e-Business Register (ariregister) → BODS.
 
-Split out of ``mapper.py`` in Phase 246, unchanged; ``mapper.py``
-re-exports every name defined here.
+Split out of ``mapper.py`` in Phase 246; ``mapper.py`` re-exports every
+name defined here. Phase 330 taught it the open-data files' vocabulary —
+the same row shape the SOAP-era bundle had, now read from the daily index
+(``sources/ariregister.py``) — while keeping the printable page's rows
+mapping exactly as before.
+
+Emitted statements:
+
+1. One entityStatement for the company itself.
+2. One personStatement (or entityStatement for a legal person) and one
+   ownershipOrControlStatement per entry in the register of shareholders
+   (``osanikud``): ``shareholding`` with the exact percentage.
+3. One personStatement / entityStatement and one ownershipOrControlStatement
+   per person on the registry card (``kaardile_kantud_isikud``), role-mapped
+   to BODS interest types (``_EE_OFFICER_ROLE_MAP``); roles that are not an
+   interest in the company (a contact person, the share registrar) are
+   skipped. Officers are serving-only (Phase 317).
+4. One personStatement and one ownershipOrControlStatement per declared
+   beneficial owner (``kasusaajad``), typed from the register's
+   manner-of-control code (``_EE_BO_CONTROL_MAP``) with the register's own
+   wording in ``details``, and ``beneficialOwnershipOrControl`` from the
+   regimes registry.
+
+Personal identity: since November 2024 the open data carries no personal
+identification codes; a natural person is identified across the three
+lists only by ``isikukood_hash``, a pseudonymous UUID that is the same for
+the same person on every list of the same company. It is the person's
+local id — so a director who is also a shareholder and the declared owner
+is one node — and it is passed as an identifier only for
+``make_person_statement`` to move into an ``identifying`` annotation
+(Phase 255): it is never written to ``personStatement.identifiers``.
+
+Countries: the files use ISO 3166-1 alpha-3 with a few IOC-style strays
+(``DEN``, ``GER``, ``LAT``, ``NED``…); :func:`_ee_country` resolves what
+it can and a code it cannot resolve becomes a name alone, never a stand-in
+(the Phase 239 contract).
+
+Date format in the files: ``DD.MM.YYYY`` (converted here); the index and
+the page path already hand over ISO days.
 """
 
 from __future__ import annotations
 
 from typing import Any, Iterable
 
+import pycountry
+
 from .. import liveness as _liveness
+from ..annotations import commenting, pointer
 from ..statements import (
     SOURCE_NAMES,
     _addr,
+    _country_obj,
     _stable_id,
+    dated_by_cut,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
@@ -21,57 +63,117 @@ from ..statements import (
 
 
 # ----------------------------------------------------------------------
-# Estonian e-Business Register (ariregister) → BODS
+# Vocabularies
 # ----------------------------------------------------------------------
-#
-# Maps a bundle from AriregisterAdapter.fetch() to BODS v0.4 statements.
-#
-# Emitted statements:
-#   1. One entityStatement for the company itself.
-#   2. One personStatement  + ownershipOrControlStatement per shareholder
-#      (osanikud). For corporate shareholders (isiku_tyyp == "J") with an
-#      Estonian registry code, an entityStatement is emitted instead of a
-#      personStatement, and the interest type is "shareholding".
-#   3. One personStatement  + ownershipOrControlStatement per officer on the
-#      registry card (kaardile_kantud_isikud), role-mapped to BODS interest
-#      types (boardMember, seniorManagingOfficial, etc.).
-#   4. One personStatement  + ownershipOrControlStatement per declared
-#      beneficial owner (kasusaajad), interest type "beneficialOwner".
-#      These statements are only emitted when the bundle contains BO data
-#      (controlled by include_beneficial_owners in the adapter).
-#
-# Personal identity: since November 2024 the open data files no longer
-# contain personal identification numbers (isikukood_registrikood is null
-# for natural persons). The `isikukood_hash` UUID field is used as a stable
-# cross-file identifier and is surfaced as an identifier with scheme
-# "EE-ARIREGISTER-HASH" when present.
-#
-# Date format in source: DD.MM.YYYY — converted to ISO YYYY-MM-DD here.
 
+#: Registry-card role code → (BODS interest type, descriptive label). The
+#: label is the English gloss with the register's Estonian term; a role not
+#: listed is not an interest in the company and is skipped (``KISIK``
+#: contact person, ``ORP``/``ARP`` share registrar, ``MDKPI`` recipient of
+#: procedural documents, ``DOKH`` keeper of documents).
 _EE_OFFICER_ROLE_MAP: dict[str, tuple[str, str]] = {
-    # (BODS interest type, descriptive label)
     "JUHL":   ("boardMember",              "Board member (juhatuse liige)"),
+    "JUHJ":   ("boardMember",              "Board member, manager (juhatuse liige (juhataja))"),
+    "JUHA":   ("boardMember",              "Sole board member (juhatuse ainuliige)"),
+    "JUHE":   ("boardChair",               "Chair of the board (juhatuse esimees)"),
+    "HNKL":   ("boardMember",              "Supervisory board member (haldusnõukogu liige)"),
     "PROK":   ("seniorManagingOfficial",   "Procurist (prokurist)"),
     "LIKV":   ("seniorManagingOfficial",   "Liquidator (likvideerija)"),
     "LIKVJ":  ("boardMember",              "Liquidator (board member)"),
+    "PANKR":  ("seniorManagingOfficial",   "Bankruptcy trustee (pankrotihaldur)"),
+    "AJUTPH": ("seniorManagingOfficial",   "Interim bankruptcy trustee (ajutine pankrotihaldur)"),
+    "AJPH":   ("seniorManagingOfficial",   "Interim bankruptcy trustee acting as liquidator"),
+    "JPNKR":  ("seniorManagingOfficial",   "Supervising bankruptcy trustee (järelevalveõiguslik pankrotihaldur)"),
+    "ERIH":   ("seniorManagingOfficial",   "Special-regime administrator (erirežiimihaldur)"),
     "TOSAN":  ("boardMember",              "General partner (täisosanik)"),
     "UOSAN":  ("boardMember",              "Limited partner (usaldusosanik)"),
+    "EUSOS":  ("boardMember",              "Limited partner authorised to represent (esindama volitatud usaldusosanik)"),
+    "EUSOS2": ("boardMember",              "Limited partner authorised to represent (esindama volitatud usaldusosanik)"),
     "ASES":   ("seniorManagingOfficial",   "Authorised representative"),
+    "ESIS":   ("seniorManagingOfficial",   "Person entitled to represent (esindama õigustatud isik)"),
+    "ESIS2":  ("seniorManagingOfficial",   "Person entitled to represent (esindama õigustatud isik)"),
     "SJESI":  ("seniorManagingOfficial",   "Legal representative"),
     "VFILJ":  ("seniorManagingOfficial",   "Branch manager (filiaali juhataja)"),
     "FV":     ("seniorManagingOfficial",   "Fund manager (fondivalitseja)"),
+    "VALIT":  ("seniorManagingOfficial",   "Manager (valitseja)"),
+    "FIE":    ("otherInfluenceOrControl",  "Sole proprietor (füüsilisest isikust ettevõtja)"),
+    "ETTEV":  ("otherInfluenceOrControl",  "Entrepreneur (ettevõtja)"),
+    "KOAS":   ("otherInfluenceOrControl",  "Superior authority (kõrgemalseisev asutus)"),
+    "YHL":    ("otherInfluenceOrControl",  "Cooperative member (ühistu liige)"),
+    "YHLLV":  ("otherInfluenceOrControl",  "Cooperative member with additional liability (lisavastutusega ühistu liige)"),
 }
 
-# Maps Estonian BO control-mechanism code → (BODS interest type, human-readable detail).
-# BODS v0.4 does not have a "beneficialOwner" interest type; BO is expressed via
-# beneficialOwnershipOrControl=True on a typed interest.
-_EE_BO_CONTROL_MAP: dict[str, tuple[str, str]] = {
-    "O": ("shareholding",            "Direct participation"),
-    "K": ("otherInfluenceOrControl", "Indirect participation"),
-    "H": ("votingRights",            "Through voting rights"),
-    "M": ("otherInfluenceOrControl", "Other means"),
-    "F": ("otherInfluenceOrControl", "Other means of control or influence"),
+#: Beneficial-owner manner-of-control code → (BODS interest type,
+#: directOrIndirect or None, English gloss). The register's own Estonian
+#: wording travels beside the gloss in ``details`` when the row carries it.
+#: ``O``/``K``/``H``/``M`` are also what the printable page's English labels
+#: are folded to; the rest were first read from the open data (13 Oct 2026:
+#: O 276,499 · J 56,361 · C 47,430 · K 23,677 · F 2,285 · Z 1,950 · X 1,168
+#: · Y 861 · S 311).
+_EE_BO_CONTROL_MAP: dict[str, tuple[str, str | None, str]] = {
+    "O": ("shareholding",            "direct",   "Direct participation"),
+    "K": ("shareholding",            "indirect", "Indirect participation"),
+    "H": ("votingRights",            None,       "Through voting rights"),
+    "X": ("votingRights",            "indirect", "More than 50% of the voting rights in a consolidated entity"),
+    "Y": ("appointmentOfBoard",      None,       "Right to appoint or remove the majority of the management or governing body"),
+    "J": ("seniorManagingOfficial",  None,       "Member of the highest governing body (board or council member), no owner identified"),
+    "C": ("seniorManagingOfficial",  None,       "Board member(s), no owner identified"),
+    "Z": ("otherInfluenceOrControl", None,       "Holder of founder's rights, council member or board member"),
+    "S": ("rightsToProfitOrIncome",  None,       "Beneficiary (soodustatud isik)"),
+    "F": ("otherInfluenceOrControl", None,       "Control or influence by other means (contractual, family or other relations)"),
+    "M": ("otherInfluenceOrControl", None,       "Other means"),
 }
+
+#: Legal forms (``ettevotja_oiguslik_vorm``) that are public bodies —
+#: typed ``stateBody``. State enterprises stay ``registeredEntity`` (the
+#: Phase 240 rule).
+_EE_STATE_BODY_FORMS = frozenset({
+    "Kohaliku omavalitsuse asutus",
+    "Täidesaatva riigivõimu asutus või riigi muu institutsioon",
+    "Avalik-õiguslik juriidiline isik, põhiseaduslik institutsioon või nende asutus",
+})
+
+#: Codes the files use that are not ISO 3166-1 alpha-3 (IOC and older
+#: spellings), seen 13 Oct 2026 — resolved to the ISO alpha-2 they mean.
+#: ``XXK`` (Kosovo) and ``ANT`` (the former Netherlands Antilles) have no
+#: current ISO code; they and ``XXX``/``XXS``/``XYY``/``~`` resolve to
+#: nothing and the row keeps the register's country name alone.
+_EE_COUNTRY_FIXUPS: dict[str, str] = {
+    "DEN": "DK", "GER": "DE", "LAT": "LV", "NED": "NL", "POR": "PT", "SUI": "CH",
+    "MON": "MC", "BUL": "BG", "IVB": "VG", "UAE": "AE", "SLO": "SI", "ROM": "RO",
+    "SIN": "SG", "CHI": "CL", "LIB": "LB", "ISV": "VI", "SKN": "KN",
+}
+
+#: Codes that mean "no country" rather than a country.
+_EE_NO_COUNTRY = frozenset({"", "XXX", "XXS", "XYY", "~"})
+
+
+def _ee_country(code3: str | None) -> str | None:
+    """ISO 3166-1 alpha-2 for one of the files' country codes, or None."""
+    code = (code3 or "").strip().upper()
+    if not code or code in _EE_NO_COUNTRY:
+        return None
+    if code in _EE_COUNTRY_FIXUPS:
+        return _EE_COUNTRY_FIXUPS[code]
+    if len(code) == 2 and pycountry.countries.get(alpha_2=code):
+        return code
+    found = pycountry.countries.get(alpha_3=code)
+    return found.alpha_2 if found else None
+
+
+def _ee_country_entry(code3: str | None, text: str | None) -> dict[str, str] | None:
+    """A BODS country object for a nationality: ``{name, code}`` when the
+    code resolves, the register's name alone when it does not, None when
+    the row names no country."""
+    alpha2 = _ee_country(code3)
+    if alpha2:
+        obj = _country_obj(alpha2)
+        if obj:
+            return obj
+    name = " ".join((text or "").split())
+    if name:
+        return {"name": name}
+    return None
 
 
 def _ee_date(s: str | None) -> str | None:
@@ -119,12 +221,104 @@ def _ee_full_name(person: dict[str, Any]) -> str:
     return last or first or "Unknown"
 
 
+def _ee_person_identifiers(person: dict[str, Any]) -> list[dict[str, str]]:
+    """The pseudonymous hash as the one identifier a person row carries —
+    ``make_person_statement`` moves it to an ``identifying`` annotation."""
+    if person.get("isikukood_hash"):
+        return [{
+            "id": person["isikukood_hash"],
+            "scheme": "EE-ARIREGISTER-HASH",
+            "schemeName": "Estonian e-Business Register person hash",
+        }]
+    return []
+
+
+def _ee_nationalities(person: dict[str, Any]) -> list[dict[str, str]]:
+    """The country of a foreign person's identifier, as a nationality; an
+    Estonian (``EST``) or unnamed one has none stated."""
+    code = (person.get("valis_kood_riik") or "").strip().upper()
+    if not code or code == "EST":
+        return []
+    entry = _ee_country_entry(code, person.get("valis_kood_riik_tekstina"))
+    return [entry] if entry else []
+
+
+def _ee_residence(person: dict[str, Any]) -> list[dict[str, Any]]:
+    """A residence address carrying the country alone (the files publish
+    no street for a beneficial owner)."""
+    alpha2 = _ee_country(person.get("aadress_riik"))
+    if not alpha2:
+        return []
+    obj = _country_obj(alpha2)
+    return [{"type": "residence", "country": obj}] if obj else []
+
+
+def _ee_foreign_entity(
+    party: dict[str, Any], kirje_id: str, prefix: str,
+) -> tuple[str, list[dict[str, str]], tuple[str, str | None] | None, str | None]:
+    """For a legal-person row: (local id, identifiers, jurisdiction, note).
+
+    An Estonian registry code is the id and an ``EE-ARIREGISTER`` identifier.
+    A foreign code (``valis_kood`` + its country) names the party stably
+    across lists but is not asserted as an identifier — the files state no
+    scheme for it — and is said in a ``commenting`` annotation instead.
+    """
+    corp_code = (party.get("isikukood_registrikood") or "").strip()
+    if corp_code:
+        return (
+            corp_code,
+            [{
+                "id": corp_code,
+                "scheme": "EE-ARIREGISTER",
+                "schemeName": "Estonian e-Business Register",
+            }],
+            ("Estonia", "EE"),
+            None,
+        )
+    foreign = (party.get("valis_kood") or "").strip()
+    riik = (party.get("valis_kood_riik") or "").strip().upper()
+    alpha2 = _ee_country(riik)
+    country_name = " ".join((party.get("valis_kood_riik_tekstina") or "").split())
+    jurisdiction: tuple[str, str | None] | None = None
+    if alpha2:
+        obj = _country_obj(alpha2)
+        if obj:
+            jurisdiction = (obj["name"], alpha2)
+    elif country_name:
+        jurisdiction = (country_name, None)
+    if foreign:
+        where = country_name or riik
+        note = f"Foreign register code {foreign}" + (f" ({where})" if where else "")
+        return f"foreign-{riik or 'xx'}-{foreign}", [], jurisdiction, note
+    return f"{prefix}-corp-{kirje_id}", [], jurisdiction, None
+
+
+def _ee_status(bundle: dict[str, Any]) -> str | None:
+    """The register's status in the printable page's English, which both
+    tiers hand over, so the liveness classes below read either."""
+    return bundle.get("status") or None
+
+
+# ----------------------------------------------------------------------
+# Mapper
+# ----------------------------------------------------------------------
+
+
 def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an AriregisterAdapter fetch bundle to BODS v0.4 statements.
 
+    A bundle read from the index (``tier: index``) is dated by the files'
+    cut (Phase 315); one read from the page keeps the factories' dates.
     Returns an empty iterable for stub bundles or missing company data.
     """
-    if not bundle or bundle.get("is_stub"):
+    if bundle and bundle.get("tier") == "index" and bundle.get("cut"):
+        yield from dated_by_cut(_map_ariregister(bundle), bundle.get("cut"))
+    else:
+        yield from _map_ariregister(bundle)
+
+
+def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
         return
 
     registry_code: str = bundle.get("registry_code") or ""
@@ -169,6 +363,10 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         if address_str
         else []
     )
+    legal_form = (bundle.get("legal_form") or "").strip()
+    subtype = (bundle.get("legal_form_subtype") or "").strip()
+    entity_details = legal_form + (f" — {subtype}" if subtype else "") or None
+    entity_type = "stateBody" if legal_form in _EE_STATE_BODY_FORMS else "registeredEntity"
 
     company_stmt = make_entity_statement(
         source_id="ariregister",
@@ -178,6 +376,8 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         identifiers=identifiers,
         founding_date=founding_date,
         addresses=addresses,
+        entity_type=entity_type,
+        entity_details=entity_details,
         source_url=source_url,
     )
     # e-Business Register status label as shown on the company page
@@ -187,12 +387,12 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         company_stmt,
         source_label=SOURCE_NAMES["ariregister"],
         liveness=_liveness.classify(
-            bundle.get("status"),
+            _ee_status(bundle),
             live=("Entered into the register", "Registered"),
             pending=("In liquidation", "Liquidation", "Bankrupt", "In bankruptcy", "Being deleted"),
             terminal=("Deleted from the register", "Deleted", "Removed from the register"),
         ),
-        raw=bundle.get("status") or None,
+        raw=bundle.get("status_text") or bundle.get("status") or None,
     )
     yield company_stmt
     company_stmt_id: str = company_stmt["statementId"]
@@ -200,6 +400,19 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     # ── 2. Shareholders ──────────────────────────────────────────────────
     seen_person_ids: set[str] = set()
     seen_entity_ids: set[str] = set()
+    # A person is emitted once, on the first list naming them; the residence
+    # country only the beneficial-owner list carries is gathered first so a
+    # shareholder-director-owner's one statement has it.
+    residences: dict[str, list[dict[str, Any]]] = {}
+    for bo in bundle.get("beneficial_owners") or []:
+        address = _ee_residence(bo)
+        if address:
+            residences.setdefault(_ee_person_id({
+                "isikukood_hash": bo.get("isikukood_hash"),
+                "kirje_id": str(bo.get("kirje_id") or ""),
+                "eesnimi": (bo.get("eesnimi") or "").strip(),
+                "nimi_arinimi": (bo.get("nimi") or "").strip(),
+            }), address)
 
     for sh in bundle.get("shareholders") or []:
         isiku_tyyp = sh.get("isiku_tyyp") or "F"
@@ -210,7 +423,7 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         end_date = _ee_date(sh.get("lopp_kpv"))
         kirje_id = str(sh.get("kirje_id") or "")
 
-        interests: list[dict[str, Any]] = [{"type": "shareholding"}]
+        interests: list[dict[str, Any]] = [{"type": "shareholding", "directOrIndirect": "direct"}]
         try:
             pct = float(pct_str) if pct_str else None
         except ValueError:
@@ -224,10 +437,22 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 "minimum": pct,
                 "maximum": pct,
             }
+        details: list[str] = []
         if share_size:
-            interests[0]["details"] = (
-                f"Share value: {share_size} {currency}".strip()
-            )
+            details.append(f"Share value: {share_size} {currency}".strip())
+        kind = (sh.get("osaluse_omandiliik") or "").strip()
+        kind_text = (sh.get("osaluse_omandiliik_tekstina") or "").strip()
+        if kind and kind != "L":
+            # Joint (Y) or common (K / KY) ownership of one share — the
+            # percentage is the share's, held together with another entry.
+            gloss = {"Y": "joint ownership", "K": "common ownership", "KY": "share in common ownership held jointly"}.get(kind, "")
+            details.append(" ".join(p for p in (gloss, f"({kind_text})" if kind_text else "") if p))
+        allikas_text = (sh.get("kontrolli_allikas_tekstina") or "").strip()
+        if allikas_text:
+            when = _ee_date(sh.get("kontrolli_allika_kpv"))
+            details.append(f"Entry source: {allikas_text}" + (f", {when}" if when else ""))
+        if details:
+            interests[0]["details"] = "; ".join(details)
         if start_date:
             interests[0]["startDate"] = start_date
         if end_date:
@@ -235,23 +460,16 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
         if isiku_tyyp == "J":
             # Corporate shareholder — emit an entity statement
-            corp_code = sh.get("isikukood_registrikood") or ""
             corp_name = (sh.get("nimi_arinimi") or "").strip()
             if not corp_name:
                 continue
-            corp_local_id = corp_code if corp_code else f"sh-corp-{kirje_id}"
-            corp_ids: list[dict[str, str]] = []
-            if corp_code:
-                corp_ids.append({
-                    "id": corp_code,
-                    "scheme": "EE-ARIREGISTER",
-                    "schemeName": "Estonian e-Business Register",
-                })
+            corp_local_id, corp_ids, jurisdiction, note = _ee_foreign_entity(sh, kirje_id, "sh")
+            corp_code = corp_ids[0]["id"] if corp_ids else ""
             corp_stmt = make_entity_statement(
                 source_id="ariregister",
                 local_id=corp_local_id,
                 name=corp_name,
-                jurisdiction=("Estonia", "EE") if corp_code else None,
+                jurisdiction=jurisdiction,
                 identifiers=corp_ids,
                 source_url=(
                     f"https://ariregister.rik.ee/eng/company/{corp_code}"
@@ -259,6 +477,10 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                     else None
                 ),
             )
+            if note:
+                corp_stmt.setdefault("annotations", []).append(
+                    commenting(pointer("recordDetails"), note + ", as filed in the e-Business Register; no identifier scheme is stated.")
+                )
             if corp_stmt["statementId"] not in seen_entity_ids:
                 yield corp_stmt
                 seen_entity_ids.add(corp_stmt["statementId"])
@@ -277,28 +499,15 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             full_name = _ee_full_name(sh)
             if not full_name or full_name == "Unknown":
                 continue
-            birth_date = _ee_date(sh.get("synniaeg"))
-            country_code = sh.get("valis_kood_riik") or ""
-            nationalities = (
-                [{"code": country_code}]
-                if country_code and country_code not in ("XXX", "EST")
-                else []
-            )
-            p_ids: list[dict[str, str]] = []
-            if sh.get("isikukood_hash"):
-                p_ids.append({
-                    "id": sh["isikukood_hash"],
-                    "scheme": "EE-ARIREGISTER-HASH",
-                    "schemeName": "Estonian e-Business Register person hash",
-                })
             if person_id not in seen_person_ids:
                 person_stmt = make_person_statement(
                     source_id="ariregister",
                     local_id=person_id,
                     full_name=full_name,
-                    nationalities=nationalities,
-                    birth_date=birth_date,
-                    identifiers=p_ids,
+                    nationalities=_ee_nationalities(sh),
+                    birth_date=_ee_date(sh.get("synniaeg")),
+                    addresses=residences.get(person_id, []),
+                    identifiers=_ee_person_identifiers(sh),
                     source_url=source_url,
                 )
                 yield person_stmt
@@ -321,13 +530,17 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     for officer in bundle.get("officers") or []:
         role_code = officer.get("isiku_roll") or ""
         if role_code not in _EE_OFFICER_ROLE_MAP:
-            continue  # skip roles we don't map (e.g. KISIK contact, ORP share registrar)
+            continue  # skip roles that are no interest (KISIK contact, ORP share registrar)
         interest_type, role_label = _EE_OFFICER_ROLE_MAP[role_code]
         start_date = _ee_date(officer.get("algus_kpv"))
         end_date = _ee_date(officer.get("lopp_kpv"))
         kirje_id = str(officer.get("kirje_id") or "")
 
         interests = [{"type": interest_type, "details": role_label}]
+        contribution = (officer.get("osamaks") or "").strip()
+        if contribution:
+            # A partner's contribution to a partnership (täisosanik / usaldusosanik).
+            interests[0]["details"] += f"; contribution {contribution} {officer.get('osamaksu_valuuta') or ''}".rstrip()
         if start_date:
             interests[0]["startDate"] = start_date
         if end_date:
@@ -335,35 +548,31 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
         if (officer.get("isiku_tyyp") or "F") == "J":
             # A legal person in the role — a fund's general partner, a fund
-            # manager, a corporate liquidator — is a company and is published
-            # as one (follow-up to Phase 293). Keyed on its registry code,
-            # the key a corporate shareholder gets, so a GP that is also a
-            # partner is one entity.
-            corp_code = (officer.get("isikukood_registrikood") or "").strip()
+            # manager, a corporate liquidator, a state agency's superior
+            # authority — is a company and is published as one (follow-up to
+            # Phase 293). Keyed on its registry code, the key a corporate
+            # shareholder gets, so a GP that is also a partner is one entity.
             corp_name = (officer.get("nimi_arinimi") or "").strip()
             if not corp_name:
                 continue
-            corp_local_id = corp_code or f"off-corp-{kirje_id}"
+            corp_local_id, corp_ids, jurisdiction, note = _ee_foreign_entity(officer, kirje_id, "off")
+            corp_code = corp_ids[0]["id"] if corp_ids else ""
             corp_stmt = make_entity_statement(
                 source_id="ariregister",
                 local_id=corp_local_id,
                 name=corp_name,
-                jurisdiction=("Estonia", "EE") if corp_code else None,
-                identifiers=(
-                    [{
-                        "id": corp_code,
-                        "scheme": "EE-ARIREGISTER",
-                        "schemeName": "Estonian e-Business Register",
-                    }]
-                    if corp_code
-                    else []
-                ),
+                jurisdiction=jurisdiction,
+                identifiers=corp_ids,
                 source_url=(
                     f"https://ariregister.rik.ee/eng/company/{corp_code}"
                     if corp_code
                     else None
                 ),
             )
+            if note:
+                corp_stmt.setdefault("annotations", []).append(
+                    commenting(pointer("recordDetails"), note + ", as filed in the e-Business Register; no identifier scheme is stated.")
+                )
             if corp_stmt["statementId"] not in seen_entity_ids:
                 yield corp_stmt
                 seen_entity_ids.add(corp_stmt["statementId"])
@@ -383,28 +592,15 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         if not full_name or full_name == "Unknown":
             continue
 
-        birth_date = _ee_date(officer.get("synniaeg"))
-        country_code = officer.get("valis_kood_riik") or ""
-        nationalities = (
-            [{"code": country_code}]
-            if country_code and country_code not in ("XXX", "EST")
-            else []
-        )
-        p_ids = []
-        if officer.get("isikukood_hash"):
-            p_ids.append({
-                "id": officer["isikukood_hash"],
-                "scheme": "EE-ARIREGISTER-HASH",
-                "schemeName": "Estonian e-Business Register person hash",
-            })
         if person_id not in seen_person_ids:
             person_stmt = make_person_statement(
                 source_id="ariregister",
                 local_id=person_id,
                 full_name=full_name,
-                nationalities=nationalities,
-                birth_date=birth_date,
-                identifiers=p_ids,
+                nationalities=_ee_nationalities(officer),
+                birth_date=_ee_date(officer.get("synniaeg")),
+                addresses=residences.get(person_id, []),
+                identifiers=_ee_person_identifiers(officer),
                 source_url=source_url,
             )
             yield person_stmt
@@ -430,9 +626,9 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         kirje_id = str(bo.get("kirje_id") or "")
         start_date = _ee_date(bo.get("algus_kpv"))
         end_date = _ee_date(bo.get("lopp_kpv"))
-        control_code = bo.get("kontrolli_teostamise_viis") or ""
-        interest_type, control_label = _EE_BO_CONTROL_MAP.get(
-            control_code, ("otherInfluenceOrControl", "")
+        control_code = (bo.get("kontrolli_teostamise_viis") or "").strip()
+        interest_type, direct_or_indirect, control_label = _EE_BO_CONTROL_MAP.get(
+            control_code, ("otherInfluenceOrControl", None, "")
         )
 
         # kasusaajad records ARE the Estonian BO declarations — the flag
@@ -440,13 +636,18 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         interest: dict[str, Any] = set_beneficial_ownership(
             {"type": interest_type}, "ariregister", record_kind="kasusaaja_bo"
         )
-        if control_label:
-            interest["details"] = control_label
+        if direct_or_indirect:
+            interest["directOrIndirect"] = direct_or_indirect
+        control_text = " ".join((bo.get("kontrolli_teostamise_viis_tekstina") or "").split())
+        if control_label and control_text:
+            interest["details"] = f"{control_label} ({control_text})"
+        elif control_label or control_text:
+            interest["details"] = control_label or control_text
         if start_date:
             interest["startDate"] = start_date
         if end_date:
             interest["endDate"] = end_date
-        interests: list[dict[str, Any]] = [interest]
+        interests = [interest]
 
         first = (bo.get("eesnimi") or "").strip()
         last = (bo.get("nimi") or "").strip()
@@ -460,35 +661,15 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             "eesnimi": first,
             "nimi_arinimi": last,
         })
-        birth_date = _ee_date(bo.get("synniaeg"))
-        country_code = bo.get("valis_kood_riik") or ""
-        res_country = bo.get("aadress_riik") or ""
-        nationalities = (
-            [{"code": country_code}]
-            if country_code and country_code not in ("XXX",)
-            else []
-        )
-        addresses = (
-            [_addr("residence", "", res_country)]
-            if res_country
-            else []
-        )
-        p_ids = []
-        if bo.get("isikukood_hash"):
-            p_ids.append({
-                "id": bo["isikukood_hash"],
-                "scheme": "EE-ARIREGISTER-HASH",
-                "schemeName": "Estonian e-Business Register person hash",
-            })
         if person_id not in seen_person_ids:
             person_stmt = make_person_statement(
                 source_id="ariregister",
                 local_id=person_id,
                 full_name=full_name,
-                nationalities=nationalities,
-                birth_date=birth_date,
-                addresses=addresses,
-                identifiers=p_ids,
+                nationalities=_ee_nationalities(bo),
+                birth_date=_ee_date(bo.get("synniaeg")),
+                addresses=_ee_residence(bo),
+                identifiers=_ee_person_identifiers(bo),
                 source_url=source_url,
             )
             yield person_stmt
@@ -497,7 +678,7 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             person_stmt = {
                 "statementId": _stable_id("ariregister", "person", person_id)
             }
-        yield make_relationship_statement(
+        rel = make_relationship_statement(
             source_id="ariregister",
             local_id=f"bo-{kirje_id}",
             subject_statement_id=company_stmt_id,
@@ -506,3 +687,15 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=interests,
             source_url=source_url,
         )
+        if bo.get("lahknevusteade_esitatud") is True:
+            # A discrepancy report (lahknevusteade) has been filed against
+            # this entry by an obliged entity or authority — the register
+            # publishes the flag, not the report. Said beside the interest,
+            # never read as a finding against the person.
+            rel.setdefault("annotations", []).append(commenting(
+                pointer("recordDetails", "interests", 0),
+                "A discrepancy report (lahknevusteade) is recorded against "
+                "this beneficial-owner entry in the e-Business Register; the "
+                "register publishes the flag, not the report's content.",
+            ))
+        yield rel

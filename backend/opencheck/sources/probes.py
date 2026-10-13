@@ -218,16 +218,25 @@ PROBES: dict[str, SourceProbe] = {
         bods_mapper="map_ares",
     ),
     "ariregister": _p(
-        tier="live",
+        tier="index",
         subject="Eesti Energia AS",
         args=("10421629",),
         anchor_lei="5493005044RTLQ5RZU70",
         expect_fields=("name", "status", "officers", "beneficial_owners"),
+        # Two tiers, one source (Phase 330): the daily index answers as a
+        # snapshot when warm_bulk_stores.py has downloaded it; without it the
+        # printable page answers live, as before. Either is the adapter
+        # working — no requires_files, so neither path is a skip.
+        expect_liveness=frozenset({"snapshot", "live"}),
+        # Rebuilt daily by refresh-ariregister-index.yml; ten days means the
+        # workflow has failed for a week, not that RIK stopped publishing.
+        snapshot_max_age_days=10,
         bods_mapper="map_ariregister",
         notes=(
-            "The regression fence for PR #153: this adapter bypasses "
-            "build_client() and records provenance explicitly, so a refactor "
-            "that drops the record_live() call turns this probe red."
+            "The regression fence for PR #153: on the page path this adapter "
+            "bypasses build_client() and records provenance explicitly, so a "
+            "refactor that drops the record_live() call turns this probe red. "
+            "On the index path declare_snapshot() plays the same part."
         ),
     ),
     "bolagsverket": _p(
