@@ -261,13 +261,16 @@ def test_the_run_reads_lookups_and_deepens_and_reports(monkeypatch):
     report = bq.run(
         client=client, base_url="https://api.example",
         lookup_subjects=[{"lei": "LEI1", "name": "Subject"}],
-        deepen=[bq.DeepenSubject("prh", "1852302-9", "Neste", frozenset())],
+        deepen=[bq.DeepenSubject("prh", "1852302-9", "Neste", frozenset(),
+                                 legal_name="Neste Oyj")],
         official_registers=OFFICIAL_REGISTER_SOURCES,
         sleep=waits.append, today=TODAY, now=lambda: "2026-10-12T10:00:00Z",
     )
     assert waits == [2.0]  # honoured Retry-After, then retried
     assert client.calls[0][1] == {"lei": "LEI1", "refresh": "true"}
-    assert client.calls[-1][1] == {"source": "prh", "hit_id": "1852302-9"}
+    assert client.calls[-1][1] == {
+        "source": "prh", "hit_id": "1852302-9", "legal_name": "Neste Oyj"
+    }
     t = report["totals"]
     assert t["by_check"] == {"bulk_dated_today": 1, "deepen_failed": 1}
     assert bq.failed(report)

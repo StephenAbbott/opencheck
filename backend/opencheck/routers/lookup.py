@@ -387,6 +387,16 @@ async def deepen(
     response: Response,
     source: str = Query(..., description="Adapter id, e.g. 'companies_house'"),
     hit_id: str = Query(..., description="Adapter-local hit id"),
+    legal_name: str | None = Query(
+        None,
+        max_length=300,
+        description=(
+            "The company's legal name, as a lookup would pass it from GLEIF. "
+            "Used only by registers that take one: KvK, whose open data has no "
+            "name, maps nothing without it; others check it against the "
+            "register's own name. Applies to this response only."
+        ),
+    ),
 ) -> DeepenResponse:
     """Fetch the full record for a single hit and map to BODS v0.4."""
 
@@ -397,8 +407,17 @@ async def deepen(
     # Stored OO bundle is canonical — consult it first so a live-fetch failure
     # (e.g. a Companies House outage) still serves the stored graph.
     override = _bods_data_override(source, hit_id)
+    # Phase 326: hand on a supplied legal name the way a lookup does, to the
+    # registers that take one. A register that remembers names (KvK) is told
+    # not to: a caller's name must not reach the next reader of that number.
+    fetch_kwargs: dict[str, Any] = {}
+    name = (legal_name or "").strip()
+    if name and adapter.lookup_pass_legal_name:
+        fetch_kwargs["legal_name"] = name
+        if adapter.remembers_legal_name:
+            fetch_kwargs["remember_name"] = False
     try:
-        raw, prov = await _fetch_with_provenance(adapter, hit_id)
+        raw, prov = await _fetch_with_provenance(adapter, hit_id, **fetch_kwargs)
     except Exception:
         if override is None:
             raise

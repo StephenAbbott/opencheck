@@ -86,6 +86,7 @@ class KvKAdapter(SourceAdapter):
         LookupDeriver(frozenset({KVK_RA_CODE}), "kvk_number", normalise_kvk),
     )
     lookup_pass_legal_name = True
+    remembers_legal_name = True
 
 
     def __init__(self) -> None:
@@ -137,7 +138,9 @@ class KvKAdapter(SourceAdapter):
     # Fetch
     # ------------------------------------------------------------------
 
-    async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
+    async def fetch(
+        self, hit_id: str, *, legal_name: str = "", remember_name: bool = True
+    ) -> dict[str, Any]:
         """Return the KvK open-data record for a KvK number.
 
         ``hit_id`` must be an 8-digit KvK number (string, with or without
@@ -147,9 +150,13 @@ class KvKAdapter(SourceAdapter):
         """
         kvk_number = normalise_kvk(hit_id)
 
-        # Persist the name if provided.
-        if legal_name:
+        # Persist the name if provided — unless the caller asked not to.
+        # ``/deepen`` passes ``remember_name=False``: a name supplied there is
+        # the caller's, not GLEIF's, and must not reach the next reader
+        # (Phase 326).
+        if legal_name and remember_name:
             self._names[kvk_number] = legal_name
+        name = legal_name or self._names.get(kvk_number, "")
 
         cache_key = f"{_CACHE_NS}/number/{kvk_number}"
         cached = self._cache.get_payload(cache_key)
@@ -161,7 +168,7 @@ class KvKAdapter(SourceAdapter):
                 "source_id": self.id,
                 "kvk_number": kvk_number,
                 "company": None,
-                "legal_name": self._names.get(kvk_number, ""),
+                "legal_name": name,
                 "is_stub": True,
             }
         else:
@@ -171,7 +178,7 @@ class KvKAdapter(SourceAdapter):
                         client, f"{_API_BASE}/basisbedrijfsgegevens/kvknummer/{kvk_number}"
                     )
             except httpx.HTTPError as exc:
-                return self._unanswered(kvk_number, type(exc).__name__)
+                return self._unanswered(kvk_number, name, type(exc).__name__)
             if response.status_code == 404:
                 # The KvK number is not in the open-data set (BV/NV-only).
                 # Cache the miss so we don't re-hit the 1-req/minute limit,
@@ -183,19 +190,19 @@ class KvKAdapter(SourceAdapter):
                 # /deepen answered HTTP 500 (BODS quality sweep, 12 Oct 2026).
                 # It is an unanswered question, never "no record": degrade,
                 # return an empty bundle, cache nothing (the Phase 262 rule).
-                return self._unanswered(kvk_number, f"HTTP {response.status_code}")
+                return self._unanswered(kvk_number, name, f"HTTP {response.status_code}")
             else:
                 try:
                     data = response.json()
                 except ValueError:
-                    return self._unanswered(kvk_number, "a non-JSON body")
+                    return self._unanswered(kvk_number, name, "a non-JSON body")
             self._cache.put(cache_key, data)
 
         bundle: dict[str, Any] = {
             "source_id": self.id,
             "kvk_number": kvk_number,
             "company": data,
-            "legal_name": self._names.get(kvk_number, ""),
+            "legal_name": name,
             "is_stub": False,
         }
         if data is None:
@@ -230,7 +237,7 @@ class KvKAdapter(SourceAdapter):
             delay *= 2
         return response
 
-    def _unanswered(self, kvk_number: str, failure: str) -> dict[str, Any]:
+    def _unanswered(self, kvk_number: str, name: str, failure: str) -> dict[str, Any]:
         """Record that KvK did not answer and return an empty, uncached bundle.
 
         The detail names the failure only, never the KvK number.
@@ -244,6 +251,6 @@ class KvKAdapter(SourceAdapter):
             "source_id": self.id,
             "kvk_number": kvk_number,
             "company": None,
-            "legal_name": self._names.get(kvk_number, ""),
+            "legal_name": name,
             "is_stub": True,
         }
