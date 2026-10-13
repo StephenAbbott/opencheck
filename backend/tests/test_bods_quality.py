@@ -217,6 +217,7 @@ def test_deepen_subjects_take_only_what_deepen_can_address():
     assert subjects["prh"].hit_id == "1852302-9"
     assert subjects["eiti_assessment"].hit_id == "21380068P1DRHMJ8KU70"  # fetch_by_lei
     assert "bce_belgium" not in subjects  # inactive
+    assert "mca_india" not in subjects  # inactive until it has an API key (Phase 328)
     assert "openaleph" not in subjects  # its fetch takes an entity id, not the LEI
     assert "opensanctions" not in subjects  # a search probe
     assert subjects["asp_moldova"].expect_liveness == frozenset({"snapshot"})

@@ -535,7 +535,13 @@ PROBES: dict[str, SourceProbe] = {
         ),
     ),
     "mca_india": _p(
-        tier="live",
+        # Phase 328: inactive until DATA_GOV_IN_API_KEY is configured on
+        # Render. Without the key every read is a stub, so the BODS sweep
+        # warned deepen_empty on it every week (Phase 327) and source-health
+        # reported it "not configured". Inactive: the BODS sweep skips it and
+        # source-health reports "env-gated off". Set tier="live" again in the
+        # commit that configures the key.
+        tier="inactive",
         subject="Infosys Limited",
         args=("L85110KA1981PLC013115",),
         requires_env=("DATA_GOV_IN_API_KEY",),
@@ -544,7 +550,7 @@ PROBES: dict[str, SourceProbe] = {
         notes=(
             "Phase 163: Infosys's own GLEIF record is registered at RA000394 with the CIN verbatim as "
             "registeredAs, so the anchor derives the probe subject exactly. The earlier note said no such "
-            "record existed."
+            "record existed. Phase 328: inactive until a data.gov.in API key is obtained."
         ),
     ),
     "nz_companies": _p(
