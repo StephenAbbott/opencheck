@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 326** — `/deepen` takes an optional legal name, so the BODS quality sweep can check the KvK register's statements.
+**Latest: Phase 327** — The BODS quality sweep warns when a source answers with no statements, instead of reading it as clean.
 
 → [Full development history](docs/status.md)
 
