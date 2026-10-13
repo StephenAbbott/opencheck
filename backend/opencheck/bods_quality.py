@@ -72,6 +72,15 @@ Every finding names its class, its source and the statement it is about.
     A relationship whose every interest has ended, still ``recordStatus``
     other than ``closed`` — the Phase 317 lifecycle rule, which the factory
     now applies.
+``deepen_empty``
+    ``/deepen`` answered 200 for a probe subject with **no** statements, so
+    none of the rules above saw anything and the source would otherwise read
+    clean (Phase 327). The message says why, from the response's ``raw``: not
+    read at all (``is_stub`` — no key, no live access, or the source did not
+    answer), the register's own "no record", a record dropped by the name
+    check, or answered but mapped nothing. A warning, not a failure: an
+    unconfigured key or a register's bad day is not invalid BODS, but it is
+    a source this report has not checked.
 
 The warnings are checked only on statements OpenCheck publishes
 (``publicationDetails.publisher.name`` "OpenCheck"): another publisher's
@@ -185,6 +194,28 @@ def _dates_in(statement: Mapping[str, Any]) -> list[tuple[str, str]]:
             if day:
                 out.append((f"interests[{i}].{key}", day))
     return out
+
+
+def empty_deepen_reason(raw: Any) -> str:
+    """Why a ``/deepen`` answer carried no statements, read from its ``raw``.
+
+    The adapters' own flags, in the order that explains most: a stub was
+    never read; ``name_mismatch`` is a record the name check dropped;
+    ``not_found`` / ``coverage_note`` is the register saying it holds no such
+    record; anything else answered and mapped to nothing.
+    """
+    if not isinstance(raw, Mapping):
+        return "no raw payload to say why"
+    if raw.get("is_stub"):
+        return (
+            "the source was not read (raw.is_stub) — no key or live access "
+            "configured, or it did not answer"
+        )
+    if raw.get("name_mismatch"):
+        return "the register's record was dropped by the name check (raw.name_mismatch)"
+    if raw.get("not_found") or raw.get("coverage_note"):
+        return "the register answered that it holds no such record"
+    return "the source answered but its record mapped to no statement"
 
 
 def check_statements(
@@ -608,6 +639,17 @@ def run(
             subjects.append(entry)
             continue
         statements = [s for s in fetched.payload.get("bods") or [] if isinstance(s, dict)]
+        if not statements:
+            # Phase 327: an empty answer is not a clean one. None of the rules
+            # would see it, and the source would read green unchecked.
+            entry["statements"] = 0
+            entry["findings"] = [Finding(
+                "deepen_empty", WARN, ds.source_id,
+                "/deepen returned no statements: "
+                + empty_deepen_reason(fetched.payload.get("raw")),
+            ).to_dict()]
+            subjects.append(entry)
+            continue
         # A probe's expectation stands in for liveness only when it names one
         # state; "live or cached" says nothing a date rule can use.
         expected = next(iter(ds.expect_liveness)) if len(ds.expect_liveness) == 1 else None

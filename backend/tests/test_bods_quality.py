@@ -378,3 +378,54 @@ def test_the_workflow_runs_the_sweep_and_publishes_the_data_slot():
         if line.strip().startswith("- uses:"):
             ref = line.split("@", 1)[1].split()[0]
             assert len(ref) == 40, f"action not pinned to a commit: {line.strip()}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 327: an empty /deepen is a warning, never a clean subject
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "fragment"),
+    [
+        ({"is_stub": True}, "not read (raw.is_stub)"),
+        ({"is_stub": False, "name_mismatch": True}, "dropped by the name check"),
+        ({"is_stub": False, "not_found": True}, "holds no such record"),
+        ({"is_stub": False, "company": None, "coverage_note": "not in the open set"},
+         "holds no such record"),
+        ({"is_stub": False, "company": {"actief": "J"}, "legal_name": ""},
+         "answered but its record mapped to no statement"),
+        (None, "no raw payload"),
+    ],
+)
+def test_empty_deepen_reason_says_why(raw, fragment):
+    assert fragment in bq.empty_deepen_reason(raw)
+
+
+def test_an_empty_deepen_is_a_warning_and_does_not_fail_the_run(monkeypatch):
+    monkeypatch.setattr(bq, "validate_schema", lambda statements: [])
+    client = _Client({
+        "deepen": [
+            _Resp(200, {"bods": [], "raw": {"source_id": "mca_india", "is_stub": True}}),
+            _Resp(200, {"bods": [_stmt()], "raw": {"is_stub": False}}),
+        ],
+    })
+    report = bq.run(
+        client=client, base_url="https://api.example",
+        lookup_subjects=[],
+        deepen=[
+            bq.DeepenSubject("mca_india", "L85110KA1981PLC013115", "Infosys", frozenset()),
+            bq.DeepenSubject("companies_house", "00102498", "BP", frozenset()),
+        ],
+        official_registers=OFFICIAL_REGISTER_SOURCES,
+        sleep=lambda s: None, today=TODAY, now=lambda: "2026-10-13T08:00:00Z",
+    )
+    empty, full = report["subjects"]
+    assert empty["statements"] == 0
+    assert [(f["check"], f["severity"], f["source_id"]) for f in empty["findings"]] == [
+        ("deepen_empty", "warn", "mca_india")
+    ]
+    assert "raw.is_stub" in empty["findings"][0]["message"]
+    assert not any(f["check"] == "deepen_empty" for f in full["findings"])
+    assert report["totals"]["by_check"].get("deepen_empty") == 1
+    assert not bq.failed(report)
