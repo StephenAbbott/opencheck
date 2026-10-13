@@ -501,6 +501,10 @@ PROBES: dict[str, SourceProbe] = {
         tier="live",
         subject="ASML Holding",
         args=("17085815",),
+        # GLEIF's legal name for the LEI below (checked 13 Oct 2026). KvK's
+        # open data has no name, so without it the mapper emits nothing and
+        # the BODS sweep's /deepen checked no KvK statement (Phase 326).
+        kwargs={"legal_name": "ASML Holding N.V."},
         anchor_lei="724500Y6DUVHQD6OXN27",
         expect_fields=("company",),
         bods_mapper="map_kvk",

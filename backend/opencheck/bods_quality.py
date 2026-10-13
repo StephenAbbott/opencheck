@@ -481,6 +481,10 @@ class DeepenSubject:
     hit_id: str
     label: str
     expect_liveness: frozenset[str]
+    #: The probe's ``legal_name``, sent to ``/deepen`` as a lookup would send
+    #: GLEIF's (Phase 326). Without it KvK maps nothing and the sweep checked
+    #: no KvK statement at all.
+    legal_name: str = ""
 
 
 #: LEI-keyed probes whose adapter ``fetch`` takes something other than the
@@ -502,9 +506,11 @@ def deepen_subjects(probes: Mapping[str, Any]) -> list[DeepenSubject]:
         if method == "fetch_by_lei" and sid in _NOT_DEEPENABLE_BY_LEI:
             continue
         if len(args) == 1 and method in ("fetch", "fetch_by_lei") and isinstance(args[0], str):
+            kwargs = getattr(probe, "kwargs", None) or {}
             out.append(DeepenSubject(
                 sid, args[0], str(getattr(probe, "subject", "") or args[0]),
                 frozenset(getattr(probe, "expect_liveness", frozenset()) or ()),
+                legal_name=str(kwargs.get("legal_name") or ""),
             ))
     return out
 
@@ -586,9 +592,10 @@ def run(
     for i, ds in enumerate(deepen):
         if i and deepen_pace_s:
             sleep(deepen_pace_s)
-        fetched = fetch_json(
-            client, f"{base}/deepen", {"source": ds.source_id, "hit_id": ds.hit_id}, sleep=sleep
-        )
+        params = {"source": ds.source_id, "hit_id": ds.hit_id}
+        if ds.legal_name:
+            params["legal_name"] = ds.legal_name
+        fetched = fetch_json(client, f"{base}/deepen", params, sleep=sleep)
         entry = {
             "kind": "deepen", "id": f"{ds.source_id}:{ds.hit_id}", "name": ds.label,
             "source_id": ds.source_id, "seconds": fetched.seconds,

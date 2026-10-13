@@ -255,6 +255,13 @@ class SourceAdapter(ABC):
     #: Whether ``fetch()`` should receive ``legal_name=`` from the anchor.
     lookup_pass_legal_name: ClassVar[bool] = False
 
+    #: Whether ``fetch()`` keeps a ``legal_name`` it is given for later calls
+    #: (KvK, whose open data carries no name). Such a ``fetch`` takes
+    #: ``remember_name=``; ``/deepen`` passes ``False``, so a name a caller
+    #: supplies there is used for that response only and never shown to the
+    #: next reader (Phase 326).
+    remembers_legal_name: ClassVar[bool] = False
+
     #: Sources this adapter *republishes* — adapter ids, or the
     #: ``lineage.NATIONAL_REGISTERS`` marker for "every national register".
     #: An aggregator that mirrors Companies House agreeing with Companies
