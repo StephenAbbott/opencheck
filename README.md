@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 328** — MCA India's health probe is switched off until a data.gov.in API key is configured, so the weekly sweeps stop warning about a gap that is already known.
+**Latest: Phase 329** — A Moldova index rebuild that is refused for yielding too few companies now degrades the source, so the weekly sweep can see an instance answering from the export before it.
 
 → [Full development history](docs/status.md)
 

@@ -417,6 +417,18 @@ class IndexBuildError(RuntimeError):
     """The export's shape is not what the index builder understands."""
 
 
+class IndexCollapsed(IndexBuildError):
+    """The export parsed, and yielded too few companies to replace the index.
+
+    A subclass because a caller that only wants "the build did not happen"
+    keeps catching :class:`IndexBuildError`. Separate because the two mean
+    different things to a reader: a build error is an export this code cannot
+    read, while this is an export it read fine and does not believe — and the
+    index that stays in place goes on answering, which is the state the
+    source-health sweep has to be told about (Phase 329).
+    """
+
+
 def _sheet_path(zf: zipfile.ZipFile, sheet_name: str | None) -> str:
     workbook = ET.fromstring(zf.read("xl/workbook.xml"))
     sheets = list(workbook.iter(f"{_NS}sheet"))
@@ -850,7 +862,7 @@ def build_index(
                 # replaced 119,258 companies with none.
                 conn.close()
                 tmp.unlink()
-                raise IndexBuildError(
+                raise IndexCollapsed(
                     f"export yielded {counts['companies']} companies, below the "
                     f"floor of {min_companies} (rows seen {counts['rows_seen']}, "
                     f"excluded as liquidated {counts['excluded_liquidated']}); "
@@ -1124,6 +1136,10 @@ def sync_index(*, force: bool = False) -> dict[str, Any]:
     portal has nothing newer; otherwise downloads the newest export and
     rebuilds. Never raises: a week-old index beats none, and the outcome is
     returned and logged.
+
+    Outcomes: ``kept``, ``built``, ``not_configured``, ``failed`` (the export
+    could not be fetched or read) and ``refused`` (it was read and yielded too
+    few companies to replace the index, which stays in place).
     """
     path = index_path()
     with _BUILD_LOCK:
@@ -1154,6 +1170,14 @@ def sync_index(*, force: bool = False) -> dict[str, Any]:
             )
             reset_connection()
             return _outcome("built", path, new_meta)
+        except IndexCollapsed as exc:
+            # Distinct from "failed" on purpose. The index in place is intact
+            # and goes on answering with every field the probe expects, so
+            # nothing downstream can tell this week's refusal from an ordinary
+            # week unless the outcome says so. ``fetch`` reads it back and
+            # records a degradation; see Phase 329 in docs/source-health-plan.md.
+            logger.warning("asp_moldova: index rebuild refused: %s", exc)
+            return _outcome("refused", path, meta, error=f"{type(exc).__name__}: {exc}"[:300])
         except Exception as exc:  # noqa: BLE001 - reported, never raised
             logger.warning("asp_moldova: index sync failed: %s", exc)
             return _outcome("failed", path, meta, error=f"{type(exc).__name__}: {exc}"[:300])
@@ -1262,6 +1286,7 @@ class AspMoldovaAdapter(SourceAdapter):
         key = name_key(query)
         if conn is None or len(key) < 3:
             return []
+        self._report_refused_rebuild()
         cur = conn.execute(
             "SELECT idno, name, legal_form FROM company WHERE name_key LIKE ? LIMIT 10",
             (f"%{key}%",),
@@ -1308,6 +1333,36 @@ class AspMoldovaAdapter(SourceAdapter):
             await asyncio.sleep(0.5)
         return _shared_conn()
 
+    def _report_refused_rebuild(self) -> None:
+        """Say so when this answer comes from an index that was kept back.
+
+        Phase 322 made a collapsed rebuild leave the previous index in place,
+        which is the right call for a reader — last week's Moldova beats none.
+        It also created a failure this project's five assertions cannot see:
+        the index answers, resolves ``snapshot``, carries every expected field
+        and maps its usual statements, so the probe is green while the register
+        has moved on and every later export is refused the same way. The only
+        alarm left was ``snapshot_max_age_days``, three weeks away.
+
+        The degradation channel is the fix precisely because the sweep already
+        reads it (Phase 229/230): any adapter that records one is reported
+        amber with no per-source wiring in the sweep. Count-free detail, so a
+        second lookup in the same scope collapses into the first.
+        """
+        if not sync_enabled():
+            return
+        if state().get("asp_moldova") != "refused":
+            return
+        degradation.record(
+            self.id,
+            (
+                "The State Register index is the one already in place: the newest "
+                "weekly export was read and yielded too few companies to replace "
+                "it, so this answer predates that export rather than reflecting it."
+            ),
+            reason=degradation.REASON_UPSTREAM_ERROR,
+        )
+
     async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
         """Return the register's record for one IDNO."""
         try:
@@ -1327,7 +1382,7 @@ class AspMoldovaAdapter(SourceAdapter):
                         "The State Register index was not available: "
                         + (
                             "the weekly export could not be downloaded or built"
-                            if outcome.get("asp_moldova") == "failed"
+                            if outcome.get("asp_moldova") in {"failed", "refused"}
                             else "the weekly export is still being downloaded and indexed"
                         )
                     ),
@@ -1335,6 +1390,7 @@ class AspMoldovaAdapter(SourceAdapter):
                 )
             return self._bundle(idno, legal_name)
 
+        self._report_refused_rebuild()
         meta = read_meta()
         age = snapshot_age_days(meta)
         if age is None or age > REFRESH_AFTER_DAYS:
