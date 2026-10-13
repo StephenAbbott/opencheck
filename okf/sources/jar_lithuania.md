@@ -1,10 +1,10 @@
 ---
 type: "Data Source"
 title: "JAR \u2014 Lithuanian Register of Legal Entities"
-description: "Lithuanian company data from the Register of Legal Entities (JAR), maintained by Registr\u0173 centras. Provides entity name, code, address, legal form, and registration status for all entities registered in Lithuania."
+description: "Lithuania's Register of Legal Entities (JAR), kept by Registr\u0173 centras and published as daily open data: every registered and deregistered entity's name, code, registered address, legal form, registration date, legal status and deregistration date. Read from a weekly index of the open data. The register withholds the names of sole proprietorships and partnerships; it publishes no officers or beneficial owners."
 resource: "https://www.registrucentras.lt/jar/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-09-06"
+timestamp: "2026-10-12"
 source_id: "jar_lithuania"
 license: "CC-BY-4.0"
 commercial_use: "yes"
@@ -14,7 +14,7 @@ national_register: true
 
 # Overview
 
-Lithuanian company data from the Register of Legal Entities (JAR), maintained by Registrų centras. Provides entity name, code, address, legal form, and registration status for all entities registered in Lithuania. Official national company / beneficial-ownership register.
+Lithuania's Register of Legal Entities (JAR), kept by Registrų centras and published as daily open data: every registered and deregistered entity's name, code, registered address, legal form, registration date, legal status and deregistration date. Read from a weekly index of the open data. The register withholds the names of sole proprietorships and partnerships; it publishes no officers or beneficial owners. Official national company / beneficial-ownership register.
 
 - **Source id:** `jar_lithuania`
 - **Category:** cdd (customer due diligence / compliance)

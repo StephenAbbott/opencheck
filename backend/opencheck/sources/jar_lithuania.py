@@ -1,127 +1,175 @@
-"""Lithuanian Register of Legal Entities (JAR) adapter.
+"""Lithuanian Register of Legal Entities (JAR) adapter — a weekly index (Phase 325).
 
-The Registrų centras (Centre of Registers) maintains the Juridinių Asmenų
-Registras (JAR) — Lithuania's statutory register of all legal entities,
-operating under the Ministry of Justice.
+Registrų centras (the Centre of Registers) keeps the Juridinių asmenų
+registras (JAR), Lithuania's statutory register of every legal entity, and
+publishes the whole of it as daily open data under CC BY 4.0:
 
-This adapter uses the JAR public search interface at:
-  https://www.registrucentras.lt/jar/p/
+    https://www.registrucentras.lt/atviri-duomenys-ir-statistika/jar-pirminiai-duomenys-raw-data
 
-One live endpoint is used (returns HTML tables, parsed inline):
-  Name search:  GET /jar/p/index.php?pav=<query>&p=1  — up to ~25 results
+Why an index, and why it is built elsewhere
+-------------------------------------------
 
-Note: the code-based lookup (?kod=) requires solving an image CAPTCHA
-(antispam_image.php) and is therefore not usable programmatically.
-Fetch() uses name search and matches on entity code.
+Until Phase 325 this adapter scraped the register's name search
+(``/jar/p/index.php?pav=``). From production it never worked: JAR's site, and
+the open-data downloads with it, sit behind a Cloudflare JavaScript challenge
+that every datacentre address receives (Render, GitHub Actions, the cloud) and
+no server-side client can pass. The national portal that republishes the
+files (``data.gov.lt`` / ``get.data.gov.lt``) is geo-fenced to Lithuania —
+tested 12 Oct 2026 from a UK residential connection and a real browser, both
+refused. So every Lithuanian lookup showed a card holding only GLEIF's name.
 
-Rate limit: Registrų centras applies a soft cap of 100 public queries per
-IP address per day.  Search results are cached to stay within this limit.
+A residential connection is not challenged. ``scripts/build_jar_lithuania_index.py``
+(standard library only) downloads the registered and deregistered entity
+files there, checks them, and packs a SQLite index;
+``scripts/refresh_jar_lithuania_index.sh`` replaces the ``jar-lithuania-index``
+release asset; and :func:`warm_index` downloads it at boot — the ONRC /
+ChileCompra arrangement. The index holds the **whole register** (≈550,000
+entities, 58 MB, 17.6 MB gzipped), not an LEI-scoped slice, because ``LT-JAR``
+is a FullCheck register hop and ``opencheck_register_lookup`` reaches
+Lithuanian companies that hold no LEI.
 
-Open data bulk download (CC BY 4.0, updated daily):
-  https://www.registrucentras.lt/aduomenys/?byla=JAR_IREGISTRUOTI.csv
-  Key fields: jaAsm_Kodas (9-digit code), jaAsm_Pavadinimas (name),
-  jaAsm_Adresas (address), jaAsm_FormKodas / jaAsm_FormPav (legal form),
-  jaAsm_StatusKodas / jaAsm_StatusPav (status), jaAsm_Reg (reg. date),
-  jaAsm_IzReg (deregistration date).
+What the index answers, measured 12 Oct 2026
+--------------------------------------------
 
-BO / participant data: Formerly available via JADIS open data, participant
-(shareholder) records are now being migrated to JANGIS, a restricted
-sub-system accessible only to those with legitimate interest.  This adapter
-covers entity data only; BO data is intentionally excluded.
+* All 5,083 GLEIF records filed under ``RA000430`` carry a bare nine-digit
+  code; 5,082 resolve (3,422 of 3,423 ISSUED). The miss is a note card.
+* No name gate. Where GLEIF and JAR disagree on a name it is GLEIF holding an
+  old one (UAB "Delela" is now UAB Starwell): the code is an exact identifier
+  from GLEIF's own record, and gating would lose exactly the renamed
+  companies — the ONRC CUI precedent (Phase 212).
+* **Names the register withholds.** The open data puts the legal form's name
+  in the name column for every sole proprietorship, general and limited
+  partnership and their branches (170,258 entities), because those names
+  usually carry the owner's own name. The index stores no name for them; the
+  bundle carries GLEIF's legal name instead, marked ``name_withheld``, and the
+  mapper annotates where the name came from.
+* Status: one code per registered entity, classified in :data:`STATUSES`.
+  Deregistered entities carry their deregistration date, which becomes
+  ``dissolutionDate``.
 
-The flow with GLEIF:
-  1. GLEIF returns ``registeredAt.id == "RA000430"`` (JAR RA code) and
-     ``registeredAs = "<9-digit-code>"`` for Lithuanian entities.
-  2. app.py extracts ``derived["lt_code"]`` and calls ``fetch()`` here.
-  3. We scrape the public JAR page and return entity details.
+No beneficial owners and no officers: neither is in the open data
+(participants moved to JANGIS, a legitimate-interest system).
 
-Authentication: none — public interface, no API key required.
-GLEIF RA code: RA000430 (Register of Legal Entities, Registrų centras)
-License: CC BY 4.0 (Creative Commons Attribution 4.0 International).
-  https://creativecommons.org/licenses/by/4.0/
-Attribution: "Contains data from the Lithuanian Register of Legal Entities
-  (JAR), published by Registrų centras (registrucentras.lt), CC BY 4.0."
+Nothing here touches the response :class:`~opencheck.cache.Cache`. A miss is
+an answer about one build of the index, and must not outlive it.
 """
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import re
+import sqlite3
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
-from urllib.parse import quote
 
-from .. import degradation
-from ..cache import Cache
+from .. import degradation, provenance
 from ..config import get_settings
-from ..http import build_client
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .schemas import validate_raw
+from .schemas.jar_lithuania import JarLithuaniaBundle
 
-_log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-# Base URL for the public JAR search interface.
-_SEARCH_URL = "https://www.registrucentras.lt/jar/p/index.php"
-
-_CACHE_NS = "jar_lithuania"
-
-# GLEIF Registration Authority code for Lithuania's JAR.
+#: GLEIF Registration Authority code for Lithuania's JAR.
 LT_RA_CODE: str = "RA000430"
 
-# Lithuanian entity code: exactly 9 digits.
+#: The table layout this adapter reads. ``scripts/build_jar_lithuania_index.py``
+#: writes the same value into ``meta``; a test pins the two equal, and an index
+#: carrying any other value is ignored rather than misread.
+INDEX_SCHEMA_VERSION = "1"
+
+#: Where the data is published — the page a reader can follow. The per-entity
+#: search page (``?kod=``) is CAPTCHA-gated and challenged from datacentres.
+DATASET_URL = (
+    "https://www.registrucentras.lt/atviri-duomenys-ir-statistika/"
+    "jar-pirminiai-duomenys-raw-data"
+)
+
+COVERAGE_NOT_IN_INDEX = (
+    "This entity code is not in the Register of Legal Entities' open data as "
+    "indexed — neither among registered nor deregistered entities. GLEIF may "
+    "hold a code the register does not use, or the entity may be newer than "
+    "the index."
+)
+
+# Lithuanian legal entity code: exactly 9 digits.
 _CODE_RE = re.compile(r"^\d{9}$")
 
-# Lithuanian legal form short codes → English descriptions.
-# Full form names appear verbatim in HTML; this dict maps the most common
-# abbreviations seen in the TEISINĖ FORMA column.
-_LEGAL_FORMS: dict[str, str] = {
-    "UAB": "Uždaroji akcinė bendrovė (Private limited company)",
-    "AB": "Akcinė bendrovė (Public limited company)",
-    "MB": "Mažoji bendrija (Small partnership)",
-    "IĮ": "Individuali įmonė (Sole proprietorship)",
-    "TŪB": "Tikroji ūkinė bendrija (General partnership)",
-    "KŪB": "Komanditinė ūkinė bendrija (Limited partnership)",
-    "VšĮ": "Viešoji įstaiga (Public institution)",
-    "Asociacija": "Asociacija (Association)",
-    "Valstybės įmonė": "Valstybės įmonė (State enterprise)",
-    "Savivaldybės įmonė": "Savivaldybės įmonė (Municipal enterprise)",
-    "Biudžetinė įstaiga": "Biudžetinė įstaiga (Budget institution)",
-    "Labdaros ir paramos fondas": "Labdaros ir paramos fondas (Charitable foundation)",
-    "Kooperatinė bendrovė": "Kooperatinė bendrovė (Cooperative)",
-    "Europos ekonominių interesų grupė": "Europos ekonominių interesų grupė (EEIG)",
+
+# ---------------------------------------------------------------------------
+# The register's vocabularies
+# ---------------------------------------------------------------------------
+
+#: JAR's legal status codes (``stat_kodas``), as found in the registered-entity
+#: file on 12 Oct 2026: ``(liveness class, English gloss, search-rank word)``.
+#:
+#: * ``live`` — code 0, *Teisinis stat neįregistruotas*: no legal status is
+#:   registered against the entity, i.e. no liquidation, bankruptcy or
+#:   reorganisation (230,558 of 235,248).
+#: * ``pending`` — a process that ends the entity is under way: liquidation,
+#:   bankruptcy, being reorganised, merged or divided **out**.
+#: * ``unknown`` — the label does not say whether this entity ends: taking
+#:   part in someone else's reorganisation, changing legal form, restructuring,
+#:   and two cross-border-merger states (480 entities). The label still shows
+#:   on the card; nothing is written to BODS rather than a guess.
+#:
+#: An unlisted code is ``unknown`` too. The rank word is a summary segment
+#: ``search_rank`` recognises, where one fits.
+STATUSES: dict[str, tuple[str, str, str | None]] = {
+    "0": ("live", "no legal status registered", None),
+    "1": ("pending", "being reorganised", None),
+    "2": ("unknown", "taking part in a reorganisation", None),
+    "3": ("unknown", "changing legal form", None),
+    "4": ("unknown", "under restructuring", None),
+    "5": ("pending", "in bankruptcy proceedings", "bankrupt"),
+    "6": ("pending", "bankrupt", "bankrupt"),
+    "7": ("pending", "in liquidation", "in liquidation"),
+    "8": ("unknown", "taking part in a separation", None),
+    "9": ("pending", "liquidation initiated", "in liquidation"),
+    "16": ("unknown", "European company formation by merger initiated", None),
+    "23": ("unknown", "in a cross-border merger", None),
+    "26": ("pending", "in liquidation following bankruptcy", "in liquidation"),
+    "27": ("pending", "being merged across borders", None),
+    "28": ("unknown", "taking part in a cross-border merger", None),
+    "30": ("pending", "being divided across borders", None),
 }
 
-# Status values that indicate an inactive entity.
-_INACTIVE: frozenset[str] = frozenset(
-    s.lower()
-    for s in [
-        "Išregistruotas",
-        "Likviduojamas",
-        "Bankrutuojantis",
-        "Reorganizuojamas",
-        "Sustabdyta",
-        "Bankrotas",
-    ]
-)
+#: English for the commonest legal forms (``form_kodas``). A gloss, shown
+#: beside the register's own words, never instead of them; an unlisted form
+#: shows in Lithuanian alone.
+FORM_GLOSSES: dict[str, str] = {
+    "110": "state enterprise",
+    "130": "municipal enterprise",
+    "210": "general partnership",
+    "220": "limited partnership",
+    "260": "gardeners' community",
+    "270": "community association",
+    "310": "private limited company",
+    "311": "branch of a private limited company",
+    "320": "public limited company",
+    "410": "agricultural company",
+    "490": "branch of a foreign legal entity",
+    "520": "representative office of a foreign legal entity",
+    "570": "public institution",
+    "630": "association",
+    "640": "charity and support foundation",
+    "700": "traditional religious community",
+    "710": "cooperative",
+    "760": "trade union",
+    "810": "sole proprietorship",
+    "850": "European economic interest grouping",
+    "860": "European company",
+    "870": "central bank",
+    "950": "budget institution",
+    "960": "small partnership",
+}
 
-# Regex to extract entity rows from the JAR HTML results table.
-# The table structure is:
-#   <td>CODE [img link]</td><td>NAME <br> ADDRESS</td><td>FORM <br> STATUS</td>
-_ROW_RE = re.compile(
-    r"<td[^>]*>\s*(\d{9}).*?</td>"   # code cell (9-digit code first)
-    r"\s*<td[^>]*>(.*?)</td>"         # name + address cell
-    r"\s*<td[^>]*>(.*?)</td>",        # legal form + status cell
-    re.DOTALL | re.IGNORECASE,
-)
-
-# Count of results line e.g. "Rasta įrašų: 27"
-_COUNT_RE = re.compile(r"Rasta\s+įrašų:\s*(\d+)", re.IGNORECASE)
-
-# No results / error indicators
-_NO_RESULTS_PATTERNS = (
-    "nerasta",  # "not found"
-    "Nieko nerasta",
-    "0 įrašų",
-)
+#: Legal forms that are public bodies funded from a state or municipal budget
+#: — typed ``stateBody``. Everything else in JAR was created by registration
+#: and is a ``registeredEntity``, **including state and municipal
+#: enterprises**: an SOE is not a government body (the Phase 240 rule).
+STATE_BODY_FORMS = frozenset({"580", "581", "680", "681", "870", "950", "951", "975"})
 
 
 # ---------------------------------------------------------------------------
@@ -139,69 +187,185 @@ def is_valid_lt_code(code: str) -> bool:
     return bool(_CODE_RE.match(normalise_code(code)))
 
 
-def _slug(text: str) -> str:
-    return hashlib.sha256(text.lower().strip().encode("utf-8")).hexdigest()[:16]
-
-
 def _entity_url(code: str) -> str:
-    """Return the public JAR entity page URL for a given code."""
-    return f"{_SEARCH_URL}?kod={code}"
+    """The register's public page for an entity code (CAPTCHA-gated)."""
+    return f"https://www.registrucentras.lt/jar/p/index.php?kod={code}"
+
+
+def form_label(name: str | None, code: str | None) -> str | None:
+    """The register's legal-form words, with an English gloss where known."""
+    name = (name or "").strip()
+    if not name:
+        return None
+    gloss = FORM_GLOSSES.get(str(code or ""))
+    return f"{name} ({gloss})" if gloss else name
 
 
 # ---------------------------------------------------------------------------
-# HTML parsing
+# Index access
 # ---------------------------------------------------------------------------
 
 
-def _strip_tags(html_fragment: str) -> str:
-    """Remove all HTML tags from a fragment, treating <br> as a newline."""
-    html_fragment = re.sub(r"<br\s*/?>", "\n", html_fragment, flags=re.IGNORECASE)
-    return re.sub(r"<[^>]+>", " ", html_fragment)
+def db_path() -> Path:
+    """``JAR_LITHUANIA_DB_FILE`` or the data-root default — one function, so
+    the reader, the boot download and the sweep's ``requires_files`` agree
+    (the ONRC lesson: they once did not, and a good index sat unread)."""
+    from ..cache import data_root
+
+    configured = get_settings().jar_lithuania_db_file
+    return Path(configured) if configured else data_root() / "jar_lithuania.sqlite"
 
 
-def _clean(text: str) -> str:
-    """Collapse whitespace and strip, preserving single newlines."""
-    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in text.split("\n")]
-    return "\n".join(ln for ln in lines if ln)
+_SHARED: dict[str, sqlite3.Connection | None] = {}
 
 
-def _parse_jar_html(html: str) -> list[dict[str, str]]:
-    """Extract entity records from JAR public-search result HTML.
+def _connect() -> sqlite3.Connection | None:
+    path = db_path()
+    if not path.exists():
+        if get_settings().jar_lithuania_db_file:
+            logger.warning("jar_lithuania: index not found at %s", path)
+        return None
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    try:
+        version = conn.execute(
+            "SELECT value FROM meta WHERE key = 'schema_version'"
+        ).fetchone()
+    except sqlite3.Error:
+        version = None
+    if not version or version[0] != INDEX_SCHEMA_VERSION:
+        logger.warning("jar_lithuania: index at %s has an unexpected schema; ignoring", path)
+        conn.close()
+        return None
+    return conn
 
-    Returns a list of dicts with keys:
-      code, name, address, legal_form, status
+
+def _shared_conn() -> sqlite3.Connection | None:
+    if _SHARED.get("conn") is None:
+        _SHARED["conn"] = _connect()
+    return _SHARED.get("conn")
+
+
+def reset_connection() -> None:
+    """Forget the cached connection (after a download, or in tests)."""
+    conn = _SHARED.pop("conn", None)
+    if conn is not None:
+        try:
+            conn.close()
+        except sqlite3.Error:  # pragma: no cover - best effort
+            pass
+
+
+def index_available() -> bool:
+    """True when a readable index of the expected schema is present."""
+    return _shared_conn() is not None
+
+
+def read_meta() -> dict[str, str]:
+    """The index's ``meta`` table, or ``{}`` when there is no index."""
+    conn = _shared_conn()
+    if conn is None:
+        return {}
+    try:
+        return {str(k): str(v) for k, v in conn.execute("SELECT key, value FROM meta")}
+    except sqlite3.Error:  # pragma: no cover
+        return {}
+
+
+def cut_date(meta: dict[str, str] | None = None) -> datetime | None:
+    """The register's cut — the ``formavimo_data`` every row of the files
+    carries — as the day the data is "as of". Never the build time."""
+    meta = read_meta() if meta is None else meta
+    try:
+        return datetime.strptime(meta.get("cut") or "", "%Y-%m-%d").replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def declare_snapshot(meta: dict[str, str] | None = None) -> None:
+    """Declare an index read as a snapshot of the register's open data.
+
+    Without this the provenance recorder collects nothing and resolves to its
+    ``stub`` default, and real register rows badge as "Placeholder data" —
+    the ariregister (Phase 45) and ONRC (PR #275) bug. The cut is the
+    register's clock; ``built_at`` is ours (Phase 314).
     """
-    results: list[dict[str, str]] = []
-    for m in _ROW_RE.finditer(html):
-        code = m.group(1)
-        name_addr = _clean(_strip_tags(m.group(2)))
-        form_status = _clean(_strip_tags(m.group(3)))
+    meta = read_meta() if meta is None else meta
+    cut = meta.get("cut") or ""
+    provenance.record_snapshot(
+        retrieved_at=provenance.parse_moment(meta.get("built_at")),
+        source_as_of=cut_date(meta),
+        detail=(
+            f"Register of Legal Entities open data, cut {cut}"
+            if cut else "Register of Legal Entities open data"
+        ),
+    )
 
-        parts = name_addr.split("\n", 1)
-        name = parts[0].strip()
-        address = parts[1].strip() if len(parts) > 1 else ""
 
-        fs_parts = form_status.split("\n", 1)
-        legal_form = fs_parts[0].strip()
-        status = fs_parts[1].strip() if len(fs_parts) > 1 else ""
+def warm_index() -> dict[str, Any]:
+    """Download the index at boot when absent; replace it when the release
+    asset changed; keep it otherwise. Never raises — no index is a state this
+    module models (``covers_lei`` is False and the source is not announced).
 
-        if code and name:
-            results.append(
-                {
-                    "code": code,
-                    "name": name,
-                    "address": address,
-                    "legal_form": legal_form,
-                    "status": status,
-                }
-            )
-    return results
+    The index cannot be built here: the register's files are behind a
+    challenge every datacentre receives.
+    """
+    from ..entity_pages import (
+        ASSET_STAMP_KEY,
+        asset_check,
+        download_db,
+        read_meta as read_file_meta,
+        record_asset_stamp,
+    )
+
+    settings = get_settings()
+    path = db_path()
+    url = settings.jar_lithuania_db_url
+    if not url:
+        state = "present" if path.exists() else "absent"
+        return {"jar_lithuania": f"{state}: {path} (no URL)"}
+    try:
+        last_modified: str | None = None
+        if path.exists():
+            decision, last_modified = asset_check(url, path)
+            if decision == "keep":
+                if last_modified and read_file_meta(path).get(ASSET_STAMP_KEY) is None:
+                    record_asset_stamp(path, last_modified)
+                return {"jar_lithuania": f"already present: {path}"}
+            outcome = "replaced"
+        else:
+            outcome = "downloaded"
+        downloaded, elapsed = download_db(url, path, last_modified=last_modified)
+        reset_connection()
+        return {"jar_lithuania": f"{outcome}: {path} ({downloaded} bytes in {elapsed:.1f}s)"}
+    except Exception as exc:  # noqa: BLE001 — no index is a state, not a crash
+        logger.warning("jar_lithuania: asset check/download failed: %s", exc)
+        return {"jar_lithuania": f"failed: {exc}"}
+
+
+_ENTITY_SQL = (
+    "SELECT e.code, e.name, e.address, e.registered_on, e.form_code,"
+    " f.name AS form_name, e.status_code, s.name AS status_name,"
+    " e.status_since, e.deregistered_on"
+    " FROM entity e"
+    " LEFT JOIN form f ON f.code = e.form_code"
+    " LEFT JOIN status s ON s.code = e.status_code"
+)
+
+
+def entity_record(code: str) -> dict[str, Any] | None:
+    """The index's row for one entity code, with form and status names joined
+    in; None when the index does not hold the code (or there is no index)."""
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    row = conn.execute(_ENTITY_SQL + " WHERE e.code = ?", (code,)).fetchone()
+    return dict(row) if row is not None else None
 
 
 # ---------------------------------------------------------------------------
 # Adapter
 # ---------------------------------------------------------------------------
-
 
 
 class JarLithuaniaAdapter(SourceAdapter):
@@ -214,22 +378,21 @@ class JarLithuaniaAdapter(SourceAdapter):
     )
     lookup_pass_legal_name = True
 
-
-    def __init__(self) -> None:
-        self._cache = Cache()
-
     @property
     def info(self) -> SourceInfo:
-        settings = get_settings()
         return SourceInfo(
             id=self.id,
             name="JAR — Lithuanian Register of Legal Entities",
             homepage="https://www.registrucentras.lt/jar/",
             description=(
-                "Lithuanian company data from the Register of Legal Entities "
-                "(JAR), maintained by Registrų centras. Provides entity name, "
-                "code, address, legal form, and registration status for all "
-                "entities registered in Lithuania."
+                "Lithuania's Register of Legal Entities (JAR), kept by "
+                "Registrų centras and published as daily open data: every "
+                "registered and deregistered entity's name, code, registered "
+                "address, legal form, registration date, legal status and "
+                "deregistration date. Read from a weekly index of the open "
+                "data. The register withholds the names of sole "
+                "proprietorships and partnerships; it publishes no officers "
+                "or beneficial owners."
             ),
             license="CC-BY-4.0",
             attribution=(
@@ -239,304 +402,150 @@ class JarLithuaniaAdapter(SourceAdapter):
             ),
             supports=[SearchKind.ENTITY],
             requires_api_key=False,
-            live_available=settings.allow_live,
+            live_available=index_available(),
             is_national_register=True,
             country="LT",
         )
 
-    # ------------------------------------------------------------------
-    # Search — name-based HTML scrape of the JAR public search
-    # ------------------------------------------------------------------
+    def covers_lei(self, lei: str) -> bool:
+        """Gate dispatch on the index file, not on the LEI.
+
+        Without an index the source would be announced for every Lithuanian
+        lookup and then answer nothing — counted in "N of N sources answered"
+        while answering nothing (the ``cac_nigeria`` / ``onrc_romania`` gate).
+        Whether the *entity* is in the index is ``fetch``'s answer: a note
+        card when it is not.
+        """
+        return index_available()
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
-        if kind != SearchKind.ENTITY:
+        if kind != SearchKind.ENTITY or not (query or "").strip():
             return []
-
-        cache_key = f"{_CACHE_NS}/search/{_slug(query)}"
-        if not self.info.live_available and not self._cache.has(cache_key):
-            return self._stub_search(query)
-
-        html = await self._fetch_html(
-            f"{_SEARCH_URL}?pav={quote(query)}",
-            cache_key=cache_key,
-        )
-        if html is None:
-            return self._stub_search(query)
-
-        records = _parse_jar_html(html)
-        return [self._entity_hit(rec) for rec in records]
-
-    # ------------------------------------------------------------------
-    # Fetch — code-based lookup of a single entity
-    # ------------------------------------------------------------------
-
-    async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
-        """Return the full JAR record for a Lithuanian entity code.
-
-        ``hit_id`` is a 9-digit entity code (may arrive zero-padded or not).
-        ``legal_name`` is the GLEIF legal name used to drive the search.
-
-        Implementation note: the JAR public interface enforces an image-based
-        CAPTCHA (``antispam_image.php``) on direct code-based lookups
-        (``?kod=``), so those requests return only the empty search form.  Name
-        search (``?pav=``) is not CAPTCHA-gated for plain GET requests.  We
-        therefore search by name and match the result whose entity code equals
-        ``hit_id``.  If no match is found we return a partial (stub=False)
-        record using the GLEIF name, which is still useful for display.
-        """
-        code = normalise_code(hit_id)
-
-        stub_bundle: dict[str, Any] = {
-            "source_id": self.id,
-            "hit_id": code,
-            "lt_code": code,
-            "name": legal_name,
-            "address": None,
-            "legal_form": None,
-            "status": None,
-            "link": _entity_url(code),
-            "is_stub": True,
-        }
-
-        if not is_valid_lt_code(code):
-            _log.warning("jar_lithuania: invalid code %r — returning stub", hit_id)
-            return stub_bundle
-
-        # Cache keys:
-        #   bundle_cache_key — stores the fully-resolved bundle dict.  Written
-        #     after a successful (non-stub) resolution so that subsequent calls
-        #     (e.g. _safe_deepen, which omits legal_name) can retrieve the full
-        #     record without a second HTTP request or needing the legal name.
-        #   html_cache_key  — stores the raw search-result HTML so we don't
-        #     repeat the same HTTP request within the same session.
-        bundle_cache_key = f"{_CACHE_NS}/bundle/{code}"
-        html_cache_key = f"{_CACHE_NS}/entity/{code}"
-
-        # --- 1. Check for a previously-resolved bundle ------------------
-        # Written at the end of this method on the first successful call.
-        # Covers _safe_deepen (no legal_name) and repeat /lookup calls.
-        cached_bundle = self._cache.get_payload(bundle_cache_key)
-        if cached_bundle is not None:
-            return cached_bundle[0]  # type: ignore[index]
-
-        # --- 2. Check for cached HTML (no bundle yet) -------------------
-        # This can happen if fetch() stored HTML but the process restarted
-        # before the bundle was written — rare, but handle gracefully.
-        cached_html = self._cache.get_payload(html_cache_key)
-        if cached_html is not None:
-            records = _parse_jar_html(cached_html[0])
-            rec = next((r for r in records if r.get("code") == code), None)
-            result: dict[str, Any] = {
-                "source_id": self.id,
-                "hit_id": code,
-                "lt_code": code,
-                "name": (rec.get("name") if rec else None) or legal_name or "",
-                "address": rec.get("address") if rec else None,
-                "legal_form": rec.get("legal_form") if rec else None,
-                "status": rec.get("status") if rec else None,
-                "link": _entity_url(code),
-                "is_stub": False,
-            }
-            if result["name"]:  # only cache if we have a name to preserve
-                self._cache.put(bundle_cache_key, result)
-            return result
-
-        if not legal_name:
-            # No cache and no name — cannot drive the search; return stub.
-            return stub_bundle
-
-        if not self.info.live_available:
-            return stub_bundle
-
-        # --- 3. Live fetch via name search ------------------------------
-        # Code-based lookup (?kod=) requires an image CAPTCHA and cannot be
-        # solved programmatically; name search (?pav=) is not CAPTCHA-gated.
-        html = await self._fetch_html(
-            f"{_SEARCH_URL}?pav={quote(legal_name)}&p=1",
-            cache_key=html_cache_key,
-        )
-        if html is None:
-            # HTTP error or host unreachable. We know the entity IS registered
-            # in the JAR (GLEIF confirmed registeredAt.id == RA000430), so
-            # surface a card using the GLEIF name rather than hiding it
-            # entirely — but say plainly that the register did not answer.
-            #
-            # Until Phase 121 this returned exactly the same shape with no
-            # marker and no degradation, so a card carrying only the name
-            # GLEIF had already supplied was indistinguishable from a
-            # successful lookup. JAR returns 403 to datacentre IPs, which made
-            # it look healthy from a laptop and broken from CI while the
-            # underlying behaviour — an answer that isn't from the register —
-            # was the same in both.
-            failure = getattr(self, "_last_failure", None) or "unreachable"
-            _log.warning(
-                "jar_lithuania: could not fetch JAR page for %s (%s); "
-                "returning GLEIF-name card marked register_unavailable",
-                code, failure,
-            )
-            degradation.record(
-                self.id,
-                f"The Lithuanian JAR interface did not answer ({failure}); "
-                "the card shows the GLEIF legal name only, with no register "
-                "detail. This is not a confirmation that the register holds "
-                "nothing.",
-                reason=degradation.reason_for_failure(failure),
-            )
-            result = {
-                "source_id": self.id,
-                "hit_id": code,
-                "lt_code": code,
-                "name": legal_name,
-                "address": None,
-                "legal_form": None,
-                "status": None,
-                "link": _entity_url(code),
-                "is_stub": False,
-                # The register did not answer. Consumers that treat a bundle as
-                # a register response — the UI, exports, the health sweep —
-                # must be able to tell.
-                "register_unavailable": True,
-                "register_unavailable_detail": failure,
-            }
-            self._cache.put(bundle_cache_key, result)
-            return result
-
-        records = _parse_jar_html(html)
-
-        # Find the result whose code matches exactly.
-        rec = next((r for r in records if r.get("code") == code), None)
-
-        if rec is None:
-            # Name search returned results but none matched this code.
-            # Return a non-stub record using the GLEIF name so the source
-            # card is still surfaced (JAR is confirmed live for this entity).
-            _log.debug(
-                "jar_lithuania: code %s not in search results for %r "
-                "(%d hits); using GLEIF name",
-                code, legal_name, len(records),
-            )
-            result = {
-                "source_id": self.id,
-                "hit_id": code,
-                "lt_code": code,
-                "name": legal_name,
-                "address": None,
-                "legal_form": None,
-                "status": None,
-                "link": _entity_url(code),
-                "is_stub": False,
-            }
-            self._cache.put(bundle_cache_key, result)
-            return result
-
-        result = {
-            "source_id": self.id,
-            "hit_id": code,
-            "lt_code": code,
-            "name": rec.get("name") or legal_name,
-            "address": rec.get("address") or None,
-            "legal_form": rec.get("legal_form") or None,
-            "status": rec.get("status") or None,
-            "link": _entity_url(code),
-            "is_stub": False,
-        }
-        self._cache.put(bundle_cache_key, result)
-        return result
-
-    # ------------------------------------------------------------------
-    # HTTP with caching
-    # ------------------------------------------------------------------
-
-    async def _fetch_html(self, url: str, *, cache_key: str) -> str | None:
-        """GET ``url``, cache the HTML, and return it.
-
-        Returns ``None`` on HTTP error; logs a warning but does not raise.
-        The cached value is the raw HTML string (stored as a single-element
-        list to match the Cache.put/get_payload contract).
-        """
-        cached = self._cache.get_payload(cache_key)
-        if cached is not None:
-            return cached[0]
-
-        headers = {
-            "Accept": "text/html,application/xhtml+xml",
-            "Accept-Language": "lt,en;q=0.8",
-        }
+        conn = _shared_conn()
+        if conn is None:
+            return []
         try:
-            async with build_client() as client:
-                resp = await client.get(url, headers=headers)
-        except Exception as exc:  # noqa: BLE001
-            _log.warning("jar_lithuania: HTTP error fetching %s: %s", url, exc)
-            self._last_failure = type(exc).__name__
-            return None
-
-        if not resp.is_success:
-            _log.warning(
-                "jar_lithuania: HTTP %s fetching %s", resp.status_code, url
-            )
-            self._last_failure = f"HTTP {resp.status_code}"
-            return None
-
-        self._last_failure = None
-
-        html = resp.text
-        self._cache.put(cache_key, html)
-        return html
-
-    # ------------------------------------------------------------------
-    # Hit factory
-    # ------------------------------------------------------------------
+            rows = conn.execute(
+                _ENTITY_SQL + " WHERE e.name LIKE ? LIMIT 10",
+                (f"%{query.strip()}%",),
+            ).fetchall()
+        except sqlite3.Error:
+            return []
+        if not rows:
+            return []
+        declare_snapshot()
+        return [self._search_hit(dict(row)) for row in rows]
 
     @staticmethod
-    def _entity_hit(rec: dict[str, str]) -> SourceHit:
-        code = rec.get("code", "")
-        name = (rec.get("name") or code or "Unknown").strip()
-        legal_form = (rec.get("legal_form") or "").strip()
-        status = (rec.get("status") or "").strip()
-        address = (rec.get("address") or "").strip()
-
-        # Determine active/inactive flag from status.
-        is_active = status.lower() not in _INACTIVE if status else True
-        status_label = "active" if is_active else status or "inactive"
-
-        summary_parts: list[str] = [f"LT {code}"]
-        if legal_form:
-            summary_parts.append(legal_form)
-        summary_parts.append(status_label)
-
+    def _search_hit(row: dict[str, Any]) -> SourceHit:
+        code = row["code"]
+        segments = [f"LT {code}"]
+        form = (row.get("form_name") or "").strip()
+        if form:
+            segments.append(form)
+        if row.get("deregistered_on"):
+            segments.append("deregistered")
+        else:
+            rank_word = STATUSES.get(str(row.get("status_code") or ""), (None, None, None))[2]
+            if rank_word:
+                segments.append(rank_word)
         return SourceHit(
             source_id="jar_lithuania",
             hit_id=code,
             kind=SearchKind.ENTITY,
-            name=name,
-            summary=" · ".join(summary_parts),
+            name=row.get("name") or f"LT {code}",
+            summary=" · ".join(segments),
             identifiers={"lt_code": code},
-            raw=rec,
+            raw={"code": code},
             is_stub=False,
+            liveness="snapshot",
         )
 
-    # ------------------------------------------------------------------
-    # Stub helpers
-    # ------------------------------------------------------------------
+    def _stub(self, code: str, legal_name: str) -> dict[str, Any]:
+        """Nothing was read: no index, or not a code. Dropped by the pipeline."""
+        return {
+            "source_id": self.id,
+            "hit_id": code,
+            "lt_code": code,
+            "name": legal_name or "",
+            "link": DATASET_URL,
+            "is_stub": True,
+        }
 
-    def _stub_search(self, query: str) -> list[SourceHit]:
-        return [
-            SourceHit(
-                source_id=self.id,
-                hit_id="111950694",  # AB Lietuvos energija (state energy group)
-                kind=SearchKind.ENTITY,
-                name=f"{query} (stub)",
-                summary=(
-                    "Stub JAR Lithuania record — set OPENCHECK_ALLOW_LIVE=true "
-                    "to query the live Registrų centras public search."
-                ),
-                identifiers={"lt_code": "111950694"},
-                raw={
-                    "code": "111950694",
-                    "name": f"{query} (stub)",
-                    "address": "Žvejų g. 14, LT-09310 Vilnius",
-                    "legal_form": "AB",
-                    "status": "Veikiantis",
-                },
+    def _not_in_index(self, code: str, legal_name: str, meta: dict[str, str]) -> dict[str, Any]:
+        """The index answered, and does not hold the code — a note card.
+
+        ``is_stub`` False and ``not_found`` True, the INPI / ONRC shape:
+        ``_lookup_pipeline`` drops every ``is_stub`` result above the registry
+        branch, so a True here would announce the source and then show
+        nothing. Not cached and not a degradation: nothing failed.
+        """
+        return {
+            "source_id": self.id,
+            "hit_id": code,
+            "lt_code": code,
+            "name": legal_name or "",
+            "link": DATASET_URL,
+            "is_stub": False,
+            "not_found": True,
+            "coverage_note": COVERAGE_NOT_IN_INDEX,
+            "cut": meta.get("cut"),
+        }
+
+    async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
+        """Return the index's record for one Lithuanian entity code.
+
+        ``hit_id`` is the nine-digit code GLEIF files under ``registeredAs``
+        (or a register-hop / ``opencheck_register_lookup`` caller passes);
+        ``legal_name`` is GLEIF's name, used only where the register
+        withholds one.
+        """
+        code = normalise_code(hit_id)
+        if not is_valid_lt_code(code):
+            logger.warning("jar_lithuania: invalid code %r", hit_id)
+            return self._stub(str(hit_id or ""), legal_name)
+        conn = _shared_conn()
+        if conn is None:
+            return self._stub(code, legal_name)
+        try:
+            row = entity_record(code)
+        except sqlite3.Error as exc:
+            degradation.record(
+                self.id,
+                "The Lithuanian register index could not be read; the card "
+                "shows nothing from the register. This is not a confirmation "
+                "that the register holds nothing.",
+                reason=degradation.reason_for_failure(type(exc).__name__),
             )
-        ]
+            return self._stub(code, legal_name)
+        meta = read_meta()
+        if row is None:
+            return self._not_in_index(code, legal_name, meta)
+
+        # Declared only once a row is in hand: a miss is not a read of data.
+        declare_snapshot(meta)
+        register_name = (row.get("name") or "").strip() or None
+        status_code = str(row.get("status_code") or "") or None
+        deregistered_on = row.get("deregistered_on")
+        bundle: dict[str, Any] = {
+            "source_id": self.id,
+            "hit_id": code,
+            "lt_code": code,
+            "name": register_name or legal_name or "",
+            "register_name": register_name,
+            "name_withheld": register_name is None,
+            "address": row.get("address"),
+            "legal_form": row.get("form_name"),
+            "legal_form_code": row.get("form_code"),
+            "registered_on": row.get("registered_on"),
+            "status": None if deregistered_on else row.get("status_name"),
+            "status_code": None if deregistered_on else status_code,
+            "status_since": None if deregistered_on else row.get("status_since"),
+            "deregistered": bool(deregistered_on),
+            "deregistered_on": deregistered_on,
+            "cut": meta.get("cut"),
+            "link": DATASET_URL,
+            "is_stub": False,
+        }
+        validate_raw("jar_lithuania", JarLithuaniaBundle, bundle)
+        return bundle

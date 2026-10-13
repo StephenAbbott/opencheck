@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 324** — The BODS quality sweep no longer flags a register cut published on the day it runs, and a rate-limited KvK register degrades the source instead of failing the lookup.
+**Latest: Phase 325** — Lithuania's Register of Legal Entities is read from a weekly index of the register's own open data, built off-datacentre because the register blocks every datacentre, so Lithuanian lookups show the register's record instead of GLEIF's name alone.
 
 → [Full development history](docs/status.md)
 

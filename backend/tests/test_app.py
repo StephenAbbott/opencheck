@@ -59,7 +59,9 @@ def test_search_entity_fans_out_to_entity_adapters(client: TestClient) -> None:
     assert "everypolitician" not in source_ids
     assert "companies_house" in source_ids
     assert "gleif" in source_ids
-    assert "jar_lithuania" in source_ids
+    # jar_lithuania is not asserted since Phase 325: it searches its index
+    # and, with none, returns nothing — the scraper it replaced invented a
+    # "<query> (stub)" row naming a real company's code instead.
 
 
 def test_search_person_skips_entity_only_adapters(client: TestClient) -> None:

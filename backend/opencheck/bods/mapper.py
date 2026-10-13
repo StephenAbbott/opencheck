@@ -300,7 +300,8 @@ from .mappers.nigeria import (  # noqa: F401  (re-exported, Phase 246)
     map_cac_nigeria,
 )
 from .mappers.lithuania import (  # noqa: F401  (re-exported, Phase 246)
-    _LT_ENTITY_TYPES,
+    _jar_entity_type,
+    _map_jar_lithuania,
     map_jar_lithuania,
 )
 from .mappers.czechia import (  # noqa: F401  (re-exported, Phase 246)

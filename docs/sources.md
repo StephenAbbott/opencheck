@@ -10,7 +10,7 @@ Fifty-one active adapters, each implementing the same `SourceAdapter` protocol (
 | `cro` | Companies Registration Office Ireland | CC-BY-4.0 | `ie_crn` from GLEIF (`RA000402`) | Irish company register — entity details (status, type, registration date, address) from the CRO Open Data Portal CKAN API; no API key required |
 | `prh` | PRH — Finnish Patent and Registration Office | CC-BY-4.0 | `fi_ytunnus` from GLEIF (`RA000188`) | Finnish company register — entity details from the YTJ Open Data API; officer data requires the paid Virre service; no API key required |
 | `ur_latvia` | UR — Latvian Register of Enterprises | Open Government Data (PSI) | `lv_regcode` from GLEIF (`RA000423`) | Latvian business register — entity profile, beneficial owners, officers, shareholders, and historical names via the CKAN Datastore API on data.gov.lv; no API key required |
-| `jar_lithuania` | JAR — Lithuanian Register of Legal Entities | CC-BY-4.0 | `lt_code` from GLEIF (`RA000430`) | Lithuanian company register — entity name, code, address, legal form, and registration status from the Registrų centras public JAR search; no API key required |
+| `jar_lithuania` | JAR — Lithuanian Register of Legal Entities | CC-BY-4.0 | `lt_code` from GLEIF (`RA000430`) | Lithuanian register of legal entities — name, code, address, legal form, registration date, legal status and deregistration date for every registered and deregistered entity, from a weekly index of Registrų centras' daily open data (Phase 325; built off-datacentre, downloaded at boot); names of sole proprietorships and partnerships are withheld by the register; no API key required |
 | `ares` | ARES (Czechia) | CC-BY-4.0 | `cz_ico` from GLEIF (`RA000163`) | Czech business register — entity basics, shareholders, directors, and share capital via the ARES REST API; no API key required |
 | `krs_poland` | KRS — National Court Register (Poland) | Open (PSI) | `pl_krs` from GLEIF (`RA000484`) | Polish National Court Register — entity basics and board/officer data (names masked in public API) via the KRS REST API; no API key required |
 | `firmenbuch` | Firmenbuch — Austrian Commercial Register | CC-BY-4.0 | `at_fn` from GLEIF (`RA000017`) | Austrian commercial register HVD — entity name, address, status, and officers (managing directors, signatories, supervisory board) via the Justiz Online SOAP API. Requires free `FIRMENBUCH_API_KEY` |
@@ -266,7 +266,7 @@ terminal statuses only; an active status is not a finding.
 | `prh` | `endDate`, `liquidations` | |
 | `firmenbuch` | AUFRECHT → `aktiv` / `gelöscht` | |
 | `cac_nigeria` | `status` | ACTIVE → live; INACTIVE means returns outstanding, not dissolution, so left unclassified |
-| `jar_lithuania` | status (Lithuanian labels) | Veikiantis → live; Išregistruotas → terminal; Likviduojamas / Bankrutuojantis / Reorganizuojamas → pending; Sustabdyta left unclassified |
+| `jar_lithuania` | `stat_kodas` (since Phase 325; `STATUSES` in the adapter) | 0 *Teisinis stat neįregistruotas* → live; liquidation, bankruptcy, being reorganised / merged / divided out → pending; a row in the deregistered file → terminal, with its date as `dissolutionDate`; taking part in another's reorganisation, changing legal form, restructuring → unclassified |
 | `ares` | normalised status, `datumZaniku` | |
 | `bce_belgium` | `status` AC / ST | |
 | `cyprus_drcor` | organisation status | |

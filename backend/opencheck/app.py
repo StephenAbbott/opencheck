@@ -168,6 +168,24 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # Phase 325: the Lithuanian Register of Legal Entities index — download the
+    # release asset when absent, replace it when the asset changed, keep it
+    # otherwise. It cannot be built here: the register's open-data files sit
+    # behind a Cloudflare challenge every datacentre receives. Until it lands
+    # ``jar_lithuania`` is not announced (``covers_lei``).
+    try:
+        from .sources.jar_lithuania import warm_index as warm_jar_lithuania_index
+
+        stats = await asyncio.to_thread(warm_jar_lithuania_index)
+        log.info("JAR Lithuania index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "JAR Lithuania index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # Phase 208: the OECD-UNSD MEIP register (BODS) — download the SQLite
     # release asset when absent, replace it when the asset changed, keep it
     # otherwise. Until it lands the ``meip`` source covers nothing and the

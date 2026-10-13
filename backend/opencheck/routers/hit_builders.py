@@ -640,10 +640,37 @@ def _bh_ur_latvia(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
 
 
 def _bh_jar_lithuania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Lithuania's Register of Legal Entities, from the index.
+
+    * **An entity.** Asserts the entity code the register published — the
+      index key. The name is the register's, or GLEIF's where the register
+      withholds it (``name_withheld``); the finding says which.
+    * **Not in the index.** A note card in the KvK / INPI / ONRC shape: the
+      row sentence says so, no identifier is asserted (the register did not
+      publish one for us), and it is not a degradation — nothing failed.
+
+    Dispatch is gated on the index file (``covers_lei``), so this builder
+    never runs on a deployment with no index.
+    """
+    from ..findings import finding_jar_lithuania
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "jar_lithuania", local_id,
+            name=ctx.legal_name or "",
+            summary=f"LT-JAR {local_id} · not in the index",
+            finding=finding_jar_lithuania(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    summary = f"LT-JAR {local_id}"
+    if r.get("deregistered"):
+        summary += " · deregistered"
     return _hit(
         "jar_lithuania", local_id,
         name=r.get("name") or ctx.legal_name or "",
-        summary=f"LT-JAR {local_id}",
+        summary=summary,
+        finding=finding_jar_lithuania(r),
         identifiers={"lt_code": local_id}, raw=r,
     )
 

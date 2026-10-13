@@ -759,30 +759,30 @@ def test_libcovebods_zefix():
 
 
 def test_libcovebods_jar_lithuania():
+    """The shape ``JarLithuaniaAdapter.fetch`` returns since Phase 325. (The
+    bundle here before carried no ``lt_code``, so the mapper emitted nothing
+    and this test validated an empty list.) ``test_jar_lithuania`` runs the
+    same check over statements from a real builder's index."""
     from opencheck.bods.mapper import map_jar_lithuania
-    bundle = {
-        "jarCode": "123456789",
-        "name": "TEST UAB",
-        "legalForm": {"name": "Uždaroji akcinė bendrovė"},
-        "registrationDate": "2000-01-01",
-        "status": "Įregistruotas",
-        "address": {
-            "country": "LT",
-            "municipality": "Vilnius",
-            "street": "Testinė g.",
-            "house": "1",
-        },
-        "managers": [
-            {
-                "firstName": "Jonas",
-                "lastName": "Jonaitis",
-                "position": "Direktorius",
-                "from": "2010-01-01",
-            }
-        ],
-        "shareholders": [],
+
+    base = {
+        "source_id": "jar_lithuania", "lt_code": "301844044", "hit_id": "301844044",
+        "name": 'AB "Ignitis grupė"', "register_name": 'AB "Ignitis grupė"',
+        "name_withheld": False, "address": "Vilnius, Laisvės pr. 10, LT-04215",
+        "legal_form": "Akcinė bendrovė", "legal_form_code": "320",
+        "registered_on": "2008-08-28", "status": "Teisinis stat neįregistruotas",
+        "status_code": "0", "status_since": "2020-07-28", "deregistered": False,
+        "deregistered_on": None, "cut": "2026-10-12", "is_stub": False,
     }
-    assert_valid(map_jar_lithuania(bundle), "JAR Lithuania")
+    withheld_and_gone = {
+        **base, "lt_code": "300557319", "hit_id": "300557319", "name": "",
+        "register_name": None, "name_withheld": True, "legal_form": "Individuali įmonė",
+        "legal_form_code": "810", "status": None, "status_code": None,
+        "status_since": None, "deregistered": True, "deregistered_on": "2014-11-20",
+    }
+    statements = list(map_jar_lithuania(base)) + list(map_jar_lithuania(withheld_and_gone))
+    assert len(statements) == 2
+    assert_valid(statements, "JAR Lithuania")
 
 
 def test_libcovebods_cro_ireland():

@@ -762,10 +762,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Nineteen** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
+**Twenty** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -1029,6 +1029,53 @@ be re-derived otherwise:
 - `SOCRATA_APP_TOKEN` (optional) goes in the `X-App-Token` header, never the
   URL. Licence `OPEN-NY-Terms` — commercial use yes, attribution not required
   (given anyway).
+
+---
+
+## Lithuania JAR is a weekly index built off-datacentre (Phase 325)
+
+`sources/jar_lithuania.py`, `scripts/build_jar_lithuania_index.py`,
+`scripts/refresh_jar_lithuania_index.sh`, `bods/mappers/lithuania.py`.
+Things that will be re-derived otherwise:
+
+- **No datacentre can read JAR.** The register's site *and* its open-data
+  files (`registrucentras.lt/aduomenys/?byla=…`) are behind a Cloudflare
+  JavaScript challenge (`403`, `cf-mitigated: challenge`) on every datacentre
+  address — Render, GitHub Actions, the cloud — with any User-Agent. The
+  national portal's copy (`data.gov.lt`, `get.data.gov.lt`, the Spinta API) is
+  FortiWeb geo-fenced to Lithuania (`Attack ID 20000018`), refused even to a
+  UK residential browser. A home connection is not challenged. So the index is
+  built off-datacentre by `refresh_jar_lithuania_index.sh` (plain `python3`,
+  standard library only; `gh` to upload) and shipped as the
+  `jar-lithuania-index` release asset; `warm_index()` downloads it at boot. It
+  cannot be a GitHub workflow.
+- **The whole register, not an LEI slice** (550,828 entities, 58 MB, 17.6 MB
+  gz): `LT-JAR` is a FullCheck register hop and `opencheck_register_lookup`
+  reaches LEI-less Lithuanian companies.
+- **A wrong `?byla=` name answers HTTP 200 with the SPA's HTML shell.** The
+  builder checks `text/plain` and the header row; it also refuses records ≠
+  physical lines − 1 (the ONRC quote trap), short files, two cut dates and
+  repeated or malformed codes, and writes nothing when it refuses.
+- **The register withholds names by form**: in the open data the name column
+  holds the form name for every `810/811` sole proprietorship and `210/211/
+  220/221` partnership (170,258 entities). The builder stores NULL where name
+  == form name (the data's rule, not a list); the bundle uses GLEIF's legal
+  name, `name_withheld: true`, and the mapper adds a `transformation`
+  annotation on `/recordDetails/name`.
+- **No name gate** on the code join — mismatches are GLEIF holding an old
+  name (the ONRC CUI precedent).
+- **Status by `stat_kodas`** (`STATUSES`): 0 live; liquidation / bankruptcy /
+  being reorganised, merged or divided out pending; the deregistered file
+  terminal with `isreg_data` as `dissolutionDate`; the rest `unknown`.
+  `stateBody` only for budget-funded forms (`STATE_BODY_FORMS`); state
+  enterprises stay `registeredEntity` (Phase 240).
+- **273 entities are deregistered before their registration date** in the
+  register's own data. The mapper keeps `dissolutionDate`, drops
+  `foundingDate`, and says so in an annotation (libcove
+  `statement_entity_dissolution_before_founding_date`).
+- Nothing touches the response `Cache`: a miss belongs to one build of the
+  index. The pre-325 scraper cached its 403 card as the answer (fixed in the
+  first commit of the phase, before the scraper was retired).
 
 ---
 
@@ -1346,7 +1393,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Norway | brreg | `RA000472` — Register of Business Enterprises (Foretaksregisteret) | 2026-08-28 — ⚠️ ambiguous; the adapter describes *Enhetsregisteret*, which is `RA000473`. `RA000270`, also named in `brreg.py`, **does not exist** in the GLEIF RA list |
 | Ireland | cro | `RA000402` — Companies Register (CRO) | 2026-08-28 — table previously said RA000215 (wrong) |
 | Latvia | ur_latvia | `RA000423` — Commerce Register (Uzņēmumu Reģistrs) | 2026-08-28 — table previously said RA000327 (wrong) |
-| Lithuania | jar_lithuania | `RA000430` — Register of Legal Entities (Registrų centras) | 2026-08-28 — table previously said RA000330 (wrong) |
+| Lithuania | jar_lithuania | `RA000430` — Register of Legal Entities (Registrų centras) | 2026-08-28 — table previously said RA000330 (wrong). 2026-10-12: all 5,083 GLEIF records under it file a bare nine-digit code; 5,082 resolve against the Phase 325 index (3,422 of 3,423 ISSUED) |
 | France | inpi | `RA000189` — Register of Companies (Sirene, INSEE) · `RA000192` — Registre du Commerce et des Sociétés (Infogreffe) · `RA001129` — Registre national des entreprises (INPI) | 2026-09-11 — 149,237 active FR LEIs under RA000189, 8,145 under RA000192, **both carry the SIREN in `registeredAs`**, plain (`552032534`) or grouped in threes (`542 051 180`) depending on the LEI issuer — 391 sampled, no other shape. Both dispatch INPI and both map to `FR-INSEE` since Phase 205 (only RA000189 did before). `RA_BY_COUNTRY["FR"]` stays RA000189; `search_by_local_id` widens a French scope to every French code and both spellings. `RA000190` = AMF fund codes, not a company register. **RA001129 was added in GLEIF RA list v1.9 (30 Sept 2026, Phase 265)** with no LEI filed under it; it dispatches INPI, maps to `FR-INSEE`, and is searched with the other two — by the backend resolver and, since Phase 265, by the frontend picker (`sameNumberAuthorities` on the FR entry of `raCodes.ts`, parsed by `test_ra_codes.py`). Check the first records it carries are SIRENs |
 | Sweden | bolagsverket | `RA000544` — Companies Register (Bolagsverket) | 2026-08-28 (also verified 2026-06-12; RA000523 in earlier notes was wrong) |
 | Estonia | ariregister | `RA000181` — Commercial Register | 2026-08-28 (ignore any reference to RA000198) |
