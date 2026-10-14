@@ -2,6 +2,7 @@
 // widened with the `test` block below, so one file configures the dev server
 // and the suite (Phase 168).
 import { defineConfig } from "vitest/config";
+import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { readFileSync } from "fs";
 import { resolve } from "path";
@@ -63,8 +64,34 @@ const proxyRoutes: Record<string, { target: string; changeOrigin: boolean }> = {
   "/saved-reports":   { target: backendTarget, changeOrigin: true },
 };
 
+/**
+ * Phase 331: write `version.json` beside `index.html`, naming the build's
+ * entry chunk. A page compares it with the entry it was served
+ * (`src/lib/buildVersion.ts`) and says when OpenCheck has been deployed since
+ * it was opened. The entry chunk's hash covers the names of every chunk it
+ * can load, so it changes exactly when a lazy chunk the page might still ask
+ * for may have gone — and not on a deploy that rebuilt the same frontend.
+ */
+function versionManifest(): Plugin {
+  return {
+    name: "opencheck-version-manifest",
+    apply: "build",
+    generateBundle(_options, bundle) {
+      const entry = Object.values(bundle).find(
+        (file) => file.type === "chunk" && file.isEntry,
+      );
+      if (!entry) return;
+      this.emitFile({
+        type: "asset",
+        fileName: "version.json",
+        source: `${JSON.stringify({ entry: entry.fileName })}\n`,
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), versionManifest()],
   server: {
     port: 5173,
     host: true,

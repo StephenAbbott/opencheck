@@ -3240,3 +3240,54 @@ Dates-audit Phase E plus the one warning the Phase 317 post-deploy sweep found.
 - **`docs/dates.md` is linked from /about** (the BODS spine card and the
   reading list), with the standard's dates guidance at the pinned 0.4.0 URL;
   `BehindTheScenesPage.test.tsx` pins both.
+
+## Three bugs, one phase: deepen_top=0, the retry's provenance, lazy chunks (Phase 331)
+
+Stephen's decisions (14 Oct 2026): always deepen the anchor; say on the page
+that the verdict predates a retry; build stale-build detection in the same
+phase. Things that will be re-derived otherwise:
+
+- **The GLEIF anchor is deepened past any cap.** `_select_deepen_pairs`
+  carves out `("gleif", ctx.lei)` beside the registers and the stored OO
+  bundles. At `deepen_top=0` a company with no register record had no
+  subject statement: `subject_profile` came back empty and the FATF / EU /
+  non-EU checks read no jurisdiction — a clean screen that never ran. The
+  anchor's fetch is the one the lookup already made, so it costs a map.
+- **A dispatched source runs through `_run_source` and is read by
+  `_source_outcome`** (`routers/lookup.py`) — in the pipeline *and* in
+  `/lookup-source`. The retry used to await the coroutines with no
+  provenance scope and never `_stamp` a hit, so every retried result read
+  `stub` with no `retrieved_at`, and it had no stored-bundle fallback. Never
+  give the retry its own copy of either again. `LookupSourceResponse` carries
+  `error_type` and `source_liveness` (the run's per-source shape);
+  `tests/test_phase331_lookup_source.py` pins retry ↔ run parity per
+  liveness kind. A stored-bundle fallback after a live **error** now records
+  the bundle's provenance in `source_liveness` (it recorded the failed
+  attempt's stub before), matching the hit.
+- **The frontend merges the retry's liveness** (`lib/sourceRetry.ts`,
+  `mergeRetryLiveness`) so the chip describes the retry, and names the
+  retried sources under the verdict (`retriedSinceRunNote`,
+  `VerdictStrip retriedNote`): the verdict, `degraded_sources` and coverage
+  are the run's and are not recomputed.
+- **Every lazy part is `lazyWithRetry`** (`lib/chunkLoad.ts`): one more
+  attempt after 1.5 s, at a cache-busted copy of the URL the browser's error
+  names (a browser may answer the same specifier with the remembered
+  failure). Only a chunk-*load* error is retried. Use it for any new
+  `React.lazy`, and wrap the site in `ui/PanelBoundary` — `kind="part"
+  compact` for something that is not a mode tab (the person report, the two
+  lazy graph sites). The boundary words a chunk failure and a render error
+  differently and never blames a deploy for a render error.
+- **Stale-build detection** (`lib/buildVersion.ts`, `ui/NewVersionBanner`):
+  the Vite plugin `versionManifest` writes `dist/version.json` naming the
+  **entry chunk** (`{"entry": "assets/index-<hash>.js"}`); the page compares
+  it with its own `<script type="module">` src. The entry's hash covers every
+  chunk name it can load, so it changes exactly when a lazy chunk may have
+  gone — not on a backend-only deploy that rebuilt the same frontend. Checked
+  on return to the tab, every ten minutes while visible, and after a chunk
+  gives up; a failed or HTML answer says nothing. Nothing runs in dev (no
+  `version.json`, no hashed entry script).
+- **`e2e/chunk-failure.spec.ts` breaks the chunk on purpose**: one 502 then
+  the real file (retried, tab opens, two requests), and a permanent 404 with a
+  newer `version.json` (tab says OpenCheck was updated, the page and the
+  other tabs survive, the banner shows). The smoke spec cannot see this — one
+  build, so the hashes always agree.

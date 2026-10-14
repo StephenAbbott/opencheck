@@ -2247,6 +2247,11 @@ export interface LookupSourceResponse {
   source_id: string;
   hits: SourceHit[];
   error: string | null;
+  /** Phase 331: the `source_error` vocabulary when `error` is set. */
+  error_type?: "schema_changed" | "timeout" | "fetch_error" | null;
+  /** Phase 331: what the retry read, per source — the entry the run's own
+   *  `source_liveness` would carry. Absent from a pre-331 server. */
+  source_liveness?: Record<string, SourceLiveness>;
 }
 
 /**

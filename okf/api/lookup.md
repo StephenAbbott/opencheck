@@ -5,7 +5,7 @@ description: The LEI-anchored synthesis — resolve a company across sources and
 tags: [api, lookup, bods, sse]
 method: GET
 path: /lookup, /lookup-stream, /lookup-register, /lookup-register-stream
-timestamp: 2026-06-14
+timestamp: 2026-10-14
 ---
 
 # Overview
@@ -53,7 +53,7 @@ tier and the shared per-client lookup budget; the replay cache is keyed on
 | `lei` | ISO 17442 Legal Entity Identifier (20 chars). Required on `/lookup`. |
 | `scheme`, `id` | Register scheme and number. Required on `/lookup-register`; `400` names the known schemes when the scheme is unknown or the value is not a number of that register; the register's own "no such number" is `404`. |
 | `name` | Optional on `/lookup-register`: the company's name as the caller knows it, handed to registers that search by name behind the number (as the FullCheck hop hands them the PSC filing's). KvK's open data publishes no names at all: without one its record is returned with a `source_read` degradation saying so, and the verdict reads as incomplete rather than clean. A named run and a nameless one are separate replay-cache entries. |
-| `deepen_top` | How many top hits to deepen + map + assess (default 5; clamped to 0–10). |
+| `deepen_top` | How many top hits to deepen + map + assess (default 5; clamped to 0–10). Registers, stored Open Ownership bundles and (since Phase 331) the GLEIF anchor are deepened past the cap, so `deepen_top=0` still returns the subject's profile and screens its jurisdiction. |
 | `refresh` | Bypass the short-lived replay cache. |
 
 # Limits

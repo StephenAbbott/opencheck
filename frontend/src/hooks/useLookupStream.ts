@@ -136,6 +136,10 @@ export function useLookupStream() {
   const [replayedAt, setReplayedAt] = useState<string | null>(null);
   // Source IDs with an in-flight per-source retry (/lookup-source).
   const [retryingSources, setRetryingSources] = useState<Set<string>>(new Set());
+  // Phase 331: sources re-run on their own since the run finished, in the
+  // order they were retried. The verdict and coverage predate them, and the
+  // verdict strip says so (`lib/sourceRetry.ts`).
+  const [retriedSources, setRetriedSources] = useState<string[]>([]);
   // `runCompletedAt` names the run on screen (its `done` event carries it);
   // a save names that run and the server copies its own held copy (Phase 217).
   const [runCompletedAt, setRunCompletedAt] = useState<string | null>(null);
@@ -163,6 +167,7 @@ export function useLookupStream() {
     setDegradedSources([]);
     setVerdict(null);
     setSourceLiveness({});
+    setRetriedSources([]);
     setOaScreening([]);
     setGraphShape(null);
     setApplicableSources([]);
@@ -286,6 +291,7 @@ export function useLookupStream() {
     degradedSources,
     verdict,
     sourceLiveness,
+    setSourceLiveness,
     oaScreening,
     graphShape,
     applicableSources,
@@ -303,6 +309,8 @@ export function useLookupStream() {
     runCompletedAt,
     retryingSources,
     setRetryingSources,
+    retriedSources,
+    setRetriedSources,
     cleanupRef,
     reset,
     handlers,

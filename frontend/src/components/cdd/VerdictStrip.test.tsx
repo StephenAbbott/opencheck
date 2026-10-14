@@ -254,3 +254,16 @@ describe("VerdictStrip", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("after a per-source retry (Phase 331)", () => {
+  it("says once that the verdict predates the retry", () => {
+    renderStrip({ retriedNote: "The verdict and the coverage count were worked out before KvK was retried." });
+    expect(screen.getAllByTestId("retried-since-run")).toHaveLength(1);
+    expect(screen.getByTestId("retried-since-run")).toHaveTextContent("before KvK was retried");
+  });
+
+  it("says nothing when no source was retried", () => {
+    renderStrip();
+    expect(screen.queryByTestId("retried-since-run")).toBeNull();
+  });
+});

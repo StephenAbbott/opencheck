@@ -1,4 +1,6 @@
-import { lazy, Suspense, useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
+import { Suspense, useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
+import { lazyWithRetry } from "../../lib/chunkLoad";
+import { PanelBoundary } from "../ui/PanelBoundary";
 import { deepen } from "../../lib/api";
 import { groupHitsForDisplay, siblingNote } from "../../lib/hitGroups";
 import { rowFinding } from "../../lib/sourceFinding";
@@ -28,7 +30,7 @@ import { hitRegisterUrl, registerRecordUrl } from "../../lib/registerLinks";
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
 // bundle) but only renders when a user clicks "Visualise". Code-split it so
 // the initial page load never ships the graph engine.
-const BodsGraphExplorer = lazy(() => import("../BodsGraphExplorer"));
+const BodsGraphExplorer = lazyWithRetry(() => import("../BodsGraphExplorer"));
 
 export interface SourceBucket {
   sourceId: string;
@@ -714,18 +716,22 @@ export function DeepenBlock({
               screening this network against other sources, not reported by this source.
             </p>
           )}
-          <Suspense
-            fallback={
-              <div
-                className="h-48 rounded-oo border border-oo-rule bg-oo-bg/40 motion-safe:animate-pulse flex items-center justify-center text-oo-meta text-oo-muted"
-                role="status"
-              >
-                Loading graph…
-              </div>
-            }
-          >
-            <BodsGraphExplorer statements={detail.bods} signals={graphSignals} entityName={entityName} />
-          </Suspense>
+          {/* Phase 331: a graph chunk that fails to load says so here, in
+              place of the diagram, instead of taking the whole tab with it. */}
+          <PanelBoundary label="ownership diagram" kind="part" compact>
+            <Suspense
+              fallback={
+                <div
+                  className="h-48 rounded-oo border border-oo-rule bg-oo-bg/40 motion-safe:animate-pulse flex items-center justify-center text-oo-meta text-oo-muted"
+                  role="status"
+                >
+                  Loading graph…
+                </div>
+              }
+            >
+              <BodsGraphExplorer statements={detail.bods} signals={graphSignals} entityName={entityName} />
+            </Suspense>
+          </PanelBoundary>
         </section>
       )}
 
