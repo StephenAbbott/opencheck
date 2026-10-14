@@ -485,6 +485,56 @@ def test_pipeline_emits_the_event_and_nothing_else_reads_it(monkeypatch, tmp_pat
         get_settings.cache_clear()
 
 
+def test_a_cik_resolved_from_the_name_reaches_the_read(monkeypatch, tmp_path) -> None:
+    """Phase 335: most US issuers get their CIK from the name fallback, not
+    OpenCorporates. The read must be handed it, or the percentage never shows
+    (Moody's in production, 14 Oct 2026). It stays out of the response's
+    derived identifiers."""
+    import json as _json
+
+    from opencheck.sources import REGISTRY
+    from tests.test_lookup_pipeline import _stream_events
+
+    client, lei = _pipeline_client(monkeypatch, tmp_path)
+    target = tmp_path / "cache" / "bods_data" / "gleif" / f"{lei}.jsonl"
+    stmt = _json.loads(target.read_text())
+    stmt["recordDetails"]["jurisdiction"] = {"name": "Delaware", "code": "US-DE"}
+    stmt["recordDetails"]["identifiers"] = [{"id": lei, "scheme": "XI-LEI"}]
+    target.write_text(_json.dumps(stmt) + "\n")
+
+    adapter = REGISTRY["sec_edgar"]
+    cls = type(adapter)
+    live_info = adapter.info.model_copy(update={"live_available": True})
+    monkeypatch.setattr(cls, "info", property(lambda self: live_info))
+
+    async def _resolve(self, name):
+        return "1059556"
+
+    async def _fetch(self, hit_id):
+        raise RuntimeError("not reached for this test")
+
+    monkeypatch.setattr(cls, "resolve_cik", _resolve)
+    monkeypatch.setattr(cls, "fetch", _fetch)
+    seen: dict[str, Any] = {}
+
+    def _fake(got_lei, bods, *, issuer_cik=None, legal_name=None, today=None):
+        seen["issuer_cik"] = issuer_cik
+        return None
+
+    monkeypatch.setattr(form13f, "build_payload", _fake)
+    try:
+        with client.stream(
+            "GET", "/lookup-stream", params={"lei": lei, "refresh": "true"}
+        ) as r:
+            events = _stream_events("".join(r.iter_text()))
+        assert seen["issuer_cik"] == "1059556"
+        assert "sec_edgar" in [p.get("source_id") for n, p in events if n == "hit"]
+        sync = client.get("/lookup", params={"lei": lei}).json()
+        assert "edgar_cik" not in (sync.get("derived_identifiers") or {})
+    finally:
+        get_settings.cache_clear()
+
+
 def test_a_failing_read_never_fails_the_lookup(monkeypatch, tmp_path) -> None:
     from tests.test_lookup_pipeline import _stream_body, _stream_events
 

@@ -1739,6 +1739,7 @@ async def _lookup_pipeline(
                         })
 
     # SEC EDGAR fallback: resolve the CIK from the legal name.
+    edgar_cik_by_name: str | None = None
     if (
         ctx.jurisdiction.upper().startswith("US")
         and not ctx.derived.get("edgar_cik")
@@ -1752,6 +1753,9 @@ async def _lookup_pipeline(
                 timeout=_source_budget("sec_edgar"),
             )
             if cik2:
+                # Kept for the 13F percentage only (Phase 335); not put in
+                # ``ctx.derived``, which is the response's derived identifiers.
+                edgar_cik_by_name = cik2
                 edgar_hit = _edgar_hit(cik2, ctx.legal_name)
                 hits.append(edgar_hit)
                 deepened_bundles.append(("sec_edgar", cik2))
@@ -1915,7 +1919,7 @@ async def _lookup_pipeline(
             _form13f.build_payload,
             ctx.lei,
             bods_all,
-            issuer_cik=ctx.derived.get("edgar_cik"),
+            issuer_cik=ctx.derived.get("edgar_cik") or edgar_cik_by_name,
             legal_name=ctx.legal_name,
         )
     except Exception as exc:  # noqa: BLE001 — never fails a lookup
