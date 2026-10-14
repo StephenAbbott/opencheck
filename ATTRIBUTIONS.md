@@ -387,6 +387,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains data from SEC EDGAR (U.S. Securities and Exchange Commission), public domain."
 - **Entry point:** legal name search for US-jurisdiction entities; no API key required
 
+## SEC Form 13F data sets (institutional investment managers' positions)
+
+- **Data:** the long positions institutional investment managers with over $100 million under discretion report each quarter on Form 13F, flattened by the SEC into quarterly data sets; and the shares-outstanding figure on issuers' 10-Q/10-K covers (`dei:EntityCommonStockSharesOutstanding`, XBRL frames API). **Not beneficial ownership** — a 13F filer is a manager with investment discretion; the data is never mapped to BODS, never drawn in the ownership graph and never read by a risk signal
+- **Portal:** <https://www.sec.gov/data-research/sec-markets-data/form-13f-data-sets>
+- **License:** Public Domain (US government works)
+- **Attribution:** "Contains data from the SEC's Form 13F data sets (U.S. Securities and Exchange Commission), public domain." The SEC's own caveat is repeated wherever the data is shown: reported by the filers, not verified by the SEC, and no substitute for the filings themselves
+- **Entry point:** a weekly-checked index built by `backend/scripts/build_form13f_index.py` (release asset `form13f-index`); the SEC asks for a contact address in the User-Agent. See `docs/form13f.md`
+
 ## LSEG PermID (primary stock-exchange listing)
 
 - **Data:** for a listed company, the organisation's primary quote — ticker, RIC and the venue's ISO 10383 MIC — resolved from the LEI. One main quote only; other listings are not shown
