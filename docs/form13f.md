@@ -84,7 +84,11 @@ Left out and counted (`excluded_price`, `excluded_name`):
 
 `backend/opencheck/form13f.py`. The backend downloads the release asset at
 boot (`warm_index`, the ariregister arrangement: replaced when the asset
-changed, kept otherwise; `OPENCHECK_FORM13F_DB_FILE` / `_DB_URL`). One lookup
+changed, kept otherwise; `OPENCHECK_FORM13F_DB_FILE` / `_DB_URL` — on Render
+`OPENCHECK_FORM13F_DB_FILE=/var/data/form13f.sqlite`, the persistent disk, so
+a restart keeps the file rather than downloading it again; the warm-up is the
+last step of the boot sequence, so `/signalstats` says `available: false` for
+the first few minutes after a deploy). One lookup
 event, `form13f`, is built after the sources settle and before the subject
 profile, folded into `LookupResponse.form13f` as recorded — so a saved report
 shows the quarter of its own day, and the PDF, Markdown and MCP read the
@@ -142,7 +146,11 @@ not.
 Only when the security is not an ADR, the company has one listed class of
 shares, and the SEC frames carry the issuer's undimensioned
 `dei:EntityCommonStockSharesOutstanding` dated within 100 days of the
-period; the issuer's CIK is the one the SEC EDGAR source resolved. Labelled
+period; the issuer's CIK is the one the SEC EDGAR source resolved —
+from OpenCorporates or, for most issuers, from the legal name. Phase 334
+passed only the first, so production showed no percentage for Moody's until
+Phase 335 passed the name-resolved CIK too (kept out of the response's
+`derived_identifiers`, which never carried it). Labelled
 as computed: "Of 173.2 million shares outstanding on Moody’s Corporation's
 10-Q/10-K cover, 30 June 2026 — computed by OpenCheck." Berkshire's 24,669,778
 Moody's shares are 14.24%, the figure commercial vendors show. Berkshire and
