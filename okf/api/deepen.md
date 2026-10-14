@@ -5,7 +5,7 @@ description: Fetch the full record for a single hit and map it to BODS; re-run o
 tags: [api, deepen, bods]
 method: GET
 path: /deepen, /lookup-source
-timestamp: 2026-10-13
+timestamp: 2026-10-14
 ---
 
 # Overview
@@ -20,7 +20,11 @@ timestamp: 2026-10-13
   remembers names (KvK) is told not to keep it.
 - `GET /lookup-source?lei=<LEI>&source_id=<id>` — re-run a single source for an
   existing LEI lookup (the UI's per-source "retry source"), invalidating that
-  LEI's replay cache.
+  LEI's replay cache. Since Phase 331 it runs the source exactly as the
+  pipeline does — its own provenance scope, the same hit reading and the same
+  stored Open Ownership bundle fallback — and returns `hits`, `error`,
+  `error_type` and `source_liveness` (the per-source entry `/lookup` would
+  carry). The run's verdict, degraded sources and coverage are not recomputed.
 
 # Raw-data policy
 

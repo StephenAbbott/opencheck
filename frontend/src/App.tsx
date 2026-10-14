@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trackEvent } from "./lib/analytics";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
@@ -21,6 +21,7 @@ import { partitionByKind } from "./lib/signalKind";
 import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
+import { addRetried, mergeRetryLiveness, retriedSinceRunNote } from "./lib/sourceRetry";
 import { useIsPhone } from "./lib/viewport";
 import { Button } from "./components/ui";
 import { leiRegistrationChip, statusChip } from "./lib/subjectProfile";
@@ -69,6 +70,8 @@ import {
 import { DegradedScreensNotice, PanelErrorsNotice } from "./components/cdd/ReportNotices";
 import { ModeBlurb, ModeTabs } from "./components/cdd/ModeTabs";
 import { PanelBoundary, PanelLoading } from "./components/ui/PanelBoundary";
+import { NewVersionBanner } from "./components/ui/NewVersionBanner";
+import { lazyWithRetry } from "./lib/chunkLoad";
 import { SiteFooter, SiteHeader } from "./components/SiteChrome";
 import { SearchPanel } from "./components/SearchPanel";
 import { useSearchForm } from "./hooks/useSearchForm";
@@ -76,16 +79,17 @@ import { useLookupStream } from "./hooks/useLookupStream";
 import { useSavedReport } from "./hooks/useSavedReport";
 
 // FullCheck (enhanced due diligence) view — lazy so Cytoscape/graph code only
-// loads when a user switches into FullCheck mode.
-const FullCheckPanel = lazy(() => import("./components/cdd/FullCheckPanel"));
-const BackgroundCheckPanel = lazy(
+// loads when a user switches into FullCheck mode. Phase 331: every lazy part
+// retries a failed chunk once (`lazyWithRetry`) before its boundary speaks.
+const FullCheckPanel = lazyWithRetry(() => import("./components/cdd/FullCheckPanel"));
+const BackgroundCheckPanel = lazyWithRetry(
   () => import("./components/cdd/BackgroundCheckPanel")
 );
-const SubsidiariesPanel = lazy(() => import("./components/cdd/SubsidiariesPanel"));
-const HistoryPanel = lazy(() => import("./components/cdd/HistoryPanel"));
+const SubsidiariesPanel = lazyWithRetry(() => import("./components/cdd/SubsidiariesPanel"));
+const HistoryPanel = lazyWithRetry(() => import("./components/cdd/HistoryPanel"));
 // Phase 246: QuickCheck is a lazy chunk too, like the five modes beside it.
-const QuickCheckPanel = lazy(() => import("./components/cdd/QuickCheckPanel"));
-const PersonReportPage = lazy(
+const QuickCheckPanel = lazyWithRetry(() => import("./components/cdd/QuickCheckPanel"));
+const PersonReportPage = lazyWithRetry(
   () => import("./components/cdd/PersonReportPage")
 );
 
@@ -630,6 +634,9 @@ export default function App() {
     const sourceName = sourceNameIndex[sourceId] ?? sourceId;
     try {
       const res = await retryLookupSource(streamingLei, sourceId);
+      // Phase 331: the freshness chip describes the retry, failed or not —
+      // the run's entry for this source described the attempt that failed.
+      stream.setSourceLiveness((prev) => mergeRetryLiveness(prev, res));
       if (res.error) {
         stream.setErrors((prev) => ({ ...prev, [sourceId]: res.error as string }));
         setSrAnnouncement(`${sourceName} retry failed.`);
@@ -643,6 +650,7 @@ export default function App() {
           ...prev.filter((h) => h.source_id !== sourceId),
           ...res.hits,
         ]);
+        stream.setRetriedSources((prev) => addRetried(prev, sourceId));
         setSrAnnouncement(`${sourceName} retried successfully.`);
       }
     } catch (e) {
@@ -991,6 +999,7 @@ export default function App() {
       }}
       screening={streaming}
       saved={Boolean(savedReport)}
+      retriedNote={retriedSinceRunNote(stream.retriedSources, sourceNameIndex)}
     />
   );
 
@@ -1006,6 +1015,7 @@ export default function App() {
       >
         Skip to main content
       </a>
+      <NewVersionBanner />
       <SiteHeader
         view={view}
         onNavigate={navigate}
@@ -1046,19 +1056,21 @@ export default function App() {
           {srAnnouncement}
         </div>
         {view === "main" && personReport && (
-          <Suspense
-            fallback={
-              <p className="text-oo-small text-oo-muted italic">
-                Loading person report…
-              </p>
-            }
-          >
-            <PersonReportPage
-              name={personReport.name}
-              birthYear={personReport.birthYear}
-              onBack={closePersonReport}
-            />
-          </Suspense>
+          <PanelBoundary label="person report" kind="part" compact>
+            <Suspense
+              fallback={
+                <p className="text-oo-small text-oo-muted italic">
+                  Loading person report…
+                </p>
+              }
+            >
+              <PersonReportPage
+                name={personReport.name}
+                birthYear={personReport.birthYear}
+                onBack={closePersonReport}
+              />
+            </Suspense>
+          </PanelBoundary>
         )}
         {view === "main" && !personReport && (
         <>

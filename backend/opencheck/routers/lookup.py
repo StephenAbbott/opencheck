@@ -12,7 +12,7 @@ from dataclasses import dataclass, field as dc_field
 from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from .. import __version__
@@ -230,6 +230,114 @@ def _stamp(hit: SourceHit | None, prov: Provenance | None) -> SourceHit | None:
         hit.liveness = prov.liveness
         hit.retrieved_at = prov.retrieved_at
     return hit
+
+
+async def _run_source(src_id: str, coro: Any) -> tuple[str, Any, Provenance]:
+    """Await one dispatched source inside its own provenance scope.
+
+    The one way a dispatched source is run — by the lookup pipeline and by the
+    per-source retry (``/lookup-source``). Cache reads and HTTP client
+    construction beneath this await record themselves into the scope, so the
+    resolved value describes what this source actually did. A timeout or a
+    failure comes back as the exception, with stub provenance: nothing was
+    read. Until Phase 331 the retry awaited the same coroutine with no scope
+    at all, so every retried result read "stub" with no retrieval date.
+    """
+    budget = _source_budget(src_id)
+    with _provenance.recording() as recorder:
+        try:
+            result = await asyncio.wait_for(coro, timeout=budget)
+        except asyncio.TimeoutError:
+            return src_id, TimeoutError(
+                f"source exceeded its {budget:.0f}s time budget"
+            ), _provenance.STUB_PROVENANCE
+        except Exception as exc:  # noqa: BLE001
+            return src_id, exc, _provenance.STUB_PROVENANCE
+    is_stub = bool(result.get("is_stub")) if isinstance(result, dict) else False
+    return src_id, result, recorder.resolve(is_stub=is_stub)
+
+
+def _source_error_type(exc: Exception) -> str:
+    """The ``error_type`` a ``source_error`` event names for ``exc``."""
+    if isinstance(exc, SourceSchemaError):
+        return "schema_changed"
+    if isinstance(exc, TimeoutError):
+        return "timeout"
+    return "fetch_error"
+
+
+#: Search-style adapters whose result is already a list of hits.
+_LIST_RESULT_SOURCES = ("opensanctions", "openaleph")
+
+
+@dataclass
+class _SourceOutcome:
+    """What one dispatched source amounts to on the report (Phase 331).
+
+    ``hits`` are stamped with ``provenance``; ``provenance`` is the entry the
+    run's ``source_liveness`` carries for the source. A source with a stored
+    Open Ownership bundle that failed or came back empty is served from the
+    bundle, and its provenance is the bundle's (a snapshot with its publication
+    date), not the failed attempt's stub. ``error`` is set only when nothing
+    could be shown.
+    """
+
+    source_id: str
+    hits: list[SourceHit]
+    provenance: Provenance
+    error: str | None = None
+    error_type: str | None = None
+
+
+def _source_outcome(
+    source_id: str, result: Any, prov: Provenance, ctx: "_LookupCtx"
+) -> _SourceOutcome:
+    """Turn one source's result into hits — shared by the pipeline and the retry.
+
+    One function, so ``/lookup-source`` cannot read a result differently from
+    the run it retries: the same stamping, the same list-source filter and the
+    same stored-bundle fallback.
+    """
+    if isinstance(result, Exception):
+        # A stored OO bundle is canonical — serve it instead of surfacing the
+        # live error (e.g. a Companies House outage).
+        bkey = _stored_bundle_key(source_id, ctx)
+        if bkey is not None:
+            return _SourceOutcome(
+                source_id,
+                [_stored_bundle_hit(source_id, bkey, ctx)],
+                _stored_bundle_provenance(source_id, bkey),
+            )
+        return _SourceOutcome(
+            source_id, [], prov,
+            error=_fmt_source_error(result),
+            error_type=_source_error_type(result),
+        )
+
+    if source_id in _LIST_RESULT_SOURCES:
+        list_hits = (
+            [h for h in result if not h.is_stub] if isinstance(result, list) else []
+        )
+        for sh in list_hits:
+            _stamp(sh, prov)
+        return _SourceOutcome(source_id, list_hits, prov)
+
+    hit = _stamp(_build_result_hit(source_id, result, ctx), prov)
+    if hit is None:
+        # No live hit (stub / not found). If a stored OO bundle exists,
+        # surface it anyway so the source card isn't lost to a live outage.
+        bkey = _stored_bundle_key(source_id, ctx)
+        if bkey is not None:
+            # Keyed: without `bkey` the helper cannot open the bundle and
+            # falls back to a dateless "Open Ownership bulk dataset", so the
+            # one thing a snapshot most needs to say — when it was published
+            # — went missing.
+            bprov = _stored_bundle_provenance(source_id, bkey)
+            return _SourceOutcome(
+                source_id, [_stored_bundle_hit(source_id, bkey, ctx)], bprov
+            )
+        return _SourceOutcome(source_id, [], prov)
+    return _SourceOutcome(source_id, [hit], prov)
 
 
 _NC_LICENSES = {"CC-BY-NC-4.0", "CC-BY-NC-SA-4.0"}
@@ -1288,7 +1396,7 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
     cannot be resolved. Shared by the pipeline and /lookup-source.
 
     The anchor fetch runs inside a provenance scope and the result is stashed
-    on ``ctx.provenance``. Every other source gets one via ``_run()``; GLEIF
+    on ``ctx.provenance``. Every other source gets one via ``_run_source()``; GLEIF
     is resolved here, before that loop exists, which is why it needs its own.
     """
     gleif = REGISTRY["gleif"]
@@ -1561,100 +1669,41 @@ async def _lookup_pipeline(
         src_name = REGISTRY[sid].info.name if sid in REGISTRY else sid
         yield ("source_started", {"source_id": sid, "source_name": src_name})
 
-    async def _run(src_id: str, coro: Any) -> tuple[str, Any, Provenance]:
-        budget = _source_budget(src_id)
-        # One provenance scope per source. Cache reads and HTTP client
-        # construction beneath this await record themselves into it, so the
-        # resolved value describes what this source actually did.
-        with _provenance.recording() as recorder:
-            try:
-                result = await asyncio.wait_for(coro, timeout=budget)
-            except asyncio.TimeoutError:
-                return src_id, TimeoutError(
-                    f"source exceeded its {budget:.0f}s time budget"
-                ), _provenance.STUB_PROVENANCE
-            except Exception as exc:  # noqa: BLE001
-                return src_id, exc, _provenance.STUB_PROVENANCE
-        is_stub = bool(result.get("is_stub")) if isinstance(result, dict) else False
-        return src_id, result, recorder.resolve(is_stub=is_stub)
-
     errors: dict[str, str] = {}
     # Seeded with the anchor, which was resolved before this loop existed.
     provenances: dict[str, Provenance] = (
         {"gleif": ctx.provenance} if ctx.provenance is not None else {}
     )
     oc_result_processed = False
-    pending = {asyncio.create_task(_run(sid, coro)) for sid, coro in dispatch}
+    pending = {asyncio.create_task(_run_source(sid, coro)) for sid, coro in dispatch}
     while pending:
         done_set, pending = await asyncio.wait(
             pending, return_when=asyncio.FIRST_COMPLETED
         )
         for task in done_set:
             source_id, result, source_prov = task.result()
-            provenances[source_id] = source_prov
+            outcome = _source_outcome(source_id, result, source_prov, ctx)
+            provenances[source_id] = outcome.provenance
 
-            if isinstance(result, Exception):
-                # A stored OO bundle is canonical — serve it instead of
-                # surfacing the live error (e.g. a Companies House outage).
-                bkey = _stored_bundle_key(source_id, ctx)
-                if bkey is not None:
-                    sh = _stored_bundle_hit(source_id, bkey, ctx)
-                    hits.append(sh)
-                    deepened_bundles.append((source_id, bkey))
-                    yield ("hit", sh)
-                    yield ("source_completed", {"source_id": source_id, "hit_count": 1})
-                    continue
-                errors[source_id] = _fmt_source_error(result)
-                if isinstance(result, SourceSchemaError):
-                    _err_type = "schema_changed"
-                elif isinstance(result, TimeoutError):
-                    _err_type = "timeout"
-                else:
-                    _err_type = "fetch_error"
+            if outcome.error is not None:
+                errors[source_id] = outcome.error
                 yield ("source_error", {
                     "source_id": source_id,
-                    "error": errors[source_id],
-                    "error_type": _err_type,
+                    "error": outcome.error,
+                    "error_type": outcome.error_type,
                 })
                 continue
 
-            # List-result sources (search-style adapters).
-            if source_id in ("opensanctions", "openaleph"):
-                list_hits = (
-                    [h for h in result if not h.is_stub]
-                    if isinstance(result, list)
-                    else []
-                )
-                for sh in list_hits:
-                    _stamp(sh, source_prov)
-                    hits.append(sh)
-                    deepened_bundles.append((source_id, sh.hit_id))
-                    yield ("hit", sh)
-                yield ("source_completed", {
-                    "source_id": source_id, "hit_count": len(list_hits),
-                })
+            for sh in outcome.hits:
+                hits.append(sh)
+                deepened_bundles.append((source_id, sh.hit_id))
+                yield ("hit", sh)
+            yield ("source_completed", {
+                "source_id": source_id, "hit_count": len(outcome.hits),
+            })
+            if isinstance(result, Exception) or source_id in _LIST_RESULT_SOURCES:
                 continue
-
-            hit = _stamp(_build_result_hit(source_id, result, ctx), source_prov)
-            if hit is None:
-                # No live hit (stub / not found). If a stored OO bundle exists,
-                # surface it anyway so the source card isn't lost to a live outage.
-                bkey = _stored_bundle_key(source_id, ctx)
-                if bkey is not None:
-                    hit = _stored_bundle_hit(source_id, bkey, ctx)
-                    # Keyed: without `bkey` the helper cannot open the bundle
-                    # and falls back to a dateless "Open Ownership bulk
-                    # dataset", so the one thing a snapshot most needs to say
-                    # — when it was published — went missing.
-                    provenances[source_id] = _stored_bundle_provenance(source_id, bkey)
-                    _stamp(hit, provenances[source_id])
-            if hit is not None:
-                hits.append(hit)
-                deepened_bundles.append((source_id, hit.hit_id))
-                yield ("hit", hit)
-                yield ("source_completed", {"source_id": source_id, "hit_count": 1})
-            else:
-                yield ("source_completed", {"source_id": source_id, "hit_count": 0})
+            hit = outcome.hits[0] if outcome.hits else None
 
             # OpenCorporates may reveal a SEC EDGAR CIK — surface immediately.
             if (
@@ -2667,6 +2716,14 @@ class LookupSourceResponse(BaseModel):
     source_id: str
     hits: list[SourceHit]
     error: str | None = None
+    #: ``schema_changed`` / ``timeout`` / ``fetch_error`` when ``error`` is set
+    #: — the same words a ``source_error`` event carries (Phase 331).
+    error_type: str | None = None
+    #: What the retry actually read, per source it dispatched — the entry the
+    #: run's own ``source_liveness`` would carry (Phase 331). A client merges it
+    #: over the run's map so the freshness chip describes the retry, not the
+    #: attempt that failed.
+    source_liveness: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 @router.get("/lookup-source", response_model=LookupSourceResponse)
@@ -2712,31 +2769,32 @@ async def lookup_source(
             ),
         )
 
+    # The pipeline's own run-and-read (Phase 331): each source in its own
+    # provenance scope, the result read by `_source_outcome`. Before this the
+    # retry awaited the coroutines bare and never stamped a hit, so every
+    # retried result read "stub" with no retrieval date, and a source with a
+    # stored Open Ownership bundle answered a failed retry with the error
+    # instead of the bundle the run had shown.
+    ran = await asyncio.gather(*(_run_source(sid, coro) for sid, coro in tasks))
     hits: list[SourceHit] = []
     error: str | None = None
-    for sid, coro in tasks:
-        try:
-            result = await asyncio.wait_for(coro, timeout=_source_budget(sid))
-        except asyncio.TimeoutError:
-            error = (
-                f"TimeoutError: source exceeded its "
-                f"{_source_budget(sid):.0f}s time budget"
-            )
-            continue
-        except Exception as exc:  # noqa: BLE001
-            error = _fmt_source_error(exc)
-            continue
-        if sid in ("opensanctions", "openaleph"):
-            if isinstance(result, list):
-                hits.extend(h for h in result if not h.is_stub)
-        else:
-            hit = _build_result_hit(sid, result, ctx)
-            if hit is not None:
-                hits.append(hit)
+    error_type: str | None = None
+    liveness: dict[str, dict[str, Any]] = {}
+    for sid, result, prov in ran:
+        outcome = _source_outcome(sid, result, prov, ctx)
+        liveness[sid] = outcome.provenance.to_dict()
+        hits.extend(outcome.hits)
+        if outcome.error is not None:
+            error, error_type = outcome.error, outcome.error_type
 
     _invalidate_replay(norm_lei)
     return LookupSourceResponse(
-        lei=norm_lei, source_id=source_id, hits=hits, error=error
+        lei=norm_lei,
+        source_id=source_id,
+        hits=hits,
+        error=error,
+        error_type=error_type,
+        source_liveness=liveness,
     )
 
 
@@ -2869,17 +2927,28 @@ def _select_deepen_pairs(
       which emit the officers / PSCs / beneficial owners the people list is
       built from;
     * stored OO bundles (GLEIF, UK PSC), whose canonical graph must never drop
-      behind other hits.
+      behind other hits;
+    * the GLEIF anchor itself (Phase 331). It is the subject's own identity
+      record: without it a ``deepen_top=0`` lookup of a company with no
+      register adapter had no subject statement at all, so ``subject_profile``
+      came back empty and the jurisdiction checks (FATF, EU high-risk, non-EU)
+      read the subject's country as absent — a clean screen nobody ran. The
+      anchor's fetch is the one the lookup already made, so this costs a map.
 
     Arrival order is preserved and duplicates are removed, so the selection is a
     deterministic function of the (deduplicated) input.
     """
+    anchor = ("gleif", getattr(ctx, "lei", None))
     deepen_pairs = list(deepened_bundles[:deepen_top])
     seen = set(deepen_pairs)
     for pair in deepened_bundles[deepen_top:]:
         if pair in seen:
             continue
-        if pair[0] in _PERSON_CAPABLE_SOURCES or _stored_bundle_key(pair[0], ctx) == pair[1]:
+        if (
+            pair == anchor
+            or pair[0] in _PERSON_CAPABLE_SOURCES
+            or _stored_bundle_key(pair[0], ctx) == pair[1]
+        ):
             deepen_pairs.append(pair)
             seen.add(pair)
     return deepen_pairs

@@ -165,7 +165,11 @@ export function ApiPage() {
             says <code className={mono}>gleif_done</code>).
           </ApiEndpoint>
           <ApiEndpoint path="/lookup-source?lei=<LEI>&source_id=<id>">
-            Re-run a single source for an existing lookup (the per-source “retry” in the UI).
+            Re-run a single source for an existing lookup (the per-source “retry” in the UI). Returns{" "}
+            <code className={mono}>hits</code>, <code className={mono}>error</code> /{" "}
+            <code className={mono}>error_type</code>, and <code className={mono}>source_liveness</code> — what
+            the retry itself read, in the shape <code className={mono}>/lookup</code> gives each source. The
+            run’s verdict and coverage are not recomputed.
           </ApiEndpoint>
           <ApiEndpoint path="/batch-stream?leis=<LEI,LEI,…>">
             Screen up to 20 LEIs in one request — the same pipeline as{" "}

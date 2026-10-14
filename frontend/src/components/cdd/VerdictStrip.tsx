@@ -70,6 +70,7 @@ export function VerdictStrip({
   registryTotal = null,
   jurisdiction = null,
   knowability = null,
+  retriedNote = null,
 }: {
   /** The deterministic sentences from the backend. */
   verdict?: string | null;
@@ -107,6 +108,11 @@ export function VerdictStrip({
   saved?: boolean;
   /** Sources are still streaming: counts are partial, so say nothing yet. */
   screening?: boolean;
+  /** Phase 331: `retriedSinceRunNote` — set once a source has been retried on
+   *  its own. The verdict and coverage are the run's and cannot follow the
+   *  retry, so the strip says they predate it rather than let them read as
+   *  current. */
+  retriedNote?: string | null;
 }) {
   const total = riskSignals.length + contextSignals.length;
 
@@ -143,6 +149,14 @@ export function VerdictStrip({
       {verdict && (
         <p className="text-oo-head font-medium leading-snug text-oo-ink max-w-[76ch]">
           {verdict}
+        </p>
+      )}
+      {retriedNote && (
+        <p
+          className="mt-2 max-w-[76ch] text-oo-small text-oo-muted"
+          data-testid="retried-since-run"
+        >
+          {retriedNote}
         </p>
       )}
 

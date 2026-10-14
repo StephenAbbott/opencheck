@@ -1,4 +1,6 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazyWithRetry } from "../../lib/chunkLoad";
+import { PanelBoundary } from "../ui/PanelBoundary";
 import { getSubsidiaries } from "../../lib/api";
 import type { RiskSignal, SubsidiariesResponse, SubsidiaryChild } from "../../lib/api";
 import { scopeCrossSourceSignals } from "../../lib/signalScope";
@@ -25,7 +27,7 @@ import { Button, Chip, SectionHeading } from "../ui";
 
 // BodsGraphExplorer pulls in Cytoscape — load it only when a small network is
 // actually rendered as a graph (large networks degrade to a table + export).
-const BodsGraphExplorer = lazy(() => import("../BodsGraphExplorer"));
+const BodsGraphExplorer = lazyWithRetry(() => import("../BodsGraphExplorer"));
 
 // ---------------------------------------------------------------------
 // Relation badge — direct / ultimate / both
@@ -612,9 +614,11 @@ export function SubsidiaryNetwork({
           {/* Small network rendered as an interactive BODS graph. */}
           {isGraphMode && showGraph && bods && (
             <div className="mt-2">
-              <Suspense fallback={<p className="text-oo-meta text-oo-muted">Loading graph…</p>}>
-                <BodsGraphExplorer statements={bods} signals={graphSignals} entityName={entityName} direction="subsidiaries" fullCheck />
-              </Suspense>
+              <PanelBoundary label="subsidiary graph" kind="part" compact>
+                <Suspense fallback={<p className="text-oo-meta text-oo-muted">Loading graph…</p>}>
+                  <BodsGraphExplorer statements={bods} signals={graphSignals} entityName={entityName} direction="subsidiaries" fullCheck />
+                </Suspense>
+              </PanelBoundary>
             </div>
           )}
 
