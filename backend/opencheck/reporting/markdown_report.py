@@ -282,12 +282,11 @@ def _degraded_lines(report: dict[str, Any]) -> list[str]:
     itself. Counts only — degradation records never carry related-party
     names.
     """
-    from ..risk import DEGRADATION_REASON_LABELS
+    from ..risk import DEGRADATION_REASON_LABELS, degraded_source_name
 
     degraded = report.get("degraded_sources") or []
     if not degraded:
         return []
-    reg = _registry()
     lines = [
         "### Screening limitations",
         "",
@@ -297,8 +296,8 @@ def _degraded_lines(report: dict[str, Any]) -> list[str]:
         "",
     ]
     for d in degraded:
-        src = reg.get(d.get("source_id", ""))
-        name = src.info.name if src else (d.get("source_id") or "an upstream source")
+        # Phase 332: "OpenCheck" / "ICIJ Offshore Leaks", never the raw id.
+        name = degraded_source_name(d)
         reason = DEGRADATION_REASON_LABELS.get(
             d.get("reason", ""), d.get("reason") or "an unknown failure"
         )

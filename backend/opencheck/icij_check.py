@@ -126,8 +126,10 @@ from . import names, related_targets
 from .config import get_settings
 from .http import build_client, sanitize_name_query
 from .risk import (
+    DEGRADED_CHECK_LABELS,
     DEGRADED_TRUNCATED,
     OFFSHORE_LEAKS,
+    OPENCHECK_SOURCE_ID,
     DegradedSource,
     RiskSignal,
     classify_degradation_reason,
@@ -340,10 +342,10 @@ async def assess_icij_names(
     if selection.truncated and degraded is not None:
         degraded.append(
             DegradedSource(
-                source_id="opencheck",
+                source_id=OPENCHECK_SOURCE_ID,
                 check=CHECK_NAME,
                 affected_signals=[OFFSHORE_LEAKS],
-                detail=selection.detail("Offshore Leaks screening"),
+                detail=selection.detail(DEGRADED_CHECK_LABELS[CHECK_NAME]),
                 reason=DEGRADED_TRUNCATED,
             )
         )

@@ -349,8 +349,21 @@ export function getSourceNames(): Record<string, string> {
   return REGISTRY_NAMES;
 }
 
+/**
+ * Names for source ids that reach the page but are not registered adapters,
+ * so `/sources` cannot name them. `opencheck` is the id a degradation carries
+ * when the limit is OpenCheck's own (Phase 279); it prettified to
+ * "Opencheck" (Phase 332). Every entry must match `_UNREGISTERED_NAMES` in
+ * `backend/opencheck/sources/__init__.py` — `test_phase332_degraded_names.py`
+ * parses this table. `icij` is deliberately not here yet: the risk chips say
+ * "From ICIJ", and renaming that is its own decision.
+ */
+export const UNREGISTERED_NAMES: Record<string, string> = {
+  opencheck: "OpenCheck",
+};
+
 export function sourceLabel(sourceId: string, names?: Record<string, string>): string {
-  const mapped = names?.[sourceId] ?? REGISTRY_NAMES[sourceId];
+  const mapped = names?.[sourceId] ?? REGISTRY_NAMES[sourceId] ?? UNREGISTERED_NAMES[sourceId];
   if (mapped) return mapped;
   return sourceId
     .split(/[_-]/)
