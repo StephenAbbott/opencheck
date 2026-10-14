@@ -229,7 +229,7 @@ def build_evidence_packet(
     subject_confidence: str | None = None,
 ) -> EvidencePacket:
     """Distil an OpenCheck lookup/report result into an evidence packet."""
-    from ..sources import REGISTRY  # lazy import to avoid cycles
+    from ..sources import REGISTRY, source_display_name  # lazy import to avoid cycles
 
     bods: list[dict[str, Any]] = report.get("bods") or []
     by_id = {
@@ -323,8 +323,10 @@ def build_evidence_packet(
     # Risk items.
     risks: list[RiskItem] = []
     for i, sig in enumerate(report.get("risk_signals") or [], start=1):
-        src = REGISTRY.get(sig.get("source_id", ""))
-        source_name = src.info.name if src else (sig.get("source_id") or "OpenCheck risk engine")
+        # Phase 332: ``source_display_name`` names the unregistered producers
+        # too — ICIJ's reconciliation signals read "icij" here before.
+        sig_sid = sig.get("source_id") or ""
+        source_name = source_display_name(sig_sid) if sig_sid else "OpenCheck risk engine"
         code = sig.get("code", "")
         risks.append(
             RiskItem(
@@ -413,27 +415,42 @@ def build_evidence_packet(
             "No beneficial owner or controlling individual was disclosed in the available sources."
         )
     for sid, err in (report.get("errors") or {}).items():
-        adapter = REGISTRY.get(sid)
-        name = adapter.info.name if adapter else sid
+        name = source_display_name(sid)
         gaps.append(f"{name} could not be queried ({err}).")
     # Degraded derived screens are gaps in their own right — each one is a
     # citable finding the narrative can (and must) lean on instead of
     # asserting a clean screen. Counts only; never related-party names.
-    from ..risk import DEGRADATION_REASON_LABELS  # lazy import to avoid cycles
+    # Phase 332: the sentence names the screen, never a raw source id —
+    # "Screening against opencheck" was the Phase 279 cap read through a
+    # REGISTRY lookup that could not find OpenCheck itself.
+    from ..risk import (  # lazy import to avoid cycles
+        DEGRADATION_REASON_LABELS,
+        DEGRADED_TRUNCATED,
+        degraded_screen_lead,
+    )
 
     for d in degraded:
-        sid = d.get("source_id") or ""
-        adapter = REGISTRY.get(sid)
-        name = adapter.info.name if adapter else sid or "an upstream source"
         reason = DEGRADATION_REASON_LABELS.get(
             d.get("reason", ""), d.get("reason") or "an unknown failure"
         )
         affected = ", ".join(d.get("affected_signals") or []) or "derived risk"
-        detail = d.get("detail") or ""
+        detail = (d.get("detail") or "").strip()
+        if d.get("reason") == DEGRADED_TRUNCATED and detail:
+            # The screen ran; it read the highest-ranked parties and not the
+            # rest. The detail already says so in the check's own name
+            # ("Related-party sanctions and PEP screening covered the 25
+            # highest-ranked of 96 related parties; …"), so it leads, and
+            # the caveat is scoped to the parties it did not read.
+            gaps.append(
+                f"{detail} The absence of {affected} signals for the related "
+                "parties not screened is therefore not conclusive — this is "
+                "not a clean screen of them."
+            )
+            continue
         gaps.append(
-            f"Screening against {name} did not fully run because {reason}. "
-            f"{detail} The absence of {affected} signals is therefore not "
-            "conclusive — this is not a clean screen."
+            f"{degraded_screen_lead(d)} did not fully run because {reason}. "
+            f"{detail + ' ' if detail else ''}The absence of {affected} "
+            "signals is therefore not conclusive — this is not a clean screen."
         )
     for notice in report.get("license_notices") or []:
         gaps.append(notice.get("notice", ""))

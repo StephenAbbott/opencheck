@@ -96,6 +96,13 @@ describe("sourceLabel", () => {
   it("falls back rather than rendering nothing for an unmapped source", () => {
     expect(sourceLabel("brand_new_source", { other: "Other" })).toBe("Brand New Source");
   });
+
+  it("names the ids no adapter owns (Phase 332)", () => {
+    // A capped related-party screen degrades as "opencheck", which is not
+    // in /sources and prettified to "Opencheck".
+    expect(sourceLabel("opencheck")).toBe("OpenCheck");
+    expect(sourceList(["opencheck", "opencheck"])).toBe("OpenCheck");
+  });
 });
 
 describe("sourceList", () => {

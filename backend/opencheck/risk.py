@@ -981,6 +981,56 @@ DEGRADATION_REASON_LABELS: dict[str, str] = {
 }
 
 
+#: The ``source_id`` a degradation carries when the failure is OpenCheck's
+#: own — the Phase 279 related-party limit, or a probe that died before it
+#: reached any upstream. It is not a registered adapter.
+OPENCHECK_SOURCE_ID = "opencheck"
+
+#: Phase 332: what each derived screen is called in a sentence. A
+#: degradation from ``OPENCHECK_SOURCE_ID`` names no upstream, so the check is
+#: what a reader needs to hear: "Related-party sanctions and PEP screening
+#: covered the 25 highest-ranked of 96 related parties", never "Screening
+#: against opencheck did not fully run". The screens pass the same words to
+#: ``related_targets.Selection.detail``, so the label and the detail cannot
+#: drift.
+DEGRADED_CHECK_LABELS: dict[str, str] = {
+    "cross_source_names": "Related-party sanctions and PEP screening",
+    "icij_offshore_leaks": "Offshore Leaks screening",
+    "openaleph_percolation": "OpenAleph archive screening",
+}
+
+
+def degraded_source_name(d: dict[str, Any]) -> str:
+    """The name a reader sees for the source a degradation record names.
+
+    The registry's name for an adapter, "ICIJ Offshore Leaks" for the
+    reconciliation endpoint, "OpenCheck" for OpenCheck's own limit — via
+    ``sources.source_display_name``. An id nothing can name is never
+    printed: it is a slug, not a source, and "an upstream source" is true.
+    """
+    from .sources import REGISTRY, source_display_name  # lazy: sources import risk
+
+    sid = d.get("source_id") or ""
+    if not sid:
+        return "an upstream source"
+    name = source_display_name(sid)
+    if name == sid and sid not in REGISTRY:
+        return "an upstream source"
+    return name
+
+
+def degraded_screen_lead(d: dict[str, Any]) -> str:
+    """The opening of a sentence saying a screen did not fully run.
+
+    "Screening against OpenSanctions" for an upstream; the check's own name
+    ("Related-party sanctions and PEP screening") when the source is
+    OpenCheck itself, since "screening against OpenCheck" says nothing.
+    """
+    if d.get("source_id") == OPENCHECK_SOURCE_ID:
+        return DEGRADED_CHECK_LABELS.get(d.get("check") or "", "An OpenCheck screen")
+    return f"Screening against {degraded_source_name(d)}"
+
+
 def classify_degradation_reason(exc: BaseException) -> str:
     """Map an upstream exception onto the closed reason vocabulary."""
     import asyncio

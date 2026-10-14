@@ -554,3 +554,20 @@ def test_export_route_is_on_the_heavy_tier(limited_client: TestClient, monkeypat
     lei = _leis(1)[0]
     assert limited_client.get("/batch-export", params={"leis": lei}, headers=hdr).status_code == 200
     assert limited_client.get("/batch-export", params={"leis": lei}, headers=hdr).status_code == 429
+
+
+def test_batch_row_lists_each_degraded_source_once() -> None:
+    # Phase 332: both capped screens degrade as "opencheck", and the row
+    # (and so rows.csv) read "opencheck opencheck".
+    row = shape_batch_row(
+        _resp(
+            "5493001KJTIIGC8Y1R12",
+            degraded_sources=[
+                {"source_id": "opencheck", "check": "cross_source_names", "reason": "truncated"},
+                {"source_id": "opencheck", "check": "icij_offshore_leaks", "reason": "truncated"},
+                {"source_id": "opensanctions", "check": "cross_source_names", "reason": "timeout"},
+            ],
+        )
+    )
+    assert row["degraded"] is True
+    assert row["degraded_sources"] == ["opencheck", "opensanctions"]

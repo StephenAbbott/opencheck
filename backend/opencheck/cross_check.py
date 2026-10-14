@@ -54,8 +54,10 @@ from .matching import is_matchable_name
 from .risk import (
     _DEBARMENT_TOPICS,
     _PEP_TOPICS,
+    DEGRADED_CHECK_LABELS,
     DEGRADED_NOT_CONFIGURED,
     DEGRADED_TRUNCATED,
+    OPENCHECK_SOURCE_ID,
     DegradedSource,
     RiskSignal,
     classify_degradation_reason,
@@ -286,12 +288,10 @@ async def assess_cross_source_names(
         # exists for. Counts only; the source is OpenCheck's own limit.
         degraded.append(
             DegradedSource(
-                source_id="opencheck",
+                source_id=OPENCHECK_SOURCE_ID,
                 check=CHECK_NAME,
                 affected_signals=list(_AFFECTED_BY_SOURCE["opensanctions"]),
-                detail=selection.detail(
-                    "Related-party sanctions and PEP screening"
-                ),
+                detail=selection.detail(DEGRADED_CHECK_LABELS[CHECK_NAME]),
                 reason=DEGRADED_TRUNCATED,
             )
         )
@@ -388,7 +388,7 @@ async def assess_cross_source_names(
                 # potentially incomplete.
                 degraded.append(
                     DegradedSource(
-                        source_id="opencheck",
+                        source_id=OPENCHECK_SOURCE_ID,
                         check=CHECK_NAME,
                         affected_signals=list(
                             _AFFECTED_BY_SOURCE["opensanctions"]

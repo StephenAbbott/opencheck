@@ -48,6 +48,7 @@ import {
   sortRows,
   type TableRow,
 } from "../lib/batch";
+import { sourceList } from "../lib/vocab";
 import { leiRegistrationChip, statusChip } from "../lib/subjectProfile";
 import { Button, Chip, SectionLabel, sectionLabelClasses } from "./ui";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
@@ -332,7 +333,7 @@ function StateChip({ r }: { r: TableRow }) {
     );
   if (r.state === "degraded")
     return (
-      <Chip tone="warn" size="sm" title={`Did not fully run: ${r.row.degraded_sources.join(", ")}`}>
+      <Chip tone="warn" size="sm" title={`Did not fully run: ${sourceList(r.row.degraded_sources)}`}>
         Not fully checked
       </Chip>
     );

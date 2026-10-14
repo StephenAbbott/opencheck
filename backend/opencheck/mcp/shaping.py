@@ -532,7 +532,12 @@ def shape_batch_row(payload: Any) -> dict[str, Any]:
             )
         },
         "degraded": bool(degraded),
-        "degraded_sources": [d.get("source_id") for d in degraded if d.get("source_id")],
+        # Ids, once each: both capped screens are "opencheck", and a row
+        # read "opencheck opencheck" (Phase 332). Readers name them with
+        # the frontend's ``sourceList``.
+        "degraded_sources": list(
+            dict.fromkeys(d.get("source_id") for d in degraded if d.get("source_id"))
+        ),
         "licensing": licensing,
         "replayed": bool(getattr(payload, "replayed", False)),
         "report_url": f"/?lei={payload.lei}",
