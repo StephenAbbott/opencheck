@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 330** — Estonia is read from a daily index of RIK's open-data files — companies, registry-card persons, shareholders and beneficial owners — with the register's page kept only as the fallback for a company the files do not hold, and personal identification codes stripped from that path.
+**Latest: Phase 331** — A `deepen_top=0` lookup keeps the subject's profile, a per-source retry says what it actually read, and a lazy part of the page that fails to load is retried, contained and explained, with a notice when a new version of OpenCheck is available.
 
 → [Full development history](docs/status.md)
 
