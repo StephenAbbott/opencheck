@@ -255,6 +255,57 @@ def _listing(payload: Any) -> dict[str, Any] | None:
     }
 
 
+def _form13f(payload: Any) -> dict[str, Any] | None:
+    """``institutional_shareholders`` (Phase 334): the positions investment
+    managers reported on Form 13F in the company's securities, from the
+    frozen ``form13f`` field — top ten per security here — or None when there
+    is no index or no security of the company's in it. **Not beneficial
+    ownership**: it never reaches ``risk_signals``, ``verdict`` or the
+    summary, and its figures are never added together."""
+    raw = getattr(payload, "form13f", None)
+    if not isinstance(raw, dict):
+        return None
+    securities = []
+    for sec in raw.get("securities") or []:
+        positions = sec.get("positions") or []
+        securities.append({
+            "cusip": sec.get("cusip"),
+            "issuer_name": sec.get("issuer_name"),
+            "title_of_class": sec.get("title_of_class"),
+            "is_adr": sec.get("is_adr"),
+            "managers_reported": sec.get("managers_reported"),
+            "shares_outstanding": sec.get("shares_outstanding"),
+            "positions": [
+                {
+                    "manager": p.get("manager"),
+                    "shares": p.get("shares"),
+                    "value_usd": p.get("value"),
+                    "value_note": p.get("value_note"),
+                    "percent_computed": p.get("percent"),
+                }
+                for p in positions[:10]
+            ],
+            "managers_not_shown": max((sec.get("managers_reported") or 0) - min(len(positions), 10), 0),
+        })
+    return {
+        "status": raw.get("status"),
+        "period": raw.get("period"),
+        "line": raw.get("line"),
+        "securities": securities,
+        "securities_not_listed": raw.get("securities_not_listed"),
+        "disclaimer": raw.get("disclaimer"),
+        "notes": raw.get("notes"),
+        "attribution": raw.get("attribution"),
+        "caveat": raw.get("caveat"),
+        "hint": (
+            "Positions investment managers reported having discretion over on Form 13F, "
+            "as at the quarter end. Not beneficial ownership and not a risk signal; "
+            "never add the figures together, because positions overlap. "
+            "percent_computed is OpenCheck's arithmetic, given only with its basis."
+        ),
+    }
+
+
 def _coverage(payload: Any) -> dict[str, Any]:
     """``coverage.source_coverage`` for a ``LookupResponse`` — anchored when
     GLEIF resolved the LEI, which it has whenever there is a legal name."""
@@ -400,6 +451,9 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         # The primary stock-exchange listing from LSEG PermID (Phase 236).
         # Null when not checked — never read null as "not listed".
         "listing": listing,
+        # Institutional shareholders from SEC Form 13F (Phase 334): positions
+        # managers reported, kept apart from ownership. Null when not held.
+        "institutional_shareholders": _form13f(payload),
         "identifiers": _subject_identifiers(bods, payload.lei),
         "derived_identifiers": payload.derived_identifiers or {},
         "risk_signals": risk,

@@ -429,7 +429,19 @@ def stats() -> dict[str, Any]:
         # endpoint, the throttle's refusals by reason, how /securities was
         # served, and the ISIN table's state (gleifstats.py).
         "gleif": _gleif_stats(),
+        # Phase 334: whether the Form 13F index is loaded, and for which
+        # quarter — counts and dates only (form13f.status()).
+        "form13f": _form13f_stats(),
     }
+
+
+def _form13f_stats() -> dict[str, Any]:
+    try:
+        from . import form13f
+
+        return form13f.status()
+    except Exception as exc:  # noqa: BLE001 — never fail /signalstats
+        return {"available": False, "error": type(exc).__name__}
 
 
 def _pipeline_stats() -> dict[str, Any]:

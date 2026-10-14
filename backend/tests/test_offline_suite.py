@@ -33,6 +33,7 @@ WARM_UPS: dict[str, tuple[str, str]] = {
     "meip": ("opencheck.meip", "warm_meip_db"),
     "psc_graph": ("opencheck.psc_graph", "warm_psc_graph_db"),
     "isin_index": ("opencheck.isin_index", "warm_index"),
+    "form13f": ("opencheck.form13f", "warm_index"),
 }
 
 

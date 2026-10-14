@@ -58,6 +58,13 @@ os.environ.setdefault(
     "OPENCHECK_ISIN_INDEX_DB_FILE",
     os.path.join(_tempfile.mkdtemp(prefix="opencheck-test-isin-"), "absent.sqlite"),
 )
+# The Form 13F index (Phase 334) likewise: never downloaded, never read from a
+# developer's data root. tests/test_form13f.py builds small indexes per test.
+os.environ.setdefault("OPENCHECK_FORM13F_DB_URL", "")
+os.environ.setdefault(
+    "OPENCHECK_FORM13F_DB_FILE",
+    os.path.join(_tempfile.mkdtemp(prefix="opencheck-test-form13f-"), "absent.sqlite"),
+)
 
 # Registry-wide entityType.subtype guard (Phase 214). Installed here, at
 # conftest import time and after the env flags above, so every test module's

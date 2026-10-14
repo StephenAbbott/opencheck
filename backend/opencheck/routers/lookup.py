@@ -51,6 +51,7 @@ from .. import lei_successor as _lei_successor
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
 from .. import listing as _listing
+from .. import form13f as _form13f
 from .. import ra_codes as _ra_codes
 from .. import register_links as _register_links
 from .. import pep_merge as _pep_merge
@@ -451,6 +452,14 @@ class ReportResponse(BaseModel):
     #: source. None when no PermID key is configured, or for a payload
     #: recorded before this field existed.
     listing: dict[str, Any] | None = None
+    #: Institutional shareholders from SEC Form 13F (Phase 334): the positions
+    #: investment managers reported in the company's securities, as the
+    #: ``form13f`` stream event carried them, frozen at run time
+    #: (``opencheck.form13f``). ``status`` "found" (``securities[]``, each with
+    #: its top twenty ``positions``) or "out_of_date". **Not beneficial
+    #: ownership**: never in ``bods``, never read by a signal or the verdict,
+    #: never totalled. None when there is no index or no matched security.
+    form13f: dict[str, Any] | None = None
     #: The subject's own page on its home register (Phase 296): ``source_id``,
     #: ``register``, ``identifier``, ``url`` and, on an LEI run, ``ra_code`` —
     #: as the anchor event carried it, built from the LEI record's
@@ -1896,6 +1905,24 @@ async def _lookup_pipeline(
             listing_payload = None
         if listing_payload is not None:
             yield ("listing", listing_payload)
+
+    # Phase 334: institutional shareholders from Form 13F — a local index read,
+    # after the sources settle because SEC EDGAR's own statements carry the
+    # issuer's CUSIP. Its own event and never a source: nothing below (the
+    # profile, the screens, the risk engine, the verdict) reads it.
+    try:
+        form13f_payload = await asyncio.to_thread(
+            _form13f.build_payload,
+            ctx.lei,
+            bods_all,
+            issuer_cik=ctx.derived.get("edgar_cik"),
+            legal_name=ctx.legal_name,
+        )
+    except Exception as exc:  # noqa: BLE001 — never fails a lookup
+        _LOG.warning("form13f: payload failed for %s: %s", ctx.lei, exc)
+        form13f_payload = None
+    if form13f_payload is not None:
+        yield ("form13f", form13f_payload)
 
     # The subject's profile, from its own statements across the deepened
     # sources. Its own event rather than a rider on `risk_signals`: it is

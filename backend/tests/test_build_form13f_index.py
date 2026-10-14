@@ -610,3 +610,23 @@ def test_workflow_uses_flags_the_builder_has() -> None:
     for flag in ("--latest", "--schema", "--out", "--gzip"):
         assert flag in wf
         assert flag in _SCRIPT.read_text()
+
+
+def test_a_wrong_share_class_is_not_mistaken_for_thousands(tmp_path: Path) -> None:
+    """Phase 334: Berkshire B shares at the B price under the A CUSIP sit at
+    about 1/1,500 of A's price — inside a factor of two of a thousandth, so
+    the old band read them as value in thousands. The thousands band is
+    narrower than the price band, and they are left out."""
+    def extra(ds):
+        ds.filing("0000000009-26-000001", "9", "Vinva-Shaped Adviser")
+        ds.holding("0000000009-26-000001", 184_831, 138_622, cusip="084670108",
+                   issuer="BERKSHIRE HATHAWAY INC DEL", title="CL A")
+        ds.filing("0000000010-26-000001", "10", "Real Thousands Filer")
+        ds.holding("0000000010-26-000001", 20, 15_000, cusip="084670108",
+                   issuer="BERKSHIRE HATHAWAY INC DEL", title="CL A")
+
+    conn = _berkshire_a(tmp_path, extra)
+    rows = {r[0]: r for r in _positions(conn, "084670108")}
+    assert "Vinva-Shaped Adviser" not in rows
+    assert rows["Real Thousands Filer"][3] == "thousands"
+    assert builder.THOUSANDS_BAND < builder.PRICE_BAND

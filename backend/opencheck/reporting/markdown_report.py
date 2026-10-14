@@ -419,6 +419,27 @@ def _knowability(report: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _form13f(report: dict[str, Any]) -> list[str]:
+    """Phase 334 — the text twin of ``html_report._form13f``: institutional
+    shareholders from Form 13F, from the frozen payload; not ownership."""
+    from .. import form13f as f13
+
+    raw = report.get("form13f")
+    if not isinstance(raw, dict):
+        return []
+    lines = [f"## {f13.REPORT_HEADING}", "", raw.get("disclaimer") or f13.DISCLAIMER, ""]
+    if raw.get("line"):
+        lines += [raw["line"], ""]
+    for sec in raw.get("securities") or []:
+        lines += [f"**{f13.security_heading(sec)}**"]
+        lines += _table(list(f13.REPORT_COLUMNS), [list(r) for r in f13.report_rows(sec)])
+        lines += [f"_{t}_" for t in f13.security_footer(sec)] + [""]
+    notes = [raw.get("not_listed_note"), *(raw.get("notes") or []),
+             f"{raw.get('attribution') or f13.ATTRIBUTION} {raw.get('caveat') or f13.CAVEAT}"]
+    lines += [f"_{n}_" for n in notes if n] + [""]
+    return lines
+
+
 def _relationships(report: dict[str, Any]) -> list[str]:
     """Per-source relationship tables — the text equivalent of the PDF diagrams."""
     bods = report.get("bods") or []
@@ -524,6 +545,7 @@ def build_report_markdown(
     sections += _risk(report)
     sections += _sources_found(report)
     sections += _knowability(report)
+    sections += _form13f(report)
     sections += _relationships(report)
     sections += _licensing(report, saved)
     sections += [
