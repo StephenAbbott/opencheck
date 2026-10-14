@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 334** — Institutional shareholders from SEC Form 13F ride one frozen lookup event into the reports and MCP, kept apart from ownership: no graph node, no signal, no total.
+**Latest: Phase 335** — The Form 13F percentage now reaches US issuers whose SEC CIK is resolved from their name, which is most of them.
 
 → [Full development history](docs/status.md)
 
