@@ -3323,3 +3323,10 @@ beneficial owner.** Things that will be re-derived otherwise:
   datacentre requests without a contact address).
 - **Debt and stray CUSIPs**: only equity CUSIPs (issue number = two digits)
   reported by ≥ 10 managers are listed; the rest are counted.
+- **The page (Phase 336)** reads only the frozen event, so it renders on a
+  saved report too (Securities, which fetches, does not):
+  `InstitutionalShareholdersSection` under Securities on QuickCheck, the words
+  in `lib/form13f.ts`. Collapsed = the largest manager per security; opened =
+  twenty. The disclaimer, caveat and attribution are always visible. The
+  frontend `BANNED_VOCABULARY` is parsed by `tests/test_form13f.py` — change
+  both together.

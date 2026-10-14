@@ -1,7 +1,7 @@
 # Institutional shareholders (SEC Form 13F)
 
 Phase 333 builds the index and Phase 334 reads it into a frozen lookup event
-next to the primary listing. Phase C shows it, as a collapsed "Institutional
+next to the primary listing. Phase 336 (Phase C) shows it, as a collapsed "Institutional
 shareholders" section under Securities on QuickCheck: the largest manager
 by shares, and the next nineteen when opened. The
 Notion ticket is *Institutional holders from SEC Form 13F*; the decisions
@@ -171,6 +171,37 @@ inside `PRICE_BAND` 2): Berkshire B shares filed at the B price under the A
 CUSIP sit at about 1/1,500 of A's price and read as "value in thousands"
 before. Rebuild the asset after merging (Actions → Refresh Form 13F index →
 Run workflow, *force*).
+
+## Showing it (Phase 336)
+
+`frontend/src/lib/form13f.ts` (the words, pinned in `form13f.test.ts`) and
+`components/cdd/InstitutionalShareholdersSection.tsx`, rendered by QuickCheck
+directly under Securities. The `form13f` event is one entry in
+`LOOKUP_EVENT_HANDLERS`, so the live stream and a saved report's replay feed
+the same state; the section reads only that frozen payload and fetches
+nothing, so unlike Securities it renders on a saved report too.
+
+- **Collapsed** (as the page opens): the disclaimer, the quarter, and per
+  listed security the largest manager by shares with its shares, value and —
+  where the backend computed one — percentage and basis sentence.
+  **Opened** ("Show the next 19", "… for each security" when several are
+  listed alike): the twenty the event carries, what was left out, and the
+  standing notes. The caveat and the attribution, linked to the SEC's page,
+  are visible in both states.
+- **No total anywhere**, and the % column is drawn only for a security with a
+  computed percentage — Berkshire's two classes and Shell's ADSs have none.
+- A value reported in thousands reads "Not shown", with `THOUSANDS_NOTE`
+  under the rows. Values otherwise round to "$11.2B"; the reports keep the
+  exact figure.
+- ADRs carry an "American depositary shares" chip and `ADR_NOTE`.
+- `lib/form13f.ts` holds a copy of `BANNED_VOCABULARY`, which
+  `tests/test_form13f.py` parses and compares; every sentence the page can
+  write is held to it (the backend's disclaimer aside).
+- /features has an "Institutional shareholders" capability card: the graph's
+  neutral grey (`oo.graph.unknown`) as its accent — never an ownership colour —
+  a pillared-building glyph (`institutional` in `ui/Icon.tsx`) and a vignette
+  from `build_feature_images.py institutional-shareholders`, drawn from
+  Moody's real 30 June 2026 figures.
 
 ## Attribution
 

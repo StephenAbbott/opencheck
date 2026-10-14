@@ -4,6 +4,7 @@ import type {
   CrossSourceLink,
   OpenAlephScreeningMatch,
   PossiblySameEntity,
+  Form13fPayload,
   PrimaryListing,
   RiskSignal,
   SavedReport,
@@ -33,6 +34,7 @@ import { OpenAlephArchiveMatches } from "./OpenAlephArchiveMatches";
 import { PossiblySameTable } from "./PossiblySameTable";
 import { RetiredLeiLeads } from "./RetiredLeiLeads";
 import { SecuritiesSection } from "./SecuritiesSection";
+import { InstitutionalShareholdersSection } from "./InstitutionalShareholdersSection";
 import { SkeletonSourceCard, SourceBucketCard, type SourceBucket } from "./SourceBucketCard";
 
 /**
@@ -77,6 +79,7 @@ export default function QuickCheckPanel({
   bodsBreakdownMap,
   oaScreening,
   primaryListing,
+  form13f = null,
   savedReport,
   savedNarrative,
   onExportPayload,
@@ -114,6 +117,8 @@ export default function QuickCheckPanel({
   bodsBreakdownMap: Record<string, BodsBreakdown>;
   oaScreening: OpenAlephScreeningMatch[];
   primaryListing: PrimaryListing | null;
+  /** Phase 336: the frozen `form13f` event. */
+  form13f?: Form13fPayload | null;
   savedReport: SavedReport | null;
   savedNarrative: ReportExportPayload | null;
   onExportPayload: (payload: ReportExportPayload) => void;
@@ -558,6 +563,11 @@ export default function QuickCheckPanel({
           listing={primaryListing}
         />
       )}
+
+      {/* Phase 336: institutional shareholders from Form 13F, under
+          Securities. Frozen with the run, so a saved report shows it too —
+          it fetches nothing. Never ownership: no graph node, no signal. */}
+      {form13f && <InstitutionalShareholdersSection payload={form13f} />}
 
       {/* Phase 208: MEIP is a source. Its statements arrive on the source
           cards above like any other register's, and a group head's list

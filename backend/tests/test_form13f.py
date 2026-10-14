@@ -361,6 +361,17 @@ def test_no_sentence_reads_a_position_as_ownership(index, isin_table) -> None:
     assert "not a record of beneficial ownership" in form13f.DISCLAIMER
 
 
+def test_the_frontend_holds_the_same_banned_vocabulary() -> None:
+    """Phase 336: ``lib/form13f.ts`` mirrors the list for the page's own
+    words; parsed here so the two cannot drift (the ``test_ra_codes`` way)."""
+    import re as _re
+
+    ts = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib" / "form13f.ts").read_text()
+    m = _re.search(r"export const BANNED_VOCABULARY = \[([^\]]*)\]", ts)
+    assert m, "BANNED_VOCABULARY not found in lib/form13f.ts"
+    assert tuple(_re.findall(r'"([^"]+)"', m.group(1))) == form13f.BANNED_VOCABULARY
+
+
 def _fold(payload: dict[str, Any] | None):
     from opencheck.routers.lookup import fold_lookup_events
 

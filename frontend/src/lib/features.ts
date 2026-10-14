@@ -219,6 +219,29 @@ export const FEATURES: Feature[] = [
       href: "/?lei=213800LH1BZH3DI6G760&mode=full",
     },
   },
+  {
+    id: "institutional-shareholders",
+    name: "Institutional shareholders",
+    kind: "Capability",
+    icon: "institutional",
+    // The graph's "unknown" grey (Phase 336): the one capability that is
+    // deliberately not in the graph wears its neutral value, never an
+    // ownership colour.
+    accent: "#888888", // oo.graph.unknown
+    glyph: "#e5e5e5", // oo.rule
+    description:
+      "For a company with US-listed shares, QuickCheck lists the investment managers that reported the largest positions on SEC Form 13F, with a percentage of shares outstanding where one can honestly be computed. A manager reports what it has discretion over for funds and clients, so these positions stay out of the ownership graph, are never added together and feed no risk signal.",
+    image: {
+      src: "/features/institutional-shareholders.png",
+      alt: "The Institutional shareholders section for Moody's: a sentence saying Form 13F is not a record of beneficial ownership, then Berkshire Hathaway's reported position with its shares, value and percentage, the basis of that percentage, and a control to show the next nineteen managers.",
+      width: 1648,
+      height: 650,
+    },
+    cta: {
+      label: "See the institutional shareholders of Moody's",
+      href: "/?lei=549300GCEDD8YCF5WU84",
+    },
+  },
 ];
 
 /**

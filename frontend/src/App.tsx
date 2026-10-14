@@ -138,6 +138,7 @@ export default function App() {
     subjectProfile,
     knowability,
     primaryListing,
+    form13f,
     registerRecord,
     knowabilityChain,
     riskSignals,
@@ -1441,6 +1442,7 @@ export default function App() {
                   bodsBreakdownMap={bodsBreakdownMap}
                   oaScreening={oaScreening}
                   primaryListing={primaryListing}
+                  form13f={form13f}
                   savedReport={savedReport}
                   savedNarrative={savedNarrative}
                   onExportPayload={setExportPayload}

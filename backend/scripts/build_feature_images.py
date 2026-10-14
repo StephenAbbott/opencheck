@@ -497,9 +497,50 @@ def watchlist():
                 warn="Could not check: KvK \u2014 the absence of a finding there is not a clean result."), 18)
     return page(f'<div style="display:grid;grid-template-columns:400px 1fr;gap:16px;align-items:start">{left}{right}</div>')
 
+def institutional():
+    """The Institutional shareholders section (Phase 336), for Moody's as the
+    30 June 2026 Form 13F index gives it — real reported positions, never an
+    invented one. Collapsed, as the page first shows it: the disclaimer, the
+    largest manager with its basis sentence, and the next nineteen behind a
+    control. Nothing is totalled and nothing is called an owner.
+    """
+    GREY = "#888888"
+    def row(name, shares, value, pct):
+        return (f'<tr><td style="padding:9px 0;border-top:1px solid {RULE};font-family:{BODY};font-size:13px;color:{NAVY}">{name}</td>'
+                f'<td style="padding:9px 0;border-top:1px solid {RULE};font-family:{MONO};font-size:12.5px;color:{NAVY};text-align:right">{shares}</td>'
+                f'<td style="padding:9px 0;border-top:1px solid {RULE};font-family:{BODY};font-size:12.5px;color:{MUTED};text-align:right">{value}</td>'
+                f'<td style="padding:9px 0;border-top:1px solid {RULE};font-family:{MONO};font-size:12.5px;color:{NAVY};text-align:right">{pct}</td></tr>')
+    th = (f'font-family:{BODY};font-size:11.5px;font-weight:500;color:{MUTED};padding:4px 0;')
+    body = card(
+        f'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-bottom:10px">'
+        f'<h2 style="font-family:{HEAD};font-weight:700;font-size:17px;color:{NAVY};margin:0">Institutional shareholders</h2>'
+        f'<span style="font-family:{BODY};font-size:12px;color:{MUTED}">Form 13F \u00b7 not in the graph</span></div>'
+        f'<p style="font-family:{BODY};font-size:13px;line-height:1.55;color:{NAVY};margin:0">Form 13F lists the positions '
+        f'institutional investment managers have discretion over for funds and clients. It is not a record of beneficial '
+        f'ownership: it never enters the ownership graph and no risk signal reads it.</p>'
+        f'<p style="font-family:{BODY};font-size:11.5px;color:{MUTED};margin:4px 0 14px">Positions as at 30 June 2026, from reports filed up to 31 Aug 2026.</p>'
+        f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+        f'<span style="font-family:{BODY};font-size:13px;font-weight:700;color:{NAVY}">MOODYS CORP \u00b7 COM</span>'
+        f'<span style="font-family:{MONO};font-size:11.5px;color:{MUTED}">CUSIP 615369105</span></div>'
+        f'<table style="width:100%;border-collapse:collapse">'
+        f'<tr><th style="{th}text-align:left">Manager</th><th style="{th}text-align:right;width:150px">Shares</th>'
+        f'<th style="{th}text-align:right;width:110px">Value</th><th style="{th}text-align:right;width:80px">%</th></tr>'
+        + row("Berkshire Hathaway Inc", "24,669,778", "$11.2B", "14.24%")
+        + f'</table>'
+        f'<p style="font-family:{BODY};font-size:11.5px;color:{MUTED};margin:6px 0 14px">Of 173.2 million shares outstanding on '
+        f'Moody\u2019s Corporation\'s 10-Q/10-K cover, 30 June 2026 \u2014 computed by OpenCheck.</p>'
+        f'<span style="display:inline-flex;align-items:center;background:#fff;border:1px solid {SOFTB};color:{BLUE};'
+        f'border-radius:10px;padding:7px 12px;font-family:{BODY};font-size:12.5px;font-weight:500">Show the next 19</span>'
+        f'<p style="font-family:{BODY};font-size:11.5px;line-height:1.5;color:{MUTED};margin:14px 0 0">Reported by the filers and '
+        f'not verified by the SEC; no substitute for the filings themselves. <span style="color:{BLUE};text-decoration:underline">'
+        f'Contains data from the SEC\'s Form 13F data sets (U.S. Securities and Exchange Commission), public domain.</span></p>',
+        22, f"border-top:3px solid {GREY}")
+    return page(body)
+
 VIGS = {"quickcheck": quickcheck, "fullcheck": fullcheck, "backgroundcheck": backgroundcheck,
         "batch": batch, "history": history, "network": network,
-        "subsidiaries": subsidiaries, "watchlist": watchlist}
+        "subsidiaries": subsidiaries, "watchlist": watchlist,
+        "institutional-shareholders": institutional}
 
 
 WIDTH = 1648

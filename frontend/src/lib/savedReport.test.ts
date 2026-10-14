@@ -190,8 +190,15 @@ describe("replaying stored events", () => {
   it("maps every streamed event to a handler, and never the internal deepen events", () => {
     expect(Object.keys(LOOKUP_EVENT_HANDLERS)).not.toContain("deepen_result");
     expect(Object.keys(LOOKUP_EVENT_HANDLERS)).toEqual(
-      expect.arrayContaining(["gleif_done", "hit", "risk_signals", "subject_profile", "bods_counts", "source_error", "knowability", "knowability_chain"]),
+      expect.arrayContaining(["gleif_done", "hit", "risk_signals", "subject_profile", "bods_counts", "source_error", "knowability", "knowability_chain", "listing", "form13f"]),
     );
+  });
+
+  it("replays a saved report's Form 13F section through the live handler (Phase 336)", () => {
+    const onForm13f = vi.fn();
+    const data = { status: "found", period: "2026-06-30", securities: [] };
+    replayLookupEvents([{ event: "form13f", data }], { onForm13f });
+    expect(onForm13f).toHaveBeenCalledWith(data);
   });
 
   it("reports a stored error event rather than swallowing it", () => {

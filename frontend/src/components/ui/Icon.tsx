@@ -61,6 +61,10 @@ export const ICON_PATHS = {
   // not an eye, which would promise the continuous monitoring the feature
   // does not do.
   watchlist: ["M6 17v-6a6 6 0 0 1 12 0v6l1.5 1.5h-15z", "M10 20.5a2 2 0 0 0 4 0"],
+  // Phase 336: institutional shareholders (Form 13F) — a pillared building,
+  // the institution that reports, deliberately not a person or a network:
+  // a 13F filer is an investment manager, never an owner in the graph.
+  institutional: ["M3.5 8.5 12 4l8.5 4.5z", "M5.5 11v6.5", "M10 11v6.5", "M14 11v6.5", "M18.5 11v6.5", "M3.5 20h17"],
 } as const;
 
 /** Icons that need a circle or two the path list cannot express. */
