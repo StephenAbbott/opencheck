@@ -386,6 +386,59 @@ def lookup(lei: str, page: int = 1, page_size: int = 20) -> IsinPage | None:
     )
 
 
+def isins_with_prefix(lei: str, prefix: str, *, limit: int = 20_000) -> list[str] | None:
+    """An LEI's ISINs that start with ``prefix`` (a country code: ``US``), in
+    ISIN order, at most ``limit`` — or ``None`` when there is no usable table.
+
+    The ISINs are stored sorted, so one prefix is one contiguous run: the
+    first chunk that can hold it is found by bisection, and only the chunks
+    the run spans are read. An issuer with 636,388 ISINs costs a dozen chunk
+    reads, not 1,273 (Phase 334, the Form 13F match)."""
+    if not usable():
+        return None
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    lei = lei.strip().upper()
+    prefix = prefix.strip().upper()
+    try:
+        row = conn.execute("SELECT total FROM counts WHERE lei = ?", (lei,)).fetchone()
+        total = int(row[0]) if row else 0
+        if not total:
+            return []
+        n_chunks = (total + CHUNK - 1) // CHUNK
+
+        def chunk(i: int) -> list[str]:
+            got = conn.execute(
+                "SELECT isins FROM chunks WHERE lei = ? AND chunk = ?", (lei, i)
+            ).fetchone()
+            return _unpack(got[0]) if got else []
+
+        lo, hi = 0, n_chunks  # the first chunk whose last ISIN is >= prefix
+        cache: dict[int, list[str]] = {}
+        while lo < hi:
+            mid = (lo + hi) // 2
+            cache[mid] = cache.get(mid) or chunk(mid)
+            if cache[mid] and cache[mid][-1] < prefix:
+                lo = mid + 1
+            else:
+                hi = mid
+        found: list[str] = []
+        for i in range(lo, n_chunks):
+            isins = cache.get(i) or chunk(i)
+            for isin in isins:
+                if isin.startswith(prefix):
+                    found.append(isin)
+                    if len(found) >= limit:
+                        return found
+                elif isin > prefix:
+                    return found
+    except (sqlite3.Error, zlib.error, UnicodeDecodeError) as exc:
+        log.warning("isin_index: prefix read failed for %s: %s", lei, exc)
+        return None
+    return found
+
+
 # ---------------------------------------------------------------------------
 # Sync
 # ---------------------------------------------------------------------------

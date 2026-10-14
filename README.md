@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 333** — The SEC's quarterly Form 13F data sets are packed weekly into an index of the positions institutional investment managers report, checked and never totalled, ready to be shown apart from beneficial ownership.
+**Latest: Phase 334** — Institutional shareholders from SEC Form 13F ride one frozen lookup event into the reports and MCP, kept apart from ownership: no graph node, no signal, no total.
 
 → [Full development history](docs/status.md)
 

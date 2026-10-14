@@ -217,6 +217,18 @@ fetch `/batch-export` directly.
   open to authorities and obliged entities only, or that OpenCheck reads no
   register of. Describes and dates; never a finding. Null for payloads recorded
   before the fields existed.
+- **`institutional_shareholders`** (Phase 334) — the positions institutional
+  investment managers reported on SEC Form 13F in the company's securities,
+  from the frozen `form13f` payload: `period` (the quarter end), `line`, and
+  per security (`cusip`, `title_of_class`, `is_adr`, `managers_reported`,
+  `shares_outstanding` with its `basis` sentence) the ten largest `positions`
+  (`manager`, `shares`, `value_usd` — null with a `value_note` when the filer
+  reported value in thousands — and `percent_computed`, only under the three
+  gates). **Not beneficial ownership:** it never reaches `risk_signals`,
+  `verdict` or `summary`, and its figures overlap and must not be added
+  together; the `disclaimer`, `notes`, `attribution` and SEC `caveat` travel
+  with it. Null when no index is loaded or no security of the company's is in
+  it. See `docs/form13f.md`.
 
 ## resolve_national_id
 

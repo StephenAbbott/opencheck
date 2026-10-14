@@ -740,6 +740,38 @@ def _knowability(report: dict[str, Any]) -> str:
     )
 
 
+def _form13f(report: dict[str, Any]) -> str:
+    """Phase 334: institutional shareholders from SEC Form 13F, from the
+    frozen ``form13f`` payload — its own section, after what can be known and
+    before the ownership diagrams, because it is not ownership. Empty when the
+    run carried no payload."""
+    from .. import form13f as f13
+
+    raw = report.get("form13f")
+    if not isinstance(raw, dict):
+        return ""
+    parts = [f'<section aria-labelledby="f13"><h2 id="f13">{escape(f13.REPORT_HEADING)}</h2>']
+    parts.append(f"<p>{escape(raw.get('disclaimer') or f13.DISCLAIMER)}</p>")
+    if raw.get("line"):
+        parts.append(f"<p>{escape(raw['line'])}</p>")
+    for sec in raw.get("securities") or []:
+        head = "".join(f'<th scope="col">{escape(c)}</th>' for c in f13.REPORT_COLUMNS)
+        body = "".join(
+            "<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row) + "</tr>"
+            for row in f13.report_rows(sec)
+        )
+        parts.append(
+            f"<table><caption>{escape(f13.security_heading(sec))}</caption>"
+            f"<thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+        )
+        parts += [f'<p style="font-size:8pt;color:#595959">{escape(t)}</p>' for t in f13.security_footer(sec)]
+    notes = [raw.get("not_listed_note"), *(raw.get("notes") or []),
+             f"{raw.get('attribution') or f13.ATTRIBUTION} {raw.get('caveat') or f13.CAVEAT}"]
+    parts += [f'<p style="font-size:8pt;color:#595959">{escape(n)}</p>' for n in notes if n]
+    parts.append("</section>")
+    return "".join(parts)
+
+
 def _diagrams(report: dict[str, Any]) -> str:
     bods = report.get("bods") or []
     # Keyed by statementId *and* recordId — a v0.4 relationship references the
@@ -900,6 +932,7 @@ def build_report_html(
         + _risk(report)
         + _sources_found(report)
         + _knowability(report)
+        + _form13f(report)
         + _diagrams(report)
         + _licensing(report, saved)
         + "<footer><p style=\"font-size:8pt;color:#595959\">OpenCheck aggregates open corporate and "

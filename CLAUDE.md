@@ -3291,3 +3291,35 @@ phase. Things that will be re-derived otherwise:
   newer `version.json` (tab says OpenCheck was updated, the page and the
   other tabs survive, the banner shows). The smoke spec cannot see this — one
   build, so the hashes always agree.
+
+## Institutional shareholders from Form 13F — never ownership (Phases 333–334)
+
+`scripts/build_form13f_index.py` + `.github/workflows/refresh-form13f-index.yml`
+(the index, weekly-if-new, release `form13f-index`) and `opencheck/form13f.py`
+(the read); design and measurements in `docs/form13f.md`. Stephen's rule
+(14 Oct 2026): **a 13F filer is an investment manager with discretion, not a
+beneficial owner.** Things that will be re-derived otherwise:
+
+- **Not a source.** Not in `REGISTRY`, no hit, no BODS, no graph node, not in
+  coverage, never a `DegradedSource`. One lookup event, `form13f`, after the
+  sources settle and before `subject_profile`, folded as recorded into
+  `LookupResponse.form13f`. `tests/test_form13f.py` fails if a risk, verdict,
+  screen, BODS, narrative, source or timeline module imports `form13f`, and a
+  pipeline test checks a payload naming a sanctioned bank changes no signal,
+  verdict, degradation or statement.
+- **Never totalled** — positions overlap (a combination report includes
+  managers that also filed). **Never repaired** — a value in thousands shows
+  shares only; transposed or wrong-CUSIP rows are left out and counted.
+- **Wording**: every sentence passes `BANNED_VOCABULARY` (owner, owns, owned,
+  beneficial, stake, control) except `DISCLAIMER`. The heading is
+  "Institutional shareholders" (Stephen).
+- **The percentage has three gates** (not an ADR, one listed class, a
+  `dei:EntityCommonStockSharesOutstanding` fact within 100 days, from the CIK
+  the SEC EDGAR source resolved) and always travels with its basis sentence.
+- **The SEC data sets are cut by filing date**, not period: read the latest
+  two, take the newest set's commonest period. The newest zip moved directory
+  in Sept 2026 — links are read off the listing page, never built. The
+  workflow needs the `OPENCHECK_EDGAR_CONTACT_EMAIL` secret (the SEC refuses
+  datacentre requests without a contact address).
+- **Debt and stray CUSIPs**: only equity CUSIPs (issue number = two digits)
+  reported by ≥ 10 managers are listed; the rest are counted.

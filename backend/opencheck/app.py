@@ -237,6 +237,19 @@ async def _warm_caches_background() -> None:
         raise
     except Exception as exc:  # noqa: BLE001
         log.warning("ISIN index warm-up failed (live GLEIF calls remain): %s", exc)
+    # Phase 334: the Form 13F index (institutional shareholders) — download the
+    # release asset when absent, replace it when the asset changed. Last of
+    # all: it reads the ISIN table, and until it lands a lookup simply carries
+    # no ``form13f`` event.
+    try:
+        from .form13f import warm_index as warm_form13f_index
+
+        stats = await asyncio.to_thread(warm_form13f_index)
+        log.info("Form 13F index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Form 13F index warm-up failed (no institutional shareholders): %s", exc)
 
 
 # The MCP streamable-HTTP session manager is single-use per instance (its

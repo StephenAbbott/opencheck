@@ -60,8 +60,8 @@ Filers make mistakes the SEC does not correct. Per CUSIP:
 
 * **Implied price.** The median of value ÷ shares over the positions that
   report both is the reference (at least ``MIN_PRICE_SAMPLE`` positions). A
-  position within ``PRICE_BAND`` of it is ``ok``; within the band of a
-  thousandth of it is ``thousands`` (value still reported in thousands, as
+  position within ``PRICE_BAND`` of it is ``ok``; within the narrower
+  ``THOUSANDS_BAND`` of a thousandth of it is ``thousands`` (value still reported in thousands, as
   before 3 January 2023 — T. Rowe Price, 71 other filings on Moody's); with
   too few positions to judge it is ``unchecked``. Anything else (shares and
   value transposed — CalSTRS reported 100,442,257 "shares" of Moody's worth
@@ -132,6 +132,11 @@ MIN_FILINGS = 5000
 MIN_PRICE_SAMPLE = 5
 MIN_NAME_SAMPLE = 3
 PRICE_BAND = 2.0  # within a factor of two of the median implied price
+#: The thousands band is narrower than ``PRICE_BAND`` on purpose (Phase 334):
+#: a filer's value in thousands sits right on a thousandth of the price, while
+#: a wrong share class can sit near it too — Berkshire B shares filed under
+#: the A CUSIP price at about 1/1,500 of it, inside a factor of two.
+THOUSANDS_BAND = 1.25
 CORE_TOKEN_SHARE = 0.4
 
 REQUIRED_COLUMNS = {
@@ -423,7 +428,7 @@ def price_check(value: int | None, shares: int, median: float | None) -> str:
     ratio = (value / shares) / median
     if 1 / PRICE_BAND <= ratio <= PRICE_BAND:
         return "ok"
-    if 1 / PRICE_BAND <= ratio * 1000 <= PRICE_BAND:
+    if 1 / THOUSANDS_BAND <= ratio * 1000 <= THOUSANDS_BAND:
         return "thousands"
     return "implausible"
 

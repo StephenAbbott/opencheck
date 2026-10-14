@@ -716,6 +716,25 @@ class Settings(BaseSettings):
     # License: KBO reuse licence (attribution required, no API key needed).
     bce_belgium_db_file: str | None = Field(default=None, alias="BCE_BELGIUM_DB_FILE")
 
+    # --- SEC Form 13F institutional shareholders (Phases 333–334) ---
+    # The index packed weekly-if-new by scripts/build_form13f_index.py
+    # (.github/workflows/refresh-form13f-index.yml) and downloaded at boot when
+    # absent or replaced — the ariregister arrangement. Never a source, never
+    # BODS, never read by a risk signal: positions investment managers report,
+    # not beneficial ownership. Unset: the data-root default (``form13f.sqlite``).
+    form13f_db_file: str | None = Field(default=None, alias="OPENCHECK_FORM13F_DB_FILE")
+    # ~30 MB on disk, ~11 MB gzipped. Empty string disables the download.
+    form13f_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "form13f-index/form13f.sqlite.gz"
+        ),
+        alias="OPENCHECK_FORM13F_DB_URL",
+    )
+    # Past this many days after the period the index describes, the section
+    # says the data is out of date instead of showing it (Stephen, 14 Oct 2026).
+    form13f_max_age_days: int = Field(default=200, alias="OPENCHECK_FORM13F_MAX_AGE_DAYS")
+
     # --- Estonian e-Business Register (ariregister) — the index, Phase 330 ---
     # The index packed daily by scripts/build_ariregister_index.py from RIK's
     # open-data files (.github/workflows/refresh-ariregister-index.yml) and

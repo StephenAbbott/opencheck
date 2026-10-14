@@ -1,8 +1,9 @@
 # Institutional shareholders (SEC Form 13F)
 
-Phase 333 builds the index. Phase B reads it (it becomes a frozen lookup event
-next to the primary listing) and Phase C shows it, as a collapsed
-"Institutional shareholders" section under Securities on QuickCheck. The
+Phase 333 builds the index and Phase 334 reads it into a frozen lookup event
+next to the primary listing. Phase C shows it, as a collapsed "Institutional
+shareholders" section under Securities on QuickCheck: the largest manager
+by shares, and the next nineteen when opened. The
 Notion ticket is *Institutional holders from SEC Form 13F*; the decisions
 below are Stephen's, of 14 Oct 2026.
 
@@ -67,7 +68,7 @@ stored), 4,623 shares-outstanding facts; 30 MB, 11 MB gzipped, 1.5 minutes.
 | `value_check` | Meaning |
 |---|---|
 | `ok` | value ÷ shares within a factor of two of the security's median implied price |
-| `thousands` | within that band of a thousandth of it: the value is still reported in thousands, as before 3 January 2023. 254 managers, T. Rowe Price among them, report nine in ten or more of their stored positions this way (206 report all of them); for 466 securities the largest position is one |
+| `thousands` | within 25% of a thousandth of it (`THOUSANDS_BAND`, narrowed in Phase 334): the value is still reported in thousands, as before 3 January 2023. 254 managers, T. Rowe Price among them, report nine in ten or more of their stored positions this way (206 report all of them); for 466 securities the largest position is one |
 | `unchecked` | fewer than five positions report a value to compare |
 
 Left out and counted (`excluded_price`, `excluded_name`):
@@ -79,26 +80,89 @@ Left out and counted (`excluded_price`, `excluded_name`):
   Berkshire A's CUSIP prices at a thousandth of it. A short or former name at
   the issuer's own price ("IBM", "RAYTHEON", "SCHLUMBERGER") is kept.
 
-## Matching a company to its securities (Phase B)
+## Reading it (Phase 334)
+
+`backend/opencheck/form13f.py`. The backend downloads the release asset at
+boot (`warm_index`, the ariregister arrangement: replaced when the asset
+changed, kept otherwise; `OPENCHECK_FORM13F_DB_FILE` / `_DB_URL`). One lookup
+event, `form13f`, is built after the sources settle and before the subject
+profile, folded into `LookupResponse.form13f` as recorded — so a saved report
+shows the quarter of its own day, and the PDF, Markdown and MCP read the
+frozen payload. No index, or no security of the company's in it: no event.
+A failed read is logged and the lookup carries on; it is never a degraded
+source. `/signalstats` → `form13f` says whether the index is loaded and for
+which quarter.
+
+**Never ownership, by construction.** No module that decides or describes
+risk, ownership or the verdict imports `form13f` (`risk`, `cross_check`,
+`icij_check`, `openaleph_check`, `verdict`, `pep_merge`, `related_targets`,
+`degradation`, `coverage`, `subject_profile`, `subject_identity`,
+`reconcile`, `watchlist`, and everything under `bods/`, `narrative/`,
+`sources/`, `timeline/` — `tests/test_form13f.py` parses them). A pipeline
+test feeds a payload naming a sanctioned bank and checks the signals, the
+verdict, the degraded sources and the statements are unchanged. Every
+sentence is held to `BANNED_VOCABULARY` (owner, owns, owned, beneficial,
+stake, control) except `DISCLAIMER`, the one sentence that says what 13F is
+not.
+
+### Matching a company to its securities
 
 13F rows carry a CUSIP, the issuer's name and nothing else — no LEI, no CIK.
 
-- **GLEIF's ISIN file** (the Phase 258 table): a US ISIN is `US` + CUSIP + a
-  check digit. This reaches 638 of the 801 most widely held company CUSIPs.
-  ADR ISINs map to the foreign issuer (Novo Nordisk, Shell).
-- **Schedule 13D/13G filings**: the SEC EDGAR adapter already reads each
-  filing's `issuerCusipNumber`. This reaches what GLEIF misses — Chevron, and
-  issuers incorporated outside the US whose CUSIP starts with a letter
-  (Accenture, Medtronic).
+- **GLEIF's ISIN file** (the Phase 258 table, read with
+  `isin_index.isins_with_prefix(lei, "US")`, which bisects to the run of US
+  ISINs): a US ISIN is `US` + CUSIP + a check digit. This reaches 638 of the
+  801 most widely held company CUSIPs. ADR ISINs map to the foreign issuer
+  (Novo Nordisk, Shell).
+- **The SEC EDGAR source's own statements**: its mapper puts the issuer's
+  CUSIP, read off the company's Schedule 13D/13G filings, on the issuer's
+  entity statement (scheme `CUSIP`). This reaches Chevron, which GLEIF lists
+  no ISIN for, and issuers incorporated outside the US whose CUSIP starts
+  with a letter (Accenture, Medtronic).
 - Rejected: the six-character CUSIP issuer prefix, and issuer names.
 
-## The percentage (Phase B)
+### What is listed
 
-Computed only when the issuer has one class, an undimensioned shares-outstanding
-fact dated within about 100 days of the period, and the security is not an
-ADR — and labelled as computed: "of 173.2 million shares outstanding on
-Moody's 10-Q cover, 30 June 2026 — computed by OpenCheck". Berkshire's
-24,669,778 shares are 14.24%, the figure MarketScreener's vendors show.
+- **Equity CUSIPs reported by at least `MIN_MANAGERS` (10) managers.** A
+  CUSIP's issue number (characters 7–8) is digits for an equity issue and
+  carries a letter for debt. JPMorgan matches 21 securities: its common
+  stock, and twenty preferreds and notes one to nine filers entered as
+  shares — those are counted in `not_listed_note`, never silently dropped.
+- **Twenty positions per security** (`TOP`), the largest by shares, with the
+  number of the rest. The section shows the first and opens to twenty.
+- **A value in thousands** shows its shares and not its value, with
+  `THOUSANDS_NOTE` (Stephen, 14 Oct 2026).
+- **ADRs and depositary shares** (title of class ADR / ADS / DEP /
+  depositary / sponsored) are labelled, with `ADR_NOTE`, and never get a
+  percentage (Stephen, 14 Oct 2026).
+- A position larger than the shares outstanding is left out and counted.
+
+### The percentage
+
+Only when the security is not an ADR, the company has one listed class of
+shares, and the SEC frames carry the issuer's undimensioned
+`dei:EntityCommonStockSharesOutstanding` dated within 100 days of the
+period; the issuer's CIK is the one the SEC EDGAR source resolved. Labelled
+as computed: "Of 173.2 million shares outstanding on Moody’s Corporation's
+10-Q/10-K cover, 30 June 2026 — computed by OpenCheck." Berkshire's 24,669,778
+Moody's shares are 14.24%, the figure commercial vendors show. Berkshire and
+Alphabet (two listed classes) get none; JPMorgan's BlackRock position is 7.76%.
+
+### Measured on the 30 June 2026 index
+
+| Company | Listed | Largest position |
+|---|---|---|
+| Moody's | COM, 1,401 managers | Berkshire Hathaway, 24,669,778 shares, 14.24% |
+| Berkshire Hathaway | CL B (4,887), CL A (1,404); 1 more not listed | BlackRock, 121,183,112 B shares |
+| Alphabet | CL A, CL C, two depositary shares | BlackRock, 460,972,803 A shares |
+| JPMorgan Chase | COM (5,115); 20 more not listed | BlackRock, 206,290,537 shares, 7.76% |
+| Shell | SPON ADS (1,520), ADR | FMR, 87,332,346 ADSs |
+
+The builder's thousands band narrowed in this phase (`THOUSANDS_BAND` 1.25
+inside `PRICE_BAND` 2): Berkshire B shares filed at the B price under the A
+CUSIP sit at about 1/1,500 of A's price and read as "value in thousands"
+before. Rebuild the asset after merging (Actions → Refresh Form 13F index →
+Run workflow, *force*).
 
 ## Attribution
 

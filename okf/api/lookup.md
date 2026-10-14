@@ -90,7 +90,12 @@ and `register_record` (the subject's own page on its home register —
 `register`, `identifier`, `url` and `ra_code` — built from the LEI record's
 registration authority and number alone, so present even when that register's
 adapter did not answer; null where OpenCheck has no per-company address for
-the register; Phase 296).
+the register; Phase 296), and `form13f` (institutional shareholders: the
+positions investment managers reported on SEC Form 13F in the company's
+securities, top twenty per security, with a percentage only where computed
+under three gates and labelled as OpenCheck's arithmetic — **not beneficial
+ownership**, never in `bods`, never read by a signal, never totalled; null
+when no index is loaded or no security of the company's is in it; Phase 334).
 
 # Citations
 

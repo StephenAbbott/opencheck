@@ -535,6 +535,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     knowability: dict[str, Any] | None = None
     knowability_chain: dict[str, Any] | None = None
     listing: dict[str, Any] | None = None
+    form13f: dict[str, Any] | None = None
     oa_screening: list[dict[str, Any]] = []
     bods_all: list[dict[str, Any]] = []
     same_pairs: list[dict[str, Any]] = []
@@ -587,6 +588,8 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             knowability_chain = payload
         elif event == "listing":
             listing = payload
+        elif event == "form13f":
+            form13f = payload
         elif event == "risk_signals":
             signals = payload["signals"]
             degraded_sources = payload.get("degraded_sources") or []
@@ -628,6 +631,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         knowability=knowability,
         knowability_chain=knowability_chain,
         listing=listing,
+        form13f=form13f,
         register_record=register_record,
         lei=norm_lei,
         legal_name=legal_name,
