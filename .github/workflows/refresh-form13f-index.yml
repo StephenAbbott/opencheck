@@ -1,0 +1,120 @@
+name: Refresh Form 13F index
+
+# Rebuilds the Form 13F index — the positions institutional investment
+# managers report on Form 13F, read from the SEC's quarterly Form 13F data
+# sets (US government work, public domain) — and replaces the
+# `form13f-index` release asset. Phase 333.
+#
+# A 13F filer is an investment manager with discretion over the shares, not
+# a beneficial owner: the index never becomes BODS, never enters the
+# ownership graph and is never read by a risk signal.
+#
+# Weekly, and the build only runs when the SEC lists a data set newer than
+# the one the published index was built from (or the builder's schema
+# changed, or the run is started by hand). The SEC publishes a set roughly
+# every three months, about two weeks after its filing window closes
+# (1 Sep–30 Nov 2026 is due around mid-December 2026); the weekly check
+# picks it up within days. `form13f-meta.json` beside the index records
+# which data sets it was built from, so the check is one small download.
+#
+# The SEC's fair-access policy refuses datacentre requests without a contact
+# address: the builder reads it from the OPENCHECK_EDGAR_CONTACT_EMAIL
+# secret and exits 2, publishing nothing, when it is missing. A refusal of
+# any kind (no links on the listing page, a download that is not a zip, a
+# missing column, too few managers for the period) exits 2 and leaves the
+# previous asset in place.
+on:
+  schedule:
+    - cron: "40 6 * * 3" # Wednesdays 06:40 UTC
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Rebuild even if the SEC has published nothing newer"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-form13f-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # required to create/upload the release asset
+    env:
+      OPENCHECK_EDGAR_CONTACT_EMAIL: ${{ secrets.OPENCHECK_EDGAR_CONTACT_EMAIL }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - name: Is there anything new to build?
+        id: check
+        working-directory: backend
+        run: |
+          latest=$(python3 scripts/build_form13f_index.py --latest)
+          schema=$(python3 scripts/build_form13f_index.py --schema)
+          echo "Newest SEC data set: $latest (builder schema $schema)"
+          built=""; built_schema=""
+          if gh release download form13f-index -p form13f-meta.json -D "$RUNNER_TEMP" 2>/dev/null; then
+            built=$(python3 -c "import json,sys; m=json.load(open(sys.argv[1])); print(json.loads(m['data_sets'])[0])" "$RUNNER_TEMP/form13f-meta.json")
+            built_schema=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['schema_version'])" "$RUNNER_TEMP/form13f-meta.json")
+            echo "Published index built from: $built (schema $built_schema)"
+          fi
+          if [ "${{ inputs.force }}" = "true" ] || [ "$latest" != "$built" ] || [ "$schema" != "$built_schema" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nothing new; the published index stands."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the index from the latest two data sets
+        if: steps.check.outputs.build == 'true'
+        working-directory: backend
+        run: |
+          python3 scripts/build_form13f_index.py \
+            --out "$RUNNER_TEMP/form13f.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial data set)
+        if: steps.check.outputs.build == 'true'
+        run: |
+          python3 - <<'PY'
+          import json, os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "form13f.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          managers, securities = int(meta["managers"]), int(meta["securities"])
+          print(f"period {meta['period']}: {managers} managers, {securities} securities, "
+                f"{meta['positions']} positions ({meta['positions_stored']} stored), "
+                f"{meta['shares_outstanding']} shares-outstanding facts")
+          # 30 June 2026: 8,857 managers, 23,363 securities, 4,623 facts.
+          if managers < 6000 or securities < 15000 or int(meta["shares_outstanding"]) < 2000:
+              sys.exit("Refusing to publish: counts far below a normal quarter — likely a format change.")
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "form13f-meta.json"), "w") as fh:
+              json.dump(meta, fh, indent=2, sort_keys=True)
+          with open("summary.txt", "w") as fh:
+              fh.write(f"Period {meta['period']}, filed through {meta['filed_through']}: "
+                       f"{managers} managers, {securities} securities.")
+          PY
+
+      - name: Replace the `form13f-index` release assets
+        if: steps.check.outputs.build == 'true'
+        run: |
+          gh release view form13f-index >/dev/null 2>&1 || gh release create form13f-index \
+            --title "Form 13F index" \
+            --notes "Built by refresh-form13f-index.yml from the SEC's Form 13F data sets (US government work, public domain). Positions reported by institutional investment managers — not beneficial ownership."
+          bash backend/scripts/replace_release_asset.sh form13f-index \
+            "$RUNNER_TEMP/form13f.sqlite.gz" form13f.sqlite.gz \
+            "$(cat summary.txt) Rebuilt automatically by refresh-form13f-index on $(date -u +%Y-%m-%d). Contains data from the SEC's Form 13F data sets (U.S. Securities and Exchange Commission), public domain. Reported by the filers and not verified by the SEC."
+          # The meta goes up last: until it is replaced, the next run still
+          # sees the old data set and rebuilds rather than skipping.
+          bash backend/scripts/replace_release_asset.sh form13f-index \
+            "$RUNNER_TEMP/form13f-meta.json" form13f-meta.json
