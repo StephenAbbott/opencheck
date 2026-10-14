@@ -4,6 +4,7 @@ import type {
   BodsCountsEvent,
   CrossSourceLink,
   DegradedSource,
+  Form13fPayload,
   GraphShape,
   KnowabilityChain,
   KnowabilityStatement,
@@ -59,6 +60,9 @@ export function useLookupStream() {
   const [knowability, setKnowability] = useState<KnowabilityStatement | null>(null);
   // Phase 236: the primary listing from PermID, as the `listing` event carried it.
   const [primaryListing, setPrimaryListing] = useState<PrimaryListing | null>(null);
+  // Phase 336: institutional shareholders from Form 13F, as the `form13f`
+  // event carried it — frozen with the run, so a saved report replays it.
+  const [form13f, setForm13f] = useState<Form13fPayload | null>(null);
   const [registerRecord, setRegisterRecord] = useState<RegisterRecord | null>(null);
   const [knowabilityChain, setKnowabilityChain] = useState<KnowabilityChain | null>(null);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
@@ -162,6 +166,7 @@ export function useLookupStream() {
     setKnowability(null);
     setKnowabilityChain(null);
     setPrimaryListing(null);
+    setForm13f(null);
     setRegisterRecord(null);
     setRiskSignals([]);
     setDegradedSources([]);
@@ -236,6 +241,7 @@ export function useLookupStream() {
       onKnowability: (e) => setKnowability(e),
       onKnowabilityChain: (e) => setKnowabilityChain(e),
       onListing: (e) => setPrimaryListing(e),
+      onForm13f: (e) => setForm13f(e),
       onRiskSignals: (e) => {
         setRiskSignals(e.signals);
         setDegradedSources(e.degraded_sources ?? []);
@@ -285,6 +291,7 @@ export function useLookupStream() {
     subjectProfile,
     knowability,
     primaryListing,
+    form13f,
     registerRecord,
     knowabilityChain,
     riskSignals,

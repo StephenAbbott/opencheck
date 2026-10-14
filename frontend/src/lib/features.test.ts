@@ -39,7 +39,7 @@ function token(group: string, name: string): string {
 }
 
 describe("FEATURES", () => {
-  it("lists the eight features: the six the /features ticket names, Subsidiaries and the Watchlist", () => {
+  it("lists the nine features: the six the /features ticket names, Subsidiaries, the Watchlist and institutional shareholders", () => {
     expect(FEATURES.map((f) => f.id)).toEqual([
       "quickcheck",
       "fullcheck",
@@ -49,6 +49,7 @@ describe("FEATURES", () => {
       "watchlist",
       "time-machine",
       "network-visualisations",
+      "institutional-shareholders",
     ]);
   });
 
@@ -99,10 +100,13 @@ describe("FEATURES", () => {
     expect(featureById("subsidiaries")?.accent).toBe(token("graph", "control"));
   });
 
-  it("takes the two capability accents from existing tokens", () => {
+  it("takes the three capability accents from existing tokens", () => {
     expect(featureById("time-machine")?.accent).toBe(token("graph", "same"));
     // The logo's network-EDGE colour, for the feature that draws them.
     expect(featureById("network-visualisations")?.accent).toBe(token("mark", "line"));
+    // Phase 336: Form 13F is never in the graph, so it wears the graph's
+    // neutral grey, never an ownership colour.
+    expect(featureById("institutional-shareholders")?.accent).toBe(token("graph", "unknown"));
   });
 
   it("knows the two invented accents: batch screening and the watchlist", () => {

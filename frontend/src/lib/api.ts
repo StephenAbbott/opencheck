@@ -206,6 +206,10 @@ export interface LookupResponse {
    *  configured and on payloads recorded before this field existed; absence
    *  is never "not listed". */
   listing?: PrimaryListing | null;
+  /** Institutional shareholders from SEC Form 13F (Phase 334) — see
+   *  `Form13fPayload`. Never ownership. Absent when no security of the
+   *  company is in the index, and on payloads recorded before this field. */
+  form13f?: Form13fPayload | null;
   bods: Record<string, unknown>[];
   bods_issues: string[];
   license_notices: { source_id: string; hit_id: string; notice: string }[];
@@ -241,6 +245,66 @@ export interface PrimaryListing {
   link: { url: string; kind: "listing" | "search" } | null;
   reason?: string;
   detail?: string;
+}
+
+/** One manager's reported position in one security (Phase 334). `value` is
+ *  null when the filer still reports in thousands (`value_note` says so);
+ *  `percent` only when the backend's three gates held. */
+export interface Form13fPosition {
+  manager: string;
+  manager_cik: string | null;
+  shares: number;
+  value: number | null;
+  value_note: string | null;
+  value_check: "ok" | "thousands" | "unchecked" | string;
+  percent: number | null;
+  discretion: string | null;
+  filed: string | null;
+  amended: boolean;
+  confidential_treatment: boolean;
+  report_type: string | null;
+  included_managers: number | null;
+}
+
+/** One listed security: its twenty largest positions by shares. */
+export interface Form13fSecurity {
+  cusip: string;
+  issuer_name: string | null;
+  title_of_class: string | null;
+  is_adr: boolean;
+  adr_note: string | null;
+  matched_via: string[];
+  managers_reported: number;
+  managers_shown: number;
+  managers_more: number;
+  left_out: number;
+  shares_outstanding: {
+    shares: number;
+    as_of: string;
+    accession: string | null;
+    basis: string;
+  } | null;
+  positions: Form13fPosition[];
+}
+
+/** The `form13f` event (Phase 334): the institutional investment managers
+ *  that reported a position in the company's securities on Form 13F, frozen
+ *  with the run. **Not beneficial ownership** — never in the graph, never a
+ *  signal, never totalled. `status` "out_of_date" carries no securities and
+ *  a `line` saying why. */
+export interface Form13fPayload {
+  status: "found" | "out_of_date";
+  period: string | null;
+  filed_through: string | null;
+  built_at: string | null;
+  attribution: string;
+  caveat: string;
+  disclaimer: string;
+  notes: string[];
+  source_url: string;
+  line: string;
+  not_listed_note?: string | null;
+  securities: Form13fSecurity[];
 }
 
 /** One adapter reading the subject's jurisdiction, as `opencheck_reads`
@@ -1817,6 +1881,7 @@ export type LookupStreamHandlers = {
   onKnowability?: (e: KnowabilityStatement) => void;
   onKnowabilityChain?: (e: KnowabilityChain) => void;
   onListing?: (e: PrimaryListing) => void;
+  onForm13f?: (e: Form13fPayload) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
   /** Called on both backend "error" events and EventSource network errors. */
   onError?: (detail: string) => void;
@@ -1853,6 +1918,7 @@ export const LOOKUP_EVENT_HANDLERS = {
   knowability: "onKnowability",
   knowability_chain: "onKnowabilityChain",
   listing: "onListing",
+  form13f: "onForm13f",
 } as const satisfies Record<string, keyof LookupStreamHandlers>;
 
 type LookupDataHandlerKey = (typeof LOOKUP_EVENT_HANDLERS)[keyof typeof LOOKUP_EVENT_HANDLERS];
