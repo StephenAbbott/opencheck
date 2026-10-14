@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 331** — A `deepen_top=0` lookup keeps the subject's profile, a per-source retry says what it actually read, and a lazy part of the page that fails to load is retried, contained and explained, with a notice when a new version of OpenCheck is available.
+**Latest: Phase 332** — A screening check that did not fully run is named by what it is — "Related-party sanctions and PEP screening covered the 25 highest-ranked of 96 related parties" — in the AI summary, the reports and the batch table, never by an internal source id.
 
 → [Full development history](docs/status.md)
 
