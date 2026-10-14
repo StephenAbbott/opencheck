@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 332** — A screening check that did not fully run is named by what it is — "Related-party sanctions and PEP screening covered the 25 highest-ranked of 96 related parties" — in the AI summary, the reports and the batch table, never by an internal source id.
+**Latest: Phase 333** — The SEC's quarterly Form 13F data sets are packed weekly into an index of the positions institutional investment managers report, checked and never totalled, ready to be shown apart from beneficial ownership.
 
 → [Full development history](docs/status.md)
 
