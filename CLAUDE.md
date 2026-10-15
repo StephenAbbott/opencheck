@@ -3652,3 +3652,9 @@ re-derived otherwise:
   `LEI:deepen_top`; at 3 every download after a QuickCheck ran a second full
   pipeline and exported a shallower graph than the report on screen. A `q`
   export keeps 3.
+- **Mirror-first is on in production** (`render.yaml`, with
+  `OPENCHECK_GLEIF_LIVE_CONFIRM`); the config default stays `false`, so tests
+  and local runs are live-first unless they set it. A store-served anchor
+  carries the direct children to the live path's cap (`_DIRECT_CHILDREN_PAGE_CAP`
+  × 100), not one page of 100. Go back to live-first by setting the
+  `render.yaml` value to `"false"`; nothing else changes.
