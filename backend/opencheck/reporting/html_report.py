@@ -740,6 +740,29 @@ def _knowability(report: dict[str, Any]) -> str:
     )
 
 
+def _integrated_ownership(report: dict[str, Any]) -> str:
+    """Phase 339: integrated ownership of each party above the subject, per
+    source, from the frozen ``integrated_ownership`` payload — context, never
+    a finding. Empty when the run carried no payload or no holder."""
+    from .. import integrated_ownership as io
+
+    raw = report.get("integrated_ownership")
+    rows = io.report_rows(raw if isinstance(raw, dict) else None)
+    if not rows:
+        return ""
+    head = "".join(f'<th scope="col">{escape(c)}</th>' for c in io.REPORT_COLUMNS)
+    body = "".join(
+        "<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row) + "</tr>" for row in rows
+    )
+    notes = "".join(
+        f'<p style="font-size:8pt;color:#595959">{escape(t)}</p>' for t in io.report_footer(raw)
+    )
+    return (
+        f'<section aria-labelledby="iown"><h2 id="iown">{escape(io.REPORT_HEADING)}</h2>'
+        f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>{notes}</section>"
+    )
+
+
 def _form13f(report: dict[str, Any]) -> str:
     """Phase 334: institutional shareholders from SEC Form 13F, from the
     frozen ``form13f`` payload — its own section, after what can be known and
@@ -932,6 +955,7 @@ def build_report_html(
         + _risk(report)
         + _sources_found(report)
         + _knowability(report)
+        + _integrated_ownership(report)
         + _form13f(report)
         + _diagrams(report)
         + _licensing(report, saved)

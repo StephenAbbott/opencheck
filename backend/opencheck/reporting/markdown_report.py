@@ -419,6 +419,24 @@ def _knowability(report: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _integrated_ownership(report: dict[str, Any]) -> list[str]:
+    """Phase 339 — the text twin of ``html_report._integrated_ownership``."""
+    from .. import integrated_ownership as io
+
+    raw = report.get("integrated_ownership")
+    rows = io.report_rows(raw if isinstance(raw, dict) else None)
+    if not rows:
+        return []
+    lines = [f"## {io.REPORT_HEADING}", ""]
+    lines.append("| " + " | ".join(io.REPORT_COLUMNS) + " |")
+    lines.append("|" + "---|" * len(io.REPORT_COLUMNS))
+    lines += ["| " + " | ".join(_cell(c) for c in row) + " |" for row in rows]
+    lines.append("")
+    for t in io.report_footer(raw):
+        lines += [f"_{t}_", ""]
+    return lines
+
+
 def _form13f(report: dict[str, Any]) -> list[str]:
     """Phase 334 — the text twin of ``html_report._form13f``: institutional
     shareholders from Form 13F, from the frozen payload; not ownership."""
@@ -545,6 +563,7 @@ def build_report_markdown(
     sections += _risk(report)
     sections += _sources_found(report)
     sections += _knowability(report)
+    sections += _integrated_ownership(report)
     sections += _form13f(report)
     sections += _relationships(report)
     sections += _licensing(report, saved)

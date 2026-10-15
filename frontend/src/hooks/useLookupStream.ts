@@ -1,3 +1,4 @@
+import type { IntegratedOwnershipPayload } from "../lib/integratedOwnership";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   BodsBreakdown,
@@ -65,6 +66,8 @@ export function useLookupStream() {
   const [form13f, setForm13f] = useState<Form13fPayload | null>(null);
   const [registerRecord, setRegisterRecord] = useState<RegisterRecord | null>(null);
   const [knowabilityChain, setKnowabilityChain] = useState<KnowabilityChain | null>(null);
+  // Phase 339: integrated ownership along the path, frozen with the run.
+  const [integratedOwnership, setIntegratedOwnership] = useState<IntegratedOwnershipPayload | null>(null);
   const [riskSignals, setRiskSignals] = useState<RiskSignal[]>([]);
   // Derived checks that did not fully run (issue #50) — rendered as a
   // warning above the risk panel; empty signals + non-empty degraded is
@@ -165,6 +168,7 @@ export function useLookupStream() {
     setSubjectProfile(null);
     setKnowability(null);
     setKnowabilityChain(null);
+    setIntegratedOwnership(null);
     setPrimaryListing(null);
     setForm13f(null);
     setRegisterRecord(null);
@@ -240,6 +244,7 @@ export function useLookupStream() {
       onSubjectProfile: (e) => setSubjectProfile(e.profile),
       onKnowability: (e) => setKnowability(e),
       onKnowabilityChain: (e) => setKnowabilityChain(e),
+      onIntegratedOwnership: (e) => setIntegratedOwnership(e),
       onListing: (e) => setPrimaryListing(e),
       onForm13f: (e) => setForm13f(e),
       onRiskSignals: (e) => {
@@ -294,6 +299,7 @@ export function useLookupStream() {
     form13f,
     registerRecord,
     knowabilityChain,
+    integratedOwnership,
     riskSignals,
     degradedSources,
     verdict,

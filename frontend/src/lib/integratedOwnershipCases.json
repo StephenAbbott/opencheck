@@ -1,0 +1,2653 @@
+{
+ "_comment": "Phase 339 — the integrated-ownership case table. Read by backend/tests/test_integrated_ownership_phase339.py and frontend/src/lib/integratedOwnership.test.ts; both implementations must give `expect` for every case. Hand-written: change a case only with the method.",
+ "cases": [
+  {
+   "name": "one path multiplies (T-Rank 3.1)",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "A",
+     "recordId": "A",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Holding A"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 60
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "A",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 40
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "A",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "40%",
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "24%",
+       "route": "through Holding A"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a direct and an indirect stake add",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "A",
+     "recordId": "A",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Holding A"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 60
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "A",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 40
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r3",
+     "recordId": "r3",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 10
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "A",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "40%",
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "34%",
+       "route": "directly and through Holding A"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a band carries both ends",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "UK Companies House",
+      "opencheckSourceId": "companies_house"
+     }
+    },
+    {
+     "statementId": "P",
+     "recordId": "P",
+     "recordType": "person",
+     "recordDetails": {
+      "personType": "knownPerson",
+      "names": [
+       {
+        "type": "legal",
+        "fullName": "Jane Doe"
+       }
+      ]
+     },
+     "source": {
+      "description": "UK Companies House",
+      "opencheckSourceId": "companies_house"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "P",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exclusiveMinimum": 75,
+         "maximum": 100
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "UK Companies House",
+      "opencheckSourceId": "companies_house"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "P",
+     "status": "current",
+     "kind": "person",
+     "figures": [
+      {
+       "source_id": "companies_house",
+       "text": "75–100%",
+       "route": "directly"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a band through an intermediate",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "A",
+     "recordId": "A",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Holding A"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "minimum": 50,
+         "exclusiveMaximum": 75
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "A",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 40
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "A",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "40%",
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "20–30%",
+       "route": "through Holding A"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a missing share on a path reads at least",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "A",
+     "recordId": "A",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Holding A"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 30
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding"
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r3",
+     "recordId": "r3",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "A",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 20
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "at least 30%",
+       "route": "directly and through Holding A"
+      }
+     ]
+    },
+    {
+     "party": "A",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "20%",
+       "route": "directly"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "no share stated gives no figure",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding"
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "No figure — no share is stated on any path",
+       "route": "directly"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "voting rights are not shares",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "V",
+     "recordId": "V",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Voter"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "V",
+      "interests": [
+       {
+        "type": "votingRights",
+        "share": {
+         "exact": 30
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "V",
+     "status": "voting_rights_only",
+     "kind": "entity",
+     "figures": []
+    }
+   ]
+  },
+  {
+   "name": "a voting path above a shareholder",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "A",
+     "recordId": "A",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Holding A"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "V",
+     "recordId": "V",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Voter"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "A",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 50
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "V",
+      "interests": [
+       {
+        "type": "votingRights",
+        "share": {
+         "exact": 80
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "A",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "50%",
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "party": "V",
+     "status": "voting_rights_only",
+     "kind": "entity",
+     "figures": []
+    }
+   ]
+  },
+  {
+   "name": "shares and votes in one relationship read the shares",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 30
+        }
+       },
+       {
+        "type": "votingRights",
+        "share": {
+         "exact": 60
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "30%",
+       "route": "directly"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "an ended holding is formerly, with no figure",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "E",
+     "recordId": "E",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Old Owner"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "C",
+     "recordId": "C",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Closed Owner"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "E",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 40
+        },
+        "endDate": "2020-01-01"
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "C",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 10
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     },
+     "recordStatus": "closed"
+    }
+   ],
+   "expect": [
+    {
+     "party": "C",
+     "status": "formerly",
+     "kind": "entity",
+     "figures": []
+    },
+    {
+     "party": "E",
+     "status": "formerly",
+     "kind": "entity",
+     "figures": []
+    }
+   ]
+  },
+  {
+   "name": "an end date after as_of is still current",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "E",
+     "recordId": "E",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Owner"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "E",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 40
+        },
+        "endDate": "2027-01-01"
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "E",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "40%",
+       "route": "directly"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "roles and control are not read",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "D",
+     "recordId": "D",
+     "recordType": "person",
+     "recordDetails": {
+      "personType": "knownPerson",
+      "names": [
+       {
+        "type": "legal",
+        "fullName": "A Director"
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "C",
+     "recordId": "C",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Controller"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "D",
+      "interests": [
+       {
+        "type": "boardMember"
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "C",
+      "interests": [
+       {
+        "type": "otherInfluenceOrControl"
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": []
+  },
+  {
+   "name": "GLEIF and MEIP edges are not ownership",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "G",
+     "recordId": "G",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Parent (GLEIF)"
+     },
+     "source": {
+      "description": "GLEIF",
+      "opencheckSourceId": "gleif"
+     }
+    },
+    {
+     "statementId": "M",
+     "recordId": "M",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Group head (MEIP)"
+     },
+     "source": {
+      "description": "OECD-UNSD Multinational Enterprise Information Platform (MEIP), 'Group Register' sheet."
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "G",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 100
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "GLEIF",
+      "opencheckSourceId": "gleif"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "M",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 100
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OECD-UNSD Multinational Enterprise Information Platform (MEIP), 'Group Register' sheet."
+     }
+    }
+   ],
+   "expect": []
+  },
+  {
+   "name": "two sources are listed, never added",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T",
+    "T2"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Ministry of Finance"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "T2",
+     "recordId": "T2",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "Wikidata",
+      "opencheckSourceId": "wikidata"
+     }
+    },
+    {
+     "statementId": "S2",
+     "recordId": "S2",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Government"
+     },
+     "source": {
+      "description": "Wikidata",
+      "opencheckSourceId": "wikidata"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 67
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T2",
+      "interestedParty": "S2",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 50.1
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "Wikidata",
+      "opencheckSourceId": "wikidata"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "67%",
+       "route": "directly"
+      },
+      {
+       "source_id": "wikidata",
+       "text": "50.1%",
+       "route": "directly"
+      }
+     ]
+    }
+   ],
+   "canon": {
+    "S2": "S"
+   }
+  },
+  {
+   "name": "figures that differ only by rounding are each listed",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S2",
+     "recordId": "S2",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "Global Energy Monitor / Climate TRACE",
+      "opencheckSourceId": "climatetrace"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 50.1
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S2",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 50.12
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "Global Energy Monitor / Climate TRACE",
+      "opencheckSourceId": "climatetrace"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "climatetrace",
+       "text": "50.12%",
+       "route": "directly"
+      },
+      {
+       "source_id": "opensanctions",
+       "text": "50.1%",
+       "route": "directly"
+      }
+     ]
+    }
+   ],
+   "canon": {
+    "S2": "S"
+   }
+  },
+  {
+   "name": "a pair repeated in one source is one holding",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 67
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 67
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "67%",
+       "route": "directly"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "treasury shares are given back",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "X",
+     "recordId": "X",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Holder"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "X",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 40
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "T",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 20
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "X",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "50%",
+       "route": "directly"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "indirect self-ownership (T-Rank 3.4)",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "A",
+     "recordId": "A",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "A"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "B",
+     "recordId": "B",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "B"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "C",
+     "recordId": "C",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "C"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "X",
+     "recordId": "X",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "X"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "X",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 50
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "B",
+      "interestedParty": "A",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 80
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r3",
+     "recordId": "r3",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "C",
+      "interestedParty": "B",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 80
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r4",
+     "recordId": "r4",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "C",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 50
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r5",
+     "recordId": "r5",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "B",
+      "interestedParty": "T",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 10
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "C",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "52.08%",
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "party": "B",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "41.67%",
+       "route": "through C"
+      }
+     ]
+    },
+    {
+     "party": "A",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "33.33%",
+       "route": "through B, C"
+      }
+     ]
+    },
+    {
+     "party": "X",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "16.67%",
+       "route": "through A, B, C"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "references by recordId resolve",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "sT"
+   ],
+   "statements": [
+    {
+     "statementId": "sT",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "sS",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 25
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "sS",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "25%",
+       "route": "directly"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "a cycle that does not settle gives no figure",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target Co"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "A",
+     "recordId": "A",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "A"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "B",
+     "recordId": "B",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "B"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "S"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 50
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "B",
+      "interestedParty": "A",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 100
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r3",
+     "recordId": "r3",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "B",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 100
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r4",
+     "recordId": "r4",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "B",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 50
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "A",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "No figure — a circular holding could not be resolved",
+       "route": ""
+      }
+     ]
+    },
+    {
+     "party": "B",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "No figure — a circular holding could not be resolved",
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "No figure — a circular holding could not be resolved",
+       "route": ""
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "the ASDA shape: a chain of PSC bands gives each layer its interval",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "ASDA Stores Limited"
+     },
+     "source": {
+      "description": "UK Companies House",
+      "opencheckSourceId": "companies_house"
+     }
+    },
+    {
+     "statementId": "A",
+     "recordId": "A",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Holdco 1"
+     },
+     "source": {
+      "description": "UK Companies House",
+      "opencheckSourceId": "companies_house"
+     }
+    },
+    {
+     "statementId": "B",
+     "recordId": "B",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Holdco 2"
+     },
+     "source": {
+      "description": "UK Companies House",
+      "opencheckSourceId": "companies_house"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "A",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exclusiveMinimum": 75,
+         "maximum": 100
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "UK Companies House",
+      "opencheckSourceId": "companies_house"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "B",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exclusiveMinimum": 75,
+         "maximum": 100
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "UK Companies House",
+      "opencheckSourceId": "companies_house"
+     }
+    },
+    {
+     "statementId": "r3",
+     "recordId": "r3",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "A",
+      "interestedParty": "B",
+      "interests": [
+       {
+        "type": "votingRights",
+        "share": {
+         "exclusiveMinimum": 75,
+         "maximum": 100
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "UK Companies House",
+      "opencheckSourceId": "companies_house"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "A",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "companies_house",
+       "text": "75–100%",
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "party": "B",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "companies_house",
+       "text": "56.25–100%",
+       "route": "through Holdco 1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "the Equinor shape: three sources, one stake, three figures never summed",
+   "as_of": "2026-10-15",
+   "subject_ids": [
+    "T",
+    "T2",
+    "T3"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Equinor ASA"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "S",
+     "recordId": "S",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "FINANSDEPARTEMENTET"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "T2",
+     "recordId": "T2",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Equinor"
+     },
+     "source": {
+      "description": "Wikidata",
+      "opencheckSourceId": "wikidata"
+     }
+    },
+    {
+     "statementId": "S2",
+     "recordId": "S2",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Government of Norway"
+     },
+     "source": {
+      "description": "Wikidata",
+      "opencheckSourceId": "wikidata"
+     }
+    },
+    {
+     "statementId": "T3",
+     "recordId": "T3",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Equinor"
+     },
+     "source": {
+      "description": "Global Energy Monitor / Climate TRACE",
+      "opencheckSourceId": "climatetrace"
+     }
+    },
+    {
+     "statementId": "S3",
+     "recordId": "S3",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Government of Norway"
+     },
+     "source": {
+      "description": "Global Energy Monitor / Climate TRACE",
+      "opencheckSourceId": "climatetrace"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T",
+      "interestedParty": "S",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 67
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T2",
+      "interestedParty": "S2",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 67
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "Wikidata",
+      "opencheckSourceId": "wikidata"
+     }
+    },
+    {
+     "statementId": "r3",
+     "recordId": "r3",
+     "recordType": "relationship",
+     "recordDetails": {
+      "isComponent": false,
+      "subject": "T3",
+      "interestedParty": "S3",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 67
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "Global Energy Monitor / Climate TRACE",
+      "opencheckSourceId": "climatetrace"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "S",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "climatetrace",
+       "text": "67%",
+       "route": "directly"
+      },
+      {
+       "source_id": "opensanctions",
+       "text": "67%",
+       "route": "directly"
+      },
+      {
+       "source_id": "wikidata",
+       "text": "67%",
+       "route": "directly"
+      }
+     ]
+    }
+   ],
+   "canon": {
+    "S2": "S",
+    "S3": "S"
+   }
+  }
+ ]
+}

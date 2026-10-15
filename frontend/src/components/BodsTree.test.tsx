@@ -94,3 +94,23 @@ describe("BodsTree ended relationships (Phase 219)", () => {
     expect(current.textContent).not.toMatch(/ended/);
   });
 });
+
+describe("BodsTree integrated ownership (Phase 339)", () => {
+  it("puts each holder's figure on its row, and nowhere else", () => {
+    const rows = buildTree(bodsToGraph(statements), new Set());
+    render(
+      <BodsTree
+        rows={rows}
+        selectedId={null}
+        onSelect={() => {}}
+        onToggleCollapse={() => {}}
+        ownershipByNode={new Map([["verified", "75–100% (UK Companies House)"]])}
+      />,
+    );
+    const cells = screen.getAllByTestId("tree-integrated-ownership");
+    expect(cells).toHaveLength(1);
+    expect(cells[0].textContent).toBe("Integrated ownership: 75–100% (UK Companies House)");
+    const row = screen.getAllByRole("treeitem").find((r) => r.textContent?.includes("VERIFIED, Alex"))!;
+    expect(within(row).getByTestId("tree-integrated-ownership")).toBeTruthy();
+  });
+});

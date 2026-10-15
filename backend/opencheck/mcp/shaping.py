@@ -194,6 +194,59 @@ def _compact_statement(st: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+#: How many holders the MCP block lists; the rest are counted.
+_INTEGRATED_LIMIT = 25
+
+
+def _integrated_ownership(payload: Any) -> dict[str, Any] | None:
+    """Phase 339 — ``integrated_ownership`` from the frozen field: each party
+    above the subject with its figure per source, never added across
+    sources. Context, not a finding: no threshold, never a risk signal. None
+    for a payload recorded before the field existed."""
+    from ..integrated_ownership import route_words
+
+    io = getattr(payload, "integrated_ownership", None)
+    if not isinstance(io, dict):
+        return None
+    holders = [h for h in io.get("holders") or [] if isinstance(h, dict)]
+    rows = []
+    for h in holders[:_INTEGRATED_LIMIT]:
+        row: dict[str, Any] = {
+            "name": h.get("name"),
+            "kind": h.get("kind"),
+            "status": h.get("status"),
+            "figures": [
+                {
+                    "source": f.get("source"),
+                    "text": f.get("text"),
+                    "minimum": f.get("minimum"),
+                    "maximum": f.get("maximum"),
+                    "incomplete": bool(f.get("incomplete")),
+                    "route": route_words(f) or None,
+                }
+                for f in h.get("figures") or []
+            ],
+        }
+        if h.get("note"):
+            row["note"] = h["note"]
+            row["sources"] = list(h.get("sources") or [])
+        rows.append(row)
+    return {
+        "method": "Integrated ownership",
+        "description": io.get("description"),
+        "credit": io.get("credit"),
+        "as_of": io.get("as_of"),
+        "holders": rows,
+        "holders_total": len(holders),
+        "hint": (
+            "Context, not a risk finding: no threshold is applied and none of "
+            "these figures feeds the risk signals or the verdict. Each source "
+            "is computed on its own; two figures for one party are two "
+            "publishers' readings, never to be added."
+        ),
+    }
+
+
 def _knowability(payload: Any) -> dict[str, Any] | None:
     """``knowability: {subject, chain[], as_of, hint}`` from the frozen
     ``knowability`` / ``knowability_chain`` fields, or None for an older
@@ -448,6 +501,10 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         # ownership path (Phase 226): dated register facts, never findings.
         # Null on a payload recorded before the fields existed.
         "knowability": knowability,
+        # Phase 339: integrated ownership of each party above the subject,
+        # per source (T-Rank's method). Context only, never a signal. Null on
+        # a payload recorded before the field existed.
+        "integrated_ownership": _integrated_ownership(payload),
         # The primary stock-exchange listing from LSEG PermID (Phase 236).
         # Null when not checked — never read null as "not listed".
         "listing": listing,

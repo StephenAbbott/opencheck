@@ -24,9 +24,18 @@
  * not claim it and no URL could reach it. One line here says where it went.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { lookup, type KnowabilityChain, type RiskSignal } from "../../lib/api";
 import type { EdgeLite } from "../../lib/expand";
+import { subjectLei } from "../../lib/expand";
+import {
+  computeIntegratedOwnership,
+  ownershipByNode,
+  subjectIdsFor,
+  type IntegratedOwnershipPayload,
+} from "../../lib/integratedOwnership";
+import { todayIso } from "../../lib/relationshipStatus";
+import { IntegratedOwnershipList } from "./IntegratedOwnershipList";
 import { chainCodes } from "../../lib/knowabilityChain";
 import { subsidiaryHref } from "../../lib/subsidiariesMode";
 import BodsGraphExplorer from "../BodsGraphExplorer";
@@ -45,6 +54,7 @@ export default function FullCheckPanel({
   focusStatementId = null,
   savedStatements = null,
   knowabilityChain = null,
+  integratedOwnership = null,
 }: {
   lei: string;
   legalName: string | null;
@@ -70,18 +80,36 @@ export default function FullCheckPanel({
    *  statements, frozen with the run. The list below extends it as the
    *  network is expanded; on a saved report it is shown as saved. */
   knowabilityChain?: KnowabilityChain | null;
+  /** Phase 339: the run's `integrated_ownership` event, frozen with it. A
+   *  saved report shows it as saved; live, the band recomputes from the
+   *  network as it is expanded. */
+  integratedOwnership?: IntegratedOwnershipPayload | null;
 }) {
   const [statements, setStatements] = useState<Stmt[] | null>(null);
   // Phase 226: the jurisdictions on the upward path of the network as drawn.
   const [graphCodes, setGraphCodes] = useState<string[]>([]);
   const [expanding, setExpanding] = useState(false);
+  // Phase 339: the network as drawn, for the integrated-ownership band.
+  const [network, setNetwork] = useState<{ all: Stmt[]; remap: Record<string, string> } | null>(null);
   const onNetworkChange = useCallback(
-    (all: Stmt[], edges: EdgeLite[], busy: boolean) => {
+    (all: Stmt[], edges: EdgeLite[], busy: boolean, remap?: Record<string, string>) => {
       setGraphCodes(chainCodes(all, edges, lei));
       setExpanding(busy);
+      setNetwork({ all, remap: remap ?? {} });
     },
     [lei],
   );
+  // A saved report reads no clock: it shows the payload frozen with the run.
+  // Live, the figure follows the network as FullCheck expands it.
+  const ownership = useMemo<IntegratedOwnershipPayload | null>(() => {
+    if (savedStatements) return integratedOwnership;
+    if (!network) return integratedOwnership;
+    const byLei = subjectIdsFor(network.all, lei, subjectLei);
+    const ids = byLei.length ? byLei : (integratedOwnership?.subject_ids ?? []);
+    if (!ids.length) return integratedOwnership;
+    return computeIntegratedOwnership(network.all, ids, todayIso(), network.remap);
+  }, [savedStatements, integratedOwnership, network, lei]);
+  const ownershipRows = useMemo(() => ownershipByNode(ownership), [ownership]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -152,10 +180,24 @@ export default function FullCheckPanel({
               readOnly={Boolean(savedStatements)}
               focusStatementId={focusStatementId}
               onNetworkChange={onNetworkChange}
+              ownershipByNode={ownershipRows}
             />
           </>
         )}
       </PanelSection>
+
+      {ownership && (
+        <PanelSection
+          title="Integrated ownership"
+          aside="Multiplied along each path, added across paths — context, not a finding"
+        >
+          <IntegratedOwnershipList
+            payload={ownership}
+            expanding={expanding}
+            readOnly={Boolean(savedStatements)}
+          />
+        </PanelSection>
+      )}
 
       {(knowabilityChain || graphCodes.length > 0) && (
         <PanelSection

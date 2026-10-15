@@ -151,8 +151,15 @@ def _solve(
     # Collapse: an edge out of any member is an edge out of the group; edges
     # into members (their own owners) and between members are internal.
     w: dict[tuple[str, str], float] = {}
+    # One owner only (integrated ownership, Phase 339): a holding *into* the
+    # owner from a company it holds is the owner's own share coming back
+    # (T-Rank example 3.4 seen from C: T → B → C → T). It is kept aside and
+    # given back below, so every row of one table is normalised alike.
+    back: dict[str, float] = {}
     for (a, b), v in weights.items():
         if b in group:
+            if len(group) == 1 and a not in group:
+                back[a] = back.get(a, 0.0) + v
             continue
         src = group_node if a in group else a
         if src == b and src == group_node:
@@ -205,7 +212,17 @@ def _solve(
                 stack.append(a)
     if target not in down:
         return None, set(), REASON_NO_PATH
-    nodes = (down & up) | {target}
+    # Nodes that lead back into the owner count too, for the share returned.
+    up_back: set[str] = set()
+    stack = [a for a in back if a in down]
+    up_back.update(stack)
+    while stack:
+        n = stack.pop()
+        for a, _ in in_edges.get(n, ()):
+            if a not in up_back:
+                up_back.add(a)
+                stack.append(a)
+    nodes = (down & (up | up_back)) | {target}
 
     # Fixed point: I(x) = Σ_y I(y)·w(y,x), with I(group) = 1. It converges
     # whenever every company on a cycle has some holder outside the cycle.
@@ -226,9 +243,14 @@ def _solve(
     else:
         return None, set(), REASON_NOT_CONVERGED
     result = value[target]
+    returned = sum(value.get(a, 0.0) * v for a, v in back.items())
+    if returned >= 1.0 - 1e-12:
+        return None, set(), REASON_NOT_CONVERGED
+    if returned > 0:
+        result /= 1.0 - returned
     if result > _OVER_100:
         return None, set(), REASON_OVER_100
-    return min(result, 1.0), nodes - {target}, None
+    return min(result, 1.0), (nodes & up) - {target}, None
 
 
 def integrated_ownership(
