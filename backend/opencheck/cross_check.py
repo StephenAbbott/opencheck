@@ -187,7 +187,7 @@ async def assess_cross_source_names(
     bods: list[dict[str, Any]],
     *,
     max_targets: int = MAX_TARGETS,
-    min_score: float = 0.88,
+    min_score: float = names.NAME_MATCH_THRESHOLD,
     degraded: list[DegradedSource] | None = None,
     screen: NameScreen | None = None,
     subject_lei: str | None = None,

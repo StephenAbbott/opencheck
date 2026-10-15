@@ -215,7 +215,7 @@ TERMINAL_STATUSES: tuple[str, ...] = (
     "Domesticated",
 )
 
-_NAME_SIMILARITY_THRESHOLD = 0.88
+_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
 
 #: Legal-form markers that make an owner row a legal entity rather than a
 #: natural person. Deliberately high-precision: a marker here is a form of

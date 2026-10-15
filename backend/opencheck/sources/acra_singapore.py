@@ -168,7 +168,7 @@ _ACRA_AGENCY_LABELS = frozenset(
 _UEN_RE = re.compile(r"^(?:\d{8}[A-Z]|\d{9}[A-Z]|[RST]\d{2}[A-Z]{2}\d{4}[A-Z])$")
 _VCC_SUB_FUND_RE = re.compile(r"^[RST]\d{2}VC\d{4}[A-Z]-SF\d+$")
 
-_NAME_SIMILARITY_THRESHOLD = 0.88
+_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
 _LATIN_LETTER_RE = re.compile(r"[A-Za-z]")
 
 #: The register's literal "no value".
