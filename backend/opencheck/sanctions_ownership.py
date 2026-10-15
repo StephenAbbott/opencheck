@@ -83,10 +83,29 @@ METHOD_DESCRIPTION = (
     "tests are not computed. Arithmetic on the records, not a determination "
     "that the company is sanctioned, blocked or frozen."
 )
+#: What the test leaves out, said wherever the result is shown. Phase 346
+#: added the three OFAC points from FAQs 398–402 (checked 15 Oct 2026):
+#: property blocked while the test was met stays blocked after a divestment
+#: by the blocked persons themselves (FAQ 402) — OpenCheck reads current
+#: holdings only; some programmes block on ownership *or control* by a
+#: government with no 50% test (FAQ 398); and the Sectoral Sanctions
+#: Identifications list, to which OFAC also applies the rule, is not read.
 NOT_COMPUTED = (
-    "Control is not computed: the EU and UK also treat a company as caught when "
-    "a designated person controls it (appoints its board, directs it, or by "
-    "agreement), and OFAC licences and general licences are not read."
+    "Not computed: control — the EU and UK also treat a company as caught when a "
+    "designated person controls it (appoints its board, directs it, or by "
+    "agreement); OFAC licences and general licences; holdings that have ended — "
+    "OFAC treats property blocked while the test was met as still blocked after "
+    "the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck "
+    "reads current holdings only; programmes that block on ownership or control "
+    "by a government without a 50% test (Cuba, Iran, North Korea, Syria, "
+    "Venezuela and Crimea, FAQ 398); and OFAC's Sectoral Sanctions "
+    "Identifications list, which is outside this test."
+)
+#: Where the OFAC reading comes from (FAQs 398–402 and the 2014 guidance).
+OFAC_SOURCES = (
+    "https://ofac.treasury.gov/faqs/topic/1521",
+    "https://ofac.treasury.gov/faqs/401",
+    "https://ofac.treasury.gov/media/6186/download?inline",
 )
 
 RESULT_MEETS = "meets"

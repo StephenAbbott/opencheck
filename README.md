@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 345** — /features scrolls to the section its address names once drawn, so the homepage's watchlist card lands on the Watchlist section.
+**Latest: Phase 346** — OFAC's own FAQ 401 and 399 examples pin the 50 Percent Rule arithmetic, and the note under every result names what FAQs 398 and 402 add that OpenCheck does not compute.
 
 → [Full development history](docs/status.md)
 

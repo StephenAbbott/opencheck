@@ -3571,3 +3571,9 @@ repeat to a fixed point. Stephen's decisions on the Phase 342 ticket:
   `lib/sanctionsOwnershipFixture.json` is pinned by the backend test — regenerate
   it from `_fixture_now()` when the evidence shape changes.
 - `SANCTIONS_CONTROLLED` is unchanged.
+- **Phase 346 — OFAC's examples are the tests.** FAQ 401's five structures
+  and FAQ 399's aggregation case run through the module in
+  `test_sanctions_ownership_phase346.py`; keep them passing before any change
+  to `_caught`. `NOT_COMPUTED` names FAQ 402 (ended holdings), FAQ 398's
+  ownership-or-control programmes and the SSI list (out of scope, decided
+  15 Oct 2026); `OFAC_SOURCES` lists the three pages checked.
