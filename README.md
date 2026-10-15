@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 338** — the state-ownership signal states each state's accumulated share in the company, per source, computed with the GROW method T-Rank publishes, instead of the share of whichever company a state body held.
+**Latest: Phase 339** — FullCheck states each party's integrated ownership of the company — directly and through the companies it holds, one figure per source, never added — as context in a new band, the reports, the BODS export and the MCP tools, by the method T-Rank publishes.
 
 → [Full development history](docs/status.md)
 
