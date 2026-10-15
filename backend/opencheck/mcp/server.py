@@ -430,7 +430,12 @@ async def opencheck_owners(
     )
 
 
-@mcp.tool()
+# Phase 341: ``structured_output=False``. With a ``list[...]`` return type
+# FastMCP builds an output schema and serialises the result as structured
+# content, which cannot hold an ``Image`` — every call failed in production
+# with "Unable to serialize unknown type". Unstructured, the list is returned
+# as the content blocks themselves: the JSON text and the SVG image.
+@mcp.tool(structured_output=False)
 async def opencheck_ownership_map(
     lei: str, source: str | None = None, depth: int = 1, deepen_top: int = 5
 ) -> list[Any]:

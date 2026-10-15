@@ -384,3 +384,35 @@ def test_no_risk_module_reads_the_owners_answer(path):
         else:
             continue
         assert not any(n.split(".")[-1] == "owners" for n in names), path.name
+
+
+# --- Phase 341: through the MCP protocol, not just the Python function ----------
+
+
+def test_the_map_tool_serialises_through_the_protocol(fake_lookup):
+    """Phase 341. Calling the function directly passed while every real call
+    failed: FastMCP serialised the ``list`` result as structured content and
+    could not encode the ``Image``. The protocol path is the one that matters."""
+    from opencheck.mcp.server import mcp
+
+    out = asyncio.run(mcp.call_tool("opencheck_ownership_map", {"lei": "TTTTTTTTTTTTTTTTTT00"}))
+    blocks = out if isinstance(out, list) else out[0]
+    assert [b.type for b in blocks] == ["text", "image"]
+    assert blocks[1].mimeType == "image/svg+xml"
+    assert json.loads(blocks[0].text)["edges"][0]["owner"] == "Pat Doe"
+
+
+def test_the_owners_tool_serialises_through_the_protocol(fake_lookup):
+    from opencheck.mcp.server import mcp
+
+    out = asyncio.run(mcp.call_tool("opencheck_owners", {"lei": "TTTTTTTTTTTTTTTTTT00"}))
+    blocks = out if isinstance(out, list) else out[0]
+    assert json.loads(blocks[0].text)["calculated_owners"][0]["name"] == "Pat Doe"
+
+
+def test_the_map_tool_declares_no_output_schema():
+    pytest.importorskip("mcp")
+    from opencheck.mcp.server import mcp
+
+    tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
+    assert tools["opencheck_ownership_map"].outputSchema is None

@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 340** — two question-shaped MCP tools: `opencheck_owners` says who owns a company above its national threshold — calculated per source, declared by registers, and who is in both — and `opencheck_ownership_map` draws the structure as an SVG image with a text table.
+**Latest: Phase 341** — the `opencheck_ownership_map` MCP tool returns its SVG image and table through the protocol; Phase 340's version failed on every call in production.
 
 → [Full development history](docs/status.md)
 
