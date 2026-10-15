@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 342** — the sanctions 50% rule, computed for OFAC, the EU and the UK side by side from designated parties' stated shareholdings: a risk signal only when the low end meets the test, ownership only.
+**Latest: Phase 344** — a "New features" band on the homepage, three illustrated cards for the sanctions 50% test, the ownership map over MCP and the watchlist, in place of the "Screen a list" box.
 
 → [Full development history](docs/status.md)
 

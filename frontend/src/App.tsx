@@ -51,9 +51,9 @@ import { ApiPage } from "./components/ApiPage";
 import { BehindTheScenesPage } from "./components/BehindTheScenesPage";
 import { FeaturesPage } from "./components/FeaturesPage";
 import {
-  BatchInvite,
   ExampleLeiPicker,
   HowItWorks,
+  NewFeatures,
 } from "./components/HomePanels";
 import {
   type SourceBucket,
@@ -1146,7 +1146,7 @@ export default function App() {
         {!streamingLei && !savedOpening && !savedOpenError && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && !nationalIdSearchMutation.data && !nationalIdSearchMutation.isPending && (
           <>
             <ExampleLeiPicker onPick={lookupLei} disabled={lookupMutation.isPending || streaming} />
-            <BatchInvite onOpen={() => navigate("batch")} />
+            <NewFeatures />
             <HowItWorks />
           </>
         )}

@@ -53,6 +53,7 @@
   --oo-risk-bg: #ffe4e6; /* Phase 241 -- the risk-finding tier */
   --oo-risk-border: #fb7185;
   --oo-risk-text: #9f1239;
+  --oo-risk-tint-border: #fecdd3; /* Phase 344 -- a risk.bg panel's edge */
   --oo-info-bg: #f0f9ff;
   --oo-info-border: #bae6fd;
   --oo-info-text: #0369a1;

@@ -92,6 +92,10 @@ export default {
             bg: "#ffe4e6",     // rose-100   -- a finding against the subject
             border: "#fb7185", // rose-400
             text: "#9f1239",   // rose-800   (4.5:1+ on risk.bg)
+            // Phase 344: the edge of a risk.bg panel used as a surface (the
+            // homepage "New features" sanctions card). risk.border is a chip
+            // outline, too strong for a panel's hairline.
+            tintBorder: "#fecdd3", // rose-200
           },
           // Phase 319: the EU tax-list chip's own tier. A tax-governance
           // listing, not an AML finding, so it stays out of the rose/red/
