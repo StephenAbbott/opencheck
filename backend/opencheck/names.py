@@ -589,6 +589,17 @@ def despace(comparable: str) -> str:
 
 # --- Phase D: the shared name-similarity scorer -----------------------------
 
+#: The name-match gate — similarity at or above which two names are treated as
+#: the same party. ONE value product-wide: related-party screening
+#: (``cross_check``, ``openaleph_check``), BackgroundCheck's strong match
+#: (``routers/person_check``), the watchlist's OpenSanctions tier and the
+#: register adapters' name checks all import it from here. Never restate the
+#: number elsewhere — ``tests/test_name_match_threshold.py`` fails on a 0.88
+#: literal in any other module (issue #302). ICIJ's ``_MIN_NAME_SIM`` (0.87)
+#: is tuned separately and is not this concept.
+NAME_MATCH_THRESHOLD = 0.88
+
+
 def name_similarity(a: str | None, b: str | None) -> float:
     """Similarity in [0.0, 1.0] between two raw names — THE scorer behind
     RELATED_PEP / RELATED_SANCTIONED and BackgroundCheck person screening

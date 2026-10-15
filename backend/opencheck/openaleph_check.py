@@ -152,7 +152,7 @@ _RESULT_LIMIT = 50
 async def assess_openaleph_names(
     bods: list[dict[str, Any]],
     *,
-    min_score: float = 0.88,
+    min_score: float = names.NAME_MATCH_THRESHOLD,
     degraded: list[DegradedSource] | None = None,
     screening: list[dict[str, Any]] | None = None,
     subject_lei: str | None = None,

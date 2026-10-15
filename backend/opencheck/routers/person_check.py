@@ -44,7 +44,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
-from .. import provenance
+from .. import names, provenance
 from ..bods import map_companies_house
 from ..cross_check import (
     _birth_year_compatible,
@@ -60,9 +60,10 @@ from .search import _run_adapters
 
 router = APIRouter()
 
-#: Same threshold as ``cross_check.assess_cross_source_names`` — keep the
-#: two in lockstep so "strong match" is one concept product-wide.
-STRONG_MATCH_THRESHOLD = 0.88
+#: Same threshold as ``cross_check.assess_cross_source_names`` — both read
+#: ``names.NAME_MATCH_THRESHOLD``, so "strong match" is one concept
+#: product-wide. Kept as an alias because callers and tests import it.
+STRONG_MATCH_THRESHOLD = names.NAME_MATCH_THRESHOLD
 
 _CAVEATS = [
     (

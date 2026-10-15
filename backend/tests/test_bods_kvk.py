@@ -298,7 +298,7 @@ async def test_kvk_fetch_retries_on_429_then_succeeds(monkeypatch) -> None:
         "opencheck.sources.kvk.get_settings",
         lambda: MagicMock(allow_live=True),
     )
-    monkeypatch.setattr("opencheck.sources.kvk.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("opencheck.http.asyncio.sleep", AsyncMock())
 
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -329,7 +329,7 @@ async def test_kvk_fetch_degrades_after_max_retries(monkeypatch) -> None:
         "opencheck.sources.kvk.get_settings",
         lambda: MagicMock(allow_live=True),
     )
-    monkeypatch.setattr("opencheck.sources.kvk.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("opencheck.http.asyncio.sleep", AsyncMock())
 
     # _MAX_RETRIES = 3 means 4 total attempts (initial + 3 retries).
     mock_client = AsyncMock()
@@ -365,7 +365,7 @@ async def test_kvk_fetch_uses_exponential_backoff_without_retry_after(monkeypatc
         "opencheck.sources.kvk.get_settings",
         lambda: MagicMock(allow_live=True),
     )
-    monkeypatch.setattr("opencheck.sources.kvk.asyncio.sleep", fake_sleep)
+    monkeypatch.setattr("opencheck.http.asyncio.sleep", fake_sleep)
 
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)

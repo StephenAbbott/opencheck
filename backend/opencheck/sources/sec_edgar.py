@@ -30,7 +30,6 @@ Coverage is limited to publicly-traded US companies with shareholders holding
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import re
@@ -41,7 +40,7 @@ from urllib.parse import quote
 from .. import names
 from ..cache import Cache
 from ..config import get_settings
-from ..http import build_client
+from ..http import build_client, request_with_retry
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .edgar_codes import EDGAR_CODES, edgar_country
 from .schemas import validate_raw
@@ -101,7 +100,7 @@ _CACHE_TTL_DAYS = 7
 # sequential EDGAR requests (ticker index, per-form-type atom feeds, one
 # primary_doc.xml per filing) inside one ~30s per-source time budget (see
 # routers/lookup.py:_source_budget), so retries must not eat that budget on
-# their own. Mirrors the established retry pattern in sources/kvk.py.
+# their own. The loop is ``http.request_with_retry``, shared with KvK.
 _MAX_RETRIES = 2
 _RETRY_BACKOFF_BASE = 1.0  # seconds; doubled on each attempt
 _RETRY_BACKOFF_MAX = 8.0  # cap, regardless of Retry-After or backoff
@@ -1082,26 +1081,16 @@ class SecEdgarAdapter(SourceAdapter):
 
         try:
             async with build_client() as client:
-                resp = None
-                delay = _RETRY_BACKOFF_BASE
-                for attempt in range(_MAX_RETRIES + 1):
-                    resp = await client.get(url, headers=self._edgar_headers())
-                    if resp.status_code not in _RETRYABLE_STATUS_CODES:
-                        break
-                    if attempt == _MAX_RETRIES:
-                        # Exhausted retries — fall through and let the
-                        # status-code checks below surface the failure.
-                        break
-                    retry_after = resp.headers.get("Retry-After")
-                    if retry_after is not None:
-                        try:
-                            wait = min(float(retry_after), _RETRY_BACKOFF_MAX)
-                        except ValueError:
-                            wait = delay
-                    else:
-                        wait = min(delay, _RETRY_BACKOFF_MAX)
-                    await asyncio.sleep(wait)
-                    delay *= 2
+                # 429/5xx are retried in the shared loop; a retryable
+                # status that outlasts the retries falls through to the
+                # status-code checks below, which surface the failure.
+                resp = await request_with_retry(
+                    lambda: client.get(url, headers=self._edgar_headers()),
+                    max_retries=_MAX_RETRIES,
+                    backoff_base=_RETRY_BACKOFF_BASE,
+                    backoff_max=_RETRY_BACKOFF_MAX,
+                    retry_on=_RETRYABLE_STATUS_CODES,
+                )
 
                 if resp.status_code == 404:
                     self._cache.put(cache_key, "")

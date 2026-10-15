@@ -137,7 +137,7 @@ _NO_RESULT = "no result found."
 
 #: Similarity at or above which two Latin-script names are treated as the same
 #: company. The product-wide name-screening threshold (see ``names``).
-_NAME_SIMILARITY_THRESHOLD = 0.88
+_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
 
 _DUMMY_BRN_RE = re.compile(r"^[A-Z]\d{7}$")
 _ID_QUERY_RE = re.compile(r"^(?:[A-Z]\d{7}|\d{7,8})$")

@@ -171,7 +171,7 @@ _CACHE_MAX_AGE_DAYS = 1.0
 
 _DOS_ID_RE = re.compile(r"^\d{1,9}$")
 
-_NAME_SIMILARITY_THRESHOLD = 0.88
+_NAME_SIMILARITY_THRESHOLD = names.NAME_MATCH_THRESHOLD
 
 #: Status labels, verbatim.
 STATUS_ACTIVE = "Active"

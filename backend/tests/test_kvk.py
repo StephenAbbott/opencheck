@@ -139,7 +139,7 @@ async def test_an_unanswered_request_degrades_instead_of_raising(
     async def no_sleep(_: float) -> None:
         return None
 
-    monkeypatch.setattr(kvk_module.asyncio, "sleep", no_sleep)
+    monkeypatch.setattr("opencheck.http.asyncio.sleep", no_sleep)
     get_settings.cache_clear()
     puts: list[str] = []
     monkeypatch.setattr(adapter._cache, "put", lambda key, *a, **k: puts.append(key))

@@ -90,6 +90,7 @@ from typing import Any
 
 from . import identifiers, sqlite_schema
 from .bods import gleif_events as _gleif_events
+from .names import NAME_MATCH_THRESHOLD as _NAME_MATCH_THRESHOLD
 from .names import name_similarity
 from .secret_scrub import describe_exception
 from .verdict import VERDICT_TEMPLATE
@@ -197,8 +198,9 @@ CHANGE_KINDS: tuple[str, ...] = (
     "verdict",
 )
 
-#: The name-match gate — the one concept product-wide (``names.name_similarity``).
-NAME_MATCH_THRESHOLD = 0.88
+#: The name-match gate — the one concept product-wide, owned by ``names``.
+#: Kept as an alias here because callers and tests read it from this module.
+NAME_MATCH_THRESHOLD = _NAME_MATCH_THRESHOLD
 
 #: OpenSanctions schemata that are organisations. v1 matches the watched
 #: entity's own names only, so Person and its kin are never read.
