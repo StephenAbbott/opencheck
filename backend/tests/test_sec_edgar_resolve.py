@@ -196,7 +196,7 @@ async def test_get_text_retries_transient_503_then_succeeds(monkeypatch, tmp_pat
     async def _fake_sleep(seconds: float) -> None:
         sleeps.append(seconds)
 
-    monkeypatch.setattr("opencheck.sources.sec_edgar.asyncio.sleep", _fake_sleep)
+    monkeypatch.setattr("opencheck.http.asyncio.sleep", _fake_sleep)
 
     with patch("opencheck.sources.sec_edgar.build_client", return_value=client):
         text = await adapter._get_text(
@@ -235,7 +235,7 @@ async def test_get_text_raises_after_exhausting_retries(monkeypatch, tmp_path) -
     async def _fake_sleep(seconds: float) -> None:
         return None
 
-    monkeypatch.setattr("opencheck.sources.sec_edgar.asyncio.sleep", _fake_sleep)
+    monkeypatch.setattr("opencheck.http.asyncio.sleep", _fake_sleep)
 
     with patch("opencheck.sources.sec_edgar.build_client", return_value=client):
         with pytest.raises(RuntimeError, match="SEC EDGAR request failed"):
@@ -272,7 +272,7 @@ async def test_get_text_honours_retry_after_header(monkeypatch, tmp_path) -> Non
     async def _fake_sleep(seconds: float) -> None:
         sleeps.append(seconds)
 
-    monkeypatch.setattr("opencheck.sources.sec_edgar.asyncio.sleep", _fake_sleep)
+    monkeypatch.setattr("opencheck.http.asyncio.sleep", _fake_sleep)
 
     with patch("opencheck.sources.sec_edgar.build_client", return_value=client):
         text = await adapter._get_text(

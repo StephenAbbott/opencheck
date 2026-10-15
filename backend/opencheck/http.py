@@ -4,14 +4,17 @@ All live adapters go through ``get_client()``. This keeps timeouts, retries,
 and the User-Agent consistent, and makes it easy to add observability or
 a circuit breaker later.
 
-Also home to :func:`sanitize_name_query` — outgoing-request hygiene for the
+Also home to :func:`request_with_retry` (the 429/5xx wait-and-retry loop KvK
+and SEC EDGAR share, issue #303) and :func:`sanitize_name_query` — outgoing-request hygiene for the
 free-text name searches several adapters send to Lucene/Elasticsearch-backed
 upstreams.
 """
 
 from __future__ import annotations
 
+import asyncio
 import re
+from collections.abc import Awaitable, Callable, Collection
 
 import httpx
 
@@ -129,3 +132,49 @@ def build_client() -> httpx.AsyncClient:
         transport=transport,
         follow_redirects=True,
     )
+
+
+async def request_with_retry(
+    send: Callable[[], Awaitable[httpx.Response]],
+    *,
+    max_retries: int,
+    backoff_base: float,
+    backoff_max: float,
+    retry_on: Collection[int] = frozenset({429}),
+) -> httpx.Response:
+    """Send a request, waiting out up to ``max_retries`` retryable answers.
+
+    ``send`` is a zero-argument callable that issues the request once (e.g.
+    ``lambda: client.get(url)``). A response whose status is in ``retry_on``
+    is retried after ``Retry-After`` seconds when the server sends a number,
+    else after an exponential backoff starting at ``backoff_base`` and
+    doubling each attempt; either wait is capped at ``backoff_max``. An
+    unparseable ``Retry-After`` waits the current backoff, uncapped — as the
+    KvK and EDGAR loops this replaced did.
+
+    Returns the last response, which is still a retryable status when the
+    retries ran out: what that means (a degradation, a ``RuntimeError``) is
+    the caller's decision, as is everything about 404/403. The retry settings
+    stay on each adapter — KvK waits longer and retries only 429; EDGAR also
+    retries 5xx and caps lower. Network errors are not retried here (the
+    transport's ``retries=2`` covers connection failures).
+    """
+    delay = backoff_base
+    for attempt in range(max_retries + 1):
+        response = await send()
+        if response.status_code not in retry_on:
+            break
+        if attempt == max_retries:
+            break
+        # Honour Retry-After if present; otherwise use exponential backoff.
+        retry_after = response.headers.get("Retry-After")
+        if retry_after is not None:
+            try:
+                wait = min(float(retry_after), backoff_max)
+            except ValueError:
+                wait = delay
+        else:
+            wait = min(delay, backoff_max)
+        await asyncio.sleep(wait)
+        delay *= 2
+    return response

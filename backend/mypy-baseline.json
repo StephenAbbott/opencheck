@@ -45,7 +45,6 @@
     "opencheck/sources/cvr_denmark.py": 4,
     "opencheck/sources/firmenbuch.py": 1,
     "opencheck/sources/lineage.py": 1,
-    "opencheck/sources/sec_edgar.py": 5,
     "opencheck/sources/sudreg_croatia.py": 2,
     "opencheck/sources/ted_eu.py": 1,
     "opencheck/timeline/ariregister.py": 16,

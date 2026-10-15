@@ -31,7 +31,6 @@ Press release (GLEIF partnership):
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 import httpx
@@ -39,7 +38,7 @@ import httpx
 from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
-from ..http import build_client
+from ..http import build_client, request_with_retry
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.kvk import KvKBundle
@@ -217,25 +216,12 @@ class KvKAdapter(SourceAdapter):
         Returns the last response, which is still a 429 when the retries ran
         out — the caller decides what that means.
         """
-        delay = _RETRY_BACKOFF_BASE
-        for attempt in range(_MAX_RETRIES + 1):
-            response = await client.get(url)
-            if response.status_code != 429:
-                break
-            if attempt == _MAX_RETRIES:
-                break
-            # Honour Retry-After if present; otherwise use exponential backoff.
-            retry_after = response.headers.get("Retry-After")
-            if retry_after is not None:
-                try:
-                    wait = min(float(retry_after), _RETRY_BACKOFF_MAX)
-                except ValueError:
-                    wait = delay
-            else:
-                wait = min(delay, _RETRY_BACKOFF_MAX)
-            await asyncio.sleep(wait)
-            delay *= 2
-        return response
+        return await request_with_retry(
+            lambda: client.get(url),
+            max_retries=_MAX_RETRIES,
+            backoff_base=_RETRY_BACKOFF_BASE,
+            backoff_max=_RETRY_BACKOFF_MAX,
+        )
 
     def _unanswered(self, kvk_number: str, name: str, failure: str) -> dict[str, Any]:
         """Record that KvK did not answer and return an empty, uncached bundle.
