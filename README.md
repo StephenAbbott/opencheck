@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 346** — OFAC's own FAQ 401 and 399 examples pin the 50 Percent Rule arithmetic, and the note under every result names what FAQs 398 and 402 add that OpenCheck does not compute.
+**Latest: Phase 347** — Phase numbers and the status row are now written when a pull request merges, so branches in flight no longer collide on the number or conflict on the stamped files.
 
 → [Full development history](docs/status.md)
 
