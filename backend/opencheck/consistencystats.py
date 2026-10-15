@@ -30,6 +30,17 @@ the lookup.
 Exit criterion for Phase D (written on the Notion plan): a pair-field enters
 the UI only if its measured ``disagree / (agree + disagree)`` is under 10 %
 **and** it has fired at least once, after at least two weeks of traffic.
+
+Phase 337: the gate got its denominator. Once the bridging identifier was no
+longer counted as agreement (Phase 268), ``identifier_clash|agree`` was
+structurally zero for every pair sharing only the register number and a
+single clash read as a 100 % rate. ``record()`` now also counts, per sorted
+source pair, how many pairs of statements were **compared** at all (one per
+pair of statements from two sources in one referent group), served as a
+top-level ``compared`` map and copied onto each row as ``compared`` with
+``disagree_per_compared`` beside ``disagree_rate``. Same closed vocabulary,
+same file: the rows live in the ``pairs`` table under the reserved field
+``_compared``.
 """
 
 from __future__ import annotations
@@ -48,6 +59,11 @@ from .consistency import RELATIONS, ConsistencyResult
 log = logging.getLogger("opencheck.consistencystats")
 
 _MAX_KEYS = 5_000
+
+#: Phase 337 — the referent-pair denominator, stored in the ``pairs`` table
+#: under a field name no comparison can have.
+COMPARED_FIELD = "_compared"
+COMPARED = "compared"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -210,6 +226,13 @@ def record(result: ConsistencyResult) -> None:
             if result.groups:
                 totals.lookups_with_groups += 1
             changed: set[tuple[str, str, str, str]] = set()
+            for a, b in result.compared:
+                key = (COMPARED_FIELD, a, b, COMPARED)
+                if key not in totals.pairs and len(totals.pairs) >= _MAX_KEYS:
+                    totals.truncated = True
+                    continue
+                totals.pairs[key] += 1
+                changed.add(key)
             for item in result.items:
                 if item.relation not in RELATIONS:
                     continue
@@ -241,12 +264,20 @@ def stats() -> dict[str, Any]:
     """
     with totals.lock:
         rows: dict[str, dict[str, Any]] = {}
+        compared: dict[str, int] = {}
         for (field, a, b, relation), n in totals.pairs.items():
+            if field == COMPARED_FIELD:
+                compared[f"{a}|{b}"] = n
+                continue
             row = rows.setdefault(f"{field}|{a}|{b}", {r: 0 for r in RELATIONS})
             row[relation] = n
-        for row in rows.values():
+        for key, row in rows.items():
             decided = row["agree"] + row["disagree"]
             row["disagree_rate"] = (row["disagree"] / decided) if decided else None
+            pair = key.split("|", 1)[1]
+            n_compared = compared.get(pair)
+            row["compared"] = n_compared
+            row["disagree_per_compared"] = (row["disagree"] / n_compared) if n_compared else None
         persisted = totals.path is not None
         return {
             "since": _iso(totals.started),
@@ -256,12 +287,15 @@ def stats() -> dict[str, Any]:
             "lookups": totals.lookups,
             "lookups_with_groups": totals.lookups_with_groups,
             "pairs": dict(sorted(rows.items())),
+            "compared": dict(sorted(compared.items())),
             "truncated": totals.truncated,
             "note": (
                 "Shadow-mode counters for the record-consistency check (Phase 152). "
                 "Aggregate only; keys are field names, adapter ids and relation "
                 "names. 'stale'/'mirror' are pairs where one source republishes the "
-                "other (see /sources derived_from). "
+                "other (see /sources derived_from). 'compared' counts the pairs of "
+                "statements from two sources that were compared at all (Phase 337), "
+                "the denominator for identifier_clash. "
                 + (
                     "Persisted across deploys since 'since' (Phase 268)."
                     if persisted

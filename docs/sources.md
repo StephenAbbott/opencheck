@@ -278,44 +278,66 @@ integer status code without a published codelist), `inpi`, `wikidata` (P576 is
 not queried), `sec_edgar`, `krs_poland`, the EITI sources, `wikirate`, `ted_eu`,
 `chilecompra`, `brightquery`.
 
-## Record consistency (shadow mode)
+## Record consistency
 
 With lineage (Phase 150) and liveness (Phase 151) in place, `backend/opencheck/consistency.py`
 compares what *independent* sources say about the *same* entity — statements grouped
 by shared strong identifier, the rule the FullCheck network merges on — on four aligned
 fields: **liveness** (the Phase 151 class), **jurisdiction**, **founding date** (registers
-and GLEIF only; Wikidata's *inception* is the business, not the incorporation, and is
-never compared), and **one-per-entity identifiers** (the LEI, and a register number
-within one jurisdiction; OpenCorporates ids are per-registration and never a clash).
-Each pair is `agree` / `disagree` between independent sources, `mirror` / `stale` where
-one republishes the other (counted, never shown), or `one_missing`.
+only; Wikidata's *inception* is the business, not the incorporation, and is never
+compared), and **one-per-entity identifiers** (the LEI, and a register number within one
+named register; OpenCorporates ids are per-registration and never a clash). Each pair is
+`agree` / `disagree` between independent sources, `mirror` / `stale` where one republishes
+the other (counted, never shown), or `one_missing`.
 
-Nothing reaches the results page yet. `GET /consistencystats` counts outcomes per
-`field|source_a|source_b` with a `disagree_rate`, on the `/signalstats` contract
-(aggregate only, closed-vocabulary keys). Since Phase 268 the counters are written
-through to `OPENCHECK_CONSISTENCYSTATS_DB_FILE` on the persistent disk, so the window
-spans deploys (`persisted`, `boots`, `since` on the endpoint). A comparison earns a
-place on the page only when its measured disagree rate is under 10 % after at least
-two weeks of traffic — the base-rate gate that keeps "sources disagree" from being noise.
+`GET /consistencystats` counts every outcome per `field|source_a|source_b` with a
+`disagree_rate`, on the `/signalstats` contract (aggregate only, closed-vocabulary keys),
+written through to `OPENCHECK_CONSISTENCYSTATS_DB_FILE` on the persistent disk so the
+window spans deploys (`persisted`, `boots`, `since`). Since Phase 337 it also counts, per
+source pair, how many pairs of statements were compared at all (`compared`), the
+denominator the identifier field needs. A comparison earns a place on the page only when
+its measured disagree rate is under 10 % after at least two weeks of traffic — the
+base-rate gate that keeps "sources disagree" from being noise.
 
-The first two production readings (17 Sept and 1 Oct 2026) re-aligned the comparison
+**Since Phase 337 the comparisons that passed the gate are shown**, as one
+`RECORD_CONSISTENCY` context observation per lookup ("Records compared", in the
+structural-context block; never a risk, never on the share card, never a graph badge) and
+as `commenting` annotations on both statements in the export. What is shown is decided by
+`backend/opencheck/consistency_allowlist.py`, generated from the 15 Oct 2026 reading:
+register status for fifteen register ↔ GLEIF pairs and Romania's two registers against
+each other; jurisdiction for every pair with twenty decided comparisons; founding date
+and identifier clash counted and logged, not shown. See
+[`record-consistency.md`](record-consistency.md) for the rules, the gate and how to read
+the sentence.
+
+The three production readings (17 Sept, 1 Oct and 15 Oct 2026) re-aligned the comparison
 table, with the measured reasons on each `Comparison` in `consistency.py`: GLEIF's
 registrant-supplied `entity.creationDate` is not the register's incorporation date
 outside the UK (it differed on 13–100 % of pairs across seven registers), so GLEIF is
 excluded from `founding_date` along with ANAF Romania (fiscal registration, not the
-ONRC incorporation); MEIP's country is the OECD's compilation, so it is excluded from
+ONRC incorporation) and OpenSanctions (whatever its originating dataset said; 25/13 across
+eleven thin rows); MEIP's country is the OECD's compilation, so it is excluded from
 `jurisdiction`; `pending` liveness (a liquidation under way) is not compared with
-`live`; an identifier with no `scheme` key (a PermID or S&P id on a passthrough
-statement) is not a register number; two registers in one jurisdiction (ABN/ACN,
-CUI/J-number) are never compared with each other; and the identifier that *bridged*
-two statements into one group is not counted as agreement — an identifier `agree`
-means a second identifier matched. Every independent `disagree` is logged at INFO
-with both values (`consistency disagree field=…`), so a row above the gate can be
-read from the server log; the endpoint still carries no value. OpenAleph's founding
-date differed from GLEIF's on 37 % of mirror pairs on 1 Oct 2026: its records come
-from several upstreams (a national-register collection for Czech entities, the
-`lei-*` copy for others), which the record-level lineage declared in Phase 150 does
-not distinguish.
+`live`; GLEIF's ACTIVE on an LEI no issuer maintains (LAPSED, RETIRED, …) is the last
+thing the company declared, not a current reading, and is not a side of the liveness
+comparison either (Phase 337, after Phase 291); an identifier with no `scheme` key (a
+PermID or S&P id on a passthrough statement) is not a register number; two registers in
+one jurisdiction (ABN/ACN, CUI/J-number) are never compared with each other; a Romanian
+number is compared in one form (an all-digit value an LEI issuer filed under the trade
+register's RA code is the CUI; a J-number on its 13-character 2024-format prefix, so
+`J40/15812/2017` and `J2017015812405` are one registration); and the identifier that
+*bridged* two statements into one group is not counted as agreement — an identifier
+`agree` means a second identifier matched. Every independent `disagree` is logged at INFO
+with both values (`consistency disagree field=…`), so a row above the gate can be read
+from the server log; the endpoint still carries no value.
+
+Two measured properties of the aggregators, recorded here because the instrument files
+them as staleness and never shows them: OpenAleph's founding date differed from GLEIF's
+on 37 % of mirror pairs on 1 Oct 2026 — its records come from several upstreams (a
+national-register collection for Czech entities, the `lei-*` copy for others until Phase
+286 dropped that collection), which the record-level lineage declared in Phase 150 does
+not distinguish; and OpenCorporates' incorporation date for Finnish companies differed
+from PRH's on 633 of 644 pairs on 15 Oct 2026 — a different date concept, not lag.
 
 ## Notes
 

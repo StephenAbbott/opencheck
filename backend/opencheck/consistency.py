@@ -62,6 +62,23 @@ different concepts, with the measured reasons on each ``Comparison``. Every
 independent ``disagree`` is logged with its values, so the next reading can
 be explained rather than hypothesised.
 
+Phase 337 (Phase D of the plan, after the 15 Oct 2026 reading) is the first
+phase in which anything here reaches a reader. :func:`build_signal` turns the
+result into **one** ``RECORD_CONSISTENCY`` signal per lookup, ``kind="context"``
+— never a risk, never counted in "N risk signals", never in the verdict's
+risk clause — whose sentence says, in the findings voice, how many sources
+describe the subject, which fields they agree on and what each disagreement
+is. Only comparisons that passed the measured gate are said
+(``consistency_allowlist``): liveness for the register↔GLEIF pairs under
+10 %, jurisdiction for every pair with twenty decided comparisons; founding
+date and identifier clash stay counted and logged. The same phase stopped
+reading GLEIF's ACTIVE as a current status when no issuer maintains the LEI
+(``_extract_liveness``), stopped comparing OpenSanctions' incorporation
+date with a register's, and gave Romanian numbers a canonical form
+(``_canonical_identifier``). Each ``disagree`` a reader sees also travels in
+the exported bundle as a ``commenting`` annotation on both statements
+(:func:`annotate_disagreements`).
+
 Everything fails soft: this runs inside the lookup pipeline and must never
 slow or break a lookup, so ``assess_consistency`` swallows its own errors and
 returns an empty result.
@@ -75,9 +92,11 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable
 
 from . import identifiers as _identifiers
+from . import lei_registration as _lei_reg
 from .bods import liveness as _liveness
-from .bods.annotations import dropped_partial_date
+from .bods.annotations import annotate, commenting, dropped_partial_date, pointer, resolve_pointer
 from .bods.mapper import SOURCE_NAMES
+from .consistency_allowlist import READING, is_shown
 from .ra_codes import is_ra_scheme
 from .reconcile import _entity_jurisdiction, _identifier_keys
 from .sources import lineage
@@ -122,6 +141,12 @@ class ConsistencyResult:
     items: list[Item] = field(default_factory=list)
     #: Referent groups that had ≥2 statements, as lists of statementIds.
     groups: list[list[str]] = field(default_factory=list)
+    #: Phase 337: one entry per pair of statements from two different sources
+    #: that was compared, as the sorted source pair — the referent-pair
+    #: denominator the identifier-clash gate needs (``agree`` on that field is
+    #: structurally zero once the bridge is dropped, so a rate over
+    #: agree + disagree reads 100 % on a single clash).
+    compared: list[tuple[str, str]] = field(default_factory=list)
 
     def by_relation(self, relation: str) -> list[Item]:
         return [i for i in self.items if i.relation == relation]
@@ -188,6 +213,45 @@ def _register_key(jur: str) -> str:
     return f"REGISTER:{jur}"
 
 
+def _canonical_identifier(scheme: str, raw: str) -> tuple[str, str]:
+    """``(scheme, value)`` in the form the comparison runs on.
+
+    Most numbers go through ``matching.canonical_identifier`` (separators
+    and punctuation stripped). Romania needs more (the 15 Oct 2026 reading:
+    293 of \u2248640 GLEIF\u2194ONRC pairs "clashed" while the two registers agreed
+    with each other 513/0 — the instrument, not the data):
+
+    * ``RO-ONRC`` carrying an all-digit value is the fiscal code (CUI) that an
+      LEI issuer filed under the trade register's RA code — GLEIF's
+      ``registeredAs`` under RA000497 reads ``38462171`` on some records and
+      ``J40/19758/2008`` on others (sampled live, 15 Oct 2026). It is
+      compared under ``RO-CUI``, which is what it is.
+    * A J-number is compared on its 13-character new-format prefix
+      (``sources.onrc_romania.prefix_for``): ONRC renumbered the register in
+      2024, ``J40/15812/2017`` and ``J2017015812405`` are one registration,
+      and GLEIF holds the old spelling on ~28 % of Romanian records and the
+      new on ~23 %.
+    * ``RO-CUI`` drops the ``RO`` VAT prefix (``RO14399840`` is the CUI
+      ``14399840`` as it appears on a VAT invoice).
+    """
+    from .matching import canonical_identifier
+
+    if scheme == "RO-CUI":
+        digits = raw.replace(" ", "").removeprefix("RO")
+        return scheme, (canonical_identifier(digits, min_len=0) or digits)
+    if scheme == "RO-ONRC":
+        from .sources.onrc_romania import prefix_for
+
+        compact = raw.replace(" ", "")
+        if compact.isdigit() or (compact.startswith("RO") and compact[2:].isdigit()):
+            return "RO-CUI", compact.removeprefix("RO")
+        prefix = prefix_for(compact)
+        if prefix:
+            return scheme, prefix
+        return scheme, (canonical_identifier(raw, min_len=0) or raw)
+    return scheme, (canonical_identifier(raw, min_len=0) or raw)
+
+
 def _split_identifiers(stmt: dict[str, Any]) -> tuple[dict[str, str], dict[str, set[str]]]:
     """``(labelled, by_jurisdiction)`` for a statement's one-per-entity ids.
 
@@ -209,10 +273,9 @@ def _split_identifiers(stmt: dict[str, Any]) -> tuple[dict[str, str], dict[str, 
 
     Values are canonicalised the same way the merge keys are
     (``_identifier_keys``), so ``556056-6258`` and ``5560566258`` compare
-    equal.
+    equal (``_canonical_identifier``, which also gives Romanian numbers their
+    one form).
     """
-    from .matching import canonical_identifier
-
     labelled: dict[str, str] = {}
     by_jur: dict[str, set[str]] = {}
     rd = stmt.get("recordDetails") or {}
@@ -231,9 +294,9 @@ def _split_identifiers(stmt: dict[str, Any]) -> tuple[dict[str, str], dict[str, 
             # register number, whatever the jurisdiction.
             continue
         scheme = str(ident.get("scheme") or "").strip().upper()
-        if "/" in raw:
+        if "/" in raw and not scheme.startswith("RO-"):
             continue
-        value = canonical_identifier(raw, min_len=0) or raw
+        scheme, value = _canonical_identifier(scheme, raw)
         if jur and (scheme == "" or is_ra_scheme(scheme)):
             # GLEIF's number with its register unnamed (empty scheme before
             # Phase 239) or named only by RA code: compared under the
@@ -335,7 +398,22 @@ def _extract_liveness(stmt: dict[str, Any]) -> str | None:
     if not status:
         return None
     cls = status["liveness"]
-    return cls if cls in (_liveness.LIVE, _liveness.TERMINAL) else None
+    if cls not in (_liveness.LIVE, _liveness.TERMINAL):
+        return None
+    # Phase 337: GLEIF's ACTIVE on an LEI no issuer maintains (LAPSED,
+    # RETIRED, …) is the last thing the company declared to its issuer, not a
+    # current reading — Phase 291 shows it as ``declared`` on the profile and
+    # left this comparator alone. Bentcard Import LLP: ACTIVE since 2015,
+    # dissolved by Companies House in 2016. Such a side is ``None`` (the pair
+    # is ``one_missing``); a GLEIF INACTIVE stays terminal, and a lapse is
+    # never read as dissolution (Phase 242).
+    if (
+        cls == _liveness.LIVE
+        and source_id_of(stmt) == "gleif"
+        and _lei_reg.statement_entity_status_is_declared(stmt)
+    ):
+        return None
+    return cls
 
 
 def _extract_jurisdiction(stmt: dict[str, Any]) -> str | None:
@@ -385,12 +463,16 @@ COMPARABLE: tuple[Comparison, ...] = (
     # of 12), so it is a different concept outside the UK and is excluded
     # too. ANAF's date is the fiscal registration, not the ONRC
     # incorporation (14 of 23 differ), so register-vs-register for Romania
-    # keeps ONRC only.
+    # keeps ONRC only. OpenSanctions' ``incorporationDate`` on a company is
+    # whatever its originating dataset said — a register copy, a sanctions
+    # list or a procurement file depending on the entity — not a register
+    # reading of its own (Phase 337: 25 agree / 13 disagree across eleven
+    # thin rows on 15 Oct 2026, three of them never agreeing).
     Comparison(
         "founding_date",
         _extract_founding,
         _dates_same,
-        exclude_sources=frozenset({"wikidata", "gleif", "anaf_romania"}),
+        exclude_sources=frozenset({"wikidata", "gleif", "anaf_romania", "opensanctions"}),
     ),
 )
 
@@ -540,6 +622,9 @@ def assess_consistency(bods: Iterable[dict[str, Any]]) -> ConsistencyResult:
             result.groups.append([s["statementId"] for s in ordered])
             for i in range(len(ordered)):
                 for j in range(i + 1, len(ordered)):
+                    sa, sb = source_id_of(ordered[i]), source_id_of(ordered[j])
+                    if sa != sb:
+                        result.compared.append(tuple(sorted((sa, sb))))  # type: ignore[arg-type]
                     result.items.extend(_compare_pair(ordered[i], ordered[j]))
     except Exception as exc:  # noqa: BLE001
         log.warning("assess_consistency failed, returning empty: %s", exc)
@@ -549,3 +634,280 @@ def assess_consistency(bods: Iterable[dict[str, Any]]) -> ConsistencyResult:
     except Exception:  # noqa: BLE001
         pass
     return result
+
+
+# ---------------------------------------------------------------------
+# Phase 337 — the RECORD_CONSISTENCY observation
+# ---------------------------------------------------------------------
+
+RECORD_CONSISTENCY = "RECORD_CONSISTENCY"
+
+#: What each compared field is called in a sentence. Liveness is said as the
+#: register's own concept, "register status", never "active/inactive" — the
+#: words the Phase 151 grammar and the subject card already use.
+FIELD_NOUNS: dict[str, str] = {
+    "liveness": "register status",
+    "jurisdiction": "jurisdiction",
+    "founding_date": "incorporation date",
+    IDENTIFIER_CLASH: "register number",
+}
+
+_WORDS = ("", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+
+
+def _count(n: int) -> str:
+    return _WORDS[n] if 0 < n < len(_WORDS) else str(n)
+
+
+def _source_label(source_id: str) -> str:
+    return SOURCE_NAMES.get(source_id, source_id)
+
+
+def _subject_group(
+    result: ConsistencyResult, subject_statement_ids: Iterable[str]
+) -> list[str] | None:
+    """The referent group the subject's statements fell into, or ``None``."""
+    wanted = set(subject_statement_ids)
+    if not wanted:
+        return None
+    for group in result.groups:
+        if wanted & set(group):
+            return list(group)
+    return None
+
+
+def _liveness_said(stmt: dict[str, Any] | None, cls: Any) -> str:
+    """"ACTIVE", "dissolved (since 3 Apr 2019)" — the register's own word
+    where it wrote one, the class otherwise. Says what the record contains."""
+    status = _liveness.read_register_status(stmt) if stmt else None
+    raw = str((status or {}).get("raw") or "").strip()
+    word = raw or ("live" if cls == _liveness.LIVE else "no longer on the register")
+    since = (status or {}).get("since")
+    if since and cls == _liveness.TERMINAL:
+        return f"{word} (since {_lei_reg.format_date(since)})"
+    return word
+
+
+def _value_said(field: str, stmt: dict[str, Any] | None, value: Any) -> str:
+    if field == "liveness":
+        return _liveness_said(stmt, value)
+    return str(value)
+
+
+def _disagreement_clause(item: Item, by_id: dict[str, dict[str, Any]]) -> str:
+    noun = FIELD_NOUNS.get(item.field, item.field.replace("_", " "))
+    a, b = item.sources
+    sa, sb = by_id.get(item.statement_ids[0]), by_id.get(item.statement_ids[1])
+    va = _value_said(item.field, sa, item.values[0])
+    vb = _value_said(item.field, sb, item.values[1])
+    return f"{_source_label(a)} records the {noun} as {va}; {_source_label(b)} records {vb}"
+
+
+def _not_answered(
+    degraded: Iterable[dict[str, Any]] | None, present: set[str]
+) -> list[str]:
+    """Sources that did not answer and would have been compared with one that
+    did — a comparison that could not run, said in the same voice as one
+    that did (the verdict's rule: silence never reads as clean)."""
+    out: list[str] = []
+    for d in degraded or []:
+        if d.get("check") != "source_fetch":
+            continue
+        sid = str(d.get("source_id") or "")
+        if not sid or sid in present or sid in out:
+            continue
+        if any(is_shown(f, sid, p) for f in FIELD_NOUNS for p in present):
+            out.append(sid)
+    return sorted(out)
+
+
+def build_signal(
+    result: ConsistencyResult,
+    bods: Iterable[dict[str, Any]],
+    *,
+    subject: str | None,
+    subject_statement_ids: Iterable[str],
+    degraded: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
+    """One ``RECORD_CONSISTENCY`` signal (``kind="context"``) for the subject,
+    or ``None`` when fewer than two sources described it.
+
+    The sentence is built the findings way — it says what the records
+    contain, never what to conclude: how many sources describe the entity and
+    how many of them are independent of each other, the fields they agree on,
+    each disagreement with both values, and any source that did not answer
+    and so was not compared. Only comparisons that passed the measured gate
+    are said (``consistency_allowlist``); everything else stays in the
+    counters. Agreement between a source and its own upstream is neither said
+    nor counted as a source agreeing — ``mirror`` is not corroboration.
+
+    Returns a plain dict in the ``RiskSignal.to_dict`` shape so the caller
+    can hand it to ``_merge_signals`` beside the others; keyed on
+    ``(code, "opencheck", subject)`` there, so one per lookup by construction.
+    """
+    try:
+        return _build_signal(result, list(bods), subject, subject_statement_ids, degraded)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("consistency.build_signal failed, emitting nothing: %s", exc)
+        return None
+
+
+def _build_signal(
+    result: ConsistencyResult,
+    bods: list[dict[str, Any]],
+    subject: str | None,
+    subject_statement_ids: Iterable[str],
+    degraded: Iterable[dict[str, Any]] | None,
+) -> dict[str, Any] | None:
+    by_id = {s["statementId"]: s for s in bods if s.get("statementId")}
+    group = _subject_group(result, subject_statement_ids)
+    if group is None:
+        return None
+    members = set(group)
+    source_ids = sorted({source_id_of(by_id[sid]) for sid in group if sid in by_id})
+    if len(source_ids) < 2:
+        return None
+    independent = lineage.independent_count(source_ids)
+
+    shown = [
+        i for i in result.items
+        if i.statement_ids[0] in members
+        and i.statement_ids[1] in members
+        and i.relation in (AGREE, DISAGREE)
+        and is_shown(i.field, *i.sources)
+    ]
+    disagreed = [i for i in shown if i.relation == DISAGREE]
+    disagreed_fields = sorted({i.field for i in disagreed}, key=list(FIELD_NOUNS).index)
+    agreed_fields = sorted(
+        {i.field for i in shown if i.relation == AGREE} - set(disagreed_fields),
+        key=list(FIELD_NOUNS).index,
+    )
+    not_answered = _not_answered(degraded, set(source_ids))
+
+    # Sentence 1: who describes it.
+    n, m = len(source_ids), independent
+    first = f"{_count(n).capitalize()} sources describe this entity"
+    first += " (none independent of the others)." if m < 2 else f" ({_count(m)} independent)."
+
+    sentences = [first]
+    # Sentence 2: what they agree on, or that nothing could be compared.
+    if agreed_fields:
+        nouns = [FIELD_NOUNS[f] for f in agreed_fields]
+        sentences.append(f"They agree on {' and '.join(nouns)}.")
+    elif not shown:
+        sentences.append("No field could be compared between independent sources.")
+    # Sentence 3: each disagreement, both values.
+    if disagreed:
+        clauses = [_disagreement_clause(i, by_id) for i in disagreed]
+        head = "One disagreement" if len(clauses) == 1 else f"{_count(len(clauses)).capitalize()} disagreements"
+        sentences.append(f"{head}: {'; and '.join(clauses)}.")
+    # Sentence 4: what could not be compared.
+    if not_answered:
+        names = ", ".join(_source_label(s) for s in not_answered)
+        verb = "did not answer, so its records were" if len(not_answered) == 1 else "did not answer, so their records were"
+        sentences.append(f"{names} {verb} not compared.")
+
+    evidence: dict[str, Any] = {
+        "items": [
+            {
+                "field": i.field,
+                "relation": i.relation,
+                "sources": list(i.sources),
+                "statement_ids": list(i.statement_ids),
+                "values": list(i.values),
+                "said": [
+                    _value_said(i.field, by_id.get(i.statement_ids[0]), i.values[0]),
+                    _value_said(i.field, by_id.get(i.statement_ids[1]), i.values[1]),
+                ],
+            }
+            for i in shown
+        ],
+        "sources": n,
+        "independent_sources": m,
+        "source_ids": source_ids,
+        "agreed_fields": agreed_fields,
+        "disagreed_fields": disagreed_fields,
+        "not_compared": [{"source_id": s, "reason": "did not answer"} for s in not_answered],
+        "subject_statements": sorted(members),
+        "reading": READING,
+    }
+    return {
+        "code": RECORD_CONSISTENCY,
+        "confidence": "high",
+        "summary": " ".join(sentences),
+        "source_id": "opencheck",
+        "hit_id": str(subject or ""),
+        "evidence": evidence,
+        "kind": "context",
+    }
+
+
+def _pointer_for(stmt: dict[str, Any], field: str) -> str:
+    """The most specific pointer that resolves on this statement."""
+    candidates = {
+        "liveness": (("recordDetails", "dissolutionDate"),),
+        "jurisdiction": (("recordDetails", "jurisdiction"), ("recordDetails", "incorporatedInJurisdiction")),
+        "founding_date": (("recordDetails", "foundingDate"),),
+    }.get(field, ())
+    for parts in candidates:
+        target = pointer(*parts)
+        try:
+            resolve_pointer(stmt, target)
+        except (KeyError, IndexError, ValueError):
+            continue
+        return target
+    return pointer("recordDetails")
+
+
+def annotate_disagreements(
+    bods: list[dict[str, Any]], signals: Iterable[dict[str, Any]] | None
+) -> list[dict[str, Any]]:
+    """Each shown ``disagree`` becomes a ``commenting`` annotation on **both**
+    statements, so the discrepancy travels with the exported bundle (Phase D).
+
+    Returns a new list: the statements touched are shallow copies with their
+    own ``annotations`` array, the rest are the originals — the replay cache
+    the payload came from is never mutated. Reads the frozen signal rather
+    than recomputing, so a saved report exports what its run said.
+    """
+    items: list[dict[str, Any]] = []
+    for sig in signals or []:
+        if sig.get("code") != RECORD_CONSISTENCY:
+            continue
+        for item in (sig.get("evidence") or {}).get("items") or []:
+            if item.get("relation") == DISAGREE:
+                items.append(item)
+    if not items:
+        return list(bods)
+    by_id = {s.get("statementId"): i for i, s in enumerate(bods)}
+    out = list(bods)
+    copied: set[int] = set()
+    for item in items:
+        field_name = str(item.get("field") or "")
+        noun = FIELD_NOUNS.get(field_name, field_name.replace("_", " "))
+        ids = list(item.get("statement_ids") or [])
+        srcs = list(item.get("sources") or [])
+        said = list(item.get("said") or item.get("values") or [])
+        if len(ids) != 2 or len(srcs) != 2 or len(said) != 2:
+            continue
+        for side, other in ((0, 1), (1, 0)):
+            idx = by_id.get(ids[side])
+            if idx is None:
+                continue
+            if idx not in copied:
+                stmt = dict(out[idx])
+                stmt["annotations"] = list(stmt.get("annotations") or [])
+                out[idx] = stmt
+                copied.add(idx)
+            stmt = out[idx]
+            annotate(
+                stmt,
+                commenting(
+                    _pointer_for(stmt, field_name),
+                    f"Record consistency: this statement records the {noun} as "
+                    f"{said[side]}; {_source_label(srcs[other])} (statement {ids[other]}) "
+                    f"records {said[other]}. Independent sources, same entity "
+                    f"(OpenCheck record-consistency check, gate of {READING}).",
+                ),
+            )
+    return out

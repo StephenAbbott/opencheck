@@ -2047,27 +2047,36 @@ async def _lookup_pipeline(
         if ep_counts:
             yield ("bods_counts", {"counts": ep_counts, "breakdown": ep_breakdown})
 
+    degraded_dicts = [d.to_dict() for d in degraded]
+    # Record consistency (Phase 152, shadow; Phase 337, shown): compare what
+    # independent sources said about the same entity, count every outcome at
+    # /consistencystats, and say the comparisons that passed the measured
+    # gate as ONE context signal for the subject (see opencheck/consistency.py
+    # and consistency_allowlist.py). CPU-only, after the network stage.
+    consistency_result = consistency.assess_consistency(bods_all)
+    consistencystats.record(consistency_result)
+    consistency_signal = consistency.build_signal(
+        consistency_result,
+        bods_all,
+        subject=ctx.lei,
+        subject_statement_ids=identity.statement_ids,
+        degraded=degraded_dicts,
+    )
     merged = _merge_signals(
         search_signals,
         deepen_signals,
         related,
         [s.to_dict() for s in icij_raw],
         sec_signals,
+        [consistency_signal] if consistency_signal else [],
         record_as="lookup",
     )
-    degraded_dicts = [d.to_dict() for d in degraded]
     # The degradation counters are recorded next to the signal counters for
     # the same reason degraded_sources rides on the same event as the
     # signals: a signal count without the count of screens that failed to
     # run is not a low number, it is an unknown one.
     signalstats.record_degraded(degraded_dicts)
     signalstats.record_lookup()
-    # Record consistency, shadow mode (Phase 152): compare what independent
-    # sources said about the same entity and count the outcomes. CPU-only,
-    # runs after the network stage, emits nothing to the client yet — the
-    # counters at /consistencystats decide which comparisons earn a place
-    # on the page (see opencheck/consistency.py).
-    consistencystats.record(consistency.assess_consistency(bods_all))
     # degraded_sources rides on the same event as the signals so every
     # consumer (SSE UI, sync /lookup, replay cache, narrative, exports)
     # sees the two together — an empty signals list plus a non-empty
@@ -2453,17 +2462,26 @@ async def _register_lookup_pipeline(
         ep_counts, ep_breakdown = await _everypolitician_row_counts(ep_hit_ids)
         if ep_counts:
             yield ("bods_counts", {"counts": ep_counts, "breakdown": ep_breakdown})
+    degraded_dicts = [d.to_dict() for d in degraded]
+    consistency_result = consistency.assess_consistency(bods_all)
+    consistencystats.record(consistency_result)
+    consistency_signal = consistency.build_signal(
+        consistency_result,
+        bods_all,
+        subject=subject,
+        subject_statement_ids=identity.statement_ids,
+        degraded=degraded_dicts,
+    )
     merged = _merge_signals(
         search_signals,
         deepen_signals,
         related,
         [s.to_dict() for s in icij_raw],
+        [consistency_signal] if consistency_signal else [],
         record_as="lookup",
     )
-    degraded_dicts = [d.to_dict() for d in degraded]
     signalstats.record_degraded(degraded_dicts)
     signalstats.record_lookup()
-    consistencystats.record(consistency.assess_consistency(bods_all))
     yield (
         "risk_signals",
         {
