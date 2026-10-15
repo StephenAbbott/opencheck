@@ -45,6 +45,34 @@ export interface Interest {
   details?: string;
   startDate?: string;
   endDate?: string;
+  /** An officer appointment's position — see OFFICER_POSITION_KEY. */
+  opencheckOfficerPosition?: string;
+}
+
+/**
+ * The BODS extension key an officer appointment carries on its interest
+ * (backend `bods/officer_roles.py`). A secretary, agent or representative has
+ * no role code in BODS v0.4, so the mappers type it `otherInfluenceOrControl`;
+ * the marker says it is an appointment, so it is drawn as a role and labelled
+ * by its position, never as "Controls". Pinned by the backend parity test.
+ */
+export const OFFICER_POSITION_KEY = "opencheckOfficerPosition";
+
+/** The officer position an interest names, or undefined. */
+export function officerPosition(i: Interest): string | undefined {
+  const value = i.opencheckOfficerPosition;
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+/** "secretary" → "Secretary"; the rest as filed (`officer_label`). */
+export function officerLabel(position: string): string {
+  const text = position.trim();
+  return text.slice(0, 1).toUpperCase() + text.slice(1);
+}
+
+/** The interest as categorise() reads it: an officer appointment is a role. */
+function asCategorised(i: Interest): Interest {
+  return officerPosition(i) ? { ...i, type: "seniorManagingOfficial" } : i;
 }
 
 export type EdgeCategory = "ownership" | "control" | "role" | "unknown" | "possiblySame";
@@ -120,6 +148,8 @@ const INTEREST_LABELS: Record<string, string> = {
 };
 
 export function interestLabel(i: Interest): string {
+  const position = officerPosition(i);
+  if (position) return officerLabel(position);
   const base = INTEREST_LABELS[i.type ?? ""] ?? i.type ?? "Interest";
   const s = i.share;
   if (!s) return base;
@@ -277,8 +307,10 @@ function consolidationFlavour(interests: Interest[]): string | null {
 }
 
 /** Edge colour-category from a (possibly pooled) interest set. Precedence:
- *  ownership → control → role → unknown. */
-function categorise(interests: Interest[]): EdgeCategory {
+ *  ownership → control → role → unknown. An officer appointment counts as a
+ *  role whatever its type (asCategorised). */
+function categorise(pooled: Interest[]): EdgeCategory {
+  const interests = pooled.map(asCategorised);
   if (interests.some((i) => i.type === "shareholding" || i.type === "votingRights")) {
     return "ownership";
   }

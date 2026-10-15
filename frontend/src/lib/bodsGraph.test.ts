@@ -7,6 +7,9 @@ import {
   computeVisibility,
   autoCollapse,
   buildTree,
+  interestLabel,
+  officerLabel,
+  OFFICER_POSITION_KEY,
   type GraphModel,
 } from "./bodsGraph";
 
@@ -648,5 +651,50 @@ describe("Phase 255: one statement for a direct-and-ultimate child", () => {
     const { edges } = bodsToGraph(statements);
     expect(edges).toHaveLength(1);
     expect(edges[0].label).toBe("Controls (direct + ultimate)");
+  });
+});
+
+// An officer appointment with no BODS role code (a company secretary) is typed
+// otherInfluenceOrControl by the mappers and marked with its position; the
+// canvas draws it as a role, labelled by the position — never "Controls".
+describe("officer appointments", () => {
+  const officer = (interests: Record<string, unknown>[]) =>
+    bodsToGraph([
+      { statementId: "co", recordType: "entity", recordDetails: { name: "UNILEVER PLC" } },
+      {
+        statementId: "pk",
+        recordType: "person",
+        recordDetails: { names: [{ fullName: "PRAKASH KAKKAD" }], personType: "knownPerson" },
+      },
+      {
+        statementId: "r",
+        recordType: "relationship",
+        recordDetails: { interestedParty: "pk", subject: "co", interests },
+      },
+    ]).edges[0];
+
+  it("draws a marked secretary as a role labelled by its position", () => {
+    const edge = officer([
+      { type: "otherInfluenceOrControl", [OFFICER_POSITION_KEY]: "secretary" },
+    ]);
+    expect(edge.category).toBe("role");
+    expect(edge.label).toBe("Secretary");
+  });
+
+  it("still draws an unmarked otherInfluenceOrControl as control", () => {
+    expect(officer([{ type: "otherInfluenceOrControl" }]).category).toBe("control");
+  });
+
+  it("lets a shareholding the officer also holds decide the edge", () => {
+    const edge = officer([
+      { type: "otherInfluenceOrControl", [OFFICER_POSITION_KEY]: "secretary" },
+      { type: "shareholding", share: { exact: 10 } },
+    ]);
+    expect(edge.category).toBe("ownership");
+  });
+
+  it("labels the position as filed, first letter capitalised", () => {
+    expect(officerLabel("company secretary")).toBe("Company secretary");
+    expect(interestLabel({ type: "otherInfluenceOrControl", opencheckOfficerPosition: "agent" })).toBe("Agent");
   });
 });

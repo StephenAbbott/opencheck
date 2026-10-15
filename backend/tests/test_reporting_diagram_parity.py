@@ -107,3 +107,17 @@ def test_label_line_cap_matches_build_edge_label():
     body = _block(_read("bodsGraph.ts"), "export function buildEdgeLabel(")
     m = re.search(r"labels\.slice\(0, (\d+)\)", body)
     assert m and int(m.group(1)) == diagram.MAX_INTEREST_LINES
+
+
+def test_officer_marker_matches_bods_graph():
+    """An officer appointment is a role on the canvas and in the PDF/MCP
+    diagram alike (the ownership-map fixes): one key, one label rule, and the
+    canvas's categorise() reads the interest through asCategorised()."""
+    from opencheck.bods.officer_roles import OFFICER_POSITION_KEY
+
+    src = _read("bodsGraph.ts")
+    assert f'export const OFFICER_POSITION_KEY = "{OFFICER_POSITION_KEY}";' in src
+    assert f"{OFFICER_POSITION_KEY}?: string;" in src
+    assert "pooled.map(asCategorised)" in _block(src, "function categorise(")
+    assert 'type: "seniorManagingOfficial"' in _block(src, "function asCategorised(")
+    assert "officerLabel(position)" in _block(src, "export function interestLabel(")

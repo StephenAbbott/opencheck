@@ -659,6 +659,7 @@ def ownership_map(
     """(the JSON answer, the SVG). One map of the subject and every party above
     it, every source's edges labelled with the source; role edges (officers,
     board) are left out — this is the ownership and control structure."""
+    from .bods.mapper import gleif_reporting_exception
     from .integrated_ownership import _excluded, party_name, source_key  # noqa: F401
     from .reporting.diagram import _edge_label, _node_kind, _node_label, _render
 
@@ -679,6 +680,10 @@ def ownership_map(
 
     want = (source or "").strip().casefold() or None
     owners_of: dict[str, list[tuple[str, dict[str, Any], str]]] = {}
+    # GLEIF reporting exceptions are filings, not parties: said in words, per
+    # company, both levels folded into one entry when the reason is the same.
+    # NON_PUBLIC (a parent that exists and is withheld) stays a drawn node.
+    exceptions: dict[tuple[str, str], dict[str, Any]] = {}
     for s in bods:
         if s.get("recordType") != "relationship":
             continue
@@ -688,6 +693,15 @@ def ownership_map(
             continue
         sid, label = source_key(s)
         if want and want not in (sid.casefold(), label.casefold()):
+            continue
+        exc = gleif_reporting_exception(s)
+        if exc and not exc["undisclosed"]:
+            entry = exceptions.setdefault((c(sub), exc["reason"]), {
+                "company": c(sub), "reason": exc["reason"],
+                "meaning": exc["meaning"], "levels": [],
+            })
+            if exc["level"] not in entry["levels"]:
+                entry["levels"].append(exc["level"])
             continue
         lines, cat = _edge_label(s)
         if cat == "role":
@@ -776,10 +790,20 @@ def ownership_map(
         svg, _summ = _render(
             nodes, edges, title, layer=layer, view_w=max(760, 270 + 250 * depth_max)
         )
+    reporting_exceptions = []
+    for entry in exceptions.values():
+        levels = sorted(entry["levels"], key=["direct", "ultimate"].index)
+        reporting_exceptions.append({
+            "company": party_name(by_canon.get(entry["company"])) or entry["company"],
+            "parent_levels": levels,
+            "reason": entry["reason"],
+            "meaning": entry["meaning"],
+        })
     answer = {
         "lei": lei,
         "legal_name": legal_name,
         "source_filter": source,
+        "summary": _map_summary(legal_name or lei, len(drawable), reporting_exceptions),
         "edges": rows,
         "edges_total": len(rows),
         "edges_drawn": len(shown),
@@ -793,6 +817,7 @@ def ownership_map(
             "extra_lookups": net.hops,
             "hop_limit_reached": net.capped,
         },
+        "reporting_exceptions": reporting_exceptions,
         "fullcheck_url": FULLCHECK_URL.format(lei=lei) if lei else None,
         "as_of": as_of,
         "note": (
@@ -800,12 +825,40 @@ def ownership_map(
             "party two sources name appears once with both edges. The image draws "
             "current edges only (at most 16, nearest the company first); every "
             "edge, ended ones included, is in 'edges'. Officers and board roles "
-            "are left out. Holder sublabels are integrated figures, one per "
-            "source, never added."
+            "— company secretaries included — are left out. A GLEIF reporting "
+            "exception names no party, so it is listed under "
+            "'reporting_exceptions' rather than drawn; an undisclosed parent "
+            "(NON_PUBLIC) is drawn. Holder sublabels are integrated figures, "
+            "one per source, never added."
         ),
         "image": "attached as SVG" if svg else "no ownership or control edges to draw",
     }
     return answer, svg
+
+
+def _map_summary(
+    name: str | None, current_edges: int, exceptions: list[dict[str, Any]]
+) -> str:
+    """One plain sentence on what the map shows — so an empty picture is never
+    the whole answer."""
+    subject = (name or "the company").rstrip(".")
+    if current_edges:
+        head = (
+            f"{current_edges} current ownership or control "
+            f"{'edge' if current_edges == 1 else 'edges'} above {subject}."
+        )
+    else:
+        head = f"No source names a current owner or controller of {subject}."
+    parts = [head]
+    for e in exceptions:
+        levels = " and ".join(e["parent_levels"])
+        noun = "parents" if len(e["parent_levels"]) > 1 else "parent"
+        meaning = f" — {e['meaning']}" if e.get("meaning") else ""
+        parts.append(
+            f"GLEIF records a reporting exception for the {levels} {noun} of "
+            f"{str(e['company']).rstrip('.')}: {e['reason']}{meaning}. It names no party."
+        )
+    return " ".join(parts)
 
 
 def default_as_of() -> str:

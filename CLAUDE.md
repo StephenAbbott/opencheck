@@ -3568,6 +3568,33 @@ decisions on the Phase 340 ticket. Things that will be re-derived otherwise:
   declare no output schema (`test_the_map_tool_declares_no_output_schema`).
 - **Isolation:** risk, verdict, signalstats and narrative must not import
   `owners` (AST guard in `test_owners_phase340.py`).
+- **Road test on UNILEVER PLC (15 Oct 2026, Notion "OpenCheck MCP ownership
+  map fixes").** The map drew three "Controls" edges into a widely held
+  company, none an owner. (1) **A GLEIF reporting exception is a filing, not
+  a party.** `bods/mapper.py::gleif_reporting_exception` reads back the
+  bridges `_gleif_exception_statements` writes (GLEIF source + the details
+  sentence — never another publisher's unknown party); the map lists them
+  under `reporting_exceptions`, direct and ultimate folded into one entry,
+  and says so in `summary`. `NON_PUBLIC` and its deprecated family (a parent
+  that exists and is withheld) are still drawn (Stephen). The BODS output is
+  unchanged — the bridges stay, as Phase 114 wants. (2) **An officer
+  appointment is a role wherever it is read.** A secretary/agent/
+  representative has no v0.4 role code, so the mappers type it
+  `otherInfluenceOrControl` (Phase 197) — which every edge classifier read as
+  control. Such an interest now carries the extension field
+  `opencheckOfficerPosition` (`bods/officer_roles.py`, the
+  `opencheckSourceId` precedent); `diagram.categorise` / `interest_label`
+  and `bodsGraph.ts`'s `categorise` (via `asCategorised`) / `interestLabel`
+  read it: category role, label the position ("Secretary"). A shareholding
+  the same party holds still decides the edge. Written by the OpenCorporates
+  officer path and the Companies House officer-appointments path; other
+  registers that type an officer `otherInfluenceOrControl` (Norway
+  INNH/REPR, Latvia liquidators, France service providers, Czechia) are
+  listed on the ticket, not yet marked. `_oc_match_position`'s regex
+  fallbacks now agree with the exact table (director →
+  `seniorManagingOfficial`, never `appointmentOfBoard`; secretary →
+  `otherInfluenceOrControl`). (3) Node names wrap onto two lines of 26
+  characters (`diagram.node_label_lines`), the full name kept as `<title>`.
 
 ## The sanctions 50% rule, computed per regime (Phase 342)
 

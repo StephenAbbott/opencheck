@@ -956,6 +956,42 @@ GLEIF_UNDISCLOSED_REASONS: frozenset[str] = frozenset(
     }
 )
 
+_EXCEPTION_DETAILS = re.compile(r"^GLEIF reporting exception:?\s*([A-Z_]+)")
+
+
+def gleif_reporting_exception(rel: dict[str, Any]) -> dict[str, Any] | None:
+    """Read back a relationship :func:`_gleif_exception_statements` wrote.
+
+    Returns ``{"level", "reason", "meaning", "undisclosed"}`` for a GLEIF
+    reporting-exception bridge, ``None`` for any other relationship. A bridge
+    is a filing that GLEIF has no parent to name, never a party: a reader that
+    draws parties (the MCP ownership map) states it in words instead.
+    Recognised from what OpenCheck itself wrote — a GLEIF statement whose
+    interest details open with the exception sentence — so another
+    publisher's unknown-party statements are never mistaken for one.
+    """
+    if rel.get("recordType") != "relationship":
+        return None
+    src = rel.get("source") or {}
+    from_gleif = src.get("opencheckSourceId") == "gleif"
+    if not from_gleif and src.get("description") != SOURCE_NAMES.get("gleif"):
+        return None
+    for interest in (rel.get("recordDetails") or {}).get("interests") or []:
+        m = _EXCEPTION_DETAILS.match(str(interest.get("details") or ""))
+        if not m:
+            continue
+        reason = m.group(1)
+        meaning = _GLEIF_EXCEPTION_REASONS.get(reason, (None, None, None, ""))[3]
+        meaning = meaning.split(": ", 1)[1] if ": " in meaning else meaning
+        return {
+            "level": "direct" if interest.get("directOrIndirect") == "direct" else "ultimate",
+            "reason": reason,
+            "meaning": meaning,
+            "undisclosed": reason in GLEIF_UNDISCLOSED_REASONS,
+        }
+    return None
+
+
 def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
     """Map a GLEIF adapter bundle to BODS v0.4 statements.
 

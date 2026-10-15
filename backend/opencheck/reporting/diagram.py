@@ -33,6 +33,7 @@ from typing import Any
 from xml.sax.saxutils import escape
 
 from ..bods.lifecycle import ended_phrase, interest_ended, statement_lifecycle
+from ..bods.officer_roles import officer_label, officer_position
 
 # Node palette — BOVS node colours.
 _PERSON = "#1d9e75"  # person node (green)
@@ -190,10 +191,13 @@ def _party_label(party: Any, by_id: dict[str, dict[str, Any]]) -> str:
 def categorise(interests: list[dict[str, Any]]) -> str:
     """The edge kind for a set of interests — ``categorise()`` in bodsGraph.ts.
 
-    Read from each interest's BODS ``type`` only, never from its free-text
-    ``details``: the canvas does not read details, and a PDF that did would
-    colour the same edge differently from the screen again."""
-    types = {i.get("type") for i in interests}
+    Read from each interest's BODS ``type`` (and the structured officer
+    marker), never from its free-text ``details``: the canvas does not read
+    details, and a PDF that did would colour the same edge differently from
+    the screen again."""
+    # An officer appointment is a role whatever its type (``officer_roles``):
+    # a company secretary is not a controller.
+    types = {"seniorManagingOfficial" if officer_position(i) else i.get("type") for i in interests}
     for category, members in EDGE_CATEGORY_TYPES:
         if types & members:
             return category
@@ -218,7 +222,11 @@ def _first_set(share: dict[str, Any], *keys: str) -> Any:
 def interest_label(interest: dict[str, Any]) -> str:
     """One interest in the canvas's words — ``interestLabel()`` in bodsGraph.ts
     ("Owns 75–100%", "Controls", "Director"). The register's own wording
-    (``details``) stays in the text-equivalent table."""
+    (``details``) stays in the text-equivalent table. An officer appointment
+    is labelled by its position ("Secretary"), never "Controls"."""
+    position = officer_position(interest)
+    if position:
+        return officer_label(position)
     base = INTEREST_LABELS.get(interest.get("type") or "") or interest.get("type") or "Interest"
     share = interest.get("share")
     if not share or not isinstance(share, dict):
@@ -351,12 +359,41 @@ def _unspec_glyph(cx: float, cy: float) -> str:
     )
 
 
+#: A node name wraps at this many characters, onto at most two lines; longer
+#: names end in an ellipsis (the full name is the node's <title>). One line of
+#: 52 characters at 11 units ran off the left edge of a 760-wide map.
+_NODE_LABEL_CHARS = 26
+_NODE_LABEL_LINES = 2
+
+
+def node_label_lines(label: str) -> list[str]:
+    """A node name as at most two centred lines of ``_NODE_LABEL_CHARS``."""
+    lines = wrap_label([[label]], _NODE_LABEL_CHARS) or [label]
+    if len(lines) > _NODE_LABEL_LINES:
+        lines = lines[:_NODE_LABEL_LINES]
+        lines[-1] = lines[-1][: _NODE_LABEL_CHARS - 1].rstrip() + "…"
+    return [
+        ln if len(ln) <= _NODE_LABEL_CHARS else ln[: _NODE_LABEL_CHARS - 1].rstrip() + "…"
+        for ln in lines
+    ]
+
+
 def _node_svg(cx: float, cy: float, kind: str, label: str, sublabel: str = "") -> str:
     glyph = {"person": _person_glyph, "entity": _entity_glyph}.get(kind, _unspec_glyph)(cx, cy)
-    lab = f'<text x="{cx}" y="{cy + _R + 16}" text-anchor="middle" font-size="11" fill="{_INK}">{escape(label)}</text>'
+    lines = node_label_lines(label)
+    spans = "".join(
+        f'<tspan x="{cx}" y="{cy + _R + 16 + 13 * n}">{escape(line)}</tspan>'
+        for n, line in enumerate(lines)
+    )
+    title = f"<title>{escape(label)}</title>" if lines != [label] else ""
+    lab = (
+        f'<text x="{cx}" y="{cy + _R + 16}" text-anchor="middle" font-size="11" '
+        f'fill="{_INK}">{title}{spans}</text>'
+    )
     sub = ""
     if sublabel:
-        sub = f'<text x="{cx}" y="{cy + _R + 30}" text-anchor="middle" font-size="9" fill="{_MUTE}">{escape(sublabel)}</text>'
+        sy = cy + _R + 30 + 13 * (len(lines) - 1)
+        sub = f'<text x="{cx}" y="{sy}" text-anchor="middle" font-size="9" fill="{_MUTE}">{escape(sublabel)}</text>'
     return glyph + lab + sub
 
 
