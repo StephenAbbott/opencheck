@@ -3490,5 +3490,11 @@ decisions on the Phase 340 ticket. Things that will be re-derived otherwise:
   Image(svg, "svg+xml")]`; PNG would need a new rasteriser (decision 4: later).
 - Both tools are on the lookup tier in `mcp/guard.py`; extra hops are charged
   to the shared lookup budget by `_lookup_impl` itself.
+- **Phase 341 — test through the protocol.** `opencheck_ownership_map` is
+  `@mcp.tool(structured_output=False)`: with a `list[...]` return type FastMCP
+  serialises structured content and cannot encode an `Image`, so every
+  production call failed while the direct-function tests passed. A tool that
+  returns content blocks must be tested with `mcp.call_tool(...)`, and must
+  declare no output schema (`test_the_map_tool_declares_no_output_schema`).
 - **Isolation:** risk, verdict, signalstats and narrative must not import
   `owners` (AST guard in `test_owners_phase340.py`).
