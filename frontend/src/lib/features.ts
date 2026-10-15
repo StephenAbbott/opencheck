@@ -258,6 +258,27 @@ export const FEATURES: Feature[] = [
  * `null` is "the count has not arrived yet", not zero: the sentence loses the
  * figure rather than rendering "0 open sources" or holding the page back.
  */
+/**
+ * The feature a `/features#…` address names, or `null` (Phase 345).
+ *
+ * The page scrolls to it once its sections are drawn, because the browser's
+ * own fragment scroll can run before React has rendered them: the homepage's
+ * "How the watchlist works" link landed at the top of /features while a
+ * reload of the same address landed on the section. Only a known feature id
+ * is honoured, so a stray or crafted fragment does nothing.
+ */
+export function featureIdFromHash(hash: string): string | null {
+  const raw = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!raw) return null;
+  let id: string;
+  try {
+    id = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  return FEATURES.some((f) => f.id === id) ? id : null;
+}
+
 export function ledeSentence(sourceCount: number | null): string {
   const scope =
     sourceCount === null ? "every open source that can answer" : `${sourceCount} open sources`;

@@ -26,6 +26,13 @@
  *   which on a page whose whole purpose is to send the reader somewhere else
  *   is the right trade.
  *
+ * - **An anchor is honoured by the page, not only the browser (Phase 345).**
+ *   The browser's fragment scroll can run before React has drawn the
+ *   sections, so arriving from the homepage's "How the watchlist works" left
+ *   the reader at the top. Once mounted, the page scrolls the section the
+ *   address names into view itself — instantly: it is where the reader asked
+ *   to land, not a movement to watch — and only for a known feature id.
+ *
  * - **Scroll-spy is progressive.** `IntersectionObserver` marks the rail
  *   entry for whichever section is in view. Where it is unavailable the rail
  *   is a plain list of working anchors, which is the whole feature minus the
@@ -34,7 +41,7 @@
 
 import { useEffect, useState } from "react";
 
-import { FEATURES, ledeSentence } from "../lib/features";
+import { FEATURES, featureIdFromHash, ledeSentence } from "../lib/features";
 import { SectionLabel } from "./ui";
 import { FeatureMark } from "./ui/FeatureMark";
 
@@ -45,6 +52,24 @@ export function FeaturesPage({
   sourceCount?: number | null;
 } = {}) {
   const [active, setActive] = useState<string | null>(FEATURES[0]?.id ?? null);
+
+  // Land on the section a `/features#…` address names (Phase 345). A frame
+  // after mount, so the sections and their reserved image heights are laid
+  // out; `scroll-mt-6` on each article keeps the heading clear, as before.
+  useEffect(() => {
+    const id = featureIdFromHash(window.location.hash);
+    if (!id) return;
+    const raf =
+      window.requestAnimationFrame?.bind(window) ??
+      ((cb: FrameRequestCallback) => window.setTimeout(() => cb(performance.now()), 0));
+    const cancel =
+      window.cancelAnimationFrame?.bind(window) ?? ((h: number) => window.clearTimeout(h));
+    const frame = raf(() => {
+      document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "auto" });
+      setActive(id);
+    });
+    return () => cancel(frame);
+  }, []);
 
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return;
