@@ -142,11 +142,13 @@ Confidence ladder
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from . import ownership_math as _ownership_math
 from .bods import jurisdiction as _bods_jurisdiction
 from .bods.lifecycle import statement_lifecycle
 from .bods.mapper import GLEIF_UNDISCLOSED_REASONS, SOURCE_NAMES
@@ -2076,38 +2078,107 @@ def _state_name(code: str) -> str:
     return getattr(country, "name", None) or code
 
 
+_SHARE_KEYS = ("exact", "minimum", "exclusiveMinimum", "maximum", "exclusiveMaximum")
+
+
 def _share_of(stmt: dict[str, Any]) -> dict[str, Any] | None:
-    """The first stated share on a relationship, as published."""
+    """The stated share on a relationship, as published: a shareholding's
+    share first (Phase 338 — the figure is cash rights), else the first
+    interest that states one. Every v0.4 bound is read, the exclusive ones
+    included: UK PSC bands are ``exclusiveMinimum`` / ``maximum``, and until
+    Phase 338 the lower end of every band was dropped."""
+    stated: list[tuple[Any, dict[str, Any]]] = []
     for interest in _interests(stmt):
         share = interest.get("share")
-        if isinstance(share, dict) and any(
-            share.get(k) is not None for k in ("exact", "minimum", "maximum")
-        ):
-            keys = ("exact", "minimum", "maximum")
-            return {k: share[k] for k in keys if share.get(k) is not None}
-    return None
+        if isinstance(share, dict) and any(share.get(k) is not None for k in _SHARE_KEYS):
+            stated.append((interest.get("type"), share))
+    stated.sort(key=lambda t: t[0] != "shareholding")
+    if not stated:
+        return None
+    share = stated[0][1]
+    return {k: share[k] for k in _SHARE_KEYS if share.get(k) is not None}
 
 
 def _share_text(share: dict[str, Any] | None) -> str | None:
-    if not share:
+    """A published share in words: "67%", "75–100%", "at least 10%"."""
+    bounds = _ownership_math.share_bounds(share)
+    if bounds is None:
         return None
-
-    def pct(v: Any) -> str:
-        try:
-            f = float(v)
-        except (TypeError, ValueError):
-            return str(v)
-        return f"{f:g}%"
-
-    if share.get("exact") is not None:
-        return pct(share["exact"])
-    lo, hi = share.get("minimum"), share.get("maximum")
-    if lo is not None and hi is not None:
-        return f"{pct(lo)[:-1]}–{pct(hi)}"
-    return f"at least {pct(lo)}" if lo is not None else f"up to {pct(hi)}"
+    lo, hi = bounds
+    return _ownership_math.figure_text(
+        {"minimum": lo * 100.0, "maximum": None if hi is None else hi * 100.0}
+    )
 
 
-def _state_holdings(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _state_group_key(match: dict[str, Any]) -> str:
+    """The holding a state party belongs to: its state's ISO code, or the
+    party itself when its source gives no country (Phase 240)."""
+    return match.get("state") or f"node:{match['statement_id']}"
+
+
+def _state_accumulated(
+    bods: list[dict[str, Any]],
+    *,
+    source_id: str,
+    subject: str | None,
+    by_party: dict[str, dict[str, Any]],
+    ended: set[str],
+    resolve: Callable[[Any], str],
+) -> list[dict[str, Any]]:
+    """Phase 338 — each state's integrated share in the subject, in this one
+    source's bundle (GROW: the state's bodies collapsed into one owner).
+
+    Current relationships only: an ended holding stays in the sentence as
+    "formerly …", never in the figure. One bundle is one consistent graph,
+    so the sum is valid inside it; two sources are never added together —
+    ``merge_state_controlled`` lists each source's figure instead."""
+    if not subject:
+        return []
+    edges: list[_ownership_math.Edge] = []
+    for stmt in bods:
+        if _stmt_kind(stmt) != "relationship" or _statement_id(stmt) in ended:
+            continue
+        subj, ip, _ = _relationship_endpoints(stmt, resolve)
+        if not subj or not ip:
+            continue
+        bounds = _ownership_math.share_bounds(_share_of(stmt))
+        lo, hi = bounds if bounds is not None else (0.0, None)
+        edges.append(_ownership_math.Edge(ip, subj, lo, hi))
+    groups: dict[str, set[str]] = {}
+    for party_id, m in by_party.items():
+        if m["current"]:
+            groups.setdefault(_state_group_key(m), set()).add(party_id)
+    out: list[dict[str, Any]] = []
+    for key in sorted(groups):
+        result = _ownership_math.integrated_ownership(edges, groups[key], subject)
+        out.append({"state_key": key, "source_id": source_id, **result.as_dict()})
+    return out
+
+
+def _figures_of(accumulated: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One entry per distinct figure, with the sources that gave it, largest
+    first — "67% (OpenSanctions; Wikidata)" never becomes "134%"."""
+    by_text: dict[str, dict[str, Any]] = {}
+    for a in accumulated:
+        text = _ownership_math.figure_text(a)
+        if not text:
+            continue
+        f = by_text.setdefault(
+            text, {"text": text, "sources": [], "minimum": a.get("minimum") or 0.0}
+        )
+        if a.get("source_id") and a["source_id"] not in f["sources"]:
+            f["sources"].append(a["source_id"])
+    figures = sorted(by_text.values(), key=lambda f: (-f["minimum"], f["text"]))
+    for f in figures:
+        f["sources"].sort()
+        del f["minimum"]
+    return figures
+
+
+def _state_holdings(
+    matches: list[dict[str, Any]],
+    accumulated: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     """Group state parties into one holding per state (Phase 240).
 
     Two sources that name the same stake by different bodies — OpenSanctions'
@@ -2121,51 +2192,86 @@ def _state_holdings(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     groups: dict[str, dict[str, Any]] = {}
     for m in matches:
-        key = m.get("state") or f"node:{m['statement_id']}"
+        key = _state_group_key(m)
         g = groups.setdefault(key, {
             "state": m.get("state"),
             "state_name": m.get("state_name") or m.get("name"),
             "parties": [],
         })
         g["parties"].append(m)
+    acc_by_key: dict[str, list[dict[str, Any]]] = {}
+    for a in accumulated or ():
+        acc_by_key.setdefault(a.get("state_key") or "", []).append(a)
     out: list[dict[str, Any]] = []
-    for g in groups.values():
+    for key, g in groups.items():
         parties = sorted(
             g["parties"],
             key=lambda m: (not m["current"], m.get("name") or "", m.get("source_id") or ""),
         )
         current = [m for m in parties if m["current"]]
-        shares: list[str] = []
-        for m in current:
-            text = _share_text(m.get("share"))
-            if text and text not in shares:
-                shares.append(text)
-        out.append({
+        acc = sorted(acc_by_key.get(key, []), key=lambda a: a.get("source_id") or "")
+        figures: list[dict[str, Any]]
+        if acc:
+            # Phase 338: the state's integrated share in the subject, per source.
+            figures = _figures_of(acc)
+        else:
+            # A signal built before Phase 338 (no figures carried): the
+            # parties' own direct shares, as Phase 240 read them.
+            figures = []
+            for m in current:
+                text = _share_text(m.get("share"))
+                if text and text not in [f["text"] for f in figures]:
+                    sid = m.get("source_id")
+                    figures.append({"text": text, "sources": [sid] if sid else []})
+        holding: dict[str, Any] = {
             "state": g["state"],
             "state_name": g["state_name"],
             "current": bool(current),
-            "shares": shares,
+            "shares": [f["text"] for f in figures],
+            "figures": figures,
             "sources": sorted({m["source_id"] for m in parties if m.get("source_id")}),
             "parties": parties,
-        })
+        }
+        if acc:
+            holding["accumulated"] = acc
+        out.append(holding)
     out.sort(key=lambda h: (not h["current"], h["state_name"] or ""))
     return out
 
 
 def _holding_clause(holding: dict[str, Any]) -> str:
     """"Norway, 67% — FINANSDEPARTEMENTET (OpenSanctions); Ministry … (Wikidata)"."""
+    def source_name(sid: str | None) -> str:
+        return SOURCE_NAMES.get(sid or "", sid or "")
+
     def label(m: dict[str, Any]) -> str:
-        src = SOURCE_NAMES.get(m.get("source_id") or "", m.get("source_id") or "")
+        src = source_name(m.get("source_id"))
         text = f"{m.get('name') or m['statement_id']} ({src})" if src else str(m.get("name"))
+        if m.get("via_names"):
+            # Phase 338: an indirect party says what it holds through.
+            route = " and ".join(m["via_names"])
+            text += f", directly and through {route}" if m.get("direct") else f", through {route}"
         return text if m["current"] else f"formerly {text}"
 
     who = "; ".join(label(m) for m in holding["parties"])
-    if not holding["state"]:
-        # No country to group on: the party is the holding, named once.
+    head = holding["state_name"] if holding["state"] else None
+    figures = holding.get("figures")
+    if figures is None:  # an evidence dict from before Phase 338
+        figures = [{"text": t, "sources": []} for t in holding.get("shares") or ()]
+    if figures:
+        if len(figures) == 1:
+            stated = figures[0]["text"]
+        else:
+            # Sources disagree: each figure with the sources that gave it.
+            stated = " or ".join(
+                f"{f['text']} ({'; '.join(source_name(s) for s in f['sources'])})"
+                if f["sources"] else f["text"]
+                for f in figures
+            )
+        head = f"{head}, {stated}" if head else stated
+    if not head:
+        # No country to group on and no figure: the party is the holding.
         return who
-    head = holding["state_name"]
-    if holding["shares"]:
-        head += ", " + " or ".join(holding["shares"])
     return f"{head} — {who}"
 
 
@@ -2175,6 +2281,7 @@ def _state_controlled_from_matches(
     source_id: str,
     hit_id: str,
     subject_node: str,
+    accumulated: list[dict[str, Any]] | None = None,
 ) -> RiskSignal | None:
     """One STATE_CONTROLLED signal from its state parties, however many
     sources they came from — the per-source rule and the lookup's merge
@@ -2182,7 +2289,11 @@ def _state_controlled_from_matches(
     evidence cannot differ between a source's drawer and the report."""
     if not matches:
         return None
-    holdings = _state_holdings(matches)
+    accumulated = sorted(
+        accumulated or [],
+        key=lambda a: (a.get("state_key") or "", a.get("source_id") or ""),
+    )
+    holdings = _state_holdings(matches, accumulated)
     ended_only = [
         rid
         for h in holdings
@@ -2225,6 +2336,8 @@ def _state_controlled_from_matches(
                 for h in holdings
             ],
             "sources": sources,
+            # Phase 338: every source's figure per state, pooled by the merge.
+            "state_accumulated": accumulated,
             **_ended_evidence(ended_only),
         },
     )
@@ -2296,27 +2409,47 @@ def _state_controlled_signals(
                 "state": code,
                 "state_name": _state_name(code) if code else None,
                 "share": None,
+                "via": [],
                 "direct": False,
                 "current": False,
                 "relationship_statement_ids": [],
             }
         m["relationship_statement_ids"].append(rel_id)
-        m["direct"] = m["direct"] or subj == subject
-        # A current holding's share wins over an ended one's.
+        is_direct = subject is not None and subj == subject
+        m["direct"] = m["direct"] or is_direct
         if is_current and not m["current"]:
+            # The first current holding: what was gathered from ended ones
+            # is replaced, so a party's share and route describe today.
             m["current"] = True
-            m["share"] = _share_of(stmt)
-        elif m["share"] is None and not m["current"]:
-            m["share"] = _share_of(stmt)
+            m["share"] = None
+            m["via"] = []
+        if is_current or not m["current"]:
+            if is_direct:
+                # Phase 338: a party's own share only when it holds the
+                # subject itself — never an intermediate company's share.
+                m["share"] = m["share"] or _share_of(stmt)
+            elif subj and subj not in m["via"]:
+                m["via"].append(subj)
         subject_node = subject_node or subj
     if not by_party:
         return []
+    for m in by_party.values():
+        m["via"] = sorted(m.get("via") or [])
+        if m["via"]:
+            m["via_names"] = [
+                _record_details(ents.get(v, {})).get("name") or v for v in m["via"]
+            ]
+    accumulated = _state_accumulated(
+        bods, source_id=source_id, subject=subject, by_party=by_party,
+        ended=ended, resolve=_resolve,
+    )
     matches = [
-        {k: v for k, v in m.items() if v is not None} | {"current": m["current"]}
+        {k: v for k, v in m.items() if v is not None and v != []} | {"current": m["current"]}
         for m in by_party.values()
     ]
     sig = _state_controlled_from_matches(
         matches, source_id=source_id, hit_id=hit_id, subject_node=subject_node,
+        accumulated=accumulated,
     )
     return [sig] if sig is not None else []
 
@@ -2342,6 +2475,21 @@ def merge_state_controlled(
                 matches.append(dict(m))
     if not matches:
         return new
+    # Phase 338: each source's figure per state is pooled, never summed —
+    # one entry per (state, source); a source seen twice keeps its larger
+    # reading, chosen the same way whichever signal arrived first.
+    pooled: dict[tuple[str, str], dict[str, Any]] = {}
+    for sig in (incumbent, new):
+        for a in (sig.get("evidence") or {}).get("state_accumulated") or ():
+            if not isinstance(a, dict):
+                continue
+            key = (a.get("state_key") or "", a.get("source_id") or "")
+            prev = pooled.get(key)
+            def rank(x: dict[str, Any]) -> tuple[float, str]:
+                return (x.get("minimum") or 0.0, json.dumps(x, sort_keys=True))
+
+            if prev is None or rank(a) > rank(prev):
+                pooled[key] = dict(a)
     ev = incumbent.get("evidence") or {}
     merged = _state_controlled_from_matches(
         matches,
@@ -2350,6 +2498,7 @@ def merge_state_controlled(
         subject_node=ev.get("subject_statement_id")
         or (new.get("evidence") or {}).get("subject_statement_id")
         or "",
+        accumulated=list(pooled.values()),
     )
     return merged.to_dict() if merged is not None else new
 
