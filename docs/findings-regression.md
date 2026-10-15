@@ -35,6 +35,7 @@ this phase merged, found three things nobody had reported (below).
 | anchor | Maersk (`549300D2K6PKKKXVNN73`) | Phase 273: its only listed-jurisdiction exposure is a BVI subsidiary. No list chip, no watch-list verdict clause, only the `SUBSIDIARY_LISTED_JURISDICTION` context note. |
 | anchor | ASDA Stores (`549300IVCS91O4IUFA35`) | Phase 272: a real layered chain (7 intermediate layers on 1 Oct 2026). The verdict counts intermediate layers; the retired composite never returns. |
 | anchor | Regulatory DataCorp Limited (`894500LD30X1VN839203`) | Phase 282: a former director, "Mr. Robert Frederick Smith", matched Panama Papers officer "Mr. Robert Frederick White" until persons got a token gate. `OFFSHORE_LEAKS` must stay absent; the verdict must not mention offshore leaks. |
+| anchor | Persia International Bank PLC (`213800HTIY6D1KMBG757`) | Phase 342: the computed sanctions 50% rule. Companies House files Bank Mellat at more than 50% up to 75%; Bank Mellat matches its OpenSanctions record on an identifier and is on the OFAC SDN, EU and UK lists, so the low end alone meets all three tests. `SANCTIONS_OWNERSHIP_TEST` must fire at high, never the context variant. |
 | control | Birtley Investment Limited (`254900RT9QQBQZVH8O89`) | Small GB Ltd, no findings. Its only signal is the GLEIF reporting exception, which is context. Lapsed LEI. |
 | control | American Foreign Policy Council (`549300W96W2VKSMVDF81`) | Non-EU (US-DC, DLCP register), reporting exception, LEI lapsed since 2017, no findings. |
 

@@ -763,6 +763,29 @@ def _integrated_ownership(report: dict[str, Any]) -> str:
     )
 
 
+def _sanctions_ownership(report: dict[str, Any]) -> str:
+    """Phase 342: the sanctions 50% rule per regime and source, from the run's
+    frozen ``SANCTIONS_OWNERSHIP_TEST`` / ``_POSSIBLE`` signal. Empty when the
+    run carried neither."""
+    from .. import sanctions_ownership as so
+
+    sig = so.signal_of(report.get("risk_signals"))
+    rows = so.report_rows(sig)
+    if not rows:
+        return ""
+    head = "".join(f'<th scope="col">{escape(c)}</th>' for c in so.REPORT_COLUMNS)
+    body = "".join(
+        "<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row) + "</tr>" for row in rows
+    )
+    notes = "".join(
+        f'<p style="font-size:8pt;color:#595959">{escape(t)}</p>' for t in so.report_footer(sig)
+    )
+    return (
+        f'<section aria-labelledby="sown"><h2 id="sown">{escape(so.REPORT_HEADING)}</h2>'
+        f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>{notes}</section>"
+    )
+
+
 def _form13f(report: dict[str, Any]) -> str:
     """Phase 334: institutional shareholders from SEC Form 13F, from the
     frozen ``form13f`` payload — its own section, after what can be known and
@@ -956,6 +979,7 @@ def build_report_html(
         + _sources_found(report)
         + _knowability(report)
         + _integrated_ownership(report)
+        + _sanctions_ownership(report)
         + _form13f(report)
         + _diagrams(report)
         + _licensing(report, saved)

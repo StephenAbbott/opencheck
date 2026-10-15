@@ -53,6 +53,9 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     # counter-designation is context, not an adverse finding.
     "COUNTER_SANCTIONED": ("Counter-sanctioned", "#f1f5f9", "#334155"),
     "SANCTIONED_SECURITY": ("Sanctioned securities", "#fff1f2", "#be123c"),
+    # Phase 342 — the computed 50% rule; the context variant in slate.
+    "SANCTIONS_OWNERSHIP_TEST": ("Sanctions 50% test met", "#ffe4e6", "#9f1239"),
+    "SANCTIONS_OWNERSHIP_TEST_POSSIBLE": ("Sanctions 50% test: may meet", "#f8fafc", "#475569"),
     "SANCTIONS_CONTROLLED": ("Sanction control", "#ffe4e6", "#9f1239"),
     "SANCTIONS_LINKED": ("Sanctions-linked", "#fffbeb", "#92400e"),
     "DEBARMENT": ("Debarred", "#ffedd5", "#7c2d12"),

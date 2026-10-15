@@ -44,6 +44,7 @@ import {
   type SignalEvidenceData,
 } from "../../lib/signalEvidence";
 import { recordConsistencyRows } from "../../lib/recordConsistency";
+import { sanctionsOwnershipNotes, sanctionsOwnershipRows } from "../../lib/sanctionsOwnership";
 import { sourceLabel } from "../../lib/vocab";
 
 export function SignalEvidence({
@@ -92,6 +93,7 @@ export function SignalEvidence({
           findings about the same party. */}
       {attribution && <span className="text-oo-muted"> {attribution}</span>}
       <RecordConsistencyTable lead={lead} sourceNames={sourceNames} />
+      <SanctionsOwnershipTable lead={lead} />
     </div>
   );
 }
@@ -148,5 +150,63 @@ function RecordConsistencyTable({
         ))}
       </tbody>
     </table>
+  );
+}
+
+/**
+ * The per-regime table behind a sanctions-ownership chip (Phase 342).
+ *
+ * One row per regime and source — OFAC, the EU and the UK side by side, the
+ * rule each applies, the result, the holding and who holds it — then how the
+ * test was computed and what it does not compute. Renders nothing for any
+ * other signal.
+ */
+function SanctionsOwnershipTable({ lead }: { lead: SignalEvidenceData }) {
+  const rows = sanctionsOwnershipRows(lead.signal);
+  if (rows.length === 0) return null;
+  const notes = sanctionsOwnershipNotes(lead.signal);
+  return (
+    <>
+      <table className="mt-2.5 w-full text-oo-meta leading-snug">
+        <caption className="sr-only">Sanctions ownership test, by regime and source</caption>
+        <thead>
+          <tr className="text-left text-oo-muted">
+            <th scope="col" className="pr-3 pb-1 font-medium">Regime</th>
+            <th scope="col" className="pr-3 pb-1 font-medium">Result</th>
+            <th scope="col" className="pr-3 pb-1 font-medium">Holding</th>
+            <th scope="col" className="pb-1 font-medium">Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={row.key}
+              className={`border-t border-oo-rule align-top ${row.result === "meets" ? "font-medium" : ""}`}
+            >
+              <td className="pr-3 py-1">
+                {row.regime}
+                <span className="block text-oo-muted font-normal">{row.rule}</span>
+              </td>
+              <td className="pr-3 py-1">
+                {row.resultWords}
+                {row.ifConfirmed && (
+                  <span className="block text-oo-muted font-normal">
+                    Would meet it if a name-only match were confirmed
+                  </span>
+                )}
+              </td>
+              <td className="pr-3 py-1">
+                {row.holding}
+                {row.holders && <span className="block text-oo-muted font-normal">{row.holders}</span>}
+              </td>
+              <td className="py-1">{row.source}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {notes.map((n) => (
+        <p key={n} className="mt-1.5 text-oo-meta text-oo-muted">{n}</p>
+      ))}
+    </>
   );
 }

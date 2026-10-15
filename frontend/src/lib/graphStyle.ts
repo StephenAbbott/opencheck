@@ -50,6 +50,10 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   // tier between a direct listing and plain adjacency.
   SANCTIONS_CONTROLLED:         { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"SC",  severity:6 },
   RELATED_SANCTIONS_CONTROLLED: { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"RSC", severity:6 },
+  // Phase 342 — the computed 50% rule: the sanction-control tier; the
+  // context variant sits at the bottom with the other context codes.
+  SANCTIONS_OWNERSHIP_TEST:          { bg:"#ffe4e6", border:"#9f1239", text:"#9f1239", label:"50",  severity:6 },
+  SANCTIONS_OWNERSHIP_TEST_POSSIBLE: { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"50?", severity:0 },
   SANCTIONS_LINKED:         { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"SL", severity:3 },
   RELATED_SANCTIONS_LINKED: { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"RSL", severity:3 },
   DEBARMENT:                { bg:"#ffedd5", border:"#c2410c", text:"#9a3412", label:"Db", severity:4 },

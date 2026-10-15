@@ -169,6 +169,14 @@ SANCTIONED = "SANCTIONED"
 COUNTER_SANCTIONED = "COUNTER_SANCTIONED"
 SANCTIONS_CONTROLLED = "SANCTIONS_CONTROLLED"
 SANCTIONS_LINKED = "SANCTIONS_LINKED"
+#: Phase 342 — the sanctions 50% rule, computed (``opencheck.sanctions_ownership``).
+#: ``SANCTIONS_OWNERSHIP_TEST`` (risk): the low ends of the stated
+#: shareholdings of parties designated under OFAC, the EU or the UK meet that
+#: regime's ownership test. ``SANCTIONS_OWNERSHIP_TEST_POSSIBLE`` (context):
+#: they may meet it (the high ends do), or would if a name-only match were
+#: confirmed. Neither says the company is sanctioned.
+SANCTIONS_OWNERSHIP_TEST = "SANCTIONS_OWNERSHIP_TEST"
+SANCTIONS_OWNERSHIP_TEST_POSSIBLE = "SANCTIONS_OWNERSHIP_TEST_POSSIBLE"
 DEBARMENT = "DEBARMENT"
 EXPORT_CONTROLLED = "EXPORT_CONTROLLED"
 EXPORT_CONTROL_LINKED = "EXPORT_CONTROL_LINKED"
@@ -1197,6 +1205,14 @@ def _opensanctions_topic_signals(
     return _opensanctions_topic_signals_from_entity(hit.hit_id, raw, source_id=hit.source_id)
 
 
+def _datasets_evidence(entity: dict[str, Any]) -> dict[str, Any]:
+    """``{"datasets": [...]}`` for an OpenSanctions record that names them."""
+    ds = entity.get("datasets")
+    if isinstance(ds, list) and ds:
+        return {"datasets": sorted({str(d) for d in ds if d})}
+    return {}
+
+
 def _opensanctions_topic_signals_from_entity(
     hit_id: str, entity: dict[str, Any], *, source_id: str = "opensanctions"
 ) -> list[RiskSignal]:
@@ -1227,7 +1243,12 @@ def _opensanctions_topic_signals_from_entity(
                 summary="OpenSanctions lists this record as sanctioned.",
                 source_id=source_id,
                 hit_id=hit_id,
-                evidence={"topics": direct_topics, "statement_id": stmt_id},
+                evidence={
+                    "topics": direct_topics,
+                    "statement_id": stmt_id,
+                    # Phase 342: which lists — the regime is in the dataset.
+                    **_datasets_evidence(entity),
+                },
             )
         )
     # Counter-designation ("sanction.counter") → COUNTER_SANCTIONED. Also a

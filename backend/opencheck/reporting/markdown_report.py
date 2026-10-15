@@ -437,6 +437,24 @@ def _integrated_ownership(report: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _sanctions_ownership(report: dict[str, Any]) -> list[str]:
+    """Phase 342 — the text twin of ``html_report._sanctions_ownership``."""
+    from .. import sanctions_ownership as so
+
+    sig = so.signal_of(report.get("risk_signals"))
+    rows = so.report_rows(sig)
+    if not rows:
+        return []
+    lines = [f"## {so.REPORT_HEADING}", ""]
+    lines.append("| " + " | ".join(so.REPORT_COLUMNS) + " |")
+    lines.append("|" + "---|" * len(so.REPORT_COLUMNS))
+    lines += ["| " + " | ".join(_cell(c) for c in row) + " |" for row in rows]
+    lines.append("")
+    for t in so.report_footer(sig):
+        lines += [f"_{t}_", ""]
+    return lines
+
+
 def _form13f(report: dict[str, Any]) -> list[str]:
     """Phase 334 — the text twin of ``html_report._form13f``: institutional
     shareholders from Form 13F, from the frozen payload; not ownership."""
@@ -564,6 +582,7 @@ def build_report_markdown(
     sections += _sources_found(report)
     sections += _knowability(report)
     sections += _integrated_ownership(report)
+    sections += _sanctions_ownership(report)
     sections += _form13f(report)
     sections += _relationships(report)
     sections += _licensing(report, saved)

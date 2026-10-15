@@ -268,6 +268,9 @@ reports on the same re-run. Version 2 is Phase 273: the FATF / EU list signals
 stopped reading subsidiaries, which moved to `SUBSIDIARY_LISTED_JURISDICTION`.
 Version 3 is Phase 319: `EU_TAX_NON_COOPERATIVE` is new, and the subsidiary
 note reads Annex I of the EU tax list too.
+Version 4 is Phase 342: the sanctions 50% rule is computed, so
+`SANCTIONS_OWNERSHIP_TEST` (or the context `SANCTIONS_OWNERSHIP_TEST_POSSIBLE`)
+can appear with nothing in a company's records changed.
 Bump `SIGNAL_RULES` and add an entry whenever a rule change moves which codes
 fire for an unchanged company.
 

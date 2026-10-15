@@ -389,7 +389,12 @@ async def opencheck_owners(
     above the threshold whose own owners were not reached) and
     ``listed_without_a_figure`` (voting rights only, or formerly). Calculated
     figures are arithmetic on filings, never a determination that anyone is a
-    beneficial owner; nothing here is a risk signal.
+    beneficial owner; nothing here is a risk signal. The one finding is
+    ``sanctions_ownership_test`` (null when none applies): the lookup's own
+    computed sanctions 50% rule for OFAC, the EU and the UK, side by side —
+    from parties designated under each regime and matched on an identifier
+    or with corroboration, ownership only (control tests not computed), and
+    never a determination that the company is sanctioned.
 
     Args:
         lei: ISO 17442 Legal Entity Identifier (20 chars).
@@ -427,6 +432,7 @@ async def opencheck_owners(
         depth=depth,
         as_of=net.payload.get("as_of") or _owners.default_as_of(),
         license_notices=list(resp.license_notices or []),
+        risk_signals=list(getattr(resp, "risk_signals", None) or []),
     )
 
 

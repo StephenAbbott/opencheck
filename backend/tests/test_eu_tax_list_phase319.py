@@ -269,7 +269,7 @@ def test_the_note_is_not_narrowed_by_the_element_setting(monkeypatch) -> None:
 def test_signal_rules_version_3_moves_the_tax_code_and_the_note() -> None:
     from opencheck.watchlist import SIGNAL_RULES, SIGNAL_RULES_CHANGED
 
-    assert SIGNAL_RULES == 3
+    assert SIGNAL_RULES >= 3  # Phase 342 moved it to 4
     assert SIGNAL_RULES_CHANGED[3] == {EU_TAX_NON_COOPERATIVE, SUBSIDIARY_LISTED_JURISDICTION}
 
 

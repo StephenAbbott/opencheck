@@ -36,6 +36,7 @@ import {
 } from "../../lib/integratedOwnership";
 import { todayIso } from "../../lib/relationshipStatus";
 import { IntegratedOwnershipList } from "./IntegratedOwnershipList";
+import { sanctionsOwnershipBandNote } from "../../lib/sanctionsOwnership";
 import { chainCodes } from "../../lib/knowabilityChain";
 import { subsidiaryHref } from "../../lib/subsidiariesMode";
 import BodsGraphExplorer from "../BodsGraphExplorer";
@@ -195,6 +196,7 @@ export default function FullCheckPanel({
             payload={ownership}
             expanding={expanding}
             readOnly={Boolean(savedStatements)}
+            sanctionsNote={sanctionsOwnershipBandNote(signals)}
           />
         </PanelSection>
       )}

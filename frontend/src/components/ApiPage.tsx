@@ -220,7 +220,7 @@ export function ApiPage() {
               ["opencheck_batch_lookup", "Up to 20 LEIs at once: one compact row each, with failed rows kept apart."],
               ["opencheck_export_bods", "The full ownership-and-control graph as BODS v0.4 statements; include_subsidiaries folds in the GLEIF subsidiary network."],
               ["opencheck_subsidiaries", "What a company consolidates: its GLEIF subsidiary network as counts, rows or BODS, optionally with the MEIP, EITI and GEM lists kept apart."],
-              ["opencheck_owners", "Who owns a company above a threshold (its national rule by default): owners calculated from shareholdings per source, the beneficial owners registers declare, and who is in both."],
+              ["opencheck_owners", "Who owns a company above a threshold (its national rule by default): owners calculated from shareholdings per source, the beneficial owners registers declare, and who is in both — plus the computed sanctions 50% test for OFAC, the EU and the UK, ownership only."],
               ["opencheck_ownership_map", "The ownership structure as an SVG image, with every edge as a text table and a link to the interactive FullCheck view."],
               ["opencheck_save_report", "Keep a check as a saved report: a link and a SHA-256 of exactly what was found, not re-checked."],
               ["opencheck_list_sources", "Inventory of the data sources, with licence and live status."],

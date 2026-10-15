@@ -1,0 +1,36 @@
+{
+  "lei": "213800HTIY6D1KMBG757",
+  "name": "Persia International Bank PLC",
+  "role": "anchor",
+  "why": "Phase 342 anchor: the computed sanctions 50% rule. Companies House files Bank Mellat at more than 50% up to 75% and Bank Tejarat at more than 25% up to 50%; Bank Mellat is matched on its OpenSanctions record id and is on us_ofac_sdn, eu_fsf and gb_fcdo_sanctions, so the low end alone meets OFAC, the EU and the UK. Never the context variant on top.",
+  "example_card": false,
+  "no_risk": false,
+  "risk": {
+    "SANCTIONED": "high",
+    "RELATED_SANCTIONED": "high",
+    "FATF_BLACK_LIST": "high",
+    "SANCTIONS_OWNERSHIP_TEST": "high"
+  },
+  "context": [
+    "NON_EU_JURISDICTION"
+  ],
+  "absent": [
+    "SANCTIONS_OWNERSHIP_TEST_POSSIBLE",
+    "FATF_GREY_LIST"
+  ],
+  "verdict": {
+    "matches": [
+      "sanctions findings on the company itself",
+      "sanctions ownership test"
+    ],
+    "not_matches": []
+  },
+  "sources_found": [
+    "gleif",
+    "companies_house",
+    "opensanctions"
+  ],
+  "liveness": {},
+  "lei_confirmed_min": 2,
+  "intermediate_layers_min": null
+}

@@ -516,6 +516,7 @@ def owners_answer(
     depth: int,
     as_of: str,
     license_notices: list[Any] | None = None,
+    risk_signals: list[Any] | None = None,
 ) -> dict[str, Any]:
     calculated, unmeasured = calculated_owners(net.payload, rule)
     declared = declared_owners(net.bods, net.subject_ids, as_of)
@@ -549,7 +550,69 @@ def owners_answer(
         "fullcheck_url": FULLCHECK_URL.format(lei=lei) if lei else None,
         "license_notices": license_notices or [],
         "hint": HINT,
-        "summary": _summary(legal_name, rule, calculated, declared, both, stops),
+        "summary": _summary(legal_name, rule, calculated, declared, both, stops)
+        + _sanctions_sentence(risk_signals),
+        "sanctions_ownership_test": sanctions_ownership_block(risk_signals),
+    }
+
+
+def _sanctions_sentence(signals: list[Any] | None) -> str:
+    from . import sanctions_ownership as so
+
+    sig = so.signal_of(signals)
+    if sig is None:
+        return ""
+    regimes = (sig.get("evidence") or {}).get("regimes") or []
+    return " Sanctions ownership test (computed, ownership only): " + so.regimes_sentence(regimes)
+
+
+_HOLDER_KEYS = ("name", "stake", "designated", "basis", "held_by")
+
+
+def sanctions_ownership_block(signals: list[Any] | None) -> dict[str, Any] | None:
+    """Phase 342: the lookup's sanctions 50% rule, per regime — the one
+    *finding* in this answer, carried over from the lookup's own
+    ``SANCTIONS_OWNERSHIP_TEST`` / ``_POSSIBLE`` signal (never recomputed
+    from the integrated figure above, which multiplies; the rule counts a
+    caught company's holding in full). None when the lookup has neither."""
+    from . import sanctions_ownership as so
+
+    sig = so.signal_of(signals)
+    if sig is None:
+        return None
+    ev = sig.get("evidence") or {}
+    return {
+        "finding": sig.get("code"),
+        "kind": sig.get("kind"),
+        "confidence": sig.get("confidence"),
+        "summary": sig.get("summary"),
+        "regimes": [
+            {
+                "regime": r.get("regime"),
+                "rule": r.get("rule"),
+                "result": r.get("result"),
+                "if_confirmed": r.get("if_confirmed", False),
+                "sources": [
+                    {
+                        "source": row.get("source"),
+                        "result": row.get("result"),
+                        "holding": (row.get("figure") or {}).get("text"),
+                        "holders": [
+                            {k: h.get(k) for k in _HOLDER_KEYS if h.get(k) is not None}
+                            for h in row.get("holders") or []
+                        ],
+                        **({"name_only": row["name_only"]} if row.get("name_only") else {}),
+                    }
+                    for row in r.get("sources") or []
+                ],
+            }
+            for r in ev.get("regimes") or []
+        ],
+        "designated": ev.get("designated") or [],
+        "method": ev.get("description"),
+        "not_computed": ev.get("not_computed"),
+        "as_of": ev.get("as_of"),
+        "credit": ev.get("credit"),
     }
 
 
