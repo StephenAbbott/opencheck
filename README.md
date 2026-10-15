@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 339** — FullCheck states each party's integrated ownership of the company — directly and through the companies it holds, one figure per source, never added — as context in a new band, the reports, the BODS export and the MCP tools, by the method T-Rank publishes.
+**Latest: Phase 340** — two question-shaped MCP tools: `opencheck_owners` says who owns a company above its national threshold — calculated per source, declared by registers, and who is in both — and `opencheck_ownership_map` draws the structure as an SVG image with a text table.
 
 → [Full development history](docs/status.md)
 
