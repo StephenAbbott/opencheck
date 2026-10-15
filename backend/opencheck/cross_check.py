@@ -247,6 +247,7 @@ async def assess_cross_source_names(
         subject_ids=identity.statement_ids,
     )
     subject_targets = _subject_targets(identity) if screen_subject else []
+    _pool_identifiers(selection.screened, bods)
     targets = subject_targets + selection.screened
     if not targets:
         return []
@@ -935,6 +936,7 @@ def _make_signal(
                 "corroboration": list(corroboration),
                 "name_match_only": False,
                 **({"topics": list(topics)} if topics else {}),
+                **_listing_evidence(target, hit),
             },
         )
     return RiskSignal(
@@ -960,9 +962,74 @@ def _make_signal(
                 and not corroboration
             ),
             **({"topics": list(topics)} if topics else {}),
+            **_listing_evidence(target, hit),
             **former_evidence(target),
         },
     )
+
+
+#: FtM properties that carry a register or market identifier. Phase 342: a
+#: related party whose own statements carry one of these values matched the
+#: record on an identifier, not only on its name.
+_IDENTIFIER_PROPS = (
+    "leiCode", "registrationNumber", "innCode", "ogrnCode", "taxNumber",
+    "okpoCode", "vatCode", "swiftBic", "kppCode", "permId", "uniqueEntityId",
+    "dunsCode", "bikCode", "imoNumber", "idNumber", "npiCode",
+)
+#: Shorter values are too likely to collide across registers.
+_MIN_IDENTIFIER_LEN = 6
+
+
+def _identifier_key(value: Any) -> str:
+    key = re.sub(r"[^0-9A-Za-z]", "", str(value or "")).upper()
+    return key if len(key) >= _MIN_IDENTIFIER_LEN else ""
+
+
+def _statement_identifier_keys(stmt: dict[str, Any]) -> set[str]:
+    rd = stmt.get("recordDetails") or {}
+    out: set[str] = set()
+    for ident in rd.get("identifiers") or ():
+        if isinstance(ident, dict):
+            key = _identifier_key(ident.get("id"))
+            if key:
+                out.add(key)
+    return out
+
+
+def _pool_identifiers(targets: list[dict[str, Any]], bods: list[dict[str, Any]]) -> None:
+    """Give each screened party the identifiers of every statement in its
+    cluster (Phase 342), so an identifier match is found whichever source's
+    statement represents the party."""
+    by_id = {s.get("statementId"): s for s in bods if s.get("statementId")}
+    for target in targets:
+        keys: set[str] = set()
+        for sid in target.get("statement_ids") or [target.get("statement_id")]:
+            stmt = by_id.get(sid)
+            if stmt is not None:
+                keys |= _statement_identifier_keys(stmt)
+        target["identifier_keys"] = sorted(keys)
+
+
+def _hit_identifier_keys(hit: SourceHit) -> set[str]:
+    raw = hit.raw or {}
+    values: list[Any] = [hit.hit_id, raw.get("id")]
+    values.extend(raw.get("referents") or ())
+    values.extend(_prop_values(raw, *_IDENTIFIER_PROPS))
+    return {k for k in (_identifier_key(v) for v in values) if k}
+
+
+def _listing_evidence(target: dict[str, Any], hit: SourceHit) -> dict[str, Any]:
+    """Phase 342: the record's datasets (which lists it is on: ``us_ofac_sdn``,
+    ``eu_fsf``, ``gb_hmt_sanctions`` …) and whether the party matched it on an
+    identifier as well as a name. Read by ``sanctions_ownership``."""
+    out: dict[str, Any] = {}
+    datasets = (hit.raw or {}).get("datasets")
+    if isinstance(datasets, list) and datasets:
+        out["datasets"] = sorted({str(d) for d in datasets if d})
+    mine = set(target.get("identifier_keys") or ())
+    if mine and mine & _hit_identifier_keys(hit):
+        out["identifier_match"] = True
+    return out
 
 
 # ---------------------------------------------------------------------

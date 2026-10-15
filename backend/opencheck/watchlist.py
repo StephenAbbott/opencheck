@@ -103,7 +103,7 @@ RETIRED_SIGNAL_CODES: frozenset[str] = frozenset({"COMPLEX_CORPORATE_STRUCTURE"}
 #: Phase 245's ``verdict_template``. Bump it whenever a rule change moves which
 #: codes fire for an unchanged company, and record the codes it moved below.
 #: A snapshot written before Phase 273 carries no number: it was version 1.
-SIGNAL_RULES = 3
+SIGNAL_RULES = 4
 
 #: version -> the codes whose firing that rules version changed. Comparing a
 #: baseline from an older version, appearances and disappearances of these
@@ -115,6 +115,9 @@ SIGNAL_RULES = 3
 #: 3 = Phase 319: EU_TAX_NON_COOPERATIVE is new, and the subsidiary note
 #: reads Annex I of the EU tax list too, so it can appear for a company with
 #: a subsidiary in, say, Anguilla and nothing else listed.
+#: 4 = Phase 342: the sanctions 50% rule is computed, so a company whose
+#: designated owners hold enough of it gains SANCTIONS_OWNERSHIP_TEST (or the
+#: context SANCTIONS_OWNERSHIP_TEST_POSSIBLE) with nothing in its records changed.
 SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
     2: frozenset(
         {
@@ -125,6 +128,7 @@ SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
         }
     ),
     3: frozenset({"EU_TAX_NON_COOPERATIVE", "SUBSIDIARY_LISTED_JURISDICTION"}),
+    4: frozenset({"SANCTIONS_OWNERSHIP_TEST", "SANCTIONS_OWNERSHIP_TEST_POSSIBLE"}),
 }
 
 

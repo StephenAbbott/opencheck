@@ -1,0 +1,180 @@
+{
+  "meets": {
+    "code": "SANCTIONS_OWNERSHIP_TEST",
+    "confidence": "high",
+    "summary": "Designated parties' stated shareholdings meet the sanctions ownership test for OFAC (US). OFAC (US): meets — 50% held by designated parties directly or through companies they own (Opensanctions); EU and UK: no party designated under them holds shares. Computed by OpenCheck from stated shareholdings, one source at a time; ownership only — the EU and UK control tests are not computed — and not a determination that the company is sanctioned or blocked.",
+    "source_id": "opencheck",
+    "hit_id": "LEI",
+    "evidence": {
+      "method": "sanctions_ownership_test",
+      "as_of": "2026-10-15",
+      "description": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only: the EU and UK control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
+      "not_computed": "Control is not computed: the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement), and OFAC licences and general licences are not read.",
+      "credit": "Method: the 50% rule as published by T-Rank (https://docs.trank.no/white_papers).",
+      "regimes": [
+        {
+          "regime": "OFAC",
+          "label": "OFAC (US)",
+          "rule": "50% or more, held by blocked persons together (OFAC's 50 Percent Rule)",
+          "result": "meets",
+          "if_confirmed": false,
+          "sources": [
+            {
+              "source_id": "opensanctions",
+              "source": "Opensanctions",
+              "result": "meets",
+              "figure": {
+                "minimum": 50.0,
+                "maximum": 50.0,
+                "text": "50%"
+              },
+              "holders": [
+                {
+                  "party": "A",
+                  "name": "Holding A",
+                  "stake": "50%",
+                  "minimum": 50.0,
+                  "maximum": 50.0,
+                  "designated": false,
+                  "held_by": [
+                    {
+                      "name": "Designated P",
+                      "stake": "60%"
+                    }
+                  ]
+                }
+              ],
+              "if_confirmed": false
+            }
+          ]
+        },
+        {
+          "regime": "EU",
+          "label": "EU",
+          "rule": "50% or more of the proprietary rights, held by designated persons together",
+          "result": "no_designated_holder",
+          "if_confirmed": false,
+          "sources": []
+        },
+        {
+          "regime": "UK",
+          "label": "UK",
+          "rule": "more than 50%, held by one designated person directly or through companies it owns (no aggregation across designated persons)",
+          "result": "no_designated_holder",
+          "if_confirmed": false,
+          "sources": []
+        }
+      ],
+      "designated": [
+        {
+          "party": "P",
+          "name": "Designated P",
+          "regimes": [
+            "OFAC"
+          ],
+          "datasets": [
+            "us_ofac_sdn"
+          ],
+          "basis": "identifier"
+        }
+      ],
+      "statement_id": "T"
+    },
+    "kind": "risk"
+  },
+  "possible": {
+    "code": "SANCTIONS_OWNERSHIP_TEST_POSSIBLE",
+    "confidence": "medium",
+    "summary": "Designated parties' stated shareholdings may meet the sanctions ownership test for OFAC (US); it is not met on the lowest reading of the stakes, counting confirmed matches only. OFAC (US): not met — 30% held by designated parties (Opensanctions); it would be met if a name-only match were confirmed; EU and UK: no party designated under them holds shares. Computed by OpenCheck from stated shareholdings, one source at a time; ownership only — the EU and UK control tests are not computed — and not a determination that the company is sanctioned or blocked.",
+    "source_id": "opencheck",
+    "hit_id": "LEI",
+    "evidence": {
+      "method": "sanctions_ownership_test",
+      "as_of": "2026-10-15",
+      "description": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only: the EU and UK control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
+      "not_computed": "Control is not computed: the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement), and OFAC licences and general licences are not read.",
+      "credit": "Method: the 50% rule as published by T-Rank (https://docs.trank.no/white_papers).",
+      "regimes": [
+        {
+          "regime": "OFAC",
+          "label": "OFAC (US)",
+          "rule": "50% or more, held by blocked persons together (OFAC's 50 Percent Rule)",
+          "result": "not_met",
+          "if_confirmed": true,
+          "sources": [
+            {
+              "source_id": "opensanctions",
+              "source": "Opensanctions",
+              "result": "not_met",
+              "figure": {
+                "minimum": 30.0,
+                "maximum": 30.0,
+                "text": "30%"
+              },
+              "holders": [
+                {
+                  "party": "P",
+                  "name": "Designated P",
+                  "stake": "30%",
+                  "minimum": 30.0,
+                  "maximum": 30.0,
+                  "designated": true,
+                  "basis": "identifier"
+                }
+              ],
+              "if_confirmed": true,
+              "name_only": [
+                {
+                  "party": "Q",
+                  "name": "Designated Q"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "regime": "EU",
+          "label": "EU",
+          "rule": "50% or more of the proprietary rights, held by designated persons together",
+          "result": "no_designated_holder",
+          "if_confirmed": false,
+          "sources": []
+        },
+        {
+          "regime": "UK",
+          "label": "UK",
+          "rule": "more than 50%, held by one designated person directly or through companies it owns (no aggregation across designated persons)",
+          "result": "no_designated_holder",
+          "if_confirmed": false,
+          "sources": []
+        }
+      ],
+      "designated": [
+        {
+          "party": "P",
+          "name": "Designated P",
+          "regimes": [
+            "OFAC"
+          ],
+          "datasets": [
+            "us_ofac_sdn"
+          ],
+          "basis": "identifier"
+        },
+        {
+          "party": "Q",
+          "name": "Designated Q",
+          "regimes": [
+            "OFAC"
+          ],
+          "datasets": [
+            "us_ofac_sdn"
+          ],
+          "basis": "name_only"
+        }
+      ],
+      "statement_id": "T"
+    },
+    "kind": "context"
+  }
+}

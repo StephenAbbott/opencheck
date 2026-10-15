@@ -11,6 +11,11 @@
  *
  * Live, the panel recomputes the payload as the network expands. On a saved
  * report it shows the payload frozen with the run, and reads no clock.
+ *
+ * `sanctionsNote` (Phase 342) is the lookup's computed sanctions 50% rule,
+ * one line per regime, read from its signal — said here because the reader
+ * of a shareholding table asks it, and said as a different computation: the
+ * rule counts a caught company's holding in full, these figures multiply.
  */
 
 import type { Holder, IntegratedOwnershipPayload } from "../../lib/integratedOwnership";
@@ -27,10 +32,12 @@ export function IntegratedOwnershipList({
   payload,
   expanding = false,
   readOnly = false,
+  sanctionsNote = "",
 }: {
   payload: IntegratedOwnershipPayload | null;
   expanding?: boolean;
   readOnly?: boolean;
+  sanctionsNote?: string;
 }) {
   const holders = payload?.holders ?? [];
   return (
@@ -81,6 +88,11 @@ export function IntegratedOwnershipList({
         {payload?.description ?? METHOD_DESCRIPTION}
         {payload?.as_of && readOnly ? ` Computed from the sources as they stood on ${payload.as_of}.` : ""}
       </p>
+      {sanctionsNote && (
+        <p data-testid="sanctions-ownership-note" className="mt-2 text-oo-meta text-oo-ink leading-[1.6] max-w-[82ch]">
+          {sanctionsNote}
+        </p>
+      )}
       {expanding && (
         <p role="status" className="mt-1 text-oo-meta text-oo-muted italic">
           Updating as the network expands…

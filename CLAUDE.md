@@ -273,7 +273,7 @@ regression asserts what the engine *finds*. `.github/workflows/findings-regressi
 against the **deployed** API — `/lookup?refresh=true`, then the MCP
 `opencheck_lookup` replay of the same run — for the golden set in
 `backend/findings_golden/` (six curated examples, BP, Shell, Maersk, Bank
-Saderat PLC, ASDA Stores, Regulatory DataCorp, two clean controls). Rules that keep it honest:
+Saderat PLC, ASDA Stores, Regulatory DataCorp, Persia International Bank, two clean controls). Rules that keep it honest:
 
 - **Golden files are lower bounds and shapes, never snapshots.** A genuine
   upstream change is fixed by editing the subject's file in a reviewed PR.
@@ -624,6 +624,7 @@ other labels.
 **Signal codes and colours** (bg / text):
 - `SANCTIONED`, `RELATED_SANCTIONED` → rose (#ffe4e6 / #be123c)
 - `SANCTIONS_CONTROLLED`, `RELATED_SANCTIONS_CONTROLLED` → deep rose (#ffe4e6 / #9f1239) — OpenSanctions `sanction.control`; deliberately the same rose family as SANCTIONED one shade darker, **not** the red of `FATF_BLACK_LIST` (#fee2e2 / #991b1b): an earlier red-50/red-800 pass was indistinguishable from FATF on the rendered share card. Sits between SANCTIONED and SANCTIONS_LINKED in both colour and `SIGNAL_STYLE.severity` (7 / **6** / 3). Chip label mirrors OpenSanctions' own display name, "Sanction ownership or control"; `og_image.py` carries the shorter "Sanction control" because the long form truncates in the share card's fixed-width pill
+- `SANCTIONS_OWNERSHIP_TEST` (Phase 342) → the deep sanction-control rose (`SANCTION_CONTROL_CLASSES`, shared with `SANCTIONS_CONTROLLED`), graph severity 6, mark "50"; `SANCTIONS_OWNERSHIP_TEST_POSSIBLE` → slate context palette, severity 0, mark "50?". Labels name a test ("Sanctions 50% test met" / "…: may meet"), never "Sanctioned"
 - `SANCTIONS_LINKED`, `RELATED_SANCTIONS_LINKED` → amber (#fef3c7 / #b45309)
 - `EXPORT_CONTROLLED`, `RELATED_EXPORT_CONTROLLED` → deep rose (#ffe4e6 / #9f1239), severity **5** — a listing of the party itself, above DEBARMENT (4), below SANCTIONS_CONTROLLED (6). `EXPORT_CONTROL_LINKED` (+related) → amber, severity 3; `EXPORT_RISK` (+related, upstream label "Trade risk") → orange, severity 2. No suppression within the export family — upstream declares no superset relationship (Phase 118)
 - `COUNTER_SANCTIONED`, `RELATED_COUNTER_SANCTIONED` → slate (#f1f5f9 / #334155) — OpenSanctions `sanction.counter`. Deliberately **outside** the rose/amber sanctions ramp, not merely a lighter rose: the Phase 105 failure was a counter-designation by a non-democratic regime reading as a shade of "Sanctioned", and any red or amber reproduces it. Graph `SIGNAL_STYLE.severity` is **2** — below `SANCTIONS_LINKED` (3), inverting the structural ranking on purpose, since the graph stacks worst-severity-wins and a counter-listing must never outrank a signal with an actual compliance consequence. `RiskChip.test.ts` fails the build if either chip's classes match `/rose/` or `/amber/`
@@ -3498,3 +3499,52 @@ decisions on the Phase 340 ticket. Things that will be re-derived otherwise:
   declare no output schema (`test_the_map_tool_declares_no_output_schema`).
 - **Isolation:** risk, verdict, signalstats and narrative must not import
   `owners` (AST guard in `test_owners_phase340.py`).
+
+## The sanctions 50% rule, computed per regime (Phase 342)
+
+`opencheck/sanctions_ownership.py`. Whether the parties a lookup found
+designated hold enough of the company to meet OFAC's, the EU's or the UK's
+*ownership* test, from the shareholdings the sources state. T-Rank's 50% rule
+(Eqs 1–5): sum the designated holdings, mark a company that crosses the
+threshold as caught, let its holdings count **in full** (never multiplied),
+repeat to a fixed point. Stephen's decisions on the Phase 342 ticket:
+
+- **Two codes, defined in `risk.py`.** `SANCTIONS_OWNERSHIP_TEST` (risk) when
+  the **low ends** meet a regime's test with counted parties only;
+  `SANCTIONS_OWNERSHIP_TEST_POSSIBLE` (context) when only the high ends do (a
+  band, an unstated share) or a name-only match would tip it. At most one per
+  lookup; `source_id` "opencheck", `hit_id` the subject, `evidence.statement_id`
+  the subject's anchor statement. Built in both lookup pipelines from the
+  pre-merge signal lists and passed into `_merge_signals`.
+- **Regimes** (`REGIMES`): OFAC ≥50% aggregated (`us_ofac_sdn` only); EU ≥50%
+  aggregated (`eu_fsf`, `eu_journal_sanctions`, `eu_sanctions_map`); UK >50%,
+  one designated person at a time with the companies *it* catches
+  (`gb_hmt_sanctions`, `gb_fcdo_sanctions`). A party counts only for the
+  regimes its datasets name. Exclusive band ends are honoured (`Stake`).
+- **Who counts.** `RELATED_SANCTIONED` from OpenSanctions whose evidence carries
+  `identifier_match` or non-empty `corroboration`. Name-only parties are listed
+  (`name_only`, `if_confirmed`), never summed. The subject's own listing is not
+  an owner.
+- **The cross-check carries what this needs** (`cross_check._listing_evidence`):
+  `datasets` (the hit's OpenSanctions datasets) and `identifier_match` (the
+  party's cluster identifiers — `_pool_identifiers` over every statement of the
+  party — share a value with the hit id, `referents` or an FtM identifier
+  property, normalised, at least 6 characters). Subject-level `SANCTIONED`
+  carries `datasets` too.
+- **What it reads.** Current `shareholding` interests only, per source (never
+  added across sources), GLEIF and MEIP excluded (the Phase 339 lists), one
+  stake per holder per company per source (larger reading, never added). It
+  borrows bundle helpers from `integrated_ownership` but never its multiplied
+  figure (AST test).
+- **Ownership only**: `NOT_COMPUTED` (EU/UK control, OFAC licences) is printed
+  wherever the result is: the chip's table (`SignalEvidence` →
+  `SanctionsOwnershipTable`, `lib/sanctionsOwnership.ts`), the FullCheck
+  integrated-ownership band note, the PDF/Markdown "Sanctions ownership test"
+  section, and `opencheck_owners.sanctions_ownership_test`. Saved reports keep
+  the frozen signal. The verdict clause is risk-code only.
+- `SIGNAL_RULES` is 4 for these codes; golden anchor
+  `findings_golden/persia-international-bank.json` (Bank Mellat >50% per
+  Companies House, matched on its OpenSanctions id). The frontend fixture
+  `lib/sanctionsOwnershipFixture.json` is pinned by the backend test — regenerate
+  it from `_fixture_now()` when the evidence shape changes.
+- `SANCTIONS_CONTROLLED` is unchanged.

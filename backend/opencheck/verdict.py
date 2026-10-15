@@ -43,6 +43,11 @@ _RELATED_SANCTIONS = (
     "RELATED_SANCTIONS_LINKED",
 )
 _SANCTIONS_LINKED = ("SANCTIONS_LINKED",)
+#: Phase 342 — the computed 50% rule. The risk code only; the context
+#: variant (``_POSSIBLE``) never reaches the sentence. Read straight after the
+#: company's own listings: it is arithmetic on its owners' listings, stated as
+#: what the records show, never as "the company is sanctioned".
+_SANCTIONS_OWNERSHIP = ("SANCTIONS_OWNERSHIP_TEST",)
 #: Counter-sanctions are a designation by the *target* of mainstream sanctions
 #: (Phase 105: ``sanction.counter``, slate chip, severity 2). They are kept
 #: out of every sanctions clause on purpose: "records linking it to sanctioned
@@ -92,6 +97,11 @@ _STRUCTURE_CODES = frozenset({"COMPLEX_OWNERSHIP_LAYERS", "GLEIF_REPORTING_EXCEP
 #: confidence is about something else, and they keep one wording.
 _RISK_CLAUSES: tuple[tuple[tuple[str, ...], str, str | None], ...] = (
     (_SUBJECT_SANCTIONS, "sanctions findings on the company itself", None),
+    (
+        _SANCTIONS_OWNERSHIP,
+        "designated parties holding enough of it to meet a sanctions ownership test",
+        None,
+    ),
     (_SUBJECT_EXPORT, "export-control findings on the company itself", None),
     (
         _DEBARMENT,

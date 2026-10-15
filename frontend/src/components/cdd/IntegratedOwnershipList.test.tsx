@@ -51,3 +51,14 @@ describe("IntegratedOwnershipList", () => {
     expect(screen.getByText(/No shareholding is stated/)).toBeTruthy();
   });
 });
+
+describe("IntegratedOwnershipList — the sanctions note (Phase 342)", () => {
+  it("prints the note under the table only when given one", () => {
+    const payload = byName("the Equinor shape: three sources, one stake, three figures never summed");
+    const { unmount } = render(<IntegratedOwnershipList payload={payload} sanctionsNote="Sanctions ownership test, computed separately — OFAC (US): meets." />);
+    expect(screen.getByTestId("sanctions-ownership-note").textContent).toMatch(/OFAC \(US\): meets/);
+    unmount();
+    render(<IntegratedOwnershipList payload={payload} />);
+    expect(screen.queryByTestId("sanctions-ownership-note")).toBeNull();
+  });
+});

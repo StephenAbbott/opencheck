@@ -51,6 +51,7 @@ from .. import lei_successor as _lei_successor
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
 from .. import integrated_ownership as _integrated_ownership
+from .. import sanctions_ownership as _sanctions_ownership
 from ..bods.lifecycle import today_iso as _today_iso
 from .. import listing as _listing
 from .. import form13f as _form13f
@@ -2080,6 +2081,15 @@ async def _lookup_pipeline(
         subject_statement_ids=identity.statement_ids,
         degraded=degraded_dicts,
     )
+    # Phase 342: the sanctions 50% rule, computed per regime from the stated
+    # shareholdings of the parties the screens above found designated.
+    sanctions_ownership_signal = _sanctions_ownership.for_lookup(
+        search_signals + deepen_signals + related,
+        bods_all,
+        identity.statement_ids,
+        subject=ctx.lei,
+        as_of=_today_iso(),
+    )
     merged = _merge_signals(
         search_signals,
         deepen_signals,
@@ -2087,6 +2097,7 @@ async def _lookup_pipeline(
         [s.to_dict() for s in icij_raw],
         sec_signals,
         [consistency_signal] if consistency_signal else [],
+        [sanctions_ownership_signal] if sanctions_ownership_signal else [],
         record_as="lookup",
     )
     # The degradation counters are recorded next to the signal counters for
@@ -2494,12 +2505,20 @@ async def _register_lookup_pipeline(
         subject_statement_ids=identity.statement_ids,
         degraded=degraded_dicts,
     )
+    sanctions_ownership_signal = _sanctions_ownership.for_lookup(
+        search_signals + deepen_signals + related,
+        bods_all,
+        identity.statement_ids,
+        subject=subject,
+        as_of=_today_iso(),
+    )
     merged = _merge_signals(
         search_signals,
         deepen_signals,
         related,
         [s.to_dict() for s in icij_raw],
         [consistency_signal] if consistency_signal else [],
+        [sanctions_ownership_signal] if sanctions_ownership_signal else [],
         record_as="lookup",
     )
     signalstats.record_degraded(degraded_dicts)

@@ -9,6 +9,10 @@ import { sourceList } from "../../lib/vocab";
  *  information, never a warning. One string so the three cannot drift. */
 const CONTEXT_CLASSES = "bg-slate-50 text-slate-700 border-slate-200";
 
+/** The strong rose the sanction-control family wears (Phase 342: shared, so
+ *  the computed 50% test and the publisher's own control topic match). */
+const SANCTION_CONTROL_CLASSES = "bg-rose-100 text-rose-800 border-rose-400 font-semibold";
+
 /**
  * Map a risk signal code to a colour palette + short display label.
  * Codes are stable strings from the backend ``opencheck.risk`` module.
@@ -43,7 +47,19 @@ export const RISK_PRESENTATION: Record<
   // same words in both tools.
   SANCTIONS_CONTROLLED: {
     label: "Sanction ownership or control",
-    classes: "bg-rose-100 text-rose-800 border-rose-400 font-semibold",
+    classes: SANCTION_CONTROL_CLASSES,
+  },
+  // Phase 342: the sanctions 50% rule, computed by OpenCheck per regime from
+  // designated parties' stated shareholdings. The darker sanction-control
+  // rose — it is about ownership by designated parties — and a label that
+  // names a test, never "Sanctioned". The context variant is slate.
+  SANCTIONS_OWNERSHIP_TEST: {
+    label: "Sanctions 50% test met",
+    classes: SANCTION_CONTROL_CLASSES,
+  },
+  SANCTIONS_OWNERSHIP_TEST_POSSIBLE: {
+    label: "Sanctions 50% test: may meet",
+    classes: CONTEXT_CLASSES,
   },
   SANCTIONS_LINKED: {
     label: "Sanctions-linked",
