@@ -37,6 +37,10 @@ _INSTRUCTIONS = (
     "opencheck_register_lookup; call opencheck_export_bods for the full machine-readable ownership "
     "graph in BODS v0.4 (include_subsidiaries=true folds in the GLEIF subsidiary "
     "network), or opencheck_subsidiaries for what the company consolidates. "
+    "To ask who owns a company above a threshold, call opencheck_owners "
+    "(calculated owners per source, declared beneficial owners, and who is in "
+    "both); opencheck_ownership_map draws the structure as an SVG image with a "
+    "text table. "
     "For a list of companies call opencheck_batch_lookup "
     "with up to 20 LEIs and read each row's verdict, counts and degraded flag. "
     "To keep a check as a record the reader can share and verify, call "
@@ -318,6 +322,165 @@ def _integrated_ownership_block(resp: Any) -> dict[str, Any] | None:
     return _integrated_ownership(resp)
 
 
+async def _owners_network(
+    lei: str, depth: int, deepen_top: int, threshold: float | None, rule_name: str | None
+) -> tuple[Any, Any, Any]:
+    """Phase 340: the lookup, the rule for its jurisdiction, then (``depth`` > 1)
+    FullCheck's owner-ward hop on each corporate owner at or above the
+    threshold. Raises HTTPException (lookup) or ValueError (rule)."""
+    from .. import integrated_ownership as _io
+    from .. import owners as _owners
+    from ..routers.expand import _expand_one_layer
+    from ..routers.lookup import _lookup_impl as _lookup
+    from ..subject_profile import subject_statements
+
+    resp = await _lookup(lei=lei, deepen_top=deepen_top)
+    rule = _owners.resolve_rule(resp.jurisdiction, threshold, rule_name)
+    bods = list(resp.bods or [])
+    subject_ids = [
+        s["statementId"] for s in subject_statements(resp.lei or lei, bods)
+        if isinstance(s.get("statementId"), str)
+    ]
+    payload = getattr(resp, "integrated_ownership", None)
+    as_of = (payload or {}).get("as_of") or _owners.default_as_of()
+    if payload is None or payload.get("subject_ids") != subject_ids:
+        payload = _io.compute(bods, subject_ids, as_of, _io.lookup_canon(bods))
+        payload["subject_ids"] = subject_ids
+
+    async def hop(owner_lei: str, anchor: str) -> list[dict[str, Any]]:
+        layer, _signals, _degraded = await _expand_one_layer(owner_lei, anchor)
+        return layer
+
+    net = await _owners.grow(
+        bods, subject_ids, payload, rule, depth, hop, as_of, subject_lei=resp.lei
+    )
+    return resp, net, rule
+
+
+def _depth_error(depth: int) -> dict[str, Any] | None:
+    from .. import owners as _owners
+
+    if not isinstance(depth, int) or not 1 <= depth <= _owners.MAX_DEPTH:
+        return {"error": f"depth must be 1, 2 or {_owners.MAX_DEPTH}", "status": 400}
+    return None
+
+
+@mcp.tool()
+async def opencheck_owners(
+    lei: str,
+    threshold: float | None = None,
+    rule: str | None = None,
+    depth: int = 1,
+    deepen_top: int = 5,
+) -> dict[str, Any]:
+    """Who owns this company above a threshold — calculated and declared.
+
+    Returns three lists:
+    - ``calculated_owners``: every person or company whose integrated ownership
+      of the company (shares multiplied along each path, added across paths)
+      meets the threshold, one figure per source — never added across sources.
+      ``position`` is "above", or "may_be_above" when a band straddles the
+      threshold or a share on the path is not stated (read that as unknown).
+    - ``declared_beneficial_owners``: the people the registers themselves flag
+      as beneficial owners of the company, with the nature of their interest.
+    - ``in_both``: the parties in both lists (same record or register
+      identifier, never a name alone).
+    Plus ``rule`` (the threshold applied, and why), ``chain_stops`` (companies
+    above the threshold whose own owners were not reached) and
+    ``listed_without_a_figure`` (voting rights only, or formerly). Calculated
+    figures are arithmetic on filings, never a determination that anyone is a
+    beneficial owner; nothing here is a risk signal.
+
+    Args:
+        lei: ISO 17442 Legal Entity Identifier (20 chars).
+        threshold: Percentage (0-100). Default: the company's national rule
+            (e.g. Estonia more than 25%, Ukraine 25% or more), or 25% or more
+            where OpenCheck records none.
+        rule: "national" (the jurisdiction's "more than" / "or more" reading)
+            or "amlr" (25% or more, EU AML Regulation 2024/1624). Optional.
+        depth: 1 (default, the lookup's own reach — same cost as
+            opencheck_lookup), 2 or 3: also look up each corporate owner at or
+            above the threshold, up to 10 extra lookups per call.
+        deepen_top: How many top sources to deepen (0-10, default 5).
+    """
+    from .. import identifiers
+    from .. import owners as _owners
+
+    bad = _depth_error(depth)
+    if bad:
+        return bad
+    norm = (lei or "").strip().upper()
+    if not identifiers.LEI_PATH_SHAPE.match(norm):
+        return {"error": f"{norm!r} is not a valid LEI (20-character alphanumeric).", "status": 400}
+    try:
+        resp, net, the_rule = await _owners_network(norm, depth, deepen_top, threshold, rule)
+    except HTTPException as exc:
+        return _err(exc)
+    except ValueError as exc:
+        return {"error": str(exc), "status": 400}
+    return _owners.owners_answer(
+        lei=resp.lei,
+        legal_name=resp.legal_name,
+        jurisdiction=resp.jurisdiction,
+        net=net,
+        rule=the_rule,
+        depth=depth,
+        as_of=net.payload.get("as_of") or _owners.default_as_of(),
+        license_notices=list(resp.license_notices or []),
+    )
+
+
+@mcp.tool()
+async def opencheck_ownership_map(
+    lei: str, source: str | None = None, depth: int = 1, deepen_top: int = 5
+) -> list[Any]:
+    """Map who owns a company: one SVG image plus a text table of every edge.
+
+    Draws the company and every party above it — ownership and control edges
+    from every source, each edge labelled with its source (officers and board
+    roles are left out). Each holder shows its integrated ownership figure, one
+    per source, never added. The JSON part carries the same edges as rows
+    (owner, interest, owned, source, current/ended) and a link to the
+    interactive FullCheck view; the image draws at most 24 edges.
+
+    Args:
+        lei: ISO 17442 Legal Entity Identifier (20 chars).
+        source: Optional — draw one source only (its id, e.g. "companies_house",
+            or its name).
+        depth: 1 (default), 2 or 3 — as opencheck_owners: also look up each
+            corporate owner at or above the company's national threshold.
+        deepen_top: How many top sources to deepen (0-10, default 5).
+    """
+    from mcp.server.fastmcp import Image
+    from mcp.types import TextContent
+
+    from .. import identifiers
+    from .. import owners as _owners
+
+    def _text(obj: dict[str, Any]) -> TextContent:
+        return TextContent(type="text", text=json.dumps(obj, ensure_ascii=False))
+
+    bad = _depth_error(depth)
+    if bad:
+        return [_text(bad)]
+    norm = (lei or "").strip().upper()
+    if not identifiers.LEI_PATH_SHAPE.match(norm):
+        return [_text({"error": f"{norm!r} is not a valid LEI (20-character alphanumeric).", "status": 400})]
+    try:
+        resp, net, _rule = await _owners_network(norm, depth, deepen_top, None, None)
+    except HTTPException as exc:
+        return [_text(_err(exc))]
+    answer, svg = _owners.ownership_map(
+        lei=resp.lei, legal_name=resp.legal_name, net=net, source=source,
+        as_of=net.payload.get("as_of") or _owners.default_as_of(),
+    )
+    answer["license_notices"] = list(resp.license_notices or [])
+    out: list[Any] = [_text(answer)]
+    if svg:
+        out.append(Image(data=svg.encode("utf-8"), format="svg+xml"))
+    return out
+
+
 @mcp.tool()
 async def opencheck_person_check(
     name: str, birth_year: int | None = None
@@ -511,6 +674,8 @@ TOOL_NAMES = [
     "opencheck_batch_lookup",
     "opencheck_export_bods",
     "opencheck_subsidiaries",
+    "opencheck_owners",
+    "opencheck_ownership_map",
     "opencheck_person_check",
     "opencheck_save_report",
     "opencheck_list_sources",

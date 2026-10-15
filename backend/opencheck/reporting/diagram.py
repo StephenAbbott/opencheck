@@ -588,11 +588,21 @@ def _label_svg(wrapped: list[str], style: EdgeStyle, box: Box) -> str:
     )
 
 
-def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
-    layer = _layer_nodes(nodes, edges)
+def _render(
+    nodes: dict,
+    edges: list,
+    source_name: str,
+    *,
+    layer: dict[str, int] | None = None,
+    view_w: int = _VIEW_W,
+) -> tuple[str, str]:
+    """Draw ``nodes`` / ``edges``. ``layer`` (Phase 340, the ownership map)
+    gives each node its column — 0 the subject, rightmost — instead of the
+    longest-path layering, and ``view_w`` widens the canvas for deep maps."""
+    layer = layer if layer is not None else _layer_nodes(nodes, edges)
     max_layer = max(layer.values())
     # Columns: layer 0 (subjects) rightmost.
-    right_x, left_x = 620, 130
+    right_x, left_x = view_w - 140, 130
     span = right_x - left_x
     col_x = {lyr: right_x - (span * lyr / max_layer if max_layer else 0) for lyr in range(max_layer + 1)}
 
@@ -616,7 +626,7 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
             pos[n] = (col_x[lyr], y)
 
     parts: list[str] = [
-        f'<svg viewBox="0 0 {_VIEW_W} {int(height)}" role="img" '
+        f'<svg viewBox="0 0 {view_w} {int(height)}" role="img" '
         f'aria-labelledby="dt ds" xmlns="http://www.w3.org/2000/svg">',
         f'<title id="dt">{escape(source_name)} — ownership and control diagram</title>',
     ]
@@ -647,7 +657,7 @@ def _render(nodes: dict, edges: list, source_name: str) -> tuple[str, str]:
         degree[e["from"]] = degree.get(e["from"], 0) + 1
         degree[e["to"]] = degree.get(e["to"], 0) + 1
     avoid = _node_boxes(pos, nodes)
-    view: Box = (0, 0, _VIEW_W, height - 16)  # clear of the legend row
+    view: Box = (0, 0, view_w, height - 16)  # clear of the legend row
     labels: list[str] = []
     for e in edges:
         (px, py), (sx, sy) = pos[e["from"]], pos[e["to"]]

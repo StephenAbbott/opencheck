@@ -3453,3 +3453,42 @@ decisions on the Phase 339 ticket. Things that will be re-derived otherwise:
   ASDA and Equinor production bundles the two give deep-equal payloads.
 - **Isolation:** `risk.py`, `verdict.py`, `signalstats.py` and `narrative/`
   must not import the module (AST guard test). No threshold, no highlighting.
+
+## Question-shaped MCP tools: opencheck_owners and opencheck_ownership_map (Phase 340)
+
+`opencheck/owners.py` (pure, apart from the injected hop) + two tools in
+`mcp/server.py`. Item D of the T-Rank research ticket; Stephen's seven
+decisions on the Phase 340 ticket. Things that will be re-derived otherwise:
+
+- **Three lists, never "the beneficial owner".** `calculated_owners` reads the
+  Phase 339 `integrated_ownership` payload (per source, never added);
+  `declared_beneficial_owners` reads `beneficialOwnershipOrControl: true` on a
+  relationship *with the subject* only; `in_both` matches on the canonical node
+  from `party_canon` — `io.lookup_canon` for entities plus people who share a
+  register identifier (scheme + id). Never a name.
+- **Positions.** `above` when the figure's low end passes the rule;
+  `may_be_above` when the band straddles it, the high end is unknown, or no size
+  is stated (min is None). A band wholly below is left out. Voting-only and
+  formerly holders go to `listed_without_a_figure`.
+- **The rule** (`resolve_rule`): the subject jurisdiction's `bo_register`
+  regime in `bo_regimes.py` (exact subdivision first, then the country), its
+  operator kept even when the caller sets `threshold`; else ">= 25" with the
+  text saying no national rule is recorded. `rule="amlr"` forces ">=";
+  `rule="national"` with no regime is a 400, not a silent fallback.
+- **Depth** (`grow`): 1 = the lookup's reach; 2–3 run
+  `routers.expand._expand_one_layer` on each corporate owner at or above the
+  threshold **that has an LEI** (register-number hops are not followed — the
+  chain stop says "no LEI to follow"), anchored on the lookup canon id, at most
+  `MAX_HOPS` (10) per call, then recompute the integrated payload. A failed hop
+  is a `chain_stops` reason, never an exception. A `state` / `stateBody` entity
+  is the top of its chain, not a stop.
+- **The map** draws current ownership/control edges only (roles left out,
+  ended edges in the table only), one column per BFS distance from the subject
+  (`diagram._render(layer=…, view_w=…)` — the two keyword arguments are
+  Phase 340's; the default call is unchanged), at most `MAP_MAX_EDGES` (16),
+  each edge's last label line its source. MCP returns `[TextContent(json),
+  Image(svg, "svg+xml")]`; PNG would need a new rasteriser (decision 4: later).
+- Both tools are on the lookup tier in `mcp/guard.py`; extra hops are charged
+  to the shared lookup budget by `_lookup_impl` itself.
+- **Isolation:** risk, verdict, signalstats and narrative must not import
+  `owners` (AST guard in `test_owners_phase340.py`).
