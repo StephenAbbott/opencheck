@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 344** — a "New features" band on the homepage, three illustrated cards for the sanctions 50% test, the ownership map over MCP and the watchlist, in place of the "Screen a list" box.
+**Latest: Phase 345** — /features scrolls to the section its address names once drawn, so the homepage's watchlist card lands on the Watchlist section.
 
 → [Full development history](docs/status.md)
 
