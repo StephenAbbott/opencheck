@@ -9,7 +9,7 @@
       "method": "sanctions_ownership_test",
       "as_of": "2026-10-15",
       "description": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only: the EU and UK control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
-      "not_computed": "Control is not computed: the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement), and OFAC licences and general licences are not read.",
+      "not_computed": "Not computed: control — the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement); OFAC licences and general licences; holdings that have ended — OFAC treats property blocked while the test was met as still blocked after the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck reads current holdings only; programmes that block on ownership or control by a government without a 50% test (Cuba, Iran, North Korea, Syria, Venezuela and Crimea, FAQ 398); and OFAC's Sectoral Sanctions Identifications list, which is outside this test.",
       "credit": "Method: the 50% rule as published by T-Rank (https://docs.trank.no/white_papers).",
       "regimes": [
         {
@@ -92,7 +92,7 @@
       "method": "sanctions_ownership_test",
       "as_of": "2026-10-15",
       "description": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only: the EU and UK control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
-      "not_computed": "Control is not computed: the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement), and OFAC licences and general licences are not read.",
+      "not_computed": "Not computed: control — the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement); OFAC licences and general licences; holdings that have ended — OFAC treats property blocked while the test was met as still blocked after the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck reads current holdings only; programmes that block on ownership or control by a government without a 50% test (Cuba, Iran, North Korea, Syria, Venezuela and Crimea, FAQ 398); and OFAC's Sectoral Sanctions Identifications list, which is outside this test.",
       "credit": "Method: the 50% rule as published by T-Rank (https://docs.trank.no/white_papers).",
       "regimes": [
         {

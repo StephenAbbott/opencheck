@@ -250,7 +250,7 @@ def test_the_evidence_says_how_it_is_computed():
     ev = sig["evidence"]
     assert ev["method"] == "sanctions_ownership_test" and ev["as_of"] == AS_OF
     assert "control tests are not computed" in ev["description"]
-    assert "not computed" in ev["not_computed"]
+    assert "Not computed: control" in ev["not_computed"]
     assert "T-Rank" in ev["credit"]
     assert ev["statement_id"] == "T"
     assert "not a determination that the company is sanctioned" in sig["summary"]
@@ -363,7 +363,7 @@ def test_the_owners_answer_carries_the_test():
     assert block["finding"] == SANCTIONS_OWNERSHIP_TEST
     ofac = block["regimes"][0]
     assert ofac["regime"] == "OFAC" and ofac["result"] == "meets"
-    assert "not computed" in block["not_computed"]
+    assert "Not computed: control" in block["not_computed"]
     assert sanctions_ownership_block([]) is None
 
 
