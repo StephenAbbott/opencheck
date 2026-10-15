@@ -21,6 +21,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .. import __version__
+from .. import consistency as _consistency
 from ..bods import (
     aml_ai_counts,
     build_aml_ai_files,
@@ -205,7 +206,12 @@ async def export(
     # per id; this is the export's own guarantee, whatever path built the
     # payload. A fresh copy, so the shared replay cache is never mutated.
     unique = unique_statements(payload.bods)
-    if len(unique) != len(payload.bods):
+    # Phase 337: each record-consistency disagreement the run showed travels
+    # with the bundle as a ``commenting`` annotation on both statements, read
+    # off the frozen RECORD_CONSISTENCY signal (so a saved report exports what
+    # its run said). The touched statements are copies; the cache is untouched.
+    unique = _consistency.annotate_disagreements(unique, payload.risk_signals)
+    if unique is not payload.bods:
         payload = payload.model_copy(update={"bods": unique})
     # Phase 267: say how much of the bundle ships with no source OpenCheck can
     # name — and so no licence attribution — instead of letting it fail open.

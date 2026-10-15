@@ -36,6 +36,7 @@ Rules, each one a decision (Stephen, 24 Sept 2026):
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 #: GLEIF LEI-CDF ``RegistrationStatus`` → the word a reader sees. The labels
@@ -261,3 +262,46 @@ def declared_sentence(raw: str | None, reg: dict[str, Any]) -> str:
         if updated:
             first += f" GLEIF last updated the record on {format_date(updated)}."
     return f"{first} This is not a current register reading."
+
+
+# ---------------------------------------------------------------------------
+# Phase 337: the registration status, read back off the GLEIF statement
+# ---------------------------------------------------------------------------
+#
+# The lookup pipeline holds the registration block on ``ctx.lei_registration``;
+# the BODS statement holds only the Phase 255 annotation — the :func:`sentence`
+# for any status other than ISSUED, pinned at ``/recordDetails``. The
+# record-consistency check works on statements alone, so it reads the status
+# back from that sentence: a GLEIF ACTIVE on an LEI no issuer maintains is the
+# last thing the company declared, not a current reading, and must not be a
+# side of the liveness comparison (the 15 Oct 2026 reading of
+# ``/consistencystats``, finding 1).
+
+_SENTENCE_RE = re.compile(r"^GLEIF records this LEI as (?P<label>[a-z ]+?)(?:[:.]|$)")
+_STATUS_BY_LABEL: dict[str, str] = {label.lower(): status for status, label in LABELS.items()}
+
+
+def registration_status_from_statement(stmt: dict[str, Any]) -> str | None:
+    """The LEI registration status a GLEIF entity statement carries, or ``None``.
+
+    ``None`` means the statement says nothing about it — which is what an
+    ISSUED LEI looks like, since the mapper annotates only a status that is
+    not ISSUED (Phase 255), and what every non-GLEIF statement looks like.
+    Absence is never read as a lapse.
+    """
+    for annotation in stmt.get("annotations") or []:
+        if not isinstance(annotation, dict):
+            continue
+        if annotation.get("motivation") != "commenting":
+            continue
+        m = _SENTENCE_RE.match(str(annotation.get("description") or ""))
+        if m:
+            return _STATUS_BY_LABEL.get(m.group("label").strip())
+    return None
+
+
+def statement_entity_status_is_declared(stmt: dict[str, Any]) -> bool:
+    """True when the statement's GLEIF entity status is no longer re-checked
+    by an issuer — the statement-level form of :func:`entity_status_is_declared`."""
+    status = registration_status_from_statement(stmt)
+    return bool(status) and status not in MAINTAINED

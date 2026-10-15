@@ -3330,3 +3330,51 @@ beneficial owner.** Things that will be re-derived otherwise:
   twenty. The disclaimer, caveat and attribution are always visible. The
   frontend `BANNED_VOCABULARY` is parsed by `tests/test_form13f.py` — change
   both together.
+
+## Records compared — the one observation the consistency check makes (Phase 337)
+
+Phase D of the record-consistency plan (Notion: *Semantic Discrepancy & Conflict
+Flagging*), built after the 15 Oct 2026 reading of `/consistencystats` met the
+gate agreed in advance (two weeks of persisted traffic, 41,100 lookups). The
+rules, each a decision Stephen took and not to be reopened:
+
+- **One `RECORD_CONSISTENCY` signal per lookup, `kind="context"`, about the
+  subject.** `consistency.build_signal` reads the referent group the subject's
+  statements fell into (`subject_identity`), never an owner's. Keyed in
+  `_merge_signals` on `(code, "opencheck", subject)`. Never a risk chip, never
+  in a verdict risk clause (`test_consistency_phase337` pins it), never on the
+  share card (by `kind`), never a graph badge (`signalScope.ts` stays
+  `RELATED_*`-only; the evidence uses keys the badge map does not read:
+  `items[]`, `subject_statements`).
+- **What is said is what the counters proved.** `consistency_allowlist.py` is
+  generated from a named reading (`READING`) and pinned by a test — liveness
+  for the fifteen register↔GLEIF pairs under 10 % plus `anaf|onrc`, jurisdiction
+  for every pair with twenty decided comparisons. `founding_date` and
+  `identifier_clash` are counted and logged, not shown. Change the lists by
+  re-reading the endpoint and editing the module, never by consulting the live
+  counters at request time.
+- **The sentence is a finding** (`findings.py` rules): "Four sources describe
+  this entity (three independent). They agree on jurisdiction. One
+  disagreement: UK Companies House records the register status as dissolved
+  (since 3 Apr 2019); GLEIF records ACTIVE. OpenCorporates did not answer, so
+  its records were not compared." Agreement is said so silence never reads as
+  clean; a `mirror` is never "two sources agree"; the register's own word is
+  used where it wrote one (`said` in the evidence). Chip label "Records
+  compared" — never "Conflict"; the chip names what was done.
+- **GLEIF's ACTIVE on an unmaintained LEI is not a current status.**
+  `_extract_liveness` returns `None` for a GLEIF `live` whose registration is
+  not in `lei_registration.MAINTAINED`, read back off the Phase 255 annotation
+  (`registration_status_from_statement`). INACTIVE stays terminal (Phase 242).
+- **Romanian numbers have one form** (`_canonical_identifier`): an all-digit
+  value under `RO-ONRC` is the CUI an issuer filed under RA000497 (GLEIF, live
+  sample 15 Oct 2026); a J-number is compared on `onrc_romania.prefix_for`'s
+  13-character prefix; `RO-CUI` drops the `RO` VAT prefix.
+- **The identifier gate has a denominator.** `consistencystats` counts
+  `compared` per source pair (`_compared` rows in the same table), served top
+  level and as `compared` / `disagree_per_compared` on every row.
+- **Export:** `consistency.annotate_disagreements` puts each shown `disagree`
+  on both statements as a `commenting` annotation, read off the frozen signal
+  (a saved report exports what its run said); touched statements are copies.
+- Docs: `docs/record-consistency.md` (the user-facing page), `docs/sources.md`
+  § Record consistency, `docs/risk-signals.md`. The readings live on the Notion
+  plan's child page.

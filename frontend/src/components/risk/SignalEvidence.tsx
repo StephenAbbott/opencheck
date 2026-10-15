@@ -43,6 +43,7 @@ import {
   splitEvidenceSources,
   type SignalEvidenceData,
 } from "../../lib/signalEvidence";
+import { recordConsistencyRows } from "../../lib/recordConsistency";
 import { sourceLabel } from "../../lib/vocab";
 
 export function SignalEvidence({
@@ -90,6 +91,62 @@ export function SignalEvidence({
           sentence — "From OpenSanctions. From EveryPolitician." read as two
           findings about the same party. */}
       {attribution && <span className="text-oo-muted"> {attribution}</span>}
+      <RecordConsistencyTable lead={lead} sourceNames={sourceNames} />
     </div>
+  );
+}
+
+/**
+ * The per-field table behind a "Records compared" chip (Phase 337).
+ *
+ * One row per comparison the signal says — field, source A and its value,
+ * source B and its value — so a reader can see which two records the
+ * sentence is about. Renders nothing for any other signal, and nothing when
+ * the evidence carries no rows (two sources, nothing comparable between
+ * them: the sentence already says so). Agreements are listed with the
+ * disagreements, in the same voice: the table says what was compared, not
+ * only what differed.
+ */
+function RecordConsistencyTable({
+  lead,
+  sourceNames,
+}: {
+  lead: SignalEvidenceData;
+  sourceNames?: Record<string, string>;
+}) {
+  const rows = recordConsistencyRows(lead.signal);
+  if (rows.length === 0) return null;
+  return (
+    <table className="mt-2.5 w-full text-oo-meta leading-snug">
+      <caption className="sr-only">Records compared, by field</caption>
+      <thead>
+        <tr className="text-left text-oo-muted">
+          <th scope="col" className="pr-3 pb-1 font-medium">Field</th>
+          <th scope="col" className="pr-3 pb-1 font-medium">Source</th>
+          <th scope="col" className="pr-3 pb-1 font-medium">Value</th>
+          <th scope="col" className="pr-3 pb-1 font-medium">Source</th>
+          <th scope="col" className="pb-1 font-medium">Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr
+            key={row.key}
+            className={`border-t border-oo-rule align-top ${row.relation === "disagree" ? "font-medium" : ""}`}
+          >
+            <td className="pr-3 py-1">{row.fieldLabel}</td>
+            <td className="pr-3 py-1">{sourceLabel(row.sourceA, sourceNames)}</td>
+            <td className="pr-3 py-1">{row.valueA}</td>
+            <td className="pr-3 py-1">{sourceLabel(row.sourceB, sourceNames)}</td>
+            <td className="py-1">
+              {row.valueB}
+              {row.relation === "disagree" && (
+                <span className="sr-only"> (the two sources differ)</span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

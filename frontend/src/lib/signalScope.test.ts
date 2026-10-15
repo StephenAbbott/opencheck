@@ -166,6 +166,29 @@ describe("scopeCrossSourceSignals", () => {
     expect(scopeCrossSourceSignals([sanctioned, layers], bundle)).toEqual([]);
   });
 
+  it("never scopes RECORD_CONSISTENCY to a node (Phase 337 — panel and export only)", () => {
+    // Decided on the plan before Phase D was built: no graph badge. The
+    // signal's evidence names the compared statements under its own keys,
+    // none of which the badge map reads, and the RELATED_* predicate keeps it
+    // out even if it did.
+    const compared = signal("RECORD_CONSISTENCY", {
+      items: [
+        {
+          field: "liveness",
+          relation: "disagree",
+          sources: ["companies_house", "gleif"],
+          statement_ids: ["in-bundle-1", "in-bundle-2"],
+          values: ["terminal", "live"],
+        },
+      ],
+      subject_statements: ["in-bundle-1", "in-bundle-2"],
+    });
+    expect(isCrossSourceSignal(compared)).toBe(false);
+    expect(signalStatementIds(compared)).toEqual([]);
+    expect(scopeCrossSourceSignals([compared], bundle)).toEqual([]);
+    expect(buildSignalMap([compared]).size).toBe(0);
+  });
+
   it("keeps only the matching subset of a mixed top-level list", () => {
     const keep = signal("RELATED_PEP", { subject_statement_id: "in-bundle-2" });
     const dropWrongBundle = signal("RELATED_PEP", { subject_statement_id: "elsewhere" });

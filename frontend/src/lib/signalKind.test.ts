@@ -145,3 +145,15 @@ describe("groupNetworkSignals (Phase 250)", () => {
     expect(debar.lead.confidence).toBe("high");
   });
 });
+
+describe("RECORD_CONSISTENCY (Phase 337)", () => {
+  it("is a context observation and never counts as a risk finding", () => {
+    const compared = sig("RECORD_CONSISTENCY", "context");
+    expect(signalKind(compared)).toBe("context");
+    expect(isContextObservation(compared)).toBe(true);
+    expect(riskFindingCount([compared, sig("OFFSHORE_LEAKS")])).toBe(1);
+    const [risk, context] = partitionByKind([compared]);
+    expect(risk).toEqual([]);
+    expect(context).toEqual([compared]);
+  });
+});

@@ -98,6 +98,16 @@ export const RISK_PRESENTATION: Record<
     label: "Outside EU/EEA",
     classes: CONTEXT_CLASSES,
   },
+  // Context, not risk (Phase 337 — Phase D of the record-consistency plan).
+  // "Records compared", never "Conflict": the chip names what was done, not
+  // a verdict. The sentence says how many sources describe the entity, what
+  // they agree on and each disagreement with both values; the expansion adds
+  // the per-field table (SignalEvidence → RecordConsistencyTable). Only
+  // comparisons that passed the measured /consistencystats gate are in it.
+  RECORD_CONSISTENCY: {
+    label: "Records compared",
+    classes: CONTEXT_CLASSES,
+  },
   // Context, not risk (Phase 273): subsidiaries in FATF- or EU-listed
   // jurisdictions (the EU tax list too, since Phase 319). Until Phase 273 they fired the red list chips themselves,
   // worded as the company's ownership chain.
