@@ -103,6 +103,7 @@ export default function BodsGraphExplorer({
   focusStatementId = null,
   readOnly = false,
   onNetworkChange,
+  ownershipByNode,
 }: {
   statements: unknown[];
   signals?: RiskSignal[];
@@ -129,7 +130,15 @@ export default function BodsGraphExplorer({
    *  every expanded layer, and the raw ownership edges — whenever it changes.
    *  The FullCheck panel reads the jurisdictions on the upward path from it;
    *  this component composes nothing about them. */
-  onNetworkChange?: (statements: Stmt[], edges: EdgeLite[], expanding: boolean) => void;
+  onNetworkChange?: (
+    statements: Stmt[],
+    edges: EdgeLite[],
+    expanding: boolean,
+    remap?: Record<string, string>,
+  ) => void;
+  /** Phase 339 (FullCheck): node id → integrated ownership in words, shown
+   *  on each row of the text tree. */
+  ownershipByNode?: Map<string, string>;
 }) {
   // Layers revealed via progressive discovery, merged onto the base statement set.
   const [extra, setExtra] = useState<Stmt[]>([]);
@@ -218,8 +227,8 @@ export default function BodsGraphExplorer({
   // the path" list follows every expansion.
   const busy = expanding || running;
   useEffect(() => {
-    onNetworkChange?.(allStatements, rawEdges, busy);
-  }, [allStatements, rawEdges, busy, onNetworkChange]);
+    onNetworkChange?.(allStatements, rawEdges, busy, recon?.remap);
+  }, [allStatements, rawEdges, busy, onNetworkChange, recon]);
 
   const [collapsed, setCollapsed] = useState<Set<string>>(() => autoCollapse(baseModel));
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -851,6 +860,7 @@ export default function BodsGraphExplorer({
               onToggleCollapse={toggleTreeCollapse}
               entityName={entityName}
               signalsByNode={signalMap}
+              ownershipByNode={ownershipByNode}
             />
           </div>
         </details>

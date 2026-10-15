@@ -54,6 +54,7 @@ export default function BodsTree({
   onToggleCollapse,
   entityName,
   signalsByNode,
+  ownershipByNode,
 }: {
   rows: TreeRow[];
   selectedId: string | null;
@@ -64,6 +65,9 @@ export default function BodsTree({
    *  canvas badges read). Without it a row would say nothing about a party the
    *  graph has drawn a risk badge on — the equivalent would be incomplete. */
   signalsByNode?: Map<string, RiskSignal[]>;
+  /** Phase 339 (FullCheck only): node id → its integrated ownership of the
+   *  subject in words, per source. Context, never a signal. */
+  ownershipByNode?: Map<string, string>;
 }) {
   const [active, setActive] = useState(0);
   const rowEls = useRef<(HTMLDivElement | null)[]>([]);
@@ -224,6 +228,19 @@ export default function BodsTree({
             {row.interestLabel && (
               <span className="flex-shrink-0 text-oo-meta text-oo-muted truncate max-w-[40%]">
                 {interestCellText(row.interestLabel, row.interestEnded, row.interestEndedOn)}
+              </span>
+            )}
+
+            {/* Phase 339: integrated ownership of the subject, per source —
+                the band under the graph in a few words, so the figure is not
+                only in a table the tree reader has to find. */}
+            {ownershipByNode?.get(row.id) && (
+              <span
+                data-testid="tree-integrated-ownership"
+                className="flex-shrink-0 text-oo-meta text-oo-muted truncate max-w-[30%]"
+              >
+                <span className="sr-only">Integrated ownership: </span>
+                {ownershipByNode.get(row.id)}
               </span>
             )}
 

@@ -50,6 +50,8 @@ from .. import lei_registration as _lei_registration
 from .. import lei_successor as _lei_successor
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
+from .. import integrated_ownership as _integrated_ownership
+from ..bods.lifecycle import today_iso as _today_iso
 from .. import listing as _listing
 from .. import form13f as _form13f
 from .. import ra_codes as _ra_codes
@@ -441,6 +443,15 @@ class ReportResponse(BaseModel):
     #: it client-side as it expands. Describes, never judges. None for a
     #: payload recorded before this field existed.
     knowability_chain: dict[str, Any] | None = None
+    #: Integrated ownership along the path (Phase 339): for every party
+    #: above the subject, how much of it that party holds directly and
+    #: through companies it holds, one figure per source, never added across
+    #: sources (``opencheck.integrated_ownership``). ``holders[]`` with
+    #: ``status`` (current / voting_rights_only / formerly) and ``figures[]``,
+    #: plus ``method``, ``description``, ``credit`` and ``as_of`` — frozen at
+    #: run time. Context only: no threshold, never a signal. None for a
+    #: payload recorded before this field existed.
+    integrated_ownership: dict[str, Any] | None = None
     #: The subject's primary stock-exchange listing (Phase 236), from LSEG
     #: PermID: ``status`` ("listed" / "not_listed" / "unavailable"),
     #: ``quote`` (ticker, MIC, RIC, security name, PermID ids), ``exchange``
@@ -1952,6 +1963,13 @@ async def _lookup_pipeline(
     # FullCheck view extends it client-side after each /expand-layer through
     # GET /knowability; a saved report shows this, the run's own depth.
     yield ("knowability_chain", knowability_chain_for_lei(ctx.lei, bods_all))
+    # Phase 339: integrated ownership of each party above the subject, per
+    # source — a context figure, never read by the risk engine. Frozen with
+    # its ``as_of`` so a saved report replays the figures of the day it ran.
+    yield (
+        "integrated_ownership",
+        _integrated_ownership.for_lookup(ctx.lei, bods_all, _today_iso()),
+    )
 
     yield (
         "possibly_same_entities",
@@ -2394,6 +2412,10 @@ async def _register_lookup_pipeline(
         {"profile": build_subject_profile(subject, bods_all)},
     )
     yield ("knowability_chain", knowability_chain_for_lei(subject, bods_all))
+    yield (
+        "integrated_ownership",
+        _integrated_ownership.for_lookup(subject, bods_all, _today_iso()),
+    )
     yield (
         "possibly_same_entities",
         {"pairs": [p.to_dict() for p in possibly_same_entities(bods_all)]},

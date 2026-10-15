@@ -256,6 +256,12 @@ async def opencheck_export_bods(
             and ultimate children, accounting consolidation) — the same merge as
             ``GET /export?subsidiaries=true``. Off by default: a large group adds
             hundreds of statements.
+
+    For ``json`` / ``jsonl`` the result also carries ``integrated_ownership``:
+    each party above the subject with how much of it that party holds,
+    directly and through companies it holds, one figure per source and never
+    added across sources (T-Rank's integrated-ownership method). Context, not
+    a risk finding — no threshold is applied.
     """
     from ..bods import map_to_ftm, map_to_senzing
     from ..gleif_throttle import discretionary as gleif_discretionary
@@ -297,9 +303,19 @@ async def opencheck_export_bods(
         "statement_count": len(resp.bods),
         "subsidiary_statement_count": subsidiary_statements,
         "statements": statements,
+        # Phase 339: each party above the subject with its integrated
+        # ownership, per source — context, never a signal. The same figures
+        # ride in the statements as a ``commenting`` annotation on the subject.
+        "integrated_ownership": _integrated_ownership_block(resp),
         "bods_issues": resp.bods_issues,
         "license_notices": resp.license_notices,
     }
+
+
+def _integrated_ownership_block(resp: Any) -> dict[str, Any] | None:
+    from .shaping import _integrated_ownership
+
+    return _integrated_ownership(resp)
 
 
 @mcp.tool()

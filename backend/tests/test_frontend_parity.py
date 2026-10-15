@@ -13,6 +13,10 @@ backend objects, so a change on either side alone fails here.
 * ``frontend/src/lib/historyMode.ts`` ↔ ``opencheck/timeline/`` (Phase 190)
 * ``frontend/src/lib/relationshipStatus.ts`` ↔ ``opencheck/bods/lifecycle.py`` (Phase 219)
 * ``frontend/src/lib/bodsRefs.ts`` ↔ ``opencheck/bods/refs.py`` (Phase 210)
+* ``frontend/src/lib/integratedOwnership.ts`` / ``ownershipMath.ts`` ↔
+  ``opencheck/integrated_ownership.py`` / ``ownership_math.py`` (Phase 339) —
+  the tables and words; the behaviour is pinned by the shared case table
+  ``integratedOwnershipCases.json``, which both sides run.
 """
 
 from __future__ import annotations
@@ -23,6 +27,7 @@ from pathlib import Path
 
 import pytest
 
+from opencheck import integrated_ownership, ownership_math
 from opencheck.bods import lifecycle, refs
 
 _BACKEND = Path(__file__).resolve().parents[1]
@@ -192,3 +197,48 @@ def test_the_same_id_fallbacks_are_read() -> None:
     assert "s.recordType ?? s.statementType" in src
     resolve = refs.resolver([{"statementType": "entityStatement", "statementID": "legacy"}])
     assert resolve("legacy") == "legacy"
+
+
+# ---------------------------------------------------------------------------
+# integratedOwnership.ts ↔ opencheck/integrated_ownership.py (Phase 339)
+# ---------------------------------------------------------------------------
+
+
+def _ts_strings(src: str, name: str) -> str:
+    """The value of a TS string constant written as one or more "…" pieces
+    joined by ``+``."""
+    m = re.search(rf"export const {name}\s*=\s*(.*?);\n", src, re.S)
+    assert m, name
+    return "".join(json_loads_str(p) for p in re.findall(r'"(?:[^"\\]|\\.)*"', m.group(1)))
+
+
+def json_loads_str(piece: str) -> str:
+    import json
+
+    return json.loads(piece)
+
+
+def test_integrated_ownership_excludes_the_same_sources() -> None:
+    src = _ts("integratedOwnership.ts")
+    ids = _string_list(src, r"EXCLUDED_SOURCES\s*=\s*new Set\(\[(.*?)\]\)")
+    descs = _string_list(src, r"EXCLUDED_DESCRIPTIONS\s*=\s*new Set\(\[(.*?)\]\)")
+    assert set(ids) == set(integrated_ownership.EXCLUDED_SOURCES)
+    assert set(descs) == set(integrated_ownership.EXCLUDED_DESCRIPTIONS)
+
+
+def test_integrated_ownership_says_the_same_words() -> None:
+    src = _ts("integratedOwnership.ts")
+    assert _ts_strings(src, "METHOD_DESCRIPTION") == integrated_ownership.METHOD_DESCRIPTION
+    assert _ts_strings(src, "METHOD_CREDIT") == integrated_ownership.METHOD_CREDIT
+    assert _ts_strings(src, "METHOD_URL") == integrated_ownership.METHOD_URL
+    for status, words in integrated_ownership.STATUS_WORDS.items():
+        assert f'{status}: "{words}"' in src, status
+
+
+def test_ownership_math_gives_the_same_reasons() -> None:
+    src = _ts("ownershipMath.ts")
+    for reason, words in ownership_math.REASON_WORDS.items():
+        assert f'"{reason}"' in src, reason
+        assert f'"{words}"' in src, words
+    assert f"MAX_ITERATIONS = {ownership_math.MAX_ITERATIONS};" in src
+    assert f"TOLERANCE = {ownership_math.TOLERANCE:g};" in src

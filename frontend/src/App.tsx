@@ -141,6 +141,7 @@ export default function App() {
     form13f,
     registerRecord,
     knowabilityChain,
+    integratedOwnership,
     riskSignals,
     degradedSources,
     verdict,
@@ -1311,6 +1312,7 @@ export default function App() {
                     focusStatementId={focusStatementId}
                     savedStatements={savedNetwork}
                     knowabilityChain={knowabilityChain}
+                    integratedOwnership={integratedOwnership}
                     onOpenSubsidiaries={() => selectMode("subsidiaries")}
                     onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
                     onPanelRecovered={(panel) =>

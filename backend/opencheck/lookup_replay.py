@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Iterable, NamedTuple
 from fastapi import HTTPException
 
 from . import (
+    integrated_ownership as _integrated_ownership,
     listing as _listing,
     lookup_budget as _lookup_budget,
     pipelinestats as _pipelinestats,
@@ -534,6 +535,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     subject_profile: dict[str, Any] | None = None
     knowability: dict[str, Any] | None = None
     knowability_chain: dict[str, Any] | None = None
+    integrated: dict[str, Any] | None = None
     listing: dict[str, Any] | None = None
     form13f: dict[str, Any] | None = None
     oa_screening: list[dict[str, Any]] = []
@@ -586,6 +588,8 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             knowability = payload
         elif event == "knowability_chain":
             knowability_chain = payload
+        elif event == "integrated_ownership":
+            integrated = payload
         elif event == "listing":
             listing = payload
         elif event == "form13f":
@@ -618,7 +622,12 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         # Phase 236: the primary listing goes onto the subject's GLEIF entity
         # statement here, from the frozen event — so a saved report's export
         # carries the listing that was true on the day it ran.
-        bods=_listing.apply_to_bods(unique_statements(bods_all), norm_lei, listing),
+        # Phase 339: the integrated-ownership figures ride as one
+        # ``commenting`` annotation on the subject, from the frozen event.
+        bods=_integrated_ownership.apply_to_bods(
+            _listing.apply_to_bods(unique_statements(bods_all), norm_lei, listing),
+            integrated,
+        ),
         bods_issues=bods_issues,
         license_notices=license_notices,
         possibly_same_entities=same_pairs,
@@ -630,6 +639,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         subject_profile=subject_profile,
         knowability=knowability,
         knowability_chain=knowability_chain,
+        integrated_ownership=integrated,
         listing=listing,
         form13f=form13f,
         register_record=register_record,

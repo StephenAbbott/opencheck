@@ -3410,3 +3410,46 @@ decisions on the Phase 338 ticket. Things that will be re-derived otherwise:
   narratives quote summaries — regenerate all six after deploy.
 - `integrated_ownership` is written for reuse (the FullCheck path figure is a
   separate ticket) and is wired nowhere else in this phase.
+
+## Integrated ownership along the path — context, never a signal (Phase 339)
+
+`opencheck/integrated_ownership.py` (statements in, a JSON payload out) on top
+of `ownership_math.py`, mirrored by `frontend/src/lib/integratedOwnership.ts` +
+`ownershipMath.ts`. Item B of the T-Rank research ticket; Stephen's five
+decisions on the Phase 339 ticket. Things that will be re-derived otherwise:
+
+- **Shareholding interests only** (decision 1). `votingRights`-only paths list
+  the party as `voting_rights_only` with no figure; roles and
+  `otherInfluenceOrControl` are not read. Phase 338's STATE_CONTROLLED still
+  falls back to a voting share — deliberately left as it is.
+- **Per source, never across sources.** The source key is
+  `source.opencheckSourceId`, else the description. Two sources reaching one
+  party give two figures, side by side. `EXCLUDED_SOURCES` (gleif,
+  bods_gleif, meip) and their legacy descriptions never contribute.
+- **Rows are canonical nodes.** Backend: `lookup_canon` (entity
+  `referent_groups`, people not merged). FullCheck: the `reconcileBods` remap,
+  passed up through `onNetworkChange`'s new fourth argument, so people merge
+  there on name + DOB. The subject is every statement carrying the LEI (or the
+  frozen `subject_ids` for a register-anchored run), collapsed to one node.
+- **Ended** = `bods.lifecycle.interest_ended` at `as_of`. An ended-only party
+  is `formerly`, no figure. `as_of` is frozen in the `integrated_ownership`
+  event; a saved report shows the frozen payload and reads no clock. Live
+  FullCheck recomputes with `todayIso()` as the network expands.
+- **Single-owner give-back** (added to `_solve`): a holding returning *into*
+  a lone owner from a company it holds is that owner's own share coming back,
+  so the target is divided by (1 − returned) — T-Rank 3.4 from C is 52.08%,
+  consistent with X's 16.67%. Groups (Phase 338) are unchanged.
+- **Where it shows:** the FullCheck "Integrated ownership" band and the
+  "Read as text" tree rows; one `commenting` annotation on the subject's first
+  entity statement (folded in `fold_lookup_events`, after the listing; cites
+  T-Rank, `url` = `METHOD_URL`); the PDF/HTML/Markdown "Integrated ownership"
+  table (`report_rows`, 40 holders max); the MCP `integrated_ownership` block
+  on `opencheck_lookup` and `opencheck_export_bods` (25 holders max).
+- **Parity:** `frontend/src/lib/integratedOwnershipCases.json` is hand-written
+  and run by both `test_integrated_ownership_phase339.py` and
+  `integratedOwnership.test.ts`; `test_frontend_parity.py` compares the
+  excluded lists, the method/credit/status words and the reason words. The
+  TS port rounds half-to-even (`pyRound`) to match Python's `round`. On the
+  ASDA and Equinor production bundles the two give deep-equal payloads.
+- **Isolation:** `risk.py`, `verdict.py`, `signalstats.py` and `narrative/`
+  must not import the module (AST guard test). No threshold, no highlighting.

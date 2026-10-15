@@ -5,6 +5,7 @@
  * Phase 2 surface: /lookup-stream (SSE, LEI-anchored progressive lookup).
  */
 
+import type { IntegratedOwnershipPayload } from "./integratedOwnership";
 import { trackEvent } from "./analytics";
 import type { Liveness, SourceLiveness } from "../components/cdd/LivenessBadge";
 import type { WatchlistPayload } from "./watchlist";
@@ -201,6 +202,10 @@ export interface LookupResponse {
   /** What is knowable along the ownership path (Phase 226) — see
    *  `KnowabilityChain`. Absent on payloads recorded before this field existed. */
   knowability_chain?: KnowabilityChain | null;
+  /** Integrated ownership along the path (Phase 339) — each party above the
+   *  subject with its figure per source, frozen with the run. Context only,
+   *  never a signal. Absent on payloads recorded before this field existed. */
+  integrated_ownership?: IntegratedOwnershipPayload | null;
   /** The subject's primary stock-exchange listing from LSEG PermID
    *  (Phase 236) — see `PrimaryListing`. Absent when no PermID key is
    *  configured and on payloads recorded before this field existed; absence
@@ -1880,6 +1885,7 @@ export type LookupStreamHandlers = {
   onSubjectProfile?: (e: SubjectProfileEvent) => void;
   onKnowability?: (e: KnowabilityStatement) => void;
   onKnowabilityChain?: (e: KnowabilityChain) => void;
+  onIntegratedOwnership?: (e: IntegratedOwnershipPayload) => void;
   onListing?: (e: PrimaryListing) => void;
   onForm13f?: (e: Form13fPayload) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
@@ -1917,6 +1923,7 @@ export const LOOKUP_EVENT_HANDLERS = {
   subject_profile: "onSubjectProfile",
   knowability: "onKnowability",
   knowability_chain: "onKnowabilityChain",
+  integrated_ownership: "onIntegratedOwnership",
   listing: "onListing",
   form13f: "onForm13f",
 } as const satisfies Record<string, keyof LookupStreamHandlers>;
