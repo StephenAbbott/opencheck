@@ -37,6 +37,45 @@ dependencies changed but are harmless to run otherwise.
 
 ---
 
+## Branches, pull requests and the phase number (Phase 347)
+
+Several chats work on this repo at once, one per Notion ticket. The rules that
+let them land without colliding:
+
+- **Never choose a phase number.** It is assigned when the pull request merges,
+  by `.github/workflows/stamp-phase.yml` running
+  `backend/scripts/stamp_phase.py` on `main`. Do not read the highest row of
+  `docs/status.md` to pick "the next one", do not name a branch, a commit, a
+  test or a docstring after a number that has not been assigned, and do not
+  ask whether a number is "taken". Refer to the work by its ticket or slug
+  until the stamp lands; afterwards the row on `main` says what number it got.
+- **Branch off `origin/main`** (fetch first — the local checkout is routinely a
+  stale merged branch), named for the work: `feat/<slug>`, `fix/<slug>`,
+  `chore/<slug>`. Never `phase-N-…`.
+- **Do not edit `docs/status.md`, `README.md`'s Status section or
+  `frontend/src/lib/statusMarkdown.json`.** Instead add **one file** under
+  `.phases/pending/` — the title, the README sentence, the test-count deltas
+  and the narrative; format in `.phases/pending/README.md`. The stamp writes
+  the row (citing the merge commit), bumps the spelled-out count, applies the
+  deltas, rewrites the Latest line, regenerates the JSON and deletes the file.
+  `python3 backend/scripts/stamp_phase.py --check` validates it;
+  `--apply --dry-run` shows the row it will write. The pull-request check
+  refuses a branch that both adds a changeset and hand-edits those files.
+- **One commit or several — it no longer matters.** The two-commit
+  implementation-then-stamp shape, and the never-rebase rule that protected
+  the stamp's hash citation, are gone: the row is written after the hash is
+  final. Rebase or merge `origin/main` into the branch freely before opening
+  the PR.
+- **Before opening the PR:** `git fetch origin && git merge origin/main` (or
+  rebase), run `uv run pytest -q` **and** `uv run python scripts/mypy_ratchet.py`
+  from `backend/`, and the frontend suite where the frontend changed. Then
+  `gh pr create`; CI is the gate.
+- Everything else a phase must update stays as it was — `docs/` where the
+  phase touched that surface, the OKF bundle, source counts, curated
+  narratives.
+
+---
+
 ## Architecture overview
 
 - **Backend**: FastAPI, split into `backend/opencheck/routers/` (health, search, lookup, export).
@@ -471,8 +510,12 @@ Specific rules:
 
 ## `docs/status.md` and the README Status section
 
-Every phase ships an update to both files. Get the shape exactly right —
-these have been broken repeatedly by edits that looked harmless.
+**Since Phase 347 a branch does not edit either file.** It adds a changeset
+under `.phases/pending/` and the stamp workflow writes the row, the count and
+the README line on `main` when the PR merges — see "Branches, pull requests
+and the phase number" above. The rules below are what the stamp implements
+(`backend/scripts/stamp_phase.py` asserts them after every change); they still
+apply to any hand edit of the files, which should now be rare.
 
 ### `docs/status.md` is ONE unbroken markdown table
 
@@ -551,7 +594,10 @@ bundle, under `ares/bundle-v2/`, only when VR returned data).
   `.github/dependabot.yml`, proposes the updates); add a new action the same
   way. Workflows are `contents: read` at the top, and only the job that uploads
   a release asset asks for `contents: write`, with `persist-credentials: false`
-  on its checkout (uploads use `GH_TOKEN`; nothing pushes).
+  on its checkout (uploads use `GH_TOKEN`). **One workflow pushes:**
+  `stamp-phase.yml`'s `stamp` job commits the phase row to `main` (Phase 347)
+  with the default token; if `main` ever gains a protection rule that blocks
+  `GITHUB_TOKEN`, that job needs a token with bypass permission.
   `dependency-audit.yml` runs pip-audit over the locked runtime dependencies
   when `pyproject.toml` / `uv.lock` change and weekly. `openaleph-client` was
   removed — nothing imported it, and it held urllib3 at 1.x; the OpenAleph

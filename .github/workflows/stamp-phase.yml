@@ -1,0 +1,106 @@
+name: Stamp phase
+
+# Phase numbers are assigned here, at merge, not on the branch (Phase 347).
+#
+# A branch adds a changeset under .phases/pending/ (see the README there) and
+# leaves docs/status.md, README.md and statusMarkdown.json alone. When it
+# merges, the `stamp` job takes the next number, writes the row citing the
+# merge commit, regenerates the changelog JSON and commits back to main.
+# Several changesets in one push are numbered in the order they landed.
+#
+# On a pull request the `check` job validates the changeset and refuses a
+# branch that both adds one and hand-edits the stamped files.
+#
+# The stamp commit carries [skip ci]: it changes no code, and without it this
+# workflow would run again on its own commit (which deletes the pending file,
+# a path this workflow watches) and tests.yml would run a third time on main.
+# Render still deploys it — the JSON is bundled into the frontend's /changelog.
+#
+# This is the one workflow that pushes. It needs `contents: write` on its job
+# and the default GITHUB_TOKEN; if main gains a branch-protection rule that
+# blocks GITHUB_TOKEN pushes, give the job a fine-grained PAT or GitHub App
+# token with contents:write and bypass permission, and read it here instead.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".phases/pending/**"
+  pull_request:
+    paths:
+      - ".phases/pending/**"
+      - "docs/status.md"
+      - "README.md"
+      - "frontend/src/lib/statusMarkdown.json"
+      - "backend/scripts/stamp_phase.py"
+      - ".github/workflows/stamp-phase.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# One stamp at a time, never cancelled: two merges a minute apart must both be
+# numbered, the second on top of the first.
+concurrency:
+  group: stamp-phase-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate pending changesets against the base branch
+        run: python3 backend/scripts/stamp_phase.py --check --base "origin/${{ github.base_ref }}"
+      - name: Show the rows that would be written
+        run: python3 backend/scripts/stamp_phase.py --apply --dry-run
+
+  stamp:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The TIP of main, not the pushed sha: a run queued behind another
+          # must see that run's stamp commit, or it would hand out the same
+          # number. Full history: the row cites the first-parent commit that
+          # landed the changeset, and several are ordered by when they landed.
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+      - name: Stamp, regenerate the changelog JSON, commit, push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # If main moves while this runs (another merge), start over from the
+          # new tip rather than rebasing a stamp that may now carry the wrong
+          # number. The rerun stamps that merge's changeset too, if it has one.
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            python3 backend/scripts/stamp_phase.py --apply | tee stamp.log
+            numbers="$(sed -n 's/^STAMPED //p' stamp.log | tail -n 1)"
+            if [ -z "${numbers}" ]; then
+              echo "nothing to stamp"
+              exit 0
+            fi
+            node frontend/scripts/gen-changelog.mjs
+            git add docs/status.md README.md frontend/src/lib/statusMarkdown.json .phases/pending
+            git commit -m "Phase ${numbers}: status row, README latest line, changelog JSON [skip ci]"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push rejected (attempt ${attempt}); main moved — restarting from its tip"
+          done
+          echo "could not push the stamp commit after 3 attempts" >&2
+          exit 1
