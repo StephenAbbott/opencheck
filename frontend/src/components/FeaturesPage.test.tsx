@@ -9,8 +9,8 @@
  * a heading level that breaks the outline.
  */
 
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FeaturesPage } from "./FeaturesPage";
 import { FEATURES } from "../lib/features";
@@ -85,5 +85,44 @@ describe("FeaturesPage", () => {
     expect(container.querySelectorAll("h2").length).toBe(1);
     // One per feature, plus the index's own "On this page".
     expect(container.querySelectorAll("h3").length).toBe(FEATURES.length + 1);
+  });
+});
+
+describe("FeaturesPage anchor landing (Phase 345)", () => {
+  const original = Element.prototype.scrollIntoView;
+  afterEach(() => {
+    Element.prototype.scrollIntoView = original;
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("scrolls the section a /features#… address names into view once drawn", async () => {
+    const calls: Element[] = [];
+    Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
+      calls.push(this);
+    });
+    window.history.replaceState(null, "", "/features#watchlist");
+    const { container } = render(<FeaturesPage />);
+    await waitFor(() => expect(calls.length).toBe(1));
+    expect(calls[0]).toBe(container.querySelector("article#watchlist"));
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+      block: "start",
+      behavior: "auto",
+    });
+    await waitFor(() =>
+      expect(container.querySelector('nav a[href="#watchlist"]')?.getAttribute("aria-current")).toBe(
+        "true",
+      ),
+    );
+  });
+
+  it("does nothing for an unknown fragment or none", async () => {
+    const spy = vi.fn();
+    Element.prototype.scrollIntoView = spy;
+    window.history.replaceState(null, "", "/features#nope");
+    render(<FeaturesPage />);
+    window.history.replaceState(null, "", "/features");
+    render(<FeaturesPage />);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(spy).not.toHaveBeenCalled();
   });
 });

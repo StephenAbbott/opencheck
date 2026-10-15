@@ -1371,6 +1371,13 @@ stale like the curated signals (`newFeatures.test.ts` pins both, plus that every
 image exists and carries no script); CTAs are plain same-site hrefs (the
 /features rule). Design options and the decision are on the Notion ticket
 "Showcase new features on OpenCheck homepage".
+
+`/features#…` anchors are scrolled to by the page itself once mounted
+(`featureIdFromHash` in `lib/features.ts`, Phase 345): the browser's own
+fragment scroll can run before React draws the sections, which left the
+homepage's "How the watchlist works" link at the top of the page. Only a known
+feature id is honoured. A new homepage card linking into /features needs no
+extra wiring.
 ---
 
 ## Test suite

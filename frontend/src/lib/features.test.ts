@@ -21,7 +21,7 @@ import { describe, expect, it } from "vitest";
 // whole app to make a single assertion.
 import TAILWIND from "../../tailwind.config.js?raw";
 
-import { FEATURES, featureById, ledeSentence, sentenceCount } from "./features";
+import { FEATURES, featureById, featureIdFromHash, ledeSentence, sentenceCount } from "./features";
 import { ICON_NAMES } from "../components/ui/Icon";
 
 /** Every colour literal the Tailwind theme defines. */
@@ -217,5 +217,26 @@ describe("featureById", () => {
 
   it("returns undefined for an anchor no feature owns", () => {
     expect(featureById("esg")).toBeUndefined();
+  });
+});
+
+describe("featureIdFromHash (Phase 345)", () => {
+  it("names the feature a /features#… address points at", () => {
+    expect(featureIdFromHash("#watchlist")).toBe("watchlist");
+    expect(featureIdFromHash("watchlist")).toBe("watchlist");
+    for (const f of FEATURES) expect(featureIdFromHash(`#${f.id}`)).toBe(f.id);
+  });
+
+  it("decodes the fragment before matching it", () => {
+    const id = FEATURES[0].id;
+    expect(featureIdFromHash(`#${encodeURIComponent(id)}`)).toBe(id);
+  });
+
+  it("ignores an empty, unknown or malformed fragment", () => {
+    expect(featureIdFromHash("")).toBeNull();
+    expect(featureIdFromHash("#")).toBeNull();
+    expect(featureIdFromHash("#not-a-feature")).toBeNull();
+    expect(featureIdFromHash("#%E0%A4%A")).toBeNull();
+    expect(featureIdFromHash("#WATCHLIST")).toBeNull();
   });
 });
