@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 336** — QuickCheck shows institutional shareholders from SEC Form 13F under Securities, collapsed to the largest manager and never read as ownership.
+**Latest: Phase 337** — the record-consistency check reaches the page as one "Records compared" context observation per lookup, saying which independent sources agree on register status and jurisdiction and what each disagreement is, over the comparisons two weeks of measured traffic proved.
 
 → [Full development history](docs/status.md)
 
