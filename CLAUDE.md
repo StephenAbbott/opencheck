@@ -3378,3 +3378,35 @@ rules, each a decision Stephen took and not to be reopened:
 - Docs: `docs/record-consistency.md` (the user-facing page), `docs/sources.md`
   § Record consistency, `docs/risk-signals.md`. The readings live on the Notion
   plan's child page.
+
+## STATE_CONTROLLED states one accumulated share per state (Phase 338)
+
+`opencheck/ownership_math.py` (pure: `Edge`s in, an interval out) +
+`risk._state_accumulated` / `_figures_of` / `_holding_clause`. From the
+"Learn from T-Rank MCP server" research ticket (15 Oct 2026); Stephen's
+decisions on the Phase 338 ticket. Things that will be re-derived otherwise:
+
+- **GROW, per source.** Within one source's bundle the state's bodies (one
+  ISO code) collapse into one owner and its integrated ownership of the
+  subject is computed — multiply along a path, add across paths, give a
+  company's own shares back to its other holders (T-Rank's published method).
+  Current relationships only. **Sources are never added together**: agreeing
+  figures are given once, differing ones each listed with their sources
+  (decision 3). One source naming one stake twice (direct holdings > 100%)
+  gives no figure, `reason: shares_exceed_100` — never 134%.
+- **Intervals, never stand-ins.** Bands carry both ends (`exclusiveMinimum`
+  is read — Phase 240 dropped it); a path with no stated share makes the
+  figure "at least X%" (decision 2); a cycle that will not settle gives no
+  figure. The figure is stated alone, never "majority" (decision 1).
+- **A party's own `share` is only a share in the subject.** An indirect party
+  carries `via` / `via_names` and the sentence says "…, through X"; Phase 240
+  printed the intermediate company's share as the state's.
+- `_share_of` prefers a `shareholding` interest's share (cash rights), then
+  any stated share. Evidence adds `state_accumulated[]` (pooled by
+  `merge_state_controlled`, one per state × source) and, per holding,
+  `figures[]` / `accumulated[]`; `shares` is kept as the list of figure texts.
+- **No `SIGNAL_RULES` bump**: codes and confidence are unchanged, and the
+  watchlist and findings regression compare those, not summaries. The curated
+  narratives quote summaries — regenerate all six after deploy.
+- `integrated_ownership` is written for reuse (the FullCheck path figure is a
+  separate ticket) and is wired nowhere else in this phase.
