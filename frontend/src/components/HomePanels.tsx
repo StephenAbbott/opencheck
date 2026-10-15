@@ -1,10 +1,10 @@
 /**
- * The homepage panels below the search — examples, the list invitation, how it works.
+ * The homepage panels below the search — examples, new features, how it works.
  *
  * Lifted out of `App.tsx` in Phase 168, unchanged. It had no business being
  * there: they are what the homepage *is*, and none of them reads a single piece
- * of App's state: the picker takes an `onPick`, BatchInvite an `onOpen`,
- * How It Works nothing at all.
+ * of App's state: the picker takes an `onPick`; New Features (BatchInvite
+ * until Phase 344) and How It Works take nothing at all.
  */
 
 import {
@@ -16,6 +16,7 @@ import {
 import { RiskChip, RISK_PRESENTATION } from "./risk/RiskChip";
 import { buttonClasses } from "./ui";
 import { cardChips, moreFindingsLabel } from "../lib/exampleCards";
+import { NEW_FEATURES, NEW_FEATURE_TONES } from "../lib/newFeatures";
 
 /**
  * Curated demo subjects. Since Phase 94 these are live lookups like any
@@ -330,40 +331,58 @@ const HOW_IT_WORKS_STEPS = [
 ] as const;
 
 /**
- * BatchInvite — the homepage's invitation to screen a list (Phase 166).
+ * NewFeatures — the homepage's "New features" band (Phase 344).
  *
- * It replaces ShareCardShowcase, the preview of the shareable summary card.
- * The share link is still advertised — one sentence in the last "How it
- * works" step — but the homepage's second section now promotes the thing a
- * compliance officer, a journalist or an EITI secretariat actually arrives
- * with: a list. Nothing in it is a claim about the engine, so nothing here
- * can go stale the way the rendered card could (see the hardcoded-claims
- * note in CLAUDE.md).
+ * It replaces BatchInvite ("Screen a list", Phase 166), which promoted one
+ * workflow; batch screening keeps its section on /features. Three cards, the
+ * content in `lib/newFeatures.ts`. They are built to read as a different kind
+ * of thing from the curated examples above: a curated card is a white tile
+ * that runs a lookup, a promo card carries an illustrated panel in its
+ * feature's own token tier, a lift (`shadow-oo-card`, which the examples only
+ * show on hover) and a secondary button that goes to a page. No `<button>` —
+ * nothing here runs anything.
  */
-export function BatchInvite({ onOpen }: { onOpen: () => void }) {
+export function NewFeatures() {
   return (
-    <section className="mb-10 bg-white border border-oo-rule rounded-oo p-7">
-      <SectionLabel>Screen a list</SectionLabel>
-      <div className="mt-2 flex flex-col md:flex-row md:items-center gap-5">
-        <p className="text-oo-small text-oo-muted md:max-w-xl">
-          Arrived with a counterparty list, a portfolio, or every licence-holder in a
-          register? Paste up to 20 LEIs and get{" "}
-          <span className="text-oo-ink font-medium">one table</span> — register status, the
-          verdict sentence and the signal count for each company, every row linking to its
-          full report — and{" "}
-          <span className="text-oo-ink font-medium">one file</span> to take away.
-        </p>
-        <a
-          href="/batch"
-          onClick={(e) => {
-            e.preventDefault();
-            onOpen();
-          }}
-          className={buttonClasses("primary", "md", "shrink-0 self-start md:self-center")}
-        >
-          Screen a list of companies
-        </a>
-      </div>
+    <section className="mb-10">
+      <SectionLabel>New features</SectionLabel>
+      <ul className="grid gap-5 lg:grid-cols-3">
+        {NEW_FEATURES.map((f) => {
+          const tone = NEW_FEATURE_TONES[f.tone];
+          return (
+            <li key={f.id}>
+              <article className="h-full flex flex-col bg-white border border-oo-rule rounded-oo overflow-hidden shadow-oo-card">
+                <div
+                  className={`flex items-center justify-center border-b h-[184px] px-4 ${tone.panel}`}
+                >
+                  <img
+                    src={f.image}
+                    alt={f.imageAlt}
+                    width={320}
+                    height={168}
+                    loading="lazy"
+                    className="max-w-full h-auto"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 p-5 flex-1">
+                  <p
+                    className={`text-oo-meta font-semibold uppercase tracking-oo-eyebrow ${tone.eyebrow}`}
+                  >
+                    New · {f.eyebrow}
+                  </p>
+                  <h3 className="font-head text-oo-stat font-bold text-oo-ink">
+                    {f.title}
+                  </h3>
+                  <p className="text-oo-small text-oo-muted flex-1">{f.description}</p>
+                  <a href={f.href} className={buttonClasses("secondary", "md", "self-start mt-2")}>
+                    {f.cta}
+                  </a>
+                </div>
+              </article>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

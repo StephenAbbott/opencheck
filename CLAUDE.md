@@ -1355,6 +1355,22 @@ key before joining EITI to EITI.
 
 Current signal inventory used in picker cards: `TRUST_OR_ARRANGEMENT`, `COMPLEX_OWNERSHIP_LAYERS`, `SANCTIONED`, `RELATED_SANCTIONED`, `NON_EU_JURISDICTION`. Since Phase 319 Rosneft's card also carries `EU_TAX_NON_COOPERATIVE` (medium). Confidence `"high"` renders as `●`, `"medium"` as `◐`.
 
+
+## The homepage "New features" band (Phase 344)
+
+`NewFeatures` in `HomePanels.tsx` replaced `BatchInvite` ("Screen a list";
+batch screening keeps its section on /features). Content is
+`frontend/src/lib/newFeatures.ts`, illustrations `frontend/public/new-features/*.svg`.
+Swapping a feature = an entry there plus a 320×168 SVG; the component does not
+change. Rules: it must stay visibly unlike the curated cards above it (an
+illustrated panel in the feature's own token tier — `oo.risk` incl. the
+`risk.tintBorder` added for it, `oo.graph.ownershipTint`, `oo.soft` — a
+`shadow-oo-card` lift and a secondary-button link, never a `<button>`); the copy
+and the pictures state no count and name no real company, so they cannot go
+stale like the curated signals (`newFeatures.test.ts` pins both, plus that every
+image exists and carries no script); CTAs are plain same-site hrefs (the
+/features rule). Design options and the decision are on the Notion ticket
+"Showcase new features on OpenCheck homepage".
 ---
 
 ## Test suite
