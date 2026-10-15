@@ -102,6 +102,17 @@ async def license_matrix(
     return matrix
 
 
+#: An LEI export's default depth — the same as ``/lookup`` and
+#: ``/lookup-stream``. The replay cache is keyed ``LEI:deepen_top``; at 3 (the
+#: default until the GLEIF-refusals investigation, 15 Oct 2026) an export
+#: after a QuickCheck never matched the stream's ``LEI:5`` run, so every
+#: download ran a second full pipeline and exported a shallower graph than
+#: the report on screen.
+LEI_EXPORT_DEEPEN_TOP = 5
+#: A free-text ``q`` export (``/report``'s algorithm) keeps its depth.
+QUERY_EXPORT_DEEPEN_TOP = 3
+
+
 @router.get("/export")
 @limiter.limit(lookup_tier)
 async def export(
@@ -122,7 +133,17 @@ async def export(
         ),
     ),
     kind: SearchKind = Query(SearchKind.ENTITY),
-    deepen_top: int = Query(3, ge=0, le=10),
+    deepen_top: int | None = Query(
+        None,
+        ge=0,
+        le=10,
+        description=(
+            "How many top results to deepen. An LEI export defaults to "
+            "/lookup's and /lookup-stream's 5, so the download reuses the run "
+            "the reader has just seen (the replay cache is keyed on it) and "
+            "carries the same graph; a ``q`` export keeps 3."
+        ),
+    ),
     format: str = Query(
         "zip",
         pattern=_EXPORT_FORMAT_PATTERN,
@@ -189,14 +210,18 @@ async def export(
         export_query = payload.lei
         kind = SearchKind.ENTITY
     elif lei is not None:
-        payload = await _lookup_impl(lei=lei, deepen_top=deepen_top)
+        payload = await _lookup_impl(
+            lei=lei, deepen_top=LEI_EXPORT_DEEPEN_TOP if deepen_top is None else deepen_top
+        )
         slug = _filename_slug(payload.lei)
         export_query = payload.lei
         if subsidiaries:
             payload, sub_count = await _merge_subsidiaries(payload)
     else:
         assert q is not None
-        payload = await _build_report(q, kind, deepen_top)
+        payload = await _build_report(
+            q, kind, QUERY_EXPORT_DEEPEN_TOP if deepen_top is None else deepen_top
+        )
         slug = _filename_slug(q)
         export_query = q
     stamp = saved.stamp if saved else datetime.now(UTC).strftime("%Y%m%d")

@@ -245,7 +245,7 @@ async def opencheck_batch_lookup(leis: list[str], deepen_top: int = 5) -> dict[s
 
 @mcp.tool()
 async def opencheck_export_bods(
-    lei: str, format: str = "json", deepen_top: int = 3, include_subsidiaries: bool = False
+    lei: str, format: str = "json", deepen_top: int = 5, include_subsidiaries: bool = False
 ) -> dict[str, Any]:
     """Export an entity's beneficial-ownership graph as BODS v0.4 statements.
 
@@ -255,7 +255,8 @@ async def opencheck_export_bods(
             BODS string), "senzing" (Senzing JSON entity records, ready to load
             into Senzing for entity resolution), or "ftm" (FollowTheMoney
             entities, ready for OpenSanctions / OpenAleph / ftm-CLI workflows).
-        deepen_top: How many top sources to deepen (0-10, default 3).
+        deepen_top: How many top sources to deepen (0-10, default 5 — the same
+            as opencheck_lookup, so an export after a lookup reuses its run).
         include_subsidiaries: Also fold in the GLEIF subsidiary network (direct
             and ultimate children, accounting consolidation) — the same merge as
             ``GET /export?subsidiaries=true``. Off by default: a large group adds
