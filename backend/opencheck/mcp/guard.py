@@ -19,6 +19,8 @@ opencheck_register_lookup      lookup      ``GET /lookup-register``
 opencheck_export_bods          lookup      ``GET /export``
 opencheck_search               lookup      ``GET /search``
 opencheck_person_check         lookup      ``GET /person-check``
+opencheck_owners               lookup      ``GET /lookup`` (+ hops at depth > 1)
+opencheck_ownership_map        lookup      ``GET /lookup`` (+ hops at depth > 1)
 opencheck_batch_lookup         heavy       ``POST /batch``
 opencheck_save_report          heavy       ``POST /saved-reports``
 =============================  ==========  ===========================
@@ -60,6 +62,8 @@ TOOL_TIERS: dict[str, Quota] = {
     "opencheck_export_bods": _LOOKUP,
     "opencheck_search": _LOOKUP,
     "opencheck_person_check": _LOOKUP,
+    "opencheck_owners": _LOOKUP,
+    "opencheck_ownership_map": _LOOKUP,
     "opencheck_batch_lookup": _HEAVY,
     "opencheck_save_report": _HEAVY,
 }
