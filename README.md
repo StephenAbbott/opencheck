@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 341** — the `opencheck_ownership_map` MCP tool returns its SVG image and table through the protocol; Phase 340's version failed on every call in production.
+**Latest: Phase 342** — the sanctions 50% rule, computed for OFAC, the EU and the UK side by side from designated parties' stated shareholdings: a risk signal only when the low end meets the test, ownership only.
 
 → [Full development history](docs/status.md)
 
