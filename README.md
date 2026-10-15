@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 337** — the record-consistency check reaches the page as one "Records compared" context observation per lookup, saying which independent sources agree on register status and jurisdiction and what each disagreement is, over the comparisons two weeks of measured traffic proved.
+**Latest: Phase 338** — the state-ownership signal states each state's accumulated share in the company, per source, computed with the GROW method T-Rank publishes, instead of the share of whichever company a state body held.
 
 → [Full development history](docs/status.md)
 
