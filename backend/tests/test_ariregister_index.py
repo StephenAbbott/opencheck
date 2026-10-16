@@ -303,6 +303,44 @@ def _off_cards() -> list[dict[str, Any]]:
     ]
 
 
+def _cards() -> list[dict[str, Any]]:
+    """The registry cards, in the file's shape: Eesti Energia's first and
+    last entries as read on 16 Oct 2026, and a company with two cards."""
+    def entry(nr: int, day: str, kind: str, text: str | None) -> dict[str, Any]:
+        return {"kande_nr": nr, "kpv": day, "kandeliik": kind, "kandeliik_tekstina": text}
+    return [
+        {"ariregistri_kood": int(AGENT), "nimi": "007 Agent & Partners OÜ", "registrikaardid": [
+            {"kaardi_piirkond": 5, "kaardi_nr": 1, "kaardi_tyyp": "R", "kanded": [
+                entry(1, "05.06.2023", "2", "Esmakanne"),
+                entry(2, "02.09.2023", "12", "Muutmiskanne"),
+                entry(3, "15.07.2024", "33", "Muutmiskanne TsMS § 595¹ lg 1 alusel"),
+            ]},
+        ]},
+        {"ariregistri_kood": int(EESTI), "nimi": "Eesti Energia AS", "registrikaardid": [
+            {"kaardi_piirkond": 1, "kaardi_nr": 1, "kaardi_tyyp": "R", "kanded": [
+                entry(1, "31.03.1998", "1", "Asutamiskanne"),
+                entry(2, "25.06.1998", "10", "Mitteavaldatav muutmiskanne"),
+                entry(56, "15.07.2026", "33", "Muutmiskanne TsMS § 595¹ lg 1 alusel"),
+                entry(57, "02.10.2026", "12", "Muutmiskanne"),
+            ]},
+        ]},
+        {"ariregistri_kood": int(HOLD), "nimi": 'Holding "Põhjala" OÜ', "registrikaardid": [
+            {"kaardi_piirkond": 1, "kaardi_nr": 1, "kaardi_tyyp": "R", "kanded": [
+                entry(1, "02.01.2015", "1", "Asutamiskanne"),
+                entry(2, "01.03.2026", "14", "Ärinime muutmise kanne"),
+            ]},
+            {"kaardi_piirkond": 1, "kaardi_nr": 2, "kaardi_tyyp": "K", "kanded": [
+                entry(1, "05.05.2025", "21", "Kommertspandi avamiskanne"),
+            ]},
+        ]},
+        {"ariregistri_kood": int(STATE), "nimi": "Maa-amet", "registrikaardid": [
+            {"kaardi_piirkond": 1, "kaardi_nr": 1, "kaardi_tyyp": "R", "kanded": [
+                entry(1, "07.01.2018", "9999", None),
+            ]},
+        ]},
+    ]
+
+
 def _zip(path: Path, member: str, text: str) -> Path:
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(zipfile.ZipInfo(member, (2026, 10, 13, 12, 24, 0)), text.encode("utf-8"))
@@ -317,6 +355,7 @@ def _write_files(
     shareholders: list[dict[str, Any]] | None = None,
     bos: list[dict[str, Any]] | None = None,
     off_cards: list[dict[str, Any]] | None = None,
+    cards: list[dict[str, Any]] | None = None,
     header: list[str] | None = None,
 ) -> None:
     src.mkdir(parents=True, exist_ok=True)
@@ -329,6 +368,7 @@ def _write_files(
         (builder.SHAREHOLDERS_FILE, _shareholders() if shareholders is None else shareholders),
         (builder.BO_FILE, _bos() if bos is None else bos),
         (builder.OFF_CARD_FILE, _off_cards() if off_cards is None else off_cards),
+        (builder.CARDS_FILE, _cards() if cards is None else cards),
     ):
         _zip(src / name, name[:-4], json.dumps(data, ensure_ascii=False, indent=4))
 
@@ -406,7 +446,7 @@ def test_the_builder_and_the_adapter_agree_on_the_schema() -> None:
     assert builder.TABLE_COLUMNS == ariregister._TABLE_COLUMNS
 
 
-def test_the_builder_indexes_the_five_files(index) -> None:
+def test_the_builder_indexes_the_six_files(index) -> None:
     out, meta = index
     assert meta["cut"] == CUT
     assert meta["entities"] == "5"
@@ -414,6 +454,7 @@ def test_the_builder_indexes_the_five_files(index) -> None:
     assert meta["shareholders"] == "7"
     assert meta["beneficial_owners"] == "5"
     assert meta["off_card_persons"] == "7"
+    assert meta["card_entries"] == "11"
     assert meta["with_vat_number"] == "1"
     assert provenance.parse_moment(meta["built_at"]) is not None
     assert "T" in meta["built_at"] and meta["built_at"].endswith("+00:00")

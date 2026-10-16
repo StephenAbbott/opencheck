@@ -7,18 +7,18 @@ as daily open-data files under CC BY 4.0:
 
     https://avaandmed.ariregister.rik.ee/en/downloading-open-data
 
-Five of them make the index: the company "simple data" CSV and four JSON
-files that put the same people on each company the printable page shows —
-the persons entered on the registry card (board members, procurists,
-liquidators, partners…), the register of shareholders, the declared
-beneficial owners — and, since the fifth file was added, the persons the
-register knows about who are *not* on the card: supervisory board members,
-the shareholders of a public limited company (AS) the register itself
-records, founders with their founding contribution, auditors. The files
-are regenerated every morning (~09:30 GMT) and
-carry no personal identification codes: since November 2024 a natural person
-is identified across the three files only by ``isikukood_hash``, a
-pseudonymous UUID.
+Six of them make the index: the company "simple data" CSV, the registry
+cards (every dated entry on every card), and four JSON files that put the
+same people on each company the printable page shows — the persons
+entered on the registry card (board members, procurists, liquidators,
+partners…), the register of shareholders, the declared beneficial owners
+— and, since the fifth file was added, the persons the register knows
+about who are *not* on the card: supervisory board members, the shareholders
+of a public limited company (AS) the register itself records, founders
+with their founding contribution, auditors. The files are regenerated every
+morning (~09:30 GMT) and carry no personal identification codes: since
+November 2024 a natural person is identified across the files only by
+``isikukood_hash``, a pseudonymous UUID.
 
     python3 scripts/build_ariregister_index.py --out /tmp/ariregister.sqlite --gzip
 
@@ -46,6 +46,13 @@ What it reads, and what it refuses
   authorised persons V 282, audit committee R 228, congregations L 457).
   The rows have the shareholder file's shape (share size and percentage,
   ownership kind, entry source) plus the role.
+* ``ettevotja_rekvisiidid__registrikaardid.json.zip`` — every entry on every
+  registry card (≈2.16 million on 379,829 entities, 620 MB unzipped; 16 Oct
+  2026): card type and number, entry number, date and entry type
+  (``kandeliik``: first entry, change entry, merger, deletion…). It needs
+  no credentials, and for Eesti Energia AS and Bolt Technology OÜ it holds
+  exactly the entries the credentialed SOAP card log returns. Packed one
+  row per company into ``card_entry``.
 
 Every JSON file is a pretty-printed array of one object per entity, so it
 is streamed with ``json.JSONDecoder.raw_decode`` straight out of the zip —
@@ -65,7 +72,7 @@ The build refuses, rather than writes a plausible-looking index, when:
   lines − 1 (a stray quote merging rows — the ONRC lesson, Phase 211);
 * a file is implausibly short (truncated transfer, or the files swapped);
 * an entity code is not eight digits, or appears twice;
-* a JSON file names an entity the CSV does not hold — the five files are
+* a JSON file names an entity the CSV does not hold — the six files are
   one snapshot, and on 13 Oct 2026 each held exactly the CSV's 379,664
   entities (16 Oct 2026: 379,829, the off-card file included);
 * the files' cut dates (``Last-Modified``) fall on different days.
@@ -113,7 +120,10 @@ OFFICERS_FILE = "ettevotja_rekvisiidid__kaardile_kantud_isikud.json.zip"
 SHAREHOLDERS_FILE = "ettevotja_rekvisiidid__osanikud.json.zip"
 BO_FILE = "ettevotja_rekvisiidid__kasusaajad.json.zip"
 OFF_CARD_FILE = "ettevotja_rekvisiidid__kandevalised_isikud.json.zip"
-FILES = (CSV_FILE, OFFICERS_FILE, SHAREHOLDERS_FILE, BO_FILE, OFF_CARD_FILE)
+#: Every entry on every registry card: number, date and entry type — the
+#: dated event spine the History tab draws from (the card-entry phase).
+CARDS_FILE = "ettevotja_rekvisiidid__registrikaardid.json.zip"
+FILES = (CSV_FILE, OFFICERS_FILE, SHAREHOLDERS_FILE, BO_FILE, OFF_CARD_FILE, CARDS_FILE)
 
 #: The JSON list each people file carries per entity, and the index table
 #: its rows go to. The off-card file spells its list ``kaardivalised`` —
@@ -216,11 +226,13 @@ DATE_COLUMNS = frozenset({"algus_kpv", "lopp_kpv", "synniaeg", "kontrolli_allika
 MIN_ROWS = {
     CSV_FILE: 300_000, OFFICERS_FILE: 400_000,
     SHAREHOLDERS_FILE: 300_000, BO_FILE: 300_000, OFF_CARD_FILE: 300_000,
+    # 2,161,627 entries on 16 Oct 2026.
+    CARDS_FILE: 1_500_000,
 }
 
 USER_AGENT = "OpenCheck ariregister index builder (+https://opencheck.world)"
 
-#: Seconds between the five downloads. Cloudflare rate-limits back-to-back
+#: Seconds between the six downloads. Cloudflare rate-limits back-to-back
 #: requests to this host from one address (``Error code: 1015``, HTTP 429).
 DOWNLOAD_SPACING_S = 15
 
@@ -289,6 +301,12 @@ CREATE INDEX off_card_person_holder ON off_card_person (isikukood_registrikood) 
 -- same UUID for the same person on every list of every company, so these four
 -- indexes answer "where else is this person" (companies_for_hash). An index
 -- built before them still answers, by scan, until the daily rebuild.
+-- Every entry on the company's registry cards (registrikaardid), one row per
+-- company, packed as "card type,card no,entry no,ISO day,entry type" joined
+-- by ";" in the register's order — 2.2 million entries, which as one row
+-- each would be the biggest table in the file. The entry type's Estonian
+-- wording is in vocab ('card_entry').
+CREATE TABLE card_entry (code TEXT PRIMARY KEY, entries TEXT NOT NULL) WITHOUT ROWID;
 CREATE INDEX officer_person ON officer (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
 CREATE INDEX shareholder_person ON shareholder (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
 CREATE INDEX beneficial_owner_person ON beneficial_owner (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
@@ -351,7 +369,7 @@ def download(name: str, dest: Path, *, attempts: int = 4) -> str | None:
 
 
 def download_all(dest_dir: Path) -> dict[str, str | None]:
-    """Download the five files, spaced out, and record each ``Last-Modified``
+    """Download the six files, spaced out, and record each ``Last-Modified``
     beside it (``<name>.last-modified``) so ``--from-dir`` can read the cut."""
     stamps: dict[str, str | None] = {}
     for i, name in enumerate(FILES):
@@ -522,7 +540,7 @@ def resolve_cut(
 
     ``--cut`` wins; else each file's ``Last-Modified`` (from the download,
     or the ``.last-modified`` sidecar a download left); else the zip
-    member's own stamp. The five days must agree — the files are regenerated
+    member's own stamp. The six days must agree — the files are regenerated
     together each morning, and a download that straddled a regeneration
     would otherwise pair yesterday's shareholders with today's companies.
     """
@@ -566,7 +584,7 @@ def build_index(
     min_rows: dict[str, int] | None = None,
     started: dt.datetime | None = None,
 ) -> dict[str, str]:
-    """Build the SQLite index at ``out_path`` from the five zips in ``src``.
+    """Build the SQLite index at ``out_path`` from the six zips in ``src``.
 
     Written to a temporary file beside ``out_path`` and renamed at the end,
     so a failed build never leaves a half-written index where one was.
@@ -678,6 +696,10 @@ def build_index(
             counts[table] = rows
             log.info("%s: %d entities, %d rows", name, entities, rows)
 
+        counts["card_entries"] = _load_card_entries(
+            conn, src / CARDS_FILE, seen, vocab, floor=floors.get(CARDS_FILE, 0),
+        )
+
         conn.executemany(
             "INSERT INTO vocab VALUES (?, ?, ?)",
             sorted((k[0], k[1], v) for k, v in vocab.items()),
@@ -692,6 +714,7 @@ def build_index(
             "shareholders": str(counts.get("shareholder", 0)),
             "beneficial_owners": str(counts.get("beneficial_owner", 0)),
             "off_card_persons": str(counts.get("off_card_person", 0)),
+            "card_entries": str(counts.get("card_entries", 0)),
             "source_page": PAGE_URL,
             "source_files": ",".join(FILES),
             "license": LICENSE,
@@ -713,6 +736,71 @@ def build_index(
         meta["beneficial_owners"], meta["off_card_persons"], cut,
     )
     return meta
+
+
+#: A card entry's fields, packed in this order (``ariregister.card_entries``
+#: reads them back in the same order).
+CARD_ENTRY_FIELDS = ("card_type", "card_no", "entry_no", "day", "entry_type")
+
+
+def _load_card_entries(
+    conn: sqlite3.Connection, path: Path, seen: set[str],
+    vocab: dict[tuple[str, str], str], *, floor: int,
+) -> int:
+    """The registry cards file into ``card_entry``, one packed row per
+    company. Refuses a company the CSV lacks, a repeated company, an entry
+    without a number, an undated entry and a field holding the separators."""
+    zf, text, _day = _open_member(path)
+    total = 0
+    batch: list[tuple[str, str]] = []
+    file_seen: set[str] = set()
+    with zf:
+        try:
+            for ent in stream_json_array(text):
+                if not isinstance(ent, dict) or "ariregistri_kood" not in ent:
+                    raise BuildRefused("an element is not an entity object")
+                code = str(ent["ariregistri_kood"]).strip().zfill(8)
+                if code not in seen:
+                    raise BuildRefused(f"code {code} is not in {CSV_FILE}")
+                if code in file_seen:
+                    raise BuildRefused(f"code {code} appears twice")
+                file_seen.add(code)
+                packed: list[str] = []
+                for card in ent.get("registrikaardid") or []:
+                    if not isinstance(card, dict):
+                        raise BuildRefused(f"a card of {code} is not an object")
+                    card_type = str(card.get("kaardi_tyyp") or "").strip()
+                    card_no = str(card.get("kaardi_nr") or "").strip()
+                    for entry in card.get("kanded") or []:
+                        if not isinstance(entry, dict):
+                            raise BuildRefused(f"an entry of {code} is not an object")
+                        number = str(entry.get("kande_nr") or "").strip()
+                        day = _iso_day(entry.get("kpv"))
+                        kind = str(entry.get("kandeliik") or "").strip()
+                        if not number.isdigit() or day is None:
+                            raise BuildRefused(f"an entry of {code} has no number or date")
+                        fields = (card_type, card_no, number, day, kind)
+                        if any("," in f or ";" in f for f in fields):
+                            raise BuildRefused(f"an entry of {code} holds a separator")
+                        packed.append(",".join(fields))
+                        if kind:
+                            text_ = " ".join(str(entry.get("kandeliik_tekstina") or "").split())
+                            if text_ or ("card_entry", kind) not in vocab:
+                                vocab[("card_entry", kind)] = text_
+                if packed:
+                    batch.append((code, ";".join(packed)))
+                    total += len(packed)
+                if len(batch) >= 5000:
+                    conn.executemany("INSERT INTO card_entry VALUES (?, ?)", batch)
+                    batch = []
+        except BuildRefused as exc:
+            raise BuildRefused(f"{path.name}: {exc}") from None
+    if batch:
+        conn.executemany("INSERT INTO card_entry VALUES (?, ?)", batch)
+    if total < floor:
+        raise BuildRefused(f"{path.name}: {total} entries, fewer than {floor}")
+    log.info("%s: %d entities, %d entries", path.name, len(file_seen), total)
+    return total
 
 
 def _collect_vocab(vocab: dict[tuple[str, str], str], table: str, p: dict[str, Any]) -> None:
@@ -739,7 +827,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True, type=Path, help="the SQLite file to write")
     parser.add_argument(
         "--from-dir", type=Path,
-        help="build from the five zips already in this directory instead of downloading",
+        help="build from the six zips already in this directory instead of downloading",
     )
     parser.add_argument(
         "--keep-dir", type=Path,

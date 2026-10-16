@@ -1147,7 +1147,7 @@ shareholders only for an OÜ); strip personal identification codes from the
 page path; a daily GitHub-workflow rebuild. Things that will be re-derived
 otherwise:
 
-- **Four files, one snapshot, streamed** (five since the off-card phase —
+- **Four files, one snapshot, streamed** (six since the card-entry phase —
   see the section below). `lihtandmed.csv` (companies) and
   the `kaardile_kantud_isikud` / `osanikud` / `kasusaajad` JSON arrays
   (officers, shareholders, beneficial owners), ≈2.2 GB unzipped. The JSON is
@@ -1366,9 +1366,34 @@ otherwise:
   snapshot. Integrated figures are unchanged (closed records are
   `formerly`, no figure); related-party screens rank current parties before
   former ones, so former holders never displace a current one under the cap.
-- **Not yet done (the ticket's Part 2):** the `registrikaardid` file as a
-  card-entry event spine for the History tab. The SOAP card log is already
-  parsed into `history.card_entries`.
+- **Part 2, the card entries**, is its own section below.
+
+### Registry-card entries on the History tab (the card-entry phase)
+
+`ettevotja_rekvisiidid__registrikaardid.json.zip` (the sixth file,
+`CARDS_FILE`) → the `card_entry` table, read by `ariregister.card_entries`
+and emitted by `timeline/ariregister.py::card_entry_events`. Measured
+16 Oct 2026: 2,161,627 entries on 379,829 entities (620 MB unzipped); for
+Eesti Energia AS (57) and Bolt Technology OÜ (50) exactly the entries the
+SOAP card log returns. Things that will be re-derived otherwise:
+
+- **Packed, one row per company** (`code`, `entries` = `"type,no,entry,
+  ISO day,kind"` joined by `;`, `CARD_ENTRY_FIELDS` on both sides): as one
+  row per entry it would be the biggest table in the file. The entry type's
+  Estonian wording goes to `vocab` (`card_entry`). No schema bump: an index
+  built before the table answers `None` (`no such table`).
+- **Every entry is an administrative (Tier 3) row**, labelled in English
+  with the register's term (`CARD_ENTRY_LABELS`; an unlisted type reads as
+  the register's words, a type with none — 9998/9999, written when the
+  non-profit register moved over in January 2018 — as "type N, no
+  description published"), dated `effective`. **Only when the SOAP history
+  was not read** (no credentials, or it failed) are the status, name and
+  succession entry types (`CARD_ENTRY_NOTABLE`) notable rows — then the card
+  is the only Estonian history; when it was read, the same change is already
+  a notable row with its before and after.
+- Read in `timeline/service.py` for any Estonian code, credentials or not,
+  off the event loop. The SOAP card log in `history.card_entries` is not
+  emitted (it is the same list).
 
 ### A person's other companies, on the register's person key (the person-index phase)
 

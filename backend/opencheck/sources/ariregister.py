@@ -983,6 +983,42 @@ def companies_for_hash(person_hash: str, *, limit: int = PERSON_COMPANIES_LIMIT)
     }
 
 
+#: The packed ``card_entry`` fields, in the builder's order
+#: (``build_ariregister_index.CARD_ENTRY_FIELDS``).
+CARD_ENTRY_FIELDS = ("card_type", "card_no", "entry_no", "day", "entry_type")
+
+
+def card_entries(code: str) -> list[dict[str, Any]] | None:
+    """Every entry on the company's registry cards, oldest first as the
+    register numbers them — card type and number, entry number, ISO day,
+    entry type and its Estonian wording. ``[]`` when the index holds no
+    entry for the code; None without an index, or with one built before
+    the registry cards were read (a missing table)."""
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    try:
+        row = conn.execute(
+            "SELECT entries FROM card_entry WHERE code = ?", (normalise_registry_code(code),),
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        if "no such table" in str(exc):
+            return None
+        raise
+    if row is None:
+        return []
+    out: list[dict[str, Any]] = []
+    for packed in str(row[0]).split(";"):
+        parts = packed.split(",")
+        if len(parts) != len(CARD_ENTRY_FIELDS):
+            continue
+        item: dict[str, Any] = dict(zip(CARD_ENTRY_FIELDS, parts))
+        item["entry_no"] = int(item["entry_no"])
+        item["entry_text"] = vocab_text("card_entry", item["entry_type"]) or None
+        out.append(item)
+    return out
+
+
 def search_index(query: str, *, limit: int = 10) -> list[dict[str, Any]]:
     """Entities whose name contains ``query`` (case-insensitive), from the
     index; ``[]`` without one."""
