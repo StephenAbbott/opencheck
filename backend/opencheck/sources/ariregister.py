@@ -882,6 +882,107 @@ def holdings_of(code: str, *, limit: int = 200) -> list[dict[str, Any]]:
     return out
 
 
+#: The register's lists, as ``companies_for_hash`` names them — the words
+#: the route and the page use, one per index table.
+PERSON_LISTS: tuple[tuple[str, str, str, str], ...] = (
+    # (table, list name, the column holding the row's role code, the surname column)
+    ("officer", "registry_card", "isiku_roll", "nimi_arinimi"),
+    ("shareholder", "shareholders", "isiku_roll", "nimi_arinimi"),
+    ("beneficial_owner", "beneficial_owners", "kontrolli_teostamise_viis", "nimi"),
+    ("off_card_person", "off_card", "isiku_roll", "nimi_arinimi"),
+)
+
+#: The most rows one person's list returns; ``total`` still counts all.
+PERSON_COMPANIES_LIMIT = 500
+
+
+def parse_person_hash(raw: str) -> bytes | None:
+    """The register's ``isikukood_hash`` as the index stores it (the UUID's
+    16 bytes), or None when ``raw`` is not a UUID. Never a personal code:
+    an eleven-digit number is refused here, whatever its shape."""
+    try:
+        return uuid.UUID(str(raw).strip()).bytes
+    except (ValueError, AttributeError):
+        return None
+
+
+def companies_for_hash(person_hash: str, *, limit: int = PERSON_COMPANIES_LIMIT) -> dict[str, Any] | None:
+    """Every company on whose current lists the register names the person
+    keyed by ``person_hash`` — the registry card, the shareholders, the
+    beneficial owners and the persons outside the card — one row per company,
+    list and role, with the fields the register publishes: company name,
+    form and status, the role (in the register's words), since when, and the
+    share where the list carries one. No addresses: the index holds none.
+
+    The hash is the register's pseudonymous key, published so a person can
+    be followed across companies; it is never an identifier, and the files
+    hold current rows only, so a deleted company or an ended role is not
+    here. None without an index or for a value that is not a UUID; an index
+    that holds no row for the hash answers an empty list.
+    """
+    key = parse_person_hash(person_hash)
+    if key is None:
+        return None
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    rows: list[dict[str, Any]] = []
+    names: dict[str, int] = {}
+    seen: set[tuple[str, str, str]] = set()
+    for table, list_name, role_column, surname_column in PERSON_LISTS:
+        share = (
+            "t.osaluse_protsent, t.osaluse_suurus, t.osaluse_valuuta"
+            if table in ("shareholder", "off_card_person")
+            else ("NULL, t.osamaks, t.osamaksu_valuuta" if table == "officer" else "NULL, NULL, NULL")
+        )
+        try:
+            found = conn.execute(
+                f"SELECT t.code, t.{role_column}, {share}, t.algus_kpv,"
+                f" e.name, e.legal_form, e.status_code, t.eesnimi, t.{surname_column}"
+                f" FROM {table} t JOIN entity e ON e.code = t.code"
+                f" WHERE t.isikukood_hash = ? ORDER BY t.code, t.kirje_id",
+                (key,),
+            ).fetchall()
+        except sqlite3.OperationalError as exc:
+            if table == "off_card_person" and "no such table" in str(exc):
+                continue  # a schema-1 index, built before the fifth file
+            raise
+        vocab_kind = "control" if table == "beneficial_owner" else "role"
+        for code, role, percent, size, currency, since, name, form, status, first, last in found:
+            code, role = str(code), str(role or "")
+            person = " ".join(p.strip() for p in (first, last) if p and p.strip())
+            if person:
+                names[person] = names.get(person, 0) + 1
+            if (code, list_name, role) in seen:
+                continue
+            seen.add((code, list_name, role))
+            rows.append({
+                "code": code,
+                "name": name,
+                "legal_form": form,
+                "status_code": status,
+                "status_text": vocab_text("status", status),
+                "list": list_name,
+                "role": role or None,
+                "role_text": vocab_text(vocab_kind, role),
+                "since": since,
+                "percent": percent,
+                "share_size": size,
+                "currency": currency,
+            })
+    rows.sort(key=lambda r: (r["name"] or "", r["code"], r["list"]))
+    companies = sorted({r["code"] for r in rows})
+    return {
+        # The name the register gives the person most often across the rows
+        # (it is spelled the same almost everywhere; a tie goes to the first).
+        "name": max(names, key=lambda n: names[n]) if names else None,
+        "rows": rows[:limit],
+        "total_rows": len(rows),
+        "companies": len(companies),
+        "truncated": len(rows) > limit,
+    }
+
+
 def search_index(query: str, *, limit: int = 10) -> list[dict[str, Any]]:
     """Entities whose name contains ``query`` (case-insensitive), from the
     index; ``[]`` without one."""

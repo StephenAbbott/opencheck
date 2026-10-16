@@ -21,6 +21,13 @@ timestamp: 2026-07-22
   appointment recorded under one officer identifier, with the BODS
   `personStatement` carrying the `GB-COH-OFFICER` identifier. Unlike the
   name-based screen, this is the register's own same-person assertion.
+- `GET /person-appointments?scheme=EE-ARIREGISTER-HASH&id=<uuid>` — every
+  company on the Estonian e-Business Register whose current lists name the
+  register's pseudonymous person key (`isikukood_hash`, carried on an Estonian
+  `personStatement` as an `identifying` annotation): company, list, role,
+  since and share, from the daily index. Keyed on the hash only, never a name;
+  the register does not guarantee one key per person, and the files hold
+  current rows only.
 - `GET /person-positions?entity_id=<id>` — the positions-held history behind
   an EveryPolitician / OpenSanctions PEP record: post, country and start/end
   dates, most recent first, keyed to the record's Wikidata Q-ID, with

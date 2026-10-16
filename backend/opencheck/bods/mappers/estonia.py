@@ -176,6 +176,53 @@ _EE_STATE_BODY_FORMS = frozenset({
     "Avalik-õiguslik juriidiline isik, põhiseaduslik institutsioon või nende asutus",
 })
 
+#: The off-card roles that are no interest in the company, worded for the
+#: list of a person's companies (``companies_for_hash``) — not mapped to BODS.
+_EE_OFF_CARD_OTHER_LABELS: dict[str, str] = {
+    "D": "Audit firm (audiitorühing)",
+    "J": "Auditor (revident)",
+    "M": "Auditor of a non-monetary contribution",
+    "P": "Bankruptcy committee member (pankrotitoimkonna liige)",
+    "V": "Authorised person (volitatud isik)",
+    "R": "Audit committee member (revisjonikomisjoni liige)",
+    "L": "Congregation of a religious association",
+}
+
+#: The entity's register status (``ettevotja_staatus``) in English.
+EE_STATUS_LABELS: dict[str, str] = {
+    "R": "Entered in the register",
+    "L": "In liquidation",
+    "N": "Bankrupt",
+    "K": "Deleted",
+}
+
+
+def ee_person_role_label(list_name: str, role: str | None, register_text: str | None = None) -> str:
+    """A person's role on one of a company's lists, in English with the
+    register's Estonian term — the words the mapper uses for the same row,
+    so the list of a person's companies and the graph say the same thing.
+    A code no table knows reads as the register's own text."""
+    role = (role or "").strip()
+    if list_name == "registry_card":
+        if role in _EE_OFFICER_ROLE_MAP:
+            return _EE_OFFICER_ROLE_MAP[role][1]
+    elif list_name == "shareholders":
+        return "Shareholder (osanik)"
+    elif list_name == "beneficial_owners":
+        gloss = _EE_BO_CONTROL_MAP.get(role)
+        return f"Beneficial owner — {gloss[2][0].lower()}{gloss[2][1:]}" if gloss else "Beneficial owner"
+    elif list_name == "off_card":
+        if role in _EE_OFF_CARD_ROLE_MAP:
+            return _EE_OFF_CARD_ROLE_MAP[role][1]
+        if role in _EE_OFF_CARD_SHAREHOLDER_ROLES:
+            return "Shareholder of a public limited company (aktsionär)"
+        if role in _EE_OFF_CARD_FOUNDER_LABELS:
+            return _EE_OFF_CARD_FOUNDER_LABELS[role]
+        if role in _EE_OFF_CARD_OTHER_LABELS:
+            return _EE_OFF_CARD_OTHER_LABELS[role]
+    return (register_text or role or "Listed").strip()
+
+
 #: Codes the files use that are not ISO 3166-1 alpha-3 (IOC and older
 #: spellings), seen 13 Oct 2026 — resolved to the ISO alpha-2 they mean.
 #: ``XXK`` (Kosovo) and ``ANT`` (the former Netherlands Antilles) have no
@@ -250,13 +297,117 @@ def _ee_person_id(person: dict[str, Any]) -> str:
     h = person.get("isikukood_hash")
     if h:
         return h
+    if person.get(_EE_NAME_KEY):
+        return "name-" + person[_EE_NAME_KEY]
     kirje = person.get("kirje_id")
     first = person.get("eesnimi") or ""
     last = person.get("nimi_arinimi") or person.get("nimi") or ""
     return f"{kirje or 'x'}-{first}-{last}"
 
 
+#: Where the page path's same-name merge records itself on the row (a key
+#: no register field uses).
+_EE_NAME_KEY = "_ee_name_key"
+_EE_NAME_LISTS = "_ee_name_lists"
+_EE_NAME_DISPLAY = "_ee_name_display"
+
+#: The account-type prefixes a Nasdaq CSD entry puts before a holder's name
+#: on the printable page.
+_EE_ACCOUNT_PREFIX = re.compile(r"^\s*(?:omanikukonto|lihtkonto)\s*:\s*", re.IGNORECASE)
+
+_EE_LIST_WORDS = {
+    "shareholders": "the shareholder list",
+    "officers": "the registry card",
+    "beneficial_owners": "the beneficial-owner list",
+}
+
+
+def ee_name_key(first: str | None, last: str | None) -> str:
+    """A person's name compared the way the register-comparison post did:
+    case, accents, hyphens and spacing set aside, and a Nasdaq CSD account
+    prefix ("Omanikukonto:", "Lihtkonto:") removed."""
+    import unicodedata
+
+    text = " ".join(p for p in ((first or "").strip(), (last or "").strip()) if p)
+    text = _EE_ACCOUNT_PREFIX.sub("", text)
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = re.sub(r"[\s\-‐-―]+", " ", text.casefold())
+    return text.strip()
+
+
+def _ee_merge_page_people(bundle: dict[str, Any]) -> dict[str, Any]:
+    """The printable page publishes no person key, so a person who is an
+    officer, a shareholder and a beneficial owner was three nodes. Within
+    this one company, natural persons with no hash whose names match
+    (``ee_name_key``) become one: a copy of the bundle whose rows carry the
+    shared key, and the lists it joined, for ``_ee_person_id`` and the
+    annotation. The bundle itself is not changed."""
+    lists: dict[str, set[str]] = {}
+    for list_name in ("shareholders", "officers", "beneficial_owners"):
+        for row in bundle.get(list_name) or []:
+            if (row.get("isiku_tyyp") or "F") == "J" or row.get("isikukood_hash"):
+                continue
+            key = ee_name_key(row.get("eesnimi"), row.get("nimi_arinimi") or row.get("nimi"))
+            if key:
+                lists.setdefault(key, set()).add(list_name)
+    # The name the node carries: the registry card's spelling first, then the
+    # beneficial-owner list's, then the shareholder list's (which can carry a
+    # Nasdaq CSD account prefix).
+    display: dict[str, str] = {}
+    for list_name in ("officers", "beneficial_owners", "shareholders"):
+        for row in bundle.get(list_name) or []:
+            if (row.get("isiku_tyyp") or "F") == "J" or row.get("isikukood_hash"):
+                continue
+            first, last = row.get("eesnimi"), row.get("nimi_arinimi") or row.get("nimi")
+            key = ee_name_key(first, last)
+            if key and key not in display:
+                display[key] = _EE_ACCOUNT_PREFIX.sub(
+                    "", " ".join(p.strip() for p in (first or "", last or "") if p and p.strip())
+                ).strip()
+    out = dict(bundle)
+    for list_name in ("shareholders", "officers", "beneficial_owners"):
+        rows = []
+        for row in bundle.get(list_name) or []:
+            row_key = ""
+            if (row.get("isiku_tyyp") or "F") != "J" and not row.get("isikukood_hash"):
+                row_key = ee_name_key(row.get("eesnimi"), row.get("nimi_arinimi") or row.get("nimi"))
+            if row_key:
+                key = row_key
+                row = {**row, _EE_NAME_KEY: key, _EE_NAME_LISTS: sorted(lists[key])}
+                if len(lists[key]) > 1:
+                    row[_EE_NAME_DISPLAY] = display[key]
+            rows.append(row)
+        if list_name in bundle:
+            out[list_name] = rows
+    return out
+
+
+def _ee_name_merge_note(row: dict[str, Any]) -> dict[str, Any] | None:
+    """The ``commenting`` annotation on a person the page path drew as one
+    across several lists by name — None when the row joined nothing."""
+    joined = row.get(_EE_NAME_LISTS) or []
+    if len(joined) < 2:
+        return None
+    words = [_EE_LIST_WORDS[name] for name in ("officers", "shareholders", "beneficial_owners") if name in joined]
+    listed = ", ".join(words[:-1]) + " and " + words[-1]
+    return commenting(
+        pointer("recordDetails"),
+        f"Drawn as one person across {listed} because the names match once case, "
+        "accents, hyphens and spacing are set aside: the register's printable page "
+        "publishes no person key. Two people of the same name in one company would "
+        "be drawn as one.",
+    )
+
+
+def _ee_add_note(stmt: dict[str, Any], note: dict[str, Any] | None) -> None:
+    if note is not None:
+        stmt.setdefault("annotations", []).append(note)
+
+
 def _ee_full_name(person: dict[str, Any]) -> str:
+    if person.get(_EE_NAME_DISPLAY):
+        return str(person[_EE_NAME_DISPLAY])
     first = (person.get("eesnimi") or "").strip()
     last = (person.get("nimi_arinimi") or person.get("nimi") or "").strip()
     if first and last:
@@ -585,8 +736,11 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         seen_entity_ids.add(sub_stmt["statementId"])
         related_stmts.append((sub, sub_stmt, sub_url))
 
+    # The printable page has no person key: one company's same-named people
+    # are one node there (the index joins them on the register's hash).
+    parties_of = _ee_merge_page_people(bundle) if bundle.get("tier") == "page" else bundle
     yield from _ee_company_parties(
-        bundle, company_stmt["statementId"], source_url, seen_person_ids, seen_entity_ids,
+        parties_of, company_stmt["statementId"], source_url, seen_person_ids, seen_entity_ids,
         include_founders=True,
     )
     # The subject's ended holdings and former beneficial owners, from the
@@ -704,6 +858,7 @@ def _ee_company_parties(
         if address:
             residences.setdefault(_ee_person_id({
                 "isikukood_hash": bo.get("isikukood_hash"),
+                _EE_NAME_KEY: bo.get(_EE_NAME_KEY),
                 "kirje_id": str(bo.get("kirje_id") or ""),
                 "eesnimi": (bo.get("eesnimi") or "").strip(),
                 "nimi_arinimi": (bo.get("nimi") or "").strip(),
@@ -806,6 +961,7 @@ def _ee_company_parties(
                     identifiers=_ee_person_identifiers(sh),
                     source_url=source_url,
                 )
+                _ee_add_note(person_stmt, _ee_name_merge_note(sh))
                 yield person_stmt
                 seen_person_ids.add(person_id)
             else:
@@ -902,6 +1058,7 @@ def _ee_company_parties(
                 identifiers=_ee_person_identifiers(officer),
                 source_url=source_url,
             )
+            _ee_add_note(person_stmt, _ee_name_merge_note(officer))
             yield person_stmt
             seen_person_ids.add(person_id)
         else:
@@ -928,11 +1085,14 @@ def _ee_company_parties(
         first = (bo.get("eesnimi") or "").strip()
         last = (bo.get("nimi") or "").strip()
         full_name = f"{first} {last}".strip() if first or last else ""
+        if bo.get(_EE_NAME_DISPLAY):
+            full_name = str(bo[_EE_NAME_DISPLAY])
         if not full_name:
             continue
 
         person_id = _ee_person_id({
             "isikukood_hash": bo.get("isikukood_hash"),
+            _EE_NAME_KEY: bo.get(_EE_NAME_KEY),
             "kirje_id": kirje_id,
             "eesnimi": first,
             "nimi_arinimi": last,
@@ -948,6 +1108,7 @@ def _ee_company_parties(
                 identifiers=_ee_person_identifiers(bo),
                 source_url=source_url,
             )
+            _ee_add_note(person_stmt, _ee_name_merge_note(bo))
             yield person_stmt
             seen_person_ids.add(person_id)
         else:

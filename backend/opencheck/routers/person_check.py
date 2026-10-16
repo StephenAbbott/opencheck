@@ -39,6 +39,7 @@ RELATED_PEP / RELATED_SANCTIONED signals on the entity report.
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -234,7 +235,8 @@ async def _person_check_impl(
 
 
 class AppointmentItem(BaseModel):
-    """One Companies House appointment held by an officer."""
+    """One appointment or position held — a Companies House appointment, or
+    a row on one of an Estonian company's lists."""
 
     company_name: str
     company_number: str | None = None
@@ -242,6 +244,16 @@ class AppointmentItem(BaseModel):
     role: str | None = None
     appointed_on: str | None = None
     resigned_on: str | None = None
+    #: Estonia: the company's legal form, which of the register's lists the
+    #: person is on (``registry_card`` / ``shareholders`` /
+    #: ``beneficial_owners`` / ``off_card``), the register's role code, and
+    #: the share the list states (an exact percentage where it gives one).
+    company_legal_form: str | None = None
+    register_list: str | None = None
+    role_code: str | None = None
+    share_percent: str | None = None
+    share_size: str | None = None
+    share_currency: str | None = None
 
 
 class PersonAppointmentsResponse(BaseModel):
@@ -257,6 +269,17 @@ class PersonAppointmentsResponse(BaseModel):
     name: str | None
     birth_date: str | None
     is_stub: bool
+    #: Which key the list hangs off: ``GB-COH-OFFICER`` (a Companies House
+    #: officer id) or ``EE-ARIREGISTER-HASH`` (the Estonian register's
+    #: pseudonymous person key), and the source that answered.
+    scheme: str = "GB-COH-OFFICER"
+    source_id: str = "companies_house"
+    #: The Estonian index's cut — the day the register's files describe.
+    as_of: str | None = None
+    #: Distinct companies in the list (Estonia; one company can carry the
+    #: person on several lists), and whether the rows were cut short.
+    company_count: int | None = None
+    truncated: bool = False
     total_results: int | None
     active_count: int
     appointments: list[AppointmentItem]
@@ -347,18 +370,107 @@ async def _person_appointments_impl(officer_id: str) -> PersonAppointmentsRespon
     )
 
 
+EE_PERSON_SCHEME = "EE-ARIREGISTER-HASH"
+
+_EE_APPOINTMENTS_CAVEAT = (
+    "Positions are as recorded in the Estonian e-Business Register's open data "
+    "under one pseudonymous person key (isikukood_hash), which the register "
+    "publishes so a person can be followed across companies; it is not an "
+    "identifier, and the register does not guarantee one key per person — a "
+    "foreign person can appear with no key on one list and a key on another. "
+    "The files hold current rows only: a deleted company or an ended role is "
+    "not listed."
+)
+
+
+def _ee_person_appointments(person_hash: str) -> PersonAppointmentsResponse:
+    """Every company the Estonian index lists the person on, keyed by the
+    register's hash — current rows, the fields the register publishes, no
+    addresses. Listed, never drawn as graph nodes (Stephen, 16 Oct 2026)."""
+    from ..bods.mappers.estonia import EE_STATUS_LABELS, ee_person_role_label
+    from ..sources import ariregister
+
+    adapter = REGISTRY["ariregister"]
+    if ariregister.parse_person_hash(person_hash) is None:
+        raise HTTPException(status_code=400, detail="Not an Estonian register person key (a UUID).")
+    found = ariregister.companies_for_hash(person_hash)
+    if found is None:
+        # A valid key and no index on this instance.
+        return PersonAppointmentsResponse(
+            officer_id=person_hash, name=None, birth_date=None, is_stub=True,
+            total_results=None, active_count=0, appointments=[], bods=[],
+            attribution=adapter.info.attribution, caveat=_EE_APPOINTMENTS_CAVEAT,
+            scheme=EE_PERSON_SCHEME, source_id="ariregister",
+        )
+    meta = ariregister.read_meta()
+    cut = ariregister.cut_date(meta)
+    items = [
+        AppointmentItem(
+            company_name=row.get("name") or "Unnamed company",
+            company_number=row["code"],
+            company_status=EE_STATUS_LABELS.get(str(row.get("status_code") or ""), row.get("status_text")),
+            company_legal_form=row.get("legal_form"),
+            role=ee_person_role_label(row["list"], row.get("role"), row.get("role_text")),
+            role_code=row.get("role"),
+            register_list=row["list"],
+            appointed_on=row.get("since"),
+            share_percent=row.get("percent"),
+            share_size=row.get("share_size"),
+            share_currency=row.get("currency"),
+        )
+        for row in found["rows"]
+    ]
+    return PersonAppointmentsResponse(
+        officer_id=str(uuid.UUID(person_hash.strip())),
+        name=found.get("name"),
+        birth_date=None,
+        is_stub=False,
+        total_results=found["total_rows"],
+        active_count=found["total_rows"],
+        appointments=items,
+        bods=[],
+        attribution=adapter.info.attribution,
+        caveat=_EE_APPOINTMENTS_CAVEAT,
+        scheme=EE_PERSON_SCHEME,
+        source_id="ariregister",
+        as_of=cut.date().isoformat() if cut else None,
+        company_count=found["companies"],
+        truncated=found["truncated"],
+    )
+
+
 @router.get("/person-appointments", response_model=PersonAppointmentsResponse)
 @limiter.limit(lookup_tier)
 async def person_appointments(
     request: Request,
     response: Response,
-    officer_id: str = Query(
-        ...,
+    officer_id: str | None = Query(
+        None,
         min_length=8,
         description="Companies House officer id (from a /person-check hit).",
     ),
+    scheme: str | None = Query(
+        None,
+        description=(
+            "With `id`: the key the person is listed under. `EE-ARIREGISTER-HASH` "
+            "is the Estonian e-Business Register's pseudonymous person key, from "
+            "an Estonian company's person statement."
+        ),
+    ),
+    id: str | None = Query(None, description="The key, with `scheme`."),
 ) -> PersonAppointmentsResponse:
-    """All Companies House appointments for one officer id."""
+    """A person's positions across companies, hanging off one register key:
+    a Companies House officer id, or the Estonian register's person key.
+    Never a name search."""
+    if scheme is not None or id is not None:
+        if scheme != EE_PERSON_SCHEME or not id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"scheme must be {EE_PERSON_SCHEME}, with an id.",
+            )
+        return _ee_person_appointments(id)
+    if not officer_id:
+        raise HTTPException(status_code=400, detail="Give officer_id, or scheme and id.")
     return await _person_appointments_impl(officer_id)
 
 

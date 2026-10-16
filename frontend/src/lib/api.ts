@@ -1284,7 +1284,8 @@ export interface PersonCheckResponse {
   cross_source_links: CrossSourceLink[];
 }
 
-/** One Companies House appointment held by an officer. */
+/** One appointment or position held — a Companies House appointment, or a
+ *  row on one of an Estonian company's lists. */
 export interface AppointmentItem {
   company_name: string;
   company_number: string | null;
@@ -1292,6 +1293,15 @@ export interface AppointmentItem {
   role: string | null;
   appointed_on: string | null;
   resigned_on: string | null;
+  /** Estonia: the company's legal form, the list the person is on
+   *  (`registry_card` / `shareholders` / `beneficial_owners` / `off_card`),
+   *  the register's role code and the share the list states. */
+  company_legal_form?: string | null;
+  register_list?: string | null;
+  role_code?: string | null;
+  share_percent?: string | null;
+  share_size?: string | null;
+  share_currency?: string | null;
 }
 
 export interface PersonAppointmentsResponse {
@@ -1305,6 +1315,22 @@ export interface PersonAppointmentsResponse {
   bods: Record<string, unknown>[];
   attribution: string;
   caveat: string;
+  /** `GB-COH-OFFICER` or `EE-ARIREGISTER-HASH`, and the source that answered. */
+  scheme?: string;
+  source_id?: string;
+  /** Estonia: the index's cut, distinct companies, and whether rows were cut. */
+  as_of?: string | null;
+  company_count?: number | null;
+  truncated?: boolean;
+}
+
+/** A person's companies on the Estonian register, by the register's
+ *  pseudonymous person key — never by name. */
+export async function estonianPersonCompanies(
+  personHash: string
+): Promise<PersonAppointmentsResponse> {
+  const params = new URLSearchParams({ scheme: "EE-ARIREGISTER-HASH", id: personHash });
+  return getJson(`/person-appointments?${params.toString()}`);
 }
 
 export async function personAppointments(
