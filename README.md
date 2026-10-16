@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 361** — An Estonian officer, shareholder or beneficial owner now shows the other companies the e-Business Register names them on, keyed on the register's own person key.
+**Latest: Phase 362** — The History tab lists every numbered entry on an Estonian company's registry cards, read from the register's open data with no credentials.
 
 → [Full development history](docs/status.md)
 
