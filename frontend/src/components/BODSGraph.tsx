@@ -28,6 +28,7 @@ import {
   type Visibility,
 } from "../lib/bodsGraph";
 import type { RiskSignal } from "../lib/api";
+import { syncOverlayWithGraph } from "../lib/overlaySync";
 // buildSignalMap lives in lib/signalScope.ts (Phase 109) — the badge machinery
 // here and the per-source scoping filter must read `evidence` identically, so
 // they share one implementation rather than two that can drift.
@@ -550,7 +551,9 @@ export default function BODSGraph({
     }
     updateOverlaysRef.current = updateOverlays;
 
-    cy.on("viewport", updateOverlays);
+    // Pan/zoom *and* node drags — a drag moves a node without touching the
+    // viewport, which left its icon and flag behind (see lib/overlaySync.ts).
+    const unbindOverlaySync = syncOverlayWithGraph(cy, updateOverlays);
 
     cy.on("mousemove", "edge", (evt) => {
       const details = evt.target.data("details") as string | undefined;
@@ -582,7 +585,7 @@ export default function BODSGraph({
     });
     cy.on("viewport", () => { setEdgeTooltip(null); setSignalTooltip(null); });
 
-    return () => { cy.destroy(); cyRef.current = null; };
+    return () => { unbindOverlaySync(); cy.destroy(); cyRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model, signalMap, sameAs, clusters]);
 

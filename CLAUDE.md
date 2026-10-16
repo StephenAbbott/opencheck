@@ -212,7 +212,7 @@ Format validation is advisory (non-blocking). The amber border + warning fires o
 
 **Test suite**: see "Test suite" below — the current totals are in the closing paragraph of `docs/status.md`, not here (a count in this file went stale for two hundred phases).
 
-**Frontend graph renderer**: Cytoscape.js (replaced `@openownership/bods-dagre` in Phase 44). Component: `frontend/src/components/BODSGraph.tsx`. Uses a React HTML overlay layer for BOVS icons and flags — never use Cytoscape's `background-image` for icons (canvas taint from Adobe Illustrator `xmlns:xlink` SVGs). BOVS icons are base64 data URIs in `frontend/src/lib/bovsIcons.ts`. Flags are served from `frontend/public/bods-dagre-images/flags/`. The overlay recomputes on `cy.on('viewport')`. Flag badges are at 45° NE circumference; risk signal badges at 315° NW.
+**Frontend graph renderer**: Cytoscape.js (replaced `@openownership/bods-dagre` in Phase 44). Component: `frontend/src/components/BODSGraph.tsx`. Uses a React HTML overlay layer for BOVS icons and flags — never use Cytoscape's `background-image` for icons (canvas taint from Adobe Illustrator `xmlns:xlink` SVGs). BOVS icons are base64 data URIs in `frontend/src/lib/bovsIcons.ts`. Flags are served from `frontend/public/bods-dagre-images/flags/`. The overlay recomputes on pan/zoom **and node drags** — `syncOverlayWithGraph` in `frontend/src/lib/overlaySync.ts` (a drag fires `position`, never `viewport`). Flag badges are at 45° NE circumference; risk signal badges at 315° NW.
 
 **Risk signal overlays**: BOVS Option C implemented. `buildSignalMap()` in BODSGraph.tsx reads `evidence.statement_id` (SANCTIONED/PEP), `evidence.subject_statement_id` (RELATED_*), `evidence.matches[].statement_id` (TRUST/AMLA), `evidence.jurisdictions[].statement_id` (FATF/NON_EU), `evidence.longest_path[]` (COMPLEX_OWNERSHIP_LAYERS). Single signal → labelled pill at 315° NW; multiple → "N ⚠" stack badge.
 
@@ -646,7 +646,7 @@ bundle, under `ares/bundle-v2/`, only when VR returned data).
 
 **Signal badge rendering**: BOVS Option C risk overlays at 315° NW circumference — `(cx − r·cos45°, cy − r·sin45°)`. Single signal: labelled pill. Multiple signals: stack badge "N ⚠" in worst-severity colour. Signal→statementId mapping via `buildSignalMap()` which reads evidence fields.
 
-**Overlay update**: `cy.on('viewport', updateOverlays)` fires on every pan/zoom. All coordinates computed in screen-space pixels.
+**Overlay update**: `syncOverlayWithGraph(cy, updateOverlays)` (`lib/overlaySync.ts`) — synchronously on `viewport` (pan/zoom) and, coalesced to one per animation frame, on node `position` (a drag, a re-layout). Listening to `viewport` alone left a dragged node's icon and flag behind until the next pan. Never subscribe the overlay to `viewport` only. All coordinates computed in screen-space pixels.
 
 **Edge styling**: All styled clones (`.own`/`.control`) from bods-dagre were removed. Arrowheads injected via custom SVG marker `#oc-bovs-arrow` in SVG `<defs>`.
 
