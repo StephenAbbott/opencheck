@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 347** — Phase numbers and the status row are now written when a pull request merges, so branches in flight no longer collide on the number or conflict on the stamped files.
+**Latest: Phase 350** — Production now serves the GLEIF anchor from the Golden Copy mirror first, spending one live call instead of six, and a mirror-served group keeps all its direct children up to the live path's cap.
 
 → [Full development history](docs/status.md)
 

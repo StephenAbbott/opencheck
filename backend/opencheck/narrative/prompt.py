@@ -23,10 +23,29 @@ from .packet import EvidencePacket
 # and that a list signal on the company itself is its own registration.
 # v9 (Phase 319): rule 5 names the EU tax list as a jurisdiction-risk source
 # and says it carries no AML obligation.
-PROMPT_VERSION = "2026-10-10-v9"
+# v10: the output is bounded whatever the packet's size — the summary has a
+# character cap, the claims a count cap, and many items of one kind are
+# summarised by kind with a count rather than listed. Rosneft's prompt-v9
+# summaries ran to ~2,250 characters (4-6 sentences of 300-500 characters
+# each) restated again across 16-25 claims, and one run passed the old
+# 4,000-token ceiling.
+PROMPT_VERSION = "2026-10-15-v10"
+
+#: Upper bound on the ``summary`` paragraph. The prompt states it in words:
+#: on 15 Oct 2026 a characters-only cap of 1,200 was overrun by 30-45% on
+#: every Rosneft run, while "180 words" brought the same packet to
+#: 1,414-1,513 characters (from ~2,250 under prompt v9). The character figure
+#: is the outer limit — in the prompt, the tool schema and the validator,
+#: which records an overshoot as an issue.
+SUMMARY_MAX_WORDS = 180
+SUMMARY_MAX_CHARS = 1500
+#: Upper bound on the number of ``claims``. Same three places.
+MAX_CLAIMS = 12
+#: Upper bound on the number of ``limitations``.
+MAX_LIMITATIONS = 6
 
 # Compliance-analyst tone, single executive paragraph, hard grounding rules.
-SYSTEM_PROMPT = """\
+SYSTEM_PROMPT = f"""\
 You are a senior customer due-diligence (CDD) / financial-crime analyst. You write
 short, factual entity summaries for other compliance professionals, from a packet
 of evidence that another system has already gathered and verified.
@@ -103,16 +122,26 @@ ABSOLUTE RULES — these protect the integrity of the summary:
    not confirm is not a clean result.
 
 OUTPUT — a single executive paragraph for a compliance reader:
-- 4–6 sentences. Lead with the entity name and whether it is identifier-confirmed
-  or name-matched.
+- 4–6 sentences and AT MOST {SUMMARY_MAX_WORDS} words in all — a hard limit,
+  never more than {SUMMARY_MAX_CHARS} characters; prefer fewer, shorter sentences.
+  Lead with the entity name and whether it is identifier-confirmed or name-matched.
 - Summarise the substantive findings (ownership/control, key officers,
   jurisdiction), then the risk signals (with confidence + derivation), then the
   material gaps.
+- When the packet holds many items of one kind — several related parties with
+  the same kind of signal, or the same signal reported by several sources —
+  summarise them by kind with a count (e.g. "15 related parties match
+  sanctions records") and name at most three examples. Never list every party.
+  The full list is on the page beside the summary; the paragraph is the overview.
 - Precise and neutral. No filler, no praise, no legal conclusions.
 
 Return your answer ONLY by calling the `emit_summary` tool. In `claims`, break the
-paragraph into the atomic claims it makes, each citing the `fact_ids` that support
-it; the `summary` paragraph must assert nothing that isn't covered by a claim.
+paragraph into the atomic claims it makes — AT MOST {MAX_CLAIMS} claims, each one
+short sentence — each citing the `fact_ids` that support it; the `summary`
+paragraph must assert nothing that isn't covered by a claim. A claim that
+summarises a group of items cites the ids of the items it summarises; cite many
+ids in one claim rather than writing one claim per item. At most
+{MAX_LIMITATIONS} `limitations`, one short sentence each.
 """
 
 SUMMARY_TOOL = {
@@ -123,11 +152,19 @@ SUMMARY_TOOL = {
         "properties": {
             "summary": {
                 "type": "string",
-                "description": "One executive paragraph (4-6 sentences) for a compliance reader.",
+                "description": (
+                    f"One executive paragraph (4-6 sentences, at most {SUMMARY_MAX_WORDS} "
+                    f"words / {SUMMARY_MAX_CHARS} characters) for a compliance reader."
+                ),
+                "maxLength": SUMMARY_MAX_CHARS,
             },
             "claims": {
                 "type": "array",
-                "description": "Every atomic claim the paragraph makes, grounded in packet facts.",
+                "description": (
+                    f"Every atomic claim the paragraph makes (at most {MAX_CLAIMS}), "
+                    "grounded in packet facts; a claim about a group cites every id it covers."
+                ),
+                "maxItems": MAX_CLAIMS,
                 "items": {
                     "type": "object",
                     "properties": {
@@ -146,7 +183,10 @@ SUMMARY_TOOL = {
             "limitations": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Material gaps / caveats surfaced from the packet.",
+                "maxItems": MAX_LIMITATIONS,
+                "description": (
+                    f"Material gaps / caveats surfaced from the packet (at most {MAX_LIMITATIONS})."
+                ),
             },
             "overall_confidence": {
                 "type": "string",

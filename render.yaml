@@ -101,10 +101,20 @@ services:
       # URL) to fall back to the Phase 88 per-boot download into /tmp.
       - key: OPENCHECK_ENTITY_PAGES_DB_FILE
         value: /var/data/entity_pages.sqlite
-      # Phase 179/180: mirror-first stays OFF until the measurement gate on
-      # the Golden Copy ticket passes (read /mirror); flip it here when it does.
+      # Phase 179/180: mirror-first. ON since the "GLEIF rate limiter refusing
+      # a third of stream/export calls" ticket (15 Oct 2026): on 5 Oct ~31% of
+      # anchor calls were refused by our own 50/min budget and every refusal
+      # already sent the anchor to this same mirror, minus the cross-reference
+      # ids. Mirror-first serves the anchor with one live call (the Level 1
+      # record, for those ids) instead of six. Read /mirror for the gate's
+      # numbers; set "false" to go back to live-first.
       - key: OPENCHECK_GLEIF_MIRROR_FIRST
-        value: "false"
+        value: "true"
+      # Measurement only: compares the top-up's live record with the mirror on
+      # every field the mapper reads and counts agreement on /mirror. Costs no
+      # extra call.
+      - key: OPENCHECK_GLEIF_LIVE_CONFIRM
+        value: "true"
       # --- Phase 186: the UK PSC graph ---
       # psc_graph.sqlite (~2.2 GB) — every active Companies House PSC record,
       # built daily from the register's own snapshot by refresh-psc-graph.yml

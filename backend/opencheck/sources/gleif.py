@@ -91,6 +91,56 @@ _RELATIONSHIP_CACHE_MAX_AGE_DAYS = 1.0
 #: (the subsidiaries network reads the same cap, ``subsidiaries._PAGE_CAP``).
 _DIRECT_CHILDREN_PAGE_CAP = 10
 
+#: Level 1 attributes the live API carries that the Golden Copy does not:
+#: the cross-reference ids from GLEIF's mapping programmes (Phase 179).
+CROSSREF_ATTRS = ("ocid", "qcc", "bic", "mic", "spglobal")
+
+#: Why a store-served anchor holds no cross-reference ids — the closed
+#: ``degradation`` reason vocabulary, so the pipeline can record it as is.
+CROSSREFS_RATE_LIMITED = "rate_limited"
+CROSSREFS_TIMEOUT = "timeout"
+CROSSREFS_UPSTREAM_ERROR = "upstream_error"
+
+
+def _merge_crossrefs(bundle: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    """Copy the mapping-file ids from a live Level 1 ``payload`` (a fresh
+    answer or a cached one, any age) into a store-served ``bundle``'s record,
+    and mark the bundle as carrying them. Returns the live record.
+
+    Only ids the live record actually holds are copied — an empty value is
+    not an id — and nothing else in the store's record changes.
+    """
+    live = payload.get("data") or payload
+    live_attrs = live.get("attributes") or {}
+    record_attrs = bundle["record"].setdefault("attributes", {})
+    for key in CROSSREF_ATTRS:
+        value = live_attrs.get(key)
+        if value not in (None, "", []):
+            record_attrs[key] = value
+    bundle["crossrefs_available"] = True
+    bundle.pop("crossrefs_unavailable_reason", None)
+    return live
+
+
+async def _gather_cancelling(*aws: Any) -> list[Any]:
+    """``asyncio.gather``, except that the first failure cancels the rest.
+
+    The anchor's four calls are all-or-nothing: one refusal sends the whole
+    bundle to the stale cache or the Golden Copy. Plain ``gather`` leaves the
+    siblings running, so a lookup that had already lost its live anchor kept
+    queueing for — and spending — slots of the shared GLEIF budget it was
+    about to throw away, which is what keeps a saturated window saturated.
+    """
+    tasks = [asyncio.ensure_future(a) for a in aws]
+    try:
+        return list(await asyncio.gather(*tasks))
+    except BaseException:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
 
 def _record_lei(record: dict[str, Any] | None) -> str | None:
     """The LEI of a Level 1 record data object, or ``None``."""
@@ -340,7 +390,7 @@ class GleifAdapter(SourceAdapter):
                 (ultimate_parent, ultimate_exception),
                 (direct_children, direct_children_total),
             ) = await asyncio.wait_for(
-                asyncio.gather(
+                _gather_cancelling(
                     self._get(
                         f"/lei-records/{quote(lei)}",
                         cache_key=cache_key,
@@ -367,6 +417,21 @@ class GleifAdapter(SourceAdapter):
                         f"{snapshot_after:.0f}s and no snapshot row was found"
                     ) from exc
                 raise
+            # The Golden Copy carries no mapping-file ids (ocid, spglobal,
+            # bic, mic, qcc). The Level 1 record may still be in the cache —
+            # often because it was answered in this very gather before a
+            # sibling call was refused — and its ids are as good stale as
+            # fresh. Without them the lookup dispatches no OpenCorporates,
+            # so when they cannot be had the bundle says why and the
+            # pipeline records it.
+            cached = self._cache.get_payload(cache_key)
+            if cached is not None:
+                _merge_crossrefs(bundle, cached[0])
+            else:
+                bundle["crossrefs_available"] = False
+                bundle["crossrefs_unavailable_reason"] = (
+                    CROSSREFS_TIMEOUT if isinstance(exc, TimeoutError) else CROSSREFS_RATE_LIMITED
+                )
             validate_raw("gleif", GLEIFBundle, bundle)
             return bundle
 
@@ -562,7 +627,7 @@ class GleifAdapter(SourceAdapter):
     #: publishes them as identifiers and the pipeline dispatches
     #: OpenCorporates on ``ocid`` and corroborates MEIP on ``spglobal``, so a
     #: mirror-served anchor without them would silently lose a source.
-    _CROSSREF_ATTRS = ("ocid", "qcc", "bic", "mic", "spglobal")
+    _CROSSREF_ATTRS = CROSSREF_ATTRS
 
     async def _crossref_topup(self, lei: str, bundle: dict[str, Any]) -> None:
         """One bounded live call on top of a mirror-served anchor, for what
@@ -585,8 +650,11 @@ class GleifAdapter(SourceAdapter):
         would make this call unnecessary.
         """
         bundle["crossrefs_available"] = False
+        bundle["crossrefs_unavailable_reason"] = CROSSREFS_RATE_LIMITED
         settings = get_settings()
         if not settings.allow_live:
+            # Live mode off is a deployment choice, not a gap in this lookup.
+            bundle.pop("crossrefs_unavailable_reason", None)
             mirrorstats.record("anchor.topup_skipped")
             return
         limit = settings.gleif_rate_limit_per_minute
@@ -606,18 +674,15 @@ class GleifAdapter(SourceAdapter):
                 ),
                 timeout=bound,
             )
-        except Exception:  # noqa: BLE001 — never fail a mirror-served anchor
+        except Exception as exc:  # noqa: BLE001 — never fail a mirror-served anchor
             mirrorstats.record("anchor.topup_failed")
+            if isinstance(exc, TimeoutError):
+                bundle["crossrefs_unavailable_reason"] = CROSSREFS_TIMEOUT
+            elif not isinstance(exc, GleifRateLimitedError):
+                bundle["crossrefs_unavailable_reason"] = CROSSREFS_UPSTREAM_ERROR
             return
         mirrorstats.record("anchor.topup_cached" if cached is not None else "anchor.topup_live")
-        live = payload.get("data") or payload
-        live_attrs = live.get("attributes") or {}
-        record_attrs = bundle["record"].setdefault("attributes", {})
-        for key in self._CROSSREF_ATTRS:
-            value = live_attrs.get(key)
-            if value not in (None, "", []):
-                record_attrs[key] = value
-        bundle["crossrefs_available"] = True
+        live = _merge_crossrefs(bundle, payload)
         if settings.gleif_live_confirm:
             from ..entity_pages import differing_paths
 
@@ -660,8 +725,8 @@ class GleifAdapter(SourceAdapter):
         Phase 178 that is the full Level 1 record (names, both addresses,
         ``registeredAs``/``registeredAt``, category, legal form, dates),
         direct/ultimate parent records, the reporting exceptions filed in
-        their place, and the first page of direct children with the store's
-        total. On a pre-178 file the detail, exceptions and cross-reference
+        their place, and the direct children up to the live path's cap with
+        the store's total. On a pre-178 file the detail, exceptions and cross-reference
         ids are simply absent, so the registry bridges and exception chips
         quietly skip for this lookup rather than being guessed at. Provenance
         is recorded as ``snapshot`` with the Golden Copy publish date, so every
@@ -692,7 +757,14 @@ class GleifAdapter(SourceAdapter):
             # build, or a non-LEI edge) — keep the LEI, claim nothing else.
             return {"id": parent_lei, "attributes": {"lei": parent_lei}}
 
-        children_rows, children_total = store.children(lei, limit=100)
+        # The live path pages /direct-children up to _DIRECT_CHILDREN_PAGE_CAP
+        # pages of 100 (Phase 255); the store answers to the same cap. At one
+        # page a mirror-served (or rate-limited) group of more than 100 direct
+        # children lost the rest from the graph and the export — Shell's 105
+        # read as 100 — which mirror-first would have made the everyday case.
+        children_rows, children_total = store.children(
+            lei, limit=_DIRECT_CHILDREN_PAGE_CAP * 100
+        )
 
         # Phase 178: the store now holds the REPEX file, so a subject with no
         # parent of a kind can carry the reporting exception it filed — the

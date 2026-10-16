@@ -70,6 +70,15 @@ let them land without colliding:
   rebase), run `uv run pytest -q` **and** `uv run python scripts/mypy_ratchet.py`
   from `backend/`, and the frontend suite where the frontend changed. Then
   `gh pr create`; CI is the gate.
+- **The PR body names its Notion ticket** — a line `Notion: <ticket URL>`
+  (the `app.notion.com/p/…` link) near the top, when the work has one. The
+  release steward (a scheduled Claude task, twice a day) merges green PRs,
+  confirms the stamp and the deploy, and then logs the phase number on that
+  ticket and moves it to Testing; without the link it has to match on the PR
+  title and may not find it. Then **leave the PR alone**: do not watch CI or
+  merge it yourself, and never merge another chat's PR. A PR that must not be
+  merged yet says so in its title (`WIP`, `DO NOT MERGE`, `hold`) or carries
+  the `hold` label.
 - Everything else a phase must update stays as it was — `docs/` where the
   phase touched that surface, the OKF bundle, source counts, curated
   narratives.
@@ -3623,3 +3632,38 @@ repeat to a fixed point. Stephen's decisions on the Phase 342 ticket:
   to `_caught`. `NOT_COMPUTED` names FAQ 402 (ended holdings), FAQ 398's
   ownership-or-control programmes and the SSI list (out of scope, decided
   15 Oct 2026); `OFAC_SOURCES` lists the three pages checked.
+
+## A refused GLEIF anchor keeps its cross-references, and says when it cannot
+
+From the "GLEIF rate limiter refusing a third of stream/export calls" ticket
+(investigated 15 Oct 2026; findings on the ticket). `sources/gleif.py`,
+`routers/lookup.py::_resolve_ctx`, `routers/export.py`. Things that will be
+re-derived otherwise:
+
+- **A refusal is never sent** (`refused_rate_limited` is counted before any
+  request) and **one refusal fails the whole live anchor**: the four calls are
+  all-or-nothing, so the bundle goes to the stale cache, then the Golden Copy
+  snapshot (`snapshot_source: "fallback"`). `_gather_cancelling` cancels the
+  other calls at the first failure; plain `gather` left them queueing for
+  budget whose answers were thrown away.
+- **The snapshot has no mapping-file ids** (`ocid`, `spglobal`, `bic`,
+  `mic`, `qcc` — `CROSSREF_ATTRS`), and OpenCorporates is dispatched only on
+  `ctx.ocid`. The fallback copies them from the cached Level 1 record at any
+  age (`_merge_crossrefs`, shared with the mirror top-up); without one the
+  bundle carries `crossrefs_available: false` and
+  `crossrefs_unavailable_reason` (the degradation reason vocabulary), and
+  `_resolve_ctx` records a `gleif` / `source_read` degradation with
+  `GLEIF_CROSSREFS_DETAIL` — so the verdict says "one source answered only in
+  part" instead of the report silently lacking OpenCorporates. A live record
+  carries no flag; a top-up skipped because live mode is off names no reason.
+- **An LEI export defaults to `deepen_top=5`** (`LEI_EXPORT_DEEPEN_TOP`), the
+  stream's and `/lookup`'s, REST and MCP alike. The replay cache is keyed
+  `LEI:deepen_top`; at 3 every download after a QuickCheck ran a second full
+  pipeline and exported a shallower graph than the report on screen. A `q`
+  export keeps 3.
+- **Mirror-first is on in production** (`render.yaml`, with
+  `OPENCHECK_GLEIF_LIVE_CONFIRM`); the config default stays `false`, so tests
+  and local runs are live-first unless they set it. A store-served anchor
+  carries the direct children to the live path's cap (`_DIRECT_CHILDREN_PAGE_CAP`
+  × 100), not one page of 100. Go back to live-first by setting the
+  `render.yaml` value to `"false"`; nothing else changes.
