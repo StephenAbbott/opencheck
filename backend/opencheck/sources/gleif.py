@@ -725,8 +725,8 @@ class GleifAdapter(SourceAdapter):
         Phase 178 that is the full Level 1 record (names, both addresses,
         ``registeredAs``/``registeredAt``, category, legal form, dates),
         direct/ultimate parent records, the reporting exceptions filed in
-        their place, and the first page of direct children with the store's
-        total. On a pre-178 file the detail, exceptions and cross-reference
+        their place, and the direct children up to the live path's cap with
+        the store's total. On a pre-178 file the detail, exceptions and cross-reference
         ids are simply absent, so the registry bridges and exception chips
         quietly skip for this lookup rather than being guessed at. Provenance
         is recorded as ``snapshot`` with the Golden Copy publish date, so every
@@ -757,7 +757,14 @@ class GleifAdapter(SourceAdapter):
             # build, or a non-LEI edge) — keep the LEI, claim nothing else.
             return {"id": parent_lei, "attributes": {"lei": parent_lei}}
 
-        children_rows, children_total = store.children(lei, limit=100)
+        # The live path pages /direct-children up to _DIRECT_CHILDREN_PAGE_CAP
+        # pages of 100 (Phase 255); the store answers to the same cap. At one
+        # page a mirror-served (or rate-limited) group of more than 100 direct
+        # children lost the rest from the graph and the export — Shell's 105
+        # read as 100 — which mirror-first would have made the everyday case.
+        children_rows, children_total = store.children(
+            lei, limit=_DIRECT_CHILDREN_PAGE_CAP * 100
+        )
 
         # Phase 178: the store now holds the REPEX file, so a subject with no
         # parent of a kind can carry the reporting exception it filed — the
