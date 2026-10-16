@@ -18,6 +18,7 @@ import {
   gleifLogLines,
   logLineWords,
   entryHeadline,
+  registerChangeLines,
   tierChip,
   tierSentence,
   tokenFromLocation,
@@ -294,6 +295,68 @@ describe("catch-up entries (Phase 260)", () => {
     expect(tierChip("opensanctions").tone).toBe("risk");
     expect(tierChip("manual").label).toBe("By hand");
     expect(tierChip("gleif").label).toBe("GLEIF delta");
+  });
+});
+
+describe("register tier entries (Estonia)", () => {
+  const entry = (trigger: Record<string, unknown>, changes: WatchEntry["changes"] = []) =>
+    ({
+      id: 4, lei: "5493005044RTLQ5RZU70", legal_name: "Eesti Energia AS", created_at: "2026-10-17T12:00:00Z",
+      tier: "register" as const, trigger, changes, checked: [], degraded: [],
+    }) as WatchEntry;
+
+  it("says which days of the register's open data and which company", () => {
+    expect(triggerSentence(entry({ code: "10421629", cuts: ["2026-10-17"] }))).toBe(
+      "The Estonian e-Business Register recorded a change to this company in its open data of 2026-10-17 (registry code 10421629).",
+    );
+    expect(triggerSentence(entry({ cuts: ["2026-10-16", "2026-10-17"] }))).toContain(
+      "its open data of 2026-10-16 and 2026-10-17.",
+    );
+  });
+
+  it("words the counts as the feed does, never a person", () => {
+    expect(
+      registerChangeLines({
+        removed: true, officers: [2, 2], beneficial_owners: [0, 1], supervisory_board: [3, 0],
+        name: ["A OÜ", "B OÜ"], legal_form: ["OÜ", "AS"], status: ["R", "Q"],
+      }),
+    ).toEqual([
+      "The company is no longer in the register's open data — deleted companies are not published.",
+      "Persons on the registry card: changed (2 entries before and after).",
+      "Beneficial owners: none → 1 entry.",
+      "Supervisory board: 3 → none entries.",
+      "Name: A OÜ → B OÜ.",
+      "Status: Entered in the register → Q.",
+      "Legal form: OÜ → AS.",
+    ]);
+    expect(registerChangeLines(undefined)).toEqual([]);
+  });
+
+  it("is news without a snapshot difference, and has its own chip", () => {
+    expect(entryHeadline(entry({}))).toBe("Eesti Energia AS: Estonian register record changed");
+    expect(tierChip("register")).toEqual({ label: "Register change", tone: "accent" });
+  });
+
+  it("explains a register gap as a catch-up", () => {
+    const gap = { ...entry({ reason: "register_gap", after: "2026-10-11", before: "2026-10-13" }), tier: "catch_up" as const };
+    expect(triggerSentence(gap)).toBe(
+      "The Estonian e-Business Register's changes between 2026-10-11 and 2026-10-13 could not be read, so every watched Estonian company was re-checked.",
+    );
+  });
+
+  it("names the tier in the honesty line only where the index is held", () => {
+    const base = {
+      gleif: { available: false, watermark: null, refresh_enabled: false, last_applied_at: null, last_delta: null, rows_applied: {}, record_count: null },
+      opensanctions: { available: false, last_version: null, last_checked_at: null },
+      worker: { enabled: true, interval_s: 300 },
+    };
+    const s = tierSentence({
+      ...base,
+      register: { available: true, index_cut: "2026-10-17", last_cut: "2026-10-17", waiting: false, gaps: [] },
+    });
+    expect(s).toContain("this instance holds 2026-10-17");
+    expect(s).toContain("No other national register is polled");
+    expect(tierSentence(base)).toContain("National registers are never polled");
   });
 });
 

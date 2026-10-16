@@ -565,11 +565,13 @@ def _shared_conn() -> sqlite3.Connection | None:
     return _SHARED.get("conn")
 
 
-def reset_connection() -> None:
-    """Forget the cached connection (after a download, or in tests)."""
+def reset_connection(*, close: bool = True) -> None:
+    """Forget the cached connection (after a download, or in tests).
+    ``close=False`` leaves closing to the garbage collector, for a file
+    replaced while lookups may be reading it."""
     _VOCAB.clear()
     conn = _SHARED.pop("conn", None)
-    if conn is not None:
+    if conn is not None and close:
         try:
             conn.close()
         except sqlite3.Error:  # pragma: no cover - best effort
@@ -674,11 +676,36 @@ def warm_index() -> dict[str, Any]:
         else:
             outcome = "downloaded"
         downloaded, elapsed = download_db(url, path, last_modified=last_modified)
-        reset_connection()
+        # The file was replaced under a server that may be reading it (the
+        # hourly refresh): drop the old connection without closing it, so a
+        # query in flight finishes on the old file and the next one opens
+        # the new. The old connection closes when the last user lets go.
+        reset_connection(close=False)
         return {"ariregister": f"{outcome}: {path} ({downloaded} bytes in {elapsed:.1f}s)"}
     except Exception as exc:  # noqa: BLE001 — no index is a state, not a crash
         logger.warning("ariregister: asset check/download failed: %s", exc)
         return {"ariregister": f"failed: {exc}"}
+
+
+async def refresh_loop(interval_s: float) -> None:
+    """Re-run :func:`warm_index` every ``interval_s`` seconds, so the daily
+    index lands without a restart (the PSC graph's arrangement). Before this
+    the server picked up a new index only when it restarted — on a busy
+    instance, rarely — and the watchlist's register tier would have re-run a
+    changed company against yesterday's record. The first run is one interval
+    after boot, since boot already checked."""
+    import asyncio
+
+    while True:
+        await asyncio.sleep(interval_s)
+        try:
+            result = await asyncio.to_thread(warm_index)
+            if not str(result.get("ariregister", "")).startswith("already present"):
+                logger.info("ariregister: refresh: %s", result)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ariregister: refresh loop iteration failed: %s", exc)
 
 
 def _people_rows(conn: sqlite3.Connection, table: str, code: str) -> list[dict[str, Any]]:

@@ -751,6 +751,22 @@ class Settings(BaseSettings):
         ),
         alias="ARIREGISTER_DB_URL",
     )
+    # How often the asset check re-runs in-process, so the daily index lands
+    # without a restart — and the watchlist's register tier re-runs a watched
+    # company against the changed record (default hourly; 0 disables the
+    # loop, boot still checks once).
+    ariregister_refresh_interval_s: float = Field(
+        default=3600.0, alias="ARIREGISTER_REFRESH_INTERVAL_S"
+    )
+    # The rolling fourteen-day diff the refresh workflow publishes beside the
+    # index (scripts/diff_ariregister_index.py), read by the watchlist worker.
+    ariregister_delta_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "ariregister-index/ariregister-delta.json"
+        ),
+        alias="ARIREGISTER_DELTA_URL",
+    )
     # --- Estonian e-Business Register (ariregister) ---
     # No credentials required — the adapter uses the public printable-page
     # endpoint at ariregister.rik.ee without authentication.

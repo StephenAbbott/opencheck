@@ -3,8 +3,10 @@
  * (Phase 215).
  *
  * The page is the front of a delta-driven loop, and it says so: a company
- * on the list is re-checked only when GLEIF's Golden Copy delta or
- * OpenSanctions' entity delta names it. Nothing here polls a register. The
+ * on the list is re-checked only when GLEIF's Golden Copy delta,
+ * OpenSanctions' entity delta or (for an Estonian company) the daily diff of
+ * the e-Business Register's open data names it. Nothing here polls a
+ * register. The
  * honesty line under the list (`tierSentence`) states what each tier is
  * actually doing on this instance — the mirror's watermark and how many
  * records the last delta changed — so "3.4 million LEI records; 16,000
@@ -32,6 +34,7 @@ import {
   describeChange,
   gleifLogLines,
   entryHeadline,
+  registerChangeLines,
   feedHelp,
   forgetToken,
   readToken,
@@ -155,7 +158,8 @@ export default function WatchlistPage({
         <h1 className={sectionLabelClasses("muted")}>Watchlist</h1>
         <p className="mt-2 max-w-2xl text-oo-small text-oo-muted">
           The companies this browser watches. Each is re-checked only when GLEIF or OpenSanctions
-          publish a change to its record — the re-run then fetches every source a normal check
+          publish a change to its record, or — for an Estonian company — when the e-Business
+          Register's daily data shows one; the re-run then fetches every source a normal check
           would, and what differed is logged below and in the feed. No account, no email.
         </p>
 
@@ -252,7 +256,8 @@ export default function WatchlistPage({
           {entries.length === 0 ? (
             <p className="mt-3 text-oo-small text-oo-muted" data-testid="log-empty">
               Nothing yet. An entry appears here, and in the feed, when GLEIF or OpenSanctions
-              publish a change to a watched company and the re-run finds a difference.
+              publish a change to a watched company and the re-run finds a difference, or when the
+              Estonian e-Business Register records one.
             </p>
           ) : (
             <ol className="mt-4 space-y-5" aria-label="Change log, newest first">
@@ -373,6 +378,7 @@ function EntryView({
   const checked = checkedSentence(e.checked);
   const degraded = Array.from(new Set(e.degraded.map((d) => d.source_id))).filter(Boolean);
   const chip = tierChip(e.tier);
+  const registerLines = e.tier === "register" ? registerChangeLines(e.trigger?.changes) : [];
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -395,6 +401,18 @@ function EntryView({
         </span>
       </div>
       <p className="mt-2 text-oo-small text-oo-ink">{triggerSentence(e)}</p>
+      {registerLines.length > 0 && (
+        <ul className="mt-2 space-y-1 text-oo-small text-oo-ink" aria-label="What the register recorded">
+          {registerLines.map((line) => (
+            <li key={line} className="flex gap-2">
+              <span aria-hidden="true" className="text-oo-muted">
+                –
+              </span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {e.changes.length > 0 ? (
         <ul className="mt-2 space-y-1 text-oo-small text-oo-ink" aria-label="What the re-run found">
           {e.changes.map((c, i) => (
@@ -409,7 +427,11 @@ function EntryView({
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-oo-small text-oo-muted">A full re-run found no difference from the last check.</p>
+        <p className="mt-2 text-oo-small text-oo-muted">
+          {e.tier === "register"
+            ? "A full re-run found nothing else that differs from the last check."
+            : "A full re-run found no difference from the last check."}
+        </p>
       )}
       {e.gleif_log && <GleifLogBlock lines={gleifLogLines(e.gleif_log)} />}
       <p className="mt-2 text-oo-meta text-oo-muted">

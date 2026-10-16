@@ -307,6 +307,15 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .isin_index import refresh_loop as isin_refresh_loop
 
         isin_task = asyncio.create_task(isin_refresh_loop(isin_interval))
+    # The Estonian index: re-check its release asset hourly, so the daily
+    # build lands without a restart (the watchlist's register tier needs the
+    # server to hold the day it re-runs for). Off with the boot downloads.
+    ee_task: asyncio.Task[None] | None = None
+    ee_interval = get_settings().ariregister_refresh_interval_s
+    if ee_interval > 0 and get_settings().warm_caches_on_start and get_settings().ariregister_db_url:
+        from .sources.ariregister import refresh_loop as ee_refresh_loop
+
+        ee_task = asyncio.create_task(ee_refresh_loop(ee_interval))
     # Phase 187: feed the PSC graph from the register's stream. Needs the
     # graph file and the streaming key; returns at once otherwise.
     stream_task: asyncio.Task[None] | None = None
@@ -356,6 +365,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 psc_task.cancel()
             if isin_task is not None and not isin_task.done():
                 isin_task.cancel()
+            if ee_task is not None and not ee_task.done():
+                ee_task.cancel()
             if stream_task is not None and not stream_task.done():
                 stream_task.cancel()
             if watch_task is not None and not watch_task.done():

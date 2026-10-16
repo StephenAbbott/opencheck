@@ -17,7 +17,7 @@ Measured on the 3 September 2026 08:00 UTC Golden Copy publish: 15,920 of
 an expected 0.9 re-runs a day; at 1,000, 4.7. Re-run cost is proportional to
 how much of GLEIF changes, not to how many LEIs are watched.
 
-## Two deltas, one shape
+## Three deltas, one shape
 
 **Tier 1 — GLEIF.** `mirror_refresh.py` already streams and applies the
 Golden Copy delta in-process every hour (Phase 180), from
@@ -220,9 +220,52 @@ hit, the catch-up is not news about the company — and a real trigger for the
 same LEI replaces a pending catch-up rather than being folded into it. Person screening deltas would put
 UBO names into the store — that waits for the GDPR ticket, with email.
 
-**There is no third tier.** National registers are never polled. They are
-re-fetched only as a consequence of a Tier 1 or Tier 2 hit: the hit re-runs
-the whole `_lookup_pipeline` with `refresh=True`, which fetches them anyway.
+**Tier 3 — a register's own changes (Estonia).** Estonia is the one register
+whose whole content OpenCheck rebuilds every day: the Phase 330 index, cut
+from RIK's open-data files each morning. The refresh workflow
+(`refresh-ariregister-index.yml`) downloads the build it is about to replace,
+builds today's, and diffs the two with `scripts/diff_ariregister_index.py`
+(about 40 s on the 380,000-company register). Per registry code it hashes
+each **people list** — the persons on the registry card, the shareholders
+(the shareholders file plus the AS shareholders recorded off the card), the
+beneficial owners and the supervisory board — and compares the company's
+**name, status and legal form**. An address, VAT number, contact, capital,
+card entry, founder or auditor is not a change, and neither is a row
+re-registered with the same content (its `kirje_id` is left out). A list's
+change is recorded as its row count before and after — never who — so no
+person reaches the watchlist store. A company absent from today's files is
+`removed` (deleted companies are not published); a new one is `added`. The
+day is appended to `ariregister-delta.json`, a rolling fourteen-day file
+published beside the index (uploaded after it, so a day the file names is a
+day the backend can load). A day touching more than 10 % of the register (and
+over 1,000 companies) is kept as a summary with `suspect: true` and no codes:
+a regenerated person key would otherwise re-run every watched Estonian
+company with nothing to say.
+
+The backend re-checks the index's release asset every hour
+(`ARIREGISTER_REFRESH_INTERVAL_S`; before this it picked up a new index only
+when it restarted), and the worker's `ariregister_tick` reads the delta only
+once the server holds a newer index than the last day it read
+(`meta.ariregister_cut`) — so the re-run reads the changed record, and the
+file is fetched about once a day. A watch's registry code is GLEIF's
+`registeredAs` where `registeredAt` is RA000181 (the mirror facts), else the
+`EE-ARIREGISTER` identifier the baseline lookup read. Days are read oldest
+first; several days for one company merge into one trigger (each list from
+its first count to its last). The first run marks the current day and starts
+from the next. A day the file cannot account for — a build that was not
+diffed, a broken chain of `previous_cut`s, or a suspect day — is a **gap**:
+recorded (`meta.ariregister_gaps`) and answered with a catch-up re-run of
+every watched Estonian company (`reason: register_gap`). A file older than
+the index (published a minute after it) is waited for. The entry on the
+`register` tier is written even when the re-run finds nothing else, as a
+Tier 2 hit is: a shareholder change moves no signal or status, so the
+register's own record of it is the news. It reads "The Estonian e-Business
+Register recorded a change to this company in its open data of 2026-10-17
+(registry code 10421629)", then "Shareholders: 3 → 4 entries."
+
+**No other register is polled.** The rest are re-fetched only as a
+consequence of a hit on one of the tiers: the hit re-runs the whole
+`_lookup_pipeline` with `refresh=True`, which fetches them anyway.
 Freshness is a consequence of an observed change rather than a clock, and
 "OpenCheck does not continuously monitor the registers" describes the
 mechanism rather than disclaiming it. The Phase 146 rule is inherited: a
@@ -331,7 +374,8 @@ of the cap or be re-run on every delta forever.
 (300 s): drain queued re-runs, at most `_RERUNS_PER_TICK` (5) per tick, so
 even a delta naming every watched LEI at once spreads over the hour; catch up
 on OpenSanctions when `_OPENSANCTIONS_INTERVAL_S` (3 h) has elapsed, in a
-thread; prune lists that hold nothing and have not been opened for a day.
+thread; read the Estonian delta when the server's index has moved on (Tier
+3, one meta read otherwise); prune lists that hold nothing and have not been opened for a day.
 The first OpenSanctions run only records the current version — it never
 scans history. Nothing is downloaded while nothing is watched.
 
@@ -361,7 +405,9 @@ name — eu_fsf", "Re-checked by hand" — then what a re-run found, one
 sentence per change, then "*N* sources checked as a result on *date*" from
 `source_liveness` (the retrieval clock, Phases 99/100), and any source that
 could not be checked. A Tier 2 hit writes an entry even when the re-run
-found no difference: OpenSanctions naming the entity is itself the news.
+found no difference: OpenSanctions naming the entity is itself the news. So
+does a register change (Tier 3), which lists the register's counts under the
+opening sentence.
 
 ## Demo framing
 
