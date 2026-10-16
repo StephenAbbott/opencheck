@@ -11,6 +11,7 @@ raises ``NarrativeUnavailable`` so the eval harness and tests degrade cleanly.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -26,7 +27,14 @@ DEFAULT_MODEL = "claude-sonnet-4-6"
 #: summary with ZERO claims (so the UI's evidence section disappears) and
 #: overall_confidence "low". Five of the six Phase 111 curated files shipped
 #: that way before anyone noticed. Truncation is now also a hard error below.
-MAX_TOKENS = 4000
+#: 4000 then proved too tight for heavily sanctioned groups: Rosneft (86
+#: risks, 131 facts, ~38k input tokens) measured 2,663-3,292 output tokens
+#: across six runs on 15 Oct 2026 under prompt v9 and one run on 14 Oct went
+#: past 4000 (a 502). 8000 is headroom, not the bound: the prompt and tool
+#: schema cap what the model writes (``SUMMARY_MAX_CHARS`` / ``MAX_CLAIMS`` in
+#: prompt.py), so output stays roughly flat however large the packet is. The
+#: ceiling costs nothing unless the tokens are generated.
+MAX_TOKENS = 8000
 
 
 class NarrativeUnavailable(RuntimeError):  # noqa: N818 — public name, kept stable
@@ -41,6 +49,9 @@ class NarrativeResult(BaseModel):
     model: str
     prompt_version: str = PROMPT_VERSION
     validation: ValidationResult
+    #: Tokens the model generated, so the eval harness can show how close a
+    #: packet comes to ``MAX_TOKENS``. ``None`` when the client reports none.
+    output_tokens: int | None = None
 
 
 def _raw_tool_output(message: Any) -> dict[str, Any]:
@@ -58,8 +69,35 @@ def _raw_tool_output(message: Any) -> dict[str, Any]:
         )
     for block in message.content:
         if getattr(block, "type", None) == "tool_use" and block.name == "emit_summary":
-            return dict(block.input)
+            return _decode_list_fields(dict(block.input))
     raise NarrativeUnavailable("model did not call emit_summary")
+
+
+def _decode_list_fields(raw: dict[str, Any]) -> dict[str, Any]:
+    """Undo a list the model sent as JSON text.
+
+    The tool schema types ``claims`` and ``limitations`` as arrays, but the
+    model sometimes emits an array as one JSON-encoded string (seen on one
+    of four Rosneft runs on 15 Oct 2026: ``claims`` arrived as 3,788
+    characters of text). The validator iterates ``claims`` and would fail on
+    the first character, so the text is decoded here; text that is not a
+    JSON list is refused like any other unusable answer — never passed on as
+    a claimless summary.
+    """
+    for key in ("claims", "limitations"):
+        value = raw.get(key)
+        if not isinstance(value, str):
+            continue
+        try:
+            decoded = json.loads(value)
+        except ValueError:
+            decoded = None
+        if not isinstance(decoded, list):
+            raise NarrativeUnavailable(
+                f"model returned {key} as text that is not a list — the claims would be lost"
+            )
+        raw[key] = decoded
+    return raw
 
 
 def summarise(
@@ -102,4 +140,5 @@ def summarise(
         model=model,
         prompt_version=PROMPT_VERSION,
         validation=validation,
+        output_tokens=getattr(getattr(message, "usage", None), "output_tokens", None),
     )

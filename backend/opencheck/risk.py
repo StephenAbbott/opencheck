@@ -3627,6 +3627,55 @@ def _chain_location(hits: list[dict[str, Any]], *, qualified: bool) -> str:
     return ", and ".join(parts)
 
 
+_FATF_TAILS = {
+    FATF_BLACK_LIST: (
+        "a jurisdiction on the FATF High-Risk list "
+        "(Call for Action / black list, June 2026)."
+    ),
+    FATF_GREY_LIST: (
+        "a jurisdiction under FATF Increased Monitoring "
+        "(grey list, June 2026)."
+    ),
+}
+
+
+def _fatf_summary(code: str, hits: list[dict[str, Any]], *, qualified: bool) -> str:
+    return f"{_chain_location(hits, qualified=qualified)}, {_FATF_TAILS[code]}"
+
+
+def _eu_hrtc_summary(hits: list[dict[str, Any]], *, qualified: bool) -> str:
+    summary = (
+        f"{_chain_location(hits, qualified=qualified)}, on the EU list of "
+        "high-risk third countries with strategic AML/CFT "
+        f"deficiencies ({EU_HRTC_INSTRUMENT}). EU-listed "
+        "jurisdictions attract mandatory enhanced due diligence."
+    )
+    section_iv = [h for h in hits if h.get("annex_section") == "IV"]
+    if section_iv:
+        iv_names = sorted(
+            {n for n in _country_names(section_iv).values() if n}
+        )
+        iv_label = ", ".join(iv_names) or ", ".join(
+            sorted({h["code"] for h in section_iv})
+        )
+        verb = "is" if len({h["code"] for h in section_iv}) == 1 and len(iv_names) <= 1 else "are"
+        summary += (
+            f" {iv_label} {verb} listed under Section IV of the Annex — "
+            "not identified by the FATF for a call for action or increased "
+            "monitoring, but suspended from FATF membership."
+        )
+    return summary
+
+
+def _eu_tax_summary(hits: list[dict[str, Any]], *, qualified: bool) -> str:
+    return (
+        f"{_chain_location(hits, qualified=qualified)}, on the EU list of "
+        f"non-cooperative jurisdictions for tax purposes ({EU_TAX_LIST_INSTRUMENT}). "
+        "This is a tax-governance list: it does not by itself require AML "
+        "enhanced due diligence."
+    )
+
+
 def _fatf_jurisdiction_signals(
     source_id: str, hit_id: str, bods: list[dict[str, Any]]
 ) -> list[RiskSignal]:
@@ -3650,18 +3699,9 @@ def _fatf_jurisdiction_signals(
     if scope is None:
         return []
     out: list[RiskSignal] = []
-    for code, codes, confidence, list_name, tail in (
-        (
-            FATF_BLACK_LIST, FATF_BLACK_LIST_CODES, "high", "black",
-            "a jurisdiction on the FATF High-Risk list "
-            "(Call for Action / black list, June 2026).",
-        ),
-        (
-            FATF_GREY_LIST, FATF_GREY_LIST_CODES - FATF_BLACK_LIST_CODES,
-            "medium", "grey",
-            "a jurisdiction under FATF Increased Monitoring "
-            "(grey list, June 2026).",
-        ),
+    for code, codes, confidence, list_name in (
+        (FATF_BLACK_LIST, FATF_BLACK_LIST_CODES, "high", "black"),
+        (FATF_GREY_LIST, FATF_GREY_LIST_CODES - FATF_BLACK_LIST_CODES, "medium", "grey"),
     ):
         hits, ended_ids = _chain_list_hits(bods, scope, codes)
         if not hits:
@@ -3670,7 +3710,7 @@ def _fatf_jurisdiction_signals(
             RiskSignal(
                 code=code,
                 confidence=confidence,
-                summary=f"{_chain_location(hits, qualified=bool(ended_ids))}, {tail}",
+                summary=_fatf_summary(code, hits, qualified=bool(ended_ids)),
                 source_id=source_id,
                 hit_id=hit_id,
                 evidence={
@@ -3715,25 +3755,7 @@ def _eu_high_risk_third_country_signals(
     for h in hits:
         h["annex_section"] = "IV" if h["code"] in EU_HRTC_SECTION_IV_CODES else "I-III"
 
-    summary = (
-        f"{_chain_location(hits, qualified=bool(ended_ids))}, on the EU list of "
-        "high-risk third countries with strategic AML/CFT "
-        f"deficiencies ({EU_HRTC_INSTRUMENT}). EU-listed "
-        "jurisdictions attract mandatory enhanced due diligence."
-    )
-
-    section_iv = [h for h in hits if h["annex_section"] == "IV"]
-    if section_iv:
-        iv_names = sorted({h["name"] for h in section_iv if h["name"]})
-        iv_label = ", ".join(iv_names) or ", ".join(
-            sorted({h["code"] for h in section_iv})
-        )
-        verb = "is" if len({h["code"] for h in section_iv}) == 1 and len(iv_names) <= 1 else "are"
-        summary += (
-            f" {iv_label} {verb} listed under Section IV of the Annex — "
-            "not identified by the FATF for a call for action or increased "
-            "monitoring, but suspended from FATF membership."
-        )
+    summary = _eu_hrtc_summary(hits, qualified=bool(ended_ids))
 
     return [
         RiskSignal(
@@ -3773,12 +3795,7 @@ def _eu_tax_non_cooperative_signals(
     hits, ended_ids = _chain_list_hits(bods, scope, EU_TAX_NON_COOPERATIVE_CODES)
     if not hits:
         return []
-    summary = (
-        f"{_chain_location(hits, qualified=bool(ended_ids))}, on the EU list of "
-        f"non-cooperative jurisdictions for tax purposes ({EU_TAX_LIST_INSTRUMENT}). "
-        "This is a tax-governance list: it does not by itself require AML "
-        "enhanced due diligence."
-    )
+    summary = _eu_tax_summary(hits, qualified=bool(ended_ids))
     return [
         RiskSignal(
             code=EU_TAX_NON_COOPERATIVE,
@@ -3794,6 +3811,81 @@ def _eu_tax_non_cooperative_signals(
             },
         )
     ]
+
+
+_LIST_SUMMARIES = {
+    FATF_BLACK_LIST: lambda hits, q: _fatf_summary(FATF_BLACK_LIST, hits, qualified=q),
+    FATF_GREY_LIST: lambda hits, q: _fatf_summary(FATF_GREY_LIST, hits, qualified=q),
+    EU_HIGH_RISK_THIRD_COUNTRY: lambda hits, q: _eu_hrtc_summary(hits, qualified=q),
+    EU_TAX_NON_COOPERATIVE: lambda hits, q: _eu_tax_summary(hits, qualified=q),
+}
+
+#: The four list signals ``merge_listed_jurisdiction`` pools.
+LIST_SIGNAL_CODES: frozenset[str] = frozenset(_LIST_SUMMARIES)
+
+_CONFIDENCE_RANK = {"low": 0, "medium": 1, "high": 2}
+
+
+def merge_listed_jurisdiction(
+    incumbent: dict[str, Any], new: dict[str, Any]
+) -> dict[str, Any]:
+    """Collapse two sources' copies of one list signal into one.
+
+    ``FATF_BLACK_LIST``, ``FATF_GREY_LIST``, ``EU_HIGH_RISK_THIRD_COUNTRY``
+    and ``EU_TAX_NON_COOPERATIVE`` fired once per source that mapped the
+    subject's jurisdiction: Rosneft carried each EU list five times (GLEIF,
+    MEIP, GEM, OpenSanctions, Wikidata) with the same sentence. The same terms
+    as ``merge_non_eu_jurisdiction`` (Phase 259): every source's jurisdictions
+    are pooled, one entry per statement, so every graph badge stays; the
+    sources ride along in ``evidence.reported_by``; "including ended
+    relationships" survives only while some country is reached through ended
+    links alone in every source that reached it. The summary is rebuilt from
+    the pooled entries with the code's own sentence, so a country one source
+    reached and another did not is named once. The list fields of the
+    evidence (``list``, ``instrument``, ``annex``) are the code's and are
+    kept; confidence is the higher of the two (the rule gives one per code).
+    """
+    code = incumbent.get("code") or new.get("code")
+    seen: set[str] = set()
+    pooled: list[dict[str, Any]] = []
+    reported_by: list[str] = []
+    ended_ids: set[str] = set()
+    for sig in (incumbent, new):
+        ev = sig.get("evidence") or {}
+        for src in ev.get("reported_by") or [sig.get("source_id") or ""]:
+            if src and src not in reported_by:
+                reported_by.append(src)
+        for m in ev.get("jurisdictions") or ():
+            sid = m.get("statement_id") if isinstance(m, dict) else None
+            if sid and sid not in seen:
+                seen.add(sid)
+                pooled.append(dict(m))
+        ended_ids.update(ev.get("ended_relationship_statement_ids") or ())
+    render = _LIST_SUMMARIES.get(code or "")
+    if not pooled or render is None:
+        return new
+    qualified = bool(_ended_only_codes(pooled)) and bool(ended_ids)
+    merged = dict(incumbent)
+    merged["confidence"] = max(
+        (incumbent.get("confidence"), new.get("confidence")),
+        key=lambda c: _CONFIDENCE_RANK.get(c or "", -1),
+    )
+    merged["summary"] = render(pooled, qualified)
+    list_fields = {
+        k: v
+        for k, v in (incumbent.get("evidence") or {}).items()
+        if k not in {
+            "jurisdictions", "reported_by",
+            "includes_ended_relationships", "ended_relationship_statement_ids",
+        }
+    }
+    merged["evidence"] = {
+        **list_fields,
+        "jurisdictions": pooled,
+        "reported_by": reported_by,
+        **_ended_evidence(ended_ids if qualified else ()),
+    }
+    return merged
 
 
 #: Every jurisdiction on any of the four lists, for the subsidiary note.

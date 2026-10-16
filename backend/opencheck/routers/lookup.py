@@ -62,6 +62,7 @@ from ..subject_identity import subject_identity
 from ..verdict import build_verdict
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
+from ..risk import merge_listed_jurisdiction as _risk_merge_listed
 from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
 from ..risk import merge_subsidiary_listed_jurisdiction as _risk_merge_subsidiary_listed
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
@@ -1283,6 +1284,12 @@ _COLLAPSE_RESOLVERS = {
     # Phase 273: one "subsidiaries in listed jurisdictions" note per lookup,
     # pooled per node on the same terms as NON_EU_JURISDICTION.
     "SUBSIDIARY_LISTED_JURISDICTION": _risk_merge_subsidiary_listed,
+    # The four list signals, one per code per lookup, pooled per
+    # node on the same terms — Rosneft carried each EU list five times.
+    "FATF_BLACK_LIST": _risk_merge_listed,
+    "FATF_GREY_LIST": _risk_merge_listed,
+    "EU_HIGH_RISK_THIRD_COUNTRY": _risk_merge_listed,
+    "EU_TAX_NON_COOPERATIVE": _risk_merge_listed,
 }
 
 
@@ -1317,9 +1324,17 @@ _COLLAPSE_RESOLVERS = {
 # ``merge_non_eu_jurisdiction`` pools every source's
 # ``evidence.jurisdictions`` (per node), so a US company reads the note once
 # rather than once per source, and every badge stays.
+#
+# The four list signals (FATF black / grey, EU high-risk, EU tax) join on
+# the same terms via ``merge_listed_jurisdiction``: each is one claim about
+# where the chain sits, pooled per node, never one copy per source.
 _STRUCTURAL_SIGNAL_CODES = {
     "COMPLEX_OWNERSHIP_LAYERS",
     "NON_EU_JURISDICTION",
+    "FATF_BLACK_LIST",
+    "FATF_GREY_LIST",
+    "EU_HIGH_RISK_THIRD_COUNTRY",
+    "EU_TAX_NON_COOPERATIVE",
     "SUBSIDIARY_LISTED_JURISDICTION",
     "STATE_CONTROLLED",
     "COMPLEX_CORPORATE_STRUCTURE",
@@ -1407,6 +1422,25 @@ class _LookupAbort(Exception):
         super().__init__(detail)
         self.status = status
         self.detail = detail
+
+
+#: The degradation detail when the GLEIF anchor came without GLEIF's
+#: cross-reference ids (the mapping-file ``ocid``, ``spglobal``, ``bic``,
+#: ``mic``, ``qcc``). A fixed sentence: it reads after the source's name.
+GLEIF_CROSSREFS_DETAIL = (
+    "could not supply its cross-reference identifiers (OpenCorporates, S&P, "
+    "BIC, MIC), so OpenCorporates was not consulted"
+)
+
+
+def _crossrefs_failure_reason(exc: BaseException) -> str:
+    if isinstance(exc, GleifRateLimitedError):
+        return _degradation.REASON_RATE_LIMITED
+    if isinstance(exc, TimeoutError | httpx.TimeoutException):
+        return _degradation.REASON_TIMEOUT
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+        return _degradation.REASON_RATE_LIMITED
+    return _degradation.REASON_UPSTREAM_ERROR
 
 
 async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
@@ -1538,10 +1572,30 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
                 ctx.ocid = attrs.get("ocid") or None
                 sp = attrs.get("spglobal")
                 ctx.spglobal = (sp[0] if isinstance(sp, list) and sp else sp) or None
+                missing = gleif_src.get("crossrefs_unavailable_reason")
+                if gleif_src.get("crossrefs_available") is False and missing:
+                    # A store-served anchor (rate-limit fallback, or the
+                    # mirror when its one live top-up could not run) holds
+                    # no ocid, so OpenCorporates is not dispatched at all —
+                    # it is not even in sources_applicable. Say so, or the
+                    # report reads as if the company had no record there.
+                    _degradation.record(
+                        "gleif",
+                        GLEIF_CROSSREFS_DETAIL,
+                        check=_degradation.CHECK_SOURCE_READ,
+                        reason=missing,
+                    )
         except Exception as exc:  # noqa: BLE001
             # Non-fatal, but not free: without ocid the OpenCorporates
-            # dispatch is skipped. Log so a GLEIF outage doesn't read as
-            # "this entity has no OpenCorporates record".
+            # dispatch is skipped. Say so on the report, not only in the
+            # log, so a GLEIF outage doesn't read as "this entity has no
+            # OpenCorporates record".
+            _degradation.record(
+                "gleif",
+                GLEIF_CROSSREFS_DETAIL,
+                check=_degradation.CHECK_SOURCE_READ,
+                reason=_crossrefs_failure_reason(exc),
+            )
             _LOG.warning(
                 "GLEIF identifier extraction failed for %s: %s: %s — "
                 "OpenCorporates dispatch will be skipped for this lookup.",

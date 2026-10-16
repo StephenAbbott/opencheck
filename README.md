@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 347** — Phase numbers and the status row are now written when a pull request merges, so branches in flight no longer collide on the number or conflict on the stamped files.
+**Latest: Phase 351** — The FATF black and grey lists, the EU high-risk list and the EU tax list now say their finding once per lookup, naming every source that reached it, rather than once per source.
 
 → [Full development history](docs/status.md)
 
