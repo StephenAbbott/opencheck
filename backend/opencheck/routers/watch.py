@@ -100,10 +100,18 @@ def _public_api_base(request: Request) -> str:
     return base or str(request.base_url).rstrip("/")
 
 
-def _tiers(gaps: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    """What the two tiers are doing — for the page's honesty line."""
+def _tiers(
+    gaps: list[dict[str, Any]] | None = None, register_gaps: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    """What the three tiers are doing — for the page's honesty line."""
     from .. import entity_pages as ep
     from .. import mirror_refresh
+    from ..sources import ariregister as ar
+
+    try:
+        ee_cut = ar.read_meta().get("cut") or None
+    except Exception:  # noqa: BLE001 — no index is a state
+        ee_cut = None
 
     mirror = ep.get_store()
     watermark = mirror.watermark() if mirror is not None else None
@@ -127,6 +135,15 @@ def _tiers(gaps: list[dict[str, Any]] | None = None) -> dict[str, Any]:
             # recent versions that could not be read at all.
             "backlog": wl.state().get("os_backlog", 0),
             "gaps": gaps or [],
+        },
+        # The register tier: the last Estonian index day read, and whether
+        # the server holds an index at all (without one it cannot fire).
+        "register": {
+            "available": ee_cut is not None,
+            "index_cut": ee_cut,
+            "last_cut": wl.state().get("ee_last_cut"),
+            "waiting": bool(wl.state().get("ee_waiting")),
+            "gaps": register_gaps or [],
         },
         "worker": {
             "enabled": wl.state().get("enabled", False),
@@ -160,7 +177,7 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "total_watched": counts["total"],
         },
         "feed_url": f"{_public_api_base(request)}/watch/{token}.atom",
-        "tiers": _tiers(wl.os_gaps(store)[-3:]),
+        "tiers": _tiers(wl.os_gaps(store)[-3:], wl.ariregister_gaps(store)[-3:]),
     }
 
 
@@ -356,7 +373,27 @@ TIER_SENTENCE = {
     wl.TIER_OPENSANCTIONS: "OpenSanctions published a change naming this entity",
     wl.TIER_MANUAL: "Re-checked on request",
     wl.TIER_CATCHUP: "Re-checked to catch up on OpenSanctions versions the watcher could not read",
+    wl.TIER_REGISTER: "The Estonian e-Business Register recorded a change to this company",
 }
+
+
+def _days_words(cuts: list[str]) -> str:
+    cuts = [c for c in cuts if c]
+    if not cuts:
+        return "its latest open data"
+    if len(cuts) == 1:
+        return f"its open data of {cuts[0]}"
+    return f"its open data of {', '.join(cuts[:-1])} and {cuts[-1]}"
+
+
+def register_sentence(trig: dict[str, Any]) -> str:
+    """Why a register tier entry exists, in the feed's words."""
+    code = trig.get("code")
+    return (
+        f"The Estonian e-Business Register recorded a change to this company in {_days_words(trig.get('cuts') or [])}"
+        + (f" (registry code {code})" if code else "")
+        + "."
+    )
 
 
 #: How the feed names a material GLEIF field. The web page carries the same
@@ -517,6 +554,11 @@ def _describe(change: dict[str, Any]) -> str:
 
 def _catch_up_sentence(trig: dict[str, Any]) -> str:
     """Why a catch-up re-run happened, in the feed's words."""
+    if trig.get("reason") == "register_gap":
+        return (
+            f"The Estonian e-Business Register's changes between {trig.get('after')} and {trig.get('before')} "
+            "could not be read, so every watched Estonian company was re-checked."
+        )
     if trig.get("reason") == "delta_missing":
         return (
             f"OpenSanctions version {trig.get('after')} was listed but its delta file could not be "
@@ -531,6 +573,8 @@ def _catch_up_sentence(trig: dict[str, Any]) -> str:
 def _entry_title(entry: dict[str, Any]) -> str:
     name = entry.get("legal_name") or entry["lei"]
     changes = entry.get("changes") or []
+    if not changes and entry["tier"] == wl.TIER_REGISTER:
+        return f"{name}: Estonian register record changed"
     if not changes:
         return f"{name}: {TIER_SENTENCE.get(entry['tier'], entry['tier'])}; the re-run found no difference"
     kinds = [c.get("kind") for c in changes]
@@ -615,10 +659,15 @@ def _entry_content(entry: dict[str, Any]) -> str:
         )
     if entry["tier"] == wl.TIER_CATCHUP:
         lines[0] = _catch_up_sentence(trig)
+    if entry["tier"] == wl.TIER_REGISTER:
+        lines[0] = register_sentence(trig)
+        lines += [" - " + line for line in wl.register_change_lines(trig.get("changes") or {})]
     changes = entry.get("changes") or []
     if changes:
         lines.append("What a re-run found:")
         lines += [" - " + _describe(c) for c in changes]
+    elif entry["tier"] == wl.TIER_REGISTER:
+        lines.append("A full re-run found nothing else that differs from the last check.")
     else:
         lines.append("A full re-run found no difference from the last check.")
     lines += gleif_log_lines(entry.get("gleif_log"))
@@ -684,6 +733,7 @@ def render_atom(
 def _subtitle(watches: list[dict[str, Any]]) -> str:
     n = len(watches)
     return (
-        f"{n} watched {'company' if n == 1 else 'companies'}. Re-checked only when GLEIF or "
-        "OpenSanctions publish a change to them — OpenCheck does not poll the registers."
+        f"{n} watched {'company' if n == 1 else 'companies'}. Re-checked only when GLEIF, "
+        "OpenSanctions or the Estonian e-Business Register publish a change to them — "
+        "OpenCheck does not poll the registers."
     )

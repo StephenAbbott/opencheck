@@ -2287,8 +2287,35 @@ loading bar left the GLEIF anchor out while the header put it in.
 
 `opencheck/watchlist.py` + `routers/watch.py`; design in `docs/watchlist.md`.
 A watched LEI is re-run only when GLEIF's Golden Copy delta names it with a
-**material** field changed, or when OpenSanctions' entity delta names it.
+**material** field changed, when OpenSanctions' entity delta names it, or —
+for an Estonian company — when the daily diff of the e-Business Register
+index does (the register tier, below).
 Things that will be re-derived otherwise:
+
+- **The register tier (Estonia) reads a diff the workflow computes**
+  (Stephen, 16 Oct 2026). `refresh-ariregister-index.yml` downloads the
+  build it replaces, runs `scripts/diff_ariregister_index.py` (stdlib) and
+  publishes a rolling 14-day `ariregister-delta.json` **after** the index.
+  Material: the four people lists (card persons; shareholders incl.
+  off-card `S`; BOs; supervisory board `N`/`E`) and name / status / legal
+  form — never address, VAT, capital, card entries, founders, auditors, and
+  `kirje_id` is out of the digest. Lists are **counts before → after, never
+  names** (the store holds no persons). `PEOPLE_LISTS` / `ENTITY_FIELDS` in
+  the script = `ARIREGISTER_LISTS` / `ARIREGISTER_FIELDS` in `watchlist.py`
+  (pinned). A day over 10 % of the register (and > 1,000) is `suspect`:
+  summary only, a gap. `ariregister_tick` reads only when the server's index
+  cut is past `meta.ariregister_cut` — which needs the hourly
+  `ariregister.refresh_loop` (`ARIREGISTER_REFRESH_INTERVAL_S`): before it, a
+  new index landed only at restart and the re-run would read yesterday's
+  record. A watch's code: mirror facts `registered_at == RA000181` →
+  `registered_as`, else the snapshot's `EE-ARIREGISTER`. A register entry is
+  written even with no snapshot diff (a shareholder change moves no signal);
+  a gap (not diffed, broken `previous_cut` chain, suspect) is a catch-up with
+  `reason: register_gap`. Words: `REGISTER_CHANGE_WORDS` + the mapper's
+  `EE_STATUS_LABELS`, copied in `lib/watchlist.ts` and parsed by
+  `test_watchlist_register.py`. A replaced index drops the shared connection
+  without closing it (`reset_connection(close=False)`), so a query in flight
+  finishes on the old file.
 
 - **Tier 1 rides on `mirror_refresh.apply_delta`**, which hands the LEIs its
   three delta files named to `watchlist.on_gleif_delta` after the watermark

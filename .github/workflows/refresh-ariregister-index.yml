@@ -20,6 +20,17 @@ name: Refresh Estonian e-Business Register index
 # publishes nothing; the previous asset stays.
 #
 # The release is created on the first run if it does not exist.
+#
+# The watchlist's register tier: before replacing the asset, the job fetches
+# the build it replaces and diffs it against today's
+# (scripts/diff_ariregister_index.py) — the companies whose people lists,
+# name, status or legal form changed. That day is appended to
+# `ariregister-delta.json`, a rolling fourteen-day file published beside the
+# index, which the backend's watchlist worker reads to re-run a watched
+# Estonian company. The delta is uploaded after the index, so a day it names
+# is always a day the backend can load. A run that cannot fetch the previous
+# build still publishes the index; the delta then records no day for it, and
+# the worker sees the gap.
 on:
   schedule:
     - cron: "20 10 * * *" # 10:20 UTC, after RIK's ~09:30 GMT regeneration
@@ -42,6 +53,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - name: Fetch the build being replaced and the delta file
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/prev"
+          if gh release download ariregister-index -p ariregister.sqlite.gz -D "$RUNNER_TEMP/prev"; then
+            gunzip "$RUNNER_TEMP/prev/ariregister.sqlite.gz"
+          else
+            echo "No previous build to diff against."
+          fi
+          gh release download ariregister-index -p ariregister-delta.json -D "$RUNNER_TEMP/prev" \
+            || echo "No delta file yet."
 
       - name: Build the index from today's open-data files
         working-directory: backend
@@ -69,6 +94,15 @@ jobs:
               fh.write(f"{n} entities, {bo} beneficial owners, cut {meta.get('cut')}.")
           PY
 
+      - name: Diff against the build being replaced (the watchlist's register tier)
+        working-directory: backend
+        run: |
+          python3 scripts/diff_ariregister_index.py \
+            --old "$RUNNER_TEMP/prev/ariregister.sqlite" \
+            --new "$RUNNER_TEMP/ariregister.sqlite" \
+            --history "$RUNNER_TEMP/prev/ariregister-delta.json" \
+            --out "$RUNNER_TEMP/ariregister-delta.json"
+
       - name: Replace the `ariregister-index` release asset
         env:
           GH_TOKEN: ${{ github.token }}
@@ -81,8 +115,12 @@ jobs:
           bash backend/scripts/replace_release_asset.sh ariregister-index \
             "$RUNNER_TEMP/ariregister.sqlite.gz" ariregister.sqlite.gz \
             "$(cat summary.txt) Rebuilt automatically by refresh-ariregister-index on $(date -u +%Y-%m-%d)."
+          # After the index: a day the delta names is a day the backend can load.
+          bash backend/scripts/replace_release_asset.sh ariregister-index \
+            "$RUNNER_TEMP/ariregister-delta.json" ariregister-delta.json
 
       # No Render redeploy here, unlike the monthly jobs: a restart a day for
       # a data refresh would clear every replay cache and cold-start the
       # service daily. The backend compares the asset's Last-Modified at boot
-      # (ariregister.warm_index) and picks a newer index up on its next start.
+      # and every hour after (ariregister.warm_index, ARIREGISTER_REFRESH_INTERVAL_S),
+      # so the new index lands without a restart.

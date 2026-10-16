@@ -6,8 +6,8 @@ lookup daily" reproduces the crawl wave of 29 August 2026 — every watched
 LEI a cold anchor of four to six GLEIF calls and ten upstream fetches, several
 rate-limited and one CC-BY-NC at volume. So nothing here polls a company.
 
-Two delta feeds, one shape
---------------------------
+Three delta feeds, one shape
+----------------------------
 
 * **Tier 1 — GLEIF.** The Golden Copy delta that ``mirror_refresh`` already
   streams and applies in-process every hour is intersected with the
@@ -32,8 +32,18 @@ Two delta feeds, one shape
   Person screening deltas would put UBO names into this store; that waits
   for the GDPR ticket, as does email.
 
-There is no third tier. National registers are re-fetched only as a
-consequence of a Tier 1 or Tier 2 hit: a hit re-runs the whole lookup
+* **Tier 3 — a register's own changes.** Estonia is the one register whose
+  whole content OpenCheck rebuilds every day (the Phase 330 index), so the
+  refresh workflow diffs each build against the one it replaces
+  (``scripts/diff_ariregister_index.py``) and publishes the last fourteen
+  days as ``ariregister-delta.json``. :func:`ariregister_tick` reads it once
+  the server holds the new index and queues a watched Estonian company whose
+  people lists, name, status or legal form changed (:data:`TIER_REGISTER`);
+  the trigger carries each list's row count before and after, never a
+  person. A day it cannot account for is a gap and a catch-up.
+
+No other national register is polled. They are re-fetched only as a
+consequence of a hit on one of the tiers: a hit re-runs the whole lookup
 pipeline (``refresh=True``, so the replay cache cannot answer for it), which
 fetches them anyway. Freshness is a consequence of an observed change rather
 than a clock, so "OpenCheck does not continuously monitor the registers" is
@@ -198,7 +208,13 @@ TIER_MANUAL = "manual"
 #: is gone). Writes an entry only when the re-run found a difference — unlike
 #: a Tier 2 hit, the catch-up itself is not news about the company.
 TIER_CATCHUP = "catch_up"
-TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL, TIER_CATCHUP)
+#: The register tier: a national register's own day-to-day changes. Estonia
+#: is the first (the daily index diff, ``scripts/diff_ariregister_index.py``);
+#: the trigger names which register. Like a Tier 2 hit, the register's change
+#: is itself the news, so an entry is written even when the re-run's snapshot
+#: shows nothing new — a shareholder change moves no signal or status.
+TIER_REGISTER = "register"
+TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL, TIER_CATCHUP, TIER_REGISTER)
 
 #: The kinds a diff can contain. Closed vocabulary; the frontend words them
 #: (``lib/watchlist.ts``) and a test pins that every kind has words.
@@ -1375,6 +1391,14 @@ class WatcherState:
     os_backlog: int = 0  # listed versions newer than the watermark, not yet read
     os_gaps: int = 0  # versions recorded as unreadable since boot
     os_last_gap_at: str | None = None
+    ee_last_cut: str | None = None  # the last Estonian index day read (register tier)
+    ee_last_checked_at: str | None = None
+    ee_days_read: int = 0
+    ee_queued: int = 0
+    ee_waiting: bool = False  # the index is newer than the delta file
+    ee_gaps: int = 0
+    ee_last_gap_at: str | None = None
+    ee_last_error: str | None = None
     reruns: int = 0
     rerun_failures: int = 0
     entries_written: int = 0
@@ -1717,6 +1741,299 @@ def opensanctions_tick(client: Any | None = None) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Tier 3 — a register's own changes: the Estonian index diff
+# ---------------------------------------------------------------------------
+
+#: The register tier's Estonian lists and fields, as the delta file names them
+#: (``scripts/diff_ariregister_index.py``: ``PEOPLE_LISTS`` / ``ENTITY_FIELDS``,
+#: pinned by a test). Material by Stephen's decision of 16 Oct 2026: the people
+#: lists, and the company's name, status and legal form — not its address,
+#: contacts, capital or card entries.
+ARIREGISTER_LISTS = ("officers", "shareholders", "beneficial_owners", "supervisory_board")
+ARIREGISTER_FIELDS = ("name", "status", "legal_form")
+ARIREGISTER_FLAGS = ("added", "removed")
+#: GLEIF's registration authority for the Estonian Commercial Register.
+ARIREGISTER_RA = "RA000181"
+#: ``meta`` keys: the last index day the tier read, and the days it could not.
+ARIREGISTER_CUT_KEY = "ariregister_cut"
+ARIREGISTER_GAPS_KEY = "ariregister_gaps"
+ARIREGISTER_GAPS_KEPT = 20
+
+
+#: How the feed and the page name each key of a register change. The page
+#: keeps a copy in ``lib/watchlist.ts`` (``REGISTER_CHANGE_WORDS``), pinned
+#: by a test.
+REGISTER_CHANGE_WORDS: dict[str, str] = {
+    "officers": "Persons on the registry card",
+    "shareholders": "Shareholders",
+    "beneficial_owners": "Beneficial owners",
+    "supervisory_board": "Supervisory board",
+    "name": "Name",
+    "status": "Status",
+    "legal_form": "Legal form",
+}
+
+
+def register_change_lines(changes: dict[str, Any]) -> list[str]:
+    """One sentence per key of a register tier trigger's ``changes``: a list
+    as its entries before and after (never who), a field as its old and new
+    value, a status in the mapper's English words."""
+    from .bods.mappers.estonia import EE_STATUS_LABELS
+
+    lines: list[str] = []
+    if changes.get("removed"):
+        lines.append(
+            "The company is no longer in the register's open data — deleted companies are not published."
+        )
+    if changes.get("added"):
+        lines.append("The company appeared in the register's open data.")
+    for key in ARIREGISTER_LISTS:
+        pair = changes.get(key)
+        if not (isinstance(pair, list) and len(pair) == 2):
+            continue
+        before, after = pair
+        words = REGISTER_CHANGE_WORDS[key]
+        if before == after:
+            lines.append(f"{words}: changed ({after} {'entry' if after == 1 else 'entries'} before and after).")
+        else:
+            lines.append(f"{words}: {before or 'none'} → {after or 'none'} {'entry' if after == 1 else 'entries'}.")
+    for key in ARIREGISTER_FIELDS:
+        pair = changes.get(key)
+        if not (isinstance(pair, list) and len(pair) == 2):
+            continue
+        old, new = pair
+        if key == "status":
+            old = EE_STATUS_LABELS.get(str(old), old)
+            new = EE_STATUS_LABELS.get(str(new), new)
+        lines.append(f"{REGISTER_CHANGE_WORDS[key]}: {old or '—'} → {new or '—'}.")
+    return lines
+
+
+def _ee_code(value: Any) -> str | None:
+    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+    return digits if len(digits) == 8 else None
+
+
+def watch_register_code(row: dict[str, Any]) -> str | None:
+    """A watch's Estonian registry code: GLEIF's ``registeredAs`` where
+    ``registeredAt`` is the Estonian Commercial Register (the mirror facts,
+    Phase 300), else the ``EE-ARIREGISTER`` identifier the baseline lookup
+    read. None for a company not registered in Estonia."""
+    facts = row.get("gleif_facts") or {}
+    if facts.get("registered_at") == ARIREGISTER_RA:
+        code = _ee_code(facts.get("registered_as"))
+        if code:
+            return code
+    identifiers_ = (row.get("snapshot") or {}).get("identifiers") or {}
+    return _ee_code(identifiers_.get("EE-ARIREGISTER"))
+
+
+def watched_ariregister_codes(store: "WatchlistStore") -> dict[str, list[str]]:
+    """``registry code → [LEIs]`` across every list."""
+    out: dict[str, list[str]] = {}
+    with store._conn() as conn:
+        rows = conn.execute("SELECT lei, gleif_facts_json, snapshot_json FROM watches").fetchall()
+    for r in rows:
+        code = watch_register_code(
+            {
+                "gleif_facts": json.loads(r["gleif_facts_json"]) if r["gleif_facts_json"] else None,
+                "snapshot": json.loads(r["snapshot_json"]) if r["snapshot_json"] else None,
+            }
+        )
+        if code and r["lei"] not in out.setdefault(code, []):
+            out[code].append(r["lei"])
+    return out
+
+
+def merge_register_changes(days: list[tuple[str, dict[str, Any]]]) -> dict[str, Any]:
+    """One company's changes over several days as one: a list or field from
+    its first value to its last, a flag if any day set it. Unknown keys (a
+    later delta schema) are left out, never guessed at."""
+    out: dict[str, Any] = {}
+    for _cut, change in days:
+        for key in (*ARIREGISTER_LISTS, *ARIREGISTER_FIELDS):
+            pair = change.get(key)
+            if not (isinstance(pair, list) and len(pair) == 2):
+                continue
+            if key in out:
+                out[key] = [out[key][0], pair[1]]
+            else:
+                out[key] = list(pair)
+        for flag in ARIREGISTER_FLAGS:
+            if change.get(flag):
+                out[flag] = True
+    # A field that went round and came back is not a change. A list is,
+    # whatever its counts: the digest moved, so someone joined or left.
+    return {
+        k: v for k, v in out.items()
+        if k in ARIREGISTER_FLAGS or k in ARIREGISTER_LISTS or v[0] != v[1]
+    }
+
+
+def ariregister_gaps(store: "WatchlistStore") -> list[dict[str, Any]]:
+    raw = store.get_meta(ARIREGISTER_GAPS_KEY)
+    try:
+        gaps = json.loads(raw) if raw else []
+    except json.JSONDecodeError:
+        gaps = []
+    return gaps if isinstance(gaps, list) else []
+
+
+def _record_ariregister_gap(
+    store: "WatchlistStore", codes: dict[str, list[str]], gap: dict[str, Any]
+) -> int:
+    """Index days the delta cannot account for (a build that could not be
+    diffed, or a day too large to list): record them and queue a catch-up
+    re-run of every watched Estonian company — the OpenSanctions gap rule."""
+    gap = {**gap, "detected_at": _now_iso()}
+    store.set_meta(ARIREGISTER_GAPS_KEY, json.dumps((ariregister_gaps(store) + [gap])[-ARIREGISTER_GAPS_KEPT:]))
+    trigger = {"tier": TIER_CATCHUP, "reason": "register_gap", "register": "ariregister",
+               "after": gap.get("after"), "before": gap.get("before")}
+    queued = 0
+    for lei in sorted({lei for leis in codes.values() for lei in leis}):
+        if store.enqueue(lei, TIER_CATCHUP, trigger):
+            queued += 1
+    log.warning(
+        "watchlist: Estonian register days could not be read (%s, after %s, up to %s); queued %d catch-up re-run%s",
+        gap.get("detail"), gap.get("after"), gap.get("before"), queued, "" if queued == 1 else "s",
+    )
+    with _state_lock:
+        _state.ee_gaps += 1
+        _state.ee_last_gap_at = gap["detected_at"]
+    return queued
+
+
+def _fetch_ariregister_delta(client: Any) -> dict[str, Any]:
+    from .config import get_settings
+
+    r = client.get(get_settings().ariregister_delta_url, timeout=60.0)
+    r.raise_for_status()
+    doc = r.json()
+    if not isinstance(doc, dict):
+        raise ValueError("the delta file is not a JSON object")
+    return doc
+
+
+def ariregister_tick(client: Any | None = None) -> dict[str, Any]:
+    """Read the Estonian index's daily delta and queue a re-run for each
+    watched company whose register record changed. Runs on a thread.
+
+    Reads only when the index this server holds is newer than the last day
+    read (``meta.ariregister_cut``), so the re-run reads the changed record
+    rather than yesterday's, and the file is fetched about once a day. The
+    first run marks the current day and starts from the next: changes from
+    before the tier existed are not news. Days are read oldest first; the
+    watermark moves past a day only once it was read or recorded as a gap. A
+    day the delta cannot account for — a build that was not diffed, or a day
+    too large to list (``suspect``) — is a gap: a catch-up re-run of every
+    watched Estonian company. A delta file older than the index (published a
+    moment after it) is waited for.
+    """
+    import httpx
+
+    from .sources import ariregister as ar
+
+    out: dict[str, Any] = {"days": 0, "queued": 0}
+    store = get_store()
+    if store is None:
+        return out
+    _bump(ee_last_checked_at=_now_iso())
+    try:
+        meta = ar.read_meta()
+    except Exception:  # noqa: BLE001 — no index is a state
+        meta = {}
+    cut = meta.get("cut") or None
+    if not cut:
+        return {**out, "skipped": "no index"}
+    last = store.get_meta(ARIREGISTER_CUT_KEY)
+    if last is None:
+        store.set_meta(ARIREGISTER_CUT_KEY, cut)
+        _bump(ee_last_cut=cut, ee_waiting=False)
+        return {**out, "started": cut}
+    if cut <= last:
+        _bump(ee_last_cut=last, ee_waiting=False)
+        return out
+    codes = watched_ariregister_codes(store)
+    if not codes:
+        # Nothing Estonian is watched: move on without downloading anything.
+        store.set_meta(ARIREGISTER_CUT_KEY, cut)
+        _bump(ee_last_cut=cut, ee_waiting=False)
+        return out
+    own_client = client is None
+    client = client or httpx.Client(follow_redirects=True, headers={"User-Agent": "OpenCheck watchlist"})
+    try:
+        doc = _fetch_ariregister_delta(client)
+        if int(doc.get("schema") or 0) != 1:
+            raise ValueError(f"unknown delta schema {doc.get('schema')!r}")
+        days = sorted(
+            (d for d in doc.get("days") or [] if isinstance(d, dict) and last < str(d.get("cut") or "") <= cut),
+            key=lambda d: str(d["cut"]),
+        )
+        if not days or str(days[-1]["cut"]) < cut:
+            # The index names a day the file does not (yet). A file written
+            # after the index was built will never name it: that day is a gap.
+            if str(doc.get("updated_at") or "") >= str(meta.get("built_at") or "~"):
+                days.append({"cut": cut, "previous_cut": str(days[-1]["cut"]) if days else last,
+                             "missing": True})
+            elif not days:
+                _bump(ee_waiting=True)
+                return {**out, "waiting": cut}
+        per_lei: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+        expected = last
+        for day in days:
+            day_cut = str(day["cut"])
+            prev = str(day.get("previous_cut") or "")
+            if day.get("missing") or day.get("suspect") or prev != expected:
+                detail = (
+                    "too many changes to list" if day.get("suspect")
+                    else "not diffed" if day.get("missing")
+                    else "the build before it was not diffed"
+                )
+                out["catch_up_queued"] = out.get("catch_up_queued", 0) + _record_ariregister_gap(
+                    store, codes, {"after": expected, "before": day_cut, "detail": detail}
+                )
+                out["gaps"] = out.get("gaps", 0) + 1
+            if not day.get("suspect") and not day.get("missing"):
+                changes = day.get("changes") or {}
+                for code, leis in codes.items():
+                    change = changes.get(code)
+                    if isinstance(change, dict):
+                        for lei in leis:
+                            per_lei.setdefault(lei, []).append((day_cut, change))
+            expected = day_cut
+            out["days"] += 1
+        for lei, items in sorted(per_lei.items()):
+            merged = merge_register_changes(items)
+            if not merged:
+                continue
+            code = next(c for c, leis in codes.items() if lei in leis)
+            trigger = {
+                "tier": TIER_REGISTER,
+                "register": "ariregister",
+                "code": code,
+                "cuts": [c for c, _ in items],
+                "changes": merged,
+            }
+            if store.enqueue(lei, TIER_REGISTER, trigger):
+                out["queued"] += 1
+        new_last = str(days[-1]["cut"]) if days else last
+        store.set_meta(ARIREGISTER_CUT_KEY, new_last)
+        _bump(ee_last_cut=new_last, ee_days_read=out["days"], ee_queued=out["queued"],
+              ee_waiting=new_last < cut, ee_last_error=None)
+        if out["queued"]:
+            log.info("watchlist: the Estonian register changed %d watched compan%s",
+                     out["queued"], "y" if out["queued"] == 1 else "ies")
+        return out
+    except Exception as exc:  # noqa: BLE001 — the next tick retries the same days
+        log.warning("watchlist: Estonian register delta failed: %s", describe_exception(exc))
+        _bump(ee_last_error=describe_exception(exc))
+        return out
+    finally:
+        if own_client:
+            client.close()
+
+
+# ---------------------------------------------------------------------------
 # The re-run
 # ---------------------------------------------------------------------------
 
@@ -1870,9 +2187,9 @@ def _write_rerun(
             legal_name=resp.legal_name,
             jurisdiction=resp.jurisdiction,
         )
-        # A Tier 2 hit is itself the news; a catch-up or a GLEIF re-run that
-        # found nothing is not.
-        if changes or tier == TIER_OPENSANCTIONS:
+        # A Tier 2 hit, or a register's own change, is itself the news; a
+        # catch-up or a GLEIF re-run that found nothing is not.
+        if changes or tier in (TIER_OPENSANCTIONS, TIER_REGISTER):
             store.add_entry(
                 th,
                 lei,
@@ -1960,6 +2277,9 @@ async def tick() -> dict[str, Any]:
     _bump(last_tick_at=_now_iso())
     try:
         out["resync"] = await asyncio.to_thread(resync_after_rebuild)
+        # The register tier: cheap when the index has not moved (one meta
+        # read), and it queues before the drain so a change runs this tick.
+        out["register"] = await asyncio.to_thread(ariregister_tick)
         for item in await asyncio.to_thread(store.take_pending, settings.watchlist_reruns_per_tick):
             await rerun(item["lei"], item["tier"], item["trigger"])
             out["reruns"] += 1
