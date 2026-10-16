@@ -103,7 +103,7 @@ RETIRED_SIGNAL_CODES: frozenset[str] = frozenset({"COMPLEX_CORPORATE_STRUCTURE"}
 #: Phase 245's ``verdict_template``. Bump it whenever a rule change moves which
 #: codes fire for an unchanged company, and record the codes it moved below.
 #: A snapshot written before Phase 273 carries no number: it was version 1.
-SIGNAL_RULES = 4
+SIGNAL_RULES = 5
 
 #: version -> the codes whose firing that rules version changed. Comparing a
 #: baseline from an older version, appearances and disappearances of these
@@ -118,6 +118,11 @@ SIGNAL_RULES = 4
 #: 4 = Phase 342: the sanctions 50% rule is computed, so a company whose
 #: designated owners hold enough of it gains SANCTIONS_OWNERSHIP_TEST (or the
 #: context SANCTIONS_OWNERSHIP_TEST_POSSIBLE) with nothing in its records changed.
+#: 5 = the distinctive-token gate on the OpenSanctions cross-check and the
+#: OpenAleph screen: an organisation-name match whose names agree only on
+#: legal form and filler no longer fires, so a related-party listing code (and
+#: the 50% test that counts it) can disappear with nothing changed upstream.
+#: Measured on 24 production lookups (16 Oct 2026): no signal moved.
 SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
     2: frozenset(
         {
@@ -129,6 +134,21 @@ SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
     ),
     3: frozenset({"EU_TAX_NON_COOPERATIVE", "SUBSIDIARY_LISTED_JURISDICTION"}),
     4: frozenset({"SANCTIONS_OWNERSHIP_TEST", "SANCTIONS_OWNERSHIP_TEST_POSSIBLE"}),
+    5: frozenset(
+        {
+            "RELATED_SANCTIONED",
+            "RELATED_SANCTIONS_CONTROLLED",
+            "RELATED_SANCTIONS_LINKED",
+            "RELATED_COUNTER_SANCTIONED",
+            "RELATED_DEBARMENT",
+            "RELATED_EXPORT_CONTROLLED",
+            "RELATED_EXPORT_CONTROL_LINKED",
+            "RELATED_EXPORT_RISK",
+            "RELATED_PEP",
+            "SANCTIONS_OWNERSHIP_TEST",
+            "SANCTIONS_OWNERSHIP_TEST_POSSIBLE",
+        }
+    ),
 }
 
 

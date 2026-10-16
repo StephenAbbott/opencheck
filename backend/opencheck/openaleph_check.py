@@ -466,19 +466,19 @@ def _process_results(
                 # to base a related-party match on — same guard as
                 # cross_check / ftmg.
                 continue
-            if target["kind"] != _KIND_PERSON and not (
-                names.org_name_residue(target["name"])
-                and names.org_name_residue(best_name)
-            ):
-                # Entity-side analogue of the guard above: a name that is
-                # nothing but legal-form boilerplate once org types are
-                # stripped cannot be meaningfully matched. Found in
-                # production (Phase 119): a Canadian-list record named only
-                # «Общество с ограниченной ответственностью» — "Limited
-                # Liability Company" in Russian — "matched" nineteen
-                # distinct subsidiaries at 0.88+, all of it legal-form
-                # similarity. Applied to both sides, mirroring
-                # ``icij_check._screenable`` on the query side.
+            if names.screens_as_organisation(
+                target["kind"] == _KIND_PERSON, target["name"], best_name
+            ) and not names.distinctive_token_agreement(target["name"], best_name):
+                # Entity-side analogue of the guard above — the same
+                # distinctive-token gate as ``cross_check`` and the ICIJ
+                # screen, so the three cannot diverge. It subsumes the
+                # Phase 119 residue guard (an empty residue never agrees):
+                # a Canadian-list record named only «Общество с
+                # ограниченной ответственностью» — "Limited Liability
+                # Company" in Russian — "matched" nineteen distinct
+                # subsidiaries at 0.88+, all of it legal-form similarity.
+                # It also stops two names that share legal form and filler
+                # but differ in the token that names the company.
                 continue
             hit = _as_hit(item, target)
             if not _birth_year_compatible(target.get("birth_year"), hit):

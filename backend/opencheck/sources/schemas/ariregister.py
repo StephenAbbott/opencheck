@@ -89,6 +89,31 @@ class AriregisterBeneficialOwnerRow(_NoPersonalCode):
     lopp_kpv: str | None = None
 
 
+class AriregisterOffCardRow(_NoPersonalCode):
+    """One person outside the registry card (kaardivalised_isikud): a
+    founder, supervisory board member, AS shareholder, auditor… — the
+    shareholder row's shape plus the role."""
+
+    kirje_id: str | int | None = None
+    isiku_tyyp: str | None = None
+    isiku_roll: str | None = None
+    eesnimi: str | None = None
+    nimi_arinimi: str | None = None
+    isikukood_hash: str | None = None
+    isikukood_registrikood: str | None = None
+    valis_kood: str | None = None
+    valis_kood_riik: str | None = None
+    synniaeg: str | None = None
+    aadress_riik: str | None = None
+    osaluse_protsent: str | None = None
+    osaluse_suurus: str | None = None
+    osaluse_valuuta: str | None = None
+    osaluse_omandiliik: str | None = None
+    kontrolli_allikas: str | None = None
+    algus_kpv: str | None = None
+    lopp_kpv: str | None = None
+
+
 class AriregisterBundle(_Base):
     """Top-level shape returned by ``AriregisterAdapter.fetch`` for a record."""
 
@@ -106,6 +131,7 @@ class AriregisterBundle(_Base):
     shareholders: list[AriregisterShareholderRow] = []
     officers: list[AriregisterOfficerRow] = []
     beneficial_owners: list[AriregisterBeneficialOwnerRow] = []
+    off_card_persons: list[AriregisterOffCardRow] = []
     cut: str | None = None
     tier: str | None = None
     index_miss: bool = False

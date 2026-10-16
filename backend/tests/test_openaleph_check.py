@@ -767,3 +767,30 @@ async def test_pipeline_gathers_openaleph_screen(monkeypatch, tmp_path) -> None:
     assert src.get("openaleph_screening") == [
         {"statement_id": "stmt-x", "collection": "C"}
     ]
+
+
+async def test_shared_boilerplate_with_a_different_company_name_is_rejected(
+    fake_percolate,
+) -> None:
+    """Both names have a residue (so the Phase 119 guard alone would pass
+    them) but the residues name different companies. The distinctive-token
+    gate — the one cross_check and ICIJ apply — rejects the pair."""
+    from opencheck import names
+
+    target_name = 'Общество с ограниченной ответственностью "РН-Капитал"'
+    matched_name = 'Общество с ограниченной ответственностью "РН-Бункер"'
+    assert names.name_similarity(target_name, matched_name) >= 0.88
+    bundle = [_entity_stmt("stmt-ooo", target_name)]
+    fake_percolate(
+        [],
+        [
+            _percolate_item(
+                matched_name,
+                surface_form="ОБЩЕСТВО",
+                topics=["sanction"],
+                schema="Company",
+                entity_id="oa-other-llc",
+            ),
+        ],
+    )
+    assert await assess_openaleph_names(bundle) == []

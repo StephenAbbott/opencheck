@@ -1147,7 +1147,8 @@ shareholders only for an OÜ); strip personal identification codes from the
 page path; a daily GitHub-workflow rebuild. Things that will be re-derived
 otherwise:
 
-- **Four files, one snapshot, streamed.** `lihtandmed.csv` (companies) and
+- **Four files, one snapshot, streamed** (five since the off-card phase —
+  see the section below). `lihtandmed.csv` (companies) and
   the `kaardile_kantud_isikud` / `osanikud` / `kasusaajad` JSON arrays
   (officers, shareholders, beneficial owners), ≈2.2 GB unzipped. The JSON is
   read with `raw_decode` over a rolling buffer **by cursor, never by slicing
@@ -1223,6 +1224,46 @@ otherwise:
 - The index holds no people's street or e-mail addresses (the files do), and
   the page path's personal codes are stripped once they have said "person";
   `AriregisterBundle` refuses a bundle carrying one.
+
+### The persons outside the registry card (the fifth file)
+
+`ettevotja_rekvisiidid__kandevalised_isikud.json.zip` (list key
+`kaardivalised_isikud` — RIK's spelling) → the `off_card_person` table,
+index schema **2** (a schema-1 index is still read, with an empty off-card list — `INDEX_SCHEMA_VERSIONS_READ`); bundle key `off_card_persons`, empty on the page path.
+Measured 16 Oct 2026 (434,083 rows on 296,427 entities): founders `A`
+370,119 + `B` 35,074; supervisory board `N` 10,691 + chairs `E` 2,252;
+**AS shareholders `S` 3,323** (1,780 legal persons, 1,543 natural — every
+one with a percentage, 3,296 from Nasdaq CSD `V1`): the shareholders Phase
+330 said no file carries; audit firms `D` 9,217, `J` revident 1,368, `M`
+698; `P` 374, `V` 282, `R` 228, `L` 457. No `lopp_kpv` anywhere. Stephen's
+decisions (16 Oct 2026):
+
+- **`N`/`E` → `boardMember`/`boardChair`** with "supervisory board
+  (nõukogu)" in the label — BODS has one board pair, so the label says
+  which board. Serving-only, like every officer.
+- **`S` is a shareholding, mapped by the OÜ row's rule**
+  (`_ee_shareholding_interest`, shared by the three shareholder-shaped
+  rows), details prefixed "Shareholder of a public limited company
+  (aktsionär), as recorded by the register". The finding counts it as a
+  shareholder, so an AS with a registered sole shareholder no longer reads
+  "no shareholders on file". Relationship local ids are `as-<kirje_id>`
+  (the off-card file's `kirje_id`s are their own series).
+- **Founders are ownership history, never a current share.** A founder
+  still on a *current* shareholding (hash / registry code / foreign key
+  matched; an ended holding does not count) gets a `commenting`
+  annotation on that holding ("Also recorded as a founder …"); one no
+  longer holding gets a `shareholding` record with `startDate`,
+  `recordStatus: closed` and **no `endDate`** (the register publishes
+  none — the CAC rule), local id `fnd-<kirje_id>`. On the real files
+  263,123 founders are current holders, ~133,000 are former, 9,138
+  (foreign, no hash) carry no key and become closed records that the
+  name-keyed merge (the `isikukood_hash` ticket) can later fold. Closed
+  records are ended to the risk engine and to integrated ownership, so a
+  founding contribution never inflates a figure.
+- **Auditors and the rest are not an interest** and are not mapped; they
+  stay in the raw bundle. Neither founders nor auditors are counted in
+  the finding; "N on the supervisory board" is said only where there is
+  one.
 
 ---
 
@@ -3585,7 +3626,10 @@ decisions on the Phase 340 ticket. Things that will be re-derived otherwise:
   sentence — never another publisher's unknown party); the map lists them
   under `reporting_exceptions`, direct and ultimate folded into one entry,
   and says so in `summary`. `NON_PUBLIC` and its deprecated family (a parent
-  that exists and is withheld) are still drawn (Stephen). The BODS output is
+  that exists and is withheld) are still drawn (Stephen) — once per company
+  and reason, the direct and ultimate bridges folded into one node, listed
+  under `undisclosed_parents` and said in `summary` (288 WHITESANDS UK
+  LIMITED drew two "Undisclosed parent" nodes until this was fixed). The BODS output is
   unchanged — the bridges stay, as Phase 114 wants. (2) **An officer
   appointment is a role wherever it is read.** A secretary/agent/
   representative has no v0.4 role code, so the mappers type it

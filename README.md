@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 352** — The MCP ownership map states GLEIF reporting exceptions in words and leaves company secretaries and other officers off the picture.
+**Latest: Phase 356** — The Estonian e-Business Register index now carries supervisory board members, AS shareholders and founders from RIK's fifth open-data file.
 
 → [Full development history](docs/status.md)
 

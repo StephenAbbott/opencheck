@@ -228,6 +228,65 @@ def _bos() -> list[dict[str, Any]]:
     ]
 
 
+def _off_card(**kw: Any) -> dict[str, Any]:
+    base = _shareholder(isiku_roll="A", isiku_roll_tekstina="Asutaja", osaluse_protsent=None,
+                        osaluse_suurus="2500.00", grupp=None, kontrolli_allikas="ELK",
+                        kontrolli_allikas_tekstina="Elektrooniliselt esitatud (kande)avaldus",
+                        kontrolli_allika_kpv="05.06.2023", aadress_riik="EST", aadress_riik_tekstina="Eesti")
+    base.update(kw)
+    return base
+
+
+H_TIINA = "6f708192-a3b4-55c6-d7e8-f90123456789"
+H_RAIVO = "708192a3-b4c5-56d7-e8f9-012345678901"
+
+
+def _off_cards() -> list[dict[str, Any]]:
+    return [
+        # The founder is still the sole shareholder: said on her holding, not a second record.
+        {"ariregistri_kood": int(AGENT), "nimi": "007 Agent & Partners OÜ",
+         "kaardivalised_isikud": [
+             _off_card(kirje_id=9001580184, eesnimi="Veronika", nimi_arinimi="Oškina", isikukood_hash=H_VERONIKA,
+                       osaluse_suurus="0.01", algus_kpv="03.06.2023"),
+         ]},
+        # A supervisory board, an audit firm (not an interest) and the register's own
+        # record of the sole shareholder of an AS (role S) with a Nasdaq CSD source.
+        {"ariregistri_kood": int(EESTI), "nimi": "Eesti Energia AS",
+         "kaardivalised_isikud": [
+             _off_card(kirje_id=41, isiku_roll="E", isiku_roll_tekstina="Nõukogu esimees",
+                       eesnimi="Tiina", nimi_arinimi="Laane", isikukood_hash=H_TIINA, osaluse_suurus=None,
+                       kontrolli_allikas=None, kontrolli_allikas_tekstina=None, kontrolli_allika_kpv=None,
+                       algus_kpv="12.05.2024"),
+             _off_card(kirje_id=42, isiku_roll="N", isiku_roll_tekstina="Nõukogu liige",
+                       eesnimi="Raivo", nimi_arinimi="Vare", isikukood_hash=H_RAIVO, osaluse_suurus=None,
+                       kontrolli_allikas=None, kontrolli_allikas_tekstina=None, kontrolli_allika_kpv=None,
+                       algus_kpv="12.05.2024"),
+             _off_card(kirje_id=43, isiku_tyyp="J", isiku_roll="D", isiku_roll_tekstina="Audiitorettevõtja",
+                       nimi_arinimi="Aktsiaselts PricewaterhouseCoopers", isikukood_registrikood="10142876",
+                       osaluse_suurus=None, kontrolli_allikas=None, kontrolli_allikas_tekstina=None,
+                       kontrolli_allika_kpv=None, algus_kpv="14.11.2002"),
+             _off_card(kirje_id=44, isiku_tyyp="J", isiku_roll="S", isiku_roll_tekstina="Aktsionär",
+                       nimi_arinimi="Eesti Vabariik", isikukood_registrikood="70000000",
+                       osaluse_protsent="100.00", osaluse_suurus="846645750.00",
+                       kontrolli_allikas="V1", kontrolli_allikas_tekstina="NASDAQ andmed",
+                       kontrolli_allika_kpv="09.07.2025", algus_kpv="31.03.1998"),
+         ]},
+        # A founder who no longer holds, with a contribution; one who made none.
+        {"ariregistri_kood": int(HOLD), "nimi": 'Holding "Põhjala" OÜ',
+         "kaardivalised_isikud": [
+             _off_card(kirje_id=51, eesnimi="Mari", nimi_arinimi="Mets",
+                       isikukood_hash="5e6f7081-92a3-54b5-c6d7-e8f901234567",
+                       osaluse_suurus="2500.00", algus_kpv="02.01.2015"),
+             _off_card(kirje_id=52, isiku_roll="B", isiku_roll_tekstina="Asutaja (sissemakseta)",
+                       eesnimi="Peeter", nimi_arinimi="Paan",
+                       isikukood_hash="8192a3b4-c5d6-57e8-f901-234567890123",
+                       osaluse_suurus=None, kontrolli_allikas=None, kontrolli_allikas_tekstina=None,
+                       kontrolli_allika_kpv=None, algus_kpv="02.01.2015"),
+         ]},
+        {"ariregistri_kood": int(STATE), "nimi": "Maa-amet", "kaardivalised_isikud": []},
+    ]
+
+
 def _zip(path: Path, member: str, text: str) -> Path:
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(zipfile.ZipInfo(member, (2026, 10, 13, 12, 24, 0)), text.encode("utf-8"))
@@ -241,6 +300,7 @@ def _write_files(
     officers: list[dict[str, Any]] | None = None,
     shareholders: list[dict[str, Any]] | None = None,
     bos: list[dict[str, Any]] | None = None,
+    off_cards: list[dict[str, Any]] | None = None,
     header: list[str] | None = None,
 ) -> None:
     src.mkdir(parents=True, exist_ok=True)
@@ -252,6 +312,7 @@ def _write_files(
         (builder.OFFICERS_FILE, _officers() if officers is None else officers),
         (builder.SHAREHOLDERS_FILE, _shareholders() if shareholders is None else shareholders),
         (builder.BO_FILE, _bos() if bos is None else bos),
+        (builder.OFF_CARD_FILE, _off_cards() if off_cards is None else off_cards),
     ):
         _zip(src / name, name[:-4], json.dumps(data, ensure_ascii=False, indent=4))
 
@@ -329,13 +390,14 @@ def test_the_builder_and_the_adapter_agree_on_the_schema() -> None:
     assert builder.TABLE_COLUMNS == ariregister._TABLE_COLUMNS
 
 
-def test_the_builder_indexes_the_four_files(index) -> None:
+def test_the_builder_indexes_the_five_files(index) -> None:
     out, meta = index
     assert meta["cut"] == CUT
     assert meta["entities"] == "4"
     assert meta["officers"] == "8"
     assert meta["shareholders"] == "5"
     assert meta["beneficial_owners"] == "5"
+    assert meta["off_card_persons"] == "7"
     assert meta["with_vat_number"] == "1"
     assert provenance.parse_moment(meta["built_at"]) is not None
     assert "T" in meta["built_at"] and meta["built_at"].endswith("+00:00")
@@ -346,6 +408,7 @@ def test_the_builder_indexes_the_four_files(index) -> None:
     assert vocab[("control", "K")] == "kaudne osalus"
     assert vocab[("country", "DEN")] == "Taani"
     assert vocab[("status", "L")] == "Likvideerimisel"
+    assert vocab[("role", "E")] == "Nõukogu esimees"
     # The hash is stored as 16 bytes, dates as ISO days, the e-mail not at all.
     row = conn.execute("SELECT isikukood_hash, algus_kpv FROM officer WHERE code = ?", (AGENT,)).fetchone()
     assert len(row[0]) == 16 and row[1] == "2023-06-05"
@@ -612,8 +675,8 @@ async def test_a_record_asserts_the_code_and_says_what_is_on_file(index) -> None
     hit = _build_result_hit("ariregister", bundle, ctx)
     assert hit is not None and hit.identifiers == {"ee_registry_code": EESTI}
     assert hit.finding == (
-        "In the register since 31 March 1998; no shareholders on file, "
-        "3 on the registry card, 2 beneficial owners; Aktsiaselts."
+        "In the register since 31 March 1998; 1 shareholder, 3 on the registry card, "
+        "2 on the supervisory board, 2 beneficial owners; Aktsiaselts."
     )
     assert len(hit.finding) <= MAX_FINDING_CHARS
 
@@ -766,4 +829,104 @@ async def test_board_member_bos_and_the_discrepancy_flag(index) -> None:
     assert flagged[0]["annotations"][0]["statementPointerTarget"] == "/recordDetails/interests/0"
     # The share registrar (ARP) is no interest; the two board members are.
     assert "Nasdaq CSD SE Eesti filiaal" not in {s["recordDetails"].get("name") for s in _by_type(statements, "entity")}
-    assert len(_by_type(statements, "person")) == 2
+    # Two board members on the card, two on the supervisory board (off the card).
+    assert len(_by_type(statements, "person")) == 4
+
+
+# ---------------------------------------------------------------------------
+# The persons outside the registry card (kaardivalised_isikud)
+# ---------------------------------------------------------------------------
+
+
+async def test_the_supervisory_board_and_the_as_shareholder_are_mapped(index) -> None:
+    statements = await _statements(EESTI)
+    tiina = _interests(statements, "Tiina Laane")
+    assert len(tiina) == 1 and tiina[0]["type"] == "boardChair"
+    assert tiina[0]["details"].startswith("Chair of the supervisory board") and tiina[0]["startDate"] == "2024-05-12"
+    raivo = _interests(statements, "Raivo Vare")
+    assert len(raivo) == 1 and raivo[0]["type"] == "boardMember" and "nõukogu liige" in raivo[0]["details"]
+    # The register's own record of the AS's sole shareholder is a shareholding,
+    # the OÜ shape: exact percentage, Nasdaq CSD as the entry's source.
+    entities = {s["recordDetails"]["name"]: s for s in _by_type(statements, "entity")}
+    state = entities["Eesti Vabariik"]
+    assert state["recordDetails"]["identifiers"][0] == {
+        "id": "70000000", "scheme": "EE-ARIREGISTER", "schemeName": "Estonian e-Business Register",
+    }
+    holding = _interests(statements, "Eesti Vabariik")
+    assert len(holding) == 1 and holding[0]["type"] == "shareholding"
+    assert holding[0]["share"] == {"exact": 100.0, "minimum": 100.0, "maximum": 100.0}
+    assert holding[0]["details"].startswith("Shareholder of a public limited company (aktsionär)")
+    assert "NASDAQ andmed" in holding[0]["details"] and "2025-07-09" in holding[0]["details"]
+    assert holding[0]["startDate"] == "1998-03-31"
+    rel = [s for s in _by_type(statements, "relationship") if s["recordDetails"]["interests"] == holding]
+    assert rel[0]["recordStatus"] == "new", "a current holding"
+    # The audit firm is no interest in the company.
+    assert "Aktsiaselts PricewaterhouseCoopers" not in entities
+    for s in statements:
+        for a in s.get("annotations", []):
+            assert "10142876" not in a["description"]
+
+
+async def test_a_founder_still_holding_is_said_on_the_holding(index) -> None:
+    statements = await _statements(AGENT)
+    rels = _by_type(statements, "relationship")
+    assert len(rels) == 3, "no second record for a founder who still holds"
+    holding = [r for r in rels if r["recordDetails"]["interests"][0]["type"] == "shareholding"
+               and not r["recordDetails"]["interests"][0].get("beneficialOwnershipOrControl")]
+    assert len(holding) == 1 and holding[0]["recordStatus"] == "new"
+    notes = [a for a in holding[0].get("annotations", []) if a["description"].startswith("Also recorded as a founder")]
+    assert len(notes) == 1
+    assert notes[0]["statementPointerTarget"] == "/recordDetails/interests/0"
+    assert "founding contribution 0.01 EUR" in notes[0]["description"] and "2023-06-03" in notes[0]["description"]
+
+
+async def test_a_founder_no_longer_holding_is_a_closed_record_with_no_end_date(index) -> None:
+    statements = await _statements(HOLD)
+    people = {s["recordDetails"]["names"][0]["fullName"] for s in _by_type(statements, "person")}
+    assert "Peeter Paan" in people
+    peeter = _interests(statements, "Peeter Paan")
+    assert len(peeter) == 1 and peeter[0]["type"] == "shareholding"
+    assert "share" not in peeter[0] and "endDate" not in peeter[0]
+    assert peeter[0]["startDate"] == "2015-01-02"
+    assert peeter[0]["details"].startswith("Founder, no contribution made")
+    assert "no longer on the current list" in peeter[0]["details"]
+    rel = [s for s in _by_type(statements, "relationship") if s["recordDetails"]["interests"] == peeter]
+    assert rel[0]["recordStatus"] == "closed"
+    # Mari Mets holds an ended shareholding (closed by its end date) and was a
+    # founder with a contribution: one person node, two closed records.
+    mari = _interests(statements, "Mari Mets")
+    assert len(mari) == 2 and {i["type"] for i in mari} == {"shareholding"}
+    founder = [i for i in mari if "founding contribution 2500.00 EUR" in i.get("details", "")]
+    assert len(founder) == 1 and "endDate" not in founder[0]
+    assert len([s for s in _by_type(statements, "person")
+                if s["recordDetails"]["names"][0]["fullName"] == "Mari Mets"]) == 1
+
+
+async def test_the_page_path_has_no_off_card_list(index) -> None:
+    with respx.mock() as mock:
+        mock.get(_page_url(ABSENT)).mock(return_value=Response(200, text=_PAGE))
+        bundle = await _fetch(ABSENT)
+    assert bundle["tier"] == "page" and bundle.get("off_card_persons", []) == []
+
+
+def test_an_off_card_row_naming_an_unknown_company_is_refused(tmp_path: Path) -> None:
+    _refused(tmp_path, "is not in", off_cards=_off_cards() + [{"ariregistri_kood": int(ABSENT), "nimi": "Ghost", "kaardivalised_isikud": []}])
+
+
+async def test_a_schema_one_index_is_read_with_no_off_card_list(tmp_path: Path) -> None:
+    """An index built before the fifth file (schema 1) still answers — with
+    an empty off-card list — so a deploy before the next rebuild does not
+    send every Estonian lookup to the page."""
+    out, _ = _build(tmp_path)
+    conn = sqlite3.connect(out)
+    conn.execute("DROP TABLE off_card_person")
+    conn.execute("UPDATE meta SET value = '1' WHERE key = 'schema_version'")
+    conn.commit()
+    conn.close()
+    _point_at(out)
+    try:
+        bundle = await _fetch(EESTI)
+        assert bundle["tier"] == "index" and bundle["off_card_persons"] == []
+        assert finding_ariregister(bundle).startswith("In the register since 31 March 1998; no shareholders on file")
+    finally:
+        _point_at(None)

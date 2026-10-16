@@ -444,6 +444,23 @@ def has_org_form_tokens(name: str | None) -> bool:
     return org_name_residue(name) != normalise_name(name)
 
 
+def screens_as_organisation(
+    target_is_person: bool, a: str | None, b: str | None
+) -> bool:
+    """Is this pair compared as organisation names?
+
+    The one classifier the three name screens share — ICIJ (Phase 120),
+    the OpenSanctions cross-check and the OpenAleph percolation screen — so
+    they cannot route the same pair differently. An entity target always
+    is; a person target is only when either name carries a legal form,
+    because BODS person statements sometimes hold corporate officers ("CSC
+    CORPORATE SERVICES (UK) LIMITED") and those are organisations for
+    matching purposes. A real personal name is all distinctive tokens and
+    goes to the person gates instead.
+    """
+    return not target_is_person or has_org_form_tokens(a) or has_org_form_tokens(b)
+
+
 def distinctive_token_agreement(a: str | None, b: str | None) -> bool:
     """Do two ORGANISATION names agree on their distinctive tokens?
 
