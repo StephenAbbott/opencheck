@@ -2,7 +2,7 @@
   "lei": "5493005044RTLQ5RZU70",
   "name": "Eesti Energia AS",
   "role": "curated",
-  "why": "Curated example. Estonian state company: STATE_CONTROLLED and a related PEP; read live from the e-Business Register (the Phase 45 provenance bug's home).",
+  "why": "Curated example. Estonian state company: STATE_CONTROLLED and a related PEP; read from the e-Business Register index (a snapshot dated by the files' cut since Phase 330; the print page, live, only for a code the index lacks) — the Phase 45 provenance bug's home.",
   "example_card": true,
   "no_risk": false,
   "risk": {
@@ -28,8 +28,8 @@
   ],
   "liveness": {
     "ariregister": [
-      "live",
-      "cached"
+      "snapshot",
+      "live"
     ]
   },
   "lei_confirmed_min": 2,
