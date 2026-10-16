@@ -684,6 +684,7 @@ def ownership_map(
     # company, both levels folded into one entry when the reason is the same.
     # NON_PUBLIC (a parent that exists and is withheld) stays a drawn node.
     exceptions: dict[tuple[str, str], dict[str, Any]] = {}
+    withheld: dict[tuple[str, str], dict[str, Any]] = {}
     for s in bods:
         if s.get("recordType") != "relationship":
             continue
@@ -703,6 +704,20 @@ def ownership_map(
             if exc["level"] not in entry["levels"]:
                 entry["levels"].append(exc["level"])
             continue
+        if exc:
+            # A withheld parent (NON_PUBLIC family) is drawn, once: GLEIF
+            # files it at the direct and the ultimate level, and the two
+            # bridges are the same undisclosed party, not two.
+            withheld_key = (c(sub), exc["reason"])
+            held = withheld.get(withheld_key)
+            if held is not None:
+                if exc["level"] not in held["levels"]:
+                    held["levels"].append(exc["level"])
+                continue
+            withheld[withheld_key] = {
+                "company": c(sub), "reason": exc["reason"],
+                "meaning": exc["meaning"], "levels": [exc["level"]],
+            }
         lines, cat = _edge_label(s)
         if cat == "role":
             continue
@@ -799,11 +814,22 @@ def ownership_map(
             "reason": entry["reason"],
             "meaning": entry["meaning"],
         })
+    undisclosed_parents = [
+        {
+            "company": party_name(by_canon.get(e["company"])) or e["company"],
+            "parent_levels": sorted(e["levels"], key=["direct", "ultimate"].index),
+            "reason": e["reason"],
+            "meaning": e["meaning"],
+        }
+        for e in withheld.values()
+    ]
     answer = {
         "lei": lei,
         "legal_name": legal_name,
         "source_filter": source,
-        "summary": _map_summary(legal_name or lei, len(drawable), reporting_exceptions),
+        "summary": _map_summary(
+            legal_name or lei, len(drawable), reporting_exceptions, undisclosed_parents
+        ),
         "edges": rows,
         "edges_total": len(rows),
         "edges_drawn": len(shown),
@@ -818,6 +844,7 @@ def ownership_map(
             "hop_limit_reached": net.capped,
         },
         "reporting_exceptions": reporting_exceptions,
+        "undisclosed_parents": undisclosed_parents,
         "fullcheck_url": FULLCHECK_URL.format(lei=lei) if lei else None,
         "as_of": as_of,
         "note": (
@@ -828,7 +855,8 @@ def ownership_map(
             "— company secretaries included — are left out. A GLEIF reporting "
             "exception names no party, so it is listed under "
             "'reporting_exceptions' rather than drawn; an undisclosed parent "
-            "(NON_PUBLIC) is drawn. Holder sublabels are integrated figures, "
+            "(NON_PUBLIC) is drawn once, whatever levels GLEIF files it at, and "
+            "listed under 'undisclosed_parents'. Holder sublabels are integrated figures, "
             "one per source, never added."
         ),
         "image": "attached as SVG" if svg else "no ownership or control edges to draw",
@@ -837,7 +865,10 @@ def ownership_map(
 
 
 def _map_summary(
-    name: str | None, current_edges: int, exceptions: list[dict[str, Any]]
+    name: str | None,
+    current_edges: int,
+    exceptions: list[dict[str, Any]],
+    withheld: list[dict[str, Any]] | None = None,
 ) -> str:
     """One plain sentence on what the map shows — so an empty picture is never
     the whole answer."""
@@ -850,6 +881,13 @@ def _map_summary(
     else:
         head = f"No source names a current owner or controller of {subject}."
     parts = [head]
+    for e in withheld or []:
+        levels = " and ".join(e["parent_levels"])
+        parts.append(
+            f"GLEIF records the {levels} parent of {str(e['company']).rstrip('.')} "
+            f"as withheld ({e['reason']}): a parent exists but is not disclosed. "
+            "It is drawn once, as an undisclosed parent."
+        )
     for e in exceptions:
         levels = " and ".join(e["parent_levels"])
         noun = "parents" if len(e["parent_levels"]) > 1 else "parent"

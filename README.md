@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 352** — The MCP ownership map states GLEIF reporting exceptions in words and leaves company secretaries and other officers off the picture.
+**Latest: Phase 353** — The MCP ownership map draws a parent GLEIF records as withheld once, not once per level, and its summary says the parent exists but is not disclosed.
 
 → [Full development history](docs/status.md)
 
