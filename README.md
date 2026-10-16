@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 363** — Estonian companies now show their share capital, whether they must file beneficial owners, their merger and division partners, dated status changes and a foreign branch's parent company.
+**Latest: Phase 364** — A watched Estonian company is now re-checked when the e-Business Register's daily open data shows a change to its shareholders, board, beneficial owners, name, status or legal form.
 
 → [Full development history](docs/status.md)
 
