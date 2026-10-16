@@ -2,11 +2,11 @@
   "lei": "FRDRIPF3EKNDJ2CQJL29",
   "name": "Eli Lilly and Company",
   "role": "curated",
-  "why": "Curated example. US company (GLEIF jurisdiction US-IN, a subdivision): related PEP, and an ICIJ person match low since Phase 282 (nothing corroborates it). RELATED_DEBARMENT medium is stable since Phase 282 (it used to come and go between runs).",
+  "why": "Curated example. US company (GLEIF jurisdiction US-IN, a subdivision): related PEP, and an ICIJ person match low since Phase 282 (nothing corroborates it). RELATED_DEBARMENT medium is stable since Phase 282 (it used to come and go between runs). RELATED_PEP is high on Katherine Baicker (board member; OpenSanctions record Q6376297, birth year agrees). Checked 16 Oct 2026: her role.pep comes from OpenSanctions' wd_categories crawler — she was a Senate-confirmed member of the President's Council of Economic Advisers (2005-07) — not from the Eli Lilly directorship, so it is not a Phase 247 subject-role case.",
   "example_card": true,
   "no_risk": false,
   "risk": {
-    "RELATED_PEP": "medium",
+    "RELATED_PEP": "high",
     "OFFSHORE_LEAKS": "low",
     "RELATED_DEBARMENT": "medium"
   },
