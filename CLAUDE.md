@@ -1147,7 +1147,7 @@ shareholders only for an OÜ); strip personal identification codes from the
 page path; a daily GitHub-workflow rebuild. Things that will be re-derived
 otherwise:
 
-- **Four files, one snapshot, streamed** (seven since the üldandmed phase —
+- **Four files, one snapshot, streamed** (nine since the rulings phase —
   see the section below). `lihtandmed.csv` (companies) and
   the `kaardile_kantud_isikud` / `osanikud` / `kasusaajad` JSON arrays
   (officers, shareholders, beneficial owners), ≈2.2 GB unzipped. The JSON is
@@ -1445,6 +1445,45 @@ decisions (16 Oct 2026) and the things that will be re-derived otherwise:
   branch is part of it, no BO flag.
 - History: `timeline/ariregister.py::general_events` — status changes and
   successions are Tier 2, dated as entered, partners as counterparty.
+
+### Rulings and commercial pledges (the rulings phase)
+
+`ettevotja_rekvisiidid__maarused.json.zip` (`RULINGS_FILE`, 1.8 GB
+unzipped) → `ruling`; `ettevotja_rekvisiidid__kommertspandid.json.zip`
+(`PLEDGES_FILE`) → `pledge` — one JSON row per company each, read by
+`ariregister.rulings` / `pledges` into the bundle's `rulings` / `pledges`.
+Stephen's decisions (16 Oct 2026) and the things that will be re-derived
+otherwise:
+
+- **A finding sentence and BODS notes, never a signal.** The rulings
+  describe the company's standing with the register; no code, no
+  `/signalstats` count, no verdict clause, no share card.
+- **Kept types** (`RULING_TYPES`, the same set in the builder and the
+  adapter, pinned): the annual-report warnings and fines X1/X2/HM/HP/H/H2,
+  the published deletion warning KAA, the annual-report deficiency ruling
+  M3, and every compulsory-dissolution warning (Y3/Y2O/Y2A/GY/KI/G1/G2T/
+  I2/Z1). Status `J` (in force) only — `L` is "deficiencies remedied", the
+  answered majority (95,760 of 106,757 X2). Always worded
+  (`EE_RULING_LABELS`, `EE_RULING_SHORT`), never a code.
+- **A filed report answers a report ruling.** The register keeps a paid
+  fine "in force"; `rulings_in_force` sets aside an annual-report ruling
+  when the company has filed a report for a year ending within 18 months
+  before it (`general.last_report_end`). Dissolution warnings stand. 16 Oct
+  2026: 148,469 kept, 100,163 on 19,162 companies shown.
+- **The finding**: the latest ruling, short and dated, replaces the
+  "in the register since" lead ("Deletion warning 12 March 2026; …"); under
+  a liquidation or bankruptcy lead, or when it would push the counts past
+  the 140-character cap, it follows the counts. The note on the company
+  lists every shown ruling with its number. `BANNED_VOCABULARY`
+  (knowability) is pinned on every word.
+- **Pledges** (8,068 current on 4,945 companies, EEK on pre-2011 pledges as
+  filed): one `commenting` note per pledge — amount, rank, date, pledgee —
+  and "N commercial pledges" near the end of the finding. A pledgee is a
+  creditor, **never a relationship or a party**. A natural-person pledgee
+  (35) is stored as `{kind: "F"}` and worded "a private individual": the
+  file carries the person's code, which the builder drops. Share pledges in
+  `osanikud` are not read (128 entities, personal codes in the text).
+- No schema bump: an index built before the tables answers `None`.
 
 ### A person's other companies, on the register's person key (the person-index phase)
 

@@ -53,6 +53,18 @@ What it reads, and what it refuses
   no credentials, and for Eesti Energia AS and Bolt Technology OÜ it holds
   exactly the entries the credentialed SOAP card log returns. Packed one
   row per company into ``card_entry``.
+* ``ettevotja_rekvisiidid__maarused.json.zip`` — the registration
+  department's rulings (2.9 million on 16 Oct 2026, 1.8 GB unzipped). Only
+  the compliance types in ``RULING_TYPES`` with status ``J`` (in force) are
+  kept, into ``ruling`` (one JSON row per company): type, date, number,
+  extra deadline. On 16 Oct 2026 that was ~150,000 rulings on ~41,000
+  companies; ``L`` (deficiencies remedied) is the answered majority — 95,760
+  of 106,757 annual-report deletion warnings.
+* ``ettevotja_rekvisiidid__kommertspandid.json.zip`` — commercial pledges
+  (4,945 companies, 8,068 pledges, all current): amount, currency (EEK on
+  pledges from before 2011, as filed), rank, date and the pledgee. A
+  natural-person pledgee (35) is kept as a kind only — the file carries the
+  person's code. Into ``pledge``.
 * ``ettevotja_rekvisiidid__yldandmed.json.zip`` — the general data, one
   object per entity (230 MB zip, 1.5 GB unzipped; current rows only, no
   history): share capital, whether the company must file beneficial owners,
@@ -80,7 +92,7 @@ The build refuses, rather than writes a plausible-looking index, when:
   lines − 1 (a stray quote merging rows — the ONRC lesson, Phase 211);
 * a file is implausibly short (truncated transfer, or the files swapped);
 * an entity code is not eight digits, or appears twice;
-* a JSON file names an entity the CSV does not hold — the seven files are
+* a JSON file names an entity the CSV does not hold — the nine files are
   one snapshot, and on 13 Oct 2026 each held exactly the CSV's 379,664
   entities (16 Oct 2026: 379,829, the off-card file included);
 * the files' cut dates (``Last-Modified``) fall on different days.
@@ -136,10 +148,30 @@ CARDS_FILE = "ettevotja_rekvisiidid__registrikaardid.json.zip"
 #: suspensions, a foreign company's branch, the main activity and the
 #: annual reports filed — current rows only (the üldandmed phase).
 GENERAL_FILE = "ettevotja_rekvisiidid__yldandmed.json.zip"
+#: The registration department's rulings (määrused) — 2.9 million on 16 Oct
+#: 2026, of which only the compliance types in ``RULING_TYPES`` that are in
+#: force are kept (the rulings phase).
+RULINGS_FILE = "ettevotja_rekvisiidid__maarused.json.zip"
+#: Commercial pledges (kommertspandid): amount, rank, date and pledgee.
+PLEDGES_FILE = "ettevotja_rekvisiidid__kommertspandid.json.zip"
 FILES = (
     CSV_FILE, OFFICERS_FILE, SHAREHOLDERS_FILE, BO_FILE, OFF_CARD_FILE, CARDS_FILE,
-    GENERAL_FILE,
+    GENERAL_FILE, RULINGS_FILE, PLEDGES_FILE,
 )
+
+#: The ruling types kept (Stephen, 16 Oct 2026): the annual-report warnings
+#: and fines, the deletion warning published in Ametlikud Teadaanded, and
+#: every compulsory-dissolution warning. The rest — entry rulings (1.9
+#: million), deficiency rulings on an application, refusals, fee notices —
+#: are procedural. ``ariregister.RULING_TYPES`` reads the same set (pinned).
+RULING_TYPES = frozenset({
+    "X1", "X2", "HM", "HP", "H", "H2", "KAA", "M3",
+    "Y3", "Y2O", "Y2A", "GY", "KI", "G1", "G2T", "I2", "Z1",
+})
+#: A ruling's status: ``J`` in force. ``L`` (deficiencies remedied), ``D``
+#: (signed, not yet in force), ``E`` (contested) and ``K`` are not kept —
+#: a warning the company answered is not a warning.
+RULING_IN_FORCE = "J"
 
 #: The JSON list each people file carries per entity, and the index table
 #: its rows go to. The off-card file spells its list ``kaardivalised`` —
@@ -246,11 +278,15 @@ MIN_ROWS = {
     CARDS_FILE: 1_500_000,
     # 379,829 entities on 16 Oct 2026.
     GENERAL_FILE: 300_000,
+    # Companies in the file (it lists all 379,925 on 16 Oct 2026).
+    RULINGS_FILE: 300_000,
+    # 4,945 pledged companies on 16 Oct 2026.
+    PLEDGES_FILE: 3_000,
 }
 
 USER_AGENT = "OpenCheck ariregister index builder (+https://opencheck.world)"
 
-#: Seconds between the seven downloads. Cloudflare rate-limits back-to-back
+#: Seconds between the nine downloads. Cloudflare rate-limits back-to-back
 #: requests to this host from one address (``Error code: 1015``, HTTP 429).
 DOWNLOAD_SPACING_S = 15
 
@@ -340,6 +376,14 @@ CREATE TABLE general (
     last_report_end TEXT, last_report_employees TEXT, reports_filed INTEGER,
     extra TEXT
 ) WITHOUT ROWID;
+-- The compliance rulings in force (määrused, the rulings phase), one JSON
+-- array per company: [{type, day, number, deadline}], newest first. The
+-- type's Estonian wording is in vocab ('ruling').
+CREATE TABLE ruling (code TEXT PRIMARY KEY, rulings TEXT NOT NULL) WITHOUT ROWID;
+-- Commercial pledges (kommertspandid), one JSON array per company:
+-- [{number, rank, amount, currency, since, pledgees: [{kind, name, code, country}]}].
+-- A natural-person pledgee is {kind: "F"} only.
+CREATE TABLE pledge (code TEXT PRIMARY KEY, pledges TEXT NOT NULL) WITHOUT ROWID;
 CREATE INDEX officer_person ON officer (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
 CREATE INDEX shareholder_person ON shareholder (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
 CREATE INDEX beneficial_owner_person ON beneficial_owner (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
@@ -353,6 +397,10 @@ class BuildRefused(RuntimeError):
 # ---------------------------------------------------------------------------
 # Download
 # ---------------------------------------------------------------------------
+
+
+class _CutShort(Exception):
+    """A download that ended early — retried."""
 
 
 def download(name: str, dest: Path, *, attempts: int = 4) -> str | None:
@@ -381,6 +429,15 @@ def download(name: str, dest: Path, *, attempts: int = 4) -> str | None:
                     magic = fh.read(2)
                 if magic != b"PK":
                     raise BuildRefused(f"{name}: the body is not a zip file")
+                # A transfer cut short still starts with "PK" (seen 16 Oct
+                # 2026: 73,269,248 of 74,262,843 bytes of the rulings file).
+                # It is retried, not refused: the next attempt is usually whole.
+                expected = resp.headers.get("Content-Length")
+                got = tmp.stat().st_size
+                if expected and expected.isdigit() and int(expected) != got:
+                    raise _CutShort(f"{got} of {expected} bytes")
+                if not zipfile.is_zipfile(tmp):
+                    raise _CutShort("no zip directory at the end")
                 tmp.replace(dest)
                 last_modified = resp.headers.get("Last-Modified")
                 log.info("downloaded %s: %d bytes, Last-Modified %s", name, dest.stat().st_size, last_modified)
@@ -402,7 +459,7 @@ def download(name: str, dest: Path, *, attempts: int = 4) -> str | None:
 
 
 def download_all(dest_dir: Path) -> dict[str, str | None]:
-    """Download the seven files, spaced out, and record each ``Last-Modified``
+    """Download the nine files, spaced out, and record each ``Last-Modified``
     beside it (``<name>.last-modified``) so ``--from-dir`` can read the cut."""
     stamps: dict[str, str | None] = {}
     for i, name in enumerate(FILES):
@@ -573,7 +630,7 @@ def resolve_cut(
 
     ``--cut`` wins; else each file's ``Last-Modified`` (from the download,
     or the ``.last-modified`` sidecar a download left); else the zip
-    member's own stamp. The seven days must agree — the files are regenerated
+    member's own stamp. The nine days must agree — the files are regenerated
     together each morning, and a download that straddled a regeneration
     would otherwise pair yesterday's shareholders with today's companies.
     """
@@ -617,7 +674,7 @@ def build_index(
     min_rows: dict[str, int] | None = None,
     started: dt.datetime | None = None,
 ) -> dict[str, str]:
-    """Build the SQLite index at ``out_path`` from the seven zips in ``src``.
+    """Build the SQLite index at ``out_path`` from the nine zips in ``src``.
 
     Written to a temporary file beside ``out_path`` and renamed at the end,
     so a failed build never leaves a half-written index where one was.
@@ -736,6 +793,12 @@ def build_index(
         counts["general"] = _load_general(
             conn, src / GENERAL_FILE, seen, vocab, floor=floors.get(GENERAL_FILE, 0),
         )
+        counts["rulings"], counts["ruled_companies"] = _load_rulings(
+            conn, src / RULINGS_FILE, seen, vocab, floor=floors.get(RULINGS_FILE, 0),
+        )
+        counts["pledges"], counts["pledged_companies"] = _load_pledges(
+            conn, src / PLEDGES_FILE, seen, floor=floors.get(PLEDGES_FILE, 0),
+        )
         # The companies obliged to file beneficial owners that have none on
         # file — counted here, said per company in the finding.
         counts["bo_obliged_none_filed"] = conn.execute(
@@ -760,6 +823,10 @@ def build_index(
             "card_entries": str(counts.get("card_entries", 0)),
             "general": str(counts.get("general", 0)),
             "bo_obliged_none_filed": str(counts.get("bo_obliged_none_filed", 0)),
+            "rulings": str(counts.get("rulings", 0)),
+            "ruled_companies": str(counts.get("ruled_companies", 0)),
+            "pledges": str(counts.get("pledges", 0)),
+            "pledged_companies": str(counts.get("pledged_companies", 0)),
             "source_page": PAGE_URL,
             "source_files": ",".join(FILES),
             "license": LICENSE,
@@ -1011,6 +1078,134 @@ def _load_general(
     return len(file_seen)
 
 
+def _entities(
+    path: Path, seen: set[str], list_key: str,
+) -> Iterator[tuple[str, list[Any]]]:
+    """``(code, list)`` for each entity object in a JSON file, refusing an
+    element that is not one, a code the CSV lacks, a repeated code and a list
+    that is not a list."""
+    zf, text, _day = _open_member(path)
+    file_seen: set[str] = set()
+    with zf:
+        try:
+            for ent in stream_json_array(text):
+                if not isinstance(ent, dict) or "ariregistri_kood" not in ent:
+                    raise BuildRefused("an element is not an entity object")
+                code = str(ent["ariregistri_kood"]).strip().zfill(8)
+                if code not in seen:
+                    raise BuildRefused(f"code {code} is not in {CSV_FILE}")
+                if code in file_seen:
+                    raise BuildRefused(f"code {code} appears twice")
+                file_seen.add(code)
+                rows = ent.get(list_key) or []
+                if not isinstance(rows, list):
+                    raise BuildRefused(f"{list_key} of {code} is not a list")
+                yield code, rows
+        except BuildRefused as exc:
+            raise BuildRefused(f"{path.name}: {exc}") from None
+
+
+def _load_rulings(
+    conn: sqlite3.Connection, path: Path, seen: set[str],
+    vocab: dict[tuple[str, str], str], *, floor: int,
+) -> tuple[int, int]:
+    """The rulings file into ``ruling``: the ``RULING_TYPES`` in force, one
+    JSON array per company, newest first. Returns (rulings, companies). The
+    floor is on the companies the file lists — almost every company has an
+    entry ruling, so a short file is a cut-short file."""
+    total = companies = listed = 0
+    batch: list[tuple[str, str]] = []
+    for code, rows in _entities(path, seen, "maarused"):
+        listed += 1
+        kept: list[dict[str, Any]] = []
+        for r in rows:
+            if not isinstance(r, dict):
+                raise BuildRefused(f"{path.name}: a ruling of {code} is not an object")
+            kind = str(r.get("maaruse_liik") or "").strip()
+            if kind not in RULING_TYPES or str(r.get("maaruse_olek") or "").strip() != RULING_IN_FORCE:
+                continue
+            day = _iso_day(r.get("maaruse_kpv"))
+            if day is None:
+                raise BuildRefused(f"{path.name}: a ruling of {code} is undated")
+            text_ = " ".join(str(r.get("maaruse_liik_tekstina") or "").split())
+            if text_ or ("ruling", kind) not in vocab:
+                vocab[("ruling", kind)] = text_
+            kept.append({
+                "type": kind, "day": day,
+                "number": " ".join(str(r.get("maaruse_nr") or "").split()) or None,
+                "deadline": _iso_day(r.get("lisatahtaeg")),
+            })
+        if kept:
+            kept.sort(key=lambda k: (k["day"], k["number"] or ""), reverse=True)
+            batch.append((code, json.dumps(kept, ensure_ascii=False, separators=(",", ":"))))
+            total += len(kept)
+            companies += 1
+        if len(batch) >= 5000:
+            conn.executemany("INSERT INTO ruling VALUES (?, ?)", batch)
+            batch = []
+    if batch:
+        conn.executemany("INSERT INTO ruling VALUES (?, ?)", batch)
+    if listed < floor:
+        raise BuildRefused(f"{path.name}: {listed} entities, fewer than {floor}")
+    log.info("%s: %d entities, %d compliance rulings in force on %d", path.name, listed, total, companies)
+    return total, companies
+
+
+def _pledgee(h: dict[str, Any]) -> dict[str, Any]:
+    """A pledgee as the index keeps it: a legal person by name, registry
+    code (eight digits, Estonian) and country; a natural person as its kind
+    alone — the file carries the person's code, which never leaves here."""
+    kind = str(h.get("pidaja_isikuliik") or "").strip()
+    if kind != "J":
+        return {"kind": "F"}
+    country = str(h.get("pidaja_riik") or "").strip() or None
+    code = str(h.get("pidaja_kood") or "").strip()
+    out: dict[str, Any] = {"kind": "J", "name": " ".join(str(h.get("pidaja_nimi") or "").split()) or None}
+    if _CODE_RE.match(code) and country in (None, "EST"):
+        out["code"] = code
+    if country and country != "EST":
+        out["country"] = country
+        out["country_text"] = h.get("pidaja_riik_tekstina")
+    return out
+
+
+def _load_pledges(
+    conn: sqlite3.Connection, path: Path, seen: set[str], *, floor: int,
+) -> tuple[int, int]:
+    """The commercial pledges file into ``pledge``: the current pledges of
+    each company (status ``R``, no end date). Returns (pledges, companies)."""
+    total = 0
+    listed = 0
+    batch: list[tuple[str, str]] = []
+    for code, rows in _entities(path, seen, "kommertspandiandmed"):
+        listed += 1
+        kept: list[dict[str, Any]] = []
+        for p in rows:
+            if not isinstance(p, dict):
+                raise BuildRefused(f"{path.name}: a pledge of {code} is not an object")
+            if p.get("lopp_kpv") or str(p.get("pandi_olek") or "R").strip() != "R":
+                continue
+            pledgees = [_pledgee(h) for h in _current(p.get("pandipidajad"))]
+            kept.append({
+                "number": p.get("pandi_number"),
+                "rank": p.get("pandi_jarjekoht"),
+                "amount": str(p.get("pandi_summa") or "").strip() or None,
+                "currency": str(p.get("pandi_valuuta") or "").strip() or None,
+                "since": _iso_day(p.get("algus_kpv")),
+                "pledgees": pledgees,
+            })
+        if kept:
+            kept.sort(key=lambda k: (k["rank"] or 0, k["since"] or ""))
+            batch.append((code, json.dumps(kept, ensure_ascii=False, separators=(",", ":"))))
+            total += len(kept)
+    if batch:
+        conn.executemany("INSERT INTO pledge VALUES (?, ?)", batch)
+    if listed < floor:
+        raise BuildRefused(f"{path.name}: {listed} entities, fewer than {floor}")
+    log.info("%s: %d pledged companies, %d current pledges", path.name, listed, total)
+    return total, len(batch)
+
+
 def _collect_vocab(vocab: dict[tuple[str, str], str], table: str, p: dict[str, Any]) -> None:
     """Record every code → text pair the files use, once."""
     for kind, code_key, text_key in VOCAB_PAIRS[table]:
@@ -1035,7 +1230,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True, type=Path, help="the SQLite file to write")
     parser.add_argument(
         "--from-dir", type=Path,
-        help="build from the seven zips already in this directory instead of downloading",
+        help="build from the nine zips already in this directory instead of downloading",
     )
     parser.add_argument(
         "--keep-dir", type=Path,
