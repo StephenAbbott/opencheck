@@ -50,6 +50,8 @@ The new gate dominates the old on both axes under either polarity. Threshold swe
 
 `eval_icij_distinctive.py surfaces` replays the gate over the entity `RELATED_*` signal evidence in the same 14 lookups (cross_check + OpenAleph): of 122 signals, exactly 20 would fail the gate — **all of them the Rosneft «Общество с ограниченной ответственностью» legal-form matches** independently found in Phase 119 (19 via OpenAleph, 1 via OpenSanctions `RELATED_SANCTIONS_LINKED`, which Phase 119's OpenAleph-side guard does not cover). Zero legitimate signals dropped. That is the follow-up ticket, sized: extending the gate to `cross_check` closes the one remaining boilerplate signal, and nothing else moves.
 
+**Follow-up shipped (16 Oct 2026).** The gate now runs in `cross_check._signals_from_os` and the OpenAleph percolation screen as well, through one classifier (`names.screens_as_organisation`) shared with this screen. Re-measured before merging on the live pool — 24 production `/lookup`s (the findings golden set plus these 14 subjects), 122 entity-type OpenSanctions/OpenAleph signals, 0 person+legal-form pairs — the gate dropped **nothing**: the Rosneft «Общество…» pair no longer collides in production (its «Общество…» signals are now exact-name matches), so the extension lands as a guard rather than a removal. `surfaces` now uses the shared classifier too.
+
 ## Reproducing
 
 ```
