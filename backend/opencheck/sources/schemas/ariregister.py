@@ -137,3 +137,8 @@ class AriregisterBundle(_Base):
     index_miss: bool = False
     is_stub: bool = False
     source_id: str | None = None
+    #: The Estonian companies above this one, keyed on registry code — each
+    #: a bundle of this shape (index tier only; ``walk_chain``), and what
+    #: the walk reached and did not follow.
+    related_companies: dict[str, "AriregisterBundle"] = {}
+    chain: dict | None = None

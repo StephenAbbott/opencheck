@@ -1188,7 +1188,7 @@ export async function getSubsidiaries(
 // the export and MCP stay on the GLEIF network above.
 // ---------------------------------------------------------------------
 
-export type DeclaredSourceId = "meip" | "eiti_assessment" | "climatetrace";
+export type DeclaredSourceId = "meip" | "eiti_assessment" | "climatetrace" | "ariregister";
 
 export interface DeclaredRow {
   name: string;
@@ -1205,6 +1205,9 @@ export interface DeclaredRow {
    *  "Parent of Subsidiary" column (the OECD's BODS file carries only the edge
    *  to the group head). GEM: the GEM entity id. */
   via: string | null;
+  /** A register number the source itself publishes for the row (the Estonian
+   *  register's registry code) — a register-lookup key where there is no LEI. */
+  register_id?: { scheme: string; id: string } | null;
 }
 
 export interface DeclaredSource {

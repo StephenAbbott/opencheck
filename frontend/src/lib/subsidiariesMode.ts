@@ -35,6 +35,7 @@ export const LIST_LABEL: Record<ListId, string> = {
   meip: "OECD-UNSD MEIP",
   eiti_assessment: "EITI",
   climatetrace: "Global Energy Monitor",
+  ariregister: "Estonian e-Business Register",
 };
 
 /** One row of any list, after resolution. */
@@ -50,6 +51,8 @@ export interface ResolvedRow {
   percent: number | null;
   years: string[];
   via: string | null;
+  /** The row's own register number, where its source publishes one. */
+  registerId: { scheme: string; id: string } | null;
   /** The other lists that carry this name (by comparison key). */
   alsoIn: ListId[];
 }
@@ -125,6 +128,7 @@ export function resolveLists(
           percent: r.percent,
           years: r.years,
           via: r.via,
+          registerId: r.register_id ?? null,
         },
       })),
     });
@@ -155,6 +159,7 @@ export function resolveLists(
         percent: r.extra.percent ?? null,
         years: r.extra.years ?? [],
         via: r.extra.via ?? null,
+        registerId: r.extra.registerId ?? null,
         alsoIn,
       };
     });

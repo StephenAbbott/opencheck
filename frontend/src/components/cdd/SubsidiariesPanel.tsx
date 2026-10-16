@@ -57,7 +57,7 @@ import { SubsidiaryNetwork } from "./SubsidiaryNetwork";
 const VISIBLE_ROWS = 12;
 
 /** The lists a company can appear in, for the "N of M" aside. */
-const LIST_COUNT = 4;
+const LIST_COUNT = 5;
 
 // ---------------------------------------------------------------------
 // One resolved row
@@ -68,6 +68,7 @@ function relationLabel(list: ResolvedList["id"], relation: string | null): strin
   if (list === "gleif") {
     return relation === "both" ? "Direct + ultimate" : relation === "ultimate" ? "Ultimate" : "Direct";
   }
+  if (list === "ariregister") return capitalise(relation); // the register's own relation word
   if (relation === "in group") return "In the group";
   if (relation === "declared") return null; // every EITI row is declared; the band says so once
   return "Direct";
@@ -107,6 +108,10 @@ function Row({ row, list }: { row: ResolvedRow; list: ResolvedList }) {
       )}
       {lei ? (
         <span className="font-mono text-oo-meta text-oo-muted">{lei}</span>
+      ) : row.registerId ? (
+        <span className="font-mono text-oo-meta text-oo-muted">
+          {row.registerId.scheme} {row.registerId.id}
+        </span>
       ) : (
         <span className="text-oo-meta text-oo-muted">no LEI published</span>
       )}
@@ -282,6 +287,8 @@ export default function SubsidiariesPanel({
   const meipSource = bySource.get("meip");
   const eitiSource = bySource.get("eiti_assessment");
   const gemSource = bySource.get("climatetrace");
+  const eeList = listById.get("ariregister");
+  const eeSource = bySource.get("ariregister");
 
   return (
     <>
@@ -371,6 +378,21 @@ export default function SubsidiariesPanel({
             {capitalise(gemSource.measures)}. <span className="italic">{NOT_IN_GRAPH}</span>.
           </p>
           <RowsList list={gemList} />
+        </PanelSection>
+      )}
+
+      {eeList && eeSource && (
+        <PanelSection
+          title={`${LIST_LABEL.ariregister} · companies it holds shares in`}
+          aside={listAside(eeList, eeSource)}
+        >
+          <p className="mb-2 text-oo-small text-oo-muted leading-[1.6] max-w-[82ch]">
+            {capitalise(eeSource.measures)}
+            {typeof eeSource.context?.cut === "string" ? ` · register data of ${eeSource.context.cut}` : ""}.{" "}
+            <span className="italic">{NOT_IN_GRAPH}</span>. A row carries the held company's registry
+            code; an LEI is shown only where another list publishes one for the same name.
+          </p>
+          <RowsList list={eeList} />
         </PanelSection>
       )}
     </>

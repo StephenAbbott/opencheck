@@ -738,6 +738,150 @@ def entity_record(code: str) -> dict[str, Any] | None:
     return record
 
 
+#: How far up a chain of Estonian corporate shareholders one lookup
+#: follows, and how many related companies it may pull in — the Companies
+#: House walk's two caps (``OPENCHECK_CH_PSC_MAX_DEPTH``, ``_MAX_RELATED_COMPANIES``).
+#: Every hop is an index read, so the caps bound the bundle, not a budget.
+CHAIN_MAX_DEPTH = 6
+MAX_RELATED_COMPANIES = 25
+
+#: Why a corporate shareholder was not followed (``chain.unfollowed``).
+UNFOLLOWED_FOREIGN = "foreign_register"       # a valis_kood, not an Estonian code
+UNFOLLOWED_NOT_IN_INDEX = "not_in_index"      # deleted, or newer than the cut
+UNFOLLOWED_DEPTH = "max_depth_reached"
+UNFOLLOWED_CAP = "related_companies_cap_reached"
+
+#: Off-card roles that are a shareholding of the company (``S`` aktsionär)
+#: and registry-card roles that are a partner's stake in a partnership —
+#: the rows the chain walk and the reverse index follow.
+_CHAIN_OFF_CARD_ROLES = frozenset({"S"})
+_CHAIN_OFFICER_ROLES = frozenset({"TOSAN", "UOSAN", "EUSOS", "EUSOS2"})
+
+
+def _corporate_holders(record: dict[str, Any]) -> list[tuple[str | None, dict[str, Any]]]:
+    """The legal persons holding a company's shares, as (registry code or
+    None for a foreign one, the row): the OÜ shareholder list, the AS
+    shareholders the register records (off-card ``S``) and partners."""
+    out: list[tuple[str | None, dict[str, Any]]] = []
+    rows = list(record.get("shareholders") or [])
+    rows += [r for r in record.get("off_card_persons") or [] if r.get("isiku_roll") in _CHAIN_OFF_CARD_ROLES]
+    rows += [r for r in record.get("officers") or [] if r.get("isiku_roll") in _CHAIN_OFFICER_ROLES]
+    for row in rows:
+        if (row.get("isiku_tyyp") or "F") != "J":
+            continue
+        code = (row.get("isikukood_registrikood") or "").strip()
+        out.append((code or None, row))
+    return out
+
+
+def walk_chain(
+    code: str, record: dict[str, Any], *, max_depth: int = CHAIN_MAX_DEPTH,
+) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    """Follow the company's Estonian corporate shareholders up the chain, in
+    the index, breadth-first: the related companies' records keyed on their
+    registry code, and a ``chain`` block — depth reached, count, and every
+    corporate holder that was *not* followed with the reason, so a chain cut
+    short by the cap or the cut is visible rather than indistinguishable
+    from the top of the structure (the Companies House rule, Phase 177).
+
+    A company that is in the chain twice (a cycle, or a parent two
+    subsidiaries share) is read once. The subject itself is never in
+    ``related``.
+    """
+    related: dict[str, dict[str, Any]] = {}
+    unfollowed: list[dict[str, Any]] = []
+    depth_reached = 0
+    frontier: list[tuple[str, dict[str, Any], int]] = [(code, record, 0)]
+    visited = {code}
+    while frontier:
+        parent_code, parent, depth = frontier.pop(0)
+        for holder_code, row in _corporate_holders(parent):
+            name = (row.get("nimi_arinimi") or "").strip()
+            if holder_code is None:
+                unfollowed.append({
+                    "of": parent_code, "name": name, "reason": UNFOLLOWED_FOREIGN,
+                    "foreign_code": row.get("valis_kood"), "country": row.get("valis_kood_riik"),
+                })
+                continue
+            if holder_code in visited:
+                continue
+            if depth >= max_depth:
+                unfollowed.append({"of": parent_code, "name": name, "code": holder_code, "reason": UNFOLLOWED_DEPTH})
+                continue
+            if len(related) >= MAX_RELATED_COMPANIES:
+                unfollowed.append({"of": parent_code, "name": name, "code": holder_code, "reason": UNFOLLOWED_CAP})
+                continue
+            visited.add(holder_code)
+            sub = entity_record(holder_code)
+            if sub is None:
+                unfollowed.append({"of": parent_code, "name": name, "code": holder_code, "reason": UNFOLLOWED_NOT_IN_INDEX})
+                continue
+            related[holder_code] = sub
+            depth_reached = max(depth_reached, depth + 1)
+            frontier.append((holder_code, sub, depth + 1))
+    chain = {"depth": depth_reached, "related": len(related), "max_depth": max_depth, "unfollowed": unfollowed}
+    return related, chain
+
+
+def holdings_of(code: str, *, limit: int = 200) -> list[dict[str, Any]]:
+    """The companies a legal person holds shares in, from the index's
+    reverse side: every shareholder, AS-shareholder and partner row whose
+    ``isikukood_registrikood`` is ``code``, with the held company's name,
+    form and status. ``[]`` without an index. The subject is a *holder*
+    here — what it owns, never who owns it."""
+    conn = _shared_conn()
+    if conn is None:
+        return []
+    code = normalise_registry_code(code)
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    #: (table, relation word, roles kept, the row's share columns)
+    queries = (
+        ("shareholder", "shareholder", None,
+         "t.osaluse_protsent, t.osaluse_suurus, t.osaluse_valuuta"),
+        ("off_card_person", "as_shareholder", _CHAIN_OFF_CARD_ROLES,
+         "t.osaluse_protsent, t.osaluse_suurus, t.osaluse_valuuta"),
+        ("officer", "partner", _CHAIN_OFFICER_ROLES,
+         "NULL, t.osamaks, t.osamaksu_valuuta"),
+    )
+    for table, relation, roles, share_columns in queries:
+        try:
+            rows = conn.execute(
+                f"SELECT t.code, t.isiku_roll, {share_columns}, t.algus_kpv,"
+                f" e.name, e.legal_form, e.status_code"
+                f" FROM {table} t JOIN entity e ON e.code = t.code"
+                f" WHERE t.isikukood_registrikood = ? ORDER BY t.code",
+                (code,),
+            ).fetchall()
+        except sqlite3.Error:
+            continue
+        for held, role, percent, size, currency, since, name, form, status in rows:
+            role = str(role or "")
+            if roles is not None and role not in roles:
+                continue
+            held = str(held)
+            if (held, role) in seen:
+                continue
+            seen.add((held, role))
+            out.append({
+                "code": held,
+                "name": name,
+                "legal_form": form,
+                "status_code": status,
+                "status_text": vocab_text("status", status),
+                "relation": relation,
+                "role": role,
+                "role_text": vocab_text("role", role),
+                "percent": percent,
+                "share_size": size,
+                "currency": currency,
+                "since": since,
+            })
+            if len(out) >= limit:
+                return out
+    return out
+
+
 def search_index(query: str, *, limit: int = 10) -> list[dict[str, Any]]:
     """Entities whose name contains ``query`` (case-insensitive), from the
     index; ``[]`` without one."""
@@ -787,7 +931,11 @@ class AriregisterAdapter(SourceAdapter):
                 "limited company the register records, founders) — read from a "
                 "daily index of RIK's open-data files, with the public "
                 "e-Business Register page as the fallback for a company the "
-                "files do not hold."
+                "files do not hold. An Estonian corporate owner's own record "
+                "is read from the same index up the chain (six hops, "
+                "twenty-five companies), and a foreign owner's register code "
+                "becomes a register-hop identifier where it has the shape of "
+                "that country's company number."
             ),
             license="CC-BY-4.0",
             attribution=(
@@ -981,6 +1129,15 @@ class AriregisterAdapter(SourceAdapter):
                 # Declared only once a row is in hand: a miss is not a read.
                 declare_snapshot(meta)
                 bundle = self._index_bundle(registry_code, record, meta)
+                # The chain above the company, from the same index: every
+                # Estonian corporate shareholder's own record, up to the
+                # caps, so the owners' owners arrive in the first lookup
+                # (the Companies House walk, with no network to spend).
+                related, chain = walk_chain(registry_code, record)
+                bundle["related_companies"] = {
+                    code: self._index_bundle(code, sub, meta) for code, sub in related.items()
+                }
+                bundle["chain"] = chain
                 validate_raw(self.id, AriregisterBundle, bundle)
                 return bundle
 

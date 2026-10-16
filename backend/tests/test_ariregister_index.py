@@ -33,7 +33,7 @@ from opencheck.bods import validator
 from opencheck.bods.mapper import map_ariregister
 from opencheck.config import get_settings
 from opencheck.findings import MAX_FINDING_CHARS, finding_ariregister
-from opencheck.register_hops import hop_for
+from opencheck.register_hops import hop_for, hop_schemes
 from opencheck.routers.lookup import _LookupCtx, _build_derived, _build_result_hit, _dispatch
 from opencheck.sources import REGISTRY, ariregister
 from opencheck.sources.base import SearchKind
@@ -58,7 +58,9 @@ AGENT = "16752073"    # 007 Agent & Partners OÜ — one person on all three lis
 EESTI = "10421629"    # Eesti Energia AS — no shareholders, board-member BOs
 HOLD = "12345678"     # a holding OÜ in liquidation, with foreign parties
 STATE = "70000000"    # a government agency → stateBody
+HAUDE = "16765745"    # Haudemaja OÜ — the holding's corporate shareholder, with a person above it
 ABSENT = "99999999"   # in no file
+H_KALEV = "92a3b4c5-d6e7-58f9-0123-456789012345"
 
 H_VERONIKA = "77a468f2-248a-5e41-8356-c975af9613a5"
 H_ANDRUS = "0f2d0a8e-6a4c-5f7b-9a2d-3b1c4d5e6f70"
@@ -84,6 +86,8 @@ def _csv_rows() -> list[str]:
         row("Maa-amet", STATE, "Täidesaatva riigivõimu asutus või riigi muu institutsioon",
             "Ministeeriumi hallatav riigiasutus", "", "R", "Registrisse kantud",
             "01.01.1990", "Mustamäe tee 51", "Harju maakond, Tallinn, Mustamäe linnaosa, Mustamäe tee 51"),
+        row("Haudemaja OÜ", HAUDE, "Osaühing", "", "", "R", "Registrisse kantud",
+            "10.03.2010", "Tartu mnt 1", "Harju maakond, Tallinn, Kesklinna linnaosa, Tartu mnt 1"),
     ]
 
 
@@ -164,6 +168,10 @@ def _officers() -> list[dict[str, Any]]:
              _officer(kirje_id=21, isiku_tyyp="J", isiku_roll="KOAS", isiku_roll_tekstina="Kõrgemalseisev asutus",
                       nimi_arinimi="Regionaal- ja Põllumajandusministeerium", isikukood_registrikood="70000734"),
          ]},
+        {"ariregistri_kood": int(HAUDE), "nimi": "Haudemaja OÜ",
+         "kaardile_kantud_isikud": [
+             _officer(kirje_id=71, eesnimi="Kalev", nimi_arinimi="Kask", isikukood_hash=H_KALEV, algus_kpv="10.03.2010"),
+         ]},
     ]
 
 
@@ -194,6 +202,14 @@ def _shareholders() -> list[dict[str, Any]]:
                           algus_kpv="02.01.2015", lopp_kpv="01.02.2024"),
          ]},
         {"ariregistri_kood": int(STATE), "nimi": "Maa-amet", "osanikud": []},
+        {"ariregistri_kood": int(HAUDE), "nimi": "Haudemaja OÜ",
+         "osanikud": [
+             _shareholder(kirje_id=61, eesnimi="Kalev", nimi_arinimi="Kask", isikukood_hash=H_KALEV,
+                          osaluse_protsent="60.00", osaluse_suurus="1500.00", algus_kpv="10.03.2010"),
+             _shareholder(kirje_id=62, isiku_tyyp="J", nimi_arinimi='Holding "Põhjala" OÜ',
+                          isikukood_registrikood=HOLD, osaluse_protsent="40.00", osaluse_suurus="1000.00",
+                          algus_kpv="10.03.2010"),
+         ]},
     ]
 
 
@@ -266,7 +282,7 @@ def _off_cards() -> list[dict[str, Any]]:
                        osaluse_suurus=None, kontrolli_allikas=None, kontrolli_allikas_tekstina=None,
                        kontrolli_allika_kpv=None, algus_kpv="14.11.2002"),
              _off_card(kirje_id=44, isiku_tyyp="J", isiku_roll="S", isiku_roll_tekstina="Aktsionär",
-                       nimi_arinimi="Eesti Vabariik", isikukood_registrikood="70000000",
+                       nimi_arinimi="Eesti Vabariik", isikukood_registrikood="70000001",
                        osaluse_protsent="100.00", osaluse_suurus="846645750.00",
                        kontrolli_allikas="V1", kontrolli_allikas_tekstina="NASDAQ andmed",
                        kontrolli_allika_kpv="09.07.2025", algus_kpv="31.03.1998"),
@@ -393,9 +409,9 @@ def test_the_builder_and_the_adapter_agree_on_the_schema() -> None:
 def test_the_builder_indexes_the_five_files(index) -> None:
     out, meta = index
     assert meta["cut"] == CUT
-    assert meta["entities"] == "4"
-    assert meta["officers"] == "8"
-    assert meta["shareholders"] == "5"
+    assert meta["entities"] == "5"
+    assert meta["officers"] == "9"
+    assert meta["shareholders"] == "7"
     assert meta["beneficial_owners"] == "5"
     assert meta["off_card_persons"] == "7"
     assert meta["with_vat_number"] == "1"
@@ -674,15 +690,19 @@ async def test_a_record_asserts_the_code_and_says_what_is_on_file(index) -> None
     _build_derived(ctx, "RA000181")
     hit = _build_result_hit("ariregister", bundle, ctx)
     assert hit is not None and hit.identifiers == {"ee_registry_code": EESTI}
+    # The 140-character cap drops the chain clause and the legal form here;
+    # the counts come first on purpose.
     assert hit.finding == (
         "In the register since 31 March 1998; 1 shareholder, 3 on the registry card, "
-        "2 on the supervisory board, 2 beneficial owners; Aktsiaselts."
+        "2 on the supervisory board, 2 beneficial owners."
     )
     assert len(hit.finding) <= MAX_FINDING_CHARS
 
 
 async def test_a_liquidation_leads_the_finding(index) -> None:
-    assert (finding_ariregister(await _fetch(HOLD)) or "").startswith("In liquidation; 4 shareholders")
+    finding = finding_ariregister(await _fetch(HOLD)) or ""
+    assert finding.startswith("In liquidation; 4 shareholders")
+    assert "1 more company followed up the chain; 1 owner not followed" in finding
 
 
 # ---------------------------------------------------------------------------
@@ -753,13 +773,22 @@ async def test_page_statements_are_not_dated_by_the_cut(index) -> None:
     assert bundle["index_miss"] is True
 
 
+def a_motivation_is_stated(note: str) -> bool:
+    return "as filed in the e-Business Register" in note
+
+
 async def test_foreign_parties_countries_and_codes(index) -> None:
     statements = await _statements(HOLD)
     entities = {s["recordDetails"]["name"]: s for s in _by_type(statements, "entity")}
     latvian = entities["SIA Ziemeļi"]
     assert latvian["recordDetails"]["jurisdiction"] == {"name": "Latvia", "code": "LV"}
-    assert not latvian["recordDetails"].get("identifiers"), "a foreign code has no stated scheme"
-    assert any("40003242879" in a["description"] for a in latvian["annotations"])
+    # The register states no scheme for a foreign code; one with the shape of
+    # a Latvian registration number is read as one, and the annotation says so.
+    assert latvian["recordDetails"]["identifiers"] == [
+        {"id": "40003242879", "scheme": "LV-UR", "schemeName": "UR — Latvian Register of Enterprises"}
+    ]
+    (note,) = [a["description"] for a in latvian["annotations"] if "40003242879" in a["description"]]
+    assert "derived from it" in note and "states no scheme" in note and a_motivation_is_stated(note)
     estonian = entities["Haudemaja OÜ"]
     assert estonian["recordDetails"]["identifiers"][0]["scheme"] == "EE-ARIREGISTER"
     nasdaq = [i for i in _interests(statements, "SIA Ziemeļi")]
@@ -850,7 +879,7 @@ async def test_the_supervisory_board_and_the_as_shareholder_are_mapped(index) ->
     entities = {s["recordDetails"]["name"]: s for s in _by_type(statements, "entity")}
     state = entities["Eesti Vabariik"]
     assert state["recordDetails"]["identifiers"][0] == {
-        "id": "70000000", "scheme": "EE-ARIREGISTER", "schemeName": "Estonian e-Business Register",
+        "id": "70000001", "scheme": "EE-ARIREGISTER", "schemeName": "Estonian e-Business Register",
     }
     holding = _interests(statements, "Eesti Vabariik")
     assert len(holding) == 1 and holding[0]["type"] == "shareholding"
@@ -930,3 +959,208 @@ async def test_a_schema_one_index_is_read_with_no_off_card_list(tmp_path: Path) 
         assert finding_ariregister(bundle).startswith("In the register since 31 March 1998; no shareholders on file")
     finally:
         _point_at(None)
+
+
+# ---------------------------------------------------------------------------
+# The chain above the company, from the index
+# ---------------------------------------------------------------------------
+
+
+async def test_the_chain_above_the_company_arrives_in_the_bundle(index) -> None:
+    bundle = await _fetch(HOLD)
+    assert set(bundle["related_companies"]) == {HAUDE}
+    assert bundle["related_companies"][HAUDE]["tier"] == "index"
+    chain = bundle["chain"]
+    assert chain["depth"] == 1 and chain["related"] == 1
+    # The Latvian shareholder is on a foreign register; the holding's own
+    # 40% of Haudemaja is a cycle back to the subject and is not "unfollowed".
+    reasons = {(u["name"], u["reason"]) for u in chain["unfollowed"]}
+    assert reasons == {("SIA Ziemeļi", ariregister.UNFOLLOWED_FOREIGN)}
+    # The AS whose registered shareholder's code is in no file.
+    eesti = await _fetch(EESTI)
+    assert eesti["related_companies"] == {}
+    assert [u["reason"] for u in eesti["chain"]["unfollowed"]] == [ariregister.UNFOLLOWED_NOT_IN_INDEX]
+
+
+async def test_the_chain_is_one_graph_with_the_register_record_for_each_company(index) -> None:
+    statements = await _statements(HOLD)
+    entities = {s["recordDetails"]["name"]: s for s in _by_type(statements, "entity")}
+    haude = entities["Haudemaja OÜ"]
+    # The related company's own record wins over the thin statement its
+    # shareholder row builds: same statementId, founding date present.
+    assert haude["recordDetails"]["foundingDate"] == "2010-03-10"
+    assert sum(1 for s in _by_type(statements, "entity") if s["recordDetails"]["name"] == "Haudemaja OÜ") == 1
+    # Kalev Kask holds 60% of Haudemaja and sits on its board — one node.
+    kalev = _interests(statements, "Kalev Kask")
+    assert sorted(i["type"] for i in kalev) == ["boardMember", "shareholding"]
+    assert [i["share"]["exact"] for i in kalev if i["type"] == "shareholding"] == [60.0]
+    rels = _by_type(statements, "relationship")
+    haude_rels = [r for r in rels if r["recordDetails"]["subject"] == haude["statementId"]]
+    assert len(haude_rels) == 3  # Kalev's share, Kalev's board seat, the holding's 40% (the cycle)
+    holding_up = [r for r in haude_rels if r["recordDetails"]["interestedParty"] == entities['Holding "Põhjala" OÜ']["statementId"]]
+    assert holding_up and holding_up[0]["recordDetails"]["interests"][0]["share"]["exact"] == 40.0
+    assert {s["statementDate"] for s in statements} == {CUT}, "the chain is dated by the same cut"
+
+
+async def test_a_related_companys_founders_are_not_the_subjects_history(index, tmp_path: Path) -> None:
+    off_cards = _off_cards() + [{
+        "ariregistri_kood": int(HAUDE), "nimi": "Haudemaja OÜ",
+        "kaardivalised_isikud": [_off_card(kirje_id=81, eesnimi="Vana", nimi_arinimi="Asutaja",
+                                           isikukood_hash="a3b4c5d6-e7f8-5901-2345-678901234567")],
+    }]
+    out, _ = _build(tmp_path / "ee-chain-founders", off_cards=off_cards)
+    _point_at(out)
+    try:
+        statements = await _statements(HOLD)
+        people = {s["recordDetails"]["names"][0]["fullName"] for s in _by_type(statements, "person")}
+        assert "Vana Asutaja" not in people
+        assert "Peeter Paan" in people, "the subject's own founders are still its history"
+    finally:
+        _point_at(None)
+
+
+async def test_the_integrated_figure_reaches_the_person_above_the_chain(index) -> None:
+    from opencheck import integrated_ownership
+
+    statements = await _statements(HOLD)
+    payload = integrated_ownership.for_lookup(f"EE-ARIREGISTER:{HOLD}", statements, "2026-10-16")
+    by_name = {h["name"]: h for h in integrated_ownership.with_figures(payload)}
+    kalev = by_name["Kalev Kask"]
+    figs = kalev["figures"]
+    assert len(figs) == 1 and not figs[0]["direct"], "one source, one indirect figure"
+    # 60% of Haudemaja, which holds 33.33% of the holding, which holds 40% of
+    # Haudemaja back: a cycle that settles above the simple 20% product.
+    assert 23.0 <= figs[0]["exact"] <= 23.2, figs
+
+
+# ---------------------------------------------------------------------------
+# Reverse holdings: what an Estonian company holds (the Subsidiaries tab)
+# ---------------------------------------------------------------------------
+
+
+def test_holdings_of_reads_the_reverse_side_of_the_index(index) -> None:
+    held = ariregister.holdings_of(HOLD)
+    assert [(h["code"], h["relation"], h["percent"]) for h in held] == [(HAUDE, "shareholder", "40.00")]
+    assert held[0]["name"] == "Haudemaja OÜ" and held[0]["status_code"] == "R"
+    assert held[0]["status_text"], "the register's own wording of the status rides along"
+    back = ariregister.holdings_of(HAUDE)
+    assert [(h["code"], h["percent"]) for h in back] == [(HOLD, "33.33")]
+    assert ariregister.holdings_of(AGENT) == [], "a company holding nothing has no rows, not an error"
+
+
+def test_holdings_of_is_empty_without_an_index(no_index) -> None:
+    assert ariregister.holdings_of(HOLD) == []
+
+
+def _mirror(monkeypatch, rows: dict[str, dict[str, Any]] | None) -> None:
+    """A GLEIF mirror that knows the given LEIs' ``registeredAs`` details."""
+    from opencheck import entity_pages
+
+    if rows is None:
+        monkeypatch.setattr(entity_pages, "get_store", lambda: None)
+        return
+
+    class _Row:
+        def __init__(self, detail: dict[str, Any]) -> None:
+            self.detail = detail
+
+    class _Store:
+        def get(self, lei: str):
+            return _Row(rows[lei]) if lei in rows else None
+
+    monkeypatch.setattr(entity_pages, "get_store", lambda: _Store())
+
+
+EE_LEI = "5493001XVZDYQ2S0OE42"
+NL_LEI = "724500PMK2A2M1SQQ228"
+
+
+def test_the_declared_block_lists_what_an_estonian_company_holds(index, monkeypatch) -> None:
+    from opencheck.subsidiaries_declared import _ariregister_block
+
+    _mirror(monkeypatch, {
+        EE_LEI: {"registeredAt": {"id": "RA000181"}, "registeredAs": HOLD},
+        NL_LEI: {"registeredAt": {"id": "RA000463"}, "registeredAs": "12345678"},
+    })
+    block = _ariregister_block(EE_LEI)
+    assert block["available"] and block["covered"] and block["total"] == 1
+    assert block["context"] == {"registry_code": HOLD, "cut": CUT}
+    (row,) = block["rows"]
+    assert row["name"] == "Haudemaja OÜ" and row["percent"] == 40.0 and row["lei"] is None
+    assert row["country"] == "EST" and row["relation"] == "shareholder"
+    assert row["register_id"] == {"scheme": "EE-ARIREGISTER", "id": HAUDE}, "the key a register lookup takes"
+    # A company on another register is outside the source, not a failure.
+    other = _ariregister_block(NL_LEI)
+    assert other["available"] and not other["covered"] and other["reason"]
+    # An LEI the mirror does not know reads the same way.
+    unknown = _ariregister_block("5493000000000000ZZ11")
+    assert unknown["available"] and not unknown["covered"]
+
+
+def test_the_declared_block_says_when_it_cannot_read(no_index, monkeypatch) -> None:
+    from opencheck.subsidiaries_declared import _ariregister_block
+
+    _mirror(monkeypatch, None)
+    block = _ariregister_block(EE_LEI)
+    assert block["available"] is False and "mirror" in block["reason"]
+    _mirror(monkeypatch, {EE_LEI: {"registeredAt": {"id": "RA000181"}, "registeredAs": HOLD}})
+    block = _ariregister_block(EE_LEI)
+    assert block["available"] is False and "index" in block["reason"]
+    # Only an Estonian subject needs the index.
+    _mirror(monkeypatch, {NL_LEI: {"registeredAt": {"id": "RA000463"}, "registeredAs": "1"}})
+    assert _ariregister_block(NL_LEI)["available"] is True
+
+
+# ---------------------------------------------------------------------------
+# Cross-border hops: a foreign code as a number on its own register
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("code", "alpha2", "expected"),
+    [
+        ("40003242879", "LV", ("LV-UR", "40003242879")),
+        ("LV40003242879", "LV", ("LV-UR", "40003242879")),   # a country prefix is removed
+        ("1234567-8", "FI", ("FI-PRH", "1234567-8")),
+        ("556677-8899", "SE", ("SE-BLV", "5566778899")),     # the hop's own normalisation
+        ("SC123456", "GB", ("GB-COH", "SC123456")),
+        ("ABC", "LV", None),                                 # not the shape of a Latvian number
+        ("40003242879", "DE", None),                         # no single German register hop
+        ("HRB 12345", "DE", None),
+        ("40003242879", None, None),                         # no country, no register
+        ("", "LV", None),
+    ],
+)
+def test_a_foreign_code_becomes_a_register_identifier_only_in_shape(code, alpha2, expected) -> None:
+    from opencheck.bods.mappers.estonia import _ee_foreign_register_identifier
+
+    identifiers, derived = _ee_foreign_register_identifier(code, alpha2)
+    if expected is None:
+        assert identifiers == [] and derived is None
+    else:
+        scheme, number = expected
+        assert derived == identifiers[0] and (derived["scheme"], derived["id"]) == (scheme, number)
+        assert derived["schemeName"] and derived["schemeName"] != scheme
+
+
+def test_every_foreign_code_shape_names_a_register_hop() -> None:
+    """A shape for a scheme no hop owns is dead; a hop that owns a scheme in
+    the table must be its country's only register (the ``REG-`` alias)."""
+    from opencheck.bods.mappers.estonia import _EE_FOREIGN_CODE_SHAPES
+
+    aliased = {h.scheme for k, h in hop_schemes().items() if k.startswith("REG-")}
+    assert set(_EE_FOREIGN_CODE_SHAPES) <= aliased, set(_EE_FOREIGN_CODE_SHAPES) - aliased
+
+
+async def test_a_foreign_owner_with_a_derived_identifier_is_a_register_hop(index) -> None:
+    """What the chain walk could not follow inside the index, FullCheck can:
+    the Latvian owner's statement carries the scheme ``register_hops`` owns."""
+    statements = await _statements(HOLD)
+    latvian = {s["recordDetails"]["name"]: s for s in _by_type(statements, "entity")}["SIA Ziemeļi"]
+    ident = latvian["recordDetails"]["identifiers"][0]
+    hop = hop_for(ident["scheme"])
+    assert hop is not None and hop.source_id == "ur_latvia"
+    assert hop.normalise(ident["id"]) == "40003242879"
+    # The walk still reports it as not followed — the index is Estonia only.
+    bundle = await _fetch(HOLD)
+    assert {(u["name"], u["reason"]) for u in bundle["chain"]["unfollowed"]} >= {("SIA Ziemeļi", ariregister.UNFOLLOWED_FOREIGN)}

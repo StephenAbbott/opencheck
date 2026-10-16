@@ -35,6 +35,7 @@ function src(id: DeclaredSource["id"], rows: Partial<DeclaredSource["rows"][numb
       percent: r.percent ?? null,
       years: r.years ?? [],
       via: r.via ?? null,
+      register_id: r.register_id ?? null,
     })),
     ...over,
   };
@@ -143,6 +144,26 @@ describe("coverageSentence", () => {
   it("does not call an absence of records a finding", () => {
     const s = coverageSentence(resolveLists([], null), "Acme");
     expect(s).toContain("not a finding that it owns nothing");
+  });
+
+  it("carries an Estonian row's registry code as a register key, never as an LEI", () => {
+    const cov = resolveLists(
+      [
+        src("ariregister", [
+          { name: "Haudemaja OÜ", relation: "shareholder", percent: 40, country: "EST", register_id: { scheme: "EE-ARIREGISTER", id: "16765745" } },
+        ]),
+        src("climatetrace", [{ name: "Haudemaja OÜ", lei: "5493001XVZDYQ2S0OE42" }]),
+      ],
+      null,
+    );
+    const ee = cov.lists.find((l) => l.id === "ariregister")!;
+    expect(ee.label).toBe("Estonian e-Business Register");
+    const [row] = ee.rows;
+    expect(row.registerId).toEqual({ scheme: "EE-ARIREGISTER", id: "16765745" });
+    expect(row.lei).toBeNull();
+    // Another list's LEI for the same name is a name match, not the row's own.
+    expect(row.matched).toEqual({ lei: "5493001XVZDYQ2S0OE42", from: "climatetrace" });
+    expect(ee.withLei).toBe(0);
   });
 
   it("says a covered-but-empty company is an absence of records, not zero across zero", () => {

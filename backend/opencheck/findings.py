@@ -1730,10 +1730,21 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
         "read from the page, not the open data"
         if bundle.get("index_miss") else None
     )
+    # The chain above the company, where the index followed one: how many
+    # Estonian companies it reached, and how many owners it could not follow
+    # (foreign registers, a code the files lack, the caps) — a chain cut
+    # short must not read as the top of the structure.
+    chain = bundle.get("chain") or {}
+    related = int(chain.get("related") or 0)
+    unfollowed = len(chain.get("unfollowed") or [])
+    chain_clauses: list[str | None] = [
+        f"{related} more {'company' if related == 1 else 'companies'} followed up the chain" if related else None,
+        f"{unfollowed} {'owner' if unfollowed == 1 else 'owners'} not followed" if unfollowed else None,
+    ]
     # Counts before the legal form: the cap drops trailing clauses, and what
     # the register lists matters more than what kind of company it is. The
     # tier, when it is worth saying, is worth more than the form too.
-    return clauses_to_sentence([lead, counts, tier, form], sep="; ")
+    return clauses_to_sentence([lead, counts, *chain_clauses, tier, form], sep="; ")
 
 
 def finding_asp_moldova(bundle: dict[str, Any]) -> str | None:

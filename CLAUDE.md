@@ -1265,6 +1265,56 @@ decisions (16 Oct 2026):
   the finding; "N on the supervisory board" is said only where there is
   one.
 
+### Ownership chains inside the index (the chains phase)
+
+`walk_chain` / `holdings_of` in `sources/ariregister.py`, `_map_ariregister`
+→ `_ee_company_statement` + `_ee_company_parties` in `bods/mappers/estonia.py`,
+`_ariregister_block` in `subsidiaries_declared.py`,
+`_ee_foreign_register_identifier` in the mapper. Stephen's ticket (16 Oct
+2026): upward hops, reverse holdings, cross-border hops on foreign codes.
+Things that will be re-derived otherwise:
+
+- **The walk is in the adapter, the Companies House shape.** On the index
+  tier `fetch` BFS-walks every corporate holder — OÜ shareholder rows, AS
+  shareholder rows (`S`) and partner officer rows (`TOSAN`/`UOSAN`/`EUSOS`/
+  `EUSOS2`) with an Estonian `isikukood_registrikood` — up to
+  `CHAIN_MAX_DEPTH` (6) and `MAX_RELATED_COMPANIES` (25), cycle-safe, the
+  subject never in `related_companies`. `bundle["chain"]` says what stopped:
+  `unfollowed[]` with `foreign` (a `valis_kood` — the index is Estonia only),
+  `not_in_index`, `depth`, `cap`. The mapper emits each related company's
+  full entity statement and its parties (`include_founders=False` — a related
+  company's founders are not the subject's history), on one `isikukood_hash`
+  node where a person recurs, so integrated ownership computes the chain
+  figure in the first lookup (the fixture's cycle settles at 23.07%). The
+  finding gains two short clauses — "N more companies followed up the chain;
+  M owners not followed" — split because the 140-char cap drops a long one.
+  `opencheck_owners`' grow still follows LEIs only; a FullCheck downward
+  register hop is a separate ticket.
+- **Reverse holdings are the Subsidiaries tab's fifth list**, never graph
+  nodes: `holdings_of(code)` reads the three holder tables' reverse side
+  (the builder's partial indexes `*_holder` on `isikukood_registrikood`; an
+  index built before them still answers, by scan, until the daily rebuild)
+  and `_ariregister_block` keys the LEI to its registry code through the
+  GLEIF mirror (`registeredAt.id == RA000181`), **mirror first**: a
+  non-Estonian subject is "not covered" whether or not the Estonian index is
+  loaded; no mirror or (for an Estonian subject) no index is `available:
+  false`. Rows carry `register_id: {scheme: "EE-ARIREGISTER", id}` — a
+  register-lookup key, never an LEI — and `country` is alpha-3 like the
+  other lists. `DeclaredRow.register_id`, `DeclaredSourceId "ariregister"`,
+  `LIST_LABEL`, `LIST_COUNT` 5. `test_subsidiaries_declared.py` stubs a
+  mirror that knows no LEI.
+- **A foreign code is an identifier only in shape.** The files state no
+  scheme for `valis_kood`; `_ee_foreign_register_identifier` reads it as a
+  number on its country's register only where `register_hops` has exactly
+  one hop for the country (the `REG-<alpha2>` alias), the scheme is in
+  `_EE_FOREIGN_CODE_SHAPES` and the hop-normalised code matches that
+  register's shape — the hops' own `normalise` mostly tidies (`ur_latvia`
+  accepts `ABC`). A leading country prefix (`LV40003…`) is removed. The
+  annotation says the identifier is derived; the local id stays
+  `foreign-<country>-<code>`. A code that fails is the pre-phase behaviour:
+  jurisdiction and an annotation, no identifier. A derived scheme is what
+  lets `_register_one_layer` follow the owner across the border.
+
 ---
 
 ## Datafordeler CVR API (Denmark) — hard-won constraints

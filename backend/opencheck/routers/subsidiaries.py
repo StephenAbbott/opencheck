@@ -142,6 +142,10 @@ class DeclaredRow(BaseModel):
     years: list[str] = []
     #: MEIP: the immediate parent's name. GEM: the GEM entity id.
     via: str | None = None
+    #: A register number the source itself publishes for the row, as
+    #: ``{"scheme", "id"}`` (the Estonian register's registry code) — a
+    #: register-lookup key where the row has no LEI.
+    register_id: dict[str, str] | None = None
 
 
 class DeclaredSource(BaseModel):
