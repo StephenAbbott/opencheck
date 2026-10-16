@@ -478,6 +478,28 @@ class TedEuAdapter(SourceAdapter):
     # Identifier-keyed lookup (called by the lookup pipeline)
     # ------------------------------------------------------------------
 
+    def applies_to(
+        self,
+        lei: str,
+        registered_as: str,
+        jurisdiction: str,
+        derived: dict[str, str] | None = None,
+    ) -> bool:
+        """Whether TED has a question to answer about this anchor.
+
+        Live mode on, a jurisdiction inside TED's plausible coverage (an
+        unknown jurisdiction is still tried) and at least one identifier.
+        The lookup pipeline asks this before dispatch, so a company outside
+        Europe is never announced as checked against TED or counted in
+        "N of N sources answered"; ``fetch_by_identifiers`` asks it again.
+        """
+        if not self.info.live_available:
+            return False
+        country = (jurisdiction or "").split("-")[0].strip().upper()
+        if country and country not in TED_JURISDICTIONS:
+            return False
+        return bool(build_identifier_set(lei, registered_as, derived))
+
     async def fetch_by_identifiers(
         self,
         lei: str,
@@ -494,14 +516,9 @@ class TedEuAdapter(SourceAdapter):
         of 0 — the hit builder drops the card in that case, per the
         "absence isn't a hit" rule).
         """
-        if not self.info.live_available:
-            return None
-        country = (jurisdiction or "").split("-")[0].strip().upper()
-        if country and country not in TED_JURISDICTIONS:
+        if not self.applies_to(lei, registered_as, jurisdiction, derived=derived):
             return None
         identifiers = build_identifier_set(lei, registered_as, derived)
-        if not identifiers:
-            return None
         return await self._build_bundle(identifiers, legal_name=legal_name, lei=lei)
 
     async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:

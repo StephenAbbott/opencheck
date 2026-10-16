@@ -550,6 +550,42 @@ def test_dispatched_when_the_index_is_present(built) -> None:
     assert _dispatched(ctx) == {"chilecompra"}
 
 
+@pytest.mark.parametrize(
+    ("lei", "jurisdiction", "ra", "registered_as"),
+    [
+        ("5493005044RTLQ5RZU70", "EE", "RA000181", "10421629"),  # Eesti Energia
+        ("MAES062Z21O4RZ2U7M96", "DK", "RA000170", "61126228"),  # Danske Bank
+        # A RUT-shaped value is not enough: the RA must be Chilean too.
+        ("549300TNI6TCPI0P8860", "DE", "RA000197", SIEMENS),
+        # A Chilean RA filing a commercial-register inscription, not a RUT.
+        ("549300TNI6TCPI0P8860", "CL", "RA000090", "fojas 59592 número 30591"),
+        ("549300TNI6TCPI0P8860", "CL", "RA000787", SOLE_TRADER),
+    ],
+)
+def test_not_announced_for_an_anchor_it_cannot_answer(
+    built, lei: str, jurisdiction: str, ra: str, registered_as: str
+) -> None:
+    """The Chilean gate runs before dispatch, with the index present.
+
+    It used to run only inside ``fetch_by_identifiers``, after the source had
+    been announced, so every lookup with a ``registeredAs`` — a Danish bank,
+    an Estonian utility — listed ChileCompra as consulted and counted it in
+    "N of N sources answered".
+    """
+    ctx = _LookupCtx(lei=lei, jurisdiction=jurisdiction, registered_as=registered_as)
+    _build_derived(ctx, ra)
+    assert _dispatched(ctx) == set()
+
+
+def test_applies_to_agrees_with_fetch_by_identifiers() -> None:
+    adapter = REGISTRY["chilecompra"]
+    assert adapter.applies_to("RA000787", "76481921-7") is True
+    assert adapter.applies_to("RA000181", "10421629") is False
+    assert adapter.applies_to("RA000090", "fojas 59592 número 30591") is False
+    assert adapter.applies_to("RA000787", SOLE_TRADER) is False
+    assert adapter.applies_to("", "") is False
+
+
 def test_not_announced_without_an_index(no_index) -> None:
     ctx = _LookupCtx(lei="549300TNI6TCPI0P8860", jurisdiction="CL", registered_as=SIEMENS)
     _build_derived(ctx, "RA000090")
