@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 362** — The History tab lists every numbered entry on an Estonian company's registry cards, read from the register's open data with no credentials.
+**Latest: Phase 363** — Estonian companies now show their share capital, whether they must file beneficial owners, their merger and division partners, dated status changes and a foreign branch's parent company.
 
 → [Full development history](docs/status.md)
 
