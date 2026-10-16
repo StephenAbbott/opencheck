@@ -450,10 +450,13 @@ async def opencheck_ownership_map(
 
     Draws the company and every party above it — ownership and control edges
     from every source, each edge labelled with its source (officers and board
-    roles are left out). Each holder shows its integrated ownership figure, one
-    per source, never added. The JSON part carries the same edges as rows
-    (owner, interest, owned, source, current/ended) and a link to the
-    interactive FullCheck view; the image draws at most 24 edges.
+    roles, company secretaries included, are left out). Each holder shows its
+    integrated ownership figure, one per source, never added. The JSON part
+    opens with a one-sentence ``summary``, carries the same edges as rows
+    (owner, interest, owned, source, current/ended), lists GLEIF reporting
+    exceptions under ``reporting_exceptions`` (a filing that names no parent,
+    so never drawn as one), and links to the interactive FullCheck view; the
+    image draws at most 16 edges.
 
     Args:
         lei: ISO 17442 Legal Entity Identifier (20 chars).

@@ -18,6 +18,7 @@ from ...identifiers import ch_identification_is_uk, normalise_ch_company_number
 from .. import former_names as _former_names, identity_verification as _idv, liveness as _liveness
 from ..annotations import annotate, commenting, identifying, pointer, transformation
 from ..ch_constants import describe_company_type, describe_officer_role
+from ..officer_roles import mark_officer
 from ..psc_natures import describe_statement, describe_super_secure
 from ..statements import (
     BODSBundle,
@@ -1478,6 +1479,10 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
             interest["startDate"] = appointment["appointed_on"]
         if appointment.get("resigned_on"):
             interest["endDate"] = appointment["resigned_on"]
+        if interest_type == "otherInfluenceOrControl":
+            # A secretary or LLP member is an appointment, not control: say so
+            # on the interest, so no reader draws it as a controller.
+            mark_officer(interest, describe_officer_role(role) or appointment.get("officer_role"))
 
         rel = make_relationship_statement(
             source_id="companies_house",

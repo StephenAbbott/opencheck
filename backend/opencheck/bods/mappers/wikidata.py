@@ -14,6 +14,7 @@ import pycountry
 
 from .. import liveness as _liveness
 from ..annotations import annotate, commenting, pointer
+from ..officer_roles import mark_officer
 from ..statements import (
     SOURCE_NAMES,
     BODSBundle,
@@ -611,10 +612,15 @@ def _oc_match_position(position: str) -> str:
         return _OC_POSITION_TO_INTEREST_TYPE[max(matches, key=len)]
     # Regex fallbacks for multilingual variants
     import re as _re
+    # A director is a senior managing official, never ``appointmentOfBoard``
+    # (the power to appoint one — Phase 196), and a secretary is the
+    # administrative officer of Phase 197, whatever language names them. The
+    # fallbacks said otherwise until the ownership-map fixes, so "Direktör"
+    # read "Controls (board)" and "Secretario" read "Director".
     if _re.search(r"\bdirect(or|eur|ör)\b", norm):
-        return "appointmentOfBoard"
-    if _re.search(r"\bsecretar", norm):
         return "seniorManagingOfficial"
+    if _re.search(r"\bsecretar", norm):
+        return "otherInfluenceOrControl"
     if _re.search(r"\bmanag", norm):
         return "seniorManagingOfficial"
     if _re.search(r"\bchair", norm):
@@ -1023,8 +1029,13 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
             "directOrIndirect": "direct",
             "beneficialOwnershipOrControl": False,  # officer roles ≠ ownership
         }
-        if interest_type == "otherInfluenceOrControl" and position:
-            interest_entry["details"] = f"Officer position: {position}"
+        if interest_type == "otherInfluenceOrControl":
+            # An officer whose position has no BODS role code: say it is an
+            # appointment, so no reader draws a company secretary as a
+            # controller (``officer_roles``).
+            if position:
+                interest_entry["details"] = f"Officer position: {position}"
+            mark_officer(interest_entry, position)
         if start_date:
             interest_entry["startDate"] = start_date
 
