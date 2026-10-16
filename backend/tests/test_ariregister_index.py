@@ -341,6 +341,76 @@ def _cards() -> list[dict[str, Any]]:
     ]
 
 
+TOOTSI_TEXT = (
+    "Eesti Energia Aktsiaselts (jagunev ühing) jaguneb eraldumise teel, mille käigus asutati "
+    "Tootsi Windpark OÜ (jagunemise käigus asutatud ühing, registrikood 16053613, aadress Harju "
+    "maakond, Tallinn, Kesklinna linnaosa, Lelle tn 22, 11318). Jagunemiskava on notariaalselt "
+    "tõestatud 23.07.2020.a. Jagunemisotsus on vastu võetud 05.08.2020.a. Jagunemine loetakse "
+    "toimunuks käesoleva jagunemiskande tegemisega."
+)
+
+
+def _yld(**kw: Any) -> dict[str, Any]:
+    """One ``yldandmed`` object with the scalars every entity carries."""
+    base: dict[str, Any] = {
+        "esmaregistreerimise_kpv": "01.01.2020", "staatus": "R", "staatus_tekstina": "Registrisse kantud",
+        "oiguslik_vorm": "OÜ", "esitab_kasusaajad": True, "lahknevusteade_puudumisest": False,
+        "evks_registreeritud": None,
+    }
+    base.update(kw)
+    return base
+
+
+def _general() -> list[dict[str, Any]]:
+    """The general data, in the file's shape: Eesti Energia's capital, main
+    activity, last annual report, its 2020 division (naming Tootsi Windpark
+    OÜ, a code the fixture index lacks) and a predecessor reference, as
+    published on 16 Oct 2026; a holding in liquidation with a dissolution
+    decision; a state agency not obliged to file
+    beneficial owners."""
+    def row(code: str, name: str, y: dict[str, Any]) -> dict[str, Any]:
+        return {"ariregistri_kood": int(code), "nimi": name, "yldandmed": y}
+    return [
+        row(AGENT, "007 Agent & Partners OÜ", _yld(
+            kapitalid=[{"kande_nr": 1, "kapitali_suurus": "2500.00", "kapitali_valuuta": "EUR",
+                        "algus_kpv": "05.06.2023", "lopp_kpv": None}],
+        )),
+        row(EESTI, "Eesti Energia AS", _yld(
+            oiguslik_vorm="AS",
+            kapitalid=[{"kande_nr": 51, "kapitali_suurus": "846645750.00", "kapitali_valuuta": "EUR",
+                        "algus_kpv": "09.07.2025", "lopp_kpv": None}],
+            teatatud_tegevusalad=[
+                {"emtak_kood": "35151", "emtak_tekstina": "Elektrienergia müük", "nace_kood": "35.15",
+                 "on_pohitegevusala": True, "algus_kpv": "08.05.2025", "lopp_kpv": None},
+                {"emtak_kood": "35231", "emtak_tekstina": "Gaasimüük magistraalvõrkude kaudu",
+                 "nace_kood": "35.23", "on_pohitegevusala": False, "algus_kpv": "08.05.2025", "lopp_kpv": None},
+            ],
+            info_majandusaasta_aruannetest=[
+                {"majandusaasta_perioodi_algus_kpv": "01.01.2024", "majandusaasta_perioodi_lopp_kpv": "31.12.2024",
+                 "tootajate_arv": "780"},
+                {"majandusaasta_perioodi_algus_kpv": "01.01.2025", "majandusaasta_perioodi_lopp_kpv": "31.12.2025",
+                 "tootajate_arv": "793"},
+            ],
+            oigusjargsused=[{"kande_nr": 41, "tyyp": "JAGUN", "tyyp_tekstina": "Jagunemine tekstina",
+                             "sisu": TOOTSI_TEXT, "algus_kpv": "15.09.2020", "lopp_kpv": None}],
+            markused_kaardil=[
+                {"kande_nr": 2, "tyyp": "EVREG", "tyyp_tekstina": "Viide eelkäijale",
+                 "sisu": "Eesti Energoremont (reg. nr. 01005614) baasil.", "algus_kpv": "25.06.1998", "lopp_kpv": None},
+                {"kande_nr": 31, "tyyp": "MARK", "tyyp_tekstina": "Märkus",
+                 "sisu": "Aadressiandmed on muudetud.", "algus_kpv": "14.09.2016", "lopp_kpv": None},
+            ],
+            sidevahendid=[{"liik": "EMAIL", "sisu": "info@enefit.com", "lopp_kpv": None}],
+        )),
+        row(HOLD, 'Holding "Põhjala" OÜ', _yld(
+            seisundi_muutused=[{"kande_nr": 3, "tyyp": "LOPET", "tyyp_tekstina": "Lõpetamine tekstina",
+                                "sisu": "Osanikud otsustasid 30.04.2026 lõpetada äriühingu tegevuse.",
+                                "algus_kpv": "01.03.2026", "lopp_kpv": None}],
+        )),
+        row(STATE, "Maa-amet", _yld(oiguslik_vorm="RAS", esitab_kasusaajad=False, lahknevusteade_puudumisest=None)),
+        row(HAUDE, "Haudemaja OÜ", _yld()),
+    ]
+
+
 def _zip(path: Path, member: str, text: str) -> Path:
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(zipfile.ZipInfo(member, (2026, 10, 13, 12, 24, 0)), text.encode("utf-8"))
@@ -356,6 +426,7 @@ def _write_files(
     bos: list[dict[str, Any]] | None = None,
     off_cards: list[dict[str, Any]] | None = None,
     cards: list[dict[str, Any]] | None = None,
+    general: list[dict[str, Any]] | None = None,
     header: list[str] | None = None,
 ) -> None:
     src.mkdir(parents=True, exist_ok=True)
@@ -369,6 +440,7 @@ def _write_files(
         (builder.BO_FILE, _bos() if bos is None else bos),
         (builder.OFF_CARD_FILE, _off_cards() if off_cards is None else off_cards),
         (builder.CARDS_FILE, _cards() if cards is None else cards),
+        (builder.GENERAL_FILE, _general() if general is None else general),
     ):
         _zip(src / name, name[:-4], json.dumps(data, ensure_ascii=False, indent=4))
 
@@ -446,7 +518,7 @@ def test_the_builder_and_the_adapter_agree_on_the_schema() -> None:
     assert builder.TABLE_COLUMNS == ariregister._TABLE_COLUMNS
 
 
-def test_the_builder_indexes_the_six_files(index) -> None:
+def test_the_builder_indexes_the_seven_files(index) -> None:
     out, meta = index
     assert meta["cut"] == CUT
     assert meta["entities"] == "5"
@@ -455,6 +527,9 @@ def test_the_builder_indexes_the_six_files(index) -> None:
     assert meta["beneficial_owners"] == "5"
     assert meta["off_card_persons"] == "7"
     assert meta["card_entries"] == "11"
+    assert meta["general"] == "5"
+    # Haudemaja must file beneficial owners and has none in the fixture.
+    assert meta["bo_obliged_none_filed"] == "1"
     assert meta["with_vat_number"] == "1"
     assert provenance.parse_moment(meta["built_at"]) is not None
     assert "T" in meta["built_at"] and meta["built_at"].endswith("+00:00")
@@ -997,7 +1072,9 @@ async def test_a_schema_one_index_is_read_with_no_off_card_list(tmp_path: Path) 
     try:
         bundle = await _fetch(EESTI)
         assert bundle["tier"] == "index" and bundle["off_card_persons"] == []
-        assert finding_ariregister(bundle).startswith("In the register since 31 March 1998; no shareholders on file")
+        # With no AS shareholder row, the registrar on the card says where
+        # the shareholders are (the üldandmed phase).
+        assert finding_ariregister(bundle).startswith("In the register since 31 March 1998; shareholders kept at Nasdaq CSD")
     finally:
         _point_at(None)
 

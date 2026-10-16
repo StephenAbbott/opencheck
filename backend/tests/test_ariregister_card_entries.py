@@ -211,7 +211,7 @@ async def test_without_credentials_the_card_is_the_estonian_history(index, live,
     get_settings().ariregister_password = None
     _estonian_registration(monkeypatch, HOLD)
     timeline = await service.fetch_timeline("529900HOLDING0000000")
-    ee = [e for e in timeline.events if e.source_id == "ariregister"]
+    ee = [e for e in timeline.events if e.raw_field and e.raw_field.startswith("card ")]
     assert len(ee) == 3
     names = [n for n in timeline.notable if n.change_type is ChangeType.LEGAL_NAME_CHANGE]
     assert len(names) == 1 and names[0].date == "2026-03-01"

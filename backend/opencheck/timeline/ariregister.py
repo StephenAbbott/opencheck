@@ -336,6 +336,40 @@ def card_entry_events(
     return events
 
 
+def general_events(subject: str, general: dict[str, Any] | None) -> list[ChangeEvent]:
+    """Dated events from the general data (the üldandmed phase): every status
+    change the register records — a decision to dissolve, a bankruptcy
+    declared or ended, activity continued, a special regime — and every
+    merger, division or transformation, naming the other companies where
+    the entry does. Notable (Tier 2), dated as entered."""
+    from ..bods.mappers.estonia import EE_STATUS_CHANGE_LABELS, EE_SUCCESSION_LABELS
+
+    events: list[ChangeEvent] = []
+    for change in (general or {}).get("status_changes") or []:
+        code = str(change.get("type") or "")
+        label = EE_STATUS_CHANGE_LABELS.get(code) or change.get("type_text") or "Status change"
+        events.append(ChangeEvent(
+            source_id=_SOURCE, subject_id=subject, record_type=RecordType.ENTITY,
+            raw_change_type=f"status change {code}".strip(), raw_field=f"entry {change.get('entry_no')}",
+            value_new=label, change_type=ChangeType.STATUS_CHANGED, tier=Tier.IDENTITY_STATUS,
+            event_date=change.get("day"), date_basis=DateBasis.EFFECTIVE, date_confidence=DateConfidence.HIGH,
+        ))
+    for change in (general or {}).get("succession") or []:
+        code = str(change.get("type") or "")
+        label = EE_SUCCESSION_LABELS.get(code, "Legal succession")
+        partners = [
+            p.get("name") or f"registry code {p.get('code')}" for p in change.get("partners") or []
+        ] or [f"registry code {c}" for c in change.get("codes") or []]
+        events.append(ChangeEvent(
+            source_id=_SOURCE, subject_id=subject, record_type=RecordType.ENTITY,
+            raw_change_type=f"succession {code}".strip(), raw_field=f"entry {change.get('entry_no')}",
+            value_new=label, change_type=ChangeType.SUCCESSION, tier=Tier.IDENTITY_STATUS,
+            event_date=change.get("day"), date_basis=DateBasis.EFFECTIVE, date_confidence=DateConfidence.HIGH,
+            counterparty=", ".join(partners) or None,
+        ))
+    return events
+
+
 # --------------------------------------------------------------------------- #
 # Public entry point
 # --------------------------------------------------------------------------- #
@@ -376,4 +410,4 @@ def ariregister_change_events(data: dict[str, Any]) -> list[ChangeEvent]:
     return events
 
 
-__all__ = ["CARD_ENTRY_LABELS", "ariregister_change_events", "card_entry_events", "card_entry_label"]
+__all__ = ["CARD_ENTRY_LABELS", "ariregister_change_events", "card_entry_events", "card_entry_label", "general_events"]

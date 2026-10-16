@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import json
 import re
 import sqlite3
 import uuid
@@ -735,6 +736,7 @@ def entity_record(code: str) -> dict[str, Any] | None:
     record["shareholders"] = _people_rows(conn, "shareholder", code)
     record["beneficial_owners"] = _people_rows(conn, "beneficial_owner", code)
     record["off_card_persons"] = _people_rows(conn, "off_card_person", code)
+    record["general"] = general_record(code)
     return record
 
 
@@ -1019,6 +1021,45 @@ def card_entries(code: str) -> list[dict[str, Any]] | None:
     return out
 
 
+def general_record(code: str) -> dict[str, Any] | None:
+    """The company's general data (üldandmed) from the index: capital, the
+    beneficial-owner filing obligation, main activity, the last annual
+    report filed, and the rare lists (succession, status changes, activity
+    periods, a foreign branch's parent, predecessor references) — with the
+    name of every company a succession entry names that the index holds.
+    None without an index, without the table (an index built before the
+    general data was read) or for a code it lacks."""
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    try:
+        row = conn.execute(
+            "SELECT capital, capital_currency, capital_since, bo_obliged, bo_absence_reported,"
+            " activity, activity_nace, last_report_end, last_report_employees, reports_filed, extra"
+            " FROM general WHERE code = ?",
+            (normalise_registry_code(code),),
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        if "no such table" in str(exc):
+            return None
+        raise
+    if row is None:
+        return None
+    out: dict[str, Any] = {k: row[k] for k in row.keys() if k != "extra"}
+    out["bo_obliged"] = bool(row["bo_obliged"])
+    out["bo_absence_reported"] = None if row["bo_absence_reported"] is None else bool(row["bo_absence_reported"])
+    out["activity_text"] = vocab_text("emtak", row["activity"]) or None
+    extra = json.loads(row["extra"]) if row["extra"] else {}
+    for entry in extra.get("succession") or []:
+        partners = []
+        for partner in entry.get("codes") or []:
+            hit = conn.execute("SELECT name FROM entity WHERE code = ?", (partner,)).fetchone()
+            partners.append({"code": partner, "name": hit["name"] if hit else None})
+        entry["partners"] = partners
+    out.update(extra)
+    return out
+
+
 def search_index(query: str, *, limit: int = 10) -> list[dict[str, Any]]:
     """Entities whose name contains ``query`` (case-insensitive), from the
     index; ``[]`` without one."""
@@ -1233,6 +1274,8 @@ class AriregisterAdapter(SourceAdapter):
             # shareholders, founders, auditors. The page path has no such
             # list, so a page bundle carries an empty one.
             "off_card_persons": record.get("off_card_persons") or [],
+            # The general data (üldandmed), when the index holds it.
+            "general": record.get("general"),
             "cut": meta.get("cut"),
             "tier": "index",
             "is_stub": False,

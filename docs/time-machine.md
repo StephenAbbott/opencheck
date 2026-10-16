@@ -318,7 +318,7 @@ four registers that publish dated, effective-from records give
 | `gleif` | field-modification change log (LEI + RR records) | recorded | the original; corporate-tree + identity diffs |
 | `companies_house` | filing-history API (typed categories) | effective | UK PSC / filing events |
 | `nz_companies` | NZBN `FullEntity` + `/history/*` endpoints | effective | directors/shareholders + name/status/address |
-| `ariregister` | RIK X-Road SOAP history (credentialed), and the `registrikaardid` open-data file in the daily index (no credentials) | effective | Estonian registry-card + beneficial-owner history; every numbered card entry (type and date) in the administrative stream — and, when the SOAP history was not read, the card's status, name and succession entries as notable rows |
+| `ariregister` | RIK X-Road SOAP history (credentialed), and the `registrikaardid` open-data file in the daily index (no credentials) | effective | Estonian registry-card + beneficial-owner history; every numbered card entry (type and date) in the administrative stream — and, when the SOAP history was not read, the card's status, name and succession entries as notable rows; the general data's dated status changes (dissolution decisions, bankruptcies) and mergers, divisions and transformations, naming the other companies |
 | `cvr_denmark` | CVR / Datafordeler bitemporal records (`virkningFra`/`virkningTil`) | effective | name / legal form / status / registered-seat address |
 
 **Denmark is the cheapest emitter to date.** CVR is bitemporal by design, so the
