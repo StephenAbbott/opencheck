@@ -1717,14 +1717,20 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
     off_card = bundle.get("off_card_persons") or []
     as_shareholders = [p for p in off_card if (p.get("isiku_roll") or "").strip() == "S"]
     supervisory = [p for p in off_card if (p.get("isiku_roll") or "").strip() in ("N", "E")]
+    # A registrar on the card (Nasdaq CSD keeps the share register): an AS
+    # with no shareholder in the open data has them there, not nowhere.
+    registrar = any(
+        (o.get("isiku_roll") or "").strip() in ("ARP", "ORP") for o in bundle.get("officers") or []
+    )
     counts = ", ".join(c for c in [
         _count(
             list(bundle.get("shareholders") or []) + as_shareholders,
-            "shareholder", "shareholders", "no shareholders on file",
+            "shareholder", "shareholders",
+            "shareholders kept at Nasdaq CSD" if registrar else "no shareholders on file",
         ),
         _count(bundle.get("officers"), "on the registry card", "on the registry card", "no one on the registry card"),
         _count(supervisory, "on the supervisory board", "on the supervisory board", "") if supervisory else "",
-        _count(bundle.get("beneficial_owners"), "beneficial owner", "beneficial owners", "no beneficial owner declared"),
+        _count(bundle.get("beneficial_owners"), "beneficial owner", "beneficial owners", _no_bo_words(bundle)),
     ] if c)
     tier = (
         "read from the page, not the open data"
@@ -1756,11 +1762,51 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
         )
     elif history.get("reason") in ("no_credentials", "upstream_error"):
         history_clause = "ownership history not read"
+    # The general data (the üldandmed phase): an activity suspension in
+    # force at the cut.
+    general = bundle.get("general") or {}
+    suspension = _ee_suspension_clause(general, bundle.get("cut"))
     # Counts before the legal form: the cap drops trailing clauses, and what
-    # the register lists matters more than what kind of company it is. The
-    # history comes next, then the chain; the tier, when it is worth
-    # saying, is worth more than the form too.
-    return clauses_to_sentence([lead, counts, history_clause, *chain_clauses, tier, form], sep="; ")
+    # the register lists matters more than what kind of company it is. A
+    # suspension comes next, then the history and the chain; the tier,
+    # when it is worth saying, is worth more than the form too.
+    return clauses_to_sentence(
+        [lead, counts, suspension, history_clause, *chain_clauses, tier, form], sep="; ",
+    )
+
+
+def _no_bo_words(bundle: dict[str, Any]) -> str:
+    """No beneficial owner on file, in the register's terms where its
+    general data says whether the company must file them: "beneficial
+    owners not required" (an apartment association, a sole trader, a
+    branch…) or "beneficial owners due, none filed" — the two read the
+    same without it (the üldandmed phase). Short on purpose: the sentence's
+    140-character cap drops the clauses after it."""
+    general = bundle.get("general") or {}
+    if general.get("bo_obliged") is False:
+        return "beneficial owners not required"
+    if general.get("bo_obliged") is True:
+        return "beneficial owners due, none filed"
+    return "no beneficial owner declared"
+
+
+def _ee_suspension_clause(general: dict[str, Any], cut: str | None) -> str | None:
+    """"activity suspended until 27 July 2035" for a suspension (``TP``)
+    the register records as running on the cut day."""
+    for period in general.get("activity_periods") or []:
+        if period.get("type") != "TP":
+            continue
+        end = _ee_iso(period.get("end"))
+        start = _ee_iso(period.get("start"))
+        if end and (not cut or end >= cut) and (not start or not cut or start <= cut):
+            return f"activity suspended until {human_date(end)}"
+    return None
+
+
+def _ee_iso(value: str | None) -> str | None:
+    """``27.07.2035`` → ``2035-07-27``; anything else None."""
+    m = re.match(r"^(\d{2})\.(\d{2})\.(\d{4})$", str(value or "").strip())
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
 
 
 def _ariregister_history_records(history: dict[str, Any]) -> int:

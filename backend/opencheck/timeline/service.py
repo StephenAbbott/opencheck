@@ -55,7 +55,7 @@ import httpx
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .ariregister import ariregister_change_events, card_entry_events
+from .ariregister import ariregister_change_events, card_entry_events, general_events
 from .assemble import Timeline, assemble_timeline
 from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
@@ -375,13 +375,20 @@ async def fetch_timeline(lei: str) -> Timeline:
     # (no credentials): the dated spine under the SOAP history, and the only
     # Estonian history when that was not read. Best-effort, like the rest.
     if ee_code:
+        from ..sources import ariregister as _ee
+
         try:
-            from ..sources import ariregister as _ee
             entries = await asyncio.to_thread(_ee.card_entries, ee_code)
         except Exception:  # noqa: BLE001
             entries = None
         if entries:
             ee_events += card_entry_events(ee_code, entries, history_read=ee_history_read)
+        # The general data's dated status changes and succession entries.
+        try:
+            general = await asyncio.to_thread(_ee.general_record, ee_code)
+        except Exception:  # noqa: BLE001
+            general = None
+        ee_events += general_events(ee_code, general)
 
     # Denmark — reconstruct events from CVR's bitemporal records. The normal CVR
     # adapter fetch already returns the full virkning history in the bundle, so no

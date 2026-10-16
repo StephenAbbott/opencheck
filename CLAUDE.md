@@ -1147,7 +1147,7 @@ shareholders only for an OÜ); strip personal identification codes from the
 page path; a daily GitHub-workflow rebuild. Things that will be re-derived
 otherwise:
 
-- **Four files, one snapshot, streamed** (six since the card-entry phase —
+- **Four files, one snapshot, streamed** (seven since the üldandmed phase —
   see the section below). `lihtandmed.csv` (companies) and
   the `kaardile_kantud_isikud` / `osanikud` / `kasusaajad` JSON arrays
   (officers, shareholders, beneficial owners), ≈2.2 GB unzipped. The JSON is
@@ -1394,6 +1394,57 @@ SOAP card log returns. Things that will be re-derived otherwise:
 - Read in `timeline/service.py` for any Estonian code, credentials or not,
   off the event loop. The SOAP card log in `history.card_entries` is not
   emitted (it is the same list).
+
+### The general data (üldandmed) (the üldandmed phase)
+
+`ettevotja_rekvisiidid__yldandmed.json.zip` (the seventh file,
+`GENERAL_FILE`; 1.5 GB unzipped, current rows only — no history) → the
+`general` table (+42 MB, +7.6 MB gzipped on 16 Oct 2026), read by
+`ariregister.general_record` into the bundle's `general`. Stephen's
+decisions (16 Oct 2026) and the things that will be re-derived otherwise:
+
+- **Columns for what most companies carry** (capital + currency + date,
+  `bo_obliged` = `esitab_kasusaajad`, `bo_absence_reported` =
+  `lahknevusteade_puudumisest`, main EMTAK/NACE with the wording in
+  `vocab('emtak')`, the latest annual report's year end and employees, the
+  count of reports), **one JSON `extra`** for the rare lists (succession,
+  status changes, activity periods, a branch's parent, `EVREG` predecessor
+  notes, shares without nominal value). Contact details (`sidevahendid`),
+  real estate and contact persons' addresses are not carried.
+- **Free texts are scrubbed** (`scrub_text`): an eleven-digit number that
+  could be a personal code is replaced unless the words before it call it a
+  registry code — a Latvian company is eleven digits too, and a bankruptcy
+  ruling against a sole trader names the person by code.
+- **No BO filed is a finding, not a signal** (Stephen): with no BO rows the
+  count reads "beneficial owners due, none filed" or "beneficial owners not
+  required" — short, because the sentence's cap drops what follows. The
+  build counts the first kind (`meta.bo_obliged_none_filed`, printed by the
+  refresh workflow). Not obliged on 16 Oct 2026: KÜ 25,679, FIE 24,605,
+  KOVAS 1,529, TÜH 1,144, FIL 475, …, and 16 AS.
+- **Succession partners** (Stephen: statements + annotation): the codes are
+  read after "registrikood"/"reg. nr" (76% of divisions, 97% of mergers),
+  and any other eight-digit number only when the index holds it. A partner
+  the index holds is an entity statement keyed on its code with a
+  `commenting` note — **no relationship** (the ClimateTRACE successor rule)
+  — or, when it is already in the chain, the note rides on its register
+  record; one the index lacks (most absorbed companies are deleted) is said
+  only in the subject's note. Direction is never inferred from the text.
+  Transformations (`YMB`, 13,595) name no other company.
+- **`KUST` is not a dissolution**: its six rows are re-registration notes
+  ("deletion entry made in connection with a change of seat"), so no
+  `dissolutionDate` is read from the general data. Deleted companies are
+  not in the files at all.
+- **`evks_registreeritud` is empty on every row**; the share registrar is
+  read from the card's `ARP`/`ORP` role instead: the count reads
+  "shareholders kept at Nasdaq CSD" when none are in the open data, and a
+  note on the statement says so either way.
+- **A branch** (`valismaa_ariyhing`, 475): the parent is an entity with its
+  jurisdiction (alpha-3 through `_ee_country`) and the registration number
+  read by `_ee_foreign_entity` (a derived identifier where the shape fits),
+  related to the branch by `otherInfluenceOrControl`, details saying the
+  branch is part of it, no BO flag.
+- History: `timeline/ariregister.py::general_events` — status changes and
+  successions are Tier 2, dated as entered, partners as counterparty.
 
 ### A person's other companies, on the register's person key (the person-index phase)
 

@@ -718,8 +718,14 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     seen_entity_ids: set[str] = set()
 
     company_stmt, source_url = _ee_company_statement(bundle)
+    general = bundle.get("general") or {}
+    for note in _ee_general_notes(general, cut=bundle.get("cut"), officers=bundle.get("officers") or []):
+        company_stmt.setdefault("annotations", []).append(note)
     yield company_stmt
     seen_entity_ids.add(company_stmt["statementId"])
+    # A merger or division partner that is also in the chain above is drawn
+    # from its own register record below; it carries the entry's note there.
+    partner_notes = _ee_partner_notes(general, company_stmt)
 
     # The related companies' own full statements come before the subject's
     # party lists, so the thin entity statement a shareholder row builds for
@@ -732,6 +738,8 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         sub_stmt, sub_url = _ee_company_statement(sub)
         if sub_stmt["statementId"] in seen_entity_ids:
             continue
+        for note in partner_notes.get(str(sub.get("registry_code") or ""), []):
+            sub_stmt.setdefault("annotations", []).append(note)
         yield sub_stmt
         seen_entity_ids.add(sub_stmt["statementId"])
         related_stmts.append((sub, sub_stmt, sub_url))
@@ -739,6 +747,12 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     # The printable page has no person key: one company's same-named people
     # are one node there (the index joins them on the register's hash).
     parties_of = _ee_merge_page_people(bundle) if bundle.get("tier") == "page" else bundle
+    # The general data's other companies — a merger or division partner, a
+    # foreign branch's parent — before the party lists, so a partner that is
+    # also a shareholder is the statement carrying the entry's note.
+    yield from _ee_general_statements(
+        general, company_stmt, source_url, seen_entity_ids, partner_notes,
+    )
     yield from _ee_company_parties(
         parties_of, company_stmt["statementId"], source_url, seen_person_ids, seen_entity_ids,
         include_founders=True,
@@ -757,6 +771,221 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield from _ee_company_parties(
             sub, sub_stmt["statementId"], sub_url, seen_person_ids, seen_entity_ids,
             include_founders=False,
+        )
+
+
+# ---------------------------------------------------------------------------
+# The general data (üldandmed) — the üldandmed phase
+# ---------------------------------------------------------------------------
+
+#: Legal succession (``oigusjargsused.tyyp``) in English.
+EE_SUCCESSION_LABELS: dict[str, str] = {
+    "YHIN": "Merger (ühinemine)",
+    "JAGUN": "Division (jagunemine)",
+    "YMB": "Transformation (ümberkujundamine)",
+}
+
+#: Status changes (``seisundi_muutused.tyyp``) in English.
+EE_STATUS_CHANGE_LABELS: dict[str, str] = {
+    "LOPET": "Decision to dissolve (lõpetamine)",
+    "PANKV": "Bankruptcy declared (pankroti väljakuulutamine)",
+    "PANKL": "Bankruptcy proceedings ended (pankrotimenetluse lõppemine)",
+    "JATK": "Activity continued (tegevuse jätkamine)",
+    "ERIT": "Special regime (erirežiim)",
+    "KUST": "Deletion entry (registrist kustutamine)",
+}
+
+#: Activity periods (``ettevotja_tegevuse_aeg.tyyp``) in English.
+EE_ACTIVITY_PERIOD_LABELS: dict[str, str] = {
+    "TP": "Activity suspended (tegevuse peatamine)",
+    "HA": "Seasonal activity (hooajaline tegutsemine)",
+    "AT": "Temporary activity (ajutine tegutsemine)",
+}
+
+
+def _ee_amount(value: str | None) -> str | None:
+    """``846645750.00`` → ``846,645,750.00``; the register's own string when
+    it is not a number."""
+    try:
+        return f"{float(str(value)):,.2f}"
+    except (TypeError, ValueError):
+        return str(value).strip() or None if value else None
+
+
+def _ee_general_notes(
+    general: dict[str, Any], *, cut: str | None, officers: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """``commenting`` annotations on the company's own statement for what
+    the general data says and BODS has no field for: share capital, the
+    main activity, shares without nominal value, activity periods, the
+    beneficial-owner filing obligation and the register's references to
+    predecessors — each in the register's terms."""
+    notes: list[str] = []
+    if any((o.get("isiku_roll") or "").strip() in ("ARP", "ORP") for o in officers or []):
+        notes.append(
+            "The share register is kept by a registrar on the registry card (Nasdaq CSD): the "
+            "open data lists only the shareholders the register itself records, so the "
+            "shareholders here may be a part of the company's shareholders."
+        )
+    if not general:
+        return [commenting(pointer("recordDetails"), n) for n in notes]
+    amount = _ee_amount(general.get("capital"))
+    if amount:
+        since = _ee_date(general.get("capital_since"))
+        notes.append(
+            f"Share capital {amount} {general.get('capital_currency') or ''}".rstrip()
+            + (f", as entered on {since}" if since else "")
+            + ", as recorded by the e-Business Register."
+        )
+    if general.get("activity"):
+        nace = general.get("activity_nace")
+        text = general.get("activity_text")
+        notes.append(
+            f"Main activity (EMTAK {general['activity']}"
+            + (f", NACE {nace}" if nace else "") + ")"
+            + (f": {text}" if text else "") + ", as declared to the e-Business Register."
+        )
+    if general.get("last_report_end"):
+        end = _ee_date(general["last_report_end"])
+        employees = general.get("last_report_employees")
+        filed = general.get("reports_filed")
+        notes.append(
+            f"Latest annual report in the register's open data: the financial year ending {end}"
+            + (f", reporting {employees} employees" if employees not in (None, "") else "")
+            + (f"; {filed} annual reports listed in all" if filed else "") + "."
+        )
+    if general.get("no_par_shares"):
+        notes.append(f"Shares without nominal value: {general['no_par_shares']}, as recorded by the register.")
+    for period in general.get("activity_periods") or []:
+        label = EE_ACTIVITY_PERIOD_LABELS.get(str(period.get("type") or ""), period.get("type_text") or "Activity period")
+        notes.append(f"{label}: {period.get('text') or ''}".rstrip(": ") + ".")
+    if general.get("bo_obliged") is False:
+        notes.append(
+            "The register records that this company is not obliged to file beneficial owners "
+            "(esitab_kasusaajad: false)."
+        )
+    if general.get("bo_absence_reported"):
+        notes.append(
+            "A discrepancy report about the absence of beneficial-owner information "
+            "(lahknevusteade puudumisest) is recorded against this company; the register "
+            "publishes the flag, not the report."
+        )
+    for text in general.get("predecessor_notes") or []:
+        notes.append(f"The register's reference to predecessors (viide eelkäijale): {text}")
+    for change in general.get("succession") or []:
+        label = EE_SUCCESSION_LABELS.get(str(change.get("type") or ""), "Legal succession")
+        day = _ee_date(change.get("day"))
+        notes.append(
+            f"{label}" + (f", entered on {day}" if day else "")
+            + f", in the register's words: {change.get('text') or ''}".rstrip()
+        )
+    return [commenting(pointer("recordDetails"), n) for n in notes]
+
+
+def _ee_partner_notes(
+    general: dict[str, Any], company_stmt: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    """The note each merger or division partner carries, keyed on its
+    registry code."""
+    subject_name = company_stmt.get("recordDetails", {}).get("name") or "this company"
+    out: dict[str, list[dict[str, Any]]] = {}
+    for change in (general or {}).get("succession") or []:
+        label = EE_SUCCESSION_LABELS.get(str(change.get("type") or ""), "Legal succession")
+        day = _ee_date(change.get("day"))
+        for partner in change.get("partners") or []:
+            code = str(partner.get("code") or "")
+            if not code:
+                continue
+            out.setdefault(code, []).append(commenting(
+                pointer("recordDetails"),
+                f"Named in a {label.split(' (')[0].lower()} entry on the registry card of "
+                f"{subject_name}" + (f" (entered on {day})" if day else "")
+                + ". The register records the entry; OpenCheck does not infer which "
+                "company succeeded which.",
+            ))
+    return out
+
+
+def _ee_general_statements(
+    general: dict[str, Any], company_stmt: dict[str, Any], source_url: str,
+    seen_entity_ids: set[str], partner_notes: dict[str, list[dict[str, Any]]],
+) -> Iterable[dict[str, Any]]:
+    """Statements for the other companies the general data names: each
+    Estonian company a merger or division entry names — an entity statement
+    keyed on its registry code, with a ``commenting`` annotation carrying
+    the entry, and no relationship (a merger or a division is not an
+    ownership or control interest; the ClimateTRACE successor rule) — and
+    the foreign company an Estonian branch belongs to, with its
+    jurisdiction, a register identifier where the number has that
+    register's shape, and the branch's relationship to it."""
+    if not general:
+        return
+    subject_name = company_stmt.get("recordDetails", {}).get("name") or "this company"
+    for change in general.get("succession") or []:
+        for partner in change.get("partners") or []:
+            code = str(partner.get("code") or "")
+            if not partner.get("name") or not code:
+                continue  # a code the index lacks: said in the subject's annotation only
+            stmt = make_entity_statement(
+                source_id="ariregister",
+                local_id=code,
+                name=partner["name"],
+                jurisdiction=("Estonia", "EE"),
+                identifiers=[{"id": code, "scheme": "EE-ARIREGISTER", "schemeName": "Estonian e-Business Register"}],
+                source_url=f"https://ariregister.rik.ee/eng/company/{code}",
+            )
+            if stmt["statementId"] in seen_entity_ids:
+                continue  # drawn already, from its own register record with this note
+            stmt.setdefault("annotations", []).extend(partner_notes.get(code, []))
+            seen_entity_ids.add(stmt["statementId"])
+            yield stmt
+
+    branch = general.get("branch_of") or {}
+    if branch.get("name"):
+        row = {
+            "valis_kood": branch.get("number") or "",
+            "valis_kood_riik": branch.get("country") or "",
+            "valis_kood_riik_tekstina": branch.get("country_text") or "",
+        }
+        local_id, identifiers, jurisdiction, note = _ee_foreign_entity(row, "branch", "branch")
+        if not row["valis_kood"]:
+            local_id = f"foreign-branch-parent-{company_stmt['recordId']}"
+        parent = make_entity_statement(
+            source_id="ariregister",
+            local_id=local_id,
+            name=branch["name"],
+            jurisdiction=jurisdiction,
+            identifiers=identifiers,
+        )
+        described = "; ".join(p for p in (
+            f"registered in {branch['register']}" if branch.get("register") else "",
+            f"comparable Estonian legal form: {branch['like_estonian_form']}" if branch.get("like_estonian_form") else "",
+        ) if p)
+        parent.setdefault("annotations", []).append(commenting(
+            pointer("recordDetails"),
+            f"The foreign company whose Estonian branch is {subject_name}, as recorded by the "
+            "e-Business Register" + (f" ({described})" if described else "") + ".",
+        ))
+        if note:
+            parent["annotations"].append(commenting(pointer("recordDetails"), note))
+        if parent["statementId"] not in seen_entity_ids:
+            seen_entity_ids.add(parent["statementId"])
+            yield parent
+        yield make_relationship_statement(
+            source_id="ariregister",
+            local_id=f"branch-of-{local_id}",
+            subject_statement_id=company_stmt["statementId"],
+            interested_party_statement_id=parent["statementId"],
+            interested_party_type="entity",
+            interests=[{
+                "type": "otherInfluenceOrControl",
+                "directOrIndirect": "direct",
+                "details": (
+                    "Branch of a foreign company (välismaa äriühingu filiaal): the branch is "
+                    "part of the foreign company, not a separate legal person"
+                ),
+            }],
+            source_url=source_url,
         )
 
 

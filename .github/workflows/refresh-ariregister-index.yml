@@ -60,8 +60,10 @@ jobs:
           bo = int(meta.get("beneficial_owners", 0))
           off = int(meta.get("off_card_persons", 0))
           cards = int(meta.get("card_entries", 0))
-          print(f"{n} entities, {meta.get('officers')} officers, {meta.get('shareholders')} shareholders, {bo} beneficial owners, {off} persons off the card, {cards} card entries, cut {meta.get('cut')}")
-          if n < 300000 or bo < 300000 or off < 300000 or cards < 1500000:
+          general = int(meta.get("general", 0))
+          print(f"{n} entities, {meta.get('officers')} officers, {meta.get('shareholders')} shareholders, {bo} beneficial owners, {off} persons off the card, {cards} card entries, {general} with general data, cut {meta.get('cut')}")
+          print(f"{meta.get('bo_obliged_none_filed')} companies obliged to file beneficial owners have none on file")
+          if n < 300000 or bo < 300000 or off < 300000 or cards < 1500000 or general < 300000:
               sys.exit("Refusing to publish: counts far below the register's — likely a source/format change.")
           with open("summary.txt", "w") as fh:
               fh.write(f"{n} entities, {bo} beneficial owners, cut {meta.get('cut')}.")

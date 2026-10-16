@@ -7,8 +7,8 @@ as daily open-data files under CC BY 4.0:
 
     https://avaandmed.ariregister.rik.ee/en/downloading-open-data
 
-Six of them make the index: the company "simple data" CSV, the registry
-cards (every dated entry on every card), and four JSON files that put the
+Seven of them make the index: the company "simple data" CSV, the registry
+cards (every dated entry on every card), the general data, and four JSON files that put the
 same people on each company the printable page shows — the persons
 entered on the registry card (board members, procurists, liquidators,
 partners…), the register of shareholders, the declared beneficial owners
@@ -53,6 +53,14 @@ What it reads, and what it refuses
   no credentials, and for Eesti Energia AS and Bolt Technology OÜ it holds
   exactly the entries the credentialed SOAP card log returns. Packed one
   row per company into ``card_entry``.
+* ``ettevotja_rekvisiidid__yldandmed.json.zip`` — the general data, one
+  object per entity (230 MB zip, 1.5 GB unzipped; current rows only, no
+  history): share capital, whether the company must file beneficial owners,
+  legal succession (merger, division, transformation — the text names the
+  other company's registry code), dated status changes, activity
+  suspensions, a foreign company's branch and its parent, the main activity
+  (EMTAK) and the annual reports filed. Into ``general``; contact details,
+  real estate and contact persons' addresses are not carried.
 
 Every JSON file is a pretty-printed array of one object per entity, so it
 is streamed with ``json.JSONDecoder.raw_decode`` straight out of the zip —
@@ -72,7 +80,7 @@ The build refuses, rather than writes a plausible-looking index, when:
   lines − 1 (a stray quote merging rows — the ONRC lesson, Phase 211);
 * a file is implausibly short (truncated transfer, or the files swapped);
 * an entity code is not eight digits, or appears twice;
-* a JSON file names an entity the CSV does not hold — the six files are
+* a JSON file names an entity the CSV does not hold — the seven files are
   one snapshot, and on 13 Oct 2026 each held exactly the CSV's 379,664
   entities (16 Oct 2026: 379,829, the off-card file included);
 * the files' cut dates (``Last-Modified``) fall on different days.
@@ -123,7 +131,15 @@ OFF_CARD_FILE = "ettevotja_rekvisiidid__kandevalised_isikud.json.zip"
 #: Every entry on every registry card: number, date and entry type — the
 #: dated event spine the History tab draws from (the card-entry phase).
 CARDS_FILE = "ettevotja_rekvisiidid__registrikaardid.json.zip"
-FILES = (CSV_FILE, OFFICERS_FILE, SHAREHOLDERS_FILE, BO_FILE, OFF_CARD_FILE, CARDS_FILE)
+#: The general data (üldandmed): capital, the beneficial-owner filing
+#: obligation, legal succession, dated status changes, activity
+#: suspensions, a foreign company's branch, the main activity and the
+#: annual reports filed — current rows only (the üldandmed phase).
+GENERAL_FILE = "ettevotja_rekvisiidid__yldandmed.json.zip"
+FILES = (
+    CSV_FILE, OFFICERS_FILE, SHAREHOLDERS_FILE, BO_FILE, OFF_CARD_FILE, CARDS_FILE,
+    GENERAL_FILE,
+)
 
 #: The JSON list each people file carries per entity, and the index table
 #: its rows go to. The off-card file spells its list ``kaardivalised`` —
@@ -228,11 +244,13 @@ MIN_ROWS = {
     SHAREHOLDERS_FILE: 300_000, BO_FILE: 300_000, OFF_CARD_FILE: 300_000,
     # 2,161,627 entries on 16 Oct 2026.
     CARDS_FILE: 1_500_000,
+    # 379,829 entities on 16 Oct 2026.
+    GENERAL_FILE: 300_000,
 }
 
 USER_AGENT = "OpenCheck ariregister index builder (+https://opencheck.world)"
 
-#: Seconds between the six downloads. Cloudflare rate-limits back-to-back
+#: Seconds between the seven downloads. Cloudflare rate-limits back-to-back
 #: requests to this host from one address (``Error code: 1015``, HTTP 429).
 DOWNLOAD_SPACING_S = 15
 
@@ -307,6 +325,21 @@ CREATE INDEX off_card_person_holder ON off_card_person (isikukood_registrikood) 
 -- each would be the biggest table in the file. The entry type's Estonian
 -- wording is in vocab ('card_entry').
 CREATE TABLE card_entry (code TEXT PRIMARY KEY, entries TEXT NOT NULL) WITHOUT ROWID;
+-- The general data (üldandmed), one row per company: the fields most
+-- companies carry as columns, the rare lists (succession, status changes,
+-- suspensions, a foreign branch's parent, predecessor references) as one
+-- JSON object in ``extra``. The main activity's wording is in vocab
+-- ('emtak'). Contact details, real estate and contact persons' addresses
+-- are in the file and deliberately not here.
+CREATE TABLE general (
+    code TEXT PRIMARY KEY,
+    capital TEXT, capital_currency TEXT, capital_since TEXT,
+    bo_obliged INTEGER,             -- esitab_kasusaajad: obliged to file beneficial owners
+    bo_absence_reported INTEGER,    -- lahknevusteade_puudumisest: a report that none were filed
+    activity TEXT, activity_nace TEXT,
+    last_report_end TEXT, last_report_employees TEXT, reports_filed INTEGER,
+    extra TEXT
+) WITHOUT ROWID;
 CREATE INDEX officer_person ON officer (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
 CREATE INDEX shareholder_person ON shareholder (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
 CREATE INDEX beneficial_owner_person ON beneficial_owner (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
@@ -369,7 +402,7 @@ def download(name: str, dest: Path, *, attempts: int = 4) -> str | None:
 
 
 def download_all(dest_dir: Path) -> dict[str, str | None]:
-    """Download the six files, spaced out, and record each ``Last-Modified``
+    """Download the seven files, spaced out, and record each ``Last-Modified``
     beside it (``<name>.last-modified``) so ``--from-dir`` can read the cut."""
     stamps: dict[str, str | None] = {}
     for i, name in enumerate(FILES):
@@ -540,7 +573,7 @@ def resolve_cut(
 
     ``--cut`` wins; else each file's ``Last-Modified`` (from the download,
     or the ``.last-modified`` sidecar a download left); else the zip
-    member's own stamp. The six days must agree — the files are regenerated
+    member's own stamp. The seven days must agree — the files are regenerated
     together each morning, and a download that straddled a regeneration
     would otherwise pair yesterday's shareholders with today's companies.
     """
@@ -584,7 +617,7 @@ def build_index(
     min_rows: dict[str, int] | None = None,
     started: dt.datetime | None = None,
 ) -> dict[str, str]:
-    """Build the SQLite index at ``out_path`` from the six zips in ``src``.
+    """Build the SQLite index at ``out_path`` from the seven zips in ``src``.
 
     Written to a temporary file beside ``out_path`` and renamed at the end,
     so a failed build never leaves a half-written index where one was.
@@ -700,6 +733,16 @@ def build_index(
             conn, src / CARDS_FILE, seen, vocab, floor=floors.get(CARDS_FILE, 0),
         )
 
+        counts["general"] = _load_general(
+            conn, src / GENERAL_FILE, seen, vocab, floor=floors.get(GENERAL_FILE, 0),
+        )
+        # The companies obliged to file beneficial owners that have none on
+        # file — counted here, said per company in the finding.
+        counts["bo_obliged_none_filed"] = conn.execute(
+            "SELECT COUNT(*) FROM general g WHERE g.bo_obliged = 1 AND NOT EXISTS"
+            " (SELECT 1 FROM beneficial_owner b WHERE b.code = g.code)"
+        ).fetchone()[0]
+
         conn.executemany(
             "INSERT INTO vocab VALUES (?, ?, ?)",
             sorted((k[0], k[1], v) for k, v in vocab.items()),
@@ -715,6 +758,8 @@ def build_index(
             "beneficial_owners": str(counts.get("beneficial_owner", 0)),
             "off_card_persons": str(counts.get("off_card_person", 0)),
             "card_entries": str(counts.get("card_entries", 0)),
+            "general": str(counts.get("general", 0)),
+            "bo_obliged_none_filed": str(counts.get("bo_obliged_none_filed", 0)),
             "source_page": PAGE_URL,
             "source_files": ",".join(FILES),
             "license": LICENSE,
@@ -803,6 +848,169 @@ def _load_card_entries(
     return total
 
 
+#: A registry code named in a succession entry's text: after "registrikood"
+#: (and its inflections) or "reg. nr" — 76% of divisions and 97% of mergers
+#: on 16 Oct 2026. Any other eight-digit number in the text is taken only
+#: when it is a company in the index.
+_SUCCESSION_CODE = re.compile(r"(?:registrikood\w*|reg\.?\s*(?:nr|kood)\.?)\D{0,6}?(\d{8})(?!\d)", re.IGNORECASE)
+_ANY_CODE = re.compile(r"(?<!\d)(\d{8})(?!\d)")
+
+
+#: An eleven-digit number that could be an Estonian personal identification
+#: code (first digit 1–6). The general data's free texts name people now and
+#: then — a bankruptcy ruling against a sole trader names the person "and
+#: personal code …" — so any such number is removed from a kept text, unless
+#: the few characters before it call it a registry code (a Latvian company
+#: is eleven digits too, and a merger names it so).
+_PERSONAL_CODE = re.compile(r"(?<!\d)[1-6]\d{10}(?!\d)")
+_REGISTRY_WORD = re.compile(r"(registrikood\w*|reg\.?\s*(nr|kood)\.?|registreerimisnumb\w*)\W{0,6}$", re.IGNORECASE)
+PERSONAL_CODE_REMOVED = "[personal code removed]"
+
+
+def scrub_text(text: Any) -> str:
+    """A register text with whitespace collapsed and every number shaped
+    like a personal identification code removed (``_PERSONAL_CODE``)."""
+    text = " ".join(str(text or "").split())
+
+    def keep(m: re.Match[str]) -> str:
+        before = text[max(0, m.start() - 24):m.start()]
+        return m.group(0) if _REGISTRY_WORD.search(before) else PERSONAL_CODE_REMOVED
+
+    return _PERSONAL_CODE.sub(keep, text)
+
+
+def _current(rows: Any) -> list[dict[str, Any]]:
+    """A list's rows that are dicts and carry no end date (the file holds
+    current rows only, but a stray ended row must not be read as current)."""
+    return [r for r in rows or [] if isinstance(r, dict) and not r.get("lopp_kpv")]
+
+
+def _general_values(
+    code: str, y: dict[str, Any], vocab: dict[tuple[str, str], str], known: set[str],
+) -> tuple[Any, ...]:
+    """One ``general`` row from an entity's ``yldandmed`` object."""
+    capital = sorted(_current(y.get("kapitalid")), key=lambda r: _iso_day(r.get("algus_kpv")) or "")
+    cap = capital[-1] if capital else {}
+    activities = _current(y.get("teatatud_tegevusalad"))
+    main = next((a for a in activities if a.get("on_pohitegevusala")), activities[0] if activities else {})
+    emtak = str(main.get("emtak_kood") or "").strip() or None
+    if emtak:
+        text = " ".join(str(main.get("emtak_tekstina") or "").split())
+        if text or ("emtak", emtak) not in vocab:
+            vocab[("emtak", emtak)] = text
+    reports = [r for r in y.get("info_majandusaasta_aruannetest") or [] if isinstance(r, dict)]
+    last = max(reports, key=lambda r: _iso_day(r.get("majandusaasta_perioodi_lopp_kpv")) or "", default={})
+    absence = y.get("lahknevusteade_puudumisest")
+
+    extra: dict[str, Any] = {}
+    succession = []
+    for r in _current(y.get("oigusjargsused")):
+        text = scrub_text(r.get("sisu"))
+        codes = [c for c in _SUCCESSION_CODE.findall(text) if c != code]
+        codes += [c for c in _ANY_CODE.findall(text) if c != code and c in known and c not in codes]
+        succession.append({
+            "type": r.get("tyyp"), "day": _iso_day(r.get("algus_kpv")), "entry_no": r.get("kande_nr"),
+            "text": text, "codes": list(dict.fromkeys(codes)),
+        })
+    if succession:
+        extra["succession"] = succession
+    changes = [
+        {"type": r.get("tyyp"), "type_text": r.get("tyyp_tekstina"), "day": _iso_day(r.get("algus_kpv")),
+         "entry_no": r.get("kande_nr"), "text": scrub_text(r.get("sisu"))}
+        for r in _current(y.get("seisundi_muutused"))
+    ]
+    if changes:
+        extra["status_changes"] = changes
+    periods = [
+        {"type": r.get("tyyp"), "type_text": r.get("tyyp_tekstina"),
+         "start": r.get("periood_algus_kpv"), "end": r.get("periood_lopp_kpv"),
+         "recurring": r.get("periood") == "K", "day": _iso_day(r.get("algus_kpv")),
+         "text": scrub_text(r.get("sisu"))}
+        for r in _current(y.get("ettevotja_tegevuse_aeg"))
+    ]
+    if periods:
+        extra["activity_periods"] = periods
+    for branch in y.get("valismaa_ariyhing") or []:
+        if not isinstance(branch, dict):
+            continue
+        def first(key: str, field: str = "sisu") -> Any:
+            rows = _current(branch.get(key))
+            return rows[0].get(field) if rows else None
+        seat = _current(branch.get("asukoht"))
+        extra["branch_of"] = {
+            "name": first("arinimi"),
+            "country": seat[0].get("aadress_riik") if seat else None,
+            "country_text": seat[0].get("aadress_riik_tekstina") if seat else None,
+            "register": first("register"),
+            "number": first("registreerimisnumber"),
+            "form": first("oiguslik_vorm"),
+            "like_estonian_form": first("sarnane_eesti_oigvorm", "sisu_tekstina"),
+        }
+        break
+    predecessors = [
+        scrub_text(r.get("sisu"))
+        for r in _current(y.get("markused_kaardil")) if r.get("tyyp") == "EVREG"
+    ]
+    if predecessors:
+        extra["predecessor_notes"] = predecessors
+    no_par = _current(y.get("nimivaartuseta_aktsiad"))
+    if no_par:
+        extra["no_par_shares"] = no_par[0].get("nimivaartuseta_aktsiate_arv")
+
+    return (
+        code,
+        str(cap.get("kapitali_suurus") or "").strip() or None,
+        str(cap.get("kapitali_valuuta") or "").strip() or None,
+        _iso_day(cap.get("algus_kpv")),
+        1 if y.get("esitab_kasusaajad") else 0,
+        None if absence is None else (1 if absence else 0),
+        emtak,
+        str(main.get("nace_kood") or "").strip() or None,
+        _iso_day(last.get("majandusaasta_perioodi_lopp_kpv")),
+        str(last.get("tootajate_arv") or "").strip() or None,
+        len(reports),
+        json.dumps(extra, ensure_ascii=False, separators=(",", ":")) if extra else None,
+    )
+
+
+def _load_general(
+    conn: sqlite3.Connection, path: Path, seen: set[str],
+    vocab: dict[tuple[str, str], str], *, floor: int,
+) -> int:
+    """The general-data file into ``general``. Its entity set must be the
+    CSV's, as the people files' must."""
+    zf, text, _day = _open_member(path)
+    file_seen: set[str] = set()
+    batch: list[tuple[Any, ...]] = []
+    insert = "INSERT INTO general VALUES (" + ", ".join("?" for _ in range(12)) + ")"
+    with zf:
+        try:
+            for ent in stream_json_array(text):
+                if not isinstance(ent, dict) or "ariregistri_kood" not in ent:
+                    raise BuildRefused("an element is not an entity object")
+                code = str(ent["ariregistri_kood"]).strip().zfill(8)
+                if code not in seen:
+                    raise BuildRefused(f"code {code} is not in {CSV_FILE}")
+                if code in file_seen:
+                    raise BuildRefused(f"code {code} appears twice")
+                file_seen.add(code)
+                y = ent.get("yldandmed")
+                if not isinstance(y, dict):
+                    raise BuildRefused(f"yldandmed of {code} is not an object")
+                batch.append(_general_values(code, y, vocab, seen))
+                if len(batch) >= 5000:
+                    conn.executemany(insert, batch)
+                    batch = []
+        except BuildRefused as exc:
+            raise BuildRefused(f"{path.name}: {exc}") from None
+    if batch:
+        conn.executemany(insert, batch)
+    if len(file_seen) < floor:
+        raise BuildRefused(f"{path.name}: {len(file_seen)} entities, fewer than {floor}")
+    log.info("%s: %d entities", path.name, len(file_seen))
+    return len(file_seen)
+
+
 def _collect_vocab(vocab: dict[tuple[str, str], str], table: str, p: dict[str, Any]) -> None:
     """Record every code → text pair the files use, once."""
     for kind, code_key, text_key in VOCAB_PAIRS[table]:
@@ -827,7 +1035,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True, type=Path, help="the SQLite file to write")
     parser.add_argument(
         "--from-dir", type=Path,
-        help="build from the six zips already in this directory instead of downloading",
+        help="build from the seven zips already in this directory instead of downloading",
     )
     parser.add_argument(
         "--keep-dir", type=Path,
