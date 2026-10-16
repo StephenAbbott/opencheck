@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 357** — The changelog page no longer scrolls sideways on a phone when a status row carries a long filename or identifier.
+**Latest: Phase 358** — The demo graph's Neo4j import scripts now load share percentages as numbers, flags as booleans and dates as dates, with a share-band weighting convention in the demo queries.
 
 → [Full development history](docs/status.md)
 
