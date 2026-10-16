@@ -482,6 +482,35 @@ def _ee_shareholding_interest(row: dict[str, Any]) -> dict[str, Any]:
     return interest
 
 
+def _ee_bo_interest(bo: dict[str, Any]) -> dict[str, Any]:
+    """One beneficial-owner interest from a ``kasusaajad`` row — current
+    (the files) or ended (the BO history): the manner of control as the
+    interest type, the register's wording in ``details``, the row's dates."""
+    control_code = (bo.get("kontrolli_teostamise_viis") or "").strip()
+    interest_type, direct_or_indirect, control_label = _EE_BO_CONTROL_MAP.get(
+        control_code, ("otherInfluenceOrControl", None, "")
+    )
+    # kasusaajad records ARE the Estonian BO declarations — the flag
+    # comes from the regimes registry (ariregister/kasusaaja_bo -> true).
+    interest: dict[str, Any] = set_beneficial_ownership(
+        {"type": interest_type}, "ariregister", record_kind="kasusaaja_bo"
+    )
+    if direct_or_indirect:
+        interest["directOrIndirect"] = direct_or_indirect
+    control_text = " ".join((bo.get("kontrolli_teostamise_viis_tekstina") or "").split())
+    if control_label and control_text:
+        interest["details"] = f"{control_label} ({control_text})"
+    elif control_label or control_text:
+        interest["details"] = control_label or control_text
+    start_date = _ee_date(bo.get("algus_kpv"))
+    end_date = _ee_date(bo.get("lopp_kpv"))
+    if start_date:
+        interest["startDate"] = start_date
+    if end_date:
+        interest["endDate"] = end_date
+    return interest
+
+
 def _ee_founder_note(row: dict[str, Any]) -> str:
     """The sentence a founder row is said in: the role, the founding
     contribution where one was made, the register's date."""
@@ -514,10 +543,15 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     cut (Phase 315); one read from the page keeps the factories' dates.
     Returns an empty iterable for stub bundles or missing company data.
     """
-    if bundle and bundle.get("tier") == "index" and bundle.get("cut"):
-        yield from dated_by_cut(_map_ariregister(bundle), bundle.get("cut"))
-    else:
-        yield from _map_ariregister(bundle)
+    cut = bundle.get("cut") if bundle and bundle.get("tier") == "index" else None
+    for statement in dated_by_cut(_map_ariregister(bundle), cut):
+        # A record from the register's history is dated by the register's
+        # own last date for it (the ending it records), never by the files'
+        # cut — the files do not hold it.
+        history_day = statement.pop(_EE_HISTORY_DATE, None)
+        if history_day:
+            statement["statementDate"] = history_day
+        yield statement
 
 
 def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
@@ -554,6 +588,13 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     yield from _ee_company_parties(
         bundle, company_stmt["statementId"], source_url, seen_person_ids, seen_entity_ids,
         include_founders=True,
+    )
+    # The subject's ended holdings and former beneficial owners, from the
+    # register's history — after the current parties, so a holder who is
+    # still on a list (joined by the register's own person record) is the
+    # node already published.
+    yield from _ee_history_statements(
+        bundle, company_stmt["statementId"], source_url, seen_person_ids, seen_entity_ids,
     )
     # A related company's parties: its shareholders, officers and declared
     # owners, never its founders (history of an intermediary is not the
@@ -882,30 +923,7 @@ def _ee_company_parties(
     # Set include_beneficial_owners=False in the adapter call to suppress.
     for bo in bundle.get("beneficial_owners") or []:
         kirje_id = str(bo.get("kirje_id") or "")
-        start_date = _ee_date(bo.get("algus_kpv"))
-        end_date = _ee_date(bo.get("lopp_kpv"))
-        control_code = (bo.get("kontrolli_teostamise_viis") or "").strip()
-        interest_type, direct_or_indirect, control_label = _EE_BO_CONTROL_MAP.get(
-            control_code, ("otherInfluenceOrControl", None, "")
-        )
-
-        # kasusaajad records ARE the Estonian BO declarations — the flag
-        # comes from the regimes registry (ariregister/kasusaaja_bo -> true).
-        interest: dict[str, Any] = set_beneficial_ownership(
-            {"type": interest_type}, "ariregister", record_kind="kasusaaja_bo"
-        )
-        if direct_or_indirect:
-            interest["directOrIndirect"] = direct_or_indirect
-        control_text = " ".join((bo.get("kontrolli_teostamise_viis_tekstina") or "").split())
-        if control_label and control_text:
-            interest["details"] = f"{control_label} ({control_text})"
-        elif control_label or control_text:
-            interest["details"] = control_label or control_text
-        if start_date:
-            interest["startDate"] = start_date
-        if end_date:
-            interest["endDate"] = end_date
-        interests = [interest]
+        interests = [_ee_bo_interest(bo)]
 
         first = (bo.get("eesnimi") or "").strip()
         last = (bo.get("nimi") or "").strip()
@@ -1058,3 +1076,159 @@ def _ee_party_statements(
     )
     seen_person_ids.add(person_id)
     return [person_stmt], person_stmt["statementId"], "person"
+
+
+# ----------------------------------------------------------------------
+# The register's history: ended holdings and former beneficial owners
+# ----------------------------------------------------------------------
+
+#: A private key a history statement carries out of ``_map_ariregister``
+#: so ``map_ariregister`` dates it by the register's own last date for it
+#: instead of the files' cut. Popped before the statement is yielded.
+_EE_HISTORY_DATE = "_ee_history_statement_date"
+
+#: How an ended row's party was identified (``ariregister_history``), in
+#: the words of the record's annotation.
+_EE_HISTORY_JOIN_NOTES: dict[str, str] = {
+    "register": "Matched to the person's current entries by the register's own person record.",
+    "name_birth": "Matched to a current entry with the same name and date of birth.",
+    "former": "No current list in the register names this person, so they are shown as a former party.",
+    "row": "The register gives this entry no identification code or date of birth, so it is shown on its own.",
+}
+
+
+def _ee_history_row(row: dict[str, Any]) -> dict[str, Any]:
+    """A stripped history row in the shape ``_ee_party_statements`` reads:
+    a former-only person's history key stands in for the ``kirje_id`` so
+    their rows are one node, and never a current person's."""
+    out = dict(row)
+    if row.get("history_key") and not row.get("isikukood_hash"):
+        out["kirje_id"] = row["history_key"]
+    return out
+
+
+def _ee_history_statements(
+    bundle: dict[str, Any],
+    company_stmt_id: str,
+    source_url: str,
+    seen_person_ids: set[str],
+    seen_entity_ids: set[str],
+) -> Iterable[dict[str, Any]]:
+    """One closed relationship per party with ended holdings, and one per
+    former beneficial owner, from the register's history (Stephen, 16 Oct
+    2026): each register row is one interest with its own share and dates,
+    so a holding re-registered at every change of size is one record, not
+    seventeen. A party who still holds shares keeps the current holding as
+    its own record; this one carries the earlier periods beside it."""
+    history = bundle.get("history") or {}
+    if not history.get("read"):
+        return
+
+    # Who holds shares now, and who is a beneficial owner now — keyed the
+    # way the current statements were built, so "earlier holdings of a
+    # current holder" and "a former holder" are told apart.
+    off_card = bundle.get("off_card_persons") or []
+    current_rows = [("sh", r) for r in bundle.get("shareholders") or []] + [
+        ("as", r) for r in off_card
+        if (r.get("isiku_roll") or "").strip() in _EE_OFF_CARD_SHAREHOLDER_ROLES
+    ]
+    current_holders = {
+        _ee_party_key(r, str(r.get("kirje_id") or ""), prefix)
+        for prefix, r in current_rows if not _ee_date(r.get("lopp_kpv"))
+    }
+    current_owners = {
+        "F:" + _ee_person_id({
+            "isikukood_hash": bo.get("isikukood_hash"),
+            "kirje_id": str(bo.get("kirje_id") or ""),
+            "eesnimi": (bo.get("eesnimi") or "").strip(),
+            "nimi_arinimi": (bo.get("nimi") or "").strip(),
+        })
+        for bo in bundle.get("beneficial_owners") or []
+    }
+
+    for kind, rows in (
+        ("sh", history.get("former_shareholders") or []),
+        ("bo", history.get("former_beneficial_owners") or []),
+    ):
+        groups: dict[str, list[dict[str, Any]]] = {}
+        for raw in rows:
+            row = _ee_history_row(raw)
+            if kind == "bo":
+                row.setdefault("isiku_tyyp", "F")
+                row.setdefault("nimi_arinimi", row.get("nimi"))
+            key = _ee_party_key(row, str(row.get("kirje_id") or ""), "hist")
+            groups.setdefault(key, []).append(row)
+
+        for key, group in groups.items():
+            group.sort(key=lambda r: (_ee_date(r.get("algus_kpv")) or "", _ee_date(r.get("lopp_kpv")) or ""))
+            first = group[0]
+            party = _ee_party_statements(
+                first, str(first.get("kirje_id") or ""), "hist",
+                seen_person_ids, seen_entity_ids, {}, source_url,
+            )
+            if party is None:
+                continue
+            party_stmts, party_id, party_type = party
+            ends = [d for d in (_ee_date(r.get("lopp_kpv")) for r in group) if d]
+            starts = [d for d in (_ee_date(r.get("algus_kpv")) for r in group) if d]
+            last_day = max(ends) if ends else None
+            for stmt in party_stmts:
+                if last_day:
+                    stmt[_EE_HISTORY_DATE] = last_day
+                yield stmt
+
+            if kind == "sh":
+                interests = []
+                for r in group:
+                    interest = _ee_shareholding_interest(r)
+                    if (r.get("isiku_roll") or "").strip() in _EE_OFF_CARD_SHAREHOLDER_ROLES:
+                        interest["details"] = "; ".join(p for p in (
+                            "Shareholder of a public limited company (aktsionär), as recorded by the register",
+                            interest.get("details"),
+                        ) if p)
+                    interests.append(interest)
+                still = key in current_holders
+                lead = (
+                    "Earlier holdings of a current shareholder" if still
+                    else "A former shareholder"
+                )
+                tail = (
+                    "The current holding is its own record." if still
+                    else "No current holding."
+                )
+                source_words = "the e-Business Register's registry-card history"
+            else:
+                interests = [_ee_bo_interest(r) for r in group]
+                still = key in current_owners
+                lead = (
+                    "Earlier entries of a current beneficial owner" if still
+                    else "A former beneficial owner"
+                )
+                tail = (
+                    "The current entry is its own record." if still
+                    else "No current beneficial-owner entry."
+                )
+                source_words = "the e-Business Register's beneficial-owner history"
+
+            span = ""
+            if starts and ends:
+                span = f" between {min(starts)} and {max(ends)}"
+            entries = "one register entry" if len(group) == 1 else f"{len(group)} register entries"
+            sentence = f"{lead}, from {source_words}: {entries}{span}. {tail}"
+            join_note = _EE_HISTORY_JOIN_NOTES.get(first.get("history_join") or "")
+            if join_note:
+                sentence = f"{sentence} {join_note}"
+
+            rel = make_relationship_statement(
+                source_id="ariregister",
+                local_id=f"hist-{kind}-{key}",
+                subject_statement_id=company_stmt_id,
+                interested_party_statement_id=party_id,
+                interested_party_type=party_type,
+                interests=interests,
+                source_url=source_url,
+            )
+            rel.setdefault("annotations", []).append(commenting(pointer("recordDetails"), sentence))
+            if last_day:
+                rel[_EE_HISTORY_DATE] = last_day
+            yield rel

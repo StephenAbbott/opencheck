@@ -1315,6 +1315,61 @@ Things that will be re-derived otherwise:
   jurisdiction and an annotation, no identifier. A derived scheme is what
   lets `_register_one_layer` follow the owner across the border.
 
+### Ended ownership from the register's history (the full-history phase)
+
+`sources/ariregister_history.py` (read, join, strip, cache),
+`_ee_history_statements` in `bods/mappers/estonia.py`. Every bulk file is
+current rows only; the history is in the credentialed SOAP service the Time
+Machine already reads. Measured on real responses (16 Oct 2026): Bolt
+Technology OÜ has 460 ended shareholder rows = 164 holders (84 still hold
+shares; 387 rows are a holding re-registered when its size changed);
+Eesti Energia AS 13 ended AS-shareholder rows and 31 ended BO entries.
+Stephen's decisions (16 Oct 2026) and the things that will be re-derived
+otherwise:
+
+- **One closed relationship per party per company** (`hist-sh-<key>` /
+  `hist-bo-<key>`), each register row one interest with its own share and
+  dates; closed by `make_relationship_statement` because every interest
+  ended (Phase 317). A current holder's earlier holdings are a separate
+  closed record beside the current one — the graph pools the pair. Officers
+  and supervisory boards stay serving-only; founders are the off-card
+  file's.
+- **Ended rows only; `kirje_id` is the join.** Every *current* SOAP row's
+  `kirje_id` is the bulk row's (Bolt 183/183 shareholders; Eesti Energia
+  11/11 BOs), so current rows are skipped. A SOAP row carries the raw
+  personal code, not the hash: the code joins an ended row to the same
+  person's current row (`kirje_id` → index hash) on any list — exact, no
+  name matching — and groups a former-only person's rows; then it is
+  dropped. **Nothing derived from a code is published** (a hash of an
+  11-digit code is reversible by enumeration): a former-only person is
+  keyed `hist-<first kirje_id>`. Rows with no code join on name + birth
+  date to an index row where one matches, else stand alone. A **natural
+  person's foreign code is dropped too** (a Lithuanian asmens kodas is 11
+  digits) — the bulk index carries none — while a legal person's foreign
+  code stays (it is the cross-border hop). The schema refuses either kind on
+  a natural person. Each record's `commenting` annotation says which join.
+- **Dated by the register, not the cut.** `map_ariregister` dates a
+  history statement by the latest end date among its rows
+  (`_EE_HISTORY_DATE`, popped before yield); everything else keeps the cut.
+- **Read on every Estonian lookup, index tier only, subject only.** The
+  page fallback already lists the ended holdings it has and has no
+  `kirje_id`. A successful read is cached per registry code for a day
+  (`ariregister/history-v1/<code>`), **after stripping** — no code reaches
+  the disk. A failure, or a BO history that did not answer, is never cached.
+  Offline (`allow_live` off) reads nothing and says nothing; no credentials
+  or a failure records a `source_read` degradation and the finding says
+  "ownership history not read". The finding counts "N ended ownership
+  records" right after the counts (it falls off the 140-char cap on a long
+  sentence; the degradation is what must not).
+- **Provenance is unchanged**: the SOAP call records live/cached, and the
+  recorder keeps the worst — snapshot — so the bundle stays the dated
+  snapshot. Integrated figures are unchanged (closed records are
+  `formerly`, no figure); related-party screens rank current parties before
+  former ones, so former holders never displace a current one under the cap.
+- **Not yet done (the ticket's Part 2):** the `registrikaardid` file as a
+  card-entry event spine for the History tab. The SOAP card log is already
+  parsed into `history.card_entries`.
+
 ---
 
 ## Datafordeler CVR API (Denmark) — hard-won constraints
@@ -1389,7 +1444,7 @@ that returns the RNE payload without going through `_make_bundle`.
 - **The live `/lookup` still uses the no-auth public scraper** in `fetch()` (see below) — do NOT route the lookup through SOAP.
 - **The Time Machine (history only) uses SOAP**, read-only: `AriregisterAdapter.fetch_timeline_data()` calls `detailandmed_v2` (`ainult_kehtivad=0`, full registry-card history) + `tegelikudKasusaajad_v2` (beneficial-owner history), and `timeline/ariregister.py` maps the dated blocks into `ChangeEvent`s (NZ-emitter shape; `DateBasis.EFFECTIVE`/`HIGH`). Endpoint: `https://ariregxmlv6.rik.ee/`, producer namespace `http://arireg.x-road.eu/producer/`.
 - **JSON dates are epoch-second floats and `{}` means "no end"** — the emitter requests XML (ISO dates, self-closing empties) for deterministic parsing; the epoch path is handled defensively in `_iso()`.
-- **Shareholders are on the register card since 1 Sept 2023** (roles `OSAN` on-card / `O` off-card), so ownership history is available via `detailandmed_v2`.
+- **Shareholder history reaches back long before 1 Sept 2023.** That date is when the card's own `OSAN` role began; the off-card `O` list has carried dated rows far longer (Bolt Technology OÜ's ended holdings start in 2013, read 16 Oct 2026). Both come back from `detailandmed_v2`, and since the full-history phase the lookup draws the ended ones — see "Ended ownership from the register's history" below.
 - **BO access restriction POSTPONED on its 2026-07-10 start date** (https://news.err.ee/1610074816/ — the Ministry of Finance is revising the draft regulation; current public access remains, no new date announced). BO events stay deliberately isolated in `_bo_events()` in `timeline/ariregister.py` so the whole branch can be dropped when the restriction eventually lands (issues #22/#28 track it; a first removal shipped in `77e7b65` and was reverted when the postponement was announced — the revert commit shows exactly what to re-apply).
 - **Render**: the Time Machine Estonia branch only lights up when `ARIREGISTER_USERNAME` / `ARIREGISTER_PASSWORD` are set on Render (in addition to `.env` locally). Without them, `fetch_timeline_data()` returns `None` and the timeline silently omits Estonian events.
 

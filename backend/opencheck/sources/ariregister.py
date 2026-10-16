@@ -935,7 +935,10 @@ class AriregisterAdapter(SourceAdapter):
                 "is read from the same index up the chain (six hops, "
                 "twenty-five companies), and a foreign owner's register code "
                 "becomes a register-hop identifier where it has the shape of "
-                "that country's company number."
+                "that country's company number. Former shareholders and former "
+                "beneficial owners come from the register's own history "
+                "(the credentialed X-Road service, cached a day), each a "
+                "closed record dated by the register."
             ),
             license="CC-BY-4.0",
             attribution=(
@@ -1138,6 +1141,15 @@ class AriregisterAdapter(SourceAdapter):
                     code: self._index_bundle(code, sub, meta) for code, sub in related.items()
                 }
                 bundle["chain"] = chain
+                # The ended holdings and former beneficial owners, from the
+                # register's own history (SOAP, credentialed; cached a day).
+                # The subject only — an intermediary's past owners are not
+                # the subject's network. Never on the page path: the page
+                # already shows the ended holdings it lists, with no
+                # kirje_id to join on.
+                from .ariregister_history import read_history
+
+                bundle["history"] = await read_history(self, registry_code, record)
                 validate_raw(self.id, AriregisterBundle, bundle)
                 return bundle
 

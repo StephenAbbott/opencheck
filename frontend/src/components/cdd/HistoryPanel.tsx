@@ -42,6 +42,7 @@ import {
   filingsTruncatedNotice,
   historyDegradedNotice,
   HISTORY_CAVEAT,
+  registerReadNotes,
   historySentence,
   historySourceLabel,
   noiseEventsOf,
@@ -246,6 +247,11 @@ export default function HistoryPanel({
                 ))}
               </ul>
             )}
+            {registerReadNotes(data).map((note) => (
+              <p key={note} className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[82ch]">
+                {note}
+              </p>
+            ))}
             {silent.length > 0 && (
               <ul className="mt-2 space-y-0.5" aria-label="Registers with no change log for this company">
                 {silent.map((s) => (

@@ -131,6 +131,12 @@ jobs:
           # than probes.MAX_SKIPPED_FOR_CREDENTIALS allows — so an expired or
           # deleted secret cannot quietly shrink coverage behind a green tick.
           ABN_GUID: ${{ secrets.ABN_GUID }}
+          # The full-history phase: the Estonian lookup reads the register's
+          # history over X-Road (open-data contract). Without these the probe
+          # still answers from the index but records "history not read" as a
+          # degradation, so ariregister would read degraded for a missing secret.
+          ARIREGISTER_USERNAME: ${{ secrets.ARIREGISTER_USERNAME }}
+          ARIREGISTER_PASSWORD: ${{ secrets.ARIREGISTER_PASSWORD }}
           BOLAGSVERKET_API_KEY: ${{ secrets.BOLAGSVERKET_API_KEY }}
           BOLAGSVERKET_CLIENT_SECRET: ${{ secrets.BOLAGSVERKET_CLIENT_SECRET }}
           COMPANIES_HOUSE_API_KEY: ${{ secrets.COMPANIES_HOUSE_API_KEY }}
