@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 350** — Production now serves the GLEIF anchor from the Golden Copy mirror first, spending one live call instead of six, and a mirror-served group keeps all its direct children up to the live path's cap.
+**Latest: Phase 351** — The FATF black and grey lists, the EU high-risk list and the EU tax list now say their finding once per lookup, naming every source that reached it, rather than once per source.
 
 → [Full development history](docs/status.md)
 
