@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 348** — A refused GLEIF anchor keeps its cross-reference identifiers from the cache or says it lost them, the anchor's other calls stop at the first refusal, and exports reuse the lookup the reader just ran.
+**Latest: Phase 349** — The AI summary now caps its own length and claim count, so heavily sanctioned groups such as Rosneft no longer fail at the model's token ceiling.
 
 → [Full development history](docs/status.md)
 
