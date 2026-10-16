@@ -75,6 +75,14 @@ person + relationship statements joins for free.
   officer id (register-asserted same-person, stronger than a name match);
   "View appointments across companies" on strong CH matches. The BODS output
   carries the `GB-COH-OFFICER` identifier.
+- **`GET /person-appointments?scheme=EE-ARIREGISTER-HASH&id=<uuid>`** (the
+  Estonian person index) — every Estonian company whose current lists (registry
+  card, shareholders, beneficial owners, persons outside the card) name the
+  register's pseudonymous person key, with list, role, since and share, from the
+  daily index; "Companies on the Estonian register" on a BackgroundCheck card
+  and on an Estonian person statement, fetched on demand, never drawn as graph
+  nodes, hidden on a saved report. Keyed on the hash only — never a name
+  search. MCP: `opencheck_person_positions(scheme, id)`.
 - **Q-ID bridging** — `/person-check` reconciles strong matches only into
   `cross_source_links`; "Same person across sources" panel. Weak matches
   excluded by design.

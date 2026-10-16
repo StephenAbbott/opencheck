@@ -1370,6 +1370,38 @@ otherwise:
   card-entry event spine for the History tab. The SOAP card log is already
   parsed into `history.card_entries`.
 
+### A person's other companies, on the register's person key (the person-index phase)
+
+`companies_for_hash` in `sources/ariregister.py`, `_ee_person_appointments`
+in `routers/person_check.py`, `opencheck_person_positions` in the MCP server,
+`lib/estonianPerson.ts` + `components/cdd/EstonianPersonCompanies.tsx`.
+Stephen's decisions (16 Oct 2026):
+
+- **Keyed on `isikukood_hash` only — never a name search.** The route is
+  `/person-appointments?scheme=EE-ARIREGISTER-HASH&id=<uuid>` (the Companies
+  House `officer_id` path is unchanged); anything but a UUID is a 400, and a
+  personal code's shape is refused by `parse_person_hash`. A hash on no list
+  is an empty list; no index is `is_stub`.
+- **The fields the register publishes**: company, form, status, which list,
+  role (worded by `ee_person_role_label`, the mapper's own labels), since,
+  share. No addresses (the index holds none). One row per company × list ×
+  role; `PERSON_COMPANIES_LIMIT` (500) rows, `total_results` counts all.
+- **Listed, never drawn.** `bods` is `[]`; the graph is unchanged. The
+  control sits on a BackgroundCheck card (`person.identifiers`) and on an
+  Estonian person statement in the Data drawer (`estonianPersonHashOf`),
+  fetches on click, and is absent on a saved report.
+- **Four partial indexes** (`*_person` on `isikukood_hash`) — no schema bump:
+  an index built before them answers by scan until the daily rebuild.
+- **Current rows only**: a deleted company and an ended role are not listed,
+  and the caveat says so (the REST-API ticket can close that).
+- **The page path merges by name, within one company.** The print page has
+  no hash, so `_ee_merge_page_people` (page tier only) gives natural persons
+  whose `ee_name_key` matches — case, accents, hyphens, spacing and a Nasdaq
+  CSD "Omanikukonto:" / "Lihtkonto:" prefix set aside — one node, named with
+  the registry card's spelling, and a `commenting` annotation on the person
+  saying which lists were joined and why. Works on a copy; the bundle is
+  untouched.
+
 ---
 
 ## Datafordeler CVR API (Denmark) — hard-won constraints

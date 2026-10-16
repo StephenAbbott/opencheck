@@ -31,6 +31,8 @@ import {
   type PersonMatch,
   type PersonPositionsResponse,
 } from "../../lib/api";
+import { estonianPersonHash } from "../../lib/estonianPerson";
+import { EstonianPersonCompanies } from "./EstonianPersonCompanies";
 import {
   extractConnectedPeople,
   extractPersonSubgraph,
@@ -446,6 +448,12 @@ function PersonCard({
             <p className="text-[10px] text-oo-muted mt-1.5">
               Recorded by: {person.sources.join(" · ")}
             </p>
+          )}
+          {estonianPersonHash(person.identifiers) && (
+            <EstonianPersonCompanies
+              personHash={estonianPersonHash(person.identifiers) as string}
+              name={person.name}
+            />
           )}
           {(onOpenReport || onDownloadBods) && (
             <p className="text-[11px] mt-1.5 flex flex-wrap gap-x-3 gap-y-1">

@@ -285,6 +285,14 @@ CREATE TABLE off_card_person (
 );
 CREATE INDEX off_card_person_code ON off_card_person (code);
 CREATE INDEX off_card_person_holder ON off_card_person (isikukood_registrikood) WHERE isikukood_registrikood IS NOT NULL;
+-- A natural person's other companies: the register's pseudonymous key is the
+-- same UUID for the same person on every list of every company, so these four
+-- indexes answer "where else is this person" (companies_for_hash). An index
+-- built before them still answers, by scan, until the daily rebuild.
+CREATE INDEX officer_person ON officer (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
+CREATE INDEX shareholder_person ON shareholder (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
+CREATE INDEX beneficial_owner_person ON beneficial_owner (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
+CREATE INDEX off_card_person_person ON off_card_person (isikukood_hash) WHERE isikukood_hash IS NOT NULL;
 """
 
 class BuildRefused(RuntimeError):

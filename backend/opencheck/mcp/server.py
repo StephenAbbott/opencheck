@@ -530,6 +530,65 @@ async def opencheck_person_check(
 
 
 @mcp.tool()
+async def opencheck_person_positions(scheme: str, id: str) -> dict[str, Any]:
+    """List one person's positions across companies, keyed by a register's
+    own person key — never by name.
+
+    Two keys are accepted:
+      - ``EE-ARIREGISTER-HASH``: the Estonian e-Business Register's
+        pseudonymous person key (a UUID). It appears in an Estonian
+        company's BODS person statement as an ``identifying`` annotation
+        ("Identifier <uuid> (scheme EE-ARIREGISTER-HASH; ...)") from
+        opencheck_lookup / opencheck_export_bods. Answers from the daily
+        index: every company whose current lists name the person, with the
+        list, role, since-date and share.
+      - ``GB-COH-OFFICER``: a Companies House officer id (from a
+        Companies House hit in opencheck_person_check). Answers with the
+        officer's appointments.
+
+    The key is the register's assertion that the rows are one person, but
+    neither register guarantees one key per person; read ``caveat``. The
+    Estonian files hold current rows only, so ended roles and deleted
+    companies are not listed.
+
+    Args:
+        scheme: ``EE-ARIREGISTER-HASH`` or ``GB-COH-OFFICER``.
+        id: The key.
+    """
+    from fastapi import HTTPException
+
+    from ..routers.person_check import (
+        EE_PERSON_SCHEME,
+        _ee_person_appointments,
+        _person_appointments_impl,
+    )
+
+    scheme = (scheme or "").strip().upper()
+    try:
+        if scheme == EE_PERSON_SCHEME:
+            resp = _ee_person_appointments(id)
+        elif scheme == "GB-COH-OFFICER":
+            if len((id or "").strip()) < 8:
+                return {"error": "a Companies House officer id is at least 8 characters"}
+            resp = await _person_appointments_impl(id.strip())
+        else:
+            return {"error": f"scheme must be {EE_PERSON_SCHEME} or GB-COH-OFFICER"}
+    except HTTPException as exc:
+        return {"error": str(exc.detail)}
+    out = resp.model_dump(exclude={"bods"}, exclude_none=True)
+    shown = out.get("appointments") or []
+    if len(shown) > MCP_POSITIONS_SHOWN:
+        out["appointments"] = shown[:MCP_POSITIONS_SHOWN]
+        out["truncated"] = True
+    return out
+
+
+#: Positions one opencheck_person_positions answer carries; ``total_results``
+#: still counts all of them.
+MCP_POSITIONS_SHOWN = 100
+
+
+@mcp.tool()
 async def opencheck_save_report(lei: str, deepen_top: int = 5) -> dict[str, Any]:
     """Keep a check of an LEI as a saved report: a link to exactly what
     OpenCheck found, on this date, that does not change afterwards.
@@ -694,6 +753,7 @@ TOOL_NAMES = [
     "opencheck_owners",
     "opencheck_ownership_map",
     "opencheck_person_check",
+    "opencheck_person_positions",
     "opencheck_save_report",
     "opencheck_list_sources",
 ]

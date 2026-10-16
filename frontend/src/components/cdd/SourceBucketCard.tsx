@@ -2,6 +2,8 @@ import { Suspense, useEffect, useId, useMemo, useState, useSyncExternalStore } f
 import { lazyWithRetry } from "../../lib/chunkLoad";
 import { PanelBoundary } from "../ui/PanelBoundary";
 import { deepen } from "../../lib/api";
+import { estonianPersonHashOf } from "../../lib/estonianPerson";
+import { EstonianPersonCompanies } from "./EstonianPersonCompanies";
 import { groupHitsForDisplay, siblingNote } from "../../lib/hitGroups";
 import { rowFinding } from "../../lib/sourceFinding";
 import { readRegisterStatus, registerStatusLabel } from "../../lib/liveness";
@@ -374,6 +376,8 @@ function PersonStatementCard({ stmt }: { stmt: BODSStmt }) {
   const identifiers = stmtArr(rd, "identifiers");
   const sourceDesc = stmtStr(stmt, "source", "description");
   const statementId = stmtStr(stmt, "statementId");
+  // The Estonian register's person key, from the Phase 255 annotation.
+  const eePersonHash = estonianPersonHashOf(stmt);
 
   return (
     <div className="rounded-oo border border-violet-200 bg-violet-50/40 overflow-hidden">
@@ -421,6 +425,7 @@ function PersonStatementCard({ stmt }: { stmt: BODSStmt }) {
           />
         )}
         {sourceDesc && <FieldRow label="Source" value={sourceDesc} />}
+        {eePersonHash && <EstonianPersonCompanies personHash={eePersonHash} name={fullName || undefined} />}
         <details className="mt-1">
           <summary className="text-[10px] text-oo-muted cursor-pointer">
             Raw statement JSON —{" "}
