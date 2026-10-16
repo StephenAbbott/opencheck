@@ -21,7 +21,7 @@ LOAD CSV WITH HEADERS FROM 'file:///country.csv' AS row
 CALL {
     WITH row
     MERGE (n:Country {code: row.code})
-    SET n += row
+    SET n.name = row.name
 } IN TRANSACTIONS OF 10000 ROWS;
 
 
@@ -29,7 +29,10 @@ LOAD CSV WITH HEADERS FROM 'file:///identifier.csv' AS row
 CALL {
     WITH row
     MERGE (n:Identifier {uid: row.uid})
-    SET n += row
+    SET n.scheme = row.scheme,
+        n.id = row.id,
+        n.schemeName = row.schemeName,
+        n.uri = row.uri
 } IN TRANSACTIONS OF 10000 ROWS;
 
 
@@ -37,7 +40,9 @@ LOAD CSV WITH HEADERS FROM 'file:///address.csv' AS row
 CALL {
     WITH row
     MERGE (n:Address {uid: row.uid})
-    SET n += row
+    SET n.address = row.address,
+        n.postCode = row.postCode,
+        n.defaultType = row.defaultType
 } IN TRANSACTIONS OF 10000 ROWS;
 
 
@@ -45,7 +50,25 @@ LOAD CSV WITH HEADERS FROM 'file:///entity.csv' AS row
 CALL {
     WITH row
     MERGE (n:Entity {recordId: row.recordId})
-    SET n += row
+    SET n.statementId = row.statementId,
+        n.statementDate = CASE WHEN row.statementDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.statementDate) ELSE row.statementDate END,
+        n.recordType = row.recordType,
+        n.recordStatus = row.recordStatus,
+        n.declarationSubject = row.declarationSubject,
+        n.publicationDate = CASE WHEN row.publicationDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.publicationDate) ELSE row.publicationDate END,
+        n.bodsVersion = row.bodsVersion,
+        n.publisherName = row.publisherName,
+        n.publisherUrl = row.publisherUrl,
+        n.publicationLicense = row.publicationLicense,
+        n.name = row.name,
+        n.entityType = row.entityType,
+        n.entityTypeDetails = row.entityTypeDetails,
+        n.isComponent = toBoolean(row.isComponent),
+        n.sourceTypes = row.sourceTypes,
+        n.sourceUrl = row.sourceUrl,
+        n.extrasJson = row.extrasJson,
+        n.foundingDate = CASE WHEN row.foundingDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.foundingDate) ELSE row.foundingDate END,
+        n.dissolutionDate = CASE WHEN row.dissolutionDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.dissolutionDate) ELSE row.dissolutionDate END
 } IN TRANSACTIONS OF 10000 ROWS;
 
 
@@ -66,7 +89,29 @@ LOAD CSV WITH HEADERS FROM 'file:///person.csv' AS row
 CALL {
     WITH row
     MERGE (n:Person {recordId: row.recordId})
-    SET n += row
+    SET n.statementId = row.statementId,
+        n.statementDate = CASE WHEN row.statementDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.statementDate) ELSE row.statementDate END,
+        n.recordType = row.recordType,
+        n.recordStatus = row.recordStatus,
+        n.declarationSubject = row.declarationSubject,
+        n.publicationDate = CASE WHEN row.publicationDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.publicationDate) ELSE row.publicationDate END,
+        n.bodsVersion = row.bodsVersion,
+        n.publisherName = row.publisherName,
+        n.publisherUrl = row.publisherUrl,
+        n.publicationLicense = row.publicationLicense,
+        n.personType = row.personType,
+        n.isComponent = toBoolean(row.isComponent),
+        n.name = row.name,
+        n.fullName = row.fullName,
+        n.familyName = row.familyName,
+        n.givenName = row.givenName,
+        n.nameType = row.nameType,
+        n.namesJson = row.namesJson,
+        n.birthDate = row.birthDate,
+        n.nationalityCodes = row.nationalityCodes,
+        n.nationalityNames = row.nationalityNames,
+        n.sourceTypes = row.sourceTypes,
+        n.sourceUrl = row.sourceUrl
 } IN TRANSACTIONS OF 10000 ROWS;
 
 
@@ -118,7 +163,32 @@ CALL {
     WITH row, start, COALESCE(e_t, p_t, u_t) AS target
     WHERE start IS NOT NULL AND target IS NOT NULL
     CREATE (start)-[r:OWNS]->(target)
-    SET r += row
+    SET r.statementId = row.statementId,
+        r.statementDate = CASE WHEN row.statementDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.statementDate) ELSE row.statementDate END,
+        r.recordId = row.recordId,
+        r.recordType = row.recordType,
+        r.recordStatus = row.recordStatus,
+        r.declarationSubject = row.declarationSubject,
+        r.publicationDate = CASE WHEN row.publicationDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.publicationDate) ELSE row.publicationDate END,
+        r.bodsVersion = row.bodsVersion,
+        r.publisherName = row.publisherName,
+        r.publisherUrl = row.publisherUrl,
+        r.publicationLicense = row.publicationLicense,
+        r.isComponent = toBoolean(row.isComponent),
+        r.sourceTypes = row.sourceTypes,
+        r.sourceUrl = row.sourceUrl,
+        r.interestIndex = toInteger(row.interestIndex),
+        r.bodsInterestType = row.bodsInterestType,
+        r.family = row.family,
+        r.directOrIndirect = row.directOrIndirect,
+        r.beneficialOwnershipOrControl = toBoolean(row.beneficialOwnershipOrControl),
+        r.shareMinimum = toFloat(row.shareMinimum),
+        r.shareMaximum = toFloat(row.shareMaximum),
+        r.startDate = CASE WHEN row.startDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.startDate) ELSE row.startDate END,
+        r.endDate = CASE WHEN row.endDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.endDate) ELSE row.endDate END,
+        r.details = row.details,
+        r.detailsCategory = row.detailsCategory,
+        r.detailsValue = row.detailsValue
 } IN TRANSACTIONS OF 10000 ROWS;
 
 
@@ -135,7 +205,32 @@ CALL {
     WITH row, start, COALESCE(e_t, p_t, u_t) AS target
     WHERE start IS NOT NULL AND target IS NOT NULL
     CREATE (start)-[r:CONTROLS]->(target)
-    SET r += row
+    SET r.statementId = row.statementId,
+        r.statementDate = CASE WHEN row.statementDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.statementDate) ELSE row.statementDate END,
+        r.recordId = row.recordId,
+        r.recordType = row.recordType,
+        r.recordStatus = row.recordStatus,
+        r.declarationSubject = row.declarationSubject,
+        r.publicationDate = CASE WHEN row.publicationDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.publicationDate) ELSE row.publicationDate END,
+        r.bodsVersion = row.bodsVersion,
+        r.publisherName = row.publisherName,
+        r.publisherUrl = row.publisherUrl,
+        r.publicationLicense = row.publicationLicense,
+        r.isComponent = toBoolean(row.isComponent),
+        r.sourceTypes = row.sourceTypes,
+        r.sourceUrl = row.sourceUrl,
+        r.interestIndex = toInteger(row.interestIndex),
+        r.bodsInterestType = row.bodsInterestType,
+        r.family = row.family,
+        r.directOrIndirect = row.directOrIndirect,
+        r.beneficialOwnershipOrControl = toBoolean(row.beneficialOwnershipOrControl),
+        r.startDate = CASE WHEN row.startDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.startDate) ELSE row.startDate END,
+        r.details = row.details,
+        r.detailsCategory = row.detailsCategory,
+        r.detailsValue = row.detailsValue,
+        r.shareMinimum = toFloat(row.shareMinimum),
+        r.shareMaximum = toFloat(row.shareMaximum),
+        r.endDate = CASE WHEN row.endDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.endDate) ELSE row.endDate END
 } IN TRANSACTIONS OF 10000 ROWS;
 
 
