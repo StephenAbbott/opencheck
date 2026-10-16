@@ -387,7 +387,7 @@ def test_the_verdict_names_the_test_and_the_context_variant_adds_nothing():
 def test_signal_rules_version_four_names_the_codes():
     from opencheck.watchlist import SIGNAL_RULES, SIGNAL_RULES_CHANGED
 
-    assert SIGNAL_RULES == 4
+    assert SIGNAL_RULES >= 4  # the cross-check token gate moved it to 5
     assert SIGNAL_RULES_CHANGED[4] == {SANCTIONS_OWNERSHIP_TEST, SANCTIONS_OWNERSHIP_TEST_POSSIBLE}
 
 
