@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 353** — The MCP ownership map draws a parent GLEIF records as withheld once, not once per level, and its summary says the parent exists but is not disclosed.
+**Latest: Phase 354** — The weekly findings regression now requires the high related-PEP findings on Rosneft and Eli Lilly that their homepage cards already show.
 
 → [Full development history](docs/status.md)
 
