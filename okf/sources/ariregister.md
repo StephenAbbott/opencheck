@@ -1,10 +1,10 @@
 ---
 type: "Data Source"
 title: "Estonian e-Business Register (e-\u00c4riregister)"
-description: "Estonian company data \u2014 entity details, the persons on the registry card (board members, procurists, liquidators, partners), the register of shareholders with ownership percentages, and declared beneficial owners with their manner of control \u2014 read from a daily index of RIK's open-data files, with the public e-Business Register page as the fallback for a company the files do not hold."
+description: "Estonian company data \u2014 entity details, the persons on the registry card (board members, procurists, liquidators, partners), the register of shareholders with ownership percentages, declared beneficial owners with their manner of control, and the persons outside the registry card (supervisory board members, the shareholders of a public limited company the register records, founders) \u2014 read from a daily index of RIK's open-data files, with the public e-Business Register page as the fallback for a company the files do not hold."
 resource: "https://ariregister.rik.ee/eng"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-10-13"
+timestamp: "2026-10-16"
 source_id: "ariregister"
 license: "CC-BY-4.0"
 commercial_use: "yes"
@@ -14,7 +14,7 @@ national_register: true
 
 # Overview
 
-Estonian company data — entity details, the persons on the registry card (board members, procurists, liquidators, partners), the register of shareholders with ownership percentages, and declared beneficial owners with their manner of control — read from a daily index of RIK's open-data files, with the public e-Business Register page as the fallback for a company the files do not hold. Official national company / beneficial-ownership register.
+Estonian company data — entity details, the persons on the registry card (board members, procurists, liquidators, partners), the register of shareholders with ownership percentages, declared beneficial owners with their manner of control, and the persons outside the registry card (supervisory board members, the shareholders of a public limited company the register records, founders) — read from a daily index of RIK's open-data files, with the public e-Business Register page as the fallback for a company the files do not hold. Official national company / beneficial-ownership register.
 
 - **Source id:** `ariregister`
 - **Category:** cdd (customer due diligence / compliance)

@@ -1668,7 +1668,9 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
     declared beneficial owners it lists — each count in the same voice when
     it is zero (rule 6), because an OÜ with no shareholder on file and an AS
     whose shareholders sit at Nasdaq CSD both read "no shareholders on file",
-    and silence would read as "nothing to see" (Phase 330).
+    and silence would read as "nothing to see" (Phase 330). A shareholder of
+    an AS the register itself records (an off-card ``S`` row) is a
+    shareholder; a supervisory board is counted where there is one.
 
     * **Not in the register** says so, with the open data's cut and that
       the page holds no record either, rather than that the company does not
@@ -1708,11 +1710,22 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
             return none
         return f"{n} {singular if n == 1 else plural}"
 
-    counts = ", ".join([
-        _count(bundle.get("shareholders"), "shareholder", "shareholders", "no shareholders on file"),
+    # The persons outside the registry card: an AS shareholder the register
+    # records (role S) counts as a shareholder; the supervisory board is
+    # said only where there is one (most companies have none, and an absent
+    # optional body is not a gap). Founders and auditors are not counted.
+    off_card = bundle.get("off_card_persons") or []
+    as_shareholders = [p for p in off_card if (p.get("isiku_roll") or "").strip() == "S"]
+    supervisory = [p for p in off_card if (p.get("isiku_roll") or "").strip() in ("N", "E")]
+    counts = ", ".join(c for c in [
+        _count(
+            list(bundle.get("shareholders") or []) + as_shareholders,
+            "shareholder", "shareholders", "no shareholders on file",
+        ),
         _count(bundle.get("officers"), "on the registry card", "on the registry card", "no one on the registry card"),
+        _count(supervisory, "on the supervisory board", "on the supervisory board", "") if supervisory else "",
         _count(bundle.get("beneficial_owners"), "beneficial owner", "beneficial owners", "no beneficial owner declared"),
-    ])
+    ] if c)
     tier = (
         "read from the page, not the open data"
         if bundle.get("index_miss") else None

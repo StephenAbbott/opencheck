@@ -430,7 +430,13 @@ def normalise_registry_code(raw: str) -> str:
 #: The table layout this adapter reads. ``scripts/build_ariregister_index.py``
 #: writes the same value into ``meta``; a test pins the two equal, and an
 #: index carrying any other value is ignored rather than misread.
-INDEX_SCHEMA_VERSION = "1"
+INDEX_SCHEMA_VERSION = "2"  # 2: the off_card_person table (kandevalised_isikud)
+
+#: The layouts this adapter can read. A schema-1 index (built before the
+#: fifth file) is read with an empty off-card list rather than ignored, so
+#: a deploy that lands before the next daily rebuild does not send every
+#: Estonian lookup to the rate-limited page.
+INDEX_SCHEMA_VERSIONS_READ = frozenset({"1", INDEX_SCHEMA_VERSION})
 
 #: Where the open data is published — the page a reader can follow.
 DATASET_URL = "https://avaandmed.ariregister.rik.ee/en/downloading-open-data"
@@ -476,6 +482,14 @@ _TABLE_COLUMNS: dict[str, tuple[str, ...]] = {
         "valis_kood", "valis_kood_riik", "synniaeg", "aadress_riik",
         "kontrolli_teostamise_viis", "lahknevusteade_esitatud",
     ),
+    "off_card_person": (
+        "kirje_id", "isiku_tyyp", "isiku_roll", "eesnimi", "nimi_arinimi",
+        "isikukood_hash", "isikukood_registrikood", "valis_kood", "valis_kood_riik",
+        "synniaeg", "aadress_riik", "osaluse_protsent", "osaluse_suurus",
+        "osaluse_valuuta", "osaluse_omandiliik", "osaluse_murdosa_lugeja",
+        "osaluse_murdosa_nimetaja", "kontrolli_allikas", "kontrolli_allika_kpv",
+        "algus_kpv", "lopp_kpv", "grupp",
+    ),
 }
 
 #: ``(code column, vocab kind, text column the mapper reads)`` — the Estonian
@@ -498,6 +512,13 @@ _TEXT_COLUMNS: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("valis_kood_riik", "country", "valis_kood_riik_tekstina"),
         ("aadress_riik", "country", "aadress_riik_tekstina"),
         ("kontrolli_teostamise_viis", "control", "kontrolli_teostamise_viis_tekstina"),
+    ),
+    "off_card_person": (
+        ("isiku_roll", "role", "isiku_roll_tekstina"),
+        ("valis_kood_riik", "country", "valis_kood_riik_tekstina"),
+        ("aadress_riik", "country", "aadress_riik_tekstina"),
+        ("osaluse_omandiliik", "ownership_kind", "osaluse_omandiliik_tekstina"),
+        ("kontrolli_allikas", "control_source", "kontrolli_allikas_tekstina"),
     ),
 }
 
@@ -530,7 +551,7 @@ def _connect() -> sqlite3.Connection | None:
         ).fetchone()
     except sqlite3.Error:
         version = None
-    if not version or version[0] != INDEX_SCHEMA_VERSION:
+    if not version or str(version[0]) not in INDEX_SCHEMA_VERSIONS_READ:
         logger.warning("ariregister: index at %s has an unexpected schema; ignoring", path)
         conn.close()
         return None
@@ -663,10 +684,15 @@ def _people_rows(conn: sqlite3.Connection, table: str, code: str) -> list[dict[s
     """One table's rows for a code, in the JSON files' shape: the hash back
     as a UUID string, the code's Estonian wording beside it, empties absent."""
     columns = _TABLE_COLUMNS[table]
-    rows = conn.execute(
-        f"SELECT {', '.join(columns)} FROM {table} WHERE code = ? ORDER BY kirje_id",
-        (code,),
-    ).fetchall()
+    try:
+        rows = conn.execute(
+            f"SELECT {', '.join(columns)} FROM {table} WHERE code = ? ORDER BY kirje_id",
+            (code,),
+        ).fetchall()
+    except sqlite3.OperationalError as exc:
+        if table == "off_card_person" and "no such table" in str(exc):
+            return []  # a schema-1 index, built before the fifth file
+        raise
     out: list[dict[str, Any]] = []
     for row in rows:
         item: dict[str, Any] = {}
@@ -691,7 +717,7 @@ def _people_rows(conn: sqlite3.Connection, table: str, code: str) -> list[dict[s
 
 def entity_record(code: str) -> dict[str, Any] | None:
     """The index's record for one registry code — the entity row with its
-    three people lists — or None when the index does not hold it (or there
+    four people lists — or None when the index does not hold it (or there
     is no index)."""
     conn = _shared_conn()
     if conn is None:
@@ -708,6 +734,7 @@ def entity_record(code: str) -> dict[str, Any] | None:
     record["officers"] = _people_rows(conn, "officer", code)
     record["shareholders"] = _people_rows(conn, "shareholder", code)
     record["beneficial_owners"] = _people_rows(conn, "beneficial_owner", code)
+    record["off_card_persons"] = _people_rows(conn, "off_card_person", code)
     return record
 
 
@@ -754,10 +781,13 @@ class AriregisterAdapter(SourceAdapter):
                 "Estonian company data — entity details, the persons on the "
                 "registry card (board members, procurists, liquidators, "
                 "partners), the register of shareholders with ownership "
-                "percentages, and declared beneficial owners with their manner "
-                "of control — read from a daily index of RIK's open-data files, "
-                "with the public e-Business Register page as the fallback for "
-                "a company the files do not hold."
+                "percentages, declared beneficial owners with their manner "
+                "of control, and the persons outside the registry card "
+                "(supervisory board members, the shareholders of a public "
+                "limited company the register records, founders) — read from a "
+                "daily index of RIK's open-data files, with the public "
+                "e-Business Register page as the fallback for a company the "
+                "files do not hold."
             ),
             license="CC-BY-4.0",
             attribution=(
@@ -871,6 +901,7 @@ class AriregisterAdapter(SourceAdapter):
             "shareholders": [],
             "officers": [],
             "beneficial_owners": [],
+            "off_card_persons": [],
             "is_stub": True,
         }
 
@@ -910,6 +941,10 @@ class AriregisterAdapter(SourceAdapter):
             "shareholders": record.get("shareholders") or [],
             "officers": record.get("officers") or [],
             "beneficial_owners": record.get("beneficial_owners") or [],
+            # The persons outside the registry card: supervisory board, AS
+            # shareholders, founders, auditors. The page path has no such
+            # list, so a page bundle carries an empty one.
+            "off_card_persons": record.get("off_card_persons") or [],
             "cut": meta.get("cut"),
             "tier": "index",
             "is_stub": False,
