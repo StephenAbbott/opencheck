@@ -1,0 +1,6 @@
+---
+title: The MCP ownership map draws an undisclosed GLEIF parent once, and says it is withheld.
+readme: The MCP ownership map draws a parent GLEIF records as withheld once, not once per level, and its summary says the parent exists but is not disclosed.
+tests: backend +2
+---
+Found testing the ownership-map fixes in production on 16 Oct 2026: 288 WHITESANDS UK LIMITED (2138008HG9U53HXBAJ27) files NON_PUBLIC at both the direct and the ultimate level, and the map drew two "Undisclosed parent (GLEIF reporting exception)" nodes beside its one real owner, counted three current edges, and its summary said nothing about the withheld parent. `owners.ownership_map` now folds the bridges of one company and one reason (NON_PUBLIC or its deprecated family) into the first one seen, so the parent is one node and one edge; the levels are listed under a new `undisclosed_parents` field, and `summary` says "GLEIF records the direct and ultimate parent of X as withheld (NON_PUBLIC): a parent exists but is not disclosed. It is drawn once, as an undisclosed parent." The BODS output is unchanged — both bridges stay in the export, as Phase 114 wants. Check in production: the map for 2138008HG9U53HXBAJ27 should show two current edges and one undisclosed node.

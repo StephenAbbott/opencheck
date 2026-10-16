@@ -455,7 +455,9 @@ async def opencheck_ownership_map(
     opens with a one-sentence ``summary``, carries the same edges as rows
     (owner, interest, owned, source, current/ended), lists GLEIF reporting
     exceptions under ``reporting_exceptions`` (a filing that names no parent,
-    so never drawn as one), and links to the interactive FullCheck view; the
+    so never drawn as one) and a parent GLEIF records as withheld under
+    ``undisclosed_parents`` (drawn once, whatever levels it is filed at), and
+    links to the interactive FullCheck view; the
     image draws at most 16 edges.
 
     Args:
