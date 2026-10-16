@@ -35,7 +35,8 @@ the model can state "no beneficial owner was disclosed" or "no risks were found"
   `ANTHROPIC_API_KEY`), `validate.py` (citation validator).
 - `scripts/eval_narrative.py`: offline eval harness over six synthetic golden
   packets, scoring a machine-checkable rubric (grounded / names subject / flags
-  name-matches / surfaces risks / surfaces gaps / no raw codes / length). This is
+  name-matches / surfaces risks / surfaces gaps / no raw codes / length / within
+  caps). This is
   where prompt wording is iterated before any UI exists.
 - `tests/golden_narrative/`: six synthetic packets (clean, sanctioned related
   party, no-PSC gap, name-matched/sparse, complex ownership layers, errored
@@ -93,6 +94,42 @@ cd frontend && npm run dev
 # offline prompt iteration
 cd backend && uv run python scripts/eval_narrative.py --show
 ```
+
+## Output size is bounded (prompt v10)
+
+Rosneft's summary (`253400JT3MQWNDKMJE44`) answered **502** on 14 Oct 2026:
+the `emit_summary` call stopped at `max_tokens`, and `summarise.py` refuses a
+truncated answer rather than ship a summary with no claims. It was intermittent
+— the packet (86 risks, 131 facts, ~38k input tokens) sat just under the
+ceiling. Measured on 15 Oct under prompt v9: 2,663–3,292 output tokens across
+six runs, against `MAX_TOKENS = 4000`. The output was the paragraph written
+twice — a ~2,250-character summary (4–6 sentences of 300–500 characters each)
+restated across 16–25 claims — and it grew with the number of risks.
+
+Two levers, both in place:
+
+- **`MAX_TOKENS = 8000`** — headroom, not the bound. A ceiling costs nothing
+  unless the tokens are generated.
+- **Caps in the prompt and the tool schema** (`prompt.py`):
+  `SUMMARY_MAX_WORDS` (180; the prompt states it in words, because a
+  characters-only cap was overrun on every run), `SUMMARY_MAX_CHARS` (1,500,
+  the outer limit — `maxLength` in the schema), `MAX_CLAIMS` (12, `maxItems`)
+  and `MAX_LIMITATIONS` (6). Many items of one kind are summarised by kind with
+  a count and at most three examples; a claim about a group cites every id it
+  covers. The API treats the schema limits as guidance, so the validator
+  records an overshoot in `validation_issues` — it never drops a grounded
+  claim to meet a cap.
+
+Measured on the same Rosneft packet under v10: 1,736–1,974 output tokens
+(eight runs), 1,398–1,513-character summaries, 12 claims, ~30 s instead of
+45–55 s. Eli Lilly: ~1,710 output tokens, 1,114 characters, 11 claims.
+
+`summarise._raw_tool_output` also decodes `claims` / `limitations` sent as one
+JSON-encoded string (one v10 run did), and refuses text that is not a list.
+`tests/golden_narrative/07_many_related_party_risks.json` is a synthetic packet
+of Rosneft's shape (88 risks, no real names) so the eval harness exercises the
+heavy case; the harness's `within_caps` column and its per-packet output-token
+line show how close each packet comes to the ceiling.
 
 ## Follow-ups (Phase 2)
 

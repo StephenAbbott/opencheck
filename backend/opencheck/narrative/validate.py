@@ -14,6 +14,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from .packet import EvidencePacket
+from .prompt import MAX_CLAIMS, SUMMARY_MAX_CHARS
 
 
 class ValidationResult(BaseModel):
@@ -72,6 +73,18 @@ def validate_narrative(
         # The paragraph asserts something we couldn't ground — withhold it. The
         # caller can re-prompt or fall back to a claims-only rendering.
         summary = ""
+
+    # Output caps (prompt v10). An overshoot is recorded, never enforced by
+    # dropping: every surviving claim is grounded, and cutting claims or prose
+    # after the fact would only hide evidence. The issue makes a model that
+    # ignores the caps visible in the eval harness and the endpoint's
+    # ``validation_issues`` before it reaches the max_tokens ceiling.
+    n_claims = len(result.get("claims") or [])
+    if n_claims > MAX_CLAIMS:
+        issues.append(f"{n_claims} claims exceed the cap of {MAX_CLAIMS}")
+    raw_len = len(result.get("summary") or "")
+    if raw_len > SUMMARY_MAX_CHARS:
+        issues.append(f"summary is {raw_len} characters, over the cap of {SUMMARY_MAX_CHARS}")
 
     # Gap-citation rule: every gap in the packet should be acknowledged by at
     # least one surviving claim. Uncited gaps don't invalidate the narrative

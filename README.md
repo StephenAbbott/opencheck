@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 347** — Phase numbers and the status row are now written when a pull request merges, so branches in flight no longer collide on the number or conflict on the stamped files.
+**Latest: Phase 349** — The AI summary now caps its own length and claim count, so heavily sanctioned groups such as Rosneft no longer fail at the model's token ceiling.
 
 → [Full development history](docs/status.md)
 

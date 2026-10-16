@@ -1,0 +1,1749 @@
+{
+  "subject_name": "Severny Neft Holdings PJSC",
+  "lei": "2138000000000000B007",
+  "jurisdiction": "RU",
+  "subject_confidence": "identifier-confirmed",
+  "identifiers": {
+    "lei": "2138000000000000B007",
+    "ru_inn": "7700000000007"
+  },
+  "facts": [
+    {
+      "id": "f1",
+      "statement": "Severny Neft Holdings PJSC is a registered entity in Russian Federation (XI-LEI 2138000000000000B007; RU-INN 7700000000007).",
+      "source_name": "GLEIF",
+      "source_id": "gleif",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "f2",
+      "statement": "Severny Neftegaz JSC holds shareholding (40–50%) in Severny Neft Holdings PJSC.",
+      "source_name": "Global Energy Monitor / Climate TRACE",
+      "source_id": "climatetrace",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f2"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f3",
+      "statement": "Polar Investments Ltd holds shareholding (15–20%) in Severny Neft Holdings PJSC.",
+      "source_name": "Global Energy Monitor / Climate TRACE",
+      "source_id": "climatetrace",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f3"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f4",
+      "statement": "Federal Property Agency of the Example State holds controlling interest in Severny Neft Holdings PJSC.",
+      "source_name": "Wikidata",
+      "source_id": "wikidata",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f4"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f5",
+      "statement": "Ivan Example holds chief executive officer, from 2012-06-09 in Severny Neft Holdings PJSC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f5"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f6",
+      "statement": "Pavel Sample holds chairperson, from 2023-07-01 in Severny Neft Holdings PJSC.",
+      "source_name": "Wikidata",
+      "source_id": "wikidata",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f6"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f7",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 01 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f7"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f8",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 02 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f8"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f9",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 03 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f9"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f10",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 04 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f10"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f11",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 05 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f11"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f12",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 06 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f12"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f13",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 07 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f13"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f14",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 08 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f14"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f15",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 09 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f15"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f16",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 10 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f16"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f17",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 11 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f17"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f18",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 12 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f18"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f19",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 13 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f19"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f20",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 14 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f20"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f21",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 15 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f21"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f22",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 16 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f22"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f23",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 17 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f23"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f24",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 18 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f24"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f25",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 19 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f25"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f26",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 20 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f26"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f27",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 21 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f27"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f28",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 22 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f28"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f29",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 23 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f29"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f30",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 24 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f30"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f31",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 25 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f31"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f32",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 26 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f32"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f33",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 27 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f33"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f34",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 28 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f34"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f35",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 29 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f35"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f36",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 30 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f36"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f37",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 31 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f37"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f38",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 32 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f38"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f39",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 33 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f39"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f40",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 34 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f40"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f41",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 35 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f41"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f42",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 36 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f42"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f43",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 37 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f43"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f44",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 38 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f44"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f45",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 39 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f45"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f46",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 40 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f46"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f47",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 41 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f47"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f48",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 42 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f48"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f49",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 43 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f49"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f50",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 44 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f50"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f51",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 45 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f51"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f52",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 46 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f52"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f53",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 47 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f53"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f54",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 48 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f54"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f55",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 49 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f55"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f56",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 50 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f56"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f57",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 51 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f57"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f58",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 52 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f58"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f59",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 53 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f59"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f60",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 54 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f60"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f61",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 55 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f61"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f62",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 56 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f62"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f63",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 57 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f63"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f64",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 58 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f64"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f65",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 59 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f65"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "f66",
+      "statement": "Severny Neft Holdings PJSC holds shareholding in Severny Subsidiary 60 LLC.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "source_url": null,
+      "bods_statement_ids": [
+        "stmt-f66"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "risks": [
+    {
+      "id": "r1",
+      "code": "SANCTIONED",
+      "label": "Sanctioned",
+      "confidence": "high",
+      "rationale": "OpenSanctions lists this record as sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r2",
+      "code": "DEBARMENT",
+      "label": "Debarred from public contracts",
+      "confidence": "high",
+      "rationale": "OpenSanctions lists this record as debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r3",
+      "code": "EXPORT_CONTROLLED",
+      "label": "Subject to export-control restrictions",
+      "confidence": "high",
+      "rationale": "OpenSanctions lists this record as subject to export controls.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r4",
+      "code": "STATE_CONTROLLED",
+      "label": "State-controlled (possible SOE)",
+      "confidence": "medium",
+      "rationale": "Example State, at least 40% — Federal Property Agency of the Example State (Wikidata).",
+      "source_name": "Wikidata",
+      "source_id": "wikidata",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r5",
+      "code": "EU_HIGH_RISK_THIRD_COUNTRY",
+      "label": "EU high-risk third country",
+      "confidence": "high",
+      "rationale": "The company is registered in Russian Federation, on the EU list of high-risk third countries with strategic AML/CFT deficiencies.",
+      "source_name": "GLEIF",
+      "source_id": "gleif",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r6",
+      "code": "EU_TAX_NON_COOPERATIVE",
+      "label": "EU tax non-cooperative jurisdiction (a tax-governance list; no AML enhanced-due-diligence obligation)",
+      "confidence": "medium",
+      "rationale": "The company is registered in Russian Federation, on the EU list of non-cooperative jurisdictions for tax purposes.",
+      "source_name": "GLEIF",
+      "source_id": "gleif",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r7",
+      "code": "EU_HIGH_RISK_THIRD_COUNTRY",
+      "label": "EU high-risk third country",
+      "confidence": "high",
+      "rationale": "The company is registered in Russian Federation, on the EU list of high-risk third countries with strategic AML/CFT deficiencies.",
+      "source_name": "OECD-UNSD MEIP",
+      "source_id": "meip",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r8",
+      "code": "EU_TAX_NON_COOPERATIVE",
+      "label": "EU tax non-cooperative jurisdiction (a tax-governance list; no AML enhanced-due-diligence obligation)",
+      "confidence": "medium",
+      "rationale": "The company is registered in Russian Federation, on the EU list of non-cooperative jurisdictions for tax purposes.",
+      "source_name": "OECD-UNSD MEIP",
+      "source_id": "meip",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r9",
+      "code": "EU_HIGH_RISK_THIRD_COUNTRY",
+      "label": "EU high-risk third country",
+      "confidence": "high",
+      "rationale": "The company is registered in Russian Federation, on the EU list of high-risk third countries with strategic AML/CFT deficiencies.",
+      "source_name": "Global Energy Monitor / Climate TRACE",
+      "source_id": "climatetrace",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r10",
+      "code": "EU_TAX_NON_COOPERATIVE",
+      "label": "EU tax non-cooperative jurisdiction (a tax-governance list; no AML enhanced-due-diligence obligation)",
+      "confidence": "medium",
+      "rationale": "The company is registered in Russian Federation, on the EU list of non-cooperative jurisdictions for tax purposes.",
+      "source_name": "Global Energy Monitor / Climate TRACE",
+      "source_id": "climatetrace",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r11",
+      "code": "EU_HIGH_RISK_THIRD_COUNTRY",
+      "label": "EU high-risk third country",
+      "confidence": "high",
+      "rationale": "The company is registered in Russian Federation, on the EU list of high-risk third countries with strategic AML/CFT deficiencies.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r12",
+      "code": "EU_TAX_NON_COOPERATIVE",
+      "label": "EU tax non-cooperative jurisdiction (a tax-governance list; no AML enhanced-due-diligence obligation)",
+      "confidence": "medium",
+      "rationale": "The company is registered in Russian Federation, on the EU list of non-cooperative jurisdictions for tax purposes.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r13",
+      "code": "EU_HIGH_RISK_THIRD_COUNTRY",
+      "label": "EU high-risk third country",
+      "confidence": "high",
+      "rationale": "The company is registered in Russian Federation, on the EU list of high-risk third countries with strategic AML/CFT deficiencies.",
+      "source_name": "Wikidata",
+      "source_id": "wikidata",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r14",
+      "code": "EU_TAX_NON_COOPERATIVE",
+      "label": "EU tax non-cooperative jurisdiction (a tax-governance list; no AML enhanced-due-diligence obligation)",
+      "confidence": "medium",
+      "rationale": "The company is registered in Russian Federation, on the EU list of non-cooperative jurisdictions for tax purposes.",
+      "source_name": "Wikidata",
+      "source_id": "wikidata",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r15",
+      "code": "NON_EU_JURISDICTION",
+      "label": "Outside EU/EEA",
+      "confidence": "high",
+      "rationale": "The company is registered outside the EU/EEA (Russian Federation).",
+      "source_name": "GLEIF",
+      "source_id": "gleif",
+      "fact_ids": [],
+      "kind": "context"
+    },
+    {
+      "id": "r16",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 01 LLC' matches a record on OpenAleph: debarred from public contracts.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r17",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 02 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r18",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 03 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r19",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 04 LLC' matches a record on OpenAleph: debarred from public contracts.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r20",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 05 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r21",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 06 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r22",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 07 LLC' matches a record on OpenAleph: debarred from public contracts.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r23",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 08 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r24",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 09 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r25",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 10 LLC' matches a record on OpenAleph: debarred from public contracts.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r26",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 11 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r27",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 12 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r28",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 13 LLC' matches a record on OpenAleph: debarred from public contracts.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r29",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 14 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r30",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 15 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r31",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 16 LLC' matches a record on OpenAleph: debarred from public contracts.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r32",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 17 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r33",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 18 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r34",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 19 LLC' matches a record on OpenAleph: debarred from public contracts.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r35",
+      "code": "RELATED_DEBARMENT",
+      "label": "Related party debarred from public contracts",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 20 LLC' matches a record on OpenSanctions: debarred from public contracts.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r36",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 21 LLC' matches a record on OpenAleph: sanctioned.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r37",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 22 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r38",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 23 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r39",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 24 LLC' matches a record on OpenAleph: sanctioned.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r40",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 25 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r41",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 26 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r42",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 27 LLC' matches a record on OpenAleph: sanctioned.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r43",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 28 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r44",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 29 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r45",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 30 LLC' matches a record on OpenAleph: sanctioned.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r46",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 31 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r47",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 32 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r48",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 33 LLC' matches a record on OpenAleph: sanctioned.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r49",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 34 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r50",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 35 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r51",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 36 LLC' matches a record on OpenAleph: sanctioned.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r52",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 37 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r53",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 38 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r54",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 39 LLC' matches a record on OpenAleph: sanctioned.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r55",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 40 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r56",
+      "code": "RELATED_SANCTIONED",
+      "label": "Related party sanctioned",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 41 LLC' matches a record on OpenSanctions: sanctioned.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r57",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 42 LLC' matches a record on OpenAleph: subject to export-control restrictions.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r58",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 43 LLC' matches a record on OpenSanctions: subject to export-control restrictions.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r59",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 44 LLC' matches a record on OpenSanctions: subject to export-control restrictions.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r60",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 45 LLC' matches a record on OpenAleph: subject to export-control restrictions.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r61",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 46 LLC' matches a record on OpenSanctions: subject to export-control restrictions.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r62",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 47 LLC' matches a record on OpenSanctions: subject to export-control restrictions.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r63",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 48 LLC' matches a record on OpenAleph: subject to export-control restrictions.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r64",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 49 LLC' matches a record on OpenSanctions: subject to export-control restrictions.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r65",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 50 LLC' matches a record on OpenSanctions: subject to export-control restrictions.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r66",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 51 LLC' matches a record on OpenAleph: subject to export-control restrictions.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r67",
+      "code": "RELATED_EXPORT_CONTROLLED",
+      "label": "Related party subject to export-control restrictions",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 52 LLC' matches a record on OpenSanctions: subject to export-control restrictions.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r68",
+      "code": "RELATED_EXPORT_CONTROL_LINKED",
+      "label": "Related party linked to an export-controlled party",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 53 LLC' matches a record on OpenAleph: linked to an export-controlled party.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r69",
+      "code": "RELATED_EXPORT_CONTROL_LINKED",
+      "label": "Related party linked to an export-controlled party",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 54 LLC' matches a record on OpenSanctions: linked to an export-controlled party.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r70",
+      "code": "RELATED_EXPORT_CONTROL_LINKED",
+      "label": "Related party linked to an export-controlled party",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 55 LLC' matches a record on OpenSanctions: linked to an export-controlled party.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r71",
+      "code": "RELATED_EXPORT_CONTROL_LINKED",
+      "label": "Related party linked to an export-controlled party",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 56 LLC' matches a record on OpenAleph: linked to an export-controlled party.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r72",
+      "code": "RELATED_EXPORT_CONTROL_LINKED",
+      "label": "Related party linked to an export-controlled party",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 57 LLC' matches a record on OpenSanctions: linked to an export-controlled party.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r73",
+      "code": "RELATED_EXPORT_CONTROL_LINKED",
+      "label": "Related party linked to an export-controlled party",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 58 LLC' matches a record on OpenSanctions: linked to an export-controlled party.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r74",
+      "code": "RELATED_EXPORT_CONTROL_LINKED",
+      "label": "Related party linked to an export-controlled party",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 59 LLC' matches a record on OpenAleph: linked to an export-controlled party.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r75",
+      "code": "RELATED_EXPORT_CONTROL_LINKED",
+      "label": "Related party linked to an export-controlled party",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 60 LLC' matches a record on OpenSanctions: linked to an export-controlled party.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r76",
+      "code": "RELATED_SANCTIONS_CONTROLLED",
+      "label": "Related party under sanction ownership or control",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 01 LLC' matches a record on OpenAleph: under sanction ownership or control.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r77",
+      "code": "RELATED_SANCTIONS_CONTROLLED",
+      "label": "Related party under sanction ownership or control",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 02 LLC' matches a record on OpenSanctions: under sanction ownership or control.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r78",
+      "code": "RELATED_SANCTIONS_CONTROLLED",
+      "label": "Related party under sanction ownership or control",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 03 LLC' matches a record on OpenSanctions: under sanction ownership or control.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r79",
+      "code": "RELATED_SANCTIONS_CONTROLLED",
+      "label": "Related party under sanction ownership or control",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 04 LLC' matches a record on OpenAleph: under sanction ownership or control.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r80",
+      "code": "RELATED_SANCTIONS_CONTROLLED",
+      "label": "Related party under sanction ownership or control",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 05 LLC' matches a record on OpenSanctions: under sanction ownership or control.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r81",
+      "code": "RELATED_SANCTIONS_CONTROLLED",
+      "label": "Related party under sanction ownership or control",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 06 LLC' matches a record on OpenSanctions: under sanction ownership or control.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r82",
+      "code": "RELATED_SANCTIONS_LINKED",
+      "label": "Related party linked to a sanctioned party",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 07 LLC' matches a record on OpenAleph: linked to a sanctioned party.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r83",
+      "code": "RELATED_SANCTIONS_LINKED",
+      "label": "Related party linked to a sanctioned party",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 08 LLC' matches a record on OpenSanctions: linked to a sanctioned party.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r84",
+      "code": "RELATED_SANCTIONS_LINKED",
+      "label": "Related party linked to a sanctioned party",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 09 LLC' matches a record on OpenSanctions: linked to a sanctioned party.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r85",
+      "code": "RELATED_SANCTIONS_LINKED",
+      "label": "Related party linked to a sanctioned party",
+      "confidence": "medium",
+      "rationale": "Related entity 'Severny Subsidiary 10 LLC' matches a record on OpenAleph: linked to a sanctioned party.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r86",
+      "code": "RELATED_SANCTIONS_LINKED",
+      "label": "Related party linked to a sanctioned party",
+      "confidence": "high",
+      "rationale": "Related entity 'Severny Subsidiary 11 LLC' matches a record on OpenSanctions: linked to a sanctioned party.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r87",
+      "code": "RELATED_PEP",
+      "label": "Related party politically exposed",
+      "confidence": "high",
+      "rationale": "Related entity 'Ivan Example' matches a record on OpenAleph: a politically exposed person.",
+      "source_name": "OpenAleph",
+      "source_id": "openaleph",
+      "fact_ids": [],
+      "kind": "risk"
+    },
+    {
+      "id": "r88",
+      "code": "RELATED_PEP",
+      "label": "Related party politically exposed",
+      "confidence": "medium",
+      "rationale": "Related entity 'Pavel Sample' matches a record on OpenSanctions: a politically exposed person.",
+      "source_name": "OpenSanctions",
+      "source_id": "opensanctions",
+      "fact_ids": [],
+      "kind": "risk"
+    }
+  ],
+  "sources_consulted": [
+    {
+      "source_id": "gleif",
+      "name": "GLEIF",
+      "license": "CC0-1.0"
+    },
+    {
+      "source_id": "opensanctions",
+      "name": "OpenSanctions",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "source_id": "openaleph",
+      "name": "OpenAleph",
+      "license": "Various"
+    },
+    {
+      "source_id": "wikidata",
+      "name": "Wikidata",
+      "license": "CC0-1.0"
+    },
+    {
+      "source_id": "climatetrace",
+      "name": "Global Energy Monitor / Climate TRACE",
+      "license": "CC-BY-4.0"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "g1",
+      "statement": "Related-party sanctions and PEP screening covered the 25 highest-ranked of 96 related parties; the rest were not screened. The absence of RELATED_SANCTIONED, RELATED_PEP signals for the related parties not screened is therefore not conclusive — this is not a clean screen of them."
+    },
+    {
+      "id": "g2",
+      "statement": "OpenSanctions data is licensed CC BY-NC 4.0: non-commercial use only."
+    },
+    {
+      "id": "g3",
+      "statement": "No beneficial owner or controlling individual was disclosed in the available sources."
+    }
+  ]
+}
