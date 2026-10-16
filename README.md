@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 359** — An Estonian lookup now follows corporate owners up the chain inside the e-Business Register index, lists what the company holds, and turns a foreign owner's register code into a cross-border register hop.
+**Latest: Phase 360** — Estonian lookups now draw former shareholders and former beneficial owners from the e-Business Register's own history, each a closed record dated by the register.
 
 → [Full development history](docs/status.md)
 
