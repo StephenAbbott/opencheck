@@ -70,6 +70,15 @@ let them land without colliding:
   rebase), run `uv run pytest -q` **and** `uv run python scripts/mypy_ratchet.py`
   from `backend/`, and the frontend suite where the frontend changed. Then
   `gh pr create`; CI is the gate.
+- **The PR body names its Notion ticket** — a line `Notion: <ticket URL>`
+  (the `app.notion.com/p/…` link) near the top, when the work has one. The
+  release steward (a scheduled Claude task, twice a day) merges green PRs,
+  confirms the stamp and the deploy, and then logs the phase number on that
+  ticket and moves it to Testing; without the link it has to match on the PR
+  title and may not find it. Then **leave the PR alone**: do not watch CI or
+  merge it yourself, and never merge another chat's PR. A PR that must not be
+  merged yet says so in its title (`WIP`, `DO NOT MERGE`, `hold`) or carries
+  the `hold` label.
 - Everything else a phase must update stays as it was — `docs/` where the
   phase touched that surface, the OKF bundle, source counts, curated
   narratives.
