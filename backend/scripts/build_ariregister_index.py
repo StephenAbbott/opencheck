@@ -250,6 +250,7 @@ CREATE TABLE officer (
     algus_kpv TEXT, lopp_kpv TEXT
 );
 CREATE INDEX officer_code ON officer (code);
+CREATE INDEX officer_holder ON officer (isikukood_registrikood) WHERE isikukood_registrikood IS NOT NULL;
 -- One row per entry in the register of shareholders (osanikud).
 CREATE TABLE shareholder (
     code TEXT NOT NULL, kirje_id INTEGER, isiku_tyyp TEXT, isiku_roll TEXT,
@@ -261,6 +262,8 @@ CREATE TABLE shareholder (
     grupp INTEGER
 );
 CREATE INDEX shareholder_code ON shareholder (code);
+-- Reverse holdings: which companies a legal person holds shares in.
+CREATE INDEX shareholder_holder ON shareholder (isikukood_registrikood) WHERE isikukood_registrikood IS NOT NULL;
 -- One row per declared beneficial owner (kasusaajad).
 CREATE TABLE beneficial_owner (
     code TEXT NOT NULL, kirje_id INTEGER, algus_kpv TEXT, lopp_kpv TEXT,
@@ -281,6 +284,7 @@ CREATE TABLE off_card_person (
     grupp INTEGER
 );
 CREATE INDEX off_card_person_code ON off_card_person (code);
+CREATE INDEX off_card_person_holder ON off_card_person (isikukood_registrikood) WHERE isikukood_registrikood IS NOT NULL;
 """
 
 class BuildRefused(RuntimeError):

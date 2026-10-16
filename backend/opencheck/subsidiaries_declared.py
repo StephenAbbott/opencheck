@@ -16,6 +16,15 @@ lists here are weaker in different ways and are gathered for *display*:
 * **GEM (Climate TRACE ownership)** — the entities GEM records the subject as
   directly owning, with a percentage where GEM has one, and an LEI where the
   GLEIF-certified GEM↔LEI mapping (or GEM's own LEI column) supplies it.
+* **Estonian e-Business Register** — the reverse side of the Estonia index:
+  every Estonian company whose shareholder list, AS shareholder record or
+  partnership card names the subject by its registry code, with the exact
+  percentage the register states (``ariregister.holdings_of``). The subject's
+  registry code is read off the GLEIF Golden Copy mirror (``registeredAs``
+  under RA000181); without the mirror the list cannot be keyed and says so.
+  Rows carry the held company's registry code so a reader can open it with
+  ``opencheck_register_lookup``; GLEIF Level 2 is thin for Estonian groups
+  (Eesti Energia reports an exception), so this is often the real list.
 
 Sources disagree, and are meant to: no two of them measure the same thing.
 The response keeps them apart — one block per source, each saying what it
@@ -34,8 +43,12 @@ import asyncio
 from typing import Any
 
 from .meip import MEIP_URL, meip_declared
+from .sources import ariregister
 from .sources.climatetrace import gem_direct_subsidiaries
 from .sources.eiti_assessment import declared_subsidiaries as eiti_declared
+
+#: GLEIF's registration authority for the Estonian commercial register.
+_EE_RA_CODE = "RA000181"
 
 __all__ = ["assemble_declared", "DECLARED_SOURCES"]
 
@@ -73,6 +86,17 @@ DECLARED_SOURCES: dict[str, dict[str, str]] = {
         ),
         "homepage": "https://climatetrace.org/",
     },
+    "ariregister": {
+        "label": "Estonian e-Business Register",
+        "measures": (
+            "the Estonian companies whose register of shareholders, recorded "
+            "AS shareholder or partnership card names this company by its "
+            "registry code, with the exact percentage the register states — "
+            "what the company holds on the Estonian register, read from the "
+            "daily open-data index; never merged with GLEIF's list"
+        ),
+        "homepage": ariregister.DATASET_URL,
+    },
 }
 
 
@@ -108,6 +132,7 @@ def _row(
     percent: float | None = None,
     years: list[str] | None = None,
     via: str | None = None,
+    register_id: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     return {
         "name": name,
@@ -117,6 +142,10 @@ def _row(
         "percent": percent,
         "years": years or [],
         "via": via,
+        # A register-scoped identifier the row's own source publishes
+        # (``{"scheme", "id"}``) — what ``opencheck_register_lookup`` takes
+        # for a company with no LEI. Absent where the source states none.
+        "register_id": register_id,
     }
 
 
@@ -202,6 +231,68 @@ def _gem_block(lei: str) -> dict[str, Any]:
     )
 
 
+def _ee_registry_code(lei: str) -> str | None:
+    """The subject's Estonian registry code, from the GLEIF mirror's record
+    (``registeredAs`` under RA000181) — a local read, never a GLEIF call."""
+    from .entity_pages import get_store
+
+    store = get_store()
+    if store is None:
+        return None
+    row = store.get(lei)
+    detail = (row.detail if row is not None else None) or {}
+    registered_at = detail.get("registeredAt") or {}
+    if (registered_at.get("id") or "") != _EE_RA_CODE:
+        return None
+    raw = detail.get("registeredAs") or ""
+    try:
+        return ariregister.normalise_registry_code(str(raw)) if raw else None
+    except ValueError:
+        return None
+
+
+def _ariregister_block(lei: str) -> dict[str, Any]:
+    """What an Estonian company holds, from the e-Business Register index's
+    reverse side. Whether the subject is Estonian is read off the GLEIF
+    mirror first, so a non-Estonian company reads "not covered" whether or
+    not the index is loaded; only an Estonian subject needs the index."""
+    from .entity_pages import get_store
+
+    if get_store() is None:
+        return _block(
+            "ariregister", available=False,
+            reason="the GLEIF mirror that keys an LEI to its Estonian registry code is not loaded",
+        )
+    code = _ee_registry_code(lei)
+    if code is None:
+        return _block("ariregister", reason="not an Estonian register company")
+    if not ariregister.index_available():
+        return _block("ariregister", available=False, reason="the e-Business Register index is not loaded")
+    held = ariregister.holdings_of(code)
+    relation_words = {"shareholder": "shareholder", "as_shareholder": "shareholder (AS)", "partner": "partner"}
+    rows = []
+    for h in held:
+        try:
+            percent = float(h["percent"]) if h.get("percent") else None
+        except ValueError:
+            percent = None
+        rows.append(_row(
+            h["name"],
+            country="EST",
+            relation=relation_words.get(h["relation"], h["relation"]),
+            percent=percent,
+            register_id={"scheme": "EE-ARIREGISTER", "id": h["code"]},
+        ))
+    meta = ariregister.read_meta()
+    return _block(
+        "ariregister",
+        covered=True,
+        total=len(rows),
+        context={"registry_code": code, "cut": meta.get("cut")},
+        rows=rows,
+    )
+
+
 async def assemble_declared(lei: str) -> dict[str, Any]:
     """Every declared-subsidiary list OpenCheck holds for ``lei``.
 
@@ -211,12 +302,13 @@ async def assemble_declared(lei: str) -> dict[str, Any]:
     still returns, so one missing file never blanks the tab.
     """
     norm = lei.strip().upper()
-    meip_b, eiti_b, gem_b = await asyncio.gather(
+    meip_b, eiti_b, gem_b, ee_b = await asyncio.gather(
         asyncio.to_thread(_meip_block, norm),
         asyncio.to_thread(_eiti_block, norm),
         asyncio.to_thread(_gem_block, norm),
+        asyncio.to_thread(_ariregister_block, norm),
     )
-    sources = [meip_b, eiti_b, gem_b]
+    sources = [meip_b, eiti_b, gem_b, ee_b]
     return {
         "lei": norm,
         "sources": sources,

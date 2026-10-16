@@ -57,6 +57,7 @@ the page path already hand over ISO days.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 import pycountry
@@ -330,9 +331,102 @@ def _ee_foreign_entity(
         jurisdiction = (country_name, None)
     if foreign:
         where = country_name or riik
-        note = f"Foreign register code {foreign}" + (f" ({where})" if where else "")
-        return f"foreign-{riik or 'xx'}-{foreign}", [], jurisdiction, note
+        note = (
+            f"Foreign register code {foreign}" + (f" ({where})" if where else "")
+            + ", as filed in the e-Business Register"
+        )
+        identifiers, derived = _ee_foreign_register_identifier(foreign, alpha2)
+        if derived:
+            note += (
+                f"; the {derived['schemeName']} identifier {derived['id']} (scheme {derived['scheme']})"
+                " is derived from it — the register states no scheme, and the code is read as a"
+                " number on that country's company register because it has the shape of one."
+            )
+        else:
+            note += "; no identifier scheme is stated."
+        return f"foreign-{riik or 'xx'}-{foreign}", identifiers, jurisdiction, note
     return f"{prefix}-corp-{kirje_id}", [], jurisdiction, None
+
+
+#: The shape a company number takes on the registers a foreign code may be
+#: read as a number on — checked *after* the hop's own ``normalise``, which
+#: for most registers only tidies (``ur_latvia`` accepts ``ABC``). Estonia's
+#: owners are mostly from these countries; a scheme absent here derives no
+#: identifier, however the code looks, because a tax or VAT number on the
+#: wrong register either misses or reaches a stranger.
+_EE_FOREIGN_CODE_SHAPES: dict[str, re.Pattern[str]] = {
+    "LV-UR": re.compile(r"^[45]\d{10}$"),       # Latvian registration number
+    "LT-JAR": re.compile(r"^\d{9}$"),            # Lithuanian JAR code
+    "FI-PRH": re.compile(r"^\d{7}-\d$"),         # Finnish Y-tunnus
+    "SE-BLV": re.compile(r"^\d{10}$"),           # Swedish organisationsnummer, hyphen removed
+    "DK-CVR": re.compile(r"^\d{8}$"),            # Danish CVR number
+    "NO-BRC": re.compile(r"^\d{9}$"),            # Norwegian organisasjonsnummer
+    "NL-KVK": re.compile(r"^\d{8}$"),            # Dutch KvK number
+    "PL-KRS": re.compile(r"^\d{10}$"),           # Polish KRS number
+    "GB-COH": re.compile(r"^[A-Z0-9]{8}$"),      # Companies House (its normaliser validates)
+    "IE-CRO": re.compile(r"^\d{1,7}$"),          # Irish CRO number
+    "CZ-ICO": re.compile(r"^\d{8}$"),            # Czech IČO
+    "SK-ICO": re.compile(r"^\d{8}$"),            # Slovak IČO
+    "AT-FB": re.compile(r"^\d{1,6}[a-z]$"),      # Austrian Firmenbuchnummer
+    "BE-BCE_KBO": re.compile(r"^\d{10}$"),       # Belgian enterprise number
+    "CH-FDJP": re.compile(r"^CHE-?\d{3}\.?\d{3}\.?\d{3}$"),  # Swiss UID
+    "FR-INSEE": re.compile(r"^\d{9}$"),          # SIREN
+    "MT-MBR": re.compile(r"^C ?\d{1,6}$"),       # Maltese company number
+    "HR-MBS": re.compile(r"^\d{9}$"),            # Croatian MBS
+    "RS-APR": re.compile(r"^\d{8}$"),            # Serbian matični broj
+    "MD-IDNO": re.compile(r"^\d{13}$"),          # Moldovan IDNO
+}
+
+
+def _ee_foreign_register_identifier(
+    foreign: str, alpha2: str | None,
+) -> tuple[list[dict[str, str]], dict[str, str] | None]:
+    """A foreign legal person's ``valis_kood`` as an identifier on its
+    country's company register, where OpenCheck has exactly one register
+    hop for that country (``register_hops``' ``REG-<country>`` alias — a
+    country with several registers, or none, gives nothing), the scheme
+    is in ``_EE_FOREIGN_CODE_SHAPES`` and the code, normalised by the hop,
+    has that register's shape. The hop is tried on the code as filed and,
+    failing that, with a leading country prefix removed (``LV40003…``,
+    ``FI1234567-8``). Nothing is asserted otherwise: the files state no
+    scheme, and a code that is a VAT or tax number must not be looked up
+    as a register number. The identifier is what lets a FullCheck register
+    hop follow the owner across the border."""
+    if not alpha2 or not foreign:
+        return [], None
+    from ...register_hops import hop_for
+
+    hop = hop_for(f"REG-{alpha2}")
+    if hop is None or hop.scheme not in _EE_FOREIGN_CODE_SHAPES:
+        return [], None
+    shape = _EE_FOREIGN_CODE_SHAPES[hop.scheme]
+    candidates = [foreign]
+    stripped = foreign[2:].lstrip(" -:") if foreign[:2].upper() == alpha2 else ""
+    if stripped:
+        candidates.append(stripped)
+    for candidate in candidates:
+        try:
+            number = hop.normalise(candidate)
+        except (ValueError, TypeError):
+            continue
+        if not number or not shape.match(str(number)):
+            continue
+        identifier = {
+            "id": str(number),
+            "scheme": hop.scheme,
+            "schemeName": _ee_scheme_name(hop),
+        }
+        return [identifier], identifier
+    return [], None
+
+
+def _ee_scheme_name(hop: Any) -> str:
+    """The register's own name for a hop's scheme — the adapter's display
+    name (``bods/mapper.py``'s RA table cannot be read from a mapper module)."""
+    from ...sources import REGISTRY
+
+    adapter = REGISTRY.get(hop.source_id)
+    return adapter.info.name if adapter is not None else str(hop.scheme)
 
 
 def _ee_party_key(row: dict[str, Any], kirje_id: str, prefix: str) -> str:
@@ -429,12 +523,53 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
         return
-
-    registry_code: str = bundle.get("registry_code") or ""
-    name: str = bundle.get("name") or ""
-    if not registry_code or not name:
+    if not (bundle.get("registry_code") or "") or not (bundle.get("name") or ""):
         return
 
+    # One set of seen parties across the subject and the chain above it: a
+    # person on two companies' lists (by hash) and a company that is both
+    # the subject's shareholder and a related company's record are one node.
+    seen_person_ids: set[str] = set()
+    seen_entity_ids: set[str] = set()
+
+    company_stmt, source_url = _ee_company_statement(bundle)
+    yield company_stmt
+    seen_entity_ids.add(company_stmt["statementId"])
+
+    # The related companies' own full statements come before the subject's
+    # party lists, so the thin entity statement a shareholder row builds for
+    # the same registry code is skipped in favour of the register's record.
+    related = bundle.get("related_companies") or {}
+    related_stmts: list[tuple[dict[str, Any], dict[str, Any], str]] = []
+    for sub in related.values():
+        if not sub or not (sub.get("registry_code") or "") or not (sub.get("name") or ""):
+            continue
+        sub_stmt, sub_url = _ee_company_statement(sub)
+        if sub_stmt["statementId"] in seen_entity_ids:
+            continue
+        yield sub_stmt
+        seen_entity_ids.add(sub_stmt["statementId"])
+        related_stmts.append((sub, sub_stmt, sub_url))
+
+    yield from _ee_company_parties(
+        bundle, company_stmt["statementId"], source_url, seen_person_ids, seen_entity_ids,
+        include_founders=True,
+    )
+    # A related company's parties: its shareholders, officers and declared
+    # owners, never its founders (history of an intermediary is not the
+    # subject's network).
+    for sub, sub_stmt, sub_url in related_stmts:
+        yield from _ee_company_parties(
+            sub, sub_stmt["statementId"], sub_url, seen_person_ids, seen_entity_ids,
+            include_founders=False,
+        )
+
+
+def _ee_company_statement(bundle: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    """The entity statement for one company bundle (the subject or a
+    related company), with its register status applied, and its source URL."""
+    registry_code: str = bundle.get("registry_code") or ""
+    name: str = bundle.get("name") or ""
     source_url = bundle.get("link") or (
         f"https://ariregister.rik.ee/eng/company/{registry_code}"
     )
@@ -503,12 +638,22 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         ),
         raw=bundle.get("status_text") or bundle.get("status") or None,
     )
-    yield company_stmt
-    company_stmt_id: str = company_stmt["statementId"]
+    return company_stmt, source_url
 
-    # ── 2. Shareholders ──────────────────────────────────────────────────
-    seen_person_ids: set[str] = set()
-    seen_entity_ids: set[str] = set()
+
+def _ee_company_parties(
+    bundle: dict[str, Any],
+    company_stmt_id: str,
+    source_url: str,
+    seen_person_ids: set[str],
+    seen_entity_ids: set[str],
+    *,
+    include_founders: bool,
+) -> Iterable[dict[str, Any]]:
+    """Sections 2–5 for one company: its shareholders (OÜ list and the AS
+    rows the register records), the persons on its registry card, its
+    declared beneficial owners and — for the subject only — its founders."""
+
     # A person is emitted once, on the first list naming them; the residence
     # country only the beneficial-owner list carries is gathered first so a
     # shareholder-director-owner's one statement has it.
@@ -535,7 +680,7 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         if (row.get("isiku_roll") or "").strip() in _EE_OFF_CARD_SHAREHOLDER_ROLES
     ]
     founders: dict[str, dict[str, Any]] = {}
-    for row in off_card:
+    for row in off_card if include_founders else []:
         if (row.get("isiku_roll") or "").strip() in _EE_OFF_CARD_FOUNDER_LABELS:
             founders.setdefault(_ee_party_key(row, str(row.get("kirje_id") or ""), "fnd"), row)
     shareholder_rows = [("sh", sh) for sh in bundle.get("shareholders") or []]
@@ -586,7 +731,7 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             )
             if note:
                 corp_stmt.setdefault("annotations", []).append(
-                    commenting(pointer("recordDetails"), note + ", as filed in the e-Business Register; no identifier scheme is stated.")
+                    commenting(pointer("recordDetails"), note)
                 )
             if corp_stmt["statementId"] not in seen_entity_ids:
                 yield corp_stmt
@@ -684,7 +829,7 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             )
             if note:
                 corp_stmt.setdefault("annotations", []).append(
-                    commenting(pointer("recordDetails"), note + ", as filed in the e-Business Register; no identifier scheme is stated.")
+                    commenting(pointer("recordDetails"), note)
                 )
             if corp_stmt["statementId"] not in seen_entity_ids:
                 yield corp_stmt
@@ -832,8 +977,8 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 interest["endDate"] = end_date
             record_status = "new"
         elif role_code in _EE_OFF_CARD_FOUNDER_LABELS:
-            if _ee_party_key(row, kirje_id, "fnd") in current_keys:
-                continue  # said on the founder's current shareholding
+            if not include_founders or _ee_party_key(row, kirje_id, "fnd") in current_keys:
+                continue  # not the subject, or said on the founder's current shareholding
             interest = _ee_shareholding_interest(row)
             interest["details"] = "; ".join(p for p in (
                 _ee_founder_note(row),
@@ -889,7 +1034,7 @@ def _ee_party_statements(
         )
         if note:
             corp_stmt.setdefault("annotations", []).append(
-                commenting(pointer("recordDetails"), note + ", as filed in the e-Business Register; no identifier scheme is stated.")
+                commenting(pointer("recordDetails"), note)
             )
         if corp_stmt["statementId"] in seen_entity_ids:
             return [], corp_stmt["statementId"], "entity"

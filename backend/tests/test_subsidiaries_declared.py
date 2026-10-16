@@ -14,6 +14,7 @@ import pytest
 from fastapi import HTTPException
 
 import opencheck.sources.climatetrace as ct
+from opencheck import entity_pages
 from opencheck.config import get_settings
 from opencheck.meip import _json_tables, meip_declared, reload_store
 from opencheck.routers.subsidiaries import (
@@ -42,6 +43,19 @@ def _meip_fallback(tmp_path, monkeypatch):
     yield
     reload_store()
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _gleif_mirror_without_estonia(monkeypatch):
+    """The Estonian block (the ownership-chains phase) reads the subject's
+    registry code off the GLEIF mirror; a mirror that knows no LEI makes
+    every subject here "not an Estonian register company"."""
+
+    class _Store:
+        def get(self, lei):
+            return None
+
+    monkeypatch.setattr(entity_pages, "get_store", lambda: _Store())
 
 
 @pytest.fixture
@@ -177,7 +191,8 @@ def test_assemble_declared_keeps_sources_apart(gem_stub) -> None:
     assert res["lei"] == SHELL
     assert [s["id"] for s in res["sources"]] == list(DECLARED_SOURCES)
     assert res["covered"] == 3
-    meip, eiti, gem = res["sources"]
+    meip, eiti, gem, ee = res["sources"]
+    assert ee["available"] and not ee["covered"], "a non-Estonian subject is outside the register"
     assert meip["covered"] and meip["available"] and meip["total"] > meip["listed"]
     assert meip["with_lei"] == meip["listed"], "every fallback MEIP row carries an LEI"
     assert meip["context"]["complete"] is False
