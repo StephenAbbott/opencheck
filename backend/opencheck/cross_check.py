@@ -681,6 +681,19 @@ def _signals_from_os(
         return []
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return []
+    # Distinctive-token gate — the ICIJ screen's Phase 120 rule, on this
+    # surface too. A similarity score cannot tell a true organisation match
+    # from two names that share only legal-form and filler text: Rosneft's
+    # «Общество с ограниченной ответственностью «…»» subsidiaries cleared
+    # 0.88 against an unrelated OpenSanctions record on the boilerplate
+    # alone. The residues left once legal forms and filler are stripped must
+    # agree. Persons with no legal form in either name bypass — their names
+    # are all distinctive tokens and the corroboration ladder covers them.
+    # The threshold does not move: this is a precision filter at 0.88.
+    if names.screens_as_organisation(
+        target["kind"] == _KIND_PERSON, target["name"], hit.name
+    ) and not names.distinctive_token_agreement(target["name"], hit.name):
+        return []
     topics = _extract_topics(hit.raw or {})
     sanctions = classify_sanction_topics(topics)
     exports = classify_export_topics(topics)

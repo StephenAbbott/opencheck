@@ -863,10 +863,8 @@ def _passes_name_gates(
     if not matched_name:
         return False
 
-    entityish = (
-        target["kind"] != _KIND_PERSON
-        or names.has_org_form_tokens(target["name"])
-        or names.has_org_form_tokens(matched_name)
+    entityish = names.screens_as_organisation(
+        target["kind"] == _KIND_PERSON, target["name"], matched_name
     )
 
     # Secondary name-similarity sanity check. A person's honorifics are

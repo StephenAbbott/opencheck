@@ -697,3 +697,31 @@ def test_map_wikidata_multilingual_alternate_names():
     alts = ent["recordDetails"]["alternateNames"]
     assert "Γκαζπρόμ" in alts and "Газпром" in alts
     assert "Gazprom" not in alts  # the display label is not its own alternate
+
+
+def test_screens_as_organisation_is_the_one_classifier_for_all_three_screens():
+    """ICIJ, the OpenSanctions cross-check and OpenAleph all route a pair to
+    the organisation gate through this predicate, so they cannot diverge."""
+    import ast
+    from pathlib import Path
+
+    assert names.screens_as_organisation(False, "Gazprom", "Gazprom PJSC")
+    assert not names.screens_as_organisation(True, "Igor Sechin", "Igor SECHIN")
+    # A corporate officer filed as a person statement is an organisation.
+    assert names.screens_as_organisation(
+        True, "CSC CORPORATE SERVICES (UK) LIMITED", "Jane Smith"
+    )
+    assert names.screens_as_organisation(
+        True, "Jane Smith", "HMSA CORPORATE SERVICES (UK) LIMITED"
+    )
+
+    pkg = Path(names.__file__).resolve().parent
+    for module in ("cross_check.py", "openaleph_check.py", "icij_check.py"):
+        tree = ast.parse((pkg / module).read_text())
+        calls = {
+            node.func.attr
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+        }
+        assert "screens_as_organisation" in calls, module
+        assert "distinctive_token_agreement" in calls, module

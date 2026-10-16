@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 352** — The MCP ownership map states GLEIF reporting exceptions in words and leaves company secretaries and other officers off the picture.
+**Latest: Phase 355** — Organisation-name matches from OpenSanctions and OpenAleph must now agree on the words that name the company, as ICIJ matches already did, so two names sharing only legal-form text no longer make a related-party finding.
 
 → [Full development history](docs/status.md)
 

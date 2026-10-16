@@ -3626,7 +3626,10 @@ decisions on the Phase 340 ticket. Things that will be re-derived otherwise:
   sentence — never another publisher's unknown party); the map lists them
   under `reporting_exceptions`, direct and ultimate folded into one entry,
   and says so in `summary`. `NON_PUBLIC` and its deprecated family (a parent
-  that exists and is withheld) are still drawn (Stephen). The BODS output is
+  that exists and is withheld) are still drawn (Stephen) — once per company
+  and reason, the direct and ultimate bridges folded into one node, listed
+  under `undisclosed_parents` and said in `summary` (288 WHITESANDS UK
+  LIMITED drew two "Undisclosed parent" nodes until this was fixed). The BODS output is
   unchanged — the bridges stay, as Phase 114 wants. (2) **An officer
   appointment is a role wherever it is read.** A secretary/agent/
   representative has no v0.4 role code, so the mappers type it
