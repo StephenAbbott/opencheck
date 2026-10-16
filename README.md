@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 349** — The AI summary now caps its own length and claim count, so heavily sanctioned groups such as Rosneft no longer fail at the model's token ceiling.
+**Latest: Phase 350** — Production now serves the GLEIF anchor from the Golden Copy mirror first, spending one live call instead of six, and a mirror-served group keeps all its direct children up to the live path's cap.
 
 → [Full development history](docs/status.md)
 
