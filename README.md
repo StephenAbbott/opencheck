@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 360** — Estonian lookups now draw former shareholders and former beneficial owners from the e-Business Register's own history, each a closed record dated by the register.
+**Latest: Phase 361** — An Estonian officer, shareholder or beneficial owner now shows the other companies the e-Business Register names them on, keyed on the register's own person key.
 
 → [Full development history](docs/status.md)
 
