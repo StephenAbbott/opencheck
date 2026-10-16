@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 347** — Phase numbers and the status row are now written when a pull request merges, so branches in flight no longer collide on the number or conflict on the stamped files.
+**Latest: Phase 348** — A refused GLEIF anchor keeps its cross-reference identifiers from the cache or says it lost them, the anchor's other calls stop at the first refusal, and exports reuse the lookup the reader just ran.
 
 → [Full development history](docs/status.md)
 
