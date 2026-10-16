@@ -62,6 +62,7 @@ from ..subject_identity import subject_identity
 from ..verdict import build_verdict
 from ..reconcile import possibly_same_entities, reconcile
 from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
+from ..risk import merge_listed_jurisdiction as _risk_merge_listed
 from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
 from ..risk import merge_subsidiary_listed_jurisdiction as _risk_merge_subsidiary_listed
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
@@ -1283,6 +1284,12 @@ _COLLAPSE_RESOLVERS = {
     # Phase 273: one "subsidiaries in listed jurisdictions" note per lookup,
     # pooled per node on the same terms as NON_EU_JURISDICTION.
     "SUBSIDIARY_LISTED_JURISDICTION": _risk_merge_subsidiary_listed,
+    # The four list signals, one per code per lookup, pooled per
+    # node on the same terms — Rosneft carried each EU list five times.
+    "FATF_BLACK_LIST": _risk_merge_listed,
+    "FATF_GREY_LIST": _risk_merge_listed,
+    "EU_HIGH_RISK_THIRD_COUNTRY": _risk_merge_listed,
+    "EU_TAX_NON_COOPERATIVE": _risk_merge_listed,
 }
 
 
@@ -1317,9 +1324,17 @@ _COLLAPSE_RESOLVERS = {
 # ``merge_non_eu_jurisdiction`` pools every source's
 # ``evidence.jurisdictions`` (per node), so a US company reads the note once
 # rather than once per source, and every badge stays.
+#
+# The four list signals (FATF black / grey, EU high-risk, EU tax) join on
+# the same terms via ``merge_listed_jurisdiction``: each is one claim about
+# where the chain sits, pooled per node, never one copy per source.
 _STRUCTURAL_SIGNAL_CODES = {
     "COMPLEX_OWNERSHIP_LAYERS",
     "NON_EU_JURISDICTION",
+    "FATF_BLACK_LIST",
+    "FATF_GREY_LIST",
+    "EU_HIGH_RISK_THIRD_COUNTRY",
+    "EU_TAX_NON_COOPERATIVE",
     "SUBSIDIARY_LISTED_JURISDICTION",
     "STATE_CONTROLLED",
     "COMPLEX_CORPORATE_STRUCTURE",
