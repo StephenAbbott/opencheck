@@ -89,6 +89,42 @@ def test_an_undisclosed_parent_is_still_drawn():
     assert svg and "Undisclosed parent" in svg
 
 
+def test_the_direct_and_ultimate_undisclosed_parent_is_one_node_and_one_edge():
+    # 288 WHITESANDS UK LIMITED (2138008HG9U53HXBAJ27), production 16 Oct 2026:
+    # GLEIF files NON_PUBLIC at both levels and the map drew two
+    # "Undisclosed parent" nodes beside its one real owner.
+    bods = [ent("T", "288 WHITESANDS UK LIMITED", "gleif", lei=LEI), *_exceptions("NON_PUBLIC"),
+            ent("P", "Stephen Allen", "companies_house"),
+            rel("r", "T", "P", X(40), "companies_house")]
+    a, svg = O.ownership_map(
+        lei=LEI, legal_name="288 WHITESANDS UK LIMITED", net=net_for(bods), as_of=AS_OF
+    )
+    owners = [r["owner"] for r in a["edges"]]
+    assert sorted(owners) == ["Stephen Allen", "Undisclosed parent (GLEIF reporting exception)"]
+    assert a["current_edges"] == 2
+    assert svg and svg.count("<title>Undisclosed parent") == 1
+    assert a["undisclosed_parents"] == [{
+        "company": "288 WHITESANDS UK LIMITED",
+        "parent_levels": ["direct", "ultimate"],
+        "reason": "NON_PUBLIC",
+        "meaning": a["undisclosed_parents"][0]["meaning"],
+    }]
+    assert a["summary"] == (
+        "2 current ownership or control edges above 288 WHITESANDS UK LIMITED. "
+        "GLEIF records the direct and ultimate parent of 288 WHITESANDS UK LIMITED "
+        "as withheld (NON_PUBLIC): a parent exists but is not disclosed. "
+        "It is drawn once, as an undisclosed parent."
+    )
+
+
+def test_a_withheld_parent_at_one_level_says_that_level_only():
+    bods = [ent("T", "Target", "gleif", lei=LEI),
+            *_gleif_exception_statements(LEI, "T", "direct", {"reason": "NON_PUBLIC"})]
+    a, _ = O.ownership_map(lei=LEI, legal_name="Target", net=net_for(bods), as_of=AS_OF)
+    assert a["undisclosed_parents"][0]["parent_levels"] == ["direct"]
+    assert "the direct parent of Target as withheld (NON_PUBLIC)" in a["summary"]
+
+
 def test_a_real_owner_is_drawn_beside_the_exception_sentence():
     bods = [ent("T", "Target", "gleif", lei=LEI), *_exceptions(),
             ent("H", "Holdco", "companies_house"), rel("r", "T", "H", X(60), "companies_house")]
