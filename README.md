@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 358** — The demo graph's Neo4j import scripts now load share percentages as numbers, flags as booleans and dates as dates, with a share-band weighting convention in the demo queries.
+**Latest: Phase 359** — An Estonian lookup now follows corporate owners up the chain inside the e-Business Register index, lists what the company holds, and turns a foreign owner's register code into a cross-border register hop.
 
 → [Full development history](docs/status.md)
 
