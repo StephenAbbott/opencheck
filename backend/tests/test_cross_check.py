@@ -935,3 +935,99 @@ async def test_without_screen_subject_the_register_subject_is_simply_excluded(mo
     )
     assert all(s.evidence.get("subject_statement_id") != "ch-metastar" for s in signals)
     assert "SANCTIONED" not in {s.code for s in signals}
+
+
+# ---------------------------------------------------------------------
+# Distinctive-token gate on the OpenSanctions path (the Phase 120 rule,
+# extended from ICIJ to cross_check)
+# ---------------------------------------------------------------------
+
+
+def _os_linked_entity_hit(name: str, hit_id: str = "OS-ent") -> SourceHit:
+    return SourceHit(
+        source_id="opensanctions",
+        hit_id=hit_id,
+        kind=SearchKind.ENTITY,
+        name=name,
+        summary="",
+        identifiers={},
+        raw={"topics": ["sanction.linked"]},
+        is_stub=False,
+    )
+
+
+async def test_boilerplate_legal_form_collision_is_not_a_signal(monkeypatch) -> None:
+    """The Rosneft shape: two Russian LLCs whose names are the same
+    «Общество с ограниченной ответственностью» text around a different
+    company name. Similarity clears 0.88 on the legal form alone; the
+    distinctive tokens ("rn kapital" / "rn bunker") disagree, so no
+    RELATED_SANCTIONS_LINKED."""
+    from opencheck import names
+
+    target = 'Общество с ограниченной ответственностью "РН-Капитал"'
+    matched = 'Общество с ограниченной ответственностью "РН-Бункер"'
+    # Self-check: the score gate alone would let this through.
+    assert names.name_similarity(target, matched) >= 0.88
+    _stub(monkeypatch, "opensanctions", [_os_linked_entity_hit(matched)])
+    assert await assess_cross_source_names([_entity("e1", target)]) == []
+
+
+async def test_same_company_with_and_without_legal_form_still_matches(
+    monkeypatch,
+) -> None:
+    """The gate is a precision filter, not a recall cut: an entity whose
+    names differ only in legal form or case still produces its signal."""
+    _stub(monkeypatch, "opensanctions", [_os_linked_entity_hit("GAZPROM PJSC")])
+    signals = await assess_cross_source_names([_entity("e1", "Gazprom PJSC")])
+    assert [s.code for s in signals] == [cross_check.RELATED_SANCTIONS_LINKED]
+
+    _stub(monkeypatch, "opensanctions", [_os_linked_entity_hit("BP RUSSIAN INVESTMENTS LIMITED")])
+    signals = await assess_cross_source_names(
+        [_entity("e2", "BP Russian Investments Ltd")]
+    )
+    assert [s.code for s in signals] == [cross_check.RELATED_SANCTIONS_LINKED]
+
+
+async def test_person_names_bypass_the_token_gate(monkeypatch) -> None:
+    """A personal name carries no legal form and is all distinctive
+    tokens; it keeps the person path (score + corroboration ladder) and is
+    never routed through the organisation gate."""
+    hit = SourceHit(
+        source_id="opensanctions",
+        hit_id="OS-sechin",
+        kind=SearchKind.PERSON,
+        name="Igor Ivanovich Sechin",
+        summary="",
+        identifiers={},
+        raw={"topics": ["sanction"]},
+        is_stub=False,
+    )
+    _stub(monkeypatch, "opensanctions", [hit])
+    _stub(monkeypatch, "everypolitician", [])
+    signals = await assess_cross_source_names([_person("p1", "Igor Ivanovich Sechin")])
+    assert RELATED_SANCTIONED in {s.code for s in signals}
+
+
+async def test_corporate_officer_filed_as_a_person_is_gated_as_an_organisation(
+    monkeypatch,
+) -> None:
+    """A person statement holding a company name is an organisation for
+    matching purposes — the same classifier the ICIJ screen uses."""
+    from opencheck import names
+
+    target = "CSC CORPORATE SERVICES (UK) LIMITED"
+    matched = "HMSA CORPORATE SERVICES (UK) LIMITED"
+    assert names.name_similarity(target, matched) >= 0.88
+    hit = SourceHit(
+        source_id="opensanctions",
+        hit_id="OS-hmsa",
+        kind=SearchKind.PERSON,
+        name=matched,
+        summary="",
+        identifiers={},
+        raw={"topics": ["sanction"]},
+        is_stub=False,
+    )
+    _stub(monkeypatch, "opensanctions", [hit])
+    _stub(monkeypatch, "everypolitician", [])
+    assert await assess_cross_source_names([_person("p1", target)]) == []

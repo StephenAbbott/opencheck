@@ -32,8 +32,9 @@ Subcommands (run from ``backend/``, live network required for ``pull``):
 * ``tokens`` prints the token-frequency table over chain names + result
   names — the evidence base for ``names._GENERIC_ORG_TOKENS``.
 * ``surfaces`` replays the gate over the RELATED_* signal evidence pairs
-  (cross_check / OpenAleph) already present in the pulled lookups — sizing
-  data for extending the gate to those surfaces; no behaviour change here.
+  (cross_check / OpenAleph) already present in the pulled lookups. Both
+  surfaces apply the gate since the cross-check follow-up, so on a fresh pull
+  this should report zero; a non-zero count means production disagrees.
 """
 
 from __future__ import annotations
@@ -295,12 +296,16 @@ def surfaces(in_dir: Path) -> None:
             if not code.startswith("RELATED_"):
                 continue
             search, matched = ev.get("search_name"), ev.get("matched_name")
-            if not search or not matched or ev.get("kind") == "person":
+            if not search or not matched:
+                continue
+            if not names.screens_as_organisation(
+                ev.get("kind") == "person", search, matched
+            ):
                 continue
             total += 1
             if not names.distinctive_token_agreement(search, matched):
                 would_drop.append((data["subject"], sig["source_id"], code, search, matched))
-    print(f"{total} entity RELATED_* signals in the pulled lookups")
+    print(f"{total} organisation-name RELATED_* signals in the pulled lookups")
     print(f"{len(would_drop)} would fail the distinctive-token gate:")
     for subject, source, code, search, matched in would_drop:
         print(f"  {subject} | {source} | {code}: {search[:38]!r} vs {matched[:38]!r}")

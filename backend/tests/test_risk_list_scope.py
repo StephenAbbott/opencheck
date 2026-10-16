@@ -314,13 +314,16 @@ def _snap(signals, *, rules, verdict="v"):
 
 
 def test_watchlist_rules_codes_exist_in_the_risk_engine() -> None:
-    from opencheck import risk
+    from opencheck import cross_check, risk
     from opencheck.watchlist import SIGNAL_RULES, SIGNAL_RULES_CHANGED
 
     assert SIGNAL_RULES == max(SIGNAL_RULES_CHANGED)
+    # The RELATED_* codes are defined by the related-party screen, the rest
+    # by the risk engine; every code named must exist in one of them.
     for codes in SIGNAL_RULES_CHANGED.values():
         for code in codes:
-            assert getattr(risk, code) == code
+            owner = cross_check if code.startswith("RELATED_") else risk
+            assert getattr(owner, code) == code
 
 
 def test_pre_273_baseline_does_not_report_the_moved_chips() -> None:
