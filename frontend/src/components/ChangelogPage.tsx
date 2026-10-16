@@ -48,8 +48,12 @@ export function ChangelogPage() {
                   {e.title}
                 </h3>
               </div>
+              {/* Like the title above: a status row can carry a long unbreakable
+                  token (a filename, an identifier), and at 320px the summary
+                  otherwise scrolls the page sideways — row 356's
+                  `ettevotja_rekvisiidid__kandevalised_isikud.json.zip` did. */}
               {e.summary && (
-                <p className="text-oo-small text-oo-muted mt-1.5 leading-[1.65]">
+                <p className="text-oo-small text-oo-muted mt-1.5 leading-[1.65] [overflow-wrap:anywhere]">
                   {e.summary}
                 </p>
               )}

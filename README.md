@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 356** — The Estonian e-Business Register index now carries supervisory board members, AS shareholders and founders from RIK's fifth open-data file.
+**Latest: Phase 357** — The changelog page no longer scrolls sideways on a phone when a status row carries a long filename or identifier.
 
 → [Full development history](docs/status.md)
 
