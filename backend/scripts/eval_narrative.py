@@ -21,6 +21,8 @@ The rubric is deliberately checkable without a human:
   * surfaces_risks   — every packet risk code is mentioned
   * surfaces_gaps    — at least one packet gap is reflected when gaps exist
   * within_length    — summary is a single tight paragraph (<= 7 sentences)
+  * within_caps      — summary <= SUMMARY_MAX_CHARS and claims <= MAX_CLAIMS
+                       (prompt v10; the output tokens are printed beside it)
 Human review still matters for tone; the rubric just catches regressions fast.
 """
 
@@ -38,8 +40,10 @@ BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 
 from opencheck.narrative import EvidencePacket  # noqa: E402
+from opencheck.narrative.prompt import MAX_CLAIMS, SUMMARY_MAX_CHARS  # noqa: E402
 from opencheck.narrative.summarise import (  # noqa: E402
     DEFAULT_MODEL,
+    MAX_TOKENS,
     NarrativeUnavailable,
     summarise,
 )
@@ -78,6 +82,10 @@ def score(packet: EvidencePacket, result_summary: str, validation) -> dict[str, 
         "surfaces_gaps": packet.gap_ids().issubset(cited),
         "no_raw_codes": not any(r.code in result_summary for r in packet.risks),
         "within_length": 1 <= len(_sentences(result_summary)) <= 7,
+        "within_caps": (
+            len(result_summary) <= SUMMARY_MAX_CHARS
+            and len(validation.valid_claims) + len(validation.dropped_claims) <= MAX_CLAIMS
+        ),
     }
 
 
@@ -115,7 +123,7 @@ def main() -> int:
         return 0
 
     rubric_keys = ["grounded", "names_subject", "flags_namematch", "surfaces_risks",
-                   "surfaces_gaps", "no_raw_codes", "within_length"]
+                   "surfaces_gaps", "no_raw_codes", "within_length", "within_caps"]
     totals = {k: 0 for k in rubric_keys}
 
     for name, packet in packets:
@@ -129,6 +137,9 @@ def main() -> int:
             totals[k] += int(v)
         marks = " ".join(f"{k}={'Y' if card[k] else 'N'}" for k in rubric_keys)
         print(f"• {name}\n    {marks}")
+        if result.output_tokens is not None:
+            print(f"    output {result.output_tokens} of {MAX_TOKENS} tokens, "
+                  f"{len(result.summary)} chars, {len(result.claims)} claims")
         if result.validation.dropped_claims:
             print(f"    DROPPED {len(result.validation.dropped_claims)} claim(s): "
                   f"{result.validation.issues}")
