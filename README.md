@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 355** — Organisation-name matches from OpenSanctions and OpenAleph must now agree on the words that name the company, as ICIJ matches already did, so two names sharing only legal-form text no longer make a related-party finding.
+**Latest: Phase 356** — The Estonian e-Business Register index now carries supervisory board members, AS shareholders and founders from RIK's fifth open-data file.
 
 → [Full development history](docs/status.md)
 
