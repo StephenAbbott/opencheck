@@ -24,6 +24,7 @@ import {
   HISTORY_SOURCES,
   historyDegradedNotice,
   historySentence,
+  registerReadNotes,
   historySourceLabel,
   filingsTruncatedNotice,
   noiseEventsOf,
@@ -572,5 +573,18 @@ describe("boardLinkSummary", () => {
     // An empty `known` is "not read yet", not "draws nobody": claiming the
     // rows cannot link would be a statement about the graph we cannot make.
     expect(boardLinkSummary([BOARD_ROW], new Set())).toBeNull();
+  });
+});
+
+describe("registerReadNotes", () => {
+  it("says what the Estonian change log covers only when Estonia contributed", () => {
+    expect(registerReadNotes(RESP)).toEqual([]);
+    const ee = registerReadNotes({ ...RESP, sources: ["gleif", "ariregister"] });
+    expect(ee).toHaveLength(1);
+    expect(ee[0]).toContain("beneficial-owner history");
+    expect(ee[0]).toContain("drawn in the ownership graph");
+    // The off-card shareholder list keeps dated history well before the
+    // card's own shareholder role (1 Sept 2023): no such boundary is claimed.
+    expect(ee[0]).not.toMatch(/2023/);
   });
 });

@@ -1741,10 +1741,42 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
         f"{related} more {'company' if related == 1 else 'companies'} followed up the chain" if related else None,
         f"{unfollowed} {'owner' if unfollowed == 1 else 'owners'} not followed" if unfollowed else None,
     ]
+    # The register's history (the full-history phase): how many ended
+    # ownership records it gave the graph — one per party, however many
+    # register rows — or that it was not read, so a current-only graph
+    # never reads as a company whose owners never changed. An offline
+    # instance reads no live source and says nothing here.
+    history = bundle.get("history") or {}
+    history_clause: str | None = None
+    if history.get("read"):
+        records = _ariregister_history_records(history)
+        history_clause = (
+            f"{records} ended ownership {'record' if records == 1 else 'records'}"
+            if records else "no ended ownership on record"
+        )
+    elif history.get("reason") in ("no_credentials", "upstream_error"):
+        history_clause = "ownership history not read"
     # Counts before the legal form: the cap drops trailing clauses, and what
     # the register lists matters more than what kind of company it is. The
-    # tier, when it is worth saying, is worth more than the form too.
-    return clauses_to_sentence([lead, counts, *chain_clauses, tier, form], sep="; ")
+    # history comes next, then the chain; the tier, when it is worth
+    # saying, is worth more than the form too.
+    return clauses_to_sentence([lead, counts, history_clause, *chain_clauses, tier, form], sep="; ")
+
+
+def _ariregister_history_records(history: dict[str, Any]) -> int:
+    """How many ended-ownership records the mapper draws from the history:
+    one per party per list (``_ee_history_statements``), keyed the way the
+    adapter identified it."""
+    def key(row: dict[str, Any]) -> str:
+        return str(
+            row.get("isikukood_hash") or row.get("history_key")
+            or row.get("isikukood_registrikood") or row.get("valis_kood")
+            or f"{row.get('eesnimi') or ''} {row.get('nimi_arinimi') or row.get('nimi') or ''}"
+        )
+    return (
+        len({key(r) for r in history.get("former_shareholders") or []})
+        + len({key(r) for r in history.get("former_beneficial_owners") or []})
+    )
 
 
 def finding_asp_moldova(bundle: dict[str, Any]) -> str | None:

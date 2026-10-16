@@ -114,6 +114,58 @@ class AriregisterOffCardRow(_NoPersonalCode):
     lopp_kpv: str | None = None
 
 
+class AriregisterHistoryShareholderRow(_NoPersonalCode):
+    """An ended shareholding from the registry-card history (SOAP), with
+    the person's code replaced by the hash of their current row or a
+    history key. A natural person's foreign code is dropped too."""
+
+    kirje_id: str | int | None = None
+    isiku_tyyp: str | None = None
+    isiku_roll: str | None = None
+    eesnimi: str | None = None
+    nimi_arinimi: str | None = None
+    isikukood_hash: str | None = None
+    isikukood_registrikood: str | None = None
+    history_key: str | None = None
+    history_join: str | None = None
+    valis_kood: str | None = None
+    osaluse_protsent: str | None = None
+    algus_kpv: str | None = None
+    lopp_kpv: str | None = None
+
+    @field_validator("valis_kood", mode="before", check_fields=False)
+    @classmethod
+    def _no_natural_person_foreign_code(cls, value: object, info: object) -> object:
+        data = getattr(info, "data", {}) or {}
+        if value and (data.get("isiku_tyyp") or "F") != "J":
+            raise ValueError("a natural person's foreign identification code must not be carried")
+        return value
+
+
+class AriregisterHistoryOwnerRow(_NoPersonalCode):
+    """An ended beneficial-owner entry from the BO history (SOAP)."""
+
+    kirje_id: str | int | None = None
+    eesnimi: str | None = None
+    nimi: str | None = None
+    isikukood_hash: str | None = None
+    history_key: str | None = None
+    history_join: str | None = None
+    kontrolli_teostamise_viis: str | None = None
+    algus_kpv: str | None = None
+    lopp_kpv: str | None = None
+
+
+class AriregisterHistory(_Base):
+    """What ``ariregister_history.read_history`` returns."""
+
+    read: bool = False
+    reason: str | None = None
+    former_shareholders: list[AriregisterHistoryShareholderRow] = []
+    former_beneficial_owners: list[AriregisterHistoryOwnerRow] = []
+    card_entries: list[dict] = []
+
+
 class AriregisterBundle(_Base):
     """Top-level shape returned by ``AriregisterAdapter.fetch`` for a record."""
 
@@ -142,3 +194,6 @@ class AriregisterBundle(_Base):
     #: the walk reached and did not follow.
     related_companies: dict[str, "AriregisterBundle"] = {}
     chain: dict | None = None
+    #: The subject's ended holdings and former beneficial owners, from the
+    #: register's history (index tier only; ``read`` False says why not).
+    history: AriregisterHistory | None = None

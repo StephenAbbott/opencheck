@@ -182,6 +182,25 @@ export const HISTORY_CAVEAT =
   "Most registers publish no history at all, and those that do keep changes of name, address and status far better than changes of ownership. What is missing here is usually a register that keeps no record, not a change that did not happen.";
 
 /**
+ * What each register's change log covers, said once under the register list
+ * when that register contributed — so a reader knows what a short Estonian
+ * timeline was read from. The e-Äriregister history (SOAP, credentialed) is
+ * the registry card's every dated row and the beneficial-owner history; the
+ * off-card shareholder list carries dated history long before the card's own
+ * shareholder role began on 1 Sept 2023 (Bolt Technology OÜ's ended
+ * holdings start in 2013), so no 2023 boundary is claimed.
+ */
+export const REGISTER_READ_NOTES: Record<string, string> = {
+  ariregister:
+    "From the e-Äriregister: the registry card's dated history — names, addresses, legal forms, statuses and every person on and off the card, shareholders included — and the beneficial-owner history. Former shareholders and former beneficial owners are drawn in the ownership graph too.",
+};
+
+/** The notes for the registers that contributed to this timeline. */
+export function registerReadNotes(data: HistoryResponse): string[] {
+  return data.sources.map((s) => REGISTER_READ_NOTES[s]).filter((n): n is string => Boolean(n));
+}
+
+/**
  * The label under a date, saying what that date actually means.
  *
  * "as recorded by GLEIF" names GLEIF rather than "the register" because GLEIF
