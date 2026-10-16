@@ -7,11 +7,15 @@ as daily open-data files under CC BY 4.0:
 
     https://avaandmed.ariregister.rik.ee/en/downloading-open-data
 
-Four of them make the index: the company "simple data" CSV and three JSON
+Five of them make the index: the company "simple data" CSV and four JSON
 files that put the same people on each company the printable page shows —
 the persons entered on the registry card (board members, procurists,
-liquidators, partners…), the register of shareholders, and the declared
-beneficial owners. The files are regenerated every morning (~09:30 GMT) and
+liquidators, partners…), the register of shareholders, the declared
+beneficial owners — and, since the fifth file was added, the persons the
+register knows about who are *not* on the card: supervisory board members,
+the shareholders of a public limited company (AS) the register itself
+records, founders with their founding contribution, auditors. The files
+are regenerated every morning (~09:30 GMT) and
 carry no personal identification codes: since November 2024 a natural person
 is identified across the three files only by ``isikukood_hash``, a
 pseudonymous UUID.
@@ -35,11 +39,19 @@ What it reads, and what it refuses
 * ``ettevotja_rekvisiidid__osanikud.json.zip`` — shareholders (≈392,000).
 * ``ettevotja_rekvisiidid__kasusaajad.json.zip`` — beneficial owners
   (≈410,000).
+* ``ettevotja_rekvisiidid__kandevalised_isikud.json.zip`` — the persons
+  outside the registry card (≈434,000 rows on ≈296,000 entities; 16 Oct
+  2026: founders A/B 410,221, supervisory board N/E 12,943, AS
+  shareholders S 3,323, auditors D/J/M 11,283, bankruptcy committee P 374,
+  authorised persons V 282, audit committee R 228, congregations L 457).
+  The rows have the shareholder file's shape (share size and percentage,
+  ownership kind, entry source) plus the role.
 
 Every JSON file is a pretty-printed array of one object per entity, so it
 is streamed with ``json.JSONDecoder.raw_decode`` straight out of the zip —
 never loaded whole (the officers file would need several gigabytes). Each
-list becomes a table (``officer``, ``shareholder``, ``beneficial_owner``)
+list becomes a table (``officer``, ``shareholder``, ``beneficial_owner``,
+``off_card_person``)
 keyed on the registry code, holding only the columns the adapter and mapper
 read, with the Estonian wording of every code stored once in ``vocab``;
 street addresses and e-mail addresses of people are **not** carried.
@@ -53,9 +65,9 @@ The build refuses, rather than writes a plausible-looking index, when:
   lines − 1 (a stray quote merging rows — the ONRC lesson, Phase 211);
 * a file is implausibly short (truncated transfer, or the files swapped);
 * an entity code is not eight digits, or appears twice;
-* a JSON file names an entity the CSV does not hold — the four files are
+* a JSON file names an entity the CSV does not hold — the five files are
   one snapshot, and on 13 Oct 2026 each held exactly the CSV's 379,664
-  entities;
+  entities (16 Oct 2026: 379,829, the off-card file included);
 * the files' cut dates (``Last-Modified``) fall on different days.
 
 Deleted companies are absent from every file: a code the index lacks means
@@ -90,7 +102,7 @@ log = logging.getLogger("build_ariregister_index")
 
 #: Bump when the table layout changes; the adapter refuses any other value
 #: (``ariregister.INDEX_SCHEMA_VERSION``, pinned equal by a test).
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"  # 2: the off_card_person table (kandevalised_isikud)
 
 BASE_URL = "https://avaandmed.ariregister.rik.ee/sites/default/files/avaandmed/"
 PAGE_URL = "https://avaandmed.ariregister.rik.ee/en/downloading-open-data"
@@ -100,14 +112,17 @@ CSV_FILE = "ettevotja_rekvisiidid__lihtandmed.csv.zip"
 OFFICERS_FILE = "ettevotja_rekvisiidid__kaardile_kantud_isikud.json.zip"
 SHAREHOLDERS_FILE = "ettevotja_rekvisiidid__osanikud.json.zip"
 BO_FILE = "ettevotja_rekvisiidid__kasusaajad.json.zip"
-FILES = (CSV_FILE, OFFICERS_FILE, SHAREHOLDERS_FILE, BO_FILE)
+OFF_CARD_FILE = "ettevotja_rekvisiidid__kandevalised_isikud.json.zip"
+FILES = (CSV_FILE, OFFICERS_FILE, SHAREHOLDERS_FILE, BO_FILE, OFF_CARD_FILE)
 
 #: The JSON list each people file carries per entity, and the index table
-#: its rows go to.
+#: its rows go to. The off-card file spells its list ``kaardivalised`` —
+#: RIK's own spelling, not a typo here.
 PEOPLE_FILES: dict[str, tuple[str, str]] = {
     OFFICERS_FILE: ("kaardile_kantud_isikud", "officer"),
     SHAREHOLDERS_FILE: ("osanikud", "shareholder"),
     BO_FILE: ("kasusaajad", "beneficial_owner"),
+    OFF_CARD_FILE: ("kaardivalised_isikud", "off_card_person"),
 }
 
 CSV_HEADER = [
@@ -145,6 +160,16 @@ TABLE_COLUMNS: dict[str, tuple[str, ...]] = {
         "valis_kood", "valis_kood_riik", "synniaeg", "aadress_riik",
         "kontrolli_teostamise_viis", "lahknevusteade_esitatud",
     ),
+    # The shareholder row's columns plus nothing: the off-card file carries
+    # the role in ``isiku_roll`` as the shareholder file does.
+    "off_card_person": (
+        "kirje_id", "isiku_tyyp", "isiku_roll", "eesnimi", "nimi_arinimi",
+        "isikukood_hash", "isikukood_registrikood", "valis_kood", "valis_kood_riik",
+        "synniaeg", "aadress_riik", "osaluse_protsent", "osaluse_suurus",
+        "osaluse_valuuta", "osaluse_omandiliik", "osaluse_murdosa_lugeja",
+        "osaluse_murdosa_nimetaja", "kontrolli_allikas", "kontrolli_allika_kpv",
+        "algus_kpv", "lopp_kpv", "grupp",
+    ),
 }
 
 #: ``(vocab kind, code field, text field)`` pairs read off every row, so the
@@ -170,6 +195,14 @@ VOCAB_PAIRS: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("country", "aadress_riik", "aadress_riik_tekstina"),
         ("control", "kontrolli_teostamise_viis", "kontrolli_teostamise_viis_tekstina"),
     ),
+    "off_card_person": (
+        ("role", "isiku_roll", "isiku_roll_tekstina"),
+        ("country", "valis_kood_riik", "valis_kood_riik_tekstina"),
+        ("country", "aadress_riik", "aadress_riik_tekstina"),
+        ("ownership_kind", "osaluse_omandiliik", "osaluse_omandiliik_tekstina"),
+        ("control_source", "kontrolli_allikas", "kontrolli_allikas_tekstina"),
+        ("currency", "osaluse_valuuta", "osamaksu_valuuta_tekstina"),
+    ),
 }
 
 #: Columns that hold a register date (``DD.MM.YYYY`` in the files), stored
@@ -177,17 +210,17 @@ VOCAB_PAIRS: dict[str, tuple[tuple[str, str, str], ...]] = {
 DATE_COLUMNS = frozenset({"algus_kpv", "lopp_kpv", "synniaeg", "kontrolli_allika_kpv"})
 
 #: Floors well under the 13 Oct 2026 counts (379,664 entities; 525,454 /
-#: 392,472 / 410,543 people rows): a file shorter than this was cut short,
-#: or is not the file it claims to be. ``--min-rows 0`` lowers them for
-#: fixtures.
+#: 392,472 / 410,543 people rows; 434,083 off-card rows on 16 Oct 2026): a
+#: file shorter than this was cut short, or is not the file it claims to be.
+#: ``--min-rows 0`` lowers them for fixtures.
 MIN_ROWS = {
     CSV_FILE: 300_000, OFFICERS_FILE: 400_000,
-    SHAREHOLDERS_FILE: 300_000, BO_FILE: 300_000,
+    SHAREHOLDERS_FILE: 300_000, BO_FILE: 300_000, OFF_CARD_FILE: 300_000,
 }
 
 USER_AGENT = "OpenCheck ariregister index builder (+https://opencheck.world)"
 
-#: Seconds between the four downloads. Cloudflare rate-limits back-to-back
+#: Seconds between the five downloads. Cloudflare rate-limits back-to-back
 #: requests to this host from one address (``Error code: 1015``, HTTP 429).
 DOWNLOAD_SPACING_S = 15
 
@@ -236,6 +269,18 @@ CREATE TABLE beneficial_owner (
     kontrolli_teostamise_viis TEXT, lahknevusteade_esitatud INTEGER
 );
 CREATE INDEX beneficial_owner_code ON beneficial_owner (code);
+-- One row per person outside the registry card (kaardivalised_isikud):
+-- founders, supervisory board, AS shareholders, auditors and the rest.
+CREATE TABLE off_card_person (
+    code TEXT NOT NULL, kirje_id INTEGER, isiku_tyyp TEXT, isiku_roll TEXT,
+    eesnimi TEXT, nimi_arinimi TEXT, isikukood_hash BLOB, isikukood_registrikood TEXT,
+    valis_kood TEXT, valis_kood_riik TEXT, synniaeg TEXT, aadress_riik TEXT,
+    osaluse_protsent TEXT, osaluse_suurus TEXT, osaluse_valuuta TEXT,
+    osaluse_omandiliik TEXT, osaluse_murdosa_lugeja TEXT, osaluse_murdosa_nimetaja TEXT,
+    kontrolli_allikas TEXT, kontrolli_allika_kpv TEXT, algus_kpv TEXT, lopp_kpv TEXT,
+    grupp INTEGER
+);
+CREATE INDEX off_card_person_code ON off_card_person (code);
 """
 
 class BuildRefused(RuntimeError):
@@ -294,7 +339,7 @@ def download(name: str, dest: Path, *, attempts: int = 4) -> str | None:
 
 
 def download_all(dest_dir: Path) -> dict[str, str | None]:
-    """Download the four files, spaced out, and record each ``Last-Modified``
+    """Download the five files, spaced out, and record each ``Last-Modified``
     beside it (``<name>.last-modified``) so ``--from-dir`` can read the cut."""
     stamps: dict[str, str | None] = {}
     for i, name in enumerate(FILES):
@@ -465,7 +510,7 @@ def resolve_cut(
 
     ``--cut`` wins; else each file's ``Last-Modified`` (from the download,
     or the ``.last-modified`` sidecar a download left); else the zip
-    member's own stamp. The four days must agree — the files are regenerated
+    member's own stamp. The five days must agree — the files are regenerated
     together each morning, and a download that straddled a regeneration
     would otherwise pair yesterday's shareholders with today's companies.
     """
@@ -509,7 +554,7 @@ def build_index(
     min_rows: dict[str, int] | None = None,
     started: dt.datetime | None = None,
 ) -> dict[str, str]:
-    """Build the SQLite index at ``out_path`` from the four zips in ``src``.
+    """Build the SQLite index at ``out_path`` from the five zips in ``src``.
 
     Written to a temporary file beside ``out_path`` and renamed at the end,
     so a failed build never leaves a half-written index where one was.
@@ -634,6 +679,7 @@ def build_index(
             "officers": str(counts.get("officer", 0)),
             "shareholders": str(counts.get("shareholder", 0)),
             "beneficial_owners": str(counts.get("beneficial_owner", 0)),
+            "off_card_persons": str(counts.get("off_card_person", 0)),
             "source_page": PAGE_URL,
             "source_files": ",".join(FILES),
             "license": LICENSE,
@@ -649,9 +695,10 @@ def build_index(
     conn.close()
     os.replace(tmp, out_path)
     log.info(
-        "built %s: %s entities, %s officers, %s shareholders, %s beneficial owners, cut %s",
+        "built %s: %s entities, %s officers, %s shareholders, %s beneficial owners,"
+        " %s persons off the card, cut %s",
         out_path, meta["entities"], meta["officers"], meta["shareholders"],
-        meta["beneficial_owners"], cut,
+        meta["beneficial_owners"], meta["off_card_persons"], cut,
     )
     return meta
 
@@ -680,7 +727,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True, type=Path, help="the SQLite file to write")
     parser.add_argument(
         "--from-dir", type=Path,
-        help="build from the four zips already in this directory instead of downloading",
+        help="build from the five zips already in this directory instead of downloading",
     )
     parser.add_argument(
         "--keep-dir", type=Path,

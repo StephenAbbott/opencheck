@@ -22,6 +22,20 @@ Emitted statements:
    manner-of-control code (``_EE_BO_CONTROL_MAP``) with the register's own
    wording in ``details``, and ``beneficialOwnershipOrControl`` from the
    regimes registry.
+5. From the persons outside the registry card (``kaardivalised_isikud``,
+   index tier only): supervisory board members and chairs as
+   ``boardMember`` / ``boardChair``; the shareholders of a public limited
+   company the register itself records (role ``S``, aktsionär) as
+   ``shareholding`` exactly as an OÜ shareholder row; and founders (``A`` /
+   ``B``, asutaja) as ownership history — a ``commenting`` annotation on
+   the founder's current shareholding when they still hold, else a
+   ``shareholding`` record with ``startDate`` and ``recordStatus: closed``
+   and no ``endDate`` (the register publishes none — the CAC rule). A
+   founder's contribution is the founding capital, never a current share,
+   so it is said in ``details`` and never folded into a current figure.
+   Auditors, bankruptcy committee members and the other off-card roles are
+   no interest in the company and are not mapped (they stay in the raw
+   bundle for the Data drawer).
 
 Personal identity: since November 2024 the open data carries no personal
 identification codes; a natural person is identified across the three
@@ -123,6 +137,34 @@ _EE_BO_CONTROL_MAP: dict[str, tuple[str, str | None, str]] = {
     "F": ("otherInfluenceOrControl", None,       "Control or influence by other means (contractual, family or other relations)"),
     "M": ("otherInfluenceOrControl", None,       "Other means"),
 }
+
+#: Off-card role code (``kaardivalised_isikud``) → (BODS interest type,
+#: label) for the roles that are a role in the company. A supervisory
+#: board (nõukogu) sits above the management board; BODS has one
+#: ``boardMember`` / ``boardChair`` pair, so the label says which board.
+_EE_OFF_CARD_ROLE_MAP: dict[str, tuple[str, str]] = {
+    "N": ("boardMember", "Supervisory board member (nõukogu liige)"),
+    "E": ("boardChair",  "Chair of the supervisory board (nõukogu esimees)"),
+}
+
+#: Off-card role codes that are a shareholding: ``S`` aktsionär, the
+#: shareholder of a public limited company (AS) the register itself records
+#: — a sole shareholder, or an entry from Nasdaq CSD (``kontrolli_allikas``
+#: V1). The row has the OÜ shareholder row's shape and is mapped as one.
+_EE_OFF_CARD_SHAREHOLDER_ROLES = frozenset({"S"})
+
+#: Off-card role codes that are a founder (asutaja): ``A`` with a founding
+#: contribution, ``B`` without one. A dated fact about the original
+#: shareholding, not a current holding — see ``_off_card_statements``.
+_EE_OFF_CARD_FOUNDER_LABELS: dict[str, str] = {
+    "A": "Founder (asutaja)",
+    "B": "Founder, no contribution made (asutaja (sissemakseta))",
+}
+#: The rest — ``D`` audit firm, ``J`` auditor (revident), ``M`` auditor of a
+#: non-monetary contribution, ``P`` bankruptcy committee member, ``V``
+#: authorised person, ``R`` audit committee member, ``L`` congregation of a
+#: religious association — are no interest in the company and are not
+#: mapped; they stay in the raw bundle.
 
 #: Legal forms (``ettevotja_oiguslik_vorm``) that are public bodies —
 #: typed ``stateBody``. State enterprises stay ``registeredEntity`` (the
@@ -293,6 +335,73 @@ def _ee_foreign_entity(
     return f"{prefix}-corp-{kirje_id}", [], jurisdiction, None
 
 
+def _ee_party_key(row: dict[str, Any], kirje_id: str, prefix: str) -> str:
+    """The key under which a row's party is one node: a natural person's
+    hash (else its kirje-based id), a legal person's registry code or
+    foreign key — the same keys the statements are built on."""
+    if (row.get("isiku_tyyp") or "F") == "J":
+        return "J:" + _ee_foreign_entity(row, kirje_id, prefix)[0]
+    return "F:" + _ee_person_id(row)
+
+
+def _ee_shareholding_interest(row: dict[str, Any]) -> dict[str, Any]:
+    """One ``shareholding`` interest from a shareholder-shaped row — an OÜ
+    shareholder (``osanikud``), an AS shareholder (off-card role ``S``) or
+    a founder — with the exact percentage where the register states one,
+    the share's value, the ownership kind and the entry's source in
+    ``details``, and the row's dates."""
+    pct_str = row.get("osaluse_protsent") or ""
+    share_size = row.get("osaluse_suurus") or ""
+    currency = row.get("osaluse_valuuta") or ""
+    interest: dict[str, Any] = {"type": "shareholding", "directOrIndirect": "direct"}
+    try:
+        pct = float(pct_str) if pct_str else None
+    except ValueError:
+        pct = None
+    if pct is not None:
+        # BODS v0.4: ``share.exclusiveMinimum``/``exclusiveMaximum`` are
+        # *numbers* (exclusive percentage bounds), not booleans as in v0.3.
+        # With an exact value known, the inclusive bounds suffice.
+        interest["share"] = {"exact": pct, "minimum": pct, "maximum": pct}
+    details: list[str] = []
+    if share_size:
+        details.append(f"Share value: {share_size} {currency}".strip())
+    kind = (row.get("osaluse_omandiliik") or "").strip()
+    kind_text = (row.get("osaluse_omandiliik_tekstina") or "").strip()
+    if kind and kind != "L":
+        # Joint (Y) or common (K / KY) ownership of one share — the
+        # percentage is the share's, held together with another entry.
+        gloss = {"Y": "joint ownership", "K": "common ownership", "KY": "share in common ownership held jointly"}.get(kind, "")
+        details.append(" ".join(p for p in (gloss, f"({kind_text})" if kind_text else "") if p))
+    allikas_text = (row.get("kontrolli_allikas_tekstina") or "").strip()
+    if allikas_text:
+        when = _ee_date(row.get("kontrolli_allika_kpv"))
+        details.append(f"Entry source: {allikas_text}" + (f", {when}" if when else ""))
+    if details:
+        interest["details"] = "; ".join(details)
+    start_date = _ee_date(row.get("algus_kpv"))
+    end_date = _ee_date(row.get("lopp_kpv"))
+    if start_date:
+        interest["startDate"] = start_date
+    if end_date:
+        interest["endDate"] = end_date
+    return interest
+
+
+def _ee_founder_note(row: dict[str, Any]) -> str:
+    """The sentence a founder row is said in: the role, the founding
+    contribution where one was made, the register's date."""
+    label = _EE_OFF_CARD_FOUNDER_LABELS.get((row.get("isiku_roll") or "").strip(), "Founder (asutaja)")
+    parts = [label]
+    size = (row.get("osaluse_suurus") or "").strip()
+    if size:
+        parts.append(f"founding contribution {size} {row.get('osaluse_valuuta') or ''}".rstrip())
+    when = _ee_date(row.get("algus_kpv"))
+    if when:
+        parts.append(f"recorded {when}")
+    return ", ".join(parts)
+
+
 def _ee_status(bundle: dict[str, Any]) -> str | None:
     """The register's status in the printable page's English, which both
     tiers hand over, so the liveness classes below read either."""
@@ -414,50 +523,48 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 "nimi_arinimi": (bo.get("nimi") or "").strip(),
             }), address)
 
-    for sh in bundle.get("shareholders") or []:
+    # The persons outside the registry card (index tier only), split by what
+    # they are to the company. A founder still on the shareholder list is
+    # said on that holding; one no longer holding becomes a closed record
+    # in section 5. ``current_keys`` is every party with a current
+    # shareholding (OÜ list + AS rows), so a founder is matched before the
+    # list is walked.
+    off_card = bundle.get("off_card_persons") or []
+    as_shareholders = [
+        row for row in off_card
+        if (row.get("isiku_roll") or "").strip() in _EE_OFF_CARD_SHAREHOLDER_ROLES
+    ]
+    founders: dict[str, dict[str, Any]] = {}
+    for row in off_card:
+        if (row.get("isiku_roll") or "").strip() in _EE_OFF_CARD_FOUNDER_LABELS:
+            founders.setdefault(_ee_party_key(row, str(row.get("kirje_id") or ""), "fnd"), row)
+    shareholder_rows = [("sh", sh) for sh in bundle.get("shareholders") or []]
+    shareholder_rows += [("as", sh) for sh in as_shareholders]
+    # A row with an end date is an ended holding, not a current one (the
+    # page path can carry those; the files do not).
+    current_keys = {
+        _ee_party_key(sh, str(sh.get("kirje_id") or ""), prefix)
+        for prefix, sh in shareholder_rows if not _ee_date(sh.get("lopp_kpv"))
+    }
+
+    for prefix, sh in shareholder_rows:
         isiku_tyyp = sh.get("isiku_tyyp") or "F"
-        pct_str = sh.get("osaluse_protsent") or ""
-        share_size = sh.get("osaluse_suurus") or ""
-        currency = sh.get("osaluse_valuuta") or ""
-        start_date = _ee_date(sh.get("algus_kpv"))
-        end_date = _ee_date(sh.get("lopp_kpv"))
         kirje_id = str(sh.get("kirje_id") or "")
-
-        interests: list[dict[str, Any]] = [{"type": "shareholding", "directOrIndirect": "direct"}]
-        try:
-            pct = float(pct_str) if pct_str else None
-        except ValueError:
-            pct = None
-        if pct is not None:
-            # BODS v0.4: ``share.exclusiveMinimum``/``exclusiveMaximum`` are
-            # *numbers* (exclusive percentage bounds), not booleans as in v0.3.
-            # With an exact value known, the inclusive bounds suffice.
-            interests[0]["share"] = {
-                "exact": pct,
-                "minimum": pct,
-                "maximum": pct,
-            }
-        details: list[str] = []
-        if share_size:
-            details.append(f"Share value: {share_size} {currency}".strip())
-        kind = (sh.get("osaluse_omandiliik") or "").strip()
-        kind_text = (sh.get("osaluse_omandiliik_tekstina") or "").strip()
-        if kind and kind != "L":
-            # Joint (Y) or common (K / KY) ownership of one share — the
-            # percentage is the share's, held together with another entry.
-            gloss = {"Y": "joint ownership", "K": "common ownership", "KY": "share in common ownership held jointly"}.get(kind, "")
-            details.append(" ".join(p for p in (gloss, f"({kind_text})" if kind_text else "") if p))
-        allikas_text = (sh.get("kontrolli_allikas_tekstina") or "").strip()
-        if allikas_text:
-            when = _ee_date(sh.get("kontrolli_allika_kpv"))
-            details.append(f"Entry source: {allikas_text}" + (f", {when}" if when else ""))
-        if details:
-            interests[0]["details"] = "; ".join(details)
-        if start_date:
-            interests[0]["startDate"] = start_date
-        if end_date:
-            interests[0]["endDate"] = end_date
-
+        interests: list[dict[str, Any]] = [_ee_shareholding_interest(sh)]
+        if prefix == "as":
+            # Recorded by the register itself, not the OÜ shareholder list:
+            # the sole shareholder of an AS, or a Nasdaq CSD entry.
+            interests[0]["details"] = "; ".join(p for p in (
+                "Shareholder of a public limited company (aktsionär), as recorded by the register",
+                interests[0].get("details"),
+            ) if p)
+        founder_row = founders.get(_ee_party_key(sh, kirje_id, prefix))
+        founder_notes = (
+            [commenting(
+                pointer("recordDetails", "interests", 0),
+                "Also recorded as a founder of the company: " + _ee_founder_note(founder_row) + ".",
+            )] if founder_row else []
+        )
         if isiku_tyyp == "J":
             # Corporate shareholder — emit an entity statement
             corp_name = (sh.get("nimi_arinimi") or "").strip()
@@ -484,15 +591,18 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             if corp_stmt["statementId"] not in seen_entity_ids:
                 yield corp_stmt
                 seen_entity_ids.add(corp_stmt["statementId"])
-            yield make_relationship_statement(
+            rel = make_relationship_statement(
                 source_id="ariregister",
-                local_id=f"sh-{kirje_id}",
+                local_id=f"{prefix}-{kirje_id}",
                 subject_statement_id=company_stmt_id,
                 interested_party_statement_id=corp_stmt["statementId"],
                 interested_party_type="entity",
                 interests=interests,
                 source_url=source_url,
             )
+            if founder_notes:
+                rel.setdefault("annotations", []).extend(founder_notes)
+            yield rel
         else:
             # Natural person shareholder
             person_id = _ee_person_id(sh)
@@ -516,15 +626,18 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 person_stmt = {
                     "statementId": _stable_id("ariregister", "person", person_id)
                 }
-            yield make_relationship_statement(
+            rel = make_relationship_statement(
                 source_id="ariregister",
-                local_id=f"sh-{kirje_id}",
+                local_id=f"{prefix}-{kirje_id}",
                 subject_statement_id=company_stmt_id,
                 interested_party_statement_id=person_stmt["statementId"],
                 interested_party_type="person",
                 interests=interests,
                 source_url=source_url,
             )
+            if founder_notes:
+                rel.setdefault("annotations", []).extend(founder_notes)
+            yield rel
 
     # ── 3. Officers (kaardile_kantud_isikud) ─────────────────────────────
     for officer in bundle.get("officers") or []:
@@ -699,3 +812,104 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 "register publishes the flag, not the report's content.",
             ))
         yield rel
+
+    # ── 5. Persons outside the registry card (kaardivalised_isikud) ──────
+    # The AS shareholders (role S) went through section 2 with the OÜ
+    # list. Here: the supervisory board, serving-only like every officer
+    # (Phase 317), and founders who no longer hold — ownership history,
+    # closed with no end date because the register publishes none.
+    for row in off_card:
+        role_code = (row.get("isiku_roll") or "").strip()
+        kirje_id = str(row.get("kirje_id") or "")
+        if role_code in _EE_OFF_CARD_ROLE_MAP:
+            interest_type, role_label = _EE_OFF_CARD_ROLE_MAP[role_code]
+            interest = {"type": interest_type, "details": role_label}
+            start_date = _ee_date(row.get("algus_kpv"))
+            end_date = _ee_date(row.get("lopp_kpv"))
+            if start_date:
+                interest["startDate"] = start_date
+            if end_date:
+                interest["endDate"] = end_date
+            record_status = "new"
+        elif role_code in _EE_OFF_CARD_FOUNDER_LABELS:
+            if _ee_party_key(row, kirje_id, "fnd") in current_keys:
+                continue  # said on the founder's current shareholding
+            interest = _ee_shareholding_interest(row)
+            interest["details"] = "; ".join(p for p in (
+                _ee_founder_note(row),
+                interest.get("details"),
+                "a founding shareholding, no longer on the current list; the "
+                "register publishes no end date",
+            ) if p)
+            record_status = "closed"
+        else:
+            continue  # auditors, bankruptcy committee, authorised persons…
+        party = _ee_party_statements(row, kirje_id, "fnd", seen_person_ids, seen_entity_ids, residences, source_url)
+        if party is None:
+            continue
+        party_stmts, party_id, party_type = party
+        yield from party_stmts
+        yield make_relationship_statement(
+            source_id="ariregister",
+            local_id=f"fnd-{kirje_id}",
+            subject_statement_id=company_stmt_id,
+            interested_party_statement_id=party_id,
+            interested_party_type=party_type,
+            interests=[interest],
+            source_url=source_url,
+            record_status=record_status,
+        )
+
+
+def _ee_party_statements(
+    row: dict[str, Any],
+    kirje_id: str,
+    prefix: str,
+    seen_person_ids: set[str],
+    seen_entity_ids: set[str],
+    residences: dict[str, list[dict[str, Any]]],
+    source_url: str,
+) -> tuple[list[dict[str, Any]], str, str] | None:
+    """The party a row names, as (statements to publish, its statementId,
+    ``person`` / ``entity``) — the statements list empty when the party
+    was already published under the same key. None for a nameless row."""
+    if (row.get("isiku_tyyp") or "F") == "J":
+        corp_name = (row.get("nimi_arinimi") or "").strip()
+        if not corp_name:
+            return None
+        corp_local_id, corp_ids, jurisdiction, note = _ee_foreign_entity(row, kirje_id, prefix)
+        corp_code = corp_ids[0]["id"] if corp_ids else ""
+        corp_stmt = make_entity_statement(
+            source_id="ariregister",
+            local_id=corp_local_id,
+            name=corp_name,
+            jurisdiction=jurisdiction,
+            identifiers=corp_ids,
+            source_url=f"https://ariregister.rik.ee/eng/company/{corp_code}" if corp_code else None,
+        )
+        if note:
+            corp_stmt.setdefault("annotations", []).append(
+                commenting(pointer("recordDetails"), note + ", as filed in the e-Business Register; no identifier scheme is stated.")
+            )
+        if corp_stmt["statementId"] in seen_entity_ids:
+            return [], corp_stmt["statementId"], "entity"
+        seen_entity_ids.add(corp_stmt["statementId"])
+        return [corp_stmt], corp_stmt["statementId"], "entity"
+    person_id = _ee_person_id(row)
+    full_name = _ee_full_name(row)
+    if not full_name or full_name == "Unknown":
+        return None
+    if person_id in seen_person_ids:
+        return [], _stable_id("ariregister", "person", person_id), "person"
+    person_stmt = make_person_statement(
+        source_id="ariregister",
+        local_id=person_id,
+        full_name=full_name,
+        nationalities=_ee_nationalities(row),
+        birth_date=_ee_date(row.get("synniaeg")),
+        addresses=residences.get(person_id) or _ee_residence(row),
+        identifiers=_ee_person_identifiers(row),
+        source_url=source_url,
+    )
+    seen_person_ids.add(person_id)
+    return [person_stmt], person_stmt["statementId"], "person"
