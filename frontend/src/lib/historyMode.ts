@@ -192,7 +192,7 @@ export const HISTORY_CAVEAT =
  */
 export const REGISTER_READ_NOTES: Record<string, string> = {
   ariregister:
-    "From the e-Äriregister: the registry card's dated history — names, addresses, legal forms, statuses and every person on and off the card, shareholders included — and the beneficial-owner history. Former shareholders and former beneficial owners are drawn in the ownership graph too.",
+    "From the e-Äriregister: the registry card's dated history — names, addresses, legal forms, statuses and every person on and off the card, shareholders included — and the beneficial-owner history. Former shareholders and former beneficial owners are drawn in the ownership graph too. Every numbered entry on the registry card is listed with the administrative changes; where the dated history could not be read, the card's status, name and merger entries stand in for it.",
 };
 
 /** The notes for the registers that contributed to this timeline. */

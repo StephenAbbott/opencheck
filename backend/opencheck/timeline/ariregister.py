@@ -231,6 +231,112 @@ def _bo_events(subject: str, bo_xml: str | None) -> list[ChangeEvent]:
 
 
 # --------------------------------------------------------------------------- #
+# Registry-card entries (the card-entry phase)
+# --------------------------------------------------------------------------- #
+
+#: The register's entry types (``kandeliik``) in English, with the Estonian
+#: term the register uses. Read off the 16 Oct 2026 registrikaardid file
+#: (2,161,627 entries); a type not listed reads as the register's own words.
+CARD_ENTRY_LABELS: dict[str, str] = {
+    "1": "Founding entry (asutamiskanne)",
+    "2": "First entry (esmakanne)",
+    "3": "Re-registration entry (ümberregistreerimiskanne)",
+    "6": "Deletion entry (kustutamiskanne)",
+    "7": "Declaration of bankruptcy (pankroti väljakuulutamiskanne)",
+    "8": "Termination entry (lõpetamiskanne)",
+    "9": "Transformation entry without a new card (ümberkujundamiskanne)",
+    "10": "Change entry, not published (mitteavaldatav muutmiskanne)",
+    "12": "Change entry (muutmiskanne)",
+    "13": "Change of capital (kapitali muutmise kanne)",
+    "14": "Change of business name (ärinime muutmise kanne)",
+    "15": "Published change entry (avaldatav muutmiskanne)",
+    "16": "Continuation of activity (tegevuse jätkamise kanne)",
+    "17": "Additional liquidation (täiendava likvideerimise kanne)",
+    "18": "Note (märkus)",
+    "19": "Deletion entry without a keeper of documents (kustutamiskanne dokumentide hoidjata)",
+    "21": "Commercial pledge entered (kommertspandi avamiskanne)",
+    "22": "Commercial pledge deleted (kommertspandi kustutamiskanne)",
+    "23": "Commercial pledge changed (kommertspandi muutmiskanne)",
+    "24": "Commercial pledge changed under Commercial Code § 33(7¹)",
+    "25": "Commercial pledge card closed in the former registry department",
+    "30": "Restored to the register to continue activity (registrisse ennistamise kanne)",
+    "32": "Change entry under Commercial Code § 525(2)",
+    "33": "Change entry under Code of Civil Procedure § 595¹(1)",
+    "34": "Transformation entry (ümberkujundamiskanne)",
+    "41": "Card opened in the registry department of the new seat",
+    "42": "Card closed in the former registry department (note)",
+    "43": "First, declaratory transformation entry",
+    "44": "Second, constitutive transformation entry",
+    "45": "Former card of a transformed company closed (note)",
+    "47": "Second, constitutive merger entry (on the acquiring company's card)",
+    "49": "First, declaratory division entry (on the acquiring company's card)",
+    "51": "Division entry of the company dividing off (second, constitutive)",
+    "52": "Third, informative division entry (on the acquiring company's card)",
+    "54": "First, declaratory division entry (on the new or other company's card)",
+    "64": "First, declaratory division entry (on the new company's card)",
+    "67": "Merger of agencies (on the merging agency's card)",
+    "75": "Merger of agencies (on the new agency's card)",
+}
+
+#: Entry types that are a change of status, name or succession — drawn as
+#: a notable History row **only when the register's own dated history was
+#: not read** (no credentials, or the SOAP call failed). When it was read,
+#: the same change is already a notable row with its before and after, so
+#: every card entry stays in the administrative stream.
+CARD_ENTRY_NOTABLE: dict[str, ChangeType] = {
+    "6": ChangeType.STATUS_CHANGED, "7": ChangeType.STATUS_CHANGED,
+    "8": ChangeType.STATUS_CHANGED, "16": ChangeType.STATUS_CHANGED,
+    "19": ChangeType.STATUS_CHANGED, "30": ChangeType.STATUS_CHANGED,
+    "14": ChangeType.LEGAL_NAME_CHANGE,
+    "9": ChangeType.SUCCESSION, "34": ChangeType.SUCCESSION,
+    "43": ChangeType.SUCCESSION, "44": ChangeType.SUCCESSION,
+    "45": ChangeType.SUCCESSION, "47": ChangeType.SUCCESSION,
+    "49": ChangeType.SUCCESSION, "51": ChangeType.SUCCESSION,
+    "52": ChangeType.SUCCESSION, "54": ChangeType.SUCCESSION,
+    "64": ChangeType.SUCCESSION, "67": ChangeType.SUCCESSION,
+    "75": ChangeType.SUCCESSION,
+}
+
+
+def card_entry_label(entry_type: str | None, register_text: str | None = None) -> str:
+    """An entry type in English with the register's term; the register's
+    own words for a type not listed; the bare type number when the register
+    publishes no wording (types 9998 and 9999, written when the non-profit
+    register moved onto the e-Business Register in 2018)."""
+    code = str(entry_type or "").strip()
+    if code in CARD_ENTRY_LABELS:
+        return CARD_ENTRY_LABELS[code]
+    if register_text:
+        return register_text
+    return f"Register entry (type {code}, no description published)" if code else "Register entry"
+
+
+def card_entry_events(
+    subject: str, entries: list[dict[str, Any]], *, history_read: bool,
+) -> list[ChangeEvent]:
+    """One dated event per registry-card entry. Administrative (Tier 3) by
+    default; the status, name and succession entries are notable only when
+    ``history_read`` is false — the card is then the only dated Estonian
+    history there is."""
+    events: list[ChangeEvent] = []
+    for e in entries:
+        day = e.get("day")
+        code = str(e.get("entry_type") or "")
+        label = card_entry_label(code, e.get("entry_text"))
+        field = f"card {e.get('card_type') or '?'} {e.get('card_no') or '?'} · entry {e.get('entry_no')}"
+        notable = None if history_read else CARD_ENTRY_NOTABLE.get(code)
+        events.append(ChangeEvent(
+            source_id=_SOURCE, subject_id=subject, record_type=RecordType.ENTITY,
+            raw_change_type=label, raw_field=field,
+            value_new=label if notable else None,
+            change_type=notable,
+            tier=Tier.IDENTITY_STATUS if notable else Tier.ADMIN_NOISE,
+            event_date=day, date_basis=DateBasis.EFFECTIVE, date_confidence=DateConfidence.HIGH,
+        ))
+    return events
+
+
+# --------------------------------------------------------------------------- #
 # Public entry point
 # --------------------------------------------------------------------------- #
 
@@ -270,4 +376,4 @@ def ariregister_change_events(data: dict[str, Any]) -> list[ChangeEvent]:
     return events
 
 
-__all__ = ["ariregister_change_events"]
+__all__ = ["CARD_ENTRY_LABELS", "ariregister_change_events", "card_entry_events", "card_entry_label"]

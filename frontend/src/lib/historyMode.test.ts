@@ -583,6 +583,7 @@ describe("registerReadNotes", () => {
     expect(ee).toHaveLength(1);
     expect(ee[0]).toContain("beneficial-owner history");
     expect(ee[0]).toContain("drawn in the ownership graph");
+    expect(ee[0]).toContain("numbered entry on the registry card");
     // The off-card shareholder list keeps dated history well before the
     // card's own shareholder role (1 Sept 2023): no such boundary is claimed.
     expect(ee[0]).not.toMatch(/2023/);

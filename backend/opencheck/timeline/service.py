@@ -55,7 +55,7 @@ import httpx
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from .ariregister import ariregister_change_events
+from .ariregister import ariregister_change_events, card_entry_events
 from .assemble import Timeline, assemble_timeline
 from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
@@ -361,6 +361,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     # Estonia — registry-card + beneficial-owner history via the credentialed
     # RIK SOAP API (read-only). Best-effort; never sinks the timeline.
     ee_events = []
+    ee_history_read = False
     if ee_code and settings.ariregister_username and settings.ariregister_password:
         try:
             from ..sources import REGISTRY
@@ -369,6 +370,18 @@ async def fetch_timeline(lei: str) -> Timeline:
             data = None
         if data:
             ee_events = ariregister_change_events(data)
+            ee_history_read = bool(data.get("detail_xml"))
+    # Every entry on the company's registry cards, from the open-data index
+    # (no credentials): the dated spine under the SOAP history, and the only
+    # Estonian history when that was not read. Best-effort, like the rest.
+    if ee_code:
+        try:
+            from ..sources import ariregister as _ee
+            entries = await asyncio.to_thread(_ee.card_entries, ee_code)
+        except Exception:  # noqa: BLE001
+            entries = None
+        if entries:
+            ee_events += card_entry_events(ee_code, entries, history_read=ee_history_read)
 
     # Denmark — reconstruct events from CVR's bitemporal records. The normal CVR
     # adapter fetch already returns the full virkning history in the bundle, so no
