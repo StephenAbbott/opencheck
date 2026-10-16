@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 351** — The FATF black and grey lists, the EU high-risk list and the EU tax list now say their finding once per lookup, naming every source that reached it, rather than once per source.
+**Latest: Phase 352** — The MCP ownership map states GLEIF reporting exceptions in words and leaves company secretaries and other officers off the picture.
 
 → [Full development history](docs/status.md)
 
