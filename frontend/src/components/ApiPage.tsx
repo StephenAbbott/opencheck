@@ -122,7 +122,7 @@ export function ApiPage() {
             path="/lookup?lei=<LEI>"
             params={[
               ["lei", "20-character ISO 17442 LEI (required)."],
-              ["deepen_top", "How many top hits to fully fetch + map + assess (default 3)."],
+              ["deepen_top", "How many top hits to fully fetch + map + assess (default 5)."],
             ]}
           >
             <strong className="text-oo-ink font-semibold">Primary entry point.</strong>{" "}
