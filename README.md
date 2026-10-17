@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 365** — An Estonian company's in-force annual-report warnings, fines and dissolution warnings now lead its finding, and its commercial pledges are noted, from two more of the register's daily files.
+**Latest: Phase 366** — ChileCompra is no longer listed as a source consulted for non-Chilean companies, nor TED for companies outside Europe.
 
 → [Full development history](docs/status.md)
 
