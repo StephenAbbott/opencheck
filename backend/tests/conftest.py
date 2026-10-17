@@ -66,6 +66,11 @@ os.environ.setdefault(
     os.path.join(_tempfile.mkdtemp(prefix="opencheck-test-form13f-"), "absent.sqlite"),
 )
 
+# RIK's REST key is never read from a developer's shell: with it, every
+# Estonian index miss would go to ar-rest.rik.ee instead of the page the
+# index tests pin. tests/test_ariregister_rest*.py set it per test.
+os.environ["ARIREGISTER_REST_API_KEY"] = ""
+
 # Registry-wide entityType.subtype guard (Phase 214). Installed here, at
 # conftest import time and after the env flags above, so every test module's
 # ``from opencheck.bods.mapper import map_x`` binds the guarded mapper. See
