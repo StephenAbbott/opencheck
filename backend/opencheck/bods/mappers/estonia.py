@@ -64,6 +64,7 @@ import pycountry
 
 from .. import liveness as _liveness
 from ..annotations import commenting, pointer
+from ..former_names import former_name_annotation
 from ..statements import (
     SOURCE_NAMES,
     _addr,
@@ -297,6 +298,10 @@ def _ee_person_id(person: dict[str, Any]) -> str:
     h = person.get("isikukood_hash")
     if h:
         return h
+    # A row read from RIK's REST API: the adapter grouped the person's rows
+    # on their personal code and dropped it, leaving ``rest-<recordId>``.
+    if person.get("person_key"):
+        return str(person["person_key"])
     if person.get(_EE_NAME_KEY):
         return "name-" + person[_EE_NAME_KEY]
     kirje = person.get("kirje_id")
@@ -1149,6 +1154,9 @@ def _ee_company_statement(bundle: dict[str, Any]) -> tuple[dict[str, Any], str]:
     entity_details = legal_form + (f" — {subtype}" if subtype else "") or None
     entity_type = "stateBody" if legal_form in _EE_STATE_BODY_FORMS else "registeredEntity"
 
+    # Former names (the REST tier gives every name with its dates): in
+    # alternateNames, each said to be former by the Phase 309 annotation.
+    former = [n for n in bundle.get("former_names") or [] if (n or {}).get("name")]
     company_stmt = make_entity_statement(
         source_id="ariregister",
         local_id=registry_code,
@@ -1157,10 +1165,26 @@ def _ee_company_statement(bundle: dict[str, Any]) -> tuple[dict[str, Any], str]:
         identifiers=identifiers,
         founding_date=founding_date,
         addresses=addresses,
+        alternate_names=[n["name"] for n in former],
         entity_type=entity_type,
         entity_details=entity_details,
         source_url=source_url,
     )
+    alternates = company_stmt.get("recordDetails", {}).get("alternateNames") or []
+    for entry in former:
+        if entry["name"] in alternates:
+            company_stmt.setdefault("annotations", []).append(former_name_annotation(
+                alternates.index(entry["name"]), entry["name"],
+                until=entry.get("until"), since=entry.get("from"),
+            ))
+    if bundle.get("bo_not_read"):
+        company_stmt.setdefault("annotations", []).append(commenting(
+            pointer("recordDetails"),
+            "Beneficial owners were not read for this company: it was read from the "
+            "e-Business Register's REST service, whose beneficial-owner service is "
+            "open only to a named viewer with a stated purpose. An absent beneficial "
+            "owner here says nothing about what the register holds.",
+        ))
     # e-Business Register status label as shown on the company page
     # (Phase 151): "Entered into the register" is live; liquidation /
     # bankruptcy are pending; "Deleted from the register" is terminal.
@@ -1174,6 +1198,9 @@ def _ee_company_statement(bundle: dict[str, Any]) -> tuple[dict[str, Any], str]:
             terminal=("Deleted from the register", "Deleted", "Removed from the register"),
         ),
         raw=bundle.get("status_text") or bundle.get("status") or None,
+        # The REST tier dates a deletion; the index holds no deleted company
+        # and the page gives no date.
+        since=bundle.get("dissolution_date") or None,
     )
     return company_stmt, source_url
 

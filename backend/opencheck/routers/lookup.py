@@ -2007,17 +2007,13 @@ async def _lookup_pipeline(
     # The subject's profile, from its own statements across the deepened
     # sources. Its own event rather than a rider on `risk_signals`: it is
     # identity, and the verdict event is the answer.
-    yield (
-        "subject_profile",
-        {
-            "profile": build_subject_profile(
-                ctx.lei,
-                bods_all,
-                lei_registration=ctx.lei_registration,
-                lei_successor=ctx.lei_successor,
-            )
-        },
+    subject_profile = build_subject_profile(
+        ctx.lei,
+        bods_all,
+        lei_registration=ctx.lei_registration,
+        lei_successor=ctx.lei_successor,
     )
+    yield ("subject_profile", {"profile": subject_profile})
 
     # Phase 226: what is knowable along the ownership path — one statement
     # per jurisdiction on the upward walk from the subject's own statements,
@@ -2185,7 +2181,10 @@ async def _lookup_pipeline(
         {
             "signals": merged,
             "degraded_sources": degraded_dicts,
-            "verdict": build_verdict(merged, degraded_dicts),
+            "verdict": build_verdict(
+                merged, degraded_dicts,
+                register_status=(subject_profile or {}).get("register_status"),
+            ),
             "openaleph_screening": oa_screening,
             "source_liveness": {
                 sid: prov.to_dict() for sid, prov in sorted(provenances.items())
@@ -2482,10 +2481,8 @@ async def _register_lookup_pipeline(
     yield ("bods_counts", {"counts": bods_counts, "breakdown": bods_breakdown})
 
     # No ``listing`` event: PermID is keyed on the LEI, and there is none.
-    yield (
-        "subject_profile",
-        {"profile": build_subject_profile(subject, bods_all)},
-    )
+    subject_profile = build_subject_profile(subject, bods_all)
+    yield ("subject_profile", {"profile": subject_profile})
     yield ("knowability_chain", knowability_chain_for_lei(subject, bods_all))
     yield (
         "integrated_ownership",
@@ -2592,7 +2589,10 @@ async def _register_lookup_pipeline(
         {
             "signals": merged,
             "degraded_sources": degraded_dicts,
-            "verdict": build_verdict(merged, degraded_dicts),
+            "verdict": build_verdict(
+                merged, degraded_dicts,
+                register_status=(subject_profile or {}).get("register_status"),
+            ),
             "openaleph_screening": oa_screening,
             "source_liveness": {
                 sid: p.to_dict() for sid, p in sorted(provenances.items())

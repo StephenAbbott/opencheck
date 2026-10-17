@@ -185,6 +185,13 @@ class AriregisterBundle(_Base):
     beneficial_owners: list[AriregisterBeneficialOwnerRow] = []
     off_card_persons: list[AriregisterOffCardRow] = []
     cut: str | None = None
+    #: The REST tier (an index miss read from ``ar-rest.rik.ee``): the
+    #: deletion date, every former name with its dates, and that the
+    #: beneficial owners were not read (that service needs a named viewer).
+    dissolution_date: str | None = None
+    former_names: list[dict] = []
+    bo_not_read: bool = False
+    retrieved_at: str | None = None
     tier: str | None = None
     index_miss: bool = False
     is_stub: bool = False

@@ -25,6 +25,7 @@
  * `PanelCard` and this supplies its `PanelSection`s.
  */
 
+import { EstonianLegalPersonRelations } from "./EstonianLegalPersonRelations";
 import { useEffect, useMemo, useState } from "react";
 import {
   getDeclaredSubsidiaries,
@@ -289,6 +290,10 @@ export default function SubsidiariesPanel({
   const gemSource = bySource.get("climatetrace");
   const eeList = listById.get("ariregister");
   const eeSource = bySource.get("ariregister");
+  // The subject's Estonian registry code, as the declared list keyed it —
+  // the key for every company it has held a role in, deleted ones included.
+  const eeRegistryCode = eeSource?.context?.registry_code;
+  const eeCode = typeof eeRegistryCode === "string" && /^\d{8}$/.test(eeRegistryCode) ? eeRegistryCode : null;
 
   return (
     <>
@@ -393,6 +398,25 @@ export default function SubsidiariesPanel({
             code; an LEI is shown only where another list publishes one for the same name.
           </p>
           <RowsList list={eeList} />
+          {eeCode && (
+            <EstonianLegalPersonRelations
+              code={eeCode}
+              name={name}
+              label="Former and deleted holdings (e-Business Register)"
+            />
+          )}
+        </PanelSection>
+      )}
+      {!eeList && eeCode && (
+        <PanelSection
+          title={`${LIST_LABEL.ariregister} · former and deleted holdings`}
+          aside="read from the register when asked"
+        >
+          <EstonianLegalPersonRelations
+            code={eeCode}
+            name={name}
+            label="Former and deleted holdings (e-Business Register)"
+          />
         </PanelSection>
       )}
     </>

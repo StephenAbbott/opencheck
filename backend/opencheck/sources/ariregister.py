@@ -106,6 +106,17 @@ def _detail_envelope(user: str, pw: str, reg_code: str) -> str:
     )
 
 
+#: The REST call that stands in for ``detailandmed_v2`` (the REST-history
+#: phase): names, addresses, forms and the people with their full history,
+#: and the registry cards' log.
+HISTORY_QUERY = {
+    "includeGeneralData": "true",
+    "includeRelatedPersons": "true",
+    "includeRegistryCards": "true",
+    "onlyValid": "false",
+}
+
+
 def _bo_envelope(user: str, pw: str, reg_code: str) -> str:
     """tegelikudKasusaajad_v2 with history on (ainult_kehtivad=0)."""
     return (
@@ -462,6 +473,28 @@ COVERAGE_PAGE_UNREACHABLE = (
     "confirmation that the register holds nothing — a company newer than "
     "the cut, or deleted, is answered by the page."
 )
+
+COVERAGE_NOT_IN_REGISTER_REST = (
+    "Not in the e-Business Register's open data as of {cut} (which holds "
+    "every company entered, in liquidation or in bankruptcy, and no deleted "
+    "company), and the register's REST service holds no company under this "
+    "code."
+)
+COVERAGE_REST_UNAVAILABLE = (
+    "Not in the e-Business Register's open data as of {cut} (which holds "
+    "every company entered, in liquidation or in bankruptcy, and no deleted "
+    "company); the register's REST service was not read — {why}. This is not "
+    "a confirmation that the register holds nothing: a deleted company, or "
+    "one newer than the cut, is answered there."
+)
+
+#: A REST answer for an index miss is kept a day, stripped (the bundle,
+#: never the response): a deleted company does not change, and the
+#: contract's allowance is shared by every user. A refusal or a failure is
+#: never kept (Phase 262), and neither is a 404 — a company entered
+#: tomorrow must be found tomorrow.
+REST_CACHE_MAX_AGE_DAYS = 1.0
+_REST_CACHE_KEY = "ariregister/rest-company-v1/{code}"
 
 _TABLE_COLUMNS: dict[str, tuple[str, ...]] = {
     "officer": (
@@ -1440,6 +1473,16 @@ class AriregisterAdapter(SourceAdapter):
                 validate_raw(self.id, AriregisterBundle, bundle)
                 return bundle
 
+        # An index miss, with RIK's REST key configured: the register's own
+        # API answers a deleted company and one entered after the cut, with a
+        # clean 404 for neither (the REST deleted-companies ticket). The page
+        # stays the no-key fallback, and the no-index path is unchanged.
+        if index_present:
+            from . import ariregister_rest as rik
+
+            if rik.rest_configured():
+                return await self._rest_tier(registry_code, legal_name, meta)
+
         page, outcome = await self._read_page(registry_code, legal_name)
         if page is not None:
             page["tier"] = "page"
@@ -1468,6 +1511,81 @@ class AriregisterAdapter(SourceAdapter):
             registry_code, legal_name, meta,
             COVERAGE_PAGE_UNREACHABLE.format(cut=cut, why=why),
         )
+
+    async def _rest_tier(
+        self, registry_code: str, legal_name: str, meta: dict[str, str],
+    ) -> dict[str, Any]:
+        """An index miss answered by RIK's REST API (``GET /company/{code}``
+        with every section and the full history). Three outcomes: the
+        company (``tier: rest``, dated live, or cached a day); RIK's
+        definitive 404 → a note card, no degradation; a refusal or failure
+        (spent allowance, busy slot, timeout, 5xx…) → a note card and a
+        degradation, never "no record"."""
+        from ..cache import Cache
+        from . import ariregister_rest as rik
+        from .ariregister_rest_company import COMPANY_QUERY, bundle_from_rest
+
+        cut = meta.get("cut") or "the last build"
+        cache = Cache()
+        key = _REST_CACHE_KEY.format(code=registry_code)
+        hit = cache.get_payload(key, max_age_days=REST_CACHE_MAX_AGE_DAYS)
+        if hit is not None and isinstance(hit[0], dict) and hit[0].get("registry_code") == registry_code:
+            bundle = dict(hit[0])
+            retrieved = provenance.parse_moment(bundle.get("retrieved_at"))
+            provenance.record_cached(retrieved, "ariregister REST company (cached)")
+        else:
+            try:
+                body = await rik.get_json(
+                    f"/company/{registry_code}", service="company", params=COMPANY_QUERY,
+                )
+            except rik.RikNotFound:
+                return self._note_card(
+                    registry_code, legal_name, meta,
+                    COVERAGE_NOT_IN_REGISTER_REST.format(cut=cut),
+                )
+            except rik.RikUnavailable as exc:
+                degradation.record(
+                    self.id,
+                    "The e-Business Register's REST service was not read for a code "
+                    f"the open-data index does not hold: {exc.detail}. The card shows "
+                    "nothing from the register; this is not a confirmation that the "
+                    "register holds nothing.",
+                    reason=exc.reason,
+                )
+                return self._note_card(
+                    registry_code, legal_name, meta,
+                    COVERAGE_REST_UNAVAILABLE.format(cut=cut, why=exc.detail),
+                )
+            if not isinstance(body, dict):
+                degradation.record(
+                    self.id,
+                    "The e-Business Register's REST service returned an answer that "
+                    "could not be read for a code the open-data index does not hold.",
+                    reason=degradation.REASON_UPSTREAM_ERROR,
+                )
+                return self._note_card(
+                    registry_code, legal_name, meta,
+                    COVERAGE_REST_UNAVAILABLE.format(cut=cut, why="its answer could not be read"),
+                )
+            bundle = bundle_from_rest(body, registry_code)
+            bundle["retrieved_at"] = datetime.now(UTC).isoformat(timespec="seconds")
+            validate_raw(self.id, AriregisterBundle, bundle)
+            cache.put(key, bundle)
+        bundle["index_miss"] = True
+        bundle["cut"] = meta.get("cut")
+        # The Estonian companies above it, from the index — a company newer
+        # than the cut usually has current owners the index already holds.
+        try:
+            related, chain = walk_chain(registry_code, bundle)
+        except sqlite3.Error:
+            related, chain = {}, None
+        if related or (chain and chain.get("unfollowed")):
+            bundle["related_companies"] = {
+                c: self._index_bundle(c, sub, meta) for c, sub in related.items()
+            }
+            bundle["chain"] = chain
+        validate_raw(self.id, AriregisterBundle, bundle)
+        return bundle
 
     async def _read_page(
         self, registry_code: str, legal_name: str,
@@ -1547,56 +1665,124 @@ class AriregisterAdapter(SourceAdapter):
     # Time Machine — historical data via the credentialed SOAP API
     # ------------------------------------------------------------------
 
-    async def fetch_timeline_data(self, registry_code: str) -> dict[str, Any] | None:
+    async def fetch_timeline_data(
+        self, registry_code: str, *, card_source: str = "soap",
+    ) -> dict[str, Any] | None:
         """Raw registry-card + beneficial-owner *history* for the Time Machine.
 
-        Calls the RIK X-Road SOAP open-data API with history on
-        (``ainult_kehtivad=0``): ``detailandmed_v2`` for the dated registry-card
-        blocks and ``tegelikudKasusaajad_v2`` for beneficial owners. Read-only,
-        lazy, off the main lookup path — the live ``/lookup`` still uses the
-        no-auth public scraper in ``fetch()``.
+        The registry card's dated blocks and people come from one of two
+        readings of the same rows (the REST-history phase; Stephen, 17 Oct
+        2026). ``card_source="rest"`` — the ownership graph's history —
+        reads RIK's REST API (``GET /company/{code}``, ``onlyValid=false`` →
+        ``detail_rest``) when ``ARIREGISTER_REST_API_KEY`` is set: one call,
+        JSON, a corporate party under its name today, as the index names a
+        current holder. ``card_source="soap"`` — the History tab — reads
+        SOAP ``detailandmed_v2`` with history on (``ainult_kehtivad=0`` →
+        ``detail_xml``), which names a corporate party as filed at the time
+        ("Taxify Shareholder SPV OÜ", "Lihtkonto: …") and an address in
+        Estonian; it takes REST only when the SOAP credentials are not set. The beneficial-owner
+        history is always SOAP ``tegelikudKasusaajad_v2`` (``bo_xml``):
+        REST's needs a named viewer and a stated reason. With the REST key
+        and no SOAP credentials the BO cause is ``not_configured``.
 
-        Returns ``None`` when not live or when credentials are unset (the
-        feature then simply doesn't contribute Estonian events). The two calls
-        run concurrently and a failure of either is tolerated.
+        Returns ``None`` when not live or when neither the key nor the
+        credentials are set. Otherwise the dict, with ``None`` for a call
+        that did not answer and the cause under ``unavailable`` (``detail``
+        / ``bo`` → an ``ariregister_rest`` cause: ``busy``, ``budget``,
+        ``timeout``, ``server_error`` …). Every call goes through the shared
+        client: the SOAP service and the REST API share one contract
+        partner, which may run one query at a time and a daily allowance.
+        The answers carry personal codes; ``ariregister_history`` strips
+        them and the Time Machine reads names and dates only.
         """
         settings = get_settings()
         if not settings.allow_live:
             return None
+        from . import ariregister_rest as rik
+
         user = settings.ariregister_username
         pw = settings.ariregister_password
-        if not user or not pw:
+        rest = rik.rest_configured()
+        if not (user and pw) and not rest:
             return None
+        use_rest = rest and (card_source == "rest" or not (user and pw))
 
         code = re.sub(r"\D", "", registry_code or "") or (registry_code or "").strip()
         if not code:
             return None
 
-        async def _post(envelope: str) -> str | None:
-            # Same reasoning as search() and fetch(): the X-Road SOAP call needs
-            # its own client and timeout, so build_client()'s automatic
-            # provenance.record_live() never fires. Record it here, at the
-            # moment we commit to the network. Nothing opens a provenance scope
-            # around the Time Machine path today, so this was latent rather
-            # than user-visible — but it is the same defect PR #153 fixed on
-            # the lookup path, and the AST guard in tests/test_source_probes.py
-            # now keeps both closed.
-            provenance.record_live("ariregister X-Road timeline")
+        async def _post(service: str, envelope: str) -> tuple[str | None, str | None]:
+            """One SOAP call inside the contract's one-query slot (shared with
+            the REST API — one contract partner). Returns the body, or
+            ``None`` and why (an ``ariregister_rest`` cause)."""
             try:
-                async with httpx.AsyncClient(timeout=_SOAP_TIMEOUT) as client:
-                    r = await client.post(_SOAP_URL, content=envelope, headers=_SOAP_HEADERS)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("ariregister: timeline SOAP error for %s: %s", code, exc)
-                return None
+                async with rik.contract_slot(service):
+                    # Same reasoning as search() and fetch(): the X-Road SOAP
+                    # call needs its own client and timeout, so
+                    # build_client()'s automatic provenance.record_live()
+                    # never fires. Recorded here, once the slot is ours and
+                    # before the request leaves (the PR #153 rule, kept by
+                    # the AST guard in tests/test_source_probes.py).
+                    provenance.record_live("ariregister X-Road timeline")
+                    try:
+                        async with httpx.AsyncClient(timeout=_SOAP_TIMEOUT) as client:
+                            r = await client.post(_SOAP_URL, content=envelope, headers=_SOAP_HEADERS)
+                    except httpx.TimeoutException:
+                        rik.record_outcome(service, "timeout")
+                        return None, "timeout"
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("ariregister: timeline SOAP %s on %s", type(exc).__name__, service)
+                        rik.record_outcome(service, "network_error")
+                        return None, "network_error"
+            except rik.RikUnavailable as exc:  # busy or budget: nothing was sent
+                return None, exc.cause
             if r.status_code != 200:
-                logger.info("ariregister: timeline HTTP %s for %s", r.status_code, code)
-                return None
-            return r.text
+                outcome = rik.outcome_of_status(r.status_code)
+                logger.info("ariregister: timeline HTTP %s on %s", r.status_code, service)
+                rik.record_outcome(service, outcome)
+                return None, outcome
+            rik.record_outcome(service, "answered")
+            return r.text, None
 
-        detail_xml, bo_xml = await asyncio.gather(
-            _post(_detail_envelope(user, pw, code)),
-            _post(_bo_envelope(user, pw, code)),
+        async def _rest_detail() -> tuple[dict[str, Any] | None, str | None]:
+            """The registry card's people and dated blocks from REST (the
+            REST-history phase): the same rows ``detailandmed_v2`` returns,
+            as JSON, in one call through the shared client."""
+            try:
+                body = await rik.get_json(f"/company/{code}", service="company", params=HISTORY_QUERY)
+            except rik.RikUnavailable as exc:
+                return None, exc.cause
+            except rik.RikNotFound:
+                return None, "not_found"
+            except rik.RikNotConfigured:
+                return None, "not_configured"
+            return (body, None) if isinstance(body, dict) else (None, "bad_response")
+
+        async def _no_bo() -> tuple[str | None, str | None]:
+            return None, "not_configured"
+
+        detail_xml: str | None = None
+        detail_rest: dict[str, Any] | None = None
+        bo_coro = (
+            _post("soap_beneficial_owners", _bo_envelope(user, pw, code)) if user and pw else _no_bo()
         )
-        if not detail_xml and not bo_xml:
-            return None
-        return {"registry_code": code, "detail_xml": detail_xml, "bo_xml": bo_xml}
+        # The slot serialises these whatever gather does; gather keeps the
+        # two waits overlapping with nothing else to do.
+        if use_rest:
+            (detail_rest, detail_cause), (bo_xml, bo_cause) = await asyncio.gather(_rest_detail(), bo_coro)
+        else:
+            (detail_xml, detail_cause), (bo_xml, bo_cause) = await asyncio.gather(
+                _post("soap_detail", _detail_envelope(user or "", pw or "", code)), bo_coro,
+            )
+        # A failed read still returns the shape, with why: the caller records
+        # the degradation in the register's own words (a spent budget or a
+        # busy slot is not "the service did not answer").
+        return {
+            "registry_code": code,
+            "detail_xml": detail_xml,
+            "detail_rest": detail_rest,
+            "bo_xml": bo_xml,
+            "unavailable": {
+                key: cause for key, cause in (("detail", detail_cause), ("bo", bo_cause)) if cause
+            },
+        }

@@ -1,0 +1,189 @@
+{
+ "legalEntityName": "Eesti Energia AS",
+ "registryCode": 10421629,
+ "companyId": 2000046208,
+ "vatID": "EE100366327",
+ "generalData": {
+  "einvoiceProvider": "Arvekeskus",
+  "firstEntryTime": "1998-03-31",
+  "isCSDRegistered": true,
+  "entryCSDRegistrationDate": "2017-09-28",
+  "status": {
+   "status": "R",
+   "statusAsText": "Entered into the register"
+  },
+  "legalEntityNames": [
+   {
+    "content": "Eesti Energia AS",
+    "cardNumber": 1,
+    "entryNumber": 42,
+    "recordId": 10133310,
+    "startDate": "2022-05-27"
+   }
+  ],
+  "addresses": [
+   {
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia",
+     "address": "Lelle tn 22",
+     "postalCode": "11318",
+     "ehak": "0298",
+     "ehakAsText": "Kesklinna district, Tallinn city, Harju county",
+     "adsAdobId": "7344752",
+     "adsOid": "ME03262636",
+     "adsNormalizedFullAddress": "Harju maakond, Tallinn, Kesklinna linnaosa, Lelle tn 22"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 34,
+    "recordId": 7125980,
+    "startDate": "2017-11-07"
+   }
+  ],
+  "legalForm": [
+   {
+    "contentNumber": 1,
+    "contentAsText": "Public limited company",
+    "content": "AS",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279798,
+    "startDate": "1998-03-31"
+   }
+  ],
+  "capitals": [
+   {
+    "size": 846645750.0,
+    "currency": "EUR",
+    "currencyAsText": "Euro",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 51,
+    "recordId": 13202216,
+    "startDate": "2025-07-09"
+   }
+  ],
+  "successions": [
+   {
+    "type": "JAGUN",
+    "typeAsText": "Division",
+    "content": "Eesti Energia Aktsiaselts (jagunev ühing) jaguneb eraldumise teel, mille käigus asutati Tootsi Windpark OÜ (jagunemise käigus asutatud ühing, registrikood 16053613, aadress Harju maakond, Tallinn, Kesklinna linnaosa, Lelle tn 22, 11318). Jagunemiskava on notariaalselt tõestatud 23.07.2020.a. Jagunemisotsus on vastu võetud 05.08.2020.a. Jagunemine loetakse toimunuks käesoleva jagunemiskande tegemisega.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 41,
+    "recordId": 9223494,
+    "startDate": "2020-09-15"
+   },
+   {
+    "type": "JAGUN",
+    "typeAsText": "Division",
+    "content": "Eesti Energia AS (jagunev äriühing) jagunes eraldumise teel, andes osa oma varast üle jagunemise käigus asutatavale osaühingule Liivi Offshore OÜ (registrikood 16704571, asukoht ja aadress Harju maakond, Tallinn, Kesklinna linnaosa, Lelle tn 22, 11318). Jagunemiskava (notari ametitegevuse raamatu registri nr 465) koostati 31.01.2023. a, jagunemisotsus võeti vastu 17.02.2023. a",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 43,
+    "recordId": 10576366,
+    "startDate": "2023-03-27"
+   }
+  ],
+  "financialYears": [
+   {
+    "financialYearStartDate": "01-01",
+    "financialYearEndDate": "12-31",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 25,
+    "recordId": 3964316,
+    "startDate": "2010-12-27"
+   }
+  ],
+  "associationArticles": [
+   {
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 57,
+    "recordId": 14008310,
+    "startDate": "2026-10-02"
+   }
+  ],
+  "registryCardNotes": [
+   {
+    "type": "EVREG",
+    "typeAsText": "Reference to the predecessor",
+    "content": "Eesti Energoremont (reg. nr. 01005614), Energiamüük (reg. nr. 01021435), Õppekeskus (reg. nr. 01003093) ja  Kommertskeskus (reg. nr. 01006105) baasil.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 326122,
+    "startDate": "1998-06-25"
+   },
+   {
+    "type": "EVREG",
+    "typeAsText": "Reference to the predecessor",
+    "content": " Põhja Elektrivõrgud (reg. nr. 1005904), Lõuna Elektrivõrgud (reg. nr. 24003871), Viru Elektrivõrgud (reg. nr. 13006205), Saarte Elektrivõrgud (reg. nr. 45001238), Tallinna Elektrivõrk (reg. nr. 01023204),",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 326121,
+    "startDate": "1998-06-25"
+   }
+  ],
+  "commMeans": [
+   {
+    "type": "EMAIL",
+    "typeAsText": "E-mail address",
+    "content": "<redacted>",
+    "cardNumber": 1,
+    "entryNumber": 56,
+    "recordId": 13869553,
+    "startDate": "2026-07-15"
+   },
+   {
+    "type": "TEL",
+    "typeAsText": "Telephone",
+    "content": "+372 4652222",
+    "recordId": 9000450427,
+    "startDate": "2017-06-12"
+   }
+  ],
+  "reportedActivities": [
+   {
+    "emtakCode": "35151",
+    "emtakAsText": "Trade of electricity",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "35.15",
+    "recordId": 9000867995,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "35231",
+    "emtakAsText": "Trade of gas through mains",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "35.23",
+    "recordId": 9000867996,
+    "startDate": "2025-05-08"
+   }
+  ],
+  "infoFinancialYearFromReports": [
+   {
+    "recordId": 3630127,
+    "periodStartDate": "2025-01-01",
+    "periodEndDate": "2025-12-31",
+    "address": "Lelle tn 22, Kesklinna linnaosa, Tallinn, Harju maakond, 11318",
+    "activityAreaEmtakCode": "35151",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 3,
+    "activityAreaEmtakVersionAsText": "EMTAK 2025",
+    "activityAreaNaceCode": "35.15"
+   }
+  ],
+  "isFoundedWithoutPayment": false,
+  "hasAbandonedFormReqs": false,
+  "isAccountingLiable": false,
+  "isRequiredtoProvideBeneficiaries": true
+ }
+}
