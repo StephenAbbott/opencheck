@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 364** — A watched Estonian company is now re-checked when the e-Business Register's daily open data shows a change to its shareholders, board, beneficial owners, name, status or legal form.
+**Latest: Phase 365** — An Estonian company's in-force annual-report warnings, fines and dissolution warnings now lead its finding, and its commercial pledges are noted, from two more of the register's daily files.
 
 → [Full development history](docs/status.md)
 
