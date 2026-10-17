@@ -700,12 +700,18 @@ async def test_feed_is_valid_atom_with_one_entry_per_change(client: TestClient, 
     entries = root.findall(f"{ATOM}entry")
     assert len(entries) == 1
     e = entries[0]
-    assert e.find(f"{ATOM}title").text == "EASY POWER (RENAMED): 1 change"
+    # A legal-name change is "Recheck the source" (pKYC stage A): the tier
+    # word prefixes the title so a titles-only reader still sees it.
+    assert e.find(f"{ATOM}title").text == "Recheck the source — EASY POWER (RENAMED): 1 change"
     assert e.find(f"{ATOM}id").text.startswith("urn:opencheck:watch-entry:")
-    assert e.find(f"{ATOM}category").get("term") == "gleif"
+    categories = e.findall(f"{ATOM}category")
+    assert categories[0].get("term") == "gleif" and categories[0].get("scheme") is None
+    assert categories[1].get("scheme") == "https://opencheck.world/watchlist/materiality"
+    assert categories[1].get("term") == "recheck" and categories[1].get("label") == "Recheck the source"
     content = e.find(f"{ATOM}content").text
     assert "GLEIF published a change to this record in the 2026-09-08 00:00:00 Golden Copy delta." in content
-    assert "Legal name: EASY POWER → EASY POWER (RENAMED)." in content
+    assert "Materiality: Recheck the source — Something about the company's record or exposure moved" in content
+    assert "Legal name: EASY POWER → EASY POWER (RENAMED). [recheck]" in content
     assert "3 sources checked as a result (retrieved 2026-09-16)." in content
     # The token itself never appears in the entry body.
     assert th not in r.text
@@ -1451,9 +1457,13 @@ def test_a_version_1_file_gains_the_columns_and_keeps_its_rows(tmp_path: Path) -
     conn.commit()
     conn.close()
     store = wl.WatchlistStore(path, wl.Caps(10, 10))
-    assert store.schema_version == 2
+    assert store.schema_version == 3
     assert store.watches("h")[0]["gleif_history"] is None
-    assert store.entries("h", limit=1)[0]["gleif_log"] is None
+    old = store.entries("h", limit=1)[0]
+    assert old["gleif_log"] is None
+    # An entry written before grading is graded on read under today's
+    # table and says so: ``materiality_rules`` is None, never back-filled.
+    assert old["materiality"] == "note" and old["materiality_rules"] is None
     store.set_prewatch_log("h", EASY, _gl.unavailable("x"))
     assert store.prewatch_log("h", EASY)["reason"] == "x"
 

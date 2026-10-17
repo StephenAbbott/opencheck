@@ -36,11 +36,21 @@ import {
   entryHeadline,
   registerChangeLines,
   feedHelp,
+  filterEntries,
+  filterFromLocation,
   forgetToken,
+  GRADED_TODAY_NOTE,
+  hiddenByFilterSentence,
+  materialityChip,
+  MATERIALITY_LABELS,
+  MATERIALITY_SENTENCES,
+  MATERIALITY_TIERS,
   readToken,
   sortEntries,
+  storeFilter,
   storeToken,
   tierChip,
+  type ChangeLogFilter,
   tierSentence,
   tokenFromLocation,
   triggerSentence,
@@ -72,6 +82,15 @@ export default function WatchlistPage({
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [filter, setFilter] = useState<ChangeLogFilter>(() => filterFromLocation(window.location.search));
+  const chooseFilter = (next: ChangeLogFilter) => {
+    setFilter(next);
+    storeFilter(next);
+    const url = new URL(window.location.href);
+    if (next === "material") url.searchParams.set("show", "material");
+    else url.searchParams.delete("show");
+    window.history.replaceState(null, "", url.toString());
+  };
 
   const label = useCallback((id: string) => sourceLabel(id, sourceNames), [sourceNames]);
 
@@ -149,7 +168,9 @@ export default function WatchlistPage({
     window.setTimeout(() => setCopied(false), 1500);
   };
 
-  const entries = useMemo(() => (data ? sortEntries(data.entries) : []), [data]);
+  const allEntries = useMemo(() => (data ? sortEntries(data.entries) : []), [data]);
+  const entries = useMemo(() => filterEntries(allEntries, filter), [allEntries, filter]);
+  const hiddenNote = hiddenByFilterSentence(allEntries.length, entries.length);
   const honesty = useMemo(() => tierSentence(data?.tiers ?? null), [data]);
 
   return (
@@ -253,11 +274,45 @@ export default function WatchlistPage({
       {data && (
         <section className="bg-white border border-oo-rule rounded-oo p-7">
           <SectionLabel as="h2">What changed</SectionLabel>
-          {entries.length === 0 ? (
+          {allEntries.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Show">
+              <span className="text-oo-meta text-oo-muted">Show:</span>
+              <Button
+                variant={filter === "all" ? "primary" : "secondary"}
+                size="sm"
+                aria-pressed={filter === "all"}
+                onClick={() => chooseFilter("all")}
+              >
+                All
+              </Button>
+              <Button
+                variant={filter === "material" ? "primary" : "secondary"}
+                size="sm"
+                aria-pressed={filter === "material"}
+                onClick={() => chooseFilter("material")}
+              >
+                Material only
+              </Button>
+              <span className="text-oo-meta text-oo-muted">
+                Every entry carries a tier — {MATERIALITY_TIERS.map((t) => MATERIALITY_LABELS[t]).join(" · ")}.
+                Material = the last two.
+              </span>
+            </div>
+          )}
+          {hiddenNote && (
+            <p className="mt-2 text-oo-meta text-oo-muted" data-testid="log-hidden">
+              {hiddenNote}
+            </p>
+          )}
+          {allEntries.length === 0 ? (
             <p className="mt-3 text-oo-small text-oo-muted" data-testid="log-empty">
               Nothing yet. An entry appears here, and in the feed, when GLEIF or OpenSanctions
               publish a change to a watched company and the re-run finds a difference, or when the
               Estonian e-Business Register records one.
+            </p>
+          ) : entries.length === 0 ? (
+            <p className="mt-3 text-oo-small text-oo-muted" data-testid="log-all-note">
+              Every entry so far is note only — recorded for the history, nothing to act on by itself.
             </p>
           ) : (
             <ol className="mt-4 space-y-5" aria-label="Change log, newest first">
@@ -378,6 +433,7 @@ function EntryView({
   const checked = checkedSentence(e.checked);
   const degraded = Array.from(new Set(e.degraded.map((d) => d.source_id))).filter(Boolean);
   const chip = tierChip(e.tier);
+  const materiality = materialityChip(e.materiality);
   const registerLines = e.tier === "register" ? registerChangeLines(e.trigger?.changes) : [];
   return (
     <div>
@@ -394,12 +450,25 @@ function EntryView({
           {entryHeadline(e)}
         </a>
         <span className="text-oo-meta text-oo-muted">
+          {materiality && (
+            <>
+              <Chip tone={materiality.tone} size="sm" data-testid="materiality-chip">
+                {materiality.label}
+              </Chip>{" "}
+            </>
+          )}
           <Chip tone={chip.tone} size="sm">
             {chip.label}
           </Chip>{" "}
           {e.created_at.replace("T", " ").slice(0, 16)} UTC
         </span>
       </div>
+      {e.materiality && (
+        <p className="mt-1 text-oo-meta text-oo-muted">
+          {MATERIALITY_SENTENCES[e.materiality]}
+          {e.materiality_rules == null ? ` ${GRADED_TODAY_NOTE}` : ""}
+        </p>
+      )}
       <p className="mt-2 text-oo-small text-oo-ink">{triggerSentence(e)}</p>
       {registerLines.length > 0 && (
         <ul className="mt-2 space-y-1 text-oo-small text-oo-ink" aria-label="What the register recorded">
@@ -423,6 +492,11 @@ function EntryView({
               <span className={c.kind.endsWith("_unchecked") ? "text-oo-warn-text" : ""}>
                 {describeChange(c, label)}
               </span>
+              {c.materiality && c.materiality !== "note" && (
+                <Chip tone={c.materiality === "escalate" ? "risk" : "warn"} size="sm">
+                  {MATERIALITY_LABELS[c.materiality]}
+                </Chip>
+              )}
             </li>
           ))}
         </ul>

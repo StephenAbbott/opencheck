@@ -307,7 +307,11 @@ async def test_a_register_rerun_writes_an_entry_even_when_nothing_else_moved(est
     th = wl.token_hash(estonia["token"])
     (entry,) = estonia["store"].entries(th)
     assert entry["tier"] == "register" and entry["trigger"] == trigger
-    assert _entry_title(entry) == "EASY POWER: Estonian register record changed"
+    # A shareholder-list change on the register's own trigger grades the
+    # entry "Recheck the source" even though the re-run's snapshot moved
+    # nothing (pKYC stage A: the trigger is graded too).
+    assert entry["materiality"] == "recheck" and entry["materiality_rules"] == 1
+    assert _entry_title(entry) == "Recheck the source — EASY POWER: Estonian register record changed"
     content = _entry_content(entry)
     assert content.splitlines()[:3] == [
         f"The Estonian e-Business Register recorded a change to this company in its open data of {CUT} (registry code {EESTI}).",

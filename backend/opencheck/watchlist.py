@@ -99,6 +99,7 @@ from pathlib import Path
 from typing import Any
 
 from . import identifiers, sqlite_schema
+from . import watchlist_materiality as materiality
 from .bods import gleif_events as _gleif_events
 from .names import NAME_MATCH_THRESHOLD as _NAME_MATCH_THRESHOLD
 from .names import name_similarity
@@ -872,6 +873,18 @@ MIGRATIONS: tuple[sqlite_schema.Migration, ...] = (
             "ALTER TABLE watches ADD COLUMN prewatch_log_json TEXT",
         ),
     ),
+    # pKYC stage A: the entry's materiality tier (note / recheck / escalate)
+    # and the version of the table it was graded under. Both nullable: a
+    # NULL is an entry written before grading existed — graded on read under
+    # the current table and labelled so, never back-filled.
+    sqlite_schema.Migration(
+        3,
+        "Watchlist materiality tier",
+        (
+            "ALTER TABLE entries ADD COLUMN materiality TEXT",
+            "ALTER TABLE entries ADD COLUMN materiality_rules INTEGER",
+        ),
+    ),
 )
 
 
@@ -1148,13 +1161,17 @@ class WatchlistStore:
         legal_name: str | None,
         gleif_log: dict[str, Any] | None = None,
     ) -> int:
+        """Write an entry, graded: each change gains its ``materiality`` and
+        the row carries the entry tier with the table version it came from
+        (``watchlist_materiality``). Graded once, here, and kept."""
         assert tier in TIERS, tier
+        entry_tier, graded = materiality.grade(changes, tier=tier, trigger=trigger)
         with self._conn() as conn:
             cur = conn.execute(
                 """
                 INSERT INTO entries (token_hash, lei, created_at, tier, trigger_json, changes_json,
-                    checked_json, degraded_json, legal_name, gleif_log_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    checked_json, degraded_json, legal_name, gleif_log_json, materiality, materiality_rules)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     th,
@@ -1162,14 +1179,28 @@ class WatchlistStore:
                     _now_iso(),
                     tier,
                     json.dumps(trigger),
-                    json.dumps(changes),
+                    json.dumps(graded),
                     json.dumps(checked),
                     json.dumps(degraded),
                     legal_name,
                     json.dumps(gleif_log) if gleif_log is not None else None,
+                    entry_tier,
+                    materiality.MATERIALITY_RULES,
                 ),
             )
             return int(cur.lastrowid or 0)
+
+    def entries_by_materiality(self) -> dict[str, int]:
+        """How many entries carry each tier — aggregate only, for
+        ``/watchstats``. Entries written before grading are counted under
+        the tier they read as today, so the distribution covers the whole
+        log; the closed vocabulary is :data:`watchlist_materiality.TIERS`."""
+        counts = dict.fromkeys(materiality.TIERS, 0)
+        with self._conn() as conn:
+            rows = conn.execute("SELECT * FROM entries").fetchall()
+        for row in rows:
+            counts[_entry_dict(row)["materiality"]] += 1
+        return counts
 
     def entries(self, th: str, *, limit: int = 100) -> list[dict[str, Any]]:
         with self._conn() as conn:
@@ -1316,17 +1347,30 @@ def _json_col(row: sqlite3.Row, name: str) -> Any:
 
 
 def _entry_dict(row: sqlite3.Row) -> dict[str, Any]:
+    trigger = json.loads(row["trigger_json"])
+    changes = json.loads(row["changes_json"])
+    keys = row.keys()
+    stored = row["materiality"] if "materiality" in keys else None
+    rules = row["materiality_rules"] if "materiality_rules" in keys else None
+    if stored not in materiality.TIERS:
+        # An entry written before grading existed: graded on read under the
+        # current table, and ``materiality_rules`` stays None so a reader can
+        # tell a grade carried on the day from one applied afterwards.
+        stored, changes = materiality.grade(changes, tier=row["tier"], trigger=trigger)
+        rules = None
     return {
         "id": row["id"],
         "lei": row["lei"],
         "legal_name": row["legal_name"],
         "created_at": row["created_at"],
         "tier": row["tier"],
-        "trigger": json.loads(row["trigger_json"]),
-        "changes": json.loads(row["changes_json"]),
+        "trigger": trigger,
+        "changes": changes,
         "checked": json.loads(row["checked_json"]),
         "degraded": json.loads(row["degraded_json"]),
         "gleif_log": _json_col(row, "gleif_log_json"),
+        "materiality": stored,
+        "materiality_rules": rules,
     }
 
 
