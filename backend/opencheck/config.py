@@ -148,6 +148,11 @@ class Settings(BaseSettings):
     # days is deleted with its watches, so abandoned lists cannot hold the
     # instance cap forever. 0 disables.
     watchlist_stale_days: int = Field(default=90, alias="OPENCHECK_WATCHLIST_STALE_DAYS")
+    # pKYC stage C: the notice written at ``stale_days`` is followed by
+    # deletion this many days later; and a watch whose last full re-run is
+    # this old is "due a review" on the page (0 disables the due chip).
+    watchlist_delete_grace_days: int = Field(default=30, alias="OPENCHECK_WATCHLIST_DELETE_GRACE_DAYS")
+    watchlist_review_days: int = Field(default=90, alias="OPENCHECK_WATCHLIST_REVIEW_DAYS")
     # The worker: drains queued re-runs (at most this many per tick) and,
     # when due, catches up on OpenSanctions' entity deltas. 0 disables the
     # worker; 0 on the OpenSanctions interval disables Tier 2 only.

@@ -94,13 +94,14 @@ import threading
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from . import identifiers, sqlite_schema
 from . import watchlist_materiality as materiality
 from . import watchlist_context as context_module
+from . import watchlist_review as review_module
 from .bods import gleif_events as _gleif_events
 from .names import NAME_MATCH_THRESHOLD as _NAME_MATCH_THRESHOLD
 from .names import name_similarity
@@ -216,7 +217,11 @@ TIER_CATCHUP = "catch_up"
 #: is itself the news, so an entry is written even when the re-run's snapshot
 #: shows nothing new — a shareholder change moves no signal or status.
 TIER_REGISTER = "register"
-TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL, TIER_CATCHUP, TIER_REGISTER)
+#: pKYC stage C: a note about the list itself, not about a company — today
+#: only the expiry notice the worker writes before a stale list is deleted.
+#: Its entries carry an empty ``lei``. Words in ``watchlist_review``.
+TIER_REVIEW = "review"
+TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL, TIER_CATCHUP, TIER_REGISTER, TIER_REVIEW)
 
 #: The kinds a diff can contain. Closed vocabulary; the frontend words them
 #: (``lib/watchlist.ts``) and a test pins that every kind has words.
@@ -901,6 +906,14 @@ MIGRATIONS: tuple[sqlite_schema.Migration, ...] = (
             "ALTER TABLE watches ADD COLUMN context_set_at TEXT",
         ),
     ),
+    # pKYC stage C: when the expiry notice was written for a list nobody has
+    # opened or polled. NULL = no notice standing; any token-bearing request
+    # clears it. Deletion happens a grace period after the notice.
+    sqlite_schema.Migration(
+        5,
+        "Watchlist expiry notice",
+        ("ALTER TABLE lists ADD COLUMN expiry_notice_at TEXT",),
+    ),
 )
 
 
@@ -950,8 +963,14 @@ class WatchlistStore:
             return conn.execute("SELECT 1 FROM lists WHERE token_hash = ?", (th,)).fetchone() is not None
 
     def touch(self, th: str) -> None:
+        """Every token-bearing request lands here: the page, the feed, add,
+        remove, re-check, context. It is what keeps a list alive, and (stage
+        C) it withdraws a standing expiry notice."""
         with self._conn() as conn:
-            conn.execute("UPDATE lists SET last_seen_at = ? WHERE token_hash = ?", (_now_iso(), th))
+            conn.execute(
+                "UPDATE lists SET last_seen_at = ?, expiry_notice_at = NULL WHERE token_hash = ?",
+                (_now_iso(), th),
+            )
 
     # -- watches -----------------------------------------------------------
 
@@ -1331,35 +1350,99 @@ class WatchlistStore:
             return cur.rowcount
 
 
-    def prune_stale_lists(self, *, older_than_days: int) -> int:
-        """Phase 234: delete lists nobody has opened for ``older_than_days``
-        — the page or the Atom feed; both touch ``last_seen_at`` — with their
-        watches, entries and nothing else. Without it an abandoned list held
-        its share of the instance cap, and was re-run on every delta, forever.
-        Returns the number of lists deleted."""
-        if older_than_days <= 0:
-            return 0
-        cutoff = datetime.fromtimestamp(
-            time.time() - older_than_days * 86400.0, UTC
-        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    def expire_stale_lists(
+        self, *, stale_days: int, grace_days: int, now: datetime | None = None
+    ) -> dict[str, int]:
+        """pKYC stage C's reading of the Phase 234 rule. A list nobody has
+        opened or polled for ``stale_days`` gets **one notice entry** (tier
+        ``review``, about the list, no LEI) and ``expiry_notice_at`` is
+        stamped; ``grace_days`` after the notice it is deleted with its
+        watches and entries. Any token-bearing request in between clears the
+        notice (:meth:`touch`), so a reader who comes back late finds the
+        warning in the log and keeps the list. ``stale_days <= 0`` disables
+        both. Returns ``{"noticed": n, "deleted": n}``."""
+        out = {"noticed": 0, "deleted": 0}
+        if stale_days <= 0:
+            return out
+        t = now or datetime.now(UTC)
+        stale_cutoff = (t - timedelta(days=stale_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        grace_cutoff = (t - timedelta(days=max(grace_days, 0))).strftime("%Y-%m-%dT%H:%M:%SZ")
+        now_iso = t.strftime("%Y-%m-%dT%H:%M:%SZ")
         with self._conn() as conn:
             conn.execute("BEGIN IMMEDIATE")
             try:
-                stale = [
+                # Deletion first: a notice that has run its grace. Lists with
+                # no watches and no entries never get a notice — the day
+                # rule (prune_empty_lists) covers them.
+                doomed = [
                     r[0]
                     for r in conn.execute(
-                        "SELECT token_hash FROM lists WHERE last_seen_at < ?", (cutoff,)
+                        "SELECT token_hash FROM lists WHERE expiry_notice_at IS NOT NULL "
+                        "AND expiry_notice_at <= ? AND last_seen_at < ?",
+                        (grace_cutoff, stale_cutoff),
                     ).fetchall()
                 ]
-                for th in stale:
+                for th in doomed:
                     conn.execute("DELETE FROM watches WHERE token_hash = ?", (th,))
                     conn.execute("DELETE FROM entries WHERE token_hash = ?", (th,))
                     conn.execute("DELETE FROM lists WHERE token_hash = ?", (th,))
+                out["deleted"] = len(doomed)
+                # Then the notices.
+                due = [
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT token_hash FROM lists WHERE last_seen_at < ? AND expiry_notice_at IS NULL "
+                        "AND (token_hash IN (SELECT DISTINCT token_hash FROM watches) "
+                        "OR token_hash IN (SELECT DISTINCT token_hash FROM entries))",
+                        (stale_cutoff,),
+                    ).fetchall()
+                ]
+                delete_after = (t + timedelta(days=max(grace_days, 0))).strftime("%Y-%m-%dT%H:%M:%SZ")
+                trigger = review_module.expiry_trigger(
+                    notice_at=now_iso, delete_after=delete_after, stale_days=stale_days, grace_days=grace_days
+                )
+                for th in due:
+                    conn.execute(
+                        """
+                        INSERT INTO entries (token_hash, lei, created_at, tier, trigger_json, changes_json,
+                            checked_json, degraded_json, legal_name, materiality, materiality_rules)
+                        VALUES (?, '', ?, ?, ?, '[]', '[]', '[]', NULL, ?, ?)
+                        """,
+                        (th, now_iso, TIER_REVIEW, json.dumps(trigger), materiality.NOTE, materiality.MATERIALITY_RULES),
+                    )
+                    conn.execute("UPDATE lists SET expiry_notice_at = ? WHERE token_hash = ?", (now_iso, th))
+                out["noticed"] = len(due)
+                if doomed:
+                    row = conn.execute("SELECT value FROM meta WHERE key = 'lists_deleted_total'").fetchone()
+                    total = int(row[0]) + len(doomed) if row else len(doomed)
+                    conn.execute(
+                        "INSERT INTO meta (key, value) VALUES ('lists_deleted_total', ?) "
+                        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                        (str(total),),
+                    )
                 conn.execute("COMMIT")
             except BaseException:
                 conn.execute("ROLLBACK")
                 raise
-        return len(stale)
+        return out
+
+    def review_counts(self, *, due_days: int, now: datetime | None = None) -> dict[str, int]:
+        """Aggregate only, for ``/watchstats``: watches due a review, lists
+        under an expiry notice, lists deleted by the rule since the file
+        began."""
+        t = now or datetime.now(UTC)
+        with self._conn() as conn:
+            rows = conn.execute("SELECT * FROM watches").fetchall()
+            expiring = conn.execute(
+                "SELECT COUNT(*) FROM lists WHERE expiry_notice_at IS NOT NULL"
+            ).fetchone()[0]
+            deleted = conn.execute("SELECT value FROM meta WHERE key = 'lists_deleted_total'").fetchone()
+        due = sum(1 for r in rows if review_module.review_of(_watch_dict(r), now=t, due_days=due_days)["due"])
+        return {
+            "watches_review_due": due,
+            "lists_expiring": int(expiring),
+            "lists_deleted_total": int(deleted[0]) if deleted else 0,
+        }
 
 
 class CapExceededError(Exception):
@@ -2401,9 +2484,13 @@ async def tick() -> dict[str, Any]:
                 await asyncio.to_thread(store.set_meta, "opensanctions_checked_at", _now_iso())
                 # Anything Tier 2 queued runs next tick, within the same bound.
         out["pruned"] = await asyncio.to_thread(store.prune_empty_lists)
-        out["expired"] = await asyncio.to_thread(
-            store.prune_stale_lists, older_than_days=settings.watchlist_stale_days
+        expiry = await asyncio.to_thread(
+            store.expire_stale_lists,
+            stale_days=settings.watchlist_stale_days,
+            grace_days=settings.watchlist_delete_grace_days,
         )
+        out["expired"] = expiry["deleted"]
+        out["noticed"] = expiry["noticed"]
     except Exception as exc:  # noqa: BLE001 — the loop outlives any one tick
         log.exception("watchlist: tick failed")
         _bump(last_error=f"tick: {type(exc).__name__}: {exc}")

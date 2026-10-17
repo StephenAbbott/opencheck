@@ -33,6 +33,7 @@ from pydantic import BaseModel, Field
 from .. import watchlist as wl
 from .. import watchlist_context as context_module
 from .. import watchlist_materiality as materiality
+from .. import watchlist_review as review_module
 from ..bods import gleif_events as _gleif_events
 from ..config import get_settings
 from ..ratelimit import default_tier, heavy_tier, limiter, lookup_tier
@@ -103,8 +104,10 @@ def _list_or_404(store: wl.WatchlistStore, token: str) -> str:
         raise HTTPException(
             status_code=404,
             detail=(
-                "No watchlist with that token. A list that nobody opens for "
-                f"{get_settings().watchlist_stale_days} days is deleted."
+                "No watchlist with that token. "
+                + review_module.stale_rule_sentence(
+                    get_settings().watchlist_stale_days, get_settings().watchlist_delete_grace_days
+                )
                 if get_settings().watchlist_stale_days > 0
                 else "No watchlist with that token."
             ),
@@ -179,9 +182,11 @@ def _tiers(
 
 def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Request) -> dict[str, Any]:
     watches = store.watches(th)
+    snap_by_lei: dict[str, dict[str, Any]] = {}
     for w in watches:
         # The page shows the baseline's coarse facts, not the whole snapshot.
         snap = w.pop("snapshot", None) or {}
+        snap_by_lei[w["lei"]] = snap
         w["baseline"] = {
             "register_status": snap.get("register_status"),
             "risk_codes": [s["code"] for s in snap.get("signals") or [] if s.get("kind") == "risk"],
@@ -193,8 +198,22 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
         }
         _enrich_context(w)
     counts = store.counts(th)
+    # pKYC stage C: when OpenCheck last fully looked at each company, and
+    # how fresh that look was — computed on read, never stored.
+    due_days = get_settings().watchlist_review_days
+    for w in watches:
+        w["review"] = review_module.review_of(
+            {**w, "snapshot": snap_by_lei.get(w["lei"]) or {}}, due_days=due_days, label=_source_words
+        )
+    due = sum(1 for w in watches if w["review"]["due"])
     return {
         "watches": watches,
+        "review": {
+            "due": due,
+            "total": len(watches),
+            "due_days": due_days,
+            "sentence": review_module.list_due_sentence(due, len(watches), due_days),
+        },
         "entries": store.entries(th),
         "caps": {
             "per_list": store.caps.max_per_list,
@@ -205,6 +224,13 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
         "feed_url": f"{_public_api_base(request)}/watch/{token}.atom",
         "tiers": _tiers(wl.os_gaps(store)[-3:], wl.ariregister_gaps(store)[-3:]),
     }
+
+
+def _source_words(source_id: str) -> str:
+    """A source's display name for a sentence; the id when unknown."""
+    from ..bods.statements import SOURCE_NAMES
+
+    return SOURCE_NAMES.get(source_id, source_id)
 
 
 def _enrich_context(w: dict[str, Any]) -> None:
@@ -342,6 +368,8 @@ async def feed(request: Request, token: str) -> Response:
     th = await _db(_list_or_404, store, token)
     entries = await _db(store.entries, th, limit=50)
     watches = await _db(store.watches, th)
+    due_days = get_settings().watchlist_review_days
+    review_due = sum(1 for w in watches if review_module.review_of(w, due_days=due_days)["due"])
     xml = render_atom(
         feed_id=f"urn:opencheck:watchlist:{th[:24]}",
         self_url=f"{_public_api_base(request)}/watch/{token}.atom",
@@ -349,6 +377,7 @@ async def feed(request: Request, token: str) -> Response:
         title="OpenCheck watchlist",
         watches=watches,
         entries=entries,
+        review_due=review_due,
     )
     return Response(
         content=xml,
@@ -431,6 +460,9 @@ async def watch_stats() -> JSONResponse:
         "entries_by_materiality": dict.fromkeys(materiality.TIERS, 0),
         "watches_with_context": 0,
         "expectations_contradicted": 0,
+        "watches_review_due": 0,
+        "lists_expiring": 0,
+        "lists_deleted_total": 0,
     }
     store = await _db(wl.get_store)
     if store is not None:
@@ -449,6 +481,9 @@ async def watch_stats() -> JSONResponse:
                 # how many entries found the expectation contradicted. Counts
                 # only — never the rationale or the LEIs.
                 **store.context_counts(),
+                # pKYC stage C: watches due a review, lists under an expiry
+                # notice, lists the rule has deleted. Counts only.
+                **store.review_counts(due_days=get_settings().watchlist_review_days),
             }
 
         counts = await _db(_counts)
@@ -488,6 +523,7 @@ TIER_SENTENCE = {
     wl.TIER_MANUAL: "Re-checked on request",
     wl.TIER_CATCHUP: "Re-checked to catch up on OpenSanctions versions the watcher could not read",
     wl.TIER_REGISTER: "The Estonian e-Business Register recorded a change to this company",
+    wl.TIER_REVIEW: review_module.TIER_REVIEW_SENTENCE,
 }
 
 
@@ -717,6 +753,8 @@ def _entry_title(entry: dict[str, Any]) -> str:
 
 
 def _entry_headline(entry: dict[str, Any]) -> str:
+    if entry["tier"] == wl.TIER_REVIEW:
+        return "This list: nobody has opened it for a while — it will be deleted unless opened"
     name = entry.get("legal_name") or entry["lei"]
     changes = entry.get("changes") or []
     if not changes and entry["tier"] == wl.TIER_REGISTER:
@@ -808,6 +846,10 @@ def _entry_content(entry: dict[str, Any]) -> str:
     if entry["tier"] == wl.TIER_REGISTER:
         lines[0] = register_sentence(trig)
         lines += [" - " + line for line in wl.register_change_lines(trig.get("changes") or {})]
+    if entry["tier"] == wl.TIER_REVIEW:
+        # pKYC stage C: the expiry notice — about the list, so none of the
+        # per-company lines below apply.
+        return review_module.expiry_sentence(trig)
     tier = entry.get("materiality")
     if tier in materiality.TIERS:
         lines.append(
@@ -850,6 +892,7 @@ def render_atom(
     title: str,
     watches: list[dict[str, Any]],
     entries: list[dict[str, Any]],
+    review_due: int = 0,
 ) -> str:
     updated = max([e["created_at"] for e in entries] + [w["added_at"] for w in watches], default=None)
     parts = [
@@ -861,12 +904,12 @@ def render_atom(
         f'  <link rel="alternate" type="text/html" href="{escape(page_url, {chr(34): "&quot;"})}"/>',
         f"  <updated>{_atom_time(updated)}</updated>",
         "  <author><name>OpenCheck</name></author>",
-        f"  <subtitle>{escape(_subtitle(watches))}</subtitle>",
+        f"  <subtitle>{escape(_subtitle(watches, review_due=review_due))}</subtitle>",
         "  <generator>OpenCheck watchlist</generator>",
     ]
     frontend = _frontend_origin()
     for e in entries:
-        link = f"{frontend}/?lei={e['lei']}"
+        link = f"{frontend}/?lei={e['lei']}" if e.get("lei") else page_url
         parts += [
             "  <entry>",
             f"    <id>urn:opencheck:watch-entry:{e['id']}</id>",
@@ -894,10 +937,11 @@ def render_atom(
     return "\n".join(parts) + "\n"
 
 
-def _subtitle(watches: list[dict[str, Any]]) -> str:
+def _subtitle(watches: list[dict[str, Any]], *, review_due: int = 0) -> str:
     n = len(watches)
+    due = f", {review_due} due a review" if review_due else ""
     return (
-        f"{n} watched {'company' if n == 1 else 'companies'}. Re-checked only when GLEIF, "
+        f"{n} watched {'company' if n == 1 else 'companies'}{due}. Re-checked only when GLEIF, "
         "OpenSanctions or the Estonian e-Business Register publish a change to them — "
         "OpenCheck does not poll the registers."
     )

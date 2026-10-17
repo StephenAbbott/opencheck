@@ -35,6 +35,12 @@ const PAYLOAD: WatchlistPayload = {
           report_path: "/report/AbCdEfGhIjKlMnOpQrStUv",
         },
       },
+      review: {
+        last_run_at: "2026-09-16T08:00:00Z", last_run_days: 112, never_rerun: false, due: true, due_days: 90,
+        sources_total: 3, sources_from_older_copy: [{ source_id: "companies_house", retrieved_at: "2026-06-03T00:00:00Z" }],
+        sources_not_reached: ["kvk"],
+        sentence: "Last fully re-run 112 days ago; 1 of 3 sources answered from an older copy (Companies House 3 Jun 2026); KvK not reached. Re-check by hand to refresh.",
+      },
       baseline: {
         register_status: { liveness: "live", source_id: "companies_house" },
         risk_codes: ["SANCTIONED"],
@@ -73,6 +79,7 @@ const PAYLOAD: WatchlistPayload = {
       materiality: "escalate", materiality_rules: null,
     },
   ],
+  review: { due: 1, total: 1, due_days: 90, sentence: "1 of 1 companies have not been fully re-run in 90 days." },
   caps: { per_list: 10, total: 200, in_list: 1, total_watched: 3 },
   feed_url: "https://api.opencheck.world/watch/tok.atom",
   tiers: {
@@ -292,5 +299,38 @@ describe("WatchlistPage", () => {
       rationale: null,
       onboarding_report_id: "AbCdEfGhIjKlMnOpQrStUv",
     });
+  });
+
+  // ---- pKYC stage C: when OpenCheck last looked -----------------------------
+
+  it("shows the review line and chip on a due watch, the list-level count, and a review-tier entry without a link", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    const notice = {
+      id: 9, lei: "", legal_name: null, created_at: "2026-10-18T00:00:00Z", tier: "review" as const,
+      trigger: { reason: "list_expiring" as const, stale_days: 90, grace_days: 30, delete_after: "2026-11-17T00:00:00Z" },
+      changes: [], checked: [], degraded: [], materiality: "note" as const, materiality_rules: 1,
+    };
+    mockFetch({ ...PAYLOAD, entries: [notice, ...PAYLOAD.entries] });
+    render(<WatchlistPage />);
+    expect(await screen.findByTestId("review-due-line")).toHaveTextContent("1 of 1 companies have not been fully re-run in 90 days.");
+    expect(screen.getByTestId("review-due-chip")).toHaveTextContent("Review due");
+    expect(screen.getByTestId("review-sentence")).toHaveTextContent("Last fully re-run 112 days ago");
+    expect(screen.getByTestId("review-sentence").className).toContain("warn");
+    const log = screen.getByRole("list", { name: "Change log, newest first" });
+    const first = log.children[0] as HTMLElement;
+    expect(first).toHaveTextContent("This list: nobody has opened it for a while");
+    expect(first).toHaveTextContent("after 2026-11-17");
+    expect(within(first).queryByRole("link")).toBeNull();
+    expect(within(first).getByText("Review")).toBeTruthy();
+  });
+
+  it("shows no review chip or list line when nothing is due", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    const fresh = { ...PAYLOAD.watches[0], review: { ...PAYLOAD.watches[0].review!, due: false, sentence: "Last fully re-run 3 days ago; every source answered live." } };
+    mockFetch({ ...PAYLOAD, watches: [fresh], review: { due: 0, total: 1, due_days: 90, sentence: null } });
+    render(<WatchlistPage />);
+    expect(await screen.findByTestId("review-sentence")).toHaveTextContent("every source answered live");
+    expect(screen.queryByTestId("review-due-chip")).toBeNull();
+    expect(screen.queryByTestId("review-due-line")).toBeNull();
   });
 });

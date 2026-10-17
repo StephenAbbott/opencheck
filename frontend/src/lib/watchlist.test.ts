@@ -524,4 +524,24 @@ describe("materiality (pKYC stage A)", () => {
     expect(hasContext({ expected_jurisdiction: null, expected_parent_lei: null, rationale: null, onboarding_report_id: null, set_at: null })).toBe(false);
     expect(hasContext({ expected_jurisdiction: "GB", expected_parent_lei: null, rationale: null, onboarding_report_id: null, set_at: "t" })).toBe(true);
   });
+
+  // ---- pKYC stage C: when OpenCheck last looked -----------------------------
+
+  it("shows a Review due chip in warn only when the review is due, and words the review tier", async () => {
+    const { reviewChip, tierChip, entryHeadline, triggerSentence, REVIEW_WORDS } = await import("./watchlist");
+    const base = { last_run_at: null, last_run_days: 3, never_rerun: false, due_days: 90, sources_total: 2, sources_from_older_copy: [], sources_not_reached: [], sentence: "x" };
+    expect(reviewChip(undefined)).toBeNull();
+    expect(reviewChip({ ...base, due: false })).toBeNull();
+    expect(reviewChip({ ...base, due: true })).toEqual({ label: REVIEW_WORDS.due_chip, tone: "warn" });
+    expect(tierChip("review")).toEqual({ label: "Review", tone: "neutral" });
+    const entry = {
+      id: 9, lei: "", legal_name: null, created_at: "2026-10-18T00:00:00Z", tier: "review",
+      trigger: { reason: "list_expiring", stale_days: 90, grace_days: 30, delete_after: "2026-11-17T00:00:00Z" },
+      changes: [], checked: [], degraded: [], materiality: "note", materiality_rules: 1,
+    } as unknown as import("./watchlist").WatchEntry;
+    expect(entryHeadline(entry)).toBe("This list: nobody has opened it for a while — it will be deleted unless opened");
+    expect(triggerSentence(entry)).toBe(
+      "Nobody has opened or polled this watchlist for 90 days. It will be deleted, with its watches and this log, after 2026-11-17 unless it is opened or its feed is read before then. Opening it keeps it.",
+    );
+  });
 });

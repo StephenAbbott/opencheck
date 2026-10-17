@@ -39,6 +39,7 @@ import {
   hasContext,
   RATIONALE_MAX,
   reportIdFromInput,
+  reviewChip,
   gleifLogLines,
   entryHeadline,
   registerChangeLines,
@@ -270,6 +271,11 @@ export default function WatchlistPage({
               {data.caps.in_list} of {data.caps.per_list} on this list
             </p>
           </div>
+          {data.review?.sentence && (
+            <p className="mt-2 text-oo-small text-oo-warn-text" data-testid="review-due-line">
+              {data.review.sentence}
+            </p>
+          )}
           {data.watches.length === 0 ? (
             <p className="mt-3 text-oo-small text-oo-muted">
               This list is empty. Open any company&apos;s report and press Watch for changes.
@@ -377,6 +383,7 @@ function WatchRow({
   const b = w.baseline;
   const status = b.register_status;
   const gleifStatus = w.gleif_facts?.registration_status ?? null;
+  const review = reviewChip(w.review);
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
       <div className="min-w-0">
@@ -422,11 +429,24 @@ function WatchRow({
               {b.coverage.answered} of {b.coverage.applicable} sources
             </Chip>
           )}
+          {review && (
+            <Chip tone={review.tone} size="sm" data-testid="review-due-chip">
+              {review.label}
+            </Chip>
+          )}
         </div>
         <p className="mt-2 text-oo-meta text-oo-muted">
           Watching since {day(w.added_at)} · last checked {day(w.last_checked_at)}
           {w.gleif_watermark ? ` · GLEIF record as of ${w.gleif_watermark.slice(0, 10)}` : ""}
         </p>
+        {w.review && (
+          <p
+            className={`mt-1 text-oo-meta ${w.review.due ? "text-oo-warn-text" : "text-oo-muted"}`}
+            data-testid="review-sentence"
+          >
+            {w.review.sentence}
+          </p>
+        )}
         {w.gleif_history && (
           <details className="mt-1 text-oo-meta text-oo-muted">
             <summary className="cursor-pointer hover:text-oo-ink">
@@ -467,17 +487,22 @@ function EntryView({
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <a
-          href={`/?lei=${e.lei}`}
-          onClick={(ev) => {
-            if (!onOpen) return;
-            ev.preventDefault();
-            onOpen(e.lei);
-          }}
-          className="font-head font-bold text-oo-ink underline-offset-2 hover:underline hover:text-oo-blue"
-        >
-          {entryHeadline(e)}
-        </a>
+        {e.tier === "review" ? (
+          // pKYC stage C: an entry about the list, not a company — nothing to open.
+          <span className="font-head font-bold text-oo-ink">{entryHeadline(e)}</span>
+        ) : (
+          <a
+            href={`/?lei=${e.lei}`}
+            onClick={(ev) => {
+              if (!onOpen) return;
+              ev.preventDefault();
+              onOpen(e.lei);
+            }}
+            className="font-head font-bold text-oo-ink underline-offset-2 hover:underline hover:text-oo-blue"
+          >
+            {entryHeadline(e)}
+          </a>
+        )}
         <span className="text-oo-meta text-oo-muted">
           {materiality && (
             <>
@@ -542,11 +567,13 @@ function EntryView({
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-oo-small text-oo-muted">
-          {e.tier === "register"
-            ? "A full re-run found nothing else that differs from the last check."
-            : "A full re-run found no difference from the last check."}
-        </p>
+        e.tier !== "review" && (
+          <p className="mt-2 text-oo-small text-oo-muted">
+            {e.tier === "register"
+              ? "A full re-run found nothing else that differs from the last check."
+              : "A full re-run found no difference from the last check."}
+          </p>
+        )
       )}
       {e.gleif_log && <GleifLogBlock lines={gleifLogLines(e.gleif_log)} />}
       <p className="mt-2 text-oo-meta text-oo-muted">
