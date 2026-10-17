@@ -6,7 +6,7 @@
  * pinned as sentences.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   checkedSentence,
@@ -433,5 +433,60 @@ describe("gleifLogLines (Phase 303)", () => {
     expect(gleifLogLines({ available: true, since: null, items: [], more: 0 }, "GLEIF's log")?.lead).toBe(
       "GLEIF's log has no change to this record other than renewal dates.",
     );
+  });
+});
+
+describe("materiality (pKYC stage A)", () => {
+  it("renders what the entry carries, with the tone the tier asserts", async () => {
+    const { materialityChip, isMaterial, filterEntries, hiddenByFilterSentence, MATERIALITY_LABELS } = await import("./watchlist");
+    expect(materialityChip("escalate")).toEqual({ label: "Escalate", tone: "risk" });
+    expect(materialityChip("recheck")).toEqual({ label: "Recheck the source", tone: "warn" });
+    expect(materialityChip("note")).toEqual({ label: "Note only", tone: "neutral" });
+    expect(materialityChip(undefined)).toBeNull();
+    // note is never red; escalate is never neutral
+    expect(materialityChip("note")?.tone).not.toBe("risk");
+    expect(materialityChip("escalate")?.tone).not.toBe("neutral");
+    expect(Object.keys(MATERIALITY_LABELS)).toEqual(["note", "recheck", "escalate"]);
+    expect([isMaterial("note"), isMaterial("recheck"), isMaterial("escalate"), isMaterial(undefined)]).toEqual([
+      false, true, true, false,
+    ]);
+    const entries = [
+      { id: 1, materiality: "note" },
+      { id: 2, materiality: "recheck" },
+      { id: 3 },
+    ] as unknown as import("./watchlist").WatchEntry[];
+    expect(filterEntries(entries, "all")).toHaveLength(3);
+    expect(filterEntries(entries, "material").map((e) => e.id)).toEqual([2]);
+    expect(hiddenByFilterSentence(3, 1)).toBe("2 note-only entries are hidden; nothing shown here is recorded for the history alone.");
+    expect(hiddenByFilterSentence(2, 1)).toBe("1 note-only entry is hidden; nothing shown here is recorded for the history alone.");
+    expect(hiddenByFilterSentence(2, 2)).toBeNull();
+  });
+
+  it("reads the filter from the URL first, then storage, and never throws without storage", async () => {
+    const { filterFromLocation, storeFilter, FILTER_KEY } = await import("./watchlist");
+    // The lib suite runs in node: no window at all, which is also what a
+    // blocked-storage browser looks like to these helpers.
+    expect(filterFromLocation("?show=material")).toBe("material");
+    expect(filterFromLocation("?show=all")).toBe("all");
+    expect(filterFromLocation("")).toBe("all");
+    expect(() => storeFilter("material")).not.toThrow();
+    const store = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+        removeItem: (k: string) => void store.delete(k),
+      },
+    });
+    try {
+      storeFilter("material");
+      expect(store.get(FILTER_KEY)).toBe("material");
+      expect(filterFromLocation("")).toBe("material");
+      storeFilter("all");
+      expect(store.has(FILTER_KEY)).toBe(false);
+      expect(filterFromLocation("")).toBe("all");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

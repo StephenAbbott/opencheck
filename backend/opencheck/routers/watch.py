@@ -28,6 +28,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .. import watchlist as wl
+from .. import watchlist_materiality as materiality
 from ..bods import gleif_events as _gleif_events
 from ..config import get_settings
 from ..ratelimit import default_tier, heavy_tier, limiter, lookup_tier
@@ -330,13 +331,26 @@ async def watch_stats() -> JSONResponse:
     """The watcher's aggregate state — deltas seen, watched LEIs a delta
     named, renewal churn filtered, re-runs, entries. Same contract as
     ``/mirror``: public, no LEI or name can appear."""
-    counts = {"total": 0, "distinct_leis": 0, "pending": 0}
+    counts: dict[str, Any] = {
+        "total": 0,
+        "distinct_leis": 0,
+        "pending": 0,
+        "entries_by_materiality": dict.fromkeys(materiality.TIERS, 0),
+    }
     store = await _db(wl.get_store)
     if store is not None:
 
-        def _counts() -> dict[str, int]:
+        def _counts() -> dict[str, Any]:
             c = store.counts()
-            return {"total": c["total"], "distinct_leis": c["distinct_leis"], "pending": store.pending_count()}
+            return {
+                "total": c["total"],
+                "distinct_leis": c["distinct_leis"],
+                "pending": store.pending_count(),
+                # pKYC stage A: the materiality distribution — the one number
+                # that says whether the tier lines are drawn in the right
+                # place. Closed vocabulary, aggregate only.
+                "entries_by_materiality": store.entries_by_materiality(),
+            }
 
         counts = await _db(_counts)
     from .. import backups
@@ -346,6 +360,7 @@ async def watch_stats() -> JSONResponse:
             "enabled": store is not None,
             "watched": counts,
             "watcher": wl.state(),
+            "materiality_rules": materiality.MATERIALITY_RULES,
             # Phase 260: the off-host backups of this file and the saved
             # reports — dates, sizes and errors only, never the repository.
             "backups": backups.state(),
@@ -552,6 +567,14 @@ def _describe(change: dict[str, Any]) -> str:
     return f"{k}."
 
 
+def _change_tier_words(change: dict[str, Any]) -> str:
+    """" [recheck]" after a change's sentence, for the two non-note tiers."""
+    tier = change.get("materiality")
+    if tier in materiality.TIERS and tier != materiality.NOTE:
+        return f" [{tier}]"
+    return ""
+
+
 def _catch_up_sentence(trig: dict[str, Any]) -> str:
     """Why a catch-up re-run happened, in the feed's words."""
     if trig.get("reason") == "register_gap":
@@ -570,7 +593,20 @@ def _catch_up_sentence(trig: dict[str, Any]) -> str:
     )
 
 
+def _materiality_prefix(entry: dict[str, Any]) -> str:
+    """The tier word before the title for the two non-note tiers, so a
+    reader that shows only titles still sees it; nothing for note."""
+    tier = entry.get("materiality")
+    if tier in materiality.TIERS and tier != materiality.NOTE:
+        return f"{materiality.TIER_LABELS[tier]} — "
+    return ""
+
+
 def _entry_title(entry: dict[str, Any]) -> str:
+    return _materiality_prefix(entry) + _entry_headline(entry)
+
+
+def _entry_headline(entry: dict[str, Any]) -> str:
     name = entry.get("legal_name") or entry["lei"]
     changes = entry.get("changes") or []
     if not changes and entry["tier"] == wl.TIER_REGISTER:
@@ -662,10 +698,16 @@ def _entry_content(entry: dict[str, Any]) -> str:
     if entry["tier"] == wl.TIER_REGISTER:
         lines[0] = register_sentence(trig)
         lines += [" - " + line for line in wl.register_change_lines(trig.get("changes") or {})]
+    tier = entry.get("materiality")
+    if tier in materiality.TIERS:
+        lines.append(
+            f"Materiality: {materiality.TIER_LABELS[tier]} — {materiality.TIER_SENTENCES[tier]}"
+            + ("" if entry.get("materiality_rules") else " (graded under today's table; the entry predates grading)")
+        )
     changes = entry.get("changes") or []
     if changes:
         lines.append("What a re-run found:")
-        lines += [" - " + _describe(c) for c in changes]
+        lines += [" - " + _describe(c) + _change_tier_words(c) for c in changes]
     elif entry["tier"] == wl.TIER_REGISTER:
         lines.append("A full re-run found nothing else that differs from the last check.")
     else:
@@ -723,6 +765,13 @@ def render_atom(
             f"    <updated>{_atom_time(e['created_at'])}</updated>",
             f"    <published>{_atom_time(e['created_at'])}</published>",
             f'    <category term="{escape(e["tier"], {chr(34): "&quot;"})}"/>',
+        ]
+        if e.get("materiality") in materiality.TIERS:
+            parts.append(
+                f'    <category scheme="{materiality.ATOM_SCHEME}" term="{e["materiality"]}" '
+                f'label="{escape(materiality.TIER_LABELS[e["materiality"]], {chr(34): "&quot;"})}"/>'
+            )
+        parts += [
             f'    <content type="text">{escape(_entry_content(e))}</content>',
             "  </entry>",
         ]
