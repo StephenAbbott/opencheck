@@ -1,0 +1,6 @@
+---
+title: A dragged node's icon and flag move with it.
+readme: Dragging a node in any network diagram now carries its icon, jurisdiction flag and badges with it, on phones as well as desktop.
+tests: vitest +4, vitest_files +1
+---
+The HTML overlay that draws each node's BOVS icon, jurisdiction flag, risk badge and collapse toggle above the Cytoscape canvas was recomputed only on Cytoscape's `viewport` event. Dragging a node moves it without touching the viewport, so on every graph (FullCheck, the per-source cards, the subsidiary network) the marks stayed where the node had been until the next pan or zoom; on a phone a tap elsewhere nudges the viewport, which is why they snapped back then (reported from Chrome on an iPhone). The overlay now also follows node `position` events through `syncOverlayWithGraph` (`frontend/src/lib/overlaySync.ts`), coalesced to one update per animation frame, while pan and zoom stay synchronous so the marks never trail a pinch. Reproduced and verified on production BP data with iPhone touch emulation: on a 60×36 px drag the icon moved 0×0 before the fix and 60×36 after. Tests run against a headless Cytoscape instance, so they exercise the real event names. To check in production: open a FullCheck on a phone, drag a node, and the icon and flag should move with it.
