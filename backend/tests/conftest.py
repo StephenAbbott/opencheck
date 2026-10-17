@@ -157,6 +157,7 @@ def _clear_lookup_replay_cache():
 
     from opencheck import gleifstats as _gstats
     from opencheck import isin_index as _isin_index
+    from opencheck.sources import ariregister_rest as _rik
 
     _lookup_mod._REPLAY_CACHE.clear()
     _lookup_mod._IN_FLIGHT.clear()
@@ -164,6 +165,7 @@ def _clear_lookup_replay_cache():
     _pstats.reset()
     _gstats.reset_for_tests()
     _isin_index.reset_for_tests()
+    _rik.reset_for_tests()
     yield
     _lookup_mod._REPLAY_CACHE.clear()
     _lookup_mod._IN_FLIGHT.clear()
@@ -171,6 +173,7 @@ def _clear_lookup_replay_cache():
     _pstats.reset()
     _gstats.reset_for_tests()
     _isin_index.reset_for_tests()
+    _rik.reset_for_tests()
 
 
 @pytest.fixture(autouse=True)

@@ -55,6 +55,9 @@ _CACHE_KEY = "ariregister/history-v1/{code}"
 NOT_READ_OFFLINE = "offline"
 NOT_READ_NO_CREDENTIALS = "no_credentials"
 NOT_READ_FAILED = "upstream_error"
+#: The contract's one-query slot was busy, or its daily allowance spent
+#: (``ariregister_rest``): nothing was sent.
+NOT_READ_LIMITED = "rate_limited"
 
 #: How an ended row's party was identified, said on the record.
 JOIN_REGISTER = "register"        # the same person's current row, by the register's own record
@@ -263,6 +266,7 @@ def not_read(reason: str) -> dict[str, Any]:
 _NOT_READ_DETAIL = {
     NOT_READ_NO_CREDENTIALS: "no open-data API credentials are configured",
     NOT_READ_FAILED: "the register's history service did not answer",
+    NOT_READ_LIMITED: "the register's query allowance was not available",
 }
 
 
@@ -283,6 +287,7 @@ async def read_history(adapter: Any, registry_code: str, record: dict[str, Any])
     if hit is not None and isinstance(hit[0], dict) and hit[0].get("read"):
         return hit[0]
 
+    unavailable: dict[str, str] = {}
     if not (settings.ariregister_username and settings.ariregister_password):
         reason = NOT_READ_NO_CREDENTIALS
         data = None
@@ -293,16 +298,18 @@ async def read_history(adapter: Any, registry_code: str, record: dict[str, Any])
         except Exception as exc:  # noqa: BLE001 — a history failure never fails the lookup
             logger.warning("ariregister: history read failed for %s: %s", registry_code, type(exc).__name__)
             data = None
+        if data:
+            unavailable = dict(data.get("unavailable") or {})
     if not data or not data.get("detail_xml"):
+        cause = unavailable.get("detail")
+        if cause in _LIMITED_CAUSES:
+            reason = NOT_READ_LIMITED
         degradation.record(
             "ariregister",
             "The registry-card history was not read "
-            f"({_NOT_READ_DETAIL[reason]}); former shareholders and former "
+            f"({_why(reason, cause)}); former shareholders and former "
             "beneficial owners are not shown.",
-            reason=(
-                degradation.REASON_NOT_CONFIGURED if reason == NOT_READ_NO_CREDENTIALS
-                else degradation.REASON_UPSTREAM_ERROR
-            ),
+            reason=_REASON[reason] if cause is None else _rest_reason(cause),
             check=degradation.CHECK_SOURCE_READ,
         )
         return not_read(reason)
@@ -311,11 +318,12 @@ async def read_history(adapter: Any, registry_code: str, record: dict[str, Any])
         # The card history answered and the BO history did not: the ended
         # holdings are shown, the former beneficial owners are not.
         history["bo_read"] = False
+        cause = unavailable.get("bo")
         degradation.record(
             "ariregister",
-            "The beneficial-owner history was not read (the register's history "
-            "service did not answer); former beneficial owners are not shown.",
-            reason=degradation.REASON_UPSTREAM_ERROR,
+            "The beneficial-owner history was not read "
+            f"({_why(NOT_READ_FAILED, cause)}); former beneficial owners are not shown.",
+            reason=_rest_reason(cause) if cause else degradation.REASON_UPSTREAM_ERROR,
             check=degradation.CHECK_SOURCE_READ,
         )
     else:
@@ -323,8 +331,34 @@ async def read_history(adapter: Any, registry_code: str, record: dict[str, Any])
     return history
 
 
+#: The ``ariregister_rest`` causes for which nothing was sent.
+_LIMITED_CAUSES = frozenset({"busy", "budget"})
+
+_REASON = {
+    NOT_READ_NO_CREDENTIALS: degradation.REASON_NOT_CONFIGURED,
+    NOT_READ_FAILED: degradation.REASON_UPSTREAM_ERROR,
+    NOT_READ_LIMITED: degradation.REASON_RATE_LIMITED,
+}
+
+
+def _why(reason: str, cause: str | None) -> str:
+    """The bracketed clause: the shared client's fixed sentence when it
+    said why, else the history module's own."""
+    if cause:
+        from . import ariregister_rest as rik
+
+        return rik.DETAILS.get(cause, _NOT_READ_DETAIL[NOT_READ_FAILED])
+    return _NOT_READ_DETAIL[reason]
+
+
+def _rest_reason(cause: str) -> str:
+    from . import ariregister_rest as rik
+
+    return rik.RikUnavailable(cause).reason if cause in rik.DETAILS else degradation.REASON_UPSTREAM_ERROR
+
+
 __all__ = [
     "CACHE_MAX_AGE_DAYS", "JOIN_FORMER", "JOIN_NAME_BIRTH", "JOIN_REGISTER", "JOIN_ROW",
-    "NOT_READ_FAILED", "NOT_READ_NO_CREDENTIALS", "NOT_READ_OFFLINE", "SHAREHOLDER_ROLES",
+    "NOT_READ_FAILED", "NOT_READ_LIMITED", "NOT_READ_NO_CREDENTIALS", "NOT_READ_OFFLINE", "SHAREHOLDER_ROLES",
     "history_from_responses", "not_read", "read_history",
 ]

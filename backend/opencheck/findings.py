@@ -1760,7 +1760,7 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
             f"{records} ended ownership {'record' if records == 1 else 'records'}"
             if records else "no ended ownership on record"
         )
-    elif history.get("reason") in ("no_credentials", "upstream_error"):
+    elif history.get("reason") in ("no_credentials", "upstream_error", "rate_limited"):
         history_clause = "ownership history not read"
     # The general data (the üldandmed phase): an activity suspension in
     # force at the cut.
