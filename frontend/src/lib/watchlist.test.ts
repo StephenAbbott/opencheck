@@ -489,4 +489,39 @@ describe("materiality (pKYC stage A)", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  // ---- pKYC stage B: what the watcher expected ----------------------------
+
+  it("words a contradicted expectation in warn and a met one in ok, and nothing without one", async () => {
+    const { expectationSentence, entryContradicted, EXPECTATION_WORDS } = await import("./watchlist");
+    const miss = { kind: "gleif_field", field: "ultimate_parent_lei", expectation: { field: "ultimate_parent_lei", expected: "X", met: false } };
+    const hit = { kind: "jurisdiction", expectation: { field: "jurisdiction", expected: "GB", met: true } };
+    expect(expectationSentence(miss as never)).toEqual({ text: "Your watch expected X.", tone: "warn" });
+    expect(expectationSentence(hit as never)).toEqual({ text: "As your watch expected.", tone: "ok" });
+    expect(expectationSentence({ kind: "legal_name" })).toBeNull();
+    // The words are the backend's (pinned by tests/test_watchlist_context.py).
+    expect(EXPECTATION_WORDS.contradicted).toContain("{expected}");
+    const entry = { changes: [hit, miss] } as unknown as import("./watchlist").WatchEntry;
+    expect(entryContradicted(entry)).toBe(true);
+    expect(entryContradicted({ changes: [hit] } as unknown as import("./watchlist").WatchEntry)).toBe(false);
+  });
+
+  it("words a baseline disagreement, reads a saved report id from a link, and knows an empty context", async () => {
+    const { disagreementSentence, reportIdFromInput, hasContext } = await import("./watchlist");
+    expect(disagreementSentence({ field: "jurisdiction", expected: "GB", actual: "GR" })).toBe(
+      "Baseline jurisdiction is GR; your watch expected GB.",
+    );
+    expect(disagreementSentence({ field: "ultimate_parent_lei", expected: "X", actual: "Y" }, "Top Co")).toBe(
+      "Baseline ultimate parent is Y (Top Co); your watch expected X.",
+    );
+    const id = "AbCdEfGhIjKlMnOpQrStUv";
+    expect(reportIdFromInput(`https://opencheck.world/report/${id}`)).toBe(id);
+    expect(reportIdFromInput(`https://api.opencheck.world/share/saved/${id}/`)).toBe(id);
+    expect(reportIdFromInput(` ${id} `)).toBe(id);
+    expect(reportIdFromInput("https://example.com/x")).toBeNull();
+    expect(reportIdFromInput("")).toBeNull();
+    expect(hasContext(undefined)).toBe(false);
+    expect(hasContext({ expected_jurisdiction: null, expected_parent_lei: null, rationale: null, onboarding_report_id: null, set_at: null })).toBe(false);
+    expect(hasContext({ expected_jurisdiction: "GB", expected_parent_lei: null, rationale: null, onboarding_report_id: null, set_at: "t" })).toBe(true);
+  });
 });

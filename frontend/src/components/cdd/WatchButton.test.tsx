@@ -110,4 +110,14 @@ describe("WatchButton", () => {
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
     expect(window.localStorage.getItem(TOKEN_KEY)).toBeNull();
   });
+
+  it("pins the page's saved report to the watch, and sends no context without one", async () => {
+    const calls = mockBackend();
+    render(<WatchButton lei={LEI} onOpenWatchlist={() => {}} onboardingReportId="AbCdEfGhIjKlMnOpQrStUv" />);
+    await waitFor(() => expect(screen.getByTestId("watch-add")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("watch-add"));
+    await waitFor(() => expect(screen.getByTestId("watch-open")).toBeInTheDocument());
+    const post = calls.find((c) => c.method === "POST");
+    expect(post?.body).toEqual({ lei: LEI, context: { onboarding_report_id: "AbCdEfGhIjKlMnOpQrStUv" } });
+  });
 });

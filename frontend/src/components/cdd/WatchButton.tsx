@@ -38,12 +38,16 @@ export function WatchButton({
   lei,
   onOpenWatchlist,
   onStateChange,
+  onboardingReportId = null,
 }: {
   lei: string;
   /** Open the /watchlist view in the app rather than by full page load. */
   onOpenWatchlist: () => void;
   /** Lets the parent show or hide the promise sentence. */
   onStateChange?: (watching: boolean) => void;
+  /** pKYC stage B: the saved report on the page, pinned to the watch as its
+   *  onboarding record. Null when the page is a live check nobody saved. */
+  onboardingReportId?: string | null;
 }) {
   const [state, setState] = useState<State>("unknown");
   const [error, setError] = useState<string | null>(null);
@@ -86,15 +90,16 @@ export function WatchButton({
     setNotice(null);
     try {
       const held = readToken();
+      const context = onboardingReportId ? { onboarding_report_id: onboardingReportId } : undefined;
       let res;
       try {
-        res = await addWatch(lei, held);
+        res = await addWatch(lei, held, context);
       } catch (err) {
         // The held token names no list here: drop it and mint a new one,
         // once. A 404 without a token is a different fault and is shown.
         if (!held || !isUnknownWatchlist(err)) throw err;
         forgetToken();
-        res = await addWatch(lei, null);
+        res = await addWatch(lei, null, context);
         setNotice(UNKNOWN_LIST_NOTICE);
       }
       storeToken(res.token);

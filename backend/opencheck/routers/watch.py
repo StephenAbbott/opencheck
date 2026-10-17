@@ -8,6 +8,9 @@ here only as its hash (see ``opencheck/watchlist.py``).
 - ``POST /watch/items``            add an LEI (creates a list when no token is sent)
 - ``GET /watch/{token}``           the list: watched entities, baselines, the log
 - ``DELETE /watch/{token}/items/{lei}``
+- ``PATCH /watch/{token}/items/{lei}`` set what the watcher expected (pKYC
+                                   stage B): jurisdiction, parent LEI, a one-line
+                                   rationale, the onboarding saved report
 - ``POST /watch/{token}/recheck``  re-run one entity now — a deliberate human
                                    action, on the heavy tier; not a schedule
 - ``GET /watch/{token}.atom``      the Atom feed a reader subscribes to
@@ -28,6 +31,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .. import watchlist as wl
+from .. import watchlist_context as context_module
 from .. import watchlist_materiality as materiality
 from ..bods import gleif_events as _gleif_events
 from ..config import get_settings
@@ -37,9 +41,29 @@ from ..sqlite_schema import SchemaTooNewError
 router = APIRouter()
 
 
+class WatchContext(BaseModel):
+    """pKYC stage B: what the watcher expected. Every field optional; a field
+    sent as ``null`` clears it, a field left out is left alone
+    (``model_fields_set`` tells the two apart). Validation is the module's
+    (:mod:`opencheck.watchlist_context`), so the rules live in one place."""
+
+    model_config = {"extra": "forbid"}
+
+    expected_jurisdiction: str | None = Field(default=None, max_length=8)
+    expected_parent_lei: str | None = Field(default=None, max_length=40)
+    rationale: str | None = Field(default=None, max_length=2000)
+    onboarding_report_id: str | None = Field(default=None, max_length=64)
+
+    def given(self) -> dict[str, Any]:
+        return {k: getattr(self, k) for k in self.model_fields_set}
+
+
 class AddItem(BaseModel):
     lei: str = Field(..., min_length=20, max_length=40)
     token: str | None = Field(default=None, max_length=128)
+    #: pKYC stage B: context set in the same call — the report page watches a
+    #: company and pins the saved report it just made at once.
+    context: WatchContext | None = None
 
 
 class RecheckItem(BaseModel):
@@ -167,6 +191,7 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "checked": snap.get("checked") or [],
             "degraded_sources": [d.get("source_id") for d in snap.get("degraded_sources") or []],
         }
+        _enrich_context(w)
     counts = store.counts(th)
     return {
         "watches": watches,
@@ -180,6 +205,48 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
         "feed_url": f"{_public_api_base(request)}/watch/{token}.atom",
         "tiers": _tiers(wl.os_gaps(store)[-3:], wl.ariregister_gaps(store)[-3:]),
     }
+
+
+def _enrich_context(w: dict[str, Any]) -> None:
+    """pKYC stage B: what the page needs beside the stored fields, read on
+    request and never stored — the expected parent's current name from the
+    mirror, the pinned report's date, and what the baseline says that the
+    watcher did not expect."""
+    ctx = w.get("context") or {}
+    ctx["expected_parent_name"] = context_module.expected_parent_name(ctx.get("expected_parent_lei"))
+    ctx["baseline_disagrees"] = context_module.baseline_disagrees(w)
+    report = None
+    if ctx.get("onboarding_report_id"):
+        from .. import saved_reports as sr
+
+        report = {"report_id": ctx["onboarding_report_id"], "available": False}
+        rstore = sr.get_store()
+        meta = rstore.meta(ctx["onboarding_report_id"]) if rstore is not None else None
+        if meta:
+            report.update(
+                available=True,
+                saved_at=meta.get("saved_at"),
+                expires_at=meta.get("expires_at"),
+                report_path=f"/report/{ctx['onboarding_report_id']}",
+            )
+    ctx["onboarding_report"] = report
+    w["context"] = ctx
+
+
+def _apply_context(
+    store: wl.WatchlistStore, th: str, lei: str, body: WatchContext
+) -> dict[str, Any] | None:
+    """Validate and write a context body. Runs on a thread. Raises
+    :class:`HTTPException` 422 naming the field that failed."""
+    from .. import saved_reports as sr
+
+    try:
+        fields = context_module.validate(body.given(), lei, report_store=sr.get_store())
+    except context_module.ContextError as exc:
+        raise HTTPException(status_code=422, detail={"field": exc.field, "message": exc.message}) from exc
+    if not fields:
+        return store.get_watch(th, lei)
+    return store.set_context(th, lei, fields)
 
 
 # Every handler under a @limiter.limit that returns a dict MUST take
@@ -255,7 +322,10 @@ async def add_item(request: Request, response: Response, body: AddItem) -> dict[
         )
     except wl.CapExceededError as exc:
         raise _cap_refusal(exc) from exc
+    if body.context is not None and body.context.given():
+        watch = await _db(_apply_context, store, th, lei, body.context) or watch
     watch.pop("snapshot", None)
+    _enrich_context(watch)
     # Phase 303: what GLEIF's own log showed in the 30 days before this list
     # started watching — one throttled call, only for a new watch, fail-soft.
     history = await wl.record_prewatch_log(th, lei)
@@ -308,6 +378,29 @@ async def remove_item(request: Request, response: Response, token: str, lei: str
     return await _db(_list_payload, store, th, token, request)
 
 
+@router.patch("/watch/{token}/items/{lei}")
+@limiter.limit(default_tier)
+async def set_context(
+    request: Request, response: Response, token: str, lei: str, body: WatchContext
+) -> dict[str, Any]:
+    """pKYC stage B: record what the watcher expected of this company — the
+    jurisdiction, the ultimate parent's LEI, one line on why it is watched,
+    the saved report that was the onboarding record. A field sent as
+    ``null`` is cleared; one left out is left alone. Writes no entry: a
+    watcher's belief changing is not a change to the company. A baseline that
+    already disagrees is said on the watch row in the payload."""
+    store = await _db(_store)
+    th = await _db(_list_or_404, store, token)
+    norm = _lei_or_400(lei)
+    watch = await _db(_apply_context, store, th, norm, body)
+    if watch is None:
+        raise HTTPException(status_code=404, detail="That LEI is not on this watchlist.")
+    watch.pop("snapshot", None)
+    _enrich_context(watch)
+    payload = await _db(_list_payload, store, th, token, request)
+    return {"watch": watch, **payload}
+
+
 @router.post("/watch/{token}/recheck")
 @limiter.limit(heavy_tier)
 async def recheck(request: Request, response: Response, token: str, body: RecheckItem) -> dict[str, Any]:
@@ -336,6 +429,8 @@ async def watch_stats() -> JSONResponse:
         "distinct_leis": 0,
         "pending": 0,
         "entries_by_materiality": dict.fromkeys(materiality.TIERS, 0),
+        "watches_with_context": 0,
+        "expectations_contradicted": 0,
     }
     store = await _db(wl.get_store)
     if store is not None:
@@ -350,6 +445,10 @@ async def watch_stats() -> JSONResponse:
                 # that says whether the tier lines are drawn in the right
                 # place. Closed vocabulary, aggregate only.
                 "entries_by_materiality": store.entries_by_materiality(),
+                # pKYC stage B: how many watches say what they expected, and
+                # how many entries found the expectation contradicted. Counts
+                # only — never the rationale or the LEIs.
+                **store.context_counts(),
             }
 
         counts = await _db(_counts)
@@ -567,6 +666,17 @@ def _describe(change: dict[str, Any]) -> str:
     return f"{k}."
 
 
+def _change_line(change: dict[str, Any]) -> str:
+    """A change's sentence, the stage B expectation clause folded into it
+    ("Jurisdiction: GR → KY — your watch expected GR."), then the stage A
+    tier word."""
+    sentence = _describe(change)
+    clause = context_module.expectation_clause(change.get("expectation"))
+    if clause:
+        sentence = sentence.rstrip(".") + clause
+    return sentence + _change_tier_words(change)
+
+
 def _change_tier_words(change: dict[str, Any]) -> str:
     """" [recheck]" after a change's sentence, for the two non-note tiers."""
     tier = change.get("materiality")
@@ -707,7 +817,7 @@ def _entry_content(entry: dict[str, Any]) -> str:
     changes = entry.get("changes") or []
     if changes:
         lines.append("What a re-run found:")
-        lines += [" - " + _describe(c) + _change_tier_words(c) for c in changes]
+        lines += [" - " + _change_line(c) for c in changes]
     elif entry["tier"] == wl.TIER_REGISTER:
         lines.append("A full re-run found nothing else that differs from the last check.")
     else:
@@ -770,6 +880,11 @@ def render_atom(
             parts.append(
                 f'    <category scheme="{materiality.ATOM_SCHEME}" term="{e["materiality"]}" '
                 f'label="{escape(materiality.TIER_LABELS[e["materiality"]], {chr(34): "&quot;"})}"/>'
+            )
+        if context_module.contradicted(e.get("changes")):
+            parts.append(
+                f'    <category scheme="{context_module.ATOM_SCHEME}" '
+                f'term="{context_module.ATOM_TERM_CONTRADICTED}" label="Contradicted an expectation"/>'
             )
         parts += [
             f'    <content type="text">{escape(_entry_content(e))}</content>',

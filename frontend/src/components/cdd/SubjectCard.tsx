@@ -50,6 +50,7 @@ export function SubjectCard({
   exportError,
   onOpenWatchlist,
   savedShare,
+  onboardingReportId = null,
   save,
   notice,
   listing = null,
@@ -107,6 +108,9 @@ export function SubjectCard({
    *  report's share link (`/share/saved/{id}`), whose preview is the record's
    *  card and which opens the saved page — instead of the live share page. */
   savedShare?: { url: string };
+  /** pKYC stage B: the saved report on the page (opened, or just saved from
+   *  this run), pinned to a new watch as its onboarding record. */
+  onboardingReportId?: string | null;
   /** Phase 217: the Keep item of Share and export (see `ExportMenu`). */
   save?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
   /** Phase 217: a one-line outcome of a save, under the header row. */
@@ -254,7 +258,7 @@ export function SubjectCard({
             save={save}
           />
           {onOpenWatchlist && (
-            <WatchButton lei={lei} onOpenWatchlist={onOpenWatchlist} />
+            <WatchButton lei={lei} onOpenWatchlist={onOpenWatchlist} onboardingReportId={onboardingReportId} />
           )}
         </div>
       </div>

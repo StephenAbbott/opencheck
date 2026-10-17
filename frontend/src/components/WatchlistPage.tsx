@@ -26,12 +26,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getWatchlist, isUnknownWatchlist, recheckWatch, removeWatch } from "../lib/api";
+import { getWatchlist, isUnknownWatchlist, recheckWatch, removeWatch, setWatchContext } from "../lib/api";
 import { trackEvent } from "../lib/analytics";
 import { sourceLabel } from "../lib/vocab";
 import {
   checkedSentence,
+  CONTEXT_FIELD_LABELS,
+  CONTEXT_FORM_NOTE,
   describeChange,
+  disagreementSentence,
+  expectationSentence,
+  hasContext,
+  RATIONALE_MAX,
+  reportIdFromInput,
   gleifLogLines,
   entryHeadline,
   registerChangeLines,
@@ -56,6 +63,7 @@ import {
   triggerSentence,
   UNKNOWN_LIST_PAGE_NOTICE,
   type Watch,
+  type WatchContextPatch,
   type WatchEntry,
   type WatchlistPayload,
 } from "../lib/watchlist";
@@ -161,6 +169,23 @@ export default function WatchlistPage({
     }
   };
 
+  // pKYC stage B: what the watcher expected. The backend validates and
+  // compares; a refusal names the field and is shown inside the form.
+  const saveContext = async (lei: string, patch: WatchContextPatch): Promise<string | null> => {
+    if (!token) return "No watchlist is open.";
+    setBusy(lei);
+    try {
+      const res = await setWatchContext(token, lei, patch);
+      trackEvent("watch_context");
+      setData(res);
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : "Could not save the context.";
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const copyFeed = () => {
     if (!data) return;
     navigator.clipboard?.writeText(data.feed_url);
@@ -260,6 +285,7 @@ export default function WatchlistPage({
                     onOpen={onOpen}
                     onRecheck={() => recheck(w.lei)}
                     onRemove={() => remove(w.lei)}
+                    onSaveContext={(patch) => saveContext(w.lei, patch)}
                   />
                 </li>
               ))}
@@ -338,6 +364,7 @@ function WatchRow({
   onOpen,
   onRecheck,
   onRemove,
+  onSaveContext,
 }: {
   w: Watch;
   busy: boolean;
@@ -345,6 +372,7 @@ function WatchRow({
   onOpen?: (lei: string) => void;
   onRecheck: () => void;
   onRemove: () => void;
+  onSaveContext: (patch: WatchContextPatch) => Promise<string | null>;
 }) {
   const b = w.baseline;
   const status = b.register_status;
@@ -408,6 +436,7 @@ function WatchRow({
             <GleifLogBlock lines={gleifLogLines(w.gleif_history, "GLEIF's log")} />
           </details>
         )}
+        <WatchContextBlock w={w} busy={busy} onSave={onSaveContext} />
       </div>
       <div className="flex shrink-0 gap-2 md:flex-col md:items-end">
         <Button variant="warn" size="sm" onClick={onRecheck} disabled={busy}>
@@ -491,6 +520,18 @@ function EntryView({
               </span>
               <span className={c.kind.endsWith("_unchecked") ? "text-oo-warn-text" : ""}>
                 {describeChange(c, label)}
+                {(() => {
+                  const exp = expectationSentence(c);
+                  return exp ? (
+                    <span
+                      className={exp.tone === "warn" ? "text-oo-warn-text" : "text-oo-ok-text"}
+                      data-testid="expectation-sentence"
+                    >
+                      {" "}
+                      {exp.text}
+                    </span>
+                  ) : null;
+                })()}
               </span>
               {c.materiality && c.materiality !== "note" && (
                 <Chip tone={c.materiality === "escalate" ? "risk" : "warn"} size="sm">
@@ -517,6 +558,198 @@ function EntryView({
           </span>
         )}
       </p>
+    </div>
+  );
+}
+
+/** pKYC stage B — what the watcher expected of this company, and the form
+ *  to say it. Closed, the block is one line (or the invitation to add
+ *  context); open, the four fields with Save and Clear. A baseline that
+ *  already disagrees with an expectation is said here at once — it is
+ *  written to no entry, because the watcher's belief changing is not a
+ *  change to the company. The backend validates every field and the
+ *  refusal names the field; the form shows it where it was typed. */
+function WatchContextBlock({
+  w,
+  busy,
+  onSave,
+}: {
+  w: Watch;
+  busy: boolean;
+  onSave: (patch: WatchContextPatch) => Promise<string | null>;
+}) {
+  const ctx = w.context;
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [jurisdiction, setJurisdiction] = useState(ctx?.expected_jurisdiction ?? "");
+  const [parent, setParent] = useState(ctx?.expected_parent_lei ?? "");
+  const [rationale, setRationale] = useState(ctx?.rationale ?? "");
+  const [report, setReport] = useState(ctx?.onboarding_report_id ?? "");
+  const idBase = `ctx-${w.lei}`;
+
+  const open = () => {
+    setJurisdiction(ctx?.expected_jurisdiction ?? "");
+    setParent(ctx?.expected_parent_lei ?? "");
+    setRationale(ctx?.rationale ?? "");
+    setReport(ctx?.onboarding_report_id ?? "");
+    setError(null);
+    setEditing(true);
+  };
+
+  const submit = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    const reportId = report.trim() ? reportIdFromInput(report) : null;
+    if (report.trim() && !reportId) {
+      setError("That is not a saved report link or id.");
+      return;
+    }
+    const patch: WatchContextPatch = {
+      expected_jurisdiction: jurisdiction.trim() ? jurisdiction.trim().toUpperCase() : null,
+      expected_parent_lei: parent.trim() ? parent.trim().toUpperCase() : null,
+      rationale: rationale.trim() ? rationale.trim() : null,
+      onboarding_report_id: reportId,
+    };
+    const problem = await onSave(patch);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setEditing(false);
+  };
+
+  const clear = async () => {
+    const problem = await onSave({
+      expected_jurisdiction: null,
+      expected_parent_lei: null,
+      rationale: null,
+      onboarding_report_id: null,
+    });
+    if (problem) setError(problem);
+    else setEditing(false);
+  };
+
+  if (ctx === undefined) return null; // an older server: nothing to show, nothing to set
+
+  const disagreements = ctx.baseline_disagrees ?? [];
+  const summary = hasContext(ctx) ? (
+    <ul className="space-y-0.5" aria-label="What your watch expects">
+      {ctx.rationale && <li>{ctx.rationale}</li>}
+      {ctx.expected_jurisdiction && (
+        <li>
+          {CONTEXT_FIELD_LABELS.expected_jurisdiction}: {ctx.expected_jurisdiction}
+        </li>
+      )}
+      {ctx.expected_parent_lei && (
+        <li className="break-all">
+          Expected ultimate parent: {ctx.expected_parent_name ? `${ctx.expected_parent_name} · ` : ""}
+          <span className="font-mono">{ctx.expected_parent_lei}</span>
+        </li>
+      )}
+      {ctx.onboarding_report_id && (
+        <li>
+          {ctx.onboarding_report?.available && ctx.onboarding_report.report_path ? (
+            <>
+              Onboarding record:{" "}
+              <a href={ctx.onboarding_report.report_path} className="underline underline-offset-2 hover:text-oo-blue">
+                saved report of {day(ctx.onboarding_report.saved_at)}
+              </a>
+            </>
+          ) : (
+            <>Onboarding record: saved report {ctx.onboarding_report_id} — no longer held on this instance.</>
+          )}
+        </li>
+      )}
+    </ul>
+  ) : (
+    <p>No context recorded. Say what you expect of this company and the log will say when a change contradicts it.</p>
+  );
+
+  return (
+    <div className="mt-2 text-oo-meta text-oo-muted" data-testid="watch-context">
+      {!editing && (
+        <>
+          {summary}
+          {disagreements.length > 0 && (
+            <ul className="mt-1 space-y-0.5 text-oo-warn-text" aria-label="Baseline disagrees with what your watch expects">
+              {disagreements.map((d) => (
+                <li key={d.field} data-testid="baseline-disagrees">
+                  {disagreementSentence(d, ctx.expected_parent_name)}
+                </li>
+              ))}
+            </ul>
+          )}
+          <Button variant="ghost" size="sm" onClick={open} disabled={busy} className="mt-1">
+            {hasContext(ctx) ? "Edit context" : "Add context"}
+          </Button>
+        </>
+      )}
+      {editing && (
+        <form onSubmit={submit} className="mt-1 grid gap-2 max-w-xl" aria-label={`Context for ${w.legal_name || w.lei}`}>
+          <p>{CONTEXT_FORM_NOTE}</p>
+          <label className="grid gap-0.5" htmlFor={`${idBase}-j`}>
+            <span>{CONTEXT_FIELD_LABELS.expected_jurisdiction}</span>
+            <input
+              id={`${idBase}-j`}
+              value={jurisdiction}
+              onChange={(e) => setJurisdiction(e.target.value)}
+              placeholder="GB, DE, US-DE"
+              maxLength={6}
+              className="border border-oo-rule rounded px-2 py-1.5 text-oo-small text-oo-ink bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+            />
+          </label>
+          <label className="grid gap-0.5" htmlFor={`${idBase}-p`}>
+            <span>{CONTEXT_FIELD_LABELS.expected_parent_lei}</span>
+            <input
+              id={`${idBase}-p`}
+              value={parent}
+              onChange={(e) => setParent(e.target.value)}
+              placeholder="20-character LEI"
+              maxLength={20}
+              className="border border-oo-rule rounded px-2 py-1.5 font-mono text-oo-small text-oo-ink bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+            />
+          </label>
+          <label className="grid gap-0.5" htmlFor={`${idBase}-r`}>
+            <span>
+              {CONTEXT_FIELD_LABELS.rationale} ({rationale.length}/{RATIONALE_MAX})
+            </span>
+            <input
+              id={`${idBase}-r`}
+              value={rationale}
+              onChange={(e) => setRationale(e.target.value)}
+              maxLength={RATIONALE_MAX}
+              className="border border-oo-rule rounded px-2 py-1.5 text-oo-small text-oo-ink bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+            />
+          </label>
+          <label className="grid gap-0.5" htmlFor={`${idBase}-s`}>
+            <span>{CONTEXT_FIELD_LABELS.onboarding_report_id}</span>
+            <input
+              id={`${idBase}-s`}
+              value={report}
+              onChange={(e) => setReport(e.target.value)}
+              placeholder="Paste a saved report link or id"
+              className="border border-oo-rule rounded px-2 py-1.5 text-oo-small text-oo-ink bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+            />
+          </label>
+          {error && (
+            <p role="alert" className="text-oo-warn-text">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" variant="primary" size="sm" disabled={busy}>
+              {busy ? "Saving…" : "Save context"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={busy}>
+              Cancel
+            </Button>
+            {hasContext(ctx) && (
+              <Button variant="ghost" size="sm" onClick={clear} disabled={busy}>
+                Clear all
+              </Button>
+            )}
+          </div>
+        </form>
+      )}
     </div>
   );
 }

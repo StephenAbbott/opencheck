@@ -22,6 +22,19 @@ const PAYLOAD: WatchlistPayload = {
       gleif_watermark: "2026-09-16 00:00:00",
       snapshot_at: "2026-09-10T08:00:00Z",
       last_checked_at: "2026-09-16T08:00:00Z",
+      context: {
+        expected_jurisdiction: "GB",
+        expected_parent_lei: "A",
+        rationale: "Key supplier since 2019.",
+        onboarding_report_id: "AbCdEfGhIjKlMnOpQrStUv",
+        set_at: "2026-09-11T08:00:00Z",
+        expected_parent_name: "Alpha Holdings",
+        baseline_disagrees: [{ field: "ultimate_parent_lei", expected: "A", actual: "B" }],
+        onboarding_report: {
+          report_id: "AbCdEfGhIjKlMnOpQrStUv", available: true, saved_at: "2026-09-10T08:00:00Z",
+          report_path: "/report/AbCdEfGhIjKlMnOpQrStUv",
+        },
+      },
       baseline: {
         register_status: { liveness: "live", source_id: "companies_house" },
         risk_codes: ["SANCTIONED"],
@@ -50,7 +63,11 @@ const PAYLOAD: WatchlistPayload = {
     {
       id: 3, lei: "213800LH1BZH3DI6G760", legal_name: "Vosper Ltd", created_at: "2026-09-17T08:05:00Z", tier: "gleif",
       trigger: { publish: "2026-09-17 00:00:00", fields: ["ultimate_parent_lei"] },
-      changes: [{ kind: "gleif_field", field: "ultimate_parent_lei", old: "A", new: "B", materiality: "escalate" }],
+      changes: [{
+        kind: "gleif_field", field: "ultimate_parent_lei", old: "A", new: "B", materiality: "escalate",
+        // pKYC stage B: compared with what the watcher expected, at write time.
+        expectation: { field: "ultimate_parent_lei", expected: "A", met: false },
+      }],
       checked: [], degraded: [],
       // graded on read: an entry written before grading existed
       materiality: "escalate", materiality_rules: null,
@@ -102,7 +119,9 @@ describe("WatchlistPage", () => {
     expect(calls[0].url).toMatch(/\/watch\/tok$/);
     expect(window.localStorage.getItem(TOKEN_KEY)).toBe("tok");
 
-    const rows = within(screen.getByRole("list", { name: "Watched companies" })).getAllByRole("listitem");
+    const watched = screen.getByRole("list", { name: "Watched companies" });
+    // Direct rows only: a row's context block carries its own list (stage B).
+    const rows = within(watched).getAllByRole("listitem").filter((li) => li.parentElement === watched);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent("Vosper Ltd");
     expect(rows[0]).toHaveTextContent("Active · Companies House");
@@ -203,5 +222,75 @@ describe("WatchlistPage", () => {
     render(<WatchlistPage />);
     expect(await screen.findByTestId("log-all-note")).toBeTruthy();
     expect(screen.queryByRole("list", { name: "Change log, newest first" })).toBeNull();
+  });
+
+  // ---- pKYC stage B: what the watcher expected ----------------------------
+
+  it("shows the context, the baseline disagreement and the report link, and a contradicted change beside its chip", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    mockFetch(PAYLOAD);
+    render(<WatchlistPage />);
+    const block = await screen.findByTestId("watch-context");
+    expect(block).toHaveTextContent("Key supplier since 2019.");
+    expect(block).toHaveTextContent("Expected jurisdiction: GB");
+    expect(block).toHaveTextContent("Expected ultimate parent: Alpha Holdings · A");
+    expect(within(block).getByRole("link", { name: /saved report of 2026-09-10/ })).toHaveAttribute(
+      "href",
+      "/report/AbCdEfGhIjKlMnOpQrStUv",
+    );
+    expect(screen.getByTestId("baseline-disagrees")).toHaveTextContent(
+      "Baseline ultimate parent is B (Alpha Holdings); your watch expected A.",
+    );
+    const log = screen.getByRole("list", { name: "Change log, newest first" });
+    const sentence = within(log).getByTestId("expectation-sentence");
+    expect(sentence).toHaveTextContent("Your watch expected A.");
+    expect(sentence.className).toContain("warn");
+    // The materiality chip is untouched by the contradiction.
+    expect(within(log.children[0] as HTMLElement).getByTestId("materiality-chip").textContent).toBe("Escalate");
+  });
+
+  it("saves the context with a PATCH, null for a cleared field, and shows a refusal where it was typed", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    const calls: { url: string; method: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const body = init?.body ? JSON.parse(String(init.body)) : null;
+        calls.push({ url: String(url), method: init?.method ?? "GET", body });
+        if (init?.method === "PATCH" && body?.rationale === "mail a@b.co") {
+          return {
+            ok: false, status: 422,
+            json: async () => ({ detail: { field: "rationale", message: "The rationale cannot carry an e-mail address." } }),
+          } as Response;
+        }
+        return { ok: true, status: 200, json: async () => ({ ...PAYLOAD, watch: PAYLOAD.watches[0] }) } as Response;
+      }),
+    );
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<WatchlistPage />);
+    const block = await screen.findByTestId("watch-context");
+    await user.click(within(block).getByRole("button", { name: "Edit context" }));
+    const form = screen.getByRole("form", { name: "Context for Vosper Ltd" });
+    expect(form).toHaveTextContent("About the company, not a person");
+    const rationale = within(form).getByLabelText(/Why this company is watched/);
+    await user.clear(rationale);
+    await user.type(rationale, "mail a@b.co");
+    await user.click(within(form).getByRole("button", { name: "Save context" }));
+    expect(await within(form).findByRole("alert")).toHaveTextContent("cannot carry an e-mail address");
+
+    await user.clear(rationale);
+    await user.clear(within(form).getByLabelText(/Expected jurisdiction/));
+    await user.click(within(form).getByRole("button", { name: "Save context" }));
+    await waitFor(() => expect(screen.queryByRole("form", { name: "Context for Vosper Ltd" })).toBeNull());
+    const patches = calls.filter((c) => c.method === "PATCH");
+    expect(patches).toHaveLength(2);
+    expect(patches[1].url).toMatch(/\/watch\/tok\/items\/213800LH1BZH3DI6G760$/);
+    expect(patches[1].body).toEqual({
+      expected_jurisdiction: null,
+      expected_parent_lei: "A",
+      rationale: null,
+      onboarding_report_id: "AbCdEfGhIjKlMnOpQrStUv",
+    });
   });
 });
