@@ -358,11 +358,16 @@ async def fetch_timeline(lei: str) -> Timeline:
         if data:
             nz_events = nz_change_events(data)
 
-    # Estonia — registry-card + beneficial-owner history via the credentialed
-    # RIK SOAP API (read-only). Best-effort; never sinks the timeline.
+    # Estonia — registry-card history via RIK's REST API (or SOAP without the
+    # key) + beneficial-owner history via SOAP. Best-effort; never sinks the
+    # timeline.
     ee_events = []
     ee_history_read = False
-    if ee_code and settings.ariregister_username and settings.ariregister_password:
+    from ..sources import ariregister_rest as _rik
+
+    if ee_code and (
+        (settings.ariregister_username and settings.ariregister_password) or _rik.rest_configured()
+    ):
         try:
             from ..sources import REGISTRY
             data = await REGISTRY["ariregister"].fetch_timeline_data(ee_code)
@@ -370,7 +375,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             data = None
         if data:
             ee_events = ariregister_change_events(data)
-            ee_history_read = bool(data.get("detail_xml"))
+            ee_history_read = bool(data.get("detail_xml") or data.get("detail_rest"))
     # Every entry on the company's registry cards, from the open-data index
     # (no credentials): the dated spine under the SOAP history, and the only
     # Estonian history when that was not read. Best-effort, like the rest.
