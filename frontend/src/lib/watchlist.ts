@@ -115,6 +115,118 @@ export interface Watch {
   baseline: WatchBaseline;
   /** Phase 303: GLEIF's log for the 30 days before this list started watching. */
   gleif_history?: GleifLog | null;
+  /** pKYC stage B: what the watcher expected. Absent on an older server. */
+  context?: WatchContext;
+}
+
+// ---------------------------------------------------------------------------
+// pKYC stage B — what the watcher expected
+// ---------------------------------------------------------------------------
+
+/** The four fields a watcher may set on a watch, as the backend stores them
+ *  (`opencheck/watchlist_context.py`). The backend validates and compares;
+ *  the page renders what the watch and the entry carry. */
+export interface WatchContextFields {
+  expected_jurisdiction: string | null;
+  expected_parent_lei: string | null;
+  rationale: string | null;
+  onboarding_report_id: string | null;
+}
+
+export interface WatchContext extends WatchContextFields {
+  set_at: string | null;
+  /** Resolved from the GLEIF mirror on read; never stored. */
+  expected_parent_name?: string | null;
+  /** What the baseline says that the watcher did not expect — computed on read. */
+  baseline_disagrees?: Disagreement[];
+  onboarding_report?: {
+    report_id: string;
+    available: boolean;
+    saved_at?: string | null;
+    expires_at?: string | null;
+    report_path?: string;
+  } | null;
+}
+
+export interface Disagreement {
+  field: "jurisdiction" | "ultimate_parent_lei";
+  expected: string;
+  actual: string;
+}
+
+/** The comparison a change carries, made at write time and kept. */
+export interface Expectation {
+  field: "jurisdiction" | "ultimate_parent_lei" | "direct_parent_lei";
+  expected: string;
+  met: boolean;
+}
+
+/** The body a `PATCH /watch/{token}/items/{lei}` sends: a key present with
+ *  `null` clears the field, a key left out leaves it alone. */
+export type WatchContextPatch = Partial<WatchContextFields>;
+
+/** One line of free text; the backend's cap (`RATIONALE_MAX`). */
+export const RATIONALE_MAX = 280;
+
+/** The clause after a change's sentence — a copy of the backend's
+ *  `EXPECTATION_WORDS`, pinned by `tests/test_watchlist_context.py`.
+ *  `{expected}` is the value the watcher wrote (a code or an LEI). */
+export const EXPECTATION_WORDS = {
+  contradicted: "your watch expected {expected}",
+  met: "as your watch expected",
+};
+
+/** The sentence beside a change, and the tone it wears: a contradiction is
+ *  `warn` (look again — never `risk`, the tier already says how much it
+ *  matters), a met expectation is `ok`. `null` when the change carries no
+ *  expectation. */
+export function expectationSentence(c: Change): { text: string; tone: "warn" | "ok" } | null {
+  const e = c.expectation;
+  if (!e) return null;
+  if (e.met) return { text: EXPECTATION_WORDS.met[0].toUpperCase() + EXPECTATION_WORDS.met.slice(1) + ".", tone: "ok" };
+  const text = EXPECTATION_WORDS.contradicted.replace("{expected}", e.expected);
+  return { text: text[0].toUpperCase() + text.slice(1) + ".", tone: "warn" };
+}
+
+/** True when any change on the entry contradicted an expectation. */
+export function entryContradicted(e: WatchEntry): boolean {
+  return e.changes.some((c) => c.expectation?.met === false);
+}
+
+export const CONTEXT_FIELD_LABELS: Record<keyof WatchContextFields, string> = {
+  expected_jurisdiction: "Expected jurisdiction",
+  expected_parent_lei: "Expected ultimate parent (LEI)",
+  rationale: "Why this company is watched",
+  onboarding_report_id: "Onboarding record (saved report)",
+};
+
+/** The form's standing note — the no-personal-data rule, said where the
+ *  text is typed. */
+export const CONTEXT_FORM_NOTE =
+  "About the company, not a person: one line, no e-mail addresses, no links other than an OpenCheck saved report, no personal codes.";
+
+/** The watch row's line when the baseline already disagrees with what the
+ *  watcher expects — said at once, written to no entry. */
+export function disagreementSentence(d: Disagreement, parentName?: string | null): string {
+  if (d.field === "jurisdiction") {
+    return `Baseline jurisdiction is ${d.actual}; your watch expected ${d.expected}.`;
+  }
+  const actual = parentName ? `${d.actual} (${parentName})` : d.actual;
+  return `Baseline ultimate parent is ${actual}; your watch expected ${d.expected}.`;
+}
+
+/** Whether a watch carries any context at all. */
+export function hasContext(ctx: WatchContext | undefined): boolean {
+  if (!ctx) return false;
+  return Boolean(ctx.expected_jurisdiction || ctx.expected_parent_lei || ctx.rationale || ctx.onboarding_report_id);
+}
+
+/** The id of a saved report from a pasted link or a bare id, or null. */
+export function reportIdFromInput(value: string): string | null {
+  const v = value.trim();
+  if (!v) return null;
+  const m = v.match(/(?:\/report\/|\/share\/saved\/)([A-Za-z0-9_-]{22})\/?$/) ?? v.match(/^([A-Za-z0-9_-]{22})$/);
+  return m ? m[1] : null;
 }
 
 /** Phase 260: ``catch_up`` = every watched company re-run because
@@ -185,6 +297,8 @@ export interface Change {
   kind: string;
   /** pKYC stage A: this change's own tier. */
   materiality?: Materiality;
+  /** pKYC stage B: how the change compared with what the watcher expected. */
+  expectation?: Expectation;
   field?: string;
   scheme?: string;
   code?: string;

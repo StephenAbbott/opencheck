@@ -8,7 +8,7 @@
 import type { IntegratedOwnershipPayload } from "./integratedOwnership";
 import { trackEvent } from "./analytics";
 import type { Liveness, SourceLiveness } from "../components/cdd/LivenessBadge";
-import type { WatchlistPayload } from "./watchlist";
+import type { Watch, WatchContextPatch, WatchlistPayload } from "./watchlist";
 import type { RegisterRecord } from "./registerLinks";
 
 export type { Liveness, SourceLiveness };
@@ -2295,11 +2295,17 @@ async function watchError(res: Response, fallback: string): Promise<WatchError> 
 export async function addWatch(
   lei: string,
   token: string | null,
+  context?: WatchContextPatch,
 ): Promise<WatchlistPayload & { token: string }> {
+  const body: Record<string, unknown> = { lei };
+  if (token) body.token = token;
+  // pKYC stage B: the report page watches a company and pins the saved
+  // report it just made in one call.
+  if (context && Object.keys(context).length > 0) body.context = context;
   const res = await fetch(`${BASE_URL}/watch/items`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(token ? { lei, token } : { lei }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw await watchError(res, `Could not watch this company (HTTP ${res.status}).`);
   return (await res.json()) as WatchlistPayload & { token: string };
@@ -2318,6 +2324,36 @@ export async function removeWatch(token: string, lei: string): Promise<Watchlist
   );
   if (!res.ok) throw await watchError(res, `Could not remove this company (HTTP ${res.status}).`);
   return (await res.json()) as WatchlistPayload;
+}
+
+/** pKYC stage B: set what the watcher expected of one watched company. A
+ *  key present with `null` clears the field; a key left out is left alone.
+ *  A refused field comes back as a 422 whose detail names it. */
+export async function setWatchContext(
+  token: string,
+  lei: string,
+  patch: WatchContextPatch,
+): Promise<WatchlistPayload & { watch: Watch }> {
+  const res = await fetch(
+    `${BASE_URL}/watch/${encodeURIComponent(token)}/items/${encodeURIComponent(lei)}`,
+    { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) },
+  );
+  if (!res.ok) throw await watchContextError(res);
+  return (await res.json()) as WatchlistPayload & { watch: Watch };
+}
+
+async function watchContextError(res: Response): Promise<WatchError> {
+  let detail = `Could not save the context (HTTP ${res.status}).`;
+  try {
+    const body = (await res.json()) as { detail?: unknown };
+    if (typeof body?.detail === "string") detail = body.detail;
+    else if (body?.detail && typeof body.detail === "object" && "message" in body.detail) {
+      detail = String((body.detail as { message: unknown }).message);
+    }
+  } catch {
+    /* keep the fallback */
+  }
+  return new WatchError(detail, res.status);
 }
 
 export interface RecheckResult {
