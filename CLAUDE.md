@@ -1485,6 +1485,58 @@ otherwise:
   `osanikud` are not read (128 entities, personal codes in the text).
 - No schema bump: an index built before the tables answers `None`.
 
+### One client for RIK's credentialed services (the shared-client phase)
+
+`sources/ariregister_rest.py`. The REST key (`ARIREGISTER_REST_API_KEY`) and
+the SOAP credentials are **one contract partner**, and RIK's terms give that
+partner **one simultaneous query** and **50,000 answers a day** — across both
+services and every OpenCheck user. Nothing calls `ar-rest.rik.ee` or
+`ariregxmlv6.rik.ee` except through this module. Things that will be
+re-derived otherwise:
+
+- **One `asyncio.Lock` per event loop** (the `ny_dos` `_bucket()` rule),
+  held for the length of one request. `get_json` holds it across the
+  login and the call; SOAP's `fetch_timeline_data` wraps each `POST` in
+  `contract_slot(service)` (its `gather` now runs one after the other). A
+  caller that waits longer than `ARIREGISTER_QUEUE_WAIT_S` is refused as
+  `busy`.
+- **A daily budget, charged per request sent**, on the register's day
+  (Europe/Tallinn): `ARIREGISTER_DAILY_BUDGET`, 40,000 by default, capped at
+  50,000. In memory — a deploy restarts it — hence the headroom. A spent
+  budget refuses before sending (`budget`).
+- **The token**: `GET /keyLogin/` with the key in the `apiKey` **header**
+  (a query parameter is a 401; an unknown key is **404** `{"detail": "API
+  Key not found"}` — read as the key refused, never as "no record"). Cached
+  per process; a 401 on a call (`JWT verification failed`) logs in again
+  once. Every call sends `acceptLanguage: eng` (`en` is a 422),
+  `apiVersion: V1` and the shared User-Agent (RIK held Python urllib's
+  default agent past 30 s on 17 Oct 2026).
+- **Three exceptions**: `RikNotFound` only for 404 with `code: 4043`;
+  `RikUnavailable` (cause → `reason` in the degradation vocabulary, `detail`
+  a fixed sentence from `DETAILS`) for everything else — `budget`, `busy`,
+  401/403/404-other/422, 429, 5xx, timeout, network, a non-JSON body;
+  `RikNotConfigured` without a key or with live calls off. The client
+  caches nothing; a caller caches only a stripped success.
+- **SOAP failures now say why.** `fetch_timeline_data` returns the dict
+  whenever credentials are set, with `None` for a call that did not answer
+  and `unavailable: {"detail"|"bo": cause}`; `read_history` words a
+  `busy`/`budget` cause as `rate_limited` (`NOT_READ_LIMITED`) with the
+  client's sentence.
+- **`/signalstats` → `ariregister_rik`**: today's `sent_today` /
+  `remaining_today`, `outcomes` by `service|outcome`, `refused` by
+  `service|budget|busy`, the queue. Closed vocabularies (`SERVICES`,
+  `OUTCOMES`, `REFUSALS`); a new caller adds its service name to
+  `SERVICES` first.
+- **Personal data.** REST answers carry `identityCode` (relatedPersons),
+  `entityCode` (representationRights) and shareholders' e-mail and street
+  address. `get_json` hands the body to its caller, which may join on a
+  code and must drop it; `personal_data_paths(bundle)` must yield nothing
+  before a bundle leaves the adapter (key-based, plus an exact personal-code
+  value under a code key — free text is not scanned, because a Latvian
+  registry code has the same shape).
+- Fixtures: `tests/fixtures/ariregister_rest/`, real answers of 17 Oct 2026
+  with the token replaced and lists cut to two rows.
+
 ### A person's other companies, on the register's person key (the person-index phase)
 
 `companies_for_hash` in `sources/ariregister.py`, `_ee_person_appointments`
