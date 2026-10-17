@@ -1,0 +1,118 @@
+{
+ "total": 8562,
+ "list": [
+  {
+   "legalEntityName": "Osaühing Hawaii Express",
+   "registryCode": 10027017,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10027017",
+   "vatNumber": "EE100283507",
+   "searchRelatedPersons": [
+    {
+     "role": "ORP",
+     "roleAsText": "The registrar of the units of the fund",
+     "startDate": "2020-11-06",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE"
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Nadory Kaduna OÜ",
+   "registryCode": 12812298,
+   "legalForm": "5",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/12812298",
+   "searchRelatedPersons": [
+    {
+     "role": "ORP",
+     "roleAsText": "The registrar of the units of the fund",
+     "startDate": "2017-09-28",
+     "endDate": "2019-05-23",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE"
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Kopli seiklus OÜ",
+   "registryCode": 14516233,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/14516233",
+   "searchRelatedPersons": [
+    {
+     "role": "ORP",
+     "roleAsText": "The registrar of the units of the fund",
+     "startDate": "2018-07-09",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE"
+    },
+    {
+     "role": "ORP",
+     "roleAsText": "The registrar of the units of the fund",
+     "startDate": "2018-07-09",
+     "endDate": "2018-07-09",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE"
+    },
+    {
+     "role": "ORP",
+     "roleAsText": "The registrar of the units of the fund",
+     "startDate": "2018-07-07",
+     "endDate": "2018-07-08",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE"
+    },
+    {
+     "role": "ORP",
+     "roleAsText": "The registrar of the units of the fund",
+     "startDate": "2018-07-08",
+     "endDate": "2018-07-09",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE"
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Rain Transport AS",
+   "registryCode": 10125337,
+   "legalForm": "1",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10125337",
+   "vatNumber": "EE100270154",
+   "searchRelatedPersons": [
+    {
+     "role": "ARP",
+     "roleAsText": "The registrar of the shares of the fund",
+     "startDate": "2017-09-28",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE"
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Saloni Büroomööbli AS",
+   "registryCode": 10289177,
+   "legalForm": "1",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10289177",
+   "vatNumber": "EE100029004",
+   "searchRelatedPersons": [
+    {
+     "role": "ARP",
+     "roleAsText": "The registrar of the shares of the fund",
+     "startDate": "2017-09-28",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE"
+    }
+   ]
+  }
+ ]
+}

@@ -4,6 +4,8 @@ import { PanelBoundary } from "../ui/PanelBoundary";
 import { deepen } from "../../lib/api";
 import { estonianPersonHashOf } from "../../lib/estonianPerson";
 import { EstonianPersonCompanies } from "./EstonianPersonCompanies";
+import { EstonianLegalPersonRelations } from "./EstonianLegalPersonRelations";
+import { estonianRegistryCodeOf } from "../../lib/legalPersonRelations";
 import { groupHitsForDisplay, siblingNote } from "../../lib/hitGroups";
 import { rowFinding } from "../../lib/sourceFinding";
 import { readRegisterStatus, registerStatusLabel } from "../../lib/liveness";
@@ -292,6 +294,8 @@ function EntityStatementCard({ stmt }: { stmt: BODSStmt }) {
   const addresses = stmtArr(rd, "addresses");
   const sourceDesc = stmtStr(stmt, "source", "description");
   const statementId = stmtStr(stmt, "statementId");
+  // An Estonian legal person: every company the register records it in.
+  const eeRegistryCode = estonianRegistryCodeOf(stmt);
 
   return (
     <div className="rounded-oo border border-blue-200 bg-blue-50/40 overflow-hidden">
@@ -349,6 +353,7 @@ function EntityStatementCard({ stmt }: { stmt: BODSStmt }) {
           );
         })}
         {sourceDesc && <FieldRow label="Source" value={sourceDesc} />}
+        {eeRegistryCode && <EstonianLegalPersonRelations code={eeRegistryCode} name={name || undefined} />}
         <details className="mt-1">
           <summary className="text-[10px] text-oo-muted cursor-pointer">
             Raw statement JSON —{" "}

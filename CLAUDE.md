@@ -1625,6 +1625,46 @@ SPV OÜ", "Lihtkonto: Rahandusministeerium"), and words places in English:
 - REST's card log (`registryCards`) gives every entry where SOAP's `kanded`
   with `kandmed=0` gives some; neither is emitted (the index's file is).
 
+### Every company a legal person was named on (the legal-person-relations phase)
+
+`sources/ariregister_relations.py`, `ee_legal_person_relations` + `GET
+/legal-person-relations?code=&country=EST` in `routers/person_check.py`,
+`opencheck_person_positions(scheme="EE-ARIREGISTER" |
+"EE-ARIREGISTER-FOREIGN", id, country)`, `lib/legalPersonRelations.ts` +
+`components/cdd/EstonianLegalPersonRelations.tsx`. RIK's `GET
+/company/companyRelations` (`legalPersonCode`, `legalPersonCodeCountry`
+alpha-3, `onlyValid=false`, `pageSize`) lists every company a **legal
+person** has been named on, deleted companies included (Eesti Energia AS,
+17 Oct 2026: 25 companies, 13 deleted, 113 ended relations). Stephen's
+decisions (17 Oct 2026) and the things that will be re-derived otherwise:
+
+- **Legal persons only, on demand only.** Fetched on click — the
+  Subsidiaries tab's "Former and deleted holdings (e-Business Register)"
+  control (under the fifth list, or alone when the index has no list) and an
+  Estonian entity statement in the Data drawer — and by the MCP tool. Never
+  per lookup: the contract's daily budget is shared. Hidden on a saved
+  report. **Listed, never drawn**: no BODS, no node.
+- **Current holdings in live companies are shown too**, beside the former
+  and deleted ones (Stephen: test in production; take them out if the
+  repeat of the fifth list reads wrong). Companies with a current non-founder
+  role come first; a founder row is history, never "current".
+- **One page of `PAGE_SIZE` (500)**, `total` from the answer, `truncated`
+  said (Nasdaq CSD SE, `LVA 40003242879`: 8,562 — share-registrar `ORP`/`ARP`
+  rows). The MCP tool shows 100 and says so.
+- **RIK answers 204 with no body** for a code on no company:
+  `rik.get_json` returns `None` (counted `answered`) and the list is empty.
+- **Reduced before the cache** (`ariregister/relations-v1/<country>/<code>`,
+  a day): company name, code, status (`EE_STATUS_LABELS`), legal form only
+  for the codes the `/company` answer confirmed (`LEGAL_FORMS`: 1 AS, 5 OÜ),
+  per relation the role in the mapper's words (`role_label` →
+  `ee_person_role_label`), dates and share. The company's e-mail, phone,
+  web site and address history are dropped; a personal-code-shaped value in
+  the reduced rows raises. A failure is raised (`RikUnavailable`) and never
+  cached; the route words it as `status: unavailable` with the client's
+  reason, never as an empty list.
+- Counted as service `company_relations` in `/signalstats` →
+  `ariregister_rik`.
+
 ### A person's other companies, on the register's person key (the person-index phase)
 
 `companies_for_hash` in `sources/ariregister.py`, `_ee_person_appointments`
