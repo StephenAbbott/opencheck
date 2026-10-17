@@ -341,6 +341,75 @@ def _cards() -> list[dict[str, Any]]:
     ]
 
 
+def _ruling(nr: str, day: str, kind: str, text: str, status: str = "J", deadline: str | None = None) -> dict[str, Any]:
+    return {
+        "maaruse_nr": nr, "maaruse_kpv": day, "kande_kpv": None, "lisatahtaeg": deadline,
+        "maaruse_liik": kind, "maaruse_liik_tekstina": text, "maaruse_olek": status,
+        "maaruse_olek_tekstina": {"J": "Jõustunud", "L": "Puudused kõrvaldatud"}.get(status),
+        "kandeliik": "12", "kandeliik_tekstina": "Muutmiskanne", "joustumise_kpv": day,
+        "joust_olek": status, "joust_olek_tekstina": None,
+    }
+
+
+def _rulings() -> list[dict[str, Any]]:
+    """The rulings, in the file's shape (16 Oct 2026). 007 Agent's are its
+    first and last as published — entry rulings and a remedied deficiency
+    ruling, none kept. Eesti Energia's annual-report fine is answered by its
+    2025 report. Haudemaja's deletion warning stands; its fine warning was
+    remedied. The agency's net-assets warning is not about a report."""
+    return [
+        {"ariregistri_kood": int(AGENT), "nimi": "007 Agent & Partners OÜ", "maarused": [
+            _ruling("Ä 50229792 / 3", "15.07.2024", "K1", "Kanne"),
+            _ruling("Ä 50229792 / M1", "01.06.2023", "M1", "Puuduste kõrvaldamise määrus", "L", "16.06.2023"),
+        ]},
+        {"ariregistri_kood": int(EESTI), "nimi": "Eesti Energia AS", "maarused": [
+            _ruling("Ä 1 / H", "01.09.2025", "H", "Aruandetrahvimäärus"),
+        ]},
+        {"ariregistri_kood": int(HAUDE), "nimi": "Haudemaja OÜ", "maarused": [
+            _ruling("Ä 2 / X2", "12.03.2026", "X2",
+                    "Hoiatusmäärus registrist kustutamiseks: majandusaasta aruanne esitamata",
+                    deadline="12.05.2026"),
+            _ruling("Ä 2 / H", "04.06.2024", "H", "Aruandetrahvimäärus"),
+            _ruling("Ä 2 / HM", "02.02.2024", "HM", "Trahvihoiatusmäärus: majandusaasta aruanne esitamata", "L"),
+        ]},
+        {"ariregistri_kood": int(STATE), "nimi": "Maa-amet", "maarused": [
+            _ruling("Ä 3 / Y3", "05.01.2026", "Y3", "Hoiatusmäärus sundlõpetamiseks: ebapiisav netovara"),
+        ]},
+    ]
+
+
+def _pledgee(kind: str, name: str, code: str, country: str | None = None, ended: str | None = None) -> dict[str, Any]:
+    return {
+        "kirje_id": 1, "kaardi_tyyp": "K", "kande_nr": 1, "pidaja_isikuliik": kind,
+        "pidaja_nimi": name, "pidaja_kood": code, "pidaja_riik": country,
+        "pidaja_riik_tekstina": {"EST": "Eesti", "FIN": "Soome"}.get(country or ""),
+        "pidaja_asukoht_ehak": None, "pidaja_asukoht_ehak_tekstina": "", "pidaja_murdosa": None,
+        "algus_kpv": "19.06.2018", "lopp_kpv": ended,
+    }
+
+
+def _pledges() -> list[dict[str, Any]]:
+    """Commercial pledges in the file's shape: the holding's first-rank
+    pledge to AS LHV Pank (as 180 OÜ's reads on 16 Oct 2026), a second-rank
+    pledge to a private individual filed with a personal code, and one that
+    ended."""
+    def pledge(no: int, rank: int, amount: str, currency: str, since: str, holders: list, ended: str | None = None):
+        return {
+            "kirje_id": no, "pandi_id": no, "pandi_number": no, "pandi_olek": "R", "olek_tekstina": None,
+            "pandi_jarjekoht": rank, "pandi_jarjekoht_tekstina": "esimene", "pandi_summa": amount,
+            "pandi_valuuta": currency, "pandi_valuuta_tekstina": "euro", "algus_kpv": since, "lopp_kpv": ended,
+            "jarjekohad": [], "pandisummad": [], "pandipidajad": holders,
+            "markused": [{"tyyp": "KMARK", "sisu": "1.kandes on muudetud pandipidaja andmeid"}],
+        }
+    return [
+        {"ariregistri_kood": int(HOLD), "nimi": 'Holding "Põhjala" OÜ', "kommertspandiandmed": [
+            pledge(1, 1, "520000.00", "EUR", "19.06.2018", [_pledgee("J", " AS LHV Pank", "10539549")]),
+            pledge(2, 2, "100000.00", "EEK", "02.05.2009", [_pledgee("F", "Juku Tamm", "34701014283", "EST")]),
+            pledge(3, 3, "5000.00", "EUR", "01.01.2015", [_pledgee("J", "Swedbank AS", "10060701")], ended="01.01.2020"),
+        ]},
+    ]
+
+
 TOOTSI_TEXT = (
     "Eesti Energia Aktsiaselts (jagunev ühing) jaguneb eraldumise teel, mille käigus asutati "
     "Tootsi Windpark OÜ (jagunemise käigus asutatud ühing, registrikood 16053613, aadress Harju "
@@ -427,6 +496,8 @@ def _write_files(
     off_cards: list[dict[str, Any]] | None = None,
     cards: list[dict[str, Any]] | None = None,
     general: list[dict[str, Any]] | None = None,
+    rulings: list[dict[str, Any]] | None = None,
+    pledges: list[dict[str, Any]] | None = None,
     header: list[str] | None = None,
 ) -> None:
     src.mkdir(parents=True, exist_ok=True)
@@ -441,6 +512,8 @@ def _write_files(
         (builder.OFF_CARD_FILE, _off_cards() if off_cards is None else off_cards),
         (builder.CARDS_FILE, _cards() if cards is None else cards),
         (builder.GENERAL_FILE, _general() if general is None else general),
+        (builder.RULINGS_FILE, _rulings() if rulings is None else rulings),
+        (builder.PLEDGES_FILE, _pledges() if pledges is None else pledges),
     ):
         _zip(src / name, name[:-4], json.dumps(data, ensure_ascii=False, indent=4))
 

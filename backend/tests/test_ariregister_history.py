@@ -371,5 +371,7 @@ def test_a_missing_bo_history_shows_holdings_and_says_so(index, live) -> None:
 
 async def test_the_finding_counts_ended_records(index) -> None:
     bundle = await _bundle_with_history()
-    sentence = finding_ariregister(bundle)
+    # The fixture's deletion warning (the rulings phase) takes the room the
+    # history clause needs here; this test is about the history.
+    sentence = finding_ariregister({**bundle, "rulings": []})
     assert "7 ended ownership records" in sentence, sentence

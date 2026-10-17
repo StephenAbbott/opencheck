@@ -1,8 +1,10 @@
 name: Refresh Estonian e-Business Register index
 
 # Rebuilds the Estonian e-Business Register (e-Äriregister) index from RIK's
-# five daily open-data files — companies, persons on the registry card,
-# shareholders, beneficial owners, persons outside the registry card (CC BY 4.0) — and replaces the
+# nine daily open-data files — companies, persons on the registry card,
+# shareholders, beneficial owners, persons outside the registry card, the
+# registry cards, the general data, the rulings and the commercial pledges
+# (CC BY 4.0) — and replaces the
 # `ariregister-index` release asset the backend downloads at boot
 # (ARIREGISTER_DB_URL). Phase 330.
 #
@@ -86,9 +88,12 @@ jobs:
           off = int(meta.get("off_card_persons", 0))
           cards = int(meta.get("card_entries", 0))
           general = int(meta.get("general", 0))
+          ruled = int(meta.get("ruled_companies", 0))
+          pledged = int(meta.get("pledged_companies", 0))
           print(f"{n} entities, {meta.get('officers')} officers, {meta.get('shareholders')} shareholders, {bo} beneficial owners, {off} persons off the card, {cards} card entries, {general} with general data, cut {meta.get('cut')}")
           print(f"{meta.get('bo_obliged_none_filed')} companies obliged to file beneficial owners have none on file")
-          if n < 300000 or bo < 300000 or off < 300000 or cards < 1500000 or general < 300000:
+          print(f"{meta.get('rulings')} compliance rulings in force on {ruled} companies; {meta.get('pledges')} commercial pledges on {pledged} companies")
+          if n < 300000 or bo < 300000 or off < 300000 or cards < 1500000 or general < 300000 or ruled < 20000 or pledged < 3000:
               sys.exit("Refusing to publish: counts far below the register's — likely a source/format change.")
           with open("summary.txt", "w") as fh:
               fh.write(f"{n} entities, {bo} beneficial owners, cut {meta.get('cut')}.")

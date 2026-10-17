@@ -1766,13 +1766,52 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
     # force at the cut.
     general = bundle.get("general") or {}
     suspension = _ee_suspension_clause(general, bundle.get("cut"))
+    # The rulings phase: the latest compliance ruling in force (a filed
+    # report answering it is already set aside), and the commercial pledges.
+    rulings = _ee_rulings_clause(bundle.get("rulings"))
+    pledges = bundle.get("pledges") or []
+    pledge_clause = (
+        f"{len(pledges)} commercial {'pledge' if len(pledges) == 1 else 'pledges'}" if pledges else None
+    )
     # Counts before the legal form: the cap drops trailing clauses, and what
     # the register lists matters more than what kind of company it is. A
     # suspension comes next, then the history and the chain; the tier,
     # when it is worth saying, is worth more than the form too.
-    return clauses_to_sentence(
-        [lead, counts, suspension, history_clause, *chain_clauses, tier, form], sep="; ",
-    )
+    # A ruling in force takes the place of the plain "in the register since"
+    # lead — it says more about the company's standing than its first entry
+    # does, and the cap leaves no room for both before the counts. Under a
+    # liquidation or bankruptcy lead it follows the counts.
+    def sentence(first: list[str | None], after_counts: str | None) -> str | None:
+        return clauses_to_sentence(
+            [*first, counts, after_counts, suspension, history_clause, *chain_clauses, pledge_clause, tier, form],
+            sep="; ",
+        )
+
+    if rulings and (lead is None or lead.startswith("In the register")):
+        leading = sentence([rulings], None)
+        # The counts are the finding; a ruling that would push them out
+        # goes after them instead (and the cap decides).
+        if not counts or (leading and counts in leading):
+            return leading
+    return sentence([lead], rulings)
+
+
+def _ee_rulings_clause(rulings: Any) -> str | None:
+    """The latest compliance ruling in force, in words and dated — "repeat
+    annual-report fine 3 April 2024" (the full list, with reasons, is in the
+    BODS note). It replaces the
+    registration-date lead, or follows the counts under a liquidation or
+    bankruptcy lead; it describes the company's standing with the register
+    and judges nothing."""
+    if not rulings:
+        return None
+    from .bods.mappers.estonia import EE_RULING_SHORT  # local import avoids a cycle
+
+    latest = rulings[0]
+    words = EE_RULING_SHORT.get(str(latest.get("type") or ""), "ruling of the register")
+    day = human_date(latest.get("day"))
+    clause = words + (f" {day}" if day else "")
+    return clause
 
 
 def _no_bo_words(bundle: dict[str, Any]) -> str:

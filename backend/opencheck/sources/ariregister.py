@@ -45,7 +45,7 @@ import json
 import re
 import sqlite3
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -1016,6 +1016,78 @@ def companies_for_hash(person_hash: str, *, limit: int = PERSON_COMPANIES_LIMIT)
 #: (``build_ariregister_index.CARD_ENTRY_FIELDS``).
 CARD_ENTRY_FIELDS = ("card_type", "card_no", "entry_no", "day", "entry_type")
 
+#: The ruling types the index keeps — ``build_ariregister_index.RULING_TYPES``
+#: (pinned by a test). Of them, the ones about the annual report: a report
+#: filed since answers them, whatever status the ruling keeps.
+RULING_TYPES = frozenset({
+    "X1", "X2", "HM", "HP", "H", "H2", "KAA", "M3",
+    "Y3", "Y2O", "Y2A", "GY", "KI", "G1", "G2T", "I2", "Z1",
+})
+ANNUAL_REPORT_RULINGS = frozenset({"X1", "X2", "HM", "HP", "H", "H2", "KAA", "M3"})
+#: A ruling about a missing or deficient annual report concerns a financial
+#: year that ended at most this long before it (the report is due six months
+#: after the year end; warnings and fines follow within the year).
+_REPORT_RULING_REACH = timedelta(days=548)
+
+
+def _json_rows(table: str, column: str, code: str) -> list[dict[str, Any]] | None:
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    try:
+        row = conn.execute(
+            f"SELECT {column} FROM {table} WHERE code = ?", (normalise_registry_code(code),)
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        if "no such table" in str(exc):
+            return None  # an index built before the rulings phase
+        raise
+    return json.loads(row[0]) if row else []
+
+
+def rulings(code: str) -> list[dict[str, Any]] | None:
+    """The company's compliance rulings in force (the rulings phase), newest
+    first, each with the register's Estonian wording: ``[]`` for a company
+    with none, None without an index or the table."""
+    rows = _json_rows("ruling", "rulings", code)
+    if rows is None:
+        return None
+    for r in rows:
+        r["type_text"] = vocab_text("ruling", r.get("type"))
+    return rows
+
+
+def rulings_in_force(
+    rows: list[dict[str, Any]] | None, last_report_end: str | None,
+) -> list[dict[str, Any]]:
+    """The rulings to show as current: every kept ruling, except one about
+    the annual report when the company has since filed a report for a year
+    ending within ``_REPORT_RULING_REACH`` of the ruling — the register keeps
+    such a fine or warning "in force", but the report it asked for is on
+    file (the ticket's rule: a ruling older than the latest filed report is
+    not current). Measured 16 Oct 2026: this sets aside 48,306 of 148,469
+    in-force rulings, leaving 100,163 on 19,162 companies."""
+    out: list[dict[str, Any]] = []
+    try:
+        filed = date.fromisoformat(last_report_end) if last_report_end else None
+    except ValueError:
+        filed = None
+    for r in rows or []:
+        try:
+            day = date.fromisoformat(str(r.get("day") or ""))
+        except ValueError:
+            continue
+        if r.get("type") in ANNUAL_REPORT_RULINGS and filed and filed >= day - _REPORT_RULING_REACH:
+            continue
+        out.append(r)
+    return out
+
+
+def pledges(code: str) -> list[dict[str, Any]] | None:
+    """The company's current commercial pledges (the rulings phase), first
+    rank first: ``[]`` for none, None without an index or the table."""
+    return _json_rows("pledge", "pledges", code)
+
 
 def card_entries(code: str) -> list[dict[str, Any]] | None:
     """Every entry on the company's registry cards, oldest first as the
@@ -1303,6 +1375,14 @@ class AriregisterAdapter(SourceAdapter):
             "off_card_persons": record.get("off_card_persons") or [],
             # The general data (üldandmed), when the index holds it.
             "general": record.get("general"),
+            # The compliance rulings in force — those a filed annual report
+            # has not answered — and the current commercial pledges. None
+            # from an index built before them.
+            "rulings": (
+                None if (raw_rulings := rulings(code)) is None
+                else rulings_in_force(raw_rulings, (record.get("general") or {}).get("last_report_end"))
+            ),
+            "pledges": pledges(code),
             "cut": meta.get("cut"),
             "tier": "index",
             "is_stub": False,

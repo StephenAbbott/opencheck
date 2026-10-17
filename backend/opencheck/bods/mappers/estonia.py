@@ -721,6 +721,11 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     general = bundle.get("general") or {}
     for note in _ee_general_notes(general, cut=bundle.get("cut"), officers=bundle.get("officers") or []):
         company_stmt.setdefault("annotations", []).append(note)
+    # The rulings phase: the compliance rulings in force and the commercial
+    # pledges — notes on the company, never parties.
+    ruling_note = _ee_ruling_note(bundle.get("rulings"))
+    for extra in ([ruling_note] if ruling_note else []) + _ee_pledge_notes(bundle.get("pledges")):
+        company_stmt.setdefault("annotations", []).append(extra)
     yield company_stmt
     seen_entity_ids.add(company_stmt["statementId"])
     # A merger or division partner that is also in the chain above is drawn
@@ -801,6 +806,114 @@ EE_ACTIVITY_PERIOD_LABELS: dict[str, str] = {
     "HA": "Seasonal activity (hooajaline tegutsemine)",
     "AT": "Temporary activity (ajutine tegutsemine)",
 }
+
+
+#: The compliance rulings the index keeps (the rulings phase), in English
+#: with the register's Estonian term. Never codes (Stephen, 16 Oct 2026).
+EE_RULING_LABELS: dict[str, str] = {
+    "X1": "Deletion warning: annual report not filed (hoiatusmäärus registrist kustutamiseks)",
+    "X2": "Deletion warning: annual report not filed (hoiatusmäärus registrist kustutamiseks)",
+    "HM": "Fine warning: annual report not filed (trahvihoiatusmäärus)",
+    "HP": "Fine warning: deficiencies in the annual report (trahvihoiatusmäärus)",
+    "H": "Annual-report fine (aruandetrahvimäärus)",
+    "H2": "Repeat annual-report fine (korduv aruandetrahvimäärus)",
+    "KAA": "Deletion warning published in Ametlikud Teadaanded (kustutamishoiatuse avaldamine)",
+    "M3": "Ruling to remedy deficiencies in the annual report (puuduste kõrvaldamise määrus)",
+    "Y3": "Compulsory-dissolution warning: insufficient net assets (hoiatusmäärus sundlõpetamiseks)",
+    "Y2O": "Compulsory-dissolution warning: insufficient net assets (hoiatusmäärus sundlõpetamiseks)",
+    "Y2A": "Compulsory-dissolution warning: insufficient net assets (hoiatusmäärus sundlõpetamiseks)",
+    "GY": "Compulsory-dissolution warning (hoiatusmäärus sundlõpetamiseks)",
+    "KI": "Compulsory-dissolution warning (hoiatusmäärus sundlõpetamiseks)",
+    "G1": "Compulsory-dissolution warning: deficiencies in the articles (hoiatusmäärus sundlõpetamiseks)",
+    "G2T": "Compulsory-dissolution warning: too few members (hoiatusmäärus sundlõpetamiseks)",
+    "I2": "Compulsory-dissolution warning: the board's term has ended (hoiatusmäärus sundlõpetamiseks)",
+    "Z1": "Compulsory-dissolution warning: incorrect address (hoiatusmäärus sundlõpetamiseks)",
+}
+#: The same, short enough for the finding sentence's 140-character cap —
+#: the reason is in the BODS note.
+EE_RULING_SHORT: dict[str, str] = {
+    "X1": "annual-report deletion warning",
+    "X2": "annual-report deletion warning",
+    "HM": "annual-report fine warning",
+    "HP": "annual-report fine warning",
+    "H": "annual-report fine",
+    "H2": "repeat annual-report fine",
+    "KAA": "published deletion warning",
+    "M3": "annual-report deficiency ruling",
+    "Y3": "net-assets dissolution warning",
+    "Y2O": "net-assets dissolution warning",
+    "Y2A": "net-assets dissolution warning",
+    "GY": "dissolution warning",
+    "KI": "dissolution warning",
+    "G1": "dissolution warning",
+    "G2T": "dissolution warning",
+    "I2": "dissolution warning",
+    "Z1": "dissolution warning",
+}
+_EE_ORDINALS = ("first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth")
+
+
+def ee_ruling_label(kind: str | None, register_text: str | None = None) -> str:
+    """A ruling type in words: the English label, else the register's own
+    Estonian wording, else that the register published no description."""
+    return EE_RULING_LABELS.get(str(kind or ""), register_text or f"Ruling (type {kind}, no description published)")
+
+
+def _ee_ruling_note(rulings: list[dict[str, Any]] | None) -> dict[str, Any] | None:
+    """One ``commenting`` annotation listing the compliance rulings in force
+    (the rulings phase), newest first, dated, in words — or None."""
+    if not rulings:
+        return None
+    items = []
+    for r in rulings:
+        item = f"{ee_ruling_label(r.get('type'), r.get('type_text'))}, {_ee_date(r.get('day')) or 'undated'}"
+        if r.get("number"):
+            item += f" (ruling {r['number']})"
+        items.append(item)
+    return commenting(
+        pointer("recordDetails"),
+        "Rulings of the e-Business Register in force that no later annual report has answered: "
+        + "; ".join(items) + ". The register records the ruling and its date; a fine or "
+        "warning describes the company's standing with the register, not its owners.",
+    )
+
+
+def _ee_pledgee_words(p: dict[str, Any]) -> str:
+    if p.get("kind") != "J":
+        return "a private individual"
+    name = p.get("name") or "a legal person"
+    if p.get("code"):
+        return f"{name} (registry code {p['code']})"
+    if p.get("country_text") or p.get("country"):
+        return f"{name} ({p.get('country_text') or p.get('country')})"
+    return name
+
+
+def _ee_pledge_notes(pledges: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """One ``commenting`` annotation per current commercial pledge: amount,
+    rank, date and pledgee. A pledgee is a creditor holding security over
+    the company's assets, not an owner — never a relationship statement."""
+    out = []
+    for p in pledges or []:
+        rank = p.get("rank")
+        rank_words = (
+            f", {_EE_ORDINALS[rank - 1]} rank" if isinstance(rank, int) and 1 <= rank <= len(_EE_ORDINALS)
+            else (f", rank {rank}" if rank else "")
+        )
+        amount = _ee_amount(p.get("amount"))
+        since = _ee_date(p.get("since"))
+        pledgees = [_ee_pledgee_words(h) for h in p.get("pledgees") or []]
+        out.append(commenting(
+            pointer("recordDetails"),
+            "Commercial pledge (kommertspant)"
+            + (f" of {amount} {p.get('currency') or ''}".rstrip() if amount else "")
+            + rank_words
+            + (f", entered on {since}" if since else "")
+            + (f", in favour of {' and '.join(pledgees)}" if pledgees else "")
+            + ", as recorded by the e-Business Register. A pledgee holds security over the "
+            "company's assets; it is not an owner.",
+        ))
+    return out
 
 
 def _ee_amount(value: str | None) -> str | None:
