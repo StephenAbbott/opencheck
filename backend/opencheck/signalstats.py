@@ -432,7 +432,21 @@ def stats() -> dict[str, Any]:
         # Phase 334: whether the Form 13F index is loaded, and for which
         # quarter — counts and dates only (form13f.status()).
         "form13f": _form13f_stats(),
+        # RIK's credentialed services (the Estonian REST API and the SOAP
+        # history): today's requests against the contract's daily allowance,
+        # by service and outcome, refusals and the one-query queue
+        # (sources/ariregister_rest.py).
+        "ariregister_rik": _ariregister_rik_stats(),
     }
+
+
+def _ariregister_rik_stats() -> dict[str, Any]:
+    try:
+        from .sources import ariregister_rest
+
+        return ariregister_rest.stats()
+    except Exception as exc:  # noqa: BLE001 — never fail /signalstats
+        return {"available": False, "error": type(exc).__name__}
 
 
 def _form13f_stats() -> dict[str, Any]:
