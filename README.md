@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 366** — ChileCompra is no longer listed as a source consulted for non-Chilean companies, nor TED for companies outside Europe.
+**Latest: Phase 367** — Dragging a node in any network diagram now carries its icon, jurisdiction flag and badges with it, on phones as well as desktop.
 
 → [Full development history](docs/status.md)
 
