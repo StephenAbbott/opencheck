@@ -1485,6 +1485,146 @@ otherwise:
   `osanikud` are not read (128 entities, personal codes in the text).
 - No schema bump: an index built before the tables answers `None`.
 
+### One client for RIK's credentialed services (the shared-client phase)
+
+`sources/ariregister_rest.py`. The REST key (`ARIREGISTER_REST_API_KEY`) and
+the SOAP credentials are **one contract partner**, and RIK's terms give that
+partner **one simultaneous query** and **50,000 answers a day** — across both
+services and every OpenCheck user. Nothing calls `ar-rest.rik.ee` or
+`ariregxmlv6.rik.ee` except through this module. Things that will be
+re-derived otherwise:
+
+- **One `asyncio.Lock` per event loop** (the `ny_dos` `_bucket()` rule),
+  held for the length of one request. `get_json` holds it across the
+  login and the call; SOAP's `fetch_timeline_data` wraps each `POST` in
+  `contract_slot(service)` (its `gather` now runs one after the other). A
+  caller that waits longer than `ARIREGISTER_QUEUE_WAIT_S` is refused as
+  `busy`.
+- **A daily budget, charged per request sent**, on the register's day
+  (Europe/Tallinn): `ARIREGISTER_DAILY_BUDGET`, 40,000 by default, capped at
+  50,000. In memory — a deploy restarts it — hence the headroom. A spent
+  budget refuses before sending (`budget`).
+- **The token**: `GET /keyLogin/` with the key in the `apiKey` **header**
+  (a query parameter is a 401; an unknown key is **404** `{"detail": "API
+  Key not found"}` — read as the key refused, never as "no record"). Cached
+  per process; a 401 on a call (`JWT verification failed`) logs in again
+  once. Every call sends `acceptLanguage: eng` (`en` is a 422),
+  `apiVersion: V1` and the shared User-Agent (RIK held Python urllib's
+  default agent past 30 s on 17 Oct 2026).
+- **Three exceptions**: `RikNotFound` only for 404 with `code: 4043`;
+  `RikUnavailable` (cause → `reason` in the degradation vocabulary, `detail`
+  a fixed sentence from `DETAILS`) for everything else — `budget`, `busy`,
+  401/403/404-other/422, 429, 5xx, timeout, network, a non-JSON body;
+  `RikNotConfigured` without a key or with live calls off. The client
+  caches nothing; a caller caches only a stripped success.
+- **SOAP failures now say why.** `fetch_timeline_data` returns the dict
+  whenever credentials are set, with `None` for a call that did not answer
+  and `unavailable: {"detail"|"bo": cause}`; `read_history` words a
+  `busy`/`budget` cause as `rate_limited` (`NOT_READ_LIMITED`) with the
+  client's sentence.
+- **`/signalstats` → `ariregister_rik`**: today's `sent_today` /
+  `remaining_today`, `outcomes` by `service|outcome`, `refused` by
+  `service|budget|busy`, the queue. Closed vocabularies (`SERVICES`,
+  `OUTCOMES`, `REFUSALS`); a new caller adds its service name to
+  `SERVICES` first.
+- **Personal data.** REST answers carry `identityCode` (relatedPersons),
+  `entityCode` (representationRights) and shareholders' e-mail and street
+  address. `get_json` hands the body to its caller, which may join on a
+  code and must drop it; `personal_data_paths(bundle)` must yield nothing
+  before a bundle leaves the adapter (key-based, plus an exact personal-code
+  value under a code key — free text is not scanned, because a Latvian
+  registry code has the same shape).
+- Fixtures: `tests/fixtures/ariregister_rest/`, real answers of 17 Oct 2026
+  with the token replaced and lists cut to two rows.
+
+
+### An index miss is read from REST (the deleted-companies phase)
+
+`sources/ariregister_rest_company.py` (`bundle_from_rest`), `_rest_tier` in
+`sources/ariregister.py`. Stephen's decisions (17 Oct 2026): **every** code
+the index does not hold goes to `GET /company/{code}` (`COMPANY_QUERY`:
+every section, `onlyValid=false`) when the REST key is set — a deleted
+company (the files carry none) or one entered after the cut; a code the
+index holds never calls REST; a deleted company says "Deleted" in the
+verdict. Things that will be re-derived otherwise:
+
+- **Three outcomes, as the page had**: the company (`tier: rest`,
+  `index_miss`, dated live; a success is cached a day under
+  `ariregister/rest-company-v1/<code>`); RIK's 404 `code: 4043` → a note
+  card, no degradation; any `RikUnavailable` (spent budget, busy slot, 5xx,
+  timeout…) → a note card **and** a degradation, never cached. No key: the
+  page, as before. No index: the page, as before.
+- **The bundle is built by allowlist** into the index's row vocabulary
+  (`kirje_id`, `isiku_tyyp`, `isiku_roll`, `algus_kpv`/`lopp_kpv`, the
+  `osaluse_*` fields…). A natural person's `identityCode` groups their rows
+  into one `person_key` (`rest-<lowest recordId>`) and is then dropped; a
+  legal person keeps an eight-digit Estonian registry code and its
+  `foreignCode`. `bundle_from_rest` raises if `personal_data_paths` finds
+  anything. Free texts go through `scrub_text` — a copy of the builder's,
+  pinned equal by a test.
+- **Current rows are the current lists; ended shareholdings are history**
+  (`history.read: True`, `bo_read: False`) in the full-history phase's
+  shape, so `_ee_history_statements` draws one closed record per party.
+  Founders are kept without their end date (the off-card rule); officers
+  stay serving-only.
+- **REST has no beneficial owners** (that service needs a named viewer):
+  `bo_not_read` → the finding says "beneficial owners not read" and the
+  company statement carries a note, never "none filed".
+- **Deletion**: status `K` → `dissolution_date` = `deletionDate`, passed as
+  `since` to `apply_register_status`. Former names (a name with an end date
+  that is not the current name; a repeated name is one name) are
+  `alternateNames` + `former_name_annotation`. Succession partners exclude
+  the subject's own code.
+- **The finding**: a deleted company's sentence is lead, history, BO,
+  pledges, form ("Deleted from the register on 18 August 2017; 15 ended
+  ownership records; beneficial owners not read; Private limited company.")
+  — its lists are empty by definition. A live company newer than the cut
+  leads "Entered on <day>, after the open data's cut".
+- **The verdict's status sentence is every register's** (`verdict.status_sentence`,
+  `VERDICT_TEMPLATE` 6): a `terminal` register status opens the verdict
+  "Deleted on <day>, according to <source>." where the register's own word
+  is "deleted", else "Dissolved …". Liquidation and live say nothing there.
+  `frontend/src/lib/subjectProfile.ts` `statusWord` says "Deleted" on the
+  chip by the same rule.
+- Fixtures `rest_company_10078240.json` / `rest_company_11336737.json`:
+  real answers of 17 Oct 2026, every personal code replaced by a fake
+  starting `3`, people's addresses and e-mails removed.
+### The history's people from REST (the REST-history phase)
+
+`rest_person_rows` / `history_from_rest` in `sources/ariregister_history.py`,
+`fetch_timeline_data(card_source=)` and `HISTORY_QUERY` in
+`sources/ariregister.py`, `_rest_events` in `timeline/ariregister.py`.
+`GET /company/{code}` (`onlyValid=false`) returns the rows SOAP
+`detailandmed_v2` returns, under the same `recordId` — Eesti Energia AS 163
+rows, 147 ended, on both (17 Oct 2026). Stephen's decision (17 Oct 2026),
+after the comparison found REST names a **corporate** party by its name
+today ("Bolt Holdings OÜ") where SOAP names it as filed ("Taxify Shareholder
+SPV OÜ", "Lihtkonto: Rahandusministeerium"), and words places in English:
+
+- **The ownership graph's history reads REST** (`card_source="rest"`, used
+  by `read_history`) when `ARIREGISTER_REST_API_KEY` is set; the **History
+  tab keeps SOAP** (`card_source="soap"`, the default, used by
+  `timeline/service.py`) and takes REST only without SOAP credentials.
+  Without the key both read SOAP, as before.
+- **Beneficial-owner history stays on SOAP** (REST's needs a named viewer).
+  With the key and no SOAP credentials the BO cause is `not_configured`
+  (`BO_NOT_CONFIGURED`), said as a `not_configured` degradation; the
+  holdings are still shown.
+- **The join and the strip are the SOAP path's.** `rest_person_rows` reads
+  REST into SOAP's field names (numbers as `%.6f`, like SOAP) and
+  `_history_from_rows` does the rest; `keep_codes=True` only inside the
+  module — the Time Machine reads rows without a natural person's codes.
+  Cache key `ariregister/history-v2/<code>`. No fallback from a failed REST
+  read to SOAP: it is said, like any failure.
+- **Parity is pinned** (`tests/test_ariregister_rest_history.py`, real
+  answers for Eesti Energia AS and Bolt Operations OÜ with fake codes): the
+  same rows and fields, the same ended holdings, and statements identical
+  apart from provenance and a legal person's spelling. REST's statuses are
+  the current one and the first entry (no dated `staatused`): a deletion
+  reads as SOAP has it; a liquidation's back-and-forth is not rebuilt.
+- REST's card log (`registryCards`) gives every entry where SOAP's `kanded`
+  with `kandmed=0` gives some; neither is emitted (the index's file is).
+
 ### A person's other companies, on the register's person key (the person-index phase)
 
 `companies_for_hash` in `sources/ariregister.py`, `_ee_person_appointments`

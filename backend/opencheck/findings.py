@@ -1697,7 +1697,8 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
     elif "bankrupt" in lower:
         lead = "Bankrupt"
     elif "deleted" in lower or "removed" in lower:
-        lead = "Deleted from the register"
+        deleted_on = human_date(bundle.get("dissolution_date"))
+        lead = "Deleted from the register" + (f" on {deleted_on}" if deleted_on else "")
     elif registered:
         lead = f"In the register since {registered}"
     else:
@@ -1732,10 +1733,25 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
         _count(supervisory, "on the supervisory board", "on the supervisory board", "") if supervisory else "",
         _count(bundle.get("beneficial_owners"), "beneficial owner", "beneficial owners", _no_bo_words(bundle)),
     ] if c)
-    tier = (
-        "read from the page, not the open data"
-        if bundle.get("index_miss") else None
-    )
+    tier: str | None = None
+    if bundle.get("index_miss") and bundle.get("tier") == "rest":
+        # The REST tier (the deleted-companies ticket): a deletion is the
+        # lead already; a live company the files lack is newer than the cut.
+        cut = bundle.get("cut")
+        newer = bool(
+            cut and bundle.get("registration_date") and str(bundle["registration_date"]) > str(cut)
+        )
+        if newer and lead and lead.startswith("In the register since"):
+            # The lead's date says why the files lack it, in the room one
+            # clause takes; the cut's own date would push the counts past
+            # the cap.
+            lead = f"Entered on {lead.removeprefix('In the register since ')}, after the open data's cut"
+        elif newer:
+            tier = f"entered after the open data's cut of {human_date(cut) or cut}"
+        elif not bundle.get("dissolution_date"):
+            tier = "read from the register's REST service, not the open data"
+    elif bundle.get("index_miss"):
+        tier = "read from the page, not the open data"
     # The chain above the company, where the index followed one: how many
     # Estonian companies it reached, and how many owners it could not follow
     # (foreign registers, a code the files lack, the caps) — a chain cut
@@ -1760,7 +1776,7 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
             f"{records} ended ownership {'record' if records == 1 else 'records'}"
             if records else "no ended ownership on record"
         )
-    elif history.get("reason") in ("no_credentials", "upstream_error"):
+    elif history.get("reason") in ("no_credentials", "upstream_error", "rate_limited"):
         history_clause = "ownership history not read"
     # The general data (the üldandmed phase): an activity suspension in
     # force at the cut.
@@ -1787,6 +1803,14 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
             sep="; ",
         )
 
+    if bundle.get("tier") == "rest" and bundle.get("dissolution_date"):
+        # A deleted company read from the REST service (the deleted-companies
+        # ticket): every list is empty by definition, so "no shareholders on
+        # file, no one on the registry card" says nothing and would push
+        # what matters — its ended ownership — past the cap.
+        return clauses_to_sentence(
+            [lead, history_clause, _no_bo_words(bundle), pledge_clause, form], sep="; ",
+        )
     if rulings and (lead is None or lead.startswith("In the register")):
         leading = sentence([rulings], None)
         # The counts are the finding; a ruling that would push them out
@@ -1821,6 +1845,8 @@ def _no_bo_words(bundle: dict[str, Any]) -> str:
     branch…) or "beneficial owners due, none filed" — the two read the
     same without it (the üldandmed phase). Short on purpose: the sentence's
     140-character cap drops the clauses after it."""
+    if bundle.get("bo_not_read"):
+        return "beneficial owners not read"
     general = bundle.get("general") or {}
     if general.get("bo_obliged") is False:
         return "beneficial owners not required"

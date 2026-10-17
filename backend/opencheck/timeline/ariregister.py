@@ -173,7 +173,14 @@ def _emit_transitions(events: list[ChangeEvent], subject: str, items: list[ET.El
         val = value_fn(it)
         if val:
             rows.append((_iso(_text(it, "algus_kpv")) or "", val))
-    rows.sort(key=lambda r: r[0])
+    _emit_transition_rows(events, subject, rows, change_type)
+
+
+def _emit_transition_rows(events: list[ChangeEvent], subject: str,
+                          rows: list[tuple[str, str]], change_type: ChangeType) -> None:
+    """The transitions in ``(start day, value)`` rows — shared by the SOAP
+    and REST readings so the two cannot word a change differently."""
+    rows = sorted(rows, key=lambda r: r[0])
     for i in range(1, len(rows)):
         events.append(_entity_event(
             subject, change_type,
@@ -374,16 +381,91 @@ def general_events(subject: str, general: dict[str, Any] | None) -> list[ChangeE
 # Public entry point
 # --------------------------------------------------------------------------- #
 
+def _rest_address(entry: dict[str, Any]) -> str | None:
+    raw = entry.get("address")
+    address: dict[str, Any] = raw if isinstance(raw, dict) else {}
+    full = (address.get("adsNormalizedFullAddress") or "").strip()
+    if full:
+        return full
+    parts = [(address.get("address") or "").strip(), (address.get("ehakAsText") or "").strip()]
+    line = ", ".join(p for p in parts if p)
+    return line or None
+
+
+def _rest_statuses(general: dict[str, Any]) -> list[tuple[str, str]]:
+    """Status intervals as far as REST gives them. REST carries the current
+    status, the first entry and the deletion date, not SOAP's dated
+    ``staatused`` list: so "entered" at the first entry, then the current
+    status where it differs — dated by the deletion, else by the latest
+    status-change entry. A deletion reads exactly as SOAP has it; a
+    liquidation's earlier back-and-forth is not reconstructed (the index's
+    general data dates every status-change entry on the same tab)."""
+    raw = general.get("status")
+    status: dict[str, Any] = raw if isinstance(raw, dict) else {}
+    first = _iso(general.get("firstEntryTime"))
+    rows: list[tuple[str, str]] = []
+    if first:
+        rows.append((first, "Entered into the register"))
+    code = (status.get("status") or "").strip()
+    words = (status.get("statusAsText") or code).strip()
+    if code and code != "R" and words:
+        when = _iso(general.get("deletionDate")) if code == "K" else None
+        if not when:
+            changes = [_iso(c.get("startDate")) for c in general.get("statusChanges") or [] if isinstance(c, dict)]
+            when = max((c for c in changes if c), default=None)
+        if when:
+            rows.append((when, words))
+    return rows
+
+
+def _rest_events(subject: str, body: dict[str, Any]) -> list[ChangeEvent]:
+    """The REST reading of ``detailandmed_v2``'s blocks (the REST-history
+    phase): names, addresses, legal forms, statuses and every person the
+    card and its lists have named, dated by the register."""
+    from ..sources.ariregister_history import rest_person_rows
+
+    events: list[ChangeEvent] = []
+    general = body.get("generalData") or {}
+    _emit_transition_rows(events, subject, [
+        (_iso(n.get("startDate")) or "", (n.get("content") or "").strip())
+        for n in general.get("legalEntityNames") or [] if isinstance(n, dict) and (n.get("content") or "").strip()
+    ], ChangeType.LEGAL_NAME_CHANGE)
+    _emit_transition_rows(events, subject, [
+        (_iso(a.get("startDate")) or "", v)
+        for a in general.get("addresses") or [] if isinstance(a, dict) and (v := _rest_address(a))
+    ], ChangeType.ADDRESS_CHANGE)
+    _emit_transition_rows(events, subject, [
+        (_iso(f.get("startDate")) or "", v)
+        for f in general.get("legalForm") or []
+        if isinstance(f, dict) and (v := (f.get("contentAsText") or f.get("content") or "").strip())
+    ], ChangeType.LEGAL_FORM_CHANGE)
+    _emit_transition_rows(events, subject, _rest_statuses(general), ChangeType.STATUS_CHANGED)
+    for row in rest_person_rows(body):   # no codes: names, roles and dates only
+        name = " ".join(p for p in (row.get("eesnimi"), row.get("nimi_arinimi")) if p).strip()
+        if not name:
+            continue
+        role = (row.get("isiku_roll_tekstina") or row.get("isiku_roll") or "").strip()
+        label = f"{name} — {role.lower()}" if role else name
+        _emit_owner(events, subject, label, _iso(row.get("algus_kpv")), _iso(row.get("lopp_kpv")))
+    return events
+
+
 def ariregister_change_events(data: dict[str, Any]) -> list[ChangeEvent]:
-    """Build Time Machine ChangeEvents from the e-Äriregister SOAP responses.
+    """Build Time Machine ChangeEvents from the e-Äriregister history.
 
     ``data`` is what ``AriregisterAdapter.fetch_timeline_data`` returns:
-    ``{"registry_code": str, "detail_xml": str|None, "bo_xml": str|None}``.
+    ``{"registry_code": str, "detail_xml": str|None, "detail_rest":
+    dict|None, "bo_xml": str|None}`` — the card from REST when the key is
+    set, else from SOAP; the beneficial owners always from SOAP.
     """
     if not data:
         return []
     subject = str(data.get("registry_code") or "")
     events: list[ChangeEvent] = []
+    if isinstance(data.get("detail_rest"), dict):
+        events += _rest_events(subject, data["detail_rest"])
+        events += _bo_events(subject, data.get("bo_xml"))
+        return events
 
     root = _parse(data.get("detail_xml"))
     company = None
