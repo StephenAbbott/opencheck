@@ -500,7 +500,9 @@ def test_bh_ted_eu_asserts_lei_only_when_ted_published_it() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_dispatch_includes_ted_eu_with_anchor_identifiers() -> None:
+def test_dispatch_includes_ted_eu_with_anchor_identifiers(monkeypatch) -> None:
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
     ctx = _LookupCtx(lei=_LEI)
     ctx.jurisdiction = "FR"
     ctx.registered_as = "380129866"
@@ -514,6 +516,44 @@ def test_dispatch_skips_ted_eu_without_lei_or_registration() -> None:
     ctx = _LookupCtx(lei="")
     ctx.registered_as = ""
     assert _dispatch(ctx, only="ted_eu") == []
+
+
+@pytest.mark.parametrize("jurisdiction", ["US", "US-DE", "CL", "JP"])
+def test_dispatch_never_announces_ted_eu_outside_its_coverage(
+    monkeypatch, jurisdiction: str
+) -> None:
+    """The jurisdiction gate runs before dispatch, not inside the fetch.
+
+    Inside the fetch it ran after the source had been announced, so a
+    company outside Europe listed TED among the sources consulted and
+    counted it in "N of N sources answered".
+    """
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+    ctx = _LookupCtx(lei=_LEI)
+    ctx.jurisdiction = jurisdiction
+    ctx.registered_as = "12-3456789"
+    assert _dispatch(ctx, only="ted_eu") == []
+
+
+def test_dispatch_never_announces_ted_eu_when_not_live() -> None:
+    """With live mode off the fetch returns nothing, so nothing is announced."""
+    ctx = _LookupCtx(lei=_LEI)
+    ctx.jurisdiction = "FR"
+    ctx.registered_as = "380129866"
+    assert _dispatch(ctx, only="ted_eu") == []
+
+
+def test_dispatch_announces_ted_eu_for_an_unknown_jurisdiction(monkeypatch) -> None:
+    """An anchor with no jurisdiction is still tried, as the fetch always did."""
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+    ctx = _LookupCtx(lei=_LEI)
+    ctx.registered_as = "380129866"
+    tasks = _dispatch(ctx, only="ted_eu")
+    assert [sid for sid, _ in tasks] == ["ted_eu"]
+    for _, coro in tasks:
+        coro.close()
 
 
 def test_registry_entry_and_source_info() -> None:

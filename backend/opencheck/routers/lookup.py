@@ -1158,12 +1158,18 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     # national numbers) — eForms BT-501 values are national registration
     # numbers today (LEI fill rate is zero as of 2026-08), so this matches any
     # LEI holder in a TED-relevant jurisdiction, not just those with a
-    # dedicated register adapter. The jurisdiction gate lives in the adapter.
+    # dedicated register adapter. The jurisdiction and live-mode gate is the
+    # adapter's ``applies_to``, asked here before dispatch: asked only inside
+    # ``fetch_by_identifiers`` it ran after the source had been announced, so
+    # an American or Chilean company listed TED as consulted.
     ted_adapter = REGISTRY.get("ted_eu")
     if (
         ted_adapter is not None
         and hasattr(ted_adapter, "fetch_by_identifiers")
-        and (ctx.registered_as or ctx.lei)
+        and hasattr(ted_adapter, "applies_to")
+        and ted_adapter.applies_to(
+            ctx.lei, ctx.registered_as, ctx.jurisdiction, derived=ctx.derived
+        )
         and _want("ted_eu")
     ):
         tasks.append((
@@ -1178,13 +1184,17 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         ))
     # ChileCompra (Phase 281) — Chilean public procurement, reached the TED way:
     # from the anchor's (registeredAt, registeredAs) pair, not as a register.
-    # Gated on its index being present, so a deployment without the release
-    # asset never announces it.
+    # Gated on a Chilean RA and a company RUT *here*, before dispatch — the
+    # adapter's own check ran only after the source had been announced, so
+    # every LEI with a registeredAs listed ChileCompra as consulted — and on
+    # its index being present, so a deployment without the release asset
+    # never announces it.
     cc_adapter = REGISTRY.get("chilecompra")
     if (
         cc_adapter is not None
         and hasattr(cc_adapter, "fetch_by_identifiers")
-        and ctx.registered_as
+        and hasattr(cc_adapter, "applies_to")
+        and cc_adapter.applies_to(ctx.registered_at, ctx.registered_as)
         and _want("chilecompra")
         and _offline_index_covers(cc_adapter, ctx.lei)
     ):

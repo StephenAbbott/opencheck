@@ -1030,6 +1030,24 @@ class ChileCompraAdapter(SourceAdapter):
         validate_raw(self.id, ChileCompraBundle, bundle)
         return bundle
 
+    @staticmethod
+    def applies_to(registered_at: str, registered_as: str) -> bool:
+        """Whether this source has a question to answer about the anchor.
+
+        A Chilean registration authority and a company RUT. The lookup
+        pipeline asks this *before* dispatch, so a Danish bank or an Estonian
+        utility is never announced as checked against Chilean procurement
+        and never counted in "N of N sources answered"; ``fetch_by_identifiers``
+        asks it again, so the two can never disagree.
+        """
+        if registered_at not in CL_RA_CODES:
+            return False
+        try:
+            normalise_rut(registered_as)
+        except ValueError:
+            return False
+        return True
+
     async def fetch_by_identifiers(
         self,
         lei: str,
@@ -1046,11 +1064,7 @@ class ChileCompraAdapter(SourceAdapter):
         the value passes the check digit. Anything else is not this source's
         question: ``None``, and the pipeline makes no card.
         """
-        if registered_at not in CL_RA_CODES:
+        if not self.applies_to(registered_at, registered_as):
             return None
-        try:
-            rut = normalise_rut(registered_as)
-        except ValueError:
-            return None
-        return await self.fetch(rut, legal_name=legal_name)
+        return await self.fetch(normalise_rut(registered_as), legal_name=legal_name)
 
