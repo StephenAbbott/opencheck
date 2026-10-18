@@ -1333,6 +1333,54 @@ export async function estonianPersonCompanies(
   return getJson(`/person-appointments?${params.toString()}`);
 }
 
+/** One role a legal person held in one company (Estonian register). */
+export interface LegalPersonRelation {
+  role: string;
+  role_code?: string | null;
+  since?: string | null;
+  until?: string | null;
+  ended: boolean;
+  founder: boolean;
+  share_percent?: string | null;
+  share_size?: string | null;
+  share_currency?: string | null;
+}
+
+export interface LegalPersonCompany {
+  name: string;
+  code?: string | null;
+  status_code?: string | null;
+  status?: string | null;
+  legal_form?: string | null;
+  current: boolean;
+  relations: LegalPersonRelation[];
+}
+
+export interface LegalPersonRelationsResponse {
+  code: string;
+  country: string;
+  status: "ok" | "not_configured" | "unavailable";
+  reason?: string | null;
+  detail?: string | null;
+  total: number;
+  truncated: boolean;
+  companies: LegalPersonCompany[];
+  retrieved_at?: string | null;
+  attribution: string;
+  caveat: string;
+}
+
+/** Every company a legal person has held a role in on the Estonian
+ *  register — current, former and deleted — read on demand from RIK's REST
+ *  service. Legal persons only. */
+export async function legalPersonRelations(
+  code: string,
+  country = "EST"
+): Promise<LegalPersonRelationsResponse> {
+  const params = new URLSearchParams({ code, country });
+  return getJson(`/legal-person-relations?${params.toString()}`);
+}
+
 export async function personAppointments(
   officerId: string
 ): Promise<PersonAppointmentsResponse> {

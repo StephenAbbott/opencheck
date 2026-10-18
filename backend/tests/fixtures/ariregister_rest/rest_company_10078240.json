@@ -1,0 +1,3289 @@
+{
+ "legalEntityName": "Osaühing Pogi",
+ "registryCode": 10078240,
+ "companyId": 8000108391,
+ "generalData": {
+  "firstEntryTime": "1996-09-09",
+  "deletionDate": "2017-08-18",
+  "status": {
+   "status": "K",
+   "statusAsText": "Deleted"
+  },
+  "legalEntityNames": [
+   {
+    "content": "Osaühing Pogi",
+    "cardNumber": 1,
+    "entryNumber": 1,
+    "recordId": 58543,
+    "startDate": "1996-09-09",
+    "endDate": "2006-01-02"
+   },
+   {
+    "content": "Osaühing Pogi",
+    "cardNumber": 4,
+    "entryNumber": 1,
+    "recordId": 3145808,
+    "startDate": "2006-01-02",
+    "endDate": "2017-08-18"
+   }
+  ],
+  "addresses": [
+   {
+    "address": {
+     "address": "Väike-Aia 4",
+     "postalCode": "72711",
+     "ehak": "0566",
+     "ehakAsText": "Paide city, Järva county"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 664003,
+    "startDate": "2000-12-15",
+    "endDate": "2006-01-02"
+   },
+   {
+    "address": {
+     "address": "Pärnu 54",
+     "postalCode": "EE2820",
+     "ehak": "0566",
+     "ehakAsText": "Paide city, Järva county"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 664004,
+    "startDate": "1996-09-09",
+    "endDate": "2000-12-15"
+   },
+   {
+    "address": {
+     "address": "Väike-Aia 4",
+     "postalCode": "72711",
+     "ehak": "0566",
+     "ehakAsText": "Paide city, Järva county"
+    },
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145814,
+    "startDate": "2006-01-02",
+    "endDate": "2009-05-14"
+   },
+   {
+    "address": {
+     "address": "Ruubassaare tee 3,",
+     "postalCode": "72720",
+     "ehak": "0566",
+     "ehakAsText": "Paide city, Järva county"
+    },
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 3415998,
+    "startDate": "2009-05-14",
+    "endDate": "2011-11-08"
+   },
+   {
+    "address": {
+     "address": "Ruubassaare tee 3",
+     "postalCode": "72720",
+     "ehak": "0566",
+     "ehakAsText": "Paide city, Järva county"
+    },
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 6,
+    "recordId": 4255732,
+    "startDate": "2011-11-08",
+    "endDate": "2017-08-18"
+   }
+  ],
+  "legalForm": [
+   {
+    "contentNumber": 5,
+    "contentAsText": "Private limited company",
+    "content": "OÜ",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145809,
+    "startDate": "2006-01-02",
+    "endDate": "2017-08-18"
+   },
+   {
+    "contentNumber": 5,
+    "contentAsText": "Private limited company",
+    "content": "OÜ",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 58545,
+    "startDate": "1996-09-09",
+    "endDate": "2006-01-02"
+   }
+  ],
+  "capitals": [
+   {
+    "size": 120000.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 58544,
+    "startDate": "1996-09-09",
+    "endDate": "2001-08-08"
+   },
+   {
+    "size": 1000000.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 3,
+    "recordId": 756772,
+    "startDate": "2001-08-08",
+    "endDate": "2006-01-02"
+   },
+   {
+    "size": 1000000.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145819,
+    "startDate": "2006-01-02",
+    "endDate": "2011-09-26"
+   },
+   {
+    "size": 64000.0,
+    "currency": "EUR",
+    "currencyAsText": "Euro",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 4207676,
+    "startDate": "2011-09-26",
+    "endDate": "2017-08-18"
+   }
+  ],
+  "successions": [
+   {
+    "type": "YHIN",
+    "typeAsText": "Merger",
+    "content": "Enefit Taastuvenergia Osaühing (ühendav ühing, registrikood 11184032, aadress Lelle tn 22, Kesklinna linnaosa, Tallinn, Harju maakond, 11318) ja Osaühing Pogi (ühendatav ühing, registrikood 10078240, aadress Ruubassaare tee 3, Paide linn, Järva maakond, 72720) ühinevad 30.06.2017.a. sõlmitud ühinemislepingu alusel. Ühinemine loetakse toimunuks ühendava ühingu Enefit Taastuvenergia Osaühingu registrikaardile ühinemiskande tegemisega.",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 10,
+    "recordId": 7018528,
+    "startDate": "2017-08-18",
+    "endDate": "2017-08-18"
+   }
+  ],
+  "statusChanges": [
+   {
+    "type": "KUST",
+    "typeAsText": "Deletion from the register",
+    "content": "Ühinemine jõustus 18.08.2017.a. ühendava ühingu Enefit Taastuvenergia Osaühing (registrikood 11184032) registrikaardile ühinemiskande tegemisega. Osaühing Pogi on seoses ühinemisega äriregistrist kustutatud.",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 11,
+    "recordId": 7018547,
+    "startDate": "2017-08-18"
+   }
+  ],
+  "financialYears": [
+   {
+    "financialYearStartDate": "07-01",
+    "financialYearEndDate": "06-30",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 58546,
+    "startDate": "1996-09-09",
+    "endDate": "2006-01-02"
+   },
+   {
+    "financialYearStartDate": "07-01",
+    "financialYearEndDate": "06-30",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145810,
+    "startDate": "2006-01-02",
+    "endDate": "2011-11-08"
+   },
+   {
+    "financialYearStartDate": "01-01",
+    "financialYearEndDate": "12-31",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 6,
+    "recordId": 4255733,
+    "startDate": "2011-11-08",
+    "endDate": "2017-08-18"
+   }
+  ],
+  "associationArticles": [
+   {
+    "modifiedDate": "2000-09-28",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 664005,
+    "startDate": "2000-12-15",
+    "endDate": "2001-08-08"
+   },
+   {
+    "approvalDate": "1996-08-01",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 665567,
+    "startDate": "1996-09-09",
+    "endDate": "2000-12-15"
+   },
+   {
+    "modifiedDate": "2001-05-08",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 3,
+    "recordId": 756773,
+    "startDate": "2001-08-08",
+    "endDate": "2006-01-02"
+   },
+   {
+    "modifiedDate": "2011-07-06",
+    "containsSpecialRights": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 4207677,
+    "startDate": "2011-09-26",
+    "endDate": "2011-11-08"
+   },
+   {
+    "modifiedDate": "2001-05-08",
+    "containsSpecialRights": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145820,
+    "startDate": "2006-01-02",
+    "endDate": "2011-09-26"
+   },
+   {
+    "modifiedDate": "2011-10-10",
+    "containsSpecialRights": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 6,
+    "recordId": 4255734,
+    "startDate": "2011-11-08",
+    "endDate": "2017-08-18"
+   }
+  ],
+  "registryCardNotes": [
+   {
+    "type": "MARK",
+    "typeAsText": "Remark",
+    "content": "Kanne on tehtud automatiseeritud korras Eesti väärtpaberite keskregistrist saadud andmete põhjal äriseadustiku § 511.3 alusel.",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 5,
+    "recordId": 4211985,
+    "startDate": "2011-09-29",
+    "endDate": "2011-09-29"
+   },
+   {
+    "type": "MARK",
+    "typeAsText": "Remark",
+    "content": "Kanne on tehtud registripidaja algatusel Äriseadustiku § 521.1 lõike 1 alusel.",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 3,
+    "recordId": 4071865,
+    "startDate": "2011-05-03",
+    "endDate": "2011-05-03"
+   },
+   {
+    "type": "MARK",
+    "typeAsText": "Remark",
+    "content": "Senine registrikaart asub Harju Maakohtu registriosakonnas. Registriandmed on teise registriosakonna tööpiirkonda üle kantud automatiseeritult vastavalt äriseadustiku § 511.2 lõikele 1.",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145821,
+    "startDate": "2006-01-02",
+    "endDate": "2006-01-02"
+   },
+   {
+    "type": "MARK",
+    "typeAsText": "Remark",
+    "content": "Uus registrikaart asub Pärnu Maakohtu registriosakonnas. Registriandmed on teise registriosakonna tööpiirkonda üle kantud automatiseeritult vastavalt äriseadustiku § 511.2 lõikele 1.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 1451337,
+    "startDate": "2006-01-02",
+    "endDate": "2006-01-02"
+   }
+  ],
+  "registryCardAreasOfActivity": [
+   {
+    "content": "veevarustuse ja kanalisatsioonitööd",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 664007,
+    "startDate": "2000-12-15",
+    "endDate": "2006-01-02"
+   },
+   {
+    "content": "küttesüsteemide ja -võrkude ehitustööd",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 664008,
+    "startDate": "2000-12-15",
+    "endDate": "2006-01-02"
+   },
+   {
+    "content": "energia tootmine, soojusenergia müük, elektrienergia müük",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145815,
+    "startDate": "2006-01-02",
+    "endDate": "2011-05-03"
+   },
+   {
+    "content": "energeetikaseadmete ehitus, montaaž ja seadistamine",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145818,
+    "startDate": "2006-01-02",
+    "endDate": "2011-05-03"
+   },
+   {
+    "content": "soojusenergia tootmine.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 58550,
+    "startDate": "1996-09-09",
+    "endDate": "2000-12-15"
+   },
+   {
+    "content": "energia tootmine, soojusenergia müük, elektrienergia müük",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 664006,
+    "startDate": "2000-12-15",
+    "endDate": "2006-01-02"
+   },
+   {
+    "content": "energeetikaseadmete ehitus, montaaž ja seadistamine",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 664009,
+    "startDate": "2000-12-15",
+    "endDate": "2006-01-02"
+   },
+   {
+    "content": "küttesüsteemide ja -võrkude ehitustööd",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145817,
+    "startDate": "2006-01-02",
+    "endDate": "2011-05-03"
+   },
+   {
+    "content": "veevarustuse ja kanalisatsioonitööd",
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145816,
+    "startDate": "2006-01-02",
+    "endDate": "2011-05-03"
+   }
+  ],
+  "reportedActivities": [
+   {
+    "emtakCode": "35141",
+    "emtakAsText": "Trade of electricity",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "35.14",
+    "recordId": 9000165364,
+    "startDate": "2015-05-01",
+    "endDate": "2017-08-18"
+   },
+   {
+    "emtakCode": "47991",
+    "emtakAsText": "Other retail sale not in stores, stalls or markets",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "47.99",
+    "recordId": 9000165365,
+    "startDate": "2015-05-01",
+    "endDate": "2017-08-18"
+   },
+   {
+    "emtakCode": "47991",
+    "emtakAsText": "Other retail sale not in stores, stalls or markets",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "47.99",
+    "recordId": 9000036816,
+    "startDate": "2013-06-20",
+    "endDate": "2014-06-02"
+   },
+   {
+    "emtakCode": "68201",
+    "emtakAsText": "Rental and operating of own or leased real estate",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "68.20",
+    "recordId": 9000036817,
+    "startDate": "2013-06-20",
+    "endDate": "2017-08-18"
+   },
+   {
+    "emtakCode": "35301",
+    "emtakAsText": "Steam and air conditioning supply",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "35.30",
+    "recordId": 3000111385,
+    "startDate": "2011-04-25",
+    "endDate": "2017-08-18"
+   },
+   {
+    "emtakCode": "43221",
+    "emtakAsText": "Installation of heating, ventilation and air conditioning equipment",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "43.22",
+    "recordId": 3000111386,
+    "startDate": "2011-04-25",
+    "endDate": "2013-06-20"
+   },
+   {
+    "emtakCode": "42211",
+    "emtakAsText": "Construction of utility projects for fluids",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "42.21",
+    "recordId": 3000111387,
+    "startDate": "2011-04-25",
+    "endDate": "2017-08-18"
+   },
+   {
+    "emtakCode": "47991",
+    "emtakAsText": "Other retail sale not in stores, stalls or markets",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "47.99",
+    "recordId": 3000111388,
+    "startDate": "2011-04-25",
+    "endDate": "2012-03-26"
+   }
+  ],
+  "infoFinancialYearFromReports": [
+   {
+    "recordId": 1598342,
+    "periodStartDate": "2016-01-01",
+    "periodEndDate": "2016-12-31",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 1407781,
+    "periodStartDate": "2015-01-01",
+    "periodEndDate": "2015-12-31",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 1249827,
+    "periodStartDate": "2014-01-01",
+    "periodEndDate": "2014-12-31",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 1116391,
+    "periodStartDate": "2013-01-01",
+    "periodEndDate": "2013-12-31",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 1003030,
+    "periodStartDate": "2011-07-01",
+    "periodEndDate": "2012-12-31",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 836625,
+    "periodStartDate": "2010-07-01",
+    "periodEndDate": "2011-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 737104,
+    "periodStartDate": "2009-07-01",
+    "periodEndDate": "2010-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 629684,
+    "periodStartDate": "2008-07-01",
+    "periodEndDate": "2009-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 476339,
+    "periodStartDate": "2006-07-01",
+    "periodEndDate": "2007-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 408352,
+    "periodStartDate": "2005-07-01",
+    "periodEndDate": "2006-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 338926,
+    "periodStartDate": "2004-07-01",
+    "periodEndDate": "2005-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 295831,
+    "periodStartDate": "2003-07-01",
+    "periodEndDate": "2004-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 244279,
+    "periodStartDate": "2002-07-01",
+    "periodEndDate": "2003-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 207335,
+    "periodStartDate": "2001-07-01",
+    "periodEndDate": "2002-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 167258,
+    "periodStartDate": "2000-07-01",
+    "periodEndDate": "2001-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 130601,
+    "periodStartDate": "1999-07-01",
+    "periodEndDate": "2000-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 97907,
+    "periodStartDate": "1998-07-01",
+    "periodEndDate": "1999-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   },
+   {
+    "recordId": 71757,
+    "periodStartDate": "1997-07-01",
+    "periodEndDate": "1998-06-30",
+    "activityAreaEmtakCode": "35301",
+    "activityAreaEmtakAsText": "Steam and air conditioning supply",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.30"
+   }
+  ],
+  "isFoundedWithoutPayment": false,
+  "hasAbandonedFormReqs": false,
+  "isAccountingLiable": false,
+  "isRequiredtoProvideBeneficiaries": false
+ },
+ "relatedPersons": {
+  "personsOnCard": [
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Anatoli",
+     "surnameLegalEntityName": "Petrov",
+     "identityCode": "34030641323"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 9,
+    "recordId": 6711035,
+    "startDate": "2017-01-17",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Alusalu",
+     "identityCode": "30529993029"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 6,
+    "recordId": 4255737,
+    "startDate": "2011-11-08",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Alusalu",
+     "identityCode": "30529993029"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 58547,
+    "startDate": "1996-09-09",
+    "endDate": "2006-01-02"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Alusalu",
+     "identityCode": "30529993029"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145811,
+    "startDate": "2006-01-02",
+    "endDate": "2011-11-08"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Innar",
+     "surnameLegalEntityName": "Kaasik",
+     "identityCode": "35799695278"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 7,
+    "recordId": 4528033,
+    "startDate": "2012-07-04",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Tamm",
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145813,
+    "startDate": "2006-01-02",
+    "endDate": "2011-11-08"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Tamm",
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 58549,
+    "startDate": "1996-09-09",
+    "endDate": "2006-01-02"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Kristjan",
+     "surnameLegalEntityName": "Suur",
+     "identityCode": "39758150394"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 7,
+    "recordId": 4528032,
+    "startDate": "2012-07-04",
+    "endDate": "2012-10-24"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Raivo",
+     "surnameLegalEntityName": "Melsas",
+     "identityCode": "32960895187"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 8,
+    "recordId": 4624736,
+    "startDate": "2012-10-24",
+    "endDate": "2017-01-17"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Rein",
+     "surnameLegalEntityName": "Rebas",
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 58548,
+    "startDate": "1996-09-09",
+    "endDate": "2006-01-02"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Rein",
+     "surnameLegalEntityName": "Rebas",
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 3145812,
+    "startDate": "2006-01-02",
+    "endDate": "2011-11-08"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Timo",
+     "surnameLegalEntityName": "Tatar",
+     "identityCode": "30253867897"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 6,
+    "recordId": 4255736,
+    "startDate": "2011-11-08",
+    "endDate": "2012-07-04"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Tõnis",
+     "surnameLegalEntityName": "Vajakas",
+     "identityCode": "37597658810"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 4,
+    "cardType": "R",
+    "entryNumber": 6,
+    "recordId": 4255735,
+    "startDate": "2011-11-08",
+    "endDate": "2012-07-04"
+   }
+  ],
+  "representationRightSpecialConditions": [
+   {
+    "type": "YHES",
+    "typeAsText": "Requirements for the joint right of representation of the management board or a body substituting for the management board",
+    "content": "Osaühingut võivad esindada ainult kaks juhatuse liiget ühiselt",
+    "cardNumber": 4,
+    "entryNumber": 6,
+    "recordId": 4255738,
+    "startDate": "2011-11-08",
+    "endDate": "2017-08-18"
+   }
+  ],
+  "shareholders": [
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Raimond",
+     "surnameLegalEntityName": "Arukivii",
+     "identityCode": "37394695935"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 2000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171632,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Enno",
+     "surnameLegalEntityName": "Dorbek",
+     "identityCode": "34881846315"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 5000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171633,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Lembit",
+     "surnameLegalEntityName": "Jalakas",
+     "identityCode": "34839035810"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171634,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Valentin",
+     "surnameLegalEntityName": "Juhanson",
+     "identityCode": "34367564503"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171635,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Aleksei",
+     "surnameLegalEntityName": "Kapitonov",
+     "identityCode": "30610215777"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171636,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Diina",
+     "surnameLegalEntityName": "Pennert",
+     "identityCode": "31596918118"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 3000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171637,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Rein",
+     "surnameLegalEntityName": "Rebas",
+     "identityCode": "36995279278"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 15000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171638,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Külliki",
+     "surnameLegalEntityName": "Seire",
+     "identityCode": "30550644736"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 2000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171641,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Urmas",
+     "surnameLegalEntityName": "Sild",
+     "identityCode": "39670956158"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171642,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Tamm",
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 15000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171643,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Eha",
+     "surnameLegalEntityName": "Valkenklau",
+     "identityCode": "39706326660"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171644,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "osaühing Tootus",
+     "identityCode": "10078233"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "company_registry_status": "L",
+    "has_active_tradebans": false,
+    "shareSize": 120000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 2000171645,
+    "startDate": "1998-07-01",
+    "endDate": "2002-07-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Impera Grupp OÜ",
+     "identityCode": "11448946"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 27.0,
+    "shareSize": 270000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2011-07-15",
+    "recordId": 3000128063,
+    "startDate": "2011-07-15",
+    "endDate": "2011-09-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Raimond",
+     "surnameLegalEntityName": "Arukivii",
+     "identityCode": "37394695935"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 6.25,
+    "shareSize": 4000.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2011-10-01",
+    "recordId": 3000148406,
+    "startDate": "2011-09-26",
+    "endDate": "2011-10-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Enno",
+     "surnameLegalEntityName": "Dorbek",
+     "identityCode": "34881846315"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 5.0,
+    "shareSize": 3200.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2011-10-01",
+    "recordId": 3000148407,
+    "startDate": "2011-09-26",
+    "endDate": "2011-10-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Diina",
+     "surnameLegalEntityName": "Pennert",
+     "identityCode": "31596918118"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 5.0,
+    "shareSize": 3200.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2012-01-01",
+    "recordId": 3000148413,
+    "startDate": "2011-09-26",
+    "endDate": "2012-01-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Tamm",
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 25.5,
+    "shareSize": 16320.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2011-10-01",
+    "recordId": 3000148418,
+    "startDate": "2011-09-26",
+    "endDate": "2011-10-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Urmas",
+     "surnameLegalEntityName": "Sild",
+     "identityCode": "39670956158"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 3.5,
+    "shareSize": 2240.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2011-10-01",
+    "recordId": 3000148419,
+    "startDate": "2011-09-26",
+    "endDate": "2011-10-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Külliki",
+     "surnameLegalEntityName": "Seire",
+     "identityCode": "30550644736"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 1.5,
+    "shareSize": 960.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2011-10-01",
+    "recordId": 3000148420,
+    "startDate": "2011-09-26",
+    "endDate": "2011-10-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Impera Grupp OÜ",
+     "identityCode": "11448946"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 27.0,
+    "shareSize": 17280.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2011-10-01",
+    "recordId": 3000148421,
+    "startDate": "2011-09-26",
+    "endDate": "2011-10-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "osaühing Tootus",
+     "identityCode": "10078233"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "company_registry_status": "L",
+    "has_active_tradebans": false,
+    "sharePercentage": 26.25,
+    "shareSize": 16800.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2011-10-01",
+    "recordId": 3000148422,
+    "startDate": "2011-09-26",
+    "endDate": "2011-10-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "osaühing Tootus",
+     "identityCode": "10078233"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "company_registry_status": "L",
+    "has_active_tradebans": false,
+    "sharePercentage": 50.0,
+    "shareSize": 32000.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2012-01-01",
+    "recordId": 3000153578,
+    "startDate": "2011-10-01",
+    "endDate": "2012-01-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Impera Grupp OÜ",
+     "identityCode": "11448946"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 45.0,
+    "shareSize": 28800.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2012-01-01",
+    "recordId": 3000153579,
+    "startDate": "2011-10-01",
+    "endDate": "2012-01-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Impera Grupp OÜ",
+     "identityCode": "11448946"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 16.75,
+    "shareSize": 10720.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2016-11-19",
+    "recordId": 3000212757,
+    "startDate": "2012-01-01",
+    "endDate": "2016-11-19"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "identityCode": "10421629"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 66.5,
+    "shareSize": 42560.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2013-05-31",
+    "recordId": 3000212758,
+    "startDate": "2012-01-01",
+    "endDate": "2013-05-31"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "osaühing Tootus",
+     "identityCode": "10078233"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "company_registry_status": "L",
+    "has_active_tradebans": false,
+    "sharePercentage": 16.75,
+    "shareSize": 10720.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2013-05-31",
+    "recordId": 3000212759,
+    "startDate": "2012-01-01",
+    "endDate": "2013-05-31"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Raimond",
+     "surnameLegalEntityName": "Arukivii",
+     "identityCode": "37394695935"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 6.25,
+    "shareSize": 62500.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195529,
+    "startDate": "2002-07-01",
+    "endDate": "2011-09-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Enno",
+     "surnameLegalEntityName": "Dorbek",
+     "identityCode": "34881846315"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 5.0,
+    "shareSize": 50000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195530,
+    "startDate": "2002-07-01",
+    "endDate": "2011-09-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Lembit",
+     "surnameLegalEntityName": "Jalakas",
+     "identityCode": "34839035810"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 0.75,
+    "shareSize": 7500.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195531,
+    "startDate": "2002-07-01",
+    "endDate": "2008-04-24"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Valentin",
+     "surnameLegalEntityName": "Juhanson",
+     "identityCode": "34367564503"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 0.75,
+    "shareSize": 7500.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195532,
+    "startDate": "2002-07-01",
+    "endDate": "2008-05-15"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Diina",
+     "surnameLegalEntityName": "Pennert",
+     "identityCode": "31596918118"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 5.0,
+    "shareSize": 50000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195533,
+    "startDate": "2002-07-01",
+    "endDate": "2011-09-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Rein",
+     "surnameLegalEntityName": "Rebas",
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 25.5,
+    "shareSize": 255000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2008-04-25",
+    "recordId": 8000195534,
+    "startDate": "2002-07-01",
+    "endDate": "2008-04-24"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Külliki",
+     "surnameLegalEntityName": "Seire",
+     "identityCode": "30550644736"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 1.5,
+    "shareSize": 15000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195535,
+    "startDate": "2002-07-01",
+    "endDate": "2011-09-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Urmas",
+     "surnameLegalEntityName": "Sild",
+     "identityCode": "39670956158"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 3.5,
+    "shareSize": 35000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195536,
+    "startDate": "2002-07-01",
+    "endDate": "2011-09-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Tamm",
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 25.5,
+    "shareSize": 255000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195537,
+    "startDate": "2002-07-01",
+    "endDate": "2011-09-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Eha",
+     "surnameLegalEntityName": "Valkenklau",
+     "identityCode": "39706326660"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 0.75,
+    "shareSize": 7500.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195538,
+    "startDate": "2002-07-01",
+    "endDate": "2008-04-24"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "osaühing Tootus",
+     "identityCode": "10078233"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "company_registry_status": "L",
+    "has_active_tradebans": false,
+    "sharePercentage": 25.5,
+    "shareSize": 255000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "M",
+    "authoritySourceAsText": "Journal of annual reports",
+    "authoritySourceDate": "2004-01-06",
+    "recordId": 8000195539,
+    "startDate": "2002-07-01",
+    "endDate": "2008-05-15"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Rein",
+     "surnameLegalEntityName": "Rebas",
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 26.25,
+    "shareSize": 262500.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2008-04-25",
+    "recordId": 8000273052,
+    "startDate": "2008-04-24",
+    "endDate": "2008-04-24"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "F",
+     "firstName": "Rein",
+     "surnameLegalEntityName": "Rebas",
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "sharePercentage": 27.0,
+    "shareSize": 270000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2008-04-25",
+    "recordId": 8000273057,
+    "startDate": "2008-04-24",
+    "endDate": "2011-07-15"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "osaühing Tootus",
+     "identityCode": "10078233"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "company_registry_status": "L",
+    "has_active_tradebans": false,
+    "sharePercentage": 26.25,
+    "shareSize": 262500.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2008-05-15",
+    "recordId": 8000273476,
+    "startDate": "2008-05-15",
+    "endDate": "2011-09-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "identityCode": "10421629"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 66.5,
+    "shareSize": 42560.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2016-06-10",
+    "recordId": 9000183929,
+    "startDate": "2013-05-31",
+    "endDate": "2016-06-10"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "osaühing Tootus",
+     "identityCode": "10078233"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "company_registry_status": "L",
+    "has_active_tradebans": false,
+    "sharePercentage": 16.75,
+    "shareSize": 10720.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2017-05-26",
+    "recordId": 9000183930,
+    "startDate": "2013-05-31",
+    "endDate": "2017-05-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "identityCode": "10421629"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 66.5,
+    "shareSize": 42560.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2016-11-19",
+    "recordId": 9000439074,
+    "startDate": "2016-06-10",
+    "endDate": "2016-11-19"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "identityCode": "10421629"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 83.25,
+    "shareSize": 53280.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2017-05-26",
+    "recordId": 9000475307,
+    "startDate": "2016-11-19",
+    "endDate": "2017-05-26"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "identityCode": "10421629"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 64000.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2017-06-27",
+    "recordId": 9000522115,
+    "startDate": "2017-05-26",
+    "endDate": "2017-06-27"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Enefit OÜ",
+     "identityCode": "11184032"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 64000.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2017-06-27",
+    "recordId": 9000529346,
+    "startDate": "2017-06-27",
+    "endDate": "2017-08-18"
+   }
+  ],
+  "nonCardRelatedPersons": [
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Raimond",
+     "surnameLegalEntityName": "Arukivii",
+     "identityCode": "37394695935"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 2000.0,
+    "recordId": 2000207067,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Enno",
+     "surnameLegalEntityName": "Dorbek",
+     "identityCode": "34881846315"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 5000.0,
+    "recordId": 2000207068,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Lembit",
+     "surnameLegalEntityName": "Jalakas",
+     "identityCode": "34839035810"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "recordId": 2000207069,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Valentin",
+     "surnameLegalEntityName": "Juhanson",
+     "identityCode": "34367564503"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "recordId": 2000207070,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Aleksei",
+     "surnameLegalEntityName": "Kapitonov",
+     "identityCode": "30610215777"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "recordId": 2000207071,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Diina",
+     "surnameLegalEntityName": "Pennert",
+     "identityCode": "31596918118"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 3000.0,
+    "recordId": 2000207072,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Rein",
+     "surnameLegalEntityName": "Rebas",
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 15000.0,
+    "recordId": 2000207073,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Külliki",
+     "surnameLegalEntityName": "Seire",
+     "identityCode": "30550644736"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 2000.0,
+    "recordId": 2000207074,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Urmas",
+     "surnameLegalEntityName": "Sild",
+     "identityCode": "39670956158"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "recordId": 2000207075,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Tamm",
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 15000.0,
+    "recordId": 2000207076,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Eha",
+     "surnameLegalEntityName": "Valkenklau",
+     "identityCode": "39706326660"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 1000.0,
+    "recordId": 2000207077,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Alusalu",
+     "identityCode": "30529993029"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "shareSize": 73000.0,
+    "recordId": 2000207078,
+    "startDate": "1996-09-09",
+    "endDate": "2017-08-18"
+   },
+   {
+    "person": {
+     "role": "D",
+     "roleAsText": "Audit firm",
+     "type": "F",
+     "firstName": "Aino",
+     "surnameLegalEntityName": "Simson",
+     "identityCode": "32874776899"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 8000195528,
+    "startDate": "2001-07-20",
+    "endDate": "2012-09-20"
+   },
+   {
+    "person": {
+     "role": "D",
+     "roleAsText": "Audit firm",
+     "type": "J",
+     "surnameLegalEntityName": "Aktsiaselts PricewaterhouseCoopers",
+     "identityCode": "10142876"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "recordId": 9000147320,
+    "startDate": "2012-09-20",
+    "endDate": "2017-08-18"
+   }
+  ]
+ },
+ "commercialPledgeData": [
+  {
+   "id": 10647,
+   "number": 2,
+   "status": "K",
+   "statusAsText": "Deleted",
+   "rank": 1,
+   "amount": "1000000.00",
+   "currency": "EEK",
+   "currencyAsText": "Estonian Kroon",
+   "rankings": [
+    {
+     "content": "Esimene"
+    }
+   ],
+   "amounts": [
+    {
+     "size": 1000000.0,
+     "currency": "EEK",
+     "currencyAsText": "Estonian Kroon",
+     "cardNumber": 3,
+     "cardType": "K",
+     "entryNumber": 1,
+     "recordId": 3145824,
+     "startDate": "2006-01-02",
+     "endDate": "2014-11-21"
+    }
+   ],
+   "pledgees": [
+    {
+     "personType": "J",
+     "name": " Aktsiaselts SEB Eesti Ühispank",
+     "code": "10004252",
+     "country": "EST",
+     "countryAsText": "Estonia",
+     "ehak": "0784",
+     "ehakAsText": "Tallinn city, Harju county",
+     "cardNumber": 3,
+     "cardType": "K",
+     "entryNumber": 1,
+     "recordId": 3145827,
+     "startDate": "2006-01-02",
+     "endDate": "2014-11-21"
+    }
+   ],
+   "notes": [
+    {
+     "content": "Senine registrikaart asub Harju Maakohtu registriosakonnas. Registriandmed on teise registriosakonna tööpiirkonda üle kantud automatiseeritult vastavalt äriseadustiku § 511.2 lõikele 1."
+    }
+   ],
+   "cardNumber": 3,
+   "cardType": "K",
+   "entryNumber": 1,
+   "startDate": "2006-01-02",
+   "endDate": "2014-11-21"
+  }
+ ],
+ "rulings": [
+  {
+   "number": "Ä 30028209 / 14",
+   "date": "2017-08-18",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2017-08-18",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2017-08-18",
+   "statusChanges": [
+    {
+     "id": 900001758894,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-08-18"
+    },
+    {
+     "id": 900001758893,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-08-18"
+    }
+   ],
+   "entry": {
+    "number": 11,
+    "date": "2017-08-18",
+    "type": "48",
+    "typeAsText": "Deletion entry of merged entity.",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 30028209 / 13",
+   "date": "2017-08-18",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2017-08-18",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2017-08-18",
+   "statusChanges": [
+    {
+     "id": 900001758884,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-08-18"
+    },
+    {
+     "id": 900001758883,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-08-18"
+    }
+   ],
+   "entry": {
+    "number": 10,
+    "date": "2017-08-18",
+    "type": "46",
+    "typeAsText": "The first, declarative merger entry (on the registry card of the entity being merged).",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 30028209 / M4",
+   "date": "2017-08-11",
+   "type": "M1",
+   "typeAsText": "A ruling on the elimination of the deficiencies",
+   "effectiveDate": "2017-08-11",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "additionalTerm": "2017-09-05",
+   "status": "L",
+   "statusAsText": "The deficiencies have been rectified",
+   "statusDate": "2017-08-18",
+   "statusChanges": [
+    {
+     "id": 900001758846,
+     "status": "L",
+     "statusAsText": "The deficiencies have been rectified",
+     "statusChangeDate": "2017-08-18"
+    },
+    {
+     "id": 900001753163,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-08-11"
+    },
+    {
+     "id": 900001753162,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-08-11"
+    }
+   ]
+  },
+  {
+   "number": "Ä 30028209 / 12",
+   "date": "2017-01-17",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2017-01-17",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2017-01-17",
+   "statusChanges": [
+    {
+     "id": 900001530422,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-01-17"
+    },
+    {
+     "id": 900001530421,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-01-17"
+    }
+   ],
+   "entry": {
+    "number": 9,
+    "date": "2017-01-17",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 30028209 / M3",
+   "date": "2017-01-04",
+   "type": "M1",
+   "typeAsText": "A ruling on the elimination of the deficiencies",
+   "effectiveDate": "2017-01-04",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "additionalTerm": "2017-01-19",
+   "status": "L",
+   "statusAsText": "The deficiencies have been rectified",
+   "statusDate": "2017-01-17",
+   "statusChanges": [
+    {
+     "id": 900001530423,
+     "status": "L",
+     "statusAsText": "The deficiencies have been rectified",
+     "statusChangeDate": "2017-01-17"
+    },
+    {
+     "id": 900001514060,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-01-04"
+    },
+    {
+     "id": 900001514059,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-01-04"
+    }
+   ]
+  },
+  {
+   "number": "K 30028209 / 11",
+   "date": "2014-11-21",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2014-11-21",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2014-11-21",
+   "statusChanges": [
+    {
+     "id": 900000590641,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2014-11-21"
+    },
+    {
+     "id": 900000590640,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2014-11-21"
+    }
+   ],
+   "entry": {
+    "number": 2,
+    "date": "2014-11-21",
+    "type": "22",
+    "typeAsText": "Entry on the deletion of commercial pledge",
+    "cardNumber": 3,
+    "cardType": "K"
+   }
+  },
+  {
+   "number": "Ä 30028209 / 10",
+   "date": "2012-10-24",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2012-10-24",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2012-10-24",
+   "statusChanges": [
+    {
+     "id": 300000491178,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2012-10-24"
+    }
+   ],
+   "entry": {
+    "number": 8,
+    "date": "2012-10-24",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 30028209 / 9",
+   "date": "2012-07-04",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2012-07-04",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2012-07-04",
+   "statusChanges": [
+    {
+     "id": 300000441823,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2012-07-04"
+    }
+   ],
+   "entry": {
+    "number": 7,
+    "date": "2012-07-04",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 30028209 / 8",
+   "date": "2011-11-08",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2011-11-08",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2011-11-08",
+   "statusChanges": [
+    {
+     "id": 300000286511,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2011-11-08"
+    }
+   ],
+   "entry": {
+    "number": 6,
+    "date": "2011-11-08",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 30028209 / 7",
+   "date": "2011-09-29",
+   "type": "++",
+   "typeAsText": "A notation concerning entry of the shares of the company in the Estonian Central Register of Securities",
+   "effectiveDate": "2011-09-29",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2011-09-29",
+   "statusChanges": [
+    {
+     "id": 300000264749,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2011-09-29"
+    }
+   ],
+   "entry": {
+    "number": 5,
+    "date": "2011-09-29",
+    "type": "18",
+    "typeAsText": "Note",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 30028209 / 6",
+   "date": "2011-09-26",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2011-09-26",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2011-09-26",
+   "statusChanges": [
+    {
+     "id": 300000262904,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2011-09-26"
+    }
+   ],
+   "entry": {
+    "number": 4,
+    "date": "2011-09-26",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 30028209 / M2",
+   "date": "2011-09-16",
+   "type": "M1",
+   "typeAsText": "A ruling on the elimination of the deficiencies",
+   "effectiveDate": "2011-09-16",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2011-09-16",
+   "statusChanges": [
+    {
+     "id": 300000259346,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2011-09-16"
+    }
+   ]
+  },
+  {
+   "number": "Ä 30028209 / 5",
+   "date": "2011-05-03",
+   "type": "TRK",
+   "typeAsText": "The deletion of the areas of activity from the registry card",
+   "effectiveDate": "2011-05-03",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2011-05-03",
+   "statusChanges": [
+    {
+     "id": 300000204446,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2011-05-03"
+    }
+   ],
+   "entry": {
+    "number": 3,
+    "date": "2011-05-03",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 30028209 / M1",
+   "date": "2011-04-21",
+   "type": "HM",
+   "typeAsText": "Penalty payment caution: annual report not submitted",
+   "effectiveDate": "2011-04-21",
+   "rulingInForceType": "K",
+   "rulingInForceTypeAsText": "Will enter into force upon delivery of the ruling",
+   "additionalTerm": "2011-05-05",
+   "status": "L",
+   "statusAsText": "The deficiencies have been rectified",
+   "statusDate": "2011-04-25",
+   "statusChanges": [
+    {
+     "id": 300000200175,
+     "status": "L",
+     "statusAsText": "The deficiencies have been rectified",
+     "statusChangeDate": "2011-04-25"
+    },
+    {
+     "id": 300000200104,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2011-04-25"
+    },
+    {
+     "id": 300000199422,
+     "status": "K",
+     "statusAsText": "Confirmed",
+     "statusChangeDate": "2011-04-21"
+    }
+   ]
+  },
+  {
+   "number": "Ä 28209 / 2",
+   "date": "2009-05-14",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2009-05-14",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2009-05-14",
+   "statusChanges": [
+    {
+     "id": 800000052240,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2009-05-14"
+    }
+   ],
+   "entry": {
+    "number": 2,
+    "date": "2009-05-14",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "K 52393 / 3",
+   "date": "2006-01-02",
+   "type": "-",
+   "typeAsText": "Automatic transfer of registry juristiction",
+   "effectiveDate": "2006-01-02",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "K",
+   "statusAsText": "Confirmed",
+   "statusDate": "2006-01-02",
+   "statusChanges": [],
+   "entry": {
+    "number": 3,
+    "date": "2006-01-02",
+    "type": "25",
+    "typeAsText": "Remark on closing of registry card of commercial pledge in the present registration court.",
+    "cardNumber": 2,
+    "cardType": "K"
+   }
+  },
+  {
+   "number": "Ä 5009 / 4",
+   "date": "2006-01-02",
+   "type": "-",
+   "typeAsText": "Automatic transfer of registry juristiction",
+   "effectiveDate": "2006-01-02",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "K",
+   "statusAsText": "Confirmed",
+   "statusDate": "2006-01-02",
+   "statusChanges": [],
+   "entry": {
+    "number": 4,
+    "date": "2006-01-02",
+    "type": "42",
+    "typeAsText": "Remark on closing of registry card in the present registration court.",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 28209",
+   "date": "2006-01-02",
+   "type": "-",
+   "typeAsText": "Automatic transfer of registry juristiction",
+   "effectiveDate": "2006-01-02",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "K",
+   "statusAsText": "Confirmed",
+   "statusDate": "2006-01-02",
+   "statusChanges": [],
+   "entry": {
+    "number": 1,
+    "date": "2006-01-02",
+    "type": "41",
+    "typeAsText": "Entry on opening of registry card in registration court of the new location.",
+    "cardNumber": 4,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "K 28210",
+   "date": "2006-01-02",
+   "type": "-",
+   "typeAsText": "Automatic transfer of registry juristiction",
+   "effectiveDate": "2006-01-02",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "K",
+   "statusAsText": "Confirmed",
+   "statusDate": "2006-01-02",
+   "statusChanges": [],
+   "entry": {
+    "number": 1,
+    "date": "2006-01-02",
+    "type": "21",
+    "typeAsText": "Entry on the opening of commercial pledge",
+    "cardNumber": 3,
+    "cardType": "K"
+   }
+  },
+  {
+   "number": "K 52393 / 2",
+   "date": "2005-12-13",
+   "type": "W",
+   "typeAsText": "Implementation of subsection 33(7.1) of the Commercial Code",
+   "effectiveDate": "2005-12-13",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2005-12-13",
+   "statusChanges": [],
+   "entry": {
+    "number": 2,
+    "date": "2005-12-13",
+    "type": "24",
+    "typeAsText": "Entry on the amendment of commercial pledge: § 33 (7.1) of the Commercial Code",
+    "cardNumber": 2,
+    "cardType": "K"
+   }
+  }
+ ],
+ "registryCards": [
+  {
+   "recordId": 49261,
+   "cardNumber": 2,
+   "cardType": "K",
+   "entries": [
+    {
+     "recordId": 2000336189,
+     "number": 1,
+     "date": "2000-11-01",
+     "type": "21",
+     "typeAsText": "Entry on the opening of commercial pledge"
+    },
+    {
+     "recordId": 2000482489,
+     "number": 2,
+     "date": "2005-12-13",
+     "type": "24",
+     "typeAsText": "Entry on the amendment of commercial pledge: § 33 (7.1) of the Commercial Code"
+    },
+    {
+     "recordId": 2000493462,
+     "number": 3,
+     "date": "2006-01-02",
+     "type": "25",
+     "typeAsText": "Remark on closing of registry card of commercial pledge in the present registration court."
+    }
+   ]
+  },
+  {
+   "recordId": 225489,
+   "cardNumber": 3,
+   "cardType": "K",
+   "entries": [
+    {
+     "recordId": 8000228641,
+     "number": 1,
+     "date": "2006-01-02",
+     "type": "21",
+     "typeAsText": "Entry on the opening of commercial pledge"
+    },
+    {
+     "recordId": 9000384770,
+     "number": 2,
+     "date": "2014-11-21",
+     "type": "22",
+     "typeAsText": "Entry on the deletion of commercial pledge"
+    }
+   ]
+  },
+  {
+   "recordId": 4839,
+   "cardNumber": 1,
+   "cardType": "R",
+   "entries": [
+    {
+     "recordId": 2000008107,
+     "number": 1,
+     "date": "1996-09-09",
+     "type": "1",
+     "typeAsText": "Foundation entry"
+    },
+    {
+     "recordId": 2000341117,
+     "number": 2,
+     "date": "2000-12-15",
+     "type": "10",
+     "typeAsText": "Unpublished entry on the amendment"
+    },
+    {
+     "recordId": 2000357004,
+     "number": 3,
+     "date": "2001-08-08",
+     "type": "15",
+     "typeAsText": "Published entry on the amendment"
+    },
+    {
+     "recordId": 2000493461,
+     "number": 4,
+     "date": "2006-01-02",
+     "type": "42",
+     "typeAsText": "Remark on closing of registry card in the present registration court."
+    }
+   ]
+  },
+  {
+   "recordId": 225488,
+   "cardNumber": 4,
+   "cardType": "R",
+   "entries": [
+    {
+     "recordId": 8000228640,
+     "number": 1,
+     "date": "2006-01-02",
+     "type": "41",
+     "typeAsText": "Entry on opening of registry card in registration court of the new location."
+    },
+    {
+     "recordId": 8000320741,
+     "number": 2,
+     "date": "2009-05-14",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 3000116965,
+     "number": 3,
+     "date": "2011-05-03",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 3000153477,
+     "number": 4,
+     "date": "2011-09-26",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 3000154660,
+     "number": 5,
+     "date": "2011-09-29",
+     "type": "18",
+     "typeAsText": "Note"
+    },
+    {
+     "recordId": 3000168026,
+     "number": 6,
+     "date": "2011-11-08",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 3000253701,
+     "number": 7,
+     "date": "2012-07-04",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 3000279013,
+     "number": 8,
+     "date": "2012-10-24",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000678211,
+     "number": 9,
+     "date": "2017-01-17",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000743341,
+     "number": 10,
+     "date": "2017-08-18",
+     "type": "46",
+     "typeAsText": "The first, declarative merger entry (on the registry card of the entity being merged)."
+    },
+    {
+     "recordId": 9000743351,
+     "number": 11,
+     "date": "2017-08-18",
+     "type": "48",
+     "typeAsText": "Deletion entry of merged entity."
+    }
+   ]
+  }
+ ]
+}

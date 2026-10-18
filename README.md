@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 367** — Dragging a node in any network diagram now carries its icon, jurisdiction flag and badges with it, on phones as well as desktop.
+**Latest: Phase 373** — A watch can now record what you expected of a company (jurisdiction, ultimate parent, why it is watched, the saved report you onboarded from), and the log says when a change contradicts it.
 
 → [Full development history](docs/status.md)
 

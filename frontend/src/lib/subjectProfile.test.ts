@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LeiRegistration, LeiSuccessor, SubjectProfile } from "./api";
 import {
+  statusWord,
   LEI_NOT_ENTITY_STATUS,
   SUCCESSOR_FOLLOW_LABEL,
   declaredSentence,
@@ -100,6 +101,26 @@ describe("statusChip", () => {
     expect(chip?.tone).toBe("terminal");
     expect(chip?.label).toBe("Dissolved · UK Companies House");
     expect(chip?.tone).not.toBe("risk");
+  });
+
+  it("says Deleted, in the register's own word, for a company the e-Business Register deleted", () => {
+    const status = {
+      liveness: "terminal" as const,
+      since: "2017-01-10",
+      raw: "Deleted",
+      source_id: "ariregister",
+      sources: ["ariregister"],
+      independent_sources: 1,
+      other_values: [],
+    };
+    const chip = statusChip(shell({ register_status: status }), { ariregister: "Estonian e-Business Register" });
+    expect(chip?.label).toBe("Deleted · Estonian e-Business Register");
+    expect(chip?.tone).toBe("terminal");
+    expect(chip?.detail).toBe("Estonian e-Business Register records this company as deleted since 10 Jan 2017.");
+    const rows = profileRows(shell({ register_status: status }), { ariregister: "Estonian e-Business Register" });
+    expect(rows.find((r) => r.label === "Register status")?.value).toBe("Deleted since 10 Jan 2017");
+    expect(statusWord({ liveness: "terminal", raw: "dissolved" })).toBe("Dissolved");
+    expect(statusWord({ liveness: "terminal", raw: null })).toBe("Dissolved");
   });
 
   it("renders nothing when no register stated a status — absence is not active", () => {

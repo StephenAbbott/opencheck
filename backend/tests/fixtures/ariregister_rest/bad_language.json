@@ -1,0 +1,16 @@
+{
+ "detail": [
+  {
+   "type": "enum",
+   "loc": [
+    "header",
+    "acceptLanguage"
+   ],
+   "msg": "Input should be 'est' or 'eng'",
+   "input": "en",
+   "ctx": {
+    "expected": "'est' or 'eng'"
+   }
+  }
+ ]
+}

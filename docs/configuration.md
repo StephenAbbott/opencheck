@@ -21,6 +21,9 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `BCE_BELGIUM_DB_FILE` | Path to the SQLite database built by `scripts/extract_bce.py`. When set, the BCE Belgium adapter provides enterprise-number-keyed lookup (via GLEIF bridge) and FTS5 name search for Belgian entities from the monthly KBO open data ZIP. |
 | `ARIREGISTER_USERNAME` | Username for the Estonian e-Business Register SOAP/XML API (`ariregxmlv6.rik.ee`). Free RIK contract credentials. |
 | `ARIREGISTER_PASSWORD` | Password for the Estonian e-Business Register SOAP/XML API. |
+| `ARIREGISTER_REST_API_KEY` | API key for RIK's REST API (`ar-rest.rik.ee`), created by the same contract partner as the SOAP credentials. Sent only to `GET /keyLogin/`, in the `apiKey` header. Unset: the REST client is off and every caller falls back. |
+| `ARIREGISTER_DAILY_BUDGET` | Requests one process may send to RIK's SOAP and REST services together on one Estonian day (default 40,000; capped at the contract's 50,000). In memory, so it restarts at zero on a deploy — hence the headroom. Counted in `/signalstats` → `ariregister_rik`. |
+| `ARIREGISTER_QUEUE_WAIT_S` | How long a caller waits for the contract's one-query-at-a-time slot before it is refused as a degradation (default 20). |
 | `BRIGHTQUERY_DB_FILE` | Path to the SQLite database built by `scripts/extract_brightquery.py`. When set, the BrightQuery adapter provides LEI-keyed lookup of US entities and their executives from OpenData.org bulk data. |
 | `CORPORATIONS_CANADA_API_KEY` | API key for the ISED Corporations Canada API Gateway. |
 | `FIRMENBUCH_API_KEY` | Free API key for the Austrian Firmenbuch (Justiz Online) SOAP service. |

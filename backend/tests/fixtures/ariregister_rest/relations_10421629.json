@@ -1,0 +1,1991 @@
+{
+ "total": 25,
+ "list": [
+  {
+   "legalEntityName": "Strantum Infra OÜ",
+   "registryCode": 11730307,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "email": [
+    {
+     "content": "info@energia.ee",
+     "startDate": "2009-10-05",
+     "endDate": "2016-08-19"
+    },
+    {
+     "content": "strantum@strantum.ee",
+     "startDate": "2016-08-19",
+     "endDate": "2018-01-17"
+    },
+    {
+     "content": "strantum@strantum.ee",
+     "startDate": "2018-01-17"
+    }
+   ],
+   "phone": [
+    "+372 6026480",
+    "+372 7152222"
+   ],
+   "homepage": [
+    "www.energia.ee",
+    "www.strantum.ee"
+   ],
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/11730307",
+   "address": [
+    {
+     "address": {
+      "address": "Laki 24",
+      "postalCode": "12915",
+      "ehak": "0784",
+      "ehakAsText": "Tallinn city, Harju county"
+     },
+     "cardNumber": 1,
+     "cardType": "R",
+     "entryNumber": 1,
+     "recordId": 2151400,
+     "startDate": "2009-10-08",
+     "endDate": "2015-02-26"
+    },
+    {
+     "address": {
+      "country": "EST",
+      "countryAsText": "Estonia",
+      "address": "Lelle tn 22",
+      "postalCode": "11318",
+      "ehak": "0784",
+      "ehakAsText": "Tallinn city, Harju county"
+     },
+     "cardNumber": 1,
+     "cardType": "R",
+     "entryNumber": 7,
+     "recordId": 5467703,
+     "startDate": "2015-02-26",
+     "endDate": "2016-08-23"
+    },
+    {
+     "address": {
+      "country": "EST",
+      "countryAsText": "Estonia",
+      "address": "Kooli tn 2a",
+      "postalCode": "76901",
+      "ehak": "8009",
+      "ehakAsText": "Tabasalu small town, Harku rural municipality, Harju county"
+     },
+     "cardNumber": 1,
+     "cardType": "R",
+     "entryNumber": 8,
+     "recordId": 6081601,
+     "startDate": "2016-08-23",
+     "endDate": "2018-02-21"
+    },
+    {
+     "address": {
+      "country": "EST",
+      "countryAsText": "Estonia",
+      "address": "Kooli 2A",
+      "postalCode": "76901",
+      "ehak": "8009",
+      "ehakAsText": "Tabasalu small town, Harku rural municipality, Harju county",
+      "adsAdobId": "7311015",
+      "adsOid": "ME01045538",
+      "adsNormalizedFullAddress": "Harju maakond, Harku vald, Tabasalu alevik, Kooli 2A"
+     },
+     "cardNumber": 1,
+     "cardType": "R",
+     "entryNumber": 10,
+     "recordId": 7941236,
+     "startDate": "2018-02-21",
+     "endDate": "2018-05-09"
+    },
+    {
+     "address": {
+      "country": "EST",
+      "countryAsText": "Estonia",
+      "address": "Kooli tn 2a",
+      "postalCode": "76901",
+      "ehak": "8009",
+      "ehakAsText": "Tabasalu small town, Harku rural municipality, Harju county",
+      "adsAdobId": "10524490",
+      "adsOid": "ME01045538",
+      "adsNormalizedFullAddress": "Harju maakond, Harku vald, Tabasalu alevik, Kooli tn 2a"
+     },
+     "cardNumber": 1,
+     "cardType": "R",
+     "entryNumber": 11,
+     "recordId": 8071605,
+     "startDate": "2018-05-09"
+    }
+   ],
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2012-02-07",
+     "endDate": "2016-08-19",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 55.0,
+      "shareSize": 1397.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2009-10-08",
+     "endDate": "2012-02-07",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 55.0,
+      "shareSize": 22000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2009-10-05",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 22000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Enefit Kaevandused AS",
+   "registryCode": 10032389,
+   "legalForm": "1",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10032389",
+   "searchRelatedPersons": [
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2017-12-22",
+     "endDate": "2020-12-31",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 28335177.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2016-06-10",
+     "endDate": "2017-12-22",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 28335177.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2013-05-31",
+     "endDate": "2016-06-10",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 28335177.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2004-06-11",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 443430000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Enefit Industry OÜ",
+   "registryCode": 10579981,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10579981",
+   "vatNumber": "EE100366327",
+   "searchRelatedPersons": [
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2004-06-08",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 500000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "1999-10-04",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 500000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2026-07-23",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 30000000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "OSAN",
+     "roleAsText": "Shareholder",
+     "startDate": "2026-01-08",
+     "endDate": "2026-07-23",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 30000000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2016-06-10",
+     "endDate": "2017-12-22",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 30000000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2023-08-16",
+     "endDate": "2026-01-08",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 30000000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2013-05-31",
+     "endDate": "2016-06-10",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 30000000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2017-12-22",
+     "endDate": "2023-08-16",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 30000000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Attarat Holding OÜ",
+   "registryCode": 12894095,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/12894095",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2016-12-02",
+     "endDate": "2022-05-27",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 2502.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2015-08-12",
+     "endDate": "2016-03-11",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 2500.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2022-05-27",
+     "endDate": "2023-09-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 2502.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2015-08-12",
+     "endDate": "2016-12-02",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 99.96,
+      "shareSize": 2500.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2016-03-11",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 2501.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "OSAN",
+     "roleAsText": "Shareholder",
+     "startDate": "2023-09-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 2502.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Gren Viru AS",
+   "registryCode": 10160791,
+   "legalForm": "1",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10160791",
+   "vatNumber": "EE100164325",
+   "searchRelatedPersons": [
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2005-10-01",
+     "endDate": "2011-04-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 59.23,
+      "shareSize": 10941260.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "PANTP",
+     "roleAsText": "Holder of the pledge",
+     "startDate": "2001-06-13",
+     "endDate": "2011-03-16",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS"
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2004-06-21",
+     "endDate": "2005-01-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 59.23,
+      "shareSize": 54706300.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2005-01-01",
+     "endDate": "2005-10-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 59.23,
+      "shareSize": 27353150.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Enefit OÜ",
+   "registryCode": 11184032,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/11184032",
+   "vatNumber": "EE100366327",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2026-01-20",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 264276232.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2013-05-31",
+     "endDate": "2014-10-22",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 4793373.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2014-10-22",
+     "endDate": "2016-06-10",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 4793473.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2021-10-15",
+     "endDate": "2022-11-15",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 77.17,
+      "shareSize": 203931405.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2017-12-22",
+     "endDate": "2021-09-03",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 4793473.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2008-04-02",
+     "endDate": "2012-04-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 75000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2008-01-01",
+     "endDate": "2008-04-02",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 40000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2023-08-16",
+     "endDate": "2025-05-16",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 77.17,
+      "shareSize": 203931405.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2025-08-01",
+     "endDate": "2026-01-13",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 264276232.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2012-04-01",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 4793373.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2016-06-10",
+     "endDate": "2017-10-17",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 4793473.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2023-01-11",
+     "endDate": "2023-08-16",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 77.17,
+      "shareSize": 203931405.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2017-10-17",
+     "endDate": "2017-12-22",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 4793473.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2025-05-16",
+     "endDate": "2025-08-01",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 97.2,
+      "shareSize": 256871515.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2021-09-03",
+     "endDate": "2021-10-15",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 229793473.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2022-11-15",
+     "endDate": "2023-01-11",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 1.8,
+      "shareSize": 4750177.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Elering AS",
+   "registryCode": 11022625,
+   "legalForm": "1",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/11022625",
+   "vatNumber": "EE100889639",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2005-04-09",
+     "endDate": "2010-04-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 2100000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2004-03-24",
+     "endDate": "2005-04-09",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 2000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2004-03-24",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 2000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Osaühing Pogi",
+   "registryCode": 10078240,
+   "legalForm": "5",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10078240",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2016-11-19",
+     "endDate": "2017-05-26",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 83.25,
+      "shareSize": 53280.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2013-05-31",
+     "endDate": "2016-06-10",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 66.5,
+      "shareSize": 42560.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2012-01-01",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 66.5,
+      "shareSize": 42560.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2017-05-26",
+     "endDate": "2017-06-27",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 64000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2016-06-10",
+     "endDate": "2016-11-19",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 66.5,
+      "shareSize": 42560.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Eesti Energia Õlitööstus AS",
+   "registryCode": 11336737,
+   "legalForm": "1",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/11336737",
+   "searchRelatedPersons": [
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2007-04-03",
+     "endDate": "2017-01-10",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 1000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2016-06-10",
+     "endDate": "2017-01-10",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 6000000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2008-07-01",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 100000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2013-05-31",
+     "endDate": "2016-06-10",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 6000000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2007-04-03",
+     "endDate": "2008-07-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 1000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Enefit AS",
+   "registryCode": 16130213,
+   "legalForm": "1",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/16130213",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2022-05-27",
+     "endDate": "2023-09-02",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 24500.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2024-01-24",
+     "endDate": "2026-01-02",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 32000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2024-01-05",
+     "endDate": "2024-01-12",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 24600.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "OSAN",
+     "roleAsText": "Shareholder",
+     "startDate": "2023-09-02",
+     "endDate": "2023-11-25",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 24500.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2023-11-24",
+     "endDate": "2024-01-05",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 24500.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2024-01-12",
+     "endDate": "2024-01-19",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 32000.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2020-12-31",
+     "endDate": "2022-05-27",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 24500.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Aktsiaselts Nordic Energy Link",
+   "registryCode": 11071658,
+   "legalForm": "1",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/11071658",
+   "searchRelatedPersons": [
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2011-10-01",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 39.9,
+      "shareSize": 8772257.3,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2005-01-01",
+     "endDate": "2005-07-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 2000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2013-12-31",
+     "endDate": "2014-04-14",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 50.0,
+      "shareSize": 10992803.63,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2014-04-30",
+     "endDate": "2015-10-04",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 45.0,
+      "shareSize": 9893523.19,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2005-07-01",
+     "endDate": "2011-10-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 39.9,
+      "shareSize": 137256000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2013-05-31",
+     "endDate": "2013-12-31",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 39.9,
+      "shareSize": 8772257.3,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2004-09-29",
+     "endDate": "2015-10-04",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 2000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2014-04-14",
+     "endDate": "2014-04-30",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 50.0,
+      "shareSize": 10992803.55,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "DOKH",
+     "roleAsText": "Depositary of documents",
+     "startDate": "2015-10-04",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts"
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Enefit Outotec Technology OÜ",
+   "registryCode": 11693868,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/11693868",
+   "vatNumber": "EE101324614",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2016-10-25",
+     "endDate": "2017-12-22",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 1719.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2009-07-29",
+     "endDate": "2011-01-21",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 24000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2009-07-29",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 24000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2023-08-21",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 1719.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2016-06-10",
+     "endDate": "2016-10-25",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 1659.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2011-01-21",
+     "endDate": "2012-04-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 1536.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2013-12-14",
+     "endDate": "2014-05-27",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 1599.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2017-12-22",
+     "endDate": "2023-08-21",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 1719.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2013-05-31",
+     "endDate": "2013-12-14",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 1539.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2014-05-27",
+     "endDate": "2016-06-10",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 1659.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2012-04-01",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 60.0,
+      "shareSize": 1539.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Osaühing MAJAHALDJAS",
+   "registryCode": 10018225,
+   "legalForm": "5",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10018225",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2002-05-29",
+     "endDate": "2006-07-04",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 33.2,
+      "shareSize": 33200.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Enefit Power OÜ",
+   "registryCode": 17209649,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/17209649",
+   "vatNumber": "EE100366327",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2025-04-08",
+     "endDate": "2026-01-08",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 31950.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "osaühing Iru Elektrijaam",
+   "registryCode": 11211326,
+   "legalForm": "5",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/11211326",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2006-01-20",
+     "endDate": "2008-08-11",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 500000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "DOKH",
+     "roleAsText": "Depositary of documents",
+     "startDate": "2010-08-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts"
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2008-12-29",
+     "endDate": "2010-08-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 1500000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2008-08-11",
+     "endDate": "2008-12-29",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 1000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2006-01-20",
+     "endDate": "2010-08-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 500000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Aktsiaselts NITROFERT",
+   "registryCode": 10160963,
+   "legalForm": "1",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10160963",
+   "searchRelatedPersons": [
+    {
+     "role": "PANTP",
+     "roleAsText": "Holder of the pledge",
+     "startDate": "2001-10-17",
+     "endDate": "2002-02-04",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS"
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Enefit Solutions AS",
+   "registryCode": 10633284,
+   "legalForm": "1",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10633284",
+   "searchRelatedPersons": [
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2016-06-10",
+     "endDate": "2016-09-19",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 639116.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2018-08-21",
+     "endDate": "2023-08-16",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 639118.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2016-09-19",
+     "endDate": "2017-12-22",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 639117.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2017-12-22",
+     "endDate": "2018-08-21",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 639117.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2004-06-28",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 10000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2000-03-13",
+     "endDate": "2026-01-02",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 10000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2013-05-31",
+     "endDate": "2016-06-10",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 639116.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2023-08-16",
+     "endDate": "2026-01-02",
+     "type": "J",
+     "surnameLegalEntityName": "Omanikukonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 639118.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "LEONHARD WEISS ENERGY AS",
+   "registryCode": 10665798,
+   "legalForm": "1",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10665798",
+   "searchRelatedPersons": [
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2000-04-25",
+     "endDate": "2011-01-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 20000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2011-01-01",
+     "endDate": "2012-04-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 21000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2013-05-31",
+     "endDate": "2014-08-14",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 1342144.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2012-04-01",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 1342144.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Eesti Energia Elektritööd AS",
+   "registryCode": 10424008,
+   "legalForm": "1",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10424008",
+   "searchRelatedPersons": [
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2002-05-20",
+     "endDate": "2005-04-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2005-04-01",
+     "endDate": "2012-10-08",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 1500000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "DOKH",
+     "roleAsText": "Depositary of documents",
+     "startDate": "2012-10-08",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts"
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Osaühing Elektrikontrollikeskus",
+   "registryCode": 10592970,
+   "legalForm": "5",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10592970",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2006-04-18",
+     "endDate": "2007-05-16",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 40000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2002-05-31",
+     "endDate": "2005-04-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2005-10-01",
+     "endDate": "2006-04-18",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 6906700.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "1999-11-15",
+     "endDate": "2008-03-04",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 1000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2005-04-01",
+     "endDate": "2005-10-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 3700000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Televõrgu Aktsiaselts",
+   "registryCode": 10718810,
+   "legalForm": "1",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10718810",
+   "searchRelatedPersons": [
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2002-05-17",
+     "endDate": "2011-10-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 25000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2001-01-04",
+     "endDate": "2016-03-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 25000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2011-10-01",
+     "endDate": "2012-04-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 1597791.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Sihtasutus Tallinna Tehnika- ja Teaduskeskus",
+   "registryCode": 90005596,
+   "legalForm": "8",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/90005596",
+   "vatNumber": "EE100945748",
+   "searchRelatedPersons": [
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "1999-07-02",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 500.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Elektrilevi OÜ",
+   "registryCode": 11050857,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/11050857",
+   "vatNumber": "EE100366327",
+   "searchRelatedPersons": [
+    {
+     "role": "OSAN",
+     "roleAsText": "Shareholder",
+     "startDate": "2023-09-01",
+     "endDate": "2024-01-02",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 159779121.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2004-06-16",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 2000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2005-04-13",
+     "endDate": "2012-02-07",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 2500000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2012-02-07",
+     "endDate": "2022-05-27",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 159779121.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2022-05-27",
+     "endDate": "2023-09-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 159779121.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2004-06-16",
+     "endDate": "2005-04-13",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 2000000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "OSAN",
+     "roleAsText": "Shareholder",
+     "startDate": "2024-01-02",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 161779121.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "Tootsi Windpark OÜ",
+   "registryCode": 16053613,
+   "legalForm": "5",
+   "status": "K",
+   "statusAsText": "Deleted",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/16053613",
+   "searchRelatedPersons": [
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2020-09-15",
+     "endDate": "2020-09-18",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 24500.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "A",
+     "roleAsText": "Founder",
+     "startDate": "2020-07-23",
+     "endDate": "2025-08-27",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "shareSize": 24500.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2020-09-18",
+     "endDate": "2022-07-27",
+     "type": "J",
+     "surnameLegalEntityName": "Lihtkonto: EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 100.0,
+      "shareSize": 24500.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  },
+  {
+   "legalEntityName": "osaühing Efipa",
+   "registryCode": 10103540,
+   "legalForm": "5",
+   "status": "R",
+   "statusAsText": "Entered into the register",
+   "infoSystemUrl": "https://ariregister.rik.ee/eng/company/10103540",
+   "vatNumber": "EE100058282",
+   "searchRelatedPersons": [
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2013-05-31",
+     "endDate": "2014-09-26",
+     "type": "J",
+     "surnameLegalEntityName": "EESTI ENERGIA AS",
+     "share": {
+      "sharePercentage": 18.32,
+      "shareSize": 38979.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2001-01-01",
+     "endDate": "2012-07-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 18.32,
+      "shareSize": 610000.0,
+      "shareCurrencyAsText": "Estonian Kroon"
+     }
+    },
+    {
+     "role": "OSAN",
+     "roleAsText": "Shareholder",
+     "startDate": "2023-09-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 18.32,
+      "shareSize": 38979.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2014-09-26",
+     "endDate": "2022-05-27",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 18.32,
+      "shareSize": 38979.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "startDate": "2022-05-27",
+     "endDate": "2023-09-01",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia AS",
+     "share": {
+      "sharePercentage": 18.32,
+      "shareSize": 38979.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    },
+    {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "startDate": "2012-07-01",
+     "endDate": "2013-05-31",
+     "type": "J",
+     "surnameLegalEntityName": "Eesti Energia Aktsiaselts",
+     "share": {
+      "sharePercentage": 18.32,
+      "shareSize": 38979.0,
+      "shareCurrencyAsText": "Euro"
+     }
+    }
+   ]
+  }
+ ]
+}
