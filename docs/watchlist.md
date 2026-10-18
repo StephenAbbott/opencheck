@@ -409,6 +409,205 @@ found no difference: OpenSanctions naming the entity is itself the news. So
 does a register change (Tier 3), which lists the register's counts under the
 opening sentence.
 
+## Does it matter? The materiality tier
+
+A change log answers *what changed?*; it did not say whether it mattered. A
+`coverage_changed` from a briefly degraded register sat beside
+`signal_new: SANCTIONED` with equal weight. Since the pKYC stage A work
+every change the diff names, and every entry, carries one of three
+**materiality tiers**, graded by a closed table in
+`opencheck/watchlist_materiality.py` (`MATERIALITY_RULES` is 1):
+
+| Tier | Key | Meaning |
+|---|---|---|
+| Note only | `note` | Recorded for the history; nothing to act on by itself. |
+| Recheck the source | `recheck` | Something about the company's record or exposure moved; open the report and look. "Source", not "register": OpenSanctions, ICIJ or OpenAleph can prompt a recheck as much as a register. |
+| Escalate | `escalate` | A finding against the subject, or the subject ceased or changed hands; route to whoever decides. |
+
+The tier is **data, not workflow**: it starts no re-run and opens no case.
+What to do stays the reader's. It is graded **once, at write time, and
+kept** — the entry is the record, and "why was A reviewed and B not" needs
+the tier A carried on the day. The table's version is stored beside it
+(`materiality_rules`); an entry written before grading existed is graded on
+read under the current table and says so (`materiality_rules: null`), never
+back-filled. An entry's tier is the worst of its changes' tiers; an entry
+with no changes is `note`, except a register-tier entry, whose trigger is
+graded too (below). A kind, field, code, event type or list this table does
+not know is `recheck`, never silent.
+
+Where it shows: `materiality` on every entry and every change in
+`GET /watch/{token}`; a second Atom `<category>` on each entry
+(`scheme="https://opencheck.world/watchlist/materiality"`, beside the
+unchanged tier category) and the tier word prefixed to the title for the two
+material tiers ("Escalate — Shell plc: new risk signal"); a chip and a
+"Show: All · Material only" filter on `/watchlist` (default All — a stale
+list must stay visible); and `entries_by_materiality` on `/watchstats`,
+which is how to tell whether the lines below are drawn in the right place.
+
+The signal table is **its own table, not the graph's badge severity**
+(`lib/graphStyle.ts`): that ranking is tuned for badge stacking —
+`COUNTER_SANCTIONED` is deliberately inverted below `SANCTIONS_LINKED` so a
+counter-listing never outranks a real finding on a node — and must not
+silently decide triage. The three tables below are the public statement of
+the rule; `tests/test_watchlist_materiality.py` fails if they and the module
+disagree. Decisions are Stephen's, 17 Oct 2026.
+
+### Change kinds (the snapshot diff)
+
+| Kind | Tier | Why |
+|---|---|---|
+| `dissolution_date` | escalate | The register says the company has ceased. |
+| `jurisdiction` | escalate | Redomiciliation — rare and real. |
+| `legal_name` | recheck | A rename, or a different entity under the same number. |
+| `legal_form` | recheck | A conversion (Ltd → plc) often accompanies a restructuring. |
+| `identifier` | recheck | A re-registration, or a wrong join. |
+| `founding_date` | note | A source corrected the incorporation date. |
+| `signal_retired` | note | Good news is still news; a retirement never outranks note. |
+| `signal_unchecked` | note | The producer did not answer. Absence of evidence is not a finding; the periodic-review line (part C) says which sources were not re-fetched. |
+| `context_new` | note | A `kind="context"` observation never counts as a finding. |
+| `context_retired` | note | As above. |
+| `context_unchecked` | note | As above. |
+| `coverage_changed` | note | About OpenCheck, not the company. |
+| `coverage_unchecked` | note | As above. |
+| `verdict` | note | The sentence moved with no graded kind behind it (a source recovering). |
+
+Two kinds are graded by a rule: `register_status` is **escalate** when the
+new class is `terminal` (dissolved, struck off, liquidated) and **recheck**
+on any other move; `signal_new` takes the code's tier from the signal table.
+`gleif_field` takes the field table.
+
+### The material GLEIF fields (`gleif_field`, Tier 1)
+
+| Field | Tier | Why |
+|---|---|---|
+| `direct_parent_lei` | escalate | Ownership or control changed — the first-listed pKYC trigger. |
+| `ultimate_parent_lei` | escalate | As above. |
+| `successors` | escalate | The entity was absorbed or merged away. |
+| `expiration_date` | escalate | Entity ceased. |
+| `expiration_reason` | escalate | As above. |
+| `jurisdiction` | escalate | Redomiciliation. |
+| `entity_status` | recheck | By rule: **escalate** when the new value is `INACTIVE`, recheck otherwise. |
+| `corporate_events` | recheck | By rule, per event — see below. |
+| `legal_name` | recheck | |
+| `legal_form` | recheck | |
+| `legal_address_country` | recheck | A move across a border (Phase 300 added it for this). |
+| `hq_address_country` | recheck | As above. |
+| `registered_at` | recheck | Re-registration, or the issuer corrected a wrong number. |
+| `registered_as` | recheck | As above. |
+| `direct_exception` | recheck | A parent appeared or was withdrawn behind a reporting exception. |
+| `ultimate_exception` | recheck | As above. |
+| `direct_children` | note | Below the subject: its own corporate activity, not its exposure. |
+| `registration_status` | note | The LEI record's status, not the company's (Phase 242). |
+| `validated_at` | note | Which authority the LOU checked against. |
+| `creation_date` | note | A data correction. |
+| `category` | note | A FUND / BRANCH / SOLE_PROPRIETOR reclassification. |
+| `sub_category` | note | As above. |
+| `conformity_flag` | note | Policy conformity of the LEI record. |
+
+**Legal Entity Events**, by type and status (LEI-CDF 3.1). A terminal type
+— `DISSOLUTION`, `LIQUIDATION`, `BANKRUPTCY`, `INSOLVENCY`,
+`MERGERS_AND_ACQUISITIONS`, `ABSORPTION`, `BREAKUP` (the Phase 305
+`TERMINAL_TYPES`) — is **escalate**; every other type the CDF defines
+(`CHANGE_LEGAL_NAME`, `CHANGE_LEGAL_FORM`, `VOLUNTARY_ARRANGEMENT`, the
+three `TRANSFORMATION_*`, `SPINOFF`, `DEMERGER`, `REVERSE_TAKEOVER`,
+`ACQUISITION_BRANCH`, `TRANSFER_BRANCH`, `CLOSURE_BRANCH`) is **recheck**;
+an unknown type is recheck. A `COMPLETED` event carries its type's tier,
+`IN_PROGRESS` one step lower (a terminal event in progress is recheck), and
+`WITHDRAWN_CANCELLED` is note — the event did not happen. An unknown status
+reads as in progress, never as completed. Address and other-name changes
+never reach the feed. A `corporate_events` change takes its worst event.
+
+### Risk-signal codes (`signal_new`)
+
+Drawn at two lines: **escalate** is a listing or control finding against the
+subject or a party in its chain, or a black-list jurisdiction; **recheck** is
+a linkage, a PEP, a debarment or an EU high-risk jurisdiction; **note** is
+structure, state ownership, the grey and tax lists, leaks, counter-sanctions,
+and every `kind="context"` code. `OFFSHORE_LEAKS` is note because the leaks
+data is often years out of date; `STATE_CONTROLLED` because state control is
+notable, not a risk.
+
+| Code | Tier |
+|---|---|
+| `SANCTIONED` | escalate |
+| `RELATED_SANCTIONED` | escalate |
+| `SANCTIONS_CONTROLLED` | escalate |
+| `RELATED_SANCTIONS_CONTROLLED` | escalate |
+| `SANCTIONS_OWNERSHIP_TEST` | escalate |
+| `SANCTIONED_SECURITY` | escalate |
+| `EXPORT_CONTROLLED` | escalate |
+| `RELATED_EXPORT_CONTROLLED` | escalate |
+| `FATF_BLACK_LIST` | escalate |
+| `SANCTIONS_LINKED` | recheck |
+| `RELATED_SANCTIONS_LINKED` | recheck |
+| `EXPORT_CONTROL_LINKED` | recheck |
+| `RELATED_EXPORT_CONTROL_LINKED` | recheck |
+| `DEBARMENT` | recheck |
+| `RELATED_DEBARMENT` | recheck |
+| `PEP` | recheck |
+| `RELATED_PEP` | recheck |
+| `EU_HIGH_RISK_THIRD_COUNTRY` | recheck |
+| `COUNTER_SANCTIONED` | note |
+| `RELATED_COUNTER_SANCTIONED` | note |
+| `EXPORT_RISK` | note |
+| `RELATED_EXPORT_RISK` | note |
+| `FATF_GREY_LIST` | note |
+| `EU_TAX_NON_COOPERATIVE` | note |
+| `TRUST_OR_ARRANGEMENT` | note |
+| `COMPLEX_OWNERSHIP_LAYERS` | note |
+| `POSSIBLE_OBFUSCATION` | note |
+| `NOMINEE` | note |
+| `OPAQUE_OWNERSHIP` | note |
+| `STATE_CONTROLLED` | note |
+| `OFFSHORE_LEAKS` | note |
+| `NON_EU_JURISDICTION` | note |
+| `SUBSIDIARY_LISTED_JURISDICTION` | note |
+| `GLEIF_REPORTING_EXCEPTION` | note |
+| `RELATED_PEP_SUBJECT_ROLE` | note |
+| `RECORD_CONSISTENCY` | note |
+| `SANCTIONS_OWNERSHIP_TEST_POSSIBLE` | note |
+| `COMPLEX_CORPORATE_STRUCTURE` | note |
+
+(`COMPLEX_CORPORATE_STRUCTURE` was retired in Phase 272 and is never diffed;
+it is listed so the table names every code the backend declares.)
+
+### The register tier's own trigger (Tier 3)
+
+A register-tier entry is written even when the re-run's snapshot shows
+nothing new, so its trigger is graded too. The company leaving the
+register's open data is escalate (deleted companies are not published); a
+shareholder or beneficial-owner list moving, or the name, status or legal
+form changing, is recheck; the registry-card persons or supervisory board
+moving, or the company appearing in the open data, is note. A terminal
+status the re-run then reads is escalated by the snapshot's
+`register_status` rule above.
+
+| Key | Tier |
+|---|---|
+| `removed` | escalate |
+| `shareholders` | recheck |
+| `beneficial_owners` | recheck |
+| `name` | recheck |
+| `status` | recheck |
+| `legal_form` | recheck |
+| `officers` | note |
+| `supervisory_board` | note |
+| `added` | note |
+
+### What it does not do
+
+No new change kind, no new detection, no email, no case. No per-list
+customisation of the table — part B's watcher context is the place for
+"your watch expected X"; a per-list override would be workflow. No
+re-grading of the baseline or the verdict: materiality grades *changes*,
+not companies. No automatic re-run on recheck: the tier says what is
+proportionate, and `/recheck` exists for a reader who agrees. One
+consequence worth stating: a watched company whose `SANCTIONED` signal goes
+unchecked because OpenSanctions did not answer is a note-only entry, hidden
+by "Material only"; the entry still says "could not re-check" in full. If
+`entries_by_materiality` shows unchecked sanctions-family codes arriving
+often, revisit as a `MATERIALITY_RULES` bump.
+
 ## Demo framing
 
 The watchlist page's honesty line reads the mirror: "OpenCheck holds

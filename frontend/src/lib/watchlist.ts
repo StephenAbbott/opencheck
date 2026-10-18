@@ -122,8 +122,69 @@ export interface Watch {
  * or a listed delta file gone). */
 export type Tier = "gleif" | "opensanctions" | "manual" | "catch_up" | "register";
 
+/** pKYC stage A — does the change matter? Graded by the backend
+ *  (`opencheck/watchlist_materiality.py`) once, at write time, and carried on
+ *  the entry and on each change. The page renders what the entry carries and
+ *  never re-grades; the three labels and sentences below are copies of the
+ *  backend's, pinned by `tests/test_watchlist_materiality.py`. */
+export type Materiality = "note" | "recheck" | "escalate";
+
+export const MATERIALITY_TIERS: readonly Materiality[] = ["note", "recheck", "escalate"];
+
+export const MATERIALITY_LABELS: Record<Materiality, string> = {
+  note: "Note only",
+  recheck: "Recheck the source",
+  escalate: "Escalate",
+};
+
+export const MATERIALITY_SENTENCES: Record<Materiality, string> = {
+  note: "Recorded for the history; nothing to act on by itself.",
+  recheck: "Something about the company's record or exposure moved; open the report and look.",
+  escalate: "A finding against the subject, or the subject ceased or changed hands; route to whoever decides.",
+};
+
+/** The chip beside an entry's headline. The tone is what the tier *asserts*:
+ *  a finding against the subject is `risk` (the only red-family tier), a
+ *  record that moved is `warn` (incomplete, look again), a note is `neutral`.
+ *  Never `risk` for note, never `neutral` for escalate. */
+export function materialityChip(tier: Materiality | null | undefined): {
+  label: string;
+  tone: "risk" | "warn" | "neutral";
+} | null {
+  if (tier === "escalate") return { label: MATERIALITY_LABELS.escalate, tone: "risk" };
+  if (tier === "recheck") return { label: MATERIALITY_LABELS.recheck, tone: "warn" };
+  if (tier === "note") return { label: MATERIALITY_LABELS.note, tone: "neutral" };
+  return null;
+}
+
+/** "Material only" = recheck and escalate. */
+export function isMaterial(tier: Materiality | null | undefined): boolean {
+  return tier === "recheck" || tier === "escalate";
+}
+
+/** The filter the page offers over the change log. `all` is the default —
+ *  a stale list must stay visible; the filter is a per-viewer convenience
+ *  carried in `?show=material`. */
+export type ChangeLogFilter = "all" | "material";
+
+export function filterEntries(entries: WatchEntry[], filter: ChangeLogFilter): WatchEntry[] {
+  return filter === "material" ? entries.filter((e) => isMaterial(e.materiality)) : entries;
+}
+
+/** The sentence under the filter when it hides something. */
+export function hiddenByFilterSentence(all: number, shown: number): string | null {
+  const hidden = all - shown;
+  if (hidden <= 0) return null;
+  return `${hidden} note-only ${hidden === 1 ? "entry is" : "entries are"} hidden; nothing shown here is recorded for the history alone.`;
+}
+
+/** One line for an entry graded after the fact. */
+export const GRADED_TODAY_NOTE = "Graded under today's table; this entry predates grading.";
+
 export interface Change {
   kind: string;
+  /** pKYC stage A: this change's own tier. */
+  materiality?: Materiality;
   field?: string;
   scheme?: string;
   code?: string;
@@ -183,6 +244,11 @@ export interface WatchEntry {
   changes: Change[];
   /** Phase 303: GLEIF's own log since this list's baseline (GLEIF-triggered entries). */
   gleif_log?: GleifLog | null;
+  /** pKYC stage A: the entry's tier (the worst of its changes'), and the
+   *  version of the table it was graded under — `null` when graded on read
+   *  because the entry predates grading. */
+  materiality?: Materiality;
+  materiality_rules?: number | null;
   checked: CheckedSource[];
   degraded: { source_id: string; check?: string; affected_signals?: string[] }[];
 }
@@ -251,6 +317,28 @@ export function forgetToken(): void {
     window.localStorage.removeItem(TOKEN_KEY);
   } catch {
     /* nothing to forget */
+  }
+}
+
+export const FILTER_KEY = "opencheck.watchlist.filter";
+
+/** The change-log filter a visit starts with: the URL's `?show=material`
+ *  first, else what this browser kept, else all. */
+export function filterFromLocation(search: string): ChangeLogFilter {
+  if (new URLSearchParams(search).get("show") === "material") return "material";
+  try {
+    return window.localStorage.getItem(FILTER_KEY) === "material" ? "material" : "all";
+  } catch {
+    return "all";
+  }
+}
+
+export function storeFilter(filter: ChangeLogFilter): void {
+  try {
+    if (filter === "material") window.localStorage.setItem(FILTER_KEY, filter);
+    else window.localStorage.removeItem(FILTER_KEY);
+  } catch {
+    /* a per-viewer convenience: nothing lost when storage is absent */
   }
 }
 

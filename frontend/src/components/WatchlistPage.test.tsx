@@ -36,14 +36,24 @@ const PAYLOAD: WatchlistPayload = {
   entries: [
     {
       id: 1, lei: "213800LH1BZH3DI6G760", legal_name: "Vosper Ltd", created_at: "2026-09-15T00:00:00Z", tier: "manual",
-      trigger: {}, changes: [{ kind: "verdict", new: "a" }], checked: [], degraded: [],
+      trigger: {}, changes: [{ kind: "verdict", new: "a", materiality: "note" }], checked: [], degraded: [],
+      materiality: "note", materiality_rules: 1,
     },
     {
       id: 2, lei: "213800LH1BZH3DI6G760", legal_name: "Vosper Ltd", created_at: "2026-09-16T08:05:00Z", tier: "gleif",
       trigger: { publish: "2026-09-16 00:00:00", fields: ["registration_status"] },
-      changes: [{ kind: "gleif_field", field: "registration_status", old: "ISSUED", new: "LAPSED" }],
+      changes: [{ kind: "gleif_field", field: "registration_status", old: "ISSUED", new: "LAPSED", materiality: "note" }],
       checked: [{ source_id: "gleif", liveness: "live", retrieved_at: "2026-09-16T08:05:00Z" }],
       degraded: [{ source_id: "kvk" }],
+      materiality: "note", materiality_rules: 1,
+    },
+    {
+      id: 3, lei: "213800LH1BZH3DI6G760", legal_name: "Vosper Ltd", created_at: "2026-09-17T08:05:00Z", tier: "gleif",
+      trigger: { publish: "2026-09-17 00:00:00", fields: ["ultimate_parent_lei"] },
+      changes: [{ kind: "gleif_field", field: "ultimate_parent_lei", old: "A", new: "B", materiality: "escalate" }],
+      checked: [], degraded: [],
+      // graded on read: an entry written before grading existed
+      materiality: "escalate", materiality_rules: null,
     },
   ],
   caps: { per_list: 10, total: 200, in_list: 1, total_watched: 3 },
@@ -102,12 +112,13 @@ describe("WatchlistPage", () => {
 
     // Newest first, tier chip, the trigger sentence and the degraded line.
     const log = Array.from(screen.getByRole("list", { name: "Change log, newest first" }).children);
-    expect(log).toHaveLength(2);
-    expect(log[0]).toHaveTextContent("GLEIF delta");
-    expect(log[0]).toHaveTextContent("GLEIF published a change to this record in its 2026-09-16 00:00:00 delta");
-    expect(log[0]).toHaveTextContent("GLEIF LEI registration status: ISSUED → LAPSED.");
-    expect(log[0]).toHaveTextContent("Could not check: KvK");
-    expect(log[1]).toHaveTextContent("By hand");
+    expect(log).toHaveLength(3);
+    expect(log[0]).toHaveTextContent("Escalate");
+    expect(log[1]).toHaveTextContent("GLEIF delta");
+    expect(log[1]).toHaveTextContent("GLEIF published a change to this record in its 2026-09-16 00:00:00 delta");
+    expect(log[1]).toHaveTextContent("GLEIF LEI registration status: ISSUED → LAPSED.");
+    expect(log[1]).toHaveTextContent("Could not check: KvK");
+    expect(log[2]).toHaveTextContent("By hand");
 
     expect(screen.getByTestId("tier-sentence")).toHaveTextContent("3,424,074 LEI records");
     expect(screen.getByTestId("tier-sentence")).toHaveTextContent("never polled");
@@ -154,5 +165,43 @@ describe("WatchlistPage", () => {
     render(<WatchlistPage />);
     await waitFor(() => expect(screen.getByTestId("watchlist-empty")).toHaveTextContent("No watchlist with that token."));
     expect(window.localStorage.getItem(TOKEN_KEY)).toBeNull();
+  });
+
+  it("shows the materiality chip, the graded-today note, and the Material-only filter hides every note entry", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    mockFetch(PAYLOAD);
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(<WatchlistPage />);
+    const log = await screen.findByRole("list", { name: "Change log, newest first" });
+    expect(within(log).getAllByRole("listitem").filter((li) => li.parentElement === log)).toHaveLength(3);
+    expect(within(log).getAllByTestId("materiality-chip").map((c) => c.textContent)).toEqual([
+      "Escalate",
+      "Note only",
+      "Note only",
+    ]);
+    expect(within(log).getByText(/Graded under today's table/)).toBeTruthy();
+    const group = screen.getByRole("group", { name: "Show" });
+    expect(within(group).getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(within(group).getByRole("button", { name: "Material only" }));
+    const filtered = screen.getByRole("list", { name: "Change log, newest first" });
+    expect(within(filtered).getAllByRole("listitem").filter((li) => li.parentElement === filtered)).toHaveLength(1);
+    expect(within(filtered).getByTestId("materiality-chip").textContent).toBe("Escalate");
+    expect(screen.getByTestId("log-hidden").textContent).toContain("2 note-only entries are hidden");
+    expect(window.location.search).toBe("?show=material");
+    expect(window.localStorage.getItem("opencheck.watchlist.filter")).toBe("material");
+
+    await user.click(within(group).getByRole("button", { name: "All" }));
+    expect(screen.queryByTestId("log-hidden")).toBeNull();
+    expect(window.location.search).toBe("");
+  });
+
+  it("starts on Material only from the URL, and says so when every entry is note only", async () => {
+    window.history.replaceState({}, "", "/watchlist?show=material");
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    mockFetch({ ...PAYLOAD, entries: PAYLOAD.entries.slice(0, 2) });
+    render(<WatchlistPage />);
+    expect(await screen.findByTestId("log-all-note")).toBeTruthy();
+    expect(screen.queryByRole("list", { name: "Change log, newest first" })).toBeNull();
   });
 });

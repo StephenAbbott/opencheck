@@ -166,7 +166,7 @@ export const FEATURES: Feature[] = [
     accent: "#e879f9",
     glyph: "#fae8ff",
     description:
-      "Watch a company and be told when something about it changes, through an Atom feed with no account behind it. Nothing is polled: a watched company is re-checked only when GLEIF's daily delta or OpenSanctions' entity delta names it, and each entry says which fired, what the re-run found, and which sources were actually reached.",
+      "Watch a company and be told when something about it changes, through an Atom feed with no account behind it. Nothing is polled: a watched company is re-checked only when GLEIF's daily delta or OpenSanctions' entity delta names it, and each entry says which fired, what the re-run found, which sources were actually reached, and whether it matters — a materiality tier of note only, recheck the source, or escalate, so a reader can filter to what counts while what to do stays theirs.",
     image: {
       src: "/features/watchlist.png",
       alt: "The watchlist page: two watched companies with their register status and signals, a copyable feed address, and a change log whose top entry says GLEIF published a change to the record, names the field that changed, and counts the sources checked as a result.",
