@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 369** — An Estonian company the open-data files do not hold — usually a deleted one — is now read from the e-Business Register's REST API, with its deletion date, former names and ended ownership, and the verdict opens with "Deleted on …".
+**Latest: Phase 370** — An Estonian company's former shareholders are now read from the e-Business Register's REST API, one JSON call checked row for row against the SOAP service it replaces for the ownership graph.
 
 → [Full development history](docs/status.md)
 
