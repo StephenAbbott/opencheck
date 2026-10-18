@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 367** — Dragging a node in any network diagram now carries its icon, jurisdiction flag and badges with it, on phones as well as desktop.
+**Latest: Phase 368** — Every call to the Estonian e-Business Register's credentialed services now goes through one shared client that honours RIK's one-query-at-a-time rule and a daily answer budget.
 
 → [Full development history](docs/status.md)
 
