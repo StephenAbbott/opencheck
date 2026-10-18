@@ -1557,8 +1557,13 @@ class AriregisterAdapter(SourceAdapter):
         no-auth public scraper in ``fetch()``.
 
         Returns ``None`` when not live or when credentials are unset (the
-        feature then simply doesn't contribute Estonian events). The two calls
-        run concurrently and a failure of either is tolerated.
+        feature then simply doesn't contribute Estonian events). Otherwise
+        the dict, with ``None`` for a call that did not answer and the cause
+        under ``unavailable`` (``detail`` / ``bo`` → an ``ariregister_rest``
+        cause: ``busy``, ``budget``, ``timeout``, ``server_error`` …). Both
+        calls go through ``ariregister_rest.contract_slot``: the SOAP service
+        and the REST API share one contract partner, which may run one query
+        at a time and a daily answer allowance.
         """
         settings = get_settings()
         if not settings.allow_live:
@@ -1572,31 +1577,55 @@ class AriregisterAdapter(SourceAdapter):
         if not code:
             return None
 
-        async def _post(envelope: str) -> str | None:
-            # Same reasoning as search() and fetch(): the X-Road SOAP call needs
-            # its own client and timeout, so build_client()'s automatic
-            # provenance.record_live() never fires. Record it here, at the
-            # moment we commit to the network. Nothing opens a provenance scope
-            # around the Time Machine path today, so this was latent rather
-            # than user-visible — but it is the same defect PR #153 fixed on
-            # the lookup path, and the AST guard in tests/test_source_probes.py
-            # now keeps both closed.
-            provenance.record_live("ariregister X-Road timeline")
-            try:
-                async with httpx.AsyncClient(timeout=_SOAP_TIMEOUT) as client:
-                    r = await client.post(_SOAP_URL, content=envelope, headers=_SOAP_HEADERS)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("ariregister: timeline SOAP error for %s: %s", code, exc)
-                return None
-            if r.status_code != 200:
-                logger.info("ariregister: timeline HTTP %s for %s", r.status_code, code)
-                return None
-            return r.text
+        from . import ariregister_rest as rik
 
-        detail_xml, bo_xml = await asyncio.gather(
-            _post(_detail_envelope(user, pw, code)),
-            _post(_bo_envelope(user, pw, code)),
+        async def _post(service: str, envelope: str) -> tuple[str | None, str | None]:
+            """One SOAP call inside the contract's one-query slot (shared with
+            the REST API — one contract partner). Returns the body, or
+            ``None`` and why (an ``ariregister_rest`` cause)."""
+            try:
+                async with rik.contract_slot(service):
+                    # Same reasoning as search() and fetch(): the X-Road SOAP
+                    # call needs its own client and timeout, so
+                    # build_client()'s automatic provenance.record_live()
+                    # never fires. Recorded here, once the slot is ours and
+                    # before the request leaves (the PR #153 rule, kept by
+                    # the AST guard in tests/test_source_probes.py).
+                    provenance.record_live("ariregister X-Road timeline")
+                    try:
+                        async with httpx.AsyncClient(timeout=_SOAP_TIMEOUT) as client:
+                            r = await client.post(_SOAP_URL, content=envelope, headers=_SOAP_HEADERS)
+                    except httpx.TimeoutException:
+                        rik.record_outcome(service, "timeout")
+                        return None, "timeout"
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("ariregister: timeline SOAP %s on %s", type(exc).__name__, service)
+                        rik.record_outcome(service, "network_error")
+                        return None, "network_error"
+            except rik.RikUnavailable as exc:  # busy or budget: nothing was sent
+                return None, exc.cause
+            if r.status_code != 200:
+                outcome = rik.outcome_of_status(r.status_code)
+                logger.info("ariregister: timeline HTTP %s on %s", r.status_code, service)
+                rik.record_outcome(service, outcome)
+                return None, outcome
+            rik.record_outcome(service, "answered")
+            return r.text, None
+
+        # The slot serialises these whatever gather does; gather keeps the
+        # two waits overlapping with nothing else to do.
+        (detail_xml, detail_cause), (bo_xml, bo_cause) = await asyncio.gather(
+            _post("soap_detail", _detail_envelope(user, pw, code)),
+            _post("soap_beneficial_owners", _bo_envelope(user, pw, code)),
         )
-        if not detail_xml and not bo_xml:
-            return None
-        return {"registry_code": code, "detail_xml": detail_xml, "bo_xml": bo_xml}
+        # A failed read still returns the shape, with why: the caller records
+        # the degradation in the register's own words (a spent budget or a
+        # busy slot is not "the service did not answer").
+        return {
+            "registry_code": code,
+            "detail_xml": detail_xml,
+            "bo_xml": bo_xml,
+            "unavailable": {
+                key: cause for key, cause in (("detail", detail_cause), ("bo", bo_cause)) if cause
+            },
+        }
