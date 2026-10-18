@@ -106,6 +106,17 @@ def _detail_envelope(user: str, pw: str, reg_code: str) -> str:
     )
 
 
+#: The REST call that stands in for ``detailandmed_v2`` (the REST-history
+#: phase): names, addresses, forms and the people with their full history,
+#: and the registry cards' log.
+HISTORY_QUERY = {
+    "includeGeneralData": "true",
+    "includeRelatedPersons": "true",
+    "includeRegistryCards": "true",
+    "onlyValid": "false",
+}
+
+
 def _bo_envelope(user: str, pw: str, reg_code: str) -> str:
     """tegelikudKasusaajad_v2 with history on (ainult_kehtivad=0)."""
     return (
@@ -1654,37 +1665,51 @@ class AriregisterAdapter(SourceAdapter):
     # Time Machine — historical data via the credentialed SOAP API
     # ------------------------------------------------------------------
 
-    async def fetch_timeline_data(self, registry_code: str) -> dict[str, Any] | None:
+    async def fetch_timeline_data(
+        self, registry_code: str, *, card_source: str = "soap",
+    ) -> dict[str, Any] | None:
         """Raw registry-card + beneficial-owner *history* for the Time Machine.
 
-        Calls the RIK X-Road SOAP open-data API with history on
-        (``ainult_kehtivad=0``): ``detailandmed_v2`` for the dated registry-card
-        blocks and ``tegelikudKasusaajad_v2`` for beneficial owners. Read-only,
-        lazy, off the main lookup path — the live ``/lookup`` still uses the
-        no-auth public scraper in ``fetch()``.
+        The registry card's dated blocks and people come from one of two
+        readings of the same rows (the REST-history phase; Stephen, 17 Oct
+        2026). ``card_source="rest"`` — the ownership graph's history —
+        reads RIK's REST API (``GET /company/{code}``, ``onlyValid=false`` →
+        ``detail_rest``) when ``ARIREGISTER_REST_API_KEY`` is set: one call,
+        JSON, a corporate party under its name today, as the index names a
+        current holder. ``card_source="soap"`` — the History tab — reads
+        SOAP ``detailandmed_v2`` with history on (``ainult_kehtivad=0`` →
+        ``detail_xml``), which names a corporate party as filed at the time
+        ("Taxify Shareholder SPV OÜ", "Lihtkonto: …") and an address in
+        Estonian; it takes REST only when the SOAP credentials are not set. The beneficial-owner
+        history is always SOAP ``tegelikudKasusaajad_v2`` (``bo_xml``):
+        REST's needs a named viewer and a stated reason. With the REST key
+        and no SOAP credentials the BO cause is ``not_configured``.
 
-        Returns ``None`` when not live or when credentials are unset (the
-        feature then simply doesn't contribute Estonian events). Otherwise
-        the dict, with ``None`` for a call that did not answer and the cause
-        under ``unavailable`` (``detail`` / ``bo`` → an ``ariregister_rest``
-        cause: ``busy``, ``budget``, ``timeout``, ``server_error`` …). Both
-        calls go through ``ariregister_rest.contract_slot``: the SOAP service
-        and the REST API share one contract partner, which may run one query
-        at a time and a daily answer allowance.
+        Returns ``None`` when not live or when neither the key nor the
+        credentials are set. Otherwise the dict, with ``None`` for a call
+        that did not answer and the cause under ``unavailable`` (``detail``
+        / ``bo`` → an ``ariregister_rest`` cause: ``busy``, ``budget``,
+        ``timeout``, ``server_error`` …). Every call goes through the shared
+        client: the SOAP service and the REST API share one contract
+        partner, which may run one query at a time and a daily allowance.
+        The answers carry personal codes; ``ariregister_history`` strips
+        them and the Time Machine reads names and dates only.
         """
         settings = get_settings()
         if not settings.allow_live:
             return None
+        from . import ariregister_rest as rik
+
         user = settings.ariregister_username
         pw = settings.ariregister_password
-        if not user or not pw:
+        rest = rik.rest_configured()
+        if not (user and pw) and not rest:
             return None
+        use_rest = rest and (card_source == "rest" or not (user and pw))
 
         code = re.sub(r"\D", "", registry_code or "") or (registry_code or "").strip()
         if not code:
             return None
-
-        from . import ariregister_rest as rik
 
         async def _post(service: str, envelope: str) -> tuple[str | None, str | None]:
             """One SOAP call inside the contract's one-query slot (shared with
@@ -1719,18 +1744,43 @@ class AriregisterAdapter(SourceAdapter):
             rik.record_outcome(service, "answered")
             return r.text, None
 
+        async def _rest_detail() -> tuple[dict[str, Any] | None, str | None]:
+            """The registry card's people and dated blocks from REST (the
+            REST-history phase): the same rows ``detailandmed_v2`` returns,
+            as JSON, in one call through the shared client."""
+            try:
+                body = await rik.get_json(f"/company/{code}", service="company", params=HISTORY_QUERY)
+            except rik.RikUnavailable as exc:
+                return None, exc.cause
+            except rik.RikNotFound:
+                return None, "not_found"
+            except rik.RikNotConfigured:
+                return None, "not_configured"
+            return (body, None) if isinstance(body, dict) else (None, "bad_response")
+
+        async def _no_bo() -> tuple[str | None, str | None]:
+            return None, "not_configured"
+
+        detail_xml: str | None = None
+        detail_rest: dict[str, Any] | None = None
+        bo_coro = (
+            _post("soap_beneficial_owners", _bo_envelope(user, pw, code)) if user and pw else _no_bo()
+        )
         # The slot serialises these whatever gather does; gather keeps the
         # two waits overlapping with nothing else to do.
-        (detail_xml, detail_cause), (bo_xml, bo_cause) = await asyncio.gather(
-            _post("soap_detail", _detail_envelope(user, pw, code)),
-            _post("soap_beneficial_owners", _bo_envelope(user, pw, code)),
-        )
+        if use_rest:
+            (detail_rest, detail_cause), (bo_xml, bo_cause) = await asyncio.gather(_rest_detail(), bo_coro)
+        else:
+            (detail_xml, detail_cause), (bo_xml, bo_cause) = await asyncio.gather(
+                _post("soap_detail", _detail_envelope(user or "", pw or "", code)), bo_coro,
+            )
         # A failed read still returns the shape, with why: the caller records
         # the degradation in the register's own words (a spent budget or a
         # busy slot is not "the service did not answer").
         return {
             "registry_code": code,
             "detail_xml": detail_xml,
+            "detail_rest": detail_rest,
             "bo_xml": bo_xml,
             "unavailable": {
                 key: cause for key, cause in (("detail", detail_cause), ("bo", bo_cause)) if cause

@@ -1589,6 +1589,42 @@ verdict. Things that will be re-derived otherwise:
 - Fixtures `rest_company_10078240.json` / `rest_company_11336737.json`:
   real answers of 17 Oct 2026, every personal code replaced by a fake
   starting `3`, people's addresses and e-mails removed.
+### The history's people from REST (the REST-history phase)
+
+`rest_person_rows` / `history_from_rest` in `sources/ariregister_history.py`,
+`fetch_timeline_data(card_source=)` and `HISTORY_QUERY` in
+`sources/ariregister.py`, `_rest_events` in `timeline/ariregister.py`.
+`GET /company/{code}` (`onlyValid=false`) returns the rows SOAP
+`detailandmed_v2` returns, under the same `recordId` — Eesti Energia AS 163
+rows, 147 ended, on both (17 Oct 2026). Stephen's decision (17 Oct 2026),
+after the comparison found REST names a **corporate** party by its name
+today ("Bolt Holdings OÜ") where SOAP names it as filed ("Taxify Shareholder
+SPV OÜ", "Lihtkonto: Rahandusministeerium"), and words places in English:
+
+- **The ownership graph's history reads REST** (`card_source="rest"`, used
+  by `read_history`) when `ARIREGISTER_REST_API_KEY` is set; the **History
+  tab keeps SOAP** (`card_source="soap"`, the default, used by
+  `timeline/service.py`) and takes REST only without SOAP credentials.
+  Without the key both read SOAP, as before.
+- **Beneficial-owner history stays on SOAP** (REST's needs a named viewer).
+  With the key and no SOAP credentials the BO cause is `not_configured`
+  (`BO_NOT_CONFIGURED`), said as a `not_configured` degradation; the
+  holdings are still shown.
+- **The join and the strip are the SOAP path's.** `rest_person_rows` reads
+  REST into SOAP's field names (numbers as `%.6f`, like SOAP) and
+  `_history_from_rows` does the rest; `keep_codes=True` only inside the
+  module — the Time Machine reads rows without a natural person's codes.
+  Cache key `ariregister/history-v2/<code>`. No fallback from a failed REST
+  read to SOAP: it is said, like any failure.
+- **Parity is pinned** (`tests/test_ariregister_rest_history.py`, real
+  answers for Eesti Energia AS and Bolt Operations OÜ with fake codes): the
+  same rows and fields, the same ended holdings, and statements identical
+  apart from provenance and a legal person's spelling. REST's statuses are
+  the current one and the first entry (no dated `staatused`): a deletion
+  reads as SOAP has it; a liquidation's back-and-forth is not rebuilt.
+- REST's card log (`registryCards`) gives every entry where SOAP's `kanded`
+  with `kandmed=0` gives some; neither is emitted (the index's file is).
+
 ### A person's other companies, on the register's person key (the person-index phase)
 
 `companies_for_hash` in `sources/ariregister.py`, `_ee_person_appointments`

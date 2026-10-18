@@ -190,11 +190,20 @@ async def test_an_index_miss_is_answered_by_rest(index, rest) -> None:
     assert rec.resolve(is_stub=False).liveness == "live"
 
 
-async def test_a_code_the_index_holds_never_calls_rest(index, rest) -> None:
+async def test_a_code_the_index_holds_is_never_read_as_a_rest_record(index, rest) -> None:
+    """The index answers the record; REST is asked only for the ownership
+    history (the REST-history phase) — without rulings or pledges, which
+    is how the record read is told apart."""
     with respx.mock(assert_all_called=False) as router:
-        route = router.get(url__startswith=rik.REST_BASE)
+        _login(router)
+        company = router.get(_company_url(EESTI)).mock(
+            return_value=httpx.Response(200, json={"relatedPersons": {}}),
+        )
         bundle = await _fetch(EESTI)
-    assert not route.called and bundle["tier"] == "index"
+    assert bundle["tier"] == "index"
+    assert company.call_count == 1
+    params = company.calls[0].request.url.params
+    assert "includeRulings" not in params and params["includeRelatedPersons"] == "true"
 
 
 async def test_a_second_read_is_served_from_the_cache(index, rest) -> None:

@@ -687,142 +687,6 @@
   "isRequiredtoProvideBeneficiaries": false
  },
  "relatedPersons": {
-  "representationRights": {
-   "persons": [
-    {
-     "firstName": "Jüri",
-     "surnameLegalEntityName": "Tamm",
-     "entityCode": "38844738716",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Tõnis",
-     "surnameLegalEntityName": "Vajakas",
-     "entityCode": "38304070069",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Timo",
-     "surnameLegalEntityName": "Tatar",
-     "entityCode": "37457230116",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Raivo",
-     "surnameLegalEntityName": "Melsas",
-     "entityCode": "30239947751",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Andres",
-     "surnameLegalEntityName": "Alusalu",
-     "entityCode": "30798877767",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Andres",
-     "surnameLegalEntityName": "Alusalu",
-     "entityCode": "30798877767",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Jüri",
-     "surnameLegalEntityName": "Tamm",
-     "entityCode": "38844738716",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Andres",
-     "surnameLegalEntityName": "Alusalu",
-     "entityCode": "30798877767",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Rein",
-     "surnameLegalEntityName": "Rebas",
-     "entityCode": "35183148189",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Rein",
-     "surnameLegalEntityName": "Rebas",
-     "entityCode": "35183148189",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Kristjan",
-     "surnameLegalEntityName": "Suur",
-     "entityCode": "33311878993",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Innar",
-     "surnameLegalEntityName": "Kaasik",
-     "entityCode": "32883217873",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    },
-    {
-     "firstName": "Anatoli",
-     "surnameLegalEntityName": "Petrov",
-     "entityCode": "34578557564",
-     "entityCodeCountry": "EST",
-     "entityCodeCountryAsText": "Estonia",
-     "personType": "F",
-     "role": "JUHL",
-     "roleAsText": "Management board member"
-    }
-   ],
-   "representationRightSpecialConditions": [],
-   "representationRightGroups": []
-  },
   "personsOnCard": [
    {
     "person": {
@@ -831,8 +695,9 @@
      "type": "F",
      "firstName": "Anatoli",
      "surnameLegalEntityName": "Petrov",
-     "identityCode": "34578557564"
+     "identityCode": "34030641323"
     },
+    "address": {},
     "is_gov_institution": false,
     "has_active_tradebans": false,
     "cardNumber": 4,
@@ -849,8 +714,9 @@
      "type": "F",
      "firstName": "Andres",
      "surnameLegalEntityName": "Alusalu",
-     "identityCode": "30798877767"
+     "identityCode": "30529993029"
     },
+    "address": {},
     "is_gov_institution": false,
     "has_active_tradebans": false,
     "cardNumber": 4,
@@ -867,7 +733,11 @@
      "type": "F",
      "firstName": "Andres",
      "surnameLegalEntityName": "Alusalu",
-     "identityCode": "30798877767"
+     "identityCode": "30529993029"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -885,7 +755,11 @@
      "type": "F",
      "firstName": "Andres",
      "surnameLegalEntityName": "Alusalu",
-     "identityCode": "30798877767"
+     "identityCode": "30529993029"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -903,8 +777,9 @@
      "type": "F",
      "firstName": "Innar",
      "surnameLegalEntityName": "Kaasik",
-     "identityCode": "32883217873"
+     "identityCode": "35799695278"
     },
+    "address": {},
     "is_gov_institution": false,
     "has_active_tradebans": false,
     "cardNumber": 4,
@@ -921,7 +796,11 @@
      "type": "F",
      "firstName": "Jüri",
      "surnameLegalEntityName": "Tamm",
-     "identityCode": "38844738716"
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -939,7 +818,11 @@
      "type": "F",
      "firstName": "Jüri",
      "surnameLegalEntityName": "Tamm",
-     "identityCode": "38844738716"
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -957,8 +840,9 @@
      "type": "F",
      "firstName": "Kristjan",
      "surnameLegalEntityName": "Suur",
-     "identityCode": "33311878993"
+     "identityCode": "39758150394"
     },
+    "address": {},
     "is_gov_institution": false,
     "has_active_tradebans": false,
     "cardNumber": 4,
@@ -975,8 +859,9 @@
      "type": "F",
      "firstName": "Raivo",
      "surnameLegalEntityName": "Melsas",
-     "identityCode": "30239947751"
+     "identityCode": "32960895187"
     },
+    "address": {},
     "is_gov_institution": false,
     "has_active_tradebans": false,
     "cardNumber": 4,
@@ -993,7 +878,11 @@
      "type": "F",
      "firstName": "Rein",
      "surnameLegalEntityName": "Rebas",
-     "identityCode": "35183148189"
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1011,7 +900,11 @@
      "type": "F",
      "firstName": "Rein",
      "surnameLegalEntityName": "Rebas",
-     "identityCode": "35183148189"
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1029,8 +922,9 @@
      "type": "F",
      "firstName": "Timo",
      "surnameLegalEntityName": "Tatar",
-     "identityCode": "37457230116"
+     "identityCode": "30253867897"
     },
+    "address": {},
     "is_gov_institution": false,
     "has_active_tradebans": false,
     "cardNumber": 4,
@@ -1047,8 +941,9 @@
      "type": "F",
      "firstName": "Tõnis",
      "surnameLegalEntityName": "Vajakas",
-     "identityCode": "38304070069"
+     "identityCode": "37597658810"
     },
+    "address": {},
     "is_gov_institution": false,
     "has_active_tradebans": false,
     "cardNumber": 4,
@@ -1079,7 +974,11 @@
      "type": "F",
      "firstName": "Raimond",
      "surnameLegalEntityName": "Arukivii",
-     "identityCode": "35015739136"
+     "identityCode": "37394695935"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1102,7 +1001,11 @@
      "type": "F",
      "firstName": "Enno",
      "surnameLegalEntityName": "Dorbek",
-     "identityCode": "32883552178"
+     "identityCode": "34881846315"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1125,7 +1028,11 @@
      "type": "F",
      "firstName": "Lembit",
      "surnameLegalEntityName": "Jalakas",
-     "identityCode": "38687517958"
+     "identityCode": "34839035810"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1148,7 +1055,11 @@
      "type": "F",
      "firstName": "Valentin",
      "surnameLegalEntityName": "Juhanson",
-     "identityCode": "36590726034"
+     "identityCode": "34367564503"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1171,7 +1082,11 @@
      "type": "F",
      "firstName": "Aleksei",
      "surnameLegalEntityName": "Kapitonov",
-     "identityCode": "33179317086"
+     "identityCode": "30610215777"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1194,7 +1109,11 @@
      "type": "F",
      "firstName": "Diina",
      "surnameLegalEntityName": "Pennert",
-     "identityCode": "37465352753"
+     "identityCode": "31596918118"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1217,8 +1136,9 @@
      "type": "F",
      "firstName": "Rein",
      "surnameLegalEntityName": "Rebas",
-     "identityCode": "35183148189"
+     "identityCode": "36995279278"
     },
+    "address": {},
     "is_gov_institution": false,
     "has_active_tradebans": false,
     "shareSize": 15000.0,
@@ -1240,7 +1160,11 @@
      "type": "F",
      "firstName": "Külliki",
      "surnameLegalEntityName": "Seire",
-     "identityCode": "35992837097"
+     "identityCode": "30550644736"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1263,7 +1187,11 @@
      "type": "F",
      "firstName": "Urmas",
      "surnameLegalEntityName": "Sild",
-     "identityCode": "37679506316"
+     "identityCode": "39670956158"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1286,7 +1214,11 @@
      "type": "F",
      "firstName": "Jüri",
      "surnameLegalEntityName": "Tamm",
-     "identityCode": "38844738716"
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1309,7 +1241,11 @@
      "type": "F",
      "firstName": "Eha",
      "surnameLegalEntityName": "Valkenklau",
-     "identityCode": "30808000664"
+     "identityCode": "39706326660"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1333,6 +1269,7 @@
      "surnameLegalEntityName": "osaühing Tootus",
      "identityCode": "10078233"
     },
+    "address": {},
     "is_gov_institution": false,
     "company_registry_status": "L",
     "has_active_tradebans": false,
@@ -1355,6 +1292,10 @@
      "type": "J",
      "surnameLegalEntityName": "Impera Grupp OÜ",
      "identityCode": "11448946"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "company_registry_status": "R",
@@ -1379,7 +1320,11 @@
      "type": "F",
      "firstName": "Raimond",
      "surnameLegalEntityName": "Arukivii",
-     "identityCode": "35015739136"
+     "identityCode": "37394695935"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1403,7 +1348,11 @@
      "type": "F",
      "firstName": "Enno",
      "surnameLegalEntityName": "Dorbek",
-     "identityCode": "32883552178"
+     "identityCode": "34881846315"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1427,7 +1376,11 @@
      "type": "F",
      "firstName": "Diina",
      "surnameLegalEntityName": "Pennert",
-     "identityCode": "37465352753"
+     "identityCode": "31596918118"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1451,7 +1404,11 @@
      "type": "F",
      "firstName": "Jüri",
      "surnameLegalEntityName": "Tamm",
-     "identityCode": "38844738716"
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1475,7 +1432,11 @@
      "type": "F",
      "firstName": "Urmas",
      "surnameLegalEntityName": "Sild",
-     "identityCode": "37679506316"
+     "identityCode": "39670956158"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1499,7 +1460,11 @@
      "type": "F",
      "firstName": "Külliki",
      "surnameLegalEntityName": "Seire",
-     "identityCode": "35992837097"
+     "identityCode": "30550644736"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1523,6 +1488,10 @@
      "type": "J",
      "surnameLegalEntityName": "Impera Grupp OÜ",
      "identityCode": "11448946"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "company_registry_status": "R",
@@ -1548,6 +1517,7 @@
      "surnameLegalEntityName": "osaühing Tootus",
      "identityCode": "10078233"
     },
+    "address": {},
     "is_gov_institution": false,
     "company_registry_status": "L",
     "has_active_tradebans": false,
@@ -1572,6 +1542,7 @@
      "surnameLegalEntityName": "osaühing Tootus",
      "identityCode": "10078233"
     },
+    "address": {},
     "is_gov_institution": false,
     "company_registry_status": "L",
     "has_active_tradebans": false,
@@ -1595,6 +1566,10 @@
      "type": "J",
      "surnameLegalEntityName": "Impera Grupp OÜ",
      "identityCode": "11448946"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "company_registry_status": "R",
@@ -1620,6 +1595,10 @@
      "surnameLegalEntityName": "Impera Grupp OÜ",
      "identityCode": "11448946"
     },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
     "is_gov_institution": false,
     "company_registry_status": "R",
     "has_active_tradebans": false,
@@ -1643,6 +1622,10 @@
      "type": "J",
      "surnameLegalEntityName": "Eesti Energia AS",
      "identityCode": "10421629"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "company_registry_status": "R",
@@ -1668,6 +1651,7 @@
      "surnameLegalEntityName": "osaühing Tootus",
      "identityCode": "10078233"
     },
+    "address": {},
     "is_gov_institution": false,
     "company_registry_status": "L",
     "has_active_tradebans": false,
@@ -1691,7 +1675,11 @@
      "type": "F",
      "firstName": "Raimond",
      "surnameLegalEntityName": "Arukivii",
-     "identityCode": "35015739136"
+     "identityCode": "37394695935"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1715,7 +1703,11 @@
      "type": "F",
      "firstName": "Enno",
      "surnameLegalEntityName": "Dorbek",
-     "identityCode": "32883552178"
+     "identityCode": "34881846315"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1739,7 +1731,11 @@
      "type": "F",
      "firstName": "Lembit",
      "surnameLegalEntityName": "Jalakas",
-     "identityCode": "38687517958"
+     "identityCode": "34839035810"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1763,7 +1759,11 @@
      "type": "F",
      "firstName": "Valentin",
      "surnameLegalEntityName": "Juhanson",
-     "identityCode": "36590726034"
+     "identityCode": "34367564503"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1787,7 +1787,11 @@
      "type": "F",
      "firstName": "Diina",
      "surnameLegalEntityName": "Pennert",
-     "identityCode": "37465352753"
+     "identityCode": "31596918118"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1811,7 +1815,11 @@
      "type": "F",
      "firstName": "Rein",
      "surnameLegalEntityName": "Rebas",
-     "identityCode": "35183148189"
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1835,7 +1843,11 @@
      "type": "F",
      "firstName": "Külliki",
      "surnameLegalEntityName": "Seire",
-     "identityCode": "35992837097"
+     "identityCode": "30550644736"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1859,7 +1871,11 @@
      "type": "F",
      "firstName": "Urmas",
      "surnameLegalEntityName": "Sild",
-     "identityCode": "37679506316"
+     "identityCode": "39670956158"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1883,7 +1899,11 @@
      "type": "F",
      "firstName": "Jüri",
      "surnameLegalEntityName": "Tamm",
-     "identityCode": "38844738716"
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1907,7 +1927,11 @@
      "type": "F",
      "firstName": "Eha",
      "surnameLegalEntityName": "Valkenklau",
-     "identityCode": "30808000664"
+     "identityCode": "39706326660"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1932,6 +1956,7 @@
      "surnameLegalEntityName": "osaühing Tootus",
      "identityCode": "10078233"
     },
+    "address": {},
     "is_gov_institution": false,
     "company_registry_status": "L",
     "has_active_tradebans": false,
@@ -1955,7 +1980,11 @@
      "type": "F",
      "firstName": "Rein",
      "surnameLegalEntityName": "Rebas",
-     "identityCode": "35183148189"
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -1979,7 +2008,11 @@
      "type": "F",
      "firstName": "Rein",
      "surnameLegalEntityName": "Rebas",
-     "identityCode": "35183148189"
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2004,6 +2037,7 @@
      "surnameLegalEntityName": "osaühing Tootus",
      "identityCode": "10078233"
     },
+    "address": {},
     "is_gov_institution": false,
     "company_registry_status": "L",
     "has_active_tradebans": false,
@@ -2027,6 +2061,10 @@
      "type": "J",
      "surnameLegalEntityName": "Eesti Energia AS",
      "identityCode": "10421629"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "company_registry_status": "R",
@@ -2052,6 +2090,7 @@
      "surnameLegalEntityName": "osaühing Tootus",
      "identityCode": "10078233"
     },
+    "address": {},
     "is_gov_institution": false,
     "company_registry_status": "L",
     "has_active_tradebans": false,
@@ -2075,6 +2114,10 @@
      "type": "J",
      "surnameLegalEntityName": "Eesti Energia AS",
      "identityCode": "10421629"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "company_registry_status": "R",
@@ -2100,6 +2143,10 @@
      "surnameLegalEntityName": "Eesti Energia AS",
      "identityCode": "10421629"
     },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
     "is_gov_institution": false,
     "company_registry_status": "R",
     "has_active_tradebans": false,
@@ -2124,6 +2171,10 @@
      "surnameLegalEntityName": "Eesti Energia AS",
      "identityCode": "10421629"
     },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
     "is_gov_institution": false,
     "company_registry_status": "R",
     "has_active_tradebans": false,
@@ -2147,6 +2198,10 @@
      "type": "J",
      "surnameLegalEntityName": "Enefit OÜ",
      "identityCode": "11184032"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "company_registry_status": "R",
@@ -2173,7 +2228,11 @@
      "type": "F",
      "firstName": "Raimond",
      "surnameLegalEntityName": "Arukivii",
-     "identityCode": "35015739136"
+     "identityCode": "37394695935"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2189,7 +2248,11 @@
      "type": "F",
      "firstName": "Enno",
      "surnameLegalEntityName": "Dorbek",
-     "identityCode": "32883552178"
+     "identityCode": "34881846315"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2205,7 +2268,11 @@
      "type": "F",
      "firstName": "Lembit",
      "surnameLegalEntityName": "Jalakas",
-     "identityCode": "38687517958"
+     "identityCode": "34839035810"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2221,7 +2288,11 @@
      "type": "F",
      "firstName": "Valentin",
      "surnameLegalEntityName": "Juhanson",
-     "identityCode": "36590726034"
+     "identityCode": "34367564503"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2237,7 +2308,11 @@
      "type": "F",
      "firstName": "Aleksei",
      "surnameLegalEntityName": "Kapitonov",
-     "identityCode": "33179317086"
+     "identityCode": "30610215777"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2253,7 +2328,11 @@
      "type": "F",
      "firstName": "Diina",
      "surnameLegalEntityName": "Pennert",
-     "identityCode": "37465352753"
+     "identityCode": "31596918118"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2269,7 +2348,11 @@
      "type": "F",
      "firstName": "Rein",
      "surnameLegalEntityName": "Rebas",
-     "identityCode": "35183148189"
+     "identityCode": "36995279278"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2285,7 +2368,11 @@
      "type": "F",
      "firstName": "Külliki",
      "surnameLegalEntityName": "Seire",
-     "identityCode": "35992837097"
+     "identityCode": "30550644736"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2301,7 +2388,11 @@
      "type": "F",
      "firstName": "Urmas",
      "surnameLegalEntityName": "Sild",
-     "identityCode": "37679506316"
+     "identityCode": "39670956158"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2317,7 +2408,11 @@
      "type": "F",
      "firstName": "Jüri",
      "surnameLegalEntityName": "Tamm",
-     "identityCode": "38844738716"
+     "identityCode": "30953465776"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2333,7 +2428,11 @@
      "type": "F",
      "firstName": "Eha",
      "surnameLegalEntityName": "Valkenklau",
-     "identityCode": "30808000664"
+     "identityCode": "39706326660"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2349,7 +2448,11 @@
      "type": "F",
      "firstName": "Andres",
      "surnameLegalEntityName": "Alusalu",
-     "identityCode": "30798877767"
+     "identityCode": "30529993029"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2365,7 +2468,11 @@
      "type": "F",
      "firstName": "Aino",
      "surnameLegalEntityName": "Simson",
-     "identityCode": "39710170157"
+     "identityCode": "32874776899"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "has_active_tradebans": false,
@@ -2380,6 +2487,10 @@
      "type": "J",
      "surnameLegalEntityName": "Aktsiaselts PricewaterhouseCoopers",
      "identityCode": "10142876"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
     },
     "is_gov_institution": false,
     "company_registry_status": "R",

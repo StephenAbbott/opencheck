@@ -459,6 +459,7 @@ def test_a_soap_call_refused_the_slot_says_why_and_sends_nothing(configured) -> 
     assert data == {
         "registry_code": CODE,
         "detail_xml": None,
+        "detail_rest": None,
         "bo_xml": None,
         "unavailable": {"detail": "budget", "bo": "budget"},
     }
@@ -485,7 +486,7 @@ def test_the_history_says_a_spent_allowance_not_a_silent_service(configured) -> 
     _settings(configured, ARIREGISTER_USERNAME="user", ARIREGISTER_PASSWORD="pass")
 
     class _Adapter:
-        async def fetch_timeline_data(self, code: str) -> dict[str, Any]:
+        async def fetch_timeline_data(self, code: str, **_kw: Any) -> dict[str, Any]:
             return {"registry_code": code, "detail_xml": None, "bo_xml": None,
                     "unavailable": {"detail": "budget", "bo": "budget"}}
 
