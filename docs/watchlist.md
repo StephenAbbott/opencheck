@@ -364,9 +364,19 @@ checked **before** the baseline runs, and a list is created only once its
 first watch can be added, so a refused add runs nothing and mints nothing.
 A tokenless add (a new list) is limited to `OPENCHECK_WATCHLIST_NEW_LISTS_PER_IP`
 (5 a day); and a list nobody has opened for `OPENCHECK_WATCHLIST_STALE_DAYS`
-(90) — the page and the Atom feed both count as opening it — is deleted with
-its watches by the worker's tick, so an abandoned list cannot keep its share
-of the cap or be re-run on every delta forever.
+(90) — every token-bearing request counts as opening it: the page, the Atom
+feed, add, remove, re-check, context — is **warned, then deleted**. Since
+pKYC stage C the worker's tick writes one notice entry into the list's log
+at 90 days (tier `review`, about the list, not a company) and deletes the
+list with its watches and entries `OPENCHECK_WATCHLIST_DELETE_GRACE_DAYS`
+(30) later; any visit in between withdraws the notice and the entry stays as
+history. The 404 says it: *A list that nobody opens or polls for 90 days is
+warned in its feed, and deleted 30 days later.* A feed reader that polls
+keeps its list alive indefinitely, so the rule reaches only the owner who
+comes back late — which is why the notice has a grace period rather than a
+single longer window. Before stage C the deletion was silent at 90 days; the
+rule still stops an abandoned list keeping its share of the cap or being
+re-run on every delta forever.
 
 ## The worker
 
@@ -670,6 +680,44 @@ encrypted (Phase 260). A saved report id is itself a read capability, so
 pinning one to a watch lets anyone with the list token open the report —
 the same reader in practice. No names are stored: the expected parent is an
 LEI and its name is read from the mirror each time.
+
+## Periodic review: when OpenCheck last looked
+
+Moody's recasts periodic review as *confirmation that monitoring caught
+what it should*. The watchlist never polls, so "nothing happened" to a
+watched company can mean two things: nothing changed, or no delta named it.
+Since pKYC stage C every watch carries a **review line**, computed on read
+by `opencheck/watchlist_review.py` from what the store already holds and
+never stored:
+
+- **The clock is the last full re-run** (`last_checked_at`) — the moment
+  every source was asked. A delta naming the company moves it; a GLEIF fact
+  upgrade does not.
+- **How fresh that run was**: the snapshot's `checked[]` carries each
+  source's liveness and `retrieved_at`, so a source that answered from a
+  cache or a bulk index older than the run is named with the copy's date
+  ("2 of 9 sources answered from an older copy (UK Companies House 3 Jun
+  2026 …)"), and the run's `degraded_sources` are named as not reached.
+- **Due a review** when the run is `OPENCHECK_WATCHLIST_REVIEW_DAYS` (90)
+  old — one instance-wide threshold, never tied to what the list has found
+  (a review period that depends on findings is risk-rating drift by another
+  name). A watch never re-run since it was added says so: "Baseline taken
+  112 days ago and never re-run — no delta has named this company since."
+- **The line never says the company is unchanged.** It says when OpenCheck
+  last looked and how much of that look was fresh, and ends with the one
+  action on offer — *Re-check by hand* — which is `/recheck`, as before. No
+  automatic re-run: that would be a schedule, the one thing the watchlist is
+  built not to be.
+
+Where it shows: `review` on every watch in `/watch/{token}` and a
+list-level `review` block ("3 of 12 companies have not been fully re-run in
+90 days"); on `/watchlist` the sentence under each watch, a `warn`-tone
+"Review due" chip and the list-level line; in the Atom feed the count in the
+`<subtitle>` only — due-ness is a state, not a change, so no entry is written
+per watch; on `/watchstats` `watches_review_due`, `lists_expiring` and
+`lists_deleted_total`, counts only. The words are `REVIEW_WORDS`, mirrored in
+`lib/watchlist.ts` and pinned by `test_watchlist_review.py`. "Mark reviewed"
+is stage D's disposition, not this.
 
 ## Demo framing
 

@@ -863,10 +863,19 @@ def test_a_list_unopened_past_the_window_is_deleted(client: TestClient, env: Pat
             "UPDATE lists SET last_seen_at = '2026-01-01T00:00:00Z' WHERE token_hash = ?",
             (wl.token_hash(token),),
         )
-    assert store.prune_stale_lists(older_than_days=90) == 1
-    assert store.prune_stale_lists(older_than_days=0) == 0
+    # pKYC stage C: a notice first, deletion only after the grace.
+    assert store.expire_stale_lists(stale_days=90, grace_days=30) == {"noticed": 1, "deleted": 0}
+    assert store.expire_stale_lists(stale_days=0, grace_days=30) == {"noticed": 0, "deleted": 0}
+    assert client.get(f"/watch/{token}").status_code == 200  # still there, and the visit withdraws the notice
+    with store._conn() as conn:
+        conn.execute(
+            "UPDATE lists SET last_seen_at = '2026-01-01T00:00:00Z', expiry_notice_at = '2026-04-01T00:00:00Z' "
+            "WHERE token_hash = ?",
+            (wl.token_hash(token),),
+        )
+    assert store.expire_stale_lists(stale_days=90, grace_days=30) == {"noticed": 0, "deleted": 1}
     r = client.get(f"/watch/{token}")
-    assert r.status_code == 404 and "90 days" in r.json()["detail"]
+    assert r.status_code == 404 and "90 days" in r.json()["detail"] and "30 days later" in r.json()["detail"]
     assert client.get(f"/watch/{keep}").status_code == 200
     assert store.watched_leis() == {PARENT}
 
@@ -1461,7 +1470,7 @@ def test_a_version_1_file_gains_the_columns_and_keeps_its_rows(tmp_path: Path) -
     conn.commit()
     conn.close()
     store = wl.WatchlistStore(path, wl.Caps(10, 10))
-    assert store.schema_version == 4
+    assert store.schema_version == 5
     assert store.watches("h")[0]["gleif_history"] is None
     assert store.watches("h")[0]["context"]["rationale"] is None  # pKYC stage B: a pre-B row says nothing
     old = store.entries("h", limit=1)[0]

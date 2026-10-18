@@ -238,7 +238,7 @@ def test_add_entry_stores_the_tier_and_the_table_version(tmp_path: Path) -> None
     store = wl.WatchlistStore(tmp_path / "w.sqlite", wl.Caps(10, 10))
     th = "h" * 64
     with sqlite3.connect(store.path) as conn:
-        conn.execute("INSERT INTO lists VALUES (?, '2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z')", (th,))
+        conn.execute("INSERT INTO lists (token_hash, created_at, last_seen_at) VALUES (?, '2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z')", (th,))
     lei = "5493001KJTIIGC8Y1R12"
     store.add_entry(
         th, lei, tier="gleif", trigger={}, changes=[{"kind": "coverage_changed"}, {"kind": "jurisdiction"}],
@@ -258,7 +258,7 @@ def test_a_stored_grade_is_kept_even_if_the_table_would_now_say_otherwise(tmp_pa
     store = wl.WatchlistStore(tmp_path / "w.sqlite", wl.Caps(10, 10))
     th = "h" * 64
     with sqlite3.connect(store.path) as conn:
-        conn.execute("INSERT INTO lists VALUES (?, '2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z')", (th,))
+        conn.execute("INSERT INTO lists (token_hash, created_at, last_seen_at) VALUES (?, '2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z')", (th,))
     store.add_entry(th, "5493001KJTIIGC8Y1R12", tier="gleif", trigger={}, changes=[{"kind": "legal_name"}],
                     checked=[], degraded=[], legal_name="X")
     monkeypatch.setitem(m.KIND_TIER, "legal_name", "escalate")

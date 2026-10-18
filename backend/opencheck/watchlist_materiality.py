@@ -360,6 +360,10 @@ def tier_for_entry(changes: list[dict[str, Any]], *, tier: str | None = None, tr
     tiers = [tier_for_change(c) for c in changes if isinstance(c, dict)]
     if tier == "register":
         tiers.append(register_trigger_tier(trigger))
+    if tier == "review":
+        # pKYC stage C: a note about the list (the expiry notice), never about
+        # a company — note whatever else it carries.
+        return NOTE
     return max(tiers, key=_RANK.__getitem__, default=NOTE)
 
 

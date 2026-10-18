@@ -117,6 +117,58 @@ export interface Watch {
   gleif_history?: GleifLog | null;
   /** pKYC stage B: what the watcher expected. Absent on an older server. */
   context?: WatchContext;
+  /** pKYC stage C: when OpenCheck last fully looked, and how fresh that was. */
+  review?: WatchReview;
+}
+
+// ---------------------------------------------------------------------------
+// pKYC stage C — when OpenCheck last looked
+// ---------------------------------------------------------------------------
+
+/** Computed by the backend on read (`opencheck/watchlist_review.py`), never
+ *  stored. The page renders the sentence it carries. */
+export interface WatchReview {
+  last_run_at: string | null;
+  last_run_days: number | null;
+  never_rerun: boolean;
+  due: boolean;
+  due_days: number;
+  sources_total: number;
+  sources_from_older_copy: { source_id: string; retrieved_at: string | null }[];
+  sources_not_reached: string[];
+  sentence: string;
+}
+
+/** The list-level review block on the payload. */
+export interface ListReview {
+  due: number;
+  total: number;
+  due_days: number;
+  sentence: string | null;
+}
+
+/** A copy of the backend's `REVIEW_WORDS`, pinned by
+ *  `tests/test_watchlist_review.py`. The sentences themselves come from the
+ *  backend; the page uses `due_chip` and reads the rest for parity. */
+export const REVIEW_WORDS = {
+  last_run: "Last fully re-run {n} days ago",
+  last_run_today: "Last fully re-run today",
+  never_rerun: "Baseline taken {n} days ago and never re-run — no delta has named this company since",
+  all_live: "every source answered live",
+  older_copy: "{n} of {total} sources answered from an older copy ({names})",
+  not_reached: "{names} not reached",
+  action_refresh: "Re-check by hand to refresh.",
+  action_confirm: "Re-check by hand to confirm.",
+  due_chip: "Review due",
+  list_due: "{n} of {total} companies have not been fully re-run in {days} days.",
+};
+
+/** The chip beside a due watch: `warn` — look again — never `risk`; a
+ *  review falling due is not a finding against the company. `null` when the
+ *  watch is not due or the server is older. */
+export function reviewChip(review: WatchReview | undefined): { label: string; tone: "warn" } | null {
+  if (!review?.due) return null;
+  return { label: REVIEW_WORDS.due_chip, tone: "warn" };
 }
 
 // ---------------------------------------------------------------------------
@@ -232,7 +284,7 @@ export function reportIdFromInput(value: string): string | null {
 /** Phase 260: ``catch_up`` = every watched company re-run because
  * OpenSanctions versions could not be read (aged out of its version list,
  * or a listed delta file gone). */
-export type Tier = "gleif" | "opensanctions" | "manual" | "catch_up" | "register";
+export type Tier = "gleif" | "opensanctions" | "manual" | "catch_up" | "register" | "review";
 
 /** pKYC stage A — does the change matter? Graded by the backend
  *  (`opencheck/watchlist_materiality.py`) once, at write time, and carried on
@@ -345,7 +397,12 @@ export interface WatchEntry {
     topics?: string[];
     matched_on?: "lei" | "name";
     score?: number;
-    reason?: "aged_out" | "delta_missing" | "register_gap";
+    reason?: "aged_out" | "delta_missing" | "register_gap" | "list_expiring";
+    /** The review tier (stage C): the expiry notice's dates and numbers. */
+    notice_at?: string;
+    delete_after?: string;
+    stale_days?: number;
+    grace_days?: number;
     after?: string | null;
     before?: string | null;
     /** The register tier: which register, the company's code there, the
@@ -399,6 +456,8 @@ export interface WatchlistTiers {
 
 export interface WatchlistPayload {
   watches: Watch[];
+  /** pKYC stage C. Absent on an older server. */
+  review?: ListReview;
   entries: WatchEntry[];
   caps: { per_list: number; total: number; in_list: number; total_watched: number };
   feed_url: string;
@@ -761,6 +820,11 @@ export function triggerSentence(e: WatchEntry): string {
       t.code ? ` (registry code ${t.code})` : ""
     }.`;
   }
+  if (e.tier === "review") {
+    return `Nobody has opened or polled this watchlist for ${t.stale_days ?? "a number of"} days. It will be deleted, with its watches and this log, after ${
+      (t.delete_after ?? "").slice(0, 10) || "the grace period"
+    } unless it is opened or its feed is read before then. Opening it keeps it.`;
+  }
   if (e.tier === "catch_up") {
     if (t.reason === "register_gap") {
       return `The Estonian e-Business Register's changes between ${t.after ?? "?"} and ${t.before ?? "?"} could not be read, so every watched Estonian company was re-checked.`;
@@ -778,11 +842,13 @@ export function tierChip(tier: Tier): { label: string; tone: "risk" | "accent" |
   if (tier === "opensanctions") return { label: "OpenSanctions delta", tone: "risk" };
   if (tier === "catch_up") return { label: "Catch-up re-check", tone: "context" };
   if (tier === "register") return { label: "Register change", tone: "accent" };
+  if (tier === "review") return { label: "Review", tone: "neutral" };
   return { label: "By hand", tone: "neutral" };
 }
 
 /** The one-line headline for an entry. */
 export function entryHeadline(e: WatchEntry): string {
+  if (e.tier === "review") return "This list: nobody has opened it for a while — it will be deleted unless opened";
   const name = e.legal_name || e.lei;
   const kinds = new Set(e.changes.map((c) => c.kind));
   if (!e.changes.length && e.tier === "register") return `${name}: Estonian register record changed`;
