@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 373** — A watch can now record what you expected of a company (jurisdiction, ultimate parent, why it is watched, the saved report you onboarded from), and the log says when a change contradicts it.
+**Latest: Phase 374** — Every watch now says when OpenCheck last fully looked at the company and how fresh that look was, with a "Review due" chip at 90 days, and a stale watchlist is warned in its log before being deleted.
 
 → [Full development history](docs/status.md)
 
