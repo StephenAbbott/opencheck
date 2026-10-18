@@ -307,7 +307,7 @@ class _Adapter:
     def __init__(self, data: dict[str, Any] | None) -> None:
         self.data, self.calls = data, 0
 
-    async def fetch_timeline_data(self, code: str) -> dict[str, Any] | None:
+    async def fetch_timeline_data(self, code: str, **_kw: Any) -> dict[str, Any] | None:
         self.calls += 1
         return self.data
 
@@ -352,7 +352,7 @@ def test_a_read_is_cached_for_the_day_stripped(index, live) -> None:
     first, found = _read(adapter)
     second, _ = _read(adapter)
     assert first["read"] and second == first and adapter.calls == 1 and found == []
-    (path,) = list(Path(os.environ["OPENCHECK_DATA_ROOT"]).glob("**/history-v1/*.json"))
+    (path,) = list(Path(os.environ["OPENCHECK_DATA_ROOT"]).glob("**/history-v2/*.json"))
     text = path.read_text()
     assert KALEV_CODE not in text and VANA_CODE not in text, "only the stripped history reaches the disk"
 

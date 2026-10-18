@@ -474,6 +474,105 @@ async def person_appointments(
     return await _person_appointments_impl(officer_id)
 
 
+class LegalPersonRelation(BaseModel):
+    """One role a legal person held in one company."""
+
+    role: str
+    role_code: str | None = None
+    since: str | None = None
+    until: str | None = None
+    ended: bool = False
+    founder: bool = False
+    share_percent: str | None = None
+    share_size: str | None = None
+    share_currency: str | None = None
+
+
+class LegalPersonCompany(BaseModel):
+    name: str
+    code: str | None = None
+    status_code: str | None = None
+    status: str | None = None
+    legal_form: str | None = None
+    #: A live company in which the legal person holds a role today.
+    current: bool = False
+    relations: list[LegalPersonRelation]
+
+
+class LegalPersonRelationsResponse(BaseModel):
+    """Every company a legal person has held a role in on the Estonian
+    e-Business Register — current, former and deleted (the
+    legal-person-relations ticket). Listed, never drawn."""
+
+    code: str
+    country: str
+    #: ``ok``; ``not_configured`` (no REST key on this server); ``unavailable``
+    #: (RIK refused or did not answer — ``detail`` says why, ``reason`` in the
+    #: degradation vocabulary). Never "no companies" when it was not read.
+    status: str
+    reason: str | None = None
+    detail: str | None = None
+    total: int = 0
+    truncated: bool = False
+    companies: list[LegalPersonCompany] = []
+    retrieved_at: str | None = None
+    attribution: str
+    caveat: str
+
+
+_EE_RELATIONS_CAVEAT = (
+    "Every company the Estonian e-Business Register records this legal person "
+    "in — as shareholder, founder, partner, pledgee or document holder — "
+    "current and ended, deleted companies included, read from the register's "
+    "REST service on the day shown. A role is the register's own record; it is "
+    "not a beneficial-ownership finding."
+)
+
+
+async def ee_legal_person_relations(code: str, country: str | None = "EST") -> LegalPersonRelationsResponse:
+    """The relations for one legal person, worded for the page and the MCP
+    tool. A bad code is a 400; anything RIK did not answer is said."""
+    from ..sources import ariregister_relations as rel
+    from ..sources import ariregister_rest as rik
+
+    adapter = REGISTRY["ariregister"]
+    try:
+        code, country = rel.normalise(code, country)
+    except rel.BadCode as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    base: dict[str, Any] = {"code": code, "country": country,
+                            "attribution": adapter.info.attribution,
+                            "caveat": _EE_RELATIONS_CAVEAT}
+    try:
+        data = await rel.legal_person_relations(code, country)
+    except rik.RikNotConfigured:
+        return LegalPersonRelationsResponse(
+            **base, status="not_configured", reason="not_configured",
+            detail="The e-Business Register's REST service is not configured on this server.",
+        )
+    except rik.RikUnavailable as exc:
+        return LegalPersonRelationsResponse(**base, status="unavailable", reason=exc.reason, detail=exc.detail)
+    return LegalPersonRelationsResponse(
+        **base, status="ok", total=data["total"], truncated=data["truncated"],
+        companies=[LegalPersonCompany(**c) for c in data["companies"]],
+        retrieved_at=data.get("retrieved_at"),
+    )
+
+
+@router.get("/legal-person-relations", response_model=LegalPersonRelationsResponse)
+@limiter.limit(lookup_tier)
+async def legal_person_relations(
+    request: Request,
+    response: Response,
+    code: str = Query(..., description="An Estonian registry code, or a foreign code with `country`."),
+    country: str = Query("EST", description="ISO 3166-1 alpha-3 country of the code (EST by default)."),
+) -> LegalPersonRelationsResponse:
+    """Every company a legal person has held a role in on the Estonian
+    e-Business Register, deleted companies included — on demand, from RIK's
+    REST service (one call, cached a day). Legal persons only."""
+    return await ee_legal_person_relations(code, country)
+
+
 class PositionItem(BaseModel):
     """One political position held, from the EveryPolitician record."""
 

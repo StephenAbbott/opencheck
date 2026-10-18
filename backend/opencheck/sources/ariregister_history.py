@@ -8,6 +8,15 @@ has ever carried) and ``tegelikudKasusaajad_v2`` (the beneficial-owner
 history). This module turns those two responses into the **ended**
 shareholdings and beneficial-owner entries the ownership graph draws.
 
+Since the REST-history phase the people come from RIK's REST API when
+``ARIREGISTER_REST_API_KEY`` is set: ``GET /company/{code}`` with
+``onlyValid=false`` returns the same rows under the same ``recordId``, as
+JSON (``rest_person_rows`` reads them into SOAP's field names, so the join
+and the strip below are unchanged). REST names a corporate party by its name
+today where SOAP names it as filed — the graph's history takes REST, the
+History tab keeps SOAP (Stephen, 17 Oct 2026). The beneficial-owner history
+stays on SOAP: REST's needs a named viewer and a stated reason.
+
 What it keeps and what it never lets out:
 
 * **Ended rows only.** Every current row in the history is already in the
@@ -48,13 +57,18 @@ SHAREHOLDER_ROLES = frozenset({"O", "S", "OSAN"})
 
 #: How long a successful history read is kept, per registry code.
 CACHE_MAX_AGE_DAYS = 1.0
-_CACHE_KEY = "ariregister/history-v1/{code}"
+#: v2 since the REST-history phase: the people come from REST when the key
+#: is set (same rows, same strip — the bump keeps a v1 entry from standing in).
+_CACHE_KEY = "ariregister/history-v2/{code}"
 
 #: Why the history was not read — the degradation reason vocabulary where
 #: one applies.
 NOT_READ_OFFLINE = "offline"
 NOT_READ_NO_CREDENTIALS = "no_credentials"
 NOT_READ_FAILED = "upstream_error"
+#: The contract's one-query slot was busy, or its daily allowance spent
+#: (``ariregister_rest``): nothing was sent.
+NOT_READ_LIMITED = "rate_limited"
 
 #: How an ended row's party was identified, said on the record.
 JOIN_REGISTER = "register"        # the same person's current row, by the register's own record
@@ -171,10 +185,119 @@ def history_from_responses(
     responses, joined to the index record's people and stripped of every
     personal code. ``record`` is ``entity_record(code)``."""
     detail = _parse(detail_xml)
+    card_rows = _rows(detail, "kaardile_kantud_isikud") + _rows(detail, "kaardivalised_isikud")
+    entries = [
+        {"kande_nr": e.get("kande_nr"), "kande_kpv": _day(e.get("kande_kpv")), "kandeliik": e.get("kandeliik")}
+        for e in _rows(detail, "kanded")
+    ]
+    return _history_from_rows(card_rows, bo_xml, entries, record)
+
+
+def history_from_rest(body: dict[str, Any] | None, bo_xml: str | None, record: dict[str, Any]) -> dict[str, Any]:
+    """The same history from RIK's REST ``GET /company/{code}`` with
+    ``onlyValid=false`` (the REST-history phase): ``relatedPersons`` carries
+    every row ``detailandmed_v2`` does, as JSON, under the same ``recordId``
+    (Eesti Energia AS: 163 rows, 147 ended, on both). The beneficial-owner
+    history stays on SOAP — REST's needs a named viewer."""
+    card_rows = rest_person_rows(body, keep_codes=True)
+    entries = rest_card_entries(body)
+    return _history_from_rows(card_rows, bo_xml, entries, record)
+
+
+def _six(value: Any) -> str:
+    """A REST number in SOAP's form (``91.46`` → ``91.460000``), so the two
+    paths hand the mapper the same strings."""
+    if value is None or value == "":
+        return ""
+    try:
+        return f"{float(value):.6f}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+#: REST row field → SOAP row field. ``person`` fields are read separately.
+_REST_ROW_FIELDS = (
+    ("recordId", "kirje_id"), ("startDate", "algus_kpv"), ("endDate", "lopp_kpv"),
+    ("shareCurrency", "osaluse_valuuta"), ("shareCurrencyAsText", "osaluse_valuuta_tekstina"),
+    ("shareOwnershipType", "osaluse_omandiliik"), ("shareOwnershipTypeAsText", "osaluse_omandiliik_tekstina"),
+    ("authoritySource", "kontrolli_allikas"), ("authoritySourceAsText", "kontrolli_allikas_tekstina"),
+    ("authoritySourceDate", "kontrolli_allika_kpv"),
+    ("cardNumber", "kaardi_nr"), ("cardType", "kaardi_tyyp"), ("entryNumber", "kande_nr"),
+)
+_REST_PERSON_FIELDS = (
+    ("type", "isiku_tyyp"), ("role", "isiku_roll"), ("roleAsText", "isiku_roll_tekstina"),
+    ("firstName", "eesnimi"), ("surnameLegalEntityName", "nimi_arinimi"),
+    ("identityCode", "isikukood_registrikood"), ("foreignCode", "valis_kood"),
+    ("foreignCodeCountry", "valis_kood_riik"), ("foreignCodeCountryAsText", "valis_kood_riik_tekstina"),
+)
+
+
+def rest_person_rows(body: dict[str, Any] | None, *, keep_codes: bool = False) -> list[dict[str, str]]:
+    """Every person REST's ``relatedPersons`` names — on the card, the
+    shareholders, off the card — as text dicts in SOAP's vocabulary, so the
+    join and the strip below are the SOAP path's, unchanged. With
+    ``keep_codes`` (this module's join only) the personal code rides along
+    under ``isikukood_registrikood`` and ``_history_from_rows`` strips it;
+    without it (the Time Machine, which reads names and dates) a natural
+    person's codes are never copied."""
+    related = (body or {}).get("relatedPersons") or {}
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for key in ("personsOnCard", "shareholders", "nonCardRelatedPersons"):
+        for row in related.get(key) or []:
+            if not isinstance(row, dict):
+                continue
+            person = row.get("person") or {}
+            item: dict[str, str] = {}
+            for src, dst in _REST_ROW_FIELDS:
+                value = row.get(src)
+                if value not in (None, ""):
+                    item[dst] = str(value)
+            natural = (person.get("type") or "F") != "J"
+            for src, dst in _REST_PERSON_FIELDS:
+                value = person.get(src)
+                if value in (None, ""):
+                    continue
+                if natural and not keep_codes and src in ("identityCode", "foreignCode"):
+                    continue
+                item[dst] = str(value).strip()
+            for src, dst in (("sharePercentage", "osaluse_protsent"), ("shareSize", "osaluse_suurus")):
+                if row.get(src) not in (None, ""):
+                    item[dst] = _six(row.get(src))
+            raw_address = row.get("address")
+            address: dict[str, Any] = raw_address if isinstance(raw_address, dict) else {}
+            if address.get("country"):
+                item["aadress_riik"] = str(address["country"])
+            if address.get("countryAsText"):
+                item["aadress_riik_tekstina"] = str(address["countryAsText"])
+            rid = item.get("kirje_id") or ""
+            if rid and rid in seen:
+                continue
+            seen.add(rid)
+            out.append(item)
+    return out
+
+
+def rest_card_entries(body: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """The registry-card log from REST's ``registryCards`` in the SOAP
+    ``kanded`` shape."""
+    out = []
+    for card in (body or {}).get("registryCards") or []:
+        for e in (card or {}).get("entries") or []:
+            out.append({
+                "kande_nr": str(e.get("number")) if e.get("number") is not None else None,
+                "kande_kpv": _day(e.get("date")),
+                "kandeliik": str(e.get("type")) if e.get("type") is not None else None,
+            })
+    return out
+
+
+def _history_from_rows(
+    card_rows: list[dict[str, str]], bo_xml: str | None,
+    entries: list[dict[str, Any]], record: dict[str, Any],
+) -> dict[str, Any]:
     bo_root = _parse(bo_xml)
     by_kirje, by_name_birth = _index_people(record)
-
-    card_rows = _rows(detail, "kaardile_kantud_isikud") + _rows(detail, "kaardivalised_isikud")
     bo_rows = _rows(bo_root, "kasusaajad", "kasusaaja")
 
     # A party's code → the hash of its current row, from every current row
@@ -237,10 +360,6 @@ def history_from_responses(
         out["lahknevusteade_esitatud"] = row.get("lahknevusteade_esitatud") == "true"
         owners.append(out)
 
-    entries = [
-        {"kande_nr": e.get("kande_nr"), "kande_kpv": _day(e.get("kande_kpv")), "kandeliik": e.get("kandeliik")}
-        for e in _rows(detail, "kanded")
-    ]
     return {
         "read": True,
         "reason": None,
@@ -263,6 +382,7 @@ def not_read(reason: str) -> dict[str, Any]:
 _NOT_READ_DETAIL = {
     NOT_READ_NO_CREDENTIALS: "no open-data API credentials are configured",
     NOT_READ_FAILED: "the register's history service did not answer",
+    NOT_READ_LIMITED: "the register's query allowance was not available",
 }
 
 
@@ -283,39 +403,55 @@ async def read_history(adapter: Any, registry_code: str, record: dict[str, Any])
     if hit is not None and isinstance(hit[0], dict) and hit[0].get("read"):
         return hit[0]
 
-    if not (settings.ariregister_username and settings.ariregister_password):
+    from . import ariregister_rest as rik
+
+    unavailable: dict[str, str] = {}
+    soap = bool(settings.ariregister_username and settings.ariregister_password)
+    if not (soap or rik.rest_configured()):
         reason = NOT_READ_NO_CREDENTIALS
         data = None
     else:
         reason = NOT_READ_FAILED
         try:
-            data = await adapter.fetch_timeline_data(registry_code)
+            data = await adapter.fetch_timeline_data(registry_code, card_source="rest")
         except Exception as exc:  # noqa: BLE001 — a history failure never fails the lookup
             logger.warning("ariregister: history read failed for %s: %s", registry_code, type(exc).__name__)
             data = None
-    if not data or not data.get("detail_xml"):
+        if data:
+            unavailable = dict(data.get("unavailable") or {})
+    if not data or not (data.get("detail_xml") or data.get("detail_rest")):
+        cause = unavailable.get("detail")
+        if cause in _LIMITED_CAUSES:
+            reason = NOT_READ_LIMITED
         degradation.record(
             "ariregister",
             "The registry-card history was not read "
-            f"({_NOT_READ_DETAIL[reason]}); former shareholders and former "
+            f"({_why(reason, cause)}); former shareholders and former "
             "beneficial owners are not shown.",
-            reason=(
-                degradation.REASON_NOT_CONFIGURED if reason == NOT_READ_NO_CREDENTIALS
-                else degradation.REASON_UPSTREAM_ERROR
-            ),
+            reason=_REASON[reason] if cause is None else _rest_reason(cause),
             check=degradation.CHECK_SOURCE_READ,
         )
         return not_read(reason)
-    history = history_from_responses(data.get("detail_xml"), data.get("bo_xml"), record)
+    if data.get("detail_rest"):
+        history = history_from_rest(data.get("detail_rest"), data.get("bo_xml"), record)
+    else:
+        history = history_from_responses(data.get("detail_xml"), data.get("bo_xml"), record)
     if not data.get("bo_xml"):
         # The card history answered and the BO history did not: the ended
-        # holdings are shown, the former beneficial owners are not.
+        # holdings are shown, the former beneficial owners are not. With the
+        # REST key and no SOAP credentials the BO history is never asked
+        # for (REST's needs a named viewer) — said as not configured.
         history["bo_read"] = False
+        cause = unavailable.get("bo")
+        if cause == BO_NOT_CONFIGURED:
+            why, reason = _NOT_READ_DETAIL[NOT_READ_NO_CREDENTIALS], degradation.REASON_NOT_CONFIGURED
+        else:
+            why = _why(NOT_READ_FAILED, cause)
+            reason = _rest_reason(cause) if cause else degradation.REASON_UPSTREAM_ERROR
         degradation.record(
             "ariregister",
-            "The beneficial-owner history was not read (the register's history "
-            "service did not answer); former beneficial owners are not shown.",
-            reason=degradation.REASON_UPSTREAM_ERROR,
+            f"The beneficial-owner history was not read ({why}); former beneficial owners are not shown.",
+            reason=reason,
             check=degradation.CHECK_SOURCE_READ,
         )
     else:
@@ -323,8 +459,39 @@ async def read_history(adapter: Any, registry_code: str, record: dict[str, Any])
     return history
 
 
+#: ``fetch_timeline_data``'s BO cause when only the REST key is set: the
+#: SOAP credentials the BO history needs are not configured.
+BO_NOT_CONFIGURED = "not_configured"
+
+#: The ``ariregister_rest`` causes for which nothing was sent.
+_LIMITED_CAUSES = frozenset({"busy", "budget"})
+
+_REASON = {
+    NOT_READ_NO_CREDENTIALS: degradation.REASON_NOT_CONFIGURED,
+    NOT_READ_FAILED: degradation.REASON_UPSTREAM_ERROR,
+    NOT_READ_LIMITED: degradation.REASON_RATE_LIMITED,
+}
+
+
+def _why(reason: str, cause: str | None) -> str:
+    """The bracketed clause: the shared client's fixed sentence when it
+    said why, else the history module's own."""
+    if cause:
+        from . import ariregister_rest as rik
+
+        return rik.DETAILS.get(cause, _NOT_READ_DETAIL[NOT_READ_FAILED])
+    return _NOT_READ_DETAIL[reason]
+
+
+def _rest_reason(cause: str) -> str:
+    from . import ariregister_rest as rik
+
+    return rik.RikUnavailable(cause).reason if cause in rik.DETAILS else degradation.REASON_UPSTREAM_ERROR
+
+
 __all__ = [
     "CACHE_MAX_AGE_DAYS", "JOIN_FORMER", "JOIN_NAME_BIRTH", "JOIN_REGISTER", "JOIN_ROW",
-    "NOT_READ_FAILED", "NOT_READ_NO_CREDENTIALS", "NOT_READ_OFFLINE", "SHAREHOLDER_ROLES",
-    "history_from_responses", "not_read", "read_history",
+    "NOT_READ_FAILED", "NOT_READ_LIMITED", "NOT_READ_NO_CREDENTIALS", "NOT_READ_OFFLINE", "SHAREHOLDER_ROLES",
+    "BO_NOT_CONFIGURED", "history_from_responses", "history_from_rest", "not_read", "read_history",
+    "rest_card_entries", "rest_person_rows",
 ]
