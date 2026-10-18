@@ -511,7 +511,7 @@ async def get_json(
 
     ``path`` is relative to ``https://ar-rest.rik.ee`` (``/company/10421629``).
     Raises :class:`RikNotConfigured`, :class:`RikNotFound` or
-    :class:`RikUnavailable`. The body may carry personal codes — see the
+    :class:`RikUnavailable`; ``None`` for a 204 (a search with no result). The body may carry personal codes — see the
     module docstring.
     """
     global _token
@@ -540,6 +540,11 @@ async def get_json(
                     headers={**REST_HEADERS, "Authorization": f"Bearer {token}"}, params=params,
                 )
 
+    if response.status_code == 204:
+        # "No Content": a search that found nothing (``companyRelations`` for
+        # a code with no relations). An answer, not a failure.
+        record_outcome(service, "answered")
+        return None
     if _is_not_found(response):
         record_outcome(service, "not_found")
         raise RikNotFound("the e-Business Register holds no company with this registry code")

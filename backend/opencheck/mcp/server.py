@@ -530,7 +530,7 @@ async def opencheck_person_check(
 
 
 @mcp.tool()
-async def opencheck_person_positions(scheme: str, id: str) -> dict[str, Any]:
+async def opencheck_person_positions(scheme: str, id: str, country: str | None = None) -> dict[str, Any]:
     """List one person's positions across companies, keyed by a register's
     own person key — never by name.
 
@@ -551,9 +551,23 @@ async def opencheck_person_positions(scheme: str, id: str) -> dict[str, Any]:
     Estonian files hold current rows only, so ended roles and deleted
     companies are not listed.
 
+    For a **legal person** (a company) on the Estonian register, two more
+    keys list every company it has held a role in — shareholder, founder,
+    partner, pledgee — current and ended, **deleted companies included**,
+    read from the register's REST service (one call, cached a day):
+      - ``EE-ARIREGISTER``: an Estonian registry code (8 digits).
+      - ``EE-ARIREGISTER-FOREIGN``: a foreign company's code as the Estonian
+        register records it, with ``country`` (ISO alpha-3, e.g. ``LVA``).
+    The answer has ``status`` (``ok`` / ``not_configured`` / ``unavailable``
+    — an unread list is never "no companies") and ``companies[]`` with
+    ``relations[]``. A role is the register's record, not a
+    beneficial-ownership finding.
+
     Args:
-        scheme: ``EE-ARIREGISTER-HASH`` or ``GB-COH-OFFICER``.
+        scheme: ``EE-ARIREGISTER-HASH``, ``GB-COH-OFFICER``,
+            ``EE-ARIREGISTER`` or ``EE-ARIREGISTER-FOREIGN``.
         id: The key.
+        country: With ``EE-ARIREGISTER-FOREIGN``: the code's ISO alpha-3 country.
     """
     from fastapi import HTTPException
 
@@ -564,6 +578,22 @@ async def opencheck_person_positions(scheme: str, id: str) -> dict[str, Any]:
     )
 
     scheme = (scheme or "").strip().upper()
+    if scheme in ("EE-ARIREGISTER", "EE-ARIREGISTER-FOREIGN"):
+        from ..routers.person_check import ee_legal_person_relations
+
+        if scheme == "EE-ARIREGISTER-FOREIGN" and not (country or "").strip():
+            return {"error": "EE-ARIREGISTER-FOREIGN needs country (ISO alpha-3, e.g. LVA)"}
+        try:
+            rel = await ee_legal_person_relations(
+                id, "EST" if scheme == "EE-ARIREGISTER" else country,
+            )
+        except HTTPException as exc:
+            return {"error": str(exc.detail)}
+        result = rel.model_dump(exclude_none=True)
+        if len(result.get("companies") or []) > MCP_RELATIONS_SHOWN:
+            result["companies"] = result["companies"][:MCP_RELATIONS_SHOWN]
+            result["truncated"] = True
+        return result
     try:
         if scheme == EE_PERSON_SCHEME:
             resp = _ee_person_appointments(id)
@@ -572,7 +602,10 @@ async def opencheck_person_positions(scheme: str, id: str) -> dict[str, Any]:
                 return {"error": "a Companies House officer id is at least 8 characters"}
             resp = await _person_appointments_impl(id.strip())
         else:
-            return {"error": f"scheme must be {EE_PERSON_SCHEME} or GB-COH-OFFICER"}
+            return {
+                "error": f"scheme must be {EE_PERSON_SCHEME}, GB-COH-OFFICER, "
+                "EE-ARIREGISTER or EE-ARIREGISTER-FOREIGN",
+            }
     except HTTPException as exc:
         return {"error": str(exc.detail)}
     out = resp.model_dump(exclude={"bods"}, exclude_none=True)
@@ -586,6 +619,8 @@ async def opencheck_person_positions(scheme: str, id: str) -> dict[str, Any]:
 #: Positions one opencheck_person_positions answer carries; ``total_results``
 #: still counts all of them.
 MCP_POSITIONS_SHOWN = 100
+#: Companies one legal-person answer carries; ``total`` still counts all.
+MCP_RELATIONS_SHOWN = 100
 
 
 @mcp.tool()
