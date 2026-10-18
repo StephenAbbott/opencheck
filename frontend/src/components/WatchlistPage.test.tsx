@@ -333,4 +333,117 @@ describe("WatchlistPage", () => {
     expect(screen.queryByTestId("review-due-chip")).toBeNull();
     expect(screen.queryByTestId("review-due-line")).toBeNull();
   });
+
+  // ---- pKYC stage D: the review record ---------------------------------------
+
+  const DECIDED = {
+    id: 7, entry_id: 3, lei: "213800LH1BZH3DI6G760", status: "escalated" as const, note: "Sent to compliance.",
+    saved_report_id: "RepRepRepRepRepRepRepR", evidence_kind: "entry_run" as const, decided_at: "2026-10-18T12:00:00+00:00",
+    report: { report_id: "RepRepRepRepRepRepRepR", report_path: "/report/RepRepRepRepRepRepRepR", available: true, content_hash: "ab" },
+  };
+
+  function withDecisions(): WatchlistPayload {
+    const [e1, e2, e3] = PAYLOAD.entries;
+    return {
+      ...PAYLOAD,
+      watches: [{ ...PAYLOAD.watches[0], review_history: [{ entry_id: 3, status: "escalated", decided_at: DECIDED.decided_at, saved_report_id: DECIDED.saved_report_id, evidence_kind: "entry_run" }] }],
+      entries: [
+        { ...e1, run_held: false, decision: null, decision_count: 0, decision_history: [] },
+        { ...e2, materiality: "recheck", run_held: true, decision: null, decision_count: 0, decision_history: [] },
+        { ...e3, run_held: false, decision: DECIDED, decision_count: 1, decision_history: [DECIDED] },
+      ],
+      decisions: { undecided_material: 1, total: 1, evidence_available: true },
+    };
+  }
+
+  it("shows the decision on a decided entry, the three buttons on an undecided one, the Needs review filter and the record link", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    mockFetch(withDecisions());
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(<WatchlistPage />);
+    expect(await screen.findByTestId("undecided-line")).toHaveTextContent("1 material entry has no decision recorded.");
+    expect(screen.getByTestId("record-link")).toHaveAttribute("href", expect.stringMatching(/\/watch\/tok\/record\.md$/));
+    expect(screen.getByTestId("review-history-line")).toHaveTextContent("1 decision recorded; latest escalated on 2026-10-18.");
+    const log = screen.getByRole("list", { name: "Change log, newest first" });
+    const [newest, middle] = Array.from(log.children) as HTMLElement[];
+    expect(within(newest).getByTestId("decision-chip")).toHaveTextContent("Escalated");
+    expect(within(newest).getByTestId("decision-sentence")).toHaveTextContent(
+      "Decision: escalated — 2026-10-18; note: Sent to compliance.; evidence: saved report RepRepRepRepRepRepRepR",
+    );
+    expect(within(newest).getByRole("link", { name: "Open the saved report" })).toHaveAttribute("href", "/report/RepRepRepRepRepRepRepR");
+    expect(within(newest).getByRole("button", { name: "Change decision" })).toBeEnabled();
+    const buttons = within(within(middle).getByRole("group", { name: "Record a decision" })).getAllByRole("button");
+    expect(buttons.map((b) => b.textContent)).toEqual(["Reviewed, no action", "Re-checked", "Escalated"]);
+
+    const group = screen.getByRole("group", { name: "Show" });
+    await user.click(within(group).getByRole("button", { name: "Needs review" }));
+    const filtered = screen.getByRole("list", { name: "Change log, newest first" });
+    expect(within(filtered).getAllByRole("listitem").filter((li) => li.parentElement === filtered)).toHaveLength(1);
+    expect(screen.getByTestId("log-hidden")).toHaveTextContent("2 entries are hidden: note-only, or already decided on.");
+    expect(window.location.search).toBe("?show=needs_review");
+  });
+
+  it("records a decision with a POST, words the evidence option by whether the run is held, and offers a re-check when the run was lost", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    const calls: { url: string; method: string; body: unknown }[] = [];
+    let lost = true;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const body = init?.body ? JSON.parse(String(init.body)) : null;
+        calls.push({ url: String(url), method: init?.method ?? "GET", body });
+        if (init?.method === "POST" && body?.evidence === "entry_run" && lost) {
+          return {
+            ok: false, status: 409, headers: new Headers({ "X-OpenCheck-Refusal": "run_not_held" }),
+            json: async () => ({ detail: "That re-run is no longer held (a finished run is held for 15 minutes); re-check and keep instead." }),
+          } as Response;
+        }
+        return { ok: true, status: 200, headers: new Headers(), json: async () => ({ ...withDecisions(), decision: DECIDED }) } as Response;
+      }),
+    );
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(<WatchlistPage />);
+    const log = await screen.findByRole("list", { name: "Change log, newest first" });
+    const middle = log.children[1] as HTMLElement;
+    await user.click(within(middle).getByRole("button", { name: "Reviewed, no action" }));
+    const form = within(middle).getByRole("form", { name: "Decision on this entry" });
+    expect(form).toHaveTextContent("Looked at; nothing to do.");
+    expect(within(form).getByTestId("evidence-option")).toHaveTextContent("keep this re-run as the evidence");
+    await user.type(within(form).getByLabelText(/Note/), "Nothing to do.");
+    await user.click(within(form).getByRole("checkbox"));
+    await user.click(within(form).getByRole("button", { name: "Record decision" }));
+    expect(await within(form).findByRole("alert")).toHaveTextContent("no longer held");
+    // The option now offers a fresh re-check, and the request goes to the heavy-tier route.
+    expect(within(form).getByTestId("evidence-option")).toHaveTextContent("keep a fresh re-check as the evidence");
+    lost = false;
+    await user.click(within(form).getByRole("button", { name: "Record decision" }));
+    await waitFor(() => expect(calls.filter((c) => c.method === "POST")).toHaveLength(2));
+    const [first, second] = calls.filter((c) => c.method === "POST");
+    expect(first.url).toMatch(/\/watch\/tok\/entries\/2\/decisions$/);
+    expect(first.body).toEqual({ status: "reviewed_no_action", note: "Nothing to do.", evidence: "entry_run" });
+    expect(second.url).toMatch(/\/watch\/tok\/entries\/2\/decisions\/recheck$/);
+    expect(second.body).toEqual({ status: "reviewed_no_action", note: "Nothing to do.", evidence: "recheck" });
+  });
+
+  it("hides the evidence option when this server cannot save reports, and the filter button on an older server", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    const payload = withDecisions();
+    mockFetch({ ...payload, decisions: { ...payload.decisions!, evidence_available: false } });
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(<WatchlistPage />);
+    const log = await screen.findByRole("list", { name: "Change log, newest first" });
+    await user.click(within(log.children[1] as HTMLElement).getByRole("button", { name: "Escalated" }));
+    expect(screen.queryByTestId("evidence-option")).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("renders no decision controls, no record link and no Needs review button on an older server", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    mockFetch(PAYLOAD);
+    render(<WatchlistPage />);
+    await screen.findByRole("list", { name: "Change log, newest first" });
+    expect(screen.queryByTestId("decision-block")).toBeNull();
+    expect(screen.queryByTestId("record-link")).toBeNull();
+    expect(within(screen.getByRole("group", { name: "Show" })).queryByRole("button", { name: "Needs review" })).toBeNull();
+  });
 });

@@ -32,6 +32,7 @@ from pydantic import BaseModel, Field
 
 from .. import watchlist as wl
 from .. import watchlist_context as context_module
+from .. import watchlist_decisions as decisions_module
 from .. import watchlist_materiality as materiality
 from .. import watchlist_review as review_module
 from ..bods import gleif_events as _gleif_events
@@ -69,6 +70,20 @@ class AddItem(BaseModel):
 
 class RecheckItem(BaseModel):
     lei: str = Field(..., min_length=20, max_length=40)
+
+
+class Decision(BaseModel):
+    """pKYC stage D: a decision on one log entry. ``evidence`` asks for a
+    saved report to be pinned — ``entry_run`` (the re-run that produced the
+    entry, while the server still holds it) or ``recheck`` (a fresh re-run
+    made now and saved); ``null`` or absent pins nothing. Validation is the
+    module's (:mod:`opencheck.watchlist_decisions`)."""
+
+    model_config = {"extra": "forbid"}
+
+    status: str = Field(..., max_length=40)
+    note: str | None = Field(default=None, max_length=2000)
+    evidence: str | None = Field(default=None, max_length=20)
 
 
 # Phase 260: every store call below runs on a worker thread. The store opens a
@@ -206,6 +221,16 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             {**w, "snapshot": snap_by_lei.get(w["lei"]) or {}}, due_days=due_days, label=_source_words
         )
     due = sum(1 for w in watches if w["review"]["due"])
+    # pKYC stage D: each entry's current decision and history, and the list's
+    # count of material entries nobody has decided on.
+    entries = _attach_decisions(store, th, store.entries(th))
+    all_decisions = store.decisions(th)
+    for w in watches:
+        w["review_history"] = [
+            {k: d[k] for k in ("entry_id", "status", "decided_at", "saved_report_id", "evidence_kind")}
+            for d in all_decisions
+            if d.get("lei") == w["lei"]
+        ]
     return {
         "watches": watches,
         "review": {
@@ -214,7 +239,12 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "due_days": due_days,
             "sentence": review_module.list_due_sentence(due, len(watches), due_days),
         },
-        "entries": store.entries(th),
+        "entries": entries,
+        "decisions": {
+            "undecided_material": sum(1 for e in entries if decisions_module.is_undecided_material(e)),
+            "total": len(all_decisions),
+            "evidence_available": _saved_reports_on(),
+        },
         "caps": {
             "per_list": store.caps.max_per_list,
             "total": store.caps.max_total,
@@ -231,6 +261,57 @@ def _source_words(source_id: str) -> str:
     from ..bods.statements import SOURCE_NAMES
 
     return SOURCE_NAMES.get(source_id, source_id)
+
+
+def _saved_reports_on() -> bool:
+    from .. import saved_reports as sr
+
+    return sr.get_store() is not None
+
+
+def _report_block(report_id: str | None, rstore: Any) -> dict[str, Any] | None:
+    """What the page says about a pinned saved report: its id and path, and
+    whether it still exists (a report expires; the decision does not)."""
+    if not report_id:
+        return None
+    block: dict[str, Any] = {
+        "report_id": report_id,
+        "report_path": f"/report/{report_id}",
+        "available": False,
+    }
+    meta = rstore.meta(report_id) if rstore is not None else None
+    if meta:
+        block.update(
+            available=True,
+            saved_at=meta.get("saved_at"),
+            expires_at=meta.get("expires_at"),
+            content_hash=meta.get("content_hash"),
+        )
+    return block
+
+
+def _with_report(decision: dict[str, Any], rstore: Any) -> dict[str, Any]:
+    return {**decision, "report": _report_block(decision.get("saved_report_id"), rstore)}
+
+
+def _attach_decisions(
+    store: wl.WatchlistStore, th: str, entries: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """pKYC stage D: put each entry's latest decision (``decision``), the
+    count and the full history on it. Runs on a thread."""
+    from .. import saved_reports as sr
+
+    rstore = sr.get_store()
+    by_entry: dict[int, list[dict[str, Any]]] = {}
+    for d in store.decisions(th):
+        by_entry.setdefault(int(d["entry_id"]), []).append(d)
+    for e in entries:
+        history = [_with_report(d, rstore) for d in by_entry.get(int(e["id"]), [])]
+        e["decision"] = history[-1] if history else None
+        e["decision_count"] = len(history)
+        e["decision_history"] = history
+        e["run_held"] = decisions_module.run_still_held(e)
+    return entries
 
 
 def _enrich_context(w: dict[str, Any]) -> None:
@@ -366,7 +447,7 @@ async def add_item(request: Request, response: Response, body: AddItem) -> dict[
 async def feed(request: Request, token: str) -> Response:
     store = await _db(_store)
     th = await _db(_list_or_404, store, token)
-    entries = await _db(store.entries, th, limit=50)
+    entries = await _db(lambda: _attach_decisions(store, th, store.entries(th, limit=50)))
     watches = await _db(store.watches, th)
     due_days = get_settings().watchlist_review_days
     review_due = sum(1 for w in watches if review_module.review_of(w, due_days=due_days)["due"])
@@ -448,6 +529,167 @@ async def recheck(request: Request, response: Response, token: str, body: Rechec
     return {"result": result, **payload}
 
 
+def _decision_422(exc: decisions_module.DecisionError) -> HTTPException:
+    return HTTPException(status_code=422, detail={"field": exc.field, "message": exc.message})
+
+
+def _save_evidence(lei: str, run_completed_at: str | None, deepen_top: int | None) -> dict[str, Any]:
+    """Save the held run as a report — the saved-reports route's own path
+    (quota checked before, spent after; every refusal is its 4xx and writes
+    nothing). Runs on a thread."""
+    from .. import saved_reports as sr
+    from .saved_reports import _refuse
+
+    rstore = sr.get_store()
+    if rstore is None:
+        raise HTTPException(
+            status_code=503, detail="Saved reports are not enabled on this instance, so no evidence can be kept."
+        )
+    if not run_completed_at:
+        raise HTTPException(
+            status_code=409,
+            detail=decisions_module.EVIDENCE_WORDS["run_not_held"],
+            headers={"X-OpenCheck-Refusal": sr.RunNotHeldError.code},
+        )
+    try:
+        sr.check_client_quota()
+        saved = sr.save_from_replay(
+            rstore,
+            lei=lei,
+            run_completed_at=run_completed_at,
+            deepen_top=int(deepen_top if deepen_top is not None else wl.RERUN_DEEPEN_TOP),
+        )
+        sr.spend_client_quota()
+    except sr.RunNotHeldError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=decisions_module.EVIDENCE_WORDS["run_not_held"],
+            headers={"X-OpenCheck-Refusal": exc.code},
+        ) from exc
+    except sr.SavedReportError as exc:
+        raise _refuse(exc) from exc
+    saved.pop("manage_token", None)
+    return saved
+
+
+async def _record_decision(
+    request: Request, token: str, entry_id: int, body: Decision
+) -> dict[str, Any]:
+    store = await _db(_store)
+    th = await _db(_list_or_404, store, token)
+    try:
+        status = decisions_module.validate_status(body.status)
+        note = decisions_module.validate_note(body.note)
+        evidence = decisions_module.validate_evidence(body.evidence)
+    except decisions_module.DecisionError as exc:
+        raise _decision_422(exc) from exc
+    entry = await _db(store.entry, th, entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="That entry is not in this watchlist's log.")
+    if entry["tier"] == wl.TIER_REVIEW and evidence:
+        raise _decision_422(
+            decisions_module.DecisionError("evidence", "A note about the list has no company to save a report of.")
+        )
+    report_id: str | None = None
+    saved: dict[str, Any] | None = None
+    if evidence == decisions_module.EVIDENCE_ENTRY_RUN:
+        saved = await _db(_save_evidence, entry["lei"], entry.get("run_completed_at"), entry.get("deepen_top"))
+    elif evidence == decisions_module.EVIDENCE_RECHECK:
+        if await _db(store.get_watch, th, entry["lei"]) is None:
+            raise HTTPException(status_code=404, detail="That company is no longer on this watchlist.")
+        result = await wl.rerun(
+            entry["lei"],
+            wl.TIER_MANUAL,
+            {"tier": wl.TIER_MANUAL, "for_decision_on": entry_id},
+            only_token_hash=th,
+        )
+        if result.get("error"):
+            raise HTTPException(
+                status_code=503, detail="The re-check could not run; no decision was recorded."
+            )
+        saved = await _db(_save_evidence, entry["lei"], result.get("run_completed_at"), result.get("deepen_top"))
+    if saved:
+        report_id = saved["report_id"]
+    decision = await _db(
+        store.add_decision,
+        th,
+        entry_id,
+        lei=entry.get("lei"),
+        status=status,
+        note=note,
+        saved_report_id=report_id,
+        evidence_kind=evidence if report_id else None,
+    )
+    payload = await _db(_list_payload, store, th, token, request)
+    from .. import saved_reports as sr
+
+    return {"decision": _with_report(decision, sr.get_store()), **payload}
+
+
+@router.post("/watch/{token}/entries/{entry_id}/decisions", status_code=201)
+@limiter.limit(default_tier)
+async def record_decision(
+    request: Request, response: Response, token: str, entry_id: int, body: Decision
+) -> dict[str, Any]:
+    """pKYC stage D: record a decision on a log entry — reviewed with no
+    action, re-checked, or escalated — with an optional note and, on request,
+    a saved report pinned as the evidence reviewed. Append-only: a later
+    decision is a new row and the history is kept. A request that asks for a
+    fresh re-check as evidence is on the heavy tier (below); this one never
+    runs a pipeline."""
+    if body.evidence == decisions_module.EVIDENCE_RECHECK:
+        # The re-check costs a pipeline run: it goes through the heavy-tier
+        # route, as /recheck does. Refused here rather than quietly run.
+        raise HTTPException(
+            status_code=400,
+            detail="A fresh re-check as evidence is recorded through …/decisions/recheck.",
+        )
+    return await _record_decision(request, token, entry_id, body)
+
+
+@router.post("/watch/{token}/entries/{entry_id}/decisions/recheck", status_code=201)
+@limiter.limit(heavy_tier)
+async def record_decision_with_recheck(
+    request: Request, response: Response, token: str, entry_id: int, body: Decision
+) -> dict[str, Any]:
+    """The same decision, with a fresh re-run of the company saved as the
+    evidence. A deliberate human action that runs a pipeline, so it is on the
+    heavy tier like ``/recheck``. The re-run writes its own entry if it finds
+    a difference; the decision is recorded on the entry asked about."""
+    if body.evidence != decisions_module.EVIDENCE_RECHECK:
+        raise HTTPException(status_code=400, detail='This route records a decision with evidence "recheck".')
+    return await _record_decision(request, token, entry_id, body)
+
+
+@router.get("/watch/{token}/record.md")
+@limiter.limit(default_tier)
+async def review_record(request: Request, token: str) -> Response:
+    """pKYC stage D: the list's review record as Markdown — every decision,
+    with the entry it answers, the note and the pinned saved report's id and
+    hash. Reads no clock and runs no pipeline."""
+    store = await _db(_store)
+    th = await _db(_list_or_404, store, token)
+
+    def _build() -> str:
+        from .. import saved_reports as sr
+
+        rstore = sr.get_store()
+        return decisions_module.record_markdown(
+            watches=store.watches(th),
+            entries=store.entries(th, limit=100000),
+            decisions=[_with_report(d, rstore) for d in store.decisions(th)],
+            headline=_entry_headline,
+            list_label=f"OpenCheck watchlist {th[:8]}",
+        )
+
+    text = await _db(_build)
+    return Response(
+        content=text,
+        media_type="text/markdown; charset=utf-8",
+        headers={"Cache-Control": "private, no-store", "X-Robots-Tag": "noindex"},
+    )
+
+
 @router.get("/watchstats")
 async def watch_stats() -> JSONResponse:
     """The watcher's aggregate state — deltas seen, watched LEIs a delta
@@ -463,6 +705,9 @@ async def watch_stats() -> JSONResponse:
         "watches_review_due": 0,
         "lists_expiring": 0,
         "lists_deleted_total": 0,
+        "decisions_by_status": dict.fromkeys(decisions_module.STATUSES, 0),
+        "decisions_with_evidence": 0,
+        "material_undecided": 0,
     }
     store = await _db(wl.get_store)
     if store is not None:
@@ -484,6 +729,10 @@ async def watch_stats() -> JSONResponse:
                 # pKYC stage C: watches due a review, lists under an expiry
                 # notice, lists the rule has deleted. Counts only.
                 **store.review_counts(due_days=get_settings().watchlist_review_days),
+                # pKYC stage D: decisions by status, how many pinned a saved
+                # report, and material entries nobody has decided on. Counts
+                # only — never a note, a report id or an LEI.
+                **store.decision_counts(),
             }
 
         counts = await _db(_counts)
@@ -849,7 +1098,7 @@ def _entry_content(entry: dict[str, Any]) -> str:
     if entry["tier"] == wl.TIER_REVIEW:
         # pKYC stage C: the expiry notice — about the list, so none of the
         # per-company lines below apply.
-        return review_module.expiry_sentence(trig)
+        return "\n".join([review_module.expiry_sentence(trig)] + _decision_lines(entry))
     tier = entry.get("materiality")
     if tier in materiality.TIERS:
         lines.append(
@@ -881,7 +1130,22 @@ def _entry_content(entry: dict[str, Any]) -> str:
             + ", ".join(sorted({d.get("source_id") for d in degraded if d.get("source_id")}))
             + " — absence of a finding there is not a clean result."
         )
+    lines += _decision_lines(entry)
     return "\n".join(lines)
+
+
+def _decision_lines(entry: dict[str, Any]) -> list[str]:
+    """pKYC stage D: the entry's current decision as the content's last line
+    — "Decision: reviewed, no action — 2026-10-18; evidence: saved report …";
+    an earlier decision is counted, never repeated."""
+    decision = entry.get("decision")
+    if not decision:
+        return []
+    line = decisions_module.decision_sentence(decision)
+    earlier = int(entry.get("decision_count") or 1) - 1
+    if earlier > 0:
+        line += f" Replaces {earlier} earlier decision{'s' if earlier != 1 else ''} on this entry."
+    return [line]
 
 
 def render_atom(
@@ -928,6 +1192,12 @@ def render_atom(
             parts.append(
                 f'    <category scheme="{context_module.ATOM_SCHEME}" '
                 f'term="{context_module.ATOM_TERM_CONTRADICTED}" label="Contradicted an expectation"/>'
+            )
+        if e.get("decision"):
+            status = e["decision"]["status"]
+            parts.append(
+                f'    <category scheme="{decisions_module.ATOM_SCHEME}" term="{escape(status, {chr(34): "&quot;"})}" '
+                f'label="{escape(decisions_module.STATUS_LABELS.get(status, status), {chr(34): "&quot;"})}"/>'
             )
         parts += [
             f'    <content type="text">{escape(_entry_content(e))}</content>',

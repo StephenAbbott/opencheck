@@ -544,4 +544,60 @@ describe("materiality (pKYC stage A)", () => {
       "Nobody has opened or polled this watchlist for 90 days. It will be deleted, with its watches and this log, after 2026-11-17 unless it is opened or its feed is read before then. Opening it keeps it.",
     );
   });
+
+  // ---- pKYC stage D: the review record ---------------------------------------
+
+  it("words a decision, picks its tone, and never calls it a finding", async () => {
+    const { decisionChip, decisionSentence, DECISION_STATUSES, DECISION_LABELS, EVIDENCE_WORDS } = await import("./watchlist");
+    expect(DECISION_STATUSES).toEqual(["reviewed_no_action", "rechecked", "escalated"]);
+    expect(decisionChip(null)).toBeNull();
+    const d = {
+      id: 1, entry_id: 4, lei: "X", status: "reviewed_no_action", note: null, saved_report_id: null,
+      evidence_kind: null, decided_at: "2026-10-18T12:00:00+00:00", report: null,
+    } as const;
+    expect(decisionChip(d)).toEqual({ label: DECISION_LABELS.reviewed_no_action, tone: "ok" });
+    expect(decisionChip({ ...d, status: "rechecked" })?.tone).toBe("context");
+    expect(decisionChip({ ...d, status: "escalated" })?.tone).toBe("warn");
+    for (const s of DECISION_STATUSES) expect(decisionChip({ ...d, status: s })?.tone).not.toBe("risk");
+    expect(decisionSentence(d)).toBe("Decision: reviewed, no action — 2026-10-18.");
+    expect(
+      decisionSentence({
+        ...d, status: "escalated", note: "Sent to compliance.", saved_report_id: "r1", evidence_kind: "entry_run",
+        report: { report_id: "r1", report_path: "/report/r1", available: false },
+      }),
+    ).toBe(
+      `Decision: escalated — 2026-10-18; note: Sent to compliance.; evidence: saved report r1 (${EVIDENCE_WORDS.entry_run}) — ${EVIDENCE_WORDS.expired}.`,
+    );
+  });
+
+  it("filters to material entries without a decision, words the evidence option by whether the run is held, and sums a watch's history", async () => {
+    const { filterEntries, hiddenByFilterSentence, isUndecidedMaterial, evidenceOption, reviewHistoryLine, undecidedSentence, filterFromLocation, FILTER_LABELS } =
+      await import("./watchlist");
+    const decided = { id: 1, status: "escalated", decided_at: "2026-10-18T12:00:00+00:00" };
+    const entries = [
+      { id: 1, materiality: "recheck", decision: null },
+      { id: 2, materiality: "escalate", decision: decided },
+      { id: 3, materiality: "note", decision: null },
+    ] as unknown as import("./watchlist").WatchEntry[];
+    expect(entries.map(isUndecidedMaterial)).toEqual([true, false, false]);
+    expect(filterEntries(entries, "needs_review").map((e) => e.id)).toEqual([1]);
+    expect(hiddenByFilterSentence(3, 1, "needs_review")).toBe("2 entries are hidden: note-only, or already decided on.");
+    expect(hiddenByFilterSentence(3, 2, "material")).toContain("note-only");
+    expect(filterFromLocation("?show=needs_review")).toBe("needs_review");
+    expect(FILTER_LABELS.needs_review).toBe("Needs review");
+    expect(evidenceOption({ run_held: true } as never).kind).toBe("entry_run");
+    expect(evidenceOption({ run_held: false } as never).kind).toBe("recheck");
+    expect(evidenceOption({} as never).kind).toBe("recheck");
+    expect(reviewHistoryLine(undefined)).toBeNull();
+    expect(reviewHistoryLine([])).toBeNull();
+    expect(
+      reviewHistoryLine([
+        { entry_id: 1, status: "reviewed_no_action", decided_at: "2026-10-01T00:00:00Z", saved_report_id: null, evidence_kind: null },
+        { entry_id: 2, status: "escalated", decided_at: "2026-10-18T12:00:00Z", saved_report_id: "r", evidence_kind: "recheck" },
+      ]),
+    ).toBe("2 decisions recorded; latest escalated on 2026-10-18.");
+    expect(undecidedSentence(0)).toBeNull();
+    expect(undecidedSentence(1)).toBe("1 material entry has no decision recorded.");
+    expect(undecidedSentence(3)).toBe("3 material entries have no decision recorded.");
+  });
 });
