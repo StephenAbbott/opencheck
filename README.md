@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 372** — Every watchlist entry now carries a materiality tier (note only, recheck the source, escalate) so a reader can see which changes matter and filter the log to them.
+**Latest: Phase 373** — A watch can now record what you expected of a company (jurisdiction, ultimate parent, why it is watched, the saved report you onboarded from), and the log says when a change contradicts it.
 
 → [Full development history](docs/status.md)
 
