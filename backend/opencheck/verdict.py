@@ -280,8 +280,36 @@ def _lead_sentence(leads: list[dict[str, Any]]) -> str | None:
 #: 4 = Phase 272 ("has N intermediate corporate layers" instead of "is N+1
 #: layers deep" — the same chain, counted without the subject), 5 = Phase
 #: 293 (a low name-only offshore-leaks person match is a lead to review, not
-#: a finding in the sentence).
-VERDICT_TEMPLATE = 5
+#: a finding in the sentence), 6 = the Estonian REST deleted-companies ticket
+#: (a register that records the company as ended opens the verdict: "Deleted
+#: on 10 January 2017, according to the Estonian e-Business Register …").
+VERDICT_TEMPLATE = 6
+
+
+def _human_day(iso: str | None) -> str | None:
+    from .findings import human_date  # local: findings imports widely
+
+    return human_date(iso) if iso else None
+
+
+def status_sentence(register_status: dict[str, Any] | None) -> str | None:
+    """The opening sentence for a company a register records as ended, or
+    ``None`` (Stephen, 17 Oct 2026: a deleted company says so in the
+    verdict). It states the register's record, never a conclusion: the
+    register's own word where it says "deleted" (Estonia), "dissolved"
+    otherwise — the status chip's word — dated where the record dates it.
+    Only ``terminal`` speaks: a liquidation under way, a declared GLEIF
+    status and a live company say nothing here (the chip carries them)."""
+    if not register_status or register_status.get("liveness") != "terminal":
+        return None
+    from .bods.statements import SOURCE_NAMES
+
+    source_id = str(register_status.get("source_id") or "")
+    source = SOURCE_NAMES.get(source_id) or "its register"
+    raw = str(register_status.get("raw") or "").strip().lower()
+    word = "Deleted" if raw.startswith("deleted") else "Dissolved"
+    day = _human_day(register_status.get("since"))
+    return f"{word}" + (f" on {day}" if day else "") + f", according to {source}."
 
 
 def build_verdict(
@@ -289,6 +317,7 @@ def build_verdict(
     degraded: list[dict[str, Any]] | None = None,
     *,
     legal_name: str | None = None,
+    register_status: dict[str, Any] | None = None,
 ) -> str | None:
     """At most two short sentences: what was found, then the company's shape.
 
@@ -311,9 +340,18 @@ def build_verdict(
     The subject is deliberately unnamed in most sentences ("the company
     itself"): the name is the ``h1`` directly above it, and repeating it
     reads as filler.
+
+    ``register_status`` is the subject profile's (``subject_profile``):
+    when a register records the company as ended, that sentence comes first
+    (``status_sentence``) — a deleted company read as "no risk signals
+    surfaced" alone would read as a live one.
     """
-    signals = signals or []
-    degraded = degraded or []
+    ended = status_sentence(register_status)
+    found = _build_verdict(signals or [], degraded or [])
+    return _join(ended, found)
+
+
+def _build_verdict(signals: list[dict[str, Any]], degraded: list[dict[str, Any]]) -> str | None:
 
     # Phase 293: low name-only offshore-leaks person matches are leads, read
     # out of the sentence and named after it only where it would otherwise

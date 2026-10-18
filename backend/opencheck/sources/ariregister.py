@@ -463,6 +463,28 @@ COVERAGE_PAGE_UNREACHABLE = (
     "the cut, or deleted, is answered by the page."
 )
 
+COVERAGE_NOT_IN_REGISTER_REST = (
+    "Not in the e-Business Register's open data as of {cut} (which holds "
+    "every company entered, in liquidation or in bankruptcy, and no deleted "
+    "company), and the register's REST service holds no company under this "
+    "code."
+)
+COVERAGE_REST_UNAVAILABLE = (
+    "Not in the e-Business Register's open data as of {cut} (which holds "
+    "every company entered, in liquidation or in bankruptcy, and no deleted "
+    "company); the register's REST service was not read — {why}. This is not "
+    "a confirmation that the register holds nothing: a deleted company, or "
+    "one newer than the cut, is answered there."
+)
+
+#: A REST answer for an index miss is kept a day, stripped (the bundle,
+#: never the response): a deleted company does not change, and the
+#: contract's allowance is shared by every user. A refusal or a failure is
+#: never kept (Phase 262), and neither is a 404 — a company entered
+#: tomorrow must be found tomorrow.
+REST_CACHE_MAX_AGE_DAYS = 1.0
+_REST_CACHE_KEY = "ariregister/rest-company-v1/{code}"
+
 _TABLE_COLUMNS: dict[str, tuple[str, ...]] = {
     "officer": (
         "kirje_id", "kaardi_tyyp", "isiku_tyyp", "isiku_roll", "eesnimi",
@@ -1440,6 +1462,16 @@ class AriregisterAdapter(SourceAdapter):
                 validate_raw(self.id, AriregisterBundle, bundle)
                 return bundle
 
+        # An index miss, with RIK's REST key configured: the register's own
+        # API answers a deleted company and one entered after the cut, with a
+        # clean 404 for neither (the REST deleted-companies ticket). The page
+        # stays the no-key fallback, and the no-index path is unchanged.
+        if index_present:
+            from . import ariregister_rest as rik
+
+            if rik.rest_configured():
+                return await self._rest_tier(registry_code, legal_name, meta)
+
         page, outcome = await self._read_page(registry_code, legal_name)
         if page is not None:
             page["tier"] = "page"
@@ -1468,6 +1500,81 @@ class AriregisterAdapter(SourceAdapter):
             registry_code, legal_name, meta,
             COVERAGE_PAGE_UNREACHABLE.format(cut=cut, why=why),
         )
+
+    async def _rest_tier(
+        self, registry_code: str, legal_name: str, meta: dict[str, str],
+    ) -> dict[str, Any]:
+        """An index miss answered by RIK's REST API (``GET /company/{code}``
+        with every section and the full history). Three outcomes: the
+        company (``tier: rest``, dated live, or cached a day); RIK's
+        definitive 404 → a note card, no degradation; a refusal or failure
+        (spent allowance, busy slot, timeout, 5xx…) → a note card and a
+        degradation, never "no record"."""
+        from ..cache import Cache
+        from . import ariregister_rest as rik
+        from .ariregister_rest_company import COMPANY_QUERY, bundle_from_rest
+
+        cut = meta.get("cut") or "the last build"
+        cache = Cache()
+        key = _REST_CACHE_KEY.format(code=registry_code)
+        hit = cache.get_payload(key, max_age_days=REST_CACHE_MAX_AGE_DAYS)
+        if hit is not None and isinstance(hit[0], dict) and hit[0].get("registry_code") == registry_code:
+            bundle = dict(hit[0])
+            retrieved = provenance.parse_moment(bundle.get("retrieved_at"))
+            provenance.record_cached(retrieved, "ariregister REST company (cached)")
+        else:
+            try:
+                body = await rik.get_json(
+                    f"/company/{registry_code}", service="company", params=COMPANY_QUERY,
+                )
+            except rik.RikNotFound:
+                return self._note_card(
+                    registry_code, legal_name, meta,
+                    COVERAGE_NOT_IN_REGISTER_REST.format(cut=cut),
+                )
+            except rik.RikUnavailable as exc:
+                degradation.record(
+                    self.id,
+                    "The e-Business Register's REST service was not read for a code "
+                    f"the open-data index does not hold: {exc.detail}. The card shows "
+                    "nothing from the register; this is not a confirmation that the "
+                    "register holds nothing.",
+                    reason=exc.reason,
+                )
+                return self._note_card(
+                    registry_code, legal_name, meta,
+                    COVERAGE_REST_UNAVAILABLE.format(cut=cut, why=exc.detail),
+                )
+            if not isinstance(body, dict):
+                degradation.record(
+                    self.id,
+                    "The e-Business Register's REST service returned an answer that "
+                    "could not be read for a code the open-data index does not hold.",
+                    reason=degradation.REASON_UPSTREAM_ERROR,
+                )
+                return self._note_card(
+                    registry_code, legal_name, meta,
+                    COVERAGE_REST_UNAVAILABLE.format(cut=cut, why="its answer could not be read"),
+                )
+            bundle = bundle_from_rest(body, registry_code)
+            bundle["retrieved_at"] = datetime.now(UTC).isoformat(timespec="seconds")
+            validate_raw(self.id, AriregisterBundle, bundle)
+            cache.put(key, bundle)
+        bundle["index_miss"] = True
+        bundle["cut"] = meta.get("cut")
+        # The Estonian companies above it, from the index — a company newer
+        # than the cut usually has current owners the index already holds.
+        try:
+            related, chain = walk_chain(registry_code, bundle)
+        except sqlite3.Error:
+            related, chain = {}, None
+        if related or (chain and chain.get("unfollowed")):
+            bundle["related_companies"] = {
+                c: self._index_bundle(c, sub, meta) for c, sub in related.items()
+            }
+            bundle["chain"] = chain
+        validate_raw(self.id, AriregisterBundle, bundle)
+        return bundle
 
     async def _read_page(
         self, registry_code: str, legal_name: str,

@@ -63,6 +63,14 @@ const STATUS_WORD: Record<SubjectProfileStatus["liveness"], string> = {
   declared: "Last declared active",
 };
 
+/** The status word for a register status: the register's own "Deleted"
+ *  where it says so (Estonia — the same word the verdict opens with,
+ *  `verdict.status_sentence`), else the class's word ("Dissolved"…). */
+export function statusWord(status: Pick<SubjectProfileStatus, "liveness" | "raw">): string {
+  if (status.liveness === "terminal" && /^deleted\b/i.test((status.raw || "").trim())) return "Deleted";
+  return STATUS_WORD[status.liveness];
+}
+
 const STATUS_TONE: Record<SubjectProfileStatus["liveness"], StatusChipTone> = {
   live: "neutral",
   pending: "warn",
@@ -99,12 +107,13 @@ export function statusChip(
       detail: declaredSentence(status),
     };
   }
+  const ended = statusWord(status);
   const since =
     status.since && status.liveness !== "live" ? ` since ${formatProfileDate(status.since)}` : "";
   return {
-    label: `${word} · ${source}`,
+    label: `${ended} · ${source}`,
     tone: STATUS_TONE[status.liveness],
-    detail: `${source} records this company as ${word.toLowerCase()}${since}.`,
+    detail: `${source} records this company as ${ended.toLowerCase()}${since}.`,
   };
 }
 
@@ -300,13 +309,13 @@ export function profileRows(
       ? {
           label: "Register status",
           value:
-            STATUS_WORD[profile.register_status.liveness] +
+            statusWord(profile.register_status) +
             (profile.register_status.since && profile.register_status.liveness !== "live"
               ? ` since ${formatProfileDate(profile.register_status.since)}`
               : "") +
             (profile.register_status.raw &&
             profile.register_status.raw.toLowerCase() !==
-              STATUS_WORD[profile.register_status.liveness].toLowerCase()
+              statusWord(profile.register_status).toLowerCase()
               ? ` — register status: “${profile.register_status.raw}”`
               : ""),
           sources: `Source: ${sourceList(profile.register_status.sources, names)}`,

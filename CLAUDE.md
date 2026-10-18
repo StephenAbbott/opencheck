@@ -1537,6 +1537,58 @@ re-derived otherwise:
 - Fixtures: `tests/fixtures/ariregister_rest/`, real answers of 17 Oct 2026
   with the token replaced and lists cut to two rows.
 
+
+### An index miss is read from REST (the deleted-companies phase)
+
+`sources/ariregister_rest_company.py` (`bundle_from_rest`), `_rest_tier` in
+`sources/ariregister.py`. Stephen's decisions (17 Oct 2026): **every** code
+the index does not hold goes to `GET /company/{code}` (`COMPANY_QUERY`:
+every section, `onlyValid=false`) when the REST key is set — a deleted
+company (the files carry none) or one entered after the cut; a code the
+index holds never calls REST; a deleted company says "Deleted" in the
+verdict. Things that will be re-derived otherwise:
+
+- **Three outcomes, as the page had**: the company (`tier: rest`,
+  `index_miss`, dated live; a success is cached a day under
+  `ariregister/rest-company-v1/<code>`); RIK's 404 `code: 4043` → a note
+  card, no degradation; any `RikUnavailable` (spent budget, busy slot, 5xx,
+  timeout…) → a note card **and** a degradation, never cached. No key: the
+  page, as before. No index: the page, as before.
+- **The bundle is built by allowlist** into the index's row vocabulary
+  (`kirje_id`, `isiku_tyyp`, `isiku_roll`, `algus_kpv`/`lopp_kpv`, the
+  `osaluse_*` fields…). A natural person's `identityCode` groups their rows
+  into one `person_key` (`rest-<lowest recordId>`) and is then dropped; a
+  legal person keeps an eight-digit Estonian registry code and its
+  `foreignCode`. `bundle_from_rest` raises if `personal_data_paths` finds
+  anything. Free texts go through `scrub_text` — a copy of the builder's,
+  pinned equal by a test.
+- **Current rows are the current lists; ended shareholdings are history**
+  (`history.read: True`, `bo_read: False`) in the full-history phase's
+  shape, so `_ee_history_statements` draws one closed record per party.
+  Founders are kept without their end date (the off-card rule); officers
+  stay serving-only.
+- **REST has no beneficial owners** (that service needs a named viewer):
+  `bo_not_read` → the finding says "beneficial owners not read" and the
+  company statement carries a note, never "none filed".
+- **Deletion**: status `K` → `dissolution_date` = `deletionDate`, passed as
+  `since` to `apply_register_status`. Former names (a name with an end date
+  that is not the current name; a repeated name is one name) are
+  `alternateNames` + `former_name_annotation`. Succession partners exclude
+  the subject's own code.
+- **The finding**: a deleted company's sentence is lead, history, BO,
+  pledges, form ("Deleted from the register on 18 August 2017; 15 ended
+  ownership records; beneficial owners not read; Private limited company.")
+  — its lists are empty by definition. A live company newer than the cut
+  leads "Entered on <day>, after the open data's cut".
+- **The verdict's status sentence is every register's** (`verdict.status_sentence`,
+  `VERDICT_TEMPLATE` 6): a `terminal` register status opens the verdict
+  "Deleted on <day>, according to <source>." where the register's own word
+  is "deleted", else "Dissolved …". Liquidation and live say nothing there.
+  `frontend/src/lib/subjectProfile.ts` `statusWord` says "Deleted" on the
+  chip by the same rule.
+- Fixtures `rest_company_10078240.json` / `rest_company_11336737.json`:
+  real answers of 17 Oct 2026, every personal code replaced by a fake
+  starting `3`, people's addresses and e-mails removed.
 ### A person's other companies, on the register's person key (the person-index phase)
 
 `companies_for_hash` in `sources/ariregister.py`, `_ee_person_appointments`
