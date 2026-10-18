@@ -1,0 +1,6894 @@
+{
+ "legalEntityName": "Eesti Energia AS",
+ "registryCode": 10421629,
+ "companyId": 2000046208,
+ "vatID": "EE100366327",
+ "generalData": {
+  "einvoiceProvider": "Arvekeskus",
+  "firstEntryTime": "1998-03-31",
+  "isCSDRegistered": true,
+  "entryCSDRegistrationDate": "2017-09-28",
+  "status": {
+   "status": "R",
+   "statusAsText": "Entered into the register"
+  },
+  "legalEntityNames": [
+   {
+    "content": "Eesti Energia Aktsiaselts",
+    "cardNumber": 1,
+    "entryNumber": 1,
+    "recordId": 279797,
+    "startDate": "1998-03-31",
+    "endDate": "2022-05-27"
+   },
+   {
+    "content": "Eesti Energia AS",
+    "cardNumber": 1,
+    "entryNumber": 42,
+    "recordId": 10133310,
+    "startDate": "2022-05-27"
+   }
+  ],
+  "addresses": [
+   {
+    "address": {
+     "address": "Laki 24",
+     "postalCode": "12915",
+     "ehak": "0784",
+     "ehakAsText": "Tallinn city, Harju county"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 8,
+    "recordId": 763747,
+    "startDate": "2001-10-01",
+    "endDate": "2015-02-20"
+   },
+   {
+    "address": {
+     "address": "Estonia pst 1",
+     "postalCode": "EE0001",
+     "ehak": "0784",
+     "ehakAsText": "Tallinn city, Harju county"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 764724,
+    "startDate": "1998-03-31",
+    "endDate": "2001-10-01"
+   },
+   {
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia",
+     "address": "Lelle tänav 22",
+     "postalCode": "11318",
+     "ehak": "0784",
+     "ehakAsText": "Tallinn city, Harju county"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 29,
+    "recordId": 5463584,
+    "startDate": "2015-02-20",
+    "endDate": "2016-09-14"
+   },
+   {
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia",
+     "address": "Lelle tn 22",
+     "postalCode": "11318",
+     "ehak": "0298",
+     "ehakAsText": "Kesklinna district, Tallinn city, Harju county"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 31,
+    "recordId": 6171102,
+    "startDate": "2016-09-14",
+    "endDate": "2017-11-07"
+   },
+   {
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia",
+     "address": "Lelle tn 22",
+     "postalCode": "11318",
+     "ehak": "0298",
+     "ehakAsText": "Kesklinna district, Tallinn city, Harju county",
+     "adsAdobId": "7344752",
+     "adsOid": "ME03262636",
+     "adsNormalizedFullAddress": "Harju maakond, Tallinn, Kesklinna linnaosa, Lelle tn 22"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 34,
+    "recordId": 7125980,
+    "startDate": "2017-11-07"
+   }
+  ],
+  "legalForm": [
+   {
+    "contentNumber": 1,
+    "contentAsText": "Public limited company",
+    "content": "AS",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279798,
+    "startDate": "1998-03-31"
+   }
+  ],
+  "capitals": [
+   {
+    "size": 6520000000.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279804,
+    "startDate": "1998-03-31",
+    "endDate": "1999-12-27"
+   },
+   {
+    "size": 6545000000.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 6,
+    "recordId": 512747,
+    "startDate": "1999-12-27",
+    "endDate": "2000-04-27"
+   },
+   {
+    "size": 6641300000.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 7,
+    "recordId": 563590,
+    "startDate": "2000-04-27",
+    "endDate": "2003-06-30"
+   },
+   {
+    "size": 7274100000.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 13,
+    "recordId": 1063760,
+    "startDate": "2003-11-07",
+    "endDate": "2008-01-31"
+   },
+   {
+    "size": 7321189600.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 18,
+    "recordId": 1802902,
+    "startDate": "2008-01-31",
+    "endDate": "2008-07-01"
+   },
+   {
+    "size": 7382326600.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 20,
+    "recordId": 1963172,
+    "startDate": "2008-07-01",
+    "endDate": "2009-06-04"
+   },
+   {
+    "size": 471645750.0,
+    "currency": "EUR",
+    "currencyAsText": "Euro",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 25,
+    "recordId": 3964315,
+    "startDate": "2010-12-27",
+    "endDate": "2012-08-28"
+   },
+   {
+    "size": 7379652400.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 22,
+    "recordId": 2129078,
+    "startDate": "2009-06-04",
+    "endDate": "2010-12-27"
+   },
+   {
+    "size": 6696100000.0,
+    "currency": "EEK",
+    "currencyAsText": "Estonian Kroon",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 11,
+    "recordId": 1002945,
+    "startDate": "2003-06-30",
+    "endDate": "2003-11-07"
+   },
+   {
+    "size": 621645750.0,
+    "currency": "EUR",
+    "currencyAsText": "Euro",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 26,
+    "recordId": 4572186,
+    "startDate": "2012-08-28",
+    "endDate": "2020-04-03"
+   },
+   {
+    "size": 746645750.0,
+    "currency": "EUR",
+    "currencyAsText": "Euro",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 39,
+    "recordId": 9017245,
+    "startDate": "2020-04-03",
+    "endDate": "2025-07-09"
+   },
+   {
+    "size": 846645750.0,
+    "currency": "EUR",
+    "currencyAsText": "Euro",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 51,
+    "recordId": 13202216,
+    "startDate": "2025-07-09"
+   }
+  ],
+  "successions": [
+   {
+    "type": "JAGUN",
+    "typeAsText": "Division",
+    "content": "Eesti Energia Aktsiaselts (jagunev ühing) jaguneb eraldumise teel, mille käigus asutati Tootsi Windpark OÜ (jagunemise käigus asutatud ühing, registrikood 16053613, aadress Harju maakond, Tallinn, Kesklinna linnaosa, Lelle tn 22, 11318). Jagunemiskava on notariaalselt tõestatud 23.07.2020.a. Jagunemisotsus on vastu võetud 05.08.2020.a. Jagunemine loetakse toimunuks käesoleva jagunemiskande tegemisega.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 41,
+    "recordId": 9223494,
+    "startDate": "2020-09-15"
+   },
+   {
+    "type": "JAGUN",
+    "typeAsText": "Division",
+    "content": "Eesti Energia AS (jagunev äriühing) jagunes eraldumise teel, andes osa oma varast üle jagunemise käigus asutatavale osaühingule Liivi Offshore OÜ (registrikood 16704571, asukoht ja aadress Harju maakond, Tallinn, Kesklinna linnaosa, Lelle tn 22, 11318). Jagunemiskava (notari ametitegevuse raamatu registri nr 465) koostati 31.01.2023. a, jagunemisotsus võeti vastu 17.02.2023. a",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 43,
+    "recordId": 10576366,
+    "startDate": "2023-03-27"
+   }
+  ],
+  "financialYears": [
+   {
+    "financialYearStartDate": "01-01",
+    "financialYearEndDate": "12-31",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279805,
+    "startDate": "1998-03-31",
+    "endDate": "1999-01-14"
+   },
+   {
+    "financialYearStartDate": "01-01",
+    "financialYearEndDate": "12-31",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 25,
+    "recordId": 3964316,
+    "startDate": "2010-12-27"
+   },
+   {
+    "financialYearStartDate": "04-01",
+    "financialYearEndDate": "03-31",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 3,
+    "recordId": 397817,
+    "startDate": "1999-01-14",
+    "endDate": "2010-12-27"
+   }
+  ],
+  "associationArticles": [
+   {
+    "modifiedDate": "2009-08-27",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 23,
+    "recordId": 2140383,
+    "startDate": "2009-09-02",
+    "endDate": "2010-07-14"
+   },
+   {
+    "modifiedDate": "1998-06-11",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 3,
+    "recordId": 397816,
+    "startDate": "1999-01-14",
+    "endDate": "1999-05-21"
+   },
+   {
+    "approvalDate": "2017-04-20",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 32,
+    "recordId": 7010830,
+    "startDate": "2017-08-10",
+    "endDate": "2020-05-18"
+   },
+   {
+    "approvalDate": "2020-05-07",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 40,
+    "recordId": 9069711,
+    "startDate": "2020-05-18",
+    "endDate": "2022-05-27"
+   },
+   {
+    "approvalDate": "1998-03-17",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 398993,
+    "startDate": "1998-03-31",
+    "endDate": "1999-01-14"
+   },
+   {
+    "modifiedDate": "1999-05-18",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442959,
+    "startDate": "1999-05-21",
+    "endDate": "2003-02-12"
+   },
+   {
+    "modifiedDate": "2005-10-20",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 14,
+    "recordId": 1407972,
+    "startDate": "2005-11-07",
+    "endDate": "2009-09-02"
+   },
+   {
+    "modifiedDate": "2010-06-30",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 24,
+    "recordId": 3830734,
+    "startDate": "2010-07-14",
+    "endDate": "2010-12-27"
+   },
+   {
+    "modifiedDate": "2010-12-07",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 25,
+    "recordId": 3964317,
+    "startDate": "2010-12-27",
+    "endDate": "2017-08-10"
+   },
+   {
+    "modifiedDate": "2003-01-10",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 9,
+    "recordId": 955991,
+    "startDate": "2003-02-12",
+    "endDate": "2005-11-07"
+   },
+   {
+    "approvalDate": "2022-04-26",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 42,
+    "recordId": 10133309,
+    "startDate": "2022-05-27",
+    "endDate": "2023-04-11"
+   },
+   {
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 45,
+    "recordId": 10596489,
+    "startDate": "2023-04-11",
+    "endDate": "2024-04-17"
+   },
+   {
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 48,
+    "recordId": 12448062,
+    "startDate": "2024-04-17",
+    "endDate": "2025-10-14"
+   },
+   {
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 52,
+    "recordId": 13363940,
+    "startDate": "2025-10-14",
+    "endDate": "2026-02-26"
+   },
+   {
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 54,
+    "recordId": 13587132,
+    "startDate": "2026-02-26",
+    "endDate": "2026-10-02"
+   },
+   {
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 57,
+    "recordId": 14008310,
+    "startDate": "2026-10-02"
+   }
+  ],
+  "registryCardNotes": [
+   {
+    "type": "MARK",
+    "typeAsText": "Remark",
+    "content": "Kanne on tehtud registripidaja algatusel Äriseadustiku § 521.1 lõike 1 alusel.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 21,
+    "recordId": 1849946,
+    "startDate": "2008-12-08",
+    "endDate": "2008-12-08"
+   },
+   {
+    "type": "MARK",
+    "typeAsText": "Remark",
+    "content": "Kanne on tehtud registripidaja algatusel Äriseadustiku § 61 alusel.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 12,
+    "recordId": 1026000,
+    "startDate": "2003-07-31",
+    "endDate": "2003-07-31"
+   },
+   {
+    "type": "EVREG",
+    "typeAsText": "Reference to the predecessor",
+    "content": "Eesti Energoremont (reg. nr. 01005614), Energiamüük (reg. nr. 01021435), Õppekeskus (reg. nr. 01003093) ja  Kommertskeskus (reg. nr. 01006105) baasil.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 326122,
+    "startDate": "1998-06-25"
+   },
+   {
+    "type": "EVREG",
+    "typeAsText": "Reference to the predecessor",
+    "content": " Põhja Elektrivõrgud (reg. nr. 1005904), Lõuna Elektrivõrgud (reg. nr. 24003871), Viru Elektrivõrgud (reg. nr. 13006205), Saarte Elektrivõrgud (reg. nr. 45001238), Tallinna Elektrivõrk (reg. nr. 01023204),",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 326121,
+    "startDate": "1998-06-25"
+   },
+   {
+    "type": "EVREG",
+    "typeAsText": "Reference to the predecessor",
+    "content": "Aktsiaselts on asutatud RE Eesti Energia (reg. nr. 01003682) ning tema koosseisu kuuluvate ettevõtete Balti Elektrijaam (reg. nr. 15000885), Eesti Elektrijaam (reg. nr. 15001548), Iru Elektrijaam (reg. nr. 01028466),",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 326120,
+    "startDate": "1998-06-25"
+   },
+   {
+    "type": "MARK",
+    "typeAsText": "Remark",
+    "content": "Aleksander Moltsar, Avo Beek, Raivo Krumm, Jüri Tuisk, Anatoli Paal, Ants Pauls, Janis-Aivars Balodis, Toomas Laurand, Harry Kasak, Ain Saarepuu, Ants Tomson ja Toomas Heinaste ei ole enam äriühingu prokuristid.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 331018,
+    "startDate": "1998-06-25",
+    "endDate": "2008-07-01"
+   },
+   {
+    "type": "MARK",
+    "typeAsText": "Remark",
+    "content": "Aadressiandmed on muudetud äriseadustiku § 511¹ alusel.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 31,
+    "recordId": 6171103,
+    "startDate": "2016-09-14"
+   }
+  ],
+  "registryCardAreasOfActivity": [
+   {
+    "content": "elektriseadmestiku projekteerimist, valmistamist, paigaldamist ja kasutamist reguleerivate eeskirjade jm. normatiivdokumentide väljatöötamises osalemine",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279800,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "transpordi-, teenindus-, kaubandus- ja vahendustegevus, s.h. importkütuse sissevedu, hulgimüük ja ladustamine",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279802,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "elektritööd",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279803,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "elektrienergia tootmine, edastamine, import, eksport ja müük;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442944,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "Eesti energiasüsteemi üldjuhtimine;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442949,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "järelevalve elektrienergia ja soojuse kasutamise ning elektrotehnilise toodangu üle;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442951,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "teaduslik-tehnilised uurimis-, katse-, konstrueerimis-, tehnoloogilised ja juurutustööd, arvutustehnika alased teenused;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442953,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "mõõtevahendite taatlemine, mootorsõidukite hooldus ja remont;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442956,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "personalikoolitus",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442958,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "koostöö Eesti Energiasüsteemiga ühendatud teiste riikide energiasüsteemidega, dispetsherjuhtimine vastavalt lepingutele",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279801,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "energeetikaga seotud objektide projekteerimine ja ehitamine ning energeetiliste seadmete remont, rekonstrueerimine ja seadistamine",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279799,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "soojusenergia tootmine, ülekandmine ja müük;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442945,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "kütuse import ja müük ning ladustamine;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442946,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "energia võrgu kaudu edastamise ning jaotamise teenuse müük;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442947,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "elektrisüsteemi ja soojussüsteemi operatiivjuhtimise teenuste müük;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442948,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "energeetikaga seotud objektide projekteerimine ja ehitamine ning energeetiliste seadmete remont, rekonstrueerimine ja seadistamine;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442950,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "elektriseadmestiku projekteerimist, valmistamist, paigaldamist ja kasutamist reguleerivate eeskirjade jm. normatiivdokumentide väljatöötamises osalemine;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442952,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "transpordi-, teenindus-, kaubandus- ja vahendustegevus;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442955,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "elektritööd;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442957,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   },
+   {
+    "content": "elektri- ja soojusenergia tootmine, ülekandmine ja müük ning riigi energiasüsteemi üldjuhtimine",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 442960,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "teaduslik- tehnilised uurimis-, katse-, konstrueerimis-, tehnoloogilised ja juurutustööd, arvutustehnika alased teenused",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 442961,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "mõõtevahendite taatlemine, mootorsõidukite hooldus ja remont",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 442962,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "järelevalve elektrienergia ja soojuse kasutamise ning elektrotehnilise toodangu üle",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 444434,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "personalikoolitus",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 444435,
+    "startDate": "1998-03-31",
+    "endDate": "1999-05-21"
+   },
+   {
+    "content": "koostöö Eesti Energiasüsteemiga ühendatud teiste riikide energiasüsteemidega, dispetšerjuhtimine vastavalt lepingutele;",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 442954,
+    "startDate": "1999-05-21",
+    "endDate": "2008-12-08"
+   }
+  ],
+  "reportedActivities": [
+   {
+    "emtakCode": "82401",
+    "emtakAsText": "Intermediation service activities for business support service activities n.e.c.",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "82.40",
+    "recordId": 9000868001,
+    "startDate": "2025-05-08",
+    "endDate": "2026-04-29"
+   },
+   {
+    "emtakCode": "35231",
+    "emtakAsText": "Trade of gas through mains",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "35.23",
+    "recordId": 9000867996,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "70101",
+    "emtakAsText": "Activities of head offices",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "70.10",
+    "recordId": 9000867997,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "62202",
+    "emtakAsText": "Computer facilities management activities",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "62.20",
+    "recordId": 9000867998,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "68321",
+    "emtakAsText": "Management of buildings and rental houses (apartment associations, housing associations, building associations etc.)",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "68.32",
+    "recordId": 9000867999,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "68201",
+    "emtakAsText": "Rental and operating of own or leased real estate",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "68.20",
+    "recordId": 9000868000,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "62101",
+    "emtakAsText": "Computer programming activities",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "62.10",
+    "recordId": 9000868002,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "77331",
+    "emtakAsText": "Rental and leasing of office machinery, equipment and computers",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "77.33",
+    "recordId": 9000868003,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "47401",
+    "emtakAsText": "Retail sale of computers, peripheral units and software",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "47.40",
+    "recordId": 9000868005,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "42221",
+    "emtakAsText": "Construction of utility projects for electricity and telecommunications",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "42.22",
+    "recordId": 9000868004,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "35151",
+    "emtakAsText": "Trade of electricity",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "35.15",
+    "recordId": 9000867995,
+    "startDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "47411",
+    "emtakAsText": "Retail sale of computers, peripheral units and software in specialised stores",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "47.41",
+    "recordId": 9000699427,
+    "startDate": "2023-06-28",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "62011",
+    "emtakAsText": "Computer programming activities",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "62.01",
+    "recordId": 9000553684,
+    "startDate": "2021-06-02",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "52102",
+    "emtakAsText": "Storage services of liquids and gases",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "52.10",
+    "recordId": 9000493958,
+    "startDate": "2020-07-26",
+    "endDate": "2022-05-06"
+   },
+   {
+    "emtakCode": "70221",
+    "emtakAsText": "Business and other management consultancy activities",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "70.22",
+    "recordId": 9000493957,
+    "startDate": "2020-07-26",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "47411",
+    "emtakAsText": "Retail sale of computers, peripheral units and software in specialised stores",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "47.41",
+    "recordId": 9000493959,
+    "startDate": "2020-07-26",
+    "endDate": "2022-05-06"
+   },
+   {
+    "emtakCode": "71209",
+    "emtakAsText": "Other testing and analysis",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "71.20",
+    "recordId": 9000493960,
+    "startDate": "2020-07-26",
+    "endDate": "2024-06-10"
+   },
+   {
+    "emtakCode": "71209",
+    "emtakAsText": "Other testing and analysis",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "71.20",
+    "recordId": 9000298348,
+    "startDate": "2017-06-12",
+    "endDate": "2018-05-29"
+   },
+   {
+    "emtakCode": "47411",
+    "emtakAsText": "Retail sale of computers, peripheral units and software in specialised stores",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "47.41",
+    "recordId": 9000240676,
+    "startDate": "2016-06-29",
+    "endDate": "2019-06-29"
+   },
+   {
+    "emtakCode": "35231",
+    "emtakAsText": "Trade of gas through mains",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "35.23",
+    "recordId": 9000113892,
+    "startDate": "2014-06-10",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "47991",
+    "emtakAsText": "Other retail sale not in stores, stalls or markets",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "47.99",
+    "recordId": 9000113893,
+    "startDate": "2014-06-10",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "46771",
+    "emtakAsText": "Wholesale of waste and scrap, buying up packaging and tare",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "46.77",
+    "recordId": 9000113891,
+    "startDate": "2014-06-10",
+    "endDate": "2018-05-29"
+   },
+   {
+    "emtakCode": "38111",
+    "emtakAsText": "Collection of non-hazardous waste",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "38.11",
+    "recordId": 9000113890,
+    "startDate": "2014-06-10",
+    "endDate": "2018-05-29"
+   },
+   {
+    "emtakCode": "68329",
+    "emtakAsText": "Other real estate management or related activities",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "68.32",
+    "recordId": 3000082039,
+    "startDate": "2010-07-28",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "35301",
+    "emtakAsText": "Steam and air conditioning supply",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "35.30",
+    "recordId": 3000082037,
+    "startDate": "2010-07-28",
+    "endDate": "2011-06-27"
+   },
+   {
+    "emtakCode": "47411",
+    "emtakAsText": "Retail sale of computers, peripheral units and software in specialised stores",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "47.41",
+    "recordId": 3000082043,
+    "startDate": "2010-07-28",
+    "endDate": "2014-06-10"
+   },
+   {
+    "emtakCode": "62011",
+    "emtakAsText": "Computer programming activities",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "62.01",
+    "recordId": 3000082044,
+    "startDate": "2010-07-28",
+    "endDate": "2020-07-26"
+   },
+   {
+    "emtakCode": "71209",
+    "emtakAsText": "Other testing and analysis",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "71.20",
+    "recordId": 3000082045,
+    "startDate": "2010-07-28",
+    "endDate": "2015-06-22"
+   },
+   {
+    "emtakCode": "35141",
+    "emtakAsText": "Trade of electricity",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "35.14",
+    "recordId": 3000082036,
+    "startDate": "2010-07-28",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "42221",
+    "emtakAsText": "Construction of utility projects for electricity and telecommunications",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "42.22",
+    "recordId": 3000082042,
+    "startDate": "2010-07-28",
+    "endDate": "2024-06-10"
+   },
+   {
+    "emtakCode": "62031",
+    "emtakAsText": "Computer facilities management activities",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "62.03",
+    "recordId": 3000082040,
+    "startDate": "2010-07-28",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "64201",
+    "emtakAsText": "Activities of holding companies",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "64.20",
+    "recordId": 3000082041,
+    "startDate": "2010-07-28",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "46191",
+    "emtakAsText": "Agents involved in the sale of a variety of goods",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "46.19",
+    "recordId": 3000082038,
+    "startDate": "2010-07-28",
+    "endDate": "2025-05-08"
+   },
+   {
+    "emtakCode": "3511",
+    "emtakAsText": "Production of electricity",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "35.11",
+    "recordId": 2000028215,
+    "startDate": "2008-12-02",
+    "endDate": "2010-07-28"
+   }
+  ],
+  "infoFinancialYearFromReports": [
+   {
+    "recordId": 3630127,
+    "periodStartDate": "2025-01-01",
+    "periodEndDate": "2025-12-31",
+    "activityAreaEmtakCode": "35151",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 3,
+    "activityAreaEmtakVersionAsText": "EMTAK 2025",
+    "activityAreaNaceCode": "35.15"
+   },
+   {
+    "recordId": 3369953,
+    "periodStartDate": "2024-01-01",
+    "periodEndDate": "2024-12-31",
+    "activityAreaEmtakCode": "35151",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 3,
+    "activityAreaEmtakVersionAsText": "EMTAK 2025",
+    "activityAreaNaceCode": "35.15"
+   },
+   {
+    "recordId": 3140814,
+    "periodStartDate": "2023-01-01",
+    "periodEndDate": "2023-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 2897271,
+    "periodStartDate": "2022-01-01",
+    "periodEndDate": "2022-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 2569229,
+    "periodStartDate": "2021-01-01",
+    "periodEndDate": "2021-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 2359975,
+    "periodStartDate": "2020-01-01",
+    "periodEndDate": "2020-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 2162527,
+    "periodStartDate": "2019-01-01",
+    "periodEndDate": "2019-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 1988012,
+    "periodStartDate": "2018-01-01",
+    "periodEndDate": "2018-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 1746778,
+    "periodStartDate": "2017-01-01",
+    "periodEndDate": "2017-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 1596677,
+    "periodStartDate": "2016-01-01",
+    "periodEndDate": "2016-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 1461638,
+    "periodStartDate": "2015-01-01",
+    "periodEndDate": "2015-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 1367385,
+    "periodStartDate": "2014-01-01",
+    "periodEndDate": "2014-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 1366558,
+    "periodStartDate": "2013-01-01",
+    "periodEndDate": "2013-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 1216400,
+    "periodStartDate": "2012-01-01",
+    "periodEndDate": "2012-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 951656,
+    "periodStartDate": "2011-01-01",
+    "periodEndDate": "2011-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 951655,
+    "periodStartDate": "2010-01-01",
+    "periodEndDate": "2010-12-31",
+    "activityAreaEmtakCode": "35141",
+    "activityAreaEmtakAsText": "Trade of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.14"
+   },
+   {
+    "recordId": 629803,
+    "periodStartDate": "2009-04-01",
+    "periodEndDate": "2010-03-31"
+   },
+   {
+    "recordId": 609054,
+    "periodStartDate": "2008-04-01",
+    "periodEndDate": "2009-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 536588,
+    "periodStartDate": "2007-04-01",
+    "periodEndDate": "2008-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 464479,
+    "periodStartDate": "2006-04-01",
+    "periodEndDate": "2007-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 397080,
+    "periodStartDate": "2005-04-01",
+    "periodEndDate": "2006-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 333582,
+    "periodStartDate": "2004-04-01",
+    "periodEndDate": "2005-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 348655,
+    "periodStartDate": "2003-04-01",
+    "periodEndDate": "2004-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 198361,
+    "periodStartDate": "2001-04-01",
+    "periodEndDate": "2002-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 164397,
+    "periodStartDate": "2000-04-01",
+    "periodEndDate": "2001-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 126981,
+    "periodStartDate": "1999-04-01",
+    "periodEndDate": "2000-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 72723,
+    "periodStartDate": "1998-04-01",
+    "periodEndDate": "1999-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   },
+   {
+    "recordId": 50546,
+    "periodStartDate": "1997-01-01",
+    "periodEndDate": "1998-03-31",
+    "activityAreaEmtakCode": "3511",
+    "activityAreaEmtakAsText": "Production of electricity",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "35.11"
+   }
+  ],
+  "isFoundedWithoutPayment": false,
+  "hasAbandonedFormReqs": false,
+  "isAccountingLiable": false,
+  "isRequiredtoProvideBeneficiaries": true
+ },
+ "relatedPersons": {
+  "personsOnCard": [
+   {
+    "person": {
+     "role": "ARP",
+     "roleAsText": "The registrar of the shares of the fund",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE",
+     "foreignCode": "37236471186",
+     "foreignCodeCountry": "LVA"
+    },
+    "address": {
+     "country": "LVA",
+     "countryAsText": "Latvia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 33,
+    "recordId": 7070214,
+    "startDate": "2017-09-28"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Agnes",
+     "surnameLegalEntityName": "Roos",
+     "identityCode": "37951254699"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 38,
+    "recordId": 8854545,
+    "startDate": "2019-12-05",
+    "endDate": "2023-04-03"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Sutt",
+     "identityCode": "38436086793"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 35,
+    "recordId": 7378097,
+    "startDate": "2017-12-12",
+    "endDate": "2018-07-03"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Vainola",
+     "identityCode": "30497841638"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 46,
+    "recordId": 10605266,
+    "startDate": "2023-04-18",
+    "endDate": "2024-08-05"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Vainola",
+     "identityCode": "30497841638"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 34,
+    "recordId": 7125981,
+    "startDate": "2017-11-07",
+    "endDate": "2017-12-12"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Vainola",
+     "identityCode": "30497841638"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 28,
+    "recordId": 5394195,
+    "startDate": "2014-12-08",
+    "endDate": "2017-11-07"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Andri",
+     "surnameLegalEntityName": "Avila",
+     "identityCode": "35527774542"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 30,
+    "recordId": 5520291,
+    "startDate": "2015-04-16",
+    "endDate": "2023-04-03"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Andrus",
+     "surnameLegalEntityName": "Durejko",
+     "identityCode": "38714654050"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 44,
+    "recordId": 10584439,
+    "startDate": "2023-04-03"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Gerrit",
+     "surnameLegalEntityName": "Mäesalu",
+     "identityCode": "32353374621"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 55,
+    "recordId": 13828815,
+    "startDate": "2026-06-22"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Gunnar",
+     "surnameLegalEntityName": "Okk",
+     "identityCode": "34906366674"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279806,
+    "startDate": "1998-03-31",
+    "endDate": "2005-12-28"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Hando",
+     "surnameLegalEntityName": "Sutter",
+     "identityCode": "34732970989"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 34,
+    "recordId": 7125983,
+    "startDate": "2017-11-07",
+    "endDate": "2023-04-03"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Hando",
+     "surnameLegalEntityName": "Sutter",
+     "identityCode": "34732970989"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 28,
+    "recordId": 5394198,
+    "startDate": "2014-12-08",
+    "endDate": "2017-11-07"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Harri",
+     "surnameLegalEntityName": "Mikk",
+     "identityCode": "37615344416"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 17,
+    "recordId": 1669106,
+    "startDate": "2007-01-19",
+    "endDate": "2013-01-28"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Ilmar",
+     "surnameLegalEntityName": "Jõgi",
+     "identityCode": "39172192156"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279809,
+    "startDate": "1998-03-31",
+    "endDate": "1999-10-26"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Juhan",
+     "surnameLegalEntityName": "Aguraiuja",
+     "identityCode": "37065711820"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 54,
+    "recordId": 13587131,
+    "startDate": "2026-02-26",
+    "endDate": "2026-06-22"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Kelli",
+     "surnameLegalEntityName": "Toss-Kaasik",
+     "identityCode": "33470317151"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 44,
+    "recordId": 10584440,
+    "startDate": "2023-04-03",
+    "endDate": "2026-02-26"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Kristjan",
+     "surnameLegalEntityName": "Kuhi",
+     "identityCode": "39469954326"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 44,
+    "recordId": 10584442,
+    "startDate": "2023-04-03",
+    "endDate": "2025-12-29"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Lauri",
+     "surnameLegalEntityName": "Karp",
+     "identityCode": "36522077653"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 50,
+    "recordId": 12683834,
+    "startDate": "2024-09-10"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Lembit",
+     "surnameLegalEntityName": "Vali",
+     "identityCode": "36945909011"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279807,
+    "startDate": "1998-03-31",
+    "endDate": "2007-01-19"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Margus",
+     "surnameLegalEntityName": "Kaasik",
+     "identityCode": "30494461169"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 15,
+    "recordId": 1450751,
+    "startDate": "2005-12-28",
+    "endDate": "2014-12-08"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Margus",
+     "surnameLegalEntityName": "Rink",
+     "identityCode": "36494828689"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 19,
+    "recordId": 1885705,
+    "startDate": "2008-05-27",
+    "endDate": "2015-04-16"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Margus",
+     "surnameLegalEntityName": "Vals",
+     "identityCode": "36058232500"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 28,
+    "recordId": 5394196,
+    "startDate": "2014-12-08",
+    "endDate": "2017-11-07"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Margus",
+     "surnameLegalEntityName": "Vals",
+     "identityCode": "36058232500"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 34,
+    "recordId": 7125982,
+    "startDate": "2017-11-07",
+    "endDate": "2023-04-03"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Marko",
+     "surnameLegalEntityName": "Allikson",
+     "identityCode": "36269061863"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 10,
+    "recordId": 972003,
+    "startDate": "2003-04-01",
+    "endDate": "2005-12-28"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Marlen",
+     "surnameLegalEntityName": "Tamm",
+     "identityCode": "30853423477"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 44,
+    "recordId": 10584441,
+    "startDate": "2023-04-03"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Mati",
+     "surnameLegalEntityName": "Jostov",
+     "identityCode": "30280832208"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 10,
+    "recordId": 972004,
+    "startDate": "2003-04-01",
+    "endDate": "2006-08-30"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Raido",
+     "surnameLegalEntityName": "Ivalo",
+     "identityCode": "35162149716"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 47,
+    "recordId": 12423862,
+    "startDate": "2024-04-04",
+    "endDate": "2026-02-26"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Raine",
+     "surnameLegalEntityName": "Pajo",
+     "identityCode": "39338956199"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 17,
+    "recordId": 1669107,
+    "startDate": "2007-01-19",
+    "endDate": "2024-04-04"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Sandor",
+     "surnameLegalEntityName": "Liive",
+     "identityCode": "34148216178"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279808,
+    "startDate": "1998-03-31",
+    "endDate": "2014-12-08"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Tiit",
+     "surnameLegalEntityName": "Nigul",
+     "identityCode": "34919034584"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 15,
+    "recordId": 1450750,
+    "startDate": "2005-12-28",
+    "endDate": "2008-05-27"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Ain",
+     "surnameLegalEntityName": "Saarepuu",
+     "identityCode": "31367667657"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279819,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Aleksander",
+     "surnameLegalEntityName": "Moltsar",
+     "identityCode": "38776657942"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279810,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Anatoli",
+     "surnameLegalEntityName": "Paal",
+     "identityCode": "39246241319"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279814,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Ants",
+     "surnameLegalEntityName": "Pauls",
+     "identityCode": "32434193630"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279815,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Ants",
+     "surnameLegalEntityName": "Tomson",
+     "identityCode": "34938125610"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279820,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Avo",
+     "surnameLegalEntityName": "Beek",
+     "identityCode": "34452522816"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279811,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Harry",
+     "surnameLegalEntityName": "Kasak",
+     "identityCode": "33044647294"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279818,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Janis-Aivars",
+     "surnameLegalEntityName": "Balodis",
+     "identityCode": "31313250973"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279816,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Tuisk",
+     "identityCode": "35531085850"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279813,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Raivo",
+     "surnameLegalEntityName": "Krumm",
+     "identityCode": "38356528872"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279812,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Toomas",
+     "surnameLegalEntityName": "Heinaste",
+     "identityCode": "39609195360"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279821,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   },
+   {
+    "person": {
+     "role": "PROK",
+     "roleAsText": "Procurator",
+     "type": "F",
+     "firstName": "Toomas",
+     "surnameLegalEntityName": "Laurand",
+     "identityCode": "38192521484"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 279817,
+    "startDate": "1998-03-31",
+    "endDate": "1998-06-25"
+   }
+  ],
+  "representationRightNormalRulings": [
+   {
+    "role": "JUHL",
+    "content": "Every member of the Management Board may represent the public limited company in concluding all transactions."
+   }
+  ],
+  "representationRightSpecialConditions": [
+   {
+    "type": "YHES",
+    "typeAsText": "Requirements for the joint right of representation of the management board or a body substituting for the management board",
+    "content": "Aktsiaseltsi võib kõigis õigustoimingutes esindada kaks juhatuse liiget ühiselt.",
+    "cardNumber": 1,
+    "entryNumber": 9,
+    "recordId": 955992,
+    "startDate": "2003-02-12"
+   }
+  ],
+  "shareholders": [
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Majandus- ja Kommunikatsiooniministeerium",
+     "identityCode": "70003158"
+    },
+    "address": {},
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 91.46,
+    "shareSize": 6696100000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2005-04-01",
+    "recordId": 2000257048,
+    "startDate": "2001-04-27",
+    "endDate": "2005-04-01"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Majandus- ja Kommunikatsiooniministeerium",
+     "identityCode": "70003158"
+    },
+    "address": {},
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 7274100000.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2008-04-01",
+    "recordId": 2000353824,
+    "startDate": "2005-04-01",
+    "endDate": "2008-04-01"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Majandus- ja Kommunikatsiooniministeerium",
+     "identityCode": "70003158"
+    },
+    "address": {},
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 7321189600.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "R",
+    "authoritySourceAsText": "Registry journal",
+    "authoritySourceDate": "2008-04-01",
+    "recordId": 2000668566,
+    "startDate": "2008-04-01",
+    "endDate": "2008-07-01"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Majandus- ja Kommunikatsiooniministeerium",
+     "identityCode": "70003158"
+    },
+    "address": {},
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "shareSize": 7382326600.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2008-07-01",
+    "recordId": 2000680326,
+    "startDate": "2008-07-01",
+    "endDate": "2008-07-01"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Majandus- ja Kommunikatsiooniministeerium",
+     "identityCode": "70003158"
+    },
+    "address": {},
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 7321189600.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2008-10-01",
+    "recordId": 2000682714,
+    "startDate": "2008-07-01",
+    "endDate": "2008-10-01"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Majandus- ja Kommunikatsiooniministeerium",
+     "identityCode": "70003158"
+    },
+    "address": {},
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 7382326600.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2009-07-01",
+    "recordId": 2000692798,
+    "startDate": "2008-10-01",
+    "endDate": "2009-07-01"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Majandus- ja Kommunikatsiooniministeerium",
+     "identityCode": "70003158"
+    },
+    "address": {},
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 7379652400.0,
+    "shareCurrency": "EEK",
+    "shareCurrencyAsText": "Estonian Kroon",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2011-01-01",
+    "recordId": 2000723801,
+    "startDate": "2009-07-01",
+    "endDate": "2011-01-01"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Majandus- ja Kommunikatsiooniministeerium",
+     "identityCode": "70003158"
+    },
+    "address": {},
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 471645750.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2012-10-01",
+    "recordId": 3000069469,
+    "startDate": "2011-01-01",
+    "endDate": "2012-10-01"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Majandus- ja Kommunikatsiooniministeerium",
+     "identityCode": "70003158"
+    },
+    "address": {},
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 621645750.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V",
+    "authoritySourceAsText": "Data from EVK",
+    "authoritySourceDate": "2013-05-31",
+    "recordId": 3000296570,
+    "startDate": "2012-10-01",
+    "endDate": "2013-05-31"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Rahandusministeerium",
+     "identityCode": "70000272"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 621645750.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V1",
+    "authoritySourceDate": "2017-12-22",
+    "recordId": 9000186868,
+    "startDate": "2013-05-31",
+    "endDate": "2017-12-22"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Rahandusministeerium",
+     "identityCode": "70000272"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 621645750.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V1",
+    "authoritySourceDate": "2020-04-14",
+    "recordId": 9000579366,
+    "startDate": "2017-12-22",
+    "endDate": "2020-04-14"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Rahandusministeerium",
+     "identityCode": "70000272"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 746645750.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V1",
+    "authoritySourceDate": "2023-08-16",
+    "recordId": 9001108754,
+    "startDate": "2020-04-14",
+    "endDate": "2023-08-16"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Rahandusministeerium",
+     "identityCode": "70000272"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 746645750.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V1",
+    "authoritySourceDate": "2025-07-14",
+    "recordId": 9001615716,
+    "startDate": "2023-08-16",
+    "endDate": "2025-07-14"
+   },
+   {
+    "person": {
+     "role": "S",
+     "roleAsText": "Stockholder",
+     "type": "J",
+     "surnameLegalEntityName": "Rahandusministeerium",
+     "identityCode": "70000272"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": true,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 846645750.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V1",
+    "authoritySourceDate": "2025-07-14",
+    "recordId": 9003462398,
+    "startDate": "2025-07-14"
+   }
+  ],
+  "nonCardRelatedPersons": [
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Väino",
+     "surnameLegalEntityName": "Milt",
+     "identityCode": "39557481376"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000035321,
+    "startDate": "1998-03-17",
+    "endDate": "1998-05-29"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Mati",
+     "surnameLegalEntityName": "Valdma",
+     "identityCode": "30849125038"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000035322,
+    "startDate": "1998-03-17",
+    "endDate": "2001-10-02"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Käo",
+     "identityCode": "37742198953"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000035323,
+    "startDate": "1998-03-17",
+    "endDate": "2002-04-08"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Ell-Mari",
+     "surnameLegalEntityName": "Koppel",
+     "identityCode": "32299123442"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000035324,
+    "startDate": "1998-03-17",
+    "endDate": "2001-11-27"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Leonhard",
+     "surnameLegalEntityName": "Tammeväli",
+     "identityCode": "31489206823"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000035325,
+    "startDate": "1998-03-17",
+    "endDate": "1999-07-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Heido",
+     "surnameLegalEntityName": "Vitsur",
+     "identityCode": "39006419017"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000035326,
+    "startDate": "1998-03-17",
+    "endDate": "1999-05-14"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Aivar",
+     "surnameLegalEntityName": "Sool",
+     "identityCode": "31440933482"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000035327,
+    "startDate": "1998-03-17",
+    "endDate": "1999-05-14"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Jaanus",
+     "surnameLegalEntityName": "Reisner",
+     "identityCode": "31146415666"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000156290,
+    "startDate": "1999-07-12",
+    "endDate": "2002-02-19"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Tiit",
+     "surnameLegalEntityName": "Tanner",
+     "identityCode": "39201883038"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000156291,
+    "startDate": "1999-05-29",
+    "endDate": "2000-09-26"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Taivo",
+     "surnameLegalEntityName": "Tahk",
+     "identityCode": "32722550441"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000156292,
+    "startDate": "1999-05-14",
+    "endDate": "2000-11-15"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Kalev",
+     "surnameLegalEntityName": "Kukk",
+     "identityCode": "31758772715"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000156293,
+    "startDate": "1999-05-14",
+    "endDate": "2003-06-25"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Toomas",
+     "surnameLegalEntityName": "Luman",
+     "identityCode": "32307000565"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000156294,
+    "startDate": "1998-03-17",
+    "endDate": "2015-09-09"
+   },
+   {
+    "person": {
+     "role": "D",
+     "roleAsText": "Audit firm",
+     "type": "F",
+     "firstName": "Sulev",
+     "surnameLegalEntityName": "Luiga",
+     "identityCode": "35509895509"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000162550,
+    "startDate": "2002-11-14",
+    "endDate": "2002-11-14"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Väino",
+     "surnameLegalEntityName": "Sarnet",
+     "identityCode": "37229805066"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000182369,
+    "startDate": "2000-09-26",
+    "endDate": "2001-11-27"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Raivo",
+     "surnameLegalEntityName": "Sulg",
+     "identityCode": "34977643576"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000185677,
+    "startDate": "2000-11-15",
+    "endDate": "2001-11-27"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Erich",
+     "surnameLegalEntityName": "Teigamägi",
+     "identityCode": "30911722380"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000205738,
+    "startDate": "2001-10-02",
+    "endDate": "2002-04-08"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Veiko",
+     "surnameLegalEntityName": "Tali",
+     "identityCode": "36988422944"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000209075,
+    "startDate": "2001-11-27",
+    "endDate": "2002-04-08"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Olev",
+     "surnameLegalEntityName": "Liik",
+     "identityCode": "33940975911"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000209076,
+    "startDate": "2001-11-27",
+    "endDate": "2002-04-08"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Maria",
+     "surnameLegalEntityName": "Alajõe",
+     "identityCode": "34936257233"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000209077,
+    "startDate": "2001-11-27",
+    "endDate": "2002-04-08"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Heido",
+     "surnameLegalEntityName": "Vitsur",
+     "identityCode": "39006419017"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000213458,
+    "startDate": "2002-02-19",
+    "endDate": "2003-06-25"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Urmas",
+     "surnameLegalEntityName": "Sõõrumaa",
+     "identityCode": "35456262191"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000222687,
+    "startDate": "2002-04-08",
+    "endDate": "2005-05-16"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Aadu",
+     "surnameLegalEntityName": "Paist",
+     "identityCode": "37343364386"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000222688,
+    "startDate": "2002-04-08",
+    "endDate": "2003-06-25"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Alo",
+     "surnameLegalEntityName": "Kelder",
+     "identityCode": "34046501200"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000222689,
+    "startDate": "2002-04-08",
+    "endDate": "2003-06-25"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Kaia",
+     "surnameLegalEntityName": "Jäppinen",
+     "identityCode": "38066848727"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000222690,
+    "startDate": "2002-04-08",
+    "endDate": "2003-06-25"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Janno",
+     "surnameLegalEntityName": "Reiljan",
+     "identityCode": "32140902438"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000222691,
+    "startDate": "2002-04-08",
+    "endDate": "2007-05-30"
+   },
+   {
+    "person": {
+     "role": "D",
+     "roleAsText": "Audit firm",
+     "type": "J",
+     "surnameLegalEntityName": "Aktsiaselts PricewaterhouseCoopers",
+     "identityCode": "10142876"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "recordId": 2000246163,
+    "startDate": "2002-11-14"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Siim-Valmar",
+     "surnameLegalEntityName": "Kiisler",
+     "identityCode": "33510589107"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000265089,
+    "startDate": "2003-06-25",
+    "endDate": "2005-05-16"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Ants",
+     "surnameLegalEntityName": "Pauls",
+     "identityCode": "32434193630"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000265090,
+    "startDate": "2003-06-25",
+    "endDate": "2005-05-16"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Märt",
+     "surnameLegalEntityName": "Rask",
+     "identityCode": "38543657951"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000265091,
+    "startDate": "2003-06-25",
+    "endDate": "2004-09-06"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Alo",
+     "surnameLegalEntityName": "Kelder",
+     "identityCode": "34046501200"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000265092,
+    "startDate": "2003-06-25",
+    "endDate": "2005-05-16"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Olev",
+     "surnameLegalEntityName": "Liik",
+     "identityCode": "33940975911"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000265093,
+    "startDate": "2003-06-25",
+    "endDate": "2005-05-16"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Peep",
+     "surnameLegalEntityName": "Aaviksoo",
+     "identityCode": "31385677200"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000302939,
+    "startDate": "2004-09-17",
+    "endDate": "2005-05-16"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Heido",
+     "surnameLegalEntityName": "Vitsur",
+     "identityCode": "39006419017"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000369218,
+    "startDate": "2005-05-16",
+    "endDate": "2007-05-30"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Värner",
+     "surnameLegalEntityName": "Lootsmann",
+     "identityCode": "33891710906"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000369219,
+    "startDate": "2005-05-16",
+    "endDate": "2007-05-30"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Mihhail",
+     "surnameLegalEntityName": "Stalnuhhin",
+     "identityCode": "32129922026"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000369220,
+    "startDate": "2005-05-16",
+    "endDate": "2007-05-30"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Meelis",
+     "surnameLegalEntityName": "Atonen",
+     "identityCode": "36922808825"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000369221,
+    "startDate": "2005-05-16",
+    "endDate": "2008-05-20"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Tiit",
+     "surnameLegalEntityName": "Tammsaar",
+     "identityCode": "37316830092"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000369222,
+    "startDate": "2005-05-16",
+    "endDate": "2007-05-30"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Urmas",
+     "surnameLegalEntityName": "Sõõrumaa",
+     "identityCode": "35456262191"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000369223,
+    "startDate": "2005-05-16",
+    "endDate": "2007-05-30"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Meelis",
+     "surnameLegalEntityName": "Virkebau",
+     "identityCode": "38624045505"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000618758,
+    "startDate": "2007-05-30",
+    "endDate": "2009-11-26"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Rene",
+     "surnameLegalEntityName": "Tammist",
+     "identityCode": "31697894120"
+    },
+    "address": {
+     "country": "BEL",
+     "countryAsText": "Belgium"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000618765,
+    "startDate": "2007-05-30",
+    "endDate": "2009-11-26"
+   },
+   {
+    "person": {
+     "role": "E",
+     "roleAsText": "Chairman of the supervisory board",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Käo",
+     "identityCode": "37742198953"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000618766,
+    "startDate": "2007-05-30",
+    "endDate": "2013-05-28"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Aivar",
+     "surnameLegalEntityName": "Reivik",
+     "identityCode": "31842336497"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000618767,
+    "startDate": "2007-05-30",
+    "endDate": "2011-07-01"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Rein",
+     "surnameLegalEntityName": "Kilk",
+     "identityCode": "36560354167"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000618768,
+    "startDate": "2007-05-30",
+    "endDate": "2013-04-24"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Jürgen",
+     "surnameLegalEntityName": "Ligi",
+     "identityCode": "37642869787"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000618769,
+    "startDate": "2007-05-30",
+    "endDate": "2009-11-25"
+   },
+   {
+    "person": {
+     "role": "M",
+     "roleAsText": "Auditor of valuation of non-monetary contribution",
+     "type": "F",
+     "firstName": "Urmas",
+     "surnameLegalEntityName": "Kaarlep",
+     "identityCode": "37339535272"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 2000653552,
+    "startDate": "2007-12-20"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Meelis",
+     "surnameLegalEntityName": "Atonen",
+     "identityCode": "36922808825"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySourceDate": "2011-08-24",
+    "recordId": 2000676322,
+    "startDate": "2008-05-20",
+    "endDate": "2011-05-19"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Kalle",
+     "surnameLegalEntityName": "Palling",
+     "identityCode": "33475543028"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 3000009206,
+    "startDate": "2009-11-26",
+    "endDate": "2015-09-02"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Janek",
+     "surnameLegalEntityName": "Parkman",
+     "identityCode": "34183894403"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 3000009207,
+    "startDate": "2009-11-26",
+    "endDate": "2011-09-21"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Rein",
+     "surnameLegalEntityName": "Kuusmik",
+     "identityCode": "34292133131"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 3000009208,
+    "startDate": "2009-11-25",
+    "endDate": "2011-07-01"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Toomas",
+     "surnameLegalEntityName": "Tauts",
+     "identityCode": "33663670581"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 3000135360,
+    "startDate": "2011-07-01",
+    "endDate": "2014-06-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Saame",
+     "identityCode": "31703618862"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 3000135872,
+    "startDate": "2011-07-01",
+    "endDate": "2014-06-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Meelis",
+     "surnameLegalEntityName": "Atonen",
+     "identityCode": "36922808825"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySourceDate": "2011-08-24",
+    "recordId": 3000138937,
+    "startDate": "2011-05-19",
+    "endDate": "2014-05-20"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Märt",
+     "surnameLegalEntityName": "Vooglaid",
+     "identityCode": "35732659987"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 3000151231,
+    "startDate": "2011-09-21",
+    "endDate": "2014-10-28"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Olari",
+     "surnameLegalEntityName": "Taal",
+     "identityCode": "34712065957"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2013-05-17",
+    "recordId": 9000160315,
+    "startDate": "2013-04-24",
+    "endDate": "2014-09-26"
+   },
+   {
+    "person": {
+     "role": "E",
+     "roleAsText": "Chairman of the supervisory board",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Käo",
+     "identityCode": "37742198953"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2013-06-05",
+    "recordId": 9000192982,
+    "startDate": "2013-05-28",
+    "endDate": "2014-08-28"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Meelis",
+     "surnameLegalEntityName": "Atonen",
+     "identityCode": "36922808825"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9000274207,
+    "startDate": "2014-05-20",
+    "endDate": "2014-08-01"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Indrek",
+     "surnameLegalEntityName": "Kaju",
+     "identityCode": "37694129334"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9000281529,
+    "startDate": "2014-06-12",
+    "endDate": "2014-09-25"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Danel",
+     "surnameLegalEntityName": "Tuusis",
+     "identityCode": "30061660681"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9000281530,
+    "startDate": "2014-06-12",
+    "endDate": "2017-05-11"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Erkki",
+     "surnameLegalEntityName": "Raasuke",
+     "identityCode": "30163066170"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9000289163,
+    "startDate": "2014-08-01",
+    "endDate": "2014-09-01"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Märt",
+     "surnameLegalEntityName": "Vooglaid",
+     "identityCode": "35732659987"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2014-10-21",
+    "recordId": 9000304675,
+    "startDate": "2014-10-21",
+    "endDate": "2011-09-21"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Meelis",
+     "surnameLegalEntityName": "Virkebau",
+     "identityCode": "38624045505"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2014-10-21",
+    "recordId": 9000304676,
+    "startDate": "2014-08-28",
+    "endDate": "2017-02-28"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Randel",
+     "surnameLegalEntityName": "Länts",
+     "identityCode": "35780377762"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2014-10-21",
+    "recordId": 9000304677,
+    "startDate": "2014-09-25",
+    "endDate": "2015-10-06"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Peep",
+     "surnameLegalEntityName": "Siitam",
+     "identityCode": "31952639589"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2014-10-21",
+    "recordId": 9000304678,
+    "startDate": "2014-09-26",
+    "endDate": "2015-12-17"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Märt",
+     "surnameLegalEntityName": "Vooglaid",
+     "identityCode": "35732659987"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9000304679,
+    "startDate": "2014-10-28",
+    "endDate": "2014-10-28"
+   },
+   {
+    "person": {
+     "role": "E",
+     "roleAsText": "Chairman of the supervisory board",
+     "type": "F",
+     "firstName": "Erkki",
+     "surnameLegalEntityName": "Raasuke",
+     "identityCode": "30163066170"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9000304682,
+    "startDate": "2014-09-01",
+    "endDate": "2017-08-01"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Märt",
+     "surnameLegalEntityName": "Vooglaid",
+     "identityCode": "35732659987"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9000304700,
+    "startDate": "2011-09-21",
+    "endDate": "2017-01-24"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Väino",
+     "surnameLegalEntityName": "Kaldoja",
+     "identityCode": "37795954651"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2015-10-13",
+    "recordId": 9000383544,
+    "startDate": "2015-09-09",
+    "endDate": "2017-05-11"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Ants",
+     "surnameLegalEntityName": "Pauls",
+     "identityCode": "32434193630"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2015-10-13",
+    "recordId": 9000383545,
+    "startDate": "2015-10-06",
+    "endDate": "2017-05-11"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Veiko",
+     "surnameLegalEntityName": "Tali",
+     "identityCode": "36988422944"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2015-10-13",
+    "recordId": 9000383546,
+    "startDate": "2015-10-06",
+    "endDate": "2017-05-11"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Rannar",
+     "surnameLegalEntityName": "Vassiljev",
+     "identityCode": "34590900020"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2015-12-30",
+    "recordId": 9000400307,
+    "startDate": "2015-12-17",
+    "endDate": "2017-05-11"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Liinat",
+     "identityCode": "34284286282"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2017-08-03",
+    "recordId": 9000540205,
+    "startDate": "2017-05-12",
+    "endDate": "2020-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Einari",
+     "surnameLegalEntityName": "Kisel",
+     "identityCode": "39599872969"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2017-08-03",
+    "recordId": 9000540206,
+    "startDate": "2017-05-12",
+    "endDate": "2020-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Ants",
+     "surnameLegalEntityName": "Pauls",
+     "identityCode": "32434193630"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2017-08-03",
+    "recordId": 9000540207,
+    "startDate": "2017-05-12",
+    "endDate": "2020-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Danel",
+     "surnameLegalEntityName": "Tuusis",
+     "identityCode": "30061660681"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2017-08-03",
+    "recordId": 9000540208,
+    "startDate": "2017-05-12",
+    "endDate": "2020-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Ivo",
+     "surnameLegalEntityName": "Palu",
+     "identityCode": "30386648405"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2017-08-03",
+    "recordId": 9000540209,
+    "startDate": "2017-05-12",
+    "endDate": "2020-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Kaie",
+     "surnameLegalEntityName": "Karniol",
+     "identityCode": "39513497429"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2017-08-03",
+    "recordId": 9000540210,
+    "startDate": "2017-05-12",
+    "endDate": "2020-05-12"
+   },
+   {
+    "person": {
+     "role": "E",
+     "roleAsText": "Chairman of the supervisory board",
+     "type": "F",
+     "firstName": "Väino",
+     "surnameLegalEntityName": "Kaldoja",
+     "identityCode": "37795954651"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2017-08-03",
+    "recordId": 9000540211,
+    "startDate": "2017-05-12",
+    "endDate": "2020-05-12"
+   },
+   {
+    "person": {
+     "role": "D",
+     "roleAsText": "Audit firm",
+     "type": "F",
+     "firstName": "Tiit",
+     "surnameLegalEntityName": "Raimla",
+     "identityCode": "38298308188"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9000627348,
+    "startDate": "2018-02-21"
+   },
+   {
+    "person": {
+     "role": "D",
+     "roleAsText": "Audit firm",
+     "type": "F",
+     "firstName": "Jüri",
+     "surnameLegalEntityName": "Koltsov",
+     "identityCode": "35801038918"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9000627349,
+    "startDate": "2018-02-21"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Väino",
+     "surnameLegalEntityName": "Kaldoja",
+     "identityCode": "37795954651"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2020-05-12",
+    "recordId": 9001118657,
+    "startDate": "2020-05-12",
+    "endDate": "2022-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Raigo",
+     "surnameLegalEntityName": "Uukkivi",
+     "identityCode": "37819188816"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2020-05-12",
+    "recordId": 9001118658,
+    "startDate": "2020-05-12",
+    "endDate": "2022-03-07"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Meelis",
+     "surnameLegalEntityName": "Einstein",
+     "identityCode": "31089417165"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2020-05-12",
+    "recordId": 9001118659,
+    "startDate": "2020-05-12",
+    "endDate": "2022-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Ivo",
+     "surnameLegalEntityName": "Palu",
+     "identityCode": "30386648405"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2020-05-12",
+    "recordId": 9001118660,
+    "startDate": "2020-05-12",
+    "endDate": "2022-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Einari",
+     "surnameLegalEntityName": "Kisel",
+     "identityCode": "39599872969"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2020-05-12",
+    "recordId": 9001118661,
+    "startDate": "2020-05-12",
+    "endDate": "2022-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Ants",
+     "surnameLegalEntityName": "Pauls",
+     "identityCode": "32434193630"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2020-05-12",
+    "recordId": 9001118662,
+    "startDate": "2020-05-12",
+    "endDate": "2022-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Liinat",
+     "identityCode": "34284286282"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2020-05-12",
+    "recordId": 9001118663,
+    "startDate": "2020-05-12",
+    "endDate": "2022-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Tarmo",
+     "surnameLegalEntityName": "Porgand",
+     "identityCode": "33099493999"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-03-07",
+    "recordId": 9001405244,
+    "startDate": "2022-03-07",
+    "endDate": "2022-05-12"
+   },
+   {
+    "person": {
+     "role": "E",
+     "roleAsText": "Chairman of the supervisory board",
+     "type": "F",
+     "firstName": "Anne",
+     "surnameLegalEntityName": "Mere",
+     "identityCode": "37054678037"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-05-12",
+    "recordId": 9001436762,
+    "startDate": "2022-05-12",
+    "endDate": "2025-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Ahti",
+     "surnameLegalEntityName": "Kuningas",
+     "identityCode": "38253636042"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-05-12",
+    "recordId": 9001436763,
+    "startDate": "2022-05-12",
+    "endDate": "2022-12-14"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Taavi",
+     "surnameLegalEntityName": "Tamkivi",
+     "identityCode": "37765356280"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-05-12",
+    "recordId": 9001436764,
+    "startDate": "2022-05-12",
+    "endDate": "2022-12-14"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Einari",
+     "surnameLegalEntityName": "Kisel",
+     "identityCode": "39599872969"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-05-12",
+    "recordId": 9001436765,
+    "startDate": "2022-05-12",
+    "endDate": "2025-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Meelis",
+     "surnameLegalEntityName": "Einstein",
+     "identityCode": "31089417165"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-05-12",
+    "recordId": 9001436766,
+    "startDate": "2022-05-12",
+    "endDate": "2025-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Tarmo",
+     "surnameLegalEntityName": "Porgand",
+     "identityCode": "33099493999"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-05-12",
+    "recordId": 9001436767,
+    "startDate": "2022-05-12",
+    "endDate": "2023-03-30"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Andres",
+     "surnameLegalEntityName": "Liinat",
+     "identityCode": "34284286282"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-05-12",
+    "recordId": 9001436768,
+    "startDate": "2022-05-12",
+    "endDate": "2025-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Luukas Kristjan",
+     "surnameLegalEntityName": "Ilves",
+     "identityCode": "37539027384"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-12-27",
+    "recordId": 9001514067,
+    "startDate": "2022-12-14",
+    "endDate": "2022-12-20"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Allan",
+     "surnameLegalEntityName": "Niidu",
+     "identityCode": "32641059007"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-12-27",
+    "recordId": 9001514068,
+    "startDate": "2022-12-14",
+    "endDate": "2022-12-20"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Luukas Kristjan",
+     "surnameLegalEntityName": "Ilves",
+     "identityCode": "37539027384"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9001517987,
+    "startDate": "2022-12-20",
+    "endDate": "2024-01-23"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Allan",
+     "surnameLegalEntityName": "Niidu",
+     "identityCode": "32641059007"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "recordId": 9001517989,
+    "startDate": "2022-12-20",
+    "endDate": "2025-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Kaur",
+     "surnameLegalEntityName": "Kajak",
+     "identityCode": "33525669338"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2023-04-05",
+    "recordId": 9001558715,
+    "startDate": "2023-04-03",
+    "endDate": "2026-04-06"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Kristi",
+     "surnameLegalEntityName": "Klaas",
+     "identityCode": "35063031611"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2024-01-26",
+    "recordId": 9001676296,
+    "startDate": "2024-01-23"
+   },
+   {
+    "person": {
+     "role": "E",
+     "roleAsText": "Chairman of the supervisory board",
+     "type": "F",
+     "firstName": "Anne",
+     "surnameLegalEntityName": "Mere",
+     "identityCode": "37054678037"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2025-05-20",
+    "recordId": 9003447033,
+    "startDate": "2025-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Priit",
+     "surnameLegalEntityName": "Rohumaa",
+     "identityCode": "34746050869"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2025-05-20",
+    "recordId": 9003447034,
+    "startDate": "2025-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Jevgeni",
+     "surnameLegalEntityName": "Kabanov",
+     "identityCode": "32294917842"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2025-05-20",
+    "recordId": 9003447035,
+    "startDate": "2025-05-12",
+    "endDate": "2026-02-18"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Anna",
+     "surnameLegalEntityName": "Broughel",
+     "identityCode": "31969652324"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2025-05-20",
+    "recordId": 9003447036,
+    "startDate": "2025-05-12"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Kaur",
+     "surnameLegalEntityName": "Kajak",
+     "identityCode": "33525669338"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2026-04-06",
+    "recordId": 9003540479,
+    "startDate": "2026-04-06",
+    "endDate": "2026-08-01"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Janek",
+     "surnameLegalEntityName": "Stalmeister",
+     "identityCode": "37468589856"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2026-05-20",
+    "recordId": 9003551956,
+    "startDate": "2026-05-22"
+   },
+   {
+    "person": {
+     "role": "N",
+     "roleAsText": "Member of the supervisory board",
+     "type": "F",
+     "firstName": "Tarmo",
+     "surnameLegalEntityName": "Porgand",
+     "identityCode": "33099493999"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2026-07-29",
+    "recordId": 9003571234,
+    "startDate": "2026-08-01"
+   }
+  ]
+ },
+ "rulings": [
+  {
+   "number": "Ä 10016579 / 58",
+   "date": "2026-10-02",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2026-10-02",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2026-10-02",
+   "statusChanges": [
+    {
+     "id": 900007802951,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2026-10-02"
+    },
+    {
+     "id": 900007802950,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2026-10-02"
+    }
+   ],
+   "entry": {
+    "number": 57,
+    "date": "2026-10-02",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 57",
+   "date": "2026-07-15",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2026-07-15",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2026-07-15",
+   "statusChanges": [
+    {
+     "id": 900007705704,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2026-07-15"
+    },
+    {
+     "id": 900007705703,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2026-07-15"
+    }
+   ],
+   "entry": {
+    "number": 56,
+    "date": "2026-07-15",
+    "type": "33",
+    "typeAsText": "Entry on the amendment: § 595¹ (1) of the Code of Civil Procedure",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 56",
+   "date": "2026-06-22",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2026-06-22",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2026-06-22",
+   "statusChanges": [
+    {
+     "id": 900007677607,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2026-06-22"
+    },
+    {
+     "id": 900007677606,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2026-06-22"
+    }
+   ],
+   "entry": {
+    "number": 55,
+    "date": "2026-06-22",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 55",
+   "date": "2026-02-25",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2026-02-26",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2026-02-26",
+   "statusChanges": [
+    {
+     "id": 900007543417,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2026-02-26"
+    },
+    {
+     "id": 900007543416,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2026-02-26"
+    }
+   ],
+   "entry": {
+    "number": 54,
+    "date": "2026-02-26",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 54",
+   "date": "2025-12-29",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2025-12-29",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2025-12-29",
+   "statusChanges": [
+    {
+     "id": 900007477231,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2025-12-29"
+    },
+    {
+     "id": 900007477229,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2025-12-29"
+    }
+   ],
+   "entry": {
+    "number": 53,
+    "date": "2025-12-29",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 53",
+   "date": "2025-10-14",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2025-10-14",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2025-10-14",
+   "statusChanges": [
+    {
+     "id": 900007402262,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2025-10-14"
+    },
+    {
+     "id": 900007402261,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2025-10-14"
+    }
+   ],
+   "entry": {
+    "number": 52,
+    "date": "2025-10-14",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 52",
+   "date": "2025-07-09",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2025-07-09",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2025-07-09",
+   "statusChanges": [
+    {
+     "id": 900007286341,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2025-07-09"
+    },
+    {
+     "id": 900007286340,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2025-07-09"
+    }
+   ],
+   "entry": {
+    "number": 51,
+    "date": "2025-07-09",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 51",
+   "date": "2024-09-10",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2024-09-10",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2024-09-10",
+   "statusChanges": [
+    {
+     "id": 900006896474,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2024-09-10"
+    },
+    {
+     "id": 900006896473,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-09-10"
+    }
+   ],
+   "entry": {
+    "number": 50,
+    "date": "2024-09-10",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 50",
+   "date": "2024-08-05",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2024-08-05",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2024-08-05",
+   "statusChanges": [
+    {
+     "id": 900006755754,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2024-08-05"
+    },
+    {
+     "id": 900006755753,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-08-05"
+    }
+   ],
+   "entry": {
+    "number": 49,
+    "date": "2024-08-05",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 49",
+   "date": "2024-04-17",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2024-04-17",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2024-04-17",
+   "statusChanges": [
+    {
+     "id": 900006489870,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2024-04-17"
+    },
+    {
+     "id": 900006489869,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-04-17"
+    }
+   ],
+   "entry": {
+    "number": 48,
+    "date": "2024-04-17",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / M11",
+   "date": "2024-04-12",
+   "type": "AB",
+   "typeAsText": "A ruling of the confirmation of the business name reservation",
+   "effectiveDate": "2024-04-12",
+   "rulingInForceType": "L",
+   "rulingInForceTypeAsText": "Will enter into force whem the judicial decision is made",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2024-04-12",
+   "statusChanges": [
+    {
+     "id": 900006484397,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2024-04-12"
+    },
+    {
+     "id": 900006484396,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-04-12"
+    }
+   ]
+  },
+  {
+   "number": "Ä 10016579 / 48",
+   "date": "2024-04-04",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2024-04-04",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2024-04-04",
+   "statusChanges": [
+    {
+     "id": 900006472994,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2024-04-04"
+    },
+    {
+     "id": 900006472993,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-04-04"
+    }
+   ],
+   "entry": {
+    "number": 47,
+    "date": "2024-04-04",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / M10",
+   "date": "2024-04-02",
+   "type": "M1",
+   "typeAsText": "A ruling on the elimination of the deficiencies",
+   "effectiveDate": "2024-04-03",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "additionalTerm": "2024-04-18",
+   "status": "L",
+   "statusAsText": "The deficiencies have been rectified",
+   "statusDate": "2024-04-12",
+   "statusChanges": [
+    {
+     "id": 900006484398,
+     "status": "L",
+     "statusAsText": "The deficiencies have been rectified",
+     "statusChangeDate": "2024-04-12"
+    },
+    {
+     "id": 900006471033,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-04-03"
+    }
+   ]
+  },
+  {
+   "number": "Ä 10016579 / 47",
+   "date": "2023-04-18",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2023-04-18",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2023-04-18",
+   "statusChanges": [
+    {
+     "id": 900005295181,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2023-04-18"
+    },
+    {
+     "id": 900005295180,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2023-04-18"
+    }
+   ],
+   "entry": {
+    "number": 46,
+    "date": "2023-04-18",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 46",
+   "date": "2023-04-11",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2023-04-11",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2023-04-11",
+   "statusChanges": [
+    {
+     "id": 900005289657,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2023-04-11"
+    },
+    {
+     "id": 900005289656,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2023-04-11"
+    }
+   ],
+   "entry": {
+    "number": 45,
+    "date": "2023-04-11",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 45",
+   "date": "2023-04-03",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2023-04-03",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2023-04-03",
+   "statusChanges": [
+    {
+     "id": 900005282507,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2023-04-03"
+    },
+    {
+     "id": 900005282506,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2023-04-03"
+    }
+   ],
+   "entry": {
+    "number": 44,
+    "date": "2023-04-03",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 44",
+   "date": "2023-03-27",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2023-03-27",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2023-03-27",
+   "statusChanges": [
+    {
+     "id": 900005277285,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2023-03-27"
+    },
+    {
+     "id": 900005277284,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2023-03-27"
+    }
+   ],
+   "entry": {
+    "number": 43,
+    "date": "2023-03-27",
+    "type": "51",
+    "typeAsText": "Division entry of separating entity",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 43",
+   "date": "2022-05-27",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2022-05-27",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2022-05-27",
+   "statusChanges": [
+    {
+     "id": 900004855821,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2022-05-27"
+    },
+    {
+     "id": 900004855820,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2022-05-27"
+    }
+   ],
+   "entry": {
+    "number": 42,
+    "date": "2022-05-27",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / M9",
+   "date": "2022-05-18",
+   "type": "M1",
+   "typeAsText": "A ruling on the elimination of the deficiencies",
+   "effectiveDate": "2022-05-19",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "additionalTerm": "2022-06-28",
+   "status": "L",
+   "statusAsText": "The deficiencies have been rectified",
+   "statusDate": "2022-05-27",
+   "statusChanges": [
+    {
+     "id": 900004855828,
+     "status": "L",
+     "statusAsText": "The deficiencies have been rectified",
+     "statusChangeDate": "2022-05-27"
+    },
+    {
+     "id": 900004843534,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2022-05-19"
+    },
+    {
+     "id": 900004843533,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2022-05-19"
+    }
+   ]
+  },
+  {
+   "number": "Ä 10016579 / 42",
+   "date": "2020-09-15",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2020-09-15",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2020-09-15",
+   "statusChanges": [
+    {
+     "id": 900004037874,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2020-09-15"
+    },
+    {
+     "id": 900004037873,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2020-09-15"
+    }
+   ],
+   "entry": {
+    "number": 41,
+    "date": "2020-09-15",
+    "type": "51",
+    "typeAsText": "Division entry of separating entity",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 41",
+   "date": "2020-05-18",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2020-05-18",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2020-05-18",
+   "statusChanges": [
+    {
+     "id": 900003941468,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2020-05-18"
+    },
+    {
+     "id": 900003941467,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2020-05-18"
+    }
+   ],
+   "entry": {
+    "number": 40,
+    "date": "2020-05-18",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 40",
+   "date": "2020-04-03",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2020-04-03",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2020-04-03",
+   "statusChanges": [
+    {
+     "id": 900003905550,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2020-04-03"
+    },
+    {
+     "id": 900003905549,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2020-04-03"
+    }
+   ],
+   "entry": {
+    "number": 39,
+    "date": "2020-04-03",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 39",
+   "date": "2019-12-05",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2019-12-05",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2019-12-05",
+   "statusChanges": [
+    {
+     "id": 900003803464,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2019-12-05"
+    },
+    {
+     "id": 900003803463,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2019-12-05"
+    }
+   ],
+   "entry": {
+    "number": 38,
+    "date": "2019-12-05",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / M8",
+   "date": "2019-11-29",
+   "type": "M1",
+   "typeAsText": "A ruling on the elimination of the deficiencies",
+   "effectiveDate": "2019-11-29",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "additionalTerm": "2019-12-09",
+   "status": "L",
+   "statusAsText": "The deficiencies have been rectified",
+   "statusDate": "2019-12-05",
+   "statusChanges": [
+    {
+     "id": 900003803461,
+     "status": "L",
+     "statusAsText": "The deficiencies have been rectified",
+     "statusChangeDate": "2019-12-05"
+    },
+    {
+     "id": 900003797665,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2019-11-29"
+    },
+    {
+     "id": 900003797664,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2019-11-29"
+    }
+   ]
+  },
+  {
+   "number": "Ä 10016579 / 38",
+   "date": "2018-07-03",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2018-07-03",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2018-07-03",
+   "statusChanges": [
+    {
+     "id": 900003218448,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2018-07-03"
+    },
+    {
+     "id": 900003218447,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2018-07-03"
+    }
+   ],
+   "entry": {
+    "number": 37,
+    "date": "2018-07-03",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 37",
+   "date": "2018-01-16",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2018-01-16",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2018-01-16",
+   "statusChanges": [
+    {
+     "id": 900002506845,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2018-01-16"
+    },
+    {
+     "id": 900002506846,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2018-01-16"
+    }
+   ],
+   "entry": {
+    "number": 36,
+    "date": "2018-01-16",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 36",
+   "date": "2017-12-12",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2017-12-12",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2017-12-12",
+   "statusChanges": [
+    {
+     "id": 900002259102,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-12-12"
+    },
+    {
+     "id": 900002259099,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-12-12"
+    }
+   ],
+   "entry": {
+    "number": 35,
+    "date": "2017-12-12",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / M7",
+   "date": "2017-12-06",
+   "type": "M1",
+   "typeAsText": "A ruling on the elimination of the deficiencies",
+   "effectiveDate": "2017-12-06",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "additionalTerm": "2017-12-18",
+   "status": "L",
+   "statusAsText": "The deficiencies have been rectified",
+   "statusDate": "2017-12-12",
+   "statusChanges": [
+    {
+     "id": 900002259172,
+     "status": "L",
+     "statusAsText": "The deficiencies have been rectified",
+     "statusChangeDate": "2017-12-12"
+    },
+    {
+     "id": 900002142344,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-12-06"
+    },
+    {
+     "id": 900002142343,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-12-06"
+    }
+   ]
+  },
+  {
+   "number": "Ä 10016579 / M6",
+   "date": "2017-12-04",
+   "type": "M1",
+   "typeAsText": "A ruling on the elimination of the deficiencies",
+   "effectiveDate": "2017-12-04",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "additionalTerm": "2017-12-19",
+   "status": "L",
+   "statusAsText": "The deficiencies have been rectified",
+   "statusDate": "2017-12-12",
+   "statusChanges": [
+    {
+     "id": 900002259163,
+     "status": "L",
+     "statusAsText": "The deficiencies have been rectified",
+     "statusChangeDate": "2017-12-12"
+    },
+    {
+     "id": 900002058555,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-12-04"
+    },
+    {
+     "id": 900002058554,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-12-04"
+    }
+   ]
+  },
+  {
+   "number": "Ä 10016579 / 35",
+   "date": "2017-11-07",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2017-11-07",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2017-11-07",
+   "statusChanges": [
+    {
+     "id": 900001843550,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-11-07"
+    },
+    {
+     "id": 900001843551,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-11-07"
+    }
+   ],
+   "entry": {
+    "number": 34,
+    "date": "2017-11-07",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 34",
+   "date": "2017-09-28",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2017-09-28",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2017-09-28",
+   "statusChanges": [
+    {
+     "id": 900001799731,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-09-28"
+    },
+    {
+     "id": 900001799732,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-09-28"
+    }
+   ],
+   "entry": {
+    "number": 33,
+    "date": "2017-09-28",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 33",
+   "date": "2017-08-10",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2017-08-10",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2017-08-10",
+   "statusChanges": [
+    {
+     "id": 900001752106,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2017-08-10"
+    },
+    {
+     "id": 900001752105,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2017-08-10"
+    }
+   ],
+   "entry": {
+    "number": 32,
+    "date": "2017-08-10",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 32",
+   "date": "2016-09-14",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2016-09-14",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2016-09-14",
+   "statusChanges": [
+    {
+     "id": 900001312312,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2016-09-14"
+    },
+    {
+     "id": 900001312313,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2016-09-14"
+    }
+   ],
+   "entry": {
+    "number": 31,
+    "date": "2016-09-14",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 31",
+   "date": "2015-04-16",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2015-04-16",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2015-04-16",
+   "statusChanges": [
+    {
+     "id": 900000706869,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2015-04-16"
+    },
+    {
+     "id": 900000706868,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2015-04-16"
+    }
+   ],
+   "entry": {
+    "number": 30,
+    "date": "2015-04-16",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 30",
+   "date": "2015-02-20",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2015-02-20",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2015-02-20",
+   "statusChanges": [
+    {
+     "id": 900000667265,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2015-02-20"
+    },
+    {
+     "id": 900000667264,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2015-02-20"
+    }
+   ],
+   "entry": {
+    "number": 29,
+    "date": "2015-02-20",
+    "type": "32",
+    "typeAsText": "Entry on the amendment: § 525 (2) of the Commercial Code",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 29",
+   "date": "2014-12-08",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2014-12-08",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2014-12-08",
+   "statusChanges": [
+    {
+     "id": 900000604518,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2014-12-08"
+    },
+    {
+     "id": 900000604517,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2014-12-08"
+    }
+   ],
+   "entry": {
+    "number": 28,
+    "date": "2014-12-08",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 28",
+   "date": "2013-01-28",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2013-01-28",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2013-01-28",
+   "statusChanges": [
+    {
+     "id": 900000115319,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2013-01-28"
+    },
+    {
+     "id": 900000115318,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2013-01-28"
+    }
+   ],
+   "entry": {
+    "number": 27,
+    "date": "2013-01-28",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 27",
+   "date": "2012-08-28",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2012-08-28",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2012-08-28",
+   "statusChanges": [
+    {
+     "id": 300000461003,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2012-08-28"
+    }
+   ],
+   "entry": {
+    "number": 26,
+    "date": "2012-08-28",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 26",
+   "date": "2010-12-27",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2010-12-27",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2010-12-27",
+   "statusChanges": [
+    {
+     "id": 300000141133,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2010-12-27"
+    }
+   ],
+   "entry": {
+    "number": 25,
+    "date": "2010-12-27",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 10016579 / 25",
+   "date": "2010-07-14",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2010-07-14",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2010-07-14",
+   "statusChanges": [
+    {
+     "id": 300000080180,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2010-07-14"
+    }
+   ],
+   "entry": {
+    "number": 24,
+    "date": "2010-07-14",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 24",
+   "date": "2009-09-02",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2009-09-02",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2009-09-02",
+   "statusChanges": [
+    {
+     "id": 200000310676,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2009-09-02"
+    }
+   ],
+   "entry": {
+    "number": 23,
+    "date": "2009-09-02",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 23",
+   "date": "2009-06-04",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2009-06-04",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2009-06-04",
+   "statusChanges": [
+    {
+     "id": 200000291529,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2009-06-04"
+    }
+   ],
+   "entry": {
+    "number": 22,
+    "date": "2009-06-04",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 22",
+   "date": "2008-12-03",
+   "type": "TRK",
+   "typeAsText": "The deletion of the areas of activity from the registry card",
+   "effectiveDate": "2008-12-03",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2008-12-08",
+   "statusChanges": [
+    {
+     "id": 200000241888,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2008-12-08"
+    }
+   ],
+   "entry": {
+    "number": 21,
+    "date": "2008-12-08",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 21",
+   "date": "2008-07-01",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2008-07-01",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2008-07-01",
+   "statusChanges": [
+    {
+     "id": 200000193509,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2008-07-01"
+    }
+   ],
+   "entry": {
+    "number": 20,
+    "date": "2008-07-01",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 20",
+   "date": "2008-05-27",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2008-05-27",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2008-05-27",
+   "statusChanges": [
+    {
+     "id": 200000187287,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2008-05-27"
+    }
+   ],
+   "entry": {
+    "number": 19,
+    "date": "2008-05-27",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 19",
+   "date": "2008-01-31",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2008-01-31",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2008-01-31",
+   "statusChanges": [
+    {
+     "id": 200000158010,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2008-01-31"
+    }
+   ],
+   "entry": {
+    "number": 18,
+    "date": "2008-01-31",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 18",
+   "date": "2007-01-19",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2007-01-19",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2007-01-19",
+   "statusChanges": [
+    {
+     "id": 200000067207,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2007-01-19"
+    }
+   ],
+   "entry": {
+    "number": 17,
+    "date": "2007-01-19",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 17",
+   "date": "2006-08-30",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2006-08-30",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2006-08-30",
+   "statusChanges": [
+    {
+     "id": 200000034366,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2006-08-30"
+    }
+   ],
+   "entry": {
+    "number": 16,
+    "date": "2006-08-30",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 16",
+   "date": "2005-12-28",
+   "type": "K",
+   "typeAsText": "Affirmative judgement on entry",
+   "effectiveDate": "2005-12-28",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2005-12-28",
+   "statusChanges": [],
+   "entry": {
+    "number": 15,
+    "date": "2005-12-28",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 15",
+   "date": "2005-11-07",
+   "type": "K",
+   "typeAsText": "Affirmative judgement on entry",
+   "effectiveDate": "2005-11-07",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2005-11-07",
+   "statusChanges": [],
+   "entry": {
+    "number": 14,
+    "date": "2005-11-07",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 14",
+   "date": "2003-11-06",
+   "type": "K",
+   "typeAsText": "Affirmative judgement on entry",
+   "effectiveDate": "2003-11-06",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2003-11-06",
+   "statusChanges": [],
+   "entry": {
+    "number": 13,
+    "date": "2003-11-07",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 13",
+   "date": "2003-07-30",
+   "type": "A",
+   "typeAsText": "Judgement on entry ex officio",
+   "effectiveDate": "2003-07-30",
+   "rulingInForceType": "L",
+   "rulingInForceTypeAsText": "Will enter into force whem the judicial decision is made",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2003-07-30",
+   "statusChanges": [],
+   "entry": {
+    "number": 12,
+    "date": "2003-07-31",
+    "type": "18",
+    "typeAsText": "Note",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 12",
+   "date": "2003-07-24",
+   "type": "N",
+   "typeAsText": "Negative judgement on entry",
+   "effectiveDate": "2003-07-24",
+   "rulingInForceType": "L",
+   "rulingInForceTypeAsText": "Will enter into force whem the judicial decision is made",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2003-07-24",
+   "statusChanges": []
+  },
+  {
+   "number": "Ä 16579 / 11",
+   "date": "2003-06-30",
+   "type": "K",
+   "typeAsText": "Affirmative judgement on entry",
+   "effectiveDate": "2003-06-30",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2003-06-30",
+   "statusChanges": [],
+   "entry": {
+    "number": 11,
+    "date": "2003-06-30",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / M5",
+   "date": "2003-06-26",
+   "type": "M",
+   "typeAsText": "A ruling on the elimination of the deficiencies that is to be delivered",
+   "effectiveDate": "2003-06-26",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "additionalTerm": "2003-08-15",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2003-06-26",
+   "statusChanges": []
+  },
+  {
+   "number": "Ä 16579 / 10",
+   "date": "2003-03-31",
+   "type": "K",
+   "typeAsText": "Affirmative judgement on entry",
+   "effectiveDate": "2003-03-31",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2003-03-31",
+   "statusChanges": [],
+   "entry": {
+    "number": 10,
+    "date": "2003-04-01",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 16579 / 9",
+   "date": "2003-02-12",
+   "type": "K",
+   "typeAsText": "Affirmative judgement on entry",
+   "effectiveDate": "2003-02-12",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2003-02-12",
+   "statusChanges": [],
+   "entry": {
+    "number": 9,
+    "date": "2003-02-12",
+    "type": "10",
+    "typeAsText": "Unpublished entry on the amendment",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  }
+ ],
+ "registryCards": [
+  {
+   "recordId": 30172,
+   "cardNumber": 1,
+   "cardType": "R",
+   "entries": [
+    {
+     "recordId": 2000266303,
+     "number": 1,
+     "date": "1998-03-31",
+     "type": "1",
+     "typeAsText": "Foundation entry"
+    },
+    {
+     "recordId": 2000275574,
+     "number": 2,
+     "date": "1998-06-25",
+     "type": "10",
+     "typeAsText": "Unpublished entry on the amendment"
+    },
+    {
+     "recordId": 2000286696,
+     "number": 3,
+     "date": "1999-01-14",
+     "type": "10",
+     "typeAsText": "Unpublished entry on the amendment"
+    },
+    {
+     "recordId": 2000294255,
+     "number": 4,
+     "date": "1999-05-21",
+     "type": "10",
+     "typeAsText": "Unpublished entry on the amendment"
+    },
+    {
+     "recordId": 2000307167,
+     "number": 5,
+     "date": "1999-10-26",
+     "type": "10",
+     "typeAsText": "Unpublished entry on the amendment"
+    },
+    {
+     "recordId": 2000313645,
+     "number": 6,
+     "date": "1999-12-27",
+     "type": "15",
+     "typeAsText": "Published entry on the amendment"
+    },
+    {
+     "recordId": 2000322368,
+     "number": 7,
+     "date": "2000-04-27",
+     "type": "15",
+     "typeAsText": "Published entry on the amendment"
+    },
+    {
+     "recordId": 2000360127,
+     "number": 8,
+     "date": "2001-10-01",
+     "type": "10",
+     "typeAsText": "Unpublished entry on the amendment"
+    },
+    {
+     "recordId": 2000394856,
+     "number": 9,
+     "date": "2003-02-12",
+     "type": "10",
+     "typeAsText": "Unpublished entry on the amendment"
+    },
+    {
+     "recordId": 2000398428,
+     "number": 10,
+     "date": "2003-04-01",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000405251,
+     "number": 11,
+     "date": "2003-06-30",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000407910,
+     "number": 12,
+     "date": "2003-07-31",
+     "type": "18",
+     "typeAsText": "Note"
+    },
+    {
+     "recordId": 2000415237,
+     "number": 13,
+     "date": "2003-11-07",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000478205,
+     "number": 14,
+     "date": "2005-11-07",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000484038,
+     "number": 15,
+     "date": "2005-12-28",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000591853,
+     "number": 16,
+     "date": "2006-08-30",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000666954,
+     "number": 17,
+     "date": "2007-01-19",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000761663,
+     "number": 18,
+     "date": "2008-01-31",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000774237,
+     "number": 19,
+     "date": "2008-05-27",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000778839,
+     "number": 20,
+     "date": "2008-07-01",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000797775,
+     "number": 21,
+     "date": "2008-12-08",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000845649,
+     "number": 22,
+     "date": "2009-06-04",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 2000860448,
+     "number": 23,
+     "date": "2009-09-02",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 3000050434,
+     "number": 24,
+     "date": "2010-07-14",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 3000089378,
+     "number": 25,
+     "date": "2010-12-27",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 3000265413,
+     "number": 26,
+     "date": "2012-08-28",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000230225,
+     "number": 27,
+     "date": "2013-01-28",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000388064,
+     "number": 28,
+     "date": "2014-12-08",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000404391,
+     "number": 29,
+     "date": "2015-02-20",
+     "type": "32",
+     "typeAsText": "Entry on the amendment: § 525 (2) of the Commercial Code"
+    },
+    {
+     "recordId": 9000417803,
+     "number": 30,
+     "date": "2015-04-16",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000596460,
+     "number": 31,
+     "date": "2016-09-14",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000741582,
+     "number": 32,
+     "date": "2017-08-10",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000757011,
+     "number": 33,
+     "date": "2017-09-28",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000773741,
+     "number": 34,
+     "date": "2017-11-07",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9000977382,
+     "number": 35,
+     "date": "2017-12-12",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001097355,
+     "number": 36,
+     "date": "2018-01-16",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001392485,
+     "number": 37,
+     "date": "2018-07-03",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001572956,
+     "number": 38,
+     "date": "2019-12-05",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001609168,
+     "number": 39,
+     "date": "2020-04-03",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001623977,
+     "number": 40,
+     "date": "2020-05-18",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001659904,
+     "number": 41,
+     "date": "2020-09-15",
+     "type": "51",
+     "typeAsText": "Division entry of separating entity"
+    },
+    {
+     "recordId": 9001868790,
+     "number": 42,
+     "date": "2022-05-27",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002015037,
+     "number": 43,
+     "date": "2023-03-27",
+     "type": "51",
+     "typeAsText": "Division entry of separating entity"
+    },
+    {
+     "recordId": 9002017071,
+     "number": 44,
+     "date": "2023-04-03",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002019843,
+     "number": 45,
+     "date": "2023-04-11",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002021979,
+     "number": 46,
+     "date": "2023-04-18",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002509176,
+     "number": 47,
+     "date": "2024-04-04",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002514619,
+     "number": 48,
+     "date": "2024-04-17",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002558619,
+     "number": 49,
+     "date": "2024-08-05",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002571532,
+     "number": 50,
+     "date": "2024-09-10",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002699536,
+     "number": 51,
+     "date": "2025-07-09",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002736003,
+     "number": 52,
+     "date": "2025-10-14",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002763983,
+     "number": 53,
+     "date": "2025-12-29",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002786131,
+     "number": 54,
+     "date": "2026-02-26",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002833779,
+     "number": 55,
+     "date": "2026-06-22",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002843656,
+     "number": 56,
+     "date": "2026-07-15",
+     "type": "33",
+     "typeAsText": "Entry on the amendment: § 595¹ (1) of the Code of Civil Procedure"
+    },
+    {
+     "recordId": 9002874437,
+     "number": 57,
+     "date": "2026-10-02",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    }
+   ]
+  }
+ ]
+}

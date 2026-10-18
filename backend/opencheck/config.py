@@ -767,14 +767,24 @@ class Settings(BaseSettings):
         ),
         alias="ARIREGISTER_DELTA_URL",
     )
-    # --- Estonian e-Business Register (ariregister) ---
-    # No credentials required — the adapter uses the public printable-page
-    # endpoint at ariregister.rik.ee without authentication.
-    # ARIREGISTER_USERNAME / ARIREGISTER_PASSWORD are retained here only for
-    # backward compatibility (existing .env files); they are no longer read
-    # by the adapter.
+    # --- Estonian e-Business Register (ariregister) — RIK's credentialed services ---
+    # The lookup reads the open-data index and needs none of these. The SOAP
+    # open-data contract (ARIREGISTER_USERNAME / ARIREGISTER_PASSWORD) is read
+    # for the history (fetch_timeline_data: the Time Machine and the ended
+    # holdings); ARIREGISTER_REST_API_KEY is the same contract partner's key
+    # for ar-rest.rik.ee. Both go through sources/ariregister_rest.py, which
+    # holds the contract's one-query-at-a-time slot and a daily answer
+    # budget shared by the two services. No key = the REST client is off.
     ariregister_username: str | None = Field(default=None, alias="ARIREGISTER_USERNAME")
     ariregister_password: str | None = Field(default=None, alias="ARIREGISTER_PASSWORD")
+    ariregister_rest_api_key: str | None = Field(default=None, alias="ARIREGISTER_REST_API_KEY")
+    # Requests a process may send to either service on one Estonian day. Under
+    # the contract's 50,000 because the count is in memory and restarts at
+    # zero on a deploy. Capped at 50,000 whatever is set.
+    ariregister_daily_budget: int = Field(default=40_000, alias="ARIREGISTER_DAILY_BUDGET")
+    # How long a caller waits for the one-query slot before it is refused
+    # (a degradation, never "no record").
+    ariregister_queue_wait_s: float = Field(default=20.0, alias="ARIREGISTER_QUEUE_WAIT_S")
 
     # --- Danish Central Business Register (CVR) via Datafordeler GraphQL ---
     # Datafordeler CVR GraphQL API authentication.

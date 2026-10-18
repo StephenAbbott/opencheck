@@ -1,0 +1,1488 @@
+{
+ "legalEntityName": "Bolt Operations OÜ",
+ "registryCode": 14532901,
+ "companyId": 9000226987,
+ "vatID": "EE102090374",
+ "generalData": {
+  "einvoiceProvider": "Telema",
+  "firstEntryTime": "2018-07-25",
+  "isCSDRegistered": true,
+  "entryCSDRegistrationDate": "2024-04-25",
+  "status": {
+   "status": "R",
+   "statusAsText": "Entered into the register"
+  },
+  "legalEntityNames": [
+   {
+    "content": "Billify OÜ",
+    "cardNumber": 1,
+    "entryNumber": 1,
+    "recordId": 8176919,
+    "startDate": "2018-07-25",
+    "endDate": "2019-05-03"
+   },
+   {
+    "content": "Bolt Operations OÜ",
+    "cardNumber": 1,
+    "entryNumber": 4,
+    "recordId": 8548475,
+    "startDate": "2019-05-03"
+   }
+  ],
+  "addresses": [
+   {
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia",
+     "address": "Vana-Lõuna tn 39/1",
+     "postalCode": "10134",
+     "ehak": "0298",
+     "ehakAsText": "Kesklinna district, Tallinn city, Harju county",
+     "adsOid": "ME00638448",
+     "adsNormalizedFullAddress": "Harju maakond, Tallinn, Kesklinna linnaosa, Vana-Lõuna tn 39/1"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 8176910,
+    "startDate": "2018-07-25",
+    "endDate": "2019-07-24"
+   },
+   {
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia",
+     "address": "Vana-Lõuna tn 15",
+     "postalCode": "10134",
+     "ehak": "0298",
+     "ehakAsText": "Kesklinna district, Tallinn city, Harju county",
+     "adsAdobId": "10271837",
+     "adsOid": "ME03776364",
+     "adsNormalizedFullAddress": "Harju maakond, Tallinn, Kesklinna linnaosa, Vana-Lõuna tn 15"
+    },
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 5,
+    "recordId": 8663469,
+    "startDate": "2019-07-24"
+   }
+  ],
+  "legalForm": [
+   {
+    "contentNumber": 5,
+    "contentAsText": "Private limited company",
+    "content": "OÜ",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 8176913,
+    "startDate": "2018-07-25"
+   }
+  ],
+  "capitals": [
+   {
+    "size": 2500.0,
+    "currency": "EUR",
+    "currencyAsText": "Euro",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 8176917,
+    "startDate": "2018-07-25",
+    "endDate": "2022-01-10"
+   },
+   {
+    "size": 2700.0,
+    "currency": "EUR",
+    "currencyAsText": "Euro",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 7,
+    "recordId": 9951935,
+    "startDate": "2022-01-10",
+    "endDate": "2022-05-02"
+   },
+   {
+    "size": 2701.0,
+    "currency": "EUR",
+    "currencyAsText": "Euro",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 10,
+    "recordId": 10099267,
+    "startDate": "2022-05-02"
+   }
+  ],
+  "financialYears": [
+   {
+    "financialYearStartDate": "01-01",
+    "financialYearEndDate": "12-31",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 8176912,
+    "startDate": "2018-07-25"
+   }
+  ],
+  "associationArticles": [
+   {
+    "approvalDate": "2018-07-23",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 8176911,
+    "startDate": "2018-07-25",
+    "endDate": "2019-05-03"
+   },
+   {
+    "approvalDate": "2019-04-25",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 4,
+    "recordId": 8548474,
+    "startDate": "2019-05-03",
+    "endDate": "2022-01-10"
+   },
+   {
+    "approvalDate": "2021-12-29",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 7,
+    "recordId": 9951936,
+    "startDate": "2022-01-10",
+    "endDate": "2022-07-19"
+   },
+   {
+    "approvalDate": "2022-07-14",
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 11,
+    "recordId": 10195851,
+    "startDate": "2022-07-19",
+    "endDate": "2023-10-16"
+   },
+   {
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 13,
+    "recordId": 12090901,
+    "startDate": "2023-10-16",
+    "endDate": "2024-03-20"
+   },
+   {
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 14,
+    "recordId": 12388024,
+    "startDate": "2024-03-20",
+    "endDate": "2024-11-15"
+   },
+   {
+    "containsSpecialRights": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 17,
+    "recordId": 12795408,
+    "startDate": "2024-11-15"
+   }
+  ],
+  "registryCardNotes": [
+   {
+    "type": "MARK",
+    "typeAsText": "Remark",
+    "content": "Kanne on tehtud äriregistri seaduse § 70 lõike 1 alusel.",
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 12,
+    "recordId": 11206584,
+    "startDate": "2023-09-01"
+   }
+  ],
+  "reportedActivities": [
+   {
+    "emtakCode": "62901",
+    "emtakAsText": "Other information technology and computer service activities",
+    "emtakVersion": 3,
+    "emtakVersionAsText": "EMTAK 2025",
+    "naceCode": "62.90",
+    "recordId": 9001006903,
+    "startDate": "2025-06-30"
+   },
+   {
+    "emtakCode": "62091",
+    "emtakAsText": "Other information technology and computer service activities",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "62.09",
+    "recordId": 9000523143,
+    "startDate": "2020-12-14",
+    "endDate": "2025-06-30"
+   },
+   {
+    "emtakCode": "82111",
+    "emtakAsText": "Office management, combined secretarial services",
+    "emtakVersion": 2,
+    "emtakVersionAsText": "EMTAK 2008",
+    "naceCode": "82.11",
+    "recordId": 9000377205,
+    "startDate": "2018-07-25",
+    "endDate": "2020-12-14"
+   }
+  ],
+  "infoFinancialYearFromReports": [
+   {
+    "recordId": 3708967,
+    "periodStartDate": "2025-01-01",
+    "periodEndDate": "2025-12-31",
+    "activityAreaEmtakCode": "62901",
+    "activityAreaEmtakAsText": "Other information technology and computer service activities",
+    "activityAreaEmtakVersion": 3,
+    "activityAreaEmtakVersionAsText": "EMTAK 2025",
+    "activityAreaNaceCode": "62.90"
+   },
+   {
+    "recordId": 3509910,
+    "periodStartDate": "2024-01-01",
+    "periodEndDate": "2024-12-31",
+    "activityAreaEmtakCode": "62901",
+    "activityAreaEmtakAsText": "Other information technology and computer service activities",
+    "activityAreaEmtakVersion": 3,
+    "activityAreaEmtakVersionAsText": "EMTAK 2025",
+    "activityAreaNaceCode": "62.90"
+   },
+   {
+    "recordId": 3229035,
+    "periodStartDate": "2023-01-01",
+    "periodEndDate": "2023-12-31",
+    "activityAreaEmtakCode": "62091",
+    "activityAreaEmtakAsText": "Other information technology and computer service activities",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "62.09"
+   },
+   {
+    "recordId": 2912461,
+    "periodStartDate": "2022-01-01",
+    "periodEndDate": "2022-12-31",
+    "activityAreaEmtakCode": "62091",
+    "activityAreaEmtakAsText": "Other information technology and computer service activities",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "62.09"
+   },
+   {
+    "recordId": 2681615,
+    "periodStartDate": "2021-01-01",
+    "periodEndDate": "2021-12-31",
+    "activityAreaEmtakCode": "62091",
+    "activityAreaEmtakAsText": "Other information technology and computer service activities",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "62.09"
+   },
+   {
+    "recordId": 2488163,
+    "periodStartDate": "2020-01-01",
+    "periodEndDate": "2020-12-31",
+    "activityAreaEmtakCode": "62091",
+    "activityAreaEmtakAsText": "Other information technology and computer service activities",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "62.09"
+   },
+   {
+    "recordId": 2254869,
+    "periodStartDate": "2018-07-25",
+    "periodEndDate": "2019-12-31",
+    "activityAreaEmtakCode": "62091",
+    "activityAreaEmtakAsText": "Other information technology and computer service activities",
+    "activityAreaEmtakVersion": 2,
+    "activityAreaEmtakVersionAsText": "EMTAK 2008",
+    "activityAreaNaceCode": "62.09"
+   }
+  ],
+  "isFoundedWithoutPayment": false,
+  "hasAbandonedFormReqs": false,
+  "isAccountingLiable": false,
+  "isRequiredtoProvideBeneficiaries": true
+ },
+ "relatedPersons": {
+  "personsOnCard": [
+   {
+    "person": {
+     "role": "ORP",
+     "roleAsText": "The registrar of the units of the fund",
+     "type": "J",
+     "surnameLegalEntityName": "Nasdaq CSD SE",
+     "foreignCode": "37236471186",
+     "foreignCodeCountry": "LVA"
+    },
+    "address": {
+     "country": "LVA",
+     "countryAsText": "Latvia"
+    },
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 15,
+    "recordId": 12461731,
+    "startDate": "2024-04-25"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Ahto",
+     "surnameLegalEntityName": "Kink",
+     "identityCode": "31306981333"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 2,
+    "recordId": 8487372,
+    "startDate": "2019-03-19"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Anneli",
+     "surnameLegalEntityName": "Aljas",
+     "identityCode": "36047542677"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 8176915,
+    "startDate": "2018-07-25",
+    "endDate": "2022-03-01"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Mahmoud Hassan",
+     "surnameLegalEntityName": "Iskandarani",
+     "identityCode": "30408466288"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 11,
+    "recordId": 10195850,
+    "startDate": "2022-07-19",
+    "endDate": "2024-08-14"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Markus",
+     "surnameLegalEntityName": "Villig",
+     "identityCode": "32345558733"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 8176914,
+    "startDate": "2018-07-25",
+    "endDate": "2019-04-02"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Martin",
+     "surnameLegalEntityName": "Villig",
+     "identityCode": "35064396218"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 1,
+    "recordId": 8176916,
+    "startDate": "2018-07-25",
+    "endDate": "2022-07-19"
+   },
+   {
+    "person": {
+     "role": "JUHL",
+     "roleAsText": "Management board member",
+     "type": "F",
+     "firstName": "Vincent Roland",
+     "surnameLegalEntityName": "Pickering",
+     "identityCode": "36429087803"
+    },
+    "address": {},
+    "is_gov_institution": false,
+    "has_active_tradebans": false,
+    "cardNumber": 1,
+    "cardType": "R",
+    "entryNumber": 18,
+    "recordId": 13304791,
+    "startDate": "2025-09-11",
+    "endDate": "2026-03-19"
+   }
+  ],
+  "representationRightNormalRulings": [
+   {
+    "role": "JUHL",
+    "content": "Every member of the Management Board may represent the private limited company in concluding all transactions."
+   }
+  ],
+  "shareholders": [
+   {
+    "person": {
+     "role": "OSAN",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Bolt Holdings OÜ",
+     "identityCode": "14056464"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 2701.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole ownership",
+    "groupId": 142459,
+    "recordId": 11206583,
+    "startDate": "2023-09-01",
+    "endDate": "2024-04-25"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Bolt Holdings OÜ",
+     "identityCode": "14056464"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 2500.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2018-07-25",
+    "recordId": 9000641279,
+    "startDate": "2018-07-25",
+    "endDate": "2019-06-04"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Bolt Holdings OÜ",
+     "identityCode": "14056464"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 92.56,
+    "shareSize": 2500.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "recordId": 9001345643,
+    "startDate": "2019-06-04",
+    "endDate": "2022-05-30"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Bolt Technology OÜ",
+     "identityCode": "12417834"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 7.41,
+    "shareSize": 200.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "recordId": 9001382688,
+    "startDate": "2022-01-10",
+    "endDate": "2022-05-02"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Bolt Technology OÜ",
+     "identityCode": "12417834"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 7.44,
+    "shareSize": 201.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-04-28",
+    "recordId": 9001425409,
+    "startDate": "2022-05-02",
+    "endDate": "2022-05-30"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Bolt Holdings OÜ",
+     "identityCode": "14056464"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 2701.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2022-05-30",
+    "recordId": 9001437676,
+    "startDate": "2022-05-30",
+    "endDate": "2023-09-01"
+   },
+   {
+    "person": {
+     "role": "O",
+     "roleAsText": "Shareholder",
+     "type": "J",
+     "surnameLegalEntityName": "Bolt Holdings OÜ",
+     "identityCode": "14056464"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "sharePercentage": 100.0,
+    "shareSize": 2701.0,
+    "shareCurrency": "EUR",
+    "shareCurrencyAsText": "Euro",
+    "shareOwnershipType": "L",
+    "shareOwnershipTypeAsText": "Sole property",
+    "authoritySource": "V1",
+    "authoritySourceDate": "2024-04-24",
+    "recordId": 9001703373,
+    "startDate": "2024-04-24"
+   }
+  ],
+  "nonCardRelatedPersons": [
+   {
+    "person": {
+     "role": "A",
+     "roleAsText": "Founder",
+     "type": "J",
+     "surnameLegalEntityName": "Bolt Holdings OÜ",
+     "identityCode": "14056464"
+    },
+    "address": {
+     "country": "EST",
+     "countryAsText": "Estonia"
+    },
+    "is_gov_institution": false,
+    "company_registry_status": "R",
+    "has_active_tradebans": false,
+    "shareSize": 2500.0,
+    "authoritySource": "ELK",
+    "authoritySourceAsText": "Electronic submission",
+    "authoritySourceDate": "2018-07-25",
+    "recordId": 9000641278,
+    "startDate": "2018-07-25"
+   }
+  ]
+ },
+ "rulings": [
+  {
+   "number": "Ä 50098929 / 19",
+   "date": "2026-03-19",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2026-03-19",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2026-03-19",
+   "statusChanges": [
+    {
+     "id": 900007570577,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2026-03-19"
+    },
+    {
+     "id": 900007570576,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2026-03-19"
+    }
+   ],
+   "entry": {
+    "number": 19,
+    "date": "2026-03-19",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 18",
+   "date": "2025-09-11",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2025-09-11",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2025-09-11",
+   "statusChanges": [
+    {
+     "id": 900007363216,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2025-09-11"
+    },
+    {
+     "id": 900007363215,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2025-09-11"
+    }
+   ],
+   "entry": {
+    "number": 18,
+    "date": "2025-09-11",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 17",
+   "date": "2024-11-15",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2024-11-15",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2024-11-15",
+   "statusChanges": [
+    {
+     "id": 900006999657,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2024-11-15"
+    },
+    {
+     "id": 900006999656,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-11-15"
+    }
+   ],
+   "entry": {
+    "number": 17,
+    "date": "2024-11-15",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 16",
+   "date": "2024-08-14",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2024-08-14",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2024-08-14",
+   "statusChanges": [
+    {
+     "id": 900006770135,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2024-08-14"
+    },
+    {
+     "id": 900006770134,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-08-14"
+    }
+   ],
+   "entry": {
+    "number": 16,
+    "date": "2024-08-14",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 15",
+   "date": "2024-04-25",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2024-04-25",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2024-04-25",
+   "statusChanges": [
+    {
+     "id": 900006499478,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-04-25"
+    },
+    {
+     "id": 900006499479,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2024-04-25"
+    }
+   ],
+   "entry": {
+    "number": 15,
+    "date": "2024-04-25",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 14",
+   "date": "2024-03-20",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2024-03-20",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2024-03-20",
+   "statusChanges": [
+    {
+     "id": 900006440222,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2024-03-20"
+    },
+    {
+     "id": 900006440221,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-03-20"
+    }
+   ],
+   "entry": {
+    "number": 14,
+    "date": "2024-03-20",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / M1",
+   "date": "2024-03-19",
+   "type": "M1",
+   "typeAsText": "A ruling on the elimination of the deficiencies",
+   "effectiveDate": "2024-03-19",
+   "rulingInForceType": "N",
+   "rulingInForceTypeAsText": "Will enter into force after lapse of the time limit for appeal",
+   "additionalTerm": "2024-04-04",
+   "status": "L",
+   "statusAsText": "The deficiencies have been rectified",
+   "statusDate": "2024-03-20",
+   "statusChanges": [
+    {
+     "id": 900006440220,
+     "status": "L",
+     "statusAsText": "The deficiencies have been rectified",
+     "statusChangeDate": "2024-03-20"
+    },
+    {
+     "id": 900006436737,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2024-03-19"
+    }
+   ]
+  },
+  {
+   "number": "Ä 50098929 / 13",
+   "date": "2023-10-16",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2023-10-16",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2023-10-16",
+   "statusChanges": [
+    {
+     "id": 900006085313,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2023-10-16"
+    },
+    {
+     "id": 900006085312,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2023-10-16"
+    }
+   ],
+   "entry": {
+    "number": 13,
+    "date": "2023-10-16",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 12",
+   "date": "2023-09-01",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2023-09-01",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2023-09-01",
+   "statusChanges": [
+    {
+     "id": 900005690128,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2023-09-01"
+    },
+    {
+     "id": 900005690129,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2023-09-01"
+    }
+   ],
+   "entry": {
+    "number": 12,
+    "date": "2023-09-01",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 11",
+   "date": "2022-07-19",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2022-07-19",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2022-07-19",
+   "statusChanges": [
+    {
+     "id": 900004925826,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2022-07-19"
+    },
+    {
+     "id": 900004925825,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2022-07-19"
+    }
+   ],
+   "entry": {
+    "number": 11,
+    "date": "2022-07-19",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 10",
+   "date": "2022-05-02",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2022-05-02",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2022-05-02",
+   "statusChanges": [
+    {
+     "id": 900004810341,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2022-05-02"
+    },
+    {
+     "id": 900004810340,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2022-05-02"
+    }
+   ],
+   "entry": {
+    "number": 10,
+    "date": "2022-05-02",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 9",
+   "date": "2022-04-20",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2022-04-20",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2022-04-20",
+   "statusChanges": [
+    {
+     "id": 900004789597,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2022-04-20"
+    },
+    {
+     "id": 900004789596,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2022-04-20"
+    }
+   ],
+   "entry": {
+    "number": 9,
+    "date": "2022-04-20",
+    "type": "32",
+    "typeAsText": "Entry on the amendment: § 525 (2) of the Commercial Code",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 8",
+   "date": "2022-03-01",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2022-03-01",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2022-03-01",
+   "statusChanges": [
+    {
+     "id": 900004706388,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2022-03-01"
+    },
+    {
+     "id": 900004706387,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2022-03-01"
+    }
+   ],
+   "entry": {
+    "number": 8,
+    "date": "2022-03-01",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 7",
+   "date": "2022-01-10",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2022-01-10",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2022-01-10",
+   "statusChanges": [
+    {
+     "id": 900004638689,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2022-01-10"
+    },
+    {
+     "id": 900004638688,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2022-01-10"
+    }
+   ],
+   "entry": {
+    "number": 7,
+    "date": "2022-01-10",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 6",
+   "date": "2021-05-05",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2021-05-05",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2021-05-05",
+   "statusChanges": [
+    {
+     "id": 900004328655,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2021-05-05"
+    },
+    {
+     "id": 900004328654,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2021-05-05"
+    }
+   ],
+   "entry": {
+    "number": 6,
+    "date": "2021-05-05",
+    "type": "32",
+    "typeAsText": "Entry on the amendment: § 525 (2) of the Commercial Code",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 5",
+   "date": "2019-07-24",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2019-07-24",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2019-07-24",
+   "statusChanges": [
+    {
+     "id": 900003665498,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2019-07-24"
+    },
+    {
+     "id": 900003665497,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2019-07-24"
+    }
+   ],
+   "entry": {
+    "number": 5,
+    "date": "2019-07-24",
+    "type": "32",
+    "typeAsText": "Entry on the amendment: § 525 (2) of the Commercial Code",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 4",
+   "date": "2019-05-03",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2019-05-03",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2019-05-03",
+   "statusChanges": [
+    {
+     "id": 900003551096,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2019-05-03"
+    },
+    {
+     "id": 900003551095,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2019-05-03"
+    }
+   ],
+   "entry": {
+    "number": 4,
+    "date": "2019-05-03",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 3",
+   "date": "2019-04-02",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2019-04-02",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2019-04-02",
+   "statusChanges": [
+    {
+     "id": 900003518808,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2019-04-02"
+    },
+    {
+     "id": 900003518807,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2019-04-02"
+    }
+   ],
+   "entry": {
+    "number": 3,
+    "date": "2019-04-02",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929 / 2",
+   "date": "2019-03-19",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2019-03-19",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2019-03-19",
+   "statusChanges": [
+    {
+     "id": 900003503398,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2019-03-19"
+    },
+    {
+     "id": 900003503397,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2019-03-19"
+    }
+   ],
+   "entry": {
+    "number": 2,
+    "date": "2019-03-19",
+    "type": "12",
+    "typeAsText": "Amending entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  },
+  {
+   "number": "Ä 50098929",
+   "date": "2018-07-25",
+   "type": "K1",
+   "typeAsText": "Entry",
+   "effectiveDate": "2018-07-25",
+   "rulingInForceType": "J",
+   "rulingInForceTypeAsText": "Will enter into force upon making of an entry",
+   "status": "J",
+   "statusAsText": "Entered into force",
+   "statusDate": "2018-07-25",
+   "statusChanges": [
+    {
+     "id": 900003243238,
+     "status": "J",
+     "statusAsText": "Entered into force",
+     "statusChangeDate": "2018-07-25"
+    },
+    {
+     "id": 900003243237,
+     "status": "D",
+     "statusAsText": "Signed",
+     "statusChangeDate": "2018-07-25"
+    }
+   ],
+   "entry": {
+    "number": 1,
+    "date": "2018-07-25",
+    "type": "2",
+    "typeAsText": "First entry",
+    "cardNumber": 1,
+    "cardType": "R"
+   }
+  }
+ ],
+ "registryCards": [
+  {
+   "recordId": 485550,
+   "cardNumber": 1,
+   "cardType": "R",
+   "entries": [
+    {
+     "recordId": 9001400755,
+     "number": 1,
+     "date": "2018-07-25",
+     "type": "2",
+     "typeAsText": "First entry"
+    },
+    {
+     "recordId": 9001476222,
+     "number": 2,
+     "date": "2019-03-19",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001480919,
+     "number": 3,
+     "date": "2019-04-02",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001490361,
+     "number": 4,
+     "date": "2019-05-03",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001525989,
+     "number": 5,
+     "date": "2019-07-24",
+     "type": "32",
+     "typeAsText": "Entry on the amendment: § 525 (2) of the Commercial Code"
+    },
+    {
+     "recordId": 9001745831,
+     "number": 6,
+     "date": "2021-05-05",
+     "type": "32",
+     "typeAsText": "Entry on the amendment: § 525 (2) of the Commercial Code"
+    },
+    {
+     "recordId": 9001826237,
+     "number": 7,
+     "date": "2022-01-10",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001841851,
+     "number": 8,
+     "date": "2022-03-01",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001856496,
+     "number": 9,
+     "date": "2022-04-20",
+     "type": "32",
+     "typeAsText": "Entry on the amendment: § 525 (2) of the Commercial Code"
+    },
+    {
+     "recordId": 9001860310,
+     "number": 10,
+     "date": "2022-05-02",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9001885409,
+     "number": 11,
+     "date": "2022-07-19",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002201792,
+     "number": 12,
+     "date": "2023-09-01",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002409247,
+     "number": 13,
+     "date": "2023-10-16",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002496378,
+     "number": 14,
+     "date": "2024-03-20",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002517696,
+     "number": 15,
+     "date": "2024-04-25",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002561893,
+     "number": 16,
+     "date": "2024-08-14",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002596467,
+     "number": 17,
+     "date": "2024-11-15",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002722167,
+     "number": 18,
+     "date": "2025-09-11",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    },
+    {
+     "recordId": 9002794966,
+     "number": 19,
+     "date": "2026-03-19",
+     "type": "12",
+     "typeAsText": "Amending entry"
+    }
+   ]
+  }
+ ]
+}

@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 367** — Dragging a node in any network diagram now carries its icon, jurisdiction flag and badges with it, on phones as well as desktop.
+**Latest: Phase 371** — An Estonian company's Subsidiaries tab and Data drawer can now list every company it has held a role in on the e-Business Register, deleted companies and ended holdings included.
 
 → [Full development history](docs/status.md)
 
