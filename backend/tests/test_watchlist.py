@@ -1461,8 +1461,9 @@ def test_a_version_1_file_gains_the_columns_and_keeps_its_rows(tmp_path: Path) -
     conn.commit()
     conn.close()
     store = wl.WatchlistStore(path, wl.Caps(10, 10))
-    assert store.schema_version == 3
+    assert store.schema_version == 4
     assert store.watches("h")[0]["gleif_history"] is None
+    assert store.watches("h")[0]["context"]["rationale"] is None  # pKYC stage B: a pre-B row says nothing
     old = store.entries("h", limit=1)[0]
     assert old["gleif_log"] is None
     # An entry written before grading is graded on read under today's

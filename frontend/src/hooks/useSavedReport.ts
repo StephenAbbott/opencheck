@@ -230,6 +230,9 @@ export function useSavedReport({
   return {
     savedReport,
     setSavedReport,
+    /** pKYC stage B: the saved report this page can pin to a new watch —
+     *  the one opened, else the one just saved from this run. */
+    onboardingReportId: savedReport?.report_id ?? savedFromRun?.report_id ?? null,
     savedOpening,
     setSavedOpening,
     savedOpenError,

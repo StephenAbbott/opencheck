@@ -386,9 +386,10 @@ the baseline where it was; the next delta that names the LEI tries again.
 
 | Route | Tier | Does |
 |---|---|---|
-| `POST /watch/items` `{lei, token?}` | default | Watch an LEI; mints a list and returns the token when none is sent. The baseline is the lookup as it stands (replayed when the reader has just run it) plus the mirror's material fields |
+| `POST /watch/items` `{lei, token?, context?}` | default | Watch an LEI; mints a list and returns the token when none is sent. The baseline is the lookup as it stands (replayed when the reader has just run it) plus the mirror's material fields |
 | `GET /watch/{token}` | default | The list: watches with baselines, entries, caps, the feed URL, and what each tier is doing on this instance |
-| `DELETE /watch/{token}/items/{lei}` | default | Stop watching |
+| `DELETE /watch/{token}/items/{lei}` | default | Stop watching; the watch's context goes with it |
+| `PATCH /watch/{token}/items/{lei}` `{expected_jurisdiction?, expected_parent_lei?, rationale?, onboarding_report_id?}` | default | Say what you expect of this company (see *What the watcher expected*). A field sent as `null` is cleared; one left out is left alone. Writes no entry |
 | `POST /watch/{token}/recheck` `{lei}` | heavy | Re-run now — a deliberate human action, never a schedule. Writes an entry only when something changed; always reports what it found |
 | `GET /watch/{token}.atom` | default | The Atom feed: one entry per logged change, `private, no-store`, `noindex` |
 | `GET /watchstats` | exempt | Aggregate watcher state; no LEI or name can appear |
@@ -607,6 +608,68 @@ unchecked because OpenSanctions did not answer is a note-only entry, hidden
 by "Material only"; the entry still says "could not re-check" in full. If
 `entries_by_materiality` shows unchecked sanctions-family codes arriving
 often, revisit as a `MATERIALITY_RULES` bump.
+
+## What the watcher expected
+
+Moody's "reuse onboarding context" (pKYC stage B). The materiality tier
+says whether a change matters in general; this lets the watcher say what
+they *expected*, so an entry can say whether a change contradicts it:
+"GLEIF ultimate parent: X → Y — your watch expected X." Module:
+`opencheck/watchlist_context.py`.
+
+A watch carries four optional fields, written by whoever holds the list
+token and read by the same (migration 4, all nullable; a NULL is "nothing
+said"):
+
+| Field | Holds | Rule at write |
+|---|---|---|
+| `expected_jurisdiction` | ISO 3166-1 alpha-2 or 3166-2 (`GB`, `US-DE`) | an ISO code, upper-cased; anything else is refused (422 naming the field) |
+| `expected_parent_lei` | the LEI the watcher expects as GLEIF's **ultimate** parent | LEI shape and check digits; not resolved against GLEIF — a lapsed or unknown LEI is still the watcher's claim |
+| `rationale` | one line on why the company is watched | at most 280 characters, one line; refused when it carries an e-mail address, a link other than an OpenCheck saved-report link, or a run of eleven or more digits (a personal code's shape). The form says "about the company, not a person" |
+| `onboarding_report_id` | the saved report that was the onboarding record | must exist on this instance, be unexpired, and be a report **of the same LEI**. Only the id is stored; the report's own expiry governs it |
+
+Two expectations and no more (Stephen, 17 Oct 2026): jurisdiction and one
+parent. The comparison is made at entry-write time in `_write_rerun` and
+kept on the change as `expectation: {field, expected, met}` — the entry is
+the record of the day, and editing the context afterwards rewrites nothing.
+A `gleif_field` / `ultimate_parent_lei` change is compared always; a
+`direct_parent_lei` change only when the expected LEI is on either side of
+it (a one-layer group's direct parent *is* its ultimate parent); a
+jurisdiction change from either diff (GLEIF's field or the merged record's)
+is compared with the expected code, and a country expectation (`US`) is met
+by any of its subdivisions (`US-DE`). A change with nothing to compare
+carries no key.
+
+**Setting context writes no entry.** A watcher's belief changing is not a
+change to the company. When the baseline already contradicts a freshly set
+expectation (GLEIF's ultimate parent is Y; the watcher just said X), the
+watch row says so at once — "Baseline ultimate parent is Y (Name); your
+watch expected X" — computed on read from the stored GLEIF facts, never
+stored.
+
+**A contradicted expectation does not move the materiality tier.** The
+tier is the closed table's (no per-list customisation — the stage A rule);
+the contradiction is said beside the chip. A met expectation is said too:
+"as your watch expected".
+
+Where it shows: `/watch/{token}` carries `context` on each watch (the four
+fields, `set_at`, the expected parent's current name resolved from the
+GLEIF mirror on read, the pinned report's date, and `baseline_disagrees`)
+and `expectation` on each change that has one; the Atom feed folds the
+clause into the change's sentence and adds
+`<category scheme="https://opencheck.world/watchlist/expectation" term="contradicted"/>`
+to an entry with at least one `met: false` — the title is unchanged; the
+`/watchlist` page shows the context under each watch with an edit form, and
+the sentence in the log beside the materiality chip; the report page's
+"Watch for changes" pins the saved report on the page (opened, or just
+saved from this run) as the onboarding record; `/watchstats` counts
+`watches_with_context` and `expectations_contradicted`, never the text.
+
+Privacy: the context is capability-scoped like the list and backed up
+encrypted (Phase 260). A saved report id is itself a read capability, so
+pinning one to a watch lets anyone with the list token open the report —
+the same reader in practice. No names are stored: the expected parent is an
+LEI and its name is read from the mirror each time.
 
 ## Demo framing
 

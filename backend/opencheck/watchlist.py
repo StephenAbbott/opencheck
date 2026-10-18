@@ -100,6 +100,7 @@ from typing import Any
 
 from . import identifiers, sqlite_schema
 from . import watchlist_materiality as materiality
+from . import watchlist_context as context_module
 from .bods import gleif_events as _gleif_events
 from .names import NAME_MATCH_THRESHOLD as _NAME_MATCH_THRESHOLD
 from .names import name_similarity
@@ -885,6 +886,21 @@ MIGRATIONS: tuple[sqlite_schema.Migration, ...] = (
             "ALTER TABLE entries ADD COLUMN materiality_rules INTEGER",
         ),
     ),
+    # pKYC stage B: what the watcher expected. Four optional fields set by
+    # whoever holds the list token — a jurisdiction code, a parent LEI, one
+    # line of text about the company, a saved report's id — and when they
+    # were last written. All nullable; a NULL is "nothing said".
+    sqlite_schema.Migration(
+        4,
+        "Watchlist watcher context",
+        (
+            "ALTER TABLE watches ADD COLUMN expected_jurisdiction TEXT",
+            "ALTER TABLE watches ADD COLUMN expected_parent_lei TEXT",
+            "ALTER TABLE watches ADD COLUMN rationale TEXT",
+            "ALTER TABLE watches ADD COLUMN onboarding_report_id TEXT",
+            "ALTER TABLE watches ADD COLUMN context_set_at TEXT",
+        ),
+    ),
 )
 
 
@@ -1047,6 +1063,35 @@ class WatchlistStore:
                 "SELECT * FROM watches WHERE token_hash = ? AND lei = ?", (th, lei)
             ).fetchone()
         return _watch_dict(row) if row else None
+
+    def set_context(self, th: str, lei: str, fields: dict[str, str | None]) -> dict[str, Any] | None:
+        """pKYC stage B: write the context fields given (already validated by
+        :func:`watchlist_context.validate`); a ``None`` clears, an absent key
+        is left alone. Stamps ``context_set_at``. Writes no entry. Returns the
+        watch, or ``None`` when ``lei`` is not on the list."""
+        cols = [k for k in fields if k in context_module.CONTEXT_FIELDS]
+        sets = [f"{k} = ?" for k in cols] + ["context_set_at = ?"]
+        args: list[Any] = [fields[k] for k in cols] + [_now_iso(), th, lei]
+        with self._conn() as conn:
+            cur = conn.execute(
+                f"UPDATE watches SET {', '.join(sets)} WHERE token_hash = ? AND lei = ?", args
+            )
+            if cur.rowcount == 0:
+                return None
+        return self.get_watch(th, lei)
+
+    def context_counts(self) -> dict[str, int]:
+        """Aggregate only, for ``/watchstats``: watches carrying any context,
+        and entries carrying a contradicted expectation. Never the text."""
+        with self._conn() as conn:
+            with_context = conn.execute(
+                "SELECT COUNT(*) FROM watches WHERE expected_jurisdiction IS NOT NULL "
+                "OR expected_parent_lei IS NOT NULL OR rationale IS NOT NULL "
+                "OR onboarding_report_id IS NOT NULL"
+            ).fetchone()[0]
+            rows = conn.execute("SELECT changes_json FROM entries").fetchall()
+        contradicted = sum(1 for (cj,) in rows if context_module.contradicted(json.loads(cj)))
+        return {"watches_with_context": with_context, "expectations_contradicted": contradicted}
 
     def watches(self, th: str) -> list[dict[str, Any]]:
         with self._conn() as conn:
@@ -1336,7 +1381,20 @@ def _watch_dict(row: sqlite3.Row) -> dict[str, Any]:
         "snapshot_at": row["snapshot_at"],
         "last_checked_at": row["last_checked_at"],
         "gleif_history": _json_col(row, "prewatch_log_json"),
+        "context": _context_col(row),
     }
+
+
+def _context_col(row: sqlite3.Row) -> dict[str, Any]:
+    """pKYC stage B: the watcher's context — every field, ``None`` where
+    nothing was said, and ``set_at``. A row from a file older than migration
+    4 reads as nothing said."""
+    keys = row.keys()
+    ctx: dict[str, Any] = {
+        k: (row[k] if k in keys else None) for k in context_module.CONTEXT_FIELDS
+    }
+    ctx["set_at"] = row["context_set_at"] if "context_set_at" in keys else None
+    return ctx
 
 
 def _json_col(row: sqlite3.Row, name: str) -> Any:
@@ -2221,6 +2279,9 @@ def _write_rerun(
             diff_gleif_facts(row.get("gleif_facts"), facts, since=row.get("gleif_watermark"))
         )
         changes = gleif_changes + diff_snapshots(row.get("snapshot"), snapshot)
+        # pKYC stage B: compared with what this list's watcher expected, and
+        # kept on the change — the entry is the record of the day.
+        changes = context_module.annotate(changes, row)
         all_changes = changes
         store.update_baseline(
             th,

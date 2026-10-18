@@ -214,6 +214,7 @@ export default function App() {
   const {
     savedReport,
     setSavedReport,
+    onboardingReportId,
     savedOpening,
     setSavedOpening,
     savedOpenError,
@@ -1205,6 +1206,7 @@ export default function App() {
                 ? { url: savedReportShareUrl(savedReport.report_id) }
                 : undefined
             }
+            onboardingReportId={onboardingReportId}
             save={saveItem}
             notice={saveNotice}
             listing={primaryListing}
