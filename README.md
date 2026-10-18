@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 371** — An Estonian company's Subsidiaries tab and Data drawer can now list every company it has held a role in on the e-Business Register, deleted companies and ended holdings included.
+**Latest: Phase 372** — Every watchlist entry now carries a materiality tier (note only, recheck the source, escalate) so a reader can see which changes matter and filter the log to them.
 
 → [Full development history](docs/status.md)
 
