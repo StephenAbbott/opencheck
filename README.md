@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 370** — An Estonian company's former shareholders are now read from the e-Business Register's REST API, one JSON call checked row for row against the SOAP service it replaces for the ownership graph.
+**Latest: Phase 371** — An Estonian company's Subsidiaries tab and Data drawer can now list every company it has held a role in on the e-Business Register, deleted companies and ended holdings included.
 
 → [Full development history](docs/status.md)
 
