@@ -243,6 +243,11 @@ CHANGE_KINDS: tuple[str, ...] = (
     "coverage_changed",
     "coverage_unchecked",
     "verdict",
+    # pKYC stage E, Route 2 (``watchlist_ownership``): an ownership-or-control
+    # relationship with the subject added, ended or re-sized, per source; and
+    # one whose source did not answer on the re-run.
+    "ownership_changed",
+    "ownership_unchecked",
 )
 
 #: The name-match gate — the one concept product-wide, owned by ``names``.
@@ -586,6 +591,15 @@ def snapshot_from_response(resp: Any) -> dict[str, Any]:
         v = profile.get(key) or {}
         return v.get("value") if isinstance(v, dict) else None
 
+    # pKYC stage E, Route 2: the person-free ownership digest, frozen with
+    # the run's day so the baseline is re-read with no clock.
+    from . import watchlist_ownership as ownership_module
+
+    run_day = str(getattr(resp, "run_completed_at", None) or "")[:10] or _now_iso()[:10]
+    ownership_digest = ownership_module.digest(
+        bods, [s["statementId"] for s in stmts if isinstance(s.get("statementId"), str)], run_day
+    )
+
     return {
         "legal_name": resp.legal_name,
         "jurisdiction": resp.jurisdiction,
@@ -606,6 +620,9 @@ def snapshot_from_response(resp: Any) -> dict[str, Any]:
         "signal_rules": SIGNAL_RULES,
         # Phase 305: which reading produced ``dissolution_date``.
         "dissolution_reading": DISSOLUTION_READING,
+        # pKYC stage E, Route 2: one row per ownership relationship with the
+        # subject, per source, keyed on the party's record — never a name.
+        "ownership_digest": ownership_digest,
         # Which sources were actually reached, and when (Phase 99/100: the
         # retrieval clock, per source). The feed says "these sources were
         # checked on that date as a result".
@@ -760,6 +777,15 @@ def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list
                 )
             else:
                 changes.append({"kind": retired_kind, "code": code, "sources": sorted(producers)})
+
+    # pKYC stage E, Route 2: the ownership digest, compared only when the
+    # baseline carries one (a baseline from before the digest compares
+    # nothing and gains one on this update — the Phase 301 baseline-shape
+    # rule, so widening the snapshot writes no change for every watched LEI).
+    from . import watchlist_ownership as ownership_module
+
+    if before.get("ownership_digest") and after.get("ownership_digest"):
+        changes += ownership_module.diff(before["ownership_digest"], after["ownership_digest"], degraded_ids)
 
     cov_a = _coverage_view(before.get("coverage"))
     cov_b = _coverage_view(after.get("coverage"))
@@ -1380,6 +1406,54 @@ class WatchlistStore:
         for row in rows:
             counts[_entry_dict(row)["materiality"]] += 1
         return counts
+
+    def ownership_counts(self) -> dict[str, Any]:
+        """pKYC stage E, Route 2 — for ``/watchstats``, counts only: ownership
+        changes written, by what happened (added / ended / changed) and by
+        whether the ≥25 % rule escalated them; parties the digest could not
+        compare, by source, over the current baselines; baselines carrying a
+        digest at all. Never a key, a band or an LEI."""
+        by_change = {"added": 0, "ended": 0, "changed": 0}
+        escalated = unchecked = 0
+        with self._conn() as conn:
+            rows = conn.execute("SELECT changes_json FROM entries WHERE changes_json LIKE '%ownership_%'").fetchall()
+            snaps = conn.execute("SELECT snapshot_json FROM watches WHERE snapshot_json IS NOT NULL").fetchall()
+        for row in rows:
+            try:
+                changes = json.loads(row["changes_json"] or "[]")
+            except json.JSONDecodeError:
+                continue
+            for c in changes:
+                if not isinstance(c, dict):
+                    continue
+                if c.get("kind") == "ownership_changed":
+                    kind = str(c.get("change") or "")
+                    if kind in by_change:
+                        by_change[kind] += 1
+                    if c.get("crossed_25"):
+                        escalated += 1
+                elif c.get("kind") == "ownership_unchecked":
+                    unchecked += 1
+        uncompared: dict[str, int] = {}
+        with_digest = 0
+        for row in snaps:
+            try:
+                snap = json.loads(row["snapshot_json"] or "{}")
+            except json.JSONDecodeError:
+                continue
+            dg = snap.get("ownership_digest") if isinstance(snap, dict) else None
+            if not isinstance(dg, dict):
+                continue
+            with_digest += 1
+            for sid, n in (dg.get("uncompared") or {}).items():
+                uncompared[str(sid)] = uncompared.get(str(sid), 0) + int(n or 0)
+        return {
+            "ownership_changes_by_change": by_change,
+            "ownership_changes_escalated": escalated,
+            "ownership_unchecked": unchecked,
+            "ownership_uncompared_by_source": dict(sorted(uncompared.items())),
+            "baselines_with_ownership_digest": with_digest,
+        }
 
     def entries(self, th: str, *, limit: int = 100) -> list[dict[str, Any]]:
         with self._conn() as conn:

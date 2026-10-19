@@ -17,7 +17,11 @@ import {
   fieldWords,
   gleifLogLines,
   logLineWords,
+  bandWords,
   entryHeadline,
+  ownershipChangeSentence,
+  uncomparedLines,
+  type Change,
   registerChangeLines,
   tierChip,
   tierSentence,
@@ -45,6 +49,8 @@ const KINDS = [
   "coverage_changed",
   "coverage_unchecked",
   "verdict",
+  "ownership_changed",
+  "ownership_unchecked",
 ];
 
 function entry(over: Partial<WatchEntry> = {}): WatchEntry {
@@ -599,5 +605,52 @@ describe("materiality (pKYC stage A)", () => {
     expect(undecidedSentence(0)).toBeNull();
     expect(undecidedSentence(1)).toBe("1 material entry has no decision recorded.");
     expect(undecidedSentence(3)).toBe("3 material entries have no decision recorded.");
+  });
+});
+
+describe("ownership_changed (pKYC stage E, Route 2)", () => {
+  const change = (over: Partial<Change>): Change =>
+    ({ kind: "ownership_changed", change: "added", party: "person", interests: ["shareholding"], bo: false, source_id: "companies_house", ...over }) as Change;
+
+  it("words bands as the feed does", () => {
+    expect(bandWords([25, 50, false, false])).toBe("25–50%");
+    expect(bandWords([25, 50, true, false])).toBe("over 25% to 50%");
+    expect(bandWords([0, 25, false, true])).toBe("0% to under 25%");
+    expect(bandWords([33.333, 33.333, false, false])).toBe("exactly 33.333%");
+    expect(bandWords([50, null, true, false])).toBe("more than 50%");
+    expect(bandWords([null, 25, false, true])).toBe("under 25%");
+    expect(bandWords(null)).toBe("an unstated share");
+  });
+
+  it("words each change without a name", () => {
+    expect(ownershipChangeSentence(change({ change: "ended", bands_before: [[25, 50, false, false]], bands_after: null }), "UK Companies House")).toBe(
+      "A person's shareholding of 25–50% ended (UK Companies House).",
+    );
+    expect(
+      ownershipChangeSentence(change({ party: "entity", interests: ["shareholding", "votingRights"], bands_after: [[75, 100, false, false]] }), "UK Companies House"),
+    ).toBe("A company's shareholding and voting rights of 75–100% added (UK Companies House).");
+    expect(
+      ownershipChangeSentence(change({ change: "changed", bo: true, bands_before: [[25, 50, false, false]], bands_after: [[50, 75, false, false]] }), "e-Business Register"),
+    ).toBe("A registered beneficial owner's shareholding changed from 25–50% to 50–75% (e-Business Register).");
+    expect(ownershipChangeSentence(change({ party: "entity", interests: ["appointmentOfBoard"], bands_after: [] }), "UK Companies House")).toBe(
+      "A company's right to appoint the board added (UK Companies House).",
+    );
+    expect(ownershipChangeSentence({ kind: "ownership_unchecked", source_id: "opensanctions", parties: 2 } as Change, "OpenSanctions")).toBe(
+      "2 parties' holdings could not be re-checked — OpenSanctions did not answer.",
+    );
+    expect(describeChange(change({ bands_after: [[25, 50, true, false]] }), (id) => id)).toBe(
+      "A person's shareholding of over 25% to 50% added (companies_house).",
+    );
+  });
+
+  it("lists the parties that could not be compared, once per source, and headlines the change", () => {
+    const changes = [change({ uncompared: 3 }), change({ change: "ended", uncompared: 3 }), change({ source_id: "ariregister", uncompared: 1 })];
+    expect(uncomparedLines(changes, (id) => id)).toEqual([
+      "1 party could not be compared (ariregister publishes no person key).",
+      "3 parties could not be compared (companies_house publishes no person key).",
+    ]);
+    expect(uncomparedLines([change({})])).toEqual([]);
+    const e = { id: 1, lei: "X", legal_name: "Vosper Ltd", created_at: "", tier: "gleif" as const, trigger: {}, changes, checked: [], degraded: [] } as WatchEntry;
+    expect(entryHeadline(e)).toBe("Vosper Ltd: ownership changed");
   });
 });

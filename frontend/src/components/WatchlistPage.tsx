@@ -84,6 +84,7 @@ import {
   type ListDecisions,
   tierSentence,
   tokenFromLocation,
+  uncomparedLines,
   triggerSentence,
   UNKNOWN_LIST_PAGE_NOTICE,
   type Watch,
@@ -656,6 +657,12 @@ function EntryView({
                   {MATERIALITY_LABELS[c.materiality]}
                 </Chip>
               )}
+            </li>
+          ))}
+          {uncomparedLines(e.changes, label).map((line) => (
+            <li key={line} className="flex gap-2 text-oo-muted" data-testid="uncompared-line">
+              <span aria-hidden="true">–</span>
+              <span>{line}</span>
             </li>
           ))}
         </ul>

@@ -293,9 +293,43 @@ difference with a closed vocabulary (`CHANGE_KINDS`):
 | `signal_unchecked` / `context_unchecked` | A code is gone but its producer is degraded — could not be re-checked |
 | `coverage_changed` / `coverage_unchecked` | Sources answered, or sources with a record, went up or down; `_unchecked` when the fall is degraded sources. A baseline stored before Phase 241 (whose `answered` meant "with a record") is compared on `with_data` only |
 | `verdict` | The sentence changed with none of the above (a degraded source recovering, say) |
+| `ownership_changed` | An ownership-or-control relationship with the subject was added, ended or re-sized, per source (pKYC stage E, Route 2 — below) |
+| `ownership_unchecked` | Such a relationship is gone or ended but its source is degraded — could not be re-checked |
 
-The two `_unchecked` kinds are the point. Absence is a finding only when
-the source answered.
+The `_unchecked` kinds are the point. Absence is a finding only when the
+source answered.
+
+**The ownership digest (pKYC stage E, Route 2).** `CHANGE_KINDS` had no
+ownership kind until this: an owner replaced by another owner with the same
+risk profile moved no signal, status or coverage, and the re-run wrote
+nothing — in any register. `watchlist_ownership.digest` now keeps a
+**person-free ownership digest** on the baseline (`snapshot.ownership_digest`,
+frozen with the run's day): one row per ownership-or-control relationship
+*with the subject*, per source, keyed on the party's record — an entity's
+`recordId`; a person's **register key only** (a Companies House officer id or
+PSC item id, an Estonian `isikukood_hash`, a Wikidata Q-id, a Slovak
+`kuv_id`, read back from the Phase 255 `identifying` annotation). A person
+with no register key — OpenCorporates officers, Norway's name-derived hash —
+is not a row: the digest counts them per source and the entry says "3 parties
+could not be compared (OpenCorporates publishes no person key)". Never a
+name, a date of birth, or a hash of either (Stephen, Q3). Each row carries
+the interest types, the share bands of its shareholding and voting-rights
+interests (BODS v0.4's `exclusiveMinimum` is the bound itself, so Companies
+House's "25-to-50" reads "over 25% to 50%"), the beneficial-ownership flag,
+direct / indirect and whether every relationship for the pair has ended.
+Left out, as the Phase 339 lists do: GLEIF's reporting-exception bridges (a
+filing, not a party), MEIP (group membership, not ownership) and officer-only
+roles — so the digest is the 2–10 rows the scoping page measured, not the
+6–60 with officers. `diff` names each row added, ended or re-sized as one
+`ownership_changed` change ("A registered beneficial owner's shareholding
+changed from 25–50% to 50–75% (e-Business Register)"); a row gone or ended
+while its source is degraded is `ownership_unchecked`, never ended; a row
+that first appears already ended (history newly read) is not news. A
+baseline stored before the digest compares nothing and gains one on its next
+update (the Phase 301 baseline-shape rule). It catches nothing on its own —
+it runs inside a re-run some delta caused — so it complements Tier 4, which
+says *that* the register moved; this says *what*. Per source, never across
+sources: two sources reaching one party give two rows.
 
 **A rule change is not a company change.** Three stamps on every snapshot
 keep OpenCheck's own changes out of the feed. `verdict_template` (Phase 245)
@@ -484,11 +518,19 @@ disagree. Decisions are Stephen's, 17 Oct 2026.
 | `coverage_changed` | note | About OpenCheck, not the company. |
 | `coverage_unchecked` | note | As above. |
 | `verdict` | note | The sentence moved with no graded kind behind it (a source recovering). |
+| `ownership_changed` | recheck | An ownership-or-control relationship with the subject added, ended or re-sized (pKYC stage E, Route 2). |
+| `ownership_unchecked` | note | The source that published the relationship did not answer on the re-run. |
 
-Two kinds are graded by a rule: `register_status` is **escalate** when the
+Three kinds are graded by a rule: `register_status` is **escalate** when the
 new class is `terminal` (dissolved, struck off, liquidated) and **recheck**
-on any other move; `signal_new` takes the code's tier from the signal table.
-`gleif_field` takes the field table.
+on any other move; `signal_new` takes the code's tier from the signal table;
+`ownership_changed` is **escalate** when a shareholding or voting-rights band
+at or above 25 % was added or ended — a party becoming or ceasing to be a
+registrable controller (Stephen, 19 Oct 2026; 25 % is the PSC and AMLD
+threshold, and registers publish bands, so "crossing 25 %" is a ≥25 % band
+appearing or disappearing, never a figure moving) — while a move between two
+bands above 25 % stays recheck. That is the one place a kind's tier reads the
+change's contents rather than its kind. `gleif_field` takes the field table.
 
 ### The material GLEIF fields (`gleif_field`, Tier 1)
 

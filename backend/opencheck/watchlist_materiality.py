@@ -105,6 +105,12 @@ ATOM_SCHEME = "https://opencheck.world/watchlist/materiality"
 #: ``gleif_field`` (Table 2), ``register_status`` (terminal or not),
 #: ``signal_new`` (Table 3), ``signal_unchecked`` (note — decided).
 KIND_TIER: dict[str, str] = {
+    # pKYC stage E, Route 2: an ownership-or-control relationship with the
+    # subject added, ended or re-sized is recheck; the one documented
+    # exception to "tiers follow the change kind, not its contents" is in
+    # ``tier_for_change``: a ≥25 % band added or ended escalates (Q4).
+    "ownership_changed": RECHECK,
+    "ownership_unchecked": NOTE,  # the source did not answer: absence is not a finding
     "dissolution_date": ESCALATE,  # the register says the company has ceased
     "legal_name": RECHECK,  # a rename, or a different entity under the same number
     "jurisdiction": ESCALATE,  # redomiciliation — rare and real
@@ -348,6 +354,11 @@ def tier_for_change(change: dict[str, Any]) -> str:
         return REGISTER_STATUS_TERMINAL_TIER if liveness == "terminal" else REGISTER_STATUS_OTHER_TIER
     if kind == "signal_new":
         return signal_tier(change.get("code"))
+    if kind == "ownership_changed" and change.get("crossed_25"):
+        # Q4 (Stephen, 19 Oct 2026): a shareholding or voting-rights band at
+        # or above 25 % added or ended — a party becoming or ceasing to be a
+        # registrable controller. A move between bands above 25 % stays recheck.
+        return ESCALATE
     # An unknown kind is a kind the diff started naming after this table
     # was written: recheck, never silent.
     return KIND_TIER.get(kind, RECHECK)
