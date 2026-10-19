@@ -177,12 +177,52 @@ def psc_id_of(event: dict[str, Any]) -> str | None:
     return uri.rsplit("/", 1)[-1] or None
 
 
+#: The kinds of PSC item the stream names, as the watchlist's PSC tier counts
+#: them (``watchlist_psc``) — a closed vocabulary, never a name.
+PSC_KINDS: tuple[str, ...] = ("individual", "corporate", "legal_person", "withheld", "statement", "unknown")
+#: What happened to the item: a first filing, an edit, a cessation, a removal.
+PSC_OUTCOMES: tuple[str, ...] = ("added", "changed", "ceased", "deleted")
+
+_KIND_HINTS: tuple[tuple[str, str], ...] = (
+    ("individual", "individual"),
+    ("corporate-entity", "corporate"),
+    ("legal-person", "legal_person"),
+    ("super-secure", "withheld"),
+    ("statement", "statement"),
+)
+
+
+def psc_kind_of(event: dict[str, Any]) -> str:
+    """Which kind of PSC item an event is about — from ``data.kind``
+    (``individual-person-with-significant-control`` …), else from the
+    resource path (a ``deleted`` event carries no data). One of
+    :data:`PSC_KINDS`; ``unknown`` when neither says."""
+    data = event.get("data") or {}
+    text = f"{data.get('kind') or ''} {event.get('resource_kind') or ''} {event.get('resource_uri') or ''}".lower()
+    for hint, kind in _KIND_HINTS:
+        if hint in text:
+            return kind
+    return "unknown"
+
+
+@dataclass
+class Touched:
+    """One event's effect, for the watchlist's PSC tier: the company, the
+    item's id, what happened and what kind of item — counts and keys only."""
+
+    company_number: str | None
+    psc_id: str
+    outcome: str
+    kind: str
+
+
 @dataclass
 class Applied:
     upserted: int = 0
     ceased: int = 0
     deleted: int = 0
     skipped: int = 0
+    touched: list[Touched] = field(default_factory=list)
 
 
 def apply_events(conn: sqlite3.Connection, events: list[dict[str, Any]]) -> Applied:
@@ -200,15 +240,17 @@ def apply_events(conn: sqlite3.Connection, events: list[dict[str, Any]]) -> Appl
         if not psc_id:
             out.skipped += 1
             continue
+        company_number = company_number_from_uri(str(event.get("resource_uri") or ""))
+        kind = psc_kind_of(event)
         if ev_type == "deleted":
             conn.execute("DELETE FROM psc WHERE psc_id = ?", (psc_id,))
             out.deleted += 1
+            out.touched.append(Touched(company_number, psc_id, "deleted", kind))
             continue
         data = event.get("data") or {}
         if not data:
             out.skipped += 1
             continue
-        company_number = company_number_from_uri(str(event.get("resource_uri") or ""))
         ceased_on = data.get("ceased_on")
         if ceased_on or data.get("ceased"):
             conn.execute(
@@ -216,6 +258,7 @@ def apply_events(conn: sqlite3.Connection, events: list[dict[str, Any]]) -> Appl
                 (str(ceased_on or _now_iso()[:10]), psc_id),
             )
             out.ceased += 1
+            out.touched.append(Touched(company_number, psc_id, "ceased", kind))
             continue
         row = psc_graph._row_from_record({"company_number": company_number, "data": data}, codes)
         if row is None:
@@ -224,8 +267,10 @@ def apply_events(conn: sqlite3.Connection, events: list[dict[str, Any]]) -> Appl
         # The seed keys the row on the same id; make sure they agree even if
         # links.self were missing on the event.
         row = (psc_id,) + row[1:]
+        known = conn.execute("SELECT 1 FROM psc WHERE psc_id = ?", (psc_id,)).fetchone() is not None
         conn.execute(psc_graph._INSERT, row)
         out.upserted += 1
+        out.touched.append(Touched(company_number, psc_id, "changed" if known else "added", kind))
     if len(codes) > known_codes:
         conn.executemany(
             "INSERT OR IGNORE INTO nature_codes (code_byte, code) VALUES (?, ?)",
@@ -264,6 +309,24 @@ def _apply_batch(
         return applied, seed
     finally:
         conn.close()
+
+
+def _notify_watchlist(touched: list[Touched], published_at: str | None) -> None:
+    try:
+        from . import watchlist_psc
+
+        watchlist_psc.on_psc_events(touched, published_at)
+    except Exception:  # noqa: BLE001 — the watcher must never fail the stream
+        log.exception("psc_stream: the watchlist hook failed")
+
+
+def _notify_watchlist_gap(since: str, timepoint: int | None) -> None:
+    try:
+        from . import watchlist_psc
+
+        watchlist_psc.on_psc_gap(since, timepoint)
+    except Exception:  # noqa: BLE001
+        log.exception("psc_stream: the watchlist gap hook failed")
 
 
 def seed_identity(meta: dict[str, Any]) -> str | None:
@@ -408,7 +471,12 @@ class Consumer:
         self._resume_how = None
         self._set(resumed_from=resumed)
         if resumed == "live":
-            self._set(gap=True, gap_since=_now_iso())
+            since = _now_iso()
+            self._set(gap=True, gap_since=since)
+            # A live resume skipped whatever the register published while the
+            # consumer was away: the watchlist answers with a catch-up re-run
+            # of every watched UK company (never raises).
+            await asyncio.to_thread(_notify_watchlist_gap, since, self.timepoint)
         self._count("connects")
         self._set(connected=True, last_error=None)
         outcome = "dropped"
@@ -478,6 +546,12 @@ class Consumer:
         applied, seed = await asyncio.to_thread(
             _apply_batch, self.path, list(batch), self.timepoint, self.published_at
         )
+        # pKYC stage E, Route 1: after the batch is committed, tell the
+        # watchlist which companies' PSC items moved — the shape of
+        # ``mirror_refresh.apply_delta`` → ``watchlist.on_gleif_delta``. The
+        # hook never raises and the stream never waits on a failure of it.
+        if applied.touched:
+            await asyncio.to_thread(_notify_watchlist, applied.touched, self.published_at)
         with _state_lock:
             _state.upserted += applied.upserted
             _state.ceased += applied.ceased
