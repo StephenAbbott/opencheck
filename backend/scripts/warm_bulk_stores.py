@@ -15,6 +15,23 @@ The sweep runs on a GitHub runner and the assets are on GitHub's own CDN
 the same terms; the JAR index in particular can be read from a runner only as
 this asset, because the register's own files are challenged there.
 
+``asp_moldova`` is the one store here that is not a release asset. It builds
+itself from the register's weekly XLSX on dataset.gov.md (about 39 MB), and
+until it was warmed here it built inside the sweep, where ``fetch()`` waits at
+most 45 s for the background download and build before degrading. On a
+GitHub runner that race was lost on 21 and 28 Sept 2026 — both runs degraded
+at ~45.3 s with "the weekly export is still being downloaded and indexed" and
+a stub liveness — and won on 5 Oct, so the row's colour said more about the
+runner's route to Chişinău than about the register. Built here, with no clock,
+the probe then finds a fresh index (``sync_index`` keeps a snapshot under
+seven days old) and the 45 s wait it still exercises is the warm path. It
+needs ``OPENCHECK_ALLOW_LIVE`` — ``sync_enabled()`` reads it — which the
+workflow sets on this step; without it the outcome is ``not_configured``, no
+file is written, and the warning below names it. Its file lives where
+``asp_moldova.index_path()`` says (the temp directory unless
+``ASP_MOLDOVA_DB_FILE`` is set), not under ``data_root()``: both steps run on
+one runner, so the sweep's process resolves the same path.
+
 Deliberately the production path, not a ``curl``
 ------------------------------------------------
 
@@ -44,6 +61,8 @@ if str(_BACKEND) not in sys.path:
 from opencheck.cache import data_root  # noqa: E402
 from opencheck.sources.ariregister import db_path as ariregister_db_path  # noqa: E402
 from opencheck.sources.ariregister import warm_index as warm_ariregister_index  # noqa: E402
+from opencheck.sources.asp_moldova import index_path as asp_moldova_index_path  # noqa: E402
+from opencheck.sources.asp_moldova import warm_index as warm_asp_moldova_index  # noqa: E402
 from opencheck.sources.chilecompra import db_path as chilecompra_db_path  # noqa: E402
 from opencheck.sources.chilecompra import warm_index as warm_chilecompra_index  # noqa: E402
 from opencheck.meip import db_path as meip_db_path  # noqa: E402
@@ -59,6 +78,7 @@ WARMERS = (
     ("chilecompra", warm_chilecompra_index, chilecompra_db_path),
     ("jar_lithuania", warm_jar_index, jar_db_path),
     ("ariregister", warm_ariregister_index, ariregister_db_path),
+    ("asp_moldova", warm_asp_moldova_index, asp_moldova_index_path),
 )
 
 
