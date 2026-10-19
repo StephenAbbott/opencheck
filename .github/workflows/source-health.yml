@@ -108,8 +108,17 @@ jobs:
       # so a failed download skips the probe exactly as before — and the report
       # now names the assertion that skip left unevaluated, which is the half
       # that was missing.
-      - name: Warm the index-tier bulk stores (ONRC Romania, OECD-UNSD MEIP, ChileCompra)
+      #
+      # ASP Moldova joins this step although its store is not a release asset:
+      # it builds itself from dataset.gov.md, and inside the sweep that build
+      # races a 45 s wait in fetch() — lost on 21 and 28 Sept 2026 (degraded,
+      # "still being downloaded and indexed"), won on 5 Oct. Built here it has
+      # no clock. OPENCHECK_ALLOW_LIVE is what lets its sync run at all; the
+      # release-asset warmers do not read it.
+      - name: Warm the index-tier bulk stores (ONRC Romania, OECD-UNSD MEIP, ChileCompra, JAR, Ariregister, ASP Moldova)
         continue-on-error: true
+        env:
+          OPENCHECK_ALLOW_LIVE: "true"
         run: uv run python scripts/warm_bulk_stores.py
         working-directory: backend
 

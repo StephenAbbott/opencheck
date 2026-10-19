@@ -81,7 +81,7 @@ from pathlib import Path
 from typing import Any
 
 from . import psc_graph
-from .identifiers import normalise_ch_company_number
+from .identifiers import ch_psc_item_id, normalise_ch_company_number
 
 log = logging.getLogger(__name__)
 
@@ -164,12 +164,15 @@ def company_number_from_uri(uri: str) -> str | None:
 
 
 def psc_id_of(event: dict[str, Any]) -> str | None:
-    """The record's stable id: the tail of ``data.links.self``, else the
-    event's ``resource_id``, else the tail of ``resource_uri``."""
+    """The record's stable id: the tail of ``data.links.self``
+    (``identifiers.ch_psc_item_id`` — the same rule the Companies House
+    mapper keys a PSC party on, so a stream event and the mapped statement
+    name the item alike), else the event's ``resource_id``, else the tail of
+    ``resource_uri``."""
     data = event.get("data") or {}
-    self_link = str((data.get("links") or {}).get("self") or "")
-    if self_link:
-        return self_link.rsplit("/", 1)[-1] or None
+    item_id = ch_psc_item_id(data)
+    if item_id:
+        return item_id
     rid = event.get("resource_id")
     if rid:
         return str(rid)

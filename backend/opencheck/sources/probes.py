@@ -409,7 +409,13 @@ PROBES: dict[str, SourceProbe] = {
             "channel rather than a fail here. The sweep itself starts cold, "
             "with no index to keep and a floor of one company, so it still "
             "reaches the fail — the two readings are different states, not a "
-            "disagreement."
+            "disagreement. "
+            "The 21 and 28 Sept 2026 ambers (stub liveness, ~45.3 s, 'still "
+            "being downloaded and indexed') were that 45 s race lost on a "
+            "GitHub runner, not the register: scripts/warm_bulk_stores.py now "
+            "builds this index before the sweep, so the probe reads a fresh "
+            "snapshot and an amber of that shape means the warm step itself "
+            "failed — its log names asp_moldova."
         ),
     ),
     "cr_hongkong": _p(
