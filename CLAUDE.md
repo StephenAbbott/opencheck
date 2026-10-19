@@ -1699,6 +1699,39 @@ Stephen's decisions (16 Oct 2026):
 
 ---
 
+## The Estonia dataset is built from local data (sweep_estonia.py)
+
+`backend/scripts/sweep_estonia.py` builds the `dataset-estonia-<cut>` release
+from the two SQLite files production reads — the Golden Copy mirror and the
+e-Business Register index — with no API calls (`--refresh-mirror` is the one
+download: GLEIF's delta, applied by `mirror_refresh.apply_delta`). Things that
+will be re-derived otherwise:
+
+- **Statements come from the lookup's own code paths**:
+  `GleifAdapter._snapshot_bundle` + `map_gleif`, and
+  `AriregisterAdapter._index_bundle` + `map_ariregister`, each inside a
+  provenance scope. Never hand-build a statement here.
+- **A GLEIF edge is published once, from the child.** A lookup keys one
+  relationship record `<child>:direct-parent:<parent>` from the child's bundle
+  and `<parent>:direct-child:<child>` from the parent's — two ids — so the
+  build drops every bundle's children. A foreign company consolidated by an
+  Estonian one keeps only its edges to Estonian parents.
+- **The register layer is the upward closure, uncapped**: every LEI holder's
+  RA000181 code and every Estonian corporate shareholder above it, each mapped
+  as its own subject without the chain walk or the SOAP/REST history. A
+  company's own record outranks a shareholder row's thin statement under the
+  same id (`assemble` ranks primaries first).
+- **`register-missing.csv` cannot reach zero**: the open data carries no
+  deleted company, and GLEIF keeps a deleted company's LEI active (19 Oct
+  2026: 429, all deleted; 414 LAPSED). They keep their GLEIF statements.
+- `check` must pass before a release: no dangling reference, no registry code
+  under `EE-KMKR`, no valid personal code in a person's identifiers or
+  annotations, no person's street address. `--libcove` adds lib-cove-bods
+  (~8 minutes on the full file).
+- The Neo4j zip is `bods-neo4j to-csv` + `backend/scripts/estonia_demo_queries.cypher`;
+  the RDF is `export_rdf_bulk.py` with **no** `--fallback-license` (every
+  statement names its source).
+
 ## Datafordeler CVR API (Denmark) — hard-won constraints
 
 These are non-obvious and cost significant debugging time. Do not deviate from them.

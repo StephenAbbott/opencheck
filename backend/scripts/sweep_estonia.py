@@ -1,45 +1,60 @@
 #!/usr/bin/env python3
-"""Phase 2 sweep: build a BODS v0.4 dataset covering every Estonian LEI holder.
+"""Build the Estonia BODS dataset from local data only: the GLEIF Golden Copy
+mirror and the daily e-Business Register index.
 
-Combines two bulk layers — **no API calls**:
+Every Estonian legal entity holding a Legal Entity Identifier, with the
+global LEI graph around it and the national register's shareholders,
+officers, supervisory boards and beneficial owners, as BODS v0.4. **No API
+calls**: both layers are read from the two SQLite files a production
+OpenCheck server reads.
 
-1. **GLEIF layer** — the Open Ownership ``gleif_version_0_4`` *parquet* files
-   (downloaded by ``setup_bods_data.py``): latest entity statement for every
-   EE-jurisdiction record, all relationship statements touching them (real
-   edges *and* reporting-exception statements for EE subjects, kept in OO's
-   original ``interestedParty: {reason, description}`` form), plus foreign
-   boundary entities at the ends of cross-border edges.
-2. **ariregister layer** — ``ariregister.db`` (built by
-   ``extract_ariregister.py`` from the RIK bulk open-data files): for every
-   LEI holder carrying an ``EE-KMKR`` registry-code identifier, shareholders /
-   officers / beneficial owners are mapped through the canonical
-   ``map_ariregister()`` from ``opencheck.bods``.
+1. **GLEIF layer — the Golden Copy mirror** (``entity_pages.sqlite``, the
+   ``entity-pages-latest`` release asset; ``--refresh-mirror`` first brings
+   it up to GLEIF's latest publish with the delta files, the in-process
+   refresh's own code). Every LEI whose legal jurisdiction is ``EE`` is
+   mapped with OpenCheck's own GLEIF mapper from the mirror bundle a lookup
+   is served from (``GleifAdapter._snapshot_bundle``), so the statements are
+   the ones a lookup publishes: ``opencheckSourceId``, the mirror's two
+   provenance clocks, Legal Entity Event dates (Phase 305), the LEI-status
+   note (Phase 255), reporting exceptions as filed. A foreign parent is a
+   boundary entity on its Estonian child's edge; a foreign company consolidated
+   by an Estonian one contributes its own record and its edges to Estonian
+   parents only. Each GLEIF edge is published once, from its child — the
+   side GLEIF's relationship record names as the start node.
+2. **Register layer — the e-Business Register index** (``ariregister.sqlite``,
+   the ``ariregister-index`` release asset). Every LEI holder whose GLEIF
+   record files an ``RA000181`` registry code, plus every Estonian company
+   above one in the index's shareholder lists (the upward closure, without
+   the lookup's caps), is mapped with ``map_ariregister`` on the index tier:
+   current lists, off-card persons (supervisory boards, AS shareholders,
+   founders), general data, rulings and pledges. The ended-ownership history
+   is **not** read — it comes from RIK's credentialed services, and this
+   dataset stays bulk-only.
 
-The layers join in graph tools via the shared identifier
-(scheme ``EE-KMKR``, id = registry code) on both entity statements.
+The layers join on ``EE-ARIREGISTER`` — the registry code the GLEIF entity
+statement and the register's own record both carry.
 
-The build is **staged and resumable** (each stage is cheap to re-run):
+Stages (each resumable; ``all`` runs them in order)::
 
-* ``--stage select``       — DuckDB selection over parquet → ``work/selection.json``
-* ``--stage gleif``        — reconstruct GLEIF BODS JSON → ``work/gleif_*.jsonl``
-* ``--stage ariregister``  — map the next ``--chunk-size`` companies
-  (repeat until ``done``; progress in ``work/ar_state.json``)
-* ``--stage assemble``     — dedup, order (entities/persons before
-  relationships), gzip; write ``estonia-YYYY-MM-DD.jsonl.gz`` +
-  ``manifest.json`` + ``LICENCES.md`` to ``--out-dir``
-* ``--stage all``          — run everything in one process (laptop use)
+    select    → work/selection.json   (the LEIs, their registry codes, the
+                                       foreign reporters, the closure)
+    gleif     → work/gleif.jsonl
+    register  → work/register.jsonl
+    assemble  → <out>/estonia-<cut>.jsonl.gz, manifest.json, LICENCES.md
+    check     → <out>/checks.json      (references, identifiers, personal data;
+                                       --libcove adds lib-cove-bods)
 
-Usage::
+Usage (from ``backend/``)::
 
-    cd backend
-    python3 scripts/sweep_estonia.py --stage all \
-        [--parquet-dir data/bods/gleif/parquet] \
-        [--ariregister-db ../data/ariregister.db] \
-        [--out-dir ../data/estonia] [--work-dir ../data/estonia/work] \
-        [--limit N] [--no-beneficial-owners]
+    uv run python scripts/sweep_estonia.py --stage all \\
+        --entity-pages-db ../data/entity_pages.sqlite --refresh-mirror \\
+        --ariregister-index ../data/ariregister.sqlite \\
+        --out-dir ../data/estonia [--libcove]
 
 Licence of the combined output: **CC-BY-4.0** (GLEIF CC0 + RIK CC-BY-4.0;
-most restrictive wins).
+most restrictive wins). Every statement names its source
+(``source.opencheckSourceId``), so the RDF projection stamps a per-statement
+licence without ``--fallback-license``.
 """
 
 from __future__ import annotations
@@ -48,429 +63,408 @@ import argparse
 import datetime as dt
 import gzip
 import json
+import os
+import re
 import sqlite3
 import sys
-from collections import defaultdict
+from collections import Counter
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
 
 _HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(_HERE.parent))  # opencheck package
+sys.path.insert(0, str(_HERE.parent))  # the opencheck package
 
-EE_SCHEME = "EE-KMKR"  # OO GLEIF mapping + OpenCheck mapper use the same scheme
+#: The registry code's scheme — the one ``gleif_registration_scheme`` maps
+#: RA000181 to and the register's own mapper writes (Phase 239).
+EE_SCHEME = "EE-ARIREGISTER"
+#: GLEIF's registration authority for the Estonian Commercial Register.
+EE_RA = "RA000181"
+#: The scheme the July 2026 build carried for the registry code. Kept here
+#: only so ``check`` can say it is gone (the register still files the VAT
+#: number under it, which is correct).
+VAT_SCHEME = "EE-KMKR"
+
+#: LEI registration states that are not a record of a company at all.
+_UNUSABLE_REGISTRATION = frozenset({"ANNULLED", "DUPLICATE"})
+
+DATASET_PREFIX = "estonia"
+
+
+# ---------------------------------------------------------------------------
+# Configuration: point the package at the two files before it reads settings
+# ---------------------------------------------------------------------------
+
+
+def configure(entity_pages_db: Path, ariregister_index: Path) -> None:
+    """Name the two files in the environment the package's settings read,
+    and turn live calls off — nothing in this build may reach a network."""
+    os.environ["OPENCHECK_ENTITY_PAGES_DB_FILE"] = str(entity_pages_db)
+    os.environ["ARIREGISTER_DB_FILE"] = str(ariregister_index)
+    os.environ["OPENCHECK_ALLOW_LIVE"] = "false"
+    from opencheck import entity_pages
+    from opencheck.config import get_settings
+    from opencheck.sources import ariregister
+
+    get_settings.cache_clear()
+    entity_pages.reset_store_for_tests()
+    ariregister.reset_connection()
+
+
+# ---------------------------------------------------------------------------
+# Stage: refresh the mirror (optional, the only stage that downloads)
+# ---------------------------------------------------------------------------
+
+
+def refresh_mirror(db_path: Path) -> dict[str, Any]:
+    """Bring the mirror up to GLEIF's latest Golden Copy publish with the
+    smallest delta that covers the gap — ``mirror_refresh.apply_delta``, the
+    code the server runs every few hours. A gap wider than a month needs a
+    fresh release asset; this says so rather than guessing."""
+    from opencheck import entity_pages as ep
+    from opencheck import mirror_build as mb
+    from opencheck import mirror_refresh as mr
+
+    store = ep.EntityStore(db_path)
+    watermark = store.watermark()
+    publish = mb._latest_publish()
+    publish_at = mr.parse_publish_datetime(publish.get("publish_date"))
+    if watermark is None or publish_at is None:
+        raise SystemExit("refresh-mirror: the mirror or the publish API has no date")
+    gap = publish_at - watermark
+    if gap <= dt.timedelta(0):
+        return {"mirror_refresh": "up_to_date", "publish": publish["publish_date"]}
+    delta = mr.choose_delta(gap)
+    if delta is None:
+        raise SystemExit(
+            f"refresh-mirror: the mirror is {gap} behind GLEIF, wider than any delta; "
+            "download a fresh entity-pages-latest asset first"
+        )
+    counts = mr.apply_delta(db_path, publish, delta)
+    ep.reset_store_for_tests()
+    return {
+        "mirror_refresh": "applied",
+        "delta": delta,
+        "publish": publish["publish_date"],
+        "rows": counts,
+    }
 
 
 # ---------------------------------------------------------------------------
 # Stage: select
 # ---------------------------------------------------------------------------
 
-def stage_select(args) -> dict:
-    import duckdb
 
-    pq = Path(args.parquet_dir)
-    d = duckdb.connect()
-    d.execute(f"""
-        CREATE TEMP TABLE latest_ent AS
-        SELECT _link, recordId, statementId, recordStatus,
-               recordDetails_jurisdiction_code AS juris
-        FROM (SELECT *, row_number() OVER
-                (PARTITION BY recordId ORDER BY statementDate DESC, _link DESC) rn
-              FROM '{pq}/entity_statement.parquet') WHERE rn = 1""")
+def registry_code_of(detail: dict[str, Any] | None) -> str | None:
+    """The Estonian registry code a GLEIF record files, or None.
 
-    lim = f"LIMIT {int(args.limit)}" if args.limit else ""
-    cc = d.execute(f"""
-        SELECT _link, recordId FROM latest_ent
-        WHERE juris = ? AND recordStatus != 'closed' ORDER BY recordId {lim}""",
-        [args.jurisdiction]).fetchall()
-    cc_links = [r[0] for r in cc]
-    cc_records = {r[1] for r in cc}
-    d.execute("CREATE TEMP TABLE cc_records (recordId VARCHAR)")
-    d.executemany("INSERT INTO cc_records VALUES (?)", [(r,) for r in cc_records])
+    Only a number filed under RA000181 is read: GLEIF records some Estonian
+    entities under another authority (a fund's, a bank's), and their
+    ``registeredAs`` is not a Commercial Register code.
+    """
+    from opencheck.sources.ariregister import normalise_registry_code
 
-    # LEI → registry code
-    lei_reg: dict[str, str] = {}
-    for rec, reg in d.execute(f"""
-        SELECT le.recordId, i.id
-        FROM latest_ent le
-        JOIN cc_records c ON c.recordId = le.recordId
-        JOIN '{pq}/entity_recorddetails_identifiers.parquet' i
-          ON i._link_entity_statement = le._link
-        WHERE i.scheme = '{EE_SCHEME}'""").fetchall():
-        reg = str(reg or "").strip()
-        if reg.isdigit():
-            lei_reg[rec.replace("XI-LEI-", "")] = reg.lstrip("0") or reg
+    detail = detail or {}
+    if ((detail.get("registeredAt") or {}).get("id") or "") != EE_RA:
+        return None
+    raw = str(detail.get("registeredAs") or "").strip()
+    if not raw:
+        return None
+    try:
+        code = normalise_registry_code(raw)
+    except ValueError:
+        return None
+    return code if code.isdigit() else None
 
-    rels = d.execute(f"""
-        SELECT _link, recordDetails_subject, recordDetails_interestedParty,
-               recordDetails_interestedParty_reason
-        FROM (SELECT *, row_number() OVER
-                (PARTITION BY recordId ORDER BY statementDate DESC, _link DESC) rn
-              FROM '{pq}/relationship_statement.parquet') r
-        WHERE rn = 1 AND recordStatus != 'closed'
-          AND (recordDetails_subject IN (SELECT recordId FROM cc_records)
-               OR (recordDetails_interestedParty IS NOT NULL AND
-                   recordDetails_interestedParty IN (SELECT recordId FROM cc_records)))
-        """).fetchall()
 
-    boundary_records: set[str] = set()
-    rel_rows = []
-    n_exc = 0
-    for link, s, ip, reason in rels:
-        if reason is not None:
-            if s not in cc_records:
-                continue
-            n_exc += 1
-        rel_rows.append((link, s, ip))
-        for endpoint in (s, ip):
-            if endpoint and endpoint not in cc_records:
-                boundary_records.add(endpoint)
+def register_closure(
+    codes: Iterable[str], *, guard: int = 200_000
+) -> tuple[list[str], dict[str, int]]:
+    """Every Estonian company in the index above ``codes`` in a shareholder
+    list (the chain walk's holders — OÜ shareholders, AS shareholders on the
+    off-card list, partners), followed to the top with no depth cap.
 
-    d.execute("CREATE TEMP TABLE brec (recordId VARCHAR)")
-    d.executemany("INSERT INTO brec VALUES (?)", [(r,) for r in sorted(boundary_records)])
-    boundary = d.execute("""
-        SELECT _link, recordId FROM latest_ent
-        WHERE recordId IN (SELECT recordId FROM brec) AND recordStatus != 'closed'
-        """).fetchall()
-    included = cc_records | {r[1] for r in boundary}
+    Returns the codes the index holds — the inputs first, in input order,
+    then the companies above them, sorted — and counts of the holders that
+    could not be followed (a foreign register, or a code the index lacks).
+    """
+    from opencheck.sources import ariregister
 
-    rel_links, dropped = [], 0
-    for link, s, ip in rel_rows:
-        if s in included and (ip is None or ip in included):
-            rel_links.append(link)
-        else:
-            dropped += 1
+    inputs = list(dict.fromkeys(codes))
+    seen = set(inputs)
+    frontier = list(inputs)
+    held: set[str] = set()
+    stats: Counter[str] = Counter()
+    while frontier:
+        code = frontier.pop()
+        record = ariregister.entity_record(code)
+        if record is None:
+            if code not in inputs:
+                stats["holders_not_in_index"] += 1
+            continue
+        held.add(code)
+        for holder, _row in ariregister._corporate_holders(record):
+            if holder is None:
+                stats["foreign_holders"] += 1
+            elif holder not in seen:
+                seen.add(holder)
+                frontier.append(holder)
+        if len(seen) > guard:  # pragma: no cover - a guard, not a cap
+            raise SystemExit("register closure grew past the guard; check the index")
+    above = sorted(held - set(inputs))
+    return [c for c in inputs if c in held] + above, dict(stats)
 
-    gleif_max_date = d.execute(
-        f"SELECT max(statementDate) FROM '{pq}/entity_statement.parquet'"
-    ).fetchone()[0]
 
-    sel = {
-        "cc_links": cc_links,
-        "boundary_links": [r[0] for r in boundary],
-        "rel_links": rel_links,
-        "lei_reg": lei_reg,
+def stage_select(args: argparse.Namespace) -> dict[str, Any]:
+    from opencheck import entity_pages as ep
+    from opencheck.sources import ariregister
+
+    store = ep.get_store()
+    if store is None or not store.is_mirror:
+        raise SystemExit("select: --entity-pages-db must be a Golden Copy mirror (schema 2)")
+    if not ariregister.index_available():
+        raise SystemExit("select: --ariregister-index is not a readable index")
+
+    conn = sqlite3.connect(f"file:{store.path}?mode=ro", uri=True)
+    rows = conn.execute(
+        "SELECT lei, entity_status, registration_status FROM entities "
+        "WHERE jurisdiction = ? ORDER BY lei",
+        (args.jurisdiction,),
+    ).fetchall()
+    excluded: Counter[str] = Counter()
+    scope: list[str] = []
+    for lei, entity_status, registration_status in rows:
+        if (registration_status or "").upper() in _UNUSABLE_REGISTRATION:
+            excluded[f"registration_{registration_status.lower()}"] += 1
+            continue
+        if (entity_status or "").upper() != "ACTIVE" and not args.include_inactive:
+            excluded[f"entity_{(entity_status or 'null').lower()}"] += 1
+            continue
+        scope.append(lei)
+    if args.limit:
+        scope = scope[: args.limit]
+    scope_set = set(scope)
+
+    # Foreign companies GLEIF records as consolidated by an Estonian one.
+    # Their edges are published from their side (the child is the start node
+    # of GLEIF's relationship record), as every other GLEIF edge here is.
+    reporters: list[str] = []
+    for lei, direct, ultimate in conn.execute(
+        "SELECT lei, direct_parent_lei, ultimate_parent_lei FROM entities "
+        "WHERE (direct_parent_lei IS NOT NULL OR ultimate_parent_lei IS NOT NULL) "
+        "AND (jurisdiction IS NULL OR jurisdiction != ?) ORDER BY lei",
+        (args.jurisdiction,),
+    ):
+        if direct in scope_set or ultimate in scope_set:
+            reporters.append(lei)
+    conn.close()
+
+    lei_code: dict[str, str] = {}
+    other_ra = 0
+    for chunk_start in range(0, len(scope), 500):
+        batch = store.get_many(scope[chunk_start : chunk_start + 500])
+        for lei, row in batch.items():
+            code = registry_code_of(row.detail)
+            if code:
+                lei_code[lei] = code
+            else:
+                other_ra += 1
+
+    codes = sorted(set(lei_code.values()))
+    closure, closure_stats = register_closure(codes)
+    held = set(closure)
+    missing_codes = [c for c in codes if c not in held]
+
+    meta = ariregister.read_meta()
+    watermark = store.watermark()
+    selection = {
+        "scope": scope,
+        "foreign_reporters": reporters,
+        "lei_code": lei_code,
+        "register_codes": closure,
+        "missing_codes": missing_codes,
         "stats": {
-            "gleif_entities_in_scope": len(cc_links),
-            "gleif_boundary_entities": len(boundary),
-            "gleif_relationships_selected": len(rel_links),
-            "gleif_exception_statements": n_exc,
-            "gleif_dangling_relationships_dropped": dropped,
-            "lei_with_registry_code": len(lei_reg),
-            "gleif_snapshot_max_statement_date": str(gleif_max_date),
+            "gleif_jurisdiction": args.jurisdiction,
+            "gleif_records_in_jurisdiction": len(rows),
+            "gleif_entities_in_scope": len(scope),
+            "gleif_excluded": dict(sorted(excluded.items())),
+            "gleif_foreign_consolidated_entities": len(reporters),
+            "lei_with_registry_code": len(lei_code),
+            "lei_without_ra000181_code": other_ra,
+            "ariregister_companies_matched": len(codes) - len(missing_codes),
+            "ariregister_companies_missing": len(missing_codes),
+            "ariregister_chain_companies": len(closure) - (len(codes) - len(missing_codes)),
+            "ariregister_chain": closure_stats,
+        },
+        "sources": {
+            "gleif": {
+                "via": "OpenCheck Golden Copy mirror (entity_pages.sqlite)",
+                "watermark": watermark.isoformat() if watermark else None,
+                "refreshed_at": (
+                    store.retrieved_at().isoformat() if store.retrieved_at() else None
+                ),
+                "mode": store.meta().get("mode"),
+            },
+            "ariregister": {
+                "via": "OpenCheck e-Business Register index (ariregister.sqlite)",
+                "cut": meta.get("cut"),
+                "built_at": meta.get("built_at"),
+                "source_files": (meta.get("source_files") or "").split(",")
+                if meta.get("source_files")
+                else [],
+            },
         },
     }
     work = Path(args.work_dir)
     work.mkdir(parents=True, exist_ok=True)
-    (work / "selection.json").write_text(json.dumps(sel))
-    print(json.dumps(sel["stats"], indent=1))
-    return sel
+    (work / "selection.json").write_text(json.dumps(selection))
+    print(json.dumps(selection["stats"], indent=1))
+    return selection
 
 
 # ---------------------------------------------------------------------------
-# Stage: gleif — bulk BODS JSON reconstruction from parquet
+# Stage: gleif
 # ---------------------------------------------------------------------------
 
-def _pub_block(row: dict) -> dict:
-    pub = {k2: str(row[k1]) for k1, k2 in (
-        ("publicationDetails_publicationDate", "publicationDate"),
-        ("publicationDetails_bodsVersion", "bodsVersion"),
-        ("publicationDetails_license", "license"),
-    ) if row.get(k1) not in (None, "")}
-    publisher = {k2: str(row[k1]) for k1, k2 in (
-        ("publicationDetails_publisher_name", "name"),
-        ("publicationDetails_publisher_url", "url"),
-    ) if row.get(k1) not in (None, "")}
-    if publisher:
-        pub["publisher"] = publisher
-    return pub
+
+def _lei_of(statement: dict[str, Any]) -> str | None:
+    for ident in (statement.get("recordDetails") or {}).get("identifiers") or []:
+        if ident.get("scheme") == "XI-LEI":
+            return str(ident.get("id") or "").upper() or None
+    return None
 
 
-def _src_block(row: dict, asserted: list[dict] | None = None) -> dict:
-    src: dict[str, Any] = {}
-    if row.get("source_type"):
-        src["type"] = [t for t in str(row["source_type"]).split(",") if t]
-    if row.get("source_url"):
-        src["url"] = row["source_url"]
-    if asserted:
-        src["assertedBy"] = asserted
-    return src
+def gleif_statements(lei: str, scope: set[str], *, reporter: bool = False) -> list[dict[str, Any]]:
+    """The GLEIF statements one LEI contributes, from the mirror bundle a
+    lookup is served from, without its children.
 
+    Children are left out because each child publishes its own edge (the
+    lookup keys a parent edge ``<child>:<kind>-parent:<parent>`` and a child
+    edge ``<parent>:direct-child:<child>``: two statement ids for one GLEIF
+    relationship record). A ``reporter`` — a foreign company consolidated
+    by an Estonian one — contributes its own record and only the edges to
+    Estonian parents, not its other parents or its reporting exceptions.
+    """
+    from opencheck import provenance
+    from opencheck.bods import map_gleif
+    from opencheck.sources.gleif import GleifAdapter
 
-def _alt_names(v) -> list[str]:
-    if v in (None, ""):
+    with provenance.recording() as recorder:
+        bundle = GleifAdapter()._snapshot_bundle(lei, reason="mirror")
+    if bundle is None:
         return []
-    try:
-        parsed = json.loads(v)
-    except (TypeError, ValueError):
-        parsed = v
-    if isinstance(parsed, str):
-        return [parsed]
-    if isinstance(parsed, list):
-        return [str(x) for x in parsed if x]
-    return []
+    bundle["direct_children"] = []
+    bundle.pop("direct_child_relationships", None)
+    if reporter:
+        for kind in ("direct", "ultimate"):
+            parent = bundle.get(f"{kind}_parent") or {}
+            parent_lei = (
+                (parent.get("attributes") or {}).get("lei") or parent.get("id") or ""
+            ).upper()
+            if parent_lei not in scope:
+                bundle[f"{kind}_parent"] = None
+                bundle.pop(f"{kind}_parent_relationship", None)
+            bundle[f"{kind}_parent_exception"] = None
+    with provenance.mapping_provenance(recorder.resolve(is_stub=False)):
+        return list(map_gleif(bundle).statements)
 
 
-def stage_gleif(args) -> None:
-    import duckdb
-
-    pq = Path(args.parquet_dir)
+def stage_gleif(args: argparse.Namespace) -> dict[str, int]:
     work = Path(args.work_dir)
     sel = json.loads((work / "selection.json").read_text())
-    d = duckdb.connect()
-
-    def _tmp(name: str, links: list[str]) -> None:
-        d.execute(f"CREATE TEMP TABLE {name} (_link VARCHAR)")
-        d.executemany(f"INSERT INTO {name} VALUES (?)", [(x,) for x in links])
-
-    _tmp("sel_ent", sel["cc_links"] + sel["boundary_links"])
-    _tmp("sel_rel", sel["rel_links"])
-
-    # entity child tables, grouped by parent link
-    ids = defaultdict(list)
-    for link, i, sch, schn, uri in d.execute(f"""
-        SELECT i._link_entity_statement, i.id, i.scheme, i.schemeName, i.uri
-        FROM '{pq}/entity_recorddetails_identifiers.parquet' i
-        JOIN sel_ent s ON s._link = i._link_entity_statement""").fetchall():
-        if i and (sch or schn or uri):
-            ids[link].append({k: v for k, v in
-                              (("id", i), ("scheme", sch), ("schemeName", schn),
-                               ("uri", uri)) if v})
-    addrs = defaultdict(list)
-    for link, t, a, pc, cn, cc_ in d.execute(f"""
-        SELECT x._link_entity_statement, x.type, x.address, x.postCode,
-               x.country_name, x.country_code
-        FROM '{pq}/entity_recorddetails_addresses.parquet' x
-        JOIN sel_ent s ON s._link = x._link_entity_statement""").fetchall():
-        addr: dict[str, Any] = {}
-        if t:
-            addr["type"] = t if t in ("registered", "business", "alternative") else "alternative"
-        if a:
-            addr["address"] = a
-        if pc:
-            addr["postCode"] = pc
-        if cc_:
-            addr["country"] = {"name": cn or cc_, "code": cc_}
-        if addr:
-            addrs[link].append(addr)
-    asserted = defaultdict(list)
-    for link, name, uri in d.execute(f"""
-        SELECT x._link_entity_statement, x.name, x.uri
-        FROM '{pq}/entity_source_assertedby.parquet' x
-        JOIN sel_ent s ON s._link = x._link_entity_statement""").fetchall():
-        if name or uri:
-            asserted[link].append({k: v for k, v in (("name", name), ("uri", uri)) if v})
-
-    cols = [c[0] for c in d.execute(
-        f"DESCRIBE SELECT * FROM '{pq}/entity_statement.parquet'").fetchall()]
-    with open(work / "gleif_entities.jsonl", "w", encoding="utf-8") as fh:
-        for row_t in d.execute(f"""
-            SELECT e.* FROM '{pq}/entity_statement.parquet' e
-            JOIN sel_ent s ON s._link = e._link ORDER BY e.recordId""").fetchall():
-            e = dict(zip(cols, row_t))
-            link = e["_link"]
-            rd: dict[str, Any] = {
-                "isComponent": bool(e.get("recordDetails_isComponent")),
-                "entityType": {
-                    "type": e.get("recordDetails_entityType_type") or "registeredEntity",
-                    **({"details": e["recordDetails_entityType_details"]}
-                       if e.get("recordDetails_entityType_details") else {}),
-                },
-                "name": e.get("recordDetails_name") or "",
-            }
-            if e.get("recordDetails_jurisdiction_code") or e.get("recordDetails_jurisdiction_name"):
-                # BODS v0.4 key (Phase 239), not v0.3's incorporatedInJurisdiction.
-                rd["jurisdiction"] = {
-                    "name": e.get("recordDetails_jurisdiction_name")
-                    or e.get("recordDetails_jurisdiction_code"),
-                }
-                if e.get("recordDetails_jurisdiction_code"):
-                    rd["jurisdiction"]["code"] = e["recordDetails_jurisdiction_code"]
-            alt = _alt_names(e.get("recordDetails_alternateNames"))
-            if alt:
-                rd["alternateNames"] = alt
-            if e.get("recordDetails_foundingDate"):
-                rd["foundingDate"] = str(e["recordDetails_foundingDate"])
-            if e.get("recordDetails_dissolutionDate"):
-                rd["dissolutionDate"] = str(e["recordDetails_dissolutionDate"])
-            if ids.get(link):
-                rd["identifiers"] = ids[link]
-            if addrs.get(link):
-                rd["addresses"] = addrs[link]
-            stmt = {
-                "statementId": e["statementId"],
-                **({"recordId": e["recordId"]} if e.get("recordId") else {}),
-                "declarationSubject": e.get("declarationSubject") or e.get("recordId")
-                or e["statementId"],
-                "recordType": "entity",
-                "recordStatus": e.get("recordStatus") or "new",
-                **({"statementDate": str(e["statementDate"])} if e.get("statementDate") else {}),
-                "recordDetails": rd,
-            }
-            pub = _pub_block(e)
-            if pub:
-                stmt["publicationDetails"] = pub
-            src = _src_block(e, asserted.get(link))
-            if src:
-                stmt["source"] = src
-            fh.write(json.dumps(stmt, ensure_ascii=False) + "\n")
-
-    # relationships
-    interests = defaultdict(list)
-    for link, do_i, t, boc, det, sd in d.execute(f"""
-        SELECT x._link_relationship_statement, x.directOrIndirect, x.type,
-               x.beneficialOwnershipOrControl, x.details, x.startDate
-        FROM '{pq}/relationship_recorddetails_interests.parquet' x
-        JOIN sel_rel s ON s._link = x._link_relationship_statement""").fetchall():
-        i: dict[str, Any] = {}
-        if t:
-            i["type"] = t
-        if do_i:
-            i["directOrIndirect"] = do_i
-        if boc is not None:
-            i["beneficialOwnershipOrControl"] = bool(boc)
-        if det:
-            i["details"] = det
-        if sd:
-            i["startDate"] = str(sd)
-        if i:
-            interests[link].append(i)
-
-    rcols = [c[0] for c in d.execute(
-        f"DESCRIBE SELECT * FROM '{pq}/relationship_statement.parquet'").fetchall()]
-    with open(work / "gleif_relationships.jsonl", "w", encoding="utf-8") as fh:
-        for row_t in d.execute(f"""
-            SELECT r.* FROM '{pq}/relationship_statement.parquet' r
-            JOIN sel_rel s ON s._link = r._link ORDER BY r.recordId""").fetchall():
-            r = dict(zip(rcols, row_t))
-            link = r["_link"]
-            rd = {
-                "isComponent": bool(r.get("recordDetails_isComponent")),
-                "subject": r["recordDetails_subject"],
-            }
-            if r.get("recordDetails_interestedParty"):
-                rd["interestedParty"] = r["recordDetails_interestedParty"]
-            else:
-                unspec: dict[str, str] = {}
-                if r.get("recordDetails_interestedParty_reason"):
-                    unspec["reason"] = r["recordDetails_interestedParty_reason"]
-                if r.get("recordDetails_interestedParty_description"):
-                    unspec["description"] = r["recordDetails_interestedParty_description"]
-                rd["interestedParty"] = unspec
-            if interests.get(link):
-                rd["interests"] = interests[link]
-            stmt = {
-                "statementId": r["statementId"],
-                **({"recordId": r["recordId"]} if r.get("recordId") else {}),
-                "declarationSubject": r.get("declarationSubject")
-                or r["recordDetails_subject"],
-                "recordType": "relationship",
-                "recordStatus": r.get("recordStatus") or "new",
-                **({"statementDate": str(r["statementDate"])} if r.get("statementDate") else {}),
-                "recordDetails": rd,
-            }
-            pub = _pub_block(r)
-            if pub:
-                stmt["publicationDetails"] = pub
-            src = _src_block(r)
-            if src:
-                stmt["source"] = src
-            fh.write(json.dumps(stmt, ensure_ascii=False) + "\n")
-    print("gleif stage done")
-
-
-# ---------------------------------------------------------------------------
-# Stage: ariregister (chunked, resumable)
-# ---------------------------------------------------------------------------
-
-def _clean_shareholders(rows: list[dict]) -> list[dict]:
-    out = []
-    for sh in rows:
-        sh = dict(sh)
-        name = sh.get("nimi_arinimi") or ""
-        if name.startswith("Omanikukonto: "):
-            sh["nimi_arinimi"] = name[len("Omanikukonto: "):]
-        out.append(sh)
-    return out
-
-
-def bundle_from_row(row: sqlite3.Row, *, include_bo: bool) -> dict[str, Any]:
-    reg = str(row["registry_code"]).lstrip("0") or str(row["registry_code"])
-    return {
-        "source_id": "ariregister",
-        "registry_code": reg,
-        "name": row["name"],
-        "legal_form": row["legal_form"] or None,
-        "vat_number": row["vat_number"] or None,
-        "status": row["status"] or None,
-        "registration_date": row["registration_date"] or None,
-        "address": row["address"] or None,
-        "link": f"https://ariregister.rik.ee/eng/company/{reg}",
-        "shareholders": _clean_shareholders(json.loads(row["shareholders"] or "[]")),
-        "officers": json.loads(row["officers"] or "[]"),
-        "beneficial_owners": (json.loads(row["beneficial_owners"] or "[]")
-                              if include_bo else []),
-        "is_stub": False,
-    }
-
-
-def stage_ariregister(args) -> bool:
-    """Process the next chunk. Returns True when all companies are done."""
-    from opencheck.bods import map_ariregister
-
-    work = Path(args.work_dir)
-    sel = json.loads((work / "selection.json").read_text())
-    items = sorted(sel["lei_reg"].items())
-    state_path = work / "ar_state.json"
-    state = (json.loads(state_path.read_text())
-             if state_path.exists()
-             else {"next": 0, "matched": 0, "missing": 0})
-    start = state["next"]
-    if start >= len(items):
-        print("ariregister stage done:", json.dumps(state))
-        return True
-    chunk = items[start:start + args.chunk_size]
-
-    conn = sqlite3.connect(str(Path(args.ariregister_db)))
-    conn.row_factory = sqlite3.Row
-    include_bo = not args.no_beneficial_owners
-    parts = work / "ar_parts"
-    parts.mkdir(exist_ok=True)
-    with open(parts / f"part-{start:07d}.jsonl", "w", encoding="utf-8") as fh:
-        for _lei, reg in chunk:
-            row = conn.execute(
-                "SELECT * FROM entities WHERE registry_code IN (?, ?)",
-                (reg, reg.zfill(8))).fetchone()
-            if row is None:
-                state["missing"] += 1
+    scope = set(sel["scope"])
+    counts: Counter[str] = Counter()
+    with open(work / "gleif.jsonl", "w", encoding="utf-8") as fh:
+        for i, lei in enumerate(sel["scope"] + sel["foreign_reporters"]):
+            reporter = lei not in scope
+            statements = gleif_statements(lei, scope, reporter=reporter)
+            if not statements:
+                counts["not_in_mirror"] += 1
                 continue
-            state["matched"] += 1
-            for stmt in map_ariregister(bundle_from_row(row, include_bo=include_bo)):
-                fh.write(json.dumps(stmt, ensure_ascii=False) + "\n")
+            for n, statement in enumerate(statements):
+                # The subject's own entity statement is what it published of
+                # itself; the parent statements beside it are copies.
+                primary = n == 0
+                fh.write(json.dumps({"p": primary, "s": statement}, ensure_ascii=False) + "\n")
+                counts[statement.get("recordType") or "unknown"] += 1
+            if i and i % 5000 == 0:
+                print(f"gleif: {i:,} LEIs mapped", flush=True)
+    print("gleif stage done:", dict(counts))
+    return dict(counts)
 
-    state["next"] = start + len(chunk)
-    state["total"] = len(items)
-    state_path.write_text(json.dumps(state))
-    done = state["next"] >= len(items)
-    print(json.dumps(state), "done" if done else "more")
-    return done
+
+# ---------------------------------------------------------------------------
+# Stage: register
+# ---------------------------------------------------------------------------
+
+
+def register_statements(code: str, *, include_bo: bool = True) -> list[dict[str, Any]] | None:
+    """The register's statements for one company, as a lookup maps them on
+    the index tier — without the chain walk (the dataset carries every
+    company above as its own record) and without the ended-ownership
+    history (it is read from RIK's credentialed services, not the files).
+    None when the index does not hold the code."""
+    from opencheck import provenance
+    from opencheck.bods import map_ariregister
+    from opencheck.sources import ariregister
+    from opencheck.sources.schemas import validate_raw
+    from opencheck.sources.schemas.ariregister import AriregisterBundle
+
+    record = ariregister.entity_record(code)
+    if record is None:
+        return None
+    meta = ariregister.read_meta()
+    with provenance.recording() as recorder:
+        ariregister.declare_snapshot(meta)
+    bundle = ariregister.AriregisterAdapter._index_bundle(code, record, meta)
+    if not include_bo:
+        bundle["beneficial_owners"] = []
+    validate_raw("ariregister", AriregisterBundle, bundle)
+    with provenance.mapping_provenance(recorder.resolve(is_stub=False)):
+        return list(map_ariregister(bundle))
+
+
+def stage_register(args: argparse.Namespace) -> dict[str, int]:
+    work = Path(args.work_dir)
+    sel = json.loads((work / "selection.json").read_text())
+    counts: Counter[str] = Counter()
+    include_bo = not args.no_beneficial_owners
+    with open(work / "register.jsonl", "w", encoding="utf-8") as fh:
+        for i, code in enumerate(sel["register_codes"]):
+            statements = register_statements(code, include_bo=include_bo)
+            if statements is None:
+                counts["not_in_index"] += 1
+                continue
+            for n, statement in enumerate(statements):
+                # The first statement is the company's own register record;
+                # a shareholder row elsewhere builds a thinner statement under
+                # the same id, which the record supersedes.
+                fh.write(json.dumps({"p": n == 0, "s": statement}, ensure_ascii=False) + "\n")
+                counts[statement.get("recordType") or "unknown"] += 1
+            if i and i % 5000 == 0:
+                print(f"register: {i:,} companies mapped", flush=True)
+    print("register stage done:", dict(counts))
+    return dict(counts)
 
 
 # ---------------------------------------------------------------------------
 # Stage: assemble
 # ---------------------------------------------------------------------------
 
-LICENCES_MD = """# Data Licences — OpenCheck Estonia sweep
+LICENCES_MD = """# Data licences — OpenCheck Estonia dataset
 
 This dataset combines two bulk sources. The combined output is licensed
-under the most restrictive of the two: **CC BY 4.0**.
+under the more restrictive of the two: **CC BY 4.0**. Every statement names
+its source (`source.opencheckSourceId`: `gleif` or `ariregister`), so the
+licence of each statement can be read from the statement itself.
 
 ## GLEIF Level 1 & Level 2 data — CC0 1.0
 
-Source: [GLEIF](https://www.gleif.org/), distributed as BODS v0.4 by
-Open Ownership: [bods-data.openownership.org/source/gleif_version_0_4](https://bods-data.openownership.org/source/gleif_version_0_4/)
-Licence: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
-No attribution legally required; acknowledging GLEIF and Open Ownership
-is good practice.
+Source: the [GLEIF Golden Copy](https://www.gleif.org/en/lei-data/gleif-golden-copy)
+(LEI records, relationship records and reporting exceptions), read from
+OpenCheck's local mirror of it. Licence:
+[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). No attribution
+legally required; acknowledging GLEIF is good practice.
 
 ## Estonian e-Business Register open data — CC BY 4.0
 
@@ -484,124 +478,389 @@ Licence: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ## Personal data / GDPR
 
-The Estonian layer contains names of shareholders, officers, and (where
-included) beneficial owners, lawfully published as open data by RIK.
-Since 1 November 2024 the open-data files contain no personal
-identification numbers. Re-users of this dataset are obliged to comply
-with the GDPR when further processing personal data (see RIK's terms:
-https://avaandmed.ariregister.rik.ee/en/terms-service). This dataset is
-a dated snapshot — always check the live registers for current data.
+The Estonian layer contains the names of shareholders, officers, supervisory
+board members, founders and (where included) beneficial owners, lawfully
+published as open data by RIK. The open-data files carry no personal
+identification codes (removed since 1 November 2024); OpenCheck keeps a
+person apart from another of the same name only by the register's
+pseudonymous person key, which is published as an annotation, never as an
+identifier. No person's street or e-mail address is carried. Re-users are
+obliged to comply with the GDPR when further processing personal data (see
+RIK's terms: https://avaandmed.ariregister.rik.ee/en/terms-service). This
+dataset is a dated snapshot — always check the live registers for current
+data.
 """
 
 
-def stage_assemble(args) -> None:
+def _dedupe_db(path: Path) -> sqlite3.Connection:
+    if path.exists():
+        path.unlink()
+    conn = sqlite3.connect(path)
+    conn.execute("CREATE TABLE s (id TEXT PRIMARY KEY, rtype TEXT, rank INTEGER, body TEXT)")
+    return conn
+
+
+def _parts(work: Path) -> Iterator[tuple[bool, str, dict[str, Any]]]:
+    for name in ("gleif.jsonl", "register.jsonl"):
+        with open(work / name, encoding="utf-8") as fh:
+            for line in fh:
+                item = json.loads(line)
+                statement = item["s"]
+                yield bool(item.get("p")), json.dumps(statement, ensure_ascii=False), statement
+
+
+def dataset_day(sel: dict[str, Any]) -> str:
+    """The dataset's date: the register cut, the later of the two clocks
+    (the mirror is refreshed to the same day by ``--refresh-mirror``)."""
+    cut = (sel.get("sources") or {}).get("ariregister", {}).get("cut")
+    return cut or dt.date.today().isoformat()
+
+
+def stage_assemble(args: argparse.Namespace) -> dict[str, Any]:
     work = Path(args.work_dir)
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     sel = json.loads((work / "selection.json").read_text())
-    state = json.loads((work / "ar_state.json").read_text())
-    if state["next"] < state.get("total", 0):
-        raise SystemExit("ariregister stage not finished — run it to completion first")
+    day = dataset_day(sel)
+    name = f"{DATASET_PREFIX}-{day}"
 
-    today = dt.date.today().isoformat()
-    out_path = out_dir / f"estonia-{today}.jsonl.gz"
-    seen: set[str] = set()
-    counts: dict[str, int] = {}
-    dupes = 0
-    rel_buf = work / "rel_buffer.jsonl"
+    # One statement per id. A company's own record outranks a thinner
+    # statement another company's list built under the same id; between two
+    # of the same rank the longer wins (they are otherwise copies).
+    conn = _dedupe_db(work / "dedupe.sqlite")
+    total_rows = 0
+    for primary, body, statement in _parts(work):
+        sid = statement.get("statementId")
+        if not sid:
+            continue
+        total_rows += 1
+        rank = (1 if primary else 0) * 10_000_000 + len(body)
+        conn.execute(
+            "INSERT INTO s VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET "
+            "rtype = excluded.rtype, rank = excluded.rank, body = excluded.body "
+            "WHERE excluded.rank > s.rank",
+            (sid, statement.get("recordType") or "unknown", rank, body),
+        )
+    kept = conn.execute("SELECT COUNT(*) FROM s").fetchone()[0]
+    duplicates = total_rows - kept
 
-    sources = [work / "gleif_entities.jsonl"]
-    sources += sorted((work / "ar_parts").glob("part-*.jsonl"))
-    sources += [work / "gleif_relationships.jsonl"]
-
+    counts: Counter[str] = Counter()
+    by_source: Counter[str] = Counter()
+    out_path = out_dir / f"{name}.jsonl.gz"
     with gzip.open(out_path, "wt", encoding="utf-8", compresslevel=6) as gz:
-        with open(rel_buf, "w", encoding="utf-8") as rb:
-            for path in sources:
-                with open(path, encoding="utf-8") as fh:
-                    for line in fh:
-                        stmt = json.loads(line)
-                        sid = stmt.get("statementId")
-                        if not sid or sid in seen:
-                            dupes += 1
-                            continue
-                        seen.add(sid)
-                        rtype = stmt.get("recordType") or "unknown"
-                        counts[rtype] = counts.get(rtype, 0) + 1
-                        (rb if rtype == "relationship" else gz).write(line)
-        # rel_buf is closed (flushed) before being read back
-        with open(rel_buf, encoding="utf-8") as fh:
-            for line in fh:
-                gz.write(line)
-    rel_buf.unlink()
+        # Entities and persons before relationships, each in id order, so
+        # every reference points backwards and a rebuild is byte-stable.
+        for clause in ("rtype != 'relationship'", "rtype = 'relationship'"):
+            for rtype, body in conn.execute(
+                f"SELECT rtype, body FROM s WHERE {clause} ORDER BY id"
+            ):
+                gz.write(body + "\n")
+                counts[rtype] += 1
+                source_id = (
+                    (json.loads(body).get("source") or {}).get("opencheckSourceId")
+                ) or "none"
+                by_source[source_id] += 1
+    conn.close()
 
-    ar_mtime = dt.datetime.fromtimestamp(
-        Path(args.ariregister_db).stat().st_mtime).date().isoformat()
     manifest = {
-        "dataset": f"estonia-{today}",
-        "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "dataset": name,
+        "generated": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
         "bods_version": "0.4",
         "licence": "CC-BY-4.0 (combined; GLEIF layer CC0-1.0, RIK layer CC-BY-4.0)",
-        "statement_counts": counts,
+        "statement_counts": dict(counts),
+        "statements_by_source": dict(by_source),
         "total_statements": sum(counts.values()),
-        "duplicate_statements_merged": dupes,
+        "duplicate_statements_merged": duplicates,
         **sel["stats"],
-        "ariregister_companies_matched": state["matched"],
-        "ariregister_companies_missing": state["missing"],
         "beneficial_owners_included": not args.no_beneficial_owners,
-        "sources": {
-            "gleif": {"via": "Open Ownership gleif_version_0_4 (parquet)",
-                      "snapshot_max_statement_date":
-                          sel["stats"]["gleif_snapshot_max_statement_date"]},
-            "ariregister": {"via": "RIK bulk open data (extract_ariregister.py)",
-                            "db_built": ar_mtime},
-        },
+        "ownership_history_included": False,
+        "registry_code_scheme": EE_SCHEME,
+        "sources": sel["sources"],
         "notes": [
-            "Latest statement per recordId; records with recordStatus=closed dropped.",
-            "GLEIF reporting-exception statements retained for in-scope subjects "
-            "in OO's interestedParty {reason, description} form.",
-            "Foreign endpoints of cross-border edges included as boundary entities; "
-            "relationships with unresolvable endpoints dropped.",
-            "GLEIF and ariregister layers join on the shared EE-KMKR identifier.",
-            "Entity/person statements precede all relationship statements.",
+            "Built by backend/scripts/sweep_estonia.py from local data only: no API calls.",
+            "GLEIF layer: every LEI with legal jurisdiction EE (entity status ACTIVE unless "
+            "--include-inactive; ANNULLED and DUPLICATE registrations left out), mapped with "
+            "OpenCheck's GLEIF mapper from the Golden Copy mirror. Foreign parents are boundary "
+            "entities; a foreign company consolidated by an Estonian one carries only its own "
+            "record and its edges to Estonian parents. Each GLEIF edge is published once, from "
+            "the child.",
+            "The mirror holds the Golden Copy, not GLEIF's mapping files: the OpenCorporates, "
+            "S&P, BIC, MIC and QCC cross-reference identifiers a live lookup adds are not carried.",
+            "Register layer: every LEI holder's registry code (RA000181) plus every Estonian "
+            "company above one in the index's shareholder lists, each mapped on the index tier "
+            "(current lists, off-card persons, general data, rulings, pledges). The register's "
+            "ended-ownership history is not included: it comes from RIK's credentialed services.",
+            "register-missing.csv lists the LEIs whose registry code the register's open data "
+            "does not hold: GLEIF records them as active, the register has deleted the company "
+            "(the open data carries no deleted company) or entered it after the cut. Their GLEIF "
+            "statements are kept; they have no register layer.",
+            "The two layers join on the shared EE-ARIREGISTER identifier (the registry code); "
+            "EE-KMKR is the VAT number only.",
+            "Entity and person statements precede all relationship statements.",
         ],
     }
-    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=1))
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=1, ensure_ascii=False) + "\n"
+    )
     (out_dir / "LICENCES.md").write_text(LICENCES_MD)
-    print(json.dumps(manifest, indent=1))
+    write_missing_csv(out_dir / "register-missing.csv", sel)
+    print(
+        json.dumps(
+            {
+                k: manifest[k]
+                for k in (
+                    "dataset",
+                    "statement_counts",
+                    "total_statements",
+                    "duplicate_statements_merged",
+                )
+            },
+            indent=1,
+        )
+    )
+    return manifest
+
+
+def write_missing_csv(path: Path, sel: dict[str, Any]) -> int:
+    """One row per LEI whose registry code the register's open data does
+    not hold: GLEIF still records the company, the register has deleted it
+    (the files carry no deleted company) or entered it after the cut. The
+    LEI's own registration status says how stale GLEIF's record is."""
+    import csv
+
+    from opencheck import entity_pages as ep
+
+    missing = set(sel.get("missing_codes") or [])
+    store = ep.get_store()
+    rows = []
+    for lei, code in sorted(sel["lei_code"].items()):
+        if code not in missing:
+            continue
+        row = store.get(lei) if store is not None else None
+        rows.append(
+            [
+                lei,
+                code,
+                row.name if row else "",
+                row.registration_status if row else "",
+                row.entity_status if row else "",
+                (row.last_updated or "")[:10] if row else "",
+            ]
+        )
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(
+            [
+                "lei",
+                "registry_code",
+                "gleif_legal_name",
+                "lei_registration_status",
+                "gleif_entity_status",
+                "gleif_last_update",
+            ]
+        )
+        writer.writerows(rows)
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# Stage: check
+# ---------------------------------------------------------------------------
+
+_PERSONAL_CODE = re.compile(r"(?<!\d)([1-6]\d{10})(?!\d)")
+
+
+def isikukood_valid(code: str) -> bool:
+    """An Estonian personal identification code's own checks: a real
+    birth date in digits 2–7 and the check digit (weights 1..9,1 then
+    3..9,1,2,3)."""
+    if not re.fullmatch(r"[1-6]\d{10}", code):
+        return False
+    century = {"1": 1800, "2": 1800, "3": 1900, "4": 1900, "5": 2000, "6": 2000}[code[0]]
+    try:
+        dt.date(century + int(code[1:3]), int(code[3:5]), int(code[5:7]))
+    except ValueError:
+        return False
+    digits = [int(c) for c in code]
+    for weights in ((1, 2, 3, 4, 5, 6, 7, 8, 9, 1), (3, 4, 5, 6, 7, 8, 9, 1, 2, 3)):
+        total = sum(d * w for d, w in zip(digits[:10], weights, strict=True))
+        if total % 11 != 10:
+            return total % 11 == digits[10]
+    return digits[10] == 0
+
+
+def check_statements(statements: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    """What the release promises, counted over the file: every reference
+    resolves, the registry code is ``EE-ARIREGISTER`` throughout, and no
+    personal code or person's address is carried. ``problems`` empty means
+    the file can be published."""
+    ids: set[str] = set()
+    record_ids: set[str] = set()
+    relationships: list[dict[str, Any]] = []
+    counts: Counter[str] = Counter()
+    problems: list[str] = []
+    for st in statements:
+        sid = st.get("statementId")
+        if sid in ids:
+            problems.append(f"duplicate statementId {sid}")
+        ids.add(sid)
+        if st.get("recordId"):
+            record_ids.add(st["recordId"])
+        rd = st.get("recordDetails") or {}
+        rtype = st.get("recordType")
+        counts[rtype or "unknown"] += 1
+        if not (st.get("source") or {}).get("opencheckSourceId"):
+            counts["no_source_id"] += 1
+        if rtype == "relationship":
+            relationships.append(rd)
+            continue
+        for ident in rd.get("identifiers") or []:
+            scheme = ident.get("scheme")
+            if scheme == EE_SCHEME:
+                counts["ee_ariregister_identifiers"] += 1
+            elif scheme == VAT_SCHEME:
+                counts["ee_kmkr_identifiers"] += 1
+                # The VAT number is "EE" + nine digits; a registry code is
+                # eight. An eight-digit value under EE-KMKR is the July bug.
+                if re.fullmatch(r"\d{8}", str(ident.get("id") or "")):
+                    problems.append(f"{sid}: a registry code under {VAT_SCHEME}")
+        if rtype == "person":
+            # A country of residence is what the files say; a street, a
+            # postcode or any address text is what the index never holds.
+            if any(a.get("address") or a.get("postCode") for a in rd.get("addresses") or []):
+                problems.append(f"{sid}: a person statement carries a street address")
+            elif rd.get("addresses"):
+                counts["person_country_of_residence"] += 1
+            for ident in rd.get("identifiers") or []:
+                if isikukood_valid(str(ident.get("id") or "")):
+                    problems.append(f"{sid}: a personal code in identifiers")
+            for note in st.get("annotations") or []:
+                for found in _PERSONAL_CODE.findall(json.dumps(note, ensure_ascii=False)):
+                    if isikukood_valid(found):
+                        problems.append(f"{sid}: a personal code in an annotation")
+    dangling = 0
+    for rd in relationships:
+        for key in ("subject", "interestedParty"):
+            ref = rd.get(key)
+            if isinstance(ref, str) and ref not in ids and ref not in record_ids:
+                dangling += 1
+    if dangling:
+        problems.append(f"{dangling} relationship references resolve to no statement")
+    counts["dangling_references"] = dangling
+    return {"counts": dict(counts), "problems": problems[:200], "problem_count": len(problems)}
+
+
+def run_libcove(path: Path, work: Path) -> dict[str, Any]:
+    """lib-cove-bods over the whole file: schema errors and additional
+    checks, counted by type."""
+    import libcovebods.data_reader as dr
+    import libcovebods.jsonschemavalidate as jsv
+    import libcovebods.run_tasks as rt
+    from libcovebods.config import LibCoveBODSConfig
+    from libcovebods.schema import SchemaBODS
+
+    array = work / "libcove-input.json"
+    with gzip.open(path, "rt", encoding="utf-8") as src, open(array, "w", encoding="utf-8") as out:
+        out.write("[")
+        for i, line in enumerate(src):
+            out.write(("," if i else "") + line.strip())
+        out.write("]")
+    config = LibCoveBODSConfig()
+    reader = dr.DataReader(str(array))
+    schema = SchemaBODS(data_reader=reader, lib_cove_bods_config=config)
+    errors = jsv.JSONSchemaValidator(schema).validate(reader)
+    additional = rt.process_additional_checks(reader, config, schema)
+    schema_errors: Counter[str] = Counter()
+    for e in errors:
+        try:
+            d = e.json()
+            schema_errors[f"{d.get('validator')}: {d.get('message')}"[:200]] += 1
+        except Exception:  # noqa: BLE001
+            schema_errors[str(e)[:200]] += 1
+    checks: Counter[str] = Counter(
+        c.get("type", "?") for c in additional.get("additional_checks", [])
+    )
+    array.unlink()
+    return {
+        "schema_errors": dict(schema_errors),
+        "additional_checks": dict(checks),
+        "statistics": {
+            k: v
+            for k, v in (additional.get("statistics") or {}).items()
+            if isinstance(v, (int, float, str))
+        },
+    }
+
+
+def stage_check(args: argparse.Namespace) -> dict[str, Any]:
+    out_dir = Path(args.out_dir)
+    work = Path(args.work_dir)
+    manifest = json.loads((out_dir / "manifest.json").read_text())
+    path = out_dir / f"{manifest['dataset']}.jsonl.gz"
+    with gzip.open(path, "rt", encoding="utf-8") as fh:
+        result = check_statements(json.loads(line) for line in fh)
+    if args.libcove:
+        result["libcove"] = run_libcove(path, work)
+    (out_dir / "checks.json").write_text(json.dumps(result, indent=1, ensure_ascii=False) + "\n")
+    print(json.dumps({k: result[k] for k in ("counts", "problem_count")}, indent=1))
+    if result["problem_count"]:
+        print("\n".join(result["problems"][:20]))
+        raise SystemExit("check: the dataset breaks a release rule; see checks.json")
+    return result
 
 
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", default="all",
-                    choices=["select", "gleif", "ariregister", "assemble", "all"])
-    ap.add_argument("--parquet-dir", default="data/bods/gleif/parquet")
-    ap.add_argument("--ariregister-db", default="../data/ariregister.db")
-    ap.add_argument("--out-dir", default="../data/estonia")
-    ap.add_argument("--work-dir", default=None)
-    ap.add_argument("--jurisdiction", default="EE")
-    ap.add_argument("--limit", type=int, default=None,
-                    help="cap the number of in-scope GLEIF entities (testing)")
-    ap.add_argument("--chunk-size", type=int, default=3000)
-    ap.add_argument("--no-beneficial-owners", action="store_true")
-    args = ap.parse_args()
-    if args.work_dir is None:
-        args.work_dir = str(Path(args.out_dir) / "work")
+STAGES = ("select", "gleif", "register", "assemble", "check")
 
-    if args.stage in ("select", "all"):
-        stage_select(args)
-    if args.stage in ("gleif", "all"):
-        stage_gleif(args)
-    if args.stage in ("ariregister", "all"):
-        if args.stage == "all":
-            while not stage_ariregister(args):
-                pass
-        else:
-            stage_ariregister(args)
-    if args.stage in ("assemble", "all"):
-        stage_assemble(args)
+
+def main(argv: list[str] | None = None) -> None:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--stage", default="all", choices=[*STAGES, "all"])
+    ap.add_argument(
+        "--entity-pages-db",
+        required=True,
+        type=Path,
+        help="the Golden Copy mirror (entity_pages.sqlite)",
+    )
+    ap.add_argument(
+        "--refresh-mirror",
+        action="store_true",
+        help="apply GLEIF's latest delta to the mirror first (downloads)",
+    )
+    ap.add_argument(
+        "--ariregister-index",
+        required=True,
+        type=Path,
+        help="the e-Business Register index (ariregister.sqlite)",
+    )
+    ap.add_argument("--out-dir", default="../data/estonia", type=Path)
+    ap.add_argument("--work-dir", default=None, type=Path)
+    ap.add_argument("--jurisdiction", default="EE")
+    ap.add_argument(
+        "--include-inactive", action="store_true", help="also map LEIs GLEIF records as INACTIVE"
+    )
+    ap.add_argument("--limit", type=int, default=None, help="cap the LEIs in scope (testing)")
+    ap.add_argument("--no-beneficial-owners", action="store_true")
+    ap.add_argument("--libcove", action="store_true", help="run lib-cove-bods in the check stage")
+    args = ap.parse_args(argv)
+    if args.work_dir is None:
+        args.work_dir = args.out_dir / "work"
+
+    configure(args.entity_pages_db, args.ariregister_index)
+    if args.refresh_mirror:
+        print(json.dumps(refresh_mirror(args.entity_pages_db)))
+        configure(args.entity_pages_db, args.ariregister_index)
+    stages = STAGES if args.stage == "all" else (args.stage,)
+    for stage in stages:
+        {
+            "select": stage_select,
+            "gleif": stage_gleif,
+            "register": stage_register,
+            "assemble": stage_assemble,
+            "check": stage_check,
+        }[stage](args)
 
 
 if __name__ == "__main__":
