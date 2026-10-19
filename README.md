@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 379** — A Companies House PSC filing on a watched UK company now re-runs it — the register's own stream as a watchlist tier, counts only, never a name.
+**Latest: Phase 380** — A watchlist re-run now says when an owner or controller of the company was added, ended or changed size, in any register, without naming anyone.
 
 → [Full development history](docs/status.md)
 
