@@ -14,7 +14,7 @@ from typing import Any
 
 import pycountry
 
-from ...identifiers import ch_identification_is_uk, normalise_ch_company_number
+from ...identifiers import ch_identification_is_uk, ch_psc_item_id, normalise_ch_company_number
 from .. import former_names as _former_names, identity_verification as _idv, liveness as _liveness
 from ..annotations import annotate, commenting, identifying, pointer, transformation
 from ..ch_constants import describe_company_type, describe_officer_role
@@ -372,6 +372,82 @@ def _ch_officer_person_local_id(company_number: str, officer: dict[str, Any]) ->
     if officer_id:
         return f"officer:{officer_id}"
     return _ch_officer_local_id(company_number, officer)
+
+
+#: The scheme the PSC item id is published under — in an ``identifying``
+#: annotation, never ``recordDetails.identifiers`` (Phase 255: BODS keeps a
+#: person's identifiers for identity documents; a corporate PSC's asserted
+#: identifier stays its registration number).
+PSC_ITEM_SCHEME = "GB-COH-PSC"
+PSC_ITEM_SCHEME_NAME = "Companies House PSC item id"
+_CH_PUBLIC = "https://find-and-update.company-information.service.gov.uk"
+
+
+def _ch_psc_local_id(company_number: str, psc: dict[str, Any], kind: str) -> str:
+    """The key for a PSC party — ``{company}:{kind}:{item id}`` on the item's
+    own id (``identifiers.ch_psc_item_id``, the tail of ``links.self``), else
+    the pre-fix ``{company}:{kind}:{etag}`` for a record without a self link.
+
+    Until the pKYC stage E prerequisite the key was the item's **etag**, which
+    Companies House reissues whenever the item is edited: a share band moving
+    on the same PSC gave the party a new ``recordId``, so the graph drew a
+    second node and a statement-level diff read one ended + one added where
+    the register recorded one change. The item id is the register's address
+    for the item and survives edits. ``psc_stream.psc_id_of`` reads the same
+    field from a stream event, so the watchlist's PSC trigger and the mapped
+    statement name an item by one key (`tests/test_ch_psc_item_id.py` pins
+    the two together).
+
+    The company number stays in the key: an item id addresses a filing at
+    one company, and the same person named at two companies is two items —
+    as the register has it. Grouping across companies is the officer id's
+    job (Phase 193), not this one's.
+    """
+    item_id = ch_psc_item_id(psc)
+    if item_id:
+        return f"{company_number}:{kind}:{item_id}"
+    etag = psc.get("etag") or psc.get("name", "")
+    return f"{company_number}:{kind}:{etag}"
+
+
+def _ch_psc_item_identifier(psc: dict[str, Any]) -> list[dict[str, str]]:
+    """The PSC item id in the ``{id, scheme, schemeName, uri}`` shape
+    ``make_person_statement`` turns into an ``identifying`` annotation
+    (``annotations.person_identifier_note``), so the exports and
+    BackgroundCheck group on ``GB-COH-PSC:<id>`` as they do on an officer id.
+    Empty for a record without a self link."""
+    item_id = ch_psc_item_id(psc)
+    if not item_id:
+        return []
+    self_link = str((psc.get("links") or {}).get("self") or "")
+    return [
+        {
+            "id": item_id,
+            "scheme": PSC_ITEM_SCHEME,
+            "schemeName": PSC_ITEM_SCHEME_NAME,
+            "uri": f"{_CH_PUBLIC}{self_link}",
+        }
+    ]
+
+
+def _ch_psc_item_note(psc: dict[str, Any]) -> dict[str, Any] | None:
+    """The same id on a corporate PSC's entity statement, as an ``identifying``
+    annotation in words: an entity's ``identifiers`` are asserted, and the item
+    id is the register's key for the filing, not for the company."""
+    ident = _ch_psc_item_identifier(psc)
+    if not ident:
+        return None
+    note = identifying(
+        pointer("recordDetails"),
+        (
+            f"Companies House PSC item id {ident[0]['id']} (scheme {PSC_ITEM_SCHEME}): "
+            "the register's own key for this PSC filing, which this statement is "
+            "keyed on. It addresses the filing at the company, not the company "
+            "itself — the registration number above is the company's identifier."
+        ),
+    )
+    note["url"] = ident[0]["uri"]
+    return note
 
 
 def _ch_officer_grouping_note(officer_id: str | None) -> dict[str, Any] | None:
@@ -1112,9 +1188,10 @@ def _emit_company_statements(
             # rides on the relationship interest (below), not a placeholder name.
             ip = make_person_statement(
                 source_id="companies_house",
-                local_id=f"{number}:anon:{psc.get('etag', '0')}",
+                local_id=_ch_psc_local_id(number, psc, "anon"),
                 full_name="Super-secure person",
                 person_type="anonymousPerson",
+                identifiers=_ch_psc_item_identifier(psc),
                 source_url=company_url,
             )
             ip_type = "person"
@@ -1312,18 +1389,16 @@ def _map_individual_psc(
         if joined:
             addresses.append(_addr("service", joined, address_block.get("country", "")))
 
-    etag = psc.get("etag") or psc.get("name", "")
-    local_id = f"{company_number}:psc:{etag}"
-
     return annotate(
         make_person_statement(
             source_id="companies_house",
-            local_id=local_id,
+            local_id=_ch_psc_local_id(company_number, psc, "psc"),
             full_name=full_name,
             person_type="knownPerson",
             nationalities=nationalities,
             birth_date=birth_date,
             addresses=addresses,
+            identifiers=_ch_psc_item_identifier(psc),
             source_url=source_url,
         ),
         _birth_date_precision_note(birth_date),
@@ -1560,21 +1635,28 @@ def _map_corporate_psc(
     # Use the UK company number as local_id when available so that the
     # statementId here aligns with the entity statement emitted by the
     # related-company pass for the same company.
+    # A UK company is keyed on its number and shared with the related-company
+    # pass, so the item id is noted only where it is the key: a foreign or
+    # unnumbered corporate PSC.
+    item_note = None
     if uk_number:
         local_id = uk_number
     else:
-        etag = psc.get("etag") or psc.get("name", "")
-        local_id = f"{company_number}:psc-corp:{etag}"
+        local_id = _ch_psc_local_id(company_number, psc, "psc-corp")
+        item_note = _ch_psc_item_note(psc)
 
-    return make_entity_statement(
-        source_id="companies_house",
-        local_id=local_id,
-        name=psc.get("name", "Corporate PSC"),
-        jurisdiction=(
-            (reg_country, _country_code(reg_country))
-            if reg_country
-            else None
+    return annotate(
+        make_entity_statement(
+            source_id="companies_house",
+            local_id=local_id,
+            name=psc.get("name", "Corporate PSC"),
+            jurisdiction=(
+                (reg_country, _country_code(reg_country))
+                if reg_country
+                else None
+            ),
+            identifiers=identifiers,
+            source_url=source_url,
         ),
-        identifiers=identifiers,
-        source_url=source_url,
+        item_note,
     )
