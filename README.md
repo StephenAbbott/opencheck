@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 378** — Companies House PSC parties are now keyed on the register's stable PSC item id rather than the etag, so an edited PSC filing stays one record.
+**Latest: Phase 379** — A Companies House PSC filing on a watched UK company now re-runs it — the register's own stream as a watchlist tier, counts only, never a name.
 
 → [Full development history](docs/status.md)
 
