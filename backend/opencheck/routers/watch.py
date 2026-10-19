@@ -35,6 +35,7 @@ from .. import watchlist_context as context_module
 from .. import watchlist_decisions as decisions_module
 from .. import watchlist_materiality as materiality
 from .. import watchlist_ownership as ownership_module
+from .. import watchlist_psc as psc_module
 from .. import watchlist_review as review_module
 from ..bods import gleif_events as _gleif_events
 from ..config import get_settings
@@ -145,17 +146,21 @@ def _public_api_base(request: Request) -> str:
 
 
 def _tiers(
-    gaps: list[dict[str, Any]] | None = None, register_gaps: list[dict[str, Any]] | None = None
+    gaps: list[dict[str, Any]] | None = None,
+    register_gaps: list[dict[str, Any]] | None = None,
+    psc_gaps: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """What the three tiers are doing — for the page's honesty line."""
+    """What the tiers are doing — for the page's honesty line."""
     from .. import entity_pages as ep
-    from .. import mirror_refresh
+    from .. import mirror_refresh, psc_stream
     from ..sources import ariregister as ar
 
     try:
         ee_cut = ar.read_meta().get("cut") or None
     except Exception:  # noqa: BLE001 — no index is a state
         ee_cut = None
+    stream = psc_stream.state()
+    watcher = wl.state()
 
     mirror = ep.get_store()
     watermark = mirror.watermark() if mirror is not None else None
@@ -189,6 +194,19 @@ def _tiers(
             "waiting": bool(wl.state().get("ee_waiting")),
             "gaps": register_gaps or [],
         },
+        # pKYC stage E, Route 1: the Companies House PSC stream — whether the
+        # consumer is on, connected and behind (its own counters are on
+        # /pscgraph), and what the watchlist hook has done with it.
+        "psc": {
+            "available": bool(stream.get("enabled")),
+            "connected": bool(stream.get("connected")),
+            "last_published_at": stream.get("last_published_at"),
+            "gap": bool(stream.get("gap")),
+            "matched": watcher.get("psc_matched", 0),
+            "queued": watcher.get("psc_queued", 0),
+            "last_match_at": watcher.get("psc_last_match_at"),
+            "gaps": psc_gaps or [],
+        },
         "worker": {
             "enabled": wl.state().get("enabled", False),
             "interval_s": settings.watchlist_interval_s,
@@ -213,6 +231,9 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "degraded_sources": [d.get("source_id") for d in snap.get("degraded_sources") or []],
         }
         _enrich_context(w)
+        # pKYC stage E (Q5): which register feed follows this company's own
+        # changes, or why none does — a statement about OpenCheck's feeds.
+        w["register_tier"] = psc_module.register_tier_of({**w, "snapshot": snap})
     counts = store.counts(th)
     # pKYC stage C: when OpenCheck last fully looked at each company, and
     # how fresh that look was — computed on read, never stored.
@@ -253,7 +274,7 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "total_watched": counts["total"],
         },
         "feed_url": f"{_public_api_base(request)}/watch/{token}.atom",
-        "tiers": _tiers(wl.os_gaps(store)[-3:], wl.ariregister_gaps(store)[-3:]),
+        "tiers": _tiers(wl.os_gaps(store)[-3:], wl.ariregister_gaps(store)[-3:], psc_module.psc_gaps(store)[-3:]),
     }
 
 
@@ -714,6 +735,7 @@ async def watch_stats() -> JSONResponse:
         "ownership_unchecked": 0,
         "ownership_uncompared_by_source": {},
         "baselines_with_ownership_digest": 0,
+        "watched_by_registration_authority": {},
     }
     store = await _db(wl.get_store)
     if store is not None:
@@ -742,6 +764,10 @@ async def watch_stats() -> JSONResponse:
                 # pKYC stage E, Route 2: the ownership diff's counts. Never a
                 # key, a band or an LEI.
                 **store.ownership_counts(),
+                # pKYC stage E: watched LEIs by the registration authority
+                # GLEIF files them under — measurement 1 on the scoping page.
+                # RA codes and counts only.
+                "watched_by_registration_authority": psc_module.watched_by_registration_authority(store),
             }
 
         counts = await _db(_counts)
@@ -782,6 +808,7 @@ TIER_SENTENCE = {
     wl.TIER_CATCHUP: "Re-checked to catch up on OpenSanctions versions the watcher could not read",
     wl.TIER_REGISTER: "The Estonian e-Business Register recorded a change to this company",
     wl.TIER_REVIEW: review_module.TIER_REVIEW_SENTENCE,
+    wl.TIER_PSC: "Companies House recorded a change to this company's people with significant control",
 }
 
 
@@ -983,6 +1010,11 @@ def _change_tier_words(change: dict[str, Any]) -> str:
 
 def _catch_up_sentence(trig: dict[str, Any]) -> str:
     """Why a catch-up re-run happened, in the feed's words."""
+    if trig.get("reason") == "register_gap" and trig.get("register") == psc_module.REGISTER_COMPANIES_HOUSE:
+        return (
+            f"The Companies House PSC stream was rejoined live at {trig.get('before')}, so filings before that "
+            "were not seen; every watched UK company was re-checked."
+        )
     if trig.get("reason") == "register_gap":
         return (
             f"The Estonian e-Business Register's changes between {trig.get('after')} and {trig.get('before')} "
@@ -1019,6 +1051,8 @@ def _entry_headline(entry: dict[str, Any]) -> str:
     changes = entry.get("changes") or []
     if not changes and entry["tier"] == wl.TIER_REGISTER:
         return f"{name}: Estonian register record changed"
+    if not changes and entry["tier"] == wl.TIER_PSC:
+        return f"{name}: Companies House PSC register changed"
     if not changes:
         return f"{name}: {TIER_SENTENCE.get(entry['tier'], entry['tier'])}; the re-run found no difference"
     kinds = [c.get("kind") for c in changes]
@@ -1108,6 +1142,9 @@ def _entry_content(entry: dict[str, Any]) -> str:
     if entry["tier"] == wl.TIER_REGISTER:
         lines[0] = register_sentence(trig)
         lines += [" - " + line for line in wl.register_change_lines(trig.get("changes") or {})]
+    if entry["tier"] == wl.TIER_PSC:
+        lines[0] = psc_module.psc_sentence(trig)
+        lines += [" - " + line for line in psc_module.psc_change_lines(trig)]
     if entry["tier"] == wl.TIER_REVIEW:
         # pKYC stage C: the expiry notice — about the list, so none of the
         # per-company lines below apply.
@@ -1124,7 +1161,7 @@ def _entry_content(entry: dict[str, Any]) -> str:
         lines += [" - " + _change_line(c) for c in changes]
         # Route 2: the parties the ownership diff could not compare, per source.
         lines += [" - " + line for line in ownership_module.uncompared_sentence(changes, _source_words)]
-    elif entry["tier"] == wl.TIER_REGISTER:
+    elif entry["tier"] in (wl.TIER_REGISTER, wl.TIER_PSC):
         lines.append("A full re-run found nothing else that differs from the last check.")
     else:
         lines.append("A full re-run found no difference from the last check.")

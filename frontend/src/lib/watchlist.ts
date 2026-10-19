@@ -121,6 +121,17 @@ export interface Watch {
   review?: WatchReview;
   /** pKYC stage D: every decision recorded on this company's entries, oldest first. */
   review_history?: WatchReviewHistoryItem[];
+  /** pKYC stage E (Q5): which register feed follows this company's own
+   *  changes, or why none does — a statement about OpenCheck's feeds, never
+   *  about the company. Absent on an older server. */
+  register_tier?: WatchRegisterTier;
+}
+
+export interface WatchRegisterTier {
+  followed: boolean;
+  register: "companies_house" | "ariregister" | null;
+  reason: "no_register_number" | "register_not_covered" | null;
+  words: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -286,7 +297,7 @@ export function reportIdFromInput(value: string): string | null {
 /** Phase 260: ``catch_up`` = every watched company re-run because
  * OpenSanctions versions could not be read (aged out of its version list,
  * or a listed delta file gone). */
-export type Tier = "gleif" | "opensanctions" | "manual" | "catch_up" | "register" | "review";
+export type Tier = "gleif" | "opensanctions" | "manual" | "catch_up" | "register" | "review" | "psc";
 
 /** pKYC stage A — does the change matter? Graded by the backend
  *  (`opencheck/watchlist_materiality.py`) once, at write time, and carried on
@@ -565,11 +576,22 @@ export interface WatchEntry {
     after?: string | null;
     before?: string | null;
     /** The register tier: which register, the company's code there, the
-     *  index days read, and each list's entries before and after. */
-    register?: "ariregister";
+     *  index days read, and each list's entries before and after. A
+     *  catch-up for a register gap names the register too. */
+    register?: "ariregister" | "companies_house";
     code?: string;
     cuts?: string[];
     changes?: RegisterChanges;
+    /** The PSC tier (pKYC stage E, Route 1): the company's number, how many
+     *  stream events, counts by kind and outcome, the PSC item ids and the
+     *  publication span — never a name. */
+    company_number?: string;
+    events?: number;
+    kinds?: Record<string, Record<string, number>>;
+    psc_ids?: string[];
+    first_at?: string | null;
+    last_at?: string | null;
+    coalesced?: number;
   };
   changes: Change[];
   /** Phase 303: GLEIF's own log since this list's baseline (GLEIF-triggered entries). */
@@ -618,6 +640,17 @@ export interface WatchlistTiers {
     last_cut: string | null;
     waiting: boolean;
     gaps: { after: string | null; before: string | null; detail?: string; detected_at: string }[];
+  };
+  /** The PSC tier (the Companies House stream). Absent on an older server. */
+  psc?: {
+    available: boolean;
+    connected: boolean;
+    last_published_at: string | null;
+    gap: boolean;
+    matched: number;
+    queued: number;
+    last_match_at: string | null;
+    gaps: { since: string; timepoint?: number | null; detected_at: string; watched?: number }[];
   };
   worker: { enabled: boolean; interval_s: number };
 }
@@ -1079,6 +1112,67 @@ function daysWords(cuts: string[] | undefined): string {
   return `its open data of ${c.slice(0, -1).join(", ")} and ${c[c.length - 1]}`;
 }
 
+// The PSC tier's words (pKYC stage E, Route 1). Keep in step with
+// PSC_KIND_WORDS / PSC_KIND_PLURALS / PSC_OUTCOME_WORDS /
+// REGISTER_NOT_FOLLOWED_WORDS / REGISTER_FOLLOWED_WORDS in
+// opencheck/watchlist_psc.py; test_watchlist_psc.py parses these tables.
+const PSC_KIND_WORDS: Record<string, string> = {
+  individual: "person",
+  corporate: "corporate entity",
+  legal_person: "legal person",
+  withheld: "person whose details are withheld",
+  statement: "PSC statement",
+  unknown: "PSC item",
+};
+const PSC_KIND_PLURALS: Record<string, string> = {
+  individual: "persons",
+  corporate: "corporate entities",
+  legal_person: "legal persons",
+  withheld: "persons whose details are withheld",
+  statement: "PSC statements",
+  unknown: "PSC items",
+};
+const PSC_OUTCOME_WORDS: Record<string, string> = {
+  added: "added",
+  changed: "changed",
+  ceased: "ceased",
+  deleted: "removed",
+};
+export const REGISTER_NOT_FOLLOWED_WORDS: Record<string, string> = {
+  no_register_number: "GLEIF files no register number for this company",
+  register_not_covered: "OpenCheck follows no change feed for this company's register",
+};
+export const REGISTER_FOLLOWED_WORDS: Record<string, string> = {
+  companies_house: "Companies House PSC stream, live",
+  ariregister: "e-Business Register open data, daily",
+};
+const PSC_KINDS = ["individual", "corporate", "legal_person", "withheld", "statement", "unknown"] as const;
+const PSC_OUTCOMES = ["added", "changed", "ceased", "deleted"] as const;
+
+/** One line per kind of PSC item a filing touched, counts only — the feed's
+ *  `psc_change_lines`. */
+export function pscChangeLines(trigger: WatchEntry["trigger"] | undefined): string[] {
+  const kinds = trigger?.kinds ?? {};
+  const out: string[] = [];
+  for (const kind of PSC_KINDS) {
+    const outcomes = kinds[kind];
+    if (!outcomes || typeof outcomes !== "object") continue;
+    const total = Object.values(outcomes).reduce((a, b) => a + (Number(b) || 0), 0);
+    if (!total) continue;
+    const noun = total === 1 ? PSC_KIND_WORDS[kind] : PSC_KIND_PLURALS[kind];
+    const parts = PSC_OUTCOMES.filter((o) => outcomes[o]).map((o) => `${outcomes[o]} ${PSC_OUTCOME_WORDS[o]}`);
+    out.push(`${total} ${noun}: ${parts.join(", ")}.`);
+  }
+  return out;
+}
+
+/** The watch row's line on register changes (Q5): what follows this
+ *  company's own register, or why nothing does. */
+export function registerTierLine(rt: WatchRegisterTier | undefined): string | null {
+  if (!rt) return null;
+  return rt.followed ? `Register changes: followed (${rt.words}).` : `Register changes: not followed — ${rt.words}.`;
+}
+
 /** Why the entry exists: the tier that fired, in its own words. */
 export function triggerSentence(e: WatchEntry): string {
   const t = e.trigger ?? {};
@@ -1103,12 +1197,22 @@ export function triggerSentence(e: WatchEntry): string {
       t.code ? ` (registry code ${t.code})` : ""
     }.`;
   }
+  if (e.tier === "psc") {
+    const n = t.events ?? 0;
+    const day = (t.last_at ?? "").slice(0, 10);
+    return `Companies House recorded ${n} change${n === 1 ? "" : "s"} to this company's people with significant control${
+      day ? ` on ${day}` : ""
+    }${t.company_number ? ` (company number ${t.company_number})` : ""}.`;
+  }
   if (e.tier === "review") {
     return `Nobody has opened or polled this watchlist for ${t.stale_days ?? "a number of"} days. It will be deleted, with its watches and this log, after ${
       (t.delete_after ?? "").slice(0, 10) || "the grace period"
     } unless it is opened or its feed is read before then. Opening it keeps it.`;
   }
   if (e.tier === "catch_up") {
+    if (t.reason === "register_gap" && t.register === "companies_house") {
+      return `The Companies House PSC stream was rejoined live at ${t.before ?? "?"}, so filings before that were not seen; every watched UK company was re-checked.`;
+    }
     if (t.reason === "register_gap") {
       return `The Estonian e-Business Register's changes between ${t.after ?? "?"} and ${t.before ?? "?"} could not be read, so every watched Estonian company was re-checked.`;
     }
@@ -1125,6 +1229,7 @@ export function tierChip(tier: Tier): { label: string; tone: "risk" | "accent" |
   if (tier === "opensanctions") return { label: "OpenSanctions delta", tone: "risk" };
   if (tier === "catch_up") return { label: "Catch-up re-check", tone: "context" };
   if (tier === "register") return { label: "Register change", tone: "accent" };
+  if (tier === "psc") return { label: "PSC filing", tone: "accent" };
   if (tier === "review") return { label: "Review", tone: "neutral" };
   return { label: "By hand", tone: "neutral" };
 }
@@ -1135,6 +1240,7 @@ export function entryHeadline(e: WatchEntry): string {
   const name = e.legal_name || e.lei;
   const kinds = new Set(e.changes.map((c) => c.kind));
   if (!e.changes.length && e.tier === "register") return `${name}: Estonian register record changed`;
+  if (!e.changes.length && e.tier === "psc") return `${name}: Companies House PSC register changed`;
   if (!e.changes.length) return `${name}: re-run found no difference`;
   if (e.changes.some((c) => c.kind === "gleif_field" && c.field === "corporate_events")) {
     return `${name}: legal entity event recorded`;
@@ -1211,8 +1317,23 @@ export function tierSentence(t: WatchlistTiers | null): string {
       );
     }
   }
+  const psc = t.psc;
+  if (psc?.available) {
+    parts.push(
+      `Companies House: the register's own PSC stream is read as it publishes${
+        psc.connected ? "" : " (not connected just now)"
+      }${psc.last_published_at ? `, last at ${psc.last_published_at.slice(0, 16).replace("T", " ")} UTC` : ""}, and a watched UK company whose people with significant control were filed is re-run — counts only, never a name.`,
+    );
+    const pscGap = psc.gaps?.length ? psc.gaps[psc.gaps.length - 1] : null;
+    if (pscGap) {
+      parts.push(
+        `On ${pscGap.detected_at.slice(0, 10)} the stream was rejoined live, so filings before that were not seen and every watched UK company was re-checked instead.`,
+      );
+    }
+  }
+  const followed = [reg?.available, psc?.available].filter(Boolean).length;
   parts.push(
-    reg?.available
+    followed
       ? "No other national register is polled; they are re-fetched only when one of those tiers fires."
       : "National registers are never polled; they are re-fetched only when one of those two fires.",
   );

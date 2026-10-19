@@ -71,7 +71,7 @@ export const NEW_FEATURES: readonly NewFeature[] = [
     id: "watchlist",
     title: "Watchlist",
     description:
-      "Follow the companies you care about: OpenCheck re-runs a check only when GLEIF or OpenSanctions record a change.",
+      "Re-run only when GLEIF, OpenSanctions or a followed register records a change; see whether it matters; keep your decisions on record.",
     eyebrow: "Monitoring",
     href: "/features#watchlist",
     cta: "How the watchlist works",

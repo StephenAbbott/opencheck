@@ -334,6 +334,39 @@ describe("WatchlistPage", () => {
     expect(screen.queryByTestId("review-due-line")).toBeNull();
   });
 
+  // ---- pKYC stage E: the register-tier line (Q5) -----------------------------
+
+  it("says on the watch row which register feed follows it, or why none does", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    const followed = {
+      ...PAYLOAD.watches[0],
+      register_tier: { followed: true, register: "companies_house" as const, reason: null, words: "Companies House PSC stream, live" },
+    };
+    mockFetch({ ...PAYLOAD, watches: [followed] });
+    const { unmount } = render(<WatchlistPage />);
+    expect(await screen.findByTestId("register-tier-line")).toHaveTextContent(
+      "Register changes: followed (Companies House PSC stream, live).",
+    );
+    unmount();
+    const not = {
+      ...PAYLOAD.watches[0],
+      register_tier: { followed: false, register: null, reason: "no_register_number" as const, words: "GLEIF files no register number for this company" },
+    };
+    mockFetch({ ...PAYLOAD, watches: [not] });
+    render(<WatchlistPage />);
+    expect(await screen.findByTestId("register-tier-line")).toHaveTextContent(
+      "Register changes: not followed — GLEIF files no register number for this company.",
+    );
+  });
+
+  it("renders a watch from an older server, with no register-tier line", async () => {
+    window.localStorage.setItem(TOKEN_KEY, "tok");
+    mockFetch(PAYLOAD);
+    render(<WatchlistPage />);
+    await screen.findByTestId("review-sentence");
+    expect(screen.queryByTestId("register-tier-line")).toBeNull();
+  });
+
   // ---- pKYC stage D: the review record ---------------------------------------
 
   const DECIDED = {

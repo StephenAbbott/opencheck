@@ -338,6 +338,23 @@ def register_trigger_tier(trigger: dict[str, Any] | None) -> str:
     return max(tiers, key=_RANK.__getitem__, default=NOTE)
 
 
+#: The PSC stream tier's own trigger (pKYC stage E, Route 1; Stephen's Q4,
+#: 18 Oct 2026): a Companies House PSC filing on the company is **recheck**
+#: whatever it counted — a person or company with significant control was
+#: added, changed, ceased or removed, and the counts-only trigger does not
+#: say which band moved. The escalate rule for a ≥25 % band added or ended
+#: belongs to Route 2, where the share band is known.
+PSC_TRIGGER_TIER = RECHECK
+
+
+def psc_trigger_tier(trigger: dict[str, Any] | None) -> str:
+    """The tier a ``psc`` entry's trigger carries: recheck when it counted
+    anything, note for an empty one (never written in practice)."""
+    kinds = (trigger or {}).get("kinds") or {}
+    counted = any(isinstance(v, dict) and any(v.values()) for v in kinds.values()) if isinstance(kinds, dict) else False
+    return PSC_TRIGGER_TIER if counted else NOTE
+
+
 # ---------------------------------------------------------------------------
 # Grading
 # ---------------------------------------------------------------------------
@@ -366,11 +383,13 @@ def tier_for_change(change: dict[str, Any]) -> str:
 
 def tier_for_entry(changes: list[dict[str, Any]], *, tier: str | None = None, trigger: dict[str, Any] | None = None) -> str:
     """The entry's tier: the worst of its changes' tiers and, for a register
-    tier entry, of its trigger's. An entry with no changes ("the re-run found
+    or PSC tier entry, of its trigger's. An entry with no changes ("the re-run found
     no difference") is note."""
     tiers = [tier_for_change(c) for c in changes if isinstance(c, dict)]
     if tier == "register":
         tiers.append(register_trigger_tier(trigger))
+    if tier == "psc":
+        tiers.append(psc_trigger_tier(trigger))
     if tier == "review":
         # pKYC stage C: a note about the list (the expiry notice), never about
         # a company — note whatever else it carries.

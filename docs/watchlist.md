@@ -17,7 +17,7 @@ Measured on the 3 September 2026 08:00 UTC Golden Copy publish: 15,920 of
 an expected 0.9 re-runs a day; at 1,000, 4.7. Re-run cost is proportional to
 how much of GLEIF changes, not to how many LEIs are watched.
 
-## Three deltas, one shape
+## Four deltas, one shape
 
 **Tier 1 — GLEIF.** `mirror_refresh.py` already streams and applies the
 Golden Copy delta in-process every hour (Phase 180), from
@@ -262,6 +262,55 @@ Tier 2 hit is: a shareholder change moves no signal or status, so the
 register's own record of it is the news. It reads "The Estonian e-Business
 Register recorded a change to this company in its open data of 2026-10-17
 (registry code 10421629)", then "Shareholders: 3 → 4 entries."
+
+**Tier 4 — the Companies House PSC stream (pKYC stage E, Route 1).** The
+UK is the one register OpenCheck consumes as a push feed: the PSC graph has
+been live-fed from Companies House's own stream since Phases 184–189, and
+`psc_stream.apply_events` is the one place every PSC filing lands, batched
+fifty at a time. After a batch is committed the consumer hands the watchlist
+what each event did (`psc_stream.Touched`: the company number, the PSC item
+id, the outcome — added, changed, ceased, removed — and the kind of item:
+person, corporate entity, legal person, details withheld, PSC statement),
+and `watchlist_psc.on_psc_events` maps the company numbers to watched LEIs
+through GLEIF's `registeredAs` under the three Companies House authorities
+(RA000585 England & Wales, RA000586 Northern Ireland, RA000587 Scotland —
+the mirror facts; else the `GB-COH` identifier the baseline lookup read; the
+number normalised on both sides), and queues one re-run per watched company
+on the `psc` tier. The trigger is **counts and keys only**: how many events,
+counts by kind and outcome, the PSC item ids (the key the graph draws the
+party on), the publication span — never a name, a date of birth or an
+address, so a person-level filing is counted before the GDPR ticket decides
+whether it may ever be named (Stephen, 18 Oct 2026: count, don't name).
+Several filings on one company before its re-run ran are **folded into one
+pending row** with their counts added, so a company that files three times
+in an afternoon is re-run once. As on the register tier the filing is itself
+the news: the entry is written whether or not the re-run's snapshot moved,
+and reads "Companies House recorded 2 changes to this company's people with
+significant control on 2026-10-19 (company number 02999029)", then "2
+persons: 1 added, 1 ceased." Its materiality is **recheck** whatever it
+counted (Q4): the counts-only trigger cannot say which band moved, so the
+escalate rule for a ≥25 % band added or ended waits for Route 2, where the
+share band is known. The hook never raises and the stream never waits on it
+(the `mirror_refresh.apply_delta` → `on_gleif_delta` shape). When the
+consumer resumes **live** — the register published events it did not see,
+after a long drop or a 416 — the watchlist records a gap (`meta.psc_gaps`)
+and queues a catch-up re-run of every watched UK company (`reason:
+register_gap`, `register: companies_house`), once per gap; an entry only
+where the re-run finds a difference, Phase 260's shape. The cost was
+measured before building (the stage E scoping page): ~15–17k PSC events a
+day across ~5.5m UK companies, ~4 % of which hold an LEI, so a watched UK
+company expects about one PSC-triggered re-run a year.
+
+**Every watch row says what follows its register** (Q5, the knowability
+voice): "Register changes: followed (Companies House PSC stream, live)" or
+"(e-Business Register open data, daily)", else "Register changes: not
+followed — GLEIF files no register number for this company" / "— OpenCheck
+follows no change feed for this company's register". It is a statement about
+OpenCheck's feeds, never about the company. `/watchstats` counts the watched
+LEIs by registration authority (`watched_by_registration_authority`, RA
+codes and counts only — the measurement the scoping page could not take) and
+the hook's own counters (`psc_events_seen`, `psc_matched`, `psc_queued`,
+`psc_coalesced`, `psc_gaps`).
 
 **No other register is polled.** The rest are re-fetched only as a
 consequence of a hit on one of the tiers: the hit re-runs the whole
@@ -649,6 +698,17 @@ status the re-run then reads is escalated by the snapshot's
 | `officers` | note |
 | `supervisory_board` | note |
 | `added` | note |
+
+### The PSC tier's own trigger (Tier 4)
+
+A `psc` entry is written whether or not the re-run's snapshot moved, so its
+trigger is graded too: **recheck** when it counted anything (a person or
+company with significant control added, changed, ceased or removed), note
+for an empty one. The trigger carries counts, not bands, so it cannot say
+whether a holding crossed 25 %; the escalate rule for a ≥25 % band added or
+ended belongs to Route 2's statement-level diff. The re-run's own changes
+(`register_status`, `signal_new`…) grade as they always have and can lift
+the entry further.
 
 ### What it does not do
 

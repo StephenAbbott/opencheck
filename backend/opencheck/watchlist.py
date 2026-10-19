@@ -92,7 +92,7 @@ import secrets
 import sqlite3
 import threading
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -221,7 +221,14 @@ TIER_REGISTER = "register"
 #: only the expiry notice the worker writes before a stale list is deleted.
 #: Its entries carry an empty ``lei``. Words in ``watchlist_review``.
 TIER_REVIEW = "review"
-TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL, TIER_CATCHUP, TIER_REGISTER, TIER_REVIEW)
+#: pKYC stage E, Route 1: a Companies House PSC filing on a watched UK
+#: company, pushed by the register's own stream (``psc_stream``) — the
+#: second register tier beside Estonia's daily diff. The trigger carries
+#: counts, kinds and PSC item ids, never a name (``watchlist_psc``). Like the
+#: ``register`` tier, the filing is itself the news: an entry is written
+#: whether or not the re-run's snapshot moved.
+TIER_PSC = "psc"
+TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL, TIER_CATCHUP, TIER_REGISTER, TIER_REVIEW, TIER_PSC)
 
 #: The kinds a diff can contain. Closed vocabulary; the frontend words them
 #: (``lib/watchlist.ts``) and a test pins that every kind has words.
@@ -1464,14 +1471,26 @@ class WatchlistStore:
 
     # -- pending re-runs ---------------------------------------------------
 
-    def enqueue(self, lei: str, tier: str, trigger: dict[str, Any]) -> bool:
+    def enqueue(
+        self,
+        lei: str,
+        tier: str,
+        trigger: dict[str, Any],
+        *,
+        fold: Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]] | None = None,
+    ) -> bool:
         """Queue a re-run of ``lei``. One pending row per LEI: a second
         trigger before the first ran is folded into it — except that a
         catch-up row (Phase 260) gives way to a real trigger, whose entry is
         news in itself, so a delta naming the company is never folded into a
-        catch-up that writes nothing when the re-run finds no difference."""
+        catch-up that writes nothing when the re-run finds no difference.
+
+        ``fold`` (pKYC stage E): when the pending row is on the same tier,
+        ``fold(existing_trigger, trigger)`` replaces its trigger — the PSC
+        tier merges a day's filings into one re-run with their counts added.
+        Returns False for a fold (nothing new was queued)."""
         with self._conn() as conn:
-            existing = conn.execute("SELECT id, tier FROM pending WHERE lei = ?", (lei,)).fetchone()
+            existing = conn.execute("SELECT id, tier, trigger_json FROM pending WHERE lei = ?", (lei,)).fetchone()
             if existing:
                 if existing["tier"] == TIER_CATCHUP and tier != TIER_CATCHUP:
                     conn.execute(
@@ -1479,6 +1498,15 @@ class WatchlistStore:
                         (tier, json.dumps(trigger), existing["id"]),
                     )
                     return True
+                if fold is not None and existing["tier"] == tier:
+                    try:
+                        merged = fold(json.loads(existing["trigger_json"] or "{}"), trigger)
+                    except (ValueError, TypeError):
+                        merged = trigger
+                    conn.execute(
+                        "UPDATE pending SET trigger_json = ? WHERE id = ?",
+                        (json.dumps(merged), existing["id"]),
+                    )
                 return False
             conn.execute(
                 "INSERT INTO pending (lei, tier, trigger_json, queued_at) VALUES (?, ?, ?, ?)",
@@ -1788,6 +1816,17 @@ class WatcherState:
     ee_gaps: int = 0
     ee_last_gap_at: str | None = None
     ee_last_error: str | None = None
+    # pKYC stage E, Route 1 — the Companies House PSC stream tier. Counts
+    # only: events the hook saw, how many touched a watched company, re-runs
+    # queued, filings folded into a pending re-run, stream gaps answered.
+    psc_events_seen: int = 0
+    psc_matched: int = 0
+    psc_queued: int = 0
+    psc_coalesced: int = 0
+    psc_gaps: int = 0
+    psc_last_event_at: str | None = None
+    psc_last_match_at: str | None = None
+    psc_last_gap_at: str | None = None
     reruns: int = 0
     rerun_failures: int = 0
     entries_written: int = 0
@@ -2588,9 +2627,10 @@ def _write_rerun(
             legal_name=resp.legal_name,
             jurisdiction=resp.jurisdiction,
         )
-        # A Tier 2 hit, or a register's own change, is itself the news; a
-        # catch-up or a GLEIF re-run that found nothing is not.
-        if changes or tier in (TIER_OPENSANCTIONS, TIER_REGISTER):
+        # A Tier 2 hit, or a register's own change (the Estonian diff, a
+        # Companies House PSC filing), is itself the news; a catch-up or a
+        # GLEIF re-run that found nothing is not.
+        if changes or tier in (TIER_OPENSANCTIONS, TIER_REGISTER, TIER_PSC):
             store.add_entry(
                 th,
                 lei,

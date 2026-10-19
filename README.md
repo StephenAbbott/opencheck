@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 375** — A watchlist entry can now carry a decision — reviewed with no action, re-checked, or escalated — with a saved report pinned as the evidence, and each list can hand over its review record as Markdown.
+**Latest: Phase 379** — A Companies House PSC filing on a watched UK company now re-runs it — the register's own stream as a watchlist tier, counts only, never a name.
 
 → [Full development history](docs/status.md)
 
