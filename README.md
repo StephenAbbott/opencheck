@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 376** — The homepage and /features Watchlist copy now name the register tier, materiality and the review record, not only GLEIF and OpenSanctions.
+**Latest: Phase 377** — The weekly source-health sweep now builds ASP Moldova's index in its warm-up step, ending the September ambers that measured the runner's download speed rather than the register.
 
 → [Full development history](docs/status.md)
 
