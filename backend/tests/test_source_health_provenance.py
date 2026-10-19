@@ -172,6 +172,60 @@ def test_an_artifact_skip_does_not_count_against_the_credential_budget() -> None
     assert report["credential_skips"] == []
 
 
+def _only_moldova(warm):
+    return tuple(w for w in warm.WARMERS if w[0] == "asp_moldova")
+
+
+def test_the_warm_up_flags_moldova_when_live_mode_is_off(tmp_path, monkeypatch, capsys) -> None:
+    """The trap this warmer could fall into silently: ``sync_enabled()`` reads
+    ``OPENCHECK_ALLOW_LIVE``, so a warm step without it returns
+    ``not_configured``, writes nothing, and the probe is back to racing the
+    45 s wait. That must surface as the step's warning, naming the source."""
+    import importlib
+
+    from opencheck.config import get_settings
+
+    warm = importlib.import_module("warm_bulk_stores")
+    monkeypatch.setattr(warm, "WARMERS", _only_moldova(warm))
+    monkeypatch.setenv("ASP_MOLDOVA_DB_FILE", str(tmp_path / "asp_moldova.sqlite"))
+    monkeypatch.delenv("OPENCHECK_ALLOW_LIVE", raising=False)
+    get_settings.cache_clear()
+    try:
+        assert warm.main() == 1
+    finally:
+        get_settings.cache_clear()
+    captured = capsys.readouterr()
+    assert "asp_moldova: not_configured" in captured.out
+    assert "could not warm asp_moldova" in captured.err
+
+
+def test_the_warm_up_builds_moldova_when_live(tmp_path, monkeypatch, capsys) -> None:
+    """Live mode on: the warm-up runs the adapter's own sync, with no clock,
+    and a file at ``index_path()`` is what makes the step green."""
+    import importlib
+
+    from opencheck.config import get_settings
+    from opencheck.sources import asp_moldova
+
+    warm = importlib.import_module("warm_bulk_stores")
+    monkeypatch.setattr(warm, "WARMERS", _only_moldova(warm))
+    target = tmp_path / "asp_moldova.sqlite"
+    monkeypatch.setenv("ASP_MOLDOVA_DB_FILE", str(target))
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    get_settings.cache_clear()
+
+    def fake_sync(*, force: bool = False) -> dict:
+        target.write_bytes(b"index")
+        return {"asp_moldova": "built", "path": str(target)}
+
+    monkeypatch.setattr(asp_moldova, "sync_index", fake_sync)
+    try:
+        assert warm.main() == 0
+    finally:
+        get_settings.cache_clear()
+    assert "asp_moldova: built" in capsys.readouterr().out
+
+
 def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
     """One path, two mechanisms. The warm-up calls each module's own
     ``db_path()`` and ``requires_files`` resolves against ``data_root()`` — if
@@ -197,6 +251,16 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
     }
     assert PROBES["ariregister"].requires_files == ()
     for name, _warm_fn, path_of in warm.WARMERS:
+        if name == "asp_moldova":
+            # Not a release asset and not under data_root(): the adapter
+            # builds its own index where index_path() says, so the warm-up
+            # must hand over that very function — a second opinion about the
+            # path would build a file the sweep never opens.
+            from opencheck.sources import asp_moldova
+
+            assert path_of is asp_moldova.index_path
+            assert PROBES["asp_moldova"].requires_files == ()
+            continue
         assert declared[name], f"{name}: the probe declares no required file"
         assert path_of() == root / declared[name][0], (
             f"{name}: the warm-up writes to {path_of()} and the probe looks for "

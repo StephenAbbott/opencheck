@@ -559,3 +559,27 @@ The 21 and 28 Sept checks read the published report at 10:00 UTC on a Monday, fo
 The lesson is not about this delay but about the class: the monitor had no way to say it had stopped. `stale` on `/source-health` only ever meant "the asset could not be re-read just now". So the API now stamps every served report with `age_days`, measured at request time from `generated_at`, and `overdue: true` once that passes eight days (`OVERDUE_AFTER_DAYS`) — a week plus a day, which absorbs an eight-hour-late Monday and flags a skipped one by the Tuesday after. The age is computed outside the hourly cache, so it advances while the cached copy does not, and it depends on nothing in GitHub. The sources page shows a warn-tone line above the cards ("The weekly sweep has not published since … — N days ago") and keeps the verdicts: last month's sweep is still evidence, just labelled as old.
 
 Anything that reads the report on a clock should judge "has a sweep published this week?", not "has it published by 10:00".
+
+## The amber that measured the runner: `asp_moldova` warmed before the sweep (2026-10-19)
+
+`asp_moldova` read degraded on 21 Sept (both runs) and 28 Sept (both runs), ok on 5 Oct, and failed
+on 12 Oct. The 12 Oct fail was the export's shape and is Phase 322's. The September ambers were
+something else: stub liveness, all-zero statement counts and a latency of ~45.3 s every time, with the
+reason "the weekly export is still being downloaded and indexed". That latency is `_BUILD_WAIT_S`.
+The index is the one bulk store the warm step did not cover, because it is not a release asset — the
+adapter builds it from the register's own weekly XLSX on dataset.gov.md — so on a cold runner the
+probe's first `fetch()` started the download and build and gave up after 45 s. Measured on
+19 Oct 2026 against that day's export (39 MB): resolve 0.5 s, download 2 s, build 23 s from a
+residential connection; 45 s for the build alone was measured on Render in September. A GitHub
+runner's route to Chişinău decides which side of 45 s it lands, which is why 5 Oct was green with no
+code change. The row was reporting the runner, not the register; production, which warms at boot
+with no clock, answered throughout.
+
+`scripts/warm_bulk_stores.py` now runs `asp_moldova.warm_index()` with the others, and the workflow
+sets `OPENCHECK_ALLOW_LIVE` on that step because `sync_enabled()` reads it — without it the outcome is
+`not_configured`, nothing is written, and the step's warning names the source (pinned by a test).
+The file goes where `index_path()` says, the temp directory, not `data_root()`; both steps run on one
+runner, and the path test checks the warm-up hands over that very function. The probe then finds a
+snapshot under seven days old, `sync_index` keeps it, and the 45 s wait is not entered. Nothing about
+the probe's assertions changed. From here, an amber of the September shape means the warm step itself
+failed — read its log line `asp_moldova: …` first.
