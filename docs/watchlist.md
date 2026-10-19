@@ -17,7 +17,7 @@ Measured on the 3 September 2026 08:00 UTC Golden Copy publish: 15,920 of
 an expected 0.9 re-runs a day; at 1,000, 4.7. Re-run cost is proportional to
 how much of GLEIF changes, not to how many LEIs are watched.
 
-## Three deltas, one shape
+## Four deltas, one shape
 
 **Tier 1 — GLEIF.** `mirror_refresh.py` already streams and applies the
 Golden Copy delta in-process every hour (Phase 180), from
@@ -263,6 +263,55 @@ register's own record of it is the news. It reads "The Estonian e-Business
 Register recorded a change to this company in its open data of 2026-10-17
 (registry code 10421629)", then "Shareholders: 3 → 4 entries."
 
+**Tier 4 — the Companies House PSC stream (pKYC stage E, Route 1).** The
+UK is the one register OpenCheck consumes as a push feed: the PSC graph has
+been live-fed from Companies House's own stream since Phases 184–189, and
+`psc_stream.apply_events` is the one place every PSC filing lands, batched
+fifty at a time. After a batch is committed the consumer hands the watchlist
+what each event did (`psc_stream.Touched`: the company number, the PSC item
+id, the outcome — added, changed, ceased, removed — and the kind of item:
+person, corporate entity, legal person, details withheld, PSC statement),
+and `watchlist_psc.on_psc_events` maps the company numbers to watched LEIs
+through GLEIF's `registeredAs` under the three Companies House authorities
+(RA000585 England & Wales, RA000586 Northern Ireland, RA000587 Scotland —
+the mirror facts; else the `GB-COH` identifier the baseline lookup read; the
+number normalised on both sides), and queues one re-run per watched company
+on the `psc` tier. The trigger is **counts and keys only**: how many events,
+counts by kind and outcome, the PSC item ids (the key the graph draws the
+party on), the publication span — never a name, a date of birth or an
+address, so a person-level filing is counted before the GDPR ticket decides
+whether it may ever be named (Stephen, 18 Oct 2026: count, don't name).
+Several filings on one company before its re-run ran are **folded into one
+pending row** with their counts added, so a company that files three times
+in an afternoon is re-run once. As on the register tier the filing is itself
+the news: the entry is written whether or not the re-run's snapshot moved,
+and reads "Companies House recorded 2 changes to this company's people with
+significant control on 2026-10-19 (company number 02999029)", then "2
+persons: 1 added, 1 ceased." Its materiality is **recheck** whatever it
+counted (Q4): the counts-only trigger cannot say which band moved, so the
+escalate rule for a ≥25 % band added or ended waits for Route 2, where the
+share band is known. The hook never raises and the stream never waits on it
+(the `mirror_refresh.apply_delta` → `on_gleif_delta` shape). When the
+consumer resumes **live** — the register published events it did not see,
+after a long drop or a 416 — the watchlist records a gap (`meta.psc_gaps`)
+and queues a catch-up re-run of every watched UK company (`reason:
+register_gap`, `register: companies_house`), once per gap; an entry only
+where the re-run finds a difference, Phase 260's shape. The cost was
+measured before building (the stage E scoping page): ~15–17k PSC events a
+day across ~5.5m UK companies, ~4 % of which hold an LEI, so a watched UK
+company expects about one PSC-triggered re-run a year.
+
+**Every watch row says what follows its register** (Q5, the knowability
+voice): "Register changes: followed (Companies House PSC stream, live)" or
+"(e-Business Register open data, daily)", else "Register changes: not
+followed — GLEIF files no register number for this company" / "— OpenCheck
+follows no change feed for this company's register". It is a statement about
+OpenCheck's feeds, never about the company. `/watchstats` counts the watched
+LEIs by registration authority (`watched_by_registration_authority`, RA
+codes and counts only — the measurement the scoping page could not take) and
+the hook's own counters (`psc_events_seen`, `psc_matched`, `psc_queued`,
+`psc_coalesced`, `psc_gaps`).
+
 **No other register is polled.** The rest are re-fetched only as a
 consequence of a hit on one of the tiers: the hit re-runs the whole
 `_lookup_pipeline` with `refresh=True`, which fetches them anyway.
@@ -293,9 +342,43 @@ difference with a closed vocabulary (`CHANGE_KINDS`):
 | `signal_unchecked` / `context_unchecked` | A code is gone but its producer is degraded — could not be re-checked |
 | `coverage_changed` / `coverage_unchecked` | Sources answered, or sources with a record, went up or down; `_unchecked` when the fall is degraded sources. A baseline stored before Phase 241 (whose `answered` meant "with a record") is compared on `with_data` only |
 | `verdict` | The sentence changed with none of the above (a degraded source recovering, say) |
+| `ownership_changed` | An ownership-or-control relationship with the subject was added, ended or re-sized, per source (pKYC stage E, Route 2 — below) |
+| `ownership_unchecked` | Such a relationship is gone or ended but its source is degraded — could not be re-checked |
 
-The two `_unchecked` kinds are the point. Absence is a finding only when
-the source answered.
+The `_unchecked` kinds are the point. Absence is a finding only when the
+source answered.
+
+**The ownership digest (pKYC stage E, Route 2).** `CHANGE_KINDS` had no
+ownership kind until this: an owner replaced by another owner with the same
+risk profile moved no signal, status or coverage, and the re-run wrote
+nothing — in any register. `watchlist_ownership.digest` now keeps a
+**person-free ownership digest** on the baseline (`snapshot.ownership_digest`,
+frozen with the run's day): one row per ownership-or-control relationship
+*with the subject*, per source, keyed on the party's record — an entity's
+`recordId`; a person's **register key only** (a Companies House officer id or
+PSC item id, an Estonian `isikukood_hash`, a Wikidata Q-id, a Slovak
+`kuv_id`, read back from the Phase 255 `identifying` annotation). A person
+with no register key — OpenCorporates officers, Norway's name-derived hash —
+is not a row: the digest counts them per source and the entry says "3 parties
+could not be compared (OpenCorporates publishes no person key)". Never a
+name, a date of birth, or a hash of either (Stephen, Q3). Each row carries
+the interest types, the share bands of its shareholding and voting-rights
+interests (BODS v0.4's `exclusiveMinimum` is the bound itself, so Companies
+House's "25-to-50" reads "over 25% to 50%"), the beneficial-ownership flag,
+direct / indirect and whether every relationship for the pair has ended.
+Left out, as the Phase 339 lists do: GLEIF's reporting-exception bridges (a
+filing, not a party), MEIP (group membership, not ownership) and officer-only
+roles — so the digest is the 2–10 rows the scoping page measured, not the
+6–60 with officers. `diff` names each row added, ended or re-sized as one
+`ownership_changed` change ("A registered beneficial owner's shareholding
+changed from 25–50% to 50–75% (e-Business Register)"); a row gone or ended
+while its source is degraded is `ownership_unchecked`, never ended; a row
+that first appears already ended (history newly read) is not news. A
+baseline stored before the digest compares nothing and gains one on its next
+update (the Phase 301 baseline-shape rule). It catches nothing on its own —
+it runs inside a re-run some delta caused — so it complements Tier 4, which
+says *that* the register moved; this says *what*. Per source, never across
+sources: two sources reaching one party give two rows.
 
 **A rule change is not a company change.** Three stamps on every snapshot
 keep OpenCheck's own changes out of the feed. `verdict_template` (Phase 245)
@@ -401,6 +484,9 @@ the baseline where it was; the next delta that names the LEI tries again.
 | `DELETE /watch/{token}/items/{lei}` | default | Stop watching; the watch's context goes with it |
 | `PATCH /watch/{token}/items/{lei}` `{expected_jurisdiction?, expected_parent_lei?, rationale?, onboarding_report_id?}` | default | Say what you expect of this company (see *What the watcher expected*). A field sent as `null` is cleared; one left out is left alone. Writes no entry |
 | `POST /watch/{token}/recheck` `{lei}` | heavy | Re-run now — a deliberate human action, never a schedule. Writes an entry only when something changed; always reports what it found |
+| `POST /watch/{token}/entries/{id}/decisions` `{status, note?, evidence?}` | default | Record a decision on an entry (see *The review record*). `evidence: "entry_run"` pins the entry's own re-run as a saved report while the server still holds it; a run no longer held is a 409 `run_not_held` and writes nothing |
+| `POST /watch/{token}/entries/{id}/decisions/recheck` `{status, note?, evidence: "recheck"}` | heavy | The same decision with a fresh re-run of the company saved as the evidence — it runs a lookup, so it sits where `/recheck` sits |
+| `GET /watch/{token}/record.md` | default | The list's review record as Markdown: every decision, the entry it answers, the note, the pinned report's id and hash. Reads no clock, runs no pipeline |
 | `GET /watch/{token}.atom` | default | The Atom feed: one entry per logged change, `private, no-store`, `noindex` |
 | `GET /watchstats` | exempt | Aggregate watcher state; no LEI or name can appear |
 
@@ -481,11 +567,19 @@ disagree. Decisions are Stephen's, 17 Oct 2026.
 | `coverage_changed` | note | About OpenCheck, not the company. |
 | `coverage_unchecked` | note | As above. |
 | `verdict` | note | The sentence moved with no graded kind behind it (a source recovering). |
+| `ownership_changed` | recheck | An ownership-or-control relationship with the subject added, ended or re-sized (pKYC stage E, Route 2). |
+| `ownership_unchecked` | note | The source that published the relationship did not answer on the re-run. |
 
-Two kinds are graded by a rule: `register_status` is **escalate** when the
+Three kinds are graded by a rule: `register_status` is **escalate** when the
 new class is `terminal` (dissolved, struck off, liquidated) and **recheck**
-on any other move; `signal_new` takes the code's tier from the signal table.
-`gleif_field` takes the field table.
+on any other move; `signal_new` takes the code's tier from the signal table;
+`ownership_changed` is **escalate** when a shareholding or voting-rights band
+at or above 25 % was added or ended — a party becoming or ceasing to be a
+registrable controller (Stephen, 19 Oct 2026; 25 % is the PSC and AMLD
+threshold, and registers publish bands, so "crossing 25 %" is a ≥25 % band
+appearing or disappearing, never a figure moving) — while a move between two
+bands above 25 % stays recheck. That is the one place a kind's tier reads the
+change's contents rather than its kind. `gleif_field` takes the field table.
 
 ### The material GLEIF fields (`gleif_field`, Tier 1)
 
@@ -605,6 +699,17 @@ status the re-run then reads is escalated by the snapshot's
 | `supervisory_board` | note |
 | `added` | note |
 
+### The PSC tier's own trigger (Tier 4)
+
+A `psc` entry is written whether or not the re-run's snapshot moved, so its
+trigger is graded too: **recheck** when it counted anything (a person or
+company with significant control added, changed, ceased or removed), note
+for an empty one. The trigger carries counts, not bands, so it cannot say
+whether a holding crossed 25 %; the escalate rule for a ≥25 % band added or
+ended belongs to Route 2's statement-level diff. The re-run's own changes
+(`register_status`, `signal_new`…) grade as they always have and can lift
+the entry further.
+
 ### What it does not do
 
 No new change kind, no new detection, no email, no case. No per-list
@@ -717,7 +822,59 @@ list-level `review` block ("3 of 12 companies have not been fully re-run in
 per watch; on `/watchstats` `watches_review_due`, `lists_expiring` and
 `lists_deleted_total`, counts only. The words are `REVIEW_WORDS`, mirrored in
 `lib/watchlist.ts` and pinned by `test_watchlist_review.py`. "Mark reviewed"
-is stage D's disposition, not this.
+is the decision below, not this.
+
+## The review record: change → review → decision
+
+A monitoring programme has to be able to say *why A was reviewed and B was
+not*. The log says what changed (the entry), how much it mattered (the
+materiality tier), what the watcher expected (the context) and when
+OpenCheck last looked (the review line). Since pKYC stage D it also records
+what someone **decided** about an entry — `opencheck/watchlist_decisions.py`:
+
+- **Three closed statuses**: *Reviewed, no action* ("Looked at; nothing to
+  do"), *Re-checked* ("Looked at and the company was re-run"), *Escalated*
+  ("Routed to whoever decides; what they decided is not recorded here"). The
+  status is the reader's statement, never set automatically — choosing a
+  fresh re-check as evidence does not make the status "re-checked". It is a
+  *decision*, not a *disposition*: `dispositions.py` signs off claims in an
+  AI narrative, a different object with a different key.
+- **Append-only.** A later decision on the same entry is a new row
+  (`entry_decisions`); the entry's current decision is the latest and the
+  history is kept and shown. Nothing is deleted except with the list.
+- **The note** (optional, one line) follows stage B's rationale rule: about
+  the company, never a person — no e-mail, no foreign link, no digit run that
+  could be a personal code.
+- **Evidence is opt-in, never automatic** (the saved-reports rule): a saved
+  report of what was reviewed, pinned to the decision. Two kinds — the
+  entry's own re-run while the server still holds it (`entry_run`; every
+  entry since stage D records its `run_completed_at` and `deepen_top`, the
+  replay-cache key, and a finished run is held for 15 minutes), or a fresh
+  re-run made and saved in the same action (`recheck`, worded as evidence of
+  *now*). Every save goes through `save_from_replay` and the per-client
+  saved-report quota; a refused save (`run_not_held`, quota, saved reports
+  off) records **no decision**. A report expires on the saved-reports
+  schedule; the decision keeps its id and says the report is gone.
+- **No reviewer identity.** No accounts, so none: the record says a decision
+  was taken by whoever held the list token, when.
+
+Where it shows: on each entry in `/watch/{token}` (`decision`,
+`decision_count`, `decision_history`, `run_held`), on each watch
+(`review_history`) and on the list (`decisions.undecided_material`,
+`evidence_available`); on `/watchlist` a chip and the decision line on a
+decided entry with its history behind a disclosure, the three buttons on an
+undecided one, a note field and a "… and keep the evidence" option worded
+for this re-run or a fresh re-check, a *Needs review* filter
+(`?show=needs_review`: material and undecided) and a *Download the review
+record* link; in the Atom feed the decision as the entry's last line and a
+`category` in the `…/watchlist/decision` scheme; on `/watchstats`
+`decisions_by_status`, `decisions_with_evidence` and `material_undecided`,
+counts only. `GET /watch/{token}/record.md` is the hand-over: the record as
+Markdown, every decision with its entry, materiality, note, and the pinned
+report's id and SHA-256 — it reads no clock and runs no pipeline, so the same
+record renders identically on any day. The words are `STATUS_LABELS` /
+`STATUS_MEANINGS` / `EVIDENCE_WORDS`, mirrored in `lib/watchlist.ts` and
+pinned by `test_watchlist_decisions.py`.
 
 ## Demo framing
 

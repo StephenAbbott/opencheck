@@ -105,6 +105,12 @@ ATOM_SCHEME = "https://opencheck.world/watchlist/materiality"
 #: ``gleif_field`` (Table 2), ``register_status`` (terminal or not),
 #: ``signal_new`` (Table 3), ``signal_unchecked`` (note — decided).
 KIND_TIER: dict[str, str] = {
+    # pKYC stage E, Route 2: an ownership-or-control relationship with the
+    # subject added, ended or re-sized is recheck; the one documented
+    # exception to "tiers follow the change kind, not its contents" is in
+    # ``tier_for_change``: a ≥25 % band added or ended escalates (Q4).
+    "ownership_changed": RECHECK,
+    "ownership_unchecked": NOTE,  # the source did not answer: absence is not a finding
     "dissolution_date": ESCALATE,  # the register says the company has ceased
     "legal_name": RECHECK,  # a rename, or a different entity under the same number
     "jurisdiction": ESCALATE,  # redomiciliation — rare and real
@@ -332,6 +338,23 @@ def register_trigger_tier(trigger: dict[str, Any] | None) -> str:
     return max(tiers, key=_RANK.__getitem__, default=NOTE)
 
 
+#: The PSC stream tier's own trigger (pKYC stage E, Route 1; Stephen's Q4,
+#: 18 Oct 2026): a Companies House PSC filing on the company is **recheck**
+#: whatever it counted — a person or company with significant control was
+#: added, changed, ceased or removed, and the counts-only trigger does not
+#: say which band moved. The escalate rule for a ≥25 % band added or ended
+#: belongs to Route 2, where the share band is known.
+PSC_TRIGGER_TIER = RECHECK
+
+
+def psc_trigger_tier(trigger: dict[str, Any] | None) -> str:
+    """The tier a ``psc`` entry's trigger carries: recheck when it counted
+    anything, note for an empty one (never written in practice)."""
+    kinds = (trigger or {}).get("kinds") or {}
+    counted = any(isinstance(v, dict) and any(v.values()) for v in kinds.values()) if isinstance(kinds, dict) else False
+    return PSC_TRIGGER_TIER if counted else NOTE
+
+
 # ---------------------------------------------------------------------------
 # Grading
 # ---------------------------------------------------------------------------
@@ -348,6 +371,11 @@ def tier_for_change(change: dict[str, Any]) -> str:
         return REGISTER_STATUS_TERMINAL_TIER if liveness == "terminal" else REGISTER_STATUS_OTHER_TIER
     if kind == "signal_new":
         return signal_tier(change.get("code"))
+    if kind == "ownership_changed" and change.get("crossed_25"):
+        # Q4 (Stephen, 19 Oct 2026): a shareholding or voting-rights band at
+        # or above 25 % added or ended — a party becoming or ceasing to be a
+        # registrable controller. A move between bands above 25 % stays recheck.
+        return ESCALATE
     # An unknown kind is a kind the diff started naming after this table
     # was written: recheck, never silent.
     return KIND_TIER.get(kind, RECHECK)
@@ -355,11 +383,13 @@ def tier_for_change(change: dict[str, Any]) -> str:
 
 def tier_for_entry(changes: list[dict[str, Any]], *, tier: str | None = None, trigger: dict[str, Any] | None = None) -> str:
     """The entry's tier: the worst of its changes' tiers and, for a register
-    tier entry, of its trigger's. An entry with no changes ("the re-run found
+    or PSC tier entry, of its trigger's. An entry with no changes ("the re-run found
     no difference") is note."""
     tiers = [tier_for_change(c) for c in changes if isinstance(c, dict)]
     if tier == "register":
         tiers.append(register_trigger_tier(trigger))
+    if tier == "psc":
+        tiers.append(psc_trigger_tier(trigger))
     if tier == "review":
         # pKYC stage C: a note about the list (the expiry notice), never about
         # a company — note whatever else it carries.

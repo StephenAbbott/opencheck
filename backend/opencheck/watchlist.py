@@ -92,7 +92,7 @@ import secrets
 import sqlite3
 import threading
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -221,7 +221,14 @@ TIER_REGISTER = "register"
 #: only the expiry notice the worker writes before a stale list is deleted.
 #: Its entries carry an empty ``lei``. Words in ``watchlist_review``.
 TIER_REVIEW = "review"
-TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL, TIER_CATCHUP, TIER_REGISTER, TIER_REVIEW)
+#: pKYC stage E, Route 1: a Companies House PSC filing on a watched UK
+#: company, pushed by the register's own stream (``psc_stream``) — the
+#: second register tier beside Estonia's daily diff. The trigger carries
+#: counts, kinds and PSC item ids, never a name (``watchlist_psc``). Like the
+#: ``register`` tier, the filing is itself the news: an entry is written
+#: whether or not the re-run's snapshot moved.
+TIER_PSC = "psc"
+TIERS = (TIER_GLEIF, TIER_OPENSANCTIONS, TIER_MANUAL, TIER_CATCHUP, TIER_REGISTER, TIER_REVIEW, TIER_PSC)
 
 #: The kinds a diff can contain. Closed vocabulary; the frontend words them
 #: (``lib/watchlist.ts``) and a test pins that every kind has words.
@@ -243,6 +250,11 @@ CHANGE_KINDS: tuple[str, ...] = (
     "coverage_changed",
     "coverage_unchecked",
     "verdict",
+    # pKYC stage E, Route 2 (``watchlist_ownership``): an ownership-or-control
+    # relationship with the subject added, ended or re-sized, per source; and
+    # one whose source did not answer on the re-run.
+    "ownership_changed",
+    "ownership_unchecked",
 )
 
 #: The name-match gate — the one concept product-wide, owned by ``names``.
@@ -586,6 +598,15 @@ def snapshot_from_response(resp: Any) -> dict[str, Any]:
         v = profile.get(key) or {}
         return v.get("value") if isinstance(v, dict) else None
 
+    # pKYC stage E, Route 2: the person-free ownership digest, frozen with
+    # the run's day so the baseline is re-read with no clock.
+    from . import watchlist_ownership as ownership_module
+
+    run_day = str(getattr(resp, "run_completed_at", None) or "")[:10] or _now_iso()[:10]
+    ownership_digest = ownership_module.digest(
+        bods, [s["statementId"] for s in stmts if isinstance(s.get("statementId"), str)], run_day
+    )
+
     return {
         "legal_name": resp.legal_name,
         "jurisdiction": resp.jurisdiction,
@@ -606,6 +627,9 @@ def snapshot_from_response(resp: Any) -> dict[str, Any]:
         "signal_rules": SIGNAL_RULES,
         # Phase 305: which reading produced ``dissolution_date``.
         "dissolution_reading": DISSOLUTION_READING,
+        # pKYC stage E, Route 2: one row per ownership relationship with the
+        # subject, per source, keyed on the party's record — never a name.
+        "ownership_digest": ownership_digest,
         # Which sources were actually reached, and when (Phase 99/100: the
         # retrieval clock, per source). The feed says "these sources were
         # checked on that date as a result".
@@ -761,6 +785,15 @@ def diff_snapshots(before: dict[str, Any] | None, after: dict[str, Any]) -> list
             else:
                 changes.append({"kind": retired_kind, "code": code, "sources": sorted(producers)})
 
+    # pKYC stage E, Route 2: the ownership digest, compared only when the
+    # baseline carries one (a baseline from before the digest compares
+    # nothing and gains one on this update — the Phase 301 baseline-shape
+    # rule, so widening the snapshot writes no change for every watched LEI).
+    from . import watchlist_ownership as ownership_module
+
+    if before.get("ownership_digest") and after.get("ownership_digest"):
+        changes += ownership_module.diff(before["ownership_digest"], after["ownership_digest"], degraded_ids)
+
     cov_a = _coverage_view(before.get("coverage"))
     cov_b = _coverage_view(after.get("coverage"))
     # Phase 241: ``answered`` now counts a source that replied with no record,
@@ -913,6 +946,34 @@ MIGRATIONS: tuple[sqlite_schema.Migration, ...] = (
         5,
         "Watchlist expiry notice",
         ("ALTER TABLE lists ADD COLUMN expiry_notice_at TEXT",),
+    ),
+    # pKYC stage D: the review record. A decision is an append-only row
+    # about one entry — status, an optional note, an optional saved report
+    # as the evidence reviewed; the entry's current decision is the latest.
+    # An entry records which run produced it (``run_completed_at`` +
+    # ``deepen_top``, the replay-cache key) so that run can be saved as the
+    # evidence while the server still holds it. Both nullable on entries: a
+    # NULL is an entry written before this, whose run cannot be saved.
+    sqlite_schema.Migration(
+        6,
+        "Watchlist decisions",
+        (
+            "ALTER TABLE entries ADD COLUMN run_completed_at TEXT",
+            "ALTER TABLE entries ADD COLUMN deepen_top INTEGER",
+            """CREATE TABLE IF NOT EXISTS entry_decisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_hash TEXT NOT NULL,
+    entry_id INTEGER NOT NULL,
+    lei TEXT,
+    status TEXT NOT NULL,
+    note TEXT,
+    saved_report_id TEXT,
+    evidence_kind TEXT,
+    decided_at TEXT NOT NULL
+)""",
+            "CREATE INDEX IF NOT EXISTS entry_decisions_entry ON entry_decisions (entry_id, id)",
+            "CREATE INDEX IF NOT EXISTS entry_decisions_list ON entry_decisions (token_hash, id)",
+        ),
     ),
 )
 
@@ -1224,18 +1285,23 @@ class WatchlistStore:
         degraded: list[dict[str, Any]],
         legal_name: str | None,
         gleif_log: dict[str, Any] | None = None,
+        run_completed_at: str | None = None,
+        deepen_top: int | None = None,
     ) -> int:
         """Write an entry, graded: each change gains its ``materiality`` and
         the row carries the entry tier with the table version it came from
-        (``watchlist_materiality``). Graded once, here, and kept."""
+        (``watchlist_materiality``). Graded once, here, and kept.
+        ``run_completed_at`` / ``deepen_top`` name the run that produced the
+        entry (stage D) so it can be saved as evidence while it is held."""
         assert tier in TIERS, tier
         entry_tier, graded = materiality.grade(changes, tier=tier, trigger=trigger)
         with self._conn() as conn:
             cur = conn.execute(
                 """
                 INSERT INTO entries (token_hash, lei, created_at, tier, trigger_json, changes_json,
-                    checked_json, degraded_json, legal_name, gleif_log_json, materiality, materiality_rules)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    checked_json, degraded_json, legal_name, gleif_log_json, materiality, materiality_rules,
+                    run_completed_at, deepen_top)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     th,
@@ -1250,9 +1316,91 @@ class WatchlistStore:
                     json.dumps(gleif_log) if gleif_log is not None else None,
                     entry_tier,
                     materiality.MATERIALITY_RULES,
+                    run_completed_at,
+                    deepen_top,
                 ),
             )
             return int(cur.lastrowid or 0)
+
+    def entry(self, th: str, entry_id: int) -> dict[str, Any] | None:
+        """One entry of this list, or ``None`` — the list's token hash is part
+        of the key, so an entry id on another list is not found."""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM entries WHERE token_hash = ? AND id = ?", (th, entry_id)
+            ).fetchone()
+        return _entry_dict(row) if row else None
+
+    # -- decisions (stage D) -------------------------------------------------
+
+    def add_decision(
+        self,
+        th: str,
+        entry_id: int,
+        *,
+        lei: str | None,
+        status: str,
+        note: str | None,
+        saved_report_id: str | None,
+        evidence_kind: str | None,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Append a decision on an entry. Never updates a row: a change of
+        mind is a later row, and the history is what the record is."""
+        decided_at = (now or datetime.now(UTC)).isoformat(timespec="seconds")
+        with self._conn() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO entry_decisions (token_hash, entry_id, lei, status, note,
+                    saved_report_id, evidence_kind, decided_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (th, entry_id, lei, status, note, saved_report_id, evidence_kind, decided_at),
+            )
+            row = conn.execute(
+                "SELECT * FROM entry_decisions WHERE id = ?", (cur.lastrowid,)
+            ).fetchone()
+        return _decision_dict(row)
+
+    def decisions(self, th: str) -> list[dict[str, Any]]:
+        """Every decision on this list, oldest first."""
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM entry_decisions WHERE token_hash = ? ORDER BY id ASC", (th,)
+            ).fetchall()
+        return [_decision_dict(r) for r in rows]
+
+    def decision_counts(self) -> dict[str, Any]:
+        """Aggregate only, for ``/watchstats``: decisions by status, how many
+        carry a saved report, and how many material entries have none."""
+        from . import watchlist_decisions as decisions_module
+
+        by_status = dict.fromkeys(decisions_module.STATUSES, 0)
+        with self._conn() as conn:
+            for status, n in conn.execute(
+                "SELECT status, COUNT(*) FROM entry_decisions GROUP BY status"
+            ).fetchall():
+                if status in by_status:
+                    by_status[status] = int(n)
+            with_evidence = int(
+                conn.execute(
+                    "SELECT COUNT(*) FROM entry_decisions WHERE saved_report_id IS NOT NULL"
+                ).fetchone()[0]
+            )
+            decided = {
+                int(r[0]) for r in conn.execute("SELECT DISTINCT entry_id FROM entry_decisions").fetchall()
+            }
+            rows = conn.execute("SELECT * FROM entries").fetchall()
+        undecided = 0
+        for row in rows:
+            e = _entry_dict(row)
+            if e["id"] not in decided and materiality.is_material(e["materiality"]):
+                undecided += 1
+        return {
+            "decisions_by_status": by_status,
+            "decisions_with_evidence": with_evidence,
+            "material_undecided": undecided,
+        }
 
     def entries_by_materiality(self) -> dict[str, int]:
         """How many entries carry each tier — aggregate only, for
@@ -1266,6 +1414,54 @@ class WatchlistStore:
             counts[_entry_dict(row)["materiality"]] += 1
         return counts
 
+    def ownership_counts(self) -> dict[str, Any]:
+        """pKYC stage E, Route 2 — for ``/watchstats``, counts only: ownership
+        changes written, by what happened (added / ended / changed) and by
+        whether the ≥25 % rule escalated them; parties the digest could not
+        compare, by source, over the current baselines; baselines carrying a
+        digest at all. Never a key, a band or an LEI."""
+        by_change = {"added": 0, "ended": 0, "changed": 0}
+        escalated = unchecked = 0
+        with self._conn() as conn:
+            rows = conn.execute("SELECT changes_json FROM entries WHERE changes_json LIKE '%ownership_%'").fetchall()
+            snaps = conn.execute("SELECT snapshot_json FROM watches WHERE snapshot_json IS NOT NULL").fetchall()
+        for row in rows:
+            try:
+                changes = json.loads(row["changes_json"] or "[]")
+            except json.JSONDecodeError:
+                continue
+            for c in changes:
+                if not isinstance(c, dict):
+                    continue
+                if c.get("kind") == "ownership_changed":
+                    kind = str(c.get("change") or "")
+                    if kind in by_change:
+                        by_change[kind] += 1
+                    if c.get("crossed_25"):
+                        escalated += 1
+                elif c.get("kind") == "ownership_unchecked":
+                    unchecked += 1
+        uncompared: dict[str, int] = {}
+        with_digest = 0
+        for row in snaps:
+            try:
+                snap = json.loads(row["snapshot_json"] or "{}")
+            except json.JSONDecodeError:
+                continue
+            dg = snap.get("ownership_digest") if isinstance(snap, dict) else None
+            if not isinstance(dg, dict):
+                continue
+            with_digest += 1
+            for sid, n in (dg.get("uncompared") or {}).items():
+                uncompared[str(sid)] = uncompared.get(str(sid), 0) + int(n or 0)
+        return {
+            "ownership_changes_by_change": by_change,
+            "ownership_changes_escalated": escalated,
+            "ownership_unchecked": unchecked,
+            "ownership_uncompared_by_source": dict(sorted(uncompared.items())),
+            "baselines_with_ownership_digest": with_digest,
+        }
+
     def entries(self, th: str, *, limit: int = 100) -> list[dict[str, Any]]:
         with self._conn() as conn:
             rows = conn.execute(
@@ -1275,14 +1471,26 @@ class WatchlistStore:
 
     # -- pending re-runs ---------------------------------------------------
 
-    def enqueue(self, lei: str, tier: str, trigger: dict[str, Any]) -> bool:
+    def enqueue(
+        self,
+        lei: str,
+        tier: str,
+        trigger: dict[str, Any],
+        *,
+        fold: Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]] | None = None,
+    ) -> bool:
         """Queue a re-run of ``lei``. One pending row per LEI: a second
         trigger before the first ran is folded into it — except that a
         catch-up row (Phase 260) gives way to a real trigger, whose entry is
         news in itself, so a delta naming the company is never folded into a
-        catch-up that writes nothing when the re-run finds no difference."""
+        catch-up that writes nothing when the re-run finds no difference.
+
+        ``fold`` (pKYC stage E): when the pending row is on the same tier,
+        ``fold(existing_trigger, trigger)`` replaces its trigger — the PSC
+        tier merges a day's filings into one re-run with their counts added.
+        Returns False for a fold (nothing new was queued)."""
         with self._conn() as conn:
-            existing = conn.execute("SELECT id, tier FROM pending WHERE lei = ?", (lei,)).fetchone()
+            existing = conn.execute("SELECT id, tier, trigger_json FROM pending WHERE lei = ?", (lei,)).fetchone()
             if existing:
                 if existing["tier"] == TIER_CATCHUP and tier != TIER_CATCHUP:
                     conn.execute(
@@ -1290,6 +1498,15 @@ class WatchlistStore:
                         (tier, json.dumps(trigger), existing["id"]),
                     )
                     return True
+                if fold is not None and existing["tier"] == tier:
+                    try:
+                        merged = fold(json.loads(existing["trigger_json"] or "{}"), trigger)
+                    except (ValueError, TypeError):
+                        merged = trigger
+                    conn.execute(
+                        "UPDATE pending SET trigger_json = ? WHERE id = ?",
+                        (json.dumps(merged), existing["id"]),
+                    )
                 return False
             conn.execute(
                 "INSERT INTO pending (lei, tier, trigger_json, queued_at) VALUES (?, ?, ?, ?)",
@@ -1512,6 +1729,21 @@ def _entry_dict(row: sqlite3.Row) -> dict[str, Any]:
         "gleif_log": _json_col(row, "gleif_log_json"),
         "materiality": stored,
         "materiality_rules": rules,
+        "run_completed_at": row["run_completed_at"] if "run_completed_at" in keys else None,
+        "deepen_top": row["deepen_top"] if "deepen_top" in keys else None,
+    }
+
+
+def _decision_dict(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "entry_id": row["entry_id"],
+        "lei": row["lei"],
+        "status": row["status"],
+        "note": row["note"],
+        "saved_report_id": row["saved_report_id"],
+        "evidence_kind": row["evidence_kind"],
+        "decided_at": row["decided_at"],
     }
 
 
@@ -1584,6 +1816,17 @@ class WatcherState:
     ee_gaps: int = 0
     ee_last_gap_at: str | None = None
     ee_last_error: str | None = None
+    # pKYC stage E, Route 1 — the Companies House PSC stream tier. Counts
+    # only: events the hook saw, how many touched a watched company, re-runs
+    # queued, filings folded into a pending re-run, stream gaps answered.
+    psc_events_seen: int = 0
+    psc_matched: int = 0
+    psc_queued: int = 0
+    psc_coalesced: int = 0
+    psc_gaps: int = 0
+    psc_last_event_at: str | None = None
+    psc_last_match_at: str | None = None
+    psc_last_gap_at: str | None = None
     reruns: int = 0
     rerun_failures: int = 0
     entries_written: int = 0
@@ -2223,10 +2466,15 @@ def ariregister_tick(client: Any | None = None) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+#: The depth every watchlist re-run runs at — the replay-cache key a stage D
+#: decision needs to save the run as evidence (``LEI:deepen_top``).
+RERUN_DEEPEN_TOP = 5
+
+
 async def _lookup(lei: str) -> Any:
     from .routers.lookup import _lookup_impl
 
-    return await _lookup_impl(lei, refresh=True)
+    return await _lookup_impl(lei, deepen_top=RERUN_DEEPEN_TOP, refresh=True)
 
 
 async def rerun(lei: str, tier: str, trigger: dict[str, Any], *, only_token_hash: str | None = None) -> dict[str, Any]:
@@ -2277,6 +2525,10 @@ async def rerun(lei: str, tier: str, trigger: dict[str, Any], *, only_token_hash
         "checked": snapshot["checked"],
         "degraded": snapshot["degraded_sources"],
         "snapshot": snapshot,
+        # Stage D: the run's key in the replay cache, so a decision recorded
+        # with a fresh re-check can save that run as its evidence.
+        "run_completed_at": getattr(resp, "run_completed_at", None),
+        "deepen_top": RERUN_DEEPEN_TOP,
     }
 
 
@@ -2375,9 +2627,10 @@ def _write_rerun(
             legal_name=resp.legal_name,
             jurisdiction=resp.jurisdiction,
         )
-        # A Tier 2 hit, or a register's own change, is itself the news; a
-        # catch-up or a GLEIF re-run that found nothing is not.
-        if changes or tier in (TIER_OPENSANCTIONS, TIER_REGISTER):
+        # A Tier 2 hit, or a register's own change (the Estonian diff, a
+        # Companies House PSC filing), is itself the news; a catch-up or a
+        # GLEIF re-run that found nothing is not.
+        if changes or tier in (TIER_OPENSANCTIONS, TIER_REGISTER, TIER_PSC):
             store.add_entry(
                 th,
                 lei,
@@ -2388,6 +2641,8 @@ def _write_rerun(
                 degraded=snapshot["degraded_sources"],
                 legal_name=resp.legal_name,
                 gleif_log=row_log,
+                run_completed_at=getattr(resp, "run_completed_at", None),
+                deepen_top=RERUN_DEEPEN_TOP,
             )
             written += 1
     return written, all_changes

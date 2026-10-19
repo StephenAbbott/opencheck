@@ -17,8 +17,14 @@ import {
   fieldWords,
   gleifLogLines,
   logLineWords,
+  bandWords,
   entryHeadline,
+  ownershipChangeSentence,
+  uncomparedLines,
+  type Change,
+  pscChangeLines,
   registerChangeLines,
+  registerTierLine,
   tierChip,
   tierSentence,
   tokenFromLocation,
@@ -45,6 +51,8 @@ const KINDS = [
   "coverage_changed",
   "coverage_unchecked",
   "verdict",
+  "ownership_changed",
+  "ownership_unchecked",
 ];
 
 function entry(over: Partial<WatchEntry> = {}): WatchEntry {
@@ -543,5 +551,186 @@ describe("materiality (pKYC stage A)", () => {
     expect(triggerSentence(entry)).toBe(
       "Nobody has opened or polled this watchlist for 90 days. It will be deleted, with its watches and this log, after 2026-11-17 unless it is opened or its feed is read before then. Opening it keeps it.",
     );
+  });
+
+  // ---- pKYC stage D: the review record ---------------------------------------
+
+  it("words a decision, picks its tone, and never calls it a finding", async () => {
+    const { decisionChip, decisionSentence, DECISION_STATUSES, DECISION_LABELS, EVIDENCE_WORDS } = await import("./watchlist");
+    expect(DECISION_STATUSES).toEqual(["reviewed_no_action", "rechecked", "escalated"]);
+    expect(decisionChip(null)).toBeNull();
+    const d = {
+      id: 1, entry_id: 4, lei: "X", status: "reviewed_no_action", note: null, saved_report_id: null,
+      evidence_kind: null, decided_at: "2026-10-18T12:00:00+00:00", report: null,
+    } as const;
+    expect(decisionChip(d)).toEqual({ label: DECISION_LABELS.reviewed_no_action, tone: "ok" });
+    expect(decisionChip({ ...d, status: "rechecked" })?.tone).toBe("context");
+    expect(decisionChip({ ...d, status: "escalated" })?.tone).toBe("warn");
+    for (const s of DECISION_STATUSES) expect(decisionChip({ ...d, status: s })?.tone).not.toBe("risk");
+    expect(decisionSentence(d)).toBe("Decision: reviewed, no action — 2026-10-18.");
+    expect(
+      decisionSentence({
+        ...d, status: "escalated", note: "Sent to compliance.", saved_report_id: "r1", evidence_kind: "entry_run",
+        report: { report_id: "r1", report_path: "/report/r1", available: false },
+      }),
+    ).toBe(
+      `Decision: escalated — 2026-10-18; note: Sent to compliance.; evidence: saved report r1 (${EVIDENCE_WORDS.entry_run}) — ${EVIDENCE_WORDS.expired}.`,
+    );
+  });
+
+  it("filters to material entries without a decision, words the evidence option by whether the run is held, and sums a watch's history", async () => {
+    const { filterEntries, hiddenByFilterSentence, isUndecidedMaterial, evidenceOption, reviewHistoryLine, undecidedSentence, filterFromLocation, FILTER_LABELS } =
+      await import("./watchlist");
+    const decided = { id: 1, status: "escalated", decided_at: "2026-10-18T12:00:00+00:00" };
+    const entries = [
+      { id: 1, materiality: "recheck", decision: null },
+      { id: 2, materiality: "escalate", decision: decided },
+      { id: 3, materiality: "note", decision: null },
+    ] as unknown as import("./watchlist").WatchEntry[];
+    expect(entries.map(isUndecidedMaterial)).toEqual([true, false, false]);
+    expect(filterEntries(entries, "needs_review").map((e) => e.id)).toEqual([1]);
+    expect(hiddenByFilterSentence(3, 1, "needs_review")).toBe("2 entries are hidden: note-only, or already decided on.");
+    expect(hiddenByFilterSentence(3, 2, "material")).toContain("note-only");
+    expect(filterFromLocation("?show=needs_review")).toBe("needs_review");
+    expect(FILTER_LABELS.needs_review).toBe("Needs review");
+    expect(evidenceOption({ run_held: true } as never).kind).toBe("entry_run");
+    expect(evidenceOption({ run_held: false } as never).kind).toBe("recheck");
+    expect(evidenceOption({} as never).kind).toBe("recheck");
+    expect(reviewHistoryLine(undefined)).toBeNull();
+    expect(reviewHistoryLine([])).toBeNull();
+    expect(
+      reviewHistoryLine([
+        { entry_id: 1, status: "reviewed_no_action", decided_at: "2026-10-01T00:00:00Z", saved_report_id: null, evidence_kind: null },
+        { entry_id: 2, status: "escalated", decided_at: "2026-10-18T12:00:00Z", saved_report_id: "r", evidence_kind: "recheck" },
+      ]),
+    ).toBe("2 decisions recorded; latest escalated on 2026-10-18.");
+    expect(undecidedSentence(0)).toBeNull();
+    expect(undecidedSentence(1)).toBe("1 material entry has no decision recorded.");
+    expect(undecidedSentence(3)).toBe("3 material entries have no decision recorded.");
+  });
+});
+
+describe("ownership_changed (pKYC stage E, Route 2)", () => {
+  const change = (over: Partial<Change>): Change =>
+    ({ kind: "ownership_changed", change: "added", party: "person", interests: ["shareholding"], bo: false, source_id: "companies_house", ...over }) as Change;
+
+  it("words bands as the feed does", () => {
+    expect(bandWords([25, 50, false, false])).toBe("25–50%");
+    expect(bandWords([25, 50, true, false])).toBe("over 25% to 50%");
+    expect(bandWords([0, 25, false, true])).toBe("0% to under 25%");
+    expect(bandWords([33.333, 33.333, false, false])).toBe("exactly 33.333%");
+    expect(bandWords([50, null, true, false])).toBe("more than 50%");
+    expect(bandWords([null, 25, false, true])).toBe("under 25%");
+    expect(bandWords(null)).toBe("an unstated share");
+  });
+
+  it("words each change without a name", () => {
+    expect(ownershipChangeSentence(change({ change: "ended", bands_before: [[25, 50, false, false]], bands_after: null }), "UK Companies House")).toBe(
+      "A person's shareholding of 25–50% ended (UK Companies House).",
+    );
+    expect(
+      ownershipChangeSentence(change({ party: "entity", interests: ["shareholding", "votingRights"], bands_after: [[75, 100, false, false]] }), "UK Companies House"),
+    ).toBe("A company's shareholding and voting rights of 75–100% added (UK Companies House).");
+    expect(
+      ownershipChangeSentence(change({ change: "changed", bo: true, bands_before: [[25, 50, false, false]], bands_after: [[50, 75, false, false]] }), "e-Business Register"),
+    ).toBe("A registered beneficial owner's shareholding changed from 25–50% to 50–75% (e-Business Register).");
+    expect(ownershipChangeSentence(change({ party: "entity", interests: ["appointmentOfBoard"], bands_after: [] }), "UK Companies House")).toBe(
+      "A company's right to appoint the board added (UK Companies House).",
+    );
+    expect(ownershipChangeSentence({ kind: "ownership_unchecked", source_id: "opensanctions", parties: 2 } as Change, "OpenSanctions")).toBe(
+      "2 parties' holdings could not be re-checked — OpenSanctions did not answer.",
+    );
+    expect(describeChange(change({ bands_after: [[25, 50, true, false]] }), (id) => id)).toBe(
+      "A person's shareholding of over 25% to 50% added (companies_house).",
+    );
+  });
+
+  it("lists the parties that could not be compared, once per source, and headlines the change", () => {
+    const changes = [change({ uncompared: 3 }), change({ change: "ended", uncompared: 3 }), change({ source_id: "ariregister", uncompared: 1 })];
+    expect(uncomparedLines(changes, (id) => id)).toEqual([
+      "1 party could not be compared (ariregister publishes no person key).",
+      "3 parties could not be compared (companies_house publishes no person key).",
+    ]);
+    expect(uncomparedLines([change({})])).toEqual([]);
+    const e = { id: 1, lei: "X", legal_name: "Vosper Ltd", created_at: "", tier: "gleif" as const, trigger: {}, changes, checked: [], degraded: [] } as WatchEntry;
+    expect(entryHeadline(e)).toBe("Vosper Ltd: ownership changed");
+  });
+});
+
+describe("PSC tier entries (Companies House stream, pKYC stage E)", () => {
+  const entry = (trigger: Record<string, unknown>, changes: WatchEntry["changes"] = []) =>
+    ({
+      id: 5, lei: "213800AEMQXSVBTVVU37", legal_name: "EASY POWER", created_at: "2026-10-19T12:00:00Z",
+      tier: "psc" as const, trigger, changes, checked: [], degraded: [],
+    }) as WatchEntry;
+
+  it("says how many filings, when and on which company number — never who", () => {
+    expect(
+      triggerSentence(entry({ company_number: "02999029", events: 2, last_at: "2026-10-19T09:15:00" })),
+    ).toBe(
+      "Companies House recorded 2 changes to this company's people with significant control on 2026-10-19 (company number 02999029).",
+    );
+    expect(triggerSentence(entry({ events: 1 }))).toBe(
+      "Companies House recorded 1 change to this company's people with significant control.",
+    );
+  });
+
+  it("words the counts by kind and outcome as the feed does", () => {
+    expect(
+      pscChangeLines({
+        kinds: {
+          individual: { added: 1, changed: 2, ceased: 1, deleted: 1 },
+          corporate: { added: 1 },
+          legal_person: { ceased: 2 },
+          withheld: { changed: 1 },
+          statement: { added: 1 },
+          unknown: { deleted: 3 },
+        },
+      }),
+    ).toEqual([
+      "5 persons: 1 added, 2 changed, 1 ceased, 1 removed.",
+      "1 corporate entity: 1 added.",
+      "2 legal persons: 2 ceased.",
+      "1 person whose details are withheld: 1 changed.",
+      "1 PSC statement: 1 added.",
+      "3 PSC items: 3 removed.",
+    ]);
+    expect(pscChangeLines(undefined)).toEqual([]);
+  });
+
+  it("is news without a snapshot difference, and has its own chip", () => {
+    expect(entryHeadline(entry({}))).toBe("EASY POWER: Companies House PSC register changed");
+    expect(tierChip("psc")).toEqual({ label: "PSC filing", tone: "accent" });
+  });
+
+  it("explains a stream gap as a catch-up of every watched UK company", () => {
+    const gap = { ...entry({ reason: "register_gap", register: "companies_house", before: "2026-10-19T09:00:00Z" }), tier: "catch_up" as const };
+    expect(triggerSentence(gap)).toBe(
+      "The Companies House PSC stream was rejoined live at 2026-10-19T09:00:00Z, so filings before that were not seen; every watched UK company was re-checked.",
+    );
+  });
+
+  it("says on the watch row what follows its register, or why nothing does (Q5)", () => {
+    expect(registerTierLine({ followed: true, register: "companies_house", reason: null, words: "Companies House PSC stream, live" })).toBe(
+      "Register changes: followed (Companies House PSC stream, live).",
+    );
+    expect(
+      registerTierLine({ followed: false, register: null, reason: "no_register_number", words: "GLEIF files no register number for this company" }),
+    ).toBe("Register changes: not followed — GLEIF files no register number for this company.");
+    expect(registerTierLine(undefined)).toBeNull();
+  });
+
+  it("names the stream in the tier line and keeps the never-polled sentence", () => {
+    const s = tierSentence({
+      gleif: { available: false, watermark: null, refresh_enabled: false, last_applied_at: null, last_delta: null, rows_applied: {}, record_count: null },
+      opensanctions: { available: false, last_version: null, last_checked_at: null },
+      psc: { available: true, connected: false, last_published_at: "2026-10-19T09:14:59", gap: false, matched: 1, queued: 1, last_match_at: null,
+        gaps: [{ since: "2026-10-19T08:00:00Z", detected_at: "2026-10-19T08:00:01Z" }] },
+      worker: { enabled: true, interval_s: 300 },
+    });
+    expect(s).toContain("Companies House: the register's own PSC stream is read as it publishes (not connected just now), last at 2026-10-19 09:14 UTC");
+    expect(s).toContain("counts only, never a name");
+    expect(s).toContain("On 2026-10-19 the stream was rejoined live");
+    expect(s).toContain("No other national register is polled");
   });
 });

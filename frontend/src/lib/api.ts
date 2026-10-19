@@ -8,7 +8,14 @@
 import type { IntegratedOwnershipPayload } from "./integratedOwnership";
 import { trackEvent } from "./analytics";
 import type { Liveness, SourceLiveness } from "../components/cdd/LivenessBadge";
-import type { Watch, WatchContextPatch, WatchlistPayload } from "./watchlist";
+import type {
+  DecisionStatus,
+  EvidenceKind,
+  Watch,
+  WatchContextPatch,
+  WatchDecision,
+  WatchlistPayload,
+} from "./watchlist";
 import type { RegisterRecord } from "./registerLinks";
 
 export type { Liveness, SourceLiveness };
@@ -2315,6 +2322,9 @@ export async function fetchBatchExport(
  *  network or server fault. */
 export class WatchError extends Error {
   readonly status: number;
+  /** The `X-OpenCheck-Refusal` code when a saved-report step refused
+   *  (`run_not_held`, `client_quota`, …); null otherwise. */
+  refusal: string | null = null;
   constructor(message: string, status: number) {
     super(message);
     this.name = "WatchError";
@@ -2391,8 +2401,11 @@ export async function setWatchContext(
   return (await res.json()) as WatchlistPayload & { watch: Watch };
 }
 
-async function watchContextError(res: Response): Promise<WatchError> {
-  let detail = `Could not save the context (HTTP ${res.status}).`;
+async function watchContextError(
+  res: Response,
+  fallback = `Could not save the context (HTTP ${res.status}).`,
+): Promise<WatchError> {
+  let detail = fallback;
   try {
     const body = (await res.json()) as { detail?: unknown };
     if (typeof body?.detail === "string") detail = body.detail;
@@ -2423,6 +2436,37 @@ export async function recheckWatch(
   });
   if (!res.ok) throw await watchError(res, `The re-check could not run (HTTP ${res.status}).`);
   return (await res.json()) as WatchlistPayload & { result: RecheckResult };
+}
+
+/** pKYC stage D: record a decision on a log entry, optionally pinning a
+ *  saved report as the evidence — the entry's own run (`entry_run`, while
+ *  the server holds it) or a fresh re-check (`recheck`, which runs a lookup
+ *  and so goes through the heavy-tier route). A 409 `run_not_held` means the
+ *  entry's run has aged out: offer the fresh re-check instead. A refused save
+ *  records no decision. */
+export async function recordWatchDecision(
+  token: string,
+  entryId: number,
+  body: { status: DecisionStatus; note?: string | null; evidence?: EvidenceKind | null },
+): Promise<WatchlistPayload & { decision: WatchDecision }> {
+  const base = `${BASE_URL}/watch/${encodeURIComponent(token)}/entries/${entryId}/decisions`;
+  const url = body.evidence === "recheck" ? `${base}/recheck` : base;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await watchContextError(res, `Could not record the decision (HTTP ${res.status}).`);
+    err.refusal = res.headers.get("x-opencheck-refusal");
+    throw err;
+  }
+  return (await res.json()) as WatchlistPayload & { decision: WatchDecision };
+}
+
+/** The review record's URL — a Markdown file the reader can download. */
+export function watchRecordUrl(token: string): string {
+  return `${BASE_URL}/watch/${encodeURIComponent(token)}/record.md`;
 }
 
 // ---------------------------------------------------------------------

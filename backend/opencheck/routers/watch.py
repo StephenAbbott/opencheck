@@ -32,7 +32,10 @@ from pydantic import BaseModel, Field
 
 from .. import watchlist as wl
 from .. import watchlist_context as context_module
+from .. import watchlist_decisions as decisions_module
 from .. import watchlist_materiality as materiality
+from .. import watchlist_ownership as ownership_module
+from .. import watchlist_psc as psc_module
 from .. import watchlist_review as review_module
 from ..bods import gleif_events as _gleif_events
 from ..config import get_settings
@@ -69,6 +72,20 @@ class AddItem(BaseModel):
 
 class RecheckItem(BaseModel):
     lei: str = Field(..., min_length=20, max_length=40)
+
+
+class Decision(BaseModel):
+    """pKYC stage D: a decision on one log entry. ``evidence`` asks for a
+    saved report to be pinned — ``entry_run`` (the re-run that produced the
+    entry, while the server still holds it) or ``recheck`` (a fresh re-run
+    made now and saved); ``null`` or absent pins nothing. Validation is the
+    module's (:mod:`opencheck.watchlist_decisions`)."""
+
+    model_config = {"extra": "forbid"}
+
+    status: str = Field(..., max_length=40)
+    note: str | None = Field(default=None, max_length=2000)
+    evidence: str | None = Field(default=None, max_length=20)
 
 
 # Phase 260: every store call below runs on a worker thread. The store opens a
@@ -129,17 +146,21 @@ def _public_api_base(request: Request) -> str:
 
 
 def _tiers(
-    gaps: list[dict[str, Any]] | None = None, register_gaps: list[dict[str, Any]] | None = None
+    gaps: list[dict[str, Any]] | None = None,
+    register_gaps: list[dict[str, Any]] | None = None,
+    psc_gaps: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """What the three tiers are doing — for the page's honesty line."""
+    """What the tiers are doing — for the page's honesty line."""
     from .. import entity_pages as ep
-    from .. import mirror_refresh
+    from .. import mirror_refresh, psc_stream
     from ..sources import ariregister as ar
 
     try:
         ee_cut = ar.read_meta().get("cut") or None
     except Exception:  # noqa: BLE001 — no index is a state
         ee_cut = None
+    stream = psc_stream.state()
+    watcher = wl.state()
 
     mirror = ep.get_store()
     watermark = mirror.watermark() if mirror is not None else None
@@ -173,6 +194,19 @@ def _tiers(
             "waiting": bool(wl.state().get("ee_waiting")),
             "gaps": register_gaps or [],
         },
+        # pKYC stage E, Route 1: the Companies House PSC stream — whether the
+        # consumer is on, connected and behind (its own counters are on
+        # /pscgraph), and what the watchlist hook has done with it.
+        "psc": {
+            "available": bool(stream.get("enabled")),
+            "connected": bool(stream.get("connected")),
+            "last_published_at": stream.get("last_published_at"),
+            "gap": bool(stream.get("gap")),
+            "matched": watcher.get("psc_matched", 0),
+            "queued": watcher.get("psc_queued", 0),
+            "last_match_at": watcher.get("psc_last_match_at"),
+            "gaps": psc_gaps or [],
+        },
         "worker": {
             "enabled": wl.state().get("enabled", False),
             "interval_s": settings.watchlist_interval_s,
@@ -197,6 +231,9 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "degraded_sources": [d.get("source_id") for d in snap.get("degraded_sources") or []],
         }
         _enrich_context(w)
+        # pKYC stage E (Q5): which register feed follows this company's own
+        # changes, or why none does — a statement about OpenCheck's feeds.
+        w["register_tier"] = psc_module.register_tier_of({**w, "snapshot": snap})
     counts = store.counts(th)
     # pKYC stage C: when OpenCheck last fully looked at each company, and
     # how fresh that look was — computed on read, never stored.
@@ -206,6 +243,16 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             {**w, "snapshot": snap_by_lei.get(w["lei"]) or {}}, due_days=due_days, label=_source_words
         )
     due = sum(1 for w in watches if w["review"]["due"])
+    # pKYC stage D: each entry's current decision and history, and the list's
+    # count of material entries nobody has decided on.
+    entries = _attach_decisions(store, th, store.entries(th))
+    all_decisions = store.decisions(th)
+    for w in watches:
+        w["review_history"] = [
+            {k: d[k] for k in ("entry_id", "status", "decided_at", "saved_report_id", "evidence_kind")}
+            for d in all_decisions
+            if d.get("lei") == w["lei"]
+        ]
     return {
         "watches": watches,
         "review": {
@@ -214,7 +261,12 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "due_days": due_days,
             "sentence": review_module.list_due_sentence(due, len(watches), due_days),
         },
-        "entries": store.entries(th),
+        "entries": entries,
+        "decisions": {
+            "undecided_material": sum(1 for e in entries if decisions_module.is_undecided_material(e)),
+            "total": len(all_decisions),
+            "evidence_available": _saved_reports_on(),
+        },
         "caps": {
             "per_list": store.caps.max_per_list,
             "total": store.caps.max_total,
@@ -222,7 +274,7 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "total_watched": counts["total"],
         },
         "feed_url": f"{_public_api_base(request)}/watch/{token}.atom",
-        "tiers": _tiers(wl.os_gaps(store)[-3:], wl.ariregister_gaps(store)[-3:]),
+        "tiers": _tiers(wl.os_gaps(store)[-3:], wl.ariregister_gaps(store)[-3:], psc_module.psc_gaps(store)[-3:]),
     }
 
 
@@ -231,6 +283,57 @@ def _source_words(source_id: str) -> str:
     from ..bods.statements import SOURCE_NAMES
 
     return SOURCE_NAMES.get(source_id, source_id)
+
+
+def _saved_reports_on() -> bool:
+    from .. import saved_reports as sr
+
+    return sr.get_store() is not None
+
+
+def _report_block(report_id: str | None, rstore: Any) -> dict[str, Any] | None:
+    """What the page says about a pinned saved report: its id and path, and
+    whether it still exists (a report expires; the decision does not)."""
+    if not report_id:
+        return None
+    block: dict[str, Any] = {
+        "report_id": report_id,
+        "report_path": f"/report/{report_id}",
+        "available": False,
+    }
+    meta = rstore.meta(report_id) if rstore is not None else None
+    if meta:
+        block.update(
+            available=True,
+            saved_at=meta.get("saved_at"),
+            expires_at=meta.get("expires_at"),
+            content_hash=meta.get("content_hash"),
+        )
+    return block
+
+
+def _with_report(decision: dict[str, Any], rstore: Any) -> dict[str, Any]:
+    return {**decision, "report": _report_block(decision.get("saved_report_id"), rstore)}
+
+
+def _attach_decisions(
+    store: wl.WatchlistStore, th: str, entries: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """pKYC stage D: put each entry's latest decision (``decision``), the
+    count and the full history on it. Runs on a thread."""
+    from .. import saved_reports as sr
+
+    rstore = sr.get_store()
+    by_entry: dict[int, list[dict[str, Any]]] = {}
+    for d in store.decisions(th):
+        by_entry.setdefault(int(d["entry_id"]), []).append(d)
+    for e in entries:
+        history = [_with_report(d, rstore) for d in by_entry.get(int(e["id"]), [])]
+        e["decision"] = history[-1] if history else None
+        e["decision_count"] = len(history)
+        e["decision_history"] = history
+        e["run_held"] = decisions_module.run_still_held(e)
+    return entries
 
 
 def _enrich_context(w: dict[str, Any]) -> None:
@@ -366,7 +469,7 @@ async def add_item(request: Request, response: Response, body: AddItem) -> dict[
 async def feed(request: Request, token: str) -> Response:
     store = await _db(_store)
     th = await _db(_list_or_404, store, token)
-    entries = await _db(store.entries, th, limit=50)
+    entries = await _db(lambda: _attach_decisions(store, th, store.entries(th, limit=50)))
     watches = await _db(store.watches, th)
     due_days = get_settings().watchlist_review_days
     review_due = sum(1 for w in watches if review_module.review_of(w, due_days=due_days)["due"])
@@ -448,6 +551,167 @@ async def recheck(request: Request, response: Response, token: str, body: Rechec
     return {"result": result, **payload}
 
 
+def _decision_422(exc: decisions_module.DecisionError) -> HTTPException:
+    return HTTPException(status_code=422, detail={"field": exc.field, "message": exc.message})
+
+
+def _save_evidence(lei: str, run_completed_at: str | None, deepen_top: int | None) -> dict[str, Any]:
+    """Save the held run as a report — the saved-reports route's own path
+    (quota checked before, spent after; every refusal is its 4xx and writes
+    nothing). Runs on a thread."""
+    from .. import saved_reports as sr
+    from .saved_reports import _refuse
+
+    rstore = sr.get_store()
+    if rstore is None:
+        raise HTTPException(
+            status_code=503, detail="Saved reports are not enabled on this instance, so no evidence can be kept."
+        )
+    if not run_completed_at:
+        raise HTTPException(
+            status_code=409,
+            detail=decisions_module.EVIDENCE_WORDS["run_not_held"],
+            headers={"X-OpenCheck-Refusal": sr.RunNotHeldError.code},
+        )
+    try:
+        sr.check_client_quota()
+        saved = sr.save_from_replay(
+            rstore,
+            lei=lei,
+            run_completed_at=run_completed_at,
+            deepen_top=int(deepen_top if deepen_top is not None else wl.RERUN_DEEPEN_TOP),
+        )
+        sr.spend_client_quota()
+    except sr.RunNotHeldError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=decisions_module.EVIDENCE_WORDS["run_not_held"],
+            headers={"X-OpenCheck-Refusal": exc.code},
+        ) from exc
+    except sr.SavedReportError as exc:
+        raise _refuse(exc) from exc
+    saved.pop("manage_token", None)
+    return saved
+
+
+async def _record_decision(
+    request: Request, token: str, entry_id: int, body: Decision
+) -> dict[str, Any]:
+    store = await _db(_store)
+    th = await _db(_list_or_404, store, token)
+    try:
+        status = decisions_module.validate_status(body.status)
+        note = decisions_module.validate_note(body.note)
+        evidence = decisions_module.validate_evidence(body.evidence)
+    except decisions_module.DecisionError as exc:
+        raise _decision_422(exc) from exc
+    entry = await _db(store.entry, th, entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="That entry is not in this watchlist's log.")
+    if entry["tier"] == wl.TIER_REVIEW and evidence:
+        raise _decision_422(
+            decisions_module.DecisionError("evidence", "A note about the list has no company to save a report of.")
+        )
+    report_id: str | None = None
+    saved: dict[str, Any] | None = None
+    if evidence == decisions_module.EVIDENCE_ENTRY_RUN:
+        saved = await _db(_save_evidence, entry["lei"], entry.get("run_completed_at"), entry.get("deepen_top"))
+    elif evidence == decisions_module.EVIDENCE_RECHECK:
+        if await _db(store.get_watch, th, entry["lei"]) is None:
+            raise HTTPException(status_code=404, detail="That company is no longer on this watchlist.")
+        result = await wl.rerun(
+            entry["lei"],
+            wl.TIER_MANUAL,
+            {"tier": wl.TIER_MANUAL, "for_decision_on": entry_id},
+            only_token_hash=th,
+        )
+        if result.get("error"):
+            raise HTTPException(
+                status_code=503, detail="The re-check could not run; no decision was recorded."
+            )
+        saved = await _db(_save_evidence, entry["lei"], result.get("run_completed_at"), result.get("deepen_top"))
+    if saved:
+        report_id = saved["report_id"]
+    decision = await _db(
+        store.add_decision,
+        th,
+        entry_id,
+        lei=entry.get("lei"),
+        status=status,
+        note=note,
+        saved_report_id=report_id,
+        evidence_kind=evidence if report_id else None,
+    )
+    payload = await _db(_list_payload, store, th, token, request)
+    from .. import saved_reports as sr
+
+    return {"decision": _with_report(decision, sr.get_store()), **payload}
+
+
+@router.post("/watch/{token}/entries/{entry_id}/decisions", status_code=201)
+@limiter.limit(default_tier)
+async def record_decision(
+    request: Request, response: Response, token: str, entry_id: int, body: Decision
+) -> dict[str, Any]:
+    """pKYC stage D: record a decision on a log entry — reviewed with no
+    action, re-checked, or escalated — with an optional note and, on request,
+    a saved report pinned as the evidence reviewed. Append-only: a later
+    decision is a new row and the history is kept. A request that asks for a
+    fresh re-check as evidence is on the heavy tier (below); this one never
+    runs a pipeline."""
+    if body.evidence == decisions_module.EVIDENCE_RECHECK:
+        # The re-check costs a pipeline run: it goes through the heavy-tier
+        # route, as /recheck does. Refused here rather than quietly run.
+        raise HTTPException(
+            status_code=400,
+            detail="A fresh re-check as evidence is recorded through …/decisions/recheck.",
+        )
+    return await _record_decision(request, token, entry_id, body)
+
+
+@router.post("/watch/{token}/entries/{entry_id}/decisions/recheck", status_code=201)
+@limiter.limit(heavy_tier)
+async def record_decision_with_recheck(
+    request: Request, response: Response, token: str, entry_id: int, body: Decision
+) -> dict[str, Any]:
+    """The same decision, with a fresh re-run of the company saved as the
+    evidence. A deliberate human action that runs a pipeline, so it is on the
+    heavy tier like ``/recheck``. The re-run writes its own entry if it finds
+    a difference; the decision is recorded on the entry asked about."""
+    if body.evidence != decisions_module.EVIDENCE_RECHECK:
+        raise HTTPException(status_code=400, detail='This route records a decision with evidence "recheck".')
+    return await _record_decision(request, token, entry_id, body)
+
+
+@router.get("/watch/{token}/record.md")
+@limiter.limit(default_tier)
+async def review_record(request: Request, token: str) -> Response:
+    """pKYC stage D: the list's review record as Markdown — every decision,
+    with the entry it answers, the note and the pinned saved report's id and
+    hash. Reads no clock and runs no pipeline."""
+    store = await _db(_store)
+    th = await _db(_list_or_404, store, token)
+
+    def _build() -> str:
+        from .. import saved_reports as sr
+
+        rstore = sr.get_store()
+        return decisions_module.record_markdown(
+            watches=store.watches(th),
+            entries=store.entries(th, limit=100000),
+            decisions=[_with_report(d, rstore) for d in store.decisions(th)],
+            headline=_entry_headline,
+            list_label=f"OpenCheck watchlist {th[:8]}",
+        )
+
+    text = await _db(_build)
+    return Response(
+        content=text,
+        media_type="text/markdown; charset=utf-8",
+        headers={"Cache-Control": "private, no-store", "X-Robots-Tag": "noindex"},
+    )
+
+
 @router.get("/watchstats")
 async def watch_stats() -> JSONResponse:
     """The watcher's aggregate state — deltas seen, watched LEIs a delta
@@ -463,6 +727,15 @@ async def watch_stats() -> JSONResponse:
         "watches_review_due": 0,
         "lists_expiring": 0,
         "lists_deleted_total": 0,
+        "decisions_by_status": dict.fromkeys(decisions_module.STATUSES, 0),
+        "decisions_with_evidence": 0,
+        "material_undecided": 0,
+        "ownership_changes_by_change": {"added": 0, "ended": 0, "changed": 0},
+        "ownership_changes_escalated": 0,
+        "ownership_unchecked": 0,
+        "ownership_uncompared_by_source": {},
+        "baselines_with_ownership_digest": 0,
+        "watched_by_registration_authority": {},
     }
     store = await _db(wl.get_store)
     if store is not None:
@@ -484,6 +757,17 @@ async def watch_stats() -> JSONResponse:
                 # pKYC stage C: watches due a review, lists under an expiry
                 # notice, lists the rule has deleted. Counts only.
                 **store.review_counts(due_days=get_settings().watchlist_review_days),
+                # pKYC stage D: decisions by status, how many pinned a saved
+                # report, and material entries nobody has decided on. Counts
+                # only — never a note, a report id or an LEI.
+                **store.decision_counts(),
+                # pKYC stage E, Route 2: the ownership diff's counts. Never a
+                # key, a band or an LEI.
+                **store.ownership_counts(),
+                # pKYC stage E: watched LEIs by the registration authority
+                # GLEIF files them under — measurement 1 on the scoping page.
+                # RA codes and counts only.
+                "watched_by_registration_authority": psc_module.watched_by_registration_authority(store),
             }
 
         counts = await _db(_counts)
@@ -524,6 +808,7 @@ TIER_SENTENCE = {
     wl.TIER_CATCHUP: "Re-checked to catch up on OpenSanctions versions the watcher could not read",
     wl.TIER_REGISTER: "The Estonian e-Business Register recorded a change to this company",
     wl.TIER_REVIEW: review_module.TIER_REVIEW_SENTENCE,
+    wl.TIER_PSC: "Companies House recorded a change to this company's people with significant control",
 }
 
 
@@ -699,6 +984,8 @@ def _describe(change: dict[str, Any]) -> str:
         return f"Coverage fell to {n.get(field)} of {n.get('applicable')} {noun} because sources could not be reached — not a fact about the company."
     if k == "verdict":
         return f"Verdict: {new}"
+    if k in ("ownership_changed", "ownership_unchecked"):
+        return ownership_module.change_sentence(change, _source_words(str(change.get("source_id") or "")))
     return f"{k}."
 
 
@@ -723,6 +1010,11 @@ def _change_tier_words(change: dict[str, Any]) -> str:
 
 def _catch_up_sentence(trig: dict[str, Any]) -> str:
     """Why a catch-up re-run happened, in the feed's words."""
+    if trig.get("reason") == "register_gap" and trig.get("register") == psc_module.REGISTER_COMPANIES_HOUSE:
+        return (
+            f"The Companies House PSC stream was rejoined live at {trig.get('before')}, so filings before that "
+            "were not seen; every watched UK company was re-checked."
+        )
     if trig.get("reason") == "register_gap":
         return (
             f"The Estonian e-Business Register's changes between {trig.get('after')} and {trig.get('before')} "
@@ -759,6 +1051,8 @@ def _entry_headline(entry: dict[str, Any]) -> str:
     changes = entry.get("changes") or []
     if not changes and entry["tier"] == wl.TIER_REGISTER:
         return f"{name}: Estonian register record changed"
+    if not changes and entry["tier"] == wl.TIER_PSC:
+        return f"{name}: Companies House PSC register changed"
     if not changes:
         return f"{name}: {TIER_SENTENCE.get(entry['tier'], entry['tier'])}; the re-run found no difference"
     kinds = [c.get("kind") for c in changes]
@@ -768,6 +1062,8 @@ def _entry_headline(entry: dict[str, Any]) -> str:
         head = "register status changed"
     elif any(k == "signal_new" for k in kinds):
         head = "new risk signal"
+    elif any(k == "ownership_changed" for k in kinds):
+        head = "ownership changed"
     elif all(
         c.get("field") == "direct_children" for c in changes if c.get("kind") == "gleif_field"
     ) and any(k == "gleif_field" for k in kinds):
@@ -846,10 +1142,13 @@ def _entry_content(entry: dict[str, Any]) -> str:
     if entry["tier"] == wl.TIER_REGISTER:
         lines[0] = register_sentence(trig)
         lines += [" - " + line for line in wl.register_change_lines(trig.get("changes") or {})]
+    if entry["tier"] == wl.TIER_PSC:
+        lines[0] = psc_module.psc_sentence(trig)
+        lines += [" - " + line for line in psc_module.psc_change_lines(trig)]
     if entry["tier"] == wl.TIER_REVIEW:
         # pKYC stage C: the expiry notice — about the list, so none of the
         # per-company lines below apply.
-        return review_module.expiry_sentence(trig)
+        return "\n".join([review_module.expiry_sentence(trig)] + _decision_lines(entry))
     tier = entry.get("materiality")
     if tier in materiality.TIERS:
         lines.append(
@@ -860,7 +1159,9 @@ def _entry_content(entry: dict[str, Any]) -> str:
     if changes:
         lines.append("What a re-run found:")
         lines += [" - " + _change_line(c) for c in changes]
-    elif entry["tier"] == wl.TIER_REGISTER:
+        # Route 2: the parties the ownership diff could not compare, per source.
+        lines += [" - " + line for line in ownership_module.uncompared_sentence(changes, _source_words)]
+    elif entry["tier"] in (wl.TIER_REGISTER, wl.TIER_PSC):
         lines.append("A full re-run found nothing else that differs from the last check.")
     else:
         lines.append("A full re-run found no difference from the last check.")
@@ -881,7 +1182,22 @@ def _entry_content(entry: dict[str, Any]) -> str:
             + ", ".join(sorted({d.get("source_id") for d in degraded if d.get("source_id")}))
             + " — absence of a finding there is not a clean result."
         )
+    lines += _decision_lines(entry)
     return "\n".join(lines)
+
+
+def _decision_lines(entry: dict[str, Any]) -> list[str]:
+    """pKYC stage D: the entry's current decision as the content's last line
+    — "Decision: reviewed, no action — 2026-10-18; evidence: saved report …";
+    an earlier decision is counted, never repeated."""
+    decision = entry.get("decision")
+    if not decision:
+        return []
+    line = decisions_module.decision_sentence(decision)
+    earlier = int(entry.get("decision_count") or 1) - 1
+    if earlier > 0:
+        line += f" Replaces {earlier} earlier decision{'s' if earlier != 1 else ''} on this entry."
+    return [line]
 
 
 def render_atom(
@@ -928,6 +1244,12 @@ def render_atom(
             parts.append(
                 f'    <category scheme="{context_module.ATOM_SCHEME}" '
                 f'term="{context_module.ATOM_TERM_CONTRADICTED}" label="Contradicted an expectation"/>'
+            )
+        if e.get("decision"):
+            status = e["decision"]["status"]
+            parts.append(
+                f'    <category scheme="{decisions_module.ATOM_SCHEME}" term="{escape(status, {chr(34): "&quot;"})}" '
+                f'label="{escape(decisions_module.STATUS_LABELS.get(status, status), {chr(34): "&quot;"})}"/>'
             )
         parts += [
             f'    <content type="text">{escape(_entry_content(e))}</content>',

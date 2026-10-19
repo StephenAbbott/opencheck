@@ -263,11 +263,20 @@ licence headline, and tells the agent the report is not re-checked. No
 summary is saved through MCP (none is generated there). `TOOL_NAMES` is eight;
 the server instructions and `opencheck_lookup`'s docstring name the tool.
 
+**The watchlist (pKYC stage D).** A decision on a watchlist entry can pin a
+saved report as the evidence reviewed — the entry's own re-run while the
+server still holds it, or a fresh re-check saved in the same action. The
+watchlist's re-run lands in the replay cache like any other (every entry
+records its `run_completed_at` and `deepen_top`), and the save is the same
+`save_from_replay` behind the same per-client quota: a run no longer held is
+the same 409 `run_not_held`, and a refused save records no decision. Opt-in
+only, as everywhere: no re-run is saved because it happened. The feed's entry
+names the pinned report in its last line. See `docs/watchlist.md` § *The review
+record*.
+
 ## Deferred (potential follow-ups)
 
 - "Save every row" on `/batch` — a saved batch (a list of saved report ids and
   one zip hash).
-- "Save what this re-run found" on a watchlist entry, and feed entries linking
-  to a saved report.
 - Freezing the Background check, Subsidiaries, History and ESG tabs.
 - A compare view of two saved reports of the same LEI.

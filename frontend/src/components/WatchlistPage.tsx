@@ -26,15 +26,38 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getWatchlist, isUnknownWatchlist, recheckWatch, removeWatch, setWatchContext } from "../lib/api";
+import {
+  getWatchlist,
+  isUnknownWatchlist,
+  recheckWatch,
+  recordWatchDecision,
+  removeWatch,
+  setWatchContext,
+  WatchError,
+  watchRecordUrl,
+} from "../lib/api";
 import { trackEvent } from "../lib/analytics";
 import { sourceLabel } from "../lib/vocab";
 import {
   checkedSentence,
   CONTEXT_FIELD_LABELS,
   CONTEXT_FORM_NOTE,
+  DECISION_LABELS,
+  DECISION_MEANINGS,
+  DECISION_NOTE_MAX,
+  DECISION_STATUSES,
+  decisionChip,
+  decisionSentence,
   describeChange,
   disagreementSentence,
+  evidenceOption,
+  EVIDENCE_WORDS,
+  FILTER_LABELS,
+  registerTierLine,
+  reviewHistoryLine,
+  undecidedSentence,
+  type DecisionStatus,
+  type EvidenceKind,
   expectationSentence,
   hasContext,
   RATIONALE_MAX,
@@ -59,8 +82,10 @@ import {
   storeToken,
   tierChip,
   type ChangeLogFilter,
+  type ListDecisions,
   tierSentence,
   tokenFromLocation,
+  uncomparedLines,
   triggerSentence,
   UNKNOWN_LIST_PAGE_NOTICE,
   type Watch,
@@ -96,7 +121,7 @@ export default function WatchlistPage({
     setFilter(next);
     storeFilter(next);
     const url = new URL(window.location.href);
-    if (next === "material") url.searchParams.set("show", "material");
+    if (next !== "all") url.searchParams.set("show", next);
     else url.searchParams.delete("show");
     window.history.replaceState(null, "", url.toString());
   };
@@ -187,6 +212,30 @@ export default function WatchlistPage({
     }
   };
 
+  // pKYC stage D: a decision on an entry, with or without a saved report as
+  // evidence. The backend validates; a refusal names the field or the
+  // reason (a run no longer held) and is shown inside the entry's block.
+  const decide = async (
+    entryId: number,
+    body: { status: DecisionStatus; note?: string | null; evidence?: EvidenceKind | null },
+  ): Promise<{ error: string; refusal: string | null } | null> => {
+    if (!token) return { error: "No watchlist is open.", refusal: null };
+    setBusy(`entry-${entryId}`);
+    try {
+      const res = await recordWatchDecision(token, entryId, body);
+      trackEvent("watch_decision");
+      setData(res);
+      return null;
+    } catch (err) {
+      return {
+        error: err instanceof Error ? err.message : "Could not record the decision.",
+        refusal: err instanceof WatchError ? err.refusal : null,
+      };
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const copyFeed = () => {
     if (!data) return;
     navigator.clipboard?.writeText(data.feed_url);
@@ -196,7 +245,8 @@ export default function WatchlistPage({
 
   const allEntries = useMemo(() => (data ? sortEntries(data.entries) : []), [data]);
   const entries = useMemo(() => filterEntries(allEntries, filter), [allEntries, filter]);
-  const hiddenNote = hiddenByFilterSentence(allEntries.length, entries.length);
+  const hiddenNote = hiddenByFilterSentence(allEntries.length, entries.length, filter);
+  const undecidedNote = undecidedSentence(data?.decisions?.undecided_material ?? 0);
   const honesty = useMemo(() => tierSentence(data?.tiers ?? null), [data]);
 
   return (
@@ -305,29 +355,43 @@ export default function WatchlistPage({
 
       {data && (
         <section className="bg-white border border-oo-rule rounded-oo p-7">
-          <SectionLabel as="h2">What changed</SectionLabel>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <SectionLabel as="h2">What changed</SectionLabel>
+            {data.decisions && token && (
+              <a
+                href={watchRecordUrl(token)}
+                download="opencheck-review-record.md"
+                className="text-oo-meta text-oo-blue underline-offset-2 hover:underline"
+                data-testid="record-link"
+              >
+                Download the review record (Markdown)
+              </a>
+            )}
+          </div>
+          {undecidedNote && (
+            <p className="mt-2 text-oo-small text-oo-warn-text" data-testid="undecided-line">
+              {undecidedNote}
+            </p>
+          )}
           {allEntries.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Show">
               <span className="text-oo-meta text-oo-muted">Show:</span>
-              <Button
-                variant={filter === "all" ? "primary" : "secondary"}
-                size="sm"
-                aria-pressed={filter === "all"}
-                onClick={() => chooseFilter("all")}
-              >
-                All
-              </Button>
-              <Button
-                variant={filter === "material" ? "primary" : "secondary"}
-                size="sm"
-                aria-pressed={filter === "material"}
-                onClick={() => chooseFilter("material")}
-              >
-                Material only
-              </Button>
+              {(["all", "material", ...(data.decisions ? (["needs_review"] as const) : [])] as ChangeLogFilter[]).map(
+                (f) => (
+                  <Button
+                    key={f}
+                    variant={filter === f ? "primary" : "secondary"}
+                    size="sm"
+                    aria-pressed={filter === f}
+                    onClick={() => chooseFilter(f)}
+                  >
+                    {FILTER_LABELS[f]}
+                  </Button>
+                ),
+              )}
               <span className="text-oo-meta text-oo-muted">
                 Every entry carries a tier — {MATERIALITY_TIERS.map((t) => MATERIALITY_LABELS[t]).join(" · ")}.
-                Material = the last two.
+                Material = the last two{data.decisions ? "; needs review = material with no decision recorded" : ""}.
               </span>
             </div>
           )}
@@ -344,13 +408,22 @@ export default function WatchlistPage({
             </p>
           ) : entries.length === 0 ? (
             <p className="mt-3 text-oo-small text-oo-muted" data-testid="log-all-note">
-              Every entry so far is note only — recorded for the history, nothing to act on by itself.
+              {filter === "needs_review"
+                ? "Every material entry has a decision recorded."
+                : "Every entry so far is note only — recorded for the history, nothing to act on by itself."}
             </p>
           ) : (
             <ol className="mt-4 space-y-5" aria-label="Change log, newest first">
               {entries.map((e) => (
                 <li key={e.id} className="rounded-oo border border-oo-rule p-4">
-                  <EntryView e={e} label={label} onOpen={onOpen} />
+                  <EntryView
+                    e={e}
+                    label={label}
+                    onOpen={onOpen}
+                    decisions={data.decisions}
+                    busy={busy === `entry-${e.id}`}
+                    onDecide={(body) => decide(e.id, body)}
+                  />
                 </li>
               ))}
             </ol>
@@ -447,6 +520,19 @@ function WatchRow({
             {w.review.sentence}
           </p>
         )}
+        {registerTierLine(w.register_tier) && (
+          <p
+            className={`mt-1 text-oo-meta ${w.register_tier?.followed ? "text-oo-muted" : "text-oo-info-text"}`}
+            data-testid="register-tier-line"
+          >
+            {registerTierLine(w.register_tier)}
+          </p>
+        )}
+        {reviewHistoryLine(w.review_history) && (
+          <p className="mt-1 text-oo-meta text-oo-muted" data-testid="review-history-line">
+            {reviewHistoryLine(w.review_history)}
+          </p>
+        )}
         {w.gleif_history && (
           <details className="mt-1 text-oo-meta text-oo-muted">
             <summary className="cursor-pointer hover:text-oo-ink">
@@ -470,19 +556,29 @@ function WatchRow({
   );
 }
 
+type DecideBody = { status: DecisionStatus; note?: string | null; evidence?: EvidenceKind | null };
+type DecideResult = { error: string; refusal: string | null } | null;
+
 function EntryView({
   e,
   label,
   onOpen,
+  decisions,
+  busy = false,
+  onDecide,
 }: {
   e: WatchEntry;
   label: (id: string) => string;
   onOpen?: (lei: string) => void;
+  decisions?: ListDecisions;
+  busy?: boolean;
+  onDecide?: (body: DecideBody) => Promise<DecideResult>;
 }) {
   const checked = checkedSentence(e.checked);
   const degraded = Array.from(new Set(e.degraded.map((d) => d.source_id))).filter(Boolean);
   const chip = tierChip(e.tier);
   const materiality = materialityChip(e.materiality);
+  const decision = decisionChip(e.decision);
   const registerLines = e.tier === "register" ? registerChangeLines(e.trigger?.changes) : [];
   return (
     <div>
@@ -508,6 +604,13 @@ function EntryView({
             <>
               <Chip tone={materiality.tone} size="sm" data-testid="materiality-chip">
                 {materiality.label}
+              </Chip>{" "}
+            </>
+          )}
+          {decision && (
+            <>
+              <Chip tone={decision.tone} size="sm" data-testid="decision-chip">
+                {decision.label}
               </Chip>{" "}
             </>
           )}
@@ -565,6 +668,12 @@ function EntryView({
               )}
             </li>
           ))}
+          {uncomparedLines(e.changes, label).map((line) => (
+            <li key={line} className="flex gap-2 text-oo-muted" data-testid="uncompared-line">
+              <span aria-hidden="true">–</span>
+              <span>{line}</span>
+            </li>
+          ))}
         </ul>
       ) : (
         e.tier !== "review" && (
@@ -585,6 +694,168 @@ function EntryView({
           </span>
         )}
       </p>
+      {decisions && onDecide && <DecisionBlock e={e} decisions={decisions} busy={busy} onDecide={onDecide} />}
+    </div>
+  );
+}
+
+/** pKYC stage D — the decision on an entry, and the controls to record one.
+ *  Closed, the block is the current decision's line (with its history behind
+ *  a disclosure) or the three buttons; open, the chosen status with a note
+ *  field and the "keep the evidence" option — worded for the entry's own run
+ *  while the server holds it, else for a fresh re-check — shown only when
+ *  this server can save reports. Append-only: "Change decision" opens the
+ *  same form and the earlier decision stays in the history. */
+function DecisionBlock({
+  e,
+  decisions,
+  busy,
+  onDecide,
+}: {
+  e: WatchEntry;
+  decisions: ListDecisions;
+  busy: boolean;
+  onDecide: (body: DecideBody) => Promise<DecideResult>;
+}) {
+  const [status, setStatus] = useState<DecisionStatus | null>(null);
+  const [note, setNote] = useState("");
+  const [keep, setKeep] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [runLost, setRunLost] = useState(false);
+  const current = e.decision ?? null;
+  const history = e.decision_history ?? [];
+  const idBase = `dec-${e.id}`;
+  const evidence = evidenceOption({ ...e, run_held: e.run_held && !runLost });
+  const canKeep = decisions.evidence_available && e.tier !== "review";
+
+  const open = (s: DecisionStatus) => {
+    setStatus(s);
+    setNote("");
+    setKeep(false);
+    setError(null);
+  };
+
+  const submit = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    if (!status) return;
+    const problem = await onDecide({
+      status,
+      note: note.trim() ? note.trim() : null,
+      evidence: keep && canKeep ? evidence.kind : null,
+    });
+    if (problem) {
+      setError(problem.error);
+      if (problem.refusal === "run_not_held") setRunLost(true);
+      return;
+    }
+    setStatus(null);
+  };
+
+  return (
+    <div className="mt-3 border-t border-oo-rule pt-3 text-oo-meta text-oo-muted" data-testid="decision-block">
+      {current && status === null && (
+        <>
+          <p className="text-oo-ink" data-testid="decision-sentence">
+            {decisionSentence(current)}
+            {current.report?.available && (
+              <>
+                {" "}
+                <a href={current.report.report_path} className="underline underline-offset-2 hover:text-oo-blue">
+                  Open the saved report
+                </a>
+              </>
+            )}
+          </p>
+          {history.length > 1 && (
+            <details className="mt-1">
+              <summary className="cursor-pointer hover:text-oo-ink">
+                {history.length - 1} earlier decision{history.length - 1 === 1 ? "" : "s"} on this entry
+              </summary>
+              <ul className="mt-1 space-y-0.5" aria-label="Earlier decisions">
+                {history.slice(0, -1).map((d) => (
+                  <li key={d.id}>{decisionSentence(d)}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          <Button variant="ghost" size="sm" className="mt-1" disabled={busy} onClick={() => open(current.status)}>
+            Change decision
+          </Button>
+        </>
+      )}
+      {!current && status === null && (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Record a decision">
+          <span>Decision:</span>
+          {DECISION_STATUSES.map((s) => (
+            <Button key={s} variant="secondary" size="sm" disabled={busy} onClick={() => open(s)}>
+              {DECISION_LABELS[s]}
+            </Button>
+          ))}
+        </div>
+      )}
+      {status !== null && (
+        <form onSubmit={submit} className="grid gap-2 max-w-xl" aria-label={`Decision on this entry`}>
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Decision">
+            {DECISION_STATUSES.map((s) => (
+              <Button
+                key={s}
+                variant={status === s ? "primary" : "secondary"}
+                size="sm"
+                aria-pressed={status === s}
+                disabled={busy}
+                onClick={() => setStatus(s)}
+              >
+                {DECISION_LABELS[s]}
+              </Button>
+            ))}
+          </div>
+          <p>{DECISION_MEANINGS[status]}</p>
+          <label className="grid gap-0.5" htmlFor={`${idBase}-n`}>
+            <span>
+              Note ({note.length}/{DECISION_NOTE_MAX}) — about the company, never about a person
+            </span>
+            <input
+              id={`${idBase}-n`}
+              value={note}
+              onChange={(ev) => setNote(ev.target.value)}
+              maxLength={DECISION_NOTE_MAX}
+              className="border border-oo-rule rounded px-2 py-1.5 text-oo-small text-oo-ink bg-white focus:outline-none focus:ring-2 focus:ring-oo-blue/30 focus:border-oo-blue"
+            />
+          </label>
+          {canKeep && (
+            <label className="flex items-start gap-2" htmlFor={`${idBase}-k`}>
+              <input
+                id={`${idBase}-k`}
+                type="checkbox"
+                checked={keep}
+                onChange={(ev) => setKeep(ev.target.checked)}
+                className="mt-0.5"
+              />
+              <span data-testid="evidence-option">
+                {evidence.label}
+                {evidence.kind === "recheck" && (
+                  <span className="block">
+                    {runLost ? EVIDENCE_WORDS.run_not_held : "The re-run that produced this entry is no longer held, so the evidence would be a re-check made now."}
+                  </span>
+                )}
+              </span>
+            </label>
+          )}
+          {error && (
+            <p role="alert" className="text-oo-warn-text">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" variant="primary" size="sm" disabled={busy}>
+              {busy ? "Recording…" : "Record decision"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setStatus(null)} disabled={busy}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

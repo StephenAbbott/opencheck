@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 374** — Every watch now says when OpenCheck last fully looked at the company and how fresh that look was, with a "Review due" chip at 90 days, and a stale watchlist is warned in its log before being deleted.
+**Latest: Phase 380** — A watchlist re-run now says when an owner or controller of the company was added, ended or changed size, in any register, without naming anyone.
 
 → [Full development history](docs/status.md)
 

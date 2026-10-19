@@ -119,6 +119,19 @@ export interface Watch {
   context?: WatchContext;
   /** pKYC stage C: when OpenCheck last fully looked, and how fresh that was. */
   review?: WatchReview;
+  /** pKYC stage D: every decision recorded on this company's entries, oldest first. */
+  review_history?: WatchReviewHistoryItem[];
+  /** pKYC stage E (Q5): which register feed follows this company's own
+   *  changes, or why none does — a statement about OpenCheck's feeds, never
+   *  about the company. Absent on an older server. */
+  register_tier?: WatchRegisterTier;
+}
+
+export interface WatchRegisterTier {
+  followed: boolean;
+  register: "companies_house" | "ariregister" | null;
+  reason: "no_register_number" | "register_not_covered" | null;
+  words: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -284,7 +297,7 @@ export function reportIdFromInput(value: string): string | null {
 /** Phase 260: ``catch_up`` = every watched company re-run because
  * OpenSanctions versions could not be read (aged out of its version list,
  * or a listed delta file gone). */
-export type Tier = "gleif" | "opensanctions" | "manual" | "catch_up" | "register" | "review";
+export type Tier = "gleif" | "opensanctions" | "manual" | "catch_up" | "register" | "review" | "psc";
 
 /** pKYC stage A — does the change matter? Graded by the backend
  *  (`opencheck/watchlist_materiality.py`) once, at write time, and carried on
@@ -328,18 +341,155 @@ export function isMaterial(tier: Materiality | null | undefined): boolean {
 
 /** The filter the page offers over the change log. `all` is the default —
  *  a stale list must stay visible; the filter is a per-viewer convenience
- *  carried in `?show=material`. */
-export type ChangeLogFilter = "all" | "material";
+ *  carried in `?show=material` / `?show=needs_review`. */
+export type ChangeLogFilter = "all" | "material" | "needs_review";
+
+export const FILTER_LABELS: Record<ChangeLogFilter, string> = {
+  all: "All",
+  material: "Material only",
+  needs_review: "Needs review",
+};
 
 export function filterEntries(entries: WatchEntry[], filter: ChangeLogFilter): WatchEntry[] {
-  return filter === "material" ? entries.filter((e) => isMaterial(e.materiality)) : entries;
+  if (filter === "material") return entries.filter((e) => isMaterial(e.materiality));
+  if (filter === "needs_review") return entries.filter(isUndecidedMaterial);
+  return entries;
 }
 
 /** The sentence under the filter when it hides something. */
-export function hiddenByFilterSentence(all: number, shown: number): string | null {
+export function hiddenByFilterSentence(all: number, shown: number, filter: ChangeLogFilter = "material"): string | null {
   const hidden = all - shown;
   if (hidden <= 0) return null;
+  if (filter === "needs_review") {
+    return `${hidden} ${hidden === 1 ? "entry is" : "entries are"} hidden: note-only, or already decided on.`;
+  }
   return `${hidden} note-only ${hidden === 1 ? "entry is" : "entries are"} hidden; nothing shown here is recorded for the history alone.`;
+}
+
+// ---------------------------------------------------------------------------
+// pKYC stage D — the review record: change → review → decision
+// ---------------------------------------------------------------------------
+
+/** The three decisions a reader can record on an entry. A copy of the
+ *  backend's `STATUSES` / `STATUS_LABELS` / `STATUS_MEANINGS` / `EVIDENCE_WORDS`
+ *  (`opencheck/watchlist_decisions.py`), pinned by
+ *  `tests/test_watchlist_decisions.py`. The status is the reader's statement,
+ *  never set by what else the request did. */
+export type DecisionStatus = "reviewed_no_action" | "rechecked" | "escalated";
+
+export const DECISION_STATUSES: readonly DecisionStatus[] = ["reviewed_no_action", "rechecked", "escalated"];
+
+export const DECISION_LABELS: Record<DecisionStatus, string> = {
+  reviewed_no_action: "Reviewed, no action",
+  rechecked: "Re-checked",
+  escalated: "Escalated",
+};
+
+export const DECISION_MEANINGS: Record<DecisionStatus, string> = {
+  reviewed_no_action: "Looked at; nothing to do.",
+  rechecked: "Looked at and the company was re-run.",
+  escalated: "Routed to whoever decides; what they decided is not recorded here.",
+};
+
+export type EvidenceKind = "entry_run" | "recheck";
+
+export const EVIDENCE_WORDS = {
+  entry_run: "the re-run that produced this entry",
+  recheck: "a fresh re-check made when the decision was recorded",
+  none: "no evidence pinned",
+  expired: "the pinned saved report has since expired",
+  run_not_held: "That re-run is no longer held (a finished run is held for 15 minutes); re-check and keep instead.",
+};
+
+/** The note follows stage B's rationale rule: the same cap, the same words. */
+export const DECISION_NOTE_MAX = 280;
+
+export interface DecisionReport {
+  report_id: string;
+  report_path: string;
+  available: boolean;
+  saved_at?: string | null;
+  expires_at?: string | null;
+  content_hash?: string | null;
+}
+
+export interface WatchDecision {
+  id: number;
+  entry_id: number;
+  lei: string | null;
+  status: DecisionStatus;
+  note: string | null;
+  saved_report_id: string | null;
+  evidence_kind: EvidenceKind | null;
+  decided_at: string;
+  report: DecisionReport | null;
+}
+
+/** The list-level block on the payload. */
+export interface ListDecisions {
+  undecided_material: number;
+  total: number;
+  /** Whether this server can keep a saved report as evidence at all. */
+  evidence_available: boolean;
+}
+
+/** The chip on a decided entry: `ok` for reviewed/no action, `context` for
+ *  re-checked, `warn` for escalated — never `risk`: a decision is the reader's
+ *  act, not a finding against the company. */
+export function decisionChip(d: WatchDecision | null | undefined): {
+  label: string;
+  tone: "ok" | "context" | "warn";
+} | null {
+  if (!d) return null;
+  const tone = d.status === "escalated" ? "warn" : d.status === "rechecked" ? "context" : "ok";
+  return { label: DECISION_LABELS[d.status] ?? d.status, tone };
+}
+
+/** The one line under a decided entry. */
+export function decisionSentence(d: WatchDecision): string {
+  const label = (DECISION_LABELS[d.status] ?? d.status).toLowerCase();
+  let out = `Decision: ${label} — ${d.decided_at.slice(0, 10)}`;
+  if (d.note) out += `; note: ${d.note}`;
+  if (d.saved_report_id) {
+    const kind = d.evidence_kind ? EVIDENCE_WORDS[d.evidence_kind] : "";
+    out += `; evidence: saved report ${d.saved_report_id}${kind ? ` (${kind})` : ""}`;
+    if (d.report && d.report.available === false) out += ` — ${EVIDENCE_WORDS.expired}`;
+  }
+  return out + ".";
+}
+
+/** Material and nobody has decided on it — the "Needs review" filter. */
+export function isUndecidedMaterial(e: WatchEntry): boolean {
+  return isMaterial(e.materiality) && !e.decision;
+}
+
+/** The label of the "keep the evidence" option: the entry's own run while
+ *  the server still holds it, else a fresh re-check. */
+export function evidenceOption(e: WatchEntry): { kind: EvidenceKind; label: string } {
+  if (e.run_held) return { kind: "entry_run", label: "… and keep this re-run as the evidence (a saved report)" };
+  return { kind: "recheck", label: "… and keep a fresh re-check as the evidence (a saved report)" };
+}
+
+/** The line on a watch row: how many of its entries carry a decision. */
+export function reviewHistoryLine(history: WatchReviewHistoryItem[] | undefined): string | null {
+  if (!history || history.length === 0) return null;
+  const last = history[history.length - 1];
+  const n = history.length;
+  return `${n} decision${n === 1 ? "" : "s"} recorded; latest ${(DECISION_LABELS[last.status] ?? last.status).toLowerCase()} on ${last.decided_at.slice(0, 10)}.`;
+}
+
+export interface WatchReviewHistoryItem {
+  entry_id: number;
+  status: DecisionStatus;
+  decided_at: string;
+  saved_report_id: string | null;
+  evidence_kind: EvidenceKind | null;
+}
+
+/** The sentence over the log when material entries await a decision. */
+export function undecidedSentence(n: number): string | null {
+  if (n <= 0) return null;
+  return `${n} material ${n === 1 ? "entry has" : "entries have"} no decision recorded.`;
 }
 
 /** One line for an entry graded after the fact. */
@@ -361,7 +511,27 @@ export interface Change {
   /** Phase 302: names of the subsidiaries a `direct_children` change moved. */
   names?: Record<string, string>;
   new?: unknown;
+  /** pKYC stage E, Route 2 — an `ownership_changed` change: which source,
+   *  what happened, the party's kind (never its name), its interests, the
+   *  share bands before and after, the beneficial-ownership flag, and
+   *  whether a ≥25 % band was added or ended (the escalate rule). An
+   *  `ownership_unchecked` change carries `source_id` and `parties`. */
+  change?: "added" | "ended" | "changed";
+  source_id?: string;
+  party?: "person" | "entity";
+  key?: string;
+  interests?: string[];
+  bands_before?: Band[] | null;
+  bands_after?: Band[] | null;
+  bo?: boolean;
+  crossed_25?: boolean;
+  uncompared?: number;
+  parties?: number;
 }
+
+/** A share band: `[low, high, exclusive low, exclusive high]`; an exact
+ *  share is a band of one value, an open end is `null`. */
+export type Band = [number | null, number | null, boolean, boolean];
 
 /** A register tier trigger's changes: a list as its entries before and
  *  after (never who), a field as its old and new value, two flags. */
@@ -406,11 +576,22 @@ export interface WatchEntry {
     after?: string | null;
     before?: string | null;
     /** The register tier: which register, the company's code there, the
-     *  index days read, and each list's entries before and after. */
-    register?: "ariregister";
+     *  index days read, and each list's entries before and after. A
+     *  catch-up for a register gap names the register too. */
+    register?: "ariregister" | "companies_house";
     code?: string;
     cuts?: string[];
     changes?: RegisterChanges;
+    /** The PSC tier (pKYC stage E, Route 1): the company's number, how many
+     *  stream events, counts by kind and outcome, the PSC item ids and the
+     *  publication span — never a name. */
+    company_number?: string;
+    events?: number;
+    kinds?: Record<string, Record<string, number>>;
+    psc_ids?: string[];
+    first_at?: string | null;
+    last_at?: string | null;
+    coalesced?: number;
   };
   changes: Change[];
   /** Phase 303: GLEIF's own log since this list's baseline (GLEIF-triggered entries). */
@@ -422,6 +603,15 @@ export interface WatchEntry {
   materiality_rules?: number | null;
   checked: CheckedSource[];
   degraded: { source_id: string; check?: string; affected_signals?: string[] }[];
+  /** pKYC stage D: the run that produced this entry (the replay-cache key),
+   *  whether the server still holds it, the latest decision and the history.
+   *  Absent on an older server. */
+  run_completed_at?: string | null;
+  deepen_top?: number | null;
+  run_held?: boolean;
+  decision?: WatchDecision | null;
+  decision_count?: number;
+  decision_history?: WatchDecision[];
 }
 
 export interface WatchlistTiers {
@@ -451,6 +641,17 @@ export interface WatchlistTiers {
     waiting: boolean;
     gaps: { after: string | null; before: string | null; detail?: string; detected_at: string }[];
   };
+  /** The PSC tier (the Companies House stream). Absent on an older server. */
+  psc?: {
+    available: boolean;
+    connected: boolean;
+    last_published_at: string | null;
+    gap: boolean;
+    matched: number;
+    queued: number;
+    last_match_at: string | null;
+    gaps: { since: string; timepoint?: number | null; detected_at: string; watched?: number }[];
+  };
   worker: { enabled: boolean; interval_s: number };
 }
 
@@ -458,6 +659,8 @@ export interface WatchlistPayload {
   watches: Watch[];
   /** pKYC stage C. Absent on an older server. */
   review?: ListReview;
+  /** pKYC stage D. Absent on an older server. */
+  decisions?: ListDecisions;
   entries: WatchEntry[];
   caps: { per_list: number; total: number; in_list: number; total_watched: number };
   feed_url: string;
@@ -497,10 +700,15 @@ export const FILTER_KEY = "opencheck.watchlist.filter";
 
 /** The change-log filter a visit starts with: the URL's `?show=material`
  *  first, else what this browser kept, else all. */
+function asFilter(value: string | null): ChangeLogFilter | null {
+  return value === "material" || value === "needs_review" ? value : null;
+}
+
 export function filterFromLocation(search: string): ChangeLogFilter {
-  if (new URLSearchParams(search).get("show") === "material") return "material";
+  const fromUrl = asFilter(new URLSearchParams(search).get("show"));
+  if (fromUrl) return fromUrl;
   try {
-    return window.localStorage.getItem(FILTER_KEY) === "material" ? "material" : "all";
+    return asFilter(window.localStorage.getItem(FILTER_KEY)) ?? "all";
   } catch {
     return "all";
   }
@@ -508,7 +716,7 @@ export function filterFromLocation(search: string): ChangeLogFilter {
 
 export function storeFilter(filter: ChangeLogFilter): void {
   try {
-    if (filter === "material") window.localStorage.setItem(FILTER_KEY, filter);
+    if (filter !== "all") window.localStorage.setItem(FILTER_KEY, filter);
     else window.localStorage.removeItem(FILTER_KEY);
   } catch {
     /* a per-viewer convenience: nothing lost when storage is absent */
@@ -729,9 +937,117 @@ export function describeChange(c: Change, sourceLabel: (id: string) => string = 
       return `Coverage fell to ${v(c.new)} because ${list(c.missing, sourceLabel)} could not be reached — a fact about the check, not the company.`;
     case "verdict":
       return `Verdict now reads: ${v(c.new)}`;
+    case "ownership_changed":
+    case "ownership_unchecked":
+      return ownershipChangeSentence(c, sourceLabel(c.source_id ?? ""));
     default:
       return `${c.kind.replace(/_/g, " ")}.`;
   }
+}
+
+// The ownership diff's words (pKYC stage E, Route 2). Keep in step with
+// INTEREST_WORDS / PARTY_WORDS / CHANGE_WORDS in opencheck/watchlist_ownership.py;
+// test_watchlist_ownership.py parses these tables.
+const INTEREST_WORDS: Record<string, string> = {
+  shareholding: "shareholding",
+  votingRights: "voting rights",
+  appointmentOfBoard: "right to appoint the board",
+  otherInfluenceOrControl: "other influence or control",
+  seniorManagingOfficial: "senior managing official",
+  settlor: "settlor",
+  trustee: "trustee",
+  protector: "protector",
+  beneficiaryOfLegalArrangement: "beneficiary",
+  rightsToSurplusAssetsOnDissolution: "rights to surplus assets",
+  rightsToProfitOrIncome: "rights to profit or income",
+  rightsGrantedByContract: "rights granted by contract",
+  conditionalRightsGrantedByContract: "conditional rights granted by contract",
+  controlViaCompanyRulesOrAgreement: "control via company rules or agreement",
+  controlByLegalFramework: "control by legal framework",
+  boardMember: "board membership",
+  boardChair: "board chair",
+  enjoymentAndUseOfAssets: "enjoyment and use of assets",
+  nominee: "nominee holding",
+  nominator: "nominator",
+  unknownInterest: "interest of unstated kind",
+  unpublishedInterest: "interest whose details are withheld",
+};
+const PARTY_WORDS: Record<string, string> = {
+  person: "A person",
+  entity: "A company",
+  bo: "A registered beneficial owner",
+};
+const CHANGE_WORDS: Record<string, string> = {
+  added: "added",
+  ended: "ended",
+  changed: "changed",
+};
+
+function pct(n: number): string {
+  return `${Number.isInteger(n) ? n : +n.toFixed(4)}%`;
+}
+
+/** One band in words — the feed's `band_words`. */
+export function bandWords(b: Band | null | undefined): string {
+  if (!b) return "an unstated share";
+  const [lo, hi, exlo, exhi] = b;
+  if (lo !== null && hi !== null && lo === hi) return `exactly ${pct(lo)}`;
+  if (lo !== null && hi !== null) {
+    const l = +lo.toFixed(4);
+    const h = +hi.toFixed(4);
+    if (exlo && exhi) return `over ${l}% to under ${h}%`;
+    if (exlo) return `over ${l}% to ${h}%`;
+    if (exhi) return `${l}% to under ${h}%`;
+    return `${l}–${h}%`;
+  }
+  if (lo !== null) return `${exlo ? "more than" : "at least"} ${pct(lo)}`;
+  return `${exhi ? "under" : "at most"} ${pct(hi as number)}`;
+}
+
+function interestWords(types: string[] | undefined): string {
+  const words = (types ?? []).map((t) => INTEREST_WORDS[t] ?? t);
+  if (!words.length) return "interest";
+  if (words.length === 1) return words[0];
+  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+}
+
+function bandsWords(bands: Band[] | null | undefined): string {
+  return (bands ?? []).map(bandWords).join(" and ");
+}
+
+/** The sentence for an ownership change — never a name. */
+export function ownershipChangeSentence(c: Change, source: string): string {
+  if (c.kind === "ownership_unchecked") {
+    const n = c.parties ?? 0;
+    return `${n} ${n === 1 ? "party's" : "parties'"} holdings could not be re-checked — ${source} did not answer.`;
+  }
+  const who = c.bo ? PARTY_WORDS.bo : PARTY_WORDS[c.party ?? ""] ?? "A party";
+  const what = interestWords(c.interests);
+  const before = bandsWords(c.bands_before);
+  const after = bandsWords(c.bands_after);
+  let body: string;
+  if (c.change === "changed") {
+    body =
+      before !== after
+        ? `${who}'s ${what} changed from ${before || "an unstated share"} to ${after || "an unstated share"}`
+        : `${who}'s ${what} changed`;
+  } else {
+    const band = c.change === "added" ? after : before;
+    body = `${who}'s ${what}${band ? ` of ${band}` : ""} ${CHANGE_WORDS[c.change ?? ""] ?? "changed"}`;
+  }
+  return `${body} (${source}).`;
+}
+
+/** "N parties could not be compared (source publishes no person key)" —
+ *  one line per source, from the count each ownership change carries. */
+export function uncomparedLines(changes: Change[], sourceLabel: (id: string) => string = (s) => s): string[] {
+  const seen = new Map<string, number>();
+  for (const c of changes) {
+    if (c.kind === "ownership_changed" && c.uncompared) seen.set(c.source_id ?? "", c.uncompared);
+  }
+  return Array.from(seen.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([sid, n]) => `${n} ${n === 1 ? "party" : "parties"} could not be compared (${sourceLabel(sid)} publishes no person key).`);
 }
 
 // The register tier's words. Keep in step with REGISTER_CHANGE_WORDS in
@@ -796,6 +1112,67 @@ function daysWords(cuts: string[] | undefined): string {
   return `its open data of ${c.slice(0, -1).join(", ")} and ${c[c.length - 1]}`;
 }
 
+// The PSC tier's words (pKYC stage E, Route 1). Keep in step with
+// PSC_KIND_WORDS / PSC_KIND_PLURALS / PSC_OUTCOME_WORDS /
+// REGISTER_NOT_FOLLOWED_WORDS / REGISTER_FOLLOWED_WORDS in
+// opencheck/watchlist_psc.py; test_watchlist_psc.py parses these tables.
+const PSC_KIND_WORDS: Record<string, string> = {
+  individual: "person",
+  corporate: "corporate entity",
+  legal_person: "legal person",
+  withheld: "person whose details are withheld",
+  statement: "PSC statement",
+  unknown: "PSC item",
+};
+const PSC_KIND_PLURALS: Record<string, string> = {
+  individual: "persons",
+  corporate: "corporate entities",
+  legal_person: "legal persons",
+  withheld: "persons whose details are withheld",
+  statement: "PSC statements",
+  unknown: "PSC items",
+};
+const PSC_OUTCOME_WORDS: Record<string, string> = {
+  added: "added",
+  changed: "changed",
+  ceased: "ceased",
+  deleted: "removed",
+};
+export const REGISTER_NOT_FOLLOWED_WORDS: Record<string, string> = {
+  no_register_number: "GLEIF files no register number for this company",
+  register_not_covered: "OpenCheck follows no change feed for this company's register",
+};
+export const REGISTER_FOLLOWED_WORDS: Record<string, string> = {
+  companies_house: "Companies House PSC stream, live",
+  ariregister: "e-Business Register open data, daily",
+};
+const PSC_KINDS = ["individual", "corporate", "legal_person", "withheld", "statement", "unknown"] as const;
+const PSC_OUTCOMES = ["added", "changed", "ceased", "deleted"] as const;
+
+/** One line per kind of PSC item a filing touched, counts only — the feed's
+ *  `psc_change_lines`. */
+export function pscChangeLines(trigger: WatchEntry["trigger"] | undefined): string[] {
+  const kinds = trigger?.kinds ?? {};
+  const out: string[] = [];
+  for (const kind of PSC_KINDS) {
+    const outcomes = kinds[kind];
+    if (!outcomes || typeof outcomes !== "object") continue;
+    const total = Object.values(outcomes).reduce((a, b) => a + (Number(b) || 0), 0);
+    if (!total) continue;
+    const noun = total === 1 ? PSC_KIND_WORDS[kind] : PSC_KIND_PLURALS[kind];
+    const parts = PSC_OUTCOMES.filter((o) => outcomes[o]).map((o) => `${outcomes[o]} ${PSC_OUTCOME_WORDS[o]}`);
+    out.push(`${total} ${noun}: ${parts.join(", ")}.`);
+  }
+  return out;
+}
+
+/** The watch row's line on register changes (Q5): what follows this
+ *  company's own register, or why nothing does. */
+export function registerTierLine(rt: WatchRegisterTier | undefined): string | null {
+  if (!rt) return null;
+  return rt.followed ? `Register changes: followed (${rt.words}).` : `Register changes: not followed — ${rt.words}.`;
+}
+
 /** Why the entry exists: the tier that fired, in its own words. */
 export function triggerSentence(e: WatchEntry): string {
   const t = e.trigger ?? {};
@@ -820,12 +1197,22 @@ export function triggerSentence(e: WatchEntry): string {
       t.code ? ` (registry code ${t.code})` : ""
     }.`;
   }
+  if (e.tier === "psc") {
+    const n = t.events ?? 0;
+    const day = (t.last_at ?? "").slice(0, 10);
+    return `Companies House recorded ${n} change${n === 1 ? "" : "s"} to this company's people with significant control${
+      day ? ` on ${day}` : ""
+    }${t.company_number ? ` (company number ${t.company_number})` : ""}.`;
+  }
   if (e.tier === "review") {
     return `Nobody has opened or polled this watchlist for ${t.stale_days ?? "a number of"} days. It will be deleted, with its watches and this log, after ${
       (t.delete_after ?? "").slice(0, 10) || "the grace period"
     } unless it is opened or its feed is read before then. Opening it keeps it.`;
   }
   if (e.tier === "catch_up") {
+    if (t.reason === "register_gap" && t.register === "companies_house") {
+      return `The Companies House PSC stream was rejoined live at ${t.before ?? "?"}, so filings before that were not seen; every watched UK company was re-checked.`;
+    }
     if (t.reason === "register_gap") {
       return `The Estonian e-Business Register's changes between ${t.after ?? "?"} and ${t.before ?? "?"} could not be read, so every watched Estonian company was re-checked.`;
     }
@@ -842,6 +1229,7 @@ export function tierChip(tier: Tier): { label: string; tone: "risk" | "accent" |
   if (tier === "opensanctions") return { label: "OpenSanctions delta", tone: "risk" };
   if (tier === "catch_up") return { label: "Catch-up re-check", tone: "context" };
   if (tier === "register") return { label: "Register change", tone: "accent" };
+  if (tier === "psc") return { label: "PSC filing", tone: "accent" };
   if (tier === "review") return { label: "Review", tone: "neutral" };
   return { label: "By hand", tone: "neutral" };
 }
@@ -852,12 +1240,14 @@ export function entryHeadline(e: WatchEntry): string {
   const name = e.legal_name || e.lei;
   const kinds = new Set(e.changes.map((c) => c.kind));
   if (!e.changes.length && e.tier === "register") return `${name}: Estonian register record changed`;
+  if (!e.changes.length && e.tier === "psc") return `${name}: Companies House PSC register changed`;
   if (!e.changes.length) return `${name}: re-run found no difference`;
   if (e.changes.some((c) => c.kind === "gleif_field" && c.field === "corporate_events")) {
     return `${name}: legal entity event recorded`;
   }
   if (kinds.has("register_status") || kinds.has("dissolution_date")) return `${name}: register status changed`;
   if (kinds.has("signal_new")) return `${name}: new risk signal`;
+  if (kinds.has("ownership_changed")) return `${name}: ownership changed`;
   if (kinds.has("gleif_field")) {
     const gleif = e.changes.filter((c) => c.kind === "gleif_field");
     if (gleif.every((c) => c.field === "direct_children")) return `${name}: direct subsidiaries changed`;
@@ -927,8 +1317,23 @@ export function tierSentence(t: WatchlistTiers | null): string {
       );
     }
   }
+  const psc = t.psc;
+  if (psc?.available) {
+    parts.push(
+      `Companies House: the register's own PSC stream is read as it publishes${
+        psc.connected ? "" : " (not connected just now)"
+      }${psc.last_published_at ? `, last at ${psc.last_published_at.slice(0, 16).replace("T", " ")} UTC` : ""}, and a watched UK company whose people with significant control were filed is re-run — counts only, never a name.`,
+    );
+    const pscGap = psc.gaps?.length ? psc.gaps[psc.gaps.length - 1] : null;
+    if (pscGap) {
+      parts.push(
+        `On ${pscGap.detected_at.slice(0, 10)} the stream was rejoined live, so filings before that were not seen and every watched UK company was re-checked instead.`,
+      );
+    }
+  }
+  const followed = [reg?.available, psc?.available].filter(Boolean).length;
   parts.push(
-    reg?.available
+    followed
       ? "No other national register is polled; they are re-fetched only when one of those tiers fires."
       : "National registers are never polled; they are re-fetched only when one of those two fires.",
   );
