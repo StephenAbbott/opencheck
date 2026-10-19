@@ -99,6 +99,7 @@ from .mappers.wikidata import (  # noqa: F401  (re-exported: see the module docs
 )
 
 from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
+    _CH_PUBLIC,
     _COUNTRY_TEXT_ALIASES,
     _ChCompany,
     _ChPscHop,
@@ -115,6 +116,9 @@ from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _ch_officer_local_id,
     _ch_officer_person_local_id,
     _ch_officer_url,
+    _ch_psc_item_identifier,
+    _ch_psc_item_note,
+    _ch_psc_local_id,
     _ch_psc_statement_statements,
     _corporate_officer_registration_number,
     _country_in_text,
@@ -126,6 +130,8 @@ from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _map_individual_psc,
     _profile_addresses,
     _rollup_ch_chains,
+    PSC_ITEM_SCHEME,
+    PSC_ITEM_SCHEME_NAME,
     map_companies_house,
 )
 from .mappers.greece import (  # noqa: F401  (re-exported, Phase 246)

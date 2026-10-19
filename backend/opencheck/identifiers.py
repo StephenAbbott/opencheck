@@ -342,6 +342,32 @@ def normalise_ch_company_number(value: object) -> str | None:
     return f"{prefix}{digits.zfill(width)}"
 
 
+_CH_PSC_PATH = "/persons-with-significant-control/"
+
+
+def ch_psc_item_id(item: dict | None) -> str | None:
+    """A Companies House PSC item's own id — the tail of ``links.self``
+    (``/company/{n}/persons-with-significant-control/individual/{id}``, or
+    ``corporate-entity`` / ``legal-person`` / ``super-secure``), or ``None``
+    when the item carries no self link.
+
+    This is the register's address for the item and is stable across edits;
+    the item's ``etag`` is not — Companies House issues a new etag whenever the
+    item changes, so a share band moving on the same PSC read as a new party
+    until the mapper keyed on this instead. The PSC stream's events carry the
+    same ``links.self`` (``psc_stream.psc_id_of``), so a stream event and the
+    mapped statement name the item by one key.
+    """
+    if not item:
+        return None
+    links = item.get("links") or {}
+    self_link = str(links.get("self") or "").strip() if isinstance(links, dict) else ""
+    if not self_link or _CH_PSC_PATH not in self_link:
+        return None
+    tail = self_link.rstrip("/").rsplit("/", 1)[-1]
+    return tail or None
+
+
 def ch_identification_is_uk(identification: dict | None) -> bool:
     """True when a PSC ``identification`` block says the registrant is on the
     UK register — by ``country_registered`` first, then ``place_registered``
