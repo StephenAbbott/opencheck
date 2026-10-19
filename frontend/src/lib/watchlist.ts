@@ -511,7 +511,27 @@ export interface Change {
   /** Phase 302: names of the subsidiaries a `direct_children` change moved. */
   names?: Record<string, string>;
   new?: unknown;
+  /** pKYC stage E, Route 2 — an `ownership_changed` change: which source,
+   *  what happened, the party's kind (never its name), its interests, the
+   *  share bands before and after, the beneficial-ownership flag, and
+   *  whether a ≥25 % band was added or ended (the escalate rule). An
+   *  `ownership_unchecked` change carries `source_id` and `parties`. */
+  change?: "added" | "ended" | "changed";
+  source_id?: string;
+  party?: "person" | "entity";
+  key?: string;
+  interests?: string[];
+  bands_before?: Band[] | null;
+  bands_after?: Band[] | null;
+  bo?: boolean;
+  crossed_25?: boolean;
+  uncompared?: number;
+  parties?: number;
 }
+
+/** A share band: `[low, high, exclusive low, exclusive high]`; an exact
+ *  share is a band of one value, an open end is `null`. */
+export type Band = [number | null, number | null, boolean, boolean];
 
 /** A register tier trigger's changes: a list as its entries before and
  *  after (never who), a field as its old and new value, two flags. */
@@ -917,9 +937,117 @@ export function describeChange(c: Change, sourceLabel: (id: string) => string = 
       return `Coverage fell to ${v(c.new)} because ${list(c.missing, sourceLabel)} could not be reached — a fact about the check, not the company.`;
     case "verdict":
       return `Verdict now reads: ${v(c.new)}`;
+    case "ownership_changed":
+    case "ownership_unchecked":
+      return ownershipChangeSentence(c, sourceLabel(c.source_id ?? ""));
     default:
       return `${c.kind.replace(/_/g, " ")}.`;
   }
+}
+
+// The ownership diff's words (pKYC stage E, Route 2). Keep in step with
+// INTEREST_WORDS / PARTY_WORDS / CHANGE_WORDS in opencheck/watchlist_ownership.py;
+// test_watchlist_ownership.py parses these tables.
+const INTEREST_WORDS: Record<string, string> = {
+  shareholding: "shareholding",
+  votingRights: "voting rights",
+  appointmentOfBoard: "right to appoint the board",
+  otherInfluenceOrControl: "other influence or control",
+  seniorManagingOfficial: "senior managing official",
+  settlor: "settlor",
+  trustee: "trustee",
+  protector: "protector",
+  beneficiaryOfLegalArrangement: "beneficiary",
+  rightsToSurplusAssetsOnDissolution: "rights to surplus assets",
+  rightsToProfitOrIncome: "rights to profit or income",
+  rightsGrantedByContract: "rights granted by contract",
+  conditionalRightsGrantedByContract: "conditional rights granted by contract",
+  controlViaCompanyRulesOrAgreement: "control via company rules or agreement",
+  controlByLegalFramework: "control by legal framework",
+  boardMember: "board membership",
+  boardChair: "board chair",
+  enjoymentAndUseOfAssets: "enjoyment and use of assets",
+  nominee: "nominee holding",
+  nominator: "nominator",
+  unknownInterest: "interest of unstated kind",
+  unpublishedInterest: "interest whose details are withheld",
+};
+const PARTY_WORDS: Record<string, string> = {
+  person: "A person",
+  entity: "A company",
+  bo: "A registered beneficial owner",
+};
+const CHANGE_WORDS: Record<string, string> = {
+  added: "added",
+  ended: "ended",
+  changed: "changed",
+};
+
+function pct(n: number): string {
+  return `${Number.isInteger(n) ? n : +n.toFixed(4)}%`;
+}
+
+/** One band in words — the feed's `band_words`. */
+export function bandWords(b: Band | null | undefined): string {
+  if (!b) return "an unstated share";
+  const [lo, hi, exlo, exhi] = b;
+  if (lo !== null && hi !== null && lo === hi) return `exactly ${pct(lo)}`;
+  if (lo !== null && hi !== null) {
+    const l = +lo.toFixed(4);
+    const h = +hi.toFixed(4);
+    if (exlo && exhi) return `over ${l}% to under ${h}%`;
+    if (exlo) return `over ${l}% to ${h}%`;
+    if (exhi) return `${l}% to under ${h}%`;
+    return `${l}–${h}%`;
+  }
+  if (lo !== null) return `${exlo ? "more than" : "at least"} ${pct(lo)}`;
+  return `${exhi ? "under" : "at most"} ${pct(hi as number)}`;
+}
+
+function interestWords(types: string[] | undefined): string {
+  const words = (types ?? []).map((t) => INTEREST_WORDS[t] ?? t);
+  if (!words.length) return "interest";
+  if (words.length === 1) return words[0];
+  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+}
+
+function bandsWords(bands: Band[] | null | undefined): string {
+  return (bands ?? []).map(bandWords).join(" and ");
+}
+
+/** The sentence for an ownership change — never a name. */
+export function ownershipChangeSentence(c: Change, source: string): string {
+  if (c.kind === "ownership_unchecked") {
+    const n = c.parties ?? 0;
+    return `${n} ${n === 1 ? "party's" : "parties'"} holdings could not be re-checked — ${source} did not answer.`;
+  }
+  const who = c.bo ? PARTY_WORDS.bo : PARTY_WORDS[c.party ?? ""] ?? "A party";
+  const what = interestWords(c.interests);
+  const before = bandsWords(c.bands_before);
+  const after = bandsWords(c.bands_after);
+  let body: string;
+  if (c.change === "changed") {
+    body =
+      before !== after
+        ? `${who}'s ${what} changed from ${before || "an unstated share"} to ${after || "an unstated share"}`
+        : `${who}'s ${what} changed`;
+  } else {
+    const band = c.change === "added" ? after : before;
+    body = `${who}'s ${what}${band ? ` of ${band}` : ""} ${CHANGE_WORDS[c.change ?? ""] ?? "changed"}`;
+  }
+  return `${body} (${source}).`;
+}
+
+/** "N parties could not be compared (source publishes no person key)" —
+ *  one line per source, from the count each ownership change carries. */
+export function uncomparedLines(changes: Change[], sourceLabel: (id: string) => string = (s) => s): string[] {
+  const seen = new Map<string, number>();
+  for (const c of changes) {
+    if (c.kind === "ownership_changed" && c.uncompared) seen.set(c.source_id ?? "", c.uncompared);
+  }
+  return Array.from(seen.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([sid, n]) => `${n} ${n === 1 ? "party" : "parties"} could not be compared (${sourceLabel(sid)} publishes no person key).`);
 }
 
 // The register tier's words. Keep in step with REGISTER_CHANGE_WORDS in
@@ -1119,6 +1247,7 @@ export function entryHeadline(e: WatchEntry): string {
   }
   if (kinds.has("register_status") || kinds.has("dissolution_date")) return `${name}: register status changed`;
   if (kinds.has("signal_new")) return `${name}: new risk signal`;
+  if (kinds.has("ownership_changed")) return `${name}: ownership changed`;
   if (kinds.has("gleif_field")) {
     const gleif = e.changes.filter((c) => c.kind === "gleif_field");
     if (gleif.every((c) => c.field === "direct_children")) return `${name}: direct subsidiaries changed`;

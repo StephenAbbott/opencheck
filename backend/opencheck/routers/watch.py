@@ -34,6 +34,7 @@ from .. import watchlist as wl
 from .. import watchlist_context as context_module
 from .. import watchlist_decisions as decisions_module
 from .. import watchlist_materiality as materiality
+from .. import watchlist_ownership as ownership_module
 from .. import watchlist_psc as psc_module
 from .. import watchlist_review as review_module
 from ..bods import gleif_events as _gleif_events
@@ -729,6 +730,11 @@ async def watch_stats() -> JSONResponse:
         "decisions_by_status": dict.fromkeys(decisions_module.STATUSES, 0),
         "decisions_with_evidence": 0,
         "material_undecided": 0,
+        "ownership_changes_by_change": {"added": 0, "ended": 0, "changed": 0},
+        "ownership_changes_escalated": 0,
+        "ownership_unchecked": 0,
+        "ownership_uncompared_by_source": {},
+        "baselines_with_ownership_digest": 0,
         "watched_by_registration_authority": {},
     }
     store = await _db(wl.get_store)
@@ -755,6 +761,9 @@ async def watch_stats() -> JSONResponse:
                 # report, and material entries nobody has decided on. Counts
                 # only — never a note, a report id or an LEI.
                 **store.decision_counts(),
+                # pKYC stage E, Route 2: the ownership diff's counts. Never a
+                # key, a band or an LEI.
+                **store.ownership_counts(),
                 # pKYC stage E: watched LEIs by the registration authority
                 # GLEIF files them under — measurement 1 on the scoping page.
                 # RA codes and counts only.
@@ -975,6 +984,8 @@ def _describe(change: dict[str, Any]) -> str:
         return f"Coverage fell to {n.get(field)} of {n.get('applicable')} {noun} because sources could not be reached — not a fact about the company."
     if k == "verdict":
         return f"Verdict: {new}"
+    if k in ("ownership_changed", "ownership_unchecked"):
+        return ownership_module.change_sentence(change, _source_words(str(change.get("source_id") or "")))
     return f"{k}."
 
 
@@ -1051,6 +1062,8 @@ def _entry_headline(entry: dict[str, Any]) -> str:
         head = "register status changed"
     elif any(k == "signal_new" for k in kinds):
         head = "new risk signal"
+    elif any(k == "ownership_changed" for k in kinds):
+        head = "ownership changed"
     elif all(
         c.get("field") == "direct_children" for c in changes if c.get("kind") == "gleif_field"
     ) and any(k == "gleif_field" for k in kinds):
@@ -1146,6 +1159,8 @@ def _entry_content(entry: dict[str, Any]) -> str:
     if changes:
         lines.append("What a re-run found:")
         lines += [" - " + _change_line(c) for c in changes]
+        # Route 2: the parties the ownership diff could not compare, per source.
+        lines += [" - " + line for line in ownership_module.uncompared_sentence(changes, _source_words)]
     elif entry["tier"] in (wl.TIER_REGISTER, wl.TIER_PSC):
         lines.append("A full re-run found nothing else that differs from the last check.")
     else:
