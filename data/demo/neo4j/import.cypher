@@ -3,6 +3,14 @@
 // Run from Neo4j Browser or cypher-shell with CSVs in the import directory.
 
 
+// List properties (sourceTypes, nationalityCodes, alternateNames, ...) are
+// stored in the CSVs as JSON arrays and parsed back with APOC Core's
+// apoc.convert.fromJsonList(). If this line fails with "Unknown function",
+// install APOC Core (bundled with Neo4j 5 as labs/apoc-*-core.jar; see the
+// README) and run the script again.
+RETURN size(apoc.convert.fromJsonList('[1]')) AS apoc_available;
+
+
 CREATE CONSTRAINT constraint_entity_record_id IF NOT EXISTS
 FOR (e:Entity) REQUIRE e.recordId IS UNIQUE;
 CREATE CONSTRAINT constraint_person_record_id IF NOT EXISTS
@@ -64,7 +72,7 @@ CALL {
         n.entityType = row.entityType,
         n.entityTypeDetails = row.entityTypeDetails,
         n.isComponent = toBoolean(row.isComponent),
-        n.sourceTypes = row.sourceTypes,
+        n.sourceTypes = CASE WHEN row.sourceTypes IS NULL THEN null ELSE apoc.convert.fromJsonList(row.sourceTypes) END,
         n.sourceUrl = row.sourceUrl,
         n.extrasJson = row.extrasJson,
         n.foundingDate = CASE WHEN row.foundingDate =~ '\\d{4}-\\d{2}-\\d{2}' THEN date(row.foundingDate) ELSE row.foundingDate END,
@@ -108,9 +116,9 @@ CALL {
         n.nameType = row.nameType,
         n.namesJson = row.namesJson,
         n.birthDate = row.birthDate,
-        n.nationalityCodes = row.nationalityCodes,
-        n.nationalityNames = row.nationalityNames,
-        n.sourceTypes = row.sourceTypes,
+        n.nationalityCodes = CASE WHEN row.nationalityCodes IS NULL THEN null ELSE apoc.convert.fromJsonList(row.nationalityCodes) END,
+        n.nationalityNames = CASE WHEN row.nationalityNames IS NULL THEN null ELSE apoc.convert.fromJsonList(row.nationalityNames) END,
+        n.sourceTypes = CASE WHEN row.sourceTypes IS NULL THEN null ELSE apoc.convert.fromJsonList(row.sourceTypes) END,
         n.sourceUrl = row.sourceUrl
 } IN TRANSACTIONS OF 10000 ROWS;
 
@@ -175,7 +183,7 @@ CALL {
         r.publisherUrl = row.publisherUrl,
         r.publicationLicense = row.publicationLicense,
         r.isComponent = toBoolean(row.isComponent),
-        r.sourceTypes = row.sourceTypes,
+        r.sourceTypes = CASE WHEN row.sourceTypes IS NULL THEN null ELSE apoc.convert.fromJsonList(row.sourceTypes) END,
         r.sourceUrl = row.sourceUrl,
         r.interestIndex = toInteger(row.interestIndex),
         r.bodsInterestType = row.bodsInterestType,
@@ -217,7 +225,7 @@ CALL {
         r.publisherUrl = row.publisherUrl,
         r.publicationLicense = row.publicationLicense,
         r.isComponent = toBoolean(row.isComponent),
-        r.sourceTypes = row.sourceTypes,
+        r.sourceTypes = CASE WHEN row.sourceTypes IS NULL THEN null ELSE apoc.convert.fromJsonList(row.sourceTypes) END,
         r.sourceUrl = row.sourceUrl,
         r.interestIndex = toInteger(row.interestIndex),
         r.bodsInterestType = row.bodsInterestType,

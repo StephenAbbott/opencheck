@@ -103,7 +103,7 @@ The output directory holds, for stamp `YYYY-MM-DD`:
 | `azerbaijani-laundromat-<stamp>.bods.jsonl.gz` | The merged BODS v0.4 bundle, LEI subjects first, deduplicated by `statementId` |
 | `….nq.gz` | The same as NQuads via `bods/rdf.py` — one named graph per statement, `bods:license` on every statement, OpenCheck's signals as `bods:Annotation` in a separate graph |
 | `….ftm.jsonl.gz`, `….senzing.jsonl.gz` | FollowTheMoney entities and Senzing JSON records (`bods/ftm.py`, `bods/senzing.py`) |
-| `….neo4j.zip` | `bods-neo4j to-csv` output — CSVs plus `import.cypher`; skipped with a warning when the CLI is not installed |
+| `….neo4j.zip` | `bods-neo4j to-csv` output — CSVs plus `import.cypher`; skipped with a warning when the CLI is not installed. Since bods-neo4j `1775533` the script needs APOC Core (list properties are parsed with `apoc.convert.fromJsonList`) |
 | `….subjects.csv` | One row per seed subject: kind, identifiers, Paco's class, status (`done` / `stub` / `failed` / `missing`), legal name, jurisdiction, register status, verdict sentence, risk and context codes, statement count, subsidiary counts, which sources answered, and whether any screening check did not fully run |
 | `….signals.jsonl` | Every risk and context signal, with the subject key that raised it |
 | `manifest.json` | Counts, per-artefact SHA-256, subject status, seed provenance, BODS shape issues, the licence verdict |

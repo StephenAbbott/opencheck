@@ -30,6 +30,13 @@ The import.cypher file can be run against a Neo4j 5.x instance started with:
 
     docker compose up -d   # from the bods-neo4j repo, or any Neo4j 5.x instance
 
+It needs APOC Core: list properties (sourceTypes, nationalityCodes,
+alternateNames …) are JSON arrays in the CSVs and are parsed back with
+apoc.convert.fromJsonList(). Neo4j 5 ships APOC Core as labs/apoc-*-core.jar
+(copy it into plugins/); bods-neo4j's docker-compose.yml already enables it.
+Keep Neo4j's default db.import.csv.legacy_quote_escaping=true — the CSVs are
+written for it (bods-neo4j 1775533).
+
 Live-export zips
 ----------------
 Curated examples that are NOT in the bulk demo set (no {lei}.jsonl in
@@ -228,7 +235,7 @@ def main() -> None:
     _summarise(args.out)
     log.info("=== Export complete ===")
     log.info("")
-    log.info("To import into a running Neo4j 5.x instance:")
+    log.info("To import into a running Neo4j 5.x instance with APOC Core installed:")
     log.info("  cd <neo4j-home> && cypher-shell -u neo4j -p <pass> < %s/import.cypher", args.out)
     log.info("Or use the bods-neo4j Docker setup:")
     log.info("  git clone https://github.com/StephenAbbott/bods-neo4j && cd bods-neo4j")
