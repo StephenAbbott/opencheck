@@ -33,6 +33,7 @@ import {
 } from "../../lib/api";
 import { estonianPersonHash } from "../../lib/estonianPerson";
 import { EstonianPersonCompanies } from "./EstonianPersonCompanies";
+import { NzPersonCompanies } from "./NzPersonCompanies";
 import {
   extractConnectedPeople,
   extractPersonSubgraph,
@@ -452,6 +453,13 @@ function PersonCard({
           {estonianPersonHash(person.identifiers) && (
             <EstonianPersonCompanies
               personHash={estonianPersonHash(person.identifiers) as string}
+              name={person.name}
+            />
+          )}
+          {person.nzRoleHolder && (
+            <NzPersonCompanies
+              companyNumber={person.nzRoleHolder.companyNumber}
+              filedName={person.nzRoleHolder.name}
               name={person.name}
             />
           )}

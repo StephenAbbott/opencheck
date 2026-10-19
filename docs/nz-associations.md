@@ -1,19 +1,40 @@
 # New Zealand — director / shareholder associations
 
-A lazy, panel-only enrichment on the New Zealand source that flags when a
-company's directors or shareholders also hold roles in **other** companies — a
+A lazy, on-demand enrichment that shows when a New Zealand company's directors
+or shareholders also hold roles in **other** companies — a
 customer-due-diligence indicator for **nominees and mass directorships**.
+
+**Where it shows (since 19 Oct 2026):** on each person's card in the
+**BackgroundCheck** tab, as a "Companies on the New Zealand register" control
+beside the Estonian register's "Companies on the Estonian register" — one person,
+fetched when asked for, listed and never drawn as graph nodes, absent from a
+saved report. Until then it was a company-wide "Director & shareholder
+associations" panel on QuickCheck's New Zealand source card; that card now says
+where it went. Two things did not move: corporate shareholders (BackgroundCheck
+lists people only — their other companies stay in the company-wide endpoint),
+and the company-wide endpoint itself, which stays in the documented API.
 
 It uses the NZ **Companies Entity Role Search API** (v3), separate from the NZBN
 API that powers the main NZ lookup.
 
-- Endpoint: `GET /nz-associations?company_number=<n>` (never on the main lookup).
+- Endpoints (never on the main lookup):
+  - `GET /nz-associations/person?company_number=<n>&name=<name>` — one director
+    or shareholder, what the BackgroundCheck card asks. The name must be a role
+    holder of that company as the filing gives it (the filing supplies the
+    address each match is graded against, and keeps this from becoming a free
+    name search); anything else answers `available: false`. One Role Search
+    call, cached per company and name; a cached company-wide result answers it
+    with no call.
+  - `GET /nz-associations?company_number=<n>` — every role holder of the
+    company (up to 60 searches), the original panel's view.
 - Auth: a **separate** subscription key, `NZBN_ROLE_SEARCH_API_KEY`
   (`Ocp-Apim-Subscription-Key` header). Also requires `OPENCHECK_ALLOW_LIVE` and
   the NZBN `NZBN_API_KEY` (to read the subject's role holders).
 - Service: `backend/opencheck/nz_associations.py`; router:
   `backend/opencheck/routers/nz_associations.py`; UI:
-  `frontend/src/components/cdd/NzAssociations.tsx`.
+  `frontend/src/components/cdd/NzPersonCompanies.tsx` (values in
+  `frontend/src/lib/nzPerson.ts`; the person's anchor, `nzRoleHolder`, is read
+  off the NZ relationship statements by `lib/backgroundCheck.ts`).
 
 ## Why this is a matching problem, not a count
 

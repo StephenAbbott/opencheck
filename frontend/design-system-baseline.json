@@ -160,13 +160,6 @@
     "palette": 31,
     "button": 8
   },
-  "src/components/cdd/NzAssociations.tsx": {
-    "hex": 0,
-    "text": 10,
-    "vocab": 0,
-    "palette": 3,
-    "button": 3
-  },
   "src/components/cdd/PersonReportPage.tsx": {
     "hex": 0,
     "text": 2,

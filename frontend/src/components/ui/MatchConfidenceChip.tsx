@@ -10,9 +10,9 @@
  *   `ui/Chip.tsx` as `CONFIDENCE_GLYPH` / `CONFIDENCE_LABEL`, rendered as
  *   ●◐○, and its prose says "Corroborated by two or more sources".
  * - **Match strength** — how sure we are that this record is *the same party*
- *   as the subject. That is what `ClusterGroup` and `NzAssociations` were both
- *   rendering, graded from a person-pair comparison and from an address tier
- *   respectively.
+ *   as the subject. That is what `ClusterGroup` and `NzPersonCompanies`
+ *   (QuickCheck's `NzAssociations` until 19 Oct 2026) both render, graded from
+ *   a person-pair comparison and from an address tier respectively.
  *
  * The Phase 124 audit listed four "confidence chip" designs and suggested one
  * component. Two of them are this one. The other two are not confidence at
