@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 375** — A watchlist entry can now carry a decision — reviewed with no action, re-checked, or escalated — with a saved report pinned as the evidence, and each list can hand over its review record as Markdown.
+**Latest: Phase 376** — The homepage and /features Watchlist copy now name the register tier, materiality and the review record, not only GLEIF and OpenSanctions.
 
 → [Full development history](docs/status.md)
 
