@@ -53,6 +53,7 @@ import {
   evidenceOption,
   EVIDENCE_WORDS,
   FILTER_LABELS,
+  registerTierLine,
   reviewHistoryLine,
   undecidedSentence,
   type DecisionStatus,
@@ -516,6 +517,14 @@ function WatchRow({
             data-testid="review-sentence"
           >
             {w.review.sentence}
+          </p>
+        )}
+        {registerTierLine(w.register_tier) && (
+          <p
+            className={`mt-1 text-oo-meta ${w.register_tier?.followed ? "text-oo-muted" : "text-oo-info-text"}`}
+            data-testid="register-tier-line"
+          >
+            {registerTierLine(w.register_tier)}
           </p>
         )}
         {reviewHistoryLine(w.review_history) && (

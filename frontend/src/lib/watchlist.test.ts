@@ -18,7 +18,9 @@ import {
   gleifLogLines,
   logLineWords,
   entryHeadline,
+  pscChangeLines,
   registerChangeLines,
+  registerTierLine,
   tierChip,
   tierSentence,
   tokenFromLocation,
@@ -599,5 +601,83 @@ describe("materiality (pKYC stage A)", () => {
     expect(undecidedSentence(0)).toBeNull();
     expect(undecidedSentence(1)).toBe("1 material entry has no decision recorded.");
     expect(undecidedSentence(3)).toBe("3 material entries have no decision recorded.");
+  });
+});
+
+describe("PSC tier entries (Companies House stream, pKYC stage E)", () => {
+  const entry = (trigger: Record<string, unknown>, changes: WatchEntry["changes"] = []) =>
+    ({
+      id: 5, lei: "213800AEMQXSVBTVVU37", legal_name: "EASY POWER", created_at: "2026-10-19T12:00:00Z",
+      tier: "psc" as const, trigger, changes, checked: [], degraded: [],
+    }) as WatchEntry;
+
+  it("says how many filings, when and on which company number — never who", () => {
+    expect(
+      triggerSentence(entry({ company_number: "02999029", events: 2, last_at: "2026-10-19T09:15:00" })),
+    ).toBe(
+      "Companies House recorded 2 changes to this company's people with significant control on 2026-10-19 (company number 02999029).",
+    );
+    expect(triggerSentence(entry({ events: 1 }))).toBe(
+      "Companies House recorded 1 change to this company's people with significant control.",
+    );
+  });
+
+  it("words the counts by kind and outcome as the feed does", () => {
+    expect(
+      pscChangeLines({
+        kinds: {
+          individual: { added: 1, changed: 2, ceased: 1, deleted: 1 },
+          corporate: { added: 1 },
+          legal_person: { ceased: 2 },
+          withheld: { changed: 1 },
+          statement: { added: 1 },
+          unknown: { deleted: 3 },
+        },
+      }),
+    ).toEqual([
+      "5 persons: 1 added, 2 changed, 1 ceased, 1 removed.",
+      "1 corporate entity: 1 added.",
+      "2 legal persons: 2 ceased.",
+      "1 person whose details are withheld: 1 changed.",
+      "1 PSC statement: 1 added.",
+      "3 PSC items: 3 removed.",
+    ]);
+    expect(pscChangeLines(undefined)).toEqual([]);
+  });
+
+  it("is news without a snapshot difference, and has its own chip", () => {
+    expect(entryHeadline(entry({}))).toBe("EASY POWER: Companies House PSC register changed");
+    expect(tierChip("psc")).toEqual({ label: "PSC filing", tone: "accent" });
+  });
+
+  it("explains a stream gap as a catch-up of every watched UK company", () => {
+    const gap = { ...entry({ reason: "register_gap", register: "companies_house", before: "2026-10-19T09:00:00Z" }), tier: "catch_up" as const };
+    expect(triggerSentence(gap)).toBe(
+      "The Companies House PSC stream was rejoined live at 2026-10-19T09:00:00Z, so filings before that were not seen; every watched UK company was re-checked.",
+    );
+  });
+
+  it("says on the watch row what follows its register, or why nothing does (Q5)", () => {
+    expect(registerTierLine({ followed: true, register: "companies_house", reason: null, words: "Companies House PSC stream, live" })).toBe(
+      "Register changes: followed (Companies House PSC stream, live).",
+    );
+    expect(
+      registerTierLine({ followed: false, register: null, reason: "no_register_number", words: "GLEIF files no register number for this company" }),
+    ).toBe("Register changes: not followed — GLEIF files no register number for this company.");
+    expect(registerTierLine(undefined)).toBeNull();
+  });
+
+  it("names the stream in the tier line and keeps the never-polled sentence", () => {
+    const s = tierSentence({
+      gleif: { available: false, watermark: null, refresh_enabled: false, last_applied_at: null, last_delta: null, rows_applied: {}, record_count: null },
+      opensanctions: { available: false, last_version: null, last_checked_at: null },
+      psc: { available: true, connected: false, last_published_at: "2026-10-19T09:14:59", gap: false, matched: 1, queued: 1, last_match_at: null,
+        gaps: [{ since: "2026-10-19T08:00:00Z", detected_at: "2026-10-19T08:00:01Z" }] },
+      worker: { enabled: true, interval_s: 300 },
+    });
+    expect(s).toContain("Companies House: the register's own PSC stream is read as it publishes (not connected just now), last at 2026-10-19 09:14 UTC");
+    expect(s).toContain("counts only, never a name");
+    expect(s).toContain("On 2026-10-19 the stream was rejoined live");
+    expect(s).toContain("No other national register is polled");
   });
 });
