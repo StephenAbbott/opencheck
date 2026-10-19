@@ -914,6 +914,34 @@ MIGRATIONS: tuple[sqlite_schema.Migration, ...] = (
         "Watchlist expiry notice",
         ("ALTER TABLE lists ADD COLUMN expiry_notice_at TEXT",),
     ),
+    # pKYC stage D: the review record. A decision is an append-only row
+    # about one entry — status, an optional note, an optional saved report
+    # as the evidence reviewed; the entry's current decision is the latest.
+    # An entry records which run produced it (``run_completed_at`` +
+    # ``deepen_top``, the replay-cache key) so that run can be saved as the
+    # evidence while the server still holds it. Both nullable on entries: a
+    # NULL is an entry written before this, whose run cannot be saved.
+    sqlite_schema.Migration(
+        6,
+        "Watchlist decisions",
+        (
+            "ALTER TABLE entries ADD COLUMN run_completed_at TEXT",
+            "ALTER TABLE entries ADD COLUMN deepen_top INTEGER",
+            """CREATE TABLE IF NOT EXISTS entry_decisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_hash TEXT NOT NULL,
+    entry_id INTEGER NOT NULL,
+    lei TEXT,
+    status TEXT NOT NULL,
+    note TEXT,
+    saved_report_id TEXT,
+    evidence_kind TEXT,
+    decided_at TEXT NOT NULL
+)""",
+            "CREATE INDEX IF NOT EXISTS entry_decisions_entry ON entry_decisions (entry_id, id)",
+            "CREATE INDEX IF NOT EXISTS entry_decisions_list ON entry_decisions (token_hash, id)",
+        ),
+    ),
 )
 
 
@@ -1224,18 +1252,23 @@ class WatchlistStore:
         degraded: list[dict[str, Any]],
         legal_name: str | None,
         gleif_log: dict[str, Any] | None = None,
+        run_completed_at: str | None = None,
+        deepen_top: int | None = None,
     ) -> int:
         """Write an entry, graded: each change gains its ``materiality`` and
         the row carries the entry tier with the table version it came from
-        (``watchlist_materiality``). Graded once, here, and kept."""
+        (``watchlist_materiality``). Graded once, here, and kept.
+        ``run_completed_at`` / ``deepen_top`` name the run that produced the
+        entry (stage D) so it can be saved as evidence while it is held."""
         assert tier in TIERS, tier
         entry_tier, graded = materiality.grade(changes, tier=tier, trigger=trigger)
         with self._conn() as conn:
             cur = conn.execute(
                 """
                 INSERT INTO entries (token_hash, lei, created_at, tier, trigger_json, changes_json,
-                    checked_json, degraded_json, legal_name, gleif_log_json, materiality, materiality_rules)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    checked_json, degraded_json, legal_name, gleif_log_json, materiality, materiality_rules,
+                    run_completed_at, deepen_top)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     th,
@@ -1250,9 +1283,91 @@ class WatchlistStore:
                     json.dumps(gleif_log) if gleif_log is not None else None,
                     entry_tier,
                     materiality.MATERIALITY_RULES,
+                    run_completed_at,
+                    deepen_top,
                 ),
             )
             return int(cur.lastrowid or 0)
+
+    def entry(self, th: str, entry_id: int) -> dict[str, Any] | None:
+        """One entry of this list, or ``None`` — the list's token hash is part
+        of the key, so an entry id on another list is not found."""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM entries WHERE token_hash = ? AND id = ?", (th, entry_id)
+            ).fetchone()
+        return _entry_dict(row) if row else None
+
+    # -- decisions (stage D) -------------------------------------------------
+
+    def add_decision(
+        self,
+        th: str,
+        entry_id: int,
+        *,
+        lei: str | None,
+        status: str,
+        note: str | None,
+        saved_report_id: str | None,
+        evidence_kind: str | None,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Append a decision on an entry. Never updates a row: a change of
+        mind is a later row, and the history is what the record is."""
+        decided_at = (now or datetime.now(UTC)).isoformat(timespec="seconds")
+        with self._conn() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO entry_decisions (token_hash, entry_id, lei, status, note,
+                    saved_report_id, evidence_kind, decided_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (th, entry_id, lei, status, note, saved_report_id, evidence_kind, decided_at),
+            )
+            row = conn.execute(
+                "SELECT * FROM entry_decisions WHERE id = ?", (cur.lastrowid,)
+            ).fetchone()
+        return _decision_dict(row)
+
+    def decisions(self, th: str) -> list[dict[str, Any]]:
+        """Every decision on this list, oldest first."""
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM entry_decisions WHERE token_hash = ? ORDER BY id ASC", (th,)
+            ).fetchall()
+        return [_decision_dict(r) for r in rows]
+
+    def decision_counts(self) -> dict[str, Any]:
+        """Aggregate only, for ``/watchstats``: decisions by status, how many
+        carry a saved report, and how many material entries have none."""
+        from . import watchlist_decisions as decisions_module
+
+        by_status = dict.fromkeys(decisions_module.STATUSES, 0)
+        with self._conn() as conn:
+            for status, n in conn.execute(
+                "SELECT status, COUNT(*) FROM entry_decisions GROUP BY status"
+            ).fetchall():
+                if status in by_status:
+                    by_status[status] = int(n)
+            with_evidence = int(
+                conn.execute(
+                    "SELECT COUNT(*) FROM entry_decisions WHERE saved_report_id IS NOT NULL"
+                ).fetchone()[0]
+            )
+            decided = {
+                int(r[0]) for r in conn.execute("SELECT DISTINCT entry_id FROM entry_decisions").fetchall()
+            }
+            rows = conn.execute("SELECT * FROM entries").fetchall()
+        undecided = 0
+        for row in rows:
+            e = _entry_dict(row)
+            if e["id"] not in decided and materiality.is_material(e["materiality"]):
+                undecided += 1
+        return {
+            "decisions_by_status": by_status,
+            "decisions_with_evidence": with_evidence,
+            "material_undecided": undecided,
+        }
 
     def entries_by_materiality(self) -> dict[str, int]:
         """How many entries carry each tier — aggregate only, for
@@ -1512,6 +1627,21 @@ def _entry_dict(row: sqlite3.Row) -> dict[str, Any]:
         "gleif_log": _json_col(row, "gleif_log_json"),
         "materiality": stored,
         "materiality_rules": rules,
+        "run_completed_at": row["run_completed_at"] if "run_completed_at" in keys else None,
+        "deepen_top": row["deepen_top"] if "deepen_top" in keys else None,
+    }
+
+
+def _decision_dict(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "entry_id": row["entry_id"],
+        "lei": row["lei"],
+        "status": row["status"],
+        "note": row["note"],
+        "saved_report_id": row["saved_report_id"],
+        "evidence_kind": row["evidence_kind"],
+        "decided_at": row["decided_at"],
     }
 
 
@@ -2223,10 +2353,15 @@ def ariregister_tick(client: Any | None = None) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+#: The depth every watchlist re-run runs at — the replay-cache key a stage D
+#: decision needs to save the run as evidence (``LEI:deepen_top``).
+RERUN_DEEPEN_TOP = 5
+
+
 async def _lookup(lei: str) -> Any:
     from .routers.lookup import _lookup_impl
 
-    return await _lookup_impl(lei, refresh=True)
+    return await _lookup_impl(lei, deepen_top=RERUN_DEEPEN_TOP, refresh=True)
 
 
 async def rerun(lei: str, tier: str, trigger: dict[str, Any], *, only_token_hash: str | None = None) -> dict[str, Any]:
@@ -2277,6 +2412,10 @@ async def rerun(lei: str, tier: str, trigger: dict[str, Any], *, only_token_hash
         "checked": snapshot["checked"],
         "degraded": snapshot["degraded_sources"],
         "snapshot": snapshot,
+        # Stage D: the run's key in the replay cache, so a decision recorded
+        # with a fresh re-check can save that run as its evidence.
+        "run_completed_at": getattr(resp, "run_completed_at", None),
+        "deepen_top": RERUN_DEEPEN_TOP,
     }
 
 
@@ -2388,6 +2527,8 @@ def _write_rerun(
                 degraded=snapshot["degraded_sources"],
                 legal_name=resp.legal_name,
                 gleif_log=row_log,
+                run_completed_at=getattr(resp, "run_completed_at", None),
+                deepen_top=RERUN_DEEPEN_TOP,
             )
             written += 1
     return written, all_changes

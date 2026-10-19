@@ -198,8 +198,8 @@ def test_the_feed_clause() -> None:
 def test_migration_4_adds_the_columns_and_a_pre_b_row_says_nothing(env: Path) -> None:  # noqa: F811
     store = wl.get_store()
     assert store is not None
-    assert store.schema_version == 5
-    assert [m.version for m in wl.MIGRATIONS] == [1, 2, 3, 4, 5]
+    assert store.schema_version == 6
+    assert [m.version for m in wl.MIGRATIONS] == [1, 2, 3, 4, 5, 6]
     assert wl.MIGRATIONS[3].steps[0].startswith("ALTER TABLE watches ADD COLUMN expected_jurisdiction")
 
 

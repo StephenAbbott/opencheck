@@ -401,6 +401,9 @@ the baseline where it was; the next delta that names the LEI tries again.
 | `DELETE /watch/{token}/items/{lei}` | default | Stop watching; the watch's context goes with it |
 | `PATCH /watch/{token}/items/{lei}` `{expected_jurisdiction?, expected_parent_lei?, rationale?, onboarding_report_id?}` | default | Say what you expect of this company (see *What the watcher expected*). A field sent as `null` is cleared; one left out is left alone. Writes no entry |
 | `POST /watch/{token}/recheck` `{lei}` | heavy | Re-run now — a deliberate human action, never a schedule. Writes an entry only when something changed; always reports what it found |
+| `POST /watch/{token}/entries/{id}/decisions` `{status, note?, evidence?}` | default | Record a decision on an entry (see *The review record*). `evidence: "entry_run"` pins the entry's own re-run as a saved report while the server still holds it; a run no longer held is a 409 `run_not_held` and writes nothing |
+| `POST /watch/{token}/entries/{id}/decisions/recheck` `{status, note?, evidence: "recheck"}` | heavy | The same decision with a fresh re-run of the company saved as the evidence — it runs a lookup, so it sits where `/recheck` sits |
+| `GET /watch/{token}/record.md` | default | The list's review record as Markdown: every decision, the entry it answers, the note, the pinned report's id and hash. Reads no clock, runs no pipeline |
 | `GET /watch/{token}.atom` | default | The Atom feed: one entry per logged change, `private, no-store`, `noindex` |
 | `GET /watchstats` | exempt | Aggregate watcher state; no LEI or name can appear |
 
@@ -717,7 +720,59 @@ list-level `review` block ("3 of 12 companies have not been fully re-run in
 per watch; on `/watchstats` `watches_review_due`, `lists_expiring` and
 `lists_deleted_total`, counts only. The words are `REVIEW_WORDS`, mirrored in
 `lib/watchlist.ts` and pinned by `test_watchlist_review.py`. "Mark reviewed"
-is stage D's disposition, not this.
+is the decision below, not this.
+
+## The review record: change → review → decision
+
+A monitoring programme has to be able to say *why A was reviewed and B was
+not*. The log says what changed (the entry), how much it mattered (the
+materiality tier), what the watcher expected (the context) and when
+OpenCheck last looked (the review line). Since pKYC stage D it also records
+what someone **decided** about an entry — `opencheck/watchlist_decisions.py`:
+
+- **Three closed statuses**: *Reviewed, no action* ("Looked at; nothing to
+  do"), *Re-checked* ("Looked at and the company was re-run"), *Escalated*
+  ("Routed to whoever decides; what they decided is not recorded here"). The
+  status is the reader's statement, never set automatically — choosing a
+  fresh re-check as evidence does not make the status "re-checked". It is a
+  *decision*, not a *disposition*: `dispositions.py` signs off claims in an
+  AI narrative, a different object with a different key.
+- **Append-only.** A later decision on the same entry is a new row
+  (`entry_decisions`); the entry's current decision is the latest and the
+  history is kept and shown. Nothing is deleted except with the list.
+- **The note** (optional, one line) follows stage B's rationale rule: about
+  the company, never a person — no e-mail, no foreign link, no digit run that
+  could be a personal code.
+- **Evidence is opt-in, never automatic** (the saved-reports rule): a saved
+  report of what was reviewed, pinned to the decision. Two kinds — the
+  entry's own re-run while the server still holds it (`entry_run`; every
+  entry since stage D records its `run_completed_at` and `deepen_top`, the
+  replay-cache key, and a finished run is held for 15 minutes), or a fresh
+  re-run made and saved in the same action (`recheck`, worded as evidence of
+  *now*). Every save goes through `save_from_replay` and the per-client
+  saved-report quota; a refused save (`run_not_held`, quota, saved reports
+  off) records **no decision**. A report expires on the saved-reports
+  schedule; the decision keeps its id and says the report is gone.
+- **No reviewer identity.** No accounts, so none: the record says a decision
+  was taken by whoever held the list token, when.
+
+Where it shows: on each entry in `/watch/{token}` (`decision`,
+`decision_count`, `decision_history`, `run_held`), on each watch
+(`review_history`) and on the list (`decisions.undecided_material`,
+`evidence_available`); on `/watchlist` a chip and the decision line on a
+decided entry with its history behind a disclosure, the three buttons on an
+undecided one, a note field and a "… and keep the evidence" option worded
+for this re-run or a fresh re-check, a *Needs review* filter
+(`?show=needs_review`: material and undecided) and a *Download the review
+record* link; in the Atom feed the decision as the entry's last line and a
+`category` in the `…/watchlist/decision` scheme; on `/watchstats`
+`decisions_by_status`, `decisions_with_evidence` and `material_undecided`,
+counts only. `GET /watch/{token}/record.md` is the hand-over: the record as
+Markdown, every decision with its entry, materiality, note, and the pinned
+report's id and SHA-256 — it reads no clock and runs no pipeline, so the same
+record renders identically on any day. The words are `STATUS_LABELS` /
+`STATUS_MEANINGS` / `EVIDENCE_WORDS`, mirrored in `lib/watchlist.ts` and
+pinned by `test_watchlist_decisions.py`.
 
 ## Demo framing
 

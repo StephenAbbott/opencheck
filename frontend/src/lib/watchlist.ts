@@ -119,6 +119,8 @@ export interface Watch {
   context?: WatchContext;
   /** pKYC stage C: when OpenCheck last fully looked, and how fresh that was. */
   review?: WatchReview;
+  /** pKYC stage D: every decision recorded on this company's entries, oldest first. */
+  review_history?: WatchReviewHistoryItem[];
 }
 
 // ---------------------------------------------------------------------------
@@ -328,18 +330,155 @@ export function isMaterial(tier: Materiality | null | undefined): boolean {
 
 /** The filter the page offers over the change log. `all` is the default —
  *  a stale list must stay visible; the filter is a per-viewer convenience
- *  carried in `?show=material`. */
-export type ChangeLogFilter = "all" | "material";
+ *  carried in `?show=material` / `?show=needs_review`. */
+export type ChangeLogFilter = "all" | "material" | "needs_review";
+
+export const FILTER_LABELS: Record<ChangeLogFilter, string> = {
+  all: "All",
+  material: "Material only",
+  needs_review: "Needs review",
+};
 
 export function filterEntries(entries: WatchEntry[], filter: ChangeLogFilter): WatchEntry[] {
-  return filter === "material" ? entries.filter((e) => isMaterial(e.materiality)) : entries;
+  if (filter === "material") return entries.filter((e) => isMaterial(e.materiality));
+  if (filter === "needs_review") return entries.filter(isUndecidedMaterial);
+  return entries;
 }
 
 /** The sentence under the filter when it hides something. */
-export function hiddenByFilterSentence(all: number, shown: number): string | null {
+export function hiddenByFilterSentence(all: number, shown: number, filter: ChangeLogFilter = "material"): string | null {
   const hidden = all - shown;
   if (hidden <= 0) return null;
+  if (filter === "needs_review") {
+    return `${hidden} ${hidden === 1 ? "entry is" : "entries are"} hidden: note-only, or already decided on.`;
+  }
   return `${hidden} note-only ${hidden === 1 ? "entry is" : "entries are"} hidden; nothing shown here is recorded for the history alone.`;
+}
+
+// ---------------------------------------------------------------------------
+// pKYC stage D — the review record: change → review → decision
+// ---------------------------------------------------------------------------
+
+/** The three decisions a reader can record on an entry. A copy of the
+ *  backend's `STATUSES` / `STATUS_LABELS` / `STATUS_MEANINGS` / `EVIDENCE_WORDS`
+ *  (`opencheck/watchlist_decisions.py`), pinned by
+ *  `tests/test_watchlist_decisions.py`. The status is the reader's statement,
+ *  never set by what else the request did. */
+export type DecisionStatus = "reviewed_no_action" | "rechecked" | "escalated";
+
+export const DECISION_STATUSES: readonly DecisionStatus[] = ["reviewed_no_action", "rechecked", "escalated"];
+
+export const DECISION_LABELS: Record<DecisionStatus, string> = {
+  reviewed_no_action: "Reviewed, no action",
+  rechecked: "Re-checked",
+  escalated: "Escalated",
+};
+
+export const DECISION_MEANINGS: Record<DecisionStatus, string> = {
+  reviewed_no_action: "Looked at; nothing to do.",
+  rechecked: "Looked at and the company was re-run.",
+  escalated: "Routed to whoever decides; what they decided is not recorded here.",
+};
+
+export type EvidenceKind = "entry_run" | "recheck";
+
+export const EVIDENCE_WORDS = {
+  entry_run: "the re-run that produced this entry",
+  recheck: "a fresh re-check made when the decision was recorded",
+  none: "no evidence pinned",
+  expired: "the pinned saved report has since expired",
+  run_not_held: "That re-run is no longer held (a finished run is held for 15 minutes); re-check and keep instead.",
+};
+
+/** The note follows stage B's rationale rule: the same cap, the same words. */
+export const DECISION_NOTE_MAX = 280;
+
+export interface DecisionReport {
+  report_id: string;
+  report_path: string;
+  available: boolean;
+  saved_at?: string | null;
+  expires_at?: string | null;
+  content_hash?: string | null;
+}
+
+export interface WatchDecision {
+  id: number;
+  entry_id: number;
+  lei: string | null;
+  status: DecisionStatus;
+  note: string | null;
+  saved_report_id: string | null;
+  evidence_kind: EvidenceKind | null;
+  decided_at: string;
+  report: DecisionReport | null;
+}
+
+/** The list-level block on the payload. */
+export interface ListDecisions {
+  undecided_material: number;
+  total: number;
+  /** Whether this server can keep a saved report as evidence at all. */
+  evidence_available: boolean;
+}
+
+/** The chip on a decided entry: `ok` for reviewed/no action, `context` for
+ *  re-checked, `warn` for escalated — never `risk`: a decision is the reader's
+ *  act, not a finding against the company. */
+export function decisionChip(d: WatchDecision | null | undefined): {
+  label: string;
+  tone: "ok" | "context" | "warn";
+} | null {
+  if (!d) return null;
+  const tone = d.status === "escalated" ? "warn" : d.status === "rechecked" ? "context" : "ok";
+  return { label: DECISION_LABELS[d.status] ?? d.status, tone };
+}
+
+/** The one line under a decided entry. */
+export function decisionSentence(d: WatchDecision): string {
+  const label = (DECISION_LABELS[d.status] ?? d.status).toLowerCase();
+  let out = `Decision: ${label} — ${d.decided_at.slice(0, 10)}`;
+  if (d.note) out += `; note: ${d.note}`;
+  if (d.saved_report_id) {
+    const kind = d.evidence_kind ? EVIDENCE_WORDS[d.evidence_kind] : "";
+    out += `; evidence: saved report ${d.saved_report_id}${kind ? ` (${kind})` : ""}`;
+    if (d.report && d.report.available === false) out += ` — ${EVIDENCE_WORDS.expired}`;
+  }
+  return out + ".";
+}
+
+/** Material and nobody has decided on it — the "Needs review" filter. */
+export function isUndecidedMaterial(e: WatchEntry): boolean {
+  return isMaterial(e.materiality) && !e.decision;
+}
+
+/** The label of the "keep the evidence" option: the entry's own run while
+ *  the server still holds it, else a fresh re-check. */
+export function evidenceOption(e: WatchEntry): { kind: EvidenceKind; label: string } {
+  if (e.run_held) return { kind: "entry_run", label: "… and keep this re-run as the evidence (a saved report)" };
+  return { kind: "recheck", label: "… and keep a fresh re-check as the evidence (a saved report)" };
+}
+
+/** The line on a watch row: how many of its entries carry a decision. */
+export function reviewHistoryLine(history: WatchReviewHistoryItem[] | undefined): string | null {
+  if (!history || history.length === 0) return null;
+  const last = history[history.length - 1];
+  const n = history.length;
+  return `${n} decision${n === 1 ? "" : "s"} recorded; latest ${(DECISION_LABELS[last.status] ?? last.status).toLowerCase()} on ${last.decided_at.slice(0, 10)}.`;
+}
+
+export interface WatchReviewHistoryItem {
+  entry_id: number;
+  status: DecisionStatus;
+  decided_at: string;
+  saved_report_id: string | null;
+  evidence_kind: EvidenceKind | null;
+}
+
+/** The sentence over the log when material entries await a decision. */
+export function undecidedSentence(n: number): string | null {
+  if (n <= 0) return null;
+  return `${n} material ${n === 1 ? "entry has" : "entries have"} no decision recorded.`;
 }
 
 /** One line for an entry graded after the fact. */
@@ -422,6 +561,15 @@ export interface WatchEntry {
   materiality_rules?: number | null;
   checked: CheckedSource[];
   degraded: { source_id: string; check?: string; affected_signals?: string[] }[];
+  /** pKYC stage D: the run that produced this entry (the replay-cache key),
+   *  whether the server still holds it, the latest decision and the history.
+   *  Absent on an older server. */
+  run_completed_at?: string | null;
+  deepen_top?: number | null;
+  run_held?: boolean;
+  decision?: WatchDecision | null;
+  decision_count?: number;
+  decision_history?: WatchDecision[];
 }
 
 export interface WatchlistTiers {
@@ -458,6 +606,8 @@ export interface WatchlistPayload {
   watches: Watch[];
   /** pKYC stage C. Absent on an older server. */
   review?: ListReview;
+  /** pKYC stage D. Absent on an older server. */
+  decisions?: ListDecisions;
   entries: WatchEntry[];
   caps: { per_list: number; total: number; in_list: number; total_watched: number };
   feed_url: string;
@@ -497,10 +647,15 @@ export const FILTER_KEY = "opencheck.watchlist.filter";
 
 /** The change-log filter a visit starts with: the URL's `?show=material`
  *  first, else what this browser kept, else all. */
+function asFilter(value: string | null): ChangeLogFilter | null {
+  return value === "material" || value === "needs_review" ? value : null;
+}
+
 export function filterFromLocation(search: string): ChangeLogFilter {
-  if (new URLSearchParams(search).get("show") === "material") return "material";
+  const fromUrl = asFilter(new URLSearchParams(search).get("show"));
+  if (fromUrl) return fromUrl;
   try {
-    return window.localStorage.getItem(FILTER_KEY) === "material" ? "material" : "all";
+    return asFilter(window.localStorage.getItem(FILTER_KEY)) ?? "all";
   } catch {
     return "all";
   }
@@ -508,7 +663,7 @@ export function filterFromLocation(search: string): ChangeLogFilter {
 
 export function storeFilter(filter: ChangeLogFilter): void {
   try {
-    if (filter === "material") window.localStorage.setItem(FILTER_KEY, filter);
+    if (filter !== "all") window.localStorage.setItem(FILTER_KEY, filter);
     else window.localStorage.removeItem(FILTER_KEY);
   } catch {
     /* a per-viewer convenience: nothing lost when storage is absent */
