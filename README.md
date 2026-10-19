@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 377** — The weekly source-health sweep now builds ASP Moldova's index in its warm-up step, ending the September ambers that measured the runner's download speed rather than the register.
+**Latest: Phase 378** — Companies House PSC parties are now keyed on the register's stable PSC item id rather than the etag, so an edited PSC filing stays one record.
 
 → [Full development history](docs/status.md)
 
