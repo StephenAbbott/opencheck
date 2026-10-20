@@ -296,11 +296,25 @@ describe("nzRoleHolder — the New Zealand register's anchor for a person", () =
   };
 
   it("carries the company number and the name as the NZ filing gives it", () => {
-    // The same person from another source, spelt differently, merges first.
+    // The same register naming the person twice, spelt differently, merges
+    // first (same source, no birth year on either); the anchor keeps the
+    // spelling of the statement the role is filed against.
+    const other = { ...nzPerson, statementId: "nz-p2", recordDetails: { ...nzPerson.recordDetails, names: [{ fullName: "Mark Julian VERBIEST" }] } };
+    const people = extractConnectedPeople([nzCompany, other, nzPerson, nzRel]);
+    expect(people).toHaveLength(1);
+    expect(people[0].name).toBe("Mark Julian VERBIEST");
+    expect(people[0].nzRoleHolder).toEqual({ companyNumber: "1166320", name: "Mark Julian Verbiest" });
+  });
+
+  it("keeps a same-name record from another source with no birth year on its own card", () => {
     const other = person("w-p", "Mark Julian VERBIEST", {}, "Wikidata");
-    const [p] = extractConnectedPeople([nzCompany, other, nzPerson, nzRel]);
-    expect(p.name).toBe("Mark Julian VERBIEST");
-    expect(p.nzRoleHolder).toEqual({ companyNumber: "1166320", name: "Mark Julian Verbiest" });
+    const people = extractConnectedPeople([nzCompany, other, nzPerson, nzRel]);
+    expect(people).toHaveLength(2);
+    const nz = people.find((p) => p.statementIds.includes("nz-p"));
+    const wd = people.find((p) => p.statementIds.includes("w-p"));
+    expect(nz?.nzRoleHolder).toEqual({ companyNumber: "1166320", name: "Mark Julian Verbiest" });
+    expect(wd?.nzRoleHolder).toBeUndefined();
+    expect(nz?.key).not.toBe(wd?.key);
   });
 
   it("falls back to the NZBN when the filing has no company number", () => {

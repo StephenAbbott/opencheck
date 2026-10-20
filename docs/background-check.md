@@ -29,9 +29,23 @@ error so "no hit" renders honestly. Tests: `tests/test_person_check.py`.
 **Frontend** — a third check mode alongside QuickCheck / FullCheck:
 
 - `src/lib/backgroundCheck.ts` — extracts connected people from the assembled
-  BODS bundle (person statements + their relationship statements), merging the
-  same person across sources by normalised name + birth year while keeping
-  every statementId for traceability. Tested in `backgroundCheck.test.ts`.
+  BODS bundle (person statements + their relationship statements), merging
+  records that are one person while keeping every statementId for
+  traceability. Tested in `backgroundCheck.test.ts` and
+  `personIdentityMerge.test.ts`. The merge rule (20 Oct 2026,
+  `groupPersonRecords`):
+  1. **Identifiers first.** Records sharing an identifier (the Estonian
+     register's person key, a Wikidata item, a Companies House officer id, an
+     OpenSanctions id…) are one person, whatever the spelling.
+  2. **Name + birth year** when both sides carry a year and the years agree.
+  3. **Name alone only within one source** (one register naming one person on
+     several lists). Across sources a same-name pair with no birth year stays
+     two cards and is offered for review as a Medium cluster.
+  4. **Never across two values of a one-person-per-value scheme**
+     (`ONE_PERSON_PER_VALUE_SCHEMES`: the Estonian person key and Wikidata).
+     Such pairs are not offered as clusters either: the source has already
+     said they are different people. Companies House officer ids are left out
+     on purpose: one person can hold several.
 - `src/components/cdd/BackgroundCheckPanel.tsx` — lists connected people with
   their roles/sources; per-person "Run background check" (plus a capped
   "check all") calls `/person-check` on demand and renders risk chips,
