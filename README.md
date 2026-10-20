@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 380** — A watchlist re-run now says when an owner or controller of the company was added, ended or changed size, in any register, without naming anyone.
+**Latest: Phase 381** — The demo graph's Neo4j import scripts now load source types, nationalities and alternate names as native lists, so the CSV import round-trips back to BODS exactly as a direct load does.
 
 → [Full development history](docs/status.md)
 
