@@ -1689,6 +1689,16 @@ Stephen's decisions (16 Oct 2026):
   an index built before them answers by scan until the daily rebuild.
 - **Current rows only**: a deleted company and an ended role are not listed,
   and the caveat says so (the REST-API ticket can close that).
+- **A Nasdaq CSD account prefix is never part of a name** (the account-prefix
+  fix, 20 Oct 2026). Every path files some holders as "Omanikukonto: X" (owner
+  account) or "Lihtkonto: X" (simple account) — the files, the page, REST and
+  SOAP history. `map_ariregister` runs `_ee_strip_statement_name` on every
+  statement it yields: the name loses the prefix and a `transformation`
+  annotation (`/recordDetails/names` or `/recordDetails/name`) keeps the filed
+  text. Annotation only, never in `details`, never a signal (Stephen). It
+  runs after the ids are built, so ids and joins are unchanged; a new path
+  needs nothing as long as its statements go through `map_ariregister`.
+  `sweep_estonia.py check` fails on a prefixed name.
 - **The page path merges by name, within one company.** The print page has
   no hash, so `_ee_merge_page_people` (page tier only) gives natural persons
   whose `ee_name_key` matches — case, accents, hyphens, spacing and a Nasdaq
@@ -1755,7 +1765,8 @@ will be re-derived otherwise:
   2026: 429, all deleted; 414 LAPSED). They keep their GLEIF statements.
 - `check` must pass before a release: no dangling reference, no registry code
   under `EE-KMKR`, no valid personal code in a person's identifiers or
-  annotations, no person's street address. `--libcove` adds lib-cove-bods
+  annotations, no person's street address, no name starting with a Nasdaq CSD
+  account prefix. `--libcove` adds lib-cove-bods
   (~8 minutes on the full file).
 - The Neo4j zip is `bods-neo4j to-csv` + `backend/scripts/estonia_demo_queries.cypher`;
   the RDF is `export_rdf_bulk.py` with **no** `--fallback-license` (every
