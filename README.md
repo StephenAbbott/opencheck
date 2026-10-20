@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 382** — A New Zealand director's or shareholder's other companies on the register now show on their BackgroundCheck card, beside the Estonian register's list, instead of in a company-wide panel on QuickCheck.
+**Latest: Phase 383** — The Estonia dataset is now built from OpenCheck's own Golden Copy mirror and e-Business Register index, so it carries every current Estonian LEI and the register's full current lists under the EE-ARIREGISTER scheme.
 
 → [Full development history](docs/status.md)
 
