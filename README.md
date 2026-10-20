@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 383** — The Estonia dataset is now built from OpenCheck's own Golden Copy mirror and e-Business Register index, so it carries every current Estonian LEI and the register's full current lists under the EE-ARIREGISTER scheme.
+**Latest: Phase 384** — Crime and regulatory topics on a company's own OpenSanctions record, matched on its LEI, now raise a crime-record risk signal or a regulatory-action or warning note.
 
 → [Full development history](docs/status.md)
 
