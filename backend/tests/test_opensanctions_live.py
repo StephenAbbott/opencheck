@@ -15,6 +15,7 @@ from opencheck.risk import (
     _KNOWN_EXPORT_TOPICS,
     _KNOWN_SANCTION_TOPICS,
     _PEP_TOPICS,
+    _SUBJECT_RECORD_TOPICS,
 )
 from opencheck.sources import SearchKind
 from opencheck.sources.opensanctions import (
@@ -128,6 +129,9 @@ def test_every_risk_topic_is_classified_or_allowlisted() -> None:
         set(_KNOWN_SANCTION_TOPICS)
         | set(_KNOWN_EXPORT_TOPICS)
         | set(_DEBARMENT_TOPICS)
+        # Crime and regulatory topics: read from the subject's own record
+        # (exact LEI, not a branch) by ``risk.assess_subject_record`` only.
+        | set(_SUBJECT_RECORD_TOPICS)
         # _PEP_TOPICS includes role.spouse / role.family, which OpenSanctions
         # does not publish as target topics — intersect so the assertion
         # covers exactly the published surface.

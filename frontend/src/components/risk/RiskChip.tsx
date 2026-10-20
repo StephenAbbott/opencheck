@@ -69,6 +69,22 @@ export const RISK_PRESENTATION: Record<
     label: "Debarred",
     classes: "bg-orange-100 text-orange-900 border-orange-400 font-semibold",
   },
+  // The subject's own OpenSanctions record, matched on its LEI (never a name
+  // match, never a branch's record). A crime topic is a finding against the
+  // company and wears the risk tier; a regulator's action or warning is
+  // context — the record does not grade it — and wears the context slate.
+  CRIME_RECORD: {
+    label: "Crime record",
+    classes: "bg-oo-risk-bg text-oo-risk-text border-oo-risk-border",
+  },
+  REGULATORY_ACTION: {
+    label: "Regulatory action",
+    classes: CONTEXT_CLASSES,
+  },
+  REGULATORY_WARNING: {
+    label: "Regulator warning",
+    classes: CONTEXT_CLASSES,
+  },
   // Export-control family (Phase 118). Labels mirror OpenSanctions' own
   // display names for the topics ("Export controlled", "Export
   // control-linked", "Trade risk") — same cross-check rationale as

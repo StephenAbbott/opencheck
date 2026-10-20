@@ -397,6 +397,9 @@ note reads Annex I of the EU tax list too.
 Version 4 is Phase 342: the sanctions 50% rule is computed, so
 `SANCTIONS_OWNERSHIP_TEST` (or the context `SANCTIONS_OWNERSHIP_TEST_POSSIBLE`)
 can appear with nothing in a company's records changed.
+Version 6 reads crime and regulatory topics on the subject's own
+OpenSanctions record (exact LEI): `CRIME_RECORD`, `REGULATORY_ACTION` and
+`REGULATORY_WARNING` can appear with nothing upstream changed.
 Bump `SIGNAL_RULES` and add an entry whenever a rule change moves which codes
 fire for an unchanged company.
 
@@ -649,6 +652,7 @@ notable, not a risk.
 | `RELATED_EXPORT_CONTROL_LINKED` | recheck |
 | `DEBARMENT` | recheck |
 | `RELATED_DEBARMENT` | recheck |
+| `CRIME_RECORD` | recheck |
 | `PEP` | recheck |
 | `RELATED_PEP` | recheck |
 | `EU_HIGH_RISK_THIRD_COUNTRY` | recheck |
@@ -669,6 +673,8 @@ notable, not a risk.
 | `SUBSIDIARY_LISTED_JURISDICTION` | note |
 | `GLEIF_REPORTING_EXCEPTION` | note |
 | `RELATED_PEP_SUBJECT_ROLE` | note |
+| `REGULATORY_ACTION` | note |
+| `REGULATORY_WARNING` | note |
 | `RECORD_CONSISTENCY` | note |
 | `SANCTIONS_OWNERSHIP_TEST_POSSIBLE` | note |
 | `COMPLEX_CORPORATE_STRUCTURE` | note |

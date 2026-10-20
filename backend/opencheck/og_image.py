@@ -59,6 +59,11 @@ SIGNAL_STYLE: dict[str, tuple[str, str, str]] = {
     "SANCTIONS_CONTROLLED": ("Sanction control", "#ffe4e6", "#9f1239"),
     "SANCTIONS_LINKED": ("Sanctions-linked", "#fffbeb", "#92400e"),
     "DEBARMENT": ("Debarred", "#ffedd5", "#7c2d12"),
+    # The subject's own OpenSanctions record, matched on its LEI. The two
+    # regulatory codes are context — never counted on the card.
+    "CRIME_RECORD": ("Crime record", "#ffe4e6", "#9f1239"),
+    "REGULATORY_ACTION": ("Regulatory action", "#f8fafc", "#475569"),
+    "REGULATORY_WARNING": ("Regulator warning", "#f8fafc", "#475569"),
     "EXPORT_CONTROLLED": ("Export controlled", "#ffe4e6", "#9f1239"),
     "EXPORT_CONTROL_LINKED": ("Export control-linked", "#fffbeb", "#92400e"),
     "EXPORT_RISK": ("Trade risk", "#fff7ed", "#c2410c"),
