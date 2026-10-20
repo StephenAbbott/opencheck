@@ -502,6 +502,36 @@ def _is_subject(stmt: dict[str, Any], lei: str) -> bool:
     return False
 
 
+def _published_by_opencheck(stmt: dict[str, Any]) -> bool:
+    publisher = (stmt.get("publicationDetails") or {}).get("publisher") or {}
+    return str(publisher.get("name") or "").startswith("OpenCheck")
+
+
+def own_gleif_target(bods: list[dict[str, Any]], lei: str | None) -> int | None:
+    """Index of the statement the primary listing goes on, or None.
+
+    OpenCheck's own GLEIF entity statement for *lei*: carries the LEI, stamped
+    ``source.opencheckSourceId: "gleif"`` and published by OpenCheck. Nothing
+    else — not Open Ownership's GLEIF statement, not another source's subject
+    statement (the PermID-listing ticket, option C: a field written into
+    ``recordDetails`` is a bigger change to a statement than an annotation, so
+    unlike ``integrated_ownership.annotation_target`` there is no fallback).
+    """
+    if not lei:
+        return None
+    lei = lei.strip().upper()
+    return next(
+        (
+            i
+            for i, s in enumerate(bods)
+            if _is_subject(s, lei)
+            and (s.get("source") or {}).get("opencheckSourceId") == "gleif"
+            and _published_by_opencheck(s)
+        ),
+        None,
+    )
+
+
 def securities_listing(listing: dict[str, Any] | None) -> dict[str, Any] | None:
     """The BODS ``SecuritiesListing`` for a payload, or None when the venue
     or ticker is unknown (``stockExchangeJurisdiction``, ``stockExchangeName``
@@ -528,31 +558,25 @@ def securities_listing(listing: dict[str, Any] | None) -> dict[str, Any] | None:
 def apply_to_bods(
     bods: list[dict[str, Any]], lei: str | None, listing: dict[str, Any] | None
 ) -> list[dict[str, Any]]:
-    """Return *bods* with the primary listing on the subject's GLEIF entity
-    statement — copied, never mutated in place (the statements are also the
-    stored event payloads of a saved report).
+    """Return *bods* with the primary listing on OpenCheck's own GLEIF entity
+    statement for the subject — copied, never mutated in place (the statements
+    are also the stored event payloads of a saved report).
 
-    One statement only: the GLEIF one when present (the anchor every lookup
-    has), else the first entity carrying the LEI. The ``linking`` annotation
-    names PermID, so the field is never read as something GLEIF published.
+    One statement only, and only OpenCheck's own (``own_gleif_target``): never
+    another publisher's statement, with no fallback. The stored Open Ownership
+    bundles are carried verbatim (Phase 317) and their GLEIF statements are
+    described "GLEIF", so the stamped ``opencheckSourceId`` and the publisher
+    are read, never the description. Where the lookup holds no OpenCheck GLEIF
+    statement for the subject the BODS carries no listing; the ``listing``
+    event and the page line are unchanged. The ``linking`` annotation names
+    PermID, so the field is never read as something GLEIF published.
     """
     sl = securities_listing(listing)
     if not sl or not lei:
         return bods
-    lei = lei.strip().upper()
-    candidates = [i for i, s in enumerate(bods) if _is_subject(s, lei)]
-    if not candidates:
+    idx = own_gleif_target(bods, lei)
+    if idx is None:
         return bods
-
-    def _src(i: int) -> str:
-        from .consistency import source_id_of
-
-        try:
-            return source_id_of(bods[i]) or ""
-        except Exception:  # noqa: BLE001
-            return ""
-
-    idx = next((i for i in candidates if _src(i) == "gleif"), candidates[0])
     stmt = copy.deepcopy(bods[idx])
     rd = stmt.setdefault("recordDetails", {})
     rd["publicListing"] = {"hasPublicListing": True, "securitiesListings": [sl]}

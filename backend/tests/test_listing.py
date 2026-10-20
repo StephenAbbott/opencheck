@@ -423,8 +423,31 @@ def _gleif_subject() -> dict[str, Any]:
             "jurisdiction": {"code": "GB", "name": "United Kingdom"},
             "identifiers": [{"scheme": "XI-LEI", "id": LEI}],
         },
-        "source": {"type": ["officialRegister"], "description": SOURCE_NAMES["gleif"]},
+        "publicationDetails": {
+            "bodsVersion": "0.4",
+            "publicationDate": "2026-09-24",
+            "publisher": {"name": "OpenCheck"},
+        },
+        "source": {
+            "type": ["officialRegister"],
+            "description": SOURCE_NAMES["gleif"],
+            "opencheckSourceId": "gleif",
+        },
     }
+
+
+def _oo_gleif_subject() -> dict[str, Any]:
+    """Open Ownership's stored GLEIF statement for the same LEI, as the curated
+    ``bulkBods`` examples carry it: described "GLEIF", no stamped id, published
+    by Open Ownership."""
+    stmt = {**_gleif_subject(), "statementId": "s-oo", "recordId": "s-oo"}
+    stmt["publicationDetails"] = {
+        "bodsVersion": "0.4",
+        "publicationDate": "2024-01-01",
+        "publisher": {"name": "Open Ownership"},
+    }
+    stmt["source"] = {"type": ["officialRegister"], "description": "GLEIF"}
+    return stmt
 
 
 def _payload(**quote_over: Any) -> dict[str, Any]:
@@ -488,6 +511,47 @@ def test_the_listing_goes_on_the_gleif_subject_statement_as_a_copy() -> None:
     assert ann["statementPointerTarget"] == "/recordDetails/publicListing"
     assert "PermID" in ann["description"]
     assert validate_shape(out) == validate_shape(bods)
+
+
+def test_the_listing_never_goes_on_open_ownerships_gleif_statement() -> None:
+    """The PermID-listing ticket, option C: Open Ownership's verbatim GLEIF
+    statement comes first and resolves to ``gleif`` by description, but the
+    listing goes on OpenCheck's own statement and the other is untouched."""
+    oo = _oo_gleif_subject()
+    own = _gleif_subject()
+    bods = [oo, own]
+
+    out = listing.apply_to_bods(bods, LEI, _payload())
+
+    assert out[0] is oo
+    assert "publicListing" not in out[0]["recordDetails"]
+    assert "annotations" not in out[0]
+    assert out[1]["recordDetails"]["publicListing"]["hasPublicListing"] is True
+    assert listing.own_gleif_target(bods, LEI) == 1
+
+
+@pytest.mark.parametrize(
+    "bods",
+    [
+        pytest.param([_oo_gleif_subject()], id="only-open-ownership"),
+        pytest.param(
+            [{**_gleif_subject(), "source": {"type": ["thirdParty"],
+              "description": SOURCE_NAMES["opensanctions"],
+              "opencheckSourceId": "opensanctions"}}],
+            id="only-another-opencheck-source",
+        ),
+        pytest.param(
+            [{**_gleif_subject(), "source": {"type": ["officialRegister"],
+              "description": SOURCE_NAMES["gleif"]}}],
+            id="opencheck-gleif-unstamped",
+        ),
+    ],
+)
+def test_without_opencheck_s_own_gleif_statement_the_bods_has_no_listing(bods) -> None:
+    """No fallback: the event and the page line carry the listing, the BODS
+    does not."""
+    assert listing.own_gleif_target(bods, LEI) is None
+    assert listing.apply_to_bods(bods, LEI, _payload()) is bods
 
 
 def test_an_unnamed_venue_or_missing_ticker_adds_nothing() -> None:
@@ -631,10 +695,13 @@ def test_pipeline_emits_listing_before_the_profile_and_folds_it(monkeypatch, tmp
 
         sync = client.get("/lookup", params={"lei": lei, "refresh": "true"}).json()
         assert sync["listing"] == payload
-        subject = next(s for s in sync["bods"] if s.get("recordType") == "entity")
-        assert subject["recordDetails"]["publicListing"]["securitiesListings"][0]["security"] == {
-            "ticker": "SHEL"
-        }
+        # The seeded bundle is a stored Open Ownership-style statement, not
+        # OpenCheck's own GLEIF statement: the listing rides the event and the
+        # response, never another publisher's recordDetails (option C).
+        assert listing.own_gleif_target(sync["bods"], lei) is None
+        assert not any(
+            "publicListing" in (s.get("recordDetails") or {}) for s in sync["bods"]
+        )
     finally:
         get_settings.cache_clear()
 
