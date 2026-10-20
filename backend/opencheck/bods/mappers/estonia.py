@@ -621,10 +621,11 @@ def _ee_shareholding_interest(row: dict[str, Any]) -> dict[str, Any]:
     except ValueError:
         pct = None
     if pct is not None:
-        # BODS v0.4: ``share.exclusiveMinimum``/``exclusiveMaximum`` are
-        # *numbers* (exclusive percentage bounds), not booleans as in v0.3.
-        # With an exact value known, the inclusive bounds suffice.
-        interest["share"] = {"exact": pct, "minimum": pct, "maximum": pct}
+        # BODS v0.4: an exact share stands alone. libcove fails ``exact``
+        # beside ``minimum``/``maximum``
+        # (statement_relationship_interests_exact_has_min_max), and every
+        # other mapper writes ``{"exact": pct}``.
+        interest["share"] = {"exact": pct}
     details: list[str] = []
     if share_size:
         details.append(f"Share value: {share_size} {currency}".strip())
