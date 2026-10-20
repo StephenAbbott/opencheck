@@ -1051,7 +1051,7 @@ export async function getHistory(
 }
 
 // ---------------------------------------------------------------------
-// NZ associations — /nz-associations (director/shareholder cross-company links)
+// NZ associations — /nz-associations/person (one role holder's other companies)
 // ---------------------------------------------------------------------
 
 export interface NzAssociatedCompany {
@@ -1060,7 +1060,7 @@ export interface NzAssociatedCompany {
   nzbn: string | null;
   roles: string[]; // "director" | "shareholder"
   share_percentage: number | null;
-  confidence: string; // "high" | "medium"
+  confidence: string; // "high" | "medium" | "low"
   basis: string;
   link: string | null;
 }
@@ -1081,24 +1081,25 @@ export interface NzPersonAssociations {
   companies: NzAssociatedCompany[];
 }
 
-export interface NzAssociationsResponse {
+/** One director's or shareholder's other NZ companies —
+ *  `/nz-associations/person`, read by the BackgroundCheck card. */
+export interface NzPersonAssociationsResponse {
   company_number: string;
+  name: string;
   available: boolean;
   reason: string | null;
   subject_name: string | null;
-  checked: number;
-  not_checked: number;
-  people: NzPersonAssociations[];
+  person: NzPersonAssociations | null;
 }
 
-/** Director/shareholder cross-company associations for an NZ company. */
-export async function getNzAssociations(
+/** One role holder's other companies on the NZ register. The name must be a
+ *  director or shareholder of `companyNumber`, as the filing gives it. */
+export async function nzPersonAssociations(
   companyNumber: string,
-): Promise<NzAssociationsResponse> {
-  const params = new URLSearchParams({ company_number: companyNumber });
-  const r = await fetch(`${BASE_URL}/nz-associations?${params.toString()}`);
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-  return (await r.json()) as NzAssociationsResponse;
+  name: string,
+): Promise<NzPersonAssociationsResponse> {
+  const params = new URLSearchParams({ company_number: companyNumber, name });
+  return getJson(`/nz-associations/person?${params.toString()}`);
 }
 
 // ---------------------------------------------------------------------

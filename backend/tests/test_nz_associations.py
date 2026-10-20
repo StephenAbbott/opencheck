@@ -433,3 +433,110 @@ def test_address_type_is_backfilled_when_a_name_holds_two_roles():
     assert len(holders) == 1
     assert holders[0]["address_type"] == "ALTERNATIVE"
     assert holders[0]["roles_here"] == {"director", "shareholder"}
+
+
+# ---------------------------------------------------------------------------
+# One person at a time — the BackgroundCheck card (NZ associations transfer)
+#
+# The card asks about one director or shareholder, by the name the NZ filing
+# gives. The name must be a role holder of the company: the filing supplies
+# the address the matches are graded against, and it keeps the endpoint from
+# becoming a free name search.
+# ---------------------------------------------------------------------------
+
+from opencheck import nz_associations as _nza  # noqa: E402
+from opencheck.routers.nz_associations import nz_person_associations  # noqa: E402
+
+_BUNDLE = {
+    "nz_company_number": _SUBJECT,
+    "company": {"name": "MERIDIAN ENERGY LIMITED"},
+    "roles": [{"name": "John Doe", "search_name": "Doe John", "paf_id": "580631",
+               "address": "1 Queen St, Auckland, 1010", "address_type": "PHYSICAL"}],
+    "shareholders": [{"name": "Jane Roe", "paf_id": None, "address": None}],
+}
+
+
+class _MemCache:
+    def __init__(self):
+        self.store = {}
+
+    def get_payload(self, key, *a, **k):
+        return (self.store[key], None) if key in self.store else None
+
+    def put(self, key, value, *a, **k):
+        self.store[key] = value
+
+
+@pytest.fixture
+def live_nz(monkeypatch):
+    monkeypatch.setenv("NZBN_ROLE_SEARCH_API_KEY", "k")
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "1")
+    get_settings.cache_clear()
+    cache = _MemCache()
+    monkeypatch.setattr(_nza, "_cache", cache)
+
+    async def fake_fetch(number, legal_name=""):
+        return _BUNDLE
+
+    monkeypatch.setattr(_nza.REGISTRY["nz_companies"], "fetch", fake_fetch)
+    searched: list[str] = []
+
+    async def fake_search(client, name, key):
+        searched.append(name)
+        return [_director_rec("111", "ALPHA LTD", phys=_phys(paf="580631")),
+                _director_rec(_SUBJECT, "MERIDIAN ENERGY LIMITED", phys=_phys(paf="580631"))], 2
+
+    monkeypatch.setattr(_nza, "_role_search", fake_search)
+    yield cache, searched
+    get_settings.cache_clear()
+
+
+async def test_person_view_searches_one_holder_and_grades_by_their_filing(live_nz):
+    cache, searched = live_nz
+    res = await _nza.person_associations(_SUBJECT, "John Doe")
+    assert res["available"] is True
+    assert searched == ["Doe John"]          # the filing's search order, one call
+    p = res["person"]
+    assert p["role_here"] == ["director"]
+    assert [c["number"] for c in p["companies"]] == ["111"]   # subject excluded
+    assert p["companies"][0]["confidence"] == "high"          # graded on the filing's PAF
+    # Cached: a second ask makes no call.
+    await _nza.person_associations(_SUBJECT, "DOE, John")
+    assert searched == ["Doe John"]
+
+
+async def test_person_view_refuses_a_name_not_on_the_company(live_nz):
+    _, searched = live_nz
+    res = await _nza.person_associations(_SUBJECT, "Somebody Else")
+    assert res["available"] is False
+    assert "not a director or shareholder" in res["reason"]
+    assert res["person"] is None
+    assert searched == []
+
+
+async def test_person_view_reads_a_cached_company_view_without_a_call(live_nz):
+    cache, searched = live_nz
+    cache.store[f"nz_associations/{_SUBJECT}"] = {
+        "company_number": _SUBJECT, "available": True, "subject_name": "M",
+        "people": [{"name": "Jane Roe", "other_company_count": 0, "companies": []}],
+    }
+    res = await _nza.person_associations(_SUBJECT, "jane roe")
+    assert res["available"] is True and res["person"]["name"] == "Jane Roe"
+    assert searched == []
+
+
+async def test_person_view_unavailable_without_key(monkeypatch):
+    monkeypatch.delenv("NZBN_ROLE_SEARCH_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCHECK_ALLOW_LIVE", raising=False)
+    get_settings.cache_clear()
+    res = await nz_person_associations(
+        request=None, response=None, company_number=_SUBJECT, name="John Doe")
+    get_settings.cache_clear()
+    assert res["available"] is False and res["person"] is None
+
+
+async def test_person_endpoint_rejects_bad_number():
+    with pytest.raises(HTTPException) as exc:
+        await nz_person_associations(
+            request=None, response=None, company_number="x1", name="John Doe")
+    assert exc.value.status_code == 400
