@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 386** — Estonian shareholdings now write an exact share on its own, which libcove accepts.
+**Latest: Phase 387** — OpenCorporates' "no company here" answer is reported as no record rather than as an outage, and a company number GLEIF's mapping wrote in scientific notation is restored from the LEI record's own register number.
 
 → [Full development history](docs/status.md)
 
