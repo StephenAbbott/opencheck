@@ -434,7 +434,7 @@ def apply_to_bods(
     stmt = copy.deepcopy(bods[idx])
     lines = "; ".join(holder_line(h) for h in holders)
     ann: dict[str, Any] = {
-        "statementPointerTarget": "/",
+        "statementPointerTarget": "/recordDetails",
         "motivation": "commenting",
         "description": (
             f"Integrated ownership, added by OpenCheck: {lines}. "

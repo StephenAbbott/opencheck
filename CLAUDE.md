@@ -4085,7 +4085,8 @@ decisions on the Phase 339 ticket. Things that will be re-derived otherwise:
 - **Where it shows:** the FullCheck "Integrated ownership" band and the
   "Read as text" tree rows; one `commenting` annotation on the subject's first
   entity statement (folded in `fold_lookup_events`, after the listing; cites
-  T-Rank, `url` = `METHOD_URL`); the PDF/HTML/Markdown "Integrated ownership"
+  T-Rank, `url` = `METHOD_URL`, target `/recordDetails` — never `/`, which
+  libcove rejects); the PDF/HTML/Markdown "Integrated ownership"
   table (`report_rows`, 40 holders max); the MCP `integrated_ownership` block
   on `opencheck_lookup` and `opencheck_export_bods` (25 holders max).
 - **Parity:** `frontend/src/lib/integratedOwnershipCases.json` is hand-written

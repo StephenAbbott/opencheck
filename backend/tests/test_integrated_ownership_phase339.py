@@ -123,11 +123,28 @@ def test_the_fold_keeps_the_frozen_payload_and_annotates_the_subject():
     assert resp.integrated_ownership == frozen
     (subject,) = [s for s in resp.bods if s.get("statementId") == "T"]
     (ann,) = [a for a in subject.get("annotations") or [] if a["motivation"] == "commenting"]
-    assert ann["statementPointerTarget"] == "/"
+    assert ann["statementPointerTarget"] == "/recordDetails"
     assert ann["url"] == io.METHOD_URL
     assert ann["creationDate"] == "2026-01-02"
     assert "State — 34% (OpenSanctions, directly and through Holding A)" in ann["description"]
     assert "T-Rank" in ann["description"]
+
+
+def test_the_annotation_never_targets_the_statement_root():
+    """libcove's ``annotation_statement_pointer_target_invalid`` rejects
+    ``"/"``; a statement-wide annotation targets ``/recordDetails`` (the
+    Phase 255 rule). Found by the BODS quality sweep of 19 Oct 2026."""
+    payload = _frozen()
+    out = io.apply_to_bods(
+        [{"statementId": "T", "recordType": "entity", "recordDetails": {}}], payload
+    )
+    pointers = [a["statementPointerTarget"] for a in out[0]["annotations"]]
+    assert pointers and "/" not in pointers
+    for pointer in pointers:
+        node = out[0]
+        for part in pointer.lstrip("/").split("/"):
+            assert part in node, f"{pointer} does not resolve in the statement"
+            node = node[part]
 
 
 def test_no_holder_means_no_annotation():
