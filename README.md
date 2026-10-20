@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 384** — Crime and regulatory topics on a company's own OpenSanctions record, matched on its LEI, now raise a crime-record risk signal or a regulatory-action or warning note.
+**Latest: Phase 385** — The integrated-ownership note now points at a statement's record details, so libcove no longer rejects it, and is written only on OpenCheck's own GLEIF statement, never on Open Ownership's.
 
 → [Full development history](docs/status.md)
 
