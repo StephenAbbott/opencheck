@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 387** — OpenCorporates' "no company here" answer is reported as no record rather than as an outage, and a company number GLEIF's mapping wrote in scientific notation is restored from the LEI record's own register number.
+**Latest: Phase 388** — Estonian shareholders filed through a Nasdaq CSD account are named without the "Omanikukonto:" / "Lihtkonto:" prefix, on every path and in the corrected 19 October 2026 dataset.
 
 → [Full development history](docs/status.md)
 
