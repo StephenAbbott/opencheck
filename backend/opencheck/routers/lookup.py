@@ -61,7 +61,13 @@ from .. import pep_merge as _pep_merge
 from ..subject_identity import subject_identity
 from ..verdict import build_verdict
 from ..reconcile import possibly_same_entities, reconcile
-from ..risk import DegradedSource, RiskSignal, assess_bundle, assess_hits
+from ..risk import (
+    DegradedSource,
+    RiskSignal,
+    assess_bundle,
+    assess_hits,
+    assess_subject_record,
+)
 from ..risk import merge_listed_jurisdiction as _risk_merge_listed
 from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
 from ..risk import merge_subsidiary_listed_jurisdiction as _risk_merge_subsidiary_listed
@@ -1884,6 +1890,12 @@ async def _lookup_pipeline(
     # Reconcile + search-time risk.
     links = [link.to_dict() for link in reconcile(hits)]
     search_signals = [s.to_dict() for s in assess_hits(hits)]
+    # The subject's own OpenSanctions record — crime and regulatory topics,
+    # on an exact LEI match only (never a name match, never a branch).
+    search_signals += [
+        s.to_dict()
+        for s in assess_subject_record(hits, ctx.lei, [ctx.legal_name or ""])
+    ]
     yield ("cross_source_links", {"links": links})
 
     # Deepen the top N bundles (BODS mapping + per-bundle risk).

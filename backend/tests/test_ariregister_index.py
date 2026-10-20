@@ -1072,7 +1072,7 @@ async def test_the_supervisory_board_and_the_as_shareholder_are_mapped(index) ->
     }
     holding = _interests(statements, "Eesti Vabariik")
     assert len(holding) == 1 and holding[0]["type"] == "shareholding"
-    assert holding[0]["share"] == {"exact": 100.0, "minimum": 100.0, "maximum": 100.0}
+    assert holding[0]["share"] == {"exact": 100.0}
     assert holding[0]["details"].startswith("Shareholder of a public limited company (aktsionär)")
     assert "NASDAQ andmed" in holding[0]["details"] and "2025-07-09" in holding[0]["details"]
     assert holding[0]["startDate"] == "1998-03-31"
@@ -1118,6 +1118,22 @@ async def test_a_founder_no_longer_holding_is_a_closed_record_with_no_end_date(i
     assert len(founder) == 1 and "endDate" not in founder[0]
     assert len([s for s in _by_type(statements, "person")
                 if s["recordDetails"]["names"][0]["fullName"] == "Mari Mets"]) == 1
+
+
+@pytest.mark.parametrize("code", [AGENT, EESTI, HOLD, STATE, HAUDE])
+async def test_an_exact_share_stands_alone(index, code: str) -> None:
+    """libcove fails ``exact`` beside ``minimum``/``maximum``
+    (statement_relationship_interests_exact_has_min_max) — found by the BODS
+    quality sweep on Eesti Energia AS's AS-shareholder and history records.
+    Every shareholder-shaped row (OÜ, AS ``S``, founder) goes through one
+    helper, so every company in the fixture is walked."""
+    shares = [
+        i["share"] for s in _by_type(await _statements(code), "relationship")
+        for i in s["recordDetails"]["interests"] if "share" in i
+    ]
+    for share in shares:
+        if "exact" in share:
+            assert share == {"exact": share["exact"]}, share
 
 
 async def test_the_page_path_has_no_off_card_list(index) -> None:
