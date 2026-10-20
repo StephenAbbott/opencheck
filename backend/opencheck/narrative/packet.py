@@ -191,6 +191,18 @@ _RISK_LABELS = {
     "SANCTIONS_LINKED": "Linked to a sanctioned party",
     "RELATED_SANCTIONS_LINKED": "Related party linked to a sanctioned party",
     "DEBARMENT": "Debarred from public contracts",
+    "CRIME_RECORD": (
+        "OpenSanctions tags the company's own record (matched on its LEI) "
+        "with a crime topic; the tag does not say how any case ended"
+    ),
+    "REGULATORY_ACTION": (
+        "A regulatory action recorded on the company's own OpenSanctions "
+        "record (matched on its LEI; context, not a finding)"
+    ),
+    "REGULATORY_WARNING": (
+        "A regulator's warning recorded on the company's own OpenSanctions "
+        "record (matched on its LEI; context, not a finding)"
+    ),
     "RELATED_DEBARMENT": "Related party debarred from public contracts",
     "EXPORT_CONTROLLED": "Subject to export-control restrictions",
     "RELATED_EXPORT_CONTROLLED": "Related party subject to export-control restrictions",

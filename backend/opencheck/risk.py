@@ -144,6 +144,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -178,6 +179,18 @@ SANCTIONS_LINKED = "SANCTIONS_LINKED"
 SANCTIONS_OWNERSHIP_TEST = "SANCTIONS_OWNERSHIP_TEST"
 SANCTIONS_OWNERSHIP_TEST_POSSIBLE = "SANCTIONS_OWNERSHIP_TEST_POSSIBLE"
 DEBARMENT = "DEBARMENT"
+#: Enforcement, regulatory and crime topics on the subject's OWN OpenSanctions
+#: record (Notion "Enforcement, regulatory-action and financial-crime
+#: OpenSanctions topics on the subject should raise a signal"). Read only
+#: from a record that carries the looked-up LEI and is not a branch's record
+#: — never from a name match, never from a related-party screen (Stephen,
+#: 20 Oct 2026). ``CRIME_RECORD`` (risk): a ``crime`` / ``crime.*`` topic.
+#: ``REGULATORY_ACTION`` / ``REGULATORY_WARNING`` (context): ``reg.action`` /
+#: ``reg.warn`` — a supervisor's action or notice, which the record does not
+#: grade, so it is stated and never counted as a finding.
+CRIME_RECORD = "CRIME_RECORD"
+REGULATORY_ACTION = "REGULATORY_ACTION"
+REGULATORY_WARNING = "REGULATORY_WARNING"
 EXPORT_CONTROLLED = "EXPORT_CONTROLLED"
 EXPORT_CONTROL_LINKED = "EXPORT_CONTROL_LINKED"
 EXPORT_RISK = "EXPORT_RISK"
@@ -781,6 +794,26 @@ _EXPORT_TOPIC_PREFIX = "export"
 _INFORMATIONAL_TOPICS = frozenset(
     {
         "corp.disqual",
+        "invest.ban",
+        "invest.risk",
+        "mare.detained",
+        "mare.shadow",
+        "poi",
+        "role.oligarch",
+        "wanted",
+    }
+)
+
+# Subject-only topics. Classified, so they left ``_INFORMATIONAL_TOPICS``,
+# but read by ``assess_subject_record`` alone: the hit and deepen rules
+# above and the related-party screens (cross_check, openaleph_check) do not
+# look at them, so a related party tagged ``crime.fin`` still raises
+# nothing. Topic meanings per https://www.opensanctions.org/docs/topics/ —
+# OpenSanctions tags a civil enforcement record (the SEC's "harmed
+# investors" list) ``crime.fin`` too, which is why the summary says what the
+# tag is and not what a court decided.
+_CRIME_TOPICS = frozenset(
+    {
         "crime",
         "crime.boss",
         "crime.fin",
@@ -789,17 +822,11 @@ _INFORMATIONAL_TOPICS = frozenset(
         "crime.theft",
         "crime.traffick",
         "crime.war",
-        "invest.ban",
-        "invest.risk",
-        "mare.detained",
-        "mare.shadow",
-        "poi",
-        "reg.action",
-        "reg.warn",
-        "role.oligarch",
-        "wanted",
     }
 )
+_REG_ACTION_TOPICS = frozenset({"reg.action"})
+_REG_WARN_TOPICS = frozenset({"reg.warn"})
+_SUBJECT_RECORD_TOPICS = _CRIME_TOPICS | _REG_ACTION_TOPICS | _REG_WARN_TOPICS
 
 
 @dataclass(frozen=True)
@@ -1393,6 +1420,140 @@ def _opensanctions_topic_signals_from_entity(
                 evidence={"topics": risk_export, "statement_id": stmt_id},
             )
         )
+    return out
+
+
+# ----------------------------------------------------------------------
+# The subject's own OpenSanctions record: crime and regulatory topics
+# ----------------------------------------------------------------------
+
+#: Words that mark a record as a branch's. Measured on 19 Oct 2026: the only
+#: record OpenSanctions files under Danske Bank A/S's LEI is captioned
+#: "DANSKE BANK A/S, FINLAND BRANCH" (its ESMA regulator warning came from
+#: the Finnish branch's MiFID entry), and a branch record carrying the
+#: parent's LEI is not the parent (Stephen, 20 Oct 2026). The word counts
+#: only when the subject's own name lacks it, so a GLEIF-registered branch
+#: looked up as itself still reads its record.
+_BRANCH_WORDS = re.compile(
+    r"\b(branch|filial|filiale|filiaal|filiāle|filialas|succursale|sucursal|"
+    r"zweigniederlassung|niederlassung|oddział|sivuliike|pobočka|podružnica|"
+    r"fióktelep|υποκατάστημα)\b",
+    re.IGNORECASE,
+)
+
+
+def _branch_words(text: str) -> set[str]:
+    return {m.group(1).casefold() for m in _BRANCH_WORDS.finditer(text or "")}
+
+
+def is_branch_record(entity: dict[str, Any], subject_names: Iterable[str]) -> bool:
+    """True when the record's caption names a branch the subject's name does not."""
+    words = _branch_words(str(entity.get("caption") or ""))
+    if not words:
+        return False
+    subject_words: set[str] = set()
+    for name in subject_names:
+        subject_words |= _branch_words(name or "")
+    return bool(words - subject_words)
+
+
+def record_carries_lei(entity: dict[str, Any], lei: str) -> bool:
+    """The record's own ``leiCode`` property holds ``lei`` exactly."""
+    props = entity.get("properties") or {}
+    values = props.get("leiCode") or []
+    if isinstance(values, str):
+        values = [values]
+    target = (lei or "").strip().upper()
+    return bool(target) and any(str(v).strip().upper() == target for v in values)
+
+
+def assess_subject_record(
+    hits: Iterable[SourceHit], subject_lei: str | None, subject_names: Iterable[str] = ()
+) -> list[RiskSignal]:
+    """``CRIME_RECORD`` / ``REGULATORY_ACTION`` / ``REGULATORY_WARNING`` from
+    the subject's own OpenSanctions record.
+
+    Three gates, all on the record itself (Stephen, 20 Oct 2026): it is an
+    OpenSanctions result, its ``leiCode`` is the looked-up LEI exactly, and it
+    is not a branch's record (``is_branch_record``). No name match reaches
+    here: a banking group has many similarly named entities, and the
+    unmerged, identifier-less enforcement records (the SEC's for Danske Bank
+    and BP) are therefore not read. A register-anchored lookup has no LEI and
+    gets nothing from this rule.
+    """
+    if not subject_lei:
+        return []
+    names = [n for n in subject_names if n]
+    out: list[RiskSignal] = []
+    for hit in hits:
+        if hit.source_id != "opensanctions" or hit.is_stub:
+            continue
+        entity = hit.raw or {}
+        if not record_carries_lei(entity, subject_lei):
+            continue
+        if is_branch_record(entity, names):
+            continue
+        topics = _extract_topics(entity)
+        stmt_id = _bods_stable_id(hit.source_id, hit.hit_id)
+        base = {
+            "statement_id": stmt_id,
+            "matched_on": "lei",
+            "record_name": entity.get("caption") or hit.name,
+            **_datasets_evidence(entity),
+        }
+        crime = sorted({t for t in topics if t in _CRIME_TOPICS})
+        if crime:
+            out.append(
+                RiskSignal(
+                    code=CRIME_RECORD,
+                    confidence="high",
+                    summary=(
+                        "OpenSanctions tags its record of this company, which "
+                        f"carries the company's LEI, as {topic_phrase(crime)}. "
+                        "The tag says what the publishing dataset records; it "
+                        "does not say whether a case ended in a conviction, a "
+                        "settlement or a civil finding."
+                    ),
+                    source_id=hit.source_id,
+                    hit_id=hit.hit_id,
+                    evidence={"topics": crime, **base},
+                )
+            )
+        if any(t in _REG_ACTION_TOPICS for t in topics):
+            out.append(
+                RiskSignal(
+                    code=REGULATORY_ACTION,
+                    confidence="high",
+                    summary=(
+                        "OpenSanctions records a regulatory action concerning "
+                        "this company, on a record that carries its LEI. "
+                        "Context, not a risk finding: an action may be a fine, "
+                        "a consent order or a settled matter, and the record "
+                        "does not grade it."
+                    ),
+                    source_id=hit.source_id,
+                    hit_id=hit.hit_id,
+                    evidence={"topics": ["reg.action"], **base},
+                    kind="context",
+                )
+            )
+        if any(t in _REG_WARN_TOPICS for t in topics):
+            out.append(
+                RiskSignal(
+                    code=REGULATORY_WARNING,
+                    confidence="high",
+                    summary=(
+                        "OpenSanctions records a regulator's warning concerning "
+                        "this company, on a record that carries its LEI. "
+                        "Context, not a risk finding: a warning is a "
+                        "supervisor's notice, not a finding of wrongdoing."
+                    ),
+                    source_id=hit.source_id,
+                    hit_id=hit.hit_id,
+                    evidence={"topics": ["reg.warn"], **base},
+                    kind="context",
+                )
+            )
     return out
 
 

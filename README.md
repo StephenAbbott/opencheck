@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 383** — The Estonia dataset is now built from OpenCheck's own Golden Copy mirror and e-Business Register index, so it carries every current Estonian LEI and the register's full current lists under the EE-ARIREGISTER scheme.
+**Latest: Phase 386** — Estonian shareholdings now write an exact share on its own, which libcove accepts.
 
 → [Full development history](docs/status.md)
 

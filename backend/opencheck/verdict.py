@@ -63,6 +63,10 @@ _RELATED_EXPORT = (
     "RELATED_EXPORT_RISK",
 )
 _DEBARMENT = ("DEBARMENT", "RELATED_DEBARMENT")
+#: A crime topic on the company's own OpenSanctions record, matched on its
+#: LEI. The regulatory action and warning codes are context and never reach
+#: the sentence. Stated as what the record is tagged, never as a conviction.
+_CRIME_RECORD = ("CRIME_RECORD",)
 _PEP = ("PEP", "RELATED_PEP")
 _JURISDICTION = ("FATF_BLACK_LIST", "FATF_GREY_LIST", "EU_HIGH_RISK_THIRD_COUNTRY")
 #: Phase 319 — Annex I of the EU tax list. A clause of its own, never folded
@@ -103,6 +107,11 @@ _RISK_CLAUSES: tuple[tuple[tuple[str, ...], str, str | None], ...] = (
         None,
     ),
     (_SUBJECT_EXPORT, "export-control findings on the company itself", None),
+    (
+        _CRIME_RECORD,
+        "a record on the company itself tagged with a crime topic",
+        None,
+    ),
     (
         _DEBARMENT,
         "procurement debarment findings",
