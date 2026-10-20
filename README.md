@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 381** — The demo graph's Neo4j import scripts now load source types, nationalities and alternate names as native lists, so the CSV import round-trips back to BODS exactly as a direct load does.
+**Latest: Phase 382** — A New Zealand director's or shareholder's other companies on the register now show on their BackgroundCheck card, beside the Estonian register's list, instead of in a company-wide panel on QuickCheck.
 
 → [Full development history](docs/status.md)
 
