@@ -1,0 +1,6 @@
+---
+title: Estonian shareholdings carry an exact share on its own, without minimum and maximum beside it.
+readme: Estonian shareholdings now write an exact share on its own, which libcove accepts.
+tests: backend +5
+---
+The BODS quality sweep of 19 Oct 2026 flagged `bods_additional|ariregister` ×6 on Eesti Energia AS (`statement_relationship_interests_exact_has_min_max`): the current AS shareholder (Eesti Vabariik) and the two closed history records carried `share: {exact, minimum, maximum}` with all three equal. `_ee_shareholding_interest` in `bods/mappers/estonia.py`, the one helper for OÜ shareholder rows, AS shareholder rows (off-card `S`) and founders, now writes `{"exact": pct}`, the shape every other mapper writes. It surfaced now because the AS-shareholder and full-history phases (16–17 Oct) put shareholdings on an AS for the first time. `test_an_exact_share_stands_alone` walks every fixture company and fails without the fix; the AS-shareholder test's pinned share is updated. Nothing that reads a share changes its answer: `exact` was already read first. After deploy: re-run the BODS quality sweep (or `/deepen?source=ariregister&hit_id=10421629`) and confirm the three statements pass, and rebuild or `--libcove`-check the published Estonia dataset, which uses this mapper.
