@@ -669,6 +669,11 @@ def write_missing_csv(path: Path, sel: dict[str, Any]) -> int:
 
 _PERSONAL_CODE = re.compile(r"(?<!\d)([1-6]\d{10})(?!\d)")
 
+#: A Nasdaq CSD account prefix ("Omanikukonto:", "Lihtkonto:") at the start
+#: of a name — the mapper removes it (keeping the register's text in an
+#: annotation), so one in the file means a statement bypassed the mapper.
+_ACCOUNT_PREFIX = re.compile(r"^\s*(?:omanikukonto|lihtkonto)\s*:", re.IGNORECASE)
+
 
 def isikukood_valid(code: str) -> bool:
     """An Estonian personal identification code's own checks: a real
@@ -714,6 +719,12 @@ def check_statements(statements: Iterable[dict[str, Any]]) -> dict[str, Any]:
         if rtype == "relationship":
             relationships.append(rd)
             continue
+        if rtype == "entity":
+            names = [rd.get("name")]
+        else:
+            names = [n.get("fullName") for n in rd.get("names") or []]
+        if any(_ACCOUNT_PREFIX.match(str(n or "")) for n in names):
+            problems.append(f"{sid}: a name starts with a Nasdaq CSD account prefix")
         for ident in rd.get("identifiers") or []:
             scheme = ident.get("scheme")
             if scheme == EE_SCHEME:

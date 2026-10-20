@@ -63,7 +63,7 @@ from typing import Any, Iterable
 import pycountry
 
 from .. import liveness as _liveness
-from ..annotations import commenting, pointer
+from ..annotations import commenting, pointer, transformation
 from ..former_names import former_name_annotation
 from ..statements import (
     SOURCE_NAMES,
@@ -317,8 +317,85 @@ _EE_NAME_LISTS = "_ee_name_lists"
 _EE_NAME_DISPLAY = "_ee_name_display"
 
 #: The account-type prefixes a Nasdaq CSD entry puts before a holder's name
-#: on the printable page.
-_EE_ACCOUNT_PREFIX = re.compile(r"^\s*(?:omanikukonto|lihtkonto)\s*:\s*", re.IGNORECASE)
+#: ("Omanikukonto: EESTI ENERGIA AS", "Lihtkonto: Rahandusministeerium") —
+#: on every path: the files, the printable page, REST and SOAP. The prefix
+#: says how the shares are held; it is not part of the party's name.
+_EE_ACCOUNT_PREFIX = re.compile(r"^\s*(omanikukonto|lihtkonto)\s*:\s*", re.IGNORECASE)
+
+#: How the annotation names each account type.
+_EE_ACCOUNT_WORDS = {
+    "omanikukonto": "an owner account (omanikukonto)",
+    "lihtkonto": "a simple account (lihtkonto)",
+}
+
+
+def ee_strip_account_prefix(name: str | None) -> tuple[str, list[str]]:
+    """``name`` without its Nasdaq CSD account prefix, and the account
+    types removed (lower case, in order) — ``[]`` when there was none.
+    A name that would be empty without the prefix is returned unchanged."""
+    text = name or ""
+    kinds: list[str] = []
+    while True:
+        m = _EE_ACCOUNT_PREFIX.match(text)
+        if not m:
+            break
+        kinds.append(m.group(1).lower())
+        text = text[m.end():]
+    text = text.strip()
+    if not kinds or not text:
+        return name or "", []
+    return text, kinds
+
+
+def _ee_account_prefix_note(target: str, filed: str, kinds: list[str], name: str) -> dict[str, Any]:
+    """The ``transformation`` annotation that keeps the register's text."""
+    accounts = " then ".join(_EE_ACCOUNT_WORDS.get(k, k) for k in kinds)
+    return transformation(
+        target,
+        f'The e-Business Register files this name as "{filed}": the prefix names the '
+        f"Nasdaq CSD securities account the shares are held through ({accounts}), "
+        "not part of the name, and OpenCheck removed it.",
+        transformed_content=name,
+    )
+
+
+def _ee_strip_statement_name(statement: dict[str, Any]) -> None:
+    """Remove the account prefix from a person or entity statement's names,
+    in place, with one annotation per name that carried it. Ids are not
+    touched: they were built before this, from the same rows as ever."""
+    rd = statement.get("recordDetails") or {}
+    if statement.get("recordType") == "entity":
+        filed = rd.get("name")
+        name, kinds = ee_strip_account_prefix(filed if isinstance(filed, str) else None)
+        if kinds:
+            rd["name"] = name
+            statement.setdefault("annotations", []).append(
+                _ee_account_prefix_note(pointer("recordDetails", "name"), str(filed), kinds, name)
+            )
+        return
+    if statement.get("recordType") != "person":
+        return
+    names = rd.get("names") or []
+    kept: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    notes: list[tuple[str, list[str], str]] = []
+    for entry in names:
+        filed = entry.get("fullName")
+        name, kinds = ee_strip_account_prefix(filed if isinstance(filed, str) else None)
+        if kinds:
+            entry = {**entry, "fullName": name}
+            notes.append((str(filed), kinds, name))
+        key = (str(entry.get("type") or ""), str(entry.get("fullName") or "").casefold())
+        if key in seen:
+            continue
+        seen.add(key)
+        kept.append(entry)
+    if notes:
+        rd["names"] = kept
+        for filed, kinds, name in notes:
+            statement.setdefault("annotations", []).append(
+                _ee_account_prefix_note(pointer("recordDetails", "names"), filed, kinds, name)
+            )
 
 _EE_LIST_WORDS = {
     "shareholders": "the shareholder list",
@@ -720,6 +797,9 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         history_day = statement.pop(_EE_HISTORY_DATE, None)
         if history_day:
             statement["statementDate"] = history_day
+        # One place for every list and every tier (index, page, REST, SOAP
+        # history): a Nasdaq CSD account prefix is not part of a name.
+        _ee_strip_statement_name(statement)
         yield statement
 
 
