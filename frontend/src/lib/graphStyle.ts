@@ -58,6 +58,7 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   RELATED_SANCTIONS_LINKED: { bg:"#fef3c7", border:"#b45309", text:"#b45309", label:"RSL", severity:3 },
   DEBARMENT:                { bg:"#ffedd5", border:"#c2410c", text:"#9a3412", label:"Db", severity:4 },
   RELATED_DEBARMENT:        { bg:"#ffedd5", border:"#c2410c", text:"#9a3412", label:"RDb", severity:4 },
+  CRIME_RECORD:             { bg:"#ffe4e6", border:"#e11d48", text:"#9f1239", label:"Cr", severity:4 },
   // Export-control family (Phase 118): a listing of the party itself, one
   // tier above debarment and below sanction control; adjacency sits with the
   // sanctions-linked tier, and "Trade risk" (export.risk) one below that.
@@ -100,6 +101,8 @@ export const SIGNAL_STYLE: Record<string, SignalStyle> = {
   // company itself (a state company's own board). Slate like the other context
   // badges and severity 0, so a board member never outranks a real finding.
   RELATED_PEP_SUBJECT_ROLE: { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"PR", severity:0 },
+  REGULATORY_ACTION:        { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"RA", severity:0 },
+  REGULATORY_WARNING:       { bg:"#f8fafc", border:"#64748b", text:"#475569", label:"RW", severity:0 },
 };
 
 export const DEFAULT_SIGNAL_STYLE: SignalStyle =

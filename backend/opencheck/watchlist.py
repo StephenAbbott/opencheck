@@ -116,7 +116,7 @@ RETIRED_SIGNAL_CODES: frozenset[str] = frozenset({"COMPLEX_CORPORATE_STRUCTURE"}
 #: Phase 245's ``verdict_template``. Bump it whenever a rule change moves which
 #: codes fire for an unchanged company, and record the codes it moved below.
 #: A snapshot written before Phase 273 carries no number: it was version 1.
-SIGNAL_RULES = 5
+SIGNAL_RULES = 6
 
 #: version -> the codes whose firing that rules version changed. Comparing a
 #: baseline from an older version, appearances and disappearances of these
@@ -136,6 +136,10 @@ SIGNAL_RULES = 5
 #: legal form and filler no longer fires, so a related-party listing code (and
 #: the 50% test that counts it) can disappear with nothing changed upstream.
 #: Measured on 24 production lookups (16 Oct 2026): no signal moved.
+#: 6 = crime and regulatory topics on the subject's own OpenSanctions record,
+#: matched on its LEI (Notion ticket E, 20 Oct 2026): a company already
+#: tagged gains CRIME_RECORD, REGULATORY_ACTION or REGULATORY_WARNING with
+#: nothing in its records changed.
 SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
     2: frozenset(
         {
@@ -162,6 +166,7 @@ SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
             "SANCTIONS_OWNERSHIP_TEST_POSSIBLE",
         }
     ),
+    6: frozenset({"CRIME_RECORD", "REGULATORY_ACTION", "REGULATORY_WARNING"}),
 }
 
 
