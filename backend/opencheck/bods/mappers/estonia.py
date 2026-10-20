@@ -452,6 +452,18 @@ def _ee_residence(person: dict[str, Any]) -> list[dict[str, Any]]:
     return [{"type": "residence", "country": obj}] if obj else []
 
 
+def _ee_company_url(identifiers: list[dict[str, Any]]) -> str | None:
+    """The register page of a legal person a row names — only for an
+    Estonian registry code. A foreign company's number (a derived Maltese
+    ``C 53839``, a German ``HRB 153232``) has no page on the Estonian
+    register, and pasted into its URL it is not even a valid URI (lib-cove-bods
+    caught eight in the October 2026 dataset build)."""
+    for ident in identifiers:
+        if ident.get("scheme") == "EE-ARIREGISTER" and str(ident.get("id") or "").isdigit():
+            return f"https://ariregister.rik.ee/eng/company/{ident['id']}"
+    return None
+
+
 def _ee_foreign_entity(
     party: dict[str, Any], kirje_id: str, prefix: str,
 ) -> tuple[str, list[dict[str, str]], tuple[str, str | None] | None, str | None]:
@@ -1281,18 +1293,13 @@ def _ee_company_parties(
             if not corp_name:
                 continue
             corp_local_id, corp_ids, jurisdiction, note = _ee_foreign_entity(sh, kirje_id, "sh")
-            corp_code = corp_ids[0]["id"] if corp_ids else ""
             corp_stmt = make_entity_statement(
                 source_id="ariregister",
                 local_id=corp_local_id,
                 name=corp_name,
                 jurisdiction=jurisdiction,
                 identifiers=corp_ids,
-                source_url=(
-                    f"https://ariregister.rik.ee/eng/company/{corp_code}"
-                    if corp_code
-                    else None
-                ),
+                source_url=_ee_company_url(corp_ids),
             )
             if note:
                 corp_stmt.setdefault("annotations", []).append(
@@ -1380,18 +1387,13 @@ def _ee_company_parties(
             if not corp_name:
                 continue
             corp_local_id, corp_ids, jurisdiction, note = _ee_foreign_entity(officer, kirje_id, "off")
-            corp_code = corp_ids[0]["id"] if corp_ids else ""
             corp_stmt = make_entity_statement(
                 source_id="ariregister",
                 local_id=corp_local_id,
                 name=corp_name,
                 jurisdiction=jurisdiction,
                 identifiers=corp_ids,
-                source_url=(
-                    f"https://ariregister.rik.ee/eng/company/{corp_code}"
-                    if corp_code
-                    else None
-                ),
+                source_url=_ee_company_url(corp_ids),
             )
             if note:
                 corp_stmt.setdefault("annotations", []).append(
@@ -1571,14 +1573,13 @@ def _ee_party_statements(
         if not corp_name:
             return None
         corp_local_id, corp_ids, jurisdiction, note = _ee_foreign_entity(row, kirje_id, prefix)
-        corp_code = corp_ids[0]["id"] if corp_ids else ""
         corp_stmt = make_entity_statement(
             source_id="ariregister",
             local_id=corp_local_id,
             name=corp_name,
             jurisdiction=jurisdiction,
             identifiers=corp_ids,
-            source_url=f"https://ariregister.rik.ee/eng/company/{corp_code}" if corp_code else None,
+            source_url=_ee_company_url(corp_ids),
         )
         if note:
             corp_stmt.setdefault("annotations", []).append(

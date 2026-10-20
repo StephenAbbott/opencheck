@@ -224,6 +224,7 @@ from .mappers.estonia import (  # noqa: F401  (re-exported, Phase 246)
     _ee_bo_interest,
     _ee_company_parties,
     _ee_company_statement,
+    _ee_company_url,
     _ee_foreign_entity,
     _ee_foreign_register_identifier,
     _ee_founder_note,
