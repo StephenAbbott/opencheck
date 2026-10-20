@@ -82,10 +82,8 @@ def test_missing_access_url_is_none_not_error() -> None:
 def test_country_without_entry_returns_none() -> None:
     # GB is a national register but not in the EU BO-access list.
     assert notice_for("GB") is None
-    # Estonia keeps its register public with no change announced. (Latvia
-    # was the example until 20 Oct 2026, when its row gained a next change
-    # expected on 10 July 2027, the AMLR's application date.)
-    assert notice_for("EE") is None
+    # Latvia is deliberately omitted (keeping its register public).
+    assert notice_for("LV") is None
     assert notice_for(None) is None
     assert notice_for("") is None
 
