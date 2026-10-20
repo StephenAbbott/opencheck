@@ -4083,8 +4083,10 @@ decisions on the Phase 339 ticket. Things that will be re-derived otherwise:
   so the target is divided by (1 − returned) — T-Rank 3.4 from C is 52.08%,
   consistent with X's 16.67%. Groups (Phase 338) are unchanged.
 - **Where it shows:** the FullCheck "Integrated ownership" band and the
-  "Read as text" tree rows; one `commenting` annotation on the subject's first
-  entity statement (folded in `fold_lookup_events`, after the listing; cites
+  "Read as text" tree rows; one `commenting` annotation on OpenCheck's own
+  GLEIF entity statement — `annotation_target`: stamped `gleif` and published
+  by OpenCheck, else OpenCheck's first subject statement, never Open
+  Ownership's (folded in `fold_lookup_events`, after the listing; cites
   T-Rank, `url` = `METHOD_URL`, target `/recordDetails` — never `/`, which
   libcove rejects); the PDF/HTML/Markdown "Integrated ownership"
   table (`report_rows`, 40 holders max); the MCP `integrated_ownership` block

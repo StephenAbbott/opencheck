@@ -409,11 +409,44 @@ def holder_line(h: Mapping[str, Any]) -> str:
     return f"{h.get('name')} — {'; '.join(parts)}"
 
 
+def _published_by_opencheck(statement: Mapping[str, Any]) -> bool:
+    publisher = (statement.get("publicationDetails") or {}).get("publisher") or {}
+    return str(publisher.get("name") or "").startswith("OpenCheck")
+
+
+def annotation_target(
+    bods: list[dict[str, Any]], subject_ids: Iterable[str]
+) -> int | None:
+    """Index of the statement the integrated-ownership note goes on, or None.
+
+    OpenCheck's own GLEIF entity statement for the subject (stamped
+    ``opencheckSourceId: "gleif"`` and published by OpenCheck). Without one —
+    a register-anchored run has no GLEIF anchor — the first subject entity
+    statement OpenCheck published. Never another publisher's statement: the
+    stored Open Ownership bundles are carried verbatim (Phase 317), and their
+    GLEIF statements are described "GLEIF", so the stamped id is read, not the
+    description.
+    """
+    ids = set(subject_ids)
+    own = [
+        i for i, s in enumerate(bods)
+        if s.get("statementId") in ids
+        and s.get("recordType") == "entity"
+        and _published_by_opencheck(s)
+    ]
+    if not own:
+        return None
+    return next(
+        (i for i in own if (bods[i].get("source") or {}).get("opencheckSourceId") == "gleif"),
+        own[0],
+    )
+
+
 def apply_to_bods(
     bods: list[dict[str, Any]], payload: Mapping[str, Any] | None
 ) -> list[dict[str, Any]]:
-    """*bods* with one ``commenting`` annotation on the subject's first entity
-    statement stating each holder's figure, the method and its credit. Copied,
+    """*bods* with one ``commenting`` annotation on the subject's statement
+    (``annotation_target``: OpenCheck's own GLEIF statement) stating each holder's figure, the method and its credit. Copied,
     never mutated (the statements are also a saved report's event payloads).
     Nothing is added when no holder is listed."""
     import copy
@@ -422,13 +455,7 @@ def apply_to_bods(
     ids = set((payload or {}).get("subject_ids") or [])
     if not holders or not ids:
         return bods
-    idx = next(
-        (
-            i for i, s in enumerate(bods)
-            if s.get("statementId") in ids and s.get("recordType") == "entity"
-        ),
-        None,
-    )
+    idx = annotation_target(bods, ids)
     if idx is None:
         return bods
     stmt = copy.deepcopy(bods[idx])

@@ -97,12 +97,25 @@ def test_a_holder_line_names_every_source_and_the_route():
 # --- the lookup event and the frozen copy -----------------------------------
 
 
+_OPENCHECK = {"publisher": {"name": "OpenCheck"}}
+
+
+def _ours(stmt: dict, source_id: str | None = None) -> dict:
+    """*stmt* as OpenCheck publishes it (the shared case table carries no
+    ``publicationDetails``; the frontend parity tests read it as it is)."""
+    out = {**stmt, "publicationDetails": _OPENCHECK}
+    if source_id:
+        out["source"] = {"description": source_id.upper(), "opencheckSourceId": source_id}
+    return out
+
+
 def _lookup_events(payload: dict) -> list[tuple[str, dict]]:
     case = next(c for c in _cases() if c["name"] == "a direct and an indirect stake add")
     return [
         ("gleif_done",
          {"legal_name": "Target Co", "jurisdiction": "GB", "derived_identifiers": {}}),
-        ("deepen_result", {"source_id": "opensanctions", "bods": case["statements"]}),
+        ("deepen_result",
+         {"source_id": "opensanctions", "bods": [_ours(s) for s in case["statements"]]}),
         ("integrated_ownership", payload),
         ("done", {"bods_issues": [], "license_notices": []}),
     ]
@@ -136,7 +149,7 @@ def test_the_annotation_never_targets_the_statement_root():
     Phase 255 rule). Found by the BODS quality sweep of 19 Oct 2026."""
     payload = _frozen()
     out = io.apply_to_bods(
-        [{"statementId": "T", "recordType": "entity", "recordDetails": {}}], payload
+        [_ours({"statementId": "T", "recordType": "entity", "recordDetails": {}})], payload
     )
     pointers = [a["statementPointerTarget"] for a in out[0]["annotations"]]
     assert pointers and "/" not in pointers
@@ -145,6 +158,55 @@ def test_the_annotation_never_targets_the_statement_root():
         for part in pointer.lstrip("/").split("/"):
             assert part in node, f"{pointer} does not resolve in the statement"
             node = node[part]
+
+
+def _subject(statement_id: str, *, publisher: str, source_id: str, description: str) -> dict:
+    return {
+        "statementId": statement_id,
+        "recordType": "entity",
+        "recordDetails": {"name": "Target Co"},
+        "publicationDetails": {"publisher": {"name": publisher}},
+        "source": {"description": description, "opencheckSourceId": source_id},
+    }
+
+
+def _commented(out: list[dict]) -> list[str]:
+    return [
+        s["statementId"] for s in out
+        if any(a.get("motivation") == "commenting" for a in s.get("annotations") or [])
+    ]
+
+
+def test_the_annotation_goes_on_opencheck_s_own_gleif_statement():
+    """Stephen, 20 Oct 2026 (option c): never on Open Ownership's verbatim
+    GLEIF statement, which is described "GLEIF" too, and not on another
+    OpenCheck statement when OpenCheck's GLEIF one is there."""
+    payload = {**_frozen(), "subject_ids": ["OO", "CH", "GL"]}
+    bods = [
+        {**_subject("OO", publisher="Open Ownership", source_id="", description="GLEIF"),
+         "source": {"description": "GLEIF"}},
+        _subject("CH", publisher="OpenCheck", source_id="companies_house",
+                 description="UK Companies House"),
+        _subject("GL", publisher="OpenCheck", source_id="gleif", description="GLEIF"),
+    ]
+    out = io.apply_to_bods(bods, payload)
+    assert _commented(out) == ["GL"]
+    assert out[0] is bods[0]  # Open Ownership's statement is untouched
+
+
+def test_without_a_gleif_statement_the_note_goes_on_opencheck_s_register_record():
+    """A register-anchored run (Phase 290) has no GLEIF anchor."""
+    payload = {**_frozen(), "subject_ids": ["CH"]}
+    bods = [_subject("CH", publisher="OpenCheck", source_id="companies_house",
+                     description="UK Companies House")]
+    assert _commented(io.apply_to_bods(bods, payload)) == ["CH"]
+
+
+def test_another_publisher_s_statement_is_never_annotated():
+    payload = {**_frozen(), "subject_ids": ["OO"]}
+    bods = [{**_subject("OO", publisher="Open Ownership", source_id="", description="GLEIF"),
+             "source": {"description": "GLEIF"}}]
+    assert io.apply_to_bods(bods, payload) == bods
 
 
 def test_no_holder_means_no_annotation():
