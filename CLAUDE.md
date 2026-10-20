@@ -1197,7 +1197,7 @@ otherwise:
   indirect participation → `shareholding` with `directOrIndirect`; `X` →
   `votingRights` indirect; `Y` → `appointmentOfBoard`; `J` / `C` (a board or
   council member named because no owner reaches the threshold) →
-  `seniorManagingOfficial`; `S` beneficiary → `rightsToProfitOrIncome`; `Z`
+  `seniorManagingOfficial` with `beneficialOwnershipOrControl: false` (record kind `kasusaaja_fallback`, 20 Oct 2026 — named, not owners; the finding says "no owner identified, N named"); `S` beneficiary → `rightsToProfitOrIncome`; `Z`
   founder's-rights holder and `F` other means → `otherInfluenceOrControl`.
   The register's Estonian text rides in `details`. `lahknevusteade_esitatud`
   (a discrepancy report filed, 460 rows) is a `commenting` annotation on the
@@ -1416,7 +1416,7 @@ decisions (16 Oct 2026) and the things that will be re-derived otherwise:
   registry code — a Latvian company is eleven digits too, and a bankruptcy
   ruling against a sole trader names the person by code.
 - **No BO filed is a finding, not a signal** (Stephen): with no BO rows the
-  count reads "beneficial owners due, none filed" or "beneficial owners not
+  count reads "beneficial owners due, none published" or "beneficial owners not
   required" — short, because the sentence's cap drops what follows. The
   build counts the first kind (`meta.bo_obliged_none_filed`, printed by the
   refresh workflow). Not obliged on 16 Oct 2026: KÜ 25,679, FIE 24,605,
@@ -1569,7 +1569,7 @@ verdict. Things that will be re-derived otherwise:
   stay serving-only.
 - **REST has no beneficial owners** (that service needs a named viewer):
   `bo_not_read` → the finding says "beneficial owners not read" and the
-  company statement carries a note, never "none filed".
+  company statement carries a note, never "none published".
 - **Deletion**: status `K` → `dissolution_date` = `deletionDate`, passed as
   `since` to `apply_register_status`. Former names (a name with an end date
   that is not the current name; a repeated name is one name) are

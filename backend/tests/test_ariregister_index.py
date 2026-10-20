@@ -883,7 +883,7 @@ async def test_a_record_asserts_the_code_and_says_what_is_on_file(index) -> None
     # the counts come first on purpose.
     assert hit.finding == (
         "In the register since 31 March 1998; 1 shareholder, 3 on the registry card, "
-        "2 on the supervisory board, 2 beneficial owners."
+        "2 on the supervisory board, no owner identified, 2 named."
     )
     assert len(hit.finding) <= MAX_FINDING_CHARS
 
@@ -1038,10 +1038,13 @@ async def test_board_member_bos_and_the_discrepancy_flag(index) -> None:
     statements = await _statements(EESTI)
     bo_interests = [
         (s, i) for s in _by_type(statements, "relationship")
-        for i in s["recordDetails"]["interests"] if i.get("beneficialOwnershipOrControl")
+        for i in s["recordDetails"]["interests"] if "beneficialOwnershipOrControl" in i
+        and i["type"] == "seniorManagingOfficial"
     ]
+    # Two board members on the BO list because no owner was identified (J):
+    # listed, but not beneficial owners (20 Oct 2026).
     assert len(bo_interests) == 2
-    assert {i["type"] for _, i in bo_interests} == {"seniorManagingOfficial"}
+    assert {i["beneficialOwnershipOrControl"] for _, i in bo_interests} == {False}
     flagged = [s for s, _ in bo_interests if any("lahknevusteade" in a["description"] for a in s.get("annotations", []))]
     assert len(flagged) == 1
     assert flagged[0]["annotations"][0]["statementPointerTarget"] == "/recordDetails/interests/0"
