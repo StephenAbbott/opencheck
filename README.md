@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 385** — The integrated-ownership note now points at a statement's record details, so libcove no longer rejects it, and is written only on OpenCheck's own GLEIF statement, never on Open Ownership's.
+**Latest: Phase 386** — Estonian shareholdings now write an exact share on its own, which libcove accepts.
 
 → [Full development history](docs/status.md)
 
