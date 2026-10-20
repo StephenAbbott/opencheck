@@ -77,6 +77,7 @@ from ..ratelimit import default_tier, limiter, lookup_tier
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
 from ..sources.eiti import us_ein_for_lei as eiti_us_ein_for_lei
 from ..sources.eiti_zambia import tpin_for_lei as eiti_zambia_tpin_for_lei
+from ..sources.opencorporates import repair_ocid
 from ..sources.schemas import SourceSchemaError
 
 # Phase 168: the per-source hit builders and the context they read moved to
@@ -1251,6 +1252,11 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     if result.get("is_stub"):
         return None
     if source_id == "opencorporates":
+        # A 404 is "answered, no record": no hit, no error (the INPI shape
+        # without the card — OpenCorporates covers every jurisdiction, so its
+        # absence needs no coverage explanation beyond the no-record row).
+        if result.get("not_found"):
+            return None
         return _bh_opencorporates(result, ctx) if ctx.ocid else None
     if source_id == "wikidata":
         return _bh_wikidata(result, ctx) if ctx.qid else None
@@ -1585,7 +1591,17 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
                         _lei_successor.from_gleif_record(gleif_src.get("record"))
                     )
                 attrs = (gleif_src.get("record") or {}).get("attributes") or {}
-                ctx.ocid = attrs.get("ocid") or None
+                raw_ocid = attrs.get("ocid") or None
+                ctx.ocid = repair_ocid(raw_ocid, ctx.registered_as)
+                if raw_ocid and ctx.ocid != raw_ocid:
+                    _LOG.warning(
+                        "GLEIF ocid %r for %s is not a usable company number; %s",
+                        raw_ocid,
+                        lei,
+                        f"repaired to {ctx.ocid!r} from registeredAs"
+                        if ctx.ocid
+                        else "OpenCorporates will not be asked",
+                    )
                 sp = attrs.get("spglobal")
                 ctx.spglobal = (sp[0] if isinstance(sp, list) and sp else sp) or None
                 missing = gleif_src.get("crossrefs_unavailable_reason")

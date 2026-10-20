@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 from typing import Any
 from urllib.parse import quote
 
@@ -59,6 +60,47 @@ _CACHE_NS = "opencorporates"
 
 def _slug(text: str) -> str:
     return hashlib.sha256(text.lower().strip().encode("utf-8")).hexdigest()[:16]
+
+
+# A company number written in scientific notation — ``1.0166E+12`` — is a
+# spreadsheet's rendering of a long number, not a number OpenCorporates holds.
+# GLEIF's LEI-to-OpenCorporates mapping carries some (``529900IQDQ6X3VTMWN63``,
+# "Kaufland" S.R.L., Moldova: ``md/1.0166E+12`` for IDNO 1016600004811, read
+# 20 Oct 2026), and asking for one is a guaranteed 404.
+_SCIENTIFIC_NUMBER = re.compile(r"^\d(?:\.\d+)?E\+?\d+$", re.IGNORECASE)
+
+#: Coverage note for a company OpenCorporates answered 404 for.
+COVERAGE_404 = (
+    "OpenCorporates holds no company under this identifier."
+)
+
+
+def repair_ocid(ocid: str | None, registered_as: str | None) -> str | None:
+    """Return a usable ocid, repairing a scientific-notation company number.
+
+    An ocid whose number is not in scientific notation is returned as it is.
+    One that is gets the subject's own GLEIF ``registeredAs`` in its place —
+    but only when that is all digits and rounds to exactly the mangled value,
+    so the repair restores the number the spreadsheet cut and never guesses
+    one. Anything else returns ``None``: an ocid that cannot name a company
+    is not asked for.
+    """
+    if not ocid:
+        return None
+    parts = ocid.strip().strip("/").split("/", 1)
+    if len(parts) != 2:
+        return ocid
+    jurisdiction, number = parts
+    if not _SCIENTIFIC_NUMBER.match(number):
+        return ocid
+    candidate = re.sub(r"\s", "", registered_as or "")
+    if not candidate.isdigit():
+        return None
+    mantissa = number.upper().split("E", 1)[0]
+    digits = len(mantissa.replace(".", ""))
+    if float(f"{int(candidate):.{digits - 1}E}") != float(number):
+        return None
+    return f"{jurisdiction}/{candidate}"
 
 
 def _ocid_to_path(ocid: str) -> str:
@@ -141,10 +183,28 @@ class OpenCorporatesAdapter(SourceAdapter):
         path = _ocid_to_path(ocid)
         cache_key = f"{_CACHE_NS}/company/{_slug(ocid)}"
 
-        if not self.info.live_available and not self._cache.has(cache_key):
+        if (
+            not self.info.live_available
+            and self._cache.get_payload(cache_key) is None
+        ):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
 
         company_data = await self._get(f"/companies{path}", cache_key=cache_key)
+        if company_data is None:
+            # A 404: OpenCorporates answered, and holds no company under this
+            # ocid. That is a "no record", not a source that did not answer —
+            # until this was split out, the 404 escaped as an HTTPStatusError
+            # and the report said OpenCorporates "did not answer, so its
+            # records were not consulted". No officers or network call: there
+            # is no company for them to belong to.
+            return {
+                "source_id": self.id,
+                "hit_id": ocid,
+                "ocid": ocid,
+                "is_stub": False,
+                "not_found": True,
+                "coverage_note": COVERAGE_404,
+            }
         company = (company_data.get("results") or {}).get("company") or {}
 
         # Officers come from the company response, which inlines them under
@@ -210,7 +270,15 @@ class OpenCorporatesAdapter(SourceAdapter):
     # HTTP with caching
     # ------------------------------------------------------------------
 
-    async def _get(self, path: str, *, cache_key: str) -> dict[str, Any]:
+    async def _get(self, path: str, *, cache_key: str) -> dict[str, Any] | None:
+        """GET a required record; ``None`` when OpenCorporates has none.
+
+        A 404 is a definitive answer and is cached as absent (it expires
+        after ``ABSENT_TTL_DAYS``, so a company added since is picked up).
+        A 402/403 (a tier the key lacks), a 429, a 5xx and a network error
+        still raise: each means OpenCheck could not ask, and the pipeline
+        reports it as a degradation.
+        """
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
             return cached[0]
@@ -221,6 +289,9 @@ class OpenCorporatesAdapter(SourceAdapter):
         params = {"api_token": settings.opencorporates_api_key}
         async with build_client() as client:
             response = await client.get(f"{_API_BASE}{path}", params=params)
+            if response.status_code == 404:
+                self._cache.put_absent(cache_key)
+                return None
             response.raise_for_status()
             payload = response.json()
 
