@@ -3,7 +3,8 @@
 ``GET /nz-associations?company_number=<n>`` reports, for each director and
 shareholder of an NZ company, how many other companies they appear in under the
 same name (address-tiered confidence). Never on the main lookup; fetched by the
-frontend's NZ panel on demand.
+frontend on demand. ``GET /nz-associations/person`` answers for one role holder —
+what the BackgroundCheck card asks for.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
-from ..nz_associations import assemble_associations
+from ..nz_associations import assemble_associations, person_associations
 from ..ratelimit import default_tier, limiter
 
 router = APIRouter()
@@ -74,3 +75,36 @@ async def nz_associations(
             detail=f"{num!r} is not a valid New Zealand company number or NZBN (digits).",
         )
     return await assemble_associations(num)
+
+
+class PersonAssociationsResponse(BaseModel):
+    company_number: str
+    name: str
+    available: bool
+    reason: str | None = None
+    subject_name: str | None = None
+    person: PersonAssociations | None = None
+
+
+@router.get("/nz-associations/person", response_model=PersonAssociationsResponse)
+@limiter.limit(default_tier)
+async def nz_person_associations(
+    request: Request,
+    response: Response,
+    company_number: str = Query(..., description="NZ company number or NZBN (digits)."),
+    name: str = Query(..., min_length=1, max_length=200,
+                      description="A director or shareholder of that company, as filed."),
+) -> Any:
+    """One director's or shareholder's other NZ companies (BackgroundCheck).
+
+    The name must be a role holder of ``company_number``: the filing supplies
+    the address each match is graded against, and keeps this from becoming a
+    free name search.
+    """
+    num = company_number.strip()
+    if not _NUMBER_SHAPE.match(num):
+        raise HTTPException(
+            status_code=400,
+            detail=f"{num!r} is not a valid New Zealand company number or NZBN (digits).",
+        )
+    return await person_associations(num, name)

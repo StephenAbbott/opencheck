@@ -1699,6 +1699,35 @@ Stephen's decisions (16 Oct 2026):
 
 ---
 
+## New Zealand associations live on the BackgroundCheck card (19 Oct 2026)
+
+`nz_associations.person_associations` + `GET /nz-associations/person`,
+`lib/nzPerson.ts`, `components/cdd/NzPersonCompanies.tsx`. Until 19 Oct 2026
+the Companies Entity Role Search enrichment was a company-wide panel on
+QuickCheck's NZ source card (`NzAssociations.tsx`, deleted); it is now one
+control per person on BackgroundCheck, the shape of the Estonian
+"Companies on the register" control. Things that will be re-derived otherwise:
+
+- **Name-keyed, so still graded.** Estonia keys a person on the register's
+  person key; NZ's Role Search takes a name, so every row keeps its
+  `MatchConfidenceChip`, the address-matched / name-only split and the
+  alternative-address wording. Never present an NZ row as the same person.
+- **The name must be a role holder of the company, as filed.** The filing's
+  address grades every match, and the check keeps the endpoint from being a
+  free name search; anything else is `available: false`. The card's anchor is
+  `ConnectedPerson.nzRoleHolder` (`lib/backgroundCheck.ts`): the company's
+  `NZ-COH`, else `NZ-NZBN`, and the name from the nz_companies person
+  statement — not the merged display name, which may be another source's
+  spelling.
+- One Role Search call per person, cached on company + name; a cached
+  company-wide result answers with no call. `GET /nz-associations` (whole
+  company, up to 60 searches) stays in the API — the only place corporate
+  shareholders' other companies are now reachable.
+- The QuickCheck NZ card says where the list went (`NZ_PEOPLE_NOTE`), not on
+  a saved report.
+
+---
+
 ## The Estonia dataset is built from local data (sweep_estonia.py)
 
 `backend/scripts/sweep_estonia.py` builds the `dataset-estonia-<cut>` release
@@ -1731,6 +1760,8 @@ will be re-derived otherwise:
 - The Neo4j zip is `bods-neo4j to-csv` + `backend/scripts/estonia_demo_queries.cypher`;
   the RDF is `export_rdf_bulk.py` with **no** `--fallback-license` (every
   statement names its source).
+
+---
 
 ## Datafordeler CVR API (Denmark) — hard-won constraints
 

@@ -53,6 +53,37 @@ export interface ConnectedPerson {
   /** Companies House identity verification carried by any of this person's
    *  statements (Phase 203). Absent is "no such record", never "unverified". */
   identityVerification?: IdentityVerification;
+  /** Where the New Zealand register files this person as a director or
+   *  shareholder: the company's number and the name as filed. What the
+   *  "Companies on the New Zealand register" control asks about — the
+   *  register keys a person on nothing but that name, so the filing (whose
+   *  address grades every match) is the anchor. */
+  nzRoleHolder?: NzRoleHolder;
+}
+
+export interface NzRoleHolder {
+  /** NZ company number, else the NZBN, of the company the role is held in. */
+  companyNumber: string;
+  /** The person's name as the NZ filing gives it. */
+  name: string;
+}
+
+const NZ_SOURCE_ID = "nz_companies";
+const NZ_SOURCE_DESCRIPTION = "New Zealand Companies Register (NZBN)";
+
+function isNzStatement(s: Stmt): boolean {
+  const source = rec(s.source);
+  const id = str(source.opencheckSourceId);
+  return id ? id === NZ_SOURCE_ID : str(source.description) === NZ_SOURCE_DESCRIPTION;
+}
+
+/** The NZ company number an entity statement carries (NZ-COH), else its
+ *  NZBN — the two keys `/nz-associations/person` accepts. */
+export function nzCompanyNumberOf(rd: Record<string, unknown>): string | undefined {
+  const ids = arr(rd.identifiers).map(rec);
+  const pick = (scheme: string) =>
+    ids.map((i) => (str(i.scheme) === scheme ? str(i.id) : undefined)).find((v) => v && /^\d{1,13}$/.test(v));
+  return pick("NZ-COH") ?? pick("NZ-NZBN");
 }
 
 function str(v: unknown): string | undefined {
@@ -213,6 +244,7 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
   const byStatementId = new Map<string, Stmt>();
   const refs = refIndex(statements);
   const entityNames = new Map<string, string>();
+  const nzNumbers = new Map<string, string>();
 
   for (const s of statements) {
     const id = str(s.statementId);
@@ -223,6 +255,8 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
     if (recordType === "entity" || recordType === "entityStatement") {
       const name = str(rd.name);
       if (name) entityNames.set(id, name);
+      const nz = isNzStatement(s) ? nzCompanyNumberOf(rd) : undefined;
+      if (nz) nzNumbers.set(id, nz);
     }
   }
 
@@ -313,7 +347,12 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
     if (!key) continue; // party is an entity, not a person
     const person = people.get(key);
     if (!person) continue;
-    const subjectName = entityNames.get(resolveRef(rd.subject, refs) ?? "");
+    const subjectId = resolveRef(rd.subject, refs) ?? "";
+    const subjectName = entityNames.get(subjectId);
+    if (!person.nzRoleHolder && isNzStatement(s) && nzNumbers.has(subjectId)) {
+      const filed = personName(rec(byStatementId.get(partyId)?.recordDetails));
+      if (filed) person.nzRoleHolder = { companyNumber: nzNumbers.get(subjectId) as string, name: filed };
+    }
     const source = str(rec(s.source).description);
     const interests = arr(rd.interests).map(rec);
     const roleInterests = interests.length > 0 ? interests : [{}];

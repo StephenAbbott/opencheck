@@ -391,6 +391,10 @@ export function ApiPage() {
             For a New Zealand company, the other companies its directors and shareholders
             are linked to — a nominee / mass-directorship review, graded by address.
           </ApiEndpoint>
+          <ApiEndpoint path="/nz-associations/person?company_number=<n>&name=<name>">
+            The same for one director or shareholder of that company, named as the
+            register files them — what each person&rsquo;s BackgroundCheck card shows.
+          </ApiEndpoint>
         </BtsCard>
 
         <BtsCard title="Catalogue &amp; health">

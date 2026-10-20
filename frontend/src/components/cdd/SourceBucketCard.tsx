@@ -3,6 +3,7 @@ import { lazyWithRetry } from "../../lib/chunkLoad";
 import { PanelBoundary } from "../ui/PanelBoundary";
 import { deepen } from "../../lib/api";
 import { estonianPersonHashOf } from "../../lib/estonianPerson";
+import { NZ_PEOPLE_NOTE } from "../../lib/nzPerson";
 import { EstonianPersonCompanies } from "./EstonianPersonCompanies";
 import { EstonianLegalPersonRelations } from "./EstonianLegalPersonRelations";
 import { estonianRegistryCodeOf } from "../../lib/legalPersonRelations";
@@ -26,7 +27,6 @@ import {
 import { mergeSignals } from "../../lib/expand";
 import { scopeCrossSourceSignals } from "../../lib/signalScope";
 import { isRiskFinding } from "../../lib/signalKind";
-import { NzAssociations } from "./NzAssociations";
 import { useSavedReport } from "./savedReportContext";
 import { NOT_DEEPENED_IN_SAVED, RAW_NOT_SAVED } from "../../lib/savedReport";
 import { hitRegisterUrl, registerRecordUrl } from "../../lib/registerLinks";
@@ -1429,15 +1429,16 @@ export function SourceBucketCard({
    *  anything other than a fresh live call. */
   liveness?: SourceLiveness;
 }) {
-  // Phase 217: New Zealand associations are looked up when the card renders,
-  // so a saved report does not show them (they were not saved).
   const savedReport = useSavedReport();
-  // NZ-only enrichment: director/shareholder cross-company associations. The
-  // nz_companies hit_id is the company number.
-  const nzCompanyNumber =
-    bucket.sourceId === "nz_companies" && !bucket.error
-      ? (bucket.hits.find((h) => !h.is_stub) ?? bucket.hits[0])?.hit_id
-      : undefined;
+  // New Zealand: each director's and shareholder's other companies on the
+  // register are on their BackgroundCheck card (moved from here, 19 Oct 2026);
+  // the card says where, so a reader who looked here finds them. Not on a
+  // saved report, which has no BackgroundCheck tab.
+  const nzPeopleNote =
+    !savedReport &&
+    bucket.sourceId === "nz_companies" &&
+    !bucket.error &&
+    bucket.hits.some((h) => !h.is_stub);
   // Rows past the source's limit stay folded until asked for. Every row is
   // still rendered once expanded, and the risk signals for the folded ones
   // are in the Risk signals section regardless — folding hides nothing that
@@ -1527,10 +1528,10 @@ export function SourceBucketCard({
           </ActionChip>
         </div>
       )}
-      {nzCompanyNumber && !savedReport && (
-        <div className="px-5 pb-4">
-          <NzAssociations companyNumber={nzCompanyNumber} />
-        </div>
+      {nzPeopleNote && (
+        <p className="px-5 pb-4 text-oo-meta text-oo-muted">
+          {NZ_PEOPLE_NOTE}
+        </p>
       )}
       {extra}
       {bucket.boAccess && !bucket.error && (

@@ -1,4 +1,11 @@
-"""New Zealand director / shareholder associations enrichment (lazy, panel-only).
+"""New Zealand director / shareholder associations enrichment (lazy, on demand).
+
+Shown on the BackgroundCheck tab, one person at a time
+(:func:`person_associations`, ``GET /nz-associations/person``), beside the
+Estonian register's "companies on the register" control — not on QuickCheck,
+where it sat as a company-wide panel until the transfer ticket (19 Oct 2026).
+The company-wide view (:func:`assemble_associations`, ``GET /nz-associations``)
+stays in the documented API.
 
 For each director and shareholder of the looked-up NZ company, this searches the
 Companies Entity Role Search API (v3) by name and reports how many **other**
@@ -487,4 +494,86 @@ async def assemble_associations(company_number: str) -> dict[str, Any]:
     return result
 
 
-__all__ = ["assemble_associations", "summarise_person"]
+def _holder_key(name: str | None) -> str:
+    """Order-insensitive comparable form of a role holder's name.
+
+    The BackgroundCheck card passes the name as the NZ person statement files
+    it — the bundle's own spelling — so the plain normalised form matches; the
+    sorted-token form also accepts "DOE, John" for "John Doe".
+    """
+    return " ".join(sorted(_norm_name(name).split()))
+
+
+def _find_holder(holders: list[dict[str, Any]], name: str) -> dict[str, Any] | None:
+    want = _norm_name(name)
+    for rh in holders:
+        if _norm_name(rh.get("name")) == want:
+            return rh
+    want_sorted = _holder_key(name)
+    for rh in holders:
+        if _holder_key(rh.get("name")) == want_sorted:
+            return rh
+    return None
+
+
+async def person_associations(company_number: str, name: str) -> dict[str, Any]:
+    """One role holder's other NZ companies — the BackgroundCheck card's view.
+
+    The same search and the same address grading as
+    :func:`assemble_associations`, for one person: the name must be a director
+    or shareholder of ``company_number`` (the register's filing is what gives
+    the address the matches are graded against), so this never becomes a free
+    name search. One Role Search call per person, cached on company + name;
+    a company-wide result already cached answers it without a call.
+    """
+    number = (company_number or "").strip()
+    name = (name or "").strip()
+    settings = get_settings()
+    key = settings.nzbn_role_search_api_key
+    base: dict[str, Any] = {"company_number": number, "name": name, "person": None}
+
+    if not number or not name:
+        return {**base, "available": False, "reason": "no company number or name"}
+    if not settings.allow_live or not key:
+        return {**base, "available": False,
+                "reason": "Companies Entity Role Search not configured"}
+
+    cache_key = f"{_CACHE_NS}/person/{number}/{_holder_key(name)}"
+    cached = _cache.get_payload(cache_key)
+    if cached is not None:
+        return cached[0]
+    whole = _cache.get_payload(f"{_CACHE_NS}/{number}")
+    if whole is not None and whole[0].get("available"):
+        for p in whole[0].get("people") or []:
+            if _holder_key(p.get("name")) == _holder_key(name):
+                return {**base, "available": True,
+                        "company_number": whole[0].get("company_number") or number,
+                        "subject_name": whole[0].get("subject_name"), "person": p}
+
+    try:
+        adapter: Any = REGISTRY["nz_companies"]  # NzCompaniesAdapter.fetch takes legal_name
+        bundle = await adapter.fetch(number, legal_name="")
+        subject_number = str(bundle.get("nz_company_number") or number)
+        rh = _find_holder(_collect_role_holders(bundle), name)
+        if rh is None:
+            # Not cached: the register's list of directors changes.
+            return {**base, "company_number": subject_number, "available": False,
+                    "reason": "not a director or shareholder of this company on the register"}
+        async with build_client() as client:
+            records, total = await _role_search(client, rh.get("search_name") or rh["name"], key)
+        result = {
+            **base,
+            "company_number": subject_number,
+            "available": True,
+            "subject_name": (bundle.get("company") or {}).get("name"),
+            "person": summarise_person(rh, records, subject_number, total_records=total),
+        }
+    except Exception as exc:  # noqa: BLE001 — a card must degrade, never 500
+        _LOG.exception("nz_associations: person lookup failed for %s: %s", number, exc)
+        return {**base, "available": False, "reason": "associations lookup failed"}
+
+    _cache.put(cache_key, result)
+    return result
+
+
+__all__ = ["assemble_associations", "person_associations", "summarise_person"]

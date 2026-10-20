@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 380** — A watchlist re-run now says when an owner or controller of the company was added, ended or changed size, in any register, without naming anyone.
+**Latest: Phase 382** — A New Zealand director's or shareholder's other companies on the register now show on their BackgroundCheck card, beside the Estonian register's list, instead of in a company-wide panel on QuickCheck.
 
 → [Full development history](docs/status.md)
 

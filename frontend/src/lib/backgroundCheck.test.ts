@@ -260,3 +260,64 @@ describe("Phase 255: person identifiers published as annotations", () => {
     expect(p.identifiers).toContain("wikidata:q7747");
   });
 });
+
+describe("nzRoleHolder — the New Zealand register's anchor for a person", () => {
+  const nzSource = {
+    description: "New Zealand Companies Register (NZBN)",
+    opencheckSourceId: "nz_companies",
+  };
+  const nzCompany = {
+    statementId: "nz-co",
+    recordType: "entity",
+    recordDetails: {
+      name: "MERIDIAN ENERGY LIMITED",
+      identifiers: [
+        { id: "9429037696863", scheme: "NZ-NZBN" },
+        { id: "1166320", scheme: "NZ-COH" },
+      ],
+    },
+    source: nzSource,
+  };
+  const nzPerson = {
+    statementId: "nz-p",
+    recordType: "person",
+    recordDetails: { personType: "knownPerson", names: [{ fullName: "Mark Julian Verbiest" }] },
+    source: nzSource,
+  };
+  const nzRel = {
+    statementId: "nz-r",
+    recordType: "relationship",
+    recordDetails: {
+      subject: "nz-co",
+      interestedParty: "nz-p",
+      interests: [{ type: "seniorManagingOfficial", details: "Director" }],
+    },
+    source: nzSource,
+  };
+
+  it("carries the company number and the name as the NZ filing gives it", () => {
+    // The same person from another source, spelt differently, merges first.
+    const other = person("w-p", "Mark Julian VERBIEST", {}, "Wikidata");
+    const [p] = extractConnectedPeople([nzCompany, other, nzPerson, nzRel]);
+    expect(p.name).toBe("Mark Julian VERBIEST");
+    expect(p.nzRoleHolder).toEqual({ companyNumber: "1166320", name: "Mark Julian Verbiest" });
+  });
+
+  it("falls back to the NZBN when the filing has no company number", () => {
+    const co = {
+      ...nzCompany,
+      recordDetails: { ...nzCompany.recordDetails, identifiers: [{ id: "9429037696863", scheme: "NZ-NZBN" }] },
+    };
+    const [p] = extractConnectedPeople([co, nzPerson, nzRel]);
+    expect(p.nzRoleHolder?.companyNumber).toBe("9429037696863");
+  });
+
+  it("is absent for a role another register records", () => {
+    const people = extractConnectedPeople([
+      entity("e1", "ACME LTD"),
+      person("p1", "Jane Smith"),
+      rel("r1", "e1", "p1", [{ type: "seniorManagingOfficial" }]),
+    ]);
+    expect(people[0].nzRoleHolder).toBeUndefined();
+  });
+});
