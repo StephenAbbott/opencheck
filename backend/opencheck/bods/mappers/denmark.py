@@ -9,7 +9,30 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
-from ..statements import SOURCE_NAMES, _addr, make_entity_statement
+from ..statements import (
+    SOURCE_NAMES,
+    _addr,
+    latest_record_date,
+    make_entity_statement,
+    make_person_statement,
+    make_relationship_statement,
+    set_beneficial_ownership,
+)
+
+#: The scheme of CVR's participant number (enhedsnummer) — the key CVR
+#: itself gives a person (datacvr.virk.dk/enhed/person/<number>), never a CPR
+#: number. One person per value: BackgroundCheck's
+#: ``ONE_PERSON_PER_VALUE_SCHEMES`` holds its lower-cased form.
+CVR_PARTICIPANT_SCHEME = "DK-CVR-ENHEDSNUMMER"
+CVR_PARTICIPANT_SCHEME_NAME = "CVR participant number (enhedsnummer)"
+
+#: The interest's words. A fully liable partner answers for the firm's debts
+#: without limit and holds a partnership interest, not shares; CVR states no
+#: size, so neither does OpenCheck, and nothing is said about beneficial
+#: ownership (no regime: the flag is left unset).
+CVR_PARTICIPANT_DETAILS = (
+    "Fully liable participant (fuldt ansvarlig deltager), as registered in CVR"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -20,9 +43,12 @@ from ..statements import SOURCE_NAMES, _addr, make_entity_statement
 def map_cvr_denmark(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CVR Denmark bundle to BODS v0.4 statements.
 
-    CVRPerson (natural persons) is a restricted entity not available without
-    a separate access application, so this mapper produces entity statements
-    only — no person or ownership-or-control statements.
+    Since Phase F (21 Oct 2026) a partnership's fully liable participants —
+    the one participant relation Datafordeler's open CVR data carries — are
+    mapped too: a person keyed on CVR's participant number (name only; CVR
+    publishes no birth date or CPR number here), or a company keyed on its
+    CVR number, each with one relationship whose interests are the periods
+    CVR records. Directors, boards and owners are not in this data.
 
     The entity identifier uses the "DK-CVR" scheme (CVR number).
     """
@@ -122,3 +148,99 @@ def map_cvr_denmark(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     stmt["recordDetails"] = record_details
 
     yield stmt
+
+    yield from _cvr_participants(bundle, stmt["statementId"], source_url)
+
+
+def _cvr_participants(
+    bundle: dict[str, Any], subject_id: str, source_url: str | None
+) -> Iterable[dict[str, Any]]:
+    """Person/entity + relationship statements for the fully liable participants."""
+    for part in bundle.get("participants") or []:
+        pid = str(part.get("participant_id") or "")
+        kind = part.get("kind")
+        if not pid or kind not in ("person", "entity"):
+            # An unresolved unit is left out rather than guessed at.
+            continue
+        periods = part.get("periods") or []
+        dated = latest_record_date(
+            [p.get("from") for p in periods] + [p.get("to") for p in periods]
+        )
+        name = (part.get("name") or "").strip()
+        local_id = f"participant-{pid}"
+        if kind == "person":
+            if name:
+                party = make_person_statement(
+                    source_id="cvr_denmark",
+                    local_id=local_id,
+                    full_name=name,
+                    identifiers=[
+                        {
+                            "id": pid,
+                            "scheme": CVR_PARTICIPANT_SCHEME,
+                            "schemeName": CVR_PARTICIPANT_SCHEME_NAME,
+                        }
+                    ],
+                    source_url=source_url,
+                    statement_date=dated,
+                )
+            else:
+                party = make_person_statement(
+                    source_id="cvr_denmark",
+                    local_id=local_id,
+                    full_name="Unnamed fully liable participant",
+                    person_type="unknownPerson",
+                    source_url=source_url,
+                    statement_date=dated,
+                )
+            party_type = "person"
+        else:
+            cvr = part.get("cvr_number")
+            party = make_entity_statement(
+                source_id="cvr_denmark",
+                # The company's own CVR record is keyed on its CVR number,
+                # so a partner company looked up in its own right is one node.
+                local_id=cvr or local_id,
+                name=name or (cvr or "Unnamed participant company"),
+                jurisdiction=("Denmark", "DK"),
+                identifiers=(
+                    [
+                        {
+                            "id": cvr,
+                            "scheme": "DK-CVR",
+                            "schemeName": (
+                                "Det Centrale Virksomhedsregister — Danish Central "
+                                "Business Register"
+                            ),
+                        }
+                    ]
+                    if cvr
+                    else []
+                ),
+                source_url=f"https://datacvr.virk.dk/enhed/virksomhed/{cvr}" if cvr else source_url,
+                statement_date=dated,
+            )
+            party_type = "entity"
+        yield party
+        interests = []
+        for period in periods:
+            interest: dict[str, Any] = {
+                "type": "otherInfluenceOrControl",
+                "directOrIndirect": "direct",
+                "details": CVR_PARTICIPANT_DETAILS,
+            }
+            if period.get("from"):
+                interest["startDate"] = str(period["from"])[:10]
+            if period.get("to"):
+                interest["endDate"] = str(period["to"])[:10]
+            interests.append(set_beneficial_ownership(interest, "cvr_denmark"))
+        yield make_relationship_statement(
+            source_id="cvr_denmark",
+            local_id=local_id,
+            subject_statement_id=subject_id,
+            interested_party_statement_id=party["statementId"],
+            interested_party_type=party_type,
+            interests=interests,
+            source_url=source_url,
+            statement_date=dated,
+        )

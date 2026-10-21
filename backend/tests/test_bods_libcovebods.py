@@ -924,7 +924,7 @@ def test_libcovebods_companies_house_corporate_psc():
 
 
 def test_libcovebods_cvr_denmark():
-    """CVR Denmark produces entity-only statements (CVRPerson is restricted access)."""
+    """A CVR Denmark bundle with no fully liable participants is one entity statement."""
     from opencheck.bods.mapper import map_cvr_denmark
     bundle = {
         "cvr_number": "10000501",

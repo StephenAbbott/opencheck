@@ -15,16 +15,21 @@ Access model
   All CVR entities except CVRPerson are publicly accessible with only an
   API key (no special access request required).
   CVRPerson (natural persons with CPR-number) is a restricted entity that
-  requires MitID Erhverv + OAuth — it is NOT fetched here.
+  requires OAuth + register approval — it is NOT fetched here. A person's
+  CVR unit (``CVR_CVREnhed``: type and participant number) and name
+  (``CVR_Navn``) are open, and are read for fully liable participants.
 
 Fetch strategy
 --------------
-  Two HTTP requests per lookup:
   1. CVR_Virksomhed — fetch by CVRNummer (Long) to get the CVREnhedsId (UUID-
      style string that joins all other entity tables).
-  2. Batch query — fetch CVR_Navn, CVR_Adressering, CVR_Branche,
-     CVR_Virksomhedsform, CVR_FuldtAnsvarligDeltagerRelation in a single
-     GraphQL request keyed by CVREnhedsId.
+  2. One request per table (DAF-GQL-0010), in parallel: CVR_Navn,
+     CVR_Adressering, CVR_Branche, CVR_Virksomhedsform,
+     CVR_FuldtAnsvarligDeltagerRelation, keyed by CVREnhedsId. Each pages:
+     Datafordeler answers 100 rows a page unless asked for more.
+  3. Only when the firm has fully liable participants (I/S, K/S, P/S):
+     CVR_CVREnhed and CVR_Navn for all of them, with an ``in`` filter of at
+     most 100 ids (DAF-GQL-0016). Two requests per 100 participants.
 
   Current-state records are selected by filtering for nodes where
   ``virkningTil`` is null in Python (these are the still-effective rows).
@@ -46,11 +51,13 @@ Bitemporal note
 
 Privacy note
 ------------
-  CVRPerson (natural persons linked via CPR number) is explicitly excluded
-  from this adapter. The CVR GraphQL API requires a separate access
-  application and MitID Erhverv authentication for CVRPerson data. This
-  adapter therefore produces entity statements only — no person or
-  ownership-or-control statements.
+  CVRPerson (natural persons linked via CPR number) is not read: no CPR
+  number and no birth date ever reach the bundle. A fully liable participant
+  who is a person is named and keyed on CVR's participant number
+  (enhedsnummer) — the number datacvr.virk.dk itself shows. That is the only
+  relation to people Datafordeler's CVR data carries: directors, boards,
+  legal owners and beneficial owners are not in it (they are in
+  Erhvervsstyrelsen's System-til-System distribution, a separate access).
 
 Datafordeler account setup
 --------------------------
@@ -79,9 +86,11 @@ from typing import Any
 
 import httpx
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
+from ..secret_scrub import describe_exception
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.cvr_denmark import CVRBundle
@@ -193,21 +202,25 @@ query($cvr: Long!) {
 # Each entity type must be fetched in a separate HTTP request.
 
 _Q_NAVN = """
-query($id: String!) {
-  CVR_Navn(where: {CVREnhedsId: {eq: $id}}) {
+query($id: String!, $first: Int, $after: String) {
+  CVR_Navn(where: {CVREnhedsId: {eq: $id}}, first: $first, after: $after) {
     nodes {
       vaerdi
       sekvens
       virkningFra
       virkningTil
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
 }
 """.strip()
 
 _Q_ADRESSERING = """
-query($id: String!) {
-  CVR_Adressering(where: {CVREnhedsId: {eq: $id}}) {
+query($id: String!, $first: Int, $after: String) {
+  CVR_Adressering(where: {CVREnhedsId: {eq: $id}}, first: $first, after: $after) {
     nodes {
       AdresseringAnvendelse
       CVRAdresse_vejnavn
@@ -219,47 +232,126 @@ query($id: String!) {
       virkningFra
       virkningTil
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
 }
 """.strip()
 
 _Q_BRANCHE = """
-query($id: String!) {
-  CVR_Branche(where: {CVREnhedsId: {eq: $id}}) {
+query($id: String!, $first: Int, $after: String) {
+  CVR_Branche(where: {CVREnhedsId: {eq: $id}}, first: $first, after: $after) {
     nodes {
       vaerdi
       sekvens
       virkningFra
       virkningTil
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
 }
 """.strip()
 
 _Q_FORM = """
-query($id: String!) {
-  CVR_Virksomhedsform(where: {CVREnhedsId: {eq: $id}}) {
+query($id: String!, $first: Int, $after: String) {
+  CVR_Virksomhedsform(where: {CVREnhedsId: {eq: $id}}, first: $first, after: $after) {
     nodes {
       vaerdi
       vaerdiTekst
       virkningFra
       virkningTil
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
 }
 """.strip()
 
 _Q_DELTAGER = """
-query($id: String!) {
-  CVR_FuldtAnsvarligDeltagerRelation(where: {CVREnhedsId: {eq: $id}}) {
+query($id: String!, $first: Int, $after: String) {
+  CVR_FuldtAnsvarligDeltagerRelation(where: {CVREnhedsId: {eq: $id}}, first: $first, after: $after) {
     nodes {
       deltagendeEnhedsId
       virkningFra
       virkningTil
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
 }
 """.strip()
+
+# A participant's own unit (Phase F, 21 Oct 2026): what kind of unit it is
+# (``CVRPerson`` or ``Virksomhed``) and its business key — a company's CVR
+# number; for a person the key is the CVREnhedsId itself, the participant
+# number CVR shows on datacvr.virk.dk/enhed/person/<number>. One request for
+# every participant: both tables take an ``in`` filter.
+_Q_PARTICIPANT_UNITS = """
+query($ids: [String!], $first: Int, $after: String) {
+  CVR_CVREnhed(where: {id: {in: $ids}}, first: $first, after: $after) {
+    nodes {
+      id
+      enhedsType
+      forretningsnoegletype
+      forretningsnoegle
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+""".strip()
+
+_Q_PARTICIPANT_NAMES = """
+query($ids: [String!], $first: Int, $after: String) {
+  CVR_Navn(where: {CVREnhedsId: {in: $ids}}, first: $first, after: $after) {
+    nodes {
+      CVREnhedsId
+      vaerdi
+      sekvens
+      virkningFra
+      virkningTil
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+""".strip()
+
+#: Datafordeler answers 100 rows a page unless asked for more; until 21 Oct
+#: 2026 no query asked, so a firm with more partners (Willis Towers Watson
+#: Consultancy Services I/S: 132) was silently cut at 100. Every query now
+#: pages, PAGE_SIZE rows at a time, up to MAX_PAGES pages.
+PAGE_SIZE = 500
+MAX_PAGES = 10
+
+#: DAF-GQL-0016: an ``in`` list may hold at most 100 elements (measured on
+#: Willis Towers Watson Consultancy Services I/S's 132 partners, 21 Oct 2026).
+IN_LIST_MAX = 100
+
+
+#: The degradation detail when the partners could not be read. A fixed
+#: sentence: no name or number can reach it (``test_degraded_sources``).
+PARTICIPANTS_NOT_READ = (
+    "named the firm's fully liable participants but did not answer who they "
+    "are, so its partners are missing from this report"
+)
+
+
+class CvrPageLimitError(RuntimeError):
+    """A query still had pages left after MAX_PAGES — never read as complete."""
 
 
 # ---------------------------------------------------------------------------
@@ -328,6 +420,81 @@ def _best_form(nodes: list[dict]) -> tuple[str | None, str | None]:
         return None, None
     node = current[0]
     return node.get("vaerdi"), node.get("vaerdiTekst")
+
+
+def _latest_name(rows: list[dict]) -> str | None:
+    """The participant's name now, else the last one CVR held.
+
+    The primary (``sekvens`` 0) current row wins; with none current, the row
+    that ended last — a dissolved company keeps the name it ended under.
+    """
+    if not rows:
+        return None
+    current = [r for r in rows if r.get("virkningTil") is None]
+    if current:
+        primary = [r for r in current if r.get("sekvens") == 0] or current
+        return (primary[0].get("vaerdi") or "").strip() or None
+    ended = sorted(rows, key=lambda r: str(r.get("virkningTil") or ""), reverse=True)
+    return (ended[0].get("vaerdi") or "").strip() or None
+
+
+def build_participants(
+    relation_nodes: list[dict], unit_nodes: list[dict], name_nodes: list[dict]
+) -> list[dict[str, Any]]:
+    """One record per fully liable participant: who, what kind, and when.
+
+    ``kind`` is ``person`` for a ``CVRPerson`` or ``AndreDeltagerePerson``
+    unit, ``entity`` for a ``Virksomhed`` (with its CVR number) or another
+    ``AndreDeltagere*`` unit, ``unknown`` otherwise. ``periods``
+    are the relation rows, oldest first; ``current`` is any row with no
+    ``virkningTil``. CVR publishes no birth date and no CPR number for a
+    person here — the participant number is the only key.
+    """
+    units = {str(u.get("id")): u for u in unit_nodes if u.get("id")}
+    names: dict[str, list[dict]] = {}
+    for n in name_nodes:
+        if n.get("CVREnhedsId"):
+            names.setdefault(str(n["CVREnhedsId"]), []).append(n)
+    periods: dict[str, list[dict[str, str | None]]] = {}
+    for r in relation_nodes:
+        pid = r.get("deltagendeEnhedsId")
+        if not pid:
+            continue
+        periods.setdefault(str(pid), []).append(
+            {"from": r.get("virkningFra"), "to": r.get("virkningTil")}
+        )
+    out: list[dict[str, Any]] = []
+    for pid in sorted(periods):
+        unit = units.get(pid) or {}
+        etype = unit.get("enhedsType")
+        etype = str(etype or "")
+        # CVRPerson: a person CVR holds with a CPR number; AndreDeltagerePerson:
+        # one it holds without (typically a foreign person, 1 of Willis's 132).
+        # Both are keyed on their CVREnhedsId. AndreDeltagere* that is not a
+        # person is a non-Danish or unregistered company: an entity, no CVR.
+        if etype.endswith("Person"):
+            kind = "person"
+        elif etype == "Virksomhed" or etype.startswith("AndreDeltagere"):
+            kind = "entity"
+        else:
+            kind = "unknown"
+        cvr = None
+        if kind == "entity" and unit.get("forretningsnoegletype") == "CVRNummer":
+            key = str(unit.get("forretningsnoegle") or "").strip()
+            cvr = normalise_cvr(key) if key.isdigit() else None
+        rows = sorted(periods[pid], key=lambda p: str(p["from"] or ""))
+        out.append(
+            {
+                "participant_id": pid,
+                "kind": kind,
+                "cvr_number": cvr,
+                "name": _latest_name(names.get(pid, [])),
+                "periods": rows,
+                "current": any(p["to"] is None for p in rows),
+            }
+        )
+    return out
+
 
 
 def _entity_url(cvr: str) -> str:
@@ -401,7 +568,9 @@ class CvrDenmarkAdapter(SourceAdapter):
             raise RuntimeError("CVR_DENMARK_API_KEY is not configured")
 
         cvr_norm = normalise_cvr(cvr_number)
-        cache_key = f"{_CACHE_NS}:{cvr_norm}"
+        # v2 (Phase F): bundles carry the participants and every list is paged;
+        # a v1 bundle has neither and must not answer for one.
+        cache_key = f"{_CACHE_NS}:v2:{cvr_norm}"
 
         if cache is not None:
             cached = await cache.get(cache_key)
@@ -423,7 +592,9 @@ class CvrDenmarkAdapter(SourceAdapter):
 
         validate_raw("cvr_denmark", CVRBundle, bundle)
 
-        if cache is not None:
+        # A bundle whose partners could not be read is never cached (the
+        # Phase 262 rule): the next lookup asks again.
+        if cache is not None and bundle.get("participants_read", True):
             await cache.set(cache_key, bundle)
 
         return bundle
@@ -469,19 +640,53 @@ class CvrDenmarkAdapter(SourceAdapter):
         #     fields are forbidden by DAF-GQL-0008 / DAF-GQL-0010) ---
         id_vars = {"id": enhed_id}
 
-        async def _gql(query: str, root_key: str) -> list[dict]:
-            """Fire one GraphQL query and return the nodes list."""
-            resp = await client.post(
-                _GRAPHQL_URL,
-                params=params,
-                json={"query": query, "variables": id_vars},
-                timeout=45.0,  # Datafordeler CVR can be slow; override default 15 s
+        async def _gql(
+            query: str, root_key: str, variables: dict[str, Any] | None = None
+        ) -> list[dict]:
+            """Fire one GraphQL query, following its pages, and return the nodes.
+
+            A GraphQL error on the first page is logged and read as no rows,
+            as it always has been. A page limit that is reached is an error:
+            a truncated list must never read as the whole list.
+            """
+            nodes: list[dict] = []
+            after: str | None = None
+            for _page in range(MAX_PAGES):
+                resp = await client.post(
+                    _GRAPHQL_URL,
+                    params=params,
+                    json={
+                        "query": query,
+                        "variables": {
+                            **(variables or id_vars),
+                            "first": PAGE_SIZE,
+                            "after": after,
+                        },
+                    },
+                    timeout=45.0,  # Datafordeler CVR can be slow; override default 15 s
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                if errs := data.get("errors"):
+                    _log.warning(
+                        "CVR GraphQL errors (%s) for %s: %s", root_key, cvr_norm, errs
+                    )
+                    if variables is not None:
+                        # Participant lookups have no older behaviour to keep:
+                        # an error there is a failed read, never "no one".
+                        raise RuntimeError(f"CVR GraphQL error on {root_key}")
+                    return nodes
+                block = (data.get("data") or {}).get(root_key) or {}
+                nodes.extend(block.get("nodes") or [])
+                page_info = block.get("pageInfo") or {}
+                if not page_info.get("hasNextPage"):
+                    return nodes
+                after = page_info.get("endCursor")
+                if not after:
+                    return nodes
+            raise CvrPageLimitError(
+                f"{root_key} had more than {MAX_PAGES * PAGE_SIZE} rows for {cvr_norm}"
             )
-            resp.raise_for_status()
-            data = resp.json()
-            if errs := data.get("errors"):
-                _log.warning("CVR GraphQL errors (%s) for %s: %s", root_key, cvr_norm, errs)
-            return data.get("data", {}).get(root_key, {}).get("nodes", [])
 
         (
             navn_nodes,
@@ -505,12 +710,51 @@ class CvrDenmarkAdapter(SourceAdapter):
         branche_code = _best_branche(branch_nodes)
         form_code, form_text = _best_form(form_nodes)
 
-        # Fully liable participant entity IDs (for K/S, I/S, etc.)
-        current_deltagere = [
-            n["deltagendeEnhedsId"]
-            for n in _current(deltager_nodes)
-            if n.get("deltagendeEnhedsId")
-        ]
+        # Fully liable participants (I/S, K/S, P/S partners). Strictly the
+        # rows with no virkningTil: ``_current``'s fall-back to every row
+        # would read a firm whose partners have all left as still having them.
+        current_deltagere = sorted(
+            {
+                n["deltagendeEnhedsId"]
+                for n in deltager_nodes
+                if n.get("deltagendeEnhedsId") and n.get("virkningTil") is None
+            }
+        )
+
+        # Who each participant is: two requests for all of them (Phase F).
+        # A failure is said, never read as "no partners": the bundle carries
+        # participants_read False and fetch() does not cache it.
+        participant_ids = sorted(
+            {n["deltagendeEnhedsId"] for n in deltager_nodes if n.get("deltagendeEnhedsId")}
+        )
+        participants: list[dict[str, Any]] = []
+        participants_read = True
+        if participant_ids:
+            try:
+                unit_nodes: list[dict] = []
+                name_nodes: list[dict] = []
+                for start in range(0, len(participant_ids), IN_LIST_MAX):
+                    chunk = participant_ids[start : start + IN_LIST_MAX]
+                    units, names = await asyncio.gather(
+                        _gql(_Q_PARTICIPANT_UNITS, "CVR_CVREnhed", {"ids": chunk}),
+                        _gql(_Q_PARTICIPANT_NAMES, "CVR_Navn", {"ids": chunk}),
+                    )
+                    unit_nodes.extend(units)
+                    name_nodes.extend(names)
+                participants = build_participants(deltager_nodes, unit_nodes, name_nodes)
+            except (httpx.HTTPError, RuntimeError) as exc:
+                participants_read = False
+                _log.warning(
+                    "CVR participant read failed for %s: %s",
+                    cvr_norm,
+                    describe_exception(exc),
+                )
+                degradation.record(
+                    "cvr_denmark",
+                    PARTICIPANTS_NOT_READ,
+                    check=degradation.CHECK_SOURCE_READ,
+                    reason=degradation.reason_for_failure(describe_exception(exc)),
+                )
 
         status_norm = _STATUS_MAP.get(cvr_status.upper(), cvr_status.lower() or "unknown")
         # Prefer the API's own vaerdiTekst label; our local map is a fallback
@@ -533,6 +777,8 @@ class CvrDenmarkAdapter(SourceAdapter):
             "address": addr,
             "source_url": source_url,
             "fully_liable_participant_ids": current_deltagere,
+            "participants": participants,
+            "participants_read": participants_read,
             # Raw for debugging / future use. CVR is bitemporal — these lists carry
             # every virkning period (virkningFra/virkningTil), so the Time Machine
             # emitter reconstructs change events from them with no extra API calls.

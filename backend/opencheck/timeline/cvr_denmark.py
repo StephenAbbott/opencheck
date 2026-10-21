@@ -17,9 +17,10 @@ Mapped change types (all Tier-2 identity/status, entity-record):
   * ``_raw_adressering`` (seat)       → ``ADDRESS_CHANGE``
   * ``_raw_branche``     (sekvens 0)  → unmapped Tier-3 admin noise (kept, hidden)
 
-Participants (``_raw_deltager``) are intentionally skipped: they reference only an
-``enhedsId`` (no name — CVRPerson is access-restricted), so there is nothing
-readable to show.
+Participants (``_raw_deltager``) are not History rows: since Phase F the
+adapter names them and the mapper draws each as a relationship whose
+interests carry the periods CVR records, so the graph already says when a
+partner joined and left.
 """
 
 from __future__ import annotations

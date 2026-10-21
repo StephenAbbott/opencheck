@@ -1805,6 +1805,25 @@ These are non-obvious and cost significant debugging time. Do not deviate from t
 - **Address preference**: The `AdresseringAnvendelse` field value for the primary business address is `"beliggenhedsadresse"` (lowercase). Use case-insensitive matching: `"beliggenhed" in (val or "").lower()`.
 - **Timeout**: The Datafordeler API is slow. All CVR `client.post()` calls must use `timeout=45.0` explicitly, overriding the global 15 s read timeout in `http.py`.
 - **GLEIF RA code for Denmark**: `RA000170` (Erhvervsstyrelsen/CVR).
+- **Every query pages (Phase F, 21 Oct 2026).** Datafordeler answers **100
+  rows a page** unless asked; the adapter never asked, so Willis Towers Watson
+  Consultancy Services I/S's 132 partner rows were cut at 100. `_gql` sends
+  `first`/`after` and follows `pageInfo` up to `MAX_PAGES`; reaching the limit
+  raises (`CvrPageLimitError`), never reads as the whole list.
+- **An `in` list holds at most 100 elements** (DAF-GQL-0016) — chunk it.
+  Some tables refuse a scan outright (DAF-GQL-0009: filter on `CVREnhedsId`).
+- **The one relation to people is `CVR_FuldtAnsvarligDeltagerRelation`**
+  (fully liable partners of I/S, K/S, P/S). A participant's `CVR_CVREnhed`
+  gives `enhedsType` (`CVRPerson`, `AndreDeltagerePerson` — a person CVR holds
+  without a CPR number — or `Virksomhed`, whose `forretningsnoegle` is its CVR
+  number) and `CVR_Navn` its name; no birth date, no CPR. The person key is
+  the participant number (`DK-CVR-ENHEDSNUMMER`), which is in BackgroundCheck's
+  `ONE_PERSON_PER_VALUE_SCHEMES`: Willis has two partners named Mikkel Martin
+  Nielsen with different numbers. Directors, boards, legal and beneficial
+  owners are only in Erhvervsstyrelsen's System-til-System distribution
+  (separate access; beneficial owners restricted since 1 Sept 2025 and never
+  republishable). A failed participant read is a `source_read` degradation
+  and the bundle is not cached (key `cvr_denmark:v2:<cvr>`).
 
 ---
 

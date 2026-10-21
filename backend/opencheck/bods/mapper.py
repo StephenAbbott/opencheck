@@ -398,6 +398,10 @@ from .mappers.singapore import (  # noqa: F401  (re-exported, Phase 246)
     map_acra_singapore,
 )
 from .mappers.denmark import (  # noqa: F401  (re-exported, Phase 246)
+    CVR_PARTICIPANT_DETAILS,
+    CVR_PARTICIPANT_SCHEME,
+    CVR_PARTICIPANT_SCHEME_NAME,
+    _cvr_participants,
     map_cvr_denmark,
 )
 from .mappers.cyprus import (  # noqa: F401  (re-exported, Phase 246)

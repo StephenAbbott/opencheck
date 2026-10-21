@@ -173,3 +173,34 @@ describe("identifiers first", () => {
     expect(groups[2]).not.toBe(groups[0]);
   });
 });
+
+describe("Denmark's CVR participant number (fully liable partners)", () => {
+  // As map_cvr_denmark publishes them: name only, the participant number in
+  // an identifying annotation (Phase 255), no birth date.
+  const CVR = { source: "CVR — Det Centrale Virksomhedsregister", sourceId: "cvr_denmark" };
+  const pn = (id: string) => ({ scheme: "DK-CVR-ENHEDSNUMMER", id });
+
+  it("keeps two same-name partners with different participant numbers apart", () => {
+    const people = extractConnectedPeople([
+      person("p1", "Lars Nielsen", { ...CVR, notes: [pn("4000000001")] }),
+      person("p2", "Lars Nielsen", { ...CVR, notes: [pn("4000000002")] }),
+    ]);
+    expect(people).toHaveLength(2);
+  });
+
+  it("merges one participant number across two records", () => {
+    const people = extractConnectedPeople([
+      person("p1", "Lars Nielsen", { ...CVR, notes: [pn("4000000001")] }),
+      person("p2", "NIELSEN, Lars", { ...CVR, notes: [pn("4000000001")] }),
+    ]);
+    expect(people).toHaveLength(1);
+  });
+
+  it("never offers two different participant numbers as one person", () => {
+    const people = extractConnectedPeople([
+      person("p1", "Lars Nielsen", { ...CVR, notes: [pn("4000000001")] }),
+      person("p2", "Lars Nielsen", { ...CVR, notes: [pn("4000000002")] }),
+    ]);
+    expect(clusterConnectedPeople(people).clusters).toHaveLength(0);
+  });
+});
