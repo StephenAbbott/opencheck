@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 388** — Estonian shareholders filed through a Nasdaq CSD account are named without the "Omanikukonto:" / "Lihtkonto:" prefix, on every path and in the corrected 19 October 2026 dataset.
+**Latest: Phase 392** — The PermID primary listing now goes only onto OpenCheck's own GLEIF statement in the BODS export, never onto another publisher's.
 
 → [Full development history](docs/status.md)
 
