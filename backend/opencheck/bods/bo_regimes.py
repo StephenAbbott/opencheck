@@ -230,9 +230,12 @@ _add(BORegime(
     threshold_value=25.0,
     reporting_basis="ULTIMATE beneficial owner (through chains), with control-mechanism code per BO",
     natural_person_only=True,
-    fallback="Senior management (juhatus) recorded where no qualifying person is identified",
+    fallback="Senior management (juhatus) recorded where no qualifying person is identified — manner-of-control codes J / C on the BO list, mapped with beneficialOwnershipOrControl false",
     record_kinds={
         "kasusaaja_bo": "assert_true",
+        # J / C rows: a board or council member named because no owner was
+        # identified — on the BO list, not a beneficial owner (20 Oct 2026).
+        "kasusaaja_fallback": "assert_false",
         "shareholder": "omit",
         "officer": "omit",
         "corporate_shareholder": "omit",  # entity party; register makes no BO claim on the holding itself

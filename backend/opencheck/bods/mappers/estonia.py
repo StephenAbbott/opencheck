@@ -140,6 +140,20 @@ _EE_BO_CONTROL_MAP: dict[str, tuple[str, str | None, str]] = {
     "M": ("otherInfluenceOrControl", None,       "Other means"),
 }
 
+#: Manner-of-control codes for a person the register names because no owner
+#: was identified (RahaPTS § 9: the management or council member who runs the
+#: company). They sit on the beneficial-owner list but are not beneficial
+#: owners, so their interest carries ``beneficialOwnershipOrControl: false``
+#: (Stephen, 20 Oct 2026) — ``kasusaaja_fallback`` in the regimes registry.
+EE_BO_FALLBACK_CODES = frozenset({"J", "C"})
+
+
+def ee_bo_is_fallback(row: dict[str, Any]) -> bool:
+    """True for a beneficial-owner-list row naming a board or council member
+    because no owner was identified (``J`` / ``C``)."""
+    return (row.get("kontrolli_teostamise_viis") or "").strip() in EE_BO_FALLBACK_CODES
+
+
 #: Off-card role code (``kaardivalised_isikud``) → (BODS interest type,
 #: label) for the roles that are a role in the company. A supervisory
 #: board (nõukogu) sits above the management board; BODS has one
@@ -211,6 +225,8 @@ def ee_person_role_label(list_name: str, role: str | None, register_text: str | 
         return "Shareholder (osanik)"
     elif list_name == "beneficial_owners":
         gloss = _EE_BO_CONTROL_MAP.get(role)
+        if gloss and role in EE_BO_FALLBACK_CODES:
+            return f"Named because no beneficial owner was identified — {gloss[2][0].lower()}{gloss[2][1:]}"
         return f"Beneficial owner — {gloss[2][0].lower()}{gloss[2][1:]}" if gloss else "Beneficial owner"
     elif list_name == "off_card":
         if role in _EE_OFF_CARD_ROLE_MAP:
@@ -737,9 +753,12 @@ def _ee_bo_interest(bo: dict[str, Any]) -> dict[str, Any]:
         control_code, ("otherInfluenceOrControl", None, "")
     )
     # kasusaajad records ARE the Estonian BO declarations — the flag
-    # comes from the regimes registry (ariregister/kasusaaja_bo -> true).
+    # comes from the regimes registry (ariregister/kasusaaja_bo -> true),
+    # except a board or council member named because no owner was
+    # identified (J / C: kasusaaja_fallback -> false).
+    record_kind = "kasusaaja_fallback" if control_code in EE_BO_FALLBACK_CODES else "kasusaaja_bo"
     interest: dict[str, Any] = set_beneficial_ownership(
-        {"type": interest_type}, "ariregister", record_kind="kasusaaja_bo"
+        {"type": interest_type}, "ariregister", record_kind=record_kind
     )
     if direct_or_indirect:
         interest["directOrIndirect"] = direct_or_indirect
