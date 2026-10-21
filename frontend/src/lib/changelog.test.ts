@@ -63,3 +63,55 @@ describe("parseStatusMarkdown", () => {
     );
   });
 });
+
+// The three shapes rows have been written in. Every card should come out the
+// same: one sentence as the heading, the next sentence as the summary.
+const SHAPES = `| Phase | Headline |
+|------:|----------|
+| 106 | A name is not an identification. Phase 105 fixed how the hit was *described*; this fixes whether it attached — the gate now asks for corroboration. More detail. Commit \`1111111\`. |
+| 384 | **Crime and regulatory topics on the company's own record now raise signals, on an exact LEI match only.** From the Notion ticket "Enforcement topics". The match is exact — no fuzzy names. Commit \`2222222\`. |
+| 385 | **Coverage honesty — three tickets from the check. A second sentence in bold.** Then the narrative. Commit \`3333333\`. |
+| 386 | **A stamped headline with no narrative.** Commits \`4444444\`, \`5555555\`. |
+`;
+
+describe("parseStatusMarkdown — one sentence as the heading, whatever the row's shape", () => {
+  const byPhase = new Map(parseStatusMarkdown(SHAPES).map((e) => [e.phase, e]));
+
+  it("stamped row: the bold headline is the heading, even with an em-dash later in the narrative", () => {
+    const e = byPhase.get(384)!;
+    expect(e.title).toBe(
+      "Crime and regulatory topics on the company's own record now raise signals, on an exact LEI match only."
+    );
+    expect(e.summary).toBe('From the Notion ticket "Enforcement topics".');
+    expect(e.commits).toEqual(["2222222"]);
+  });
+
+  it("stamped row: a bold lead of two sentences still gives a one-sentence heading", () => {
+    const e = byPhase.get(385)!;
+    expect(e.title).toBe("Coverage honesty — three tickets from the check.");
+    expect(e.summary).toBe("A second sentence in bold.");
+  });
+
+  it("stamped row with nothing after the headline has no summary and no citation text", () => {
+    const e = byPhase.get(386)!;
+    expect(e.title).toBe("A stamped headline with no narrative.");
+    expect(e.summary).toBe("");
+    expect(e.commits).toEqual(["4444444", "5555555"]);
+  });
+
+  it("prose row: the first sentence is the heading, not everything up to a later em-dash", () => {
+    const e = byPhase.get(106)!;
+    expect(e.title).toBe("A name is not an identification.");
+    expect(e.summary).toBe(
+      "Phase 105 fixed how the hit was described; this fixes whether it attached — the gate now asks for corroboration."
+    );
+  });
+
+  it("never puts the commit citation in a heading or summary", () => {
+    for (const e of byPhase.values()) {
+      expect(e.title).not.toMatch(/Commits? /);
+      expect(e.summary).not.toMatch(/Commits? /);
+    }
+  });
+});
+
