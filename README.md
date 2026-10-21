@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 389** — Estonian board and council members listed in place of a beneficial owner are mapped as senior managing officials who are not beneficial owners, and a missing filing now reads "none published".
+**Latest: Phase 390** — The changelog page gives every release the same card — one bold sentence as the heading, the next sentence as the summary — and says it lists every merged change.
 
 → [Full development history](docs/status.md)
 
