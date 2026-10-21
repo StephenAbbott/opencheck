@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 388** — Estonian shareholders filed through a Nasdaq CSD account are named without the "Omanikukonto:" / "Lihtkonto:" prefix, on every path and in the corrected 19 October 2026 dataset.
+**Latest: Phase 389** — Estonian board and council members listed in place of a beneficial owner are mapped as senior managing officials who are not beneficial owners, and a missing filing now reads "none published".
 
 → [Full development history](docs/status.md)
 
