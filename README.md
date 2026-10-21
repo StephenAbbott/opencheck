@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 393** — BackgroundCheck now merges people on a shared identifier first and on name plus birth year second, and never merges two Wikidata items or two Estonian register person keys into one card.
+**Latest: Phase 394** — Danish partnerships' fully liable partners now appear in the ownership graph and BackgroundCheck, keyed on CVR's participant number.
 
 → [Full development history](docs/status.md)
 
