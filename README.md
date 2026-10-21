@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 392** — The PermID primary listing now goes only onto OpenCheck's own GLEIF statement in the BODS export, never onto another publisher's.
+**Latest: Phase 393** — BackgroundCheck now merges people on a shared identifier first and on name plus birth year second, and never merges two Wikidata items or two Estonian register person keys into one card.
 
 → [Full development history](docs/status.md)
 
