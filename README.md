@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 391** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, filling in Estonia's threshold, reporting basis, published fields, verification and company register.
+**Latest: Phase 392** — The PermID primary listing now goes only onto OpenCheck's own GLEIF statement in the BODS export, never onto another publisher's.
 
 → [Full development history](docs/status.md)
 
