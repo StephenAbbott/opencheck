@@ -14,6 +14,8 @@
  *     never a silent "different people" veto;
  *   - a shared hard identifier (Companies House officer id, Wikidata Q-id)
  *     DOMINATES and can carry a pair to High even across a birth-year conflict;
+ *   - two different values of a one-person-per-value scheme (the Estonian
+ *     register's person key, a Wikidata item) are never a candidate pair;
  *   - name similarity ALONE never reaches High — that needs an identifier, or a
  *     near-exact name plus corroboration (matching birth year AND shared
  *     nationality or company).
@@ -21,7 +23,11 @@
  * Pure and deterministic — unit-tested in clusterPeople.test.ts.
  */
 
-import { nameTokens, type ConnectedPerson } from "./backgroundCheck";
+import {
+  ONE_PERSON_PER_VALUE_SCHEMES,
+  nameTokens,
+  type ConnectedPerson,
+} from "./backgroundCheck";
 
 /** A ConnectedPerson optionally carrying normalised "scheme:value" identifiers. */
 export type ClusterablePerson = ConnectedPerson & { identifiers?: string[] };
@@ -158,6 +164,36 @@ function sharedIdentifiers(a: ClusterablePerson, b: ClusterablePerson): string[]
   return overlap(a.identifiers ?? [], b.identifiers ?? []);
 }
 
+/**
+ * The two records carry different values of a scheme that names one person per
+ * value (the Estonian register's person key, a Wikidata item): the source has
+ * already said they are different people, so they are never a candidate pair.
+ */
+export function distinctByIdentifier(a: ClusterablePerson, b: ClusterablePerson): boolean {
+  const bySchemes = (p: ClusterablePerson): Map<string, Set<string>> => {
+    const m = new Map<string, Set<string>>();
+    for (const id of p.identifiers ?? []) {
+      const key = id.toLowerCase();
+      const at = key.indexOf(":");
+      if (at <= 0) continue;
+      const scheme = key.slice(0, at);
+      if (!ONE_PERSON_PER_VALUE_SCHEMES.has(scheme)) continue;
+      const set = m.get(scheme) ?? new Set<string>();
+      set.add(key);
+      m.set(scheme, set);
+    }
+    return m;
+  };
+  const A = bySchemes(a);
+  const B = bySchemes(b);
+  for (const [scheme, values] of A) {
+    const other = B.get(scheme);
+    if (!other) continue;
+    if (![...values].some((v) => other.has(v))) return true;
+  }
+  return false;
+}
+
 function companiesOf(p: ClusterablePerson): string[] {
   return (p.roles ?? []).map((r) => r.subjectName).filter((s): s is string => !!s);
 }
@@ -171,6 +207,7 @@ export function scorePair(
   b: ClusterablePerson
 ): PersonClusterPair | null {
   const ids = sharedIdentifiers(a, b);
+  if (ids.length === 0 && distinctByIdentifier(a, b)) return null;
   const name = nameSimilarity(a.name, b.name);
   const byr = birthYearRelation(a, b);
   const nats = overlap(a.nationalities, b.nationalities);

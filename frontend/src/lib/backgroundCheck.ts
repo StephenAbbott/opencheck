@@ -8,12 +8,14 @@
  * ownership, shareholding…), each with the source that asserted it and
  * the company it is held in.
  *
- * People are merged across sources by normalised name + birth year —
- * the same person typically appears in both the live Companies House
- * bundle and the Open Ownership UK PSC bulk dataset (and, for Estonia,
- * as officer + beneficial owner + shareholder). Merging is
- * presentational only: every underlying statementId is kept so claims
- * remain traceable to their statements.
+ * People are merged on a shared identifier first (the Estonian register's
+ * person key, a Wikidata item, a Companies House officer id…), then on
+ * normalised name + birth year — the same person typically appears in both
+ * the live Companies House bundle and the Open Ownership UK PSC bulk dataset.
+ * A name alone never merges records from different sources, and two
+ * different values of a one-person-per-value scheme are never merged (see
+ * `groupPersonRecords`). Merging is presentational only: every underlying
+ * statementId is kept so claims remain traceable to their statements.
  */
 
 import { personIdentifierNotes } from "./annotations";
@@ -38,7 +40,8 @@ export interface ConnectedPersonRole {
 }
 
 export interface ConnectedPerson {
-  /** Merge key — normalised name + birth year. */
+  /** Merge key — normalised name + birth year, made unique with the first
+   *  statementId when two people share both. */
   key: string;
   name: string;
   birthDate?: string;
@@ -225,6 +228,190 @@ export function extractPersonSubgraph(
 }
 
 /**
+ * Identifier schemes whose values name exactly one person each: two different
+ * values in one of these schemes are two different people, whatever their
+ * names. The Estonian register's person key is one per person by
+ * construction; a Wikidata item is one per human (Unilever's "Fernando
+ * Fernández" card merged a Mexican actor's item with another person's).
+ *
+ * Companies House officer ids are deliberately NOT here: Companies House can
+ * give one person several officer ids, and a veto on them would split people
+ * the name + birth-year rule has always merged correctly.
+ */
+export const ONE_PERSON_PER_VALUE_SCHEMES: ReadonlySet<string> = new Set([
+  "ee-ariregister-hash",
+  "wikidata",
+]);
+
+interface PersonRecord {
+  stmt: Stmt;
+  id: string;
+  name: string;
+  nameKey: string;
+  birthDate?: string;
+  birthYear?: number;
+  /** opencheckSourceId, else the source description. */
+  source?: string;
+  /** Normalised "scheme:value" keys. */
+  identifiers: string[];
+}
+
+function personRecord(s: Stmt): PersonRecord | undefined {
+  const id = str(s.statementId);
+  if (!id) return undefined;
+  const rd = rec(s.recordDetails);
+  const personType = str(rd.personType);
+  // anonymousPerson / unknownPerson carry no screenable identity.
+  if (personType && personType !== "knownPerson") return undefined;
+  const name = personName(rd);
+  if (!name) return undefined;
+  const birthDate = str(rd.birthDate);
+  const identifiers: string[] = [];
+  // Phase 255: a Wikidata Q-id or record id now rides in an `identifying`
+  // annotation; read it back so people still group on the same key.
+  for (const idObj of [...arr(rd.identifiers).map(rec), ...personIdentifierNotes(s).map(rec)]) {
+    const scheme = str(idObj.scheme) ?? str(idObj.schemeName);
+    const value = str(idObj.id);
+    const idKey = (scheme && value ? `${scheme}:${value}` : value)?.toLowerCase();
+    if (idKey && !identifiers.includes(idKey)) identifiers.push(idKey);
+  }
+  const source = rec(s.source);
+  return {
+    stmt: s,
+    id,
+    name,
+    nameKey: nameMatchKey(name),
+    birthDate,
+    birthYear: birthYearOf(birthDate),
+    source: str(source.opencheckSourceId) ?? str(source.description),
+    identifiers,
+  };
+}
+
+function schemeOf(idKey: string): string | undefined {
+  const at = idKey.indexOf(":");
+  return at > 0 ? idKey.slice(0, at) : undefined;
+}
+
+interface PersonGroup {
+  years: Set<number>;
+  sources: Set<string>;
+  /** scheme → values, for ONE_PERSON_PER_VALUE_SCHEMES only. */
+  strict: Map<string, Set<string>>;
+}
+
+function strictConflict(a: PersonGroup, b: PersonGroup): boolean {
+  for (const [scheme, values] of a.strict) {
+    const other = b.strict.get(scheme);
+    if (!other) continue;
+    for (const v of other) if (!values.has(v)) return true;
+    for (const v of values) if (!other.has(v)) return true;
+  }
+  return false;
+}
+
+function intersects<T>(a: Set<T>, b: Set<T>): boolean {
+  for (const v of a) if (b.has(v)) return true;
+  return false;
+}
+
+/**
+ * Decide which person statements are one person. Returns, for each record,
+ * the index of its group's root.
+ *
+ * 1. Records sharing an identifier (any scheme) are one person.
+ * 2. Records with the same order-insensitive name are one person when
+ *    - both carry a birth year and the years agree, or
+ *    - neither group carries a birth year and both come from the same source
+ *      (one register naming one person on several lists of one company);
+ *    never on a name alone across sources — those stay separate candidates
+ *    for the clustering step to surface for review.
+ * 3. Nothing is merged across two different values of a scheme that names one
+ *    person per value (ONE_PERSON_PER_VALUE_SCHEMES).
+ *
+ * A birth year on one side and none on the other was never a merge and still
+ * is not: clustering offers it as a possible match.
+ */
+export function groupPersonRecords(
+  records: ReadonlyArray<{ nameKey: string; birthYear?: number; source?: string; identifiers: string[] }>
+): number[] {
+  const parent = records.map((_, i) => i);
+  const groups: PersonGroup[] = records.map((r) => {
+    const strict = new Map<string, Set<string>>();
+    for (const idKey of r.identifiers) {
+      const scheme = schemeOf(idKey);
+      if (!scheme || !ONE_PERSON_PER_VALUE_SCHEMES.has(scheme)) continue;
+      const set = strict.get(scheme) ?? new Set<string>();
+      set.add(idKey);
+      strict.set(scheme, set);
+    }
+    return {
+      years: new Set(r.birthYear !== undefined ? [r.birthYear] : []),
+      sources: new Set(r.source ? [r.source] : []),
+      strict,
+    };
+  });
+  const find = (i: number): number => {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  };
+  const union = (i: number, j: number): boolean => {
+    const a = find(i);
+    const b = find(j);
+    if (a === b) return true;
+    if (strictConflict(groups[a], groups[b])) return false;
+    const [keep, drop] = a < b ? [a, b] : [b, a];
+    parent[drop] = keep;
+    const g = groups[keep];
+    const d = groups[drop];
+    d.years.forEach((y) => g.years.add(y));
+    d.sources.forEach((v) => g.sources.add(v));
+    for (const [scheme, values] of d.strict) {
+      const set = g.strict.get(scheme) ?? new Set<string>();
+      values.forEach((v) => set.add(v));
+      g.strict.set(scheme, set);
+    }
+    return true;
+  };
+
+  // 1. Shared identifiers.
+  const firstWithId = new Map<string, number>();
+  records.forEach((r, i) => {
+    for (const idKey of r.identifiers) {
+      const seen = firstWithId.get(idKey);
+      if (seen === undefined) firstWithId.set(idKey, i);
+      else union(seen, i);
+    }
+  });
+
+  // 2. Same name, with a birth year to agree on — or one source, no years.
+  const byName = new Map<string, number[]>();
+  records.forEach((r, i) => {
+    const list = byName.get(r.nameKey) ?? [];
+    list.push(i);
+    byName.set(r.nameKey, list);
+  });
+  for (const members of byName.values()) {
+    for (let x = 1; x < members.length; x++) {
+      for (let y = 0; y < x; y++) {
+        const a = groups[find(members[x])];
+        const b = groups[find(members[y])];
+        if (find(members[x]) === find(members[y])) continue;
+        const agree =
+          (a.years.size > 0 && b.years.size > 0 && intersects(a.years, b.years)) ||
+          (a.years.size === 0 && b.years.size === 0 && intersects(a.sources, b.sources));
+        if (agree) union(members[x], members[y]);
+      }
+    }
+  }
+
+  return records.map((_, i) => find(i));
+}
+
+/**
  * A person is a *current* connection to the entity if they hold at least one
  * role with no end date. People whose every recorded role has ended are
  * "former" connections; people with no recorded roles are treated as current
@@ -263,23 +450,37 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
   const people = new Map<string, ConnectedPerson>();
   const keyByStatementId = new Map<string, string>();
 
-  const addPerson = (s: Stmt): ConnectedPerson | undefined => {
-    const id = str(s.statementId);
-    if (!id) return undefined;
-    const rd = rec(s.recordDetails);
-    const personType = str(rd.personType);
-    // anonymousPerson / unknownPerson carry no screenable identity.
-    if (personType && personType !== "knownPerson") return undefined;
-    const name = personName(rd);
-    if (!name) return undefined;
-    const birthDate = str(rd.birthDate);
-    const birthYear = birthYearOf(birthDate);
-    const key = `${nameMatchKey(name)}|${birthYear ?? ""}`;
-    let person = people.get(key);
+  // ---- 1. One record per screenable person statement ----------------------
+  const records: PersonRecord[] = [];
+  for (const s of statements) {
+    const recordType = str(s.recordType) ?? str(s.statementType);
+    if (recordType !== "person" && recordType !== "personStatement") continue;
+    const r = personRecord(s);
+    if (r) records.push(r);
+  }
+
+  // ---- 2. Group the records: identifiers first, then name (+ birth year) --
+  const groupOf = groupPersonRecords(records);
+
+  // ---- 3. One ConnectedPerson per group, in order of first appearance -----
+  const keyByGroup = new Map<number, string>();
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+    const root = groupOf[i];
+    let key = keyByGroup.get(root);
+    let person = key ? people.get(key) : undefined;
     if (!person) {
+      const first = records.find((x, j) => groupOf[j] === root && x.birthYear !== undefined);
+      const birthDate = first?.birthDate;
+      const birthYear = first?.birthYear;
+      key = `${r.nameKey}|${birthYear ?? ""}`;
+      // Two people can share a name and a (missing) birth year now that a
+      // name alone no longer merges them: keep their keys apart.
+      if (people.has(key)) key = `${key}|${r.id}`;
+      keyByGroup.set(root, key);
       person = {
         key,
-        name,
+        name: r.name,
         birthDate,
         birthYear,
         nationalities: [],
@@ -290,27 +491,18 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
       };
       people.set(key, person);
     }
-    if (!person.birthDate && birthDate) {
-      person.birthDate = birthDate;
-      person.birthYear = birthYear;
-    }
+    const s = r.stmt;
+    const rd = rec(s.recordDetails);
     for (const n of arr(rd.nationalities).map(rec)) {
       const label = str(n.name) ?? str(n.code);
       if (label && !person.nationalities.includes(label)) {
         person.nationalities.push(label);
       }
     }
-    // Phase 255: a Wikidata Q-id or record id now rides in an `identifying`
-    // annotation; read it back so people still group on the same key.
-    for (const idObj of [...arr(rd.identifiers).map(rec), ...personIdentifierNotes(s).map(rec)]) {
-      const scheme = str(idObj.scheme) ?? str(idObj.schemeName);
-      const value = str(idObj.id);
-      const idKey = (scheme && value ? `${scheme}:${value}` : value)?.toLowerCase();
-      if (idKey && !person.identifiers.includes(idKey)) {
-        person.identifiers.push(idKey);
-      }
+    for (const idKey of r.identifiers) {
+      if (!person.identifiers.includes(idKey)) person.identifiers.push(idKey);
     }
-    if (!person.statementIds.includes(id)) person.statementIds.push(id);
+    if (!person.statementIds.includes(r.id)) person.statementIds.push(r.id);
     // Merged rows can hold one person from two filings (a PSC notification and
     // a directorship). Keep the record that says more: an ACSP verification
     // names who verified and when; the direct route publishes neither.
@@ -324,15 +516,7 @@ export function extractConnectedPeople(statements: Stmt[]): ConnectedPerson[] {
     }
     const source = str(rec(s.source).description);
     if (source && !person.sources.includes(source)) person.sources.push(source);
-    keyByStatementId.set(id, key);
-    return person;
-  };
-
-  for (const s of statements) {
-    const recordType = str(s.recordType) ?? str(s.statementType);
-    if (recordType === "person" || recordType === "personStatement") {
-      addPerson(s);
-    }
+    keyByStatementId.set(r.id, key as string);
   }
 
   for (const s of statements) {

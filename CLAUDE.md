@@ -1738,6 +1738,23 @@ control per person on BackgroundCheck, the shape of the Estonian
 
 ---
 
+## BackgroundCheck merges people on identifiers first (20 Oct 2026)
+
+`groupPersonRecords` in `frontend/src/lib/backgroundCheck.ts`, pinned by
+`personIdentityMerge.test.ts`. Stephen's decision (20 Oct 2026, the
+"person-source data quality" ticket, the precondition for Phase F): a shared
+identifier merges; name + birth year merges only when both sides have a year;
+a name alone merges only within one source; nothing merges across two values
+of `ONE_PERSON_PER_VALUE_SCHEMES` (`ee-ariregister-hash`, `wikidata`), and
+`clusterPeople.scorePair` never offers such a pair. Companies House officer
+ids stay out of that set on purpose: one person can hold several. A new
+person source that publishes a register-issued person key should add its
+scheme there. `frontend/scripts/cluster-eval.mjs` runs the real modules
+(`npx vite-node`) against captured bundles — use it to measure a change on
+Unilever, HSBC and Tallink before shipping.
+
+---
+
 ## The Estonia dataset is built from local data (sweep_estonia.py)
 
 `backend/scripts/sweep_estonia.py` builds the `dataset-estonia-<cut>` release
