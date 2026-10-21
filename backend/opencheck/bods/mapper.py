@@ -241,6 +241,7 @@ from .mappers.estonia import (  # noqa: F401  (re-exported, Phase 246)
     _ee_shareholding_interest,
     _ee_status,
     _map_ariregister,
+    EE_BO_FALLBACK_CODES,
     EE_STATUS_LABELS,
     EE_ACTIVITY_PERIOD_LABELS,
     EE_STATUS_CHANGE_LABELS,
@@ -269,6 +270,7 @@ from .mappers.estonia import (  # noqa: F401  (re-exported, Phase 246)
     _ee_merge_page_people,
     _ee_name_merge_note,
     ee_name_key,
+    ee_bo_is_fallback,
     ee_person_role_label,
     map_ariregister,
 )

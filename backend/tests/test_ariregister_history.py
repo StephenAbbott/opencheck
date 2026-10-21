@@ -262,7 +262,9 @@ async def test_former_bo_interest_keeps_the_register_wording_and_flag(index) -> 
     teine = next(s for s in statements if s["recordType"] == "relationship"
                  and "A former beneficial owner" in str(s.get("annotations")) and "2019-01-01" in json.dumps(s))
     (interest,) = teine["recordDetails"]["interests"]
-    assert interest["type"] == "seniorManagingOfficial" and interest["beneficialOwnershipOrControl"] is True
+    # A J row: a board member named because no owner was identified — on
+    # the BO list, not a beneficial owner (20 Oct 2026).
+    assert interest["type"] == "seniorManagingOfficial" and interest["beneficialOwnershipOrControl"] is False
     assert interest["endDate"] == "2021-12-31"
 
 
@@ -371,7 +373,8 @@ def test_a_missing_bo_history_shows_holdings_and_says_so(index, live) -> None:
 
 async def test_the_finding_counts_ended_records(index) -> None:
     bundle = await _bundle_with_history()
-    # The fixture's deletion warning (the rulings phase) takes the room the
-    # history clause needs here; this test is about the history.
-    sentence = finding_ariregister({**bundle, "rulings": []})
+    # The fixture's deletion warning (the rulings phase) and its "beneficial
+    # owners due, none published" take the room the history clause needs
+    # here; this test is about the history.
+    sentence = finding_ariregister({**bundle, "rulings": [], "general": {}})
     assert "7 ended ownership records" in sentence, sentence

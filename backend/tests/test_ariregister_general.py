@@ -232,7 +232,7 @@ async def test_the_finding_says_whether_beneficial_owners_are_due(index) -> None
     state, _ = await _statements(STATE)
     assert "beneficial owners not required" in finding_ariregister(state)
     haude, _ = await _statements(HAUDE)
-    assert "beneficial owners due, none filed" in finding_ariregister(haude)
+    assert "beneficial owners due, none published" in finding_ariregister(haude)
 
 
 async def test_the_finding_says_a_suspension_in_force(index) -> None:

@@ -1731,7 +1731,7 @@ def finding_ariregister(bundle: dict[str, Any]) -> str | None:
         ),
         _count(bundle.get("officers"), "on the registry card", "on the registry card", "no one on the registry card"),
         _count(supervisory, "on the supervisory board", "on the supervisory board", "") if supervisory else "",
-        _count(bundle.get("beneficial_owners"), "beneficial owner", "beneficial owners", _no_bo_words(bundle)),
+        _bo_count_words(bundle),
     ] if c)
     tier: str | None = None
     if bundle.get("index_miss") and bundle.get("tier") == "rest":
@@ -1838,12 +1838,32 @@ def _ee_rulings_clause(rulings: Any) -> str | None:
     return clause
 
 
+def _bo_count_words(bundle: dict[str, Any]) -> str:
+    """The beneficial-owner count. A board or council member the register
+    names because no owner was identified (``J`` / ``C``) is not counted as
+    a beneficial owner: "no owner identified, 2 named" — short, because the
+    sentence's 140-character cap drops the clauses after it."""
+    from .bods.mappers.estonia import ee_bo_is_fallback  # local import avoids a cycle
+
+    rows = list(bundle.get("beneficial_owners") or [])
+    named = [r for r in rows if ee_bo_is_fallback(r)]
+    owners = len(rows) - len(named)
+    if owners:
+        return f"{owners} beneficial owner{'' if owners == 1 else 's'}"
+    if named:
+        n = len(named)
+        return f"no owner identified, {n} named"
+    return _no_bo_words(bundle)
+
+
 def _no_bo_words(bundle: dict[str, Any]) -> str:
     """No beneficial owner on file, in the register's terms where its
     general data says whether the company must file them: "beneficial
     owners not required" (an apartment association, a sole trader, a
-    branch…) or "beneficial owners due, none filed" — the two read the
-    same without it (the üldandmed phase). Short on purpose: the sentence's
+    branch…) or "beneficial owners due, none published" — the two read the
+    same without it (the üldandmed phase). "Published", not "filed": an
+    entry can be restricted for a person at risk or a minor, and nothing in
+    the open data says so (20 Oct 2026). Short on purpose: the sentence's
     140-character cap drops the clauses after it."""
     if bundle.get("bo_not_read"):
         return "beneficial owners not read"
@@ -1851,7 +1871,7 @@ def _no_bo_words(bundle: dict[str, Any]) -> str:
     if general.get("bo_obliged") is False:
         return "beneficial owners not required"
     if general.get("bo_obliged") is True:
-        return "beneficial owners due, none filed"
+        return "beneficial owners due, none published"
     return "no beneficial owner declared"
 
 
