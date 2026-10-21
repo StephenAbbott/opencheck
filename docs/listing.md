@@ -5,7 +5,8 @@ is** — the exchange, the ticker, and a link to the exchange's page for the
 security — on the subject card, at the top of the Securities panel, in the
 PDF / Markdown report, in the MCP `opencheck_lookup` result (`listing`) and
 batch rows (`primary_listing`), and in the BODS export
-(`publicListing.securitiesListings` on the subject's GLEIF entity statement).
+(`publicListing.securitiesListings` on OpenCheck's own GLEIF entity statement
+for the subject).
 
 Code: `backend/opencheck/listing.py` (fetch, venues, BODS) and
 `frontend/src/lib/listing.ts` (wording). Tests: `backend/tests/test_listing.py`,
@@ -109,8 +110,23 @@ JPX block automated checks; B3 has no ticker-based pattern.
 ## BODS
 
 `publicListing = {hasPublicListing: true, securitiesListings: [{stockExchangeJurisdiction, stockExchangeName, marketIdentifierCode, security: {ticker}}]}`
-on a **copy** of the subject's GLEIF entity statement, plus a `linking`
+on a **copy** of OpenCheck's own GLEIF entity statement for the subject
+(`listing.own_gleif_target`: carries the LEI, stamped
+`source.opencheckSourceId: "gleif"`, published by OpenCheck), plus a `linking`
 annotation (`url` = the PermID quote) saying OpenCheck added it from PermID.
+
+**Never another publisher's statement, and no fallback** (20 Oct 2026, option C
+of the PermID-listing ticket). The stored Open Ownership bundles behind the
+curated examples carry their own GLEIF statements verbatim (Phase 317); they
+are described "GLEIF" with no stamped id, so the description is never read. A
+lookup that holds no OpenCheck GLEIF statement for the subject has no
+`publicListing` in its BODS; the `listing` event, the page line, the report and
+the MCP `listing` field are unchanged. Unlike the integrated-ownership note
+(`integrated_ownership.annotation_target`), which falls back to OpenCheck's
+first subject statement, the listing does not: it writes a field into
+`recordDetails`, a bigger change to a statement than an annotation. A saved
+report rebuilds its export from the frozen event, so it picks up the new target
+on its next export with no migration.
 `security.idScheme` is omitted: PermID is not in the closed
 `securitiesIdentifierSchemes` codelist (isin, figi, cusip, cins). A venue with
 no known name or jurisdiction adds nothing to BODS.

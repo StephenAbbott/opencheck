@@ -2929,8 +2929,12 @@ and MCP had no limit at all. Things that will be re-derived otherwise:
 - **One `listing` lookup event**, started as a task after `gleif_done` and
   awaited before `subject_profile`; `fold_lookup_events` copies it into
   `LookupResponse.listing` as recorded and puts `publicListing` on a *copy*
-  of the subject's GLEIF entity statement (`listing.apply_to_bods`) — so a
-  saved report exports the listing of its own day. It is one entry in
+  of OpenCheck's own GLEIF entity statement for the subject
+  (`listing.apply_to_bods` → `own_gleif_target`: stamped `gleif` and
+  published by OpenCheck) — so a saved report exports the listing of its own
+  day. **Never Open Ownership's verbatim GLEIF statement and no fallback**
+  (20 Oct 2026): without OpenCheck's own statement the BODS carries no
+  listing, while the event and the page line are unchanged. It is one entry in
   `LOOKUP_EVENT_HANDLERS`. Not a registered source; not in coverage counts.
 - **No key → no task, no event, no line.** Gated on `PERMID_API_KEY` *and*
   `OPENCHECK_ALLOW_LIVE`. The UI never says "not listed": `not_listed`
