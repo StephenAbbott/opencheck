@@ -234,6 +234,11 @@ export function extractPersonSubgraph(
  * construction; a Wikidata item is one per human (Unilever's "Fernando
  * Fernández" card merged a Mexican actor's item with another person's).
  *
+ * Denmark's CVR participant number (enhedsnummer, Phase F) is CVR's own key
+ * for a person — never the CPR number — and the only one its open data gives
+ * a fully liable partner, who has no birth date there: without it two Danish
+ * partners of the same name would have nothing to tell them apart.
+ *
  * Companies House officer ids are deliberately NOT here: Companies House can
  * give one person several officer ids, and a veto on them would split people
  * the name + birth-year rule has always merged correctly.
@@ -241,6 +246,7 @@ export function extractPersonSubgraph(
 export const ONE_PERSON_PER_VALUE_SCHEMES: ReadonlySet<string> = new Set([
   "ee-ariregister-hash",
   "wikidata",
+  "dk-cvr-enhedsnummer",
 ]);
 
 interface PersonRecord {
