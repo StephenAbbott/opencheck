@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 390** — The changelog page gives every release the same card — one bold sentence as the heading, the next sentence as the summary — and says it lists every merged change.
+**Latest: Phase 391** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, filling in Estonia's threshold, reporting basis, published fields, verification and company register.
 
 → [Full development history](docs/status.md)
 
