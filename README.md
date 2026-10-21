@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 394** — Danish partnerships' fully liable partners now appear in the ownership graph and BackgroundCheck, keyed on CVR's participant number.
+**Latest: Phase 395** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, updating Italy's, Belgium's and Cyprus's legitimate-interest access position after the first weekly EU watch.
 
 → [Full development history](docs/status.md)
 
