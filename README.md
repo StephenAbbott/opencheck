@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 395** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, updating Italy's, Belgium's and Cyprus's legitimate-interest access position after the first weekly EU watch.
+**Latest: Phase 396** — Every BODS statement's declarationSubject now names the looked-up company as its source records it, per source, instead of each party naming itself.
 
 → [Full development history](docs/status.md)
 
