@@ -944,14 +944,16 @@ Norske Shell and SHELL PLC drew as two unlinked nodes.
 - **One resolver each side:** `backend/opencheck/bods/refs.py`
   (`party_ref`, `statement_index`, `resolver`) and `frontend/src/lib/bodsRefs.ts`
   (`partyRef`, `refIndex`, `resolveRef`). They map any spelling — statementId,
-  recordId, `declarationSubject` alias, bare string or legacy `describedBy*`
-  wrapper — to the **statementId** every index in the codebase is keyed on.
-  Unknown references come back unchanged so a dangling edge still reads as
-  dangling. **Never compare a relationship reference against a statementId set
-  directly** — resolve it first.
-- **Tier order is strict and matters:** statementId > recordId >
-  declarationSubject. As a peer of recordId, the OECD's head-on-every-statement
-  alias pointed the head's id at the first subsidiary in the file.
+  recordId, bare string or legacy `describedBy*` wrapper — to the
+  **statementId** every index in the codebase is keyed on. Unknown references
+  come back unchanged so a dangling edge still reads as dangling. **Never
+  compare a relationship reference against a statementId set directly** —
+  resolve it first.
+- **Tier order is strict and matters:** statementId > recordId, and nothing
+  else. Until the declaration-subject phase `declarationSubject` was a third
+  tier — it names *another* statement (the network's subject), so in a bundle
+  without the subject's own statement it pointed the subject's id at whichever
+  party came first. See "declarationSubject names the network's subject" below.
 - Wired into: `risk.py` (`_relationship_endpoints(stmt, resolve)` — all four
   loops build `_resolve = _refs_resolver(bods)`), the PDF/Markdown report
   `by_id`, `narrative/packet.py`, the Senzing / Neo4j / FtM exports, and on the
@@ -962,6 +964,53 @@ Norske Shell and SHELL PLC drew as two unlinked nodes.
   `src/lib/bodsRefs.test.ts`, both on a bundle in the OECD's exact shape.
 
 ---
+
+## `declarationSubject` names the network's subject (the declaration-subject phase)
+
+BODS v0.4: `declarationSubject` is "a recordId value for the subject of a
+beneficial ownership network", and every statement about a declared network
+"MUST contain the subject's recordId as its declarationSubject". Until this
+phase every OpenCheck entity and person statement carried **its own**
+recordId there and a relationship its *immediate* subject's — the Ørsted
+lookup of 22 Oct 2026 showed a Wikidata party with `statementId == recordId
+== declarationSubject`. Stephen's decision (23 Oct 2026): **per source** —
+each source bundle's statements name *that source's own* subject record, so a
+bundle read alone is a declared network in its own right. Things that will be
+re-derived otherwise:
+
+- **The factories still default to self.** `make_entity_statement` /
+  `make_person_statement` write the party's own recordId, a relationship its
+  immediate subject's; the value is stamped *after* mapping by
+  `bods/declaration.py`, never by a mapper. A new mapper needs nothing.
+- **Two passes, one rule.** `stamp_bundle` runs where one source's bundle is
+  mapped — `/deepen`, `_safe_deepen`, the FullCheck register hop
+  (`routers/expand.py`), the subsidiary network — and finds the subject by
+  `find_subject`: the lookup's subject reference (`_safe_deepen(subject=…)`,
+  an LEI or Phase 290's `SCHEME:id`) → an entity statement carrying the
+  adapter's `hit_id` as an identifier (a register bundle carries no LEI, and
+  `/deepen` knows only the hit id) → the only entity in the bundle → nothing.
+  `stamp_merged` then runs over the merged lookup bundle, where
+  `subject_statements`' referent group names every source's subject at once,
+  and restamps each source's statements to its own member. Both work on
+  copies and leave another publisher's statements alone (`VERBATIM_SOURCES`,
+  Open Ownership's stored bundles).
+- **A miss is loud, never invented.** An unresolved bundle keeps the factory
+  default and is counted on `/signalstats` → `declaration_subject` by
+  `source_id|outcome` (`bods.declaration.OUTCOMES`: `ref`, `hit_id`,
+  `single`, `unresolved`). The weekly BODS quality sweep fails
+  `declaration_subject_not_subject` on a value naming no party, a source whose
+  statements name more than one subject, or a subject that does not name
+  itself.
+- **The resolver has no `declarationSubject` tier.** Nothing references a
+  party by it (v0.4 references by recordId; OpenCheck's own by statementId,
+  equal for now). `test_frontend_parity.py` pins two tiers.
+- **The frontend's `reconcileBods`** carries the members' declaration onto a
+  merged statement and remaps every party's to the subject's canonical id.
+- **Phase B (content-addressed `statementId`) is separate** and will find
+  the places that assume `statementId == recordId` — including
+  `routers/expand.py`'s blunt string remap, which today rewrites
+  `recordId` and `declarationSubject` along with `statementId` only because
+  the three are equal.
 
 ## OECD-UNSD MEIP is a source, as the OECD's own BODS (Phase 208)
 

@@ -92,6 +92,18 @@ describe("reconcileBods", () => {
     expect(rel._sources).toEqual(expect.arrayContaining(["GLEIF", "Companies House"]));
   });
 
+  it("names the network's subject on every statement by its canonical id (the declaration-subject phase)", () => {
+    // Each source's statements name that source's own subject record; once
+    // the two subject records merge, every party names the merged node.
+    const bundle = twoSourceBundle().map((s) => ({
+      ...s,
+      declarationSubject: (s.source as Stmt).description === "GLEIF" ? "gleif-acme" : "ch-acme",
+    }));
+    const { statements } = reconcileBods(bundle);
+    const canonical = `recon:LEI:${LEI}`;
+    for (const s of statements) expect(s.declarationSubject).toBe(canonical);
+  });
+
   it("produces a graph where the merged node carries both sources", () => {
     const { statements } = reconcileBods(twoSourceBundle());
     const model = bodsToGraph(statements);

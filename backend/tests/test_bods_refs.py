@@ -75,11 +75,19 @@ def test_resolver_maps_every_spelling_to_the_statement_id() -> None:
     assert party_ref("") is None
 
 
-def test_declaration_subject_ranks_below_record_id() -> None:
-    """The OECD's alias names the head on every statement; as a peer of
-    recordId it pointed the head's id at the first subsidiary in the file."""
+def test_declaration_subject_is_not_an_alias() -> None:
+    """The OECD's declarationSubject names the head on every statement, and
+    OpenCheck's names the looked-up company on every statement of a bundle:
+    it names *another* statement. Phase 210 kept it as a third tier below
+    recordId, which — in a bundle that lacks the subject's own statement —
+    resolved the subject's id to whichever party came first."""
     assert statement_index(BUNDLE)["meip-entity-100913"]["statementId"] == HEAD_SID
     assert resolver(BUNDLE)("meip-entity-100913") == HEAD_SID
+    without_head = [s for s in BUNDLE if s["statementId"] != HEAD_SID]
+    assert "meip-entity-100913" not in statement_index(without_head)
+    assert resolver(without_head)("meip-entity-100913") == "meip-entity-100913", (
+        "a subject absent from the bundle stays a dangling reference"
+    )
 
 
 def test_index_never_lets_a_record_id_shadow_a_statement_id() -> None:

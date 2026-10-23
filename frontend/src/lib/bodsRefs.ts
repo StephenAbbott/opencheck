@@ -14,8 +14,7 @@
  * then resolved to nothing and A/S Norske Shell and SHELL PLC drew as two
  * unlinked nodes.
  *
- * `refIndex` maps every spelling — statementId, recordId, `declarationSubject`
- * alias — to the statementId every index in the app is keyed on; `resolveRef`
+ * `refIndex` maps every spelling — statementId, recordId — to the statementId every index in the app is keyed on; `resolveRef`
  * reads a reference out of either the v0.4 bare string or the legacy wrapped
  * object and canonicalises it. Unknown references come back unchanged so a
  * dangling edge still reads as dangling. Pure; the mirror of
@@ -27,16 +26,20 @@ type Stmt = Record<string, unknown>;
 
 const PARTY_TYPES = new Set(["entity", "person", "entityStatement", "personStatement"]);
 
-/** Every spelling of a party's id → its statementId. */
+/** Every spelling of a party's id → its statementId.
+ *
+ *  `declarationSubject` is deliberately not a key: it names the subject of
+ *  the network a statement belongs to (the OECD stamps the group head on
+ *  every MEIP statement; OpenCheck stamps the looked-up company on every
+ *  statement of a source bundle), so it names *another* statement. Phase 210
+ *  indexed it as a third tier below recordId, which in any bundle without the
+ *  subject's own statement resolved the subject's id to whichever party came
+ *  first. Nothing references a party by declarationSubject. */
 export function refIndex(statements: Stmt[]): Map<string, string> {
-  // Three tiers, in strict order: a statementId is never shadowed by another
-  // statement's recordId, and a recordId never by a declarationSubject. The
-  // last matters in the wild — the OECD stamps every statement's
-  // declarationSubject with the *group head's* recordId, so as a peer of
-  // recordId it pointed the head's id at the first subsidiary in the file.
+  // Two tiers, in strict order: a statementId is never shadowed by another
+  // statement's recordId.
   const bySid = new Map<string, string>();
   const byRid = new Map<string, string>();
-  const byDecl = new Map<string, string>();
   for (const s of statements) {
     const kind = (s.recordType ?? s.statementType) as string | undefined;
     if (!kind || !PARTY_TYPES.has(kind)) continue;
@@ -45,10 +48,8 @@ export function refIndex(statements: Stmt[]): Map<string, string> {
     if (!bySid.has(sid)) bySid.set(sid, sid);
     const rid = s.recordId;
     if (typeof rid === "string" && rid && !byRid.has(rid)) byRid.set(rid, sid);
-    const decl = s.declarationSubject;
-    if (typeof decl === "string" && decl && !byDecl.has(decl)) byDecl.set(decl, sid);
   }
-  return new Map([...byDecl, ...byRid, ...bySid]);
+  return new Map([...byRid, ...bySid]);
 }
 
 /** The reference a `subject` / `interestedParty` value carries — the v0.4

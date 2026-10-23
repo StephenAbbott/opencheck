@@ -252,10 +252,10 @@ def test_a_source_whose_read_failed_is_a_partial_answer(client, monkeypatch) -> 
 
     real = lookup_mod._safe_deepen
 
-    async def failing(source_id, hit_id):
+    async def failing(source_id, hit_id, **kwargs):
         if source_id == "gleif":
             raise TimeoutError("ReadTimeout")
-        return await real(source_id, hit_id)
+        return await real(source_id, hit_id, **kwargs)
 
     monkeypatch.setattr(lookup_mod, "_safe_deepen", failing)
     body = client.get("/lookup", params={"lei": LEI}).json()

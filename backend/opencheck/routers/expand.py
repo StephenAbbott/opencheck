@@ -33,6 +33,7 @@ from ..bods import unique_statements
 from ..cross_check import CHECK_NAME as _CROSS_CHECK
 from ..icij_check import CHECK_NAME as _ICIJ_CHECK
 from ..openaleph_check import CHECK_NAME as _OPENALEPH_CHECK
+from ..bods.declaration import stamp_bundle
 from ..bods.state_bodies import classify_government_entities
 from ..cross_check import assess_cross_source_names
 from ..ratelimit import default_tier, limiter, lookup_tier
@@ -261,6 +262,16 @@ async def _register_one_layer(
                 bods = classify_government_entities(
                     unique_statements(mapper(raw)), source_id=hop.source_id
                 )
+            # The hop's bundle is its own declared network: its subject is
+            # the company reached, not the lookup's (declaration-subject
+            # phase). The anchor remap below carries the value onto the
+            # existing node with everything else.
+            bods = stamp_bundle(
+                bods,
+                source_id=hop.source_id,
+                ref=f"{hop.scheme}:{local_id}",
+                hit_id=local_id,
+            )
             bundle_signals = [
                 s.to_dict() for s in assess_bundle(hop.source_id, raw, bods, hit_id=local_id)
             ]

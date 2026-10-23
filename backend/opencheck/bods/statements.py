@@ -443,6 +443,9 @@ def make_entity_statement(
     statement: dict[str, Any] = {
         "statementId": statement_id,
         "recordId": record_id,
+        # A default only: the network's subject is stamped after mapping, by
+        # ``bods.declaration`` — right as it stands for the subject itself,
+        # and for nothing else (the declaration-subject phase).
         "declarationSubject": record_id,
         "recordType": "entity",
         "recordStatus": "new",
@@ -540,7 +543,7 @@ def make_person_statement(
     statement: dict[str, Any] = {
         "statementId": statement_id,
         "recordId": record_id,
-        "declarationSubject": record_id,
+        "declarationSubject": record_id,  # a default — see make_entity_statement
         "recordType": "person",
         "recordStatus": "new",
         "statementDate": _statement_date(statement_date),
@@ -621,6 +624,8 @@ def make_relationship_statement(
     statement: dict[str, Any] = {
         "statementId": statement_id,
         "recordId": record_id,
+        # A default — the network's subject, not necessarily this edge's
+        # (a chain deeper than one layer); stamped by ``bods.declaration``.
         "declarationSubject": subject_statement_id,
         "recordType": "relationship",
         "recordStatus": record_status,

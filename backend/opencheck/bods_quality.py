@@ -52,6 +52,12 @@ Every finding names its class, its source and the statement it is about.
 ``deepen_failed``
     ``/deepen`` returned an HTTP error for a probe subject that should map —
     the PRH / CRO 500 class.
+``declaration_subject_not_subject``
+    A ``declarationSubject`` that is no party's ``recordId`` in the bundle,
+    a source whose statements name more than one subject (the factory
+    default's every-party-names-itself shape), or a named subject that does
+    not name itself — the declaration-subject phase's rule, which the stamp
+    applies after every mapping.
 
 ``warn`` — honest but weaker than it should be, or a known backlog:
 
@@ -334,6 +340,79 @@ def check_statements(
                     "ended_not_closed", WARN,
                     f"every interest has ended but recordStatus is {st.get('recordStatus')!r}",
                 )
+    findings.extend(check_declaration_subjects(statements))
+    return findings
+
+
+def check_declaration_subjects(statements: Iterable[Mapping[str, Any]]) -> list[Finding]:
+    """``declarationSubject`` names the network's subject (the
+    declaration-subject phase), checked over the whole bundle.
+
+    BODS v0.4: every statement about a declared network carries the
+    subject's ``recordId`` as its ``declarationSubject``. OpenCheck publishes
+    one network per source bundle, its subject the looked-up company as that
+    source records it, so for each source every OpenCheck-published statement
+    names one record, that record is an entity statement in the bundle, and
+    it names itself. Three ways to fail, one class:
+
+    * a ``declarationSubject`` that is no entity's or person's ``recordId`` in
+      the bundle;
+    * a source whose statements name more than one subject — the shape the
+      factory default leaves when a bundle's subject could not be found
+      (every party names itself);
+    * a named subject that does not name itself.
+
+    Another publisher's statements (``PUBLISHER_VERBATIM``, Open Ownership's
+    stored bundles) are not checked: their declarations are theirs.
+    """
+    stmts = [st for st in statements if isinstance(st, Mapping)]
+    record_ids: dict[str, Mapping[str, Any]] = {}
+    for st in stmts:
+        rid = st.get("recordId")
+        if st.get("recordType") in ("entity", "person") and isinstance(rid, str) and rid:
+            record_ids.setdefault(rid, st)
+    by_source: dict[str, dict[str, int]] = {}
+    findings: list[Finding] = []
+    for st in stmts:
+        sid = _source_id(st)
+        if sid in PUBLISHER_VERBATIM or not _published_by_opencheck(st):
+            continue
+        stmt_id = str(st.get("statementId") or "") or None
+        decl = st.get("declarationSubject")
+        if not isinstance(decl, str) or not decl:
+            findings.append(Finding(
+                "declaration_subject_not_subject", FAIL, sid,
+                "no declarationSubject", stmt_id,
+            ))
+            continue
+        by_source.setdefault(sid, {}).setdefault(decl, 0)
+        by_source[sid][decl] += 1
+        named = record_ids.get(decl)
+        if named is None:
+            findings.append(Finding(
+                "declaration_subject_not_subject", FAIL, sid,
+                f"declarationSubject {decl} is no entity's or person's recordId in the bundle",
+                stmt_id,
+            ))
+        elif named.get("recordType") != "entity":
+            findings.append(Finding(
+                "declaration_subject_not_subject", FAIL, sid,
+                f"declarationSubject {decl} names a person, not the network's subject",
+                stmt_id,
+            ))
+        elif named.get("declarationSubject") != decl:
+            findings.append(Finding(
+                "declaration_subject_not_subject", FAIL, sid,
+                f"declarationSubject {decl} names a statement that does not name itself as the subject",
+                stmt_id,
+            ))
+    for sid, subjects in by_source.items():
+        if len(subjects) > 1:
+            findings.append(Finding(
+                "declaration_subject_not_subject", FAIL, sid,
+                f"{len(subjects)} different declarationSubject values across one source's "
+                f"statements — one network has one subject",
+            ))
     return findings
 
 

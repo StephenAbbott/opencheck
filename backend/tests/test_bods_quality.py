@@ -28,6 +28,8 @@ TODAY = "2026-10-09"
 def _stmt(**over: Any) -> dict[str, Any]:
     st: dict[str, Any] = {
         "statementId": "s1",
+        "recordId": "s1",
+        "declarationSubject": "s1",  # the subject of its own network
         "recordType": "entity",
         "statementDate": "2026-09-01",
         "publicationDetails": {"publicationDate": TODAY, "publisher": {"name": "OpenCheck"}},
@@ -162,16 +164,18 @@ class TestProvenanceRules:
         assert _run([st]) == []
 
     def test_an_ended_relationship_left_open_warns(self):
-        st = _stmt(recordType="relationship", recordStatus="new", recordDetails={
+        subject = _stmt()  # the relationship names it as the network's subject
+        st = _stmt(statementId="r1", recordId="r1", recordType="relationship",
+                   recordStatus="new", recordDetails={
             "interests": [{"type": "shareholding", "endDate": "2026-03-13"}],
         })
-        assert _checks(_run([st])) == ["ended_not_closed"]
+        assert _checks(_run([subject, st])) == ["ended_not_closed"]
         st["recordStatus"] = "closed"
-        assert _run([st]) == []
+        assert _run([subject, st]) == []
         # One interest still running: the relationship has not ended.
         st["recordStatus"] = "new"
         st["recordDetails"]["interests"].append({"type": "votingRights"})
-        assert _run([st]) == []
+        assert _run([subject, st]) == []
 
 
 class TestSchema:
