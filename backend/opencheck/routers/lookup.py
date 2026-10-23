@@ -72,6 +72,7 @@ from ..risk import merge_listed_jurisdiction as _risk_merge_listed
 from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
 from ..risk import merge_subsidiary_listed_jurisdiction as _risk_merge_subsidiary_listed
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
+from ..bods.declaration import stamp_bundle, stamp_merged
 from ..bods.state_bodies import classify_government_entities
 from ..ratelimit import default_tier, limiter, lookup_tier
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
@@ -583,6 +584,10 @@ async def deepen(
     # Phase 240: an owner whose LEI GLEIF files as a government is a state
     # body, whichever source named it — before the risk rules read the types.
     bods = classify_government_entities(bods, source_id=source)
+    # The declaration-subject phase: every statement names the bundle's
+    # subject. The drawer knows no LEI — the hit id and the bundle's own
+    # identifiers are what name it here.
+    bods = stamp_bundle(bods, source_id=source, hit_id=hit_id)
     info = adapter.info
     license_notice = _license_notice_for(info, raw)
     signals = [s.to_dict() for s in assess_bundle(source, raw, bods, hit_id=hit_id)]
@@ -1920,7 +1925,8 @@ async def _lookup_pipeline(
             # Deepen usually replays the adapter's cached fetch, but give it
             # the same wall-clock protection as dispatch (+ mapping headroom).
             asyncio.wait_for(
-                _safe_deepen(dsrc, dhit), timeout=_source_budget(dsrc) + 15.0
+                _safe_deepen(dsrc, dhit, subject=ctx.lei),
+                timeout=_source_budget(dsrc) + 15.0,
             )
             for dsrc, dhit in deepen_pairs
         ],
@@ -2005,6 +2011,11 @@ async def _lookup_pipeline(
     # OpenSanctions records naming one subsidiary): every consumer below —
     # the profile, the screens, the risk engine — reads one statement per id.
     bods_all = unique_statements(bods_all)
+    # The declaration-subject phase, second pass: the reconciler's referent
+    # group names every source's subject statement at once, so a source the
+    # single-bundle pass could not resolve alone (a register bundle carries
+    # no LEI) is stamped to its own subject here. Per source, by decision.
+    bods_all = stamp_merged(bods_all, ctx.lei)
 
     if listing_task is not None:
         try:
@@ -2420,7 +2431,9 @@ async def _register_lookup_pipeline(
     ctx = _LookupCtx(lei="")
     ctx.derived = {hop.derived_key: local_id} if hop.derived_key else {}
     ctx.provenance = prov
-    deep = await _safe_deepen(hop.source_id, local_id, fetched=(raw, prov))
+    deep = await _safe_deepen(
+        hop.source_id, local_id, fetched=(raw, prov), subject=subject
+    )
     bods_all: list[dict[str, Any]] = unique_statements(deep["bods"]) if deep else []
     subject_stmts = _subject_statements_for(subject, bods_all)
     ctx.legal_name, ctx.jurisdiction = _subject_name_and_jurisdiction(
@@ -3234,8 +3247,14 @@ async def _safe_deepen(
     hit_id: str,
     *,
     fetched: tuple[Any, Provenance | None] | None = None,
+    subject: str | None = None,
 ) -> dict[str, Any] | None:
     """Internal helper — does what /deepen does, returns plain dict.
+
+    ``subject`` (the declaration-subject phase) is the lookup's subject
+    reference — an LEI, or Phase 290's ``SCHEME:id`` — so the bundle's
+    ``declarationSubject`` can be found by it; without one the hit id and
+    the bundle's own identifiers are tried (``bods.declaration``).
 
     ``fetched`` (Phase 290) is a ``(raw, provenance)`` pair the caller has
     already fetched: the register-anchored lookup reads its one register
@@ -3281,6 +3300,7 @@ async def _safe_deepen(
             issues = validate_shape(bods)
 
     bods = classify_government_entities(bods, source_id=source_id)  # Phase 240, as in _deepen
+    bods = stamp_bundle(bods, source_id=source_id, ref=subject, hit_id=hit_id)
     license_notice = _license_notice_for(adapter.info, raw)
     signals = [s.to_dict() for s in assess_bundle(source_id, raw, bods, hit_id=hit_id)]
     return {

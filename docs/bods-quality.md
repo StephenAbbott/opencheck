@@ -51,6 +51,7 @@ defects in production, fixed in the same phase (below).
 | `start_after_end` | An interest that ends before it starts. |
 | `bulk_dated_today` | A statement from a `snapshot` or `curated` source dated the day of the run that no cut can have dated: no `source.retrievedAt` (nothing declared — the Phase 314 conftest rule, applied to production), or, on a lookup, a source that declared no `source_as_of` (dated by its build alone). A deepen dated today with a `retrievedAt` may be a cut the register published that morning — ASP Moldova exports on Mondays, the sweep's day — and is not flagged (Phase 324). |
 | `lookup_failed`, `deepen_failed` | The API returned an error for a subject that should map — the Phase 315 PRH/CRO class. |
+| `declaration_subject_not_subject` | A `declarationSubject` that is no party's `recordId` in the bundle, a source whose statements name more than one subject (the pre-phase shape, every party naming itself), or a named subject that does not name itself. BODS v0.4: every statement about a declared network carries the subject's `recordId` as its `declarationSubject`; OpenCheck publishes one network per source bundle, its subject the looked-up company as that source records it. |
 
 **Warnings** — honest but weaker than it should be, or a known backlog. Since
 Phase 317 the provenance warnings apply only to statements **OpenCheck

@@ -15,10 +15,10 @@ drew as two unlinked nodes.
 
 This module is the one place that knows both spellings. ``party_ref`` reads a
 reference out of either the v0.4 bare string or the legacy wrapped object;
-``resolver`` returns a function mapping any reference — recordId, statementId
-or ``declarationSubject`` alias — to the **statementId** of the statement it
-names, which is what every index in the codebase is keyed on. An unknown
-reference comes back unchanged so a dangling edge still reads as dangling.
+``resolver`` returns a function mapping any reference — recordId or
+statementId — to the **statementId** of the statement it names, which is
+what every index in the codebase is keyed on. An unknown reference comes
+back unchanged so a dangling edge still reads as dangling.
 
 ``frontend/src/lib/bodsRefs.ts`` is the mirror; ``tests/test_frontend_parity.py``
 (Phase 266) parses it and fails when its party types, legacy wrapper keys, id
@@ -77,17 +77,24 @@ def unspecified_party(raw: Any) -> dict[str, str] | None:
 
 def statement_index(statements: Iterable[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Every entity and person statement, keyed by statementId **and**
-    recordId (and ``declarationSubject`` where it differs), so a lookup by
-    whichever a relationship used finds the statement. A statementId key is
-    never overwritten by a recordId collision from another statement."""
-    # Three tiers, in strict order: a statementId is never shadowed by another
-    # statement's recordId, and a recordId never by a declarationSubject. The
-    # last matters in the wild — the OECD stamps every statement's
-    # declarationSubject with the *group head's* recordId, so as a peer of
-    # recordId it pointed the head's id at the first subsidiary in the file.
+    recordId, so a lookup by whichever a relationship used finds the
+    statement. A statementId key is never overwritten by a recordId collision
+    from another statement.
+
+    ``declarationSubject`` is **not** a key. It names the subject of the
+    network a statement belongs to (the OECD stamps the group head on every
+    MEIP statement; since the declaration-subject phase OpenCheck stamps the
+    looked-up company on every statement of a source bundle), so it names
+    *another* statement, never this one. Phase 210 indexed it as a third tier
+    below recordId, which was harmless only while the subject's own statement
+    was in the bundle — in any bundle without it the subject's id resolved to
+    whichever party came first. A relationship references a party by
+    recordId (v0.4) or statementId (OpenCheck's own, equal for now); nothing
+    references a party by declarationSubject."""
+    # Two tiers, in strict order: a statementId is never shadowed by another
+    # statement's recordId.
     by_sid: dict[str, dict[str, Any]] = {}
     by_rid: dict[str, dict[str, Any]] = {}
-    by_decl: dict[str, dict[str, Any]] = {}
     for stmt in statements:
         if not isinstance(stmt, dict):
             continue
@@ -100,11 +107,7 @@ def statement_index(statements: Iterable[dict[str, Any]]) -> dict[str, dict[str,
         rid = stmt.get("recordId")
         if isinstance(rid, str) and rid:
             by_rid.setdefault(rid, stmt)
-        decl = stmt.get("declarationSubject")
-        if isinstance(decl, str) and decl:
-            by_decl.setdefault(decl, stmt)
-    index = dict(by_decl)
-    index.update(by_rid)
+    index = dict(by_rid)
     index.update(by_sid)
     return index
 

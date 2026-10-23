@@ -51,6 +51,7 @@ from urllib.parse import quote
 
 from . import lei_registration, mirrorstats, provenance
 from .bods import map_gleif_subsidiaries
+from .bods.declaration import stamp_bundle
 from .bods.mapper import _gleif_rr_period
 from .cache import Cache
 from .config import get_settings
@@ -772,6 +773,11 @@ async def assemble_subsidiaries(lei: str, *, include_bods: bool = False) -> dict
                 result["bods"] = list(
                     map_gleif_subsidiaries(lei, data["subject_attrs"], children)
                 )
+        # The network is the head's declared network (declaration-subject
+        # phase): every child names the head.
+        result["bods"] = stamp_bundle(
+            result["bods"], source_id="gleif", ref=lei, hit_id=lei, record=False
+        )
     return result
 
 

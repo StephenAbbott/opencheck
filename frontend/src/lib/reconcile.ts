@@ -353,10 +353,16 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
       if (src) (matched.has(m) ? matchedSources : sources).add(src);
     }
     for (const src of sources) matchedSources.delete(src);
+    // The merged statement names the network's subject as its members do
+    // (the declaration-subject phase): the first member's declarationSubject
+    // once its subject is known — so a merged owner names the looked-up
+    // company, and the merged subject names itself. Resolved after every
+    // group is known (see `ref` below).
+    const declaration = byId.get(ordered[0])?.declarationSubject;
     canonStmt.set(canonicalId, {
       statementId: canonicalId,
       recordId: canonicalId,
-      declarationSubject: canonicalId,
+      declarationSubject: typeof declaration === "string" && declaration ? declaration : canonicalId,
       recordType: "entity",
       recordDetails: {
         entityType: entityType ?? { type: "registeredEntity" },
@@ -446,10 +452,11 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
       if (src) sources.add(src);
     }
 
+    const declaration = members[0].declarationSubject;
     canonStmt.set(canonicalId, {
       statementId: canonicalId,
       recordId: canonicalId,
-      declarationSubject: canonicalId,
+      declarationSubject: typeof declaration === "string" && declaration ? declaration : canonicalId,
       recordType: "person",
       recordDetails: {
         personType: personType ?? "knownPerson",
@@ -477,17 +484,20 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
   const out: Stmt[] = [];
   const emittedCanon = new Set<string>();
   const relIndex = new Map<string, number>();
+  // A party's declarationSubject names the network's subject by its source
+  // recordId; once that subject has merged, name it by its canonical id.
+  const party = (s: Stmt): Stmt => ({ ...s, declarationSubject: ref(s.declarationSubject) });
 
   for (const s of stmts) {
     if (s.recordType === "entity") {
       const cid = remap[s.statementId as string];
       if (!cid) {
-        out.push({ ...s, _sources: sourceOf(s) ? [sourceOf(s)] : [] });
+        out.push({ ...party(s), _sources: sourceOf(s) ? [sourceOf(s)] : [] });
         continue;
       }
       if (emittedCanon.has(cid)) continue;
       emittedCanon.add(cid);
-      out.push(canonStmt.get(cid)!);
+      out.push(party(canonStmt.get(cid)!));
     } else if (s.recordType === "relationship") {
       const d = rd(s);
       const subject = ref(d.subject);
@@ -512,12 +522,12 @@ export function reconcileBods(statements: Stmt[]): ReconcileResult {
     } else if (s.recordType === "person") {
       const cid = remap[s.statementId as string];
       if (!cid) {
-        out.push({ ...s, _sources: sourceOf(s) ? [sourceOf(s)] : [] });
+        out.push({ ...party(s), _sources: sourceOf(s) ? [sourceOf(s)] : [] });
         continue;
       }
       if (emittedCanon.has(cid)) continue;
       emittedCanon.add(cid);
-      out.push(canonStmt.get(cid)!);
+      out.push(party(canonStmt.get(cid)!));
     } else {
       out.push({ ...s, _sources: sourceOf(s) ? [sourceOf(s)] : [] });
     }

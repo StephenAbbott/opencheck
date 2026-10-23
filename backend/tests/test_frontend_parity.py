@@ -178,17 +178,20 @@ def test_the_same_legacy_wrappers_are_read_in_the_same_order() -> None:
 
 
 def test_the_tiers_are_merged_in_the_same_order() -> None:
-    """statementId > recordId > declarationSubject — the order that stops the
-    OECD's head-on-every-statement alias shadowing a real recordId."""
+    """statementId > recordId, and nothing else — declarationSubject names
+    the network's subject, another statement, and is not an alias (the
+    declaration-subject phase dropped Phase 210's third tier)."""
     src = _strip_comments(_ts("bodsRefs.ts"))
-    m = re.search(r"new Map\(\[\s*\.\.\.(\w+),\s*\.\.\.(\w+),\s*\.\.\.(\w+)\s*\]\)", src)
-    assert m and m.groups() == ("byDecl", "byRid", "bySid"), "tier merge order changed"
+    m = re.search(r"new Map\(\[\s*\.\.\.(\w+),\s*\.\.\.(\w+)\s*\]\)", src)
+    assert m and m.groups() == ("byRid", "bySid"), "tier merge order changed"
+    assert "byDecl" not in src and "declarationSubject" not in src
     stmts = [
         {"recordType": "entity", "statementId": "head", "recordId": "r-head", "declarationSubject": "r-head"},
         {"recordType": "entity", "statementId": "sub", "recordId": "r-sub", "declarationSubject": "r-head"},
     ]
     resolve = refs.resolver(stmts)
     assert resolve("r-head") == "head" and resolve("r-sub") == "sub"
+    assert refs.resolver(stmts[1:])("r-head") == "r-head"
 
 
 def test_the_same_id_fallbacks_are_read() -> None:

@@ -53,9 +53,11 @@ describe("refIndex / resolveRef", () => {
     expect(partyRef("")).toBeUndefined();
   });
 
-  it("ranks declarationSubject below recordId — the OECD's alias names the head everywhere", () => {
-    const idx = refIndex([MEMBER, HEAD]);
-    expect(idx.get("meip-entity-100913")).toBe(HEAD.statementId);
+  it("never treats declarationSubject as an alias — it names another statement", () => {
+    expect(refIndex([MEMBER, HEAD]).get("meip-entity-100913")).toBe(HEAD.statementId);
+    const withoutHead = refIndex([MEMBER, EDGE]);
+    expect(withoutHead.has("meip-entity-100913")).toBe(false);
+    expect(resolveRef("meip-entity-100913", withoutHead)).toBe("meip-entity-100913");
   });
 
   it("never lets one statement's recordId shadow another's statementId", () => {

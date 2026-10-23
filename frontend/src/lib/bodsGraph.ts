@@ -406,7 +406,7 @@ export interface BuildGraphOptions {
  * Transform a BODS statement bundle into a neutral graph model.
  *
  * Handles both v0.3 (object refs via `describedBy*`) and v0.4 (string refs,
- * which may be a `statementId` UUID or a `declarationSubject` alias).
+ * which may be a `recordId` or, for OpenCheck's own statements, a `statementId`).
  *
  * By default two view-layer clean-ups run (both leave the underlying BODS
  * untouched — they only shape the rendered graph/tree, never the export):
@@ -424,10 +424,10 @@ export function bodsToGraph(statements: Stmt[], opts: BuildGraphOptions = {}): G
   const asOf = opts.asOf ?? todayIso();
   const nodes: GraphNode[] = [];
   const nodeIds = new Set<string>();
-  // v0.4 relationship endpoints reference the party's *recordId* (or a
-  // declarationSubject alias such as "XI-LEI-…"), not its statementId, and a
-  // publisher's own statements (MEIP, Phase 208) do not share the two. Resolve
-  // every spelling to the node id (Phase 210).
+  // v0.4 relationship endpoints reference the party's *recordId*, not its
+  // statementId, and a publisher's own statements (MEIP, Phase 208) do not
+  // share the two. Resolve every spelling to the node id (Phase 210).
+  // `declarationSubject` is not a spelling: it names the network's subject.
   const refs = refIndex(statements);
 
   for (const stmt of statements) {

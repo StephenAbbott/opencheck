@@ -13,12 +13,17 @@ import {
   type GraphModel,
 } from "./bodsGraph";
 
-// Minimal BODS v0.4 bundle: an entity (with a declarationSubject alias and an
-// identifier), a person, and a relationship whose endpoints reference the
-// person by statementId and the entity by its declarationSubject alias.
+// Minimal BODS v0.4 bundle: an entity (whose recordId differs from its
+// statementId, and with an identifier), a person, and a relationship whose
+// endpoints reference the person by statementId and the entity by its
+// recordId — the two spellings the resolver accepts. (Until the
+// declaration-subject phase this fixture referenced the entity by its
+// declarationSubject, which names the network's subject, never the
+// statement that carries it.)
 const STATEMENTS: Record<string, unknown>[] = [
   {
     statementId: "n-acme",
+    recordId: "XI-LEI-ACME",
     recordType: "entity",
     declarationSubject: "XI-LEI-ACME",
     recordDetails: {
@@ -50,7 +55,7 @@ describe("bodsToGraph", () => {
     expect(model.nodes.map((n) => n.id).sort()).toEqual(["n-acme", "n-bob"]);
   });
 
-  it("resolves a relationship using statementId + declarationSubject alias", () => {
+  it("resolves a relationship using statementId + recordId", () => {
     expect(model.edges).toHaveLength(1);
     expect(model.edges[0]).toMatchObject({ source: "n-bob", target: "n-acme" });
   });

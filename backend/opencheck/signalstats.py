@@ -152,6 +152,9 @@ class _Counters:
         self.degraded: Counter[tuple[str, str, str]] = Counter()
         self.walks = _Walks()
         self.unresolved_sources: Counter[tuple[str, str]] = Counter()
+        # The declaration-subject phase: how each source bundle's subject was
+        # found for ``declarationSubject`` — (source_id, outcome).
+        self.declaration_subject: Counter[tuple[str, str]] = Counter()
         self.truncated = False
 
 
@@ -236,6 +239,27 @@ def record_unresolved_sources(surface: str, counts: Mapping[str, int]) -> None:
                 totals.unresolved_sources[key] += n
     except Exception as exc:  # noqa: BLE001
         log.debug("signalstats.record_unresolved_sources failed, ignoring: %s", exc)
+
+
+def record_declaration_subject(source_id: str, outcome: str) -> None:
+    """Count how one source bundle's subject was found for its
+    ``declarationSubject`` (``bods.declaration.OUTCOMES``) — by source id and
+    outcome, both closed vocabularies. ``unresolved`` is the number to watch:
+    a source whose bundles OpenCheck cannot name the subject of alone.
+    """
+    try:
+        from .bods.declaration import OUTCOMES
+
+        if outcome not in OUTCOMES or not isinstance(source_id, str) or not source_id:
+            return
+        with totals.lock:
+            key = (source_id, outcome)
+            if key not in totals.declaration_subject and len(totals.declaration_subject) >= _MAX_KEYS:
+                totals.truncated = True
+                return
+            totals.declaration_subject[key] += 1
+    except Exception as exc:  # noqa: BLE001
+        log.debug("signalstats.record_declaration_subject failed, ignoring: %s", exc)
 
 
 def record_lookup() -> None:
@@ -398,6 +422,7 @@ def stats() -> dict[str, Any]:
         truncated = totals.truncated
         walks = _walk_stats(totals.walks)
         unresolved = Counter(totals.unresolved_sources)
+        declaration = Counter(totals.declaration_subject)
 
     subject, related = _split_related(signals)
     return {
@@ -419,6 +444,11 @@ def stats() -> dict[str, Any]:
         # ``surface|reason``. Anything but zero is worth a look.
         "unresolved_sources_total": sum(unresolved.values()),
         "unresolved_sources": {"|".join(key): n for key, n in unresolved.items()},
+        # The declaration-subject phase: how each source bundle's subject was
+        # found for ``declarationSubject``, by ``source_id|outcome``
+        # (``bods.declaration.OUTCOMES``). ``unresolved`` rows name a source
+        # whose bundle OpenCheck cannot name the subject of on its own.
+        "declaration_subject": {"|".join(key): n for key, n in declaration.items()},
         # True only if the cardinality cap was hit — i.e. something is
         # generating keys it should not be, and these numbers are partial.
         "truncated": truncated,
