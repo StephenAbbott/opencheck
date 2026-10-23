@@ -13,10 +13,9 @@ Output shape — one JSON object per entity, the standard FtM serialisation::
 
 Modelling decisions
 -------------------
-* **One FtM entity per BODS entity/person statement.** OpenCheck sets
-  ``statementId == recordId`` for entity/person statements and relationship
-  statements reference those ids, so the BODS statementId is a stable FtM id
-  and references resolve with no extra entity resolution.
+* **One FtM entity per BODS entity/person statement**, keyed on the
+  statementId; a relationship's reference (a recordId, BODS v0.4) is resolved
+  to it through ``bods/refs.py``, so the two ids need not be equal.
 * **BODS entityType → FtM schema:** ``registeredEntity`` → ``Company``;
   ``state`` / ``stateBody`` → ``PublicBody``; everything else (legalEntity,
   arrangement, anonymousEntity, unknownEntity) → ``LegalEntity``.

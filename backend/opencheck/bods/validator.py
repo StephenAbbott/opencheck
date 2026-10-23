@@ -262,10 +262,10 @@ def validate_shape(statements: Iterable[dict[str, Any]]) -> list[str]:
     Relationship cross-reference resolution
     ---------------------------------------
     BODS v0.4 specifies that ``subject`` and ``interestedParty`` are bare
-    strings (statementId references).  OpenCheck sets statementId == recordId
-    so either value works for our own output.  The canonical bods-fixtures pack
-    uses *recordId* as the reference key, so we accept both statementId and
-    recordId to avoid false positives on valid external datasets.
+    strings holding the party's *recordId*.  OpenCheck's own output references
+    by recordId too (equal to the statementId until the record-ID ticket's
+    phase B); we accept either spelling so a valid external dataset, and a
+    bundle produced before the two diverged, raise no false positive.
     """
     statements = list(statements)
     # Accept both statementId and recordId as valid reference targets.
