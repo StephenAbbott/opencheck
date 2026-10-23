@@ -159,9 +159,9 @@ class TestGleifRegistrationDate:
         }
         rels = {r["recordDetails"]["subject"]: r for r in _rels(map_gleif(bundle))}
         by_child = {
-            e["recordDetails"]["name"]: rels[e["statementId"]]
+            e["recordDetails"]["name"]: rels[e["recordId"]]
             for e in _entities(map_gleif(bundle))
-            if e["statementId"] in rels
+            if e["recordId"] in rels
         }
         assert by_child["CHILD ONE"]["statementDate"] == "2026-01-15"
         assert by_child["CHILD ONE"]["recordDetails"]["interests"][0]["startDate"] == "2019-06-30"
@@ -177,8 +177,8 @@ class TestGleifRegistrationDate:
         dated["direct_parent_relationship"] = _gleif_rr(
             "213800LH1BZH3DI6G760", "5493001KJTIIGC8Y1R12", last_update="2025-11-03T00:00:00Z",
         )
-        assert [s["statementId"] for s in map_gleif(plain)] == [
-            s["statementId"] for s in map_gleif(dated)
+        assert [s["recordId"] for s in map_gleif(plain)] == [
+            s["recordId"] for s in map_gleif(dated)
         ]
 
     def test_reporting_exception_bridge_carries_the_subject_date(self):

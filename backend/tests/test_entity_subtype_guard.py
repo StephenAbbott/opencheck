@@ -24,6 +24,7 @@ from typing import Any
 import pytest
 
 from opencheck.bods import BODSBundle, make_entity_statement, validate_shape
+from opencheck.bods.statements import refresh_statement_id
 from opencheck.bods.validator import (
     VALID_ENTITY_SUBTYPES,
     VALID_ENTITY_SUBTYPES_BY_TYPE,
@@ -36,7 +37,7 @@ from tests import _entity_subtype_guard as guard
 def _entity(**entity_type: Any) -> dict[str, Any]:
     stmt = make_entity_statement(source_id="test", local_id="1", name="ACME")
     stmt["recordDetails"]["entityType"] = {"type": "registeredEntity", **entity_type}
-    return stmt
+    return refresh_statement_id(stmt)
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +144,20 @@ def test_no_loaded_module_holds_an_unwrapped_mapper() -> None:
 
 def _bad() -> dict[str, Any]:
     return _entity(subtype="Private")
+
+
+def test_guard_catches_a_stale_statement_id() -> None:
+    """A statement edited after the factory without ``refresh_statement_id``
+    carries an id that names content it no longer has."""
+    def map_fake(bundle: dict[str, Any]):
+        stmt = make_entity_statement(source_id="test", local_id="1", name="ACME")
+        stmt["recordDetails"]["name"] = "ACME LIMITED"
+        yield stmt
+
+    list(guard.wrap(map_fake)({}))
+    (violation,) = guard.drain()
+    assert violation[0] == "map_fake"
+    assert "statementId is stale" in violation[2]
 
 
 def test_guard_catches_a_generator_mapper() -> None:

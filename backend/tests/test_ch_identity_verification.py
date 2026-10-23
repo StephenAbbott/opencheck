@@ -251,7 +251,7 @@ class TestOfficers:
     def test_role_annotation_sits_on_the_appointment(self):
         stmts = self._stmts()
         person = _people(stmts)["VERIFIED, Alex"]
-        (rel,) = _role_rels(stmts, person["statementId"])
+        (rel,) = _role_rels(stmts, person["recordId"])
         (ann,) = _iv(rel)
         assert ann["statementPointerTarget"] == "/recordDetails/interestedParty"
         assert ann["motivation"] == "commenting"
@@ -306,7 +306,7 @@ class TestPersonAcrossBoards:
     def test_only_the_verified_appointment_carries_a_role_annotation(self):
         stmts = self._stmts()
         person = next(s for s in stmts if s["recordType"] == "person")
-        rels = _role_rels(stmts, person["statementId"])
+        rels = _role_rels(stmts, person["recordId"])
         assert len(rels) == 2
         assert sorted(len(_iv(r)) for r in rels) == [0, 1]
 
@@ -342,7 +342,7 @@ class TestPscs:
         person = _people(stmts)["Mr Example Owner"]
         (ann,) = _iv(person)
         assert ann[ANNOTATION_KEY]["route"] == ROUTE_ACSP
-        (rel,) = _role_rels(stmts, person["statementId"])
+        (rel,) = _role_rels(stmts, person["recordId"])
         (role,) = _iv(rel)
         assert role["url"].endswith("/company/04366849/persons-with-significant-control")
         assert validate_all(stmts) == []

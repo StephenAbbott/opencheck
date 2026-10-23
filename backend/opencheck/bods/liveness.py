@@ -56,6 +56,8 @@ dissolved, GLEIF silent".
 
 from __future__ import annotations
 
+from .statements import refresh_statement_id
+
 import re
 from typing import Any, Iterable, Literal
 
@@ -197,7 +199,8 @@ def apply_register_status(
     existing = stmt.get("annotations") or []
     stmt["annotations"] = [a for a in existing if not _is_status_annotation(a)]
     annotate(stmt, commenting(STATUS_TARGET, description, creation_date=creation_date))
-    return stmt
+    # The dissolution date is in the content the statementId names.
+    return refresh_statement_id(stmt)
 
 
 def _is_status_annotation(annotation: dict[str, Any]) -> bool:

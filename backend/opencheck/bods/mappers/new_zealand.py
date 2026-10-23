@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     _stable_id,
@@ -34,6 +35,7 @@ def _nz_ids(nzbn: str | None, number: str | None) -> list[dict[str, str]]:
     return ids
 
 
+@content_addressed
 def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an NzCompaniesAdapter bundle to BODS v0.4 statements.
 
@@ -102,7 +104,7 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         raw=nz_status or None,
     )
     yield company_stmt
-    company_stmt_id: str = company_stmt["statementId"]
+    company_stmt_id: str = company_stmt["recordId"]
 
     seen: set[str] = set()
 

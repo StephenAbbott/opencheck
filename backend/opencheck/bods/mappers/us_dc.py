@@ -12,6 +12,7 @@ from typing import Any, Iterable
 from ... import names as _names_mod
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _country_obj,
     _stable_id,
@@ -94,6 +95,7 @@ def _dc_business_address(company: dict[str, Any]) -> list[dict[str, Any]]:
     return [address]
 
 
+@content_addressed
 def map_dlcp_dc(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a DlcpDcAdapter bundle to BODS v0.4 statements.
 
@@ -186,7 +188,7 @@ def map_dlcp_dc(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         raw=status or None,
     )
     yield subject_stmt
-    subject_id: str = subject_stmt["statementId"]
+    subject_id: str = subject_stmt["recordId"]
 
     owners_url = record_url(2, f"INITIALFILENUMBER = '{file_number}'")
     seen: set[str] = set()

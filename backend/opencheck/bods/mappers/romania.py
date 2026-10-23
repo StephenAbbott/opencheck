@@ -17,6 +17,7 @@ import pycountry
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     _country_obj,
@@ -197,6 +198,7 @@ def _ro_address(row: dict[str, Any]) -> dict[str, str] | None:
     return address
 
 
+@content_addressed
 def map_onrc_romania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Every statement dated by the ONRC monthly export (Phase 315). See ``_map_onrc_romania`` for the mapping."""
     yield from dated_by_cut(_map_onrc_romania(bundle), (bundle or {}).get("export_date"))
@@ -321,14 +323,15 @@ def _map_onrc_romania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield make_relationship_statement(
             source_id="onrc_romania",
             local_id=f"{number}:rep:{index}",
-            subject_statement_id=entity["statementId"],
-            interested_party_statement_id=party["statementId"],
+            subject_statement_id=entity["recordId"],
+            interested_party_statement_id=party["recordId"],
             interested_party_type=party_type,
             interests=[interest],
             source_url=bundle.get("link"),
         )
 
 
+@content_addressed
 def map_anaf_romania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an AnafRomaniaAdapter bundle to one BODS v0.4 entity statement.
 

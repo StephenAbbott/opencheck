@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, _addr, latest_record_date, make_entity_statement
+from ..statements import content_addressed
 
 
 # ----------------------------------------------------------------------
@@ -56,6 +57,7 @@ def _zefix_format_uid(uid: str) -> str:
     return uid
 
 
+@content_addressed
 def map_zefix(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a Zefix fetch bundle to BODS v0.4 entity statements.
 

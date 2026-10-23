@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     _stable_id,
@@ -59,6 +60,7 @@ def _at_date_iso(raw: str) -> str | None:
     return None  # unrecognised: no date rather than a schema-invalid one
 
 
+@content_addressed
 def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a FirmenbuchAdapter fetch bundle to BODS v0.4 statements.
 
@@ -122,7 +124,7 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         raw=extract.get("status") or None,
     )
     yield company_stmt
-    company_stmt_id: str = company_stmt["statementId"]
+    company_stmt_id: str = company_stmt["recordId"]
 
     # Track already-emitted local IDs to avoid duplicate statements.
     seen_ids: set[str] = set()
@@ -153,13 +155,13 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             yield person_stmt
             seen_ids.add(person_local_id)
         else:
-            person_stmt = {"statementId": _stable_id("firmenbuch", "person", person_local_id)}
+            person_stmt = {"recordId": _stable_id("firmenbuch", "person", person_local_id)}
 
         yield make_relationship_statement(
             source_id="firmenbuch",
             local_id=f"{fn}:officer:{idx}:{person_local_id}",
             subject_statement_id=company_stmt_id,
-            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_statement_id=person_stmt["recordId"],
             interested_party_type="person",
             interests=[{
                 "type": interest_type,
@@ -219,7 +221,7 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 yield sh_stmt
                 seen_ids.add(sh_local_id)
             else:
-                sh_stmt = {"statementId": _stable_id("firmenbuch", "person", sh_local_id)}
+                sh_stmt = {"recordId": _stable_id("firmenbuch", "person", sh_local_id)}
             interested_party_type = "person"
         else:
             sh_local_id = f"firmenbuch:sh_entity:{sh_fn or display_name.lower().replace(' ', '_')}"
@@ -240,14 +242,14 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 yield sh_stmt
                 seen_ids.add(sh_local_id)
             else:
-                sh_stmt = {"statementId": _stable_id("firmenbuch", "entity", sh_local_id)}
+                sh_stmt = {"recordId": _stable_id("firmenbuch", "entity", sh_local_id)}
             interested_party_type = "entity"
 
         yield make_relationship_statement(
             source_id="firmenbuch",
             local_id=f"{fn}:sh:{idx}:{sh_local_id}",
             subject_statement_id=company_stmt_id,
-            interested_party_statement_id=sh_stmt["statementId"],
+            interested_party_statement_id=sh_stmt["recordId"],
             interested_party_type=interested_party_type,
             interests=[interest],
             source_url=source_url,

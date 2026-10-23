@@ -328,4 +328,9 @@ def test_the_quality_sweep_finds_nothing_in_either_shape() -> None:
 
     plain = check_statements(bundle(), today="2026-10-23")
     scr = check_statements(scramble(bundle()), today="2026-10-23")
-    assert [f.check for f in plain] == [f.check for f in scr]
+    # The scramble invents statementIds, which the content-addressed phase's
+    # own check rightly calls stale; that check is not what this harness
+    # measures.
+    assert [f.check for f in plain] == [
+        f.check for f in scr if f.check != "stale_statement_id"
+    ]

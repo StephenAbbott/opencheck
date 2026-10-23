@@ -69,7 +69,7 @@ def _prefix_notes(statement: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _shape(statements: list[dict[str, Any]]) -> tuple[list[str], list[tuple[Any, ...]]]:
     """What the graph is apart from names: the ids, and every edge."""
-    ids = sorted(s["statementId"] for s in statements)
+    ids = sorted(s["recordId"] for s in statements)
     edges = sorted(
         (s["recordDetails"]["subject"], s["recordDetails"]["interestedParty"], s["recordId"])
         for s in statements

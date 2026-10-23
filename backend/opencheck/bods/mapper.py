@@ -37,6 +37,7 @@ from .annotations import annotate, commenting, pointer
 # `sources/probes.py` resolves a mapper by `getattr(mapper, name)`. Moving
 # code is not the same as moving its address.
 from .statements import (  # noqa: F401  (re-exported: see the module docstring)
+    content_addressed,
     BODSBundle,
     SOURCE_NAMES,
     _BO_ASSERTING_SOURCES,
@@ -1052,6 +1053,7 @@ def gleif_reporting_exception(rel: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+@content_addressed
 def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
     """Map a GLEIF adapter bundle to BODS v0.4 statements.
 
@@ -1091,7 +1093,7 @@ def map_gleif(bundle: dict[str, Any]) -> BODSBundle:
         lei, subject_entity_block, subject_url, attrs=subject_attrs
     )
     result.statements.append(subject_statement)
-    subject_sid = subject_statement["statementId"]
+    subject_sid = subject_statement["recordId"]
 
     for kind, parent, exception in (
         (
@@ -1171,7 +1173,7 @@ def _gleif_parent_statements(
     rel = _gleif_child_relationship(
         local_id=f"{lei}:{kind}-parent:{parent_lei}",
         child_sid=subject_sid,
-        parent_sid=parent_statement["statementId"],
+        parent_sid=parent_statement["recordId"],
         direct=kind == "direct",
         details=f"GLEIF Level 2 {kind}-parent (accounting consolidation)",
         rr=rr,
@@ -1215,7 +1217,7 @@ def _gleif_child_statements(
     )
     rel = _gleif_child_relationship(
         local_id=f"{lei}:direct-child:{child_lei}",
-        child_sid=child_statement["statementId"],
+        child_sid=child_statement["recordId"],
         parent_sid=subject_sid,
         direct=True,
         details="GLEIF Level 2 direct-child (accounting consolidation)",
@@ -1226,6 +1228,7 @@ def _gleif_child_statements(
     return [child_statement, rel]
 
 
+@content_addressed
 def map_gleif_subsidiaries(
     subject_lei: str,
     subject_attrs: dict[str, Any],
@@ -1273,7 +1276,7 @@ def map_gleif_subsidiaries(
         or subject_lei
     )
     out: list[dict[str, Any]] = [subj]
-    subj_sid = subj["statementId"]
+    subj_sid = subj["recordId"]
     seen: set[str] = set()
     child_sids: dict[str, str] = {}
     child_dates: dict[str, str | None] = {}
@@ -1290,7 +1293,7 @@ def map_gleif_subsidiaries(
             child_lei, attrs.get("entity") or {}, child_url, attrs=attrs
         )
         out.append(child_stmt)
-        child_sids[child_lei] = child_stmt["statementId"]
+        child_sids[child_lei] = child_stmt["recordId"]
         child_date = _gleif_registration_date(attrs)
         child_dates[child_lei] = child_date
         relations = set(c.get("relations") or [])
@@ -1301,7 +1304,7 @@ def map_gleif_subsidiaries(
                 details += "; also its ultimate consolidating parent"
             out.append(_gleif_child_relationship(
                 local_id=f"{subject_lei}:direct-child:{child_lei}",
-                child_sid=child_stmt["statementId"],
+                child_sid=child_stmt["recordId"],
                 parent_sid=subj_sid,
                 direct=True,
                 details=details,
@@ -1312,7 +1315,7 @@ def map_gleif_subsidiaries(
         elif "ultimate" in relations:
             rel = _gleif_child_relationship(
                 local_id=f"{subject_lei}:ultimate-child:{child_lei}",
-                child_sid=child_stmt["statementId"],
+                child_sid=child_stmt["recordId"],
                 parent_sid=subj_sid,
                 direct=False,
                 details="GLEIF Level 2 ultimate-child (accounting consolidation)",
@@ -1496,7 +1499,7 @@ def _gleif_exception_statements(
         source_id="gleif",
         local_id=f"{lei}:{kind}-parent-exception-rel:{reason or 'unspecified'}",
         subject_statement_id=subject_sid,
-        interested_party_statement_id=bridge["statementId"],
+        interested_party_statement_id=bridge["recordId"],
         interested_party_type=ip_type,
         interests=[
             {
@@ -1967,6 +1970,7 @@ def _oo_republish(statements: Any, source_id: str) -> Iterator[dict[str, Any]]:
         yield out
 
 
+@content_addressed
 def map_bods_gleif(bundle: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """The Open Ownership GLEIF bulk data, republished by OpenCheck.
 
@@ -1977,6 +1981,7 @@ def map_bods_gleif(bundle: dict[str, Any]) -> Iterator[dict[str, Any]]:
     return _oo_republish(bundle.get("bods_statements", []), "bods_gleif")
 
 
+@content_addressed
 def map_bods_uk_psc(bundle: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """The Open Ownership UK PSC bulk data, republished by OpenCheck — the
     same republication as :func:`map_bods_gleif` (Phase 317)."""
@@ -1993,6 +1998,7 @@ def _with_meip_source_id(statement: Any) -> Any:
     return out
 
 
+@content_addressed
 def map_meip(bundle: dict[str, Any]) -> BODSBundle:
     """Passthrough mapper for the OECD-UNSD MEIP register (Phase 208).
 

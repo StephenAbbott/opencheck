@@ -2,11 +2,16 @@
  * Resolving a relationship's parties to the statements they name (Phase 210).
  *
  * BODS v0.4 says a relationship's `subject` and `interestedParty` hold the
- * **recordId** of the party's entity or person statement. Every OpenCheck
- * mapper sets `statementId === recordId` for entities and people, so nothing
+ * **recordId** of the party's entity or person statement. Until the
+ * content-addressed statementId phase every OpenCheck mapper set
+ * `statementId === recordId` for entities and people, so nothing
  * distinguished the two and every consumer — the graph, the tree, the
  * reconciler, the BackgroundCheck people extractor, the statement cards —
- * keyed its lookups on `statementId` and happened to work.
+ * keyed its lookups on `statementId` and happened to work. Now a
+ * `statementId` is derived from the `recordId` and a digest of the record's
+ * content, every OpenCheck relationship references its parties by
+ * `recordId`, and this resolver is the only correct way from a reference to
+ * a node.
  *
  * Phase 208 brought the first statements OpenCheck did not write: the OECD's
  * MEIP release, where `statementId` is a hash, `recordId` is `meip-entity-N`

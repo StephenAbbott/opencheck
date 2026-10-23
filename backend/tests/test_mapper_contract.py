@@ -41,7 +41,11 @@ from opencheck.bods.mapper import (
     normalise_registered_as,
 )
 from opencheck.bods.mappers.wikidata import _wikidata_country, map_wikidata
-from opencheck.bods.statements import make_entity_statement, make_person_statement
+from opencheck.bods.statements import (
+    make_entity_statement,
+    make_person_statement,
+    refresh_statement_id,
+)
 from opencheck.bods.validator import (
     is_iso_jurisdiction_code,
     jurisdiction_input_issues,
@@ -75,7 +79,7 @@ def test_non_iso_codes_are_refused(code: str) -> None:
 def _entity(**rd: Any) -> dict[str, Any]:
     stmt = make_entity_statement(source_id="test", local_id="1", name="ACME")
     stmt["recordDetails"].update(rd)
-    return stmt
+    return refresh_statement_id(stmt)
 
 
 def test_a_conformant_entity_has_no_issue() -> None:

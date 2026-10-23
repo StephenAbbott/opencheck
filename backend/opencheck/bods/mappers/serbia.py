@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, dated_by_cut, make_entity_statement
+from ..statements import content_addressed
 
 
 # ---------------------------------------------------------------------------
@@ -20,6 +21,7 @@ from ..statements import SOURCE_NAMES, dated_by_cut, make_entity_statement
 _RS_JURISDICTION = ("Serbia", "RS")
 
 
+@content_addressed
 def map_apr_serbia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Every statement dated by APR's cut (DatumPreseka) (Phase 315). See ``_map_apr_serbia`` for the mapping."""
     yield from dated_by_cut(_map_apr_serbia(bundle), (bundle or {}).get("snapshot_date"))

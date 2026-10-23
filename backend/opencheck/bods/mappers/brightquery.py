@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..statements import (
+    content_addressed,
     BODSBundle,
     _addr,
     make_entity_statement,
@@ -85,6 +86,7 @@ def _bq_other_ids(feats: list[dict]) -> dict[str, str]:
     return result
 
 
+@content_addressed
 def map_brightquery(bundle: dict[str, Any]) -> BODSBundle:
     """Map a BrightQuery bundle to BODS v0.4 statements.
 
@@ -162,7 +164,7 @@ def map_brightquery(bundle: dict[str, Any]) -> BODSBundle:
         source_url=_BQ_SOURCE_URL,
     )
     result.statements.append(entity)
-    entity_sid = entity["statementId"]
+    entity_sid = entity["recordId"]
 
     # --- Executives (PEOPLE_BUSINESS records) ---
     for person_record in people:
@@ -196,7 +198,7 @@ def map_brightquery(bundle: dict[str, Any]) -> BODSBundle:
             source_url=_BQ_SOURCE_URL,
         )
         result.statements.append(person)
-        person_sid = person["statementId"]
+        person_sid = person["recordId"]
 
         interest: dict[str, Any] = {
             "type": "otherInfluenceOrControl",

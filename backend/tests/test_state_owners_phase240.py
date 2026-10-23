@@ -213,11 +213,11 @@ def test_mapper_dates_interests_and_sets_owner_jurisdiction():
         s["recordDetails"]["interestedParty"]: s
         for s in bods if s["recordType"] == "relationship"
     }
-    moe = by_name["Ministry of Energy of Norway"]["statementId"]
+    moe = by_name["Ministry of Energy of Norway"]["recordId"]
     interest = rels[moe]["recordDetails"]["interests"][0]
     assert interest["endDate"] == "2021-12-31"
     assert "ended 2021-12-31" in interest["details"]
-    assert "endDate" not in rels[ntf["statementId"]]["recordDetails"]["interests"][0]
+    assert "endDate" not in rels[ntf["recordId"]]["recordDetails"]["interests"][0]
 
 
 # --- OpenSanctions / FtM ------------------------------------------------------
@@ -293,8 +293,8 @@ def _os_equinor_bundle():
             "statementId": rid, "recordId": rid, "recordType": "relationship",
             "recordDetails": {
                 "isComponent": False,
-                "subject": subj["statementId"],
-                "interestedParty": ip["statementId"],
+                "subject": subj["recordId"],
+                "interestedParty": ip["recordId"],
                 "interests": [{"type": "shareholding", "share": {"exact": pct}}],
             },
         }

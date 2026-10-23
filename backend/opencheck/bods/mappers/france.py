@@ -10,6 +10,7 @@ import hashlib
 from typing import Any, Iterable
 
 from ..statements import (
+    content_addressed,
     _addr,
     make_entity_statement,
     make_person_statement,
@@ -174,6 +175,7 @@ def _inpi_role_interest_type(role_code: int | str | None) -> str:
     )
 
 
+@content_addressed
 def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an INPI RNE fetch bundle to BODS v0.4 statements.
 
@@ -309,7 +311,7 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         source_url=source_url,
     )
     yield entity
-    entity_sid = entity["statementId"]
+    entity_sid = entity["recordId"]
 
     # Emit person + relationship statements for non-BO INDIVIDU pouvoirs.
     seen_sids: set[str] = {entity_sid}
@@ -323,7 +325,7 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         for stmt in _inpi_individu_statements(
             siren, pouvoir, entity_sid, source_url, seen_sids, record_dated
         ):
-            seen_sids.add(stmt["statementId"])
+            seen_sids.add(stmt["recordId"])
             yield stmt
 
 
@@ -397,7 +399,7 @@ def _inpi_individu_statements(
         nationalities=nationalities,
         source_url=source_url,
     )
-    person_sid = person["statementId"]
+    person_sid = person["recordId"]
 
     stmts: list[dict[str, Any]] = []
     if person_sid not in seen_sids:
@@ -442,7 +444,7 @@ def _inpi_individu_statements(
         # when the RNE declared it or when OpenCheck published — same class of
         # error as the Companies House officer path above.
     )
-    rel_sid = rel["statementId"]
+    rel_sid = rel["recordId"]
     if rel_sid not in seen_sids:
         stmts.append(rel)
 

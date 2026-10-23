@@ -10,6 +10,7 @@ from typing import Any
 
 from ..annotations import annotate, commenting, pointer
 from ..statements import (
+    content_addressed,
     BODSBundle,
     _country_obj,
     make_entity_statement,
@@ -193,15 +194,15 @@ def _emit_gem_interested_party(
         ),
         source_url=source_url,
     )
-    if party_entity["statementId"] not in emitted:
-        emitted.add(party_entity["statementId"])
+    if party_entity["recordId"] not in emitted:
+        emitted.add(party_entity["recordId"])
         result.statements.append(party_entity)
 
     relationship = make_relationship_statement(
         source_id="climatetrace",
         local_id=local_id,
         subject_statement_id=subject_statement_id,
-        interested_party_statement_id=party_entity["statementId"],
+        interested_party_statement_id=party_entity["recordId"],
         interested_party_type="entity",
         interests=[interest],
         source_url=source_url,
@@ -210,6 +211,7 @@ def _emit_gem_interested_party(
     return relationship
 
 
+@content_addressed
 def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
     """Map a Climate TRACE / GEM fetch bundle to BODS statements.
 
@@ -328,7 +330,7 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
             commenting(pointer("recordDetails"), _gem_status_note(entity_status)),
         )
     result.statements.append(entity)
-    subject_statement_id: str = entity["statementId"]
+    subject_statement_id: str = entity["recordId"]
 
     # A stub statement for the amalgamation successor, so "merged into X"
     # names a node that exists in the bundle. Deliberately NO relationship
@@ -389,7 +391,7 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
     # is emitted once whichever path reaches it first. The IDs coincide by
     # construction (``_stable_id("climatetrace", "entity", <GEM ID>)``) and a
     # test pins that, so this set is what stops a duplicate, not luck.
-    emitted: set[str] = {s["statementId"] for s in result.statements}
+    emitted: set[str] = {s["recordId"] for s in result.statements}
 
     # GEM's relationships CSV — the subject's *direct* owners (Phase 199).
     owners = [
@@ -495,7 +497,7 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
             (
                 s
                 for s in result.statements
-                if s["statementId"] == deferred_successor["statementId"]
+                if s["recordId"] == deferred_successor["recordId"]
             ),
             None,
         )

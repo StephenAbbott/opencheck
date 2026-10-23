@@ -29,9 +29,11 @@ Reference: https://standard.openownership.org/en/0.4.0/
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import date
+from collections.abc import Callable
 from typing import Any, Iterable, Iterator
 
 import pycountry
@@ -224,6 +226,127 @@ def _stable_id(*parts: str) -> str:
     return f"opencheck-{digest[:24]}"
 
 
+def content_digest(record_details: Any, record_status: str) -> str:
+    """The digest of what a statement asserts — ``recordDetails`` and
+    ``recordStatus`` — that makes its ``statementId`` content-addressed (the
+    record-ID ticket's phase B; Stephen's decision of 23 Oct 2026).
+
+    A ``statementId`` is "a persistent globally unique identifier for this
+    Statement": the same record said twice the same way is one statement, and
+    said differently is a new statement with the same ``recordId``. Left out
+    on purpose: ``annotations`` and ``recordDetails.publicListing`` (a
+    post-mapping pass — the integrated-ownership note, the listing applied at
+    fold time — must not move an id the signals already cite),
+    ``statementDate``, ``publicationDetails`` and ``source`` (so a re-fetch
+    that finds nothing changed gives the same id, and replay caches and saved
+    reports stay comparable across runs).
+    """
+    details = record_details
+    if isinstance(details, dict) and "publicListing" in details:
+        # The listing (Phase 236) is applied at fold time to a copy of the
+        # subject's statement, after the signals have cited its id; like an
+        # annotation it must not move the id.
+        details = {k: v for k, v in details.items() if k != "publicListing"}
+    body = json.dumps(
+        {"recordDetails": details, "recordStatus": record_status},
+        sort_keys=True, ensure_ascii=False, default=str, separators=(",", ":"),
+    )
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
+
+
+def content_statement_id(record_id: str, record_details: Any, record_status: str) -> str:
+    """``statementId`` = the record's identity plus its content digest.
+
+    Derived from the ``recordId`` (not the source parts), so
+    ``refresh_statement_id`` can recompute it from the statement alone.
+    """
+    return _stable_id(record_id, "content", content_digest(record_details, record_status))
+
+
+def refresh_statement_id(stmt: dict[str, Any]) -> dict[str, Any]:
+    """Recompute an OpenCheck statement's content-addressed ``statementId``
+    after its ``recordDetails`` or ``recordStatus`` were edited, in place.
+
+    The factories compute the id when the statement is built; a mapper or an
+    enrichment pass that edits the record afterwards (the Estonian account-
+    prefix strip, the state-body classification, the listing) calls this so
+    the id still names the content. The test suite's mapper guard fails any
+    mapper whose yielded statement carries a stale id. Statements with no
+    ``recordId``, and another publisher's (no ``opencheck-`` recordId — the
+    OECD's MEIP, Open Ownership's bundles), are left alone.
+    """
+    rid = stmt.get("recordId")
+    if not isinstance(rid, str) or not rid.startswith("opencheck-"):
+        return stmt
+    stmt["statementId"] = content_statement_id(
+        rid, stmt.get("recordDetails"), str(stmt.get("recordStatus") or "new")
+    )
+    return stmt
+
+
+def content_addressed(mapper: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorate a ``map_<source>`` so every statement it yields or returns
+    leaves with a ``statementId`` that names its content.
+
+    A mapper builds a statement with a factory and then, often, edits it —
+    a register status written by ``apply_register_status``, a legal-form
+    label, an industry code, a name stripped of an account prefix. Each edit
+    moves the content the id was computed from. Rather than ask forty
+    mappers to call ``refresh_statement_id`` after their last edit (and the
+    guard to catch the one that forgot), the id is recomputed as the
+    statement leaves the mapper. A generator stays a generator, so the
+    Phase 314 rule — consume it inside the provenance scope that made it —
+    is unchanged; a ``BODSBundle`` or list is refreshed in place. Another
+    publisher's statements (no ``opencheck-`` recordId) are left alone.
+    """
+    import functools
+    import inspect
+
+    def _refresh_all(result: Any) -> Any:
+        if inspect.isgenerator(result) or (
+            not isinstance(result, (list, BODSBundle)) and hasattr(result, "__next__")
+        ):
+            return (refresh_statement_id(s) if isinstance(s, dict) else s for s in result)
+        if isinstance(result, BODSBundle):
+            for s in result.statements:
+                if isinstance(s, dict):
+                    refresh_statement_id(s)
+            return result
+        if isinstance(result, list):
+            for s in result:
+                if isinstance(s, dict):
+                    refresh_statement_id(s)
+            return result
+        return result
+
+    if inspect.isgeneratorfunction(mapper):
+        @functools.wraps(mapper)
+        def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+            for s in mapper(*args, **kwargs):
+                yield refresh_statement_id(s) if isinstance(s, dict) else s
+        gen_wrapper.__opencheck_content_addressed__ = True  # type: ignore[attr-defined]
+        return gen_wrapper
+
+    @functools.wraps(mapper)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return _refresh_all(mapper(*args, **kwargs))
+
+    wrapper.__opencheck_content_addressed__ = True  # type: ignore[attr-defined]
+    return wrapper
+
+
+def stale_statement_id(stmt: dict[str, Any]) -> bool:
+    """True when an OpenCheck statement's ``statementId`` no longer names its
+    content — an edit after the factory without ``refresh_statement_id``."""
+    rid = stmt.get("recordId")
+    if not isinstance(rid, str) or not rid.startswith("opencheck-"):
+        return False
+    expected = content_statement_id(
+        rid, stmt.get("recordDetails"), str(stmt.get("recordStatus") or "new")
+    )
+    return stmt.get("statementId") != expected
+
+
 def _today() -> str:
     return date.today().isoformat()
 
@@ -380,15 +503,15 @@ def make_entity_statement(
     publication_date: str | None = None,
     statement_date: str | None = None,
 ) -> dict[str, Any]:
-    statement_id = _stable_id(source_id, "entity", local_id)
-    # The recordId is the party's stable identity; a relationship references
-    # it (BODS v0.4), and so does ``declarationSubject``. The statementId is
-    # this statement's own id. They are equal here because OpenCheck has never
-    # versioned a record; the record-ID ticket's phase B makes the statementId
-    # content-addressed, and every consumer resolves a reference through
-    # ``bods/refs.py`` rather than comparing it against statementIds —
+    # The recordId is the party's stable identity — ``_stable_id(source,
+    # kind, local)``, what a relationship references (BODS v0.4) and what a
+    # mapper predicts for a party before building it. The statementId is
+    # this statement's own id: the same identity plus a digest of its
+    # content (``content_statement_id``), so a changed record is a new
+    # statement under the same recordId. Every consumer resolves a reference
+    # through ``bods/refs.py`` rather than comparing it against statementIds —
     # ``tests/test_record_id_references.py`` holds them to that.
-    record_id = statement_id
+    record_id = _stable_id(source_id, "entity", local_id)
 
     entity_type_obj: dict[str, Any] = {"type": entity_type}
     if entity_details:
@@ -443,7 +566,7 @@ def make_entity_statement(
         record_details["alternateNames"] = alternate_names
 
     statement: dict[str, Any] = {
-        "statementId": statement_id,
+        "statementId": content_statement_id(record_id, record_details, "new"),
         "recordId": record_id,
         # A default only: the network's subject is stamped after mapping, by
         # ``bods.declaration`` — right as it stands for the subject itself,
@@ -481,8 +604,7 @@ def make_person_statement(
     statement_date: str | None = None,
     political_exposure: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    statement_id = _stable_id(source_id, "person", local_id)
-    record_id = statement_id  # see make_entity_statement for reasoning
+    record_id = _stable_id(source_id, "person", local_id)  # see make_entity_statement
 
     # The legal name stays at index 0. Readers that pick "the person's name"
     # should ask for the type (they now do — see cross_check._person_full_name),
@@ -543,7 +665,7 @@ def make_person_statement(
         record_details["politicalExposure"] = political_exposure
 
     statement: dict[str, Any] = {
-        "statementId": statement_id,
+        "statementId": content_statement_id(record_id, record_details, "new"),
         "recordId": record_id,
         "declarationSubject": record_id,  # a default — see make_entity_statement
         "recordType": "person",
@@ -622,15 +744,24 @@ def make_relationship_statement(
     ).ended:
         record_status = "closed"
     record_id = _stable_id(source_id, "relationship-record", local_id)
-    if record_status == "new":
-        statement_id = _stable_id(source_id, "relationship", local_id)
-    else:
-        statement_id = _stable_id(
-            source_id, "relationship", local_id, record_status, publication_date or ""
-        )
+    record_details: dict[str, Any] = {
+        "isComponent": bool(is_component),
+        "subject": subject_statement_id,
+        "interestedParty": (
+            interested_party_unspecified
+            if interested_party_unspecified is not None
+            else interested_party_statement_id
+        ),
+        "interests": interests,
+    }
+    if component_records is not None:
+        record_details["componentRecords"] = list(component_records)
 
     statement: dict[str, Any] = {
-        "statementId": statement_id,
+        # Content-addressed like a party's (phase B): a closed record and the
+        # open one it replaced are two statements of one record, as before —
+        # the status is in the digest — and so is any change to its interests.
+        "statementId": content_statement_id(record_id, record_details, record_status),
         "recordId": record_id,
         # A default — the network's subject, not necessarily this edge's
         # (a chain deeper than one layer); stamped by ``bods.declaration``.
@@ -639,20 +770,9 @@ def make_relationship_statement(
         "recordStatus": record_status,
         "statementDate": _statement_date(statement_date),
         "publicationDetails": _publication_details_block(publication_date),
-        "recordDetails": {
-            "isComponent": bool(is_component),
-            "subject": subject_statement_id,
-            "interestedParty": (
-                interested_party_unspecified
-                if interested_party_unspecified is not None
-                else interested_party_statement_id
-            ),
-            "interests": interests,
-        },
+        "recordDetails": record_details,
         "source": _source_block(source_id, source_url),
     }
-    if component_records is not None:
-        statement["recordDetails"]["componentRecords"] = list(component_records)
     return statement
 
 

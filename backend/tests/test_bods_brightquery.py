@@ -217,8 +217,8 @@ def test_map_brightquery_relationship_links_entity_to_person() -> None:
     entity = next(s for s in stmts if s["recordType"] == "entity")
     person = next(s for s in stmts if s["recordType"] == "person")
     rel = next(s for s in stmts if s["recordType"] == "relationship")
-    assert rel["recordDetails"]["subject"] == entity["statementId"]
-    assert rel["recordDetails"]["interestedParty"] == person["statementId"]
+    assert rel["recordDetails"]["subject"] == entity["recordId"]
+    assert rel["recordDetails"]["interestedParty"] == person["recordId"]
 
 
 def test_map_brightquery_nameless_person_skipped() -> None:

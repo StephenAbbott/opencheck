@@ -150,7 +150,7 @@ def test_ownership_owner_subject_is_interested_party():
         if isinstance(s.get("recordDetails"), dict)
         and s["recordDetails"].get("name") == "BP PLC"
     )
-    bp_sid = bp_stmt["statementId"]
+    bp_sid = bp_stmt["recordId"]
 
     rel_stmts = _stmts_by_type(result, "relationship")
     for rel in rel_stmts:
@@ -251,7 +251,7 @@ def test_ownership_asset_subject_is_subject_in_ooc():
         if isinstance(s.get("recordDetails"), dict)
         and s["recordDetails"].get("name") == "BP PLC"
     )
-    bp_sid = bp_stmt["statementId"]
+    bp_sid = bp_stmt["recordId"]
 
     rel_stmts = _stmts_by_type(result, "relationship")
     for rel in rel_stmts:
@@ -399,7 +399,7 @@ def test_directorship_subject_is_organisation():
         if isinstance(s.get("recordDetails"), dict)
         and s["recordDetails"].get("name") == "Rosneft Oil Company"
     )
-    rosneft_sid = rosneft["statementId"]
+    rosneft_sid = rosneft["recordId"]
 
     for rel in _stmts_by_type(result, "relationship"):
         assert rel["recordDetails"]["subject"] == rosneft_sid

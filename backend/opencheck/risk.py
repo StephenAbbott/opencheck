@@ -1240,13 +1240,25 @@ def _datasets_evidence(entity: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def _ftm_record_id(source_id: str, hit_id: str, entity: dict[str, Any]) -> str:
+    """The recordId ``bods.mappers.ftm`` gives an FtM record: a ``Person``
+    is a person statement, anything else an entity statement."""
+    kind = "person" if (entity.get("schema") or "") == "Person" else "entity"
+    return _bods_stable_id(source_id, kind, hit_id)
+
+
 def _opensanctions_topic_signals_from_entity(
     hit_id: str, entity: dict[str, Any], *, source_id: str = "opensanctions"
 ) -> list[RiskSignal]:
     topics = _extract_topics(entity)
     out: list[RiskSignal] = []
-    # statement_id lets the frontend highlight the exact BODS graph node.
-    stmt_id = _bods_stable_id(source_id, hit_id)
+    # statement_id lets the frontend highlight the exact BODS graph node:
+    # the recordId the FtM mapper gives the record (``_stable_id(source,
+    # kind, ftm id)``), resolved to the statementId by
+    # ``resolve_signal_references`` once the bundle is known. Until the
+    # content-addressed statementId phase this predicted a two-part id
+    # the mapper never wrote.
+    stmt_id = _ftm_record_id(source_id, hit_id, entity)
     if any(t in _PEP_TOPICS for t in topics):
         matched = sorted(t for t in topics if t in _PEP_TOPICS)
         out.append(
@@ -1494,7 +1506,7 @@ def assess_subject_record(
         if is_branch_record(entity, names):
             continue
         topics = _extract_topics(entity)
-        stmt_id = _bods_stable_id(hit.source_id, hit.hit_id)
+        stmt_id = _ftm_record_id(hit.source_id, hit.hit_id, entity)
         base = {
             "statement_id": stmt_id,
             "matched_on": "lei",

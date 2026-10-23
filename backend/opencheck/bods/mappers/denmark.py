@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     latest_record_date,
@@ -40,6 +41,7 @@ CVR_PARTICIPANT_DETAILS = (
 # ---------------------------------------------------------------------------
 
 
+@content_addressed
 def map_cvr_denmark(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CVR Denmark bundle to BODS v0.4 statements.
 
@@ -149,7 +151,7 @@ def map_cvr_denmark(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     yield stmt
 
-    yield from _cvr_participants(bundle, stmt["statementId"], source_url)
+    yield from _cvr_participants(bundle, stmt["recordId"], source_url)
 
 
 def _cvr_participants(
@@ -238,7 +240,7 @@ def _cvr_participants(
             source_id="cvr_denmark",
             local_id=local_id,
             subject_statement_id=subject_id,
-            interested_party_statement_id=party["statementId"],
+            interested_party_statement_id=party["recordId"],
             interested_party_type=party_type,
             interests=interests,
             source_url=source_url,

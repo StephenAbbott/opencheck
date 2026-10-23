@@ -236,8 +236,8 @@ def test_director_relationship_subject_is_company() -> None:
     entity = next(s for s in bundle if s["recordType"] == "entity")
     person = next(s for s in bundle if s["recordType"] == "person")
     rel = next(s for s in bundle if s["recordType"] == "relationship")
-    assert rel["recordDetails"]["subject"] == entity["statementId"]
-    assert rel["recordDetails"]["interestedParty"] == person["statementId"]
+    assert rel["recordDetails"]["subject"] == entity["recordId"]
+    assert rel["recordDetails"]["interestedParty"] == person["recordId"]
 
 
 # ---------------------------------------------------------------------------
@@ -419,7 +419,7 @@ def test_one_officer_id_on_two_boards_is_one_person_with_two_relationships() -> 
     # Two appointments, one for each company, both pointing at that person.
     rels = _director_rels(bundle)
     assert len(rels) == 2
-    assert {r["recordDetails"]["interestedParty"] for r in rels} == {persons[0]["statementId"]}
+    assert {r["recordDetails"]["interestedParty"] for r in rels} == {persons[0]["recordId"]}
     assert len({r["recordDetails"]["subject"] for r in rels}) == 2
 
 
@@ -485,9 +485,9 @@ def test_person_key_matches_the_officer_appointments_path() -> None:
             "appointments": {"name": "Jane SMITH", "items": []},
         }
     )
-    company_sid = _persons(company)[0]["statementId"]
+    company_sid = _persons(company)[0]["recordId"]
     officer_sid = [s for s in officer.statements if s["recordType"] == "person"][0][
-        "statementId"
+        "recordId"
     ]
     assert company_sid == officer_sid
 

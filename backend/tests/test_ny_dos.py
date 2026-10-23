@@ -469,7 +469,7 @@ class TestMapper:
 
     def test_the_ceo_person_id_is_the_one_the_history_tab_points_at(self):
         person = _by_type(list(map_ny_dos(_bundle("corning"))), "person")[0]
-        assert person["statementId"] == ny_ceo_statement_id("49779", "WENDELL P WEEKS")
+        assert person["recordId"] == ny_ceo_statement_id("49779", "WENDELL P WEEKS")
 
     def test_an_llc_has_no_people(self):
         assert _by_type(list(map_ny_dos(_bundle("alta"))), "person") == []
@@ -501,8 +501,8 @@ class TestMapper:
         assert list(map_ny_dos(bundle)) == []
 
     def test_statement_ids_are_stable_across_runs(self):
-        a = [s["statementId"] for s in map_ny_dos(_bundle("maybank"))]
-        b = [s["statementId"] for s in map_ny_dos(_bundle("maybank"))]
+        a = [s["recordId"] for s in map_ny_dos(_bundle("maybank"))]
+        b = [s["recordId"] for s in map_ny_dos(_bundle("maybank"))]
         assert a == b
 
 

@@ -11,8 +11,10 @@ from typing import Any, Iterable
 from .. import liveness as _liveness
 from ..annotations import annotate, pointer, transformation
 from ..statements import SOURCE_NAMES, _addr, dated_by_cut, make_entity_statement
+from ..statements import content_addressed
 
 
+@content_addressed
 def map_jar_lithuania(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Every statement dated by the register's cut (Phase 315). See
     ``_map_jar_lithuania`` for the mapping."""

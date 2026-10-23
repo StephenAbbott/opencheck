@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..statements import (
+    content_addressed,
     BODSBundle,
     _addr,
     _stable_id,
@@ -115,6 +116,7 @@ def reports_exit(reporter: dict[str, Any]) -> bool:
     return percent == 0
 
 
+@content_addressed
 def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
     """Map a SEC EDGAR 13D/13G bundle to BODS v0.4.
 
@@ -204,7 +206,7 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
         statement_date=latest_filed,
     )
     result.statements.append(subject_entity)
-    subject_sid = subject_entity["statementId"]
+    subject_sid = subject_entity["recordId"]
 
     # --- Reporters ---
     for filing in filings:
@@ -273,7 +275,7 @@ def map_sec_edgar(bundle: dict[str, Any]) -> BODSBundle:
             party_type = "entity"
 
         result.statements.append(reporter_stmt)
-        party_sid = reporter_stmt["statementId"]
+        party_sid = reporter_stmt["recordId"]
 
         # Build interests — always at least a bare shareholding entry.
         shareholding: dict[str, Any] = {

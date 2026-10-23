@@ -31,27 +31,51 @@ def _canonical(stmt: dict[str, Any]) -> str:
     return json.dumps(stmt, sort_keys=True, ensure_ascii=False, default=str)
 
 
+_PARTY_TYPES = frozenset({"entity", "person"})
+
+
+def _dedupe_key(stmt: dict[str, Any]) -> str | None:
+    """One statement per *record* for a party, per statementId otherwise.
+
+    Since statementIds became content-addressed (the record-ID ticket's phase
+    B) a party mapped twice with slightly different details — a person on two
+    of a register's lists, an officer who is also a PSC — carries two
+    statementIds under one recordId. Deduping on the recordId keeps exactly
+    what deduping on the statementId kept while the two were equal: the first
+    mapping of each party, in the mapper's order. A relationship keeps its
+    statementId key: a closed record beside the open one it replaced is two
+    statements of one record, and both are published (Phase 317).
+    """
+    if stmt.get("recordType") in _PARTY_TYPES:
+        rid = stmt.get("recordId")
+        if isinstance(rid, str) and rid:
+            return rid
+    sid = stmt.get("statementId")
+    return sid if isinstance(sid, str) and sid else None
+
+
 def unique_statements(statements: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    """``statements`` with every repeated statementId after the first dropped."""
+    """``statements`` with every repeated party (by recordId) or repeated
+    statementId after the first dropped."""
     out: list[dict[str, Any]] = []
     seen: dict[str, dict[str, Any]] = {}
     differing = 0
     for stmt in statements:
-        sid = stmt.get("statementId") if isinstance(stmt, dict) else None
-        if not sid:
+        key = _dedupe_key(stmt) if isinstance(stmt, dict) else None
+        if not key:
             out.append(stmt)
             continue
-        first = seen.get(sid)
+        first = seen.get(key)
         if first is None:
-            seen[sid] = stmt
+            seen[key] = stmt
             out.append(stmt)
             continue
         if first is not stmt and _canonical(first) != _canonical(stmt):
             differing += 1
     if differing:
         _LOG.warning(
-            "unique_statements: %d statement(s) reused an existing statementId "
-            "with different content; the first was kept.",
+            "unique_statements: %d statement(s) repeated a record with different "
+            "content; the first was kept.",
             differing,
         )
     return out

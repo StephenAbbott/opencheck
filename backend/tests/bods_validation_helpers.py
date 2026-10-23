@@ -47,6 +47,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from opencheck.bods.refs import resolver
+
 # ---------------------------------------------------------------------------
 # BODS v0.4 valid interest type codelist
 #
@@ -156,6 +158,9 @@ def check_unreferenced_entities(stmts: list[dict]) -> list[tuple[str, str]]:
     their own entity statement for the same company with different IDs, where
     only one of the duplicates gets connected to a relationship.
     """
+    # A reference is a recordId (BODS v0.4); resolve it to the statementId
+    # the result names, as every consumer does (Phase 210).
+    resolve = resolver(stmts)
     referenced: set[str] = set()
     for s in stmts:
         if s.get("recordType") != "relationship":
@@ -164,7 +169,7 @@ def check_unreferenced_entities(stmts: list[dict]) -> list[tuple[str, str]]:
         for field in ("subject", "interestedParty"):
             val = rd.get(field)
             if isinstance(val, str):
-                referenced.add(val)
+                referenced.add(resolve(val))
 
     result: list[tuple[str, str]] = []
     for s in stmts:
@@ -219,12 +224,13 @@ def connected_components(stmts: list[dict]) -> list[frozenset[str]]:
         if sid:
             adj.setdefault(sid, set())
 
+    resolve = resolver(stmts)  # a reference is a recordId; nodes are statementIds
     for s in stmts:
         if s.get("recordType") != "relationship":
             continue
         rd = s.get("recordDetails") or {}
-        subj = rd.get("subject")
-        ip = rd.get("interestedParty")
+        subj = resolve(rd.get("subject"))
+        ip = resolve(rd.get("interestedParty"))
         rel_id = s.get("statementId")
         if rel_id:
             adj.setdefault(rel_id, set())

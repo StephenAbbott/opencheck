@@ -454,9 +454,10 @@ def test_export_subsidiaries_opt_in_merges_and_dedupes(
 
     r = client.get("/export", params={"lei": _LEI, "format": "json", "subsidiaries": "true"})
     assert r.status_code == 200
-    ids = [s["statementId"] for s in json.loads(r.content)]
+    ids = [s.get("statementId") for s in json.loads(r.content)]
     assert "SUB-CHILD-1" in ids and "SUB-REL-1" in ids   # children merged in
-    assert ids.count(subj_id) == 1                        # subject not duplicated
+    rids = [s.get("recordId") for s in json.loads(r.content)]
+    assert rids.count(subj_id) == 1                        # subject not duplicated
 
 
 def test_export_subsidiaries_default_off(
@@ -474,7 +475,7 @@ def test_export_subsidiaries_default_off(
 
     r = client.get("/export", params={"lei": _LEI, "format": "json"})
     assert r.status_code == 200
-    assert "X" not in [s["statementId"] for s in json.loads(r.content)]
+    assert "X" not in [s["recordId"] for s in json.loads(r.content)]
     assert calls["n"] == 0
 
 

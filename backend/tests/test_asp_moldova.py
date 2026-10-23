@@ -518,7 +518,7 @@ async def test_mapper_one_person_for_director_and_founder(index: Path) -> None:
     assert len(people) == 1  # BAKARJI SVETLANA, administrator and 40% founder
     rels_to_her = [
         r for r in _relationships(statements)
-        if r["recordDetails"]["interestedParty"] == people[0]["statementId"]
+        if r["recordDetails"]["interestedParty"] == people[0]["recordId"]
     ]
     assert len(rels_to_her) == 2
 

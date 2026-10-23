@@ -57,14 +57,14 @@ def _wikidata_bundle() -> list[dict]:
     rels = [
         make_relationship_statement(
             source_id="wikidata", local_id="r-board",
-            subject_statement_id=subject["statementId"],
-            interested_party_statement_id=person["statementId"],
+            subject_statement_id=subject["recordId"],
+            interested_party_statement_id=person["recordId"],
             interests=[{"type": "boardMember"}],
         ),
         make_relationship_statement(
             source_id="wikidata", local_id="r-owner",
-            subject_statement_id=subject["statementId"],
-            interested_party_statement_id=owner["statementId"],
+            subject_statement_id=subject["recordId"],
+            interested_party_statement_id=owner["recordId"],
             interested_party_type="entity",
             interests=[{"type": "shareholding", "share": {"exact": 50.1}}],
         ),
@@ -72,8 +72,8 @@ def _wikidata_bundle() -> list[dict]:
         # network's subject is still Ørsted.
         make_relationship_statement(
             source_id="wikidata", local_id="r-child",
-            subject_statement_id=child["statementId"],
-            interested_party_statement_id=subject["statementId"],
+            subject_statement_id=child["recordId"],
+            interested_party_statement_id=subject["recordId"],
             interested_party_type="entity",
             interests=[{"type": "shareholding", "share": {"exact": 100}}],
         ),
@@ -218,14 +218,14 @@ def test_a_chain_names_the_subject_at_every_layer() -> None:
     top = _entity("companies_house", "3", "TOP LTD", [{"scheme": "GB-COH", "id": "00000003"}])
     lower = make_relationship_statement(
         source_id="companies_house", local_id="r1",
-        subject_statement_id=subject["statementId"],
-        interested_party_statement_id=middle["statementId"], interested_party_type="entity",
+        subject_statement_id=subject["recordId"],
+        interested_party_statement_id=middle["recordId"], interested_party_type="entity",
         interests=[{"type": "shareholding"}],
     )
     upper = make_relationship_statement(
         source_id="companies_house", local_id="r2",
-        subject_statement_id=middle["statementId"],
-        interested_party_statement_id=top["statementId"], interested_party_type="entity",
+        subject_statement_id=middle["recordId"],
+        interested_party_statement_id=top["recordId"], interested_party_type="entity",
         interests=[{"type": "shareholding"}],
     )
     assert upper["declarationSubject"] == middle["recordId"]
@@ -255,8 +255,8 @@ def test_stamp_merged_stamps_each_source_to_its_own_subject_statement() -> None:
     ch_psc = make_person_statement(source_id="companies_house", local_id="psc-1", full_name="A Person")
     ch_rel = make_relationship_statement(
         source_id="companies_house", local_id="r",
-        subject_statement_id=ch_subject["statementId"],
-        interested_party_statement_id=ch_psc["statementId"],
+        subject_statement_id=ch_subject["recordId"],
+        interested_party_statement_id=ch_psc["recordId"],
         interests=[{"type": "shareholding"}],
     )
     merged = [gleif_subject, gleif_parent, ch_subject, ch_psc, ch_rel]
@@ -329,8 +329,8 @@ async def test_safe_deepen_stamps_a_register_bundle_by_the_hit_id(monkeypatch, t
     ]
     bundle.append(make_relationship_statement(
         source_id="companies_house", local_id="r",
-        subject_statement_id=bundle[0]["statementId"],
-        interested_party_statement_id=bundle[1]["statementId"],
+        subject_statement_id=bundle[0]["recordId"],
+        interested_party_statement_id=bundle[1]["recordId"],
         interests=[{"type": "shareholding"}],
     ))
 

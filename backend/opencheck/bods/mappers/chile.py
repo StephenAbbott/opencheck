@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from ..statements import make_entity_statement
+from ..statements import content_addressed
 
 
 def _chilecompra_clp(value: int) -> str:
@@ -25,6 +26,7 @@ def _chilecompra_clp(value: int) -> str:
     return f"CLP {value:,}"
 
 
+@content_addressed
 def map_chilecompra(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a ChileCompra fetch bundle to one BODS entity statement."""
     if not bundle or bundle.get("is_stub") or bundle.get("not_found"):

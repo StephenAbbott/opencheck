@@ -89,10 +89,17 @@ def _anchor_replacements(bods: list[dict[str, Any]], key: str, anchor: str) -> d
 
     # The GLEIF subject statement is keyed on the LEI itself; a register hop's
     # subject is found through its identifiers like every other statement.
+    # Both ids of each subject statement are rewritten: since the
+    # content-addressed statementId phase a relationship names its party by
+    # recordId, so the recordId is what the hop's edges carry, and the
+    # statementId is what the canvas keys its node on. The structured remap
+    # (its own ticket) replaces this blunt table.
     subject_ids = {_stable_id("gleif", "entity", norm)} if _LEI_SHAPE.match(norm) else set()
     for s in bods:
         if s.get("recordType") == "entity" and (_entity_idents(s) & subj_idents):
             subject_ids.add(s["statementId"])
+            if s.get("recordId"):
+                subject_ids.add(s["recordId"])
     subject_ids.discard(anchor)
     return {sid: anchor for sid in subject_ids}
 
@@ -288,7 +295,7 @@ async def _register_one_layer(
     # Phase 247: one PEP chip per upstream record here too. The own-role label
     # is left to the lookup, which knows its subject.
     signals = _merge_signals(
-        bundle_signals, merge_derived_pep([s.to_dict() for s in cross])
+        bundle_signals, merge_derived_pep([s.to_dict() for s in cross]), bods=bods
     )
     repl = _anchor_replacements(bods, local_id, anchor)
     return (

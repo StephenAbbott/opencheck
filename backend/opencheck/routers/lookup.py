@@ -73,6 +73,7 @@ from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
 from ..risk import merge_subsidiary_listed_jurisdiction as _risk_merge_subsidiary_listed
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
 from ..bods.declaration import stamp_bundle, stamp_merged
+from ..bods.refs import resolve_signal_references
 from ..bods.state_bodies import classify_government_entities
 from ..ratelimit import default_tier, limiter, lookup_tier
 from ..sources import REGISTRY, SearchKind, SourceHit, SourceInfo
@@ -590,7 +591,9 @@ async def deepen(
     bods = stamp_bundle(bods, source_id=source, hit_id=hit_id)
     info = adapter.info
     license_notice = _license_notice_for(info, raw)
-    signals = [s.to_dict() for s in assess_bundle(source, raw, bods, hit_id=hit_id)]
+    signals = resolve_signal_references(
+        [s.to_dict() for s in assess_bundle(source, raw, bods, hit_id=hit_id)], bods
+    )
 
     # Sources whose licence forbids raw re-publication (OpenCorporates) return a
     # redaction notice in place of the raw bundle; the BODS output is unaffected.
@@ -714,7 +717,7 @@ async def _build_report(
     )
 
     all_signals = _merge_signals(
-        search_signals, deepen_signals, related, icij_signals
+        search_signals, deepen_signals, related, icij_signals, bods=bods_all
     )
 
     return ReportResponse(
@@ -1389,7 +1392,9 @@ def _source_budget(source_id: str) -> float:
 
 
 def _merge_signals(
-    *signal_lists: list[dict[str, Any]], record_as: str | None = None
+    *signal_lists: list[dict[str, Any]],
+    record_as: str | None = None,
+    bods: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Deduplicate risk signals: structural codes collapse globally,
     statement-scoped codes key on the subject statement, the rest on
@@ -1408,9 +1413,16 @@ def _merge_signals(
     denominator with debugging runs and quietly corrupt the one ratio the
     instrumentation exists to produce. An opt-in default also means a
     future caller cannot skew the numbers merely by existing.
+
+    ``bods`` is the graph the signals are about: every evidence reference
+    is resolved to a statementId through ``resolve_signal_references``
+    before the keys are built, so a finding the engine anchored on a
+    predicted recordId dedupes with one anchored on the statement itself.
     """
     merged: dict[tuple, dict[str, Any]] = {}
     for signals in signal_lists:
+        if bods is not None:
+            signals = resolve_signal_references(signals, bods)
         for sig in signals:
             if sig["code"] in _STRUCTURAL_SIGNAL_CODES:
                 key: tuple = (sig["code"],)
@@ -2198,6 +2210,7 @@ async def _lookup_pipeline(
         [consistency_signal] if consistency_signal else [],
         [sanctions_ownership_signal] if sanctions_ownership_signal else [],
         record_as="lookup",
+        bods=bods_all,
     )
     # The degradation counters are recorded next to the signal counters for
     # the same reason degraded_sources rides on the same event as the
@@ -2622,6 +2635,7 @@ async def _register_lookup_pipeline(
         [consistency_signal] if consistency_signal else [],
         [sanctions_ownership_signal] if sanctions_ownership_signal else [],
         record_as="lookup",
+        bods=bods_all,
     )
     signalstats.record_degraded(degraded_dicts)
     signalstats.record_lookup()
@@ -3302,7 +3316,9 @@ async def _safe_deepen(
     bods = classify_government_entities(bods, source_id=source_id)  # Phase 240, as in _deepen
     bods = stamp_bundle(bods, source_id=source_id, ref=subject, hit_id=hit_id)
     license_notice = _license_notice_for(adapter.info, raw)
-    signals = [s.to_dict() for s in assess_bundle(source_id, raw, bods, hit_id=hit_id)]
+    signals = resolve_signal_references(
+        [s.to_dict() for s in assess_bundle(source_id, raw, bods, hit_id=hit_id)], bods
+    )
     return {
         "raw": raw,
         "bods": bods,

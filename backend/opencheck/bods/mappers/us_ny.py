@@ -9,6 +9,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _stable_id,
     make_entity_statement,
@@ -55,6 +56,7 @@ def _ny_entity_details(summary: dict[str, Any]) -> str:
     return text
 
 
+@content_addressed
 def map_ny_dos(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a NyDosAdapter bundle to BODS v0.4 statements.
 
@@ -139,7 +141,7 @@ def map_ny_dos(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         since=summary.get("status_since") if klass == _liveness.TERMINAL else None,
     )
     yield subject_stmt
-    subject_id: str = subject_stmt["statementId"]
+    subject_id: str = subject_stmt["recordId"]
 
     ceo_url = record_url(dos_id, "2tms-hftb")
     for person in summary.get("ceos") or []:

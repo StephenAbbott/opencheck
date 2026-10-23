@@ -178,9 +178,9 @@ def _interest_details(statements: list[dict]) -> dict[str, str]:
     for s in statements:
         rd = s.get("recordDetails", {})
         if s["recordType"] == "entity":
-            names[s["statementId"]] = rd["name"]
+            names[s["recordId"]] = rd["name"]
         elif s["recordType"] == "person":
-            names[s["statementId"]] = rd["names"][0]["fullName"]
+            names[s["recordId"]] = rd["names"][0]["fullName"]
     return {
         names[s["recordDetails"]["interestedParty"]]: s["recordDetails"]["interests"][0].get("details", "")
         for s in statements

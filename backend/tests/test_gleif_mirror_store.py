@@ -536,6 +536,11 @@ def test_map_gleif_cannot_tell_a_store_record_from_a_live_one(store: ep.EntitySt
         i for i in live_ids if i["scheme"] not in mapping_file_schemes
     ]
     assert len(live_ids) > len(from_live["recordDetails"]["identifiers"])  # the gap is real
+    # The statementId is content-addressed, so the identifiers trimmed above
+    # moved it; the record is the same.
+    assert from_store["recordId"] == from_live["recordId"]
+    from_store.pop("statementId")
+    from_live.pop("statementId")
     assert from_store == from_live
     # And it is a rich statement, not two empty ones agreeing with each other.
     ids = {i["scheme"]: i["id"] for i in from_store["recordDetails"]["identifiers"]}

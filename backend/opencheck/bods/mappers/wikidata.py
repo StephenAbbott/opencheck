@@ -16,6 +16,7 @@ from .. import liveness as _liveness
 from ..annotations import annotate, commenting, pointer
 from ..officer_roles import mark_officer
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     BODSBundle,
     _stable_id,
@@ -135,7 +136,7 @@ def _emit_wikidata_owner(
         statement_date=reference_retrieved,
         local_id=f"{subject_qid}-owner-{oqid}",
         subject_statement_id=subject_statement_id,
-        interested_party_statement_id=owner_stmt["statementId"],
+        interested_party_statement_id=owner_stmt["recordId"],
         interested_party_type=ip_type,
         interests=[interest],
         source_url=(ref0.get("url") or subject_source_url),
@@ -149,6 +150,7 @@ def _emit_wikidata_owner(
     result.statements.append(relationship)
 
 
+@content_addressed
 def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
     """Map a Wikidata fetch bundle to BODS statements.
 
@@ -268,7 +270,7 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
     # with an indicative share and the underlying reference (see
     # docs/wikidata-ownership.md). Falls back to the legacy parent_orgs path for
     # bundles produced before the ownership query existed.
-    subject_statement_id: str = entity["statementId"]
+    subject_statement_id: str = entity["recordId"]
     controlling_owners = summary.get("controlling_owners")
     if controlling_owners:
         for owner in controlling_owners:
@@ -303,7 +305,7 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
                 source_id="wikidata",
                 local_id=f"{qid}-parent-{parent_qid}",
                 subject_statement_id=subject_statement_id,
-                interested_party_statement_id=parent_entity["statementId"],
+                interested_party_statement_id=parent_entity["recordId"],
                 interested_party_type="entity",
                 interests=[
                     {
@@ -378,7 +380,7 @@ def map_wikidata(bundle: dict[str, Any]) -> BODSBundle:
             source_id="wikidata",
             local_id=f"{qid}-role-{person_qid}",
             subject_statement_id=subject_statement_id,
-            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_statement_id=person_stmt["recordId"],
             interested_party_type="person",
             interests=interests,
             source_url=source_url,
@@ -828,6 +830,7 @@ def _oc_build_interests_from_relationship(rel: dict[str, Any]) -> list[dict[str,
     return interests
 
 
+@content_addressed
 def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
     """Map an OpenCorporates fetch bundle to BODS v0.4 statements.
 
@@ -957,7 +960,7 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
         raw=company.get("current_status") or company.get("company_status"),
         since=oc_dissolved,
     )
-    subject_stmt_id: str = subject_stmt["statementId"]
+    subject_stmt_id: str = subject_stmt["recordId"]
     result.extend([subject_stmt])
 
     # Track emitted entity statementIds to avoid duplicates across officers
@@ -993,7 +996,7 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
                 name=officer_name,
                 source_url=oc_url,
             )
-            ip_sid: str = corp_stmt["statementId"]
+            ip_sid: str = corp_stmt["recordId"]
             if ip_sid not in seen_entity_sids:
                 result.extend([corp_stmt])
                 seen_entity_sids.add(ip_sid)
@@ -1018,7 +1021,7 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
                 nationalities=nationalities,
                 source_url=oc_url,
             )
-            ip_sid = person_stmt["statementId"]
+            ip_sid = person_stmt["recordId"]
             result.extend([person_stmt])
             ip_type = "person"
 
@@ -1102,8 +1105,8 @@ def map_opencorporates(bundle: dict[str, Any]) -> BODSBundle:
             # controlled/owned) ← interestedParty (the owner/controller).
             # OC relationship direction: source controls/owns target.
             # → subject = target, interestedParty = source.
-            subj_sid = tgt_stmt["statementId"]
-            party_sid = src_stmt["statementId"]
+            subj_sid = tgt_stmt["recordId"]
+            party_sid = src_stmt["recordId"]
 
             if subj_sid not in seen_entity_sids:
                 result.extend([tgt_stmt])

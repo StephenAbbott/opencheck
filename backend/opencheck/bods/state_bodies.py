@@ -39,6 +39,7 @@ import logging
 from typing import Any
 
 from . import annotations as _ann
+from .statements import refresh_statement_id as _refresh_statement_id
 
 log = logging.getLogger(__name__)
 
@@ -156,5 +157,8 @@ def classify_government_entities(
                 creation_date=creation_date,
             ),
         )
+        # The type changed, so the content-addressed id changes with it
+        # (phase B); this runs before the signals read the bundle.
+        _refresh_statement_id(stmt)
         out[i] = stmt
     return out

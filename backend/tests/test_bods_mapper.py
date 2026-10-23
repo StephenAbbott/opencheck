@@ -41,14 +41,14 @@ def test_entity_statement_shape() -> None:
         "code": "GB",
     }
     assert s["recordDetails"]["name"] == "BP P.L.C."
-    assert s["statementId"].startswith("opencheck-")
+    assert s["recordId"].startswith("opencheck-")
     assert s["recordId"].startswith("opencheck-")
     # statementId == recordId by design: bods-dagre v0.4 resolves graph edges
     # by looking up the relationship's referenced id against each node's recordId.
     # Since BODS relationships reference by statementId, the two must be equal
     # for the lookup to succeed.  Opencheck never versions records so the
     # semantic distinction doesn't apply.
-    assert s["statementId"] == s["recordId"]
+    assert s["recordId"] == s["recordId"]
 
 
 def test_person_statement_shape() -> None:
@@ -72,7 +72,7 @@ def test_stable_ids_are_deterministic() -> None:
     b = make_entity_statement(
         source_id="companies_house", local_id="00102498", name="BP P.L.C."
     )
-    assert a["statementId"] == b["statementId"]
+    assert a["recordId"] == b["recordId"]
     assert a["recordId"] == b["recordId"]
 
 
@@ -86,8 +86,8 @@ def test_relationship_statement_shape() -> None:
     rel = make_relationship_statement(
         source_id="companies_house",
         local_id="00102498:p1",
-        subject_statement_id=entity["statementId"],
-        interested_party_statement_id=person["statementId"],
+        subject_statement_id=entity["recordId"],
+        interested_party_statement_id=person["recordId"],
         interests=[
             {
                 "type": "shareholding",
@@ -98,8 +98,8 @@ def test_relationship_statement_shape() -> None:
         ],
     )
     rd = rel["recordDetails"]
-    assert rd["subject"] == entity["statementId"]
-    assert rd["interestedParty"] == person["statementId"]
+    assert rd["subject"] == entity["recordId"]
+    assert rd["interestedParty"] == person["recordId"]
     assert rd["interests"][0]["type"] == "shareholding"
 
 
@@ -241,7 +241,7 @@ def test_psc_statements_map_to_unspecified_ooc() -> None:
     assert unident["recordDetails"]["interests"][0]["type"] == "unknownInterest"
 
     company = next(s for s in statements if s["recordType"] == "entity")
-    assert no_bo["recordDetails"]["subject"] == company["statementId"]
+    assert no_bo["recordDetails"]["subject"] == company["recordId"]
 
 
 def test_individual_psc_shareholding_interest() -> None:
@@ -249,7 +249,7 @@ def test_individual_psc_shareholding_interest() -> None:
     rels = [s for s in bundle if s["recordType"] == "relationship"]
     # Find the relationship pointing at the individual Jane Smith.
     people = {
-        s["statementId"]
+        s["recordId"]
         for s in bundle
         if s["recordType"] == "person"
     }
@@ -289,7 +289,7 @@ def test_ceased_pscs_emit_closed_record() -> None:
     c = closed[0]
     # Stable recordId vs distinct statementId. BODS 0.4 links a record's versions
     # via the shared recordId; the removed replacesStatements field must NOT appear.
-    assert c["recordId"] != c["statementId"]
+    assert c["statementId"] != c["recordId"]
     assert "replacesStatements" not in c, "replacesStatements was removed in BODS 0.4"
     # Cessation date stamped on every interest and, as the register's own
     # declaration of the closure, on statementDate. NOT on publicationDate:
@@ -374,8 +374,8 @@ def test_related_companies_connected_statementids() -> None:
     # Collect entity statementIds and the interestedParty refs in relationships.
     # In BODS v0.4, subject/interestedParty are bare strings; resolve entity refs
     # by cross-referencing against the known entity statement IDs.
-    entity_sids = {s["statementId"] for s in statements if s["recordType"] == "entity"}
-    person_sids = {s["statementId"] for s in statements if s["recordType"] == "person"}
+    entity_sids = {s["recordId"] for s in statements if s["recordType"] == "entity"}
+    person_sids = {s["recordId"] for s in statements if s["recordType"] == "person"}
     entity_ip_refs = {
         s["recordDetails"]["interestedParty"]
         for s in statements
@@ -396,7 +396,7 @@ def test_related_companies_connected_statementids() -> None:
     from opencheck.bods.mapper import _stable_id
     acme_sid = _stable_id("companies_house", "entity", "12345678")
     assert acme_sid in entity_sids, "Acme Holdings entity statement missing"
-    assert sum(1 for s in statements if s["statementId"] == acme_sid) == 1, (
+    assert sum(1 for s in statements if s["recordId"] == acme_sid) == 1, (
         "Duplicate entity statement for Acme Holdings"
     )
 
@@ -408,7 +408,7 @@ def test_related_companies_no_duplicates() -> None:
         "12345678": _make_related_bundle("12345678", "Acme Holdings Ltd", [])
     }
     bundle = map_companies_house(root)
-    sids = [s["statementId"] for s in bundle]
+    sids = [s["recordId"] for s in bundle]
     assert len(sids) == len(set(sids)), f"Duplicate statementIds: {[s for s in sids if sids.count(s) > 1]}"
 
 

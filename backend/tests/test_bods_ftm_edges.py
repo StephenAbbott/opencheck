@@ -123,8 +123,8 @@ def test_directorship_director_person_is_interested_party_of_org() -> None:
     rel = rels[0]
     # Subject = the organisation; interested party = the person (subject
     # payload) holding the directorship.
-    assert rel["subject"] == org["statementId"]
-    person_sid = bundle.statements[0]["statementId"]
+    assert rel["subject"] == org["recordId"]
+    person_sid = bundle.statements[0]["recordId"]
     assert rel["interestedParty"] == person_sid
 
 
@@ -278,8 +278,8 @@ def test_representation_maps_to_nominee() -> None:
     (rel,) = _rels(bundle)
     assert rel["interests"][0]["type"] == "nominee"
     # Agent (the subject) is the interested party; client is the subject.
-    assert rel["subject"] == client["statementId"]
-    assert rel["interestedParty"] == bundle.statements[0]["statementId"]
+    assert rel["subject"] == client["recordId"]
+    assert rel["interestedParty"] == bundle.statements[0]["recordId"]
 
 
 def test_unknown_link_maps_to_unknown_interest() -> None:
@@ -359,8 +359,8 @@ def test_edge_with_both_sides_nested_links_the_two_parties() -> None:
     asset = _statement_by_name(bundle, "Asset AS")
     assert owner is not None and asset is not None
     (rel,) = _rels(bundle)
-    assert rel["interestedParty"] == owner["statementId"]
-    assert rel["subject"] == asset["statementId"]
+    assert rel["interestedParty"] == owner["recordId"]
+    assert rel["subject"] == asset["recordId"]
     assert rel["interests"][0]["share"] == {"exact": 40.0}
 
 

@@ -197,8 +197,8 @@ def test_map_gleif_child_relationship_direction() -> None:
     rel = next(s for s in stmts if s["recordType"] == "relationship")
     rd = rel["recordDetails"]
     # Child is subject; Parent (queried entity) is interestedParty.
-    assert rd["subject"] == child_entity["statementId"]
-    assert rd["interestedParty"] == parent_entity["statementId"]
+    assert rd["subject"] == child_entity["recordId"]
+    assert rd["interestedParty"] == parent_entity["recordId"]
 
 
 def test_map_gleif_child_interest_type() -> None:
@@ -614,7 +614,7 @@ def test_map_gleif_exception_statements_carry_oo_style_annotation() -> None:
             and "LEI00000000000000022" in a.get("description", "")
             and a.get("statementPointerTarget") == "/recordDetails"
             for a in anns
-        ), stmt["statementId"]
+        ), stmt["recordId"]
 
 
 # ---------------------------------------------------------------------

@@ -13,6 +13,7 @@ import pycountry
 from .. import liveness as _liveness
 from ..annotations import annotate, entry_date_as_start
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     make_entity_statement,
@@ -26,6 +27,7 @@ from ..statements import (
 # ----------------------------------------------------------------------
 
 
+@content_addressed
 def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an AresAdapter fetch bundle to BODS v0.4 statements.
 
@@ -133,7 +135,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         since=str(entity_rec.get("datumZaniku") or "")[:10] or None,
     )
     yield entity_stmt
-    entity_stmt_id: str = entity_stmt["statementId"]
+    entity_stmt_id: str = entity_stmt["recordId"]
 
     # ----------------------------------------------------------------
     # 2.  Owners (shareholders / partners)
@@ -180,7 +182,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 source_url=source_url,
             )
             yield person_stmt
-            interested_party_id = person_stmt["statementId"]
+            interested_party_id = person_stmt["recordId"]
             interested_party_type = "person"
 
         else:
@@ -223,7 +225,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 source_url=source_url,
             )
             yield o_entity_stmt
-            interested_party_id = o_entity_stmt["statementId"]
+            interested_party_id = o_entity_stmt["recordId"]
             interested_party_type = "entity"
 
         # Relationship: owner → subject entity
@@ -339,7 +341,7 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_id="ares",
             local_id=dir_rel_local_id,
             subject_statement_id=entity_stmt_id,
-            interested_party_statement_id=dir_stmt["statementId"],
+            interested_party_statement_id=dir_stmt["recordId"],
             interested_party_type="person" if director.get("type") == "person" else "entity",
             interests=[dir_interest],
             source_url=source_url,

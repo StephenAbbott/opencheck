@@ -916,7 +916,7 @@ def _by_type(statements: list[dict[str, Any]], kind: str) -> list[dict[str, Any]
 
 def _interests(statements: list[dict[str, Any]], party_name: str) -> list[dict[str, Any]]:
     ids = {
-        s["statementId"] for s in statements
+        s["recordId"] for s in statements
         if (s["recordType"] == "entity" and s["recordDetails"].get("name") == party_name)
         or (s["recordType"] == "person"
             and any(n.get("fullName") == party_name for n in s["recordDetails"].get("names", [])))
@@ -1205,9 +1205,9 @@ async def test_the_chain_is_one_graph_with_the_register_record_for_each_company(
     assert sorted(i["type"] for i in kalev) == ["boardMember", "shareholding"]
     assert [i["share"]["exact"] for i in kalev if i["type"] == "shareholding"] == [60.0]
     rels = _by_type(statements, "relationship")
-    haude_rels = [r for r in rels if r["recordDetails"]["subject"] == haude["statementId"]]
+    haude_rels = [r for r in rels if r["recordDetails"]["subject"] == haude["recordId"]]
     assert len(haude_rels) == 3  # Kalev's share, Kalev's board seat, the holding's 40% (the cycle)
-    holding_up = [r for r in haude_rels if r["recordDetails"]["interestedParty"] == entities['Holding "Põhjala" OÜ']["statementId"]]
+    holding_up = [r for r in haude_rels if r["recordDetails"]["interestedParty"] == entities['Holding "Põhjala" OÜ']["recordId"]]
     assert holding_up and holding_up[0]["recordDetails"]["interests"][0]["share"]["exact"] == 40.0
     assert {s["statementDate"] for s in statements} == {CUT}, "the chain is dated by the same cut"
 

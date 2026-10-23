@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _country_obj,
     _stable_id,
@@ -270,6 +271,7 @@ def _cac_owner_statements(
         )
 
 
+@content_addressed
 def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CacNigeriaAdapter bundle to BODS v0.4 statements.
 
@@ -322,7 +324,7 @@ def map_cac_nigeria(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         raw=(record.get("status") or "").strip() or None,
     )
     yield subject_stmt
-    subject_id: str = subject_stmt["statementId"]
+    subject_id: str = subject_stmt["recordId"]
 
     # ── 2. Owners + relationships (shared with eiti_bo — Phase 231) ──────
     yield from _cac_owner_statements(

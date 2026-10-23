@@ -109,10 +109,10 @@ def test_relationship_is_senior_managing_official_with_an_entity_party() -> None
     llp, *members = _by_type(stmts, "entity")
     rels = _by_type(stmts, "relationship")
     assert len(rels) == 2
-    member_ids = {m["statementId"] for m in members}
+    member_ids = {m["recordId"] for m in members}
     for rel in rels:
         rd = rel["recordDetails"]
-        assert rd["subject"] == llp["statementId"]
+        assert rd["subject"] == llp["recordId"]
         assert rd["interestedParty"] in member_ids
         (interest,) = rd["interests"]
         assert interest["type"] == "seniorManagingOfficial"
@@ -133,9 +133,9 @@ def test_one_corporate_member_of_two_llps_is_one_entity() -> None:
     b = _statements(_bundle([member], "OC369315", "BENTCARD IMPORT LLP"))
     ent_a = next(e for e in _by_type(a, "entity") if e["recordDetails"]["name"] == "SHARED NOMINEE LTD")
     ent_b = next(e for e in _by_type(b, "entity") if e["recordDetails"]["name"] == "SHARED NOMINEE LTD")
-    assert ent_a["statementId"] == ent_b["statementId"]
+    assert ent_a["recordId"] == ent_b["recordId"]
     # The appointment stays company-scoped.
-    assert _by_type(a, "relationship")[0]["statementId"] != _by_type(b, "relationship")[0]["statementId"]
+    assert _by_type(a, "relationship")[0]["recordId"] != _by_type(b, "relationship")[0]["recordId"]
     # Leading zeros are part of the number; the place registered names the country.
     assert ent_a["recordDetails"]["identifiers"][0] == {
         "id": "096479", "scheme": "REG-SC", "schemeName": "SEYCHELLES",
@@ -210,7 +210,7 @@ def test_uk_corporate_director_is_keyed_on_its_company_number() -> None:
     assert rd["jurisdiction"] == {"name": "United Kingdom", "code": "GB"}
     assert "annotations" not in ent  # the register said UK; nothing was inferred
     root = map_companies_house(_bundle([], "02999029", "UK CORPORATE DIRECTOR LIMITED"))
-    assert ent["statementId"] == next(iter(root))["statementId"]
+    assert ent["recordId"] == next(iter(root))["recordId"]
 
 
 def test_natural_people_are_unchanged_beside_a_corporate_member() -> None:

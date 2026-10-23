@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, _addr, make_entity_statement
+from ..statements import content_addressed
 
 
 # ---------------------------------------------------------------------------
@@ -20,6 +21,7 @@ from ..statements import SOURCE_NAMES, _addr, make_entity_statement
 # beneficial owners — so this mapper produces a single entity statement.
 
 
+@content_addressed
 def map_abr_australia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Yield a BODS v0.4 entity statement for an Australian ABR entity.
 

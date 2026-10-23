@@ -233,7 +233,7 @@ async def test_one_closed_record_per_party_each_row_an_interest(index) -> None:
 
 async def test_a_current_holders_earlier_holdings_sit_on_the_same_node(index) -> None:
     statements = await _statements(await _bundle_with_history())
-    kalev_ids = {s["statementId"] for s in statements if s["recordType"] == "person"
+    kalev_ids = {s["recordId"] for s in statements if s["recordType"] == "person"
                  and s["recordDetails"]["names"][0]["fullName"] == "Kalev Kask"}
     assert len(kalev_ids) == 1, "the register's own person record joins him — one node"
     earlier = next(s for s in statements if s["recordType"] == "relationship"
@@ -250,7 +250,7 @@ async def test_former_people_are_their_own_nodes_and_officers_are_not_drawn(inde
     assert people["Jonas Petraitis"]["recordDetails"]["nationalities"] == [{"name": "Lithuania", "code": "LT"}]
     assert people["Vana Omanik"]["statementDate"] == "2016-06-30"
     vana_rels = [s for s in statements if s["recordType"] == "relationship"
-                 and s["recordDetails"]["interestedParty"] == people["Vana Omanik"]["statementId"]]
+                 and s["recordDetails"]["interestedParty"] == people["Vana Omanik"]["recordId"]]
     assert len(vana_rels) == 2, "a former shareholding and a former BO entry, one person"
     ids = former_party_ids(statements)
     assert people["Vana Omanik"]["statementId"] in ids

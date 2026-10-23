@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, _addr, make_entity_statement, record_date
+from ..statements import content_addressed
 
 
 # ----------------------------------------------------------------------
@@ -113,6 +114,7 @@ def _prh_address(company: dict[str, Any]) -> dict[str, str] | None:
     return None
 
 
+@content_addressed
 def map_prh(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a PrhAdapter fetch bundle to a BODS v0.4 entity statement.
 
