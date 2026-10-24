@@ -74,7 +74,10 @@ def test_expand_remaps_subject_onto_anchor(client, monkeypatch):
     subj = _stable_id("gleif", "entity", _LEI_A)
     ids = [s["statementId"] for s in bods]
 
-    assert subj not in ids and all(subj not in str(s) for s in bods)
+    # Reference positions only — the structured remap leaves free text as
+    # written (test_expand_structured_remap.py), so "subj not in str(s)" is no
+    # longer the contract.
+    assert subj not in ids and all(s.get("recordId") != subj for s in bods)
     rel = next(s for s in bods if s["recordType"] == "relationship")
     assert rel["recordDetails"]["subject"] == "ANCHOR-A"
     assert any(s["recordType"] == "person" for s in bods)  # owner came through

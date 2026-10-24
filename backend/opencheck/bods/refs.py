@@ -207,3 +207,169 @@ def resolve_signal_references(
         else:
             out.append({**sig, "evidence": new_evidence})
     return out
+
+
+# ---------------------------------------------------------------------------
+# Rewriting references (the structured anchor remap)
+# ---------------------------------------------------------------------------
+
+#: The top-level and ``recordDetails`` fields of a BODS statement that hold a
+#: party or record reference. FullCheck's anchor collapse (``routers/expand.py``)
+#: rewrites exactly these — never a name, an annotation sentence, ``details``
+#: or any other free text. ``subject`` / ``interestedParty`` may be a bare
+#: string or a legacy ``describedBy*`` wrapper (``_WRAPPED_KEYS``), and an
+#: ``UnspecifiedRecord`` there is left alone; ``componentRecords`` holds
+#: relationship recordIds.
+STATEMENT_REFERENCE_FIELDS: tuple[str, ...] = (
+    "statementId",
+    "recordId",
+    "declarationSubject",
+    "recordDetails/subject",
+    "recordDetails/interestedParty",
+    "recordDetails/componentRecords",
+)
+
+#: An evidence key holding one statement id, wherever it sits in ``evidence``.
+EVIDENCE_ID_KEY = "statement_id"
+#: An evidence key holding a list of statement ids, by suffix: ``statement_ids``,
+#: ``subject_statement_ids``, ``party_statement_ids``,
+#: ``relationship_statement_ids``, ``ended_relationship_statement_ids`` …
+EVIDENCE_ID_LIST_SUFFIX = "statement_ids"
+
+
+def _remap_party_value(raw: Any, repl: dict[str, str]) -> Any:
+    """A ``subject`` / ``interestedParty`` value with its reference rewritten,
+    in the shape it came in — a bare string stays bare, a legacy wrapper keeps
+    its key — or the value itself when it is an ``UnspecifiedRecord``, empty,
+    or names nothing in ``repl``."""
+    if isinstance(raw, str):
+        return repl.get(raw, raw)
+    if isinstance(raw, dict):
+        for key in _WRAPPED_KEYS:
+            value = raw.get(key)
+            if isinstance(value, str) and value in repl:
+                return {**raw, key: repl[value]}
+    return raw
+
+
+def remap_statement_references(
+    statements: Iterable[dict[str, Any]], repl: dict[str, str]
+) -> list[dict[str, Any]]:
+    """The statements with every reference in ``STATEMENT_REFERENCE_FIELDS``
+    that names a key of ``repl`` replaced by its value — ``statementId``,
+    ``recordId`` and ``declarationSubject`` on the statement, the party
+    references and ``componentRecords`` under ``recordDetails``. Nothing else
+    is read: a statement id quoted in an annotation sentence, a name or an
+    interest's ``details`` is left as written.
+
+    Statements are copied where a field changes; untouched ones are returned
+    as they are (the ``resolve_signal_references`` rule). The old
+    ``json.dumps().replace()`` remap rewrote every occurrence of an id,
+    including inside free text, and knew nothing about which fields are
+    references.
+    """
+    if not repl:
+        return list(statements)
+    out: list[dict[str, Any]] = []
+    for stmt in statements:
+        if not isinstance(stmt, dict):
+            out.append(stmt)
+            continue
+        new_stmt: dict[str, Any] | None = None
+        for field in ("statementId", "recordId", "declarationSubject"):
+            value = stmt.get(field)
+            if isinstance(value, str) and value in repl:
+                if new_stmt is None:
+                    new_stmt = dict(stmt)
+                new_stmt[field] = repl[value]
+        rd = stmt.get("recordDetails")
+        if isinstance(rd, dict):
+            new_rd: dict[str, Any] | None = None
+            for field in ("subject", "interestedParty"):
+                if field not in rd:
+                    continue
+                replacement = _remap_party_value(rd[field], repl)
+                if replacement is not rd[field]:
+                    if new_rd is None:
+                        new_rd = dict(rd)
+                    new_rd[field] = replacement
+            components = rd.get("componentRecords")
+            if isinstance(components, list) and any(
+                isinstance(c, str) and c in repl for c in components
+            ):
+                if new_rd is None:
+                    new_rd = dict(rd)
+                new_rd["componentRecords"] = [
+                    repl.get(c, c) if isinstance(c, str) else c for c in components
+                ]
+            if new_rd is not None:
+                if new_stmt is None:
+                    new_stmt = dict(stmt)
+                new_stmt["recordDetails"] = new_rd
+        out.append(stmt if new_stmt is None else new_stmt)
+    return out
+
+
+_NAMED_ONE_FIELDS = frozenset(f for f, shape in SIGNAL_REFERENCE_FIELDS if shape == "one")
+_NAMED_LIST_FIELDS = frozenset(f for f, shape in SIGNAL_REFERENCE_FIELDS if shape == "list")
+
+
+def _remap_evidence(value: Any, repl: dict[str, str], key: str | None = None) -> Any:
+    """``value`` with every statement id it holds in a reference position
+    rewritten through ``repl``: a ``statement_id`` key, a key ending
+    ``statement_ids``, and the named list fields in ``SIGNAL_REFERENCE_FIELDS``
+    (``longest_path``, whose name does not say it holds ids). Walks dicts and
+    lists to any depth, so a nested ``state_holdings[].parties[]`` or
+    ``elements[].statement_ids`` is reached, and reads no other string — a
+    ``summary`` or a ``detail`` that quotes an id keeps it. Returns the same
+    object when nothing changed, so callers can copy on change."""
+    if isinstance(value, dict):
+        new: dict[str, Any] | None = None
+        for k, v in value.items():
+            if k == EVIDENCE_ID_KEY or k in _NAMED_ONE_FIELDS:
+                r: Any = repl.get(v, v) if isinstance(v, str) else v
+            elif k.endswith(EVIDENCE_ID_LIST_SUFFIX) or k in _NAMED_LIST_FIELDS:
+                r = (
+                    [repl.get(x, x) if isinstance(x, str) else x for x in v]
+                    if isinstance(v, list) else _remap_evidence(v, repl, k)
+                )
+            else:
+                r = _remap_evidence(v, repl, k)
+            if r is not v and r != v:
+                if new is None:
+                    new = dict(value)
+                new[k] = r
+        return value if new is None else new
+    if isinstance(value, list):
+        items = [_remap_evidence(x, repl) for x in value]
+        return value if all(a is b for a, b in zip(items, value)) else items
+    return value
+
+
+
+def remap_signal_references(
+    signals: Iterable[dict[str, Any]], repl: dict[str, str]
+) -> list[dict[str, Any]]:
+    """The signals with every statement id in their ``evidence`` that names a
+    key of ``repl`` replaced by its value: the fields
+    ``resolve_signal_references`` names (``SIGNAL_REFERENCE_FIELDS``) **and**,
+    because the risk engine nests ids the named list does not reach —
+    ``STATE_CONTROLLED``'s ``state_holdings[].parties[].statement_id`` and
+    ``party_statement_ids``, ``TRUST_OR_ARRANGEMENT``'s
+    ``elements[].statement_ids``, ``relationship_statement_ids`` — any
+    ``statement_id`` key or key ending ``statement_ids`` at any depth of
+    ``evidence`` (Stephen, 24 Oct 2026: both). ``summary``, ``hit_id`` and
+    every other free text are not read. Signals are copied where a field
+    changes; untouched ones are returned as they are.
+    """
+    if not repl:
+        return list(signals)
+    out: list[dict[str, Any]] = []
+    for sig in signals:
+        evidence = sig.get("evidence") if isinstance(sig, dict) else None
+        if not isinstance(evidence, dict):
+            out.append(sig)
+            continue
+        new_evidence = _remap_evidence(evidence, repl)
+        out.append(sig if new_evidence is evidence else {**sig, "evidence": new_evidence})
+    return out
