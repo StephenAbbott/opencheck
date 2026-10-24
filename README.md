@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 397** — A scramble harness on both sides proves every consumer resolves a relationship's parties by recordId, ready for content-addressed statement ids.
+**Latest: Phase 398** — Entity, person and relationship statementIds are now content-addressed, so a record that changes gets a new statementId and keeps its recordId, as BODS v0.4 asks.
 
 → [Full development history](docs/status.md)
 
