@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 398** — Entity, person and relationship statementIds are now content-addressed, so a record that changes gets a new statementId and keeps its recordId, as BODS v0.4 asks.
+**Latest: Phase 399** — OpenAleph's several records of one company now join the subject's referent group, so a source names one declarationSubject and the quality sweep passes.
 
 → [Full development history](docs/status.md)
 
