@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 399** — OpenAleph's several records of one company now join the subject's referent group, so a source names one declarationSubject and the quality sweep passes.
+**Latest: Phase 400** — A new docs page explains OpenCheck's three BODS identifiers, and the /about page now describes them correctly.
 
 → [Full development history](docs/status.md)
 
