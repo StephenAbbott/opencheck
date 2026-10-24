@@ -104,6 +104,46 @@ describe("reconcileBods", () => {
     for (const s of statements) expect(s.declarationSubject).toBe(canonical);
   });
 
+  it("merges a REG-<country> register number with the named register's number in that country", () => {
+    // Ørsted, 24 Oct 2026: OpenAleph's three PSC-derived records carried
+    // `REG-DK 36213728` and never joined GLEIF's `DK-CVR 36213728`, so the
+    // canvas drew four Ørsteds. The REG- fallback is a register number in
+    // that country (the backend test pins the country guard on the key).
+    const bundle: Stmt[] = [
+      {
+        statementId: "gleif-orsted",
+        recordType: "entity",
+        recordDetails: {
+          name: "Ørsted A/S",
+          jurisdiction: { code: "DK" },
+          identifiers: [{ scheme: "XI-LEI", id: LEI }, { scheme: "DK-CVR", id: "36213728" }],
+        },
+        source: { description: "GLEIF" },
+      },
+      {
+        statementId: "oa-orsted-1",
+        recordType: "entity",
+        recordDetails: {
+          name: "Ørsted A/S",
+          jurisdiction: { code: "DK" },
+          identifiers: [{ scheme: "REG-DK", id: "36213728" }],
+        },
+        source: { description: "OpenAleph" },
+      },
+      {
+        statementId: "oa-orsted-2",
+        recordType: "entity",
+        recordDetails: { name: "Ørsted A/S", identifiers: [{ scheme: "REG-DK", id: "36213728" }] },
+        source: { description: "OpenAleph" },
+      },
+    ];
+    const { statements, remap } = reconcileBods(bundle);
+    const entities = statements.filter((s) => s.recordType === "entity");
+    expect(entities).toHaveLength(1);
+    expect(remap["oa-orsted-1"]).toBe(remap["gleif-orsted"]);
+    expect(remap["oa-orsted-2"]).toBe(remap["gleif-orsted"]);
+  });
+
   it("produces a graph where the merged node carries both sources", () => {
     const { statements } = reconcileBods(twoSourceBundle());
     const model = bodsToGraph(statements);

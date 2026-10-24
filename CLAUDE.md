@@ -1010,6 +1010,16 @@ re-derived otherwise:
   (Stephen, 23 Oct 2026, after a challenge): the BODS MUST is about what a
   statement *contains*, which the stamp satisfies; a lookup path by
   `declarationSubject` would point a chain's middle company at the subject.
+- **A source's several records of the subject fold onto one** (the
+  one-subject-per-source follow-up, 24 Oct 2026). OpenAleph returned three
+  PSC-derived records of Ørsted, each its own bundle; `stamp_merged` only
+  folds members of the subject's referent group, and `REG-DK 36213728`
+  never joined GLEIF's `DK-CVR 36213728`. `reconcile._identifier_keys` /
+  `identKeys` now give a `REG-<country>` identifier the `JUR:<country>:`
+  key (the statement's own jurisdiction, where present, must agree) — the
+  reading `subject_keys` has had since Phase 290. A source naming more than
+  one subject in a merged bundle is a referent-join gap, not a sweep rule to
+  relax.
 
 ## A `statementId` names its content; a `recordId` names the record (the content-addressed phase)
 

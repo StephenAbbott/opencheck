@@ -271,6 +271,55 @@ def test_stamp_merged_stamps_each_source_to_its_own_subject_statement() -> None:
     assert ch_psc["declarationSubject"] == ch_psc["recordId"]
 
 
+def test_stamp_merged_folds_a_sources_several_records_of_the_subject() -> None:
+    """Ørsted on 24 Oct 2026: OpenAleph returned three PSC-derived records of
+    Ørsted A/S, each its own bundle, each carrying ``REG-DK 36213728`` and
+    no LEI. The per-bundle stamp gave each its own declaration; the merged
+    stamp left them, because ``REG-DK`` never joined GLEIF's ``DK-CVR``
+    record, so one source named three subjects and the quality sweep failed
+    it. Now the ``REG-<country>`` fallback bridges to the jurisdiction key,
+    the three are in the subject's referent group, and the source's
+    statements all name one of them (Stephen, 24 Oct 2026: option 1)."""
+    gleif_subject = _entity("gleif", LEI, "Ørsted A/S", [
+        {"scheme": "XI-LEI", "id": LEI}, {"scheme": "DK-CVR", "id": "36213728"},
+    ])
+    oa = [
+        _entity("openaleph", f"gb-coh-psc-{n}", "Ørsted A/S", [
+            {"scheme": "OPENALEPH", "id": f"gb-coh-psc-{n}"},
+            {"scheme": "REG-DK", "id": "36213728"},
+        ])
+        for n in ("10899680", "07883284", "07640851")
+    ]
+    oa_child = _entity("openaleph", "gb-coh-11111", "ØRSTED UK LIMITED",
+                       [{"scheme": "REG-GB", "id": "11111"}])
+    oa_rels = [
+        make_relationship_statement(
+            source_id="openaleph", local_id=f"r-{i}",
+            subject_statement_id=oa_child["recordId"],
+            interested_party_statement_id=o["recordId"], interested_party_type="entity",
+            interests=[{"type": "shareholding"}],
+        )
+        for i, o in enumerate(oa)
+    ]
+    merged = [gleif_subject, *oa, oa_child, *oa_rels]
+    out = stamp_merged(merged, LEI)
+    declared = {s["declarationSubject"] for s in out if s.get("source", {}).get("opencheckSourceId") == "openaleph"}
+    assert len(declared) == 1 and declared <= {o["recordId"] for o in oa}
+    assert {s["declarationSubject"] for s in out if s.get("source", {}).get("opencheckSourceId") == "gleif"} == {gleif_subject["recordId"]}
+    # The sweep's one-subject-per-source rule passes on the result.
+    from opencheck.bods_quality import check_declaration_subjects
+    assert check_declaration_subjects(out) == []
+    # A REG-<country> number whose statement sits in another country is not
+    # the same company's number.
+    from opencheck.reconcile import _identifier_keys
+    elsewhere = make_entity_statement(
+        source_id="openaleph", local_id="x", name="X",
+        jurisdiction=("Germany", "DE"), identifiers=[{"scheme": "REG-DK", "id": "36213728"}],
+    )
+    assert "JUR:DK:36213728" in _identifier_keys(oa[0])
+    assert "JUR:DK:36213728" not in _identifier_keys(elsewhere)
+
+
 def test_stamp_merged_leaves_a_source_with_no_subject_statement_alone() -> None:
     gleif_subject = _entity("gleif", LEI, "X", [{"scheme": "XI-LEI", "id": LEI}])
     stray = _entity("wikidata", "Q1", "Y")  # no identifier joins it to the subject
