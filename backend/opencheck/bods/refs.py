@@ -2,10 +2,12 @@
 
 BODS v0.4 says a relationship's ``subject`` and ``interestedParty`` hold the
 **recordId** of the party's entity or person statement. Every OpenCheck
-mapper sets ``statementId == recordId`` for entities and people, so for ten
-months nothing distinguished the two and every consumer — the graph, the risk
-layer walk, the reconciler, the PDF diagram, the Senzing / Neo4j / FtM
-exports — keyed its lookups on ``statementId`` and happened to work.
+mapper set ``statementId == recordId`` for entities and people (the record-ID
+ticket's phase B ends that), so for ten months nothing distinguished the two
+and every consumer — the graph, the risk layer walk, the reconciler, the PDF
+diagram, the Senzing / Neo4j / FtM exports — keyed its lookups on
+``statementId`` and happened to work. ``tests/test_record_id_references.py``
+now scrambles the two apart and holds every consumer to resolving.
 
 Phase 208 brought the first statements OpenCheck did not write: the OECD's
 MEIP release, where ``statementId`` is a hash and ``recordId`` is

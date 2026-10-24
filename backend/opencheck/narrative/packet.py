@@ -256,12 +256,11 @@ def build_evidence_packet(
         **{s.get("statementId"): s for s in bods if s.get("statementId")},
         **statement_index(bods),
     }
-    # Relationship statements reference their parties by *statementId* in
-    # OpenCheck's own mapper output, but Open Ownership's published bulk
-    # bundles (served verbatim via ``bods_data``) reference the party's
-    # *recordId* (e.g. "XI-LEI-…", "GB-COH-…"). Index records by recordId as
-    # well — first statement wins, statementIds take precedence — so those
-    # parties resolve to names instead of "a party".
+    # A relationship references its parties by *recordId* (BODS v0.4) —
+    # OpenCheck's own output and Open Ownership's published bundles alike
+    # ("XI-LEI-…", "GB-COH-…"). Index records by recordId as well — first
+    # statement wins, statementIds take precedence — so every party resolves
+    # to a name instead of "a party".
     for s in bods:
         rid = s.get("recordId")
         if rid and rid not in by_id and s.get("recordType") in ("entity", "person"):

@@ -381,11 +381,13 @@ def make_entity_statement(
     statement_date: str | None = None,
 ) -> dict[str, Any]:
     statement_id = _stable_id(source_id, "entity", local_id)
-    # bods-dagre v0.4 resolves graph edges by matching the relationship's
-    # referenced statementId against each entity/person statement's recordId.
-    # Using statementId == recordId ensures that lookup succeeds without
-    # breaking BODS semantics: we never version records in opencheck so the
-    # distinction between "statement id" and "record id" doesn't apply.
+    # The recordId is the party's stable identity; a relationship references
+    # it (BODS v0.4), and so does ``declarationSubject``. The statementId is
+    # this statement's own id. They are equal here because OpenCheck has never
+    # versioned a record; the record-ID ticket's phase B makes the statementId
+    # content-addressed, and every consumer resolves a reference through
+    # ``bods/refs.py`` rather than comparing it against statementIds —
+    # ``tests/test_record_id_references.py`` holds them to that.
     record_id = statement_id
 
     entity_type_obj: dict[str, Any] = {"type": entity_type}
@@ -573,6 +575,12 @@ def make_relationship_statement(
     component_records: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Build a BODS v0.4 relationship statement.
+
+    ``subject_statement_id`` / ``interested_party_statement_id`` are the
+    parties' **recordIds** — the names predate the distinction, and every
+    OpenCheck mapper passes the value its factory returned under both keys.
+    What is written to ``subject`` / ``interestedParty`` is a recordId, as
+    BODS v0.4 requires; consumers resolve it with ``bods/refs.py``.
 
     *is_component* marks a secondary (component) record — a hop inside an
     indirect chain whose primary relationship lists it in ``componentRecords``.

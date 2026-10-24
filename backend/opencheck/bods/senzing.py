@@ -22,10 +22,9 @@ Output shape — the *modern* Senzing spec
 
 Modelling decisions
 -------------------
-* **One Senzing record per BODS entity/person statement.** OpenCheck sets
-  ``statementId == recordId`` for entity/person statements, and relationship
-  statements reference those ids, so the BODS statementId is a perfect stable
-  Senzing ``RECORD_ID``.
+* **One Senzing record per BODS entity/person statement**, keyed on the
+  statementId; a relationship's reference (a recordId, BODS v0.4) is resolved
+  to it through ``bods/refs.py``, so the two ids need not be equal.
 * **Every entity/person record carries exactly one ``REL_ANCHOR``** keyed by its
   own statementId, so other records can point at it (Senzing allows at most one
   anchor per record).
