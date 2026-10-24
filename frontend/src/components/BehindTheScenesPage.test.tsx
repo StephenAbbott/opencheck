@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import { BehindTheScenesPage } from "./BehindTheScenesPage";
 
 const DATES_DOC = "https://github.com/StephenAbbott/opencheck/blob/main/docs/dates.md";
+const IDENTIFIERS_DOC = "https://github.com/StephenAbbott/opencheck/blob/main/docs/identifiers.md";
 
 describe("BehindTheScenesPage", () => {
   it("links the dates guide from the BODS spine and from the reading list", () => {
@@ -24,6 +25,24 @@ describe("BehindTheScenesPage", () => {
       expect(link.getAttribute("target")).toBe("_blank");
       expect(link.getAttribute("rel")).toContain("noreferrer");
     }
+  });
+
+  it("links the identifiers guide from the BODS spine and from the reading list", () => {
+    // The identifiers counterpart to the dates guide (Phases 396–398): the
+    // card used to say statement ids were "SHA-256 of source + type + local
+    // key" and never changed, which has been the record id, not the
+    // statement id, since Phase 398.
+    render(<BehindTheScenesPage />);
+    const links = screen
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("href") === IDENTIFIERS_DOC);
+    expect(links.length).toBe(2);
+    expect(screen.getByText(/a statement id derived from the record id/)).toBeTruthy();
+    expect(screen.queryByText(/re-running a lookup always produces the same IDs/)).toBeNull();
+    const guidance = screen.getByRole("link", { name: /BODS record identifiers guidance/ });
+    expect(guidance.getAttribute("href")).toBe(
+      "https://standard.openownership.org/en/0.4.0/standard/modelling/record-ids.html",
+    );
   });
 
   it("names the four dates the guide explains", () => {

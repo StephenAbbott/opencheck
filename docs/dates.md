@@ -7,6 +7,8 @@ explanation.
 OpenCheck is a **republisher**: it reads other people's registers and emits BODS
 statements about what they say. That makes the dates unusually easy to get
 wrong, because four different questions all have date-shaped answers.
+(The identifiers — what stays the same between two runs and what changes —
+are the subject of [Identifiers](identifiers.md).)
 
 ## The four clocks
 

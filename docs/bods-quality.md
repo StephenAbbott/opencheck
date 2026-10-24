@@ -2,7 +2,8 @@
 
 A weekly run that checks the **BODS statements production publishes**: whether
 they validate against BODS v0.4, and whether their dates and provenance say
-what OpenCheck's rules (see [dates.md](dates.md)) require. It is the third
+what OpenCheck's rules (see [dates.md](dates.md) and
+[identifiers.md](identifiers.md)) require. It is the third
 sibling of the source-health sweep ([source-health-plan.md](source-health-plan.md)),
 which asks whether every adapter answers, and the findings regression
 ([findings-regression.md](findings-regression.md)), which asks what the risk

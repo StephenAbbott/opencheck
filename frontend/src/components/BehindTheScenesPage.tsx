@@ -132,9 +132,21 @@ export function BehindTheScenesPage() {
           <p className="text-oo-small text-oo-muted mt-3 leading-[1.7]">
             Each source has a dedicated mapper in{" "}
             <code className="font-mono text-[11px] bg-oo-bg px-1 rounded">opencheck/bods/mapper.py</code>.
-            Statement IDs are deterministic (SHA-256 of source + type + local key)
-            so re-running a lookup always produces the same IDs — stable for
-            deduplication and graph visualisation.
+            Every statement carries three identifiers: a record id that names
+            the record and never changes, a statement id derived from the
+            record id and the statement&apos;s content, so a changed record is
+            a new statement, and a declaration subject naming whose network
+            the statement belongs to. What is stable, what changes and how a
+            relationship names its parties is set out in{" "}
+            <a
+              href="https://github.com/StephenAbbott/opencheck/blob/main/docs/identifiers.md"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-oo-blue hover:text-oo-burst"
+            >
+              identifiers in OpenCheck&apos;s BODS output
+            </a>
+            .
           </p>
           <p className="text-oo-small text-oo-muted mt-3 leading-[1.7]">
             Every statement carries four dates that answer different questions:
@@ -258,6 +270,8 @@ export function BehindTheScenesPage() {
               ["OpenCheck on GitHub", "https://github.com/StephenAbbott/opencheck"],
               ["BODS v0.4 documentation", "https://standard.openownership.org/en/0.4.0/"],
               ["How OpenCheck dates its BODS statements", "https://github.com/StephenAbbott/opencheck/blob/main/docs/dates.md"],
+              ["Identifiers in OpenCheck's BODS output", "https://github.com/StephenAbbott/opencheck/blob/main/docs/identifiers.md"],
+              ["BODS record identifiers guidance (Open Ownership)", "https://standard.openownership.org/en/0.4.0/standard/modelling/record-ids.html"],
               ["BODS dates guidance (Open Ownership)", "https://standard.openownership.org/en/0.4.0/standard/modelling/dates-guidance.html"],
               ["Open Ownership", "https://www.openownership.org/"],
               ["GLEIF — Global LEI Foundation", "https://www.gleif.org/"],
