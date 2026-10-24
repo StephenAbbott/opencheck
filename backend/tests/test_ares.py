@@ -451,7 +451,7 @@ class TestMapAres:
 
     def test_relationships_reference_subject_entity(self) -> None:
         stmts = list(map_ares(self._alza_bundle()))
-        entity_stmt_id = next(s["statementId"] for s in stmts if s["recordType"] == "entity"
+        entity_stmt_id = next(s["recordId"] for s in stmts if s["recordType"] == "entity"
                               and s["recordDetails"]["name"] == "Alza.cz a.s.")
         for rel in (s for s in stmts if s["recordType"] == "relationship"):
             assert rel["recordDetails"]["subject"] == entity_stmt_id
@@ -478,8 +478,8 @@ class TestMapAres:
         adapter = AresAdapter()
         bundle1 = adapter._build_bundle("27082440", AGGREGATE_ALZA, VR_ALZA)
         bundle2 = adapter._build_bundle("27082440", AGGREGATE_ALZA, VR_ALZA)
-        ids1 = [s["statementId"] for s in map_ares(bundle1)]
-        ids2 = [s["statementId"] for s in map_ares(bundle2)]
+        ids1 = [s["recordId"] for s in map_ares(bundle1)]
+        ids2 = [s["recordId"] for s in map_ares(bundle2)]
         assert ids1 == ids2
 
 

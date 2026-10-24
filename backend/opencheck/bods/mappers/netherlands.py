@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, make_entity_statement
+from ..statements import content_addressed
 
 
 # ----------------------------------------------------------------------
@@ -26,6 +27,7 @@ from ..statements import SOURCE_NAMES, make_entity_statement
 # Source: https://developers.kvk.nl/nl/documentation/open-dataset-basis-bedrijfsgegevens-api
 
 
+@content_addressed
 def map_kvk(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a KvK fetch bundle to a BODS v0.4 entity statement.
 

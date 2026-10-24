@@ -514,8 +514,8 @@ def test_state_control_uses_the_bods_soe_shape():
     # jurisdiction is required on a state node — it says WHICH state
     assert state[0]["recordDetails"]["jurisdiction"]["code"] == "UA"
     rel = stmts["relationship"][0]
-    assert rel["recordDetails"]["subject"] == stmts["entity"][0]["statementId"]
-    assert rel["recordDetails"]["interestedParty"] == state[0]["statementId"]
+    assert rel["recordDetails"]["subject"] == stmts["entity"][0]["recordId"]
+    assert rel["recordDetails"]["interestedParty"] == state[0]["recordId"]
     interest = rel["recordDetails"]["interests"][0]
     assert interest["type"] == "controlByLegalFramework"
     # The register does not distinguish "belongs to" from "holds >=25%", and

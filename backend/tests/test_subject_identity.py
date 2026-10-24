@@ -428,14 +428,14 @@ def test_gleif_parent_that_is_both_direct_and_ultimate_is_one_statement() -> Non
         }
     )
     stmts = list(bundle)
-    ids = [s["statementId"] for s in stmts]
+    ids = [s["recordId"] for s in stmts]
     assert len(ids) == len(set(ids))
     parents = [s for s in stmts if (s["recordDetails"].get("name") == "JOHN SWIRE & SONS LIMITED")]
     assert len(parents) == 1
     rels = [s for s in stmts if s["recordType"] == "relationship"]
     # Both relationships stay, and both point at the one party statement.
     assert {r["recordDetails"]["interests"][0]["directOrIndirect"] for r in rels} == {"direct", "indirect"}
-    assert {r["recordDetails"]["interestedParty"] for r in rels} == {parents[0]["statementId"]}
+    assert {r["recordDetails"]["interestedParty"] for r in rels} == {parents[0]["recordId"]}
     assert not any("duplicate" in i for i in validate_shape(stmts))
 
 
@@ -456,7 +456,7 @@ def test_gleif_exception_bridges_for_direct_and_ultimate_stay_two() -> None:
         if s["recordType"] == "entity" and s["recordDetails"]["entityType"]["type"] == "unknownEntity"
     ]
     assert len(unknown) == 2
-    assert len({s["statementId"] for s in unknown}) == 2
+    assert len({s["recordId"] for s in unknown}) == 2
 
 
 def test_ftm_party_named_by_two_edges_is_one_statement() -> None:
@@ -476,7 +476,7 @@ def test_ftm_party_named_by_two_edges_is_one_statement() -> None:
         "properties": {"name": ["ROSNEFT"], "ownershipOwner": edges},
     }
     stmts = list(map_ftm(payload, source_id="opensanctions"))
-    ids = [s["statementId"] for s in stmts]
+    ids = [s["recordId"] for s in stmts]
     assert len(ids) == len(set(ids))
     assert sum(1 for s in stmts if s["recordDetails"].get("name") == "RN Vankor OOO") == 1
     assert sum(1 for s in stmts if s["recordType"] == "relationship") == 2
@@ -491,7 +491,7 @@ def test_the_fold_publishes_each_statement_once() -> None:
         ("deepen_result", {"source_id": "opensanctions", "bods": [dict(party)]}),
     ]
     resp = fold_lookup_events(ROSNEFT, events)
-    assert [s["statementId"] for s in resp.bods] == ["opencheck-x"]
+    assert [s["recordId"] for s in resp.bods] == ["opencheck-x"]
 
 
 def test_export_network_publishes_each_statement_once() -> None:
@@ -502,7 +502,7 @@ def test_export_network_publishes_each_statement_once() -> None:
         json={"bods": [party, dict(party)], "format": "json", "slug": "t"},
     )
     assert r.status_code == 200, r.text
-    assert [s["statementId"] for s in r.json()] == ["opencheck-x"]
+    assert [s["recordId"] for s in r.json()] == ["opencheck-x"]
 
 
 # ---------------------------------------------------------------------
@@ -549,7 +549,7 @@ def test_a_register_reference_names_the_subject_like_an_lei() -> None:
     )
     assert subject_keys("213800LH1BZH3DI6G760") == frozenset({"LEI:213800LH1BZH3DI6G760"})
     bundle = _metastar_bundle()
-    assert {s["statementId"] for s in subject_statements("GB-COH:OC346224", bundle)} == {
+    assert {s["recordId"] for s in subject_statements("GB-COH:OC346224", bundle)} == {
         "ch-metastar", "oa-metastar"
     }
     identity = subject_identity("GB-COH:OC346224", bundle)

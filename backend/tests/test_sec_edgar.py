@@ -473,7 +473,7 @@ def test_map_sec_edgar_relationship_share_exact():
     bundle = map_sec_edgar(_make_bundle(percent=77.0))
     rel_stmts = [s for s in bundle if s["recordType"] == "relationship"]
     assert len(rel_stmts) == 2
-    persons = {s["statementId"] for s in bundle if s["recordType"] == "person"}
+    persons = {s["recordId"] for s in bundle if s["recordType"] == "person"}
     for rel in rel_stmts:
         interests = rel["recordDetails"]["interests"]
         assert len(interests) == 1
@@ -518,7 +518,7 @@ def test_map_sec_edgar_relationship_links_correct_entities():
     stmts = list(bundle)
 
     issuer_sid = next(
-        s["statementId"] for s in stmts
+        s["recordId"] for s in stmts
         if s["recordType"] == "entity" and "Rush Street Interactive, Inc." in s["recordDetails"]["name"]
     )
     # In BODS v0.4, subject is a plain statementId string, not a nested dict.

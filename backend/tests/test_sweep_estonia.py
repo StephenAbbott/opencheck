@@ -245,7 +245,7 @@ def test_every_gleif_edge_is_published_once_from_the_child(built: Path) -> None:
         for st in gleif_rels
         if "direct" in st["recordDetails"]["interests"][0]["details"]
     ]
-    sid = {lei: st["statementId"] for lei, st in by_lei.items()}
+    sid = {lei: st["recordId"] for lei, st in by_lei.items()}
     # AGENT → EESTI, EESTI → foreign parent, the Latvian child → EESTI: once each.
     assert sorted(pairs) == sorted(
         [
@@ -283,7 +283,7 @@ def test_the_layers_join_on_the_registry_code_scheme(built: Path) -> None:
 
 def test_every_statement_names_its_source_and_dates(built: Path) -> None:
     statements = _statements(built)
-    ids = {st["statementId"] for st in statements}
+    ids = {st["recordId"] for st in statements}
     assert len(ids) == len(statements)
     seen_relationship = False
     for st in statements:

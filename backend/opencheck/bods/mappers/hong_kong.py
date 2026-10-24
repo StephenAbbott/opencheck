@@ -10,8 +10,10 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, _addr, make_entity_statement
+from ..statements import content_addressed
 
 
+@content_addressed
 def map_cr_hongkong(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CrHongKongAdapter fetch bundle to a single BODS v0.4 entity statement.
 

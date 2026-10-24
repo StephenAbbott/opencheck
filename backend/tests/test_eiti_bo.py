@@ -330,7 +330,7 @@ async def test_drc_pep_honorific_share_and_dates(adapter):
     rels = [s for s in stmts if s["recordType"] == "relationship"]
     jean_rel = next(
         r for r in rels
-        if r["recordDetails"]["interestedParty"] == jean["statementId"]
+        if r["recordDetails"]["interestedParty"] == jean["recordId"]
     )
     types = {i["type"]: i for i in jean_rel["recordDetails"]["interests"]}
     # Fraction-of-1 semantics normalised to percentages…
@@ -366,7 +366,7 @@ async def test_armenia_upconversion_shapes_and_validate(adapter):
 
 async def test_armenia_chain_references_and_interests(adapter):
     stmts = list(map_eiti_bo(await adapter.fetch_by_lei(_LEI_AM)))
-    ids = {s["statementId"] for s in stmts}
+    ids = {s["recordId"] for s in stmts}
     rels = [s for s in stmts if s["recordType"] == "relationship"]
     for r in rels:
         assert r["recordDetails"]["subject"] in ids
@@ -375,7 +375,7 @@ async def test_armenia_chain_references_and_interests(adapter):
     person_rel = next(
         r for r in rels
         if any(
-            p["statementId"] == r["recordDetails"]["interestedParty"]
+            p["recordId"] == r["recordDetails"]["interestedParty"]
             and p["recordType"] == "person"
             for p in stmts
         )
@@ -494,7 +494,7 @@ async def test_committed_zangezur_duplicate_parent_collapses_to_one_record():
         for a in parent.get("annotations", [])
     )
     rels = [s for s in stmts if s["recordType"] == "relationship"]
-    rel_ids = {s["statementId"] for s in stmts}
+    rel_ids = {s["recordId"] for s in stmts}
     for r in rels:
         assert r["recordDetails"]["subject"] in rel_ids
         ip = r["recordDetails"]["interestedParty"]
@@ -506,9 +506,9 @@ async def test_committed_zangezur_duplicate_parent_collapses_to_one_record():
     ]
     assert len(keys) == len(set(keys)), "a relationship was published twice"
     # The parent still holds Zangezur and Urbanevent Plus, and is held by Neo Metals.
-    held_by_parent = [r for r in rels if r["recordDetails"].get("interestedParty") == parent["statementId"]]
+    held_by_parent = [r for r in rels if r["recordDetails"].get("interestedParty") == parent["recordId"]]
     assert len(held_by_parent) == 2
-    holding_parent = [r for r in rels if r["recordDetails"]["subject"] == parent["statementId"]]
+    holding_parent = [r for r in rels if r["recordDetails"]["subject"] == parent["recordId"]]
     assert len(holding_parent) == 1
     # 1 subject + 1 parent + Urbanevent + Neo Metals = 4 entities (was 5).
     assert len(entities) == 4
@@ -555,7 +555,7 @@ async def test_nigeria_mapping_and_neiti_evidence(adapter):
         "NEITI" in a["description"] for a in subject.get("annotations") or []
     )
     # BOC flag: person True, entity False (CAC interest mapping reused).
-    by_id = {s["statementId"]: s for s in stmts}
+    by_id = {s["recordId"]: s for s in stmts}
     for r in (s for s in stmts if s["recordType"] == "relationship"):
         party = by_id[r["recordDetails"]["interestedParty"]]
         boc = {i["beneficialOwnershipOrControl"] for i in r["recordDetails"]["interests"]}
@@ -701,7 +701,7 @@ def ng_history_adapter(monkeypatch):
 def _relationship_shape(stmts):
     """(party name, party type, recordStatus, interests) per relationship —
     everything a reader sees, nothing that depends on the source id."""
-    by_id = {s["statementId"]: s for s in stmts}
+    by_id = {s["recordId"]: s for s in stmts}
     out = []
     for s in stmts:
         if s["recordType"] != "relationship":
@@ -762,8 +762,8 @@ async def test_nigeria_keeps_eiti_bo_ids_and_neiti_evidence(ng_history_adapter):
     # the two cards stay two sources with their own ids.
     from opencheck.bods import map_cac_nigeria
 
-    cac_ids = {s["statementId"] for s in map_cac_nigeria({"record": _NG_HISTORY_CAC})}
-    assert not cac_ids & {s["statementId"] for s in stmts}
+    cac_ids = {s["recordId"] for s in map_cac_nigeria({"record": _NG_HISTORY_CAC})}
+    assert not cac_ids & {s["recordId"] for s in stmts}
 
 
 async def test_nigeria_hit_summary_counts_current_filings(ng_history_adapter):

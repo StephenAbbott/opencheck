@@ -58,6 +58,12 @@ Every finding names its class, its source and the statement it is about.
     default's every-party-names-itself shape), or a named subject that does
     not name itself — the declaration-subject phase's rule, which the stamp
     applies after every mapping.
+``stale_statement_id``
+    An OpenCheck statement whose ``statementId`` is not the content-addressed
+    id of its ``recordDetails`` and ``recordStatus`` — an edit after the
+    mapper that bypassed ``refresh_statement_id`` (the content-addressed
+    statementId phase). Two statements with one id and different content,
+    or one record whose change produced no new id, are what this catches.
 
 ``warn`` — honest but weaker than it should be, or a known backlog:
 
@@ -117,6 +123,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Any, Callable, Iterable, Mapping, Sequence
+
+from .bods.statements import stale_statement_id
 
 FAIL = "fail"
 WARN = "warn"
@@ -304,6 +312,11 @@ def check_statements(
         # (Phase 317).
         if sid in PUBLISHER_VERBATIM or not _published_by_opencheck(st):
             continue
+        if stale_statement_id(dict(st)):
+            add(
+                "stale_statement_id", FAIL,
+                "statementId is not the content-addressed id of recordDetails + recordStatus",
+            )
         if (
             read_as == "snapshot"
             and sid in no_cut

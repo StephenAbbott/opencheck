@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, _addr, make_entity_statement
+from ..statements import content_addressed
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +113,7 @@ def _acra_address(entity: dict[str, Any], detail: dict[str, Any] | None) -> dict
     return _addr("registered", text, "SG") if text else None
 
 
+@content_addressed
 def map_acra_singapore(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an AcraSingaporeAdapter fetch bundle to one BODS v0.4 entity statement.
 

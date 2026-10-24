@@ -16,6 +16,7 @@ import pycountry
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     _stable_id,
@@ -87,6 +88,7 @@ def _br_interest_type(qualificacao: str | None) -> str:
     return "seniorManagingOfficial"
 
 
+@content_addressed
 def map_cnpj_brazil(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CnpjBrazilAdapter bundle to BODS v0.4 statements.
 
@@ -156,7 +158,7 @@ def map_cnpj_brazil(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         since=(company.get("status_date") if br_liveness == _liveness.TERMINAL else None),
     )
     yield company_stmt
-    company_stmt_id: str = company_stmt["statementId"]
+    company_stmt_id: str = company_stmt["recordId"]
 
     # ── 2. QSA partners / administrators ──────────────────────────────────
     seen: set[str] = set()

@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, _addr, make_entity_statement
+from ..statements import content_addressed
 
 
 # ---------------------------------------------------------------------------
@@ -41,6 +42,7 @@ _MCA_PENDING_STATUSES = frozenset({
 _MCA_LIVE_STATUSES = frozenset({"active", "dormant", "active in progress", "dormant under section 455"})
 
 
+@content_addressed
 def map_mca_india(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Yield a BODS v0.4 entity statement for an Indian MCA company.
 

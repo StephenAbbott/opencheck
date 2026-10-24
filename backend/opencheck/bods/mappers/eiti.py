@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from ..annotations import annotate, commenting, identifying, pointer
 from ..statements import (
+    content_addressed,
     _country_obj,
     dated_by_cut,
     latest_record_date,
@@ -36,6 +37,7 @@ _EITI_SCHEME_BY_COUNTRY: dict[str, tuple[str, str]] = {
 }
 
 
+@content_addressed
 def map_eiti(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an EITI fetch bundle to BODS v0.4 statements.
 
@@ -89,6 +91,7 @@ def map_eiti(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 _EITI_SOE_URL = "https://eiti-database.eiti.org/eiti_database/view_soeList"
 
 
+@content_addressed
 def map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Every statement dated by the EITI SOE database snapshot (Phase 315). See ``_map_eiti_soe`` for the mapping."""
     yield from dated_by_cut(_map_eiti_soe(bundle), (bundle or {}).get("source_snapshot"))
@@ -209,8 +212,8 @@ def _map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     yield make_relationship_statement(
         source_id="eiti_soe",
         local_id=f"{lei}:state-control",
-        subject_statement_id=soe["statementId"],
-        interested_party_statement_id=government["statementId"],
+        subject_statement_id=soe["recordId"],
+        interested_party_statement_id=government["recordId"],
         interested_party_type="entity",
         interests=[
             {
@@ -251,6 +254,7 @@ def _map_eiti_soe(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 # ==========================================================================
 
 
+@content_addressed
 def map_eiti_assessment(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Every statement dated by the EITI assessment harvest (Phase 315). See ``_map_eiti_assessment`` for the mapping."""
     yield from dated_by_cut(_map_eiti_assessment(bundle), (bundle or {}).get("source_snapshot"))
@@ -472,6 +476,7 @@ def _zmw(value: float) -> str:
     return f"ZMW {v:,.0f}"
 
 
+@content_addressed
 def map_eiti_zambia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a Zambia EITI portal bundle to one BODS entity statement.
 

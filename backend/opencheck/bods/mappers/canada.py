@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     _stable_id,
@@ -48,6 +49,7 @@ def _cc_current_name(corp: dict[str, Any]) -> str:
     return ""
 
 
+@content_addressed
 def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CorporationsCanadaAdapter fetch bundle to BODS v0.4 statements.
 
@@ -146,7 +148,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         since=dissolution_date,
     )
     yield company_stmt
-    company_stmt_id: str = company_stmt["statementId"]
+    company_stmt_id: str = company_stmt["recordId"]
 
     # ── 2. Director statements ────────────────────────────────────────────
     seen_person_ids: set[str] = set()
@@ -170,9 +172,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             yield person_stmt
             seen_person_ids.add(person_local_id)
         else:
-            person_stmt = {
-                "statementId": _stable_id("corporations_canada", "person", person_local_id)
-            }
+            person_stmt = {"recordId": _stable_id("corporations_canada", "person", person_local_id)}
 
         interests: list[dict[str, Any]] = [
             {
@@ -187,7 +187,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_id="corporations_canada",
             local_id=f"{corp_id}:director:{idx}",
             subject_statement_id=company_stmt_id,
-            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_statement_id=person_stmt["recordId"],
             interested_party_type="person",
             interests=interests,
             source_url=source_url,

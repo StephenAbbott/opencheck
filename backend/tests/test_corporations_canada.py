@@ -252,7 +252,7 @@ class TestMapCorporationsCanada:
     def test_relationships_reference_entity(self) -> None:
         bundle = self._build_bundle(directors=DIRECTORS_1007["_embedded"]["directors"])
         stmts = list(map_corporations_canada(bundle))
-        entity_id = next(s["statementId"] for s in stmts if s["recordType"] == "entity")
+        entity_id = next(s["recordId"] for s in stmts if s["recordType"] == "entity")
         for rel in (s for s in stmts if s["recordType"] == "relationship"):
             assert rel["recordDetails"]["subject"] == entity_id
 
@@ -268,8 +268,8 @@ class TestMapCorporationsCanada:
     def test_deterministic_ids(self) -> None:
         bundle1 = self._build_bundle(directors=DIRECTORS_1007["_embedded"]["directors"])
         bundle2 = self._build_bundle(directors=DIRECTORS_1007["_embedded"]["directors"])
-        ids1 = [s["statementId"] for s in map_corporations_canada(bundle1)]
-        ids2 = [s["statementId"] for s in map_corporations_canada(bundle2)]
+        ids1 = [s["recordId"] for s in map_corporations_canada(bundle1)]
+        ids2 = [s["recordId"] for s in map_corporations_canada(bundle2)]
         assert ids1 == ids2
 
 

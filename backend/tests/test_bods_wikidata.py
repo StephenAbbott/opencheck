@@ -217,8 +217,8 @@ def test_map_wikidata_entity_with_parent_relationship_links_subject_to_parent() 
     parent_entity = statements[1]
     rel = statements[2]
 
-    assert rel["recordDetails"]["subject"] == subject_entity["statementId"]
-    assert rel["recordDetails"]["interestedParty"] == parent_entity["statementId"]
+    assert rel["recordDetails"]["subject"] == subject_entity["recordId"]
+    assert rel["recordDetails"]["interestedParty"] == parent_entity["recordId"]
 
 
 def test_map_wikidata_entity_with_parent_interest_type() -> None:
@@ -434,9 +434,9 @@ def test_map_wikidata_roleholders_relationship_links_to_correct_statements() -> 
     """Each relationship's subject is the entity; interestedParty is the person."""
     bundle = map_wikidata(_entity_with_roleholders_bundle())
     statements = list(bundle)
-    entity_id = statements[0]["statementId"]
+    entity_id = statements[0]["recordId"]
     relationships = [s for s in statements if s["recordType"] == "relationship"]
-    persons = {s["statementId"] for s in statements if s["recordType"] == "person"}
+    persons = {s["recordId"] for s in statements if s["recordType"] == "person"}
     for rel in relationships:
         assert rel["recordDetails"]["subject"] == entity_id
         assert rel["recordDetails"]["interestedParty"] in persons
@@ -536,7 +536,7 @@ def test_map_wikidata_owner_share_and_bo_flags() -> None:
     # Natural-person owner → NO flag: Wikidata publishes no BO declaration,
     # so the old hard-coded true over-claimed — bo_regimes:
     # wikidata/owner_natural_person -> omit (2026-08 audit finding 4).
-    person_id = persons[0]["statementId"]
+    person_id = persons[0]["recordId"]
     prel = next(r for r in rels if r["recordDetails"]["interestedParty"] == person_id)
     assert "beneficialOwnershipOrControl" not in prel["recordDetails"]["interests"][0]
 

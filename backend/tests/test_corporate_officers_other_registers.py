@@ -86,7 +86,7 @@ def test_ch_appointments_corporate_officer_is_an_entity() -> None:
     assert rd["jurisdiction"]["code"] == "BZ"
     assert {"id": "36265", "scheme": "REG-BZ"}.items() <= rd["identifiers"][0].items()
     for rel in _rels(stmts):
-        assert rel["recordDetails"]["interestedParty"] == officer[0]["statementId"]
+        assert rel["recordDetails"]["interestedParty"] == officer[0]["recordId"]
     assert validate_shape(stmts) == []
 
 
@@ -128,11 +128,11 @@ def test_ch_appointments_entity_matches_the_company_path() -> None:
         "related_companies": {},
     }))
     via_company = {
-        s["statementId"] for s in _by_type(company, "entity")
+        s["recordId"] for s in _by_type(company, "entity")
         if s["recordDetails"]["name"] == "ADVANCE DEVELOPMENTS LIMITED"
     }
     via_officer = {
-        s["statementId"]
+        s["recordId"]
         for s in _by_type(
             _map_companies_house_officer(
                 _officer_bundle([
@@ -217,7 +217,7 @@ def test_brreg_enhet_role_holder_is_an_entity() -> None:
     }]
     rel = next(
         r for r in _rels(stmts)
-        if r["recordDetails"]["interestedParty"] == obos[0]["statementId"]
+        if r["recordDetails"]["interestedParty"] == obos[0]["recordId"]
     )
     assert rel["recordDetails"]["interests"][0]["details"] == "Forretningsfører"
     assert len(_by_type(stmts, "person")) == 1

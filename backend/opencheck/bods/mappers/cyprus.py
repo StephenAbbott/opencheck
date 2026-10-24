@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     _stable_id,
@@ -44,6 +45,7 @@ def _cy_official_is_org(name: str) -> bool:
     return any(tok in up for tok in _CY_ORG_OFFICIAL_TOKENS)
 
 
+@content_addressed
 def map_cyprus_drcor(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CyprusDrcorAdapter fetch bundle to BODS v0.4 statements.
 
@@ -127,7 +129,7 @@ def map_cyprus_drcor(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         raw=cy_status or None,
     )
     yield company_stmt
-    company_stmt_id = company_stmt["statementId"]
+    company_stmt_id = company_stmt["recordId"]
 
     # ── 2. Officials ──────────────────────────────────────────────────────
     seen: set[str] = set()
@@ -161,7 +163,7 @@ def map_cyprus_drcor(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 )
             yield party_stmt
             seen.add(party_local)
-            party_stmt_id = party_stmt["statementId"]
+            party_stmt_id = party_stmt["recordId"]
         else:
             kind = "entity" if is_org else "person"
             party_stmt_id = _stable_id("cyprus_drcor", kind, party_local)

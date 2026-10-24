@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     latest_record_date,
@@ -25,6 +26,7 @@ from ..statements import (
 # ----------------------------------------------------------------------
 
 
+@content_addressed
 def map_rpo_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an RpoSlovakiaAdapter fetch bundle to a BODS v0.4 entity statement.
 
@@ -105,6 +107,7 @@ def map_rpo_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+@content_addressed
 def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an RpvsSlovakiaAdapter fetch bundle to BODS v0.4 statements.
 
@@ -156,7 +159,7 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         source_url=source_url,
     )
     yield entity_stmt
-    entity_sid = entity_stmt["statementId"]
+    entity_sid = entity_stmt["recordId"]
 
     # ------------------------------------------------------------------
     # 2 & 3. Person/entity statements + relationship statements for KUVs
@@ -255,7 +258,7 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             ip_type = "person"
 
         yield ip_stmt
-        ip_sid = ip_stmt["statementId"]
+        ip_sid = ip_stmt["recordId"]
 
         # --- 3. Ownership-or-control relationship statement ---
         kuv_valid_from: str | None = (kuv.get("PlatnostOd") or "")[:10] or None

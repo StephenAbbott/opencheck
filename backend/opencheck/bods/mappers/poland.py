@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from ..statements import _addr, make_entity_statement
+from ..statements import content_addressed
 
 
 # ----------------------------------------------------------------------
@@ -16,6 +17,7 @@ from ..statements import _addr, make_entity_statement
 # ----------------------------------------------------------------------
 
 
+@content_addressed
 def map_krs_poland(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a KrsPolandAdapter fetch bundle to BODS v0.4 statements.
 

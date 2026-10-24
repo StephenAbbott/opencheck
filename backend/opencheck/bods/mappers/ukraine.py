@@ -11,6 +11,7 @@ from typing import Any, Iterable
 from .. import liveness as _liveness
 from ..annotations import annotate, pointer, transformation
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _country_obj,
     make_entity_statement,
@@ -133,6 +134,7 @@ def _ua_bo_interests(row: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+@content_addressed
 def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an EdrUkraineAdapter fetch bundle to BODS v0.4 statements.
 
@@ -186,7 +188,7 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         raw=stan or None,
     )
     yield company
-    company_id = company["statementId"]
+    company_id = company["recordId"]
 
     # ── Beneficial owners, and filed absences ─────────────────────────────
     for row in bundle.get("beneficiaries") or []:
@@ -244,7 +246,7 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_id="edr_ukraine",
             local_id=f"{edrpou}:bo-rel:{seq}",
             subject_statement_id=company_id,
-            interested_party_statement_id=person["statementId"],
+            interested_party_statement_id=person["recordId"],
             interested_party_type="person",
             interests=_ua_bo_interests(row),
             source_url=source_url,
@@ -315,7 +317,7 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_id="edr_ukraine",
             local_id=f"{edrpou}:founder-rel:{seq}",
             subject_statement_id=company_id,
-            interested_party_statement_id=party["statementId"],
+            interested_party_statement_id=party["recordId"],
             interested_party_type=party_type,
             interests=[interest],
             source_url=source_url,
@@ -355,7 +357,7 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_id="edr_ukraine",
             local_id=f"{edrpou}:signer-rel:{seq}",
             subject_statement_id=company_id,
-            interested_party_statement_id=person["statementId"],
+            interested_party_statement_id=person["recordId"],
             interested_party_type="person",
             interests=[interest],
             source_url=source_url,
@@ -390,7 +392,7 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_id="edr_ukraine",
             local_id=f"{edrpou}:member-rel:{seq}",
             subject_statement_id=company_id,
-            interested_party_statement_id=person["statementId"],
+            interested_party_statement_id=person["recordId"],
             interested_party_type="person",
             interests=[interest],
             source_url=source_url,
@@ -451,7 +453,7 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_id="edr_ukraine",
             local_id=f"{edrpou}:state-control",
             subject_statement_id=company_id,
-            interested_party_statement_id=state_body["statementId"],
+            interested_party_statement_id=state_body["recordId"],
             interested_party_type="entity",
             interests=[interest],
             source_url=source_url,

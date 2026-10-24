@@ -156,8 +156,8 @@ def test_map_climatetrace_with_parent_relationship_links_correctly() -> None:
     parent_entity = statements[1]
     rel = statements[2]
 
-    assert rel["recordDetails"]["subject"] == subject_entity["statementId"]
-    assert rel["recordDetails"]["interestedParty"] == parent_entity["statementId"]
+    assert rel["recordDetails"]["subject"] == subject_entity["recordId"]
+    assert rel["recordDetails"]["interestedParty"] == parent_entity["recordId"]
 
 
 def test_map_climatetrace_with_parent_interest_type() -> None:
@@ -582,8 +582,8 @@ def test_direct_state_owner_is_a_state_shareholding() -> None:
     assert state["recordDetails"]["jurisdiction"]["code"] == "ID"
 
     [rel] = _relationships(statements)
-    assert rel["recordDetails"]["interestedParty"] == state["statementId"]
-    assert rel["recordDetails"]["subject"] == statements[0]["statementId"]
+    assert rel["recordDetails"]["interestedParty"] == state["recordId"]
+    assert rel["recordDetails"]["subject"] == statements[0]["recordId"]
     [interest] = rel["recordDetails"]["interests"]
     assert interest["type"] == "shareholding"
     assert interest["directOrIndirect"] == "direct"
@@ -638,7 +638,7 @@ def test_owner_and_parent_resolve_to_the_same_entity_statement_id() -> None:
     statement, because the ID is built from the GEM entity ID alone."""
     via_parent = _parent_statement(list(map_climatetrace(_soe_bundle("state"))))
     via_owner = _parent_statement(list(map_climatetrace(_pertamina_as_gem_ships_it())))
-    assert via_parent["statementId"] == via_owner["statementId"]
+    assert via_parent["recordId"] == via_owner["recordId"]
 
 
 def test_pair_in_both_columns_emits_only_the_csv_edge() -> None:
@@ -654,7 +654,7 @@ def test_pair_in_both_columns_emits_only_the_csv_edge() -> None:
     [interest] = rel["recordDetails"]["interests"]
     assert interest["type"] == "shareholding"
     assert interest["share"] == {"exact": 28.85}
-    assert len({s["statementId"] for s in statements}) == len(statements)
+    assert len({s["recordId"] for s in statements}) == len(statements)
 
 
 def test_parent_the_csv_does_not_name_keeps_its_parent_edge() -> None:
@@ -761,7 +761,7 @@ def test_successor_that_is_also_an_owner_is_one_entity_statement() -> None:
     }
     bundle["owners"] = [_owner(entity_type="state")]
     statements = list(map_climatetrace(bundle))
-    ids = [s["statementId"] for s in statements]
+    ids = [s["recordId"] for s in statements]
     assert len(ids) == len(set(ids))
     assert len(_relationships(statements)) == 1
 

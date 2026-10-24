@@ -9,8 +9,10 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from ..statements import make_entity_statement
+from ..statements import content_addressed
 
 
+@content_addressed
 def map_ted_eu(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a TED (Tenders Electronic Daily) fetch bundle to BODS statements.
 

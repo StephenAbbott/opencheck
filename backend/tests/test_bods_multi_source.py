@@ -403,14 +403,14 @@ class TestGleifWithParentPlusChWithPsc:
 
         # The GLEIF-child entity statementId
         gleif_child_id = next(
-            s["statementId"]
+            s["recordId"]
             for s in gleif_stmts
             if s["recordType"] == "entity"
             and (s.get("recordDetails") or {}).get("name") == _COMPANY_NAME
         )
         # The CH-child entity statementId
         ch_child_id = next(
-            s["statementId"]
+            s["recordId"]
             for s in ch_only_stmts
             if s["recordType"] == "entity"
         )

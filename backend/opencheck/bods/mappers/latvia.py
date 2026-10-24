@@ -13,6 +13,7 @@ import pycountry
 from .. import liveness as _liveness
 from ..annotations import annotate, entry_date_as_start
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     make_entity_statement,
@@ -82,6 +83,7 @@ def _lv_nationality(code: str | None) -> list[dict[str, str]]:
     return [{"name": code, "code": code}]
 
 
+@content_addressed
 def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a UrLatviaAdapter fetch bundle to BODS v0.4 statements.
 
@@ -180,7 +182,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         since=dissolution_date,
     )
     yield entity_stmt
-    entity_stmt_id: str = entity_stmt["statementId"]
+    entity_stmt_id: str = entity_stmt["recordId"]
 
     # ------------------------------------------------------------------
     # 2.  Beneficial owners (UBO declarations)
@@ -235,7 +237,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             local_id=rel_local_id,
             statement_date=bo_dated,
             subject_statement_id=entity_stmt_id,
-            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_statement_id=person_stmt["recordId"],
             interested_party_type="person",
             interests=interests,
             source_url=source_url,
@@ -318,7 +320,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_id="ur_latvia",
             local_id=rel_local_id,
             subject_statement_id=entity_stmt_id,
-            interested_party_statement_id=off_stmt["statementId"],
+            interested_party_statement_id=off_stmt["recordId"],
             interested_party_type=ip_type,
             interests=interests,
             source_url=source_url,
@@ -406,7 +408,7 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             local_id=rel_local_id,
             statement_date=member_dated,
             subject_statement_id=entity_stmt_id,
-            interested_party_statement_id=mem_stmt["statementId"],
+            interested_party_statement_id=mem_stmt["recordId"],
             interested_party_type=ip_type,
             interests=[interest],
             source_url=source_url,

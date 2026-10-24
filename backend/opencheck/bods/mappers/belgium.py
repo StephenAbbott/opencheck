@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, _addr, make_entity_statement
+from ..statements import content_addressed
 
 
 # ----------------------------------------------------------------------
@@ -18,6 +19,7 @@ from ..statements import SOURCE_NAMES, _addr, make_entity_statement
 # ----------------------------------------------------------------------
 
 
+@content_addressed
 def map_bce_belgium(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a BceBelgiumAdapter fetch bundle to BODS v0.4 statements.
 

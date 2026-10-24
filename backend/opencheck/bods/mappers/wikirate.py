@@ -10,6 +10,7 @@ from dataclasses import field
 from typing import Any, Iterable
 
 from ..statements import make_entity_statement
+from ..statements import content_addressed
 
 
 # ----------------------------------------------------------------------
@@ -34,6 +35,7 @@ _WIKIRATE_IDENTIFIER_SCHEMES: dict[str, tuple[str, str]] = {
 }
 
 
+@content_addressed
 def map_wikirate(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a Wikirate fetch bundle to BODS v0.4 statements.
 

@@ -66,6 +66,7 @@ from .. import liveness as _liveness
 from ..annotations import commenting, pointer, transformation
 from ..former_names import former_name_annotation
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     _country_obj,
@@ -75,6 +76,7 @@ from ..statements import (
     make_person_statement,
     make_relationship_statement,
     set_beneficial_ownership,
+    refresh_statement_id,
 )
 
 
@@ -801,6 +803,7 @@ def _ee_status(bundle: dict[str, Any]) -> str | None:
 # ----------------------------------------------------------------------
 
 
+@content_addressed
 def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an AriregisterAdapter fetch bundle to BODS v0.4 statements.
 
@@ -819,6 +822,9 @@ def map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         # One place for every list and every tier (index, page, REST, SOAP
         # history): a Nasdaq CSD account prefix is not part of a name.
         _ee_strip_statement_name(statement)
+        # The strip edits the name after the factory computed the content-
+        # addressed id; the id must name the content (phase B).
+        refresh_statement_id(statement)
         yield statement
 
 
@@ -844,7 +850,7 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     for extra in ([ruling_note] if ruling_note else []) + _ee_pledge_notes(bundle.get("pledges")):
         company_stmt.setdefault("annotations", []).append(extra)
     yield company_stmt
-    seen_entity_ids.add(company_stmt["statementId"])
+    seen_entity_ids.add(company_stmt["recordId"])
     # A merger or division partner that is also in the chain above is drawn
     # from its own register record below; it carries the entry's note there.
     partner_notes = _ee_partner_notes(general, company_stmt)
@@ -858,12 +864,12 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         if not sub or not (sub.get("registry_code") or "") or not (sub.get("name") or ""):
             continue
         sub_stmt, sub_url = _ee_company_statement(sub)
-        if sub_stmt["statementId"] in seen_entity_ids:
+        if sub_stmt["recordId"] in seen_entity_ids:
             continue
         for note in partner_notes.get(str(sub.get("registry_code") or ""), []):
             sub_stmt.setdefault("annotations", []).append(note)
         yield sub_stmt
-        seen_entity_ids.add(sub_stmt["statementId"])
+        seen_entity_ids.add(sub_stmt["recordId"])
         related_stmts.append((sub, sub_stmt, sub_url))
 
     # The printable page has no person key: one company's same-named people
@@ -876,7 +882,7 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         general, company_stmt, source_url, seen_entity_ids, partner_notes,
     )
     yield from _ee_company_parties(
-        parties_of, company_stmt["statementId"], source_url, seen_person_ids, seen_entity_ids,
+        parties_of, company_stmt["recordId"], source_url, seen_person_ids, seen_entity_ids,
         include_founders=True,
     )
     # The subject's ended holdings and former beneficial owners, from the
@@ -884,14 +890,14 @@ def _map_ariregister(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     # still on a list (joined by the register's own person record) is the
     # node already published.
     yield from _ee_history_statements(
-        bundle, company_stmt["statementId"], source_url, seen_person_ids, seen_entity_ids,
+        bundle, company_stmt["recordId"], source_url, seen_person_ids, seen_entity_ids,
     )
     # A related company's parties: its shareholders, officers and declared
     # owners, never its founders (history of an intermediary is not the
     # subject's network).
     for sub, sub_stmt, sub_url in related_stmts:
         yield from _ee_company_parties(
-            sub, sub_stmt["statementId"], sub_url, seen_person_ids, seen_entity_ids,
+            sub, sub_stmt["recordId"], sub_url, seen_person_ids, seen_entity_ids,
             include_founders=False,
         )
 
@@ -1164,10 +1170,10 @@ def _ee_general_statements(
                 identifiers=[{"id": code, "scheme": "EE-ARIREGISTER", "schemeName": "Estonian e-Business Register"}],
                 source_url=f"https://ariregister.rik.ee/eng/company/{code}",
             )
-            if stmt["statementId"] in seen_entity_ids:
+            if stmt["recordId"] in seen_entity_ids:
                 continue  # drawn already, from its own register record with this note
             stmt.setdefault("annotations", []).extend(partner_notes.get(code, []))
-            seen_entity_ids.add(stmt["statementId"])
+            seen_entity_ids.add(stmt["recordId"])
             yield stmt
 
     branch = general.get("branch_of") or {}
@@ -1198,14 +1204,14 @@ def _ee_general_statements(
         ))
         if note:
             parent["annotations"].append(commenting(pointer("recordDetails"), note))
-        if parent["statementId"] not in seen_entity_ids:
-            seen_entity_ids.add(parent["statementId"])
+        if parent["recordId"] not in seen_entity_ids:
+            seen_entity_ids.add(parent["recordId"])
             yield parent
         yield make_relationship_statement(
             source_id="ariregister",
             local_id=f"branch-of-{local_id}",
-            subject_statement_id=company_stmt["statementId"],
-            interested_party_statement_id=parent["statementId"],
+            subject_statement_id=company_stmt["recordId"],
+            interested_party_statement_id=parent["recordId"],
             interested_party_type="entity",
             interests=[{
                 "type": "otherInfluenceOrControl",
@@ -1405,14 +1411,14 @@ def _ee_company_parties(
                 corp_stmt.setdefault("annotations", []).append(
                     commenting(pointer("recordDetails"), note)
                 )
-            if corp_stmt["statementId"] not in seen_entity_ids:
+            if corp_stmt["recordId"] not in seen_entity_ids:
                 yield corp_stmt
-                seen_entity_ids.add(corp_stmt["statementId"])
+                seen_entity_ids.add(corp_stmt["recordId"])
             rel = make_relationship_statement(
                 source_id="ariregister",
                 local_id=f"{prefix}-{kirje_id}",
                 subject_statement_id=company_stmt_id,
-                interested_party_statement_id=corp_stmt["statementId"],
+                interested_party_statement_id=corp_stmt["recordId"],
                 interested_party_type="entity",
                 interests=interests,
                 source_url=source_url,
@@ -1441,14 +1447,12 @@ def _ee_company_parties(
                 yield person_stmt
                 seen_person_ids.add(person_id)
             else:
-                person_stmt = {
-                    "statementId": _stable_id("ariregister", "person", person_id)
-                }
+                person_stmt = {"recordId": _stable_id("ariregister", "person", person_id)}
             rel = make_relationship_statement(
                 source_id="ariregister",
                 local_id=f"{prefix}-{kirje_id}",
                 subject_statement_id=company_stmt_id,
-                interested_party_statement_id=person_stmt["statementId"],
+                interested_party_statement_id=person_stmt["recordId"],
                 interested_party_type="person",
                 interests=interests,
                 source_url=source_url,
@@ -1499,14 +1503,14 @@ def _ee_company_parties(
                 corp_stmt.setdefault("annotations", []).append(
                     commenting(pointer("recordDetails"), note)
                 )
-            if corp_stmt["statementId"] not in seen_entity_ids:
+            if corp_stmt["recordId"] not in seen_entity_ids:
                 yield corp_stmt
-                seen_entity_ids.add(corp_stmt["statementId"])
+                seen_entity_ids.add(corp_stmt["recordId"])
             yield make_relationship_statement(
                 source_id="ariregister",
                 local_id=f"off-{kirje_id}",
                 subject_statement_id=company_stmt_id,
-                interested_party_statement_id=corp_stmt["statementId"],
+                interested_party_statement_id=corp_stmt["recordId"],
                 interested_party_type="entity",
                 interests=interests,
                 source_url=source_url,
@@ -1533,14 +1537,12 @@ def _ee_company_parties(
             yield person_stmt
             seen_person_ids.add(person_id)
         else:
-            person_stmt = {
-                "statementId": _stable_id("ariregister", "person", person_id)
-            }
+            person_stmt = {"recordId": _stable_id("ariregister", "person", person_id)}
         yield make_relationship_statement(
             source_id="ariregister",
             local_id=f"off-{kirje_id}",
             subject_statement_id=company_stmt_id,
-            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_statement_id=person_stmt["recordId"],
             interested_party_type="person",
             interests=interests,
             source_url=source_url,
@@ -1583,14 +1585,12 @@ def _ee_company_parties(
             yield person_stmt
             seen_person_ids.add(person_id)
         else:
-            person_stmt = {
-                "statementId": _stable_id("ariregister", "person", person_id)
-            }
+            person_stmt = {"recordId": _stable_id("ariregister", "person", person_id)}
         rel = make_relationship_statement(
             source_id="ariregister",
             local_id=f"bo-{kirje_id}",
             subject_statement_id=company_stmt_id,
-            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_statement_id=person_stmt["recordId"],
             interested_party_type="person",
             interests=interests,
             source_url=source_url,
@@ -1685,10 +1685,10 @@ def _ee_party_statements(
             corp_stmt.setdefault("annotations", []).append(
                 commenting(pointer("recordDetails"), note)
             )
-        if corp_stmt["statementId"] in seen_entity_ids:
-            return [], corp_stmt["statementId"], "entity"
-        seen_entity_ids.add(corp_stmt["statementId"])
-        return [corp_stmt], corp_stmt["statementId"], "entity"
+        if corp_stmt["recordId"] in seen_entity_ids:
+            return [], corp_stmt["recordId"], "entity"
+        seen_entity_ids.add(corp_stmt["recordId"])
+        return [corp_stmt], corp_stmt["recordId"], "entity"
     person_id = _ee_person_id(row)
     full_name = _ee_full_name(row)
     if not full_name or full_name == "Unknown":
@@ -1706,7 +1706,7 @@ def _ee_party_statements(
         source_url=source_url,
     )
     seen_person_ids.add(person_id)
-    return [person_stmt], person_stmt["statementId"], "person"
+    return [person_stmt], person_stmt["recordId"], "person"
 
 
 # ----------------------------------------------------------------------

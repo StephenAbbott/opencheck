@@ -135,7 +135,7 @@ async def test_mapper_shapes_and_validate(adapter):
 
 async def test_person_vs_entity_beneficial_ownership_flag(adapter):
     stmts = list(map_cac_nigeria(await adapter.fetch_by_lei(_LEI_B)))
-    by_id = {s["statementId"]: s for s in stmts}
+    by_id = {s["recordId"]: s for s in stmts}
     for s in stmts:
         if s["recordType"] != "relationship":
             continue
@@ -156,7 +156,7 @@ async def test_five_conditions_map_to_interest_types(adapter):
         and any(
             p["recordType"] == "person"
             for p in stmts
-            if p["statementId"] == s["recordDetails"]["interestedParty"]
+            if p["recordId"] == s["recordDetails"]["interestedParty"]
         )
     )
     types = [i["type"] for i in rel["recordDetails"]["interests"]]
@@ -175,7 +175,7 @@ async def test_shared_owner_dedup_across_subjects(adapter):
 
     def owner_id(stmts):
         return next(
-            s["statementId"] for s in stmts
+            s["recordId"] for s in stmts
             if s["recordType"] == "entity"
             and s["recordDetails"]["name"] == "Shared Holdings Ltd"
         )
@@ -345,7 +345,7 @@ def history_adapter(monkeypatch):
 
 
 def _rels(stmts):
-    by_id = {s["statementId"]: s for s in stmts}
+    by_id = {s["recordId"]: s for s in stmts}
     out = {}
     for s in stmts:
         if s["recordType"] != "relationship":
@@ -384,7 +384,7 @@ async def test_blank_name_rows_are_kept_as_separate_unknown_entities(history_ada
     unnamed = rels["Unnamed corporate owner"]
     # Two blank rows are two parties: nothing says they are one owner.
     assert len(unnamed) == 2
-    parties = {by_id[r["recordDetails"]["interestedParty"]]["statementId"] for r in unnamed}
+    parties = {by_id[r["recordDetails"]["interestedParty"]]["recordId"] for r in unnamed}
     assert len(parties) == 2
     for r in unnamed:
         party = by_id[r["recordDetails"]["interestedParty"]]

@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, _addr, make_entity_statement, record_date
+from ..statements import content_addressed
 
 
 # ----------------------------------------------------------------------
@@ -64,6 +65,7 @@ def _cro_address(rec: dict[str, Any]) -> dict[str, str] | None:
     return _addr("registered", ", ".join(non_empty), "IE")
 
 
+@content_addressed
 def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CroAdapter fetch bundle to a single BODS v0.4 entity statement.
 

@@ -11,6 +11,7 @@ from typing import Any, Iterable
 from .. import liveness as _liveness
 from ..annotations import annotate, pointer, transformation
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _today,
     dated_by_cut,
@@ -49,6 +50,7 @@ def _md_person_key(idno: str, name: str) -> str:
     return f"{idno}:person:{' '.join(folded.split())}"
 
 
+@content_addressed
 def map_asp_moldova(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Every statement dated by the ASP weekly export it came from (Phase 315). See ``_map_asp_moldova`` for the mapping."""
     yield from dated_by_cut(_map_asp_moldova(bundle), (bundle or {}).get("snapshot_date"))
@@ -170,8 +172,8 @@ def _map_asp_moldova(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield make_relationship_statement(
             source_id="asp_moldova",
             local_id=f"{idno}:officer:{index}",
-            subject_statement_id=entity["statementId"],
-            interested_party_statement_id=party["statementId"],
+            subject_statement_id=entity["recordId"],
+            interested_party_statement_id=party["recordId"],
             interested_party_type=party_type,
             interests=[interest],
             source_url=link,
@@ -249,8 +251,8 @@ def _map_asp_moldova(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         yield make_relationship_statement(
             source_id="asp_moldova",
             local_id=f"{idno}:founder:{index}",
-            subject_statement_id=entity["statementId"],
-            interested_party_statement_id=party["statementId"],
+            subject_statement_id=entity["recordId"],
+            interested_party_statement_id=party["recordId"],
             interested_party_type=party_type,
             interests=[interest],
             source_url=link,

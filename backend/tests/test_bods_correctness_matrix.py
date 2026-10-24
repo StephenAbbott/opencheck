@@ -136,12 +136,12 @@ class TestCompaniesHouseIndividualPsc:
         assert _interests(rel)[0]["directOrIndirect"] == "unknown"
 
     def test_subject_is_entity(self, stmts):
-        entity_id = _entities(stmts)[0]["statementId"]
+        entity_id = _entities(stmts)[0]["recordId"]
         rel_subject = (_relationships(stmts)[0].get("recordDetails") or {}).get("subject")
         assert rel_subject == entity_id
 
     def test_interested_party_is_person(self, stmts):
-        person_id = _persons(stmts)[0]["statementId"]
+        person_id = _persons(stmts)[0]["recordId"]
         rel_ip = (_relationships(stmts)[0].get("recordDetails") or {}).get("interestedParty")
         assert rel_ip == person_id
 
@@ -196,9 +196,9 @@ class TestCompaniesHouseCorporatePscChain:
         intermediary_ids = rel_subjects & rel_ips
         assert len(intermediary_ids) == 1
         intermediary_id = next(iter(intermediary_ids))
-        intermediary_stmt = next(s for s in stmts if s.get("statementId") == intermediary_id)
+        intermediary_stmt = next(s for s in stmts if s.get("recordId") == intermediary_id)
         assert (intermediary_stmt.get("recordDetails") or {}).get("isComponent") is True
-        subject = next(e for e in _entities(stmts) if e["statementId"] != intermediary_id)
+        subject = next(e for e in _entities(stmts) if e["recordId"] != intermediary_id)
         assert subject["recordDetails"]["isComponent"] is False
 
     def test_primary_indirect_relationship_exists(self, stmts):
@@ -215,8 +215,8 @@ class TestCompaniesHouseCorporatePscChain:
         assert "share" not in interest  # the band is the intermediary's
         assert primary["recordDetails"]["isComponent"] is False
         subsidiary = next(e for e in _entities(stmts) if e["recordDetails"]["name"] == "SUBSIDIARY LTD")
-        assert primary["recordDetails"]["subject"] == subsidiary["statementId"]
-        assert primary["recordDetails"]["interestedParty"] == _persons(stmts)[0]["statementId"]
+        assert primary["recordDetails"]["subject"] == subsidiary["recordId"]
+        assert primary["recordDetails"]["interestedParty"] == _persons(stmts)[0]["recordId"]
 
     def test_component_records_name_the_intermediary_and_both_hops(self, stmts):
         primary = next(r for r in _relationships(stmts) if "componentRecords" in r["recordDetails"])
@@ -231,17 +231,17 @@ class TestCompaniesHouseCorporatePscChain:
         assert set(primary["recordDetails"]["componentRecords"]) <= record_ids
 
     def test_components_are_published_before_the_primary(self, stmts):
-        ids = [s["statementId"] for s in stmts]
+        ids = [s["recordId"] for s in stmts]
         primary = next(r for r in _relationships(stmts) if "componentRecords" in r["recordDetails"])
-        primary_pos = ids.index(primary["statementId"])
-        by_record = {s["recordId"]: ids.index(s["statementId"]) for s in stmts}
+        primary_pos = ids.index(primary["recordId"])
+        by_record = {s["recordId"]: ids.index(s["recordId"]) for s in stmts}
         assert all(by_record[c] < primary_pos for c in primary["recordDetails"]["componentRecords"])
 
     def test_hops_keep_register_flags(self, stmts):
         """The register-sourced hops are untouched apart from isComponent: the
         person→holding hop stays BO true, the RLE hop BO false, both unknown
         directness."""
-        person_id = _persons(stmts)[0]["statementId"]
+        person_id = _persons(stmts)[0]["recordId"]
         hops = [r for r in _relationships(stmts) if "componentRecords" not in r["recordDetails"]]
         person_hop = next(r for r in hops if r["recordDetails"]["interestedParty"] == person_id)
         rle_hop = next(r for r in hops if r is not person_hop)
@@ -283,7 +283,7 @@ class TestCompaniesHouseCorporatePscChain:
         from opencheck.bods.mapper import map_companies_house
         a = [r for r in _relationships(_stmts(map_companies_house, bundle)) if "componentRecords" in r["recordDetails"]]
         b = [r for r in _relationships(_stmts(map_companies_house, bundle)) if "componentRecords" in r["recordDetails"]]
-        assert a[0]["statementId"] == b[0]["statementId"]
+        assert a[0]["recordId"] == b[0]["recordId"]
         assert a[0]["recordId"] == b[0]["recordId"]
         assert a[0]["statementId"] != a[0]["recordId"]
 
@@ -380,7 +380,7 @@ class TestCompaniesHouseChainWithoutPrimary:
         primaries = self._primaries(stmts)
         assert len(primaries) == 1
         direct_owner = next(p for p in _persons(stmts) if p["recordDetails"]["names"][0]["fullName"] == "DIRECT OWNER")
-        assert primaries[0]["recordDetails"]["interestedParty"] != direct_owner["statementId"]
+        assert primaries[0]["recordDetails"]["interestedParty"] != direct_owner["recordId"]
 
     def test_two_level_chain_lists_every_intermediary_and_hop(self):
         """Subsidiary ← Holding ← Top ← person: two intermediaries, three hops."""
@@ -587,7 +587,7 @@ class TestGleifDirectParent:
             if (e.get("recordDetails") or {}).get("name") == "TEST GMBH"
         )
         rel = _relationships(stmts)[0]
-        assert (rel.get("recordDetails") or {}).get("subject") == child_entity["statementId"]
+        assert (rel.get("recordDetails") or {}).get("subject") == child_entity["recordId"]
 
     def test_interested_party_is_parent_entity(self, stmts):
         """interestedParty of the relationship is the parent entity."""
@@ -596,7 +596,7 @@ class TestGleifDirectParent:
             if (e.get("recordDetails") or {}).get("name") == "PARENT HOLDING AG"
         )
         rel = _relationships(stmts)[0]
-        assert (rel.get("recordDetails") or {}).get("interestedParty") == parent_entity["statementId"]
+        assert (rel.get("recordDetails") or {}).get("interestedParty") == parent_entity["recordId"]
 
 
 # ===========================================================================

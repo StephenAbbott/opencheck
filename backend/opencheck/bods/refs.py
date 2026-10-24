@@ -132,3 +132,78 @@ def resolver(statements: Iterable[dict[str, Any]]) -> Callable[[Any], str]:
         return sid if isinstance(sid, str) and sid else ref
 
     return resolve
+
+
+# ---------------------------------------------------------------------------
+# Risk-signal evidence names statements too
+# ---------------------------------------------------------------------------
+
+#: The evidence fields that name a statement, and the shape each one has.
+#: ``signalScope.ts`` reads the same fields on the frontend.
+SIGNAL_REFERENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    ("statement_id", "one"),
+    ("subject_statement_id", "one"),
+    ("subject_statement_ids", "list"),
+    ("longest_path", "list"),
+    ("matches", "list_of_dicts"),
+    ("jurisdictions", "list_of_dicts"),
+    ("ended_relationship_statement_ids", "list"),
+)
+
+
+def resolve_signal_references(
+    signals: Iterable[dict[str, Any]], statements: Iterable[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """The signals with every evidence reference that names a statement
+    resolved to that statement's **statementId**.
+
+    The risk engine predicts the id of the statement a finding is about
+    from the source and the hit id — a prediction that is the party's
+    *recordId* now that a statementId is content-addressed and cannot be
+    predicted. A consumer (the graph badges, ``signalScope``, the
+    narrative) keys on statementId, so the reference is resolved here, in
+    one place, through the same tiers a relationship reference takes. An
+    id that names nothing in ``statements`` is left as it is, so a
+    dangling reference still reads as dangling. Signals are copied where
+    a field changes; untouched ones are returned as they are.
+    """
+    resolve = resolver(statements)
+
+    def one(value: Any) -> Any:
+        if not isinstance(value, str) or not value:
+            return value
+        resolved = resolve(value)
+        return resolved or value
+
+    out: list[dict[str, Any]] = []
+    for sig in signals:
+        evidence = sig.get("evidence")
+        if not isinstance(evidence, dict):
+            out.append(sig)
+            continue
+        new_evidence: dict[str, Any] | None = None
+        for field, shape in SIGNAL_REFERENCE_FIELDS:
+            value = evidence.get(field)
+            if value is None:
+                continue
+            if shape == "one":
+                replacement: Any = one(value)
+            elif shape == "list" and isinstance(value, list):
+                replacement = [one(v) for v in value]
+            elif shape == "list_of_dicts" and isinstance(value, list):
+                replacement = [
+                    {**m, "statement_id": one(m.get("statement_id"))}
+                    if isinstance(m, dict) and m.get("statement_id") else m
+                    for m in value
+                ]
+            else:
+                continue
+            if replacement != value:
+                if new_evidence is None:
+                    new_evidence = dict(evidence)
+                new_evidence[field] = replacement
+        if new_evidence is None:
+            out.append(sig)
+        else:
+            out.append({**sig, "evidence": new_evidence})
+    return out

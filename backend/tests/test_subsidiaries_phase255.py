@@ -103,7 +103,7 @@ def _sid_of(stmts: list[dict], lei: str) -> str:
     for s in stmts:
         for i in (s.get("recordDetails") or {}).get("identifiers") or []:
             if i.get("scheme") == "XI-LEI" and i.get("id") == lei:
-                return s["statementId"]
+                return s["recordId"]
     raise AssertionError(lei)
 
 
@@ -144,8 +144,8 @@ def test_the_deep_edge_uses_the_parents_own_network_id():
           "rels": {"direct": _rr(DEEP, DIRECT, start="2020-11-02T00:00:00Z",
                                  updated="2023-07-31T17:34:15Z")}}],
     )
-    ids = {r["statementId"] for r in _rels(stmts)}
-    assert {r["statementId"] for r in _rels(from_parent)} <= ids
+    ids = {r["recordId"] for r in _rels(stmts)}
+    assert {r["recordId"] for r in _rels(from_parent)} <= ids
 
 
 def test_a_direct_parent_outside_the_network_is_named_not_drawn():

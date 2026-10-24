@@ -11,6 +11,7 @@ from typing import Any
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     BODSBundle,
     SOURCE_NAMES,
     _addr,
@@ -217,6 +218,7 @@ def _gemi_partner_class(role: str) -> str | None:
     return None
 
 
+@content_addressed
 def map_gemi_greece(bundle: dict[str, Any]) -> BODSBundle:
     """Map a ΓΕΜΗ fetch bundle to BODS v0.4 statements.
 

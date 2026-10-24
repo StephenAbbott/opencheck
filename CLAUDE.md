@@ -1006,11 +1006,71 @@ re-derived otherwise:
   equal for now). `test_frontend_parity.py` pins two tiers.
 - **The frontend's `reconcileBods`** carries the members' declaration onto a
   merged statement and remaps every party's to the subject's canonical id.
-- **Phase B (content-addressed `statementId`) is separate** and will find
-  the places that assume `statementId == recordId` — including
-  `routers/expand.py`'s blunt string remap, which today rewrites
-  `recordId` and `declarationSubject` along with `statementId` only because
-  the three are equal.
+- **The resolver keeps two tiers and no `declarationSubject` alias**
+  (Stephen, 23 Oct 2026, after a challenge): the BODS MUST is about what a
+  statement *contains*, which the stamp satisfies; a lookup path by
+  `declarationSubject` would point a chain's middle company at the subject.
+
+## A `statementId` names its content; a `recordId` names the record (the content-addressed phase)
+
+Phase B of the record-id ticket. BODS v0.4: a `statementId` is unique per
+statement, a `recordId` stable across a record's versions. Until this phase
+every OpenCheck entity and person had the two equal, so a changed record kept
+its id. Stephen's decisions (23 Oct 2026): hash `recordDetails` +
+`recordStatus`; exclude annotations, `statementDate` and `retrievedAt`;
+relationships-by-recordId first as its own PR; the minimal FullCheck remap
+(the structured one is its own ticket); one curated-narrative regeneration
+after deploy. Things that will be re-derived otherwise:
+
+- **`recordId` is unchanged** — `_stable_id(source, kind, local_id)` — so
+  every key in the codebase still works. **`statementId` =
+  `content_statement_id(recordId, recordDetails, recordStatus)`** =
+  `_stable_id(recordId, "content", sha256[:16])`; `publicListing` is left
+  out of the digest because the listing is stamped after the sources settle
+  and the node must keep its id. A relationship's id follows the same rule
+  (the old closed-variant salt is gone). `refresh_statement_id(stmt)`
+  recomputes it in place; `stale_statement_id(stmt)` says whether it needs
+  to. Another publisher's statements (no `opencheck-` recordId: MEIP, Open
+  Ownership's bundles, `_oo_republish`) are never touched.
+- **Every `map_*` is `@content_addressed`** (`bods/statements.py`). A mapper
+  that edits a statement after the factory — `apply_register_status`, a
+  legal-form label, an industry code, the Estonian prefix strip — would
+  leave a stale id, so the decorator recomputes it as each statement leaves
+  the mapper; generators stay generators (the Phase 314 scope rule holds).
+  A new mapper takes the decorator on its `def map_<source>` line;
+  `test_content_addressed_statement_id.py` fails on a registered one without
+  it. `apply_register_status` and `classify_government_entities` refresh in
+  place too, for callers outside a mapper.
+- **Three guards**: the conftest mapper guard (`_entity_subtype_guard`)
+  fails a yielded statement whose id is stale; the weekly BODS quality sweep
+  has `stale_statement_id`; `unique_statements` dedupes entities and people
+  on `recordId` (the later reading of one record wins) and relationships on
+  `statementId` (a closed version beside an open one is two statements).
+- **References are recordIds, everywhere.** Every mapper passes
+  `x["recordId"]` to `make_relationship_statement`; the risk engine's
+  predicted ids (`risk.py`'s FtM subject-level signals via `_ftm_record_id`,
+  the GLEIF exception bridges, `expand.py`'s GLEIF subject) are recordIds.
+  **`bods/refs.py::resolve_signal_references`** maps every evidence reference
+  (`SIGNAL_REFERENCE_FIELDS`: `statement_id`, `subject_statement_id(s)`,
+  `matches[]`, `jurisdictions[]`, `longest_path`,
+  `ended_relationship_statement_ids`) to statementIds through the Phase 210
+  resolver. It runs inside `_merge_signals(..., bods=)` — both lookup
+  pipelines, `/report`, the FullCheck hop — and on `/deepen`. A signal
+  built elsewhere must go through it before a consumer keys on it. Before
+  this phase the FtM path predicted `_stable_id(source, hit_id)`, a two-part
+  id no mapper wrote, so SANCTIONED/PEP evidence never found its node.
+- **A test that compares two mappings of one record compares minus
+  `statementId`** when their content differs (the GLEIF mirror-vs-live test:
+  trimmed identifiers move the id). A test that keys the engine's output —
+  `former_party_ids`, `officer_only_entity_ids`, `check_unreferenced_entities`
+  — reads statementIds; a test that builds a reference passes a recordId.
+- **FullCheck's `_anchor_replacements` rewrites both ids** of each subject
+  statement onto the anchor (a statementId on the canvas); the hop's edges
+  carry recordIds, the node is keyed on the statementId. Blunt by decision;
+  the structured remap is its own ticket.
+- **After deploy**: Ørsted's QuickCheck shows `statementId ≠ recordId` on
+  every OpenCheck statement and badges on OpenSanctions subject nodes;
+  regenerate the six curated narratives once.
 
 ## OECD-UNSD MEIP is a source, as the OECD's own BODS (Phase 208)
 

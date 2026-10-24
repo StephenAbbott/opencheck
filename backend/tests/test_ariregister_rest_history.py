@@ -161,7 +161,7 @@ def _statements(code: str, history: dict[str, Any]) -> dict[str, dict[str, Any]]
         s = copy.deepcopy(s)
         s.pop("source", None)
         s.pop("publicationDetails", None)
-        out[s["statementId"]] = s
+        out[s["recordId"]] = s
     return out
 
 
@@ -180,6 +180,9 @@ def test_the_graph_is_the_same_apart_from_a_legal_persons_spelling(code: str) ->
         b = copy.deepcopy(twin)
         a["recordDetails"].pop("name")
         b["recordDetails"].pop("name")
+        # The statementId is content-addressed, so it follows the name.
+        a.pop("statementId")
+        b.pop("statementId")
         assert a == b
         assert statement["recordDetails"]["name"].casefold().split(":")[-1].strip() == \
             twin["recordDetails"]["name"].casefold()

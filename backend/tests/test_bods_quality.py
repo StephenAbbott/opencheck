@@ -434,3 +434,22 @@ def test_an_empty_deepen_is_a_warning_and_does_not_fail_the_run(monkeypatch):
     assert not any(f["check"] == "deepen_empty" for f in full["findings"])
     assert report["totals"]["by_check"].get("deepen_empty") == 1
     assert not bq.failed(report)
+
+
+def test_a_stale_statement_id_is_a_finding() -> None:
+    """The content-addressed statementId phase: a statement edited after the
+    mapper without ``refresh_statement_id`` fails the sweep."""
+    from opencheck.bods.statements import make_entity_statement, refresh_statement_id
+
+    with provenance.recording() as rec:
+        provenance.record_live("companies_house")
+    with provenance.mapping_provenance(rec.resolve(is_stub=False)):
+        stmt = make_entity_statement(
+            source_id="companies_house", local_id="1", name="ACME LIMITED"
+        )
+    today = dt.date.today().isoformat()
+    assert [f.check for f in bq.check_statements([stmt], today=today)] == []
+    stmt["recordDetails"]["name"] = "ACME PLC"
+    assert "stale_statement_id" in {f.check for f in bq.check_statements([stmt], today=today)}
+    refresh_statement_id(stmt)
+    assert [f.check for f in bq.check_statements([stmt], today=today)] == []

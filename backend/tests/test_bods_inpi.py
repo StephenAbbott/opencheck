@@ -302,14 +302,14 @@ def test_map_inpi_relationship_subject_is_entity() -> None:
     stmts = list(map_inpi(_bundle()))
     entity = next(s for s in stmts if s["recordType"] == "entity")
     rel = next(s for s in stmts if s["recordType"] == "relationship")
-    assert rel["recordDetails"]["subject"] == entity["statementId"]
+    assert rel["recordDetails"]["subject"] == entity["recordId"]
 
 
 def test_map_inpi_relationship_interested_party_is_person() -> None:
     stmts = list(map_inpi(_bundle()))
     person = next(s for s in stmts if s["recordType"] == "person")
     rel = next(s for s in stmts if s["recordType"] == "relationship")
-    assert rel["recordDetails"]["interestedParty"] == person["statementId"]
+    assert rel["recordDetails"]["interestedParty"] == person["recordId"]
 
 
 # ---------------------------------------------------------------------------

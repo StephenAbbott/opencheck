@@ -524,13 +524,19 @@ def stage_assemble(args: argparse.Namespace) -> dict[str, Any]:
     day = dataset_day(sel)
     name = f"{DATASET_PREFIX}-{day}"
 
-    # One statement per id. A company's own record outranks a thinner
-    # statement another company's list built under the same id; between two
-    # of the same rank the longer wins (they are otherwise copies).
+    # One statement per record. A company's own record outranks a thinner
+    # statement another company's list built for the same party; between two
+    # of the same rank the longer wins. A party is keyed on its recordId — the
+    # statementId is content-addressed (the record-ID ticket's phase B), so
+    # the thin and the full statement of one party carry different ones — and
+    # a relationship on its statementId, as ``unique_statements`` does.
     conn = _dedupe_db(work / "dedupe.sqlite")
     total_rows = 0
     for primary, body, statement in _parts(work):
-        sid = statement.get("statementId")
+        if statement.get("recordType") in ("entity", "person"):
+            sid = statement.get("recordId") or statement.get("statementId")
+        else:
+            sid = statement.get("statementId")
         if not sid:
             continue
         total_rows += 1

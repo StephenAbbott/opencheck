@@ -16,6 +16,7 @@ from ... import names as _names
 from .. import liveness as _liveness
 from ..unique import unique_statements
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     BODSBundle,
     _addr,
@@ -393,7 +394,7 @@ def _ftm_edge_relationships(
                         if stmt is None:
                             continue
                         result.statements.append(stmt)
-                        ip_sid = stmt["statementId"]
+                        ip_sid = stmt["recordId"]
                         ip_type = (
                             "entity" if stmt["recordType"] == "entity" else "person"
                         )
@@ -408,7 +409,7 @@ def _ftm_edge_relationships(
                         if stmt is None:
                             continue
                         result.statements.append(stmt)
-                        subj_sid = stmt["statementId"]
+                        subj_sid = stmt["recordId"]
 
                     # Composite local id: stays stable per edge AND unique per
                     # endpoint pair when one edge fans out to several parties.
@@ -429,6 +430,7 @@ def _ftm_edge_relationships(
                     result.statements.append(rel)
 
 
+@content_addressed
 def map_ftm(
     payload: dict[str, Any],
     *,
@@ -450,7 +452,7 @@ def map_ftm(
     if subject is None:
         return result
     result.statements.append(subject)
-    subject_sid = subject["statementId"]
+    subject_sid = subject["recordId"]
     subject_type = "entity" if subject["recordType"] == "entity" else "person"
 
     # --- Legacy flat-property relationships (older FtM API shape) -----------
@@ -486,12 +488,12 @@ def map_ftm(
             # When the FtM property expresses "owner of X", the related
             # record is the *subject* and `payload` is the interested party.
             if key == "ownersOf":
-                rel_subject_sid = related_stmt["statementId"]
+                rel_subject_sid = related_stmt["recordId"]
                 rel_ip_sid = subject_sid
                 rel_ip_type = subject_type
             else:
                 rel_subject_sid = subject_sid
-                rel_ip_sid = related_stmt["statementId"]
+                rel_ip_sid = related_stmt["recordId"]
                 rel_ip_type = related_type
 
             legacy_interest: dict[str, Any] = {
@@ -812,6 +814,7 @@ def _ftm_addresses(props: dict[str, Any]) -> list[dict[str, Any]]:
     return result
 
 
+@content_addressed
 def map_opensanctions(bundle: dict[str, Any]) -> BODSBundle:
     """Convenience wrapper: ``bundle`` is the adapter's fetch output."""
     entity = bundle.get("entity") or bundle
@@ -822,6 +825,7 @@ def map_opensanctions(bundle: dict[str, Any]) -> BODSBundle:
     )
 
 
+@content_addressed
 def map_openaleph(bundle: dict[str, Any]) -> BODSBundle:
     """Convenience wrapper: ``bundle`` is the adapter's fetch output."""
     entity = bundle.get("entity") or bundle
@@ -832,6 +836,7 @@ def map_openaleph(bundle: dict[str, Any]) -> BODSBundle:
     )
 
 
+@content_addressed
 def map_everypolitician(bundle: dict[str, Any]) -> BODSBundle:
     """Convenience wrapper for EveryPolitician — same FtM shape as OpenSanctions.
 

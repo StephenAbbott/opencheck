@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .. import liveness as _liveness
 from ..statements import (
+    content_addressed,
     SOURCE_NAMES,
     _addr,
     _stable_id,
@@ -144,15 +145,15 @@ def _brreg_unit_role_statements(
         source_url=_company_url_brreg(unit_orgnr) if unit_orgnr else source_url,
         statement_date=role_last_changed,
     )
-    if entity["statementId"] not in seen:
+    if entity["recordId"] not in seen:
         out.append(entity)
-        seen.add(entity["statementId"])
+        seen.add(entity["recordId"])
     out.append(
         make_relationship_statement(
             source_id="brreg",
             local_id=f"{orgnr}:role:{idx}:{local_id}",
             subject_statement_id=company_stmt_id,
-            interested_party_statement_id=entity["statementId"],
+            interested_party_statement_id=entity["recordId"],
             interested_party_type="entity",
             interests=[{
                 "type": interest_type,
@@ -171,6 +172,7 @@ def _company_url_brreg(orgnr: str) -> str:
     return f"https://w2.brreg.no/enhet/sok/detalj.jsp?orgnr={orgnr}"
 
 
+@content_addressed
 def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a BrregAdapter fetch bundle to BODS v0.4 statements.
 
@@ -251,7 +253,7 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         since=no_deleted,
     )
     yield company_stmt
-    company_stmt_id: str = company_stmt["statementId"]
+    company_stmt_id: str = company_stmt["recordId"]
 
     # ── 2. Role-holder statements ─────────────────────────────────────────
     seen_person_ids: set[str] = set()
@@ -311,9 +313,7 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             yield person_stmt
             seen_person_ids.add(person_local_id)
         else:
-            person_stmt = {
-                "statementId": _stable_id("brreg", "person", person_local_id)
-            }
+            person_stmt = {"recordId": _stable_id("brreg", "person", person_local_id)}
 
         interests: list[dict[str, Any]] = [
             {
@@ -328,7 +328,7 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_id="brreg",
             local_id=f"{orgnr}:role:{idx}:{person_local_id}",
             subject_statement_id=company_stmt_id,
-            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_statement_id=person_stmt["recordId"],
             interested_party_type="person",
             interests=interests,
             source_url=source_url,

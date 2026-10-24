@@ -12,6 +12,7 @@ from typing import Any, Iterable
 
 from ..annotations import annotate, commenting, pointer, transformation
 from ..statements import (
+    content_addressed,
     _addr,
     _country_obj,
     _stable_id,
@@ -105,6 +106,7 @@ def _eiti_bo_date(value: Any) -> str | None:
     return m.group(1) if m else None
 
 
+@content_addressed
 def map_eiti_bo(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a pooled EITI BO registers bundle to BODS v0.4 statements.
 
@@ -169,7 +171,7 @@ def _eiti_bo_map_drc(
         ),
     )
     yield subject_stmt
-    subject_id: str = subject_stmt["statementId"]
+    subject_id: str = subject_stmt["recordId"]
 
     fraction = comp.get("pct_semantics") == "fraction-of-1"
     for owner in comp.get("owners") or []:
@@ -257,7 +259,7 @@ def _eiti_bo_map_drc(
             source_id="eiti_bo",
             local_id=f"drc:{nif}:{raw_name}",
             subject_statement_id=subject_id,
-            interested_party_statement_id=person_stmt["statementId"],
+            interested_party_statement_id=person_stmt["recordId"],
             interests=interests,
             source_url=source_url,
             statement_date=statement_date,
@@ -648,7 +650,7 @@ def _eiti_bo_map_nigeria(
             ),
         )
     yield subject_stmt
-    subject_id: str = subject_stmt["statementId"]
+    subject_id: str = subject_stmt["recordId"]
 
     # Phase 231: the same grouping as the cac_nigeria card beside it —
     # current vs closed owners, unnamed corporate owners kept — so one report

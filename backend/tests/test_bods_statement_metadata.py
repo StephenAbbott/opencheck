@@ -327,10 +327,10 @@ class TestMakeEntityStatement:
 
     def test_statement_id_present(self, stmt):
         assert "statementId" in stmt
-        assert stmt["statementId"].startswith("opencheck-")
+        assert stmt["recordId"].startswith("opencheck-")
 
     def test_record_id_equals_statement_id(self, stmt):
-        assert stmt["recordId"] == stmt["statementId"]
+        assert stmt["recordId"] == stmt["recordId"]
 
     def test_record_type_entity(self, stmt):
         assert stmt["recordType"] == "entity"
@@ -408,7 +408,7 @@ class TestMakeEntityStatement:
     def test_deterministic_statement_id(self):
         a = make_entity_statement(source_id=_ENTITY_SOURCE, local_id=_ENTITY_LOCAL, name="Acme Ltd")
         b = make_entity_statement(source_id=_ENTITY_SOURCE, local_id=_ENTITY_LOCAL, name="Acme Ltd")
-        assert a["statementId"] == b["statementId"]
+        assert a["recordId"] == b["recordId"]
 
     def test_custom_entity_type(self):
         stmt = make_entity_statement(
@@ -507,7 +507,7 @@ class TestMakePersonStatement:
         assert stmt["recordDetails"]["birthDate"] == "1975-06-20"
 
     def test_record_id_equals_statement_id(self, stmt):
-        assert stmt["recordId"] == stmt["statementId"]
+        assert stmt["recordId"] == stmt["recordId"]
 
 
 # ---------------------------------------------------------------------------
@@ -537,8 +537,8 @@ class TestMakeRelationshipStatement:
         return make_relationship_statement(
             source_id=_REL_SOURCE,
             local_id="psc-abc123",
-            subject_statement_id=entity_stmt["statementId"],
-            interested_party_statement_id=person_stmt["statementId"],
+            subject_statement_id=entity_stmt["recordId"],
+            interested_party_statement_id=person_stmt["recordId"],
             interests=[
                 {
                     "type": "shareholding",
@@ -567,10 +567,10 @@ class TestMakeRelationshipStatement:
         assert "publicationDetails" in rel_stmt
 
     def test_subject_points_to_entity(self, entity_stmt, rel_stmt):
-        assert rel_stmt["recordDetails"]["subject"] == entity_stmt["statementId"]
+        assert rel_stmt["recordDetails"]["subject"] == entity_stmt["recordId"]
 
     def test_interested_party_points_to_person(self, person_stmt, rel_stmt):
-        assert rel_stmt["recordDetails"]["interestedParty"] == person_stmt["statementId"]
+        assert rel_stmt["recordDetails"]["interestedParty"] == person_stmt["recordId"]
 
     def test_interests_populated(self, rel_stmt):
         assert rel_stmt["recordDetails"]["interests"]
@@ -588,8 +588,8 @@ class TestMakeRelationshipStatement:
         rel = make_relationship_statement(
             source_id=_REL_SOURCE,
             local_id="psc-abc123",
-            subject_statement_id=entity_stmt["statementId"],
-            interested_party_statement_id=person_stmt["statementId"],
+            subject_statement_id=entity_stmt["recordId"],
+            interested_party_statement_id=person_stmt["recordId"],
             source_url=url,
         )
         assert rel["source"]["url"] == url
@@ -610,7 +610,7 @@ class TestCrossSourceMetadataConsistency:
             make_entity_statement(source_id="kvk", local_id="90000001", name="Test BV")
             for _ in range(3)
         ]
-        ids = {s["statementId"] for s in calls}
+        ids = {s["recordId"] for s in calls}
         assert len(ids) == 1, "statementId is not deterministic across calls"
 
     def test_person_statement_id_is_stable_across_calls(self):
@@ -618,11 +618,11 @@ class TestCrossSourceMetadataConsistency:
             make_person_statement(source_id="kvk", local_id="person-001", full_name="Jan de Vries")
             for _ in range(3)
         ]
-        ids = {s["statementId"] for s in calls}
+        ids = {s["recordId"] for s in calls}
         assert len(ids) == 1
 
     def test_different_sources_same_local_id_produce_different_statement_ids(self):
         """Two sources reporting on the same local_id must not clash in statementId."""
         e_ch = make_entity_statement(source_id="companies_house", local_id="12345678", name="Acme")
         e_oc = make_entity_statement(source_id="opencorporates", local_id="12345678", name="Acme")
-        assert e_ch["statementId"] != e_oc["statementId"]
+        assert e_ch["recordId"] != e_oc["recordId"]

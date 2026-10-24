@@ -21,6 +21,7 @@ from ..ch_constants import describe_company_type, describe_officer_role
 from ..officer_roles import mark_officer
 from ..psc_natures import describe_statement, describe_super_secure
 from ..statements import (
+    content_addressed,
     BODSBundle,
     SOURCE_NAMES,
     _addr,
@@ -36,6 +37,7 @@ from ..statements import (
 )
 
 
+@content_addressed
 def map_companies_house(bundle: dict[str, Any]) -> BODSBundle:
     """Map a Companies House bundle to BODS.
 
@@ -104,7 +106,7 @@ def _annotate_verified_people(result: BODSBundle) -> None:
     for stmt in result.statements:
         if stmt.get("recordType") != "person":
             continue
-        found = roles.get(stmt.get("statementId"))
+        found = roles.get(stmt.get("recordId"))
         if not found:
             continue
         annotate(
@@ -171,7 +173,7 @@ def _rollup_ch_chains(
     and a ``transformation`` annotation says which component records it was
     derived from. The hops keep their register-sourced flags.
     """
-    root_sid = root.entity["statementId"]
+    root_sid = root.entity["recordId"]
     primaries: dict[str, dict[str, Any]] = {}  # person sid -> primary statement
 
     def walk(
@@ -297,9 +299,9 @@ def _rollup_ch_chains(
     walk(root, 0, frozenset({root.number}), None, (), ())
 
     for primary in primaries.values():
-        if primary["statementId"] not in seen_sids:
+        if primary["recordId"] not in seen_sids:
             result.statements.append(primary)
-            seen_sids.add(primary["statementId"])
+            seen_sids.add(primary["recordId"])
 
 
 def _ch_officer_id(officer: dict[str, Any]) -> str | None:
@@ -628,7 +630,7 @@ def _ch_director_statements(
             _birth_date_precision_note(birth_date),
             _ch_officer_grouping_note(officer_id),
         )
-        person_sid = person["statementId"]
+        person_sid = person["recordId"]
         # First writer wins, and the subject is always mapped first
         # (``map_companies_house`` emits the root bundle before any related
         # company), so where two boards file different details for one person
@@ -684,7 +686,7 @@ def _ch_director_statements(
                 ),
             )
 
-        rel_sid = rel["statementId"]
+        rel_sid = rel["recordId"]
         if rel_sid not in seen_sids:
             stmts.append(rel)
             seen_sids.add(rel_sid)
@@ -949,7 +951,7 @@ def _ch_corporate_officer_statements(
     """
     out: list[dict[str, Any]] = []
     entity = _ch_corporate_officer_entity(company_number, officer, company_url)
-    party_sid = entity["statementId"]
+    party_sid = entity["recordId"]
     if party_sid not in seen_sids:
         out.append(entity)
         seen_sids.add(party_sid)
@@ -971,9 +973,9 @@ def _ch_corporate_officer_statements(
         interests=[interest],
         source_url=company_url,
     )
-    if rel["statementId"] not in seen_sids:
+    if rel["recordId"] not in seen_sids:
         out.append(rel)
-        seen_sids.add(rel["statementId"])
+        seen_sids.add(rel["recordId"])
     return out
 
 
@@ -1143,14 +1145,14 @@ def _emit_company_statements(
         raw=profile.get("company_status"),
         since=profile.get("date_of_cessation"),
     )
-    entity_sid = entity["statementId"]
+    entity_sid = entity["recordId"]
     if entity_sid not in seen_sids:
         result.statements.append(entity)
         seen_sids.add(entity_sid)
     else:
         # The related-company pass re-emits an entity the PSC pass already
         # produced; the roll-up must flag the statement that is in the bundle.
-        entity = next(s for s in result.statements if s["statementId"] == entity_sid)
+        entity = next(s for s in result.statements if s["recordId"] == entity_sid)
     company = _ChCompany(number=number, entity=entity, url=company_url)
 
     for psc in pscs:
@@ -1196,7 +1198,7 @@ def _emit_company_statements(
             )
             ip_type = "person"
 
-        ip_sid = ip["statementId"]
+        ip_sid = ip["recordId"]
         if ip_sid not in seen_sids:
             result.statements.append(ip)
             seen_sids.add(ip_sid)
@@ -1297,12 +1299,12 @@ def _emit_company_statements(
                     ),
                 )
 
-        rel_sid = rel["statementId"]
+        rel_sid = rel["recordId"]
         if rel_sid not in seen_sids:
             result.statements.append(rel)
             seen_sids.add(rel_sid)
         else:
-            rel = next(s for s in result.statements if s["statementId"] == rel_sid)
+            rel = next(s for s in result.statements if s["recordId"] == rel_sid)
         company.hops.append(
             _ChPscHop(
                 ip_sid=ip_sid,
@@ -1319,9 +1321,9 @@ def _emit_company_statements(
     # information modelling, data-standard issue #389).
     statement_items = (bundle.get("psc_statements") or {}).get("items") or []
     for stmt in _ch_psc_statement_statements(number, statement_items, entity_sid, company_url):
-        if stmt["statementId"] not in seen_sids:
+        if stmt["recordId"] not in seen_sids:
             result.statements.append(stmt)
-            seen_sids.add(stmt["statementId"])
+            seen_sids.add(stmt["recordId"])
 
     # Directors → seniorManagingOfficial person + relationship statements.
     director_stmts = _ch_director_statements(
@@ -1496,7 +1498,7 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
         )
         party_type = "person"
     result.statements.append(person)
-    person_sid = person["statementId"]
+    person_sid = person["recordId"]
 
     for idx, appointment in enumerate(items):
         appointed_to = appointment.get("appointed_to") or {}
@@ -1525,7 +1527,7 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
             source_url=company_url,
         )
         result.statements.append(entity)
-        entity_sid = entity["statementId"]
+        entity_sid = entity["recordId"]
 
         # Map the officer role to a BODS interest. Directors and
         # secretaries become boardMember; LLP members are otherInfluence

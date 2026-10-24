@@ -205,8 +205,8 @@ async def test_mapper_emits_state_control_shape(adapter):
         if e["recordDetails"]["entityType"]["type"] == "registeredEntity"
     )
     rel = rels[0]
-    assert rel["recordDetails"]["subject"] == soe["statementId"]
-    assert rel["recordDetails"]["interestedParty"] == state_body["statementId"]
+    assert rel["recordDetails"]["subject"] == soe["recordId"]
+    assert rel["recordDetails"]["interestedParty"] == state_body["recordId"]
     interest = rel["recordDetails"]["interests"][0]
     assert interest["type"] == "controlByLegalFramework"
     # The roster asserts state ownership, not the chain it runs through
