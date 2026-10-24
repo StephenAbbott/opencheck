@@ -274,6 +274,20 @@ def _identifier_keys(stmt: dict) -> set[str]:
         # authority named, where the scheme used to be blank.
         if jur and (scheme == "" or is_ra_scheme(scheme) or scheme.startswith(f"{jur}-")) and "VAT" not in scheme and "/" not in val:
             keys.add(f"JUR:{jur}:{val}")
+        # ``REG-<country>`` is the mappers' fallback for a register number
+        # whose register is not named (OpenAleph's ``registrationNumber``,
+        # a PSC filed as registered in "England And Wales"): a national
+        # registration number in that country, so it bridges to the
+        # jurisdiction key like a named register scheme does —
+        # ``subject_keys`` already reads the two as one. Ørsted's three
+        # OpenAleph records carried ``REG-DK 36213728`` and never joined the
+        # GLEIF record's ``DK-CVR 36213728`` (the one-subject-per-source
+        # ticket, 24 Oct 2026). The statement's own jurisdiction, where it
+        # has one, must agree.
+        if scheme.startswith("REG-") and "/" not in val:
+            country = scheme[4:]
+            if len(country) == 2 and country.isalpha() and (not jur or jur == country):
+                keys.add(f"JUR:{country}:{val}")
     return keys
 
 

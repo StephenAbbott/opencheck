@@ -180,6 +180,18 @@ function identKeys(s: Stmt): string[] {
     ) {
       keys.push(`JUR:${jur}:${val}`);
     }
+    // `REG-<country>` is the mappers' fallback for a register number whose
+    // register is not named (OpenAleph's registrationNumber): a national
+    // registration number in that country, so it bridges to the jurisdiction
+    // key like a named register scheme does. The statement's own
+    // jurisdiction, where it has one, must agree. Mirror of the backend
+    // `_identifier_keys` (the one-subject-per-source ticket, 24 Oct 2026).
+    if (scheme.startsWith("REG-") && !val.includes("/")) {
+      const country = scheme.slice(4);
+      if (/^[A-Z]{2}$/.test(country) && (!jur || jur === country)) {
+        keys.push(`JUR:${country}:${val}`);
+      }
+    }
   }
   return keys;
 }
