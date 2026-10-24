@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 396** — Every BODS statement's declarationSubject now names the looked-up company as its source records it, per source, instead of each party naming itself.
+**Latest: Phase 397** — A scramble harness on both sides proves every consumer resolves a relationship's parties by recordId, ready for content-addressed statement ids.
 
 → [Full development history](docs/status.md)
 
