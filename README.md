@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 401** — FullCheck's anchor collapse now rewrites only the fields that reference a party, leaving annotation sentences and summaries as written.
+**Latest: Phase 402** — RECORD_CONSISTENCY's subject list and the GLEIF exception signals' exception list now name the same statement ids as the rest of the evidence, in a lookup and after a FullCheck hop.
 
 → [Full development history](docs/status.md)
 
