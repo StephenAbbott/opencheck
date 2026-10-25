@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 400** — A new docs page explains OpenCheck's three BODS identifiers, and the /about page now describes them correctly.
+**Latest: Phase 401** — FullCheck's anchor collapse now rewrites only the fields that reference a party, leaving annotation sentences and summaries as written.
 
 → [Full development history](docs/status.md)
 
