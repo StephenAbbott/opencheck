@@ -1076,8 +1076,21 @@ after deploy. Things that will be re-derived otherwise:
   — reads statementIds; a test that builds a reference passes a recordId.
 - **FullCheck's `_anchor_replacements` rewrites both ids** of each subject
   statement onto the anchor (a statementId on the canvas); the hop's edges
-  carry recordIds, the node is keyed on the statementId. Blunt by decision;
-  the structured remap is its own ticket.
+  carry recordIds, the node is keyed on the statementId. The table is applied
+  **field by field** since the structured-remap phase (24 Oct 2026):
+  `refs.remap_statement_references` (`STATEMENT_REFERENCE_FIELDS` —
+  `statementId`, `recordId`, `declarationSubject`, the party references in
+  either spelling, `componentRecords`) and `refs.remap_signal_references`
+  (the `SIGNAL_REFERENCE_FIELDS` **plus** any `statement_id` /
+  `…statement_ids` key at any depth of `evidence` — the risk engine nests
+  ids in `state_holdings[].parties[]` and `elements[].statement_ids`). Free
+  text — an annotation sentence, `details`, a signal `summary` — is never
+  read; the `json.dumps().replace()` it replaced rewrote every occurrence. A
+  new evidence shape that holds ids under some other key name needs a name
+  in `SIGNAL_REFERENCE_FIELDS`; `test_expand_structured_remap.py` pins both
+  lists. The collapsed statement's `recordId` is rewritten to the anchor's
+  *statementId* on purpose (Stephen): the resolver takes it at tier 1 and
+  the canvas drops the statement as a duplicate of the anchor's.
 - **After deploy**: Ørsted's QuickCheck shows `statementId ≠ recordId` on
   every OpenCheck statement and badges on OpenSanctions subject nodes;
   regenerate the six curated narratives once.

@@ -29,7 +29,7 @@ from .. import (
     register_hops,
     signalstats,
 )
-from ..bods import unique_statements
+from ..bods import refs as _refs, unique_statements
 from ..cross_check import CHECK_NAME as _CROSS_CHECK
 from ..icij_check import CHECK_NAME as _ICIJ_CHECK
 from ..openaleph_check import CHECK_NAME as _OPENALEPH_CHECK
@@ -92,8 +92,11 @@ def _anchor_replacements(bods: list[dict[str, Any]], key: str, anchor: str) -> d
     # Both ids of each subject statement are rewritten: since the
     # content-addressed statementId phase a relationship names its party by
     # recordId, so the recordId is what the hop's edges carry, and the
-    # statementId is what the canvas keys its node on. The structured remap
-    # (its own ticket) replaces this blunt table.
+    # statementId is what the canvas keys its node on. The table is applied
+    # field by field by ``_apply_id_remap``; the recordId is rewritten to the
+    # anchor's statementId on purpose (Stephen, 24 Oct 2026) — the resolver
+    # takes a statementId reference at tier 1, and the collapsed statement is
+    # dropped on the canvas as a duplicate of the anchor's.
     subject_ids = {_stable_id("gleif", "entity", norm)} if _LEI_SHAPE.match(norm) else set()
     for s in bods:
         if s.get("recordType") == "entity" and (_entity_idents(s) & subj_idents):
@@ -105,16 +108,23 @@ def _anchor_replacements(bods: list[dict[str, Any]], key: str, anchor: str) -> d
 
 
 def _apply_id_remap(items: list[dict[str, Any]], repl: dict[str, str]) -> list[dict[str, Any]]:
-    """Rewrite statement ids over a serialised list (BODS *or* risk signals). A
-    blunt string replace is safe — opencheck statement ids are unique 24-hex
-    tokens with no collision risk — and it catches every reference field uniformly
-    (including the ``evidence.statement_id`` fields risk signals carry)."""
-    if not repl:
+    """Rewrite the collapsed ids over a hop's BODS **or** its risk signals,
+    field by field (the structured-remap ticket). A BODS list goes through
+    ``refs.remap_statement_references`` — ``statementId``, ``recordId``,
+    ``declarationSubject``, the party references in either spelling and
+    ``componentRecords``; a signal list through ``refs.remap_signal_references``
+    — the named evidence fields plus any ``statement_id`` / ``…statement_ids``
+    key at any depth. Free text is left as written: the ``json.dumps().replace()``
+    this replaced rewrote every occurrence of an id, annotation sentences and
+    ``summary`` included, and knew nothing about which fields are references.
+    The two lists are told apart by shape — a statement carries ``recordType``
+    (or the legacy ``statementType``), a signal carries ``code``."""
+    if not repl or not items:
         return items
-    raw = json.dumps(items)
-    for old, new in repl.items():
-        raw = raw.replace(old, new)
-    return json.loads(raw)
+    first = next((i for i in items if isinstance(i, dict)), None)
+    if first is not None and "code" in first and "recordType" not in first:
+        return _refs.remap_signal_references(items, repl)
+    return _refs.remap_statement_references(items, repl)
 
 
 def _collapse_onto_anchor(bods: list[dict[str, Any]], lei: str, anchor: str) -> list[dict[str, Any]]:
