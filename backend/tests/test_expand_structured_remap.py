@@ -342,6 +342,7 @@ def test_the_signal_walk_covers_the_named_fields_and_the_suffix_rule() -> None:
         "subject_statement_ids": "list", "longest_path": "list",
         "matches": "list_of_dicts", "jurisdictions": "list_of_dicts",
         "ended_relationship_statement_ids": "list",
+        "subject_statements": "list", "exceptions": "list_of_dicts",
     }
     assert refs.EVIDENCE_ID_KEY == "statement_id"
     assert refs.EVIDENCE_ID_LIST_SUFFIX == "statement_ids"
@@ -399,3 +400,64 @@ def test_apply_id_remap_tells_signals_from_statements() -> None:
     assert expand._apply_id_remap(scrambled_signals(), repl)[0]["evidence"]["statement_id"] == ANCHOR
     assert expand._apply_id_remap(scrambled_hop(), repl)[0]["statementId"] == ANCHOR
     assert expand._apply_id_remap([], repl) == []
+
+
+# ---------------------------------------------------------------------------
+# The two shapes the production check found (25 Oct 2026)
+# ---------------------------------------------------------------------------
+
+
+def _record_consistency() -> dict:
+    """RECORD_CONSISTENCY as production emits it: the compared statements per
+    item under ``items[].statement_ids``, and the subject's statements under
+    ``subject_statements`` — a key neither suffix rule matches."""
+    return {
+        "code": "RECORD_CONSISTENCY", "kind": "context", "confidence": "high",
+        "source_id": "opencheck", "hit_id": LEI,
+        "summary": f"Four sources describe this entity ({GLEIF_SID}).",
+        "evidence": {
+            "items": [{"field": "jurisdiction", "statement_ids": [GLEIF_SID, NAT_SID]}],
+            "subject_statements": sorted([GLEIF_SID, NAT_SID, OWNER_SID]),
+        },
+    }
+
+
+def test_record_consistency_subject_statements_follow_the_anchor() -> None:
+    """Every collapsed id that survived Ørsted's and Equinor's production
+    hops sat in ``subject_statements``; the old string replace rewrote it."""
+    out = refs.remap_signal_references([_record_consistency()], _repl())[0]
+    assert out["evidence"]["subject_statements"] == [ANCHOR, ANCHOR, OWNER_SID]
+    assert out["evidence"]["items"][0]["statement_ids"] == [ANCHOR, ANCHOR]
+    assert out["summary"] == f"Four sources describe this entity ({GLEIF_SID})."
+
+
+def test_record_consistency_subject_statements_are_resolved() -> None:
+    """The named field is resolved too: a recordId there becomes the
+    statementId every consumer keys on."""
+    sig = _record_consistency()
+    sig["evidence"]["subject_statements"] = [GLEIF_RID, NAT_RID]
+    out = refs.resolve_signal_references([sig], scrambled_hop())[0]
+    assert out["evidence"]["subject_statements"] == [GLEIF_SID, NAT_SID]
+
+
+def test_gleif_exceptions_name_the_same_statement_as_matches() -> None:
+    """GLEIF_REPORTING_EXCEPTION puts each bridge's id in ``exceptions[]``
+    and ``matches[]``. In production ``matches[]`` was resolved to the
+    statementId and ``exceptions[]`` kept the recordId — two ids for one
+    node. Both are resolved now, and the exception's own fields survive."""
+    sig = {
+        "code": "GLEIF_REPORTING_EXCEPTION", "kind": "context", "confidence": "high",
+        "source_id": "gleif", "hit_id": LEI,
+        "evidence": {
+            "exceptions": [{"relationship": "direct", "reason": "NON_CONSOLIDATING",
+                            "category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+                            "reference": "", "statement_id": OWNER_RID}],
+            "matches": [{"statement_id": OWNER_RID}],
+        },
+    }
+    out = refs.resolve_signal_references([sig], scrambled_hop())[0]["evidence"]
+    assert out["matches"] == [{"statement_id": OWNER_SID}]
+    assert out["exceptions"] == [{"relationship": "direct", "reason": "NON_CONSOLIDATING",
+                                  "category": "DIRECT_ACCOUNTING_CONSOLIDATION_PARENT",
+                                  "reference": "", "statement_id": OWNER_SID}]
+    assert out["exceptions"][0]["statement_id"] == out["matches"][0]["statement_id"]

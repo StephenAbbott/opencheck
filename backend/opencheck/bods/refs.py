@@ -148,6 +148,15 @@ SIGNAL_REFERENCE_FIELDS: tuple[tuple[str, str], ...] = (
     ("matches", "list_of_dicts"),
     ("jurisdictions", "list_of_dicts"),
     ("ended_relationship_statement_ids", "list"),
+    # RECORD_CONSISTENCY names the subject's statements here (Phase 337); the
+    # key matches neither the ``statement_id`` nor the ``…statement_ids`` rule,
+    # so FullCheck's anchor collapse left it stale until it was named (found
+    # in production, 25 Oct 2026).
+    ("subject_statements", "list"),
+    # GLEIF_REPORTING_EXCEPTION / OPAQUE_OWNERSHIP carry each exception's
+    # bridge statement here as well as in ``matches[]``; only ``matches[]``
+    # was resolved, so the two named different ids for one node.
+    ("exceptions", "list_of_dicts"),
 )
 
 

@@ -1063,7 +1063,10 @@ after deploy. Things that will be re-derived otherwise:
   **`bods/refs.py::resolve_signal_references`** maps every evidence reference
   (`SIGNAL_REFERENCE_FIELDS`: `statement_id`, `subject_statement_id(s)`,
   `matches[]`, `jurisdictions[]`, `longest_path`,
-  `ended_relationship_statement_ids`) to statementIds through the Phase 210
+  `ended_relationship_statement_ids`, and since 25 Oct 2026
+  `RECORD_CONSISTENCY`'s `subject_statements` and the GLEIF exception
+  signals' `exceptions[]` — both found by a production sweep of every
+  id-bearing evidence key; name a new one here) to statementIds through the Phase 210
   resolver. It runs inside `_merge_signals(..., bods=)` — both lookup
   pipelines, `/report`, the FullCheck hop — and on `/deepen`. A signal
   built elsewhere must go through it before a consumer keys on it. Before
