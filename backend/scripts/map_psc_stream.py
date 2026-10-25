@@ -89,6 +89,7 @@ def map_events(
     events: list[dict[str, Any]], fetch_profiles: bool
 ) -> tuple[list[dict[str, Any]], Counter]:
     """Map each event to BODS statements. Returns (statements, outcome tally)."""
+    from opencheck.bods.declaration import stamp_bundle
     from opencheck.bods.mapper import map_companies_house
 
     outcome: Counter = Counter()
@@ -137,7 +138,14 @@ def map_events(
             outcome[f"ERROR mapping ({type(exc).__name__})"] += 1
             continue
 
-        statements.extend(result.statements)
+        # Each event is one company's PSC, so one declared network: stamp it
+        # as a lookup stamps a bundle (the bulk-script stamping ticket).
+        statements.extend(
+            stamp_bundle(
+                list(result.statements), source_id="companies_house",
+                hit_id=number, record=False,
+            )
+        )
         label = f"mapped: {ev_type}"
         if data.get("ceased_on"):
             label += " (ceased -> closed record)"

@@ -224,6 +224,19 @@ def stamp_merged(
     """
     if not statements or not ref:
         return statements
+    out = statements
+    for key, rid in network_subjects(statements, ref).items():
+        out = _stamp(out, rid, source_id=None, only_source=key)
+    return out
+
+
+def network_subjects(statements: list[dict[str, Any]], ref: str) -> dict[str, str]:
+    """Each source's subject record in a merged bundle about ``ref``: source
+    key → the ``recordId`` of that source's member of the subject's referent
+    group. The networks ``stamp_merged`` stamps, read without stamping — a
+    release build uses it to know which records are network subjects."""
+    if not statements or not ref:
+        return {}
     from ..subject_profile import subject_statements  # lazy: avoids a cycle
 
     by_source: dict[str, str] = {}
@@ -234,10 +247,147 @@ def stamp_merged(
         rid = _record_id(stmt)
         if key and rid and key not in by_source:
             by_source[key] = rid
-    out = statements
-    for key, rid in by_source.items():
-        out = _stamp(out, rid, source_id=None, only_source=key)
+    return by_source
+
+
+# ---------------------------------------------------------------------------
+# Release files: many networks, one record per party
+# ---------------------------------------------------------------------------
+#
+# A release file (the Estonia dataset, the laundromat dataset) holds many
+# networks — one per company mapped — and one record per party: a person on
+# two boards, or a company that is its own network's subject and a shareholder
+# of three others, is one statement. BODS's *Record identifiers* page asks for
+# a record per set of information, so a party shared by two networks would be
+# two records; Stephen's decision (25 Oct 2026, the bulk-script stamping
+# ticket) keeps one record, so the party stays one node across companies, and
+# stamps it with one network:
+#
+# * a relationship keeps the subject of the bundle it was mapped in;
+# * a network's subject names itself;
+# * any other party names the first, by ``recordId``, of the network subjects
+#   whose relationships reference it — a rule that does not depend on build
+#   order — or, referenced by none, keeps the network its bundle gave it.
+#
+# The network subjects are passed in by the build, never read back from the
+# file: in the pre-phase shape every party names itself, which any rule
+# derived from the file's own values would accept.
+
+
+def _party_refs(stmt: dict[str, Any]) -> list[str]:
+    from .refs import party_ref
+
+    rd = stmt.get("recordDetails") or {}
+    out = []
+    for key in ("subject", "interestedParty"):
+        ref = party_ref(rd.get(key))
+        if ref:
+            out.append(ref)
     return out
+
+
+def relationship_networks(
+    statements: Iterable[dict[str, Any]], subjects: Iterable[str] | None = None
+) -> dict[str, set[str]]:
+    """Party ``recordId`` → the networks (``declarationSubject`` values) whose
+    relationships reference it. With ``subjects``, only those networks count.
+    One pass over the relationships; parties and other statements are
+    skipped, so a build can stream a file through it."""
+    subject_set = set(subjects) if subjects is not None else None
+    networks: dict[str, set[str]] = {}
+    for stmt in statements:
+        if not isinstance(stmt, dict) or stmt.get("recordType") != "relationship":
+            continue
+        decl = stmt.get("declarationSubject")
+        if not isinstance(decl, str) or not decl:
+            continue
+        if subject_set is not None and decl not in subject_set:
+            continue
+        for ref in _party_refs(stmt):
+            networks.setdefault(ref, set()).add(decl)
+    return networks
+
+
+def settle_party(
+    stmt: dict[str, Any], subjects: set[str], networks: dict[str, set[str]]
+) -> dict[str, Any]:
+    """One statement stamped by the one-record-one-network rule;
+    ``networks`` is ``relationship_networks(..., subjects)``. A relationship,
+    another publisher's statement or a party referenced by no network is
+    returned as it is; a changed party is a copy."""
+    rid = _record_id(stmt) if isinstance(stmt, dict) else None
+    if (
+        rid is None
+        or stmt.get("recordType") not in _PARTY_TYPES
+        or not _stampable(stmt, source_id=None)
+    ):
+        return stmt
+    if rid in subjects:
+        wanted: str | None = rid
+    elif rid in networks:
+        wanted = min(networks[rid])
+    else:
+        wanted = None
+    if wanted is None or stmt.get("declarationSubject") == wanted:
+        return stmt
+    changed = copy.copy(stmt)
+    changed["declarationSubject"] = wanted
+    return changed
+
+
+def settle_shared_parties(
+    statements: list[dict[str, Any]], subjects: Iterable[str]
+) -> list[dict[str, Any]]:
+    """A release file with every OpenCheck-published party stamped by the
+    one-record-one-network rule above (``settle_party`` over the list)."""
+    subject_set = set(subjects)
+    networks = relationship_networks(statements, subject_set)
+    return [settle_party(s, subject_set, networks) for s in statements]
+
+
+def declaration_problem(
+    stmt: dict[str, Any], subjects: set[str], networks: dict[str, set[str]]
+) -> str | None:
+    """The rule one statement of a release file breaks, or ``None``;
+    ``networks`` is ``relationship_networks(...)`` over the whole file,
+    unfiltered. Another publisher's statements are not checked."""
+    if not isinstance(stmt, dict) or not _stampable(stmt, source_id=None):
+        return None
+    sid = stmt.get("statementId")
+    rid = _record_id(stmt)
+    decl = stmt.get("declarationSubject")
+    if not isinstance(decl, str) or decl not in subjects:
+        return f"{sid}: declarationSubject {decl} is not a network subject"
+    if stmt.get("recordType") not in _PARTY_TYPES or rid is None:
+        return None
+    if rid in subjects:
+        if decl != rid:
+            return f"{sid}: a network subject's record names {decl}, not itself"
+    elif rid in networks and decl not in networks[rid]:
+        return (
+            f"{sid}: names network {decl}, which none of the relationships"
+            " referencing it belong to"
+        )
+    return None
+
+
+def release_declaration_problems(
+    statements: Iterable[dict[str, Any]], subjects: Iterable[str]
+) -> list[str]:
+    """What the one-record-one-network rule promises, checked over a release
+    file against the network subjects its build recorded. Empty means the
+    file can ship; each entry names a statement and the rule it breaks:
+
+    * its ``declarationSubject`` is not a network subject (the pre-phase
+      shape: a non-subject party that names itself);
+    * a network subject's own record names another network;
+    * a party referenced by a network's relationships names a network none of
+      its relationships belong to.
+    """
+    stmts = [s for s in statements if isinstance(s, dict)]
+    subject_set = set(subjects)
+    networks = relationship_networks(stmts)
+    return [p for s in stmts if (p := declaration_problem(s, subject_set, networks))]
 
 
 def _record(source_id: str, outcome: str) -> None:

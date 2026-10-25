@@ -1918,8 +1918,23 @@ will be re-derived otherwise:
 - `check` must pass before a release: no dangling reference, no registry code
   under `EE-KMKR`, no valid personal code in a person's identifiers or
   annotations, no person's street address, no name starting with a Nasdaq CSD
-  account prefix. `--libcove` adds lib-cove-bods
+  account prefix, and every `declarationSubject` follows the
+  one-record-one-network rule. `--libcove` adds lib-cove-bods
   (~8 minutes on the full file).
+- **`declarationSubject` (the bulk-script stamping ticket, 25 Oct 2026).**
+  Each GLEIF and register bundle is stamped as its own network
+  (`stamp_bundle`, the lookup's rule) and its subject's `recordId` written to
+  `gleif-subjects.txt` / `register-subjects.txt` in the work directory.
+  `assemble` then settles every party shared by several networks to one of
+  them — `bods.declaration.settle_party`: a subject names itself, any other
+  party the lowest `recordId` among the networks whose relationships
+  reference it (Stephen: one record per party, so a person stays one node).
+  Assemble and check read the subject files and **refuse a work directory
+  without them**: the check must take the networks from the build, because
+  the pre-phase shape (every party naming itself) satisfies any rule read
+  back from the file. The laundromat build applies the same helpers to its
+  raws (re-stamping old ones with `stamp_merged`) and counts breaches in its
+  manifest instead of refusing. `docs/identifiers.md` says it for readers.
 - The Neo4j zip is `bods-neo4j to-csv` + `backend/scripts/estonia_demo_queries.cypher`;
   the RDF is `export_rdf_bulk.py` with **no** `--fallback-license` (every
   statement names its source).

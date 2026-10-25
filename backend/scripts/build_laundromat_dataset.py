@@ -563,9 +563,19 @@ def assemble(subjects: list[dict[str, Any]], raws: dict[str, dict[str, Any]]) ->
     ``contributing_ids``, ``license_notices`` and the counts the manifest
     needs. Pure: no I/O, so it is what the tests exercise.
     """
+    from opencheck.bods.declaration import (
+        network_subjects,
+        release_declaration_problems,
+        settle_shared_parties,
+        stamp_merged,
+    )
+
     statements: list[dict[str, Any]] = []
     seen: set[str] = set()
     duplicates = 0
+    # Every subject's per-source network subjects (its referent group, the
+    # members ``stamp_merged`` stamps): the networks the release holds.
+    networks_declared: set[str] = set()
     rows: list[dict[str, Any]] = []
     signals: list[dict[str, Any]] = []
     sig_seen: set[str] = set()
@@ -596,7 +606,17 @@ def assemble(subjects: list[dict[str, Any]], raws: dict[str, dict[str, Any]]) ->
             rows.append(row)
             continue
         n_before = len(statements)
-        for st in raw.get("bods") or []:
+        # A subject's merged bundle, stamped as a lookup stamps it — again,
+        # because raws cached before the declaration-subject phase carry the
+        # factory default. Idempotent for a raw that is already stamped.
+        ref = s.get("lei") or (
+            f"{s['scheme']}:{s['id']}" if s.get("scheme") and s.get("id") else None
+        )
+        bods = list(raw.get("bods") or [])
+        if ref:
+            bods = stamp_merged(bods, ref)
+            networks_declared.update(network_subjects(bods, ref).values())
+        for st in bods:
             sid = st.get("statementId")
             if sid and sid in seen:
                 duplicates += 1
@@ -663,10 +683,22 @@ def assemble(subjects: list[dict[str, Any]], raws: dict[str, dict[str, Any]]) ->
                 networks["partial"] += 1
         rows.append(row)
 
+    # One record per party across subjects: a party in several subjects'
+    # networks names one of them (Stephen, 25 Oct 2026; the rule is in
+    # ``bods.declaration``). What still breaks the rule — a source a lookup
+    # could not resolve to the subject keeps the factory default — is counted
+    # for the manifest, not refused: these are real lookups, and an
+    # unresolved source is what the lookup itself served.
+    statements = settle_shared_parties(statements, networks_declared)
+    declaration_problems = release_declaration_problems(statements, networks_declared)
+
     counts: Counter[str] = Counter(st.get("recordType") or "?" for st in statements)
     status_counts = Counter(r["status"] for r in rows)
     return {
         "statements": statements,
+        "network_subjects": len(networks_declared),
+        "declaration_subject_problems": len(declaration_problems),
+        "declaration_subject_problem_examples": declaration_problems[:20],
         "rows": rows,
         "signals": signals,
         "contributing_ids": sorted(sources),
@@ -861,6 +893,11 @@ def write_release(
         "bods_statement_count": len(statements),
         "node_counts": assembled["node_counts"],
         "duplicate_statements_collapsed": assembled["duplicate_statements_collapsed"],
+        "network_subjects": assembled.get("network_subjects", 0),
+        "declaration_subject_problems": assembled.get("declaration_subject_problems", 0),
+        "declaration_subject_problem_examples": assembled.get(
+            "declaration_subject_problem_examples", []
+        ),
         "signal_count": len(assembled["signals"]),
         "signal_codes": dict(Counter(s.get("code") for s in assembled["signals"])),
         "contributing_source_ids": assembled["contributing_ids"],
@@ -933,6 +970,11 @@ def release_notes(manifest: dict[str, Any], licensing: Any) -> str:
         ),
         f"- {m['bods_statement_count']:,} BODS statements ({m['node_counts']}); "
         f"{m['duplicate_statements_collapsed']} duplicates collapsed across subjects.",
+        f"- declarationSubject: {m.get('network_subjects', 0)} declared networks (one per "
+        "subject per source). A party in several networks is published once and names one of "
+        "them — the first, by recordId, of the networks whose relationships reference it; "
+        f"{m.get('declaration_subject_problems', 0)} statements break that rule (a source a "
+        "lookup could not resolve to its subject keeps the factory default).",
         f"- {m['signal_count']} signals: {m['signal_codes']}.",
         f"- Sources contributing: {', '.join(m['contributing_source_ids'])}.",
         "",
