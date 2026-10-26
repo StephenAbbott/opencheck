@@ -14,7 +14,7 @@ dependencies = [
     # fastapi and pillow through weasyprint, so neither is otherwise named —
     # a floor here keeps a re-lock from resolving back below the fix.
     "starlette>=1.3.1",
-    "pillow>=12.3.0",
+    "pillow>=13.0.0",
     "uvicorn[standard]>=0.32",
     "httpx>=0.27",
     "pydantic>=2.9",
