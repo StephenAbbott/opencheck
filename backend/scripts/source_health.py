@@ -500,10 +500,18 @@ def statement_counts(source_id: str, probe: SourceProbe, result: Any) -> dict[st
     Counts, not content: the artifact carries integers, never statements, so
     nothing licence-restricted or personal is written down.
 
-    Returns None when there is nothing to count — no mapper declared, or the
-    probe returns a list of hits rather than a mappable bundle.
+    Returns None when there is nothing to count — no mapper declared, the
+    probe returns a list of hits rather than a mappable bundle, or the bundle
+    is a stub. A stub is a source that did not answer (KvK's HTTP 429 on
+    26 Oct 2026), not a source that answered with nothing: counting it as
+    zeros reported "entity 1 → 0" as a collapse and failed the run over a rate
+    limit the sweep had already reported as a degradation. The collapse diff
+    skips a source with no counts on either side, so a real withdrawal — a
+    register that answers and no longer carries the statements — still fires.
     """
     if probe.bods_mapper is None or not isinstance(result, dict):
+        return None
+    if is_stub_bundle(result):
         return None
     try:
         from opencheck.bods import mapper as mapper_module
