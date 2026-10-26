@@ -31,7 +31,10 @@ Two passes, one rule:
   when the caller has one (an LEI, or Phase 290's ``SCHEME:id``) → an entity
   statement carrying the adapter's ``hit_id`` as an identifier (a register
   bundle never carries the LEI; the Data drawer knows only the hit id) → the
-  only entity statement in the bundle → nothing. Nothing is invented: a
+  only entity statement in the bundle → the one entity every relationship in
+  the bundle names as its subject (an LEI-keyed bundle that asserts no LEI,
+  such as ``cac_nigeria`` or ``eiti_soe``, read through ``/deepen``) →
+  nothing. Nothing is invented: a
   bundle whose subject cannot be found keeps the factory default and the
   miss is counted on ``/signalstats`` (``declaration_subject``), the Phase
   267 rule that a miss is loud.
@@ -72,8 +75,12 @@ _PARTY_TYPES = frozenset({"entity", "person"})
 #: ``/signalstats`` counts under ``declaration_subject``. ``ref``: the
 #: lookup's subject reference; ``hit_id``: an entity statement carrying the
 #: adapter's hit id; ``single``: the bundle's only entity statement;
-#: ``unresolved``: none of those, the factory default left in place.
-OUTCOMES: frozenset[str] = frozenset({"ref", "hit_id", "single", "unresolved"})
+#: ``relationships``: the one entity every relationship in the bundle names
+#: as its subject; ``unresolved``: none of those, the factory default left
+#: in place.
+OUTCOMES: frozenset[str] = frozenset(
+    {"ref", "hit_id", "single", "relationships", "unresolved"}
+)
 
 
 def _record_id(stmt: dict[str, Any]) -> str | None:
@@ -156,7 +163,46 @@ def find_subject(
                 return stmt, "hit_id"
     if len(entities) == 1:
         return entities[0], "single"
+    shared = _shared_relationship_subject(statements, entities)
+    if shared is not None:
+        return shared, "relationships"
     return None, "unresolved"
+
+
+def _shared_relationship_subject(
+    statements: list[dict[str, Any]], entities: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    """The entity every relationship in the bundle names as its subject, when
+    there is exactly one such entity and it is no relationship's interested
+    party. Read from the bundle's own structure: a register-style bundle
+    (one company, its owners above it) has this shape, a subsidiary bundle
+    (one parent, several children as subjects) does not, and a bundle with no
+    relationships says nothing."""
+    from .refs import party_ref, resolver
+
+    resolve = resolver(statements)
+    subjects: set[str] = set()
+    interested: set[str] = set()
+    for stmt in statements:
+        if not isinstance(stmt, dict) or stmt.get("recordType") != "relationship":
+            continue
+        rd = stmt.get("recordDetails") or {}
+        subject = party_ref(rd.get("subject"))
+        if not subject:
+            return None
+        subjects.add(resolve(subject))
+        party = party_ref(rd.get("interestedParty"))
+        if party:
+            interested.add(resolve(party))
+    if len(subjects) != 1:
+        return None
+    (only,) = subjects
+    if only in interested:
+        return None
+    for stmt in entities:
+        if stmt.get("statementId") == only or _record_id(stmt) == only:
+            return stmt
+    return None
 
 
 def _stamp(
@@ -224,9 +270,25 @@ def stamp_merged(
     """
     if not statements or not ref:
         return statements
+    return apply_network_subjects(statements, network_subjects(statements, ref))
+
+
+def apply_network_subjects(
+    statements: list[dict[str, Any]], subjects: dict[str, str]
+) -> list[dict[str, Any]]:
+    """Stamp each source's statements with the subject ``network_subjects``
+    named for that source (source key → ``recordId``).
+
+    Split from ``stamp_merged`` so the lookup can carry the mapping in its
+    ``declaration_subjects`` event and ``fold_lookup_events`` can apply it to
+    the bundle it rebuilds from ``deepen_result`` payloads: before that split
+    the second pass ran inside the pipeline only, and the response, the
+    exports and saved reports carried the first pass alone (the BODS quality
+    sweep of 26 Oct 2026). Copies only the statements that change."""
     out = statements
-    for key, rid in network_subjects(statements, ref).items():
-        out = _stamp(out, rid, source_id=None, only_source=key)
+    for key, rid in subjects.items():
+        if isinstance(key, str) and isinstance(rid, str) and key and rid:
+            out = _stamp(out, rid, source_id=None, only_source=key)
     return out
 
 
