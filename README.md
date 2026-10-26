@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 402** — RECORD_CONSISTENCY's subject list and the GLEIF exception signals' exception list now name the same statement ids as the rest of the evidence, in a lookup and after a FullCheck hop.
+**Latest: Phase 403** — The Estonia and laundromat dataset builds now stamp declarationSubject network by network, publishing a party shared by several companies once under one of their networks.
 
 → [Full development history](docs/status.md)
 
