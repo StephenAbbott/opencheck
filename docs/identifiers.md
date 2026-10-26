@@ -85,6 +85,30 @@ Before Phase 396 every entity and person statement named itself and a
 relationship named its immediate subject; an export from that period shows
 `statementId == recordId == declarationSubject` on every party.
 
+### Release files: many networks, one record per party
+
+The bulk datasets — the [Estonia dataset](../backend/scripts/sweep_estonia.py)
+(`dataset-estonia-<cut>`) and the laundromat dataset — hold **one declared
+network per company mapped**, built by the same per-bundle rule as a lookup, and
+**one record per party**. A party can sit in several of those networks: a person
+on two boards, or a company that is its own network's subject and a shareholder
+of three others. BODS's
+[Record identifiers](https://standard.openownership.org/en/0.4.0/standard/modelling/record-ids.html)
+guidance would make such a party one record per network. The release files keep
+one record, so a person stays one node across companies, and stamp it with one
+network (decided 25 Oct 2026):
+
+- a relationship names the subject of the network it was mapped in;
+- a network's subject names itself;
+- any other party names the first, by `recordId`, of the networks whose
+  relationships reference it — so the choice does not depend on the order the
+  file was built in.
+
+To find every network a party appears in, follow the relationships that
+reference its `recordId`, not its `declarationSubject`. Each build records the
+subject of every network it maps and checks the file against that list before
+release; the manifest gives the number of networks.
+
 ## Relationships reference parties by `recordId`
 
 A relationship's `subject`, `interestedParty` and `componentRecords` hold a
@@ -131,3 +155,10 @@ annotation naming the OO statement they were drawn from.
   over a bundle whose `statementId`s differ from its `recordId`s.
 - `/signalstats` → `declaration_subject` counts how each source's subject was
   found (`ref`, `hit_id`, `single`) and when it was not (`unresolved`).
+- `sweep_estonia.py check` refuses an Estonia release in which a statement
+  names no recorded network, a network's subject names another network, or a
+  party names a network none of its relationships belong to. The laundromat
+  build counts the same breaches in its manifest
+  (`declaration_subject_problems`) rather than refusing: its subjects are real
+  lookups, and a source a lookup could not resolve to its subject keeps the
+  factory default there too.

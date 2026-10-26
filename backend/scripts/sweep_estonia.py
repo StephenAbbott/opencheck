@@ -327,6 +327,47 @@ def stage_select(args: argparse.Namespace) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _declared(
+    statements: list[dict[str, Any]],
+    *,
+    source_id: str,
+    ref: str | None = None,
+    hit_id: str | None = None,
+) -> tuple[list[dict[str, Any]], str | None]:
+    """One bundle stamped as its own declared network (``stamp_bundle``, the
+    rule a lookup applies) and the ``recordId`` of its subject, or ``None``
+    when the subject could not be found — the build records the subjects so
+    the assemble and check stages know which records are networks."""
+    from opencheck.bods.declaration import find_subject, stamp_bundle
+
+    subject, _outcome = find_subject(statements, ref=ref, hit_id=hit_id)
+    rid = subject.get("recordId") if subject else None
+    stamped = stamp_bundle(
+        statements, source_id=source_id, ref=ref, hit_id=hit_id, record=False
+    )
+    return stamped, rid
+
+
+#: The network subjects each mapping stage recorded, one ``recordId`` a line.
+SUBJECT_FILES = ("gleif-subjects.txt", "register-subjects.txt")
+
+
+def read_subjects(work: Path) -> set[str]:
+    """Every network subject the gleif and register stages recorded. Raises
+    when a stage wrote none — a work directory built before the
+    declaration-subject stamping cannot be assembled or checked."""
+    out: set[str] = set()
+    for name in SUBJECT_FILES:
+        path = work / name
+        if not path.exists():
+            raise SystemExit(
+                f"{path} is missing: re-run the gleif and register stages "
+                "(the work directory predates declarationSubject stamping)"
+            )
+        out.update(line.strip() for line in path.read_text().splitlines() if line.strip())
+    return out
+
+
 def _lei_of(statement: dict[str, Any]) -> str | None:
     for ident in (statement.get("recordDetails") or {}).get("identifiers") or []:
         if ident.get("scheme") == "XI-LEI":
@@ -335,6 +376,13 @@ def _lei_of(statement: dict[str, Any]) -> str | None:
 
 
 def gleif_statements(lei: str, scope: set[str], *, reporter: bool = False) -> list[dict[str, Any]]:
+    """The GLEIF statements one LEI contributes (see ``gleif_network``)."""
+    return gleif_network(lei, scope, reporter=reporter)[0]
+
+
+def gleif_network(
+    lei: str, scope: set[str], *, reporter: bool = False
+) -> tuple[list[dict[str, Any]], str | None]:
     """The GLEIF statements one LEI contributes, from the mirror bundle a
     lookup is served from, without its children.
 
@@ -352,7 +400,7 @@ def gleif_statements(lei: str, scope: set[str], *, reporter: bool = False) -> li
     with provenance.recording() as recorder:
         bundle = GleifAdapter()._snapshot_bundle(lei, reason="mirror")
     if bundle is None:
-        return []
+        return [], None
     bundle["direct_children"] = []
     bundle.pop("direct_child_relationships", None)
     if reporter:
@@ -366,7 +414,8 @@ def gleif_statements(lei: str, scope: set[str], *, reporter: bool = False) -> li
                 bundle.pop(f"{kind}_parent_relationship", None)
             bundle[f"{kind}_parent_exception"] = None
     with provenance.mapping_provenance(recorder.resolve(is_stub=False)):
-        return list(map_gleif(bundle).statements)
+        statements = list(map_gleif(bundle).statements)
+    return _declared(statements, source_id="gleif", ref=lei)
 
 
 def stage_gleif(args: argparse.Namespace) -> dict[str, int]:
@@ -374,13 +423,19 @@ def stage_gleif(args: argparse.Namespace) -> dict[str, int]:
     sel = json.loads((work / "selection.json").read_text())
     scope = set(sel["scope"])
     counts: Counter[str] = Counter()
-    with open(work / "gleif.jsonl", "w", encoding="utf-8") as fh:
+    with open(work / "gleif.jsonl", "w", encoding="utf-8") as fh, open(
+        work / "gleif-subjects.txt", "w", encoding="utf-8"
+    ) as subjects:
         for i, lei in enumerate(sel["scope"] + sel["foreign_reporters"]):
             reporter = lei not in scope
-            statements = gleif_statements(lei, scope, reporter=reporter)
+            statements, subject = gleif_network(lei, scope, reporter=reporter)
             if not statements:
                 counts["not_in_mirror"] += 1
                 continue
+            if subject:
+                subjects.write(subject + "\n")
+            else:
+                counts["subject_unresolved"] += 1
             for n, statement in enumerate(statements):
                 # The subject's own entity statement is what it published of
                 # itself; the parent statements beside it are copies.
@@ -399,6 +454,14 @@ def stage_gleif(args: argparse.Namespace) -> dict[str, int]:
 
 
 def register_statements(code: str, *, include_bo: bool = True) -> list[dict[str, Any]] | None:
+    """The register's statements for one company (see ``register_network``)."""
+    network = register_network(code, include_bo=include_bo)
+    return None if network is None else network[0]
+
+
+def register_network(
+    code: str, *, include_bo: bool = True
+) -> tuple[list[dict[str, Any]], str | None] | None:
     """The register's statements for one company, as a lookup maps them on
     the index tier — without the chain walk (the dataset carries every
     company above as its own record) and without the ended-ownership
@@ -421,7 +484,8 @@ def register_statements(code: str, *, include_bo: bool = True) -> list[dict[str,
         bundle["beneficial_owners"] = []
     validate_raw("ariregister", AriregisterBundle, bundle)
     with provenance.mapping_provenance(recorder.resolve(is_stub=False)):
-        return list(map_ariregister(bundle))
+        statements = list(map_ariregister(bundle))
+    return _declared(statements, source_id="ariregister", hit_id=code)
 
 
 def stage_register(args: argparse.Namespace) -> dict[str, int]:
@@ -429,12 +493,19 @@ def stage_register(args: argparse.Namespace) -> dict[str, int]:
     sel = json.loads((work / "selection.json").read_text())
     counts: Counter[str] = Counter()
     include_bo = not args.no_beneficial_owners
-    with open(work / "register.jsonl", "w", encoding="utf-8") as fh:
+    with open(work / "register.jsonl", "w", encoding="utf-8") as fh, open(
+        work / "register-subjects.txt", "w", encoding="utf-8"
+    ) as subjects:
         for i, code in enumerate(sel["register_codes"]):
-            statements = register_statements(code, include_bo=include_bo)
-            if statements is None:
+            network = register_network(code, include_bo=include_bo)
+            if network is None:
                 counts["not_in_index"] += 1
                 continue
+            statements, subject = network
+            if subject:
+                subjects.write(subject + "\n")
+            else:
+                counts["subject_unresolved"] += 1
             for n, statement in enumerate(statements):
                 # The first statement is the company's own register record;
                 # a shareholder row elsewhere builds a thinner statement under
@@ -550,6 +621,23 @@ def stage_assemble(args: argparse.Namespace) -> dict[str, Any]:
     kept = conn.execute("SELECT COUNT(*) FROM s").fetchone()[0]
     duplicates = total_rows - kept
 
+    # One record per party, many networks: a party kept from one bundle may
+    # sit in others too. Each relationship keeps its bundle's subject; each
+    # party is settled to one network by the rule in ``bods.declaration``
+    # (Stephen, 25 Oct 2026). The networks are the subjects the gleif and
+    # register stages recorded, never values read back from the file.
+    from opencheck.bods.declaration import relationship_networks, settle_party
+
+    subjects = read_subjects(work)
+    networks = relationship_networks(
+        (
+            json.loads(body)
+            for (body,) in conn.execute("SELECT body FROM s WHERE rtype = 'relationship'")
+        ),
+        subjects,
+    )
+    settled = 0
+
     counts: Counter[str] = Counter()
     by_source: Counter[str] = Counter()
     out_path = out_dir / f"{name}.jsonl.gz"
@@ -560,6 +648,12 @@ def stage_assemble(args: argparse.Namespace) -> dict[str, Any]:
             for rtype, body in conn.execute(
                 f"SELECT rtype, body FROM s WHERE {clause} ORDER BY id"
             ):
+                if rtype != "relationship":
+                    statement = json.loads(body)
+                    party = settle_party(statement, subjects, networks)
+                    if party is not statement:
+                        settled += 1
+                        body = json.dumps(party, ensure_ascii=False)
                 gz.write(body + "\n")
                 counts[rtype] += 1
                 source_id = (
@@ -577,6 +671,8 @@ def stage_assemble(args: argparse.Namespace) -> dict[str, Any]:
         "statements_by_source": dict(by_source),
         "total_statements": sum(counts.values()),
         "duplicate_statements_merged": duplicates,
+        "network_subjects": len(subjects),
+        "parties_settled_to_one_network": settled,
         **sel["stats"],
         "beneficial_owners_included": not args.no_beneficial_owners,
         "ownership_history_included": False,
@@ -603,6 +699,14 @@ def stage_assemble(args: argparse.Namespace) -> dict[str, Any]:
             "The two layers join on the shared EE-ARIREGISTER identifier (the registry code); "
             "EE-KMKR is the VAT number only.",
             "Entity and person statements precede all relationship statements.",
+            "declarationSubject: each company mapped is its own declared network (the "
+            "rule a lookup applies to one source's bundle). A relationship names the subject "
+            "of the network it was mapped in, and a network's subject names itself. A party "
+            "that appears in several networks (a person on two boards, a company that holds "
+            "shares in several others) is published once, as one record, and names one "
+            "network: the first, by recordId, of the networks whose relationships reference "
+            "it. BODS's Record identifiers guidance would give such a party one record per "
+            "network; the dataset keeps one so the party stays one node across companies.",
         ],
     }
     (out_dir / "manifest.json").write_text(
@@ -700,11 +804,24 @@ def isikukood_valid(code: str) -> bool:
     return digits[10] == 0
 
 
-def check_statements(statements: Iterable[dict[str, Any]]) -> dict[str, Any]:
+def check_statements(
+    statements: Iterable[dict[str, Any]],
+    subjects: set[str] | None = None,
+    networks: dict[str, set[str]] | None = None,
+) -> dict[str, Any]:
     """What the release promises, counted over the file: every reference
-    resolves, the registry code is ``EE-ARIREGISTER`` throughout, and no
-    personal code or person's address is carried. ``problems`` empty means
-    the file can be published."""
+    resolves, the registry code is ``EE-ARIREGISTER`` throughout, no personal
+    code or person's address is carried, and — given the network ``subjects``
+    the build recorded — every ``declarationSubject`` follows the
+    one-record-one-network rule (``bods.declaration.declaration_problem``).
+    ``networks`` is that rule's relationship pass over the same file; without
+    it the statements are read into memory to compute it. ``problems`` empty
+    means the file can be published."""
+    from opencheck.bods.declaration import declaration_problem, relationship_networks
+
+    if subjects is not None and networks is None:
+        statements = list(statements)
+        networks = relationship_networks(statements)
     ids: set[str] = set()
     record_ids: set[str] = set()
     relationships: list[dict[str, Any]] = []
@@ -714,6 +831,11 @@ def check_statements(statements: Iterable[dict[str, Any]]) -> dict[str, Any]:
         sid = st.get("statementId")
         if sid in ids:
             problems.append(f"duplicate statementId {sid}")
+        if subjects is not None and networks is not None:
+            declared = declaration_problem(st, subjects, networks)
+            if declared:
+                counts["declaration_subject_problems"] += 1
+                problems.append(declared)
         ids.add(sid)
         if st.get("recordId"):
             record_ids.add(st["recordId"])
@@ -814,8 +936,15 @@ def stage_check(args: argparse.Namespace) -> dict[str, Any]:
     work = Path(args.work_dir)
     manifest = json.loads((out_dir / "manifest.json").read_text())
     path = out_dir / f"{manifest['dataset']}.jsonl.gz"
+    from opencheck.bods.declaration import relationship_networks
+
+    subjects = read_subjects(work)
     with gzip.open(path, "rt", encoding="utf-8") as fh:
-        result = check_statements(json.loads(line) for line in fh)
+        networks = relationship_networks(json.loads(line) for line in fh)
+    with gzip.open(path, "rt", encoding="utf-8") as fh:
+        result = check_statements(
+            (json.loads(line) for line in fh), subjects=subjects, networks=networks
+        )
     if args.libcove:
         result["libcove"] = run_libcove(path, work)
     (out_dir / "checks.json").write_text(json.dumps(result, indent=1, ensure_ascii=False) + "\n")
