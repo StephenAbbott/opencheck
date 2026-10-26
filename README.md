@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 403** — The Estonia and laundromat dataset builds now stamp declarationSubject network by network, publishing a party shared by several companies once under one of their networks.
+**Latest: Phase 404** — The Estonia Neo4j demo queries now state the expected figures of the 25 October 2026 dataset release.
 
 → [Full development history](docs/status.md)
 
