@@ -13,6 +13,7 @@ from typing import Any
 import pycountry
 
 from ... import names as _names
+from .. import annotations as _annotations
 from .. import liveness as _liveness
 from ..unique import unique_statements
 from ..statements import (
@@ -632,7 +633,7 @@ def _ftm_entity_statement(
     )
 
     jurisdiction = _ftm_jurisdiction(props)
-    identifiers = _ftm_identifiers(ftm_id, source_id, props)
+    identifiers = _ftm_identifiers(ftm_id, source_id, props, read_address=True)
     addresses = _ftm_addresses(props)
     founding_date = (props.get("incorporationDate") or [None])[0]
     state_basis = _ftm_state_body_basis(payload.get("schema") or "", props)
@@ -654,6 +655,7 @@ def _ftm_entity_statement(
         alternate_names=[text for text, _type in _ftm_other_names(props, name)],
         source_url=source_url,
     )
+    _annotate_address_registration_country(stmt, props, source_id)
     # FtM ``dissolutionDate`` / ``status`` (Phase 151). Only a dissolution date
     # is a positive statement; FtM ``status`` is free text from whichever
     # upstream dataset produced the record, so it travels as the raw label
@@ -668,6 +670,43 @@ def _ftm_entity_statement(
             since=str(ftm_dissolved)[:10],
         )
     return stmt
+
+
+def _annotate_address_registration_country(
+    stmt: dict[str, Any], props: dict[str, Any], source_id: str
+) -> None:
+    """Say where a ``REG-<cc>`` scheme came from when it was read from an address.
+
+    The source names no jurisdiction or country for the record; the country is
+    OpenCheck's reading of its structured address, so the identifier carries a
+    ``transformation`` note in the source's own terms. Scheme only — the
+    statement's ``jurisdiction`` stays empty, so an address country never
+    reaches the FATF / EU high-risk / non-EU checks (Stephen, 26 Oct 2026).
+    """
+    country, basis = ftm_registration_country(props, read_address=True)
+    if basis != "address" or not country:
+        return
+    scheme = f"REG-{country}"
+    number = (props.get("registrationNumber") or [None])[0]
+    for index, ident in enumerate(
+        (stmt.get("recordDetails") or {}).get("identifiers") or []
+    ):
+        if ident.get("scheme") == scheme and ident.get("id") == number:
+            source = SOURCE_NAMES.get(source_id, source_id)
+            _annotations.annotate(
+                stmt,
+                _annotations.transformation(
+                    _annotations.pointer("recordDetails", "identifiers", index, "scheme"),
+                    f"{source} publishes registration number {number} with no "
+                    "jurisdiction or country. OpenCheck reads the country "
+                    f"({country}) from the record's structured address "
+                    "(addressEntity country), which every address on the record "
+                    "gives as the same; the source does not name the register "
+                    "that issued the number.",
+                    transformed_content="REG",
+                ),
+            )
+            return
 
 
 def _ftm_person_statement(
@@ -738,8 +777,79 @@ def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str | None] | None:
         return (jur.strip(), code or None)
 
 
+def _ftm_country_set(values: Any) -> set[str] | None:
+    """The distinct ISO alpha-2 codes a list of FtM country strings names.
+
+    ``None`` when any value does not resolve: an unreadable country is not
+    evidence for the others.
+    """
+    codes: set[str] = set()
+    for raw in values or []:
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        try:
+            code: str | None = pycountry.countries.lookup(raw.strip()).alpha_2
+        except LookupError:
+            code = _country_code(raw)
+        if not code:
+            return None
+        codes.add(code.upper())
+    return codes
+
+
+def ftm_registration_country(
+    props: dict[str, Any], *, read_address: bool = False
+) -> tuple[str | None, str]:
+    """The one country a FtM record's ``registrationNumber`` belongs to, and why.
+
+    Returns ``(alpha2, basis)`` with ``basis`` one of ``"jurisdiction"``,
+    ``"country"``, ``"address"`` or ``""`` (none). The first property the
+    record fills decides — ``jurisdiction``, then ``country`` — and it must
+    name **exactly one** country; two different ones leave the number bare
+    rather than pick the first (until the bare-REG ticket, 26 Oct 2026, the
+    first value won).
+
+    With ``read_address`` (entities only), a record that fills neither may be
+    read from its **structured** addresses: every ``addressEntity`` that is an
+    expanded Address must carry a ``country``, and all of them the same one.
+    Stephen's decision (26 Oct 2026): the structured address only — never a
+    country name at the end of free-text ``address``, never the collection
+    (``gb_coh_psc`` and ``gb_ocds_find_a_tender_service`` name the register
+    that filed the record, not the company's), never a name match. Found on
+    Regulatory DataCorp's UK Find a Tender party record (``REG 08739364``,
+    ``addressEntity.country: gb``), which never joined the subject's
+    referent group. Mærsk's overseas-entity PSC record (``REG 22756214``)
+    carries its country only in free text and stays bare.
+    """
+    for key in ("jurisdiction", "country"):
+        values = props.get(key) or []
+        if values:
+            codes = _ftm_country_set(values)
+            if codes is not None and len(codes) == 1:
+                return next(iter(codes)), key
+            return None, ""
+    if not read_address:
+        return None, ""
+    countries: set[str] = set()
+    expanded = 0
+    for entry in props.get("addressEntity") or []:
+        if not isinstance(entry, dict):
+            # An unexpanded reference (a bare entity id) says nothing.
+            continue
+        expanded += 1
+        codes = _ftm_country_set((entry.get("properties") or {}).get("country"))
+        if not codes:
+            # No country, or one that does not resolve: not every address
+            # names one, so none of them decides.
+            return None, ""
+        countries |= codes
+    if expanded and len(countries) == 1:
+        return next(iter(countries)), "address"
+    return None, ""
+
+
 def _ftm_identifiers(
-    ftm_id: str, source_id: str, props: dict[str, Any]
+    ftm_id: str, source_id: str, props: dict[str, Any], *, read_address: bool = False
 ) -> list[dict[str, str]]:
     scheme_name = "OpenSanctions" if source_id == "opensanctions" else "OpenAleph"
     scheme_code = "OPENSANCTIONS" if source_id == "opensanctions" else "OPENALEPH"
@@ -747,19 +857,11 @@ def _ftm_identifiers(
         {"id": ftm_id, "scheme": scheme_code, "schemeName": scheme_name}
     ]
 
-    # Resolve jurisdiction so registrationNumber gets a country-qualified scheme
-    # (e.g. "REG-RU" instead of the generic "REG") when the entity's
-    # jurisdiction is known. This lets reconcilers bridge to other sources on
-    # the same identifier without guessing the registry.
-    jur_raw = (props.get("jurisdiction") or props.get("country") or [None])[0]
-    reg_scheme = "REG"
-    if jur_raw:
-        try:
-            alpha2 = pycountry.countries.lookup(jur_raw.strip()).alpha_2
-        except LookupError:
-            alpha2 = _country_code(jur_raw)
-        if alpha2:
-            reg_scheme = f"REG-{alpha2}"
+    # Qualify registrationNumber with its country ("REG-RU" instead of the
+    # generic "REG") when the record says which one, so reconcilers bridge to
+    # other sources on the same number without guessing the registry.
+    country, _basis = ftm_registration_country(props, read_address=read_address)
+    reg_scheme = f"REG-{country}" if country else "REG"
 
     for key, scheme, name in (
         ("leiCode", "XI-LEI", "Legal Entity Identifier"),
