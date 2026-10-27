@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 409** — OpenAleph records that give a company's country only in a structured address now join the right company, with a note saying where the country was read.
+**Latest: Phase 410** — The New Zealand register card reads a withheld alternative address from each company's own record and never grades a match on one above medium.
 
 → [Full development history](docs/status.md)
 
