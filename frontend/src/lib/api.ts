@@ -1062,6 +1062,10 @@ export interface NzAssociatedCompany {
   share_percentage: number | null;
   confidence: string; // "high" | "medium" | "low"
   basis: string;
+  /** Where the graded address came from. Role Search withholds an
+   *  alternative address (from 18 Nov 2026); OpenCheck then reads the
+   *  company's own NZBN record. Absent on answers cached before 27 Oct 2026. */
+  address_source?: "role_search" | "company_record" | "not_checked" | "check_failed";
   link: string | null;
 }
 
@@ -1078,6 +1082,12 @@ export interface NzPersonAssociations {
   as_shareholder: number;
   total_records_under_name: number;
   truncated: boolean;
+  /** Companies where Role Search withheld the address (an alternative address
+   *  is on file), and what became of each. */
+  address_withheld_count?: number;
+  withheld_checked?: number;
+  withheld_not_checked?: number;
+  withheld_check_failed?: number;
   companies: NzAssociatedCompany[];
 }
 
