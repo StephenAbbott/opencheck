@@ -62,8 +62,40 @@ export const NZ_MATCH_CAVEAT =
   "a matching filed address makes it stronger; a name-only match may be a " +
   "different person who shares the name. From 18 November 2026 a director may " +
   "publish an alternative address instead of their home address — often an " +
-  "accountant's or agent's office shared by all of their clients — and a match " +
-  "on one is labelled as such. For review, not a determination.";
+  "accountant's or agent's office shared by all of their clients. The name " +
+  "search then publishes no address for them, so it is read from each " +
+  "company's own record, and a match on an alternative address is never graded " +
+  "above medium. For review, not a determination.";
+
+function companiesWord(n: number): string {
+  return n === 1 ? "one company" : `${n} companies`;
+}
+
+/** What happened where the name search withheld the address. Null when it
+ *  withheld none, or on an answer recorded before the field existed. */
+export function nzWithheldNote(data: NzPersonAssociationsResponse): string | null {
+  const p = data.person;
+  if (!p || !p.address_withheld_count) return null;
+  const parts: string[] = [];
+  if (p.withheld_checked) {
+    parts.push(`${companiesWord(p.withheld_checked)} checked against the company's own record`);
+  }
+  if (p.withheld_not_checked) {
+    parts.push(`${companiesWord(p.withheld_not_checked)} not checked`);
+  }
+  if (p.withheld_check_failed) {
+    parts.push(`${companiesWord(p.withheld_check_failed)} whose record could not be read`);
+  }
+  const lead =
+    p.address_withheld_count === 1
+      ? "For one company the name search publishes no address for this person"
+      : `For ${p.address_withheld_count} companies the name search publishes no address for this person`;
+  const tail =
+    p.withheld_not_checked || p.withheld_check_failed
+      ? " Those not checked are counted on the name alone."
+      : "";
+  return `${lead}: ${parts.join(", ")}.${tail}`;
+}
 
 /** When the register holds more role records under the name than were read. */
 export function nzTruncatedNote(data: NzPersonAssociationsResponse): string | null {

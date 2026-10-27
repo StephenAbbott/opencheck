@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { NzPersonAssociations, NzPersonAssociationsResponse } from "./api";
-import { NZ_MATCH_CAVEAT, nzCompaniesSummary, nzCompanyRoles, nzTruncatedNote } from "./nzPerson";
+import {
+  NZ_MATCH_CAVEAT,
+  nzCompaniesSummary,
+  nzCompanyRoles,
+  nzTruncatedNote,
+  nzWithheldNote,
+} from "./nzPerson";
 
 const person = (over: Partial<NzPersonAssociations> = {}): NzPersonAssociations => ({
   name: "John Doe",
@@ -67,5 +73,43 @@ describe("rows and notes", () => {
   it("keeps the alternative-address warning", () => {
     expect(NZ_MATCH_CAVEAT).toMatch(/alternative address/);
     expect(NZ_MATCH_CAVEAT).toMatch(/not an identity/);
+  });
+});
+
+describe("nzWithheldNote — the name search withholds an alternative address", () => {
+  it("says nothing when no address was withheld, or on an older answer", () => {
+    expect(nzWithheldNote(resp(person()))).toBeNull();
+    expect(nzWithheldNote(resp(person({ address_withheld_count: 0 })))).toBeNull();
+    expect(nzWithheldNote(resp(null))).toBeNull();
+  });
+
+  it("names what was checked against the company's own record", () => {
+    expect(
+      nzWithheldNote(resp(person({ address_withheld_count: 1, withheld_checked: 1 }))),
+    ).toBe(
+      "For one company the name search publishes no address for this person: one company checked against the company's own record.",
+    );
+  });
+
+  it("counts the unchecked and the unreadable, and says how they are counted", () => {
+    expect(
+      nzWithheldNote(
+        resp(
+          person({
+            address_withheld_count: 31,
+            withheld_checked: 24,
+            withheld_not_checked: 6,
+            withheld_check_failed: 1,
+          }),
+        ),
+      ),
+    ).toBe(
+      "For 31 companies the name search publishes no address for this person: 24 companies checked against the company's own record, 6 companies not checked, one company whose record could not be read. Those not checked are counted on the name alone.",
+    );
+  });
+
+  it("the caveat says an alternative address is never graded above medium", () => {
+    expect(NZ_MATCH_CAVEAT).toMatch(/never graded above medium/);
+    expect(NZ_MATCH_CAVEAT).toMatch(/own record/);
   });
 });

@@ -19,6 +19,7 @@ import {
   nzCompaniesSummary,
   nzCompanyRoles,
   nzTruncatedNote,
+  nzWithheldNote,
 } from "../../lib/nzPerson";
 import { Button } from "../ui";
 import MatchConfidenceChip from "../ui/MatchConfidenceChip";
@@ -64,6 +65,7 @@ export function NzPersonCompanies({
 
   const rows = data?.person?.companies ?? [];
   const truncated = data ? nzTruncatedNote(data) : null;
+  const withheld = data ? nzWithheldNote(data) : null;
   return (
     <div className="mt-1.5">
       <Button
@@ -115,6 +117,7 @@ export function NzPersonCompanies({
                 ))}
               </ul>
             )}
+            {withheld && <p className="text-oo-meta text-oo-muted mt-1.5">{withheld}</p>}
             {truncated && <p className="text-oo-meta text-oo-muted mt-1.5">{truncated}</p>}
             {data.available && (
               <p className="text-oo-meta text-oo-muted mt-1.5">{NZ_MATCH_CAVEAT}</p>

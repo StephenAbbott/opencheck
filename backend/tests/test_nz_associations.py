@@ -352,11 +352,13 @@ def test_alternative_address_is_not_described_as_a_shared_residence():
     records = [_director_rec("111", "ALPHA LTD", phys=_phys(paf="580631"))]
     p = summarise_person(_RH_ALT, records, _SUBJECT)
     alpha = p["companies"][0]
-    # The tier is deliberately unchanged, so counts and ordering are stable...
-    assert alpha["confidence"] == "high"
-    assert p["high_confidence_count"] == 1
+    # A shared pafId on an alternative address is at most medium (Stephen,
+    # 27 Oct 2026): it corroborates a service provider, not an identity. It
+    # still counts as address-matched.
+    assert alpha["confidence"] == "medium"
+    assert p["high_confidence_count"] == 0
     assert p["address_match_count"] == 1
-    # ...but the basis no longer claims a shared registered address.
+    # The basis does not claim a shared registered address.
     assert alpha["basis"] == "Same alternative address — may be a shared service address"
     assert "registered" not in alpha["basis"].lower()
 
@@ -516,7 +518,7 @@ async def test_person_view_refuses_a_name_not_on_the_company(live_nz):
 
 async def test_person_view_reads_a_cached_company_view_without_a_call(live_nz):
     cache, searched = live_nz
-    cache.store[f"nz_associations/{_SUBJECT}"] = {
+    cache.store[f"nz_associations/v2/{_SUBJECT}"] = {
         "company_number": _SUBJECT, "available": True, "subject_name": "M",
         "people": [{"name": "Jane Roe", "other_company_count": 0, "companies": []}],
     }
@@ -540,3 +542,31 @@ async def test_person_endpoint_rejects_bad_number():
         await nz_person_associations(
             request=None, response=None, company_number="x1", name="John Doe")
     assert exc.value.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# A pafId is not guaranteed on any register address (MBIE, 15 Oct 2026: an
+# approved alternative address is keyed in by hand and has none until an
+# authority holder re-enters it with the address lookup). When either side
+# lacks one, the grading falls back to the address text.
+# ---------------------------------------------------------------------------
+
+def test_subject_without_paf_falls_back_to_address_text():
+    rh = {**_RH, "paf_id": None}
+    rec = _director_rec("111", "ALPHA LTD",
+                        phys=_phys(paf="580631", lines=["1 Queen St", "Auckland"], postcode="1010"))
+    c = summarise_person(rh, [rec], _SUBJECT)["companies"][0]
+    assert c["confidence"] == "medium" and c["basis"] == "Overlapping address"
+
+
+def test_record_without_paf_falls_back_to_address_text():
+    rec = _director_rec("111", "ALPHA LTD",
+                        phys=_phys(lines=["1 Queen St", "Auckland"], postcode="1010"))
+    c = summarise_person(_RH, [rec], _SUBJECT)["companies"][0]
+    assert c["confidence"] == "medium" and c["basis"] == "Overlapping address"
+
+
+def test_paf_on_one_side_and_a_different_address_on_the_other_is_name_only():
+    rh = {**_RH, "paf_id": None}
+    rec = _director_rec("111", "ALPHA LTD", phys=_phys(paf="580631", lines=["99 Other Rd"]))
+    assert summarise_person(rh, [rec], _SUBJECT)["companies"][0]["confidence"] == "low"
