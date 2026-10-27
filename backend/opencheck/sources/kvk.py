@@ -31,6 +31,7 @@ Press release (GLEIF partnership):
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import httpx
@@ -38,7 +39,8 @@ import httpx
 from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
-from ..http import build_client, request_with_retry
+from ..host_throttle import HostRateLimitedError
+from ..http import build_client
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.kvk import KvKBundle
@@ -46,10 +48,19 @@ from .schemas.kvk import KvKBundle
 _API_BASE = "https://opendata.kvk.nl/api/v1/hvds"
 _CACHE_NS = "kvk"
 
-# Retry configuration for 429 Too Many Requests responses.
-_MAX_RETRIES = 3
-_RETRY_BACKOFF_BASE = 2.0  # seconds; doubled on each attempt
-_RETRY_BACKOFF_MAX = 30.0  # cap, regardless of Retry-After or backoff
+# Request pacing lives in opencheck/host_throttle.py, installed by
+# build_client(): KvK's open data allows one request per minute per IP and
+# answers a spent quota with a bare 429 (no Retry-After). Until 27 Oct 2026 this
+# adapter had its own retry loop — three tries over ~14 s against a 60 s
+# window, each one another refused request — and nothing paced it at all.
+
+# Wording when the throttle refused to send because the minute's request was
+# already spent and no slot freed within the wait. Nothing reached KvK.
+_QUOTA_SPENT: str = (
+    "KvK open data allows one request a minute from this server; this "
+    "minute's was already used and no slot freed in time, so the request was "
+    "not sent (HTTP 429 avoided)"
+)
 
 # GLEIF Registration Authority code for KvK (Netherlands Chamber of Commerce).
 KVK_RA_CODE: str = "RA000463"
@@ -97,6 +108,12 @@ class KvKAdapter(SourceAdapter):
         # (which happen immediately after /lookup within the same process)
         # can produce named BODS entity statements.
         self._names: dict[str, str] = {}
+        # One in-flight request per KvK number. A lookup and the /deepen that
+        # follows it (or two readers of the same card) used to send the same
+        # request twice inside one minute — the second guaranteed a 429. Each
+        # caller still reads the cache itself, so its own provenance scope
+        # records what it was served.
+        self._locks: dict[str, asyncio.Lock] = {}
 
     @property
     def info(self) -> SourceInfo:
@@ -158,6 +175,17 @@ class KvKAdapter(SourceAdapter):
         name = legal_name or self._names.get(kvk_number, "")
 
         cache_key = f"{_CACHE_NS}/number/{kvk_number}"
+        if self._cache.get_payload(cache_key) is None and self.info.live_available:
+            # Wait for any fetch of the same number already in flight; when it
+            # lands, the cache read below serves its answer.
+            lock = self._locks.setdefault(kvk_number, asyncio.Lock())
+            async with lock:
+                return await self._fetch_unlocked(kvk_number, name, cache_key)
+        return await self._fetch_unlocked(kvk_number, name, cache_key)
+
+    async def _fetch_unlocked(
+        self, kvk_number: str, name: str, cache_key: str
+    ) -> dict[str, Any]:
         cached = self._cache.get_payload(cache_key)
 
         if cached is not None:
@@ -173,9 +201,11 @@ class KvKAdapter(SourceAdapter):
         else:
             try:
                 async with build_client() as client:
-                    response = await self._get_with_retries(
-                        client, f"{_API_BASE}/basisbedrijfsgegevens/kvknummer/{kvk_number}"
+                    response = await client.get(
+                        f"{_API_BASE}/basisbedrijfsgegevens/kvknummer/{kvk_number}"
                     )
+            except HostRateLimitedError:
+                return self._unanswered(kvk_number, name, None)
             except httpx.HTTPError as exc:
                 return self._unanswered(kvk_number, name, type(exc).__name__)
             if response.status_code == 404:
@@ -184,7 +214,7 @@ class KvKAdapter(SourceAdapter):
                 # and degrade gracefully rather than surfacing a 404 error.
                 data = None
             elif not 200 <= response.status_code < 300:
-                # Phase 324: a 429 that outlasted the retries, or a 5xx, used
+                # Phase 324: a 429 the throttle could not wait out, or a 5xx, used
                 # to go through raise_for_status() and out of fetch() —
                 # /deepen answered HTTP 500 (BODS quality sweep, 12 Oct 2026).
                 # It is an unanswered question, never "no record": degrade,
@@ -210,29 +240,23 @@ class KvKAdapter(SourceAdapter):
         validate_raw("kvk", KvKBundle, bundle)
         return bundle
 
-    async def _get_with_retries(self, client: httpx.AsyncClient, url: str) -> httpx.Response:
-        """GET ``url``, waiting out up to ``_MAX_RETRIES`` 429s.
-
-        Returns the last response, which is still a 429 when the retries ran
-        out — the caller decides what that means.
-        """
-        return await request_with_retry(
-            lambda: client.get(url),
-            max_retries=_MAX_RETRIES,
-            backoff_base=_RETRY_BACKOFF_BASE,
-            backoff_max=_RETRY_BACKOFF_MAX,
-        )
-
-    def _unanswered(self, kvk_number: str, name: str, failure: str) -> dict[str, Any]:
+    def _unanswered(self, kvk_number: str, name: str, failure: str | None) -> dict[str, Any]:
         """Record that KvK did not answer and return an empty, uncached bundle.
 
-        The detail names the failure only, never the KvK number.
+        ``failure`` is ``None`` when the throttle refused to send at all — the
+        quota was spent, which is a rate limit, not an upstream fault. The
+        detail names the failure only, never the KvK number.
         """
-        degradation.record(
-            self.id,
-            f"KvK open data did not answer ({failure})",
-            reason=degradation.reason_for_failure(failure),
-        )
+        if failure is None:
+            degradation.record(
+                self.id, _QUOTA_SPENT, reason=degradation.REASON_RATE_LIMITED
+            )
+        else:
+            degradation.record(
+                self.id,
+                f"KvK open data did not answer ({failure})",
+                reason=degradation.reason_for_failure(failure),
+            )
         return {
             "source_id": self.id,
             "kvk_number": kvk_number,

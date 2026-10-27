@@ -2014,11 +2014,29 @@ These are non-obvious and cost significant debugging time. Do not deviate from t
 
 ---
 
-## KvK (Netherlands) — rate limit handling
+## KvK (Netherlands) — paced, not retried (the KvK request-pacing ticket, 27 Oct 2026)
 
-- The KvK open-data endpoint returns HTTP 429 when the global rate limit is hit.
-- The shared `httpx.AsyncHTTPTransport(retries=2)` only retries on network errors, not HTTP 4xx responses.
-- The adapter handles 429 with an explicit retry loop: up to `_MAX_RETRIES=3` retries, honouring the `Retry-After` response header when present, otherwise using exponential backoff starting at 2 s (capped at 30 s).
+- `opendata.kvk.nl` allows **one request per minute per IP** (plus 200 per five
+  minutes across all callers) and answers a spent minute with a bare 429 — no
+  `Retry-After`, no `RateLimit-*` headers.
+- Pacing lives in `opencheck/host_throttle.py`, installed by `build_client()`
+  inside the GLEIF wrapper, so no adapter opts in. A request that cannot get a
+  slot within `OPENCHECK_KVK_THROTTLE_MAX_WAIT_S` (20 s; under the lookup's
+  30 s source budget) raises `HostRateLimitedError` **without being sent**; a
+  429 penalises the process one full window and is re-sent only if the
+  caller's deadline allows. The sweep sets the wait to 130 s and the `kvk`
+  probe's `timeout_s` to 150 s. `OPENCHECK_KVK_RATE_LIMIT_PER_MINUTE=0`
+  disables it (conftest does).
+- **The adapter has no retry loop** — a retry after a refusal cannot beat a
+  one-a-minute quota, and the old 2 + 4 + 8 s loop only spent the window. It
+  holds one lock per KvK number and re-reads the cache inside it, so a lookup
+  and its `/deepen` send one request. A refusal is a `rate_limited`
+  degradation ("not sent"), never cached.
+- **No paid-API fallback** (Stephen, 27 Oct 2026): KvK's authenticated API
+  needs a Dutch-registered subscriber and is not openly licensed.
+- Another host with a per-IP quota joins with one entry in
+  `host_throttle._LIMIT_READERS` and two settings. GLEIF keeps its own
+  throttle.
 
 ---
 

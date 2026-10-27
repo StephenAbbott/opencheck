@@ -134,12 +134,7 @@ async def test_an_unanswered_request_degrades_instead_of_raising(
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
     from opencheck import degradation
     from opencheck.config import get_settings
-    from opencheck.sources import kvk as kvk_module
 
-    async def no_sleep(_: float) -> None:
-        return None
-
-    monkeypatch.setattr("opencheck.http.asyncio.sleep", no_sleep)
     get_settings.cache_clear()
     puts: list[str] = []
     monkeypatch.setattr(adapter._cache, "put", lambda key, *a, **k: puts.append(key))
@@ -161,5 +156,104 @@ async def test_an_unanswered_request_degrades_instead_of_raising(
     assert detail in entry.detail
     assert "17085815" not in entry.detail
     if response is not None and response.status_code == 429:
-        assert route.call_count == kvk_module._MAX_RETRIES + 1
+        # Sent once: the adapter no longer retries a refusal itself.
+        assert route.call_count == 1
     get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# 27 Oct 2026: request pacing — one request a minute, through build_client
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def paced(monkeypatch, tmp_path):
+    """Live mode with the real KvK throttle on a fake clock (20 s wait)."""
+    from opencheck import host_throttle as ht
+    from opencheck.config import get_settings
+
+    monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
+    monkeypatch.setenv("OPENCHECK_KVK_RATE_LIMIT_PER_MINUTE", "1")
+    monkeypatch.setenv("OPENCHECK_KVK_THROTTLE_MAX_WAIT_S", "20")
+    get_settings.cache_clear()
+    ht.reset_host_throttles_for_tests()
+
+    class Clock:
+        now = 5000.0
+
+        def __call__(self) -> float:
+            return self.now
+
+        async def sleep(self, s: float) -> None:
+            self.now += s
+
+    clock = Clock()
+    ht._throttles[ht.KVK_OPENDATA_HOST] = ht.HostThrottle(
+        ht.KVK_OPENDATA_HOST, clock=clock, sleep=clock.sleep
+    )
+    yield clock
+    ht.reset_host_throttles_for_tests()
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_fetches_of_one_number_send_one_request(adapter, paced):
+    # A lookup and the /deepen behind it used to send the same request twice
+    # inside one minute; the second was a guaranteed 429. Now the second waits
+    # for the first and is served from the cache it fills.
+    import asyncio
+
+    with respx.mock:
+        route = respx.get(f"{_URL}/17085815").mock(
+            return_value=Response(200, json={"actief": "J", "rechtsvormCode": "NV"})
+        )
+        first, second = await asyncio.gather(
+            adapter.fetch("17085815", legal_name="ASML Holding N.V."),
+            adapter.fetch("17085815"),
+        )
+    assert route.call_count == 1
+    assert first["company"] == second["company"] == {"actief": "J", "rechtsvormCode": "NV"}
+    assert second["legal_name"] == "ASML Holding N.V."
+
+
+@pytest.mark.asyncio
+async def test_a_second_number_inside_the_minute_degrades_without_sending(adapter, paced):
+    # The production pattern of 27 Oct 2026 (ASML, then Heineken two minutes
+    # later): with the minute spent and no slot inside the 20 s wait, the
+    # second request is never sent — so it cannot extend the refusal — and the
+    # card says why, honestly.
+    from opencheck import degradation
+
+    with respx.mock:
+        asml = respx.get(f"{_URL}/17085815").mock(return_value=Response(200, json={"actief": "J"}))
+        heineken = respx.get(f"{_URL}/33011433").mock(
+            return_value=Response(200, json={"actief": "J"})
+        )
+        await adapter.fetch("17085815", legal_name="ASML Holding N.V.")
+        paced.now += 10  # ten seconds later
+        with degradation.recording() as recorded:
+            bundle = await adapter.fetch("33011433", legal_name="Heineken N.V.")
+    assert asml.call_count == 1
+    assert heineken.call_count == 0
+    assert bundle["is_stub"] is True and bundle["company"] is None
+    [entry] = [d for d in recorded if d.source_id == "kvk"]
+    assert entry.reason == "rate_limited"
+    assert "not sent" in entry.detail
+
+
+@pytest.mark.asyncio
+async def test_a_second_number_within_the_wait_is_answered(adapter, paced):
+    # 45 s after the last request the next slot is 15 s away — inside the
+    # 20 s wait — so the lookup queues and gets the real record.
+    with respx.mock:
+        respx.get(f"{_URL}/17085815").mock(return_value=Response(200, json={"actief": "J"}))
+        heineken = respx.get(f"{_URL}/33011433").mock(
+            return_value=Response(200, json={"actief": "J", "rechtsvormCode": "NV"})
+        )
+        await adapter.fetch("17085815")
+        paced.now += 45
+        bundle = await adapter.fetch("33011433", legal_name="Heineken N.V.")
+    assert heineken.call_count == 1
+    assert bundle["is_stub"] is False
+    assert bundle["company"] == {"actief": "J", "rechtsvormCode": "NV"}
