@@ -814,6 +814,51 @@ def test_row_entity_status_parses_new_columns() -> None:
         _ct_mod._entity_index = None
 
 
+_STATUS_URL_CELLS = [
+    # August 2026: a stringified Python list.
+    ("['https://a.example', 'https://b.example']", ["https://a.example", "https://b.example"]),
+    # September 2026: one semicolon-delimited string.
+    ("https://a.example; https://b.example", ["https://a.example", "https://b.example"]),
+    ("['https://a.example; https://b.example']", ["https://a.example", "https://b.example"]),
+    ("https://a.example", ["https://a.example"]),
+    ("", []),
+    (None, []),
+    # Same URL twice (either wrapper) is one piece of evidence.
+    ("https://a.example; https://a.example", ["https://a.example"]),
+]
+
+
+@pytest.mark.parametrize("cell,expected", _STATUS_URL_CELLS)
+def test_status_urls_read_both_published_formats(cell, expected) -> None:
+    """A multi-URL cell is split, never served as one unopenable string."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    assert _ct_mod._parse_status_urls(cell) == expected
+
+
+@pytest.mark.parametrize("cell,expected", _STATUS_URL_CELLS)
+def test_status_url_parsers_agree_across_the_two_carriers(cell, expected) -> None:
+    """The adapter (CSV) and the build script (xlsx) read the cell alike.
+
+    They are separate implementations — the script is standalone tooling and
+    must not import the backend — so nothing but this test stops them
+    drifting when GEM changes the format again.
+    """
+    import importlib.util
+    from pathlib import Path
+
+    import opencheck.sources.climatetrace as _ct_mod
+
+    script = Path(__file__).resolve().parent.parent / "scripts" / "build_geot_projects.py"
+    spec = importlib.util.spec_from_file_location("_build_geot_projects", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module._parse_status_urls(cell) == expected
+    assert module._parse_status_urls(cell) == _ct_mod._parse_status_urls(cell)
+
+
 def test_row_entity_status_dangling_successor_keeps_bare_id() -> None:
     import opencheck.sources.climatetrace as _ct_mod
 

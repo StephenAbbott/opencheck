@@ -157,13 +157,29 @@ def _gem_release_path() -> Path:
     return data_root() / "gem" / "release.json"
 
 
-#: GEM dates its CSVs ``…_DDMMYY.csv`` (``ownership_all_entities_050826.csv``
-#: is the 5 August 2026 release).
+#: GEM dates its CSVs ``…_DDMMYY.csv`` — read as day, month, year
+#: (``ownership_all_entities_050826.csv`` as the 5 August 2026 release).
+#: **GEM documents neither order**, and the two readings are
+#: indistinguishable while the day is 12 or lower, so this is a convention,
+#: not a fact: ``_071026`` reads as 7 October 2026 here and as 10 July 2026
+#: under MM/DD/YY, and the bucket uploaded it on 29 July 2026, which only the
+#: second reading fits. ``not_after`` below is what keeps the convention
+#: honest; confirming the order with GEM would retire the guess.
 _GEM_DATED_NAME = re.compile(r"_(\d{2})(\d{2})(\d{2})\.csv$")
 
 
-def _release_date_from_name(name: str | None) -> str | None:
-    """The ISO release date in a dated GEM filename, or ``None``."""
+def _release_date_from_name(name: str | None, *, not_after: str | None = None) -> str | None:
+    """The ISO release date in a dated GEM filename, or ``None``.
+
+    ``not_after`` is a stamp the release cannot postdate — the bucket's
+    ``updated`` for a GCS download, the file's mtime for the zip. A file
+    cannot be published after it was uploaded, so a parse that lands later
+    than its own stamp has read the digits in the wrong order and is refused;
+    the caller then falls back to the stamp rather than dating statements
+    from a day that had not happened yet. Until this check, the current
+    release (``_071026``, uploaded 29 July 2026) dated every GEM-derived
+    statement 2026-10-07.
+    """
     from datetime import date
 
     m = _GEM_DATED_NAME.search(name or "")
@@ -171,9 +187,18 @@ def _release_date_from_name(name: str | None) -> str | None:
         return None
     day, month, year = (int(g) for g in m.groups())
     try:
-        return date(2000 + year, month, day).isoformat()
+        parsed = date(2000 + year, month, day).isoformat()
     except ValueError:
         return None
+    limit = (not_after or "")[:10]
+    if limit and parsed > limit:
+        log.warning(
+            "GEM release date %s from %r postdates the file's own stamp %s — "
+            "refusing it and dating the release by the stamp instead",
+            parsed, name, limit,
+        )
+        return None
+    return parsed
 
 
 def _write_gem_release(name: str, gcs_updated: str | None) -> None:
@@ -184,7 +209,7 @@ def _write_gem_release(name: str, gcs_updated: str | None) -> None:
 
     record = {
         "file": name,
-        "release_date": _release_date_from_name(name)
+        "release_date": _release_date_from_name(name, not_after=gcs_updated)
         or ((gcs_updated or "")[:10] or None),
         "gcs_updated": gcs_updated,
         "downloaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -239,10 +264,11 @@ def gem_release() -> dict[str, Any] | None:
                 )
         except (OSError, zipfile.BadZipFile):
             member = None
+        downloaded_at = _mtime(zip_path)
         return {
             "file": member,
-            "release_date": _release_date_from_name(member),
-            "downloaded_at": _mtime(zip_path),
+            "release_date": _release_date_from_name(member, not_after=downloaded_at),
+            "downloaded_at": downloaded_at,
         }
     return None
 
@@ -741,6 +767,12 @@ def _geot_projects(entity_id: str) -> dict[str, Any] | None:
 # the repo-shipped GEOT artifact (built from the xlsx, successor name and LEI
 # pre-resolved) is the primary source; the CSV columns are parsed defensively
 # as a fallback so newly flagged entities surface once the bucket catches up.
+#
+# The xlsx's own spelling of these columns is not fixed: September 2026 kept
+# every header and changed the status-URL *format* (see _parse_status_urls),
+# so the fallback reads both formats. It is read-both rather than
+# read-the-latest because the bucket is three months behind the xlsx and may
+# ship either.
 
 _STATUS_COL = "Entity Status"
 _MERGED_INTO_COL = "Merged Into"
@@ -764,22 +796,40 @@ def _first_valid_lei(raw: str | None) -> str | None:
 def _parse_status_urls(raw: str | None) -> list[str]:
     """Parse the Entity Status Data Source URL cell.
 
-    GEM publishes stringified Python lists ("['https://a', 'https://b']");
-    tolerate a plain URL string too in case the format is fixed upstream.
+    The format has already changed once: August 2026 published stringified
+    Python lists ("['https://a', 'https://b']"), September 2026 publishes one
+    semicolon-delimited string ("https://a; https://b") — 73 of its 317
+    url-bearing rows carry more than one. Both are read, and a multi-URL cell
+    is split whichever wrapper it arrives in; the August-only reading turned
+    a September cell into a single unopenable string, which is what these
+    URLs are published as evidence *for*.
+
+    Kept in step with ``scripts/build_geot_projects.py::_parse_status_urls``
+    (the xlsx carrier) — ``test_climatetrace.py`` pins the two equal.
     """
     text = (raw or "").strip()
     if not text:
         return []
+    tokens: list[str] = []
     if text.startswith("["):
         try:
             import ast
 
             parsed = ast.literal_eval(text)
             if isinstance(parsed, (list, tuple)):
-                return [str(u).strip() for u in parsed if str(u).strip()]
+                tokens = [str(u) for u in parsed]
         except (ValueError, SyntaxError):
-            pass
-    return [text]
+            tokens = []
+    if not tokens:
+        tokens = [text]
+
+    urls: list[str] = []
+    for token in tokens:
+        for part in token.split(";"):
+            url = part.strip().strip(",").strip()
+            if url and url not in urls:
+                urls.append(url)
+    return urls
 
 
 def _row_entity_status(gem_row: dict[str, str]) -> dict[str, Any] | None:
