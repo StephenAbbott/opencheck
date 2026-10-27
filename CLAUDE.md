@@ -818,10 +818,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Twenty-one** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
+**Twenty-two** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`, `ariregister`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`, `ariregister`, `brreg`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -1952,6 +1952,31 @@ will be re-derived otherwise:
   statement names its source).
 
 ---
+
+## Brreg annual accounts on the Norway card (the Brreg accounts ticket, 26 Oct 2026)
+
+`sources/brreg_accounts.py`, read by `BrregAdapter.fetch` into the bundle's
+`accounts`; `finding_brreg` in `findings.py`; `lib/brregAccounts.ts` +
+`BrregAccountsFacts` in `SourceBucketCard.tsx`. Brreg opened the
+Regnskapsregisteret API to everyone on 1 Oct 2026 (three filed years, company
+and group accounts, no key). Stephen's decisions and the traps:
+
+- **Facts about the latest period only, never a figure**: period, `journalnr`,
+  group accounts filed, audit opt-out / unaudited, liquidation accounts,
+  currency, accounting rules, small-company rules, parent company — and a link
+  to the register's PDF copy (`/aarsregnskap/kopi/{orgnr}/{year}`, linked only
+  when `/aar` lists the year; never fetched). `summarise` reads no amount and a
+  test fails if one reaches the summary. **Nothing in BODS** — `map_brreg`
+  ignores `accounts`; no signal, no verdict clause.
+- **Four answers**: 200 `filed` (cached a day); 404 `none` — "no annual accounts
+  in the last three filed years", never "overdue" (cached as an absence); a 500
+  whose message names an unsupported `oppstillingsplan` — `BANK`, `LIV`,
+  `SKADE` — is `unsupported`, an answer, cached, no degradation; anything else
+  `unavailable`, a `source_read` degradation, never cached.
+- **The API spells it `regnkapsprinsipper`** (sic); the reader takes either.
+  Equinor's company accounts are `forenkletAnvendelseIFRS`, its group's IFRS.
+- `RULES_WORDS` lives in both `brreg_accounts.py` and `lib/brregAccounts.ts`;
+  `test_brreg_accounts.py` parses the TypeScript.
 
 ## Datafordeler CVR API (Denmark) — hard-won constraints
 

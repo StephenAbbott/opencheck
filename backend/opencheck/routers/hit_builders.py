@@ -226,12 +226,23 @@ def _bh_ariregister(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
 
 
 def _bh_brreg(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
-    e = r.get("entity") or {}
+    """The Enhetsregisteret record, with the annual accounts summary beside it.
+
+    ``raw`` stays the entity record, plus ``accounts`` (the facts about the
+    latest filed period and the PDF link) so the card can list them; the
+    summary never carries a figure.
+    """
+    from ..findings import finding_brreg
+
+    e = dict(r.get("entity") or {})
+    if r.get("accounts") is not None:
+        e["accounts"] = r["accounts"]
     return _hit(
         "brreg", local_id,
         name=e.get("navn") or ctx.legal_name or "",
         summary=f"NO-ORGNR {local_id}",
         identifiers={"no_orgnr": local_id}, raw=e,
+        finding=finding_brreg(r),
     )
 
 
