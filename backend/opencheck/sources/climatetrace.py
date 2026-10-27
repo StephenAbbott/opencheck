@@ -86,6 +86,7 @@ import json
 import logging
 import re
 import zipfile
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -610,7 +611,9 @@ def _load_relationship_indexes() -> tuple[
     text = _read_gem_csv_text("entity_relationships")
     if text:
         try:
-            for row in csv.DictReader(io.StringIO(text)):
+            reader = csv.DictReader(io.StringIO(text))
+            imputed_col = _share_imputed_column(reader.fieldnames)
+            for row in reader:
                 owner = (row.get("owner_entity_id") or "").strip()
                 subject = (row.get("subject_entity_id") or "").strip()
                 if not owner or not subject:
@@ -633,6 +636,11 @@ def _load_relationship_indexes() -> tuple[
                         "name": (row.get("owner_name") or "").strip(),
                         "percent": pct,
                         "source_urls": _split_source_urls(row.get("data_source_url")),
+                        # None when the CSV has no "Share Imputed?" column
+                        # (the July 2026 schema) or the cell is blank.
+                        "share_imputed": (
+                            _parse_share_imputed(row.get(imputed_col)) if imputed_col else None
+                        ),
                     }
                 )
         except Exception as exc:
@@ -686,6 +694,85 @@ def _split_source_urls(raw: str | None) -> list[str]:
     # query string must not cut it in two.
     parts = re.split(r",\s*(?=https?://)", (raw or "").strip())
     return [u.strip() for u in parts if u.strip().startswith(("http://", "https://"))]
+
+
+# ---------------------------------------------------------------------------
+# "Share Imputed?" — which percentages GEM derived itself
+# ---------------------------------------------------------------------------
+#
+# GEOT's Entity Ownership sheet (August 2026 onwards) says, per holding,
+# whether the percentage is a "known value, not imputed" or an "imputed value"
+# — GEM's own arithmetic, overwhelmingly an equal split among the owners it
+# knows of (100, 50, 33.3, 25 …), with 0 standing for "size not known". The
+# relationships CSV in the Climate TRACE bucket is still on the July 2026
+# schema without the column, so it is read defensively — any header whose
+# letters contain "imputed", either GEM's wording or a plain boolean — and
+# the repo-shipped GEOT artifact (``imputed_shares``, built from the xlsx) is
+# the fallback. The artifact is consulted only when the CSV row's own share
+# equals the imputed figure: a CSV value that differs is not the number GEM
+# imputed. Measured on the August 2026 xlsx against the July CSV: the CSV
+# leaves the share blank on 1,983 of the 1,989 rows GEM imputed, so today the
+# flag mostly matters for the next bucket release.
+
+_SHARE_IMPUTED_WORDS: dict[str, bool] = {
+    "imputed value": True,
+    "known value, not imputed": False,
+    "true": True,
+    "yes": True,
+    "1": True,
+    "false": False,
+    "no": False,
+    "0": False,
+}
+
+#: Two shares are "the same figure" within GEM's one-decimal rounding.
+_IMPUTED_SHARE_TOLERANCE = 0.05
+
+
+def _parse_share_imputed(raw: object) -> bool | None:
+    """GEM's "Share Imputed?" cell → True / False, or None when blank or not
+    a value GEM uses.
+
+    Kept in step with ``scripts/build_geot_projects.py::_parse_share_imputed``
+    (the xlsx carrier) — ``test_climatetrace.py`` pins the two equal.
+    """
+    if isinstance(raw, bool):
+        return raw
+    text = " ".join(str(raw if raw is not None else "").split()).casefold()
+    return _SHARE_IMPUTED_WORDS.get(text)
+
+
+def _share_imputed_column(fieldnames: Sequence[str] | None) -> str | None:
+    """The CSV header carrying GEM's imputation flag, whatever its spelling
+    ("Share Imputed?", "share_imputed", …), or None for the July schema."""
+    for name in fieldnames or []:
+        if "imputed" in re.sub(r"[^a-z]", "", (name or "").casefold()):
+            return name
+    return None
+
+
+def _share_imputed(
+    subject_id: str, party_id: str, share: object, row_flag: bool | None
+) -> bool | None:
+    """Whether GEM imputed *share* for the subject←party holding.
+
+    The row's own flag wins; otherwise the GEOT artifact's ``imputed_shares``
+    says True when it holds this pair at this same figure. None means "GEM has
+    not said" — never read as known. A missing or zero share has nothing to
+    flag (the mapper publishes no share for either).
+    """
+    if not isinstance(share, (int, float)) or isinstance(share, bool) or share <= 0:
+        return None
+    if row_flag is not None:
+        return row_flag
+    imputed = (
+        (_get_geot_data().get("imputed_shares") or {}).get(subject_id) or {}
+    ).get(party_id)
+    if isinstance(imputed, (int, float)) and abs(float(imputed) - float(share)) <= (
+        _IMPUTED_SHARE_TOLERANCE
+    ):
+        return True
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1289,7 +1376,9 @@ def _parse_parents(gem_row: dict[str, str]) -> list[dict[str, Any]]:
     """Extract parent entities declared in the GEM CSV row.
 
     Each parent dict has ``entity_id``, ``name``, ``share`` (float percentage,
-    or None when GEM doesn't publish one), ``entity_type`` and ``country``.
+    or None when GEM doesn't publish one), ``share_imputed`` (True when GEM
+    marks that figure as its own estimate, else None — see
+    ``_share_imputed``), ``entity_type`` and ``country``.
     The share suffix that GEM embeds in both columns ("… [55.0%]") is stripped
     from the values.
 
@@ -1303,6 +1392,7 @@ def _parse_parents(gem_row: dict[str, str]) -> list[dict[str, Any]]:
     when the state above it is typed ``state`` / ``stateBody``. Both are None
     when the parent has no row of its own.
     """
+    subject_id = (gem_row.get(_ENTITY_ID_COL) or "").strip()
     parent_ids_raw = (gem_row.get(_PARENT_IDS_COL) or "").strip()
     parent_names_raw = (gem_row.get(_PARENT_NAMES_COL) or "").strip()
 
@@ -1329,6 +1419,8 @@ def _parse_parents(gem_row: dict[str, str]) -> list[dict[str, Any]]:
                 "entity_id": pid,
                 "name": pname or pid,
                 "share": share,
+                # The entities CSV has no flag of its own for this column.
+                "share_imputed": _share_imputed(subject_id, pid, share, None),
                 "entity_type": entity_type,
                 "country": country,
             }
@@ -1384,6 +1476,9 @@ def _parse_owners(entity_id: str) -> list[dict[str, Any]]:
                 or edge.get("name")
                 or oid,
                 "share": edge.get("percent"),
+                "share_imputed": _share_imputed(
+                    entity_id, oid, edge.get("percent"), edge.get("share_imputed")
+                ),
                 "entity_type": entity_type,
                 "country": country,
                 "source_urls": list(edge.get("source_urls") or []),
@@ -1458,7 +1553,8 @@ def gem_direct_subsidiaries(lei: str | None) -> dict[str, Any] | None:
             {
                 "gem_id": cid,
                 "name": child.get("name") or (child_row.get(_ENTITY_NAME_COL) or "").strip() or cid,
-                "percent": child.get("percent"),
+                # GEM writes 0 for "size not known": no stated share.
+                "percent": child.get("percent") or None,
                 "lei": child_lei,
                 "country": (child_row.get(_COUNTRY_COL) or "").strip() or None,
             }

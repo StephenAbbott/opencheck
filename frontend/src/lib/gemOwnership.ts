@@ -21,7 +21,8 @@ export interface GemPartyChip {
   /** GEM entity ID — stable React key. */
   id: string;
   name: string;
-  /** Percentage as GEM published it, or null when GEM gives none. */
+  /** Percentage as GEM published it, or null when GEM gives none (or 0,
+   * which GEM writes for "size not known"). */
   share: number | null;
 }
 
@@ -40,7 +41,9 @@ function toChips(list: unknown, selfId: string): GemPartyChip[] {
     if (!id || id === selfId || seen.has(id)) continue;
     seen.add(id);
     const name = typeof item.name === "string" && item.name.trim() ? item.name.trim() : id;
-    chips.push({ id, name, share: typeof item.share === "number" ? item.share : null });
+    // GEM writes 0 where it does not know the size, so 0 is no stated share.
+    const share = typeof item.share === "number" && item.share > 0 ? item.share : null;
+    chips.push({ id, name, share });
   }
   return chips;
 }

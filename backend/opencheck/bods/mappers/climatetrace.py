@@ -112,6 +112,47 @@ def _gem_unidentified_owner(entity_id: str, name: str) -> str | None:
     return _GEM_UNIDENTIFIED_OWNERS.get(key)
 
 
+#: The ``commenting`` annotation on a share GEM marks as imputed (decision
+#: of 27 Oct 2026: keep the number, say what it is). GEM's own two labels are
+#: "known value, not imputed" and "imputed value"; the sentence quotes the
+#: second and says no more about how GEM derived it than GEM does.
+GEM_IMPUTED_SHARE_NOTE = (
+    'Global Energy Monitor marks this share as an "imputed value" (its '
+    '"Share Imputed?" column): a figure GEM estimated, not a known value.'
+)
+
+
+def _gem_share(interest: dict[str, Any], share: Any) -> bool:
+    """Put GEM's share on *interest* when it states a size; True if it did.
+
+    A share of 0 is not "holds nothing": GEM writes 0 where it does not know
+    the size (424 imputed rows in September 2026, and the three ``small
+    shareholder(s)`` rows of the July relationships CSV, a holder it still
+    calls a shareholder). So 0 publishes no ``share`` at all — the holder and
+    the interest stay, as for a blank cell.
+    """
+    if isinstance(share, bool) or not isinstance(share, (int, float)) or share <= 0:
+        return False
+    interest["share"] = {"exact": float(share)}
+    return True
+
+
+def _note_imputed_share(relationship: dict[str, Any] | None, party: dict[str, Any]) -> None:
+    """Annotate the interest's share when GEM says it imputed it."""
+    if relationship is None or party.get("share_imputed") is not True:
+        return
+    interests = relationship.get("recordDetails", {}).get("interests") or []
+    if not interests or "share" not in interests[0]:
+        return
+    annotate(
+        relationship,
+        commenting(
+            pointer("recordDetails", "interests", 0, "share"),
+            GEM_IMPUTED_SHARE_NOTE,
+        ),
+    )
+
+
 def _emit_gem_interested_party(
     result: BODSBundle,
     emitted: set[str],
@@ -242,6 +283,11 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
       shareholder(s)``, ``member/employee owned``, ``unknown``) become an
       unspecified interested party on either path, keeping the share, never a
       shared entity node.
+    * On either path a share of 0 publishes no ``share`` (GEM writes 0 for
+      "size not known"), and a share GEM marks as an "imputed value" keeps
+      its number with a ``commenting`` annotation on
+      ``/recordDetails/interests/0/share`` (``GEM_IMPUTED_SHARE_NOTE``).
+      Integrated ownership reads an imputed figure like any other.
     * For a dissolved or amalgamated entity (August 2026 GEOT fields): a
       ``commenting`` annotation on the subject's statement — never a
       ``dissolutionDate``, which requires a date GEM does not publish, and
@@ -433,11 +479,9 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
         }
         # GEM publishes the parent's share for most entities (parsed from the
         # "Gem parents IDs" column by the adapter, e.g. "E1000… [55.0%]").
-        share = parent.get("share")
-        if isinstance(share, (int, float)):
-            interest["share"] = {"exact": float(share)}
+        _gem_share(interest, parent.get("share"))
 
-        _emit_gem_interested_party(
+        relationship = _emit_gem_interested_party(
             result,
             emitted,
             party=parent,
@@ -446,6 +490,7 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
             interest=interest,
             source_url=source_url,
         )
+        _note_imputed_share(relationship, parent)
 
     for owner in owners:
         owner_eid = (owner.get("entity_id") or "").strip()
@@ -469,9 +514,7 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
                 "(not a beneficial ownership assertion)"
             ),
         }
-        share = owner.get("share")
-        if isinstance(share, (int, float)):
-            interest["share"] = {"exact": float(share)}
+        _gem_share(interest, owner.get("share"))
 
         relationship = _emit_gem_interested_party(
             result,
@@ -482,6 +525,7 @@ def map_climatetrace(bundle: dict[str, Any]) -> BODSBundle:
             interest=interest,
             source_url=source_url,
         )
+        _note_imputed_share(relationship, owner)
         urls = [u for u in owner.get("source_urls") or [] if isinstance(u, str) and u]
         if relationship is not None and urls:
             annotate(
