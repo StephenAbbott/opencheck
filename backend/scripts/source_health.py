@@ -472,7 +472,7 @@ async def sweep(
             _probe_with_retry(
                 sid,
                 PROBES[sid],
-                timeout=timeout,
+                timeout=max(timeout, PROBES[sid].timeout_s or 0.0),
                 retry_delay=retry_delay,
                 retry=retry,
                 semaphore=semaphore,

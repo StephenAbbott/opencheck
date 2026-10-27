@@ -46,6 +46,9 @@ os.environ.setdefault("OPENCHECK_IDENTIFIER_CHECKSUMS_ENFORCED", "0")
 # fired. tests/test_gleif_throttle.py re-enables it per-fixture (env var +
 # get_settings.cache_clear() + reset_throttle_for_tests()).
 os.environ.setdefault("OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE", "0")
+# Likewise the per-host throttle for KvK open data (one request a minute):
+# tests/test_host_throttle.py and test_kvk.py re-enable it where they need it.
+os.environ.setdefault("OPENCHECK_KVK_RATE_LIMIT_PER_MINUTE", "0")
 
 # GLEIF's ISIN-to-LEI table (Phase 258) is never downloaded or built by the
 # suite, and never read from wherever a developer's dev server left one: the

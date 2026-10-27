@@ -100,7 +100,7 @@ _CACHE_TTL_DAYS = 7
 # sequential EDGAR requests (ticker index, per-form-type atom feeds, one
 # primary_doc.xml per filing) inside one ~30s per-source time budget (see
 # routers/lookup.py:_source_budget), so retries must not eat that budget on
-# their own. The loop is ``http.request_with_retry``, shared with KvK.
+# their own. The loop is ``http.request_with_retry``.
 _MAX_RETRIES = 2
 _RETRY_BACKOFF_BASE = 1.0  # seconds; doubled on each attempt
 _RETRY_BACKOFF_MAX = 8.0  # cap, regardless of Retry-After or backoff

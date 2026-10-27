@@ -133,6 +133,13 @@ jobs:
           # 50/min budget, and the first published sweep reported twelve
           # anchors as "drifted" because each fetch abandoned the wait.
           OPENCHECK_GLEIF_THROTTLE_MAX_WAIT_S: "120"
+          # Same principle for KvK open data, which allows ONE request a minute
+          # per IP and answers a spent minute with a bare 429. A runner's IP
+          # is shared, so the minute may be gone before the probe starts: queue
+          # through up to two refused minutes rather than degrade (the 20 s
+          # default is for an interactive lookup). The kvk probe's own
+          # timeout_s (150 s) outlasts this wait.
+          OPENCHECK_KVK_THROTTLE_MAX_WAIT_S: "130"
           # Phase B: add each of these as a repository secret to lift the
           # source out of "skipped (not configured)". A source with no secret
           # is reported as untested rather than counted as healthy, and the

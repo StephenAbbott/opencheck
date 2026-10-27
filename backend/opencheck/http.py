@@ -4,8 +4,8 @@ All live adapters go through ``get_client()``. This keeps timeouts, retries,
 and the User-Agent consistent, and makes it easy to add observability or
 a circuit breaker later.
 
-Also home to :func:`request_with_retry` (the 429/5xx wait-and-retry loop KvK
-and SEC EDGAR share, issue #303) and :func:`sanitize_name_query` — outgoing-request hygiene for the
+Also home to :func:`request_with_retry` (the 429/5xx wait-and-retry loop SEC
+EDGAR uses, issue #303; KvK's 429s are paced by :mod:`opencheck.host_throttle`) and :func:`sanitize_name_query` — outgoing-request hygiene for the
 free-text name searches several adapters send to Lucene/Elasticsearch-backed
 upstreams.
 """
@@ -21,6 +21,7 @@ import httpx
 from . import __version__, provenance
 from .config import get_settings
 from .gleif_throttle import GleifThrottledTransport
+from .host_throttle import HostThrottledTransport
 
 _DEFAULT_TIMEOUT = httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0)
 _DEFAULT_LIMITS = httpx.Limits(max_connections=20, max_keepalive_connections=10)
@@ -117,6 +118,10 @@ def build_client() -> httpx.AsyncClient:
     """
     provenance.record_live()
     transport: httpx.AsyncBaseTransport = httpx.AsyncHTTPTransport(retries=2)
+    # Pacing for hosts with a per-IP quota other than GLEIF (KvK open data:
+    # one request a minute) — opencheck/host_throttle.py. Hosts it does not
+    # govern pass straight through.
+    transport = HostThrottledTransport(transport)
     # Phase 143: GLEIF rate-limits by IP (60 req/min) and every adapter in this
     # process shares that budget, so requests to api.gleif.org pass through a
     # process-wide throttle + 429-retry wrapper. Other hosts are untouched.
@@ -155,8 +160,9 @@ async def request_with_retry(
     Returns the last response, which is still a retryable status when the
     retries ran out: what that means (a degradation, a ``RuntimeError``) is
     the caller's decision, as is everything about 404/403. The retry settings
-    stay on each adapter — KvK waits longer and retries only 429; EDGAR also
-    retries 5xx and caps lower. Network errors are not retried here (the
+    stay on each adapter (EDGAR also retries 5xx). A host with a per-IP quota
+    belongs in :mod:`opencheck.host_throttle` instead, which paces requests
+    before they are sent rather than retrying after they are refused. Network errors are not retried here (the
     transport's ``retries=2`` covers connection failures).
     """
     delay = backoff_base

@@ -1,4 +1,5 @@
-"""``http.request_with_retry`` — the 429/5xx loop KvK and SEC EDGAR share (issue #303).
+"""``http.request_with_retry`` — the 429/5xx loop SEC EDGAR uses (issue #303; KvK shared it until its
+pacing moved to ``opencheck.host_throttle`` on 27 Oct 2026).
 
 The helper replaced two pasted copies; these tests pin the behaviour both
 copies had, so the adapters' own tests (test_bods_kvk, test_sec_edgar_resolve)
@@ -115,12 +116,10 @@ async def test_only_statuses_in_retry_on_are_retried(waits):
 
 
 def test_the_adapters_keep_their_own_settings():
-    # The settings are each adapter's; only the loop is shared.
-    assert (kvk._MAX_RETRIES, kvk._RETRY_BACKOFF_BASE, kvk._RETRY_BACKOFF_MAX) == (
-        3,
-        2.0,
-        30.0,
-    )
+    # The settings are each adapter's; only the loop is shared. KvK has none
+    # any more: a retry after a refusal cannot beat a one-a-minute quota, so
+    # its requests are paced before sending (opencheck/host_throttle.py).
+    assert not hasattr(kvk, "_MAX_RETRIES")
     assert (
         sec_edgar._MAX_RETRIES,
         sec_edgar._RETRY_BACKOFF_BASE,
@@ -135,4 +134,4 @@ def test_no_adapter_pastes_its_own_retry_loop():
     for module in (kvk, sec_edgar):
         source = inspect.getsource(module)
         assert "asyncio.sleep" not in source, module.__name__
-        assert "request_with_retry" in source, module.__name__
+    assert "request_with_retry" in inspect.getsource(sec_edgar)

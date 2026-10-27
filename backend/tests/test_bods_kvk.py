@@ -289,49 +289,23 @@ async def test_kvk_fetch_success_no_retry(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_kvk_fetch_retries_on_429_then_succeeds(monkeypatch) -> None:
-    """One 429 followed by a 200 — should succeed after one retry."""
-    resp_429 = _make_response(429, headers={"Retry-After": "0"})
-    resp_200 = _make_response(200, _KVK_API_RESPONSE)
-
-    monkeypatch.setattr(
-        "opencheck.sources.kvk.get_settings",
-        lambda: MagicMock(allow_live=True),
-    )
-    monkeypatch.setattr("opencheck.http.asyncio.sleep", AsyncMock())
-
-    mock_client = AsyncMock()
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
-    mock_client.get = AsyncMock(side_effect=[resp_429, resp_200])
-
-    with patch("opencheck.sources.kvk.build_client", return_value=mock_client):
-        adapter = KvKAdapter()
-        adapter._cache.get_payload = MagicMock(return_value=None)
-        adapter._cache.put = MagicMock()
-
-        bundle = await adapter.fetch("35000363")
-
-    assert mock_client.get.call_count == 2
-    assert bundle["company"] == _KVK_API_RESPONSE
-
-
-@pytest.mark.asyncio
-async def test_kvk_fetch_degrades_after_max_retries(monkeypatch) -> None:
-    """All attempts return 429 — after the retries the source degrades.
+async def test_kvk_fetch_degrades_on_a_429_without_retrying_it(monkeypatch) -> None:
+    """A 429 that reaches the adapter degrades at once — no retry loop.
 
     Until Phase 324 this raised ``HTTPStatusError`` out of ``fetch()``, and
-    ``/deepen`` answered HTTP 500 (BODS quality sweep, 12 Oct 2026).
+    ``/deepen`` answered HTTP 500 (BODS quality sweep, 12 Oct 2026). Until the
+    27 Oct 2026 pacing fix the adapter then retried three times over ~14 s
+    against a 60 s quota window — each retry another refused request. Waiting
+    for the window is now the transport's job (opencheck/host_throttle.py),
+    and a 429 reaching the adapter means that wait was not allowed.
     """
-    resp_429 = _make_response(429, headers={"Retry-After": "0"})
+    resp_429 = _make_response(429)
 
     monkeypatch.setattr(
         "opencheck.sources.kvk.get_settings",
         lambda: MagicMock(allow_live=True),
     )
-    monkeypatch.setattr("opencheck.http.asyncio.sleep", AsyncMock())
 
-    # _MAX_RETRIES = 3 means 4 total attempts (initial + 3 retries).
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -344,39 +318,42 @@ async def test_kvk_fetch_degrades_after_max_retries(monkeypatch) -> None:
 
         bundle = await adapter.fetch("35000363")
 
-    # 4 total attempts (_MAX_RETRIES=3, so initial + 3)
-    assert mock_client.get.call_count == 4
+    assert mock_client.get.call_count == 1
     assert bundle["company"] is None and bundle["is_stub"] is True
     adapter._cache.put.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_kvk_fetch_uses_exponential_backoff_without_retry_after(monkeypatch) -> None:
-    """Without Retry-After, backoff should double: 2s, 4s."""
-    sleep_calls: list[float] = []
-
-    async def fake_sleep(secs: float) -> None:
-        sleep_calls.append(secs)
-
-    resp_429 = _make_response(429)  # no Retry-After header
-    resp_200 = _make_response(200, _KVK_API_RESPONSE)
+async def test_kvk_fetch_degrades_when_the_throttle_refuses_to_send(monkeypatch) -> None:
+    """The minute's request is spent: nothing is sent, the source degrades as
+    rate-limited, and nothing is cached as "no record"."""
+    from opencheck import degradation
+    from opencheck.host_throttle import HostRateLimitedError
 
     monkeypatch.setattr(
         "opencheck.sources.kvk.get_settings",
         lambda: MagicMock(allow_live=True),
     )
-    monkeypatch.setattr("opencheck.http.asyncio.sleep", fake_sleep)
 
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
-    mock_client.get = AsyncMock(side_effect=[resp_429, resp_429, resp_200])
+    mock_client.get = AsyncMock(
+        side_effect=HostRateLimitedError("opendata.kvk.nl", "not sent")
+    )
 
     with patch("opencheck.sources.kvk.build_client", return_value=mock_client):
         adapter = KvKAdapter()
         adapter._cache.get_payload = MagicMock(return_value=None)
         adapter._cache.put = MagicMock()
 
-        await adapter.fetch("35000363")
+        with degradation.recording() as recorded:
+            bundle = await adapter.fetch("35000363", legal_name="Ahold Delhaize")
 
-    assert sleep_calls == [2.0, 4.0]
+    assert bundle["company"] is None and bundle["is_stub"] is True
+    assert bundle["legal_name"] == "Ahold Delhaize"
+    adapter._cache.put.assert_not_called()
+    [entry] = [d for d in recorded if d.source_id == "kvk"]
+    assert entry.reason == "rate_limited"
+    assert "not sent" in entry.detail
+    assert "35000363" not in entry.detail

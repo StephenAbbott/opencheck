@@ -151,6 +151,18 @@ class SourceProbe:
     missing while both of these skipped every week.
     """
 
+    timeout_s: float | None = None
+    """Per-probe time budget, when the sweep's default (``--timeout``, 60 s)
+    is too short for how this source is paced.
+
+    KvK is the case: its open data allows one request a minute per IP, and a
+    GitHub runner's IP is shared, so the minute may already be spent when the
+    probe starts. The sweep raises ``OPENCHECK_KVK_THROTTLE_MAX_WAIT_S`` so the
+    request queues through the window instead of degrading; this budget has to
+    outlast that wait or ``asyncio.wait_for`` cuts it off first. Never lower
+    than the sweep default — the larger of the two applies.
+    """
+
     snapshot_max_age_days: int | None = None
     """Report `degraded: refresh due` once the snapshot is older than this.
 
@@ -544,6 +556,9 @@ PROBES: dict[str, SourceProbe] = {
         kwargs={"legal_name": "ASML Holding N.V."},
         anchor_lei="724500Y6DUVHQD6OXN27",
         expect_fields=("company",),
+        # One request a minute per IP: the sweep's KvK wait (130 s, set in
+        # source-health.yml) covers two refused minutes, and this outlasts it.
+        timeout_s=150.0,
         bods_mapper="map_kvk",
     ),
     "malta_mbr": _p(

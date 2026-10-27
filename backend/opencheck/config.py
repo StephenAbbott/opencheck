@@ -282,6 +282,19 @@ class Settings(BaseSettings):
     gleif_throttle_max_wait_s: float = Field(
         default=15.0, alias="OPENCHECK_GLEIF_THROTTLE_MAX_WAIT_S"
     )
+    # --- Outbound pacing for other per-IP quotas (see opencheck/host_throttle.py) ---
+    # KvK open data (opendata.kvk.nl) allows ONE request per minute per IP and
+    # answers a spent quota with a bare 429 (no Retry-After). 0 disables the
+    # pacing (the test suite does). The wait is how long one KvK request may
+    # queue for its slot before the adapter degrades without sending: kept
+    # under the lookup's 30 s per-source budget for interactive use; the
+    # source-health sweep raises it so a batch job queues through the window.
+    kvk_rate_limit_per_minute: int = Field(
+        default=1, alias="OPENCHECK_KVK_RATE_LIMIT_PER_MINUTE"
+    )
+    kvk_throttle_max_wait_s: float = Field(
+        default=20.0, alias="OPENCHECK_KVK_THROTTLE_MAX_WAIT_S"
+    )
     # Phase 144: when the anchor LEI exists in the entity-pages Golden Copy,
     # don't make the user sit out the full max-wait — if the live anchor fetch
     # hasn't completed within this many seconds, serve the snapshot instead
