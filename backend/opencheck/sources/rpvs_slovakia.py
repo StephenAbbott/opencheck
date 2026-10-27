@@ -229,8 +229,9 @@ class RpvsSlovakiaAdapter(SourceAdapter):
         1. Resolve IČO → internal ``CisloVlozky`` (Partner.Id).
         2. Fetch ``Partneri({id})`` with KUVs expanded.
 
-        Returns a bundle dict or ``{"is_stub": True}`` when live mode is off
-        and no cache entry exists.
+        Returns a bundle dict, or ``{"is_stub": True}`` when live mode is off
+        and no cache entry exists or when the register holds no partner for
+        the IČO. A register that did not answer raises.
         """
         ico = _normalise_ico(hit_id)
         if not ico:
@@ -289,9 +290,11 @@ class RpvsSlovakiaAdapter(SourceAdapter):
                 resp = await client.get(detail_url)
                 resp.raise_for_status()
                 raw = resp.json()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
+            # Raised, never a stub: a register that did not answer must not
+            # read like live mode switched off (the silent-stub fix).
             _log.warning("RPVS fetch failed for partner %s: %s", partner_id, exc)
-            return {"source_id": self.id, "hit_id": ico, "is_stub": True}
+            raise
 
         self._cache.put(detail_key, raw)
         return self._build_bundle(raw, ico, partner_id)
@@ -312,9 +315,12 @@ class RpvsSlovakiaAdapter(SourceAdapter):
                 resp = await client.get(url)
                 resp.raise_for_status()
                 payload = resp.json()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
+            # Raised, never ``[]``: an empty list means "not a public-sector
+            # partner", which is an answer; a timeout is not (the silent-stub
+            # fix — the pipeline records the source_error and degradation).
             _log.warning("RPVS request failed for %s: %s", url, exc)
-            return []
+            raise
 
         items: list[dict[str, Any]] = []
         if isinstance(payload, list):
@@ -322,7 +328,12 @@ class RpvsSlovakiaAdapter(SourceAdapter):
         elif isinstance(payload, dict):
             items = payload.get("value") or []
 
-        self._cache.put(cache_key, items)
+        if items:
+            self._cache.put(cache_key, items)
+        else:
+            # Answered, nothing under this key: a definitive absence, which
+            # expires (Phase 262) — a company registered since is picked up.
+            self._cache.put_absent(cache_key)
         return items
 
     # ------------------------------------------------------------------

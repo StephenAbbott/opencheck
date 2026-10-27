@@ -72,7 +72,7 @@ from ..risk import merge_listed_jurisdiction as _risk_merge_listed
 from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
 from ..risk import merge_subsidiary_listed_jurisdiction as _risk_merge_subsidiary_listed
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
-from ..bods.declaration import stamp_bundle, stamp_merged
+from ..bods.declaration import apply_network_subjects, network_subjects, stamp_bundle
 from ..bods.refs import resolve_signal_references
 from ..bods.state_bodies import classify_government_entities
 from ..ratelimit import default_tier, limiter, lookup_tier
@@ -557,9 +557,18 @@ async def deepen(
             fetch_kwargs["remember_name"] = False
     try:
         raw, prov = await _fetch_with_provenance(adapter, hit_id, **fetch_kwargs)
-    except Exception:
+    except HTTPException:
+        raise
+    except Exception as exc:
         if override is None:
-            raise
+            # An upstream that did not answer is a bad gateway, said with the
+            # cause — never the app's bare 500. An httpx timeout stringifies
+            # to "", which is how Corning's ny_dos read reached the BODS
+            # quality sweep of 26 Oct 2026 as "Internal server error: ".
+            raise HTTPException(
+                status_code=502,
+                detail=f"{source} did not answer: {describe_exception(exc)}",
+            ) from exc
         raw, prov = {"is_stub": True}, _provenance.STUB_PROVENANCE
 
     bods: list[dict[str, Any]] = []
@@ -2027,7 +2036,12 @@ async def _lookup_pipeline(
     # group names every source's subject statement at once, so a source the
     # single-bundle pass could not resolve alone (a register bundle carries
     # no LEI) is stamped to its own subject here. Per source, by decision.
-    bods_all = stamp_merged(bods_all, ctx.lei)
+    # The mapping rides on its own event so ``fold_lookup_events`` applies it
+    # to the response's bundle too — the response is rebuilt from the
+    # ``deepen_result`` payloads, which carry the first pass only.
+    declaration_subjects = network_subjects(bods_all, ctx.lei)
+    bods_all = apply_network_subjects(bods_all, declaration_subjects)
+    yield ("declaration_subjects", {"subjects": declaration_subjects})
 
     if listing_task is not None:
         try:
