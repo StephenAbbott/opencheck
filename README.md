@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 406** — The lookup response, exports and saved reports now carry each source's own declarationSubject, and /deepen answers a source that did not respond with a 502 naming the cause.
+**Latest: Phase 407** — A Slovak register that does not answer now shows as a failed source with a retry, instead of reading as if it had been switched off.
 
 → [Full development history](docs/status.md)
 
