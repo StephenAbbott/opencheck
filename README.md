@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 404** — The Estonia Neo4j demo queries now state the expected figures of the 25 October 2026 dataset release.
+**Latest: Phase 406** — The lookup response, exports and saved reports now carry each source's own declarationSubject, and /deepen answers a source that did not respond with a 502 naming the cause.
 
 → [Full development history](docs/status.md)
 

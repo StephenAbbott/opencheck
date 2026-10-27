@@ -34,6 +34,7 @@ from . import (
     pipelinestats as _pipelinestats,
 )
 from .bods import unique_statements
+from .bods.declaration import apply_network_subjects
 from .config import get_settings
 from .knowability import statement_for as knowability_statement_for
 from .sources import SearchKind
@@ -535,6 +536,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     subject_profile: dict[str, Any] | None = None
     knowability: dict[str, Any] | None = None
     knowability_chain: dict[str, Any] | None = None
+    declaration_subjects: dict[str, str] = {}
     integrated: dict[str, Any] | None = None
     listing: dict[str, Any] | None = None
     form13f: dict[str, Any] | None = None
@@ -588,6 +590,11 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             knowability = payload
         elif event == "knowability_chain":
             knowability_chain = payload
+        elif event == "declaration_subjects":
+            # The merged second pass (bods.declaration): each source's
+            # statements name that source's own subject record. Absent from
+            # runs recorded before it, which keep the first pass.
+            declaration_subjects = payload.get("subjects") or {}
         elif event == "integrated_ownership":
             integrated = payload
         elif event == "listing":
@@ -625,7 +632,11 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         # Phase 339: the integrated-ownership figures ride as one
         # ``commenting`` annotation on the subject, from the frozen event.
         bods=_integrated_ownership.apply_to_bods(
-            _listing.apply_to_bods(unique_statements(bods_all), norm_lei, listing),
+            _listing.apply_to_bods(
+                apply_network_subjects(unique_statements(bods_all), declaration_subjects),
+                norm_lei,
+                listing,
+            ),
             integrated,
         ),
         bods_issues=bods_issues,
