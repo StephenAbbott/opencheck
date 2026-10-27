@@ -38,8 +38,11 @@ entities that carry any of them:
   a spurious ``.0`` float suffix on 115 of 117 rows (August 2026), which is
   stripped; name and LEI are resolved from the same sheet at build time and
   omitted when the successor ID has no row (33 dangle in August 2026).
-* ``urls`` — ``Entity Status Data Source URL``, published as a stringified
-  Python list (``"['https://…', 'https://…']"``) and parsed accordingly.
+* ``urls`` — ``Entity Status Data Source URL``. The publishing format changed
+  between releases: August 2026 wrote a stringified Python list
+  (``"['https://…', 'https://…']"``), September 2026 one semicolon-delimited
+  string (``"https://…; https://…"``). Both are read, and a multi-URL cell is
+  always split (see ``_parse_status_urls``).
 * ``jv: true`` — the ``Joint Venture`` column; the literal ``"Unknown"``
   (4 rows in August 2026) is treated as absent.
 
@@ -173,20 +176,41 @@ def _clean_lei(raw: object) -> str | None:
 def _parse_status_urls(raw: object) -> list[str]:
     """Parse the Entity Status Data Source URL cell.
 
-    August 2026 publishes stringified Python lists ("['https://a', 'https://b']");
-    tolerate a plain URL string too in case the format is fixed upstream.
+    The format has changed once already, so all three readings are kept:
+
+    * **August 2026** published stringified Python lists
+      (``"['https://a', 'https://b']"``).
+    * **September 2026** publishes one semicolon-delimited string
+      (``"https://a; https://b"``) — 73 of its 317 url-bearing rows carry
+      more than one. Reading that as a single URL yields a string no
+      browser can open, which is what the August-only parser did.
+    * A single bare URL, either release.
+
+    A multi-URL cell therefore splits on ``;`` whichever wrapper it arrives
+    in, and anything that is not a URL-shaped token is dropped rather than
+    published as evidence.
     """
     text = str(raw or "").strip()
     if not text:
         return []
+    tokens: list[str] = []
     if text.startswith("["):
         try:
             parsed = ast.literal_eval(text)
             if isinstance(parsed, (list, tuple)):
-                return [str(u).strip() for u in parsed if str(u).strip()]
+                tokens = [str(u) for u in parsed]
         except (ValueError, SyntaxError):
-            pass
-    return [text]
+            tokens = []
+    if not tokens:
+        tokens = [text]
+
+    urls: list[str] = []
+    for token in tokens:
+        for part in str(token).split(";"):
+            url = part.strip().strip(",").strip()
+            if url and url not in urls:
+                urls.append(url)
+    return urls
 
 
 def extract_entity_status(wb: object) -> dict[str, dict]:
