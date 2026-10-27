@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 411** — The GEOT artifact is rebuilt from GEM's September 2026 release, a release date that postdates its own file is now refused, and multi-URL status cells are split in both carriers.
+**Latest: Phase 412** — KvK open-data requests are now paced at the register's one-request-a-minute quota through a general per-host throttle, so Dutch company cards stop showing placeholder KvK data whenever the minute was already spent.
 
 → [Full development history](docs/status.md)
 
