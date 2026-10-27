@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 404** — The Estonia Neo4j demo queries now state the expected figures of the 25 October 2026 dataset release.
+**Latest: Phase 405** — A rate-limited source in the weekly health sweep is reported as degraded rather than failing the run as a collapse of its BODS statements.
 
 → [Full development history](docs/status.md)
 
