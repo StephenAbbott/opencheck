@@ -2167,3 +2167,80 @@ def finding_dlcp_dc(bundle: dict[str, Any]) -> str | None:
     if sentence and len(sentence) > MAX_FINDING_CHARS:
         sentence = clauses_to_sentence(clauses[:2])
     return sentence
+
+
+def _brreg_period_words(accounts: dict[str, Any]) -> str | None:
+    """``2025`` for a calendar year, else ``the year to 30 June 2025``."""
+    start = str(accounts.get("period_start") or "")
+    end = str(accounts.get("period_end") or "")
+    if len(end) < 10:
+        return None
+    year = end[:4]
+    if start == f"{year}-01-01" and end == f"{year}-12-31":
+        return year
+    day = human_date(end)
+    return f"the year to {day}" if day else None
+
+
+def brreg_accounts_clauses(accounts: dict[str, Any] | None) -> list[str | None]:
+    """The accounts clauses of the Brreg sentence, most important first.
+
+    Facts about the latest filed period only — never a figure (Stephen,
+    26 Oct 2026). A company with no accounts in the window is said so, in
+    the register's terms: it says nothing about whether the company had to
+    file, so never "overdue".
+    """
+    if not accounts:
+        return []
+    status = accounts.get("status")
+    if status == "none":
+        return ["no annual accounts in the last three filed years"]
+    if status == "unsupported":
+        words = accounts.get("format_words") or accounts.get("format")
+        return [
+            "annual accounts in a format the open API does not serve"
+            + (f" ({words})" if words else "")
+        ]
+    if status == "unavailable":
+        return ["annual accounts not read"]
+    if status != "filed":
+        return []
+    period = _brreg_period_words(accounts)
+    lead = "latest annual accounts filed" + (f" for {period}" if period else "")
+    if accounts.get("group_accounts"):
+        lead += ", with group accounts"
+    clauses: list[str | None] = [lead]
+    if accounts.get("liquidation_accounts"):
+        clauses.append("liquidation accounts")
+    if accounts.get("audit_opted_out"):
+        clauses.append("audit opted out")
+    elif accounts.get("not_audited"):
+        clauses.append("accounts not audited")
+    return clauses
+
+
+def finding_brreg(bundle: dict[str, Any]) -> str | None:
+    """What Brønnøysundregistrene records: a pending or final status, then
+    the latest annual accounts filed with the accounts register.
+
+    The status flags are Enhetsregisteret's (the same flags the mapper reads
+    for the entity's register status); the accounts are Regnskapsregisteret's
+    facts about the latest filed period (``sources/brreg_accounts.py``). A
+    company with neither a status flag nor an accounts answer gets no
+    sentence and the row falls back to its summary, as before.
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+    entity = bundle.get("entity") or {}
+    lead: str | None = None
+    deleted = human_date(entity.get("slettedato"))
+    if deleted:
+        lead = f"Deleted from the register on {deleted}"
+    elif entity.get("konkurs"):
+        lead = "Declared bankrupt (konkurs)"
+    elif entity.get("underTvangsavviklingEllerTvangsopplosning"):
+        lead = "Under compulsory liquidation or dissolution"
+    elif entity.get("underAvvikling"):
+        lead = "In liquidation (under avvikling)"
+    clauses = [lead, *brreg_accounts_clauses(bundle.get("accounts"))]
+    return clauses_to_sentence(clauses, sep="; ")

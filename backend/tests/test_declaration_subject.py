@@ -143,7 +143,7 @@ def test_find_subject_invents_nothing() -> None:
     b = _entity("prh", "2", "B OY")
     assert find_subject([a, b], hit_id="3") == (None, "unresolved")
     assert find_subject([], ref=LEI) == (None, "unresolved")
-    assert {"ref", "hit_id", "single", "unresolved"} == OUTCOMES
+    assert {"ref", "hit_id", "single", "relationships", "unresolved"} == OUTCOMES
 
 
 # ---------------------------------------------------------------------------

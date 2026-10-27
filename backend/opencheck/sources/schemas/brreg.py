@@ -31,4 +31,7 @@ class BrregBundle(_Base):
     orgnr: str  # required — mapper key
     entity: BrregEntity | None = None
     roles: list[dict[str, Any]] = Field(default_factory=list)
+    #: The annual accounts summary (``brreg_accounts.summarise``): facts about
+    #: the latest filed period, never figures. ``None`` when not read.
+    accounts: dict[str, Any] | None = None
     legal_name: str | None = None

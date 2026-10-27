@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 404** — The Estonia Neo4j demo queries now state the expected figures of the 25 October 2026 dataset release.
+**Latest: Phase 408** — The Norwegian register card now says what annual accounts a company last filed with Brønnøysundregistrene's accounts register, with a link to the filed PDF.
 
 → [Full development history](docs/status.md)
 

@@ -13,6 +13,10 @@ This adapter uses the public, key-free REST API:
   — full entity record by organisation number.
 * ``GET /enhetsregisteret/api/enheter/{orgnr}/roller``
   — board members, daily managers, contact persons, and other roles.
+* ``GET /regnskapsregisteret/regnskap/{orgnr}`` (+ the PDF year list)
+  — the annual accounts register, open to everyone since 1 October 2026;
+  read by :mod:`.brreg_accounts` into the bundle's ``accounts`` as facts
+  about the latest filed period only (no figures, nothing in BODS).
 
 Beneficial ownership data (reelle rettighetshavere) is restricted to users
 in Norway who hold a legitimate interest (see brreg.no/en/use-of-data).
@@ -44,6 +48,7 @@ from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .brreg_accounts import read_accounts
 from .schemas import validate_raw
 from .schemas.brreg import BrregBundle
 
@@ -102,12 +107,14 @@ class BrregAdapter(SourceAdapter):
             description=(
                 "Norwegian company data from the Enhetsregisteret "
                 "(Central Coordinating Register for Legal Entities), "
-                "including entity details and role-holders."
+                "including entity details and role-holders, and facts about "
+                "the latest annual accounts filed with the Regnskapsregisteret."
             ),
             license="NLOD-2.0",
             attribution=(
                 "Contains data from Brønnøysundregistrene via the "
-                "Enhetsregisteret, licensed under NLOD 2.0."
+                "Enhetsregisteret and the Regnskapsregisteret, licensed "
+                "under NLOD 2.0."
             ),
             supports=[SearchKind.ENTITY],
             requires_api_key=False,
@@ -196,11 +203,16 @@ class BrregAdapter(SourceAdapter):
                     "_group_last_changed": group_last_changed,
                 })
 
+        accounts = await read_accounts(
+            orgnr, self._cache, live=self.info.live_available, source_id=self.id
+        )
+
         bundle = {
             "source_id": self.id,
             "orgnr": orgnr,
             "entity": entity,
             "roles": roles,
+            "accounts": accounts,
             "legal_name": legal_name,
             "is_stub": False,
         }

@@ -818,10 +818,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Twenty-one** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
+**Twenty-two** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`, `ariregister`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`, `ariregister`, `brreg`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -988,7 +988,10 @@ re-derived otherwise:
   `find_subject`: the lookup's subject reference (`_safe_deepen(subject=…)`,
   an LEI or Phase 290's `SCHEME:id`) → an entity statement carrying the
   adapter's `hit_id` as an identifier (a register bundle carries no LEI, and
-  `/deepen` knows only the hit id) → the only entity in the bundle → nothing.
+  `/deepen` knows only the hit id) → the only entity in the bundle → the one
+  entity every relationship names as its subject, itself no interested party
+  (`relationships` — an LEI-keyed bundle that asserts no LEI: `cac_nigeria`,
+  `eiti_bo`, `eiti_soe` on `/deepen`) → nothing.
   `stamp_merged` then runs over the merged lookup bundle, where
   `subject_statements`' referent group names every source's subject at once,
   and restamps each source's statements to its own member. Both work on
@@ -997,10 +1000,19 @@ re-derived otherwise:
 - **A miss is loud, never invented.** An unresolved bundle keeps the factory
   default and is counted on `/signalstats` → `declaration_subject` by
   `source_id|outcome` (`bods.declaration.OUTCOMES`: `ref`, `hit_id`,
-  `single`, `unresolved`). The weekly BODS quality sweep fails
+  `single`, `relationships`, `unresolved`). The weekly BODS quality sweep fails
   `declaration_subject_not_subject` on a value naming no party, a source whose
   statements name more than one subject, or a subject that does not name
   itself.
+- **The merged pass reaches the response through an event** (26 Oct 2026,
+  the BODS quality sweep). `/lookup`, the exports and saved reports are folded
+  from `deepen_result` payloads, which carry the first pass only; until this
+  fix `stamp_merged`'s output stayed inside the pipeline. The pipeline yields
+  `declaration_subjects` (`network_subjects`: source key → subject
+  `recordId`) and `fold_lookup_events` applies it with
+  `apply_network_subjects`; a run recorded before the event folds as it did.
+  Anything new that changes statements after the deepen pass needs its own
+  event, the listing / integrated-ownership pattern.
 - **The resolver has no `declarationSubject` tier.** Nothing references a
   party by it (v0.4 references by recordId; OpenCheck's own by statementId,
   equal for now). `test_frontend_parity.py` pins two tiers.
@@ -1940,6 +1952,31 @@ will be re-derived otherwise:
   statement names its source).
 
 ---
+
+## Brreg annual accounts on the Norway card (the Brreg accounts ticket, 26 Oct 2026)
+
+`sources/brreg_accounts.py`, read by `BrregAdapter.fetch` into the bundle's
+`accounts`; `finding_brreg` in `findings.py`; `lib/brregAccounts.ts` +
+`BrregAccountsFacts` in `SourceBucketCard.tsx`. Brreg opened the
+Regnskapsregisteret API to everyone on 1 Oct 2026 (three filed years, company
+and group accounts, no key). Stephen's decisions and the traps:
+
+- **Facts about the latest period only, never a figure**: period, `journalnr`,
+  group accounts filed, audit opt-out / unaudited, liquidation accounts,
+  currency, accounting rules, small-company rules, parent company — and a link
+  to the register's PDF copy (`/aarsregnskap/kopi/{orgnr}/{year}`, linked only
+  when `/aar` lists the year; never fetched). `summarise` reads no amount and a
+  test fails if one reaches the summary. **Nothing in BODS** — `map_brreg`
+  ignores `accounts`; no signal, no verdict clause.
+- **Four answers**: 200 `filed` (cached a day); 404 `none` — "no annual accounts
+  in the last three filed years", never "overdue" (cached as an absence); a 500
+  whose message names an unsupported `oppstillingsplan` — `BANK`, `LIV`,
+  `SKADE` — is `unsupported`, an answer, cached, no degradation; anything else
+  `unavailable`, a `source_read` degradation, never cached.
+- **The API spells it `regnkapsprinsipper`** (sic); the reader takes either.
+  Equinor's company accounts are `forenkletAnvendelseIFRS`, its group's IFRS.
+- `RULES_WORDS` lives in both `brreg_accounts.py` and `lib/brregAccounts.ts`;
+  `test_brreg_accounts.py` parses the TypeScript.
 
 ## Datafordeler CVR API (Denmark) — hard-won constraints
 

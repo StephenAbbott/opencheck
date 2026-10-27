@@ -107,3 +107,23 @@ def test_markdown_names_the_reclassification_and_still_says_no_collapse() -> Non
         "- ↔️ `climatetrace` — interest types reclassified, not a collapse: "
         "interest:otherInfluenceOrControl 4 → 0, interest:shareholding 0 → 4"
     ) in md
+
+
+def test_a_source_that_did_not_answer_is_not_counted_as_zero() -> None:
+    """KvK, 26 Oct 2026: a 429 that outlasted the retries returned a stub
+    bundle, its zeros were compared with last week's 1 entity, and the run went
+    red over a rate limit already reported as a degradation."""
+    probe = sweep.PROBES["kvk"]
+    stub = {"source_id": "kvk", "kvk_number": "33302047", "company": None,
+            "legal_name": None, "is_stub": True}
+    assert sweep.statement_counts("kvk", probe, stub) is None
+    now = {"kvk": {"statement_counts": sweep.statement_counts("kvk", probe, stub)}}
+    assert sweep.diff_statement_counts(now, _previous({"entity": 1, "person": 0, "relationship": 0}, "kvk")) == {}
+
+
+def test_a_source_that_answered_with_nothing_is_still_a_collapse() -> None:
+    """The alarm the diff exists for: the register answers and the statements
+    are gone."""
+    now = _run({"entity": 1, "person": 0, "relationship": 0}, "ariregister")
+    then = _previous({"entity": 1, "person": 3, "relationship": 3}, "ariregister")
+    assert "ariregister" in sweep.diff_statement_counts(now, then)

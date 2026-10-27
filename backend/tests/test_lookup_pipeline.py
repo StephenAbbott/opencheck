@@ -187,6 +187,12 @@ def test_sync_and_stream_agree_on_offline_bundle(
     assert chain["statements"][0]["sentence"] == know["sentence"]
     assert chain["as_of"] == know["as_of"]
 
+    # The merged declarationSubject pass rides its own event, after the
+    # sources settle and before the profile, so the fold can apply it to the
+    # response's bundle (the BODS quality sweep of 26 Oct 2026).
+    assert names.index("declaration_subjects") < names.index("subject_profile")
+    assert isinstance(by_name["declaration_subjects"][0]["subjects"], dict)
+
 
 def test_meip_is_a_source_when_the_register_lists_the_lei(
     client: TestClient, tmp_path: Path, monkeypatch

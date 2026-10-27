@@ -28,6 +28,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains data from Brønnøysundregistrene via the Enhetsregisteret, licensed under NLOD 2.0."
 - **Entry point:** `no_orgnr` (9-digit organisation number) derived from GLEIF RA code `RA000472`
 - **Note:** Beneficial ownership data (reelle rettighetshavere) is restricted to users in Norway with legitimate interest and is not available via the public API.
+- **Annual accounts:** facts about the latest filed annual accounts (period, journal number, group accounts, audit opt-out, currency, accounting rules) and a link to the register's PDF copy, from the Regnskapsregisteret (Register of Company Accounts) open API, <https://data.brreg.no/regnskapsregisteret/regnskap/v3/api-docs>, opened to everyone on 1 October 2026. Brreg publishes its open datasets under NLOD. OpenCheck does not republish the figures.
 
 ## Companies Registration Office Ireland (CRO)
 

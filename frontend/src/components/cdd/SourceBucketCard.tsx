@@ -9,6 +9,13 @@ import { EstonianLegalPersonRelations } from "./EstonianLegalPersonRelations";
 import { estonianRegistryCodeOf } from "../../lib/legalPersonRelations";
 import { groupHitsForDisplay, siblingNote } from "../../lib/hitGroups";
 import { rowFinding } from "../../lib/sourceFinding";
+import {
+  ACCOUNTS_HEADING,
+  ACCOUNTS_SOURCE_NOTE,
+  brregAccountsFacts,
+  brregAccountsOf,
+  brregAccountsPdf,
+} from "../../lib/brregAccounts";
 import { readRegisterStatus, registerStatusLabel } from "../../lib/liveness";
 import { chainSourceCaption, graphPartiesLabel } from "../../lib/vocab";
 import { ActionChip, Chip, DataTile, RowList } from "../ui";
@@ -1069,6 +1076,41 @@ function HitFinding({ hit }: { hit: SourceHit }) {
   );
 }
 
+/**
+ * Brreg's latest filed annual accounts: the details a reader checks against
+ * the filing, and a link to the register's PDF copy. The row's sentence says
+ * what was filed; this never shows a figure (lib/brregAccounts.ts).
+ */
+export function BrregAccountsFacts({ hit }: { hit: SourceHit }) {
+  const accounts = brregAccountsOf(hit);
+  const facts = brregAccountsFacts(accounts);
+  const pdf = brregAccountsPdf(accounts);
+  if (!facts.length && !pdf) return null;
+  return (
+    <div className="mt-1.5 text-oo-meta text-oo-muted leading-[1.5]">
+      <p>
+        <span className="font-semibold text-oo-ink">{ACCOUNTS_HEADING}:</span>{" "}
+        {facts.join(" · ")}
+        {pdf && (
+          <>
+            {facts.length ? " · " : ""}
+            <a
+              href={pdf.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-dotted underline-offset-2"
+            >
+              {pdf.label}
+              <span className="sr-only"> (opens in new tab)</span>
+            </a>
+          </>
+        )}
+      </p>
+      <p className="mt-0.5">{ACCOUNTS_SOURCE_NOTE}</p>
+    </div>
+  );
+}
+
 function HitRow({
   hit,
   siblingCount = 1,
@@ -1219,6 +1261,7 @@ function HitRow({
           falls back to the fragment, so the migration can land one adapter
           at a time without any row looking broken. */}
       <HitFinding hit={hit} />
+      <BrregAccountsFacts hit={hit} />
       {/* What the collapsed rows were. Said in the row's own voice rather
           than as a count beside the title: the number is about the source's
           holdings, and the drawer below shows one of them. */}

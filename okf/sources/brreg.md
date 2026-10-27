@@ -1,10 +1,10 @@
 ---
 type: "Data Source"
 title: "Br\u00f8nn\u00f8ysundregistrene \u2014 Norwegian Register Centre"
-description: "Norwegian company data from the Enhetsregisteret (Central Coordinating Register for Legal Entities), including entity details and role-holders."
+description: "Norwegian company data from the Enhetsregisteret (Central Coordinating Register for Legal Entities), including entity details and role-holders, and facts about the latest annual accounts filed with the Regnskapsregisteret."
 resource: "https://www.brreg.no/en/"
 tags: ["cdd", "national-register", "NLOD-2.0", "commercial-yes"]
-timestamp: "2026-09-06"
+timestamp: "2026-10-26"
 source_id: "brreg"
 license: "NLOD-2.0"
 commercial_use: "yes"
@@ -14,7 +14,7 @@ national_register: true
 
 # Overview
 
-Norwegian company data from the Enhetsregisteret (Central Coordinating Register for Legal Entities), including entity details and role-holders. Official national company / beneficial-ownership register.
+Norwegian company data from the Enhetsregisteret (Central Coordinating Register for Legal Entities), including entity details and role-holders, and facts about the latest annual accounts filed with the Regnskapsregisteret. Official national company / beneficial-ownership register.
 
 - **Source id:** `brreg`
 - **Category:** cdd (customer due diligence / compliance)
@@ -27,7 +27,7 @@ Norwegian company data from the Enhetsregisteret (Central Coordinating Register 
 
 - **Licence:** `NLOD-2.0` — Norwegian Licence for Open Government Data 2.0
 - **Commercial use:** yes · **Attribution:** required · **Share-alike:** no
-- **Attribution line:** Contains data from Brønnøysundregistrene via the Enhetsregisteret, licensed under NLOD 2.0.
+- **Attribution line:** Contains data from Brønnøysundregistrene via the Enhetsregisteret and the Regnskapsregisteret, licensed under NLOD 2.0.
 - Commercial use permitted with attribution.
 
 See the [licensing compatibility matrix](/licensing/matrix.md) for how this licence combines with others at export time.
