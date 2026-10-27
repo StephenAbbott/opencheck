@@ -2031,7 +2031,14 @@ These are non-obvious and cost significant debugging time. Do not deviate from t
   one-a-minute quota, and the old 2 + 4 + 8 s loop only spent the window. It
   holds one lock per KvK number and re-reads the cache inside it, so a lookup
   and its `/deepen` send one request. A refusal is a `rate_limited`
-  degradation ("not sent"), never cached.
+  degradation ("not sent"), never cached, and the card says "Did not answer"
+  with Try again (the degraded-empty-answer rule under Coverage).
+- **KvK also refuses correctly paced requests** (27 Oct 2026: 429 · 200 · 200 ·
+  429 at 61 s spacing from a fresh IP) — its shared 200-per-five-minutes cap.
+  Stephen's decision: leave it, honestly worded, with the retry. The bulk
+  file (`kvk.nl/download/kvk-open-dataset-basis-bedrijfsgegevens.zip`, 12.9 MB
+  zip, 1.93M rows) carries **no KvK number and no name**, so it cannot be an
+  index tier; KvK was asked (27 Oct 2026) whether a keyed bulk file exists.
 - **No paid-API fallback** (Stephen, 27 Oct 2026): KvK's authenticated API
   needs a Dutch-registered subscriber and is not openly licensed.
 - Another host with a per-IP quota joins with one entry in
@@ -2812,6 +2819,17 @@ loading bar left the GLEIF anchor out while the header put it in.
   `source_read` when it returned a record and the read failed. An adapter's own
   record for the source is not repeated. The verdict says "one source answered
   only in part" for `source_read`.
+- **And the reverse (27 Oct 2026): a degraded empty answer is an error.** An
+  adapter that cannot reach its upstream records a `source_fetch` degradation
+  and returns a stub (Phase 324). `_source_outcome` reads that
+  (`degradation.unanswered_fetch`) for a source that produced nothing and
+  reports it as `source_error` with the adapter's own sentence — run and
+  `/lookup-source` alike — so it gets the "Did not answer … Try again" card and
+  counts as *did not answer*, never as "Answered with no record". A source
+  with a card (a note card, a partial read) is unchanged, and so is
+  `not_configured` (a missing credential, not a failed request). Before this,
+  KvK's rate-limit read as "no record" beside a notice saying it was
+  rate-limited.
 - **No-record sources are named**: a chip row "Answered with no record" under
   "What each source said", and "Answered with no record: …" / "Did not answer:
   …" lines in the PDF/Markdown. Absence in the same voice as presence.
