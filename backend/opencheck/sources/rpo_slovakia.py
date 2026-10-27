@@ -230,8 +230,9 @@ class RpoSlovakiaAdapter(SourceAdapter):
         """Fetch full RPO record for a given IČO.
 
         ``hit_id`` is an IČO (8-digit Slovak business identifier,
-        zero-padded).  Returns a bundle dict or ``{"is_stub": True}``
-        when live mode is off and no cache entry exists.
+        zero-padded).  Returns a bundle dict, or ``{"is_stub": True}``
+        when live mode is off and no cache entry exists or when the register
+        answered with no record. A register that did not answer raises.
         """
         ico = normalise_ico(hit_id)
         cache_key = f"{_CACHE_NS}/ico/{ico}"
@@ -255,7 +256,15 @@ class RpoSlovakiaAdapter(SourceAdapter):
     async def _get_list(self, url: str, *, cache_key: str) -> list[dict[str, Any]]:
         """GET a URL expected to return a JSON array (or object with results).
 
-        Caches the parsed list; returns [] on network/parse failure.
+        Caches only an answer: a non-empty list as itself, an empty one as a
+        definitive absence (``put_absent``, which expires). A timeout, an HTTP
+        error or an unreadable body is **raised**, never cached and never
+        turned into ``[]``. Until the silent-stub fix it was swallowed here,
+        so a register that did not answer Render (26 Oct 2026: ~16 s, then
+        nothing) read exactly like live mode switched off — no
+        ``source_error``, no degradation. Raised, the pipeline records a
+        ``source_error`` and a ``source_fetch`` degradation and the card
+        offers a retry (Phase 241, Phase 262).
         """
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
@@ -267,9 +276,9 @@ class RpoSlovakiaAdapter(SourceAdapter):
                 response = await client.get(url)
                 response.raise_for_status()
                 payload = response.json()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             _log.warning("RPO Slovakia request failed for %s: %s", url, exc)
-            return []
+            raise
 
         # API returns a raw list or an object containing a list.
         if isinstance(payload, list):
@@ -285,7 +294,11 @@ class RpoSlovakiaAdapter(SourceAdapter):
         else:
             items = []
 
-        self._cache.put(cache_key, items)
+        if items:
+            self._cache.put(cache_key, items)
+        else:
+            # The register answered and holds nothing under this key.
+            self._cache.put_absent(cache_key)
         return items
 
     # ------------------------------------------------------------------
