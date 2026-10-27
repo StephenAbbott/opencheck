@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 409** — OpenAleph records that give a company's country only in a structured address now join the right company, with a note saying where the country was read.
+**Latest: Phase 411** — The GEOT artifact is rebuilt from GEM's September 2026 release, a release date that postdates its own file is now refused, and multi-URL status cells are split in both carriers.
 
 → [Full development history](docs/status.md)
 

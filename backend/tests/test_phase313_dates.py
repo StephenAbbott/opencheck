@@ -347,6 +347,9 @@ class TestGemRelease:
     @pytest.mark.parametrize(
         "name,expected",
         [
+            # DD/MM/YY by convention — GEM documents no order, and the
+            # `not_after` tests below are what stop the convention dating a
+            # statement from a day that had not happened yet.
             ("ownership/ownership_all_entities_050826.csv", "2026-08-05"),
             ("ownership_all_entities_020626.csv", "2026-06-02"),
             ("ownership_all_entities_310226.csv", None),  # 31 Feb: not a date
@@ -356,6 +359,29 @@ class TestGemRelease:
     )
     def test_release_date_from_the_dated_filename(self, name, expected):
         assert ct._release_date_from_name(name) == expected
+
+    def test_a_release_date_cannot_postdate_the_files_own_stamp(self):
+        """The live release: `_071026` uploaded on 29 July 2026.
+
+        Read as DD/MM/YY that is 7 October 2026 — ten weeks after the upload,
+        so the digits are not in that order and the date is refused rather
+        than carried onto every GEM-derived statement.
+        """
+        name = "ownership/ownership_all_entities_071026.csv"
+        assert ct._release_date_from_name(name) == "2026-10-07"
+        assert ct._release_date_from_name(name, not_after="2026-07-29T20:17:47.779Z") is None
+
+    def test_a_release_date_on_or_before_the_stamp_stands(self):
+        name = "ownership/ownership_all_entities_050826.csv"
+        assert (
+            ct._release_date_from_name(name, not_after="2026-08-07T10:00:00Z")
+            == "2026-08-05"
+        )
+        # The release's own day is not "after" it.
+        assert (
+            ct._release_date_from_name(name, not_after="2026-08-05T00:00:00Z")
+            == "2026-08-05"
+        )
 
     def test_the_sidecar_names_the_release_of_the_cached_csv(self, tmp_path, monkeypatch):
         monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
@@ -372,6 +398,24 @@ class TestGemRelease:
             assert release["release_date"] == "2026-08-05"
             assert release["downloaded_at"]
             assert json.loads(ct._gem_release_path().read_text())["gcs_updated"]
+        finally:
+            get_settings.cache_clear()
+
+    def test_the_sidecar_falls_back_to_the_bucket_stamp_on_a_refused_date(
+        self, tmp_path, monkeypatch
+    ):
+        """The live release dates itself by the upload, not by 2026-10-07."""
+        monkeypatch.setenv("OPENCHECK_DATA_ROOT", str(tmp_path))
+        get_settings.cache_clear()
+        try:
+            path = ct._gem_csv_path("entities")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("Entity ID,Full Name\n")
+            ct._write_gem_release(
+                "ownership/ownership_all_entities_071026.csv",
+                "2026-07-29T20:17:47.779Z",
+            )
+            assert ct.gem_release()["release_date"] == "2026-07-29"
         finally:
             get_settings.cache_clear()
 

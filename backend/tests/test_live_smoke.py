@@ -493,14 +493,15 @@ async def test_nzbn_sandbox_alternative_address_does_not_reuse_the_residential_p
 
 
 async def test_role_search_sandbox_still_has_no_address_type():
-    """Entity Role Search (v3) is the API `/nz-associations` actually searches,
-    and MBIE's notice does not mention it. As of 1 October 2026 its
-    `physicalAddress` block has no `addressType` field, so a consumer cannot
-    tell which kind of address a record carries.
+    """Entity Role Search (v3) is the API `/nz-associations` actually searches.
+    Its `physicalAddress` block has no `addressType` field (checked 1 and
+    27 Oct 2026), and MBIE has said none is planned (27 Oct 2026, possibly not
+    before a future Companies Register replacement): an alternative address is
+    withheld instead and read from the company's NZBN record.
 
-    This asserts that state deliberately: when MBIE adds the field, this test
-    fails and points at the decision it unblocks — whether `_tier()` should
-    demote a match on an alternative address, not merely relabel it.
+    When MBIE adds the field, this test fails: the NZBN follow-up in
+    `nz_associations.follow_up_withheld` could then be skipped for typed
+    records, and `docs/nz-associations.md` updated.
     """
     key = get_settings().nzbn_role_search_sandbox_api_key
     if not key:
@@ -527,90 +528,134 @@ async def test_role_search_sandbox_still_has_no_address_type():
     assert keys, "no physicalAddress block on any Role Search record"
     assert "addressType" not in keys, (
         "Entity Role Search now returns an addressType "
-        f"(physicalAddress keys: {sorted(keys)}). That answers the question put "
-        "to MBIE on 1 Oct 2026: decide whether _tier() should demote a match "
-        "on an ALTERNATIVE address rather than only relabel its basis, and "
-        "update docs/nz-associations.md."
+        f"(physicalAddress keys: {sorted(keys)}). Decide whether the NZBN "
+        "follow-up (follow_up_withheld) is still needed, and update "
+        "docs/nz-associations.md."
     )
 
 
-async def test_role_search_sandbox_does_not_serve_the_alternative_address():
-    """The question MBIE's notice left open, answered against real payloads.
+async def _role_search_sandbox_records(name: str, key: str, pages: int = 7) -> list[dict]:
+    from opencheck.nz_associations import _extract_records
 
-    For MBIE's own alternative-address test entities, the `pafId` that Entity
-    Role Search returns for the director does **not** match the `pafId` on the
-    NZBN `ALTERNATIVE` block. In other words Role Search serves a *different*
-    address — on 1 October 2026, in the sandbox, it is not the alternative one.
+    out: list[dict] = []
+    for page in range(pages):
+        url = (
+            f"{_role_search_sandbox_url()}?name={name}&role-type=ALL"
+            f"&page={page}&page-size=50&registered-only=true"
+        )
+        records = _extract_records(await _sandbox_get(url, key))
+        if not records:
+            break
+        out.extend(records)
+    return out
 
-    Two things follow, and both matter enough to pin:
 
-    * for `/nz-associations`, the subject's NZBN address and the Role Search
-      address will disagree for any director who elects an alternative address,
-      so genuine matches fall from high/medium to name-only — the false-negative
-      branch in `docs/nz-associations.md`;
-    * more seriously, if the address Role Search keeps serving is the
-      residential one, the Act's protection does not hold across MBIE's own
-      APIs. That is the question put to MBIE, and this test is the evidence.
+def _records_at(records: list[dict], nzbns: set[str]) -> list[dict]:
+    """Role Search records naming one of these companies — on the record (a
+    directorship) or, for a DirectorShareholder, only on its shareholdings."""
+    out = []
+    for rec in records:
+        named = {rec.get("associatedCompanyNzbn")} | {
+            s.get("associatedCompanyNzbn") for s in (rec.get("shareholdings") or [])
+        }
+        if named & nzbns:
+            out.append(rec)
+    return out
 
-    When this fails, Role Search has started serving the alternative address:
-    the false-*positive* branch is then live (every client of one agent shares a
-    `pafId`) and `_tier()` needs revisiting, not just the basis wording.
+
+async def test_role_search_sandbox_withholds_an_alternative_address():
+    """MBIE's fix (27 Oct 2026, production from 18 Nov 2026): for a role holder
+    with an alternative address, Role Search returns an **empty**
+    `physicalAddress` — `addressLines: []`, and no `pafId`, postcode or
+    country. Before the fix it served the residential address (Case 00094468).
+
+    Fails if anything comes back in that block: a `pafId` or postcode there
+    would be the residential address leaking again, and `_address_withheld`
+    (which matches on neither lines nor `pafId`) would start comparing it.
     """
+    rs_key = get_settings().nzbn_role_search_sandbox_api_key
+    if not rs_key:
+        pytest.skip("NZBN_ROLE_SEARCH_SANDBOX_API_KEY not set — skipping")
+
+    from opencheck.nz_associations import _address_withheld
+
+    nzbns = {_NZ_SANDBOX_DIRECTOR_NZBN, _NZ_SANDBOX_DIRECTOR_NZBN_2}
+    records = _records_at(
+        await _role_search_sandbox_records("LASTNAME%20Firstname", rs_key), nzbns
+    )
+    if not records:
+        pytest.skip("Role Search returned no record for MBIE's test director")
+    roles = {r.get("roleType") for r in records}
+    assert "DirectorShareholder" in roles or "Director" in roles
+    for rec in records:
+        phys = rec.get("physicalAddress")
+        leaked = {k: v for k, v in (phys or {}).items() if k != "addressLines" and v}
+        assert not leaked, (
+            f"Role Search's withheld block now carries {sorted(leaked)} for an "
+            "alternative-address holder — possibly the residential address. "
+            "Report to MBIE (Case 00094468)."
+        )
+        assert _address_withheld(phys), f"block is not withheld: {phys}"
+
+
+async def test_role_search_sandbox_still_publishes_a_residential_address():
+    """The fix withholds only an alternative-address holder's block: MBIE's
+    other test director (John DOE) keeps a full address that agrees with the
+    NZBN record, so residential matching is unaffected."""
     nzbn_key = get_settings().nzbn_sandbox_api_key
     rs_key = get_settings().nzbn_role_search_sandbox_api_key
     if not (nzbn_key and rs_key):
-        pytest.skip("both NZ sandbox keys required — skipping cross-API check")
+        pytest.skip("both NZ sandbox keys required — skipping")
 
-    from opencheck.nz_associations import _extract_records, _paf_of
-    from opencheck.sources.nz_companies import _address_type, _paf
+    from opencheck.nz_associations import _address_withheld, _paf_of
+    from opencheck.sources.nz_companies import NzCompaniesAdapter
 
-    # The alternative-address pafIds, and the companies they sit on.
-    alt_pafs: set[str] = set()
-    company_names: set[str] = set()
-    for nzbn in (_NZ_SANDBOX_DIRECTOR_NZBN, _NZ_SANDBOX_DIRECTOR_NZBN_2):
-        full = await _sandbox_get(f"{_nzbn_sandbox_base()}/entities/{nzbn}", nzbn_key)
-        if full.get("entityName"):
-            company_names.add(str(full["entityName"]))
-        for r in full.get("roles") or []:
-            for a in (r.get("roleAddress") or []):
-                if isinstance(a, dict) and _address_type(a) == "ALTERNATIVE" and _paf(a):
-                    alt_pafs.add(_paf(a))  # type: ignore[arg-type]
-    if not alt_pafs:
-        pytest.skip("no ALTERNATIVE block carried a pafId — nothing to compare")
-    assert company_names, "sandbox entities returned no entityName"
-
-    # What Role Search serves for that director at those same companies.
-    rs_pafs: set[str] = set()
-    for page in range(7):
-        url = (
-            f"{_role_search_sandbox_url()}?name=LASTNAME%20Firstname&role-type=ALL"
-            f"&page={page}&page-size=50&registered-only=true"
-        )
-        records = _extract_records(await _sandbox_get(url, rs_key))
-        if not records:
-            break
-        for rec in records:
-            names = {rec.get("associatedCompanyName")} | {
-                s.get("associatedCompanyName") for s in (rec.get("shareholdings") or [])
-            }
-            if names & company_names:
-                paf = _paf_of(rec.get("physicalAddress"))
-                if paf:
-                    rs_pafs.add(paf)
-    if not rs_pafs:
-        pytest.skip(
-            "Role Search returned no pafId for MBIE's test entities — the "
-            "sandbox fixture data may have changed"
-        )
-
-    assert not (alt_pafs & rs_pafs), (
-        "Entity Role Search now serves the alternative address "
-        f"(shared pafId {sorted(alt_pafs & rs_pafs)}). The false-positive branch "
-        "is live: every client of one accountant or agent now shares a pafId, so "
-        "unrelated directors will grade as address-matched and sort to the top of "
-        "the panel. Revisit _tier() in nz_associations — relabelling the basis is "
-        "no longer enough — and update docs/nz-associations.md."
+    records = _records_at(
+        await _role_search_sandbox_records("DOE%20John", rs_key, pages=2),
+        {_NZ_SANDBOX_DIRECTOR_NZBN_2},
     )
+    if not records:
+        pytest.skip("Role Search returned no record for John DOE at the test entity")
+    phys = records[0].get("physicalAddress")
+    assert not _address_withheld(phys)
+    full = await _sandbox_get(
+        f"{_nzbn_sandbox_base()}/entities/{_NZ_SANDBOX_DIRECTOR_NZBN_2}", nzbn_key
+    )
+    bundle = NzCompaniesAdapter()._normalise("", _NZ_SANDBOX_DIRECTOR_NZBN_2, full, "")
+    doe = next(r for r in bundle["roles"] if "DOE" in r["name"].upper())
+    assert doe["address_type"] is None
+    assert _paf_of(phys) == doe["paf_id"]
+
+
+async def test_nzbn_sandbox_supplies_the_withheld_address():
+    """MBIE's documented route: the company's own NZBN record names the
+    alternative address that Role Search withheld, and our follow-up's holder
+    match finds the director on it with `address_type == "ALTERNATIVE"`."""
+    nzbn_key = get_settings().nzbn_sandbox_api_key
+    rs_key = get_settings().nzbn_role_search_sandbox_api_key
+    if not (nzbn_key and rs_key):
+        pytest.skip("both NZ sandbox keys required — skipping")
+
+    from opencheck.nz_associations import (
+        _collect_role_holders,
+        _find_record_holder,
+        withheld_companies,
+    )
+    from opencheck.sources.nz_companies import NzCompaniesAdapter
+
+    nzbns = {_NZ_SANDBOX_DIRECTOR_NZBN, _NZ_SANDBOX_DIRECTOR_NZBN_2}
+    records = _records_at(
+        await _role_search_sandbox_records("LASTNAME%20Firstname", rs_key), nzbns
+    )
+    targets = [(n, r) for n, r in withheld_companies(records, "") if n in nzbns]
+    if not targets:
+        pytest.skip("no withheld record at MBIE's test entities")
+    for nzbn, rec in targets:
+        full = await _sandbox_get(f"{_nzbn_sandbox_base()}/entities/{nzbn}", nzbn_key)
+        bundle = NzCompaniesAdapter()._normalise("", nzbn, full, "")
+        holder = _find_record_holder(_collect_role_holders(bundle), rec)
+        assert holder is not None, f"director not found on {nzbn}'s NZBN record"
+        assert holder["address_type"] == "ALTERNATIVE"
 
 
 # --- OpenAleph GLEIF mirror (Phase 286; public, no key) ----------------------

@@ -113,61 +113,73 @@ Two consequences for this panel:
 - **A shared alternative address is not a shared residence.** An alternative
   address is typically the office of the accountant or agent who provides it,
   shared by every one of their clients, so a matching `pafId` stops being
-  evidence about a *person*. The **tier is deliberately unchanged** — the
-  `address_match_count` / `name_only_count` split and the panel ordering keep
-  their meaning — but the **basis wording** changes, so the drill-down says
-  "Same alternative address — may be a shared service address" rather than
-  "Same registered address". Relabelling is honest at any volume; re-tiering
-  would silently move counts on evidence we do not yet have.
+  evidence about a *person*. Where **either** side's address is `ALTERNATIVE`
+  the match is graded **at most medium** (decided 27 October 2026), and the
+  basis says "Same alternative address — may be a shared service address" or
+  "Overlapping alternative address". It still counts as address-matched. Until
+  27 October 2026 only the wording changed and the tier did not, because
+  Role Search did not yet say what it would serve.
 
-### Is Role Search affected? Tested in the sandbox — no.
+### What Role Search does from 18 November 2026
 
-MBIE's notice covers the NZBN v5 and Companies v2 APIs. It does **not** mention
-the **Companies Entity Role Search API (v3)**, which is the API this panel
-actually searches. Tested against MBIE's sandbox on 1 October 2026, using the
-two alternative-address test entities it named:
+MBIE's notice of 30 September covered the NZBN v5 and Companies v2 APIs and
+did not mention the **Companies Entity Role Search API (v3)**, which is the API
+this panel searches. OpenCheck tested it in the sandbox on 1 October 2026 and
+found it served the director's **residential** address, so a residential
+address withheld from the NZBN API was still reachable by name. We reported
+that to MBIE (Case 00094468, 14 October); on 15 October MBIE confirmed it was
+unintended, and on 27 October it shipped a fix to the sandbox and announced it
+for production on 18 November:
 
-| Checked | Result |
-|---|---|
-| NZBN v5 `addressType` on a director with an alternative address | `ALTERNATIVE` — populated as documented |
-| Other directors on the same entity | `addressType` null — null *is* the residential address |
-| `PHYSICAL` ever visible to a public viewer | no — only `ALTERNATIVE` or null |
-| Does an `ALTERNATIVE` block carry a `pafId`? | **inconsistent** — absent on one test entity, present (`3161519`) on the other |
-| Does an `ALTERNATIVE` `pafId` ever equal a residential one? | no |
-| Role Search `physicalAddress` fields | `addressLines`, `postCode`, `countryCode`, `pafId` — still **no `addressType`** |
-| Does Role Search serve the alternative address? | **no** — its `pafId` for the same director at the same company is a different one |
+- For a role holder with an alternative address, Role Search returns an
+  **empty** block: `"physicalAddress": {"addressLines": []}` in JSON (an empty
+  `<physicalAddress />` in XML). Checked in the sandbox on 27 October: no
+  `pafId`, `postCode` or `countryCode` either, for the director's record and
+  the director-and-shareholder record alike.
+- Role holders with a residential address are unchanged — full address and
+  `pafId`, matching the NZBN record.
+- Role Search has **no `addressType`** field and MBIE plans none (perhaps with
+  a future Companies Register replacement, not on its work plan).
+- To get the address, MBIE says to take `associatedCompanyNzbn` from the Role
+  Search record and read the company from the NZBN API (`GET
+  /entities/{nzbn}`, or the `/roles` and `/company-details` sub-resources).
 
-So of the two branches, the **false-negative** one is what the sandbox shows:
-for any director who elects an alternative address, the subject's NZBN address
-and the Role Search address disagree, and genuine matches fall from high/medium
-to name-only — exactly for the directors who elected privacy. The panel already
-shows name-only matches rather than hiding them (the recall fix above), so they
-are not lost, only demoted.
+What OpenCheck does with that:
 
-Two caveats on that result. The sandbox is **synthetic** data, not a clone of
-production — the test entities are generated companies (`MANDATORY
-CONTEXTUALLY-BASED SUCCESS LIMITED`) with placeholder directors, and almost
-every synthetic address resolves to one Wellington `pafId`. And a sandbox index
-that has not been refreshed would look identical to an API that is deliberately
-out of scope. So this is evidence, not proof.
+| Role Search block | How the company is graded | `address_source` |
+|---|---|---|
+| has an address line or a `pafId` | against it, as before | `role_search` |
+| no address line and no `pafId` (withheld; a postcode alone is ignored) | against the person's address on **the company's own NZBN record** — the full entity, through the `nz_companies` adapter's fetch and cache, holder found by full name, else first + last name | `company_record` |
+| withheld, past the cap | name-only: "Same name — address not published by Role Search, not checked" | `not_checked` |
+| withheld, the NZBN read failed | name-only: "Same name — the company's own record could not be read" | `check_failed` |
 
-It also raises something larger than our matching. If the address Role Search
-keeps serving is the **residential** one, then the Act's protection does not
-hold across MBIE's own APIs: a residential address withheld from the NZBN API
-would still be reachable through entity-roles v3. That is the first question in
-the feedback sent to MBIE before the **14 October 2026** deadline
-(`helpdesk@mail.api.business.govt.nz`), alongside the inconsistent `pafId` on
-alternative addresses.
+- **At most 25 companies per person** are read (`_FOLLOWUP_CAP`), in Role
+  Search's order; the rest are counted (`withheld_not_checked`) and the card
+  says how many. A director-and-shareholder record carries the company's NZBN
+  only on its `shareholdings[]`, and that is where it is read from.
+- **The company-wide view** (`GET /nz-associations`, up to 60 names) makes no
+  follow-up reads; its withheld companies are `not_checked`, and a cached
+  company-wide answer stands in for one person only when nothing was left
+  unchecked.
+- **A failed read is never cached as the answer** (the Phase 262 rule): a
+  person view with a `check_failed` company is not cached, and the
+  `nz_companies` adapter now raises on any NZBN failure other than a 404
+  instead of caching an empty company. That matters on **17 November 2026,
+  7pm–midnight NZ time (06:00–11:00 UTC)**, when MBIE takes the production
+  NZBN and Companies APIs offline for the release: a lookup in that window
+  shows the NZ source as failed, not as a company with no directors.
 
-Because the answer is a sandbox observation rather than a commitment from MBIE,
-the **tier algorithm is left alone** and only the basis wording changes. Four
-opt-in live smoke tests in `backend/tests/test_live_smoke.py` pin each finding,
-including one that fails the day Role Search starts serving the alternative
-address — at which point the false-positive branch is live (every client of one
-agent sharing a `pafId`) and `_tier()` does need revisiting. They need the
-sandbox keys (`NZBN_SANDBOX_API_KEY`, `NZBN_ROLE_SEARCH_SANDBOX_API_KEY` — the
-production keys 401 against `/sandbox/`) **exported into the environment**, since
-the test tier runs with `OPENCHECK_DISABLE_DOTENV=1`:
+The sandbox is **synthetic** data (generated companies, placeholder
+directors, nearly every address on one Wellington `pafId`), so the opt-in live
+smoke tests in `backend/tests/test_live_smoke.py` pin what it shows: that the
+withheld block carries nothing (the test fails if a `pafId` or postcode
+reappears — the residential address leaking again), that a residential holder
+keeps a full address matching the NZBN record, that the NZBN record supplies
+the withheld address as `ALTERNATIVE`, and that Role Search still has no
+`addressType`. They need the sandbox keys (`NZBN_SANDBOX_API_KEY`,
+`NZBN_ROLE_SEARCH_SANDBOX_API_KEY` — the production keys 401 against
+`/sandbox/`) **exported into the environment**, since the test tier runs with
+`OPENCHECK_DISABLE_DOTENV=1`:
 
 ```
 set -a && . ./.env && set +a && cd backend \
@@ -186,6 +198,10 @@ Per director/shareholder of the subject company:
   differently for AML);
 - the company list — name, role(s), share % (where shareholder), confidence +
   match basis, and a link out — ordered address-matched first, then name-only.
+- where Role Search withheld the address, how many companies were graded on
+  the company's own record (`withheld_checked`), how many were not checked
+  (`withheld_not_checked`) and how many could not be read
+  (`withheld_check_failed`), with each company's `address_source`.
 
 ## Disclosure (three layers)
 

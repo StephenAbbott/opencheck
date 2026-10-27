@@ -38,6 +38,7 @@ from urllib.parse import quote
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
+from ..secret_scrub import describe_exception
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _LOG = logging.getLogger(__name__)
@@ -52,6 +53,10 @@ NZ_RA_CODE: str = "RA000466"
 def normalise_nz_company_number(value: str) -> str:
     """NZ company numbers are short numeric strings; strip whitespace."""
     return re.sub(r"\s+", "", str(value or "")).strip()
+
+
+class NzbnUnavailable(RuntimeError):
+    """The NZBN API did not give an answer (as opposed to answering "none")."""
 
 
 def _entity_url(nzbn: str) -> str:
@@ -136,8 +141,9 @@ def _paf(a: Any) -> str | None:
 #   * an authority holder sees ``PHYSICAL`` and/or ``ALTERNATIVE``, and for
 #     **directors** gets *both* blocks when both exist.
 #
-# So ``roleAddress`` can hold more than one block and MBIE does not specify the
-# order. Choosing ``[0]`` would be a coin-flip between a residential and a
+# So ``roleAddress`` can hold more than one block, and the order is not
+# guaranteed, now or after future API or register changes (MBIE API team, Case
+# 00094468, 15 Oct 2026). Choosing ``[0]`` would be a coin-flip between a residential and a
 # service address, so pick deliberately instead: a current block before an
 # ended one, then residential (``PHYSICAL`` or null) before ``ALTERNATIVE``.
 # Residential is preferred because an alternative address is shared by every
@@ -377,21 +383,28 @@ class NzCompaniesAdapter(SourceAdapter):
         return bundle
 
     async def _resolve_nzbn(self, number: str, headers: dict[str, str]) -> str:
-        """Resolve a company number to its NZBN via the directory search."""
+        """Resolve a company number to its NZBN via the directory search.
+
+        ``""`` means the register answered and holds no such number; a failure
+        (network error, any non-2xx, an unreadable body) raises
+        :class:`NzbnUnavailable` instead, so it can never be cached as "no
+        record" (the Phase 262 rule; MBIE takes the APIs offline 7pm–midnight
+        NZ time on 17 Nov 2026 for the alternative-address release).
+        """
         url = f"{_API_BASE}/entities?search-term={quote(number)}&page-size=10"
         try:
             async with build_client() as client:
                 resp = await client.get(url, headers=headers)
         except Exception as exc:  # noqa: BLE001
-            _LOG.warning("nz_companies: search HTTP error: %s", exc)
-            return ""
+            _LOG.warning("nz_companies: search HTTP error: %s", describe_exception(exc))
+            raise NzbnUnavailable("NZBN directory search did not answer") from exc
         if not resp.is_success:
             _LOG.warning("nz_companies: search HTTP %s", resp.status_code)
-            return ""
+            raise NzbnUnavailable(f"NZBN directory search answered HTTP {resp.status_code}")
         try:
             items = (resp.json() or {}).get("items") or []
-        except ValueError:
-            return ""
+        except ValueError as exc:
+            raise NzbnUnavailable("NZBN directory search answered an unreadable body") from exc
         # Prefer an exact match on the legacy company number.
         for it in items:
             if str((it or {}).get("sourceRegisterUniqueId") or "") == number and it.get("nzbn"):
@@ -401,20 +414,24 @@ class NzCompaniesAdapter(SourceAdapter):
         return ""
 
     async def _get_entity(self, nzbn: str, headers: dict[str, str]) -> dict[str, Any]:
+        """The full NZBN entity. ``{}`` only for a 404 (no such NZBN); any
+        other failure raises :class:`NzbnUnavailable` and is never cached."""
         url = f"{_API_BASE}/entities/{quote(nzbn)}"
         try:
             async with build_client() as client:
                 resp = await client.get(url, headers=headers)
         except Exception as exc:  # noqa: BLE001
-            _LOG.warning("nz_companies: entity HTTP error: %s", exc)
+            _LOG.warning("nz_companies: entity HTTP error: %s", describe_exception(exc))
+            raise NzbnUnavailable("NZBN entity read did not answer") from exc
+        if resp.status_code == 404:
             return {}
         if not resp.is_success:
             _LOG.warning("nz_companies: entity HTTP %s", resp.status_code)
-            return {}
+            raise NzbnUnavailable(f"NZBN entity read answered HTTP {resp.status_code}")
         try:
             data = resp.json()
-        except ValueError:
-            return {}
+        except ValueError as exc:
+            raise NzbnUnavailable("NZBN entity read answered an unreadable body") from exc
         return data if isinstance(data, dict) else {}
 
     async def _get_json(self, url: str, headers: dict[str, str]) -> Any:
@@ -444,13 +461,16 @@ class NzCompaniesAdapter(SourceAdapter):
         if not number:
             return None
         headers = {"Ocp-Apim-Subscription-Key": key}
-        if len(number) == 13 and number.isdigit():
-            nzbn = number
-        else:
-            nzbn = await self._resolve_nzbn(number, headers)
-        if not nzbn:
+        try:
+            if len(number) == 13 and number.isdigit():
+                nzbn = number
+            else:
+                nzbn = await self._resolve_nzbn(number, headers)
+            if not nzbn:
+                return None
+            full = await self._get_entity(nzbn, headers)
+        except NzbnUnavailable:
             return None
-        full = await self._get_entity(nzbn, headers)
         base = f"{_API_BASE}/entities/{quote(nzbn)}/history"
         name_h = await self._get_json(f"{base}/entity-names", headers)
         status_h = await self._get_json(f"{base}/entity-statuses", headers)

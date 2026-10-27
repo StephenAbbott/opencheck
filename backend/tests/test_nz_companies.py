@@ -373,3 +373,87 @@ def test_norm_shareholders_carries_the_address_type() -> None:
     ]}}
     out = _norm_shareholders(details)
     assert [s["address_type"] for s in out] == ["ALTERNATIVE", None]
+
+
+# ---------------------------------------------------------------------------
+# A failure is never cached as the company's record (Phase 262 rule). MBIE
+# takes the production NZBN and Companies APIs offline from 7pm to midnight NZ
+# time on 17 Nov 2026 for the alternative-address release; before this, a
+# failed entity read was normalised into an empty bundle and cached.
+# ---------------------------------------------------------------------------
+
+from opencheck.sources.nz_companies import NzbnUnavailable  # noqa: E402
+
+
+async def _fetch_with(monkeypatch, tmp_path, route):
+    _live(monkeypatch, tmp_path)
+    cache = MagicMock(); cache.has.return_value = False
+    cache.get_payload.return_value = None; cache.put.return_value = None
+    with (
+        patch("opencheck.sources.nz_companies.Cache", return_value=cache),
+        patch("opencheck.sources.nz_companies.build_client", return_value=_make_client(route)),
+    ):
+        try:
+            return await NzCompaniesAdapter().fetch(_NUMBER, legal_name="Fonterra"), cache
+        except NzbnUnavailable as exc:
+            return exc, cache
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [500, 503, 429])
+async def test_entity_read_failure_raises_and_caches_nothing(monkeypatch, tmp_path, status):
+    async def route(url, **kw):
+        if "search-term" in url:
+            return _resp(200, SEARCH_RESPONSE)
+        return _resp(status, {})
+
+    result, cache = await _fetch_with(monkeypatch, tmp_path, route)
+    assert isinstance(result, NzbnUnavailable)
+    assert str(status) in str(result)
+    cache.put.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_directory_search_failure_raises_and_caches_nothing(monkeypatch, tmp_path):
+    async def route(url, **kw):
+        return _resp(503, {})
+
+    result, cache = await _fetch_with(monkeypatch, tmp_path, route)
+    assert isinstance(result, NzbnUnavailable)
+    cache.put.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_network_error_raises_and_caches_nothing(monkeypatch, tmp_path):
+    import httpx
+
+    async def route(url, **kw):
+        raise httpx.ConnectError("connection refused")
+
+    result, cache = await _fetch_with(monkeypatch, tmp_path, route)
+    assert isinstance(result, NzbnUnavailable)
+    cache.put.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_entity_404_is_still_an_answer(monkeypatch, tmp_path):
+    async def route(url, **kw):
+        if "search-term" in url:
+            return _resp(200, SEARCH_RESPONSE)
+        return _resp(404, {})
+
+    result, cache = await _fetch_with(monkeypatch, tmp_path, route)
+    assert isinstance(result, dict) and result["is_stub"] is False
+    assert result["roles"] == []
+    cache.put.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_timeline_still_answers_none_on_failure(monkeypatch, tmp_path):
+    _live(monkeypatch, tmp_path)
+
+    async def route(url, **kw):
+        return _resp(503, {})
+
+    with patch("opencheck.sources.nz_companies.build_client", return_value=_make_client(route)):
+        assert await NzCompaniesAdapter().fetch_timeline_data(_NUMBER) is None

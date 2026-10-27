@@ -172,7 +172,7 @@ Sources publishing a declaration date OpenCheck uses today:
 | `brreg` | `rollegrupper[].sistEndret` | When Enhetsregisteret last changed that group of roles |
 | `ted_eu` | latest notice `publication-date` | TED's publication of the notice is the declaration |
 | `chilecompra` | the supplier's latest dated activity in the window | ChileCompra's own filing; the snapshot is dated from the last month the index covers |
-| `climatetrace` | GEM ownership release date | From the dated CSV filename (`…_050826.csv` = 5 Aug 2026), recorded when the CSVs are downloaded; the bundle is declared a `snapshot` of that release (Phase 313) rather than inheriting the live Climate TRACE API call's timestamp |
+| `climatetrace` | GEM ownership release date | From the dated CSV filename (`…_050826.csv` read as 5 Aug 2026), recorded when the CSVs are downloaded; the bundle is declared a `snapshot` of that release (Phase 313) rather than inheriting the live Climate TRACE API call's timestamp. GEM documents no digit order, so a parsed date that postdates the bucket's own `updated` stamp is refused and the stamp is the release date instead — the live `…_071026.csv`, uploaded 29 July 2026, dates itself 2026-07-29 rather than 2026-10-07 |
 
 Everything else falls back to the retrieval date.
 
