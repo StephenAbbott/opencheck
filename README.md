@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 407** — A Slovak register that does not answer now shows as a failed source with a retry, instead of reading as if it had been switched off.
+**Latest: Phase 408** — The Norwegian register card now says what annual accounts a company last filed with Brønnøysundregistrene's accounts register, with a link to the filed PDF.
 
 → [Full development history](docs/status.md)
 
