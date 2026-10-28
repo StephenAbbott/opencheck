@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 413** — A source whose upstream refused or timed out without raising — KvK's rate limit is the case — now shows a "Did not answer" card with Try again and counts as not answering, instead of being listed as having no record.
+**Latest: Phase 414** — A GEM share the tracker marks as an imputed value now carries a commenting annotation, and a GEM share of 0 is published as no stated size rather than share.exact 0.
 
 → [Full development history](docs/status.md)
 
