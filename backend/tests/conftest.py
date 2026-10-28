@@ -50,6 +50,15 @@ os.environ.setdefault("OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE", "0")
 # tests/test_host_throttle.py and test_kvk.py re-enable it where they need it.
 os.environ.setdefault("OPENCHECK_KVK_RATE_LIMIT_PER_MINUTE", "0")
 
+# The suite is dataless by construction, as it is offline: the data root is a
+# per-session temporary tree seeded from the tracked data/ files, and asset
+# paths exported in the developer's shell are removed. A test that reads a real
+# asset takes @pytest.mark.local_data(...). See tests/_data_root.py. Installed
+# before the two index paths below, which it would otherwise remove.
+from tests import _data_root  # noqa: E402
+
+_data_root.install()
+
 # GLEIF's ISIN-to-LEI table (Phase 258) is never downloaded or built by the
 # suite, and never read from wherever a developer's dev server left one: the
 # path points at a file that does not exist unless a test builds it there.
@@ -150,6 +159,32 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "live" in item.keywords:
             item.add_marker(skip_live)
+
+
+@pytest.fixture(autouse=True)
+def _local_data(request, monkeypatch):
+    """``@pytest.mark.local_data("meip.sqlite", ...)``: this test reads real
+    release assets from the developer's data root. It runs against that root
+    when every named asset is present and skips otherwise (CI has none).
+    Every other test sees only the seeded, dataless root."""
+    marker = request.node.get_closest_marker("local_data")
+    if marker is None:
+        yield
+        return
+    if not marker.args:
+        pytest.fail("@pytest.mark.local_data needs the asset path(s) the test reads")
+    root = _data_root.real_data_root()
+    missing = [str(a) for a in marker.args if not (root / a).exists()]
+    if missing:
+        pytest.skip(f"local data absent under {root}: {', '.join(missing)}")
+    from opencheck.config import get_settings
+
+    monkeypatch.setenv(_data_root.DATA_ROOT_ENV, str(root))
+    get_settings.cache_clear()
+    _data_root.reset_stores()
+    yield root
+    _data_root.reset_stores()
+    get_settings.cache_clear()
 
 
 @pytest.fixture(autouse=True)
