@@ -140,6 +140,30 @@ def record(
     )
 
 
+def unanswered_fetch(source_id: str) -> "DegradedSource | None":
+    """The ``source_fetch`` degradation ``source_id`` recorded in this scope.
+
+    An adapter that cannot reach its upstream (KvK's 429, a register page that
+    timed out) records ``CHECK_SOURCE_FETCH`` and returns a stub. The pipeline
+    asks this when such a source produced nothing, so the source is reported
+    as not answering rather than as answering with no record. A
+    ``not_configured`` record is left out: a missing credential is a
+    deployment fact, not a failed request, and retrying it changes nothing.
+    ``None`` outside a scope, or when the source recorded no such failure.
+    """
+    current = _CURRENT.get()
+    if not current:
+        return None
+    for d in current:
+        if (
+            d.source_id == source_id
+            and d.check == CHECK_SOURCE_FETCH
+            and d.reason != REASON_NOT_CONFIGURED
+        ):
+            return d
+    return None
+
+
 #: The ``detail`` of a degradation built from a pipeline error. Fixed
 #: sentences, so no entity name can reach them; each reads after the source's
 #: name ("OpenAleph — did not answer …").

@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 412** — KvK open-data requests are now paced at the register's one-request-a-minute quota through a general per-host throttle, so Dutch company cards stop showing placeholder KvK data whenever the minute was already spent.
+**Latest: Phase 413** — A source whose upstream refused or timed out without raising — KvK's rate limit is the case — now shows a "Did not answer" card with Try again and counts as not answering, instead of being listed as having no record.
 
 → [Full development history](docs/status.md)
 

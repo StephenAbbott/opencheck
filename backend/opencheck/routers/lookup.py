@@ -334,6 +334,10 @@ def _source_outcome(
         )
         for sh in list_hits:
             _stamp(sh, prov)
+        if not list_hits:
+            unanswered = _unanswered_outcome(source_id, prov)
+            if unanswered is not None:
+                return unanswered
         return _SourceOutcome(source_id, list_hits, prov)
 
     hit = _stamp(_build_result_hit(source_id, result, ctx), prov)
@@ -350,8 +354,35 @@ def _source_outcome(
             return _SourceOutcome(
                 source_id, [_stored_bundle_hit(source_id, bkey, ctx)], bprov
             )
+        unanswered = _unanswered_outcome(source_id, prov)
+        if unanswered is not None:
+            return unanswered
         return _SourceOutcome(source_id, [], prov)
     return _SourceOutcome(source_id, [hit], prov)
+
+
+def _unanswered_outcome(source_id: str, prov: Provenance) -> _SourceOutcome | None:
+    """A source that produced nothing because it could not reach its upstream.
+
+    The adapter degraded instead of raising (Phase 324): it recorded a
+    ``source_fetch`` degradation and returned a stub. Until 27 Oct 2026 that
+    read as an answer with no record — KvK was listed under "Answered with no
+    record", counted as answered, and had no card to retry from, while the
+    degraded-sources notice above said it had been rate-limited. It is a
+    source that did not answer, so it is reported as one: an error carrying
+    the adapter's own sentence (never an entity name — the degradation rule),
+    a ``timeout`` or ``fetch_error`` type, and the Try again card.
+    """
+    failure = _degradation.unanswered_fetch(source_id)
+    if failure is None:
+        return None
+    return _SourceOutcome(
+        source_id, [], prov,
+        error=failure.detail,
+        error_type=(
+            "timeout" if failure.reason == _degradation.REASON_TIMEOUT else "fetch_error"
+        ),
+    )
 
 
 _NC_LICENSES = {"CC-BY-NC-4.0", "CC-BY-NC-SA-4.0"}
@@ -2998,13 +3029,20 @@ async def lookup_source(
     # retried result read "stub" with no retrieval date, and a source with a
     # stored Open Ownership bundle answered a failed retry with the error
     # instead of the bundle the run had shown.
-    ran = await asyncio.gather(*(_run_source(sid, coro) for sid, coro in tasks))
+    # A scope of its own, so an adapter that degrades instead of raising is
+    # read as not answering here too, exactly as in the run it retries.
+    _degradation.begin()
+    try:
+        ran = await asyncio.gather(*(_run_source(sid, coro) for sid, coro in tasks))
+        outcomes = [_source_outcome(sid, result, prov, ctx) for sid, result, prov in ran]
+    finally:
+        _degradation.collect()
     hits: list[SourceHit] = []
     error: str | None = None
     error_type: str | None = None
     liveness: dict[str, dict[str, Any]] = {}
-    for sid, result, prov in ran:
-        outcome = _source_outcome(sid, result, prov, ctx)
+    for outcome in outcomes:
+        sid = outcome.source_id
         liveness[sid] = outcome.provenance.to_dict()
         hits.extend(outcome.hits)
         if outcome.error is not None:
