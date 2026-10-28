@@ -536,10 +536,13 @@ function RelationshipStatementCard({
                   const desc = describeInterest(int);
                   const details = stmtStr(int, "details");
                   // The register's own nature-of-control code hangs off the
-                  // interest's `type`, which is what describeInterest renders.
-                  const anns = annotationsAt(
-                    stmt, "recordDetails", "interests", i, "type",
-                  );
+                  // interest's `type`, and a note on the figure (GEM's
+                  // "imputed value") off its `share` — describeInterest
+                  // renders both.
+                  const anns = [
+                    ...annotationsAt(stmt, "recordDetails", "interests", i, "type"),
+                    ...annotationsAt(stmt, "recordDetails", "interests", i, "share"),
+                  ];
                   return (
                     <span key={i} className="block">
                       <AnnotatedValue value={desc} annotations={anns} />

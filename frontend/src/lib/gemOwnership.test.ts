@@ -36,6 +36,14 @@ describe("gemOwnershipChips", () => {
     expect(owners).toEqual([{ id: "E100000123261", name: "natural person(s)", share: null }]);
   });
 
+  it("reads a share of 0 as no stated size", () => {
+    const { owners } = gemOwnershipChips({
+      entity_id: "E1",
+      owners: [{ entity_id: "E100001015587", name: "small shareholder(s)", share: 0 }],
+    });
+    expect(owners).toEqual([{ id: "E100001015587", name: "small shareholder(s)", share: null }]);
+  });
+
   it("reads a stored pre-Phase-199 hit, which has no owners list", () => {
     const { owners, parents } = gemOwnershipChips({
       entity_id: "E2",

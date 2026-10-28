@@ -788,3 +788,118 @@ def test_direct_owners_alone_do_not_make_layers() -> None:
     signals = assess_bundle("climatetrace", bundle, statements, hit_id="E100000000538")
     codes = {s.code for s in signals}
     assert COMPLEX_OWNERSHIP_LAYERS not in codes
+
+
+# ---------------------------------------------------------------------------
+# GEM's "Share Imputed?" and the zero share
+# ---------------------------------------------------------------------------
+
+
+def _owner_rel(owner: dict) -> dict:
+    [rel] = _relationships(list(map_climatetrace(_pertamina_as_gem_ships_it([owner]))))
+    return rel
+
+
+def _share_notes(rel: dict) -> list[dict]:
+    return [
+        a
+        for a in rel.get("annotations") or []
+        if a["statementPointerTarget"] == "/recordDetails/interests/0/share"
+    ]
+
+
+def test_imputed_and_known_shares_both_publish_only_imputed_is_annotated() -> None:
+    from opencheck.bods.annotations import resolve_pointer, validate_all
+    from opencheck.bods.mappers.climatetrace import GEM_IMPUTED_SHARE_NOTE
+
+    imputed = _owner(share=50.0) | {"share_imputed": True}
+    known = _owner(share=50.0) | {"share_imputed": False}
+
+    imputed_rel = _owner_rel(imputed)
+    known_rel = _owner_rel(known)
+    for rel in (imputed_rel, known_rel):
+        assert rel["recordDetails"]["interests"][0]["share"] == {"exact": 50.0}
+
+    [note] = _share_notes(imputed_rel)
+    assert note["motivation"] == "commenting"
+    assert note["description"] == GEM_IMPUTED_SHARE_NOTE
+    assert '"imputed value"' in note["description"]
+    assert resolve_pointer(imputed_rel, note["statementPointerTarget"]) == {"exact": 50.0}
+    assert _share_notes(known_rel) == []
+    # GEM's citation annotation is still there beside it.
+    assert len(imputed_rel["annotations"]) == 2
+    assert validate_all([imputed_rel]) == []
+
+
+def test_unflagged_share_is_not_annotated() -> None:
+    """None means GEM has not said — the July CSV, today."""
+    assert _share_notes(_owner_rel(_owner(share=50.0))) == []
+
+
+def test_zero_share_publishes_no_share_and_keeps_the_holder() -> None:
+    statements = list(map_climatetrace(_pertamina_as_gem_ships_it([_owner(share=0.0)])))
+    assert validate_shape(statements) == []
+    [rel] = _relationships(statements)
+    [interest] = rel["recordDetails"]["interests"]
+    assert interest["type"] == "shareholding"
+    assert "share" not in interest
+    assert rel["recordDetails"]["interestedParty"] == _parent_statement(statements)["recordId"]
+
+
+def test_imputed_zero_share_has_neither_share_nor_dangling_note() -> None:
+    rel = _owner_rel(_owner(share=0) | {"share_imputed": True})
+    assert "share" not in rel["recordDetails"]["interests"][0]
+    assert _share_notes(rel) == []
+
+
+def test_zero_share_on_a_placeholder_keeps_the_unspecified_party() -> None:
+    """The three live rows: ``small shareholder(s)`` at 0 — still a shareholder,
+    no ``share.exact: 0.0``; the placeholder handling is unchanged."""
+    owner = _owner("E100001015587", "small shareholder(s)", share=0.0, entity_type=None)
+    rel = _owner_rel(owner)
+    assert rel["recordDetails"]["interestedParty"]["reason"] == "informationUnknownToPublisher"
+    assert "share" not in rel["recordDetails"]["interests"][0]
+
+
+def test_imputed_share_on_a_placeholder_is_annotated() -> None:
+    """``natural person(s)`` at an imputed 100 — the commonest imputed row."""
+    owner = _owner("E100000123261", "natural person(s)", share=100.0, entity_type="person")
+    rel = _owner_rel(owner | {"share_imputed": True})
+    assert rel["recordDetails"]["interests"][0]["share"] == {"exact": 100.0}
+    assert len(_share_notes(rel)) == 1
+
+
+def test_zero_and_imputed_shares_on_the_parent_column() -> None:
+    bundle = _entity_with_parent_bundle()
+    bundle["parents"] = [
+        {"entity_id": "E100000001096", "name": "BP p.l.c.", "share": 0.0},
+    ]
+    [rel] = _relationships(list(map_climatetrace(bundle)))
+    assert "share" not in rel["recordDetails"]["interests"][0]
+
+    bundle["parents"] = [
+        {"entity_id": "E100000001096", "name": "BP p.l.c.", "share": 33.3, "share_imputed": True},
+    ]
+    [rel] = _relationships(list(map_climatetrace(bundle)))
+    assert rel["recordDetails"]["interests"][0]["share"] == {"exact": 33.3}
+    assert len(_share_notes(rel)) == 1
+
+
+def test_integrated_ownership_multiplies_an_imputed_share_unchanged() -> None:
+    """Decision 2: integrated ownership reads an imputed figure like any other."""
+    from opencheck.integrated_ownership import compute
+
+    known = list(map_climatetrace(_pertamina_as_gem_ships_it([_owner(share=50.0)])))
+    imputed = list(
+        map_climatetrace(
+            _pertamina_as_gem_ships_it([_owner(share=50.0) | {"share_imputed": True}])
+        )
+    )
+    a = compute(known, [known[0]["statementId"]], "2026-10-27")
+    b = compute(imputed, [imputed[0]["statementId"]], "2026-10-27")
+    strip = lambda p: [  # noqa: E731
+        [(f["minimum"], f["maximum"], f["text"]) for f in h.get("figures") or []]
+        for h in p["holders"]
+    ]
+    assert strip(a) == strip(b)
+    assert strip(a)[0][0][0] == 50.0

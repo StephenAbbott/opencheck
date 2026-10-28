@@ -1568,3 +1568,230 @@ def test_repeated_owner_row_is_one_owner(monkeypatch) -> None:
     edge = {"entity_id": "E9", "name": "Acme", "percent": 5.0, "source_urls": []}
     monkeypatch.setattr(_ct_mod, "_rel_owners", {"E1": [edge, dict(edge, percent=6.0)]})
     assert [o["share"] for o in _ct_mod._parse_owners("E1")] == [5.0]
+
+
+# ---------------------------------------------------------------------------
+# GEM's "Share Imputed?" column — both carriers, and the artifact fallback
+# ---------------------------------------------------------------------------
+
+_SHARE_IMPUTED_CELLS = [
+    ("imputed value", True),
+    ("known value, not imputed", False),
+    ("Imputed Value ", True),
+    ("known  value, not imputed", False),
+    ("True", True),
+    ("false", False),
+    (True, True),
+    (False, False),
+    ("", None),
+    (None, None),
+    ("Unknown", None),
+]
+
+
+@pytest.mark.parametrize("cell,expected", _SHARE_IMPUTED_CELLS)
+def test_share_imputed_parsers_agree_across_the_two_carriers(cell, expected) -> None:
+    """The adapter (CSV) and the build script (xlsx) read the flag alike."""
+    import importlib.util
+    from pathlib import Path
+
+    import opencheck.sources.climatetrace as _ct_mod
+
+    script = Path(__file__).resolve().parent.parent / "scripts" / "build_geot_projects.py"
+    spec = importlib.util.spec_from_file_location("_build_geot_projects", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert _ct_mod._parse_share_imputed(cell) is expected
+    assert module._parse_share_imputed(cell) is _ct_mod._parse_share_imputed(cell)
+
+
+def test_share_imputed_column_found_whatever_its_spelling() -> None:
+    import opencheck.sources.climatetrace as _ct_mod
+
+    base = ["subject_entity_id", "owner_entity_id", "percent_of_ownership"]
+    assert _ct_mod._share_imputed_column(base) is None
+    assert _ct_mod._share_imputed_column(None) is None
+    for name in ("Share Imputed?", "share_imputed", "is_share_imputed"):
+        assert _ct_mod._share_imputed_column([*base, name]) == name
+
+
+_REL_CSV_HEAD = (
+    "subject_entity_id,subject_name,owner_entity_id,owner_name,"
+    "percent_of_ownership,data_source_url"
+)
+
+
+def _load_rel_csv(monkeypatch, text: str):
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(
+        _ct_mod,
+        "_read_gem_csv_text",
+        lambda kind: text if kind == "entity_relationships" else None,
+    )
+    return _ct_mod._load_relationship_indexes()[2]
+
+
+def test_relationships_csv_with_the_column_carries_the_flag(monkeypatch) -> None:
+    owners = _load_rel_csv(
+        monkeypatch,
+        _REL_CSV_HEAD + ",share_imputed\n"
+        "E1,Sub,E2,Imputed Co,50.0,,imputed value\n"
+        "E1,Sub,E3,Known Co,50.0,,\"known value, not imputed\"\n"
+        "E1,Sub,E4,Blank Co,25.0,,\n",
+    )
+    flags = {o["entity_id"]: o["share_imputed"] for o in owners["E1"]}
+    assert flags == {"E2": True, "E3": False, "E4": None}
+
+
+def test_relationships_csv_without_the_column_reads_as_today(monkeypatch) -> None:
+    owners = _load_rel_csv(monkeypatch, _REL_CSV_HEAD + "\nE1,Sub,E2,Co,50.0,\n")
+    [edge] = owners["E1"]
+    assert edge["percent"] == 50.0
+    assert edge["share_imputed"] is None
+
+
+def _with_artifact(monkeypatch, imputed: dict) -> None:
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(
+        _ct_mod, "_geot_data", {"meta": {}, "entities": {}, "imputed_shares": imputed}
+    )
+
+
+def test_share_imputed_row_flag_wins_over_the_artifact(monkeypatch) -> None:
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _with_artifact(monkeypatch, {"E1": {"E2": 50.0}})
+    assert _ct_mod._share_imputed("E1", "E2", 50.0, False) is False
+    assert _ct_mod._share_imputed("E1", "E9", 50.0, True) is True
+
+
+def test_share_imputed_from_the_artifact_only_at_the_same_figure(monkeypatch) -> None:
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _with_artifact(monkeypatch, {"E1": {"E2": 33.3}})
+    assert _ct_mod._share_imputed("E1", "E2", 33.3, None) is True
+    assert _ct_mod._share_imputed("E1", "E2", 33.33, None) is True
+    # The CSV says something else: not the number GEM imputed.
+    assert _ct_mod._share_imputed("E1", "E2", 40.0, None) is None
+    assert _ct_mod._share_imputed("E1", "E3", 33.3, None) is None
+    # Nothing to flag without a stated size.
+    assert _ct_mod._share_imputed("E1", "E2", None, True) is None
+    assert _ct_mod._share_imputed("E1", "E2", 0.0, True) is None
+
+
+def test_share_imputed_without_the_artifact_section(monkeypatch) -> None:
+    """The committed September artifact predates the section: no flag, no crash."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    monkeypatch.setattr(_ct_mod, "_geot_data", {"meta": {}, "entities": {}})
+    assert _ct_mod._share_imputed("E1", "E2", 50.0, None) is None
+
+
+def test_owners_and_parents_carry_the_flag(monkeypatch) -> None:
+    import opencheck.sources.climatetrace as _ct_mod
+
+    _with_artifact(monkeypatch, {"E1": {"E5": 100.0}})
+    monkeypatch.setattr(_ct_mod, "_entity_index", {})
+    monkeypatch.setattr(
+        _ct_mod,
+        "_rel_owners",
+        {
+            "E1": [
+                {"entity_id": "E2", "name": "A", "percent": 50.0, "share_imputed": True},
+                {"entity_id": "E5", "name": "B", "percent": 100.0, "share_imputed": None},
+            ]
+        },
+    )
+    flags = {o["entity_id"]: o["share_imputed"] for o in _ct_mod._parse_owners("E1")}
+    assert flags == {"E2": True, "E5": True}
+
+    [parent] = _ct_mod._parse_parents(
+        {"Entity ID": "E1", "Gem parents IDs": "E5 [100.0%]", "Gem parents": "B [100.0%]"}
+    )
+    assert parent["share"] == 100.0
+    assert parent["share_imputed"] is True
+
+
+def _fake_workbook(sheets: dict[str, list[tuple]]):
+    class _Ws:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def iter_rows(self, values_only=True):
+            return iter(self._rows)
+
+    class _Wb:
+        sheetnames = list(sheets)
+
+        def __getitem__(self, name):
+            return _Ws(sheets[name])
+
+    return _Wb()
+
+
+def _build_script():
+    import importlib.util
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parent.parent / "scripts" / "build_geot_projects.py"
+    spec = importlib.util.spec_from_file_location("_build_geot_projects", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_build_script_extracts_imputed_shares_and_drops_zeros() -> None:
+    header = (
+        "Subject Entity ID", "Subject Entity Name", "Interested Party ID",
+        "Interested Party Name", "% Share of Ownership", "Data Source URL",
+        "Share Imputed?",
+    )
+    wb = _fake_workbook(
+        {
+            "Entity Ownership": [
+                header,
+                ("E1", "Sub", "E2", "A", 50, None, "imputed value"),
+                ("E1", "Sub", "E3", "B", 50, None, "known value, not imputed"),
+                ("E1", "Sub", "E4", "C", 0, None, "imputed value"),
+                ("E6", "Sub2", "E2", "A", 33.3, None, "imputed value"),
+            ]
+        }
+    )
+    assert _build_script().extract_imputed_shares(wb) == {
+        "E1": {"E2": 50.0},
+        "E6": {"E2": 33.3},
+    }
+
+
+def test_build_script_tolerates_a_workbook_without_the_column() -> None:
+    module = _build_script()
+    assert module.extract_imputed_shares(_fake_workbook({})) == {}
+    wb = _fake_workbook(
+        {"Entity Ownership": [("Subject Entity ID", "Interested Party ID", "% Share of Ownership")]}
+    )
+    assert module.extract_imputed_shares(wb) == {}
+
+
+def test_build_script_and_adapter_agree_on_the_flag_end_to_end(monkeypatch) -> None:
+    """A holding the xlsx marks imputed reaches the owner dict as imputed when
+    the CSV states the same figure — the two carriers, one reading."""
+    import opencheck.sources.climatetrace as _ct_mod
+
+    header = ("Subject Entity ID", "Interested Party ID", "% Share of Ownership", "Share Imputed?")
+    wb = _fake_workbook(
+        {"Entity Ownership": [header, ("E1", "E2", 25, "imputed value")]}
+    )
+    _with_artifact(monkeypatch, _build_script().extract_imputed_shares(wb))
+    monkeypatch.setattr(_ct_mod, "_entity_index", {})
+    monkeypatch.setattr(
+        _ct_mod,
+        "_rel_owners",
+        _load_rel_csv(monkeypatch, _REL_CSV_HEAD + "\nE1,Sub,E2,Co,25.0,\n"),
+    )
+    [owner] = _ct_mod._parse_owners("E1")
+    assert owner["share_imputed"] is True

@@ -1640,7 +1640,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.28.1,<2" },
     { name = "opencc-python-reimplemented", specifier = ">=0.1.7" },
     { name = "openpyxl", specifier = ">=3.1" },
-    { name = "pillow", specifier = ">=12.3.0" },
+    { name = "pillow", specifier = ">=13.0.0" },
     { name = "pycountry", specifier = ">=24.6" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pydantic-settings", specifier = ">=2.14.2" },

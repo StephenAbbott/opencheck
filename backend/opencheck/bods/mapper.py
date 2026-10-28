@@ -349,10 +349,13 @@ from .mappers.climatetrace import (  # noqa: F401  (re-exported, Phase 246)
     _GEM_UNIDENTIFIED_OWNERS,
     _GEM_UNIDENTIFIED_OWNER_IDS,
     _GEM_UNIDENTIFIED_REASON,
+    GEM_IMPUTED_SHARE_NOTE,
     _emit_gem_interested_party,
     _gem_entity_type,
+    _gem_share,
     _gem_status_note,
     _gem_unidentified_owner,
+    _note_imputed_share,
     map_climatetrace,
 )
 from .mappers.austria import (  # noqa: F401  (re-exported, Phase 246)

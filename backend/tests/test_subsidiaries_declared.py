@@ -166,6 +166,15 @@ def test_gem_direct_subsidiaries_unavailable_when_no_data(monkeypatch) -> None:
     assert gem_direct_subsidiaries(SHELL) == {"available": False, "rows": []}
 
 
+def test_gem_direct_subsidiaries_reads_a_zero_share_as_no_stated_size(gem_stub) -> None:
+    """GEM writes 0 for "size not known" — the list shows no percentage."""
+    _, _, rel = gem_stub
+    rel["E1"][2]["percent"] = 0.0
+    by_id = {r["gem_id"]: r for r in gem_direct_subsidiaries(SHELL)["rows"]}
+    assert by_id["E4"]["percent"] is None
+    assert by_id["E3"]["percent"] == 50.0
+
+
 def test_gem_direct_subsidiaries_resolves_lei_from_index_then_column(gem_stub) -> None:
     decl = gem_direct_subsidiaries(SHELL)
     assert decl is not None and decl["available"] and decl["gem_id"] == "E1"

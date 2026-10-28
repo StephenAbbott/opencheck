@@ -9,7 +9,7 @@ GEOT release (roughly twice a year) and the generated artifact is committed:
         ~/Downloads/Global-Energy-Ownership-Tracker-August-2026-V2.xlsx \
         --release "August 2026"
 
-Output: ``opencheck/data/geot_projects.json.gz`` with two data sections.
+Output: ``opencheck/data/geot_projects.json.gz`` with three data sections.
 
 ``entities`` — a per-entity summary of the precomputed ownership closure in
 the 9 per-tracker sheets:
@@ -45,6 +45,15 @@ entities that carry any of them:
   always split (see ``_parse_status_urls``).
 * ``jv: true`` — the ``Joint Venture`` column; the literal ``"Unknown"``
   (4 rows in August 2026) is treated as absent.
+
+``imputed_shares`` (built from the Entity Ownership sheet, whose ``Share
+Imputed?`` column GEM added in August 2026) — the entity-to-entity holdings
+whose percentage GEM marks ``imputed value``, as
+``{subject_id: {interested_party_id: share}}``. Only imputed rows with a
+share above 0 are kept: a 0 is "size not known" and is published as no share
+at all, and a ``known value, not imputed`` row needs no record. The adapter
+flags a holding from here only when the relationships CSV gives the same
+figure. A workbook without the sheet or the column yields an empty section.
 
 Requires openpyxl (tooling-only dependency, not needed at runtime):
     pip install openpyxl
@@ -289,6 +298,81 @@ def extract_entity_status(wb: object) -> dict[str, dict]:
     return records
 
 
+# --- Entity Ownership sheet: which shares GEM imputed (August 2026 onwards) ---
+
+_EO_SHEET = "Entity Ownership"
+_EO_SUBJECT = "Subject Entity ID"
+_EO_PARTY = "Interested Party ID"
+_EO_SHARE = "% Share of Ownership"
+_EO_IMPUTED = "Share Imputed?"
+
+_SHARE_IMPUTED_WORDS: dict[str, bool] = {
+    "imputed value": True,
+    "known value, not imputed": False,
+    "true": True,
+    "yes": True,
+    "1": True,
+    "false": False,
+    "no": False,
+    "0": False,
+}
+
+
+def _parse_share_imputed(raw: object) -> bool | None:
+    """GEM's "Share Imputed?" cell → True / False, or None when blank or not
+    a value GEM uses.
+
+    Kept in step with ``opencheck/sources/climatetrace.py::_parse_share_imputed``
+    (the CSV carrier) — ``tests/test_climatetrace.py`` pins the two equal.
+    """
+    if isinstance(raw, bool):
+        return raw
+    text = " ".join(str(raw if raw is not None else "").split()).casefold()
+    return _SHARE_IMPUTED_WORDS.get(text)
+
+
+def extract_imputed_shares(wb: object) -> dict[str, dict[str, float]]:
+    """{subject_id: {interested_party_id: share}} for the holdings GEM imputed."""
+    if _EO_SHEET not in wb.sheetnames:  # type: ignore[attr-defined]
+        print(f"No {_EO_SHEET!r} sheet — skipping imputed_shares")
+        return {}
+    ws = wb[_EO_SHEET]  # type: ignore[index]
+    rows = ws.iter_rows(values_only=True)
+    header = [str(h).strip() if h is not None else "" for h in next(rows)]
+    subject_i = _col(header, _EO_SHEET, _EO_SUBJECT)
+    party_i = _col(header, _EO_SHEET, _EO_PARTY)
+    share_i = _col(header, _EO_SHEET, _EO_SHARE)
+    imputed_i = _col(header, _EO_SHEET, _EO_IMPUTED, required=False)
+    if imputed_i is None:
+        print(f"{_EO_SHEET} sheet predates the Share Imputed? column — skipping")
+        return {}
+
+    out: dict[str, dict[str, float]] = {}
+    n_rows = n_imputed = n_zero = 0
+    for row in rows:
+        subject = str(row[subject_i] or "").strip()
+        party = str(row[party_i] or "").strip()
+        if not subject or not party:
+            continue
+        n_rows += 1
+        if _parse_share_imputed(row[imputed_i]) is not True:
+            continue
+        n_imputed += 1
+        try:
+            share = float(row[share_i])
+        except (TypeError, ValueError):
+            continue
+        if share <= 0:
+            n_zero += 1
+            continue
+        out.setdefault(subject, {})[party] = share
+    print(
+        f"{_EO_SHEET:32s} rows={n_rows:6d} imputed={n_imputed:5d} "
+        f"(zero={n_zero}, kept={sum(len(v) for v in out.values())})"
+    )
+    return out
+
+
 def build(xlsx_path: Path, release: str) -> dict:
     import openpyxl  # tooling-only dependency
 
@@ -389,6 +473,7 @@ def build(xlsx_path: Path, release: str) -> dict:
     }
 
     entity_status = extract_entity_status(wb)
+    imputed_shares = extract_imputed_shares(wb)
 
     return {
         "meta": {
@@ -402,9 +487,11 @@ def build(xlsx_path: Path, release: str) -> dict:
             "live_buckets": sorted(LIVE_BUCKETS),
             "entity_count": len(out_entities),
             "entity_status_count": len(entity_status),
+            "imputed_share_count": sum(len(v) for v in imputed_shares.values()),
         },
         "entities": out_entities,
         "entity_status": entity_status,
+        "imputed_shares": imputed_shares,
     }
 
 
@@ -427,7 +514,8 @@ def main() -> None:
     size_kb = args.out.stat().st_size / 1024
     print(
         f"\nWrote {args.out} ({size_kb:.0f} KB, {data['meta']['entity_count']} entities, "
-        f"{data['meta']['entity_status_count']} entity-status records)"
+        f"{data['meta']['entity_status_count']} entity-status records, "
+        f"{data['meta']['imputed_share_count']} imputed shares)"
     )
 
 
