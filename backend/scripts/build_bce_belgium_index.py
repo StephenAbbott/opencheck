@@ -172,6 +172,24 @@ def newest_full_zip(listing_html: str) -> tuple[str, str] | None:
     return name, ym
 
 
+def describe_listing(html: str) -> str:
+    """The page's ``<title>``, or its first 200 characters of text."""
+    m = re.search(r"<title[^>]*>(.*?)</title>", html, re.S | re.I)
+    if m:
+        return " ".join(m.group(1).split())
+    text = " ".join(re.sub(r"<[^>]+>", " ", html).split())
+    return text[:200]
+
+
+def listing_links(html: str) -> list[str]:
+    """Every distinct ``href``/``src`` on the page, in order of appearance."""
+    seen: list[str] = []
+    for m in re.finditer(r"""(?:href|src)\s*=\s*["']([^"']+)["']""", html, re.I):
+        if m.group(1) not in seen:
+            seen.append(m.group(1))
+    return seen
+
+
 def download(work: Path, username: str, password: str) -> Path:
     """Log in, list the files, fetch the newest full ZIP into ``work``."""
     import http.cookiejar
@@ -185,11 +203,20 @@ def download(work: Path, username: str, password: str) -> Path:
     opener.open(f"{PORTAL}/login", timeout=60).read()
     body = urllib.parse.urlencode({"j_username": username, "j_password": password}).encode()
     resp = opener.open(LOGIN_URL, data=body, timeout=60)
-    listing = opener.open(FILES_URL, timeout=60).read().decode("utf-8", "replace")
+    log.info("login answered HTTP %s at %s", resp.status, resp.geturl())
+    files = opener.open(FILES_URL, timeout=60)
+    listing = files.read().decode("utf-8", "replace")
     if "j_spring_security_check" in listing or "j_username" in listing:
         raise RefusedInput(f"KBO open data: login refused (HTTP {resp.status})")
     newest = newest_full_zip(listing)
     if newest is None:
+        # Say what the portal served instead, so a changed listing page or
+        # file name can be read off the workflow log: the final URL, the
+        # title and the links — never the credentials or the session.
+        log.error("files listing: HTTP %s at %s (%d bytes)", files.status, files.geturl(), len(listing))
+        log.error("files listing title: %s", describe_listing(listing))
+        for href in listing_links(listing)[:60]:
+            log.error("files listing link: %s", href)
         raise RefusedInput("KBO open data: no KboOpenData_*_Full.zip on the files listing")
     name, ym = newest
     work.mkdir(parents=True, exist_ok=True)
