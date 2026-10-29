@@ -324,3 +324,32 @@ def test_the_repository_readme_has_one_latest_line():
 def test_every_pending_changeset_in_the_repository_parses():
     for p in sp.load_pending():
         assert p.title and p.readme and p.body
+
+
+def test_a_readme_count_bump_beside_a_pending_file_is_not_a_hand_stamp(tmp_path, monkeypatch):
+    """A new source edits the README's intro (the source count) by the
+    adapter checklist; only the ``**Latest: Phase N**`` line is the stamp's.
+    PRs #502 / #503 were refused for a count bump (29 Oct 2026)."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    readme = "Fans out across 52 sources.\n\n## Status\n\n**Latest: Phase 416** — old.\n"
+    (repo / "README.md").write_text(readme)
+    _git(repo, "add", "."); _git(repo, "commit", "-q", "-m", "init")
+    _git(repo, "checkout", "-q", "-b", "feat/x")
+    (repo / "README.md").write_text(readme.replace("52 sources", "53 sources"))
+    _git(repo, "add", "."); _git(repo, "commit", "-q", "-m", "count")
+
+    monkeypatch.setattr(sp, "REPO", repo)
+    monkeypatch.setattr(sp, "README_MD", repo / "README.md")
+    monkeypatch.chdir(repo)
+    changed = sp.changed_against("main")
+    assert changed == {"README.md"}
+    assert sp.stamped_files_touched("main", changed) == []
+
+    # The Latest line moved: that is a hand stamp.
+    (repo / "README.md").write_text(
+        readme.replace("52 sources", "53 sources").replace("Phase 416", "Phase 417")
+    )
+    _git(repo, "add", "."); _git(repo, "commit", "-q", "-m", "stamp")
+    assert sp.stamped_files_touched("main", sp.changed_against("main")) == ["README.md"]
