@@ -412,11 +412,15 @@ def test_cyprus_corporate_official_has_no_assumed_jurisdiction() -> None:
 
     stmts = list(map_cyprus_drcor({
         "reg_no": "123456",
-        "organisation": {"organisation_name": "TEST HOLDINGS LTD", "organisation_type_code": "HE"},
+        "type_code": "C",
+        "name": "TEST HOLDINGS LTD",
+        "org_type": "Εταιρεία",
+        "sub_type": "Ιδιωτική",
+        "status": "Εγγεγραμμένη",
+        "status_class": "live",
         "officials": [
-            {"person_or_organisation_name": "OFFSHORE SECRETARIAL SERVICES LIMITED",
-             "official_position": "Secretary"},
-            {"person_or_organisation_name": "ANDREAS GEORGIOU", "official_position": "Director"},
+            {"seq": 0, "name": "OFFSHORE SECRETARIAL SERVICES LIMITED", "position": "Γραμματέας"},
+            {"seq": 1, "name": "ANDREAS GEORGIOU", "position": "Διευθυντής"},
         ],
     }))
     secretary = next(

@@ -1,187 +1,208 @@
 """Cyprus — DRCOR (data.gov.cy) → BODS.
 
-Split out of ``mapper.py`` in Phase 246, unchanged; ``mapper.py``
-re-exports every name defined here.
+Split out of ``mapper.py`` in Phase 246; rewritten for the index built from
+the register's own CSV columns when the source was wired into the lookup
+(the Cyprus wiring, 29 Oct 2026). ``mapper.py`` re-exports every name here.
 """
 
 from __future__ import annotations
 
-import re
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from .. import liveness as _liveness
+from ..officer_roles import mark_officer
 from ..statements import (
-    content_addressed,
     SOURCE_NAMES,
     _addr,
-    _stable_id,
+    content_addressed,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
 )
 
-
 # ---------------------------------------------------------------------------
 # Cyprus DRCOR (data.gov.cy open data)
 # ---------------------------------------------------------------------------
 #
-# DRCOR's open dataset carries company + role-holder data but no
-# shareholders, so this mapper produces:
-#   * one entityStatement for the organisation,
-#   * one personStatement / entityStatement per official, and
-#   * one relationshipStatement (seniorManagingOfficial) per official.
+# The register publishes organisations and their officials — no shareholders
+# and no beneficial owners — so this mapper produces one entity statement for
+# the organisation and, per official, a party statement and a relationship.
+# An official is a name and one of nine positions: the register files no
+# person/organisation flag, no country and no date, so a corporate official
+# is told from its name (Cyprus secretaries are very often companies) and
+# carries no jurisdiction (Phase 295: an assumed CY would corroborate a
+# Cypriot name match it has no right to).
 
-
-# Tokens that mark an "official" row as a corporate body rather than a person
-# (Cyprus secretaries are frequently companies). Greek "ΛΤΔ" / "ΛΙΜΙΤΕΔ" and
-# the Latin equivalents.
-_CY_ORG_OFFICIAL_TOKENS = (
-    "LTD", "LIMITED", "PLC", "ΛΤΔ", "ΛΙΜΙΤΕΔ", "SECRETARIAL", "SERVICES LIMITED",
+_CY_SCHEME = "CY-DRCOR"
+_CY_SCHEME_NAME = (
+    "Cyprus registration number — Department of Registrar of Companies and "
+    "Intellectual Property"
 )
+
+#: Tokens that mark an official as a corporate body rather than a person —
+#: Greek "ΛΤΔ" / "ΛΙΜΙΤΕΔ" and the Latin forms. Matched on whole words.
+_CY_ORG_OFFICIAL_TOKENS = frozenset(
+    {"LTD", "LIMITED", "PLC", "LLC", "INC", "CORP", "CORPORATION", "SA", "S.A.", "AG",
+     "BV", "B.V.", "NV", "N.V.", "GMBH", "ΛΤΔ", "ΛΙΜΙΤΕΔ", "SECRETARIAL", "SECRETARIES",
+     "NOMINEES", "TRUSTEES", "SERVICES", "HOLDINGS", "ΕΠΕ", "Α.Ε.", "ΑΕ"}
+)
+
+#: Position → BODS interest. A director or alternate director is a senior
+#: managing official; a secretary, assistant / deputy secretary or an
+#: authorised person (an overseas company's representative) has no v0.4 role
+#: code and is ``otherInfluenceOrControl`` **marked as an officer** (the
+#: Phase 340 ``opencheckOfficerPosition`` rule, so the canvas draws a role,
+#: not control). A partner holds a partnership interest, not shares — the
+#: CVR Denmark reading (``otherInfluenceOrControl``, not an officer). The
+#: owner of a business name (``Ιδιοκτήτης``) is the person or company
+#: trading under it: ``otherInfluenceOrControl`` too, said in the details,
+#: because a business name has no capital to hold a share of.
+_CY_POSITION_INTERESTS: dict[str, tuple[str, bool]] = {
+    "Διευθυντής": ("seniorManagingOfficial", False),
+    "Αντικαταστάτης Διευθυντής": ("seniorManagingOfficial", False),
+    "Γραμματέας": ("otherInfluenceOrControl", True),
+    "Βοηθός Γραμματέας": ("otherInfluenceOrControl", True),
+    "Αναπληρωτής Γραμματέας": ("otherInfluenceOrControl", True),
+    "Εξουσιοδοτημένο Πρόσωπο": ("otherInfluenceOrControl", True),
+    "Ομόρρυθμος Συνέταιρος": ("otherInfluenceOrControl", False),
+    "Ετερόρρυθμος Συνέταιρος": ("otherInfluenceOrControl", False),
+    "Ιδιοκτήτης": ("otherInfluenceOrControl", False),
+}
 
 
 def _cy_official_is_org(name: str) -> bool:
-    up = (name or "").upper()
-    return any(tok in up for tok in _CY_ORG_OFFICIAL_TOKENS)
+    words = {w.strip(".,()") for w in (name or "").upper().replace("/", " ").split()}
+    return bool(words & _CY_ORG_OFFICIAL_TOKENS)
+
+
+def _cy_interest(position: str | None) -> dict[str, Any]:
+    """The interest for one official, from the register's position."""
+    from ...sources.cyprus_drcor import position_label
+
+    text = (position or "").strip()
+    kind, officer = _CY_POSITION_INTERESTS.get(text, ("otherInfluenceOrControl", True))
+    label = position_label(text) or "Official"
+    interest: dict[str, Any] = {
+        "type": kind,
+        "directOrIndirect": "direct",
+        "beneficialOwnershipOrControl": False,
+        "details": f"{label} ({text})" if text and label != text else label,
+    }
+    if officer:
+        mark_officer(interest, label)
+    return interest
 
 
 @content_addressed
 def map_cyprus_drcor(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CyprusDrcorAdapter fetch bundle to BODS v0.4 statements.
 
-    Yields:
-    * One entityStatement for the Cypriot organisation.
-    * One person/entity statement per official (corporate officials such as
-      secretarial companies are emitted as entityStatements).
-    * One relationshipStatement (seniorManagingOfficial) per official.
+    Yields one entityStatement for the organisation, then per official a
+    person or entity statement (corporate officials by name) and a
+    relationshipStatement typed by the register's position. A note card
+    (``not_found``) and a stub yield nothing.
     """
-    # Local import to avoid a circular import at module load time.
-    from ...sources.cyprus_drcor import _field as _cy_field
+    from ...sources.cyprus_drcor import (
+        TYPE_CODES,
+        display_number,
+        form_label,
+        register_identifier,
+    )
 
-    if not bundle or bundle.get("is_stub"):
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
         return
 
     reg_no = (bundle.get("reg_no") or "").strip()
-    organisation = bundle.get("organisation") or {}
-    officials = bundle.get("officials") or []
-    if not reg_no or not organisation:
+    type_code = (bundle.get("type_code") or "C").strip()
+    if not reg_no or type_code not in TYPE_CODES:
         return
 
-    name = _cy_field(organisation, "org_name") or bundle.get("name") or f"CY {reg_no}"
+    name = bundle.get("name") or bundle.get("legal_name") or f"CY {display_number(type_code, reg_no)}"
     source_url = bundle.get("link") or None
 
-    # ── Identifiers ───────────────────────────────────────────────────────
-    type_code = _cy_field(organisation, "org_type_code") or "HE"
-    display_reg = f"{type_code}{reg_no}" if type_code else reg_no
-    identifiers: list[dict[str, str]] = [
-        {
-            "id": display_reg,
-            "scheme": "CY-DRCOR",
-            "schemeName": (
-                "Cyprus registration number — Department of Registrar of "
-                "Companies and Intellectual Property"
-            ),
-        }
+    # Spelled as GLEIF files it under RA000161 ("ΗΕ 449149", Greek letters),
+    # so the two statements meet on CY-DRCOR.
+    identifiers = [
+        {"id": register_identifier(type_code, reg_no), "scheme": _CY_SCHEME, "schemeName": _CY_SCHEME_NAME}
     ]
-
-    # ── Founding date + address ───────────────────────────────────────────
-    reg_date = _cy_field(organisation, "reg_date")
-    founding_date: str | None = reg_date if re.match(r"\d{4}-\d{2}-\d{2}", reg_date) else None
 
     addresses: list[dict[str, Any]] = []
     addr = bundle.get("address") or {}
-    addr_parts = [
-        p for p in (
-            _cy_field(addr, "street"),
-            _cy_field(addr, "building"),
-            _cy_field(addr, "territory"),
-        ) if p
-    ]
-    if addr_parts:
-        addresses.append(_addr("registered", ", ".join(addr_parts), "CY"))
+    parts = [str(addr[k]).strip() for k in ("street", "building", "territory") if addr.get(k)]
+    if parts:
+        addresses.append(_addr("registered", ", ".join(parts), "CY"))
 
-    # ── 1. Entity statement ───────────────────────────────────────────────
-    company_stmt = make_entity_statement(
+    # The register's own type and sub-type wording, glossed, as the details
+    # of a closed-codelist entityType (Phase 214).
+    org_type = (bundle.get("org_type") or "").strip()
+    sub_type = (bundle.get("sub_type") or "").strip()
+    gloss = form_label(type_code, sub_type)
+    greek = " — ".join(p for p in (org_type, sub_type) if p)
+    if gloss and greek:
+        entity_details: str | None = f"{gloss[0].upper()}{gloss[1:]} ({greek})"
+    else:
+        entity_details = gloss or greek or None
+
+    company = make_entity_statement(
         source_id="cyprus_drcor",
-        local_id=reg_no,
+        local_id=f"{type_code}:{reg_no}",
         name=name,
         jurisdiction=("Cyprus", "CY"),
         identifiers=identifiers,
-        founding_date=founding_date,
+        founding_date=bundle.get("registered_on") or None,
         addresses=addresses,
+        entity_details=entity_details,
         source_url=source_url,
-        # The register's own organisation-type wording ("Limited Company")
-        # is a local name, so it goes to entityType.details. entityType.subtype
-        # is a closed codelist in BODS 0.4 and never takes free text (Phase 214).
-        entity_details=_cy_field(organisation, "org_type") or None,
     )
-    # DRCOR organisation status (Phase 151).
-    cy_status = (_cy_field(organisation, "org_status") or "").strip()
+    status = (bundle.get("status") or "").strip()
+    cls = (bundle.get("status_class") or "unknown").strip()
     _liveness.apply_register_status(
-        company_stmt,
+        company,
         source_label=SOURCE_NAMES["cyprus_drcor"],
         liveness=_liveness.classify(
-            cy_status,
-            live=("Active", "Εγγεγραμμένη"),
-            pending=("Under Liquidation", "In Liquidation", "Under Strike Off", "Strike Off Pending"),
-            terminal=("Dissolved", "Struck Off", "Deleted", "Liquidated"),
+            cls, live=("live",), pending=("pending",), terminal=("terminal",)
         ),
-        raw=cy_status or None,
+        raw=status or None,
+        since=bundle.get("status_date") or None,
     )
-    yield company_stmt
-    company_stmt_id = company_stmt["recordId"]
+    yield company
+    company_id = company["recordId"]
 
-    # ── 2. Officials ──────────────────────────────────────────────────────
-    seen: set[str] = set()
-    for idx, official in enumerate(officials):
-        full_name = _cy_field(official, "official_name")
+    seen: dict[str, str] = {}
+    for idx, official in enumerate(bundle.get("officials") or []):
+        full_name = (official.get("name") or "").strip()
         if not full_name:
             continue
-        position = _cy_field(official, "official_position") or "Official"
+        seq = official.get("seq", idx)
         is_org = _cy_official_is_org(full_name)
-        party_local = f"{reg_no}:official:{idx}:{full_name.lower()}"
-
-        if party_local not in seen:
+        party_key = ("entity" if is_org else "person") + ":" + full_name.casefold()
+        if party_key not in seen:
+            party_local = f"{type_code}:{reg_no}:official:{seq}"
             if is_org:
-                # DRCOR files no country for an official, so none is
-                # published: a corporate secretary or director is often a
-                # BVI or UK company, and an assumed CY would corroborate a
-                # Cypriot name match it has no right to (Phase 295).
-                party_stmt = make_entity_statement(
+                party = make_entity_statement(
                     source_id="cyprus_drcor",
                     local_id=party_local,
                     name=full_name,
+                    # The register files no country for an official (Phase 295).
                     jurisdiction=None,
                     source_url=source_url,
                 )
             else:
-                party_stmt = make_person_statement(
+                party = make_person_statement(
                     source_id="cyprus_drcor",
                     local_id=party_local,
                     full_name=full_name,
                     source_url=source_url,
                 )
-            yield party_stmt
-            seen.add(party_local)
-            party_stmt_id = party_stmt["recordId"]
-        else:
-            kind = "entity" if is_org else "person"
-            party_stmt_id = _stable_id("cyprus_drcor", kind, party_local)
-
-        interests: list[dict[str, Any]] = [
-            {
-                "type": "seniorManagingOfficial",
-                "directOrIndirect": "direct",
-                "beneficialOwnershipOrControl": False,
-                "details": position,
-            }
-        ]
+            yield party
+            seen[party_key] = party["recordId"]
         yield make_relationship_statement(
             source_id="cyprus_drcor",
-            local_id=f"{reg_no}:official:{idx}",
-            subject_statement_id=company_stmt_id,
-            interested_party_statement_id=party_stmt_id,
+            local_id=f"{type_code}:{reg_no}:official-rel:{seq}",
+            subject_statement_id=company_id,
+            interested_party_statement_id=seen[party_key],
             interested_party_type="entity" if is_org else "person",
-            interests=interests,
+            interests=[_cy_interest(official.get("position"))],
             source_url=source_url,
         )

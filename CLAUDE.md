@@ -1282,6 +1282,49 @@ Things that will be re-derived otherwise:
 
 ---
 
+## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
+
+`sources/cyprus_drcor.py`, `scripts/build_cyprus_drcor_index.py`,
+`.github/workflows/refresh-cyprus-drcor-index.yml`, `bods/mappers/cyprus.py`.
+Phase 47 wrote the adapter against a hand-built file with guessed columns and
+never wired it; this rebuilt it in the `jar_lithuania` shape. Things that will
+be re-derived otherwise:
+
+- **data.gov.cy answers a datacentre**, so the index is a GitHub workflow,
+  monthly on the 6th (the JAR / ЄДР hand-run arrangement is not needed). The
+  portal renumbers each file on publication (`organisations_102.csv`,
+  `registered_office_101.csv`, `organisation_officials_88.csv` on 29 Sept
+  2026); `current_links` scrapes the dataset page for the three current
+  `/sites/default/files/…` links and the cut is the newest `Last-Modified`.
+  A wrong link answers 200 with the SPA's HTML: the builder requires the
+  exact header row (`HEADERS`), `MIN_ROWS` per file and ≤ `MAX_MALFORMED`
+  rows, and writes nothing when it refuses.
+- **The whole register, keyed on `(type_code, reg_no)`.** Numbers repeat
+  across types (`C` company HE, `O` overseas company AE, `P` partnership S,
+  `B`/`N` business name BN); an HE number is type `C` and a search hit of
+  another type is `<type>:<number>`. Dates are day-first in the files.
+- **The identifier is spelled as GLEIF spells it**: `ΗΕ 449149`, Greek eta
+  and epsilon then a space (200 of 200 ISSUED records under RA000161) —
+  `register_identifier`, so the GLEIF and register statements corroborate
+  on `CY-DRCOR`; `display_number` is the Latin `HE 449149` for summaries and
+  `normalise_he_number` the digits for the deriver and the hop.
+- **Officials are a name and one of nine positions** — no person flag, no
+  country, no date. A corporate official is told by its name
+  (`_CY_ORG_OFFICIAL_TOKENS`; Cypriot secretaries are mostly fiduciary
+  companies) and carries no jurisdiction (Phase 295). Directors →
+  `seniorManagingOfficial`; secretaries and an overseas company's authorised
+  person → `otherInfluenceOrControl` **marked as an officer** (Phase 340);
+  partners and a business name's owner (`Ιδιοκτήτης`) →
+  `otherInfluenceOrControl`, unmarked. Nothing here is a shareholder or a
+  beneficial owner; the register publishes neither, and the finding never
+  says "none on file" for them (the JAR / ACRA precedent).
+- **Status words are Greek** (`STATUSES`, with the three rare ones the
+  29 Sept files carry); "Ευρωπαϊκή Εταιρεία" in the status column is a form,
+  left unknown. `ORGANISATION_STATUS_DATE` is the `dissolutionDate` of a
+  terminal status and the `since` of a pending one.
+- A search ranks companies before the other types and an exact name first.
+  Nothing touches the response `Cache` (the Phase 325 rule).
+
 ## Estonia is an index first, the page second (Phase 330)
 
 `sources/ariregister.py`, `scripts/build_ariregister_index.py`,

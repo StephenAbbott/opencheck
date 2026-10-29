@@ -610,9 +610,24 @@ class Settings(BaseSettings):
     socrata_app_token: str | None = Field(default=None, alias="SOCRATA_APP_TOKEN")
 
     # --- Cyprus DRCOR (data.gov.cy open data, CC BY 4.0) ---
-    # No API key. Pre-built SQLite index. Build with: python scripts/extract_cyprus.py
-    # Source (3 monthly CSVs): https://data.gov.cy/el/dataset/mitroo-eggegrammenon-etaireion-emporikon-eponymion-kai-synetairismon-stin-kypro
+    # No API key and no query API: the register is three monthly CSV
+    # distributions, built into a SQLite index by
+    # scripts/build_cyprus_drcor_index.py — monthly on GitHub Actions
+    # (.github/workflows/refresh-cyprus-drcor-index.yml; data.gov.cy answers a
+    # datacentre address) — and shipped as the ``cyprus-drcor-index`` release
+    # asset. Unset: the data-root default (``cyprus_drcor.sqlite``).
+    # Source: https://www.data.gov.cy/el/dataset/mitroo-eggegrammenon-etaireion-emporikon-eponymion-kai-synetairismon-stin-kypro
     cyprus_drcor_db_file: str | None = Field(default=None, alias="CYPRUS_DRCOR_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed —
+    # the ONRC / JAR rule. ~150 MB on disk, ~40 MB gzipped. Empty string
+    # disables the download.
+    cyprus_drcor_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "cyprus-drcor-index/cyprus_drcor.sqlite.gz"
+        ),
+        alias="CYPRUS_DRCOR_DB_URL",
+    )
 
     # --- Ukraine ЄДР (data.gov.ua open data, CC BY 4.0) ---
     # No API key, and no government API of any kind — the weekly XML bulk

@@ -1662,6 +1662,58 @@ def finding_jar_lithuania(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence([lead, form, withheld])
 
 
+def finding_cyprus_drcor(bundle: dict[str, Any]) -> str | None:
+    """What Cyprus's Registrar of Companies says: the register status with its
+    date, the legal form, and how many directors and secretaries are on file
+    — each count in the same voice when it is zero (rule 6), because the
+    open data lists officials for most companies and a company with none is
+    a fact about that company (the Cyprus wiring, 29 Oct 2026).
+
+    * **Not in the index** says so rather than that the company does not
+      exist: GLEIF may file a number the register does not use.
+    * A **strike-off, liquidation or dissolution** leads, dated where the
+      register dates it, because it changes a decision.
+    * Deliberately **not** said: that no shareholders or beneficial owners
+      are on file. The open data carries neither for any company, so the
+      clause would read the same on every row (the JAR / ACRA precedent).
+    """
+    from .sources.cyprus_drcor import form_label, status_class, status_label
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        return (
+            "Not in the Registrar of Companies' open data as indexed; GLEIF "
+            "may file a number the register does not use."
+        )
+    cls = status_class(bundle.get("status"))
+    since = str(bundle.get("status_date") or "").strip()
+    registered = str(bundle.get("registered_on") or "").strip()
+    gloss = status_label(bundle.get("status")) or ""
+    if cls == "live":
+        lead = f"On the register since {registered}" if registered else "On the register"
+    elif gloss:
+        lead = f"{gloss[0].upper()}{gloss[1:]}" + (f" since {since}" if since else "")
+    else:
+        lead = f"On the register since {registered}" if registered else "On the register"
+    form = form_label(bundle.get("type_code"), bundle.get("sub_type"))
+    officials = bundle.get("officials") or []
+    counts: list[str] = []
+    if (bundle.get("type_code") or "C") == "C":
+        directors = sum(
+            1 for o in officials if "Διευθυντής" in str(o.get("position") or "")
+        )
+        secretaries = sum(
+            1 for o in officials if "Γραμματέας" in str(o.get("position") or "")
+        )
+        counts.append(f"{directors} director{'' if directors == 1 else 's'} on file")
+        counts.append(f"{secretaries} secretar{'y' if secretaries == 1 else 'ies'}")
+    else:
+        n = len(officials)
+        counts.append(f"{n} official{'' if n == 1 else 's'} on file")
+    return clauses_to_sentence([lead, form, *counts])
+
+
 def finding_ariregister(bundle: dict[str, Any]) -> str | None:
     """What the Estonian e-Business Register says: the company's status and
     legal form, and how many shareholders, persons on the registry card and

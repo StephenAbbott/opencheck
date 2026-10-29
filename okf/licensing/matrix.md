@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-10-07"
+timestamp: "2026-10-29"
 ---
 
 # Source licence matrix
@@ -32,6 +32,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Hong Kong Companies Registry (`cr_hongkong`) | `DATA.GOV.HK-Terms` | yes | yes | no |
 | CRO — Companies Registration Office Ireland (`cro`) | `CC-BY-4.0` | yes | yes | no |
 | CVR — Det Centrale Virksomhedsregister (`cvr_denmark`) | `Danish Open Government Data (CVR brugervilkår)` | yes | yes | no |
+| Cyprus DRCOR — Registrar of Companies (`cyprus_drcor`) | `CC-BY-4.0` | yes | yes | no |
 | DLCP — Department of Licensing and Consumer Protection Corporations Division (Washington, DC) (`dlcp_dc`) | `CC-BY-4.0` | yes | yes | no |
 | EITI — Extractive Industries Transparency Initiative (`eiti`) | `EITI open data (free reuse with attribution)` | yes | yes | no |
 | EITI Company Assessment (`eiti_assessment`) | `EITI content-use policy (free reuse with attribution)` | conditional | yes | no |
