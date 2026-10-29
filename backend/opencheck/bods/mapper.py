@@ -410,6 +410,10 @@ from .mappers.denmark import (  # noqa: F401  (re-exported, Phase 246)
 )
 from .mappers.cyprus import (  # noqa: F401  (re-exported, Phase 246)
     _CY_ORG_OFFICIAL_TOKENS,
+    _CY_POSITION_INTERESTS,
+    _CY_SCHEME,
+    _CY_SCHEME_NAME,
+    _cy_interest,
     _cy_official_is_org,
     map_cyprus_drcor,
 )

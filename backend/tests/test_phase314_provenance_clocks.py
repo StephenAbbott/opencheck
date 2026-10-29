@@ -14,7 +14,6 @@ today with no ``retrievedAt``. Both are pinned here, in both directions.
 from __future__ import annotations
 
 import ast
-import csv
 import datetime as dt
 import os
 import sqlite3
@@ -328,39 +327,24 @@ class TestEdrUkraine:
 
 
 class TestCyprusDrcor:
-    def test_the_release_date_is_persisted(self, tmp_path):
-        import extract_cyprus
-
-        orgs = tmp_path / "organisations.csv"
-        with orgs.open("w", newline="", encoding="utf-8") as fh:
-            w = csv.writer(fh)
-            w.writerow(["registration_no", "organisation_name"])
-            w.writerow(["HE123456", "EXAMPLE LTD"])
-        out = tmp_path / "cyprus.db"
-        assert extract_cyprus.main([
-            "--organisations-csv", str(orgs), "--output", str(out),
-            "--release-date", "2026-09-30",
-        ]) == 0
-        meta = provenance.index_meta(sqlite3.connect(out))
-        assert meta["release_date"] == "2026-09-30"
-        assert provenance.parse_moment(meta["built_at"]) is not None
+    """The Cyprus wiring: the index declares the portal's cut as the source's
+    clock and the build time as OpenCheck's."""
 
     def test_the_adapter_declares_both_clocks(self):
-        from opencheck.sources.cyprus_drcor import CyprusDrcorAdapter
+        from opencheck.sources.cyprus_drcor import declare_snapshot
 
-        adapter = CyprusDrcorAdapter()
-        adapter._meta = {"built_at": "2026-10-01T09:00:00Z", "release_date": "2026-09-30"}
         with provenance.recording() as rec:
-            adapter._record_index_provenance()
+            declare_snapshot({"built_at": "2026-10-01T09:00:00Z", "cut": "2026-09-29"})
         resolved = rec.resolve()
-        assert resolved.source_as_of == datetime(2026, 9, 30, tzinfo=UTC)
+        assert resolved.liveness == "snapshot"
+        assert resolved.source_as_of == datetime(2026, 9, 29, tzinfo=UTC)
         assert resolved.retrieved_at == datetime(2026, 10, 1, 9, tzinfo=UTC)
 
     def test_an_index_without_meta_claims_no_cut(self):
-        from opencheck.sources.cyprus_drcor import CyprusDrcorAdapter
+        from opencheck.sources.cyprus_drcor import declare_snapshot
 
         with provenance.recording() as rec:
-            CyprusDrcorAdapter()._record_index_provenance()
+            declare_snapshot({})
         (obs,) = rec.observations
         assert obs.liveness == "snapshot"
         assert obs.retrieved_at is None and obs.source_as_of is None

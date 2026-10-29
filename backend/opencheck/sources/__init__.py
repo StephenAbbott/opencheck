@@ -42,6 +42,7 @@ from .gleif import GleifAdapter
 from .inpi import InpiAdapter
 from .edr_ukraine import EdrUkraineAdapter
 from .jar_lithuania import JarLithuaniaAdapter
+from .cyprus_drcor import CyprusDrcorAdapter
 from .krs_poland import KrsPolandAdapter
 from .kvk import KvKAdapter
 from .malta_mbr import MaltaMbrAdapter
@@ -96,6 +97,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "inpi": InpiAdapter(),
     "jar_lithuania": JarLithuaniaAdapter(),
     "edr_ukraine": EdrUkraineAdapter(),
+    "cyprus_drcor": CyprusDrcorAdapter(),
     "krs_poland": KrsPolandAdapter(),
     "kvk": KvKAdapter(),
     "malta_mbr": MaltaMbrAdapter(),

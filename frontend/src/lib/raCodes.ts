@@ -221,6 +221,14 @@ export const RA_CODES: Record<string, RaEntry> = {
     formatHint: "9 digits",
     formatPattern: /^\d{9}$/,
   },
+  CY: {
+    raCode: "RA000161",
+    countryName: "Cyprus",
+    idLabel: "Registration number (HE number)",
+    placeholder: "HE 449149",
+    formatHint: "HE followed by up to 6 digits",
+    formatPattern: /^(HE|ΗΕ)?\s?\d{1,6}$/i,
+  },
   MT: {
     raCode: "RA000443",
     countryName: "Malta",

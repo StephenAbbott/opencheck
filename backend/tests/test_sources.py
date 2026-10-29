@@ -25,7 +25,6 @@ _DELIBERATELY_UNREGISTERED = {
     "bods_gleif",       # Open Ownership bulk BODS — wired via lookup pipeline only
     "bods_uk_psc",      # Open Ownership bulk BODS (UK PSC)
     "brightquery",      # paid source, not enabled
-    "cyprus_drcor",     # bulk download only
 }
 
 
@@ -131,6 +130,9 @@ _IDENTIFIER_KEYED = {
     # edr_ukraine: the same shape over the ЄДР index, reached from the EDRPOU
     # GLEIF files under three authorities; no stub row without an index.
     "edr_ukraine",
+    # cyprus_drcor (the Cyprus wiring): the same LIKE over the local index;
+    # a fresh test process has none.
+    "cyprus_drcor",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "eiti_zambia", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "meip", "nz_companies", "opencorporates", "inpi", "kvk",

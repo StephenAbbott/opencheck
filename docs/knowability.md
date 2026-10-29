@@ -279,7 +279,7 @@ Data generated 2026-10-29T11:16:48+00:00; sentences rendered as of 2026-10-29. *
 
 ### Cyprus (CY) — verified 2026-10-21
 
-> Cyprus Register of Beneficial Owners is open to authorities and obliged entities only. OpenCheck reads no Cyprus register, so an owner absent from this report says nothing about what Cyprus holds.
+> Cyprus Register of Beneficial Owners is open to authorities and obliged entities only. OpenCheck reads Cyprus DRCOR — Registrar of Companies for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -295,7 +295,7 @@ Data generated 2026-10-29T11:16:48+00:00; sentences rendered as of 2026-10-29. *
 | 6AMLD LIA / BORIS | No / Yes |
 | 6AMLD details | Law 25(I)/2026 (Official Gazette No. 5079, 20.3.2026), harmonising with Art. 74 of Directive (EU) 2024/1640, amends s.61A(6) (companies) and s.61B (trusts) so that a person who proves a legitimate interest ('έννομο συμφέρον') may access beneficial ownership information. It transposes only Art. 74, not Arts 11, 12, 13 or 15, so it introduces the concept of legitimate interest but none of the specific 6AMLD access rules. No operating application route confirmed as of 21 Oct 2026 (DRCIP privacy policy of 26/06/2025 still lists only authorities and obliged entities). |
 | Next FATF/FSRB assessment | MONEYVAL; onsite 2028-10-01; plenary 2029-05-01 |
-| OpenCheck reads | *no adapter for this jurisdiction* |
+| OpenCheck reads | `cyprus_drcor` |
 | OpenCheck source (note) | cyprus_drcor Untitled |
 
 ### Czechia (CZ) — verified 2026-09-18

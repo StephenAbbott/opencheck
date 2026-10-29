@@ -60,6 +60,7 @@ VERIFIED: dict[str, str] = {
     "HR": "RA000156",  # Sudski registar
     "IE": "RA000402",  # CRO
     "LT": "RA000430",  # Registrų centras
+    "CY": "RA000161",  # DRCOR — 7,449 ISSUED LEIs file "ΗΕ 449149" (Greek letters), 29 Oct 2026
     "LV": "RA000423",  # Uzņēmumu Reģistrs
     "MT": "RA000443",  # Malta Business Registry
     "NL": "RA000463",  # KvK

@@ -62,7 +62,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
 - **Data:** organisations, registered office addresses, and officials (directors/secretaries) from the *Register of Registered Companies, Commercial Names and Cooperatives in Cyprus*. No shareholder/ownership data is published.
 - **Portal:** <https://data.gov.cy/> (High-Value Dataset, three monthly CSVs). Public search UI: <https://efiling.drcor.mcit.gov.cy/DrcorPublic/SearchForm.aspx>
-- **Access:** Bulk CSV download only — data.gov.cy exposes no working datastore query API for these resources (`/api/1/datastore/query` returns HTTP 404). The CSVs are built into a local SQLite index via `scripts/extract_cyprus.py`.
+- **Access:** Bulk CSV download only — data.gov.cy exposes no working datastore query API for these resources (`/api/1/datastore/query` returns HTTP 404). The three CSVs are built into a SQLite index by `scripts/build_cyprus_drcor_index.py`, monthly on GitHub Actions (`refresh-cyprus-drcor-index.yml`), shipped as the `cyprus-drcor-index` release asset and downloaded by the backend at boot.
 - **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Attribution:** "Contains information from the Department of Registrar of Companies and Intellectual Property (Republic of Cyprus), published on data.gov.cy under CC BY 4.0."
 - **Entry point:** `cy_he` (HE registration number) derived from GLEIF RA code `RA000161`
