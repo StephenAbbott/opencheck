@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 415** — The backend test suite now reads a temporary data root seeded from the tracked data files, so a developer's downloaded release assets never change a test result.
+**Latest: Phase 416** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, moving Austria to "legitimate-interest route in law, not yet open" and recording the WiEReG 2027's passage through Parliament.
 
 → [Full development history](docs/status.md)
 
