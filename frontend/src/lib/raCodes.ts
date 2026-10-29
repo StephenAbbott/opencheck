@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 24 countries that have
+ * GLEIF Registration Authority codes for the 25 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
@@ -289,6 +289,16 @@ export const RA_CODES: Record<string, RaEntry> = {
     placeholder: "17162543",
     // 295 of the 304 Serbian GLEIF records sit under RA000517 (APR), every one
     // an 8-digit matični broj, 2026-09-17.
+    formatHint: "8 digits",
+    formatPattern: /^\d{8}$/,
+  },
+  TW: {
+    raCode: "RA000551",
+    countryName: "Taiwan",
+    idLabel: "Unified Business Number (統一編號)",
+    placeholder: "22099131",
+    // 504 ISSUED records under RA000551 (Ministry of Economic Affairs), every
+    // one a bare 8-digit UBN, 2026-10-29. RA001009 (FSC) files funds.
     formatHint: "8 digits",
     formatPattern: /^\d{8}$/,
   },

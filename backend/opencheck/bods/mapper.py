@@ -314,6 +314,29 @@ from .mappers.malta import (  # noqa: F401  (re-exported, Phase 246)
 from .mappers.hong_kong import (  # noqa: F401  (re-exported, Phase 246)
     map_cr_hongkong,
 )
+from .mappers.taiwan import (  # noqa: F401  (re-exported)
+    _tw,
+    TW_STATUS_LIVENESS,
+    TW_FOREIGN_PREFIXES,
+    TW_LEGAL_FORMS,
+    TW_POSITIONS,
+    TW_HOLDINGS_CAVEAT,
+    tw_foreign_prefix,
+    tw_legal_form,
+    tw_is_limited_company,
+    tw_position,
+    tw_holding_denominator,
+    tw_holders,
+    tw_percentages,
+    _tw_holding_details,
+    _tw_seat_interest,
+    _tw_shareholding_interest,
+    _tw_percentage_note,
+    _tw_no_percentage_note,
+    _tw_entity_details,
+    _tw_suspension_note,
+    map_gcis_taiwan,
+)
 from .mappers.brazil import (  # noqa: F401  (re-exported, Phase 246)
     _BR_OWNER_KEYWORDS,
     _br_country_code,
@@ -631,6 +654,11 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # the old seven-character CR No.
     "RA000388": ("HK-BRN", "Hong Kong Business Registration Number (Unique Business Identifier)"),
     "RA000389": ("HK-BRN", "Hong Kong Business Registration Number (Unique Business Identifier)"),
+    # Taiwan — Ministry of Economic Affairs. ``registeredAs`` is the bare
+    # 8-digit Unified Business Number on every ISSUED record but three (504
+    # checked, 29 Oct 2026). RA001009 (Financial Supervisory Commission)
+    # files funds, which the company register lacks, and is left unmapped.
+    "RA000551": ("TW-CR", "Unified Business Number (統一編號), Ministry of Economic Affairs company register"),
     # Singapore — ACRA Business Registry. ``registeredAs`` is the Unique Entity
     # Number on 12,292 of 13,326 active SG LEI records (2026-09-10).
     "RA000523": ("SG-ACRA", "Unique Entity Number (UEN) — Accounting and Corporate Regulatory Authority (Singapore)"),

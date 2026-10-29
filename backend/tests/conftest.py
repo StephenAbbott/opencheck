@@ -49,6 +49,7 @@ os.environ.setdefault("OPENCHECK_GLEIF_RATE_LIMIT_PER_MINUTE", "0")
 # Likewise the per-host throttle for KvK open data (one request a minute):
 # tests/test_host_throttle.py and test_kvk.py re-enable it where they need it.
 os.environ.setdefault("OPENCHECK_KVK_RATE_LIMIT_PER_MINUTE", "0")
+os.environ.setdefault("OPENCHECK_GCIS_RATE_LIMIT_PER_MINUTE", "0")
 
 # The suite is dataless by construction, as it is offline: the data root is a
 # per-session temporary tree seeded from the tracked data/ files, and asset
