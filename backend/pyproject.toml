@@ -141,6 +141,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [
     "live: opt-in smoke test that hits a real external API (GLEIF, Wikidata) to catch API-shape drift. Skipped unless --run-live (or OPENCHECK_RUN_LIVE=1).",
+    "local_data(*assets): reads real release assets (paths relative to the data root) from the developer's data root; skipped when any is absent. Every other test sees a dataless root seeded from the tracked data/ files (tests/_data_root.py).",
 ]
 
 [tool.ruff]
