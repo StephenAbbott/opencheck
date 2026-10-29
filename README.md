@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 416** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, moving Austria to "legitimate-interest route in law, not yet open" and recording the WiEReG 2027's passage through Parliament.
+**Latest: Phase 417** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, adding Belgium's national legitimate-interest test, presumed categories and protection regime to its 6AMLD details.
 
 → [Full development history](docs/status.md)
 
