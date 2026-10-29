@@ -230,65 +230,28 @@ def _env(monkeypatch):
     get_settings.cache_clear()
 
 
-def _bce_db(path: Path, *, with_meta: bool) -> Path:
-    import extract_bce
-
-    conn = sqlite3.connect(path)
-    for stmt in extract_bce._DDL.strip().split(";"):
-        if stmt.strip():
-            conn.execute(stmt)
-    conn.execute(
-        "INSERT INTO entities (enterprise_number, status, juridical_form, start_date, "
-        "name_nl, name_fr, name_de, address, link) VALUES (?,?,?,?,?,?,?,?,?)",
-        ("0403170701", "AC", "SA/NV", "1919-07-25", "ANHEUSER", "", "", "", ""),
-    )
-    if with_meta:
-        # KBO's meta.csv shape: two columns, day-first dates.
-        extract_bce._load_meta(
-            conn,
-            iter([
-                {"Variable": "SnapshotDate", "Value": "04-10-2026"},
-                {"Variable": "ExtractTimestamp", "Value": "05-10-2026 02:15:00"},
-                {"Variable": "ExtractNumber", "Value": "321"},
-            ]),
-        )
-    else:
-        conn.execute("DROP TABLE meta")
-    conn.commit()
-    conn.close()
-    return path
-
-
 class TestBceBelgium:
-    async def _fetch(self, db: Path, _env) -> Provenance:
-        from opencheck.sources.bce_belgium import BceBelgiumAdapter
+    """The Belgium wiring: the index declares KBO's ``SnapshotDate`` as the
+    register's clock and the build time as OpenCheck's."""
 
-        _env("BCE_BELGIUM_DB_FILE", str(db))
+    def test_the_adapter_declares_both_clocks(self):
+        from opencheck.sources.bce_belgium import declare_snapshot
+
         with provenance.recording() as rec:
-            bundle = await BceBelgiumAdapter().fetch("0403170701")
-        assert bundle["is_stub"] is False
-        return rec.resolve()
-
-    async def test_the_kbo_snapshot_date_is_the_cut(self, tmp_path, _env):
-        resolved = await self._fetch(_bce_db(tmp_path / "bce.db", with_meta=True), _env)
+            declare_snapshot({"built_at": "2026-10-05T03:00:00Z", "cut": "2026-10-04"})
+        resolved = rec.resolve()
         assert resolved.liveness == "snapshot"
         assert resolved.source_as_of == datetime(2026, 10, 4, tzinfo=UTC)
-        assert resolved.retrieved_at is not None  # meta.built_at — the build
-        assert resolved.retrieved_at.date() == dt.datetime.now(UTC).date()
+        assert resolved.retrieved_at == datetime(2026, 10, 5, 3, tzinfo=UTC)
 
-    async def test_a_db_built_before_the_meta_table_uses_its_build_time(self, tmp_path, _env):
-        db = _bce_db(tmp_path / "old.db", with_meta=False)
-        resolved = await self._fetch(db, _env)
-        assert resolved.source_as_of is None
-        assert resolved.retrieved_at is not None
-        assert resolved.retrieved_at.timestamp() == pytest.approx(db.stat().st_mtime, abs=1)
+    def test_an_index_without_meta_claims_no_cut(self):
+        from opencheck.sources.bce_belgium import declare_snapshot
 
-    def test_meta_is_stored_verbatim(self, tmp_path):
-        conn = sqlite3.connect(_bce_db(tmp_path / "bce.db", with_meta=True))
-        meta = provenance.index_meta(conn)
-        assert meta["SnapshotDate"] == "04-10-2026"
-        assert meta["ExtractNumber"] == "321"
-        assert provenance.parse_moment(meta["built_at"]) is not None
+        with provenance.recording() as rec:
+            declare_snapshot({})
+        (obs,) = rec.observations
+        assert obs.liveness == "snapshot"
+        assert obs.retrieved_at is None and obs.source_as_of is None
 
     @pytest.mark.parametrize(
         "raw,expected",

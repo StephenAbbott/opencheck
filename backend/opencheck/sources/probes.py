@@ -1045,21 +1045,28 @@ PROBES: dict[str, SourceProbe] = {
         snapshot_max_age_days=400,
         bods_mapper="map_eiti_zambia",
     ),
-    # --- registered but env-gated ----------------------------------------
     "bce_belgium": _p(
-        tier="inactive",
-        subject="Proximus",
+        tier="index",
+        subject="Proximus (BE 0202.239.951)",
         args=("0202239951",),
+        kwargs={"legal_name": "Proximus"},
+        expect_fields=("name", "enterprise_number", "status", "juridical_form"),
+        # SKIP without an index (the jar_lithuania shape), never allow_empty.
+        # warm_bulk_stores.py downloads the asset first.
+        requires_files=("bce_belgium.sqlite",),
         expect_liveness=frozenset({"snapshot"}),
-        expect_fields=("name", "enterprise_number"),
-        requires_env=("BCE_BELGIUM_DB_FILE",),
-        requires_env_files=("BCE_BELGIUM_DB_FILE",),
+        # Rebuilt monthly by refresh-bce-belgium-index.yml from KBO's monthly
+        # full file; seven weeks means a missed run or a missing secret, not
+        # a broken source.
+        snapshot_max_age_days=49,
         anchor_lei="549300CWRXC5EP004533",
         bods_mapper="map_bce_belgium",
         notes=(
-            "Reads a local KBO Open Data build. It recorded nothing at all "
-            "until Phase 121 — an Ariregister-class defect that would have "
-            "badged the data 'Placeholder' the day the source was switched on."
+            "The Belgium wiring (29 Oct 2026): a monthly index of the KBO "
+            "Open Data full file (active entities only; no owners, officers "
+            "or beneficial owners). It recorded nothing at all until Phase "
+            "121 — an Ariregister-class defect that would have badged the "
+            "data 'Placeholder' the day the source was switched on."
         ),
     ),
 }

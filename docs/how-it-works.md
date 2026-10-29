@@ -103,7 +103,7 @@ opencheck/
       config.py           Pydantic settings; env vars listed in docs/configuration.md
     scripts/
       extract_bods_subgraphs.py    Walk local OO SQLite dumps → per-LEI BODS bundles
-      extract_bce.py               Walk Belgian BCE/KBO open data ZIP → SQLite DB with FTS5 name index
+      build_bce_belgium_index.py   Log in to KBO Open Data, read the monthly full ZIP → SQLite index with FTS5 name search
       extract_brightquery.py       Walk BrightQuery bulk files → SQLite DB indexed by LEI
       build_geot_projects.py       Condense GEM GEOT xlsx ownership-closure sheets → geot_projects.json.gz
     tests/                pytest suite (1835 tests)

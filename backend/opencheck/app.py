@@ -197,6 +197,22 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # The Belgium wiring: the KBO Open Data index, rebuilt monthly by a GitHub
+    # workflow with the portal's free login, downloaded here when absent or
+    # changed. Until it lands ``bce_belgium`` is not announced.
+    try:
+        from .sources.bce_belgium import warm_index as warm_bce_belgium_index
+
+        stats = await asyncio.to_thread(warm_bce_belgium_index)
+        log.info("BCE Belgium index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "BCE Belgium index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # The Ukrainian ЄДР index — the same arrangement as Lithuania's: built
     # off-datacentre (data.gov.ua refuses the download from every datacentre
     # address) and downloaded here when absent or when the asset changed,

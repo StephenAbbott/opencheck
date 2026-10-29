@@ -525,33 +525,25 @@ def test_libcovebods_rpvs_slovakia_pep():
     assert_valid(map_rpvs_slovakia(bundle), "RPVS Slovakia — PEP KUV")
 
 
-def test_libcovebods_bce_belgium():
+async def test_libcovebods_bce_belgium(tmp_path):
+    """The bundle comes from the adapter's own ``fetch`` over an index the
+    real builder wrote, so the mapper reads the keys the adapter emits."""
+    from opencheck import provenance
     from opencheck.bods.mapper import map_bce_belgium
-    bundle = {
-        "enterpriseNumber": "0123456789",
-        "name": "Test BVBA",
-        "legalForm": {
-            "code": "014",
-            "label": "Besloten vennootschap met beperkte aansprakelijkheid",
-        },
-        "startDate": "2000-01-01",
-        "status": "Active",
-        "address": {
-            "streetAndNumber": "Testlaan 1",
-            "zipCode": "1000",
-            "municipality": "Brussel",
-            "country": "BE",
-        },
-        "contacts": [],
-        "persons": [
-            {
-                "name": "Jan Janssen",
-                "quality": "Zaakvoerder",
-                "startDate": "2010-01-01",
-            }
-        ],
-    }
-    assert_valid(map_bce_belgium(bundle), "BCE Belgium")
+    from opencheck.sources.bce_belgium import BceBelgiumAdapter
+    from tests.test_bce_belgium import PROXIMUS, _build, _point_at
+
+    out, _ = _build(tmp_path)
+    _point_at(out)
+    try:
+        with provenance.recording():
+            bundle = await BceBelgiumAdapter().fetch(PROXIMUS, legal_name="PROXIMUS")
+            statements = list(map_bce_belgium(bundle))
+    finally:
+        _point_at(None)
+    assert statements
+    _assert_details_not_subtype(statements, "BCE Belgium")
+    assert_valid(statements, "BCE Belgium")
 
 
 def test_libcovebods_acra_singapore():

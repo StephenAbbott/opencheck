@@ -127,6 +127,9 @@ _IDENTIFIER_KEYED = {
     # the onrc_romania case. The scraper it replaced returned an invented
     # "<query> (stub)" row naming a real company's code; nothing does now.
     "jar_lithuania",
+    # bce_belgium (the Belgium wiring): an FTS5 search over the local index;
+    # a fresh test process has none. The invented "<query> (stub)" row is gone.
+    "bce_belgium",
     # edr_ukraine: the same shape over the ЄДР index, reached from the EDRPOU
     # GLEIF files under three authorities; no stub row without an index.
     "edr_ukraine",

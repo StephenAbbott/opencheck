@@ -751,10 +751,22 @@ class Settings(BaseSettings):
     data_gov_in_api_key: str | None = Field(default=None, alias="DATA_GOV_IN_API_KEY")
 
     # --- Belgian Crossroads Bank for Enterprises (BCE / KBO) ---
-    # Pre-built SQLite index. Build with: python scripts/extract_bce.py
-    # Source: https://kbopub.economie.fgov.be/kbo-open-data/
-    # License: KBO reuse licence (attribution required, no API key needed).
+    # A monthly index of the KBO Open Data full file, built by
+    # scripts/build_bce_belgium_index.py (a GitHub workflow,
+    # refresh-bce-belgium-index.yml, with the KBO_OPEN_DATA_USERNAME /
+    # KBO_OPEN_DATA_PASSWORD secrets — the portal needs a free account) and
+    # shipped as the ``bce-belgium-index`` release asset. Unset: the
+    # data-root default (``bce_belgium.sqlite``).
     bce_belgium_db_file: str | None = Field(default=None, alias="BCE_BELGIUM_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed —
+    # the ONRC / JAR rule. Empty string disables the download.
+    bce_belgium_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "bce-belgium-index/bce_belgium.sqlite.gz"
+        ),
+        alias="BCE_BELGIUM_DB_URL",
+    )
 
     # --- SEC Form 13F institutional shareholders (Phases 333–334) ---
     # The index packed weekly-if-new by scripts/build_form13f_index.py
