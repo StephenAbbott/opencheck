@@ -65,7 +65,7 @@ where there is one: rebuilding an old dump does not make it new.
 | Source | `source_as_of` (cut) | `retrieved_at` (ours) |
 |--------|----------------------|------------------------|
 | `gleif` mirror, subsidiaries mirror | Golden Copy publish watermark | `meta.refreshed_at`, else `meta.built_at` |
-| `bce_belgium` | KBO `meta.csv` `SnapshotDate` (persisted by `extract_bce.py`) | `meta.built_at`, else the DB file's write time |
+| `bce_belgium` | KBO `meta.csv` `SnapshotDate` (persisted as `meta.cut` by `build_bce_belgium_index.py`) | `meta.built_at` |
 | `edr_ukraine` | `UO.xml`'s own timestamp inside the ZIP (`meta.export_date`) | `meta.built_at` |
 | `cyprus_drcor` | `--release-date` passed to `extract_cyprus.py` | `meta.built_at` |
 | `onrc_romania` | the export slug date | `meta.built_at`, else the downloaded file's write time |

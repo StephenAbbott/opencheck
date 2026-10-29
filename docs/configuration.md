@@ -18,7 +18,7 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `ZEFIX_PASSWORD` | Zefix (Switzerland) API password. |
 | `OPENCORPORATES_API_KEY` | OpenCorporates API key — unlocks live company + officer data via the OC REST API. |
 | `OPENCORPORATES_RELATIONSHIPS_FILE` | Path to the OC Relationships bulk CSV file. When set, network relationship data is read from this file instead of the live `/network` API endpoint (which requires a premium tier). |
-| `BCE_BELGIUM_DB_FILE` | Path to the SQLite database built by `scripts/extract_bce.py`. When set, the BCE Belgium adapter provides enterprise-number-keyed lookup (via GLEIF bridge) and FTS5 name search for Belgian entities from the monthly KBO open data ZIP. |
+| `BCE_BELGIUM_DB_FILE` | Path to the KBO index built by `scripts/build_bce_belgium_index.py`. Unset, the data-root default (`bce_belgium.sqlite`), which `BCE_BELGIUM_DB_URL` (the `bce-belgium-index` release asset) fills at boot. The workflow that builds it needs the `KBO_OPEN_DATA_USERNAME` / `KBO_OPEN_DATA_PASSWORD` secrets — the portal's free account. |
 | `ARIREGISTER_USERNAME` | Username for the Estonian e-Business Register SOAP/XML API (`ariregxmlv6.rik.ee`). Free RIK contract credentials. |
 | `ARIREGISTER_PASSWORD` | Password for the Estonian e-Business Register SOAP/XML API. |
 | `ARIREGISTER_REST_API_KEY` | API key for RIK's REST API (`ar-rest.rik.ee`), created by the same contract partner as the SOAP credentials. Sent only to `GET /keyLogin/`, in the `apiKey` header. Unset: the REST client is off and every caller falls back. |

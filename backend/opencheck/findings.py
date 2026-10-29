@@ -1662,6 +1662,41 @@ def finding_jar_lithuania(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence([lead, form, withheld])
 
 
+def finding_bce_belgium(bundle: dict[str, Any]) -> str | None:
+    """What Belgium's Crossroads Bank for Enterprises says: that the entity is
+    on the register and since when, its juridical situation where it is not
+    the normal one, and its legal form (the Belgium wiring, 29 Oct 2026).
+
+    * **Not in the index** says so — the monthly file holds active entities
+      only — rather than that the enterprise does not exist (rule 6).
+    * A **juridical situation** other than the normal one (bankruptcy opened,
+      judicial reorganisation, dissolution…) leads, in the register's own
+      wording, because it changes a decision.
+    * Deliberately **not** said: that no owners or officers are on file. The
+      open data carries neither for any entity (the JAR / ACRA precedent).
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        return (
+            "Not in the KBO open data as indexed, which holds the register's "
+            "active entities only; a stopped enterprise is not in it."
+        )
+    situation = str(bundle.get("juridical_situation") or "").strip()
+    normal = situation.lower() in ("", "normal situation", "normale toestand", "situation normale")
+    registered = str(bundle.get("start_date") or "").strip()
+    cls = str(bundle.get("status_class") or "unknown")
+    if cls == "terminal":
+        lead = "Stopped"
+    elif not normal:
+        lead = f"{situation[0].upper()}{situation[1:]}"
+    else:
+        lead = f"On the register since {registered}" if registered else "On the register"
+    form = str(bundle.get("juridical_form") or "").strip() or None
+    kind = "natural-person enterprise" if bundle.get("enterprise_type") == "natural person" else None
+    return clauses_to_sentence([lead, form, kind])
+
+
 def finding_ariregister(bundle: dict[str, Any]) -> str | None:
     """What the Estonian e-Business Register says: the company's status and
     legal form, and how many shareholders, persons on the registry card and

@@ -1,10 +1,10 @@
 ---
 type: "Data Source"
 title: "Belgian Crossroads Bank for Enterprises (BCE/KBO)"
-description: "Belgian company data including entity name, status, juridical form, start date, and registered address, from the BCE/KBO open data publication by FPS Economy."
+description: "Belgium's central business register, read from a monthly index of the KBO Open Data full file: name (NL/FR/DE), status, juridical situation and form, start date and registered office for every active registered entity. No shareholders, officers or beneficial owners \u2014 the Belgian UBO register is held separately and is not open."
 resource: "https://kbopub.economie.fgov.be/kbo-open-data/"
 tags: ["cdd", "national-register", "Custom-KBO-Reuse", "commercial-conditional"]
-timestamp: "2026-09-06"
+timestamp: "2026-10-29"
 source_id: "bce_belgium"
 license: "Custom-KBO-Reuse"
 commercial_use: "conditional"
@@ -14,7 +14,7 @@ national_register: true
 
 # Overview
 
-Belgian company data including entity name, status, juridical form, start date, and registered address, from the BCE/KBO open data publication by FPS Economy. Official national company / beneficial-ownership register.
+Belgium's central business register, read from a monthly index of the KBO Open Data full file: name (NL/FR/DE), status, juridical situation and form, start date and registered office for every active registered entity. No shareholders, officers or beneficial owners — the Belgian UBO register is held separately and is not open. Official national company / beneficial-ownership register.
 
 - **Source id:** `bce_belgium`
 - **Category:** cdd (customer due diligence / compliance)

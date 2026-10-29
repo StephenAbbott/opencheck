@@ -1,0 +1,83 @@
+name: Refresh BCE Belgium index
+
+# Rebuilds the index of Belgium's Crossroads Bank for Enterprises from the
+# monthly KBO Open Data full file and replaces the `bce-belgium-index` release
+# asset the backend downloads at boot (BCE_BELGIUM_DB_URL). The Belgium
+# wiring, 29 Oct 2026.
+#
+# KBO publishes one full ZIP a month (KboOpenData_<n>_<yyyy>_<mm>_Full.zip,
+# ~240 MB, 1.5 GB of CSV) behind a free account: the login is a plain Spring
+# form and the portal answers a datacentre address, so this runs here with the
+# KBO_OPEN_DATA_USERNAME / KBO_OPEN_DATA_PASSWORD repository secrets. Without
+# them the job fails at the first step and says so; the deployed source stays
+# as it was.
+#
+# The result is ~500 MB (~150 MB gzipped). The release is created on the first
+# run if it does not exist.
+on:
+  schedule:
+    - cron: "41 4 8 * *" # 04:41 UTC on the 8th — KBO's monthly file lands in the first days
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-bce-belgium-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Log in, download the newest full file and build the index
+        working-directory: backend
+        env:
+          KBO_OPEN_DATA_USERNAME: ${{ secrets.KBO_OPEN_DATA_USERNAME }}
+          KBO_OPEN_DATA_PASSWORD: ${{ secrets.KBO_OPEN_DATA_PASSWORD }}
+        run: |
+          uv sync
+          uv run python scripts/build_bce_belgium_index.py --download \
+            --work "$RUNNER_TEMP/kbo" \
+            --out "$RUNNER_TEMP/bce_belgium.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "bce_belgium.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM entity WHERE type = '2'").fetchone()[0]
+          named = conn.execute("SELECT COUNT(*) FROM entity WHERE name_nl IS NOT NULL OR name_fr IS NOT NULL").fetchone()[0]
+          print(f"{n} legal persons, {named} named entities, cut {meta.get('cut')}, schema {meta.get('schema_version')}")
+          if n < 900_000 or named < 1_200_000:
+              sys.exit(f"Refusing to publish: {n} legal persons / {named} named — likely a source/format change.")
+          PY
+
+      - name: Replace the `bce-belgium-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view bce-belgium-index >/dev/null 2>&1 || gh release create bce-belgium-index \
+            --title "BCE / KBO Belgium index" \
+            --notes "Built monthly by refresh-bce-belgium-index.yml from the KBO Open Data full file (FPS Economy — reuse of KBO public data, attribution required). Downloaded by the backend at boot (BCE_BELGIUM_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh bce-belgium-index \
+            "$RUNNER_TEMP/bce_belgium.sqlite.gz" bce_belgium.sqlite.gz \
+            "Rebuilt automatically by refresh-bce-belgium-index on $(date -u +%Y-%m-%d)."
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"

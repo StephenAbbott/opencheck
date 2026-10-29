@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-10-07"
+timestamp: "2026-10-29"
 ---
 
 # Source licence matrix

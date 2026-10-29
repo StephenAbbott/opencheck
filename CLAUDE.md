@@ -1282,6 +1282,45 @@ Things that will be re-derived otherwise:
 
 ---
 
+## Belgium is a monthly index of the KBO Open Data full file (the Belgium wiring, 29 Oct 2026)
+
+`sources/bce_belgium.py`, `scripts/build_bce_belgium_index.py`,
+`.github/workflows/refresh-bce-belgium-index.yml`, `bods/mappers/belgium.py`.
+Phase 35 built the adapter against a hand-built local file and left it
+env-gated; this rebuilt it in the `jar_lithuania` shape. Things that will be
+re-derived otherwise:
+
+- **One full ZIP a month behind a free login.** `KboOpenData_<n>_<yyyy>_<mm>_Full.zip`
+  (~240 MB; `enterprise`, `denomination`, `address`, `code`, `meta` are read)
+  at `kbopub.economie.fgov.be/kbo-open-data/affiliation/xml/?files`, behind
+  `j_spring_security_check` — a plain form, and the portal answers a
+  datacentre address, so the builder runs as a GitHub workflow on the 8th with
+  the `KBO_OPEN_DATA_USERNAME` / `KBO_OPEN_DATA_PASSWORD` secrets. The
+  interim update files are not read. The file holds **active entities
+  only**: a stopped enterprise is a note card (`COVERAGE_NOT_IN_INDEX`),
+  never "dissolved".
+- **The identifier is dotted** (`0202.239.951`): GLEIF files 41,351 ISSUED
+  Belgian LEIs under RA000025 that way (197 of 200 sampled), and it is the
+  register's spelling. `normalise_enterprise_number` gives the ten digits
+  that key the index and the deriver; `format_enterprise_number` the dotted
+  form the mapper writes under `BE-BCE_KBO`. Phase 35 wrote the digits and
+  the GLEIF and register statements never corroborated.
+- **Codes are glossed from `code.csv`**, never hardcoded: `code_label(category,
+  code, *languages)` reads the register's wording, English first, then NL /
+  FR / DE. `JuridicalSituation` other than the normal one ("Bankruptcy
+  opened") is the status annotation's raw text and leads the finding; KBO's
+  `Status` (AC / ST) decides liveness.
+- **Natural-person enterprises are in the index and out of name search.**
+  `TypeOfEnterprise` 1 is a sole trader whose enterprise name is the
+  person's; GLEIF can file an LEI for one, so the row is kept and mapped
+  (`entityType.details` "natural-person enterprise"), but the FTS5 table is
+  built over legal persons only. An establishment unit's names and
+  addresses (numbers starting 2–8) are skipped; the registered office is
+  `TypeOfAddress` `REGO` with no `DateStrikingOff`.
+- `cut` is KBO's `SnapshotDate` (day-first in `meta.csv`, stored ISO);
+  KBO's own meta rides as `kbo_*` keys. Nothing touches the response
+  `Cache` (the Phase 325 rule).
+
 ## Estonia is an index first, the page second (Phase 330)
 
 `sources/ariregister.py`, `scripts/build_ariregister_index.py`,

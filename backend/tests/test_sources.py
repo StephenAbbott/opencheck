@@ -129,6 +129,9 @@ _IDENTIFIER_KEYED = {
     # the onrc_romania case. The scraper it replaced returned an invented
     # "<query> (stub)" row naming a real company's code; nothing does now.
     "jar_lithuania",
+    # bce_belgium (the Belgium wiring): an FTS5 search over the local index;
+    # a fresh test process has none. The invented "<query> (stub)" row is gone.
+    "bce_belgium",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "eiti_zambia", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "meip", "nz_companies", "opencorporates", "inpi", "kvk",

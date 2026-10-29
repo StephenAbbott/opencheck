@@ -759,10 +759,37 @@ def _bh_rpvs_slovakia(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
 
 
 def _bh_bce_belgium(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Belgium's Crossroads Bank for Enterprises, from the
+    monthly index (the Belgium wiring, 29 Oct 2026).
+
+    * **An enterprise.** Asserts the enterprise number the register published
+      (``be_enterprise_number``, the index key).
+    * **Not in the index.** A note card (the JAR shape): the monthly file holds
+      active entities only, so a stopped enterprise reads as absent; the row
+      sentence says so, no identifier is asserted, nothing is degraded.
+
+    Dispatch is gated on the index file (``covers_lei``).
+    """
+    from ..findings import finding_bce_belgium
+
+    dotted = r.get("dotted") or local_id
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "bce_belgium", local_id,
+            name=ctx.legal_name or "",
+            summary=f"BE {dotted} · not in the index",
+            finding=finding_bce_belgium(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    summary = f"BE {dotted}"
+    if (r.get("status_class") or "live") != "live":
+        summary += " · " + str(r.get("status_label") or r.get("status_class")).lower()
     return _hit(
         "bce_belgium", local_id,
         name=r.get("name") or ctx.legal_name or "",
-        summary=f"BE {r.get('dotted') or local_id}",
+        summary=summary,
+        finding=finding_bce_belgium(r),
         identifiers={"be_enterprise_number": local_id}, raw=r,
     )
 

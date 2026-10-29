@@ -1,44 +1,34 @@
-"""Belgian Crossroads Bank for Enterprises (BCE / KBO) adapter.
+"""Belgian Crossroads Bank for Enterprises (BCE / KBO) — an index tier.
 
-The Banque-Carrefour des Entreprises (BCE, Dutch: Kruispuntbank van
-Ondernemingen / KBO) is Belgium's central business register, administered
-by the FPS Economy (FOD Economie / SPF Économie).
+The Banque-Carrefour des Entreprises (Kruispuntbank van Ondernemingen) is
+Belgium's central business register, run by the FPS Economy. Its open data
+is one full ZIP a month (``KboOpenData_<n>_<yyyy>_<mm>_Full.zip``: the
+**active** registered entities — legal persons and natural-person
+enterprises — with names, status, juridical situation, form, start date
+and registered office; plus the register's own wording for every code in
+NL / FR / DE / EN) behind a free account, and interim update files. No
+shareholders, no officers, no beneficial owners: the Belgian UBO register
+is held separately by FPS Finance and is not open.
 
-Open data is published as a monthly ZIP of CSV files at:
-  https://kbopub.economie.fgov.be/kbo-open-data/affiliation/xml/files/
+Phase 35 built this adapter against a hand-built local file and left it
+env-gated; the Belgium wiring (29 Oct 2026) rebuilt it in the
+``jar_lithuania`` / ``cyprus_drcor`` shape: ``scripts/build_bce_belgium_index.py``
+logs in and builds the index from the monthly full file, a GitHub workflow
+runs it monthly (``refresh-bce-belgium-index.yml`` — the portal answers a
+datacentre address; the login is a plain form) and ships it as the
+``bce-belgium-index`` release asset, which ``warm_index`` downloads at boot
+(``BCE_BELGIUM_DB_URL``). Without an index ``covers_lei`` is False and the
+source is not announced.
 
-The ZIP (~300 MB compressed) contains:
-  enterprise.csv      — entity number, status, juridical form, start date
-  denomination.csv    — names (official, commercial) in NL / FR / DE
-  address.csv         — registered-office and other addresses
+GLEIF files the enterprise number under ``RA000025`` as ``0202.239.951``
+(dotted — 197 of 200 ISSUED records sampled on 29 Oct 2026; 41,351 ISSUED
+Belgian LEIs carry one); ``normalise_enterprise_number`` gives the ten
+digits that key the index, and the mapper writes the identifier **dotted**,
+as the register and GLEIF spell it, so the two statements corroborate on
+``BE-BCE_KBO``.
 
-Note: Belgian UBO register data is NOT included here.  The UBO register
-(UBO-register / Registre UBO) requires legitimate-interest access and is
-not openly available.  Belgium is also in the process of legislating that
-public access will be restricted to users with a demonstrable need, in
-line with AMLD6 implementation.
-
-This adapter queries a pre-built SQLite database that is populated by
-``scripts/extract_bce.py`` from the three CSV files above, plus KBO's
-``meta.csv`` (its ``SnapshotDate`` dates every statement — Phase 314).
-
-GLEIF bridge:
-  GLEIF records for Belgian entities carry:
-    ``registeredAt.id  == "RA000025"``  (BCE/KBO RA code)
-    ``registeredAs     == "NNNN.NNN.NNN"`` (10-digit dotted enterprise number)
-  We normalise to 10 raw digits, stored as ``be_enterprise_number`` in the
-  derived identifiers dict in app.py.
-
-Activation: set ``BCE_BELGIUM_DB_FILE=/path/to/bce.db`` in .env.
-Build the DB with: ``python scripts/extract_bce.py --zip-file kbo_open_data.zip --output bce.db``
-
-GLEIF RA code: RA000025
-
-License: Reuse of KBO public data (Réutilisation données publiques KBO).
-  https://kbopub.economie.fgov.be/kbo-open-data/static/doc/Licentie/Licentie.pdf
-Attribution:
-  Data from the Belgian Crossroads Bank for Enterprises (BCE/KBO), made
-  available by the FPS Economy, SMEs, Self-Employed and Energy, Belgium.
+Licence: Reuse of KBO public data (FPS Economy) — free, attribution
+required: https://kbopub.economie.fgov.be/kbo-open-data/static/doc/Licentie/Licentie.pdf
 """
 
 from __future__ import annotations
@@ -46,11 +36,11 @@ from __future__ import annotations
 import logging
 import re
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .. import provenance
+from .. import degradation, provenance
 from ..config import get_settings
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
@@ -58,20 +48,42 @@ from .schemas.bce_belgium import BCEBundle
 
 logger = logging.getLogger(__name__)
 
-# GLEIF Registration Authority code for the BCE/KBO.
+#: GLEIF Registration Authority code for the BCE/KBO.
 BCE_RA_CODE: str = "RA000025"
 
-# Company portal URL template.
-_COMPANY_URL = "https://kbopub.economie.fgov.be/kbopub/zoeknaamfonetischform.html?searchWord={enterprise_number}&_target=0&lang=en"
-# Direct link to a specific enterprise.
-_ENTITY_URL = "https://kbopub.economie.fgov.be/kbopub/toonondernemingps.html?ondernemingsnummer={enterprise_number}"
+#: ``meta.schema_version`` the reader accepts.
+INDEX_SCHEMA_VERSION = "1"
+
+PORTAL_URL = "https://kbopub.economie.fgov.be/kbo-open-data/"
+#: KBO's public search, per enterprise.
+_ENTITY_URL = (
+    "https://kbopub.economie.fgov.be/kbopub/toonondernemingps.html"
+    "?ondernemingsnummer={enterprise_number}"
+)
+
+COVERAGE_NOT_IN_INDEX = (
+    "This enterprise number is not in the KBO open data as indexed. The "
+    "monthly file holds the register's active entities only, so a stopped "
+    "enterprise is not in it; GLEIF may also file a number the register "
+    "does not use, or the enterprise may be newer than the index."
+)
+
+#: KBO's ``Status``: the open data holds active entities; ``ST`` appears
+#: only in update files, kept here in case a full file ever carries it.
+STATUSES: dict[str, tuple[str, str]] = {
+    "AC": ("live", "Active"),
+    "ST": ("terminal", "Stopped"),
+}
+
+#: ``TypeOfEnterprise``.
+ENTERPRISE_TYPES = {"1": "natural person", "2": "legal person"}
 
 
 def normalise_enterprise_number(raw: str) -> str:
-    """Normalise a Belgian enterprise number to a 10-digit string (no dots).
+    """Ten digits, no dots — the index key.
 
-    Accepts both dotted form ``0433.795.975`` and plain ``0433795975``.
-    Returns empty string if the input contains no digits.
+    Accepts ``0433.795.975``, ``0433795975``, ``BE 0433.795.975`` (a VAT
+    spelling); returns "" when the input has no digits.
     """
     digits = re.sub(r"[^0-9]", "", (raw or "").strip())
     if not digits:
@@ -80,10 +92,7 @@ def normalise_enterprise_number(raw: str) -> str:
 
 
 def format_enterprise_number(raw: str) -> str:
-    """Format a 10-digit enterprise number in the canonical dotted form.
-
-    ``0433795975`` → ``0433.795.975``
-    """
+    """The canonical dotted form the register and GLEIF write: ``0433.795.975``."""
     digits = normalise_enterprise_number(raw)
     if len(digits) == 10:
         return f"{digits[:4]}.{digits[4:7]}.{digits[7:]}"
@@ -91,51 +100,198 @@ def format_enterprise_number(raw: str) -> str:
 
 
 def _kbo_date(raw: str | None) -> datetime | None:
-    """KBO's ``SnapshotDate`` as an aware UTC datetime.
-
-    KBO writes it day-first (``04-10-2026``); an ISO value is accepted too so a
-    future format change still dates the answer rather than dropping it.
-    """
+    """KBO's ``SnapshotDate`` as an aware UTC datetime (day-first, or ISO)."""
     value = (raw or "").strip()
     if not value:
         return None
-    for fmt in ("%d-%m-%Y", "%d/%m/%Y", "%d-%m-%Y %H:%M:%S"):
+    for fmt in ("%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y %H:%M:%S"):
         try:
-            return datetime.strptime(value, fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(value, fmt).replace(tzinfo=UTC)
         except ValueError:
             continue
     return provenance.parse_moment(value)
 
 
-def _record_db_provenance(
-    meta: dict[str, str], db_path: str | Path | None = None
-) -> None:
-    """Declare that this answer came from the local KBO Open Data extract.
+# ---------------------------------------------------------------------------
+# Index access
+# ---------------------------------------------------------------------------
 
-    Two clocks, kept apart (Phase 314):
 
-    * ``source_as_of`` — KBO's own ``SnapshotDate`` from ``meta.csv``, the day
-      the register cut the extract. It becomes the statements'
-      ``statementDate``.
-    * ``retrieved_at`` — when OpenCheck built the database from the ZIP
-      (``meta.built_at``), falling back to the DB file's mtime on a build that
-      predates the meta table. It becomes ``source.retrievedAt``.
+def db_path() -> Path:
+    """``BCE_BELGIUM_DB_FILE`` or the data-root default — one function, so the
+    reader, the boot download and the sweep's ``requires_files`` agree."""
+    from ..cache import data_root
 
-    A pre-314 DB therefore still carries a retrieval time but no cut; the
-    statement then dates from the retrieval, which is the latest moment the
-    data is known to have been true.
-    """
-    retrieved_at = provenance.parse_moment(meta.get("built_at"))
-    if retrieved_at is None and db_path:
+    configured = get_settings().bce_belgium_db_file
+    return Path(configured) if configured else data_root() / "bce_belgium.sqlite"
+
+
+_SHARED: dict[str, sqlite3.Connection | None] = {}
+
+
+def _connect() -> sqlite3.Connection | None:
+    path = db_path()
+    if not path.exists():
+        if get_settings().bce_belgium_db_file:
+            logger.warning("bce_belgium: index not found at %s", path)
+        return None
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    try:
+        version = conn.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
+    except sqlite3.Error:
+        version = None
+    if not version or version[0] != INDEX_SCHEMA_VERSION:
+        logger.warning(
+            "bce_belgium: index at %s has an unexpected schema (want %s); ignoring",
+            path, INDEX_SCHEMA_VERSION,
+        )
+        conn.close()
+        return None
+    return conn
+
+
+def _shared_conn() -> sqlite3.Connection | None:
+    if _SHARED.get("conn") is None:
+        _SHARED["conn"] = _connect()
+    return _SHARED.get("conn")
+
+
+def reset_connection() -> None:
+    """Forget the cached connection (after a download, or in tests)."""
+    conn = _SHARED.pop("conn", None)
+    if conn is not None:
         try:
-            retrieved_at = datetime.fromtimestamp(Path(db_path).stat().st_mtime, tz=timezone.utc)
-        except OSError:
-            retrieved_at = None
+            conn.close()
+        except sqlite3.Error:  # pragma: no cover - best effort
+            pass
+
+
+def index_available() -> bool:
+    return _shared_conn() is not None
+
+
+def read_meta() -> dict[str, str]:
+    conn = _shared_conn()
+    if conn is None:
+        return {}
+    try:
+        return {str(k): str(v) for k, v in conn.execute("SELECT key, value FROM meta")}
+    except sqlite3.Error:  # pragma: no cover
+        return {}
+
+
+def cut_date(meta: dict[str, str] | None = None) -> datetime | None:
+    """KBO's ``SnapshotDate`` — the day the register cut the monthly file."""
+    meta = read_meta() if meta is None else meta
+    return _kbo_date(meta.get("cut") or meta.get("kbo_SnapshotDate") or meta.get("SnapshotDate"))
+
+
+def declare_snapshot(meta: dict[str, str] | None = None) -> None:
+    """Declare an index read as a snapshot: KBO's cut is the register's clock,
+    ``built_at`` is ours (Phase 314). Without this the recorder resolves to
+    ``stub`` and real rows badge as placeholder data."""
+    meta = read_meta() if meta is None else meta
+    cut = cut_date(meta)
     provenance.record_snapshot(
-        retrieved_at=retrieved_at,
-        source_as_of=_kbo_date(meta.get("SnapshotDate")),
-        detail="KBO Open Data extract (local SQLite build)",
+        retrieved_at=provenance.parse_moment(meta.get("built_at")),
+        source_as_of=cut,
+        detail=(
+            f"KBO Open Data monthly extract, cut {cut.date().isoformat()}"
+            if cut else "KBO Open Data monthly extract"
+        ),
     )
+
+
+def warm_index() -> dict[str, Any]:
+    """Download the index at boot when absent; replace it when the release
+    asset changed; keep it otherwise. Never raises — no index is a state
+    this module models (``covers_lei`` is False, the source not announced)."""
+    from ..entity_pages import (
+        ASSET_STAMP_KEY,
+        asset_check,
+        download_db,
+        record_asset_stamp,
+    )
+    from ..entity_pages import (
+        read_meta as read_file_meta,
+    )
+
+    settings = get_settings()
+    path = db_path()
+    url = settings.bce_belgium_db_url
+    if not url:
+        state = "present" if path.exists() else "absent"
+        return {"bce_belgium": f"{state}: {path} (no URL)"}
+    try:
+        last_modified: str | None = None
+        if path.exists():
+            decision, last_modified = asset_check(url, path)
+            if decision == "keep":
+                if last_modified and read_file_meta(path).get(ASSET_STAMP_KEY) is None:
+                    record_asset_stamp(path, last_modified)
+                return {"bce_belgium": f"already present: {path}"}
+            outcome = "replaced"
+        else:
+            outcome = "downloaded"
+        downloaded, elapsed = download_db(url, path, last_modified=last_modified)
+        reset_connection()
+        return {"bce_belgium": f"{outcome}: {path} ({downloaded} bytes in {elapsed:.1f}s)"}
+    except Exception as exc:  # noqa: BLE001 — no index is a state, not a crash
+        logger.warning("bce_belgium: asset check/download failed: %s", exc)
+        return {"bce_belgium": f"failed: {exc}"}
+
+
+def entity_record(number: str) -> dict[str, Any] | None:
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    row = conn.execute("SELECT * FROM entity WHERE number = ?", (number,)).fetchone()
+    return dict(row) if row is not None else None
+
+
+def code_label(category: str, code: str | None, *languages: str) -> str | None:
+    """The register's own wording for a code, in the first language it has
+    it (English, then Dutch, then French by default)."""
+    conn = _shared_conn()
+    text = (code or "").strip()
+    if conn is None or not text:
+        return None
+    order = languages or ("EN", "NL", "FR", "DE")
+    rows = conn.execute(
+        "SELECT language, description FROM code WHERE category = ? AND code = ?",
+        (category, text),
+    ).fetchall()
+    found = {str(r["language"]): str(r["description"]) for r in rows}
+    for lang in order:
+        if found.get(lang):
+            return found[lang]
+    return None
+
+
+def status_class(status: str | None) -> str:
+    return STATUSES.get((status or "").strip().upper(), ("unknown", ""))[0]
+
+
+def _display_name(row: dict[str, Any], legal_name: str = "") -> str:
+    return (
+        row.get("name_nl") or row.get("name_fr") or row.get("name_de")
+        or row.get("name_en") or legal_name or ""
+    )
+
+
+def _address_text(row: dict[str, Any]) -> str | None:
+    street = " ".join(x for x in (row.get("street"), row.get("house")) if x)
+    if row.get("box"):
+        street = f"{street} box {row['box']}".strip()
+    locality = " ".join(x for x in (row.get("zipcode"), row.get("municipality")) if x)
+    parts = [p for p in (street, locality, row.get("country")) if p]
+    return ", ".join(parts) or None
+
+
+# ---------------------------------------------------------------------------
+# Adapter
+# ---------------------------------------------------------------------------
 
 
 class BceBelgiumAdapter(SourceAdapter):
@@ -148,28 +304,19 @@ class BceBelgiumAdapter(SourceAdapter):
     )
     lookup_pass_legal_name = True
 
-
-    def __init__(self) -> None:
-        self._db: sqlite3.Connection | None = None
-        self._meta: dict[str, str] = {}
-
-    # ------------------------------------------------------------------
-    # Metadata
-    # ------------------------------------------------------------------
-
     @property
     def info(self) -> SourceInfo:
-        settings = get_settings()
-        db_path = settings.bce_belgium_db_file
-        live = bool(db_path and Path(db_path).exists())
         return SourceInfo(
             id=self.id,
             name="Belgian Crossroads Bank for Enterprises (BCE/KBO)",
-            homepage="https://kbopub.economie.fgov.be/kbo-open-data/",
+            homepage=PORTAL_URL,
             description=(
-                "Belgian company data including entity name, status, juridical "
-                "form, start date, and registered address, from the BCE/KBO "
-                "open data publication by FPS Economy."
+                "Belgium's central business register, read from a monthly "
+                "index of the KBO Open Data full file: name (NL/FR/DE), "
+                "status, juridical situation and form, start date and "
+                "registered office for every active registered entity. No "
+                "shareholders, officers or beneficial owners — the Belgian "
+                "UBO register is held separately and is not open."
             ),
             license="Custom-KBO-Reuse",
             attribution=(
@@ -179,199 +326,157 @@ class BceBelgiumAdapter(SourceAdapter):
             ),
             supports=[SearchKind.ENTITY],
             requires_api_key=False,
-            live_available=live,
+            live_available=index_available(),
             is_national_register=True,
             country="BE",
         )
 
-    # ------------------------------------------------------------------
-    # SQLite connection (lazy, cached per-instance)
-    # ------------------------------------------------------------------
-
-    def _conn(self) -> sqlite3.Connection | None:
-        settings = get_settings()
-        db_path = settings.bce_belgium_db_file
-        if not db_path:
-            return None
-        if self._db is None:
-            path = Path(db_path)
-            if not path.exists():
-                logger.warning("bce_belgium: DB file not found at %s", db_path)
-                return None
-            conn = sqlite3.connect(str(path), check_same_thread=False)
-            conn.row_factory = sqlite3.Row
-            self._db = conn
-            self._meta = provenance.index_meta(conn)
-        return self._db
-
-    def _query_by_number(self, enterprise_number: str) -> dict[str, Any] | None:
-        """Return the entity row for a given enterprise number (no dots)."""
-        conn = self._conn()
-        if conn is None:
-            return None
-        cur = conn.execute(
-            "SELECT * FROM entities WHERE enterprise_number = ?",
-            (enterprise_number,),
-        )
-        row = cur.fetchone()
-        return dict(row) if row is not None else None
-
-    def _search_by_name(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
-        """FTS5 name search. Returns up to ``limit`` entity dicts."""
-        conn = self._conn()
-        if conn is None:
-            return []
-        # Check whether the FTS table exists.
-        cur = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='entities_fts'"
-        )
-        if cur.fetchone() is None:
-            # FTS not built — fall back to LIKE search (slow on large DBs).
-            cur2 = conn.execute(
-                """
-                SELECT * FROM entities
-                WHERE name_nl LIKE ? OR name_fr LIKE ? OR name_de LIKE ?
-                LIMIT ?
-                """,
-                (f"%{query}%", f"%{query}%", f"%{query}%", limit),
-            )
-            return [dict(r) for r in cur2.fetchall()]
-        try:
-            cur3 = conn.execute(
-                """
-                SELECT e.*
-                FROM entities_fts f
-                JOIN entities e ON e.enterprise_number = f.enterprise_number
-                WHERE entities_fts MATCH ?
-                LIMIT ?
-                """,
-                (query, limit),
-            )
-            return [dict(r) for r in cur3.fetchall()]
-        except sqlite3.OperationalError as exc:
-            logger.warning("bce_belgium FTS search failed: %s", exc)
-            return []
+    def covers_lei(self, lei: str) -> bool:
+        """Gate dispatch on the index file, not on the LEI (the JAR gate):
+        without an index the source would be announced for every Belgian
+        lookup and then answer nothing."""
+        return index_available()
 
     # ------------------------------------------------------------------
-    # Search
+    # Search — legal persons only (the FTS index is built over them)
     # ------------------------------------------------------------------
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
-        """Name-based search via FTS5 when the DB is loaded; stub otherwise."""
-        if kind != SearchKind.ENTITY:
+        text = " ".join((query or "").split())
+        if kind != SearchKind.ENTITY or not text:
             return []
-
-        conn = self._conn()
+        conn = _shared_conn()
         if conn is None:
-            return self._stub_search(query)
-
-        rows = self._search_by_name(query)
+            return []
+        # FTS5 MATCH syntax: quote the query so punctuation is literal.
+        match = '"' + text.replace('"', '""') + '"'
+        try:
+            rows = conn.execute(
+                "SELECT e.* FROM entity e WHERE e.number IN ("
+                " SELECT number FROM entity_fts WHERE entity_fts MATCH ?"
+                " GROUP BY number ORDER BY MIN(rank) LIMIT 10)",
+                (match,),
+            ).fetchall()
+        except sqlite3.Error as exc:
+            logger.warning("bce_belgium: name search failed: %s", exc)
+            return []
         if not rows:
             return []
+        declare_snapshot()
+        return [self._search_hit(dict(r)) for r in rows]
 
-        _record_db_provenance(self._meta, get_settings().bce_belgium_db_file)
-        hits: list[SourceHit] = []
-        for row in rows:
-            num = row.get("enterprise_number") or ""
-            name = row.get("name_nl") or row.get("name_fr") or row.get("name_de") or num
-            dotted = format_enterprise_number(num)
-            status = row.get("status") or ""
-            hits.append(
-                SourceHit(
-                    source_id=self.id,
-                    hit_id=num,
-                    kind=SearchKind.ENTITY,
-                    name=name,
-                    summary=f"BE {dotted} · {status}".strip(" ·"),
-                    identifiers={"be_enterprise_number": num},
-                    raw=row,
-                    is_stub=False,
-                )
-            )
-        return hits
+    def _search_hit(self, row: dict[str, Any]) -> SourceHit:
+        number = row["number"]
+        segments = [f"BE {format_enterprise_number(number)}"]
+        form = code_label("JuridicalForm", row.get("form"))
+        if form:
+            segments.append(form)
+        cls = status_class(row.get("status"))
+        if cls != "live":
+            segments.append((STATUSES.get(row.get("status") or "", ("", cls))[1] or cls).lower())
+        return SourceHit(
+            source_id=self.id,
+            hit_id=number,
+            kind=SearchKind.ENTITY,
+            name=_display_name(row) or f"BE {format_enterprise_number(number)}",
+            summary=" · ".join(segments),
+            identifiers={"be_enterprise_number": number},
+            raw={"number": number},
+            is_stub=False,
+            liveness="snapshot",
+        )
 
     # ------------------------------------------------------------------
     # Fetch
     # ------------------------------------------------------------------
 
-    async def fetch(
-        self,
-        hit_id: str,
-        *,
-        legal_name: str = "",
-    ) -> dict[str, Any]:
-        """Return BCE/KBO data for a Belgian enterprise number.
-
-        ``hit_id`` is the 10-digit enterprise number (no dots, e.g. "0433795975").
-        ``legal_name`` is used as fallback display name when the DB has no record.
-        """
-        enterprise_number = normalise_enterprise_number(hit_id)
-        dotted = format_enterprise_number(enterprise_number) if enterprise_number else hit_id
-
-        stub_bundle: dict[str, Any] = {
+    def _stub(self, number: str, legal_name: str) -> dict[str, Any]:
+        """Nothing was read: no index, or not a number. Dropped by the pipeline."""
+        return {
             "source_id": self.id,
-            "enterprise_number": enterprise_number,
-            "dotted": dotted,
-            "name": legal_name,
-            "name_nl": "",
-            "name_fr": "",
-            "name_de": "",
-            "status": None,
-            "juridical_form": None,
-            "start_date": None,
-            "address": None,
-            "link": _ENTITY_URL.format(enterprise_number=enterprise_number),
+            "enterprise_number": number,
+            "dotted": format_enterprise_number(number) if number else "",
+            "name": legal_name or "",
+            "link": _ENTITY_URL.format(enterprise_number=number),
             "is_stub": True,
         }
 
-        if not enterprise_number:
-            return stub_bundle
-
-        row = self._query_by_number(enterprise_number)
-        if row is None:
-            return stub_bundle
-        _record_db_provenance(self._meta, get_settings().bce_belgium_db_file)
-
-        name = (
-            row.get("name_nl")
-            or row.get("name_fr")
-            or row.get("name_de")
-            or legal_name
-            or ""
-        )
-
-        bundle = {
+    def _not_in_index(self, number: str, legal_name: str, meta: dict[str, str]) -> dict[str, Any]:
+        """A number the monthly file does not hold: a note card, not a stub
+        and not a degradation — the read succeeded and found nothing."""
+        cut = cut_date(meta)
+        return {
             "source_id": self.id,
-            "enterprise_number": enterprise_number,
-            "dotted": dotted,
-            "name": name,
+            "enterprise_number": number,
+            "dotted": format_enterprise_number(number),
+            "name": legal_name or "",
+            "link": _ENTITY_URL.format(enterprise_number=number),
+            "is_stub": False,
+            "not_found": True,
+            "coverage_note": COVERAGE_NOT_IN_INDEX,
+            "cut": cut.date().isoformat() if cut else None,
+        }
+
+    async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
+        """The index's record for one enterprise number (any spelling)."""
+        number = normalise_enterprise_number(hit_id)
+        if len(number) != 10:
+            logger.warning("bce_belgium: not an enterprise number: %r", hit_id)
+            return self._stub(number, legal_name)
+        if _shared_conn() is None:
+            return self._stub(number, legal_name)
+        try:
+            meta = read_meta()
+            row = entity_record(number)
+            if row is None:
+                return self._not_in_index(number, legal_name, meta)
+            form = code_label("JuridicalForm", row.get("form"))
+            form_native = code_label("JuridicalForm", row.get("form"), "NL", "FR")
+            situation = code_label("JuridicalSituation", row.get("situation"))
+            status_text = code_label("Status", row.get("status"))
+        except sqlite3.Error as exc:
+            degradation.record(
+                self.id,
+                "The KBO open-data index could not be read; the card shows "
+                "nothing from the register. This is not a confirmation that "
+                "the register holds nothing.",
+                reason=degradation.reason_for_failure(type(exc).__name__),
+            )
+            return self._stub(number, legal_name)
+
+        # Declared only once a row is in hand: a miss is not a read of data.
+        declare_snapshot(meta)
+        cut = cut_date(meta)
+        bundle: dict[str, Any] = {
+            "source_id": self.id,
+            "enterprise_number": number,
+            "dotted": format_enterprise_number(number),
+            "name": _display_name(row, legal_name),
             "name_nl": row.get("name_nl") or "",
             "name_fr": row.get("name_fr") or "",
             "name_de": row.get("name_de") or "",
+            "name_en": row.get("name_en") or "",
+            "name_type": row.get("name_type"),
             "status": row.get("status"),
-            "juridical_form": row.get("juridical_form"),
+            "status_label": status_text or STATUSES.get(row.get("status") or "", ("", ""))[1] or None,
+            "status_class": status_class(row.get("status")),
+            "juridical_situation_code": row.get("situation"),
+            "juridical_situation": situation,
+            "enterprise_type_code": row.get("type"),
+            "enterprise_type": ENTERPRISE_TYPES.get(row.get("type") or ""),
+            "juridical_form_code": row.get("form"),
+            "juridical_form": form,
+            "juridical_form_native": form_native,
+            "juridical_form_cac": row.get("form_cac"),
             "start_date": row.get("start_date"),
-            "address": row.get("address"),
-            "link": row.get("link") or _ENTITY_URL.format(enterprise_number=enterprise_number),
+            "address": _address_text(row),
+            "registered_office": {
+                k: row.get(k) for k in ("street", "house", "box", "zipcode", "municipality", "country")
+                if row.get(k)
+            },
+            "cut": cut.date().isoformat() if cut else None,
+            "link": _ENTITY_URL.format(enterprise_number=number),
             "is_stub": False,
         }
         validate_raw("bce_belgium", BCEBundle, bundle)
         return bundle
-
-    # ------------------------------------------------------------------
-    # Stub
-    # ------------------------------------------------------------------
-
-    def _stub_search(self, query: str) -> list[SourceHit]:
-        return [
-            SourceHit(
-                source_id=self.id,
-                hit_id="0000000000",
-                kind=SearchKind.ENTITY,
-                name=f"{query} (stub)",
-                summary="Stub BCE/KBO record — build bce.db to enable live search.",
-                identifiers={"be_enterprise_number": "0000000000"},
-                raw={"enterprise_number": "0000000000"},
-                is_stub=True,
-            )
-        ]

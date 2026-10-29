@@ -69,6 +69,8 @@ from opencheck.meip import db_path as meip_db_path  # noqa: E402
 from opencheck.meip import warm_meip_db  # noqa: E402
 from opencheck.sources.jar_lithuania import db_path as jar_db_path  # noqa: E402
 from opencheck.sources.jar_lithuania import warm_index as warm_jar_index  # noqa: E402
+from opencheck.sources.bce_belgium import db_path as bce_db_path  # noqa: E402
+from opencheck.sources.bce_belgium import warm_index as warm_bce_index  # noqa: E402
 from opencheck.sources.onrc_romania import db_path as onrc_db_path  # noqa: E402
 from opencheck.sources.onrc_romania import warm_index as warm_onrc_index  # noqa: E402
 
@@ -77,6 +79,7 @@ WARMERS = (
     ("meip", warm_meip_db, meip_db_path),
     ("chilecompra", warm_chilecompra_index, chilecompra_db_path),
     ("jar_lithuania", warm_jar_index, jar_db_path),
+    ("bce_belgium", warm_bce_index, bce_db_path),
     ("ariregister", warm_ariregister_index, ariregister_db_path),
     ("asp_moldova", warm_asp_moldova_index, asp_moldova_index_path),
 )

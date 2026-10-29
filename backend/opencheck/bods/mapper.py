@@ -386,6 +386,8 @@ from .mappers.slovakia import (  # noqa: F401  (re-exported, Phase 246)
     map_rpvs_slovakia,
 )
 from .mappers.belgium import (  # noqa: F401  (re-exported, Phase 246)
+    _BE_SCHEME,
+    _BE_SCHEME_NAME,
     map_bce_belgium,
 )
 from .mappers.canada import (  # noqa: F401  (re-exported, Phase 246)
