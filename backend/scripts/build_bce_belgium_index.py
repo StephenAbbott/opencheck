@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Build the Belgian BCE / KBO index from the monthly KBO Open Data ZIP.
+"""Build the Belgian BCE / KBO index from the KBO Open Data full ZIP.
 
 The Crossroads Bank for Enterprises (Banque-Carrefour des Entreprises /
-Kruispuntbank van Ondernemingen) publishes its open data as one full ZIP a
-month — ``KboOpenData_<extract>_<year>_<month>_Full.zip`` (~240 MB, nine
-CSVs, 1.5 GB unzipped) — plus interim update files, behind a free account
-(``j_spring_security_check``, a plain form login; the portal answers a
-datacentre address). This script reads the **full** file, the register's
-monthly cut, into one SQLite index the backend downloads at boot — the
+Kruispuntbank van Ondernemingen) publishes its open data as a full ZIP —
+``KboOpenData_<extract>_<year>_<month>_Full.zip`` in the cookbook, and since
+at least September 2026 one a day, ``KboOpenData_<extract>_<year>_<month>_<day>_Full.zip``
+(~240 MB, nine CSVs, 1.5 GB unzipped) — beside each day's update file, behind
+a free account (``j_spring_security_check``, a plain form login; the portal
+answers a datacentre address). This script reads the newest **full** file,
+the register's own cut, into one SQLite index the backend downloads at boot — the
 ``jar_lithuania`` / ``cyprus_drcor`` arrangement (the Belgium wiring,
 29 Oct 2026; replaces Phase 35's ``extract_bce.py``).
 
@@ -57,7 +58,12 @@ log = logging.getLogger("build_bce_belgium_index")
 PORTAL = "https://kbopub.economie.fgov.be/kbo-open-data"
 LOGIN_URL = f"{PORTAL}/static/j_spring_security_check"
 FILES_URL = f"{PORTAL}/affiliation/xml/?files"
-FULL_ZIP_RE = re.compile(r"KboOpenData_(\d{4})_(\d{4})_(\d{2})_Full\.zip")
+#: The cookbook's monthly name ``KboOpenData_0140_2026_10_Full.zip`` and the
+#: daily name the portal has published since at least September 2026
+#: (``KboOpenData_0518_2026_10_20_Full.zip`` — a full file beside each
+#: day's update, read off the listing on 29 Oct 2026). The extract number is
+#: what orders them; the date is kept for the log.
+FULL_ZIP_RE = re.compile(r"KboOpenData_(\d{4})_(\d{4})_(\d{2})(?:_(\d{2}))?_Full\.zip")
 
 INDEX_SCHEMA_VERSION = "1"
 
@@ -163,13 +169,18 @@ def iso_day(raw: str) -> str | None:
 
 
 def newest_full_zip(listing_html: str) -> tuple[str, str] | None:
-    """``(filename, year-month)`` of the newest full file named on the listing."""
-    found = sorted({(m.group(1), m.group(0), f"{m.group(2)}-{m.group(3)}")
-                    for m in FULL_ZIP_RE.finditer(listing_html)})
+    """``(filename, date)`` of the newest full file named on the listing —
+    the highest extract number; the date is ``YYYY-MM`` or ``YYYY-MM-DD`` as
+    the name spells it."""
+    found = sorted({
+        (m.group(1), m.group(0),
+         "-".join(part for part in (m.group(2), m.group(3), m.group(4)) if part))
+        for m in FULL_ZIP_RE.finditer(listing_html)
+    })
     if not found:
         return None
-    _, name, ym = found[-1]
-    return name, ym
+    _, name, when = found[-1]
+    return name, when
 
 
 def describe_listing(html: str) -> str:
