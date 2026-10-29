@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 420** — Ukraine's ЄДР register, with its beneficial owners, now answers lookups from an index of the weekly open-data export downloaded at boot.
+**Latest: Phase 421** — The Belgian Crossroads Bank for Enterprises joins the lookup as a monthly index of the KBO Open Data full file, built by a workflow with the portal's free login.
 
 → [Full development history](docs/status.md)
 
