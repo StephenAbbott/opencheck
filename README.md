@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 419** — The Cypriot Registrar of Companies joins the lookup as an index of data.gov.cy's monthly CSVs — company, status, registered office and officials for every HE number GLEIF files.
+**Latest: Phase 420** — Ukraine's ЄДР register, with its beneficial owners, now answers lookups from an index of the weekly open-data export downloaded at boot.
 
 → [Full development history](docs/status.md)
 
