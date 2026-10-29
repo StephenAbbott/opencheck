@@ -1312,11 +1312,22 @@ wired in the `jar_lithuania` shape. Things that will be re-derived otherwise:
   construction.
 - **A founder row naming a class of people is an unspecified party.**
   "ФІЗИЧНІ ОСОБИ", "НЕВІДОМІ ОСОБИ", "ПРИВАТНІ ОСОБИ В КІЛЬКОСТІ 112 ОСІБ",
-  "АКЦІОНЕРИ"… (10,110 rows) → `interestedParty.unspecified` with
+  "АКЦІОНЕРИ", "ІНШІ АКЦІОНЕРИ", "НЕВИЗНАЧЕНА ОСОБА", "ЗАГАЛЬНА КІЛЬКІСТЬ
+  АКЦІОНЕРІВ …", "ТРИ ФІЗИЧНІ ОСОБИ"… (3,086 of the 1,029,088 codeless
+  founder rows on 27 Oct 2026) → `interestedParty.unspecified` with
   `informationUnknownToPublisher` and the register's words (the Phase 199
   GEM placeholder rule), never a person statement — a phantom person would
   reach the graph and the related-party screens. `founder_is_placeholder`
   is the one place that decides it.
+- **A codeless founder named by its legal form is an entity.** The register
+  types no founder; a foreign company ("КЛАРІКС КЕПІТАЛ ЛІМІТЕД", 261 rows;
+  "… ЛТД", "… B.V.") carries no EDRPOU and until the wiring was emitted as a
+  **person** — 17,212 rows on the related-party screens. `founder_is_organisation`
+  matches whole legal-form tokens (`_UA_ORG_TOKENS`, Cyrillic transliterations
+  and Latin forms; "РАДА" and "СПІЛКА" left out — they are also names) and
+  makes it an entity with no identifier and **no jurisdiction** (the register
+  files no country; Phase 295). Measured: no three-word person-shaped name
+  is flagged.
 - **Nothing here reconstructs a withheld field** (addresses, locations, KVED
   — Law 4576-IX). The pre-2022 Open Ownership Ukraine data carries BO
   addresses and must never be joined in to fill them.

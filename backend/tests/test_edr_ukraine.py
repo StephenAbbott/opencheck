@@ -621,6 +621,18 @@ def test_state_control_absent_when_the_register_names_no_authority():
         "ГРОМАДЯНИ УКРАЇНИ",
         "АКЦІОНЕРИ",
         "ЮРИДИЧНІ ТА ФІЗИЧНІ ОСОБИ",
+        "ІНШІ АКЦІОНЕРИ",
+        "НЕВИЗНАЧЕНА ФІЗИЧНА ОСОБА",
+        "НЕВИЗНАЧЕНА ОСОБА",
+        "ЗАГАЛЬНА КІЛЬКІСТЬ АКЦІОНЕРІВ 1520",
+        "ВСЬОГО АКЦІОНЕРІВ",
+        "ТРИ ФІЗИЧНІ ОСОБИ",
+        "ФІЗИЧНИХ ОСІБ",
+        "ФІЗ ОСОБИ",
+        "[ЗАСНОВНИК]",
+        "ІНФОРМАЦІЯ ПРО ЗАСНОВНИКІВ ВІДСУТНЯ",
+        "ЗГІДНО РЕЄСТРУ АКЦІОНЕРІВ",
+        "ТРУДОВИЙ КОЛЕКТИВ",
     ],
 )
 def test_a_placeholder_founder_is_an_unspecified_party_never_a_person(name: str):
@@ -644,6 +656,43 @@ def test_a_placeholder_founder_is_an_unspecified_party_never_a_person(name: str)
     assert interest["type"] == "unknownInterest"
     assert "beneficialOwnershipOrControl" not in interest
     assert "1,000.00 UAH" in interest["details"]
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "КЛАРІКС КЕПІТАЛ ЛІМІТЕД",
+        "КОМПАНІЯ ЕКСТРА ВЕНЧУР ЛТД (EXTRA VENTURE LTD)",
+        "ПРИВАТНА АКЦІОНЕРНА КОМПАНІЯ «БІЗ КОРП. ЛТД»",
+        "КВІНТЕР ЛП LP 21052",
+        "STELLAR STAR LTD",
+        "ACME HOLDINGS B.V.",
+    ],
+)
+def test_a_codeless_founder_named_by_its_legal_form_is_an_entity_with_no_jurisdiction(name: str):
+    """A foreign company founder carries no EDRPOU and the register types
+    nothing; its legal-form words make it an entity, with no identifier and
+    no assumed country (Phase 295), never a person on the related-party
+    screens. Measured on the 27 Oct 2026 index: 17,212 of 1,029,088
+    codeless founder rows; none shaped like a person's three names."""
+    from opencheck.bods.mappers.ukraine import founder_is_organisation
+
+    assert founder_is_organisation(name)
+    for person in (
+        "ПЕЛИХ МАРИНА АРКАДІЇВНА",
+        "ТРОФІМОВА РАДА ВОЛОДИМИРІВНА",  # a given name, not a council
+        "СПІЛКА ОЛЕГ ВІКТОРОВИЧ",  # a surname, not a union
+    ):
+        assert not founder_is_organisation(person), person
+    founders = [{"seq": 0, "name": name, "code": None, "amount_uah": 500.0}]
+    out = _by_type(map_edr_ukraine(_bundle(founders=founders)))
+    assert out["person"] == []
+    (subject, party) = out["entity"]
+    assert party["recordDetails"]["name"] == name
+    assert "jurisdiction" not in party["recordDetails"]
+    assert not party["recordDetails"].get("identifiers")
+    (rel,) = out["relationship"]
+    assert rel["recordDetails"]["interestedParty"] == party["recordId"]
 
 
 def test_the_finding_sentence_counts_in_one_voice():
