@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 418** — The Estonia RDF demo queries answer the same questions as the release's Cypher file and assert the 25 October 2026 dataset's figures.
+**Latest: Phase 419** — The Cypriot Registrar of Companies joins the lookup as an index of data.gov.cy's monthly CSVs — company, status, registered office and officials for every HE number GLEIF files.
 
 → [Full development history](docs/status.md)
 
