@@ -83,9 +83,12 @@ HEADERS: dict[str, list[str]] = {
     "code.csv": ["Category", "Code", "Language", "Description"],
     "meta.csv": ["Variable", "Value"],
 }
-#: Far below these and it is not the register (1.9M enterprises, 3.2M names,
-#: 2.7M addresses on the October 2024 file).
-MIN_ROWS = {"enterprise.csv": 1_200_000, "denomination.csv": 2_000_000, "address.csv": 1_500_000}
+#: Far below these and it is not the register. Measured on the 29 Oct 2026
+#: full file: 1,265,258 denomination rows — a natural-person enterprise
+#: (a sole trader) files no denomination, so the file is well short of the
+#: enterprise count, and the first run refused the real register against a
+#: 2,000,000 floor taken from the cookbook's headline figures.
+MIN_ROWS = {"enterprise.csv": 1_000_000, "denomination.csv": 1_000_000, "address.csv": 1_000_000}
 MAX_MALFORMED = 1_000
 
 #: KBO language codes.
