@@ -538,6 +538,55 @@ PROBES: dict[str, SourceProbe] = {
             "Registrų centras stopped publishing."
         ),
     ),
+    "edr_ukraine": _p(
+        tier="index",
+        subject="ТОВ «КИЇВ-АРТ» (UA-EDR 35265987)",
+        args=("35265987",),
+        kwargs={"legal_name": 'ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ "КИЇВ-АРТ"'},
+        expect_fields=("entity", "beneficiaries", "founders"),
+        # SKIP without an index (the jar_lithuania shape), never allow_empty.
+        # warm_bulk_stores.py downloads the asset first.
+        requires_files=("edr_ukraine.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt by hand-run refresh_edr_ukraine_index.sh (data.gov.ua
+        # refuses the download from a runner); the register publishes weekly,
+        # four weeks means a missed rebuild or two, not a broken source.
+        snapshot_max_age_days=28,
+        anchor_lei="254900UI956MSQXOL287",
+        bods_mapper="map_edr_ukraine",
+        notes=(
+            "An index of the register's weekly open-data export (Phase 206's "
+            "builder), built off-datacentre because data.gov.ua answers HTTP "
+            "403 to every datacentre address. A refresh-due amber means "
+            "refresh_edr_ukraine_index.sh has not been run, not that the "
+            "Ministry of Justice stopped publishing."
+        ),
+    ),
+    "cyprus_drcor": _p(
+        tier="index",
+        subject="BERN INVESTMENTS LIMITED (CY HE 449149)",
+        args=("449149",),
+        kwargs={"legal_name": "BERN INVESTMENTS LIMITED"},
+        expect_fields=("name", "org_type", "registered_on", "status"),
+        # SKIP without an index (the jar_lithuania shape), never allow_empty.
+        # warm_bulk_stores.py downloads the asset first.
+        requires_files=("cyprus_drcor.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt monthly by refresh-cyprus-drcor-index.yml (data.gov.cy
+        # answers a datacentre, unlike JAR); the register republishes the
+        # three CSVs roughly monthly. Seven weeks means a missed rebuild or
+        # two, not a broken source.
+        snapshot_max_age_days=49,
+        anchor_lei="254900YI1OJO26HFY821",
+        bods_mapper="map_cyprus_drcor",
+        notes=(
+            "The Cyprus wiring (29 Oct 2026): an index of the register's "
+            "three CSV distributions (organisations, registered offices, "
+            "officials), the whole register — companies, business names, "
+            "partnerships and overseas companies. The register publishes no "
+            "shareholders and no beneficial owners."
+        ),
+    ),
     "krs_poland": _p(
         tier="live",
         subject="ORLEN Spółka Akcyjna",

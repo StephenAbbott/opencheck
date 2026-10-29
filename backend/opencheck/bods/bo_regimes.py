@@ -343,12 +343,11 @@ _add(BORegime(
         "https://zakon.rada.gov.ua/laws/show/361-20",
         "https://zakon.rada.gov.ua/laws/show/755-15",
     ),
-    last_verified="2026-09-14",
-    # "draft", not "verified": assembled from the statute and secondary
-    # summaries and reviewed by Stephen on 2026-09-14, but not yet checked
-    # line-by-line against the primary legislation the way the 2026-08-30 pass
-    # checked the other nine entries.
-    review_status="draft",
+    # Drafted from the statute and secondary summaries on 2026-09-14;
+    # confirmed by Stephen on 2026-10-29 when the source was wired into the
+    # lookup (the ticket's one open item).
+    last_verified="2026-10-29",
+    review_status="verified",
 ))
 
 

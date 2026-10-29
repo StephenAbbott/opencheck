@@ -1320,6 +1320,109 @@ re-derived otherwise:
 - `cut` is KBO's `SnapshotDate` (day-first in `meta.csv`, stored ISO);
   KBO's own meta rides as `kbo_*` keys. Nothing touches the response
   `Cache` (the Phase 325 rule).
+## Ukraine's ЄДР is an index tier with beneficial owners (the EDR wiring, 29 Oct 2026)
+
+`sources/edr_ukraine.py`, `scripts/build_edr_ukraine_index.py`,
+`scripts/refresh_edr_ukraine_index.sh`, `bods/mappers/ukraine.py`. Phase 206
+built the adapter and left it unregistered because "a 967 MB index cannot live
+on Render"; Phase 180's persistent disk made that false, and the source is now
+wired in the `jar_lithuania` shape. Things that will be re-derived otherwise:
+
+- **data.gov.ua refuses the download from every datacentre address** (HTTP
+  403, Cloudflare — the cloud and a GitHub runner alike; a ranged GET from a
+  home connection answers 206), while its CKAN API answers everywhere. So the
+  index is built by hand with `refresh_edr_ukraine_index.sh` (download →
+  build `--gzip` → `replace_release_asset.sh`) and shipped as the
+  `edr-ukraine-index` asset; `warm_index` downloads it at boot when absent or
+  changed (`EDR_UKRAINE_DB_URL`), onto `/var/data`. It cannot be a workflow.
+- **The index is the ownership graph, not the register** (`--tier graph`):
+  live entities with a BO record, a corporate founder or a state authority,
+  plus every founder target — ~800,000 of 2.0M, ~1 GB. A code outside it is a
+  **note card** (`not_found`, `COVERAGE_NOT_IN_INDEX` says what the index
+  holds), never a degradation; a `sqlite3.Error` is a `source_read`
+  degradation; no index is `covers_lei` False and the source is not announced.
+  The reader requires `meta.schema_version == INDEX_SCHEMA_VERSION` ("1").
+- **Three authorities file the EDRPOU** — `UA_RA_CODES` (RA000567, RA001026,
+  RA001027), one `LookupDeriver` over the set; `RA_BY_COUNTRY["UA"]` is
+  RA000567 and the picker's UA entry names the other two as
+  `sameNumberAuthorities`, which `GleifAdapter.search_by_local_id` widens to
+  (the French arrangement). `UA-EDR` is a FullCheck register hop by
+  construction.
+- **A founder row naming a class of people is an unspecified party.**
+  "ФІЗИЧНІ ОСОБИ", "НЕВІДОМІ ОСОБИ", "ПРИВАТНІ ОСОБИ В КІЛЬКОСТІ 112 ОСІБ",
+  "АКЦІОНЕРИ", "ІНШІ АКЦІОНЕРИ", "НЕВИЗНАЧЕНА ОСОБА", "ЗАГАЛЬНА КІЛЬКІСТЬ
+  АКЦІОНЕРІВ …", "ТРИ ФІЗИЧНІ ОСОБИ"… (3,086 of the 1,029,088 codeless
+  founder rows on 27 Oct 2026) → `interestedParty.unspecified` with
+  `informationUnknownToPublisher` and the register's words (the Phase 199
+  GEM placeholder rule), never a person statement — a phantom person would
+  reach the graph and the related-party screens. `founder_is_placeholder`
+  is the one place that decides it.
+- **A codeless founder named by its legal form is an entity.** The register
+  types no founder; a foreign company ("КЛАРІКС КЕПІТАЛ ЛІМІТЕД", 261 rows;
+  "… ЛТД", "… B.V.") carries no EDRPOU and until the wiring was emitted as a
+  **person** — 17,212 rows on the related-party screens. `founder_is_organisation`
+  matches whole legal-form tokens (`_UA_ORG_TOKENS`, Cyrillic transliterations
+  and Latin forms; "РАДА" and "СПІЛКА" left out — they are also names) and
+  makes it an entity with no identifier and **no jurisdiction** (the register
+  files no country; Phase 295). Measured: no three-word person-shaped name
+  is flagged.
+- **Nothing here reconstructs a withheld field** (addresses, locations, KVED
+  — Law 4576-IX). The pre-2022 Open Ownership Ukraine data carries BO
+  addresses and must never be joined in to fill them.
+- **Cross-source name matching is weaker for Ukrainian persons**: the BO
+  string carries name, citizenship, influence and percentage — no birth
+  date, so the `cross_check` birth-year corroboration can never fire. A
+  stricter gate for UA-sourced person names is an open follow-up on the
+  ticket, not a reason to drop the names.
+- The `bo_regimes` entry is `verified` (Stephen, 29 Oct 2026); founders
+  `omit` the flag and are emitted (a percentage only where the hryvnia
+  holdings reconcile to the declared capital within 1 %, annotated as
+  OpenCheck's arithmetic); `EXECUTIVE_POWER` → `stateBody` +
+  `controlByLegalFramework` → `STATE_CONTROLLED`.
+
+---
+## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
+
+`sources/cyprus_drcor.py`, `scripts/build_cyprus_drcor_index.py`,
+`.github/workflows/refresh-cyprus-drcor-index.yml`, `bods/mappers/cyprus.py`.
+Phase 47 wrote the adapter against a hand-built file with guessed columns and
+never wired it; this rebuilt it in the `jar_lithuania` shape. Things that will
+be re-derived otherwise:
+
+- **data.gov.cy answers a datacentre**, so the index is a GitHub workflow,
+  monthly on the 6th (the JAR / ЄДР hand-run arrangement is not needed). The
+  portal renumbers each file on publication (`organisations_102.csv`,
+  `registered_office_101.csv`, `organisation_officials_88.csv` on 29 Sept
+  2026); `current_links` scrapes the dataset page for the three current
+  `/sites/default/files/…` links and the cut is the newest `Last-Modified`.
+  A wrong link answers 200 with the SPA's HTML: the builder requires the
+  exact header row (`HEADERS`), `MIN_ROWS` per file and ≤ `MAX_MALFORMED`
+  rows, and writes nothing when it refuses.
+- **The whole register, keyed on `(type_code, reg_no)`.** Numbers repeat
+  across types (`C` company HE, `O` overseas company AE, `P` partnership S,
+  `B`/`N` business name BN); an HE number is type `C` and a search hit of
+  another type is `<type>:<number>`. Dates are day-first in the files.
+- **The identifier is spelled as GLEIF spells it**: `ΗΕ 449149`, Greek eta
+  and epsilon then a space (200 of 200 ISSUED records under RA000161) —
+  `register_identifier`, so the GLEIF and register statements corroborate
+  on `CY-DRCOR`; `display_number` is the Latin `HE 449149` for summaries and
+  `normalise_he_number` the digits for the deriver and the hop.
+- **Officials are a name and one of nine positions** — no person flag, no
+  country, no date. A corporate official is told by its name
+  (`_CY_ORG_OFFICIAL_TOKENS`; Cypriot secretaries are mostly fiduciary
+  companies) and carries no jurisdiction (Phase 295). Directors →
+  `seniorManagingOfficial`; secretaries and an overseas company's authorised
+  person → `otherInfluenceOrControl` **marked as an officer** (Phase 340);
+  partners and a business name's owner (`Ιδιοκτήτης`) →
+  `otherInfluenceOrControl`, unmarked. Nothing here is a shareholder or a
+  beneficial owner; the register publishes neither, and the finding never
+  says "none on file" for them (the JAR / ACRA precedent).
+- **Status words are Greek** (`STATUSES`, with the three rare ones the
+  29 Sept files carry); "Ευρωπαϊκή Εταιρεία" in the status column is a form,
+  left unknown. `ORGANISATION_STATUS_DATE` is the `dissolutionDate` of a
+  terminal status and the `since` of a pending one.
+- A search ranks companies before the other types and an exact name first.
+  Nothing touches the response `Cache` (the Phase 325 rule).
 
 ## Estonia is an index first, the page second (Phase 330)
 

@@ -1,17 +1,25 @@
 """Ukraine — ЄДР, the Unified State Register of Legal Entities (data.gov.ua).
 
-Bulk/offline adapter over a pre-built SQLite index, in the ``cyprus_drcor``
-shape: not in ``REGISTRY``, not wired into the lookup dispatch, and returning a
-stub when no index is configured. Build the index with
-``scripts/build_edr_ukraine_index.py`` and point ``EDR_UKRAINE_DB_FILE`` at it.
+An **index-tier** register source, the ``jar_lithuania`` shape: the lookup
+reads a SQLite index of the weekly bulk export, downloaded at boot from the
+``edr-ukraine-index`` release asset (``EDR_UKRAINE_DB_URL``) onto the
+persistent disk and replaced when the asset changes. Dispatch is gated on
+the index being present (``covers_lei``); a code the index does not hold is
+a note card, never a failure. Build the index with
+``scripts/refresh_edr_ukraine_index.sh`` (download + build + upload) or
+``scripts/build_edr_ukraine_index.py`` by hand.
 
 Why bulk and not live
 ---------------------
 There is no government API for the ЄДР. The only official channel is a weekly
-ZIP of XML on data.gov.ua: ``UO.zip`` is 327 MB compressed and **3.16 GB of XML**
+ZIP of XML on data.gov.ua: ``UO.zip`` is 328 MB compressed and **3.16 GB of XML**
 holding 2,017,706 legal entities (measured against the 8 Sep 2026 export). The
 whole file streams through ``iterparse`` in 113 s at 209 MB peak RSS, so the
 cost is storage, not parsing — which is why the index is built once, offline.
+The download itself sits behind a Cloudflare rule that refuses datacentre
+addresses (HTTP 403 from the cloud and, like Lithuania's register, from a
+GitHub runner) and answers a home connection, so the index is built
+off-datacentre and shipped in, never rebuilt by a workflow.
 
 What the register publishes
 ---------------------------
@@ -37,6 +45,12 @@ Format traps, each measured against the real export
   GLEIF ``registeredAs``.
 * Founder holdings are **hryvnia amounts, not percentages** — see
   ``parse_founder``.
+* **The index holds the ownership graph, not the whole register** (the
+  ``graph`` tier): every live entity with a beneficial-ownership record, a
+  corporate founder or a state authority, plus every entity a founder list
+  points at. A live company with none of those, or a terminated one nothing
+  points at, is "not in the index" — the note card says so, and says what
+  the index holds.
 
 The four repeating elements (``BENEFICIARIES``, ``FOUNDERS``, ``SIGNERS``,
 ``MEMBERS``) are all ``xs:string`` in the register's own schema: semicolon-
@@ -55,9 +69,9 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from .. import provenance
+from .. import degradation, provenance
 from ..config import get_settings
-from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
+from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .schemas import validate_raw
 from .schemas.edr_ukraine import EdrUkraineBundle
 
@@ -81,12 +95,82 @@ UA_RA_CODES: frozenset[str] = frozenset(
 )
 UA_EDR_RA_CODE: str = "RA000567"
 
-_DATASET_URL = "https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7"
+DATASET_URL = "https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7"
+_DATASET_URL = DATASET_URL
 _SEARCH_URL = "https://usr.minjust.gov.ua/content/free-search"
+
+#: ``meta.schema_version`` the reader accepts. Bump when a table or column
+#: the adapter reads changes; an index of another version is ignored (with a
+#: warning) rather than read wrongly.
+INDEX_SCHEMA_VERSION = "1"
+
+#: Said on the card when the index answered and holds no row for the code.
+COVERAGE_NOT_IN_INDEX = (
+    "This EDRPOU code is not in OpenCheck's index of the ЄДР open data. The "
+    "index holds the register's ownership graph — every live entity with a "
+    "beneficial-ownership record, a corporate founder or a state authority, "
+    "and every entity a founder list points at — so a live company with none "
+    "of those, a terminated company, or a company newer than the export is "
+    "not in it. This is not a statement that the register holds no record."
+)
 
 #: ``STAN`` value for a live registration. Every other value is some flavour of
 #: terminated, in-termination, cancelled or bankrupt.
 ACTIVE_STAN = "зареєстровано"
+
+#: The register's ``STAN`` values with an English gloss, for the card's
+#: sentence. An unlisted value is shown in the register's own words.
+STATUS_GLOSSES: dict[str, str] = {
+    "зареєстровано": "Registered",
+    "припинено": "Terminated",
+    "в стані припинення": "In termination",
+    "порушено справу про банкрутство": "Bankruptcy proceedings opened",
+    "порушено справу про банкрутство (санація)": "Bankruptcy proceedings opened (rehabilitation)",
+    "скасовано": "Cancelled",
+    "архівний": "Archived",
+}
+
+#: The commonest ``OPF`` (legal form) values, glossed. An unlisted form is
+#: shown as the register writes it, in sentence case.
+FORM_GLOSSES: dict[str, str] = {
+    "ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ": "limited liability company (ТОВ)",
+    "АКЦІОНЕРНЕ ТОВАРИСТВО": "joint-stock company (АТ)",
+    "ПУБЛІЧНЕ АКЦІОНЕРНЕ ТОВАРИСТВО": "public joint-stock company (ПАТ)",
+    "ПРИВАТНЕ АКЦІОНЕРНЕ ТОВАРИСТВО": "private joint-stock company (ПрАТ)",
+    "ПРИВАТНЕ ПІДПРИЄМСТВО": "private enterprise (ПП)",
+    "ДЕРЖАВНЕ ПІДПРИЄМСТВО": "state enterprise (ДП)",
+    "КОМУНАЛЬНЕ ПІДПРИЄМСТВО": "municipal enterprise (КП)",
+    "ТОВАРИСТВО З ДОДАТКОВОЮ ВІДПОВІДАЛЬНІСТЮ": "additional liability company (ТДВ)",
+    "ПОВНЕ ТОВАРИСТВО": "general partnership",
+    "КОМАНДИТНЕ ТОВАРИСТВО": "limited partnership",
+    "ГРОМАДСЬКА ОРГАНІЗАЦІЯ": "civic organisation (ГО)",
+    "БЛАГОДІЙНА ОРГАНІЗАЦІЯ": "charitable organisation",
+    "ДОЧІРНЄ ПІДПРИЄМСТВО": "subsidiary enterprise",
+    "ІНОЗЕМНЕ ПІДПРИЄМСТВО": "foreign enterprise",
+    "ФЕРМЕРСЬКЕ ГОСПОДАРСТВО": "farm enterprise",
+    "ОБСЛУГОВУЮЧИЙ КООПЕРАТИВ": "service cooperative",
+    "ОБ'ЄДНАННЯ СПІВВЛАСНИКІВ БАГАТОКВАРТИРНОГО БУДИНКУ": "apartment-building co-owners' association (ОСББ)",
+}
+
+
+def status_label(stan: str | None) -> str | None:
+    """The register's status, glossed in English where known."""
+    text = (stan or "").strip()
+    if not text:
+        return None
+    return STATUS_GLOSSES.get(text.lower(), text)
+
+
+def form_label(opf: str | None) -> str | None:
+    """The register's legal-form words, glossed where known."""
+    text = (opf or "").strip()
+    if not text:
+        return None
+    gloss = FORM_GLOSSES.get(text.upper())
+    if gloss:
+        return gloss
+    return text[0].upper() + text[1:].lower()
+
 
 # ---------------------------------------------------------------------------
 # Field grammar
@@ -391,6 +475,161 @@ def classify_absence(reason_text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Index access
+# ---------------------------------------------------------------------------
+
+
+def db_path() -> Path:
+    """``EDR_UKRAINE_DB_FILE`` or the data-root default — one function, so the
+    reader, the boot download and the sweep's ``requires_files`` agree (the
+    ONRC lesson: they once did not, and a good index sat unread)."""
+    from ..cache import data_root
+
+    configured = get_settings().edr_ukraine_db_file
+    return Path(configured) if configured else data_root() / "edr_ukraine.sqlite"
+
+
+_SHARED: dict[str, sqlite3.Connection | None] = {}
+
+
+def _connect() -> sqlite3.Connection | None:
+    path = db_path()
+    if not path.exists():
+        if get_settings().edr_ukraine_db_file:
+            logger.warning("edr_ukraine: index not found at %s", path)
+        return None
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    try:
+        version = conn.execute(
+            "SELECT value FROM meta WHERE key = 'schema_version'"
+        ).fetchone()
+    except sqlite3.Error:
+        version = None
+    if not version or version[0] != INDEX_SCHEMA_VERSION:
+        logger.warning(
+            "edr_ukraine: index at %s has an unexpected schema (want %s); ignoring",
+            path, INDEX_SCHEMA_VERSION,
+        )
+        conn.close()
+        return None
+    return conn
+
+
+def _shared_conn() -> sqlite3.Connection | None:
+    if _SHARED.get("conn") is None:
+        _SHARED["conn"] = _connect()
+    return _SHARED.get("conn")
+
+
+def reset_connection() -> None:
+    """Forget the cached connection (after a download, or in tests)."""
+    conn = _SHARED.pop("conn", None)
+    if conn is not None:
+        try:
+            conn.close()
+        except sqlite3.Error:  # pragma: no cover - best effort
+            pass
+
+
+def index_available() -> bool:
+    """True when a readable index of the expected schema is present."""
+    return _shared_conn() is not None
+
+
+def read_meta() -> dict[str, str]:
+    """The index's ``meta`` table, or ``{}`` when there is no index."""
+    conn = _shared_conn()
+    if conn is None:
+        return {}
+    try:
+        return {str(k): str(v) for k, v in conn.execute("SELECT key, value FROM meta")}
+    except sqlite3.Error:  # pragma: no cover
+        return {}
+
+
+def declare_snapshot(meta: dict[str, str] | None = None) -> None:
+    """Declare an index read as a snapshot of the register's open data.
+
+    ``retrieved_at`` is when OpenCheck built the index (``meta.built_at``);
+    ``source_as_of`` is the day data.gov.ua cut the export
+    (``meta.export_date``), so ``statementDate`` is the register's date and
+    not the day of the lookup (Phase 314). Without this the recorder resolves
+    to its ``stub`` default and real register rows badge as "Placeholder
+    data" — the ariregister (Phase 45) and ONRC (PR #275) bug.
+    """
+    meta = read_meta() if meta is None else meta
+    cut = meta.get("export_date") or ""
+    provenance.record_snapshot(
+        retrieved_at=provenance.parse_moment(meta.get("built_at")),
+        source_as_of=provenance.parse_moment(cut),
+        detail=(
+            f"data.gov.ua ЄДР bulk export, cut {cut} (local SQLite index)"
+            if cut else "data.gov.ua ЄДР bulk export (local SQLite index)"
+        ),
+    )
+
+
+def warm_index() -> dict[str, Any]:
+    """Download the index at boot when absent; replace it when the release
+    asset changed; keep it otherwise. Never raises — no index is a state this
+    module models (``covers_lei`` is False and the source is not announced).
+
+    The index cannot be built here: data.gov.ua's download refuses every
+    datacentre address (``refresh_edr_ukraine_index.sh`` runs at home).
+    """
+    from ..entity_pages import (
+        ASSET_STAMP_KEY,
+        asset_check,
+        download_db,
+        read_meta as read_file_meta,
+        record_asset_stamp,
+    )
+
+    settings = get_settings()
+    path = db_path()
+    url = settings.edr_ukraine_db_url
+    if not url:
+        state = "present" if path.exists() else "absent"
+        return {"edr_ukraine": f"{state}: {path} (no URL)"}
+    try:
+        last_modified: str | None = None
+        if path.exists():
+            decision, last_modified = asset_check(url, path)
+            if decision == "keep":
+                if last_modified and read_file_meta(path).get(ASSET_STAMP_KEY) is None:
+                    record_asset_stamp(path, last_modified)
+                return {"edr_ukraine": f"already present: {path}"}
+            outcome = "replaced"
+        else:
+            outcome = "downloaded"
+        downloaded, elapsed = download_db(url, path, last_modified=last_modified)
+        reset_connection()
+        return {"edr_ukraine": f"{outcome}: {path} ({downloaded} bytes in {elapsed:.1f}s)"}
+    except Exception as exc:  # noqa: BLE001 — no index is a state, not a crash
+        logger.warning("edr_ukraine: asset check/download failed: %s", exc)
+        return {"edr_ukraine": f"failed: {exc}"}
+
+
+def _rows(table: str, edrpou: str) -> list[dict[str, Any]]:
+    conn = _shared_conn()
+    if conn is None:
+        return []
+    cur = conn.execute(f"SELECT * FROM {table} WHERE edrpou = ? ORDER BY seq", (edrpou,))
+    return [dict(r) for r in cur.fetchall()]
+
+
+def entity_record(edrpou: str) -> dict[str, Any] | None:
+    """The index's ``entity`` row for one code; None when the index does not
+    hold it (or there is no index)."""
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    row = conn.execute("SELECT * FROM entity WHERE edrpou = ?", (edrpou,)).fetchone()
+    return dict(row) if row is not None else None
+
+
+# ---------------------------------------------------------------------------
 # Adapter
 # ---------------------------------------------------------------------------
 
@@ -400,41 +639,26 @@ class EdrUkraineAdapter(SourceAdapter):
 
     id = "edr_ukraine"
 
-    def __init__(self) -> None:
-        self._db: sqlite3.Connection | None = None
-        self._meta: dict[str, str] = {}
-
-    def _record_index_provenance(self) -> None:
-        """Declare the answer came from the local ЄДР index (Phase 314).
-
-        ``retrieved_at`` is when OpenCheck built the index (``meta.built_at``);
-        ``source_as_of`` is the day data.gov.ua cut the export
-        (``meta.export_date``), so ``statementDate`` is the register's date and
-        not the day of the lookup. An index built before the export date was
-        persisted carries a retrieval time and no cut.
-        """
-        provenance.record_snapshot(
-            retrieved_at=provenance.parse_moment(self._meta.get("built_at")),
-            source_as_of=provenance.parse_moment(self._meta.get("export_date")),
-            detail="data.gov.ua ЄДР bulk export (local SQLite index)",
-        )
+    # All three authorities file the 8-digit EDRPOU in ``registeredAs``.
+    lookup_derivers = (
+        LookupDeriver(UA_RA_CODES, "ua_edrpou", normalise_edrpou),
+    )
+    lookup_pass_legal_name = True
 
     @property
     def info(self) -> SourceInfo:
-        settings = get_settings()
-        db_path = getattr(settings, "edr_ukraine_db_file", None)
-        live = bool(db_path and Path(db_path).exists())
         return SourceInfo(
             id=self.id,
             name="ЄДР — Unified State Register of Legal Entities (Ukraine)",
             homepage="https://usr.minjust.gov.ua/",
             description=(
                 "Ukrainian company register published as open data by the "
-                "Ministry of Justice on data.gov.ua. Carries founders with "
-                "their hryvnia holdings, heads and signatories, governing-body "
-                "members, and beneficial owners — or the register's stated "
-                "reason for their absence. Addresses and activity codes are "
-                "withheld at source under martial law."
+                "Ministry of Justice on data.gov.ua, read from a local index "
+                "of the weekly export. Carries founders with their hryvnia "
+                "holdings, heads and signatories, governing-body members, and "
+                "beneficial owners — or the register's stated reason for "
+                "their absence. Addresses and activity codes are withheld at "
+                "source under martial law."
             ),
             license="CC-BY-4.0",
             attribution=(
@@ -445,88 +669,61 @@ class EdrUkraineAdapter(SourceAdapter):
             ),
             supports=[SearchKind.ENTITY],
             requires_api_key=False,
-            live_available=live,
+            live_available=index_available(),
             is_national_register=True,
             country="UA",
         )
 
-    # -- storage ----------------------------------------------------------
-    def _conn(self) -> sqlite3.Connection | None:
-        if self._db is not None:
-            return self._db
-        settings = get_settings()
-        db_path = getattr(settings, "edr_ukraine_db_file", None)
-        if not db_path:
-            return None
-        path = Path(db_path)
-        if not path.exists():
-            logger.warning("edr_ukraine: index not found at %s", db_path)
-            return None
-        conn = sqlite3.connect(str(path), check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        self._db = conn
-        self._meta = provenance.index_meta(conn)
-        return self._db
+    def covers_lei(self, lei: str) -> bool:
+        """Gate dispatch on the index file, not on the LEI.
 
-    def _rows(self, table: str, edrpou: str) -> list[dict[str, Any]]:
-        conn = self._conn()
-        if conn is None:
-            return []
-        try:
-            cur = conn.execute(
-                f"SELECT * FROM {table} WHERE edrpou = ? ORDER BY seq", (edrpou,)
-            )
-        except sqlite3.OperationalError as exc:
-            logger.warning("edr_ukraine: query on %s failed: %s", table, exc)
-            return []
-        return [dict(r) for r in cur.fetchall()]
-
-    def _entity_row(self, edrpou: str) -> dict[str, Any] | None:
-        conn = self._conn()
-        if conn is None:
-            return None
-        try:
-            cur = conn.execute("SELECT * FROM entity WHERE edrpou = ?", (edrpou,))
-        except sqlite3.OperationalError as exc:
-            logger.warning("edr_ukraine: entity query failed: %s", exc)
-            return None
-        row = cur.fetchone()
-        return dict(row) if row is not None else None
+        Without an index the source would be announced for every Ukrainian
+        lookup and then answer nothing — counted in "N of N sources answered"
+        while answering nothing (the ``jar_lithuania`` / ``onrc_romania``
+        gate). Whether the *entity* is in the index is ``fetch``'s answer: a
+        note card when it is not.
+        """
+        return index_available()
 
     # -- SourceAdapter ----------------------------------------------------
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
-        if kind != SearchKind.ENTITY:
+        if kind != SearchKind.ENTITY or not (query or "").strip():
             return []
-        conn = self._conn()
+        conn = _shared_conn()
         if conn is None:
-            return self._stub_search(query)
-        try:
-            cur = conn.execute(
-                "SELECT edrpou, name, stan FROM entity WHERE name LIKE ? LIMIT 10",
-                (f"%{query}%",),
-            )
-        except sqlite3.OperationalError:
             return []
-        rows = cur.fetchall()
-        if rows:
-            self._record_index_provenance()
+        try:
+            rows = conn.execute(
+                "SELECT edrpou, name, stan FROM entity WHERE name LIKE ? LIMIT 10",
+                (f"%{query.strip()}%",),
+            ).fetchall()
+        except sqlite3.Error:
+            return []
+        if not rows:
+            return []
+        declare_snapshot()
         hits: list[SourceHit] = []
         for row in rows:
+            segments = [f"UA-EDR {row['edrpou']}"]
+            if row["stan"] and row["stan"] != ACTIVE_STAN:
+                segments.append(str(row["stan"]))
             hits.append(
                 SourceHit(
                     source_id=self.id,
                     hit_id=row["edrpou"],
                     kind=SearchKind.ENTITY,
                     name=row["name"],
-                    summary=f"UA · EDRPOU {row['edrpou']}",
+                    summary=" · ".join(segments),
                     identifiers={"ua_edrpou": row["edrpou"]},
                     raw={"edrpou": row["edrpou"], "stan": row["stan"]},
                     is_stub=False,
+                    liveness="snapshot",
                 )
             )
         return hits
 
     def _stub(self, edrpou: str, legal_name: str) -> dict[str, Any]:
+        """Nothing was read: no index, or not a code. Dropped by the pipeline."""
         return {
             "source_id": self.id,
             "edrpou": edrpou,
@@ -542,6 +739,26 @@ class EdrUkraineAdapter(SourceAdapter):
             "is_stub": True,
         }
 
+    def _not_in_index(self, edrpou: str, legal_name: str, meta: dict[str, str]) -> dict[str, Any]:
+        """The index answered, and does not hold the code — a note card.
+
+        ``is_stub`` False and ``not_found`` True, the INPI / ONRC / JAR shape:
+        ``_lookup_pipeline`` drops every ``is_stub`` result above the registry
+        branch, so a True here would announce the source and then show
+        nothing. Not cached and not a degradation: nothing failed.
+        """
+        bundle = self._stub(edrpou, legal_name)
+        bundle.update(
+            {
+                "link": DATASET_URL,
+                "is_stub": False,
+                "not_found": True,
+                "coverage_note": COVERAGE_NOT_IN_INDEX,
+                "export_date": meta.get("export_date"),
+            }
+        )
+        return bundle
+
     async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
         """Return the ЄДР bundle for one EDRPOU code.
 
@@ -551,43 +768,42 @@ class EdrUkraineAdapter(SourceAdapter):
         edrpou = normalise_edrpou(hit_id)
         if not edrpou:
             return self._stub(edrpou, legal_name)
-
-        entity = self._entity_row(edrpou)
-        if entity is None:
+        conn = _shared_conn()
+        if conn is None:
             return self._stub(edrpou, legal_name)
 
-        self._record_index_provenance()
-        exec_rows = self._rows("executive_power", edrpou)
-        bundle: dict[str, Any] = {
-            "source_id": self.id,
-            "edrpou": edrpou,
-            "name": entity.get("name") or legal_name or f"UA {edrpou}",
-            "entity": entity,
-            "beneficiaries": self._rows("beneficiary", edrpou),
-            "founders": self._rows("founder", edrpou),
-            "signers": self._rows("signer", edrpou),
-            "members": self._rows("member", edrpou),
-            "executive_power": exec_rows[0] if exec_rows else None,
-            "legal_name": legal_name,
-            "link": _DATASET_URL,
-            "is_stub": False,
-        }
+        try:
+            entity = entity_record(edrpou)
+            meta = read_meta()
+            if entity is None:
+                return self._not_in_index(edrpou, legal_name, meta)
+            exec_rows = _rows("executive_power", edrpou)
+            bundle: dict[str, Any] = {
+                "source_id": self.id,
+                "edrpou": edrpou,
+                "name": entity.get("name") or legal_name or f"UA {edrpou}",
+                "entity": entity,
+                "beneficiaries": _rows("beneficiary", edrpou),
+                "founders": _rows("founder", edrpou),
+                "signers": _rows("signer", edrpou),
+                "members": _rows("member", edrpou),
+                "executive_power": exec_rows[0] if exec_rows else None,
+                "legal_name": legal_name,
+                "export_date": meta.get("export_date"),
+                "link": DATASET_URL,
+                "is_stub": False,
+            }
+        except sqlite3.Error as exc:
+            degradation.record(
+                self.id,
+                "The ЄДР index could not be read; the card shows nothing from "
+                "the register. This is not a confirmation that the register "
+                "holds nothing.",
+                reason=degradation.reason_for_failure(type(exc).__name__),
+            )
+            return self._stub(edrpou, legal_name)
+
+        # Declared only once a row is in hand: a miss is not a read of data.
+        declare_snapshot(meta)
         validate_raw("edr_ukraine", EdrUkraineBundle, bundle)
         return bundle
-
-    def _stub_search(self, query: str) -> list[SourceHit]:
-        return [
-            SourceHit(
-                source_id=self.id,
-                hit_id="00000000",
-                kind=SearchKind.ENTITY,
-                name=f"{query} (stub)",
-                summary=(
-                    "Stub ЄДР record — build the index with "
-                    "scripts/build_edr_ukraine_index.py to enable live data."
-                ),
-                identifiers={"ua_edrpou": "00000000"},
-                raw={"edrpou": "00000000"},
-                is_stub=True,
-            )
-        ]

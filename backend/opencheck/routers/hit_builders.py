@@ -708,6 +708,81 @@ def _bh_jar_lithuania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_edr_ukraine(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Ukrainian ЄДР, from the index.
+
+    * **An entity.** Asserts the EDRPOU the register published — the index
+      key. The name is the register's (Ukrainian), GLEIF's only as a last
+      resort; the finding carries the status, the form and the counts.
+    * **Not in the index.** A note card in the KvK / INPI / JAR shape: the
+      row sentence says what the index holds, no identifier is asserted, and
+      it is not a degradation — nothing failed.
+
+    Dispatch is gated on the index file (``covers_lei``), so this builder
+    never runs on a deployment with no index.
+    """
+    from ..findings import finding_edr_ukraine
+    from ..sources.edr_ukraine import ACTIVE_STAN, status_label
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "edr_ukraine", local_id,
+            name=ctx.legal_name or "",
+            summary=f"UA-EDR {local_id} · not in the index",
+            finding=finding_edr_ukraine(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    summary = f"UA-EDR {local_id}"
+    stan = ((r.get("entity") or {}).get("stan") or "").strip()
+    if stan and stan != ACTIVE_STAN:
+        summary += f" · {(status_label(stan) or stan).lower()}"
+    return _hit(
+        "edr_ukraine", local_id,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=summary,
+        finding=finding_edr_ukraine(r),
+        identifiers={"ua_edrpou": local_id}, raw=r,
+    )
+
+def _bh_cyprus_drcor(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Cyprus's Registrar of Companies, from the index
+    (the Cyprus wiring, 29 Oct 2026).
+
+    * **A company.** Asserts the HE number the register published (``cy_he``,
+      the index key), with the register's status on the summary where it is
+      not plainly registered.
+    * **Not in the index.** A note card (the JAR shape): the row sentence
+      says so, no identifier is asserted and nothing is degraded.
+
+    Dispatch is gated on the index file (``covers_lei``).
+    """
+    from ..findings import finding_cyprus_drcor
+    from ..sources.cyprus_drcor import display_number, status_class, status_label
+
+    number = display_number(r.get("type_code") or "C", local_id)
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "cyprus_drcor", local_id,
+            name=ctx.legal_name or "",
+            summary=f"CY {number} · not in the index",
+            finding=finding_cyprus_drcor(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    summary = f"CY {number}"
+    cls = status_class(r.get("status"))
+    if cls != "live":
+        summary += " · " + (status_label(r.get("status")) or cls).lower()
+    return _hit(
+        "cyprus_drcor", local_id,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=summary,
+        finding=finding_cyprus_drcor(r),
+        identifiers={"cy_he": local_id}, raw=r,
+    )
+
+
 def _bh_ares(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     e = r.get("entity") or {}
     return _hit(

@@ -2,8 +2,10 @@
 
 The adapter queries a local SQLite index (built by
 scripts/build_edr_ukraine_index.py from the weekly data.gov.ua XML export).
-Tests inject an in-memory DB via ``adapter._db`` so no filesystem or network
-access is needed.
+Tests write a small index of the fixture rows to a temporary file and point
+``EDR_UKRAINE_DB_FILE`` at it (the ``jar_lithuania`` fixture shape), so no
+network access is needed and the module-level shared connection is exercised
+exactly as production exercises it.
 
 The fixture strings are **verbatim rows from the 8 September 2026 export** —
 not invented shapes. Several of them exist to pin a specific hard-won reading:
@@ -14,9 +16,14 @@ corporate founder's bare EDRPOU, and the four flavours of filed absence.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
+from pathlib import Path
 
 import pytest
+
+from opencheck.config import get_settings
+from opencheck.sources import edr_ukraine
 
 from opencheck.bods.mapper import map_edr_ukraine
 from opencheck.sources.base import SearchKind
@@ -195,8 +202,8 @@ def test_parse_capital():
 # --- adapter tests ---------------------------------------------------------
 
 
-def _make_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(":memory:")
+def _make_db(path: Path) -> sqlite3.Connection:
+    conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     conn.executescript(
         """
@@ -210,7 +217,17 @@ def _make_db() -> sqlite3.Connection:
         CREATE TABLE signer (edrpou TEXT, seq INTEGER, name TEXT, role TEXT);
         CREATE TABLE member (edrpou TEXT, seq INTEGER, name TEXT, role TEXT);
         CREATE TABLE executive_power (edrpou TEXT, seq INTEGER, name TEXT, code TEXT);
+        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
         """
+    )
+    conn.executemany(
+        "INSERT INTO meta VALUES (?,?)",
+        [
+            ("schema_version", edr_ukraine.INDEX_SCHEMA_VERSION),
+            ("export_date", "2026-09-08"),
+            ("built_at", "2026-09-14T10:00:00Z"),
+            ("tier", "graph"),
+        ],
     )
     conn.execute(
         "INSERT INTO entity VALUES (?,?,?,?,?,?,?,?)",
@@ -238,16 +255,31 @@ def _make_db() -> sqlite3.Connection:
     return conn
 
 
+def _point_at(path: Path | None) -> None:
+    if path is None:
+        os.environ.pop("EDR_UKRAINE_DB_FILE", None)
+    else:
+        os.environ["EDR_UKRAINE_DB_FILE"] = str(path)
+    get_settings.cache_clear()
+    edr_ukraine.reset_connection()
+
+
 @pytest.fixture
 def adapter():
-    return EdrUkraineAdapter()
+    """No index: the adapter answers stubs and covers nothing."""
+    _point_at(None)
+    yield EdrUkraineAdapter()
+    _point_at(None)
 
 
 @pytest.fixture
-def live_adapter():
-    a = EdrUkraineAdapter()
-    a._db = _make_db()  # inject in-memory DB (bypasses settings/filesystem)
-    return a
+def live_adapter(tmp_path: Path):
+    """An index of the fixture rows, on disk, found through the settings."""
+    path = tmp_path / "edr_ukraine.sqlite"
+    _make_db(path).close()
+    _point_at(path)
+    yield EdrUkraineAdapter()
+    _point_at(None)
 
 
 def test_requires_no_api_key(adapter):
@@ -273,14 +305,60 @@ async def test_fetch_stub_when_no_db(adapter):
 
 
 @pytest.mark.asyncio
-async def test_fetch_stub_when_unknown_code(live_adapter):
-    assert (await live_adapter.fetch("00000000"))["is_stub"] is True
+async def test_fetch_unknown_code_is_a_note_card_not_a_stub(live_adapter):
+    """The index answered and holds no row: ``not_found`` with the coverage
+    note, ``is_stub`` False (a stub is dropped by the pipeline before the
+    card is built — the JAR / INPI / ONRC shape)."""
+    bundle = await live_adapter.fetch("00000001", legal_name="NOBODY LLC")
+    assert bundle["is_stub"] is False
+    assert bundle["not_found"] is True
+    assert bundle["coverage_note"] == edr_ukraine.COVERAGE_NOT_IN_INDEX
+    assert bundle["export_date"] == "2026-09-08"
+    assert bundle["entity"] is None and bundle["beneficiaries"] == []
+    assert list(map_edr_ukraine(bundle)) == []
 
 
 @pytest.mark.asyncio
-async def test_search_returns_stub_without_db(adapter):
-    hits = await adapter.search("КИЇВ-АРТ", SearchKind.ENTITY)
-    assert hits and hits[0].is_stub is True
+async def test_fetch_blank_code_is_a_stub(live_adapter):
+    assert (await live_adapter.fetch(""))["is_stub"] is True
+
+
+@pytest.mark.asyncio
+async def test_search_returns_nothing_without_db(adapter):
+    assert await adapter.search("КИЇВ-АРТ", SearchKind.ENTITY) == []
+
+
+def test_dispatch_is_gated_on_the_index(adapter):
+    assert adapter.covers_lei("254900UI956MSQXOL287") is False
+    assert adapter.info.live_available is False
+
+
+def test_dispatch_opens_with_the_index(live_adapter):
+    assert live_adapter.covers_lei("254900UI956MSQXOL287") is True
+    assert live_adapter.info.live_available is True
+
+
+def test_an_index_of_another_schema_is_ignored(tmp_path: Path):
+    path = tmp_path / "edr_ukraine.sqlite"
+    conn = _make_db(path)
+    conn.execute("UPDATE meta SET value = '0' WHERE key = 'schema_version'")
+    conn.commit()
+    conn.close()
+    _point_at(path)
+    try:
+        assert edr_ukraine.index_available() is False
+    finally:
+        _point_at(None)
+
+
+def test_the_adapter_declares_the_lookup_wiring():
+    """Three authorities file the EDRPOU; the deriver names all three."""
+    (deriver,) = EdrUkraineAdapter.lookup_derivers
+    assert deriver.ra_codes == UA_RA_CODES
+    assert deriver.derived_key == "ua_edrpou"
+    assert deriver.normalise("35265987") == "35265987"
+    assert deriver.normalise("1234567") == "01234567"
+    assert EdrUkraineAdapter.lookup_pass_legal_name is True
 
 
 @pytest.mark.asyncio
@@ -529,3 +607,145 @@ def test_state_control_absent_when_the_register_names_no_authority():
         e for e in stmts["entity"]
         if e["recordDetails"]["entityType"]["type"] == "stateBody"
     ]
+
+
+# --- the EDR wiring (29 Oct 2026): placeholders, the sentence, the card ----
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "ФІЗИЧНІ ОСОБИ",
+        "НЕВІДОМІ ОСОБИ",
+        "ПРИВАТНІ ОСОБИ В КІЛЬКОСТІ 112 ОСІБ",
+        "ГРОМАДЯНИ УКРАЇНИ",
+        "АКЦІОНЕРИ",
+        "ЮРИДИЧНІ ТА ФІЗИЧНІ ОСОБИ",
+        "ІНШІ АКЦІОНЕРИ",
+        "НЕВИЗНАЧЕНА ФІЗИЧНА ОСОБА",
+        "НЕВИЗНАЧЕНА ОСОБА",
+        "ЗАГАЛЬНА КІЛЬКІСТЬ АКЦІОНЕРІВ 1520",
+        "ВСЬОГО АКЦІОНЕРІВ",
+        "ТРИ ФІЗИЧНІ ОСОБИ",
+        "ФІЗИЧНИХ ОСІБ",
+        "ФІЗ ОСОБИ",
+        "[ЗАСНОВНИК]",
+        "ІНФОРМАЦІЯ ПРО ЗАСНОВНИКІВ ВІДСУТНЯ",
+        "ЗГІДНО РЕЄСТРУ АКЦІОНЕРІВ",
+        "ТРУДОВИЙ КОЛЕКТИВ",
+    ],
+)
+def test_a_placeholder_founder_is_an_unspecified_party_never_a_person(name: str):
+    """"ФІЗИЧНІ ОСОБИ" names a class of people, not a person: no person
+    statement reaches the graph or the related-party screens; the holding is
+    an unspecified party carrying the register's words (the GEM shape)."""
+    from opencheck.bods.mappers.ukraine import founder_is_placeholder
+
+    assert founder_is_placeholder(name)
+    assert not founder_is_placeholder("ПЕЛИХ МАРИНА АРКАДІЇВНА")
+    founders = [
+        {"seq": 0, "name": name, "code": None, "citizenship": None, "amount_uah": 1000.0},
+    ]
+    out = _by_type(map_edr_ukraine(_bundle(founders=founders)))
+    assert out["person"] == []
+    (rel,) = out["relationship"]
+    party = rel["recordDetails"]["interestedParty"]
+    assert party["reason"] == "informationUnknownToPublisher"
+    assert party["description"] == name
+    (interest,) = rel["recordDetails"]["interests"]
+    assert interest["type"] == "unknownInterest"
+    assert "beneficialOwnershipOrControl" not in interest
+    assert "1,000.00 UAH" in interest["details"]
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "КЛАРІКС КЕПІТАЛ ЛІМІТЕД",
+        "КОМПАНІЯ ЕКСТРА ВЕНЧУР ЛТД (EXTRA VENTURE LTD)",
+        "ПРИВАТНА АКЦІОНЕРНА КОМПАНІЯ «БІЗ КОРП. ЛТД»",
+        "КВІНТЕР ЛП LP 21052",
+        "STELLAR STAR LTD",
+        "ACME HOLDINGS B.V.",
+    ],
+)
+def test_a_codeless_founder_named_by_its_legal_form_is_an_entity_with_no_jurisdiction(name: str):
+    """A foreign company founder carries no EDRPOU and the register types
+    nothing; its legal-form words make it an entity, with no identifier and
+    no assumed country (Phase 295), never a person on the related-party
+    screens. Measured on the 27 Oct 2026 index: 17,212 of 1,029,088
+    codeless founder rows; none shaped like a person's three names."""
+    from opencheck.bods.mappers.ukraine import founder_is_organisation
+
+    assert founder_is_organisation(name)
+    for person in (
+        "ПЕЛИХ МАРИНА АРКАДІЇВНА",
+        "ТРОФІМОВА РАДА ВОЛОДИМИРІВНА",  # a given name, not a council
+        "СПІЛКА ОЛЕГ ВІКТОРОВИЧ",  # a surname, not a union
+    ):
+        assert not founder_is_organisation(person), person
+    founders = [{"seq": 0, "name": name, "code": None, "amount_uah": 500.0}]
+    out = _by_type(map_edr_ukraine(_bundle(founders=founders)))
+    assert out["person"] == []
+    (subject, party) = out["entity"]
+    assert party["recordDetails"]["name"] == name
+    assert "jurisdiction" not in party["recordDetails"]
+    assert not party["recordDetails"].get("identifiers")
+    (rel,) = out["relationship"]
+    assert rel["recordDetails"]["interestedParty"] == party["recordId"]
+
+
+def test_the_finding_sentence_counts_in_one_voice():
+    from opencheck.findings import MAX_FINDING_CHARS, finding_edr_ukraine
+
+    b = parse_beneficiary(BO_DIRECT)
+    bundle = _bundle(
+        beneficiaries=[{"seq": 0, "kind": "named", **b}],
+        founders=[{"seq": 0, "name": "ПЕЛИХ МАРИНА АРКАДІЇВНА", "code": None, "amount_uah": 1.0}],
+        signers=[{"seq": 0, "name": "ПЕЛИХ МАРИНА АРКАДІЇВНА", "role": "керівник"}],
+    )
+    sentence = finding_edr_ukraine(bundle)
+    assert sentence == (
+        "On the register, limited liability company (ТОВ), 1 beneficial owner "
+        "declared, 1 founder on file, 1 signatory."
+    )
+    assert len(sentence) <= MAX_FINDING_CHARS
+
+    absent = _bundle(
+        beneficiaries=[{"seq": 0, "kind": "absence", "reason_text": "засновником є держава", "raw": ""}],
+    )
+    assert "no beneficial owner declared: state or municipal founder" in finding_edr_ukraine(absent)
+    assert "0 founders on file" in finding_edr_ukraine(absent)
+
+    terminated = _bundle(entity={**_bundle()["entity"], "stan": "припинено"})
+    assert finding_edr_ukraine(terminated).startswith("Terminated, ")
+
+    assert finding_edr_ukraine({"is_stub": True}) is None
+    assert finding_edr_ukraine({"is_stub": False, "not_found": True}).startswith(
+        "Not in OpenCheck's index"
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_hit_builder_asserts_the_code_only_when_the_register_did(live_adapter):
+    from opencheck.routers.hit_builders import _bh_edr_ukraine
+
+    class Ctx:
+        legal_name = "KYIV-ART"
+
+    found = await live_adapter.fetch("35265987", legal_name="KYIV-ART")
+    hit = _bh_edr_ukraine(found, "35265987", Ctx())
+    assert hit.identifiers == {"ua_edrpou": "35265987"}
+    assert hit.summary == "UA-EDR 35265987"
+    assert hit.finding and "1 beneficial owner declared" in hit.finding
+    assert hit.name.startswith("ТОВАРИСТВО")
+
+    class Other:
+        legal_name = "NOBODY LLC"
+
+    missing = await live_adapter.fetch("00000001", legal_name="NOBODY LLC")
+    card = _bh_edr_ukraine(missing, "00000001", Other())
+    assert card.identifiers == {}
+    assert card.name == "NOBODY LLC"
+    assert "not in the index" in card.summary
+    assert card.raw["coverage_note"] == edr_ukraine.COVERAGE_NOT_IN_INDEX

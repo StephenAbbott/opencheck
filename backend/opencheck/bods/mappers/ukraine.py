@@ -6,6 +6,7 @@ re-exports every name defined here.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
@@ -62,14 +63,86 @@ _UA_CAPITAL_TOLERANCE = 0.01
 #: Role text marking a governing-body member as the chair rather than a member.
 _UA_CHAIR_TOKENS = ("голова", "президент", "head", "chair")
 
+#: Founder rows that name nobody — 10,110 in the 8 Sep 2026 export: "ФІЗИЧНІ
+#: ОСОБИ" (natural persons), "НЕВІДОМІ ОСОБИ" (unknown persons), "ПРИВАТНІ
+#: ОСОБИ В КІЛЬКОСТІ 112 ОСІБ" (private persons, 112 of them), "ГРОМАДЯНИ
+#: УКРАЇНИ", "ЮРИДИЧНІ ТА ФІЗИЧНІ ОСОБИ"… The register files them where a
+#: company's shareholders are not listed by name (most joint-stock companies).
+#: They are a placeholder, never a person: mapped as an **unspecified** party
+#: in the GEM shape (Phase 199), so no phantom person node reaches the graph
+#: or the related-party screens. Matched on the first word(s) of the row
+#: after case folding; a row naming a real person never starts this way.
+_UA_PLACEHOLDER_FOUNDER = re.compile(
+    r"^(інші\s+|невизначен[аі]\s+|загальна\s+кількість\s+|всього\s+|згідно\s+реєстру\s+|громада\s+"
+    r"|(дві|два|три|чотири|п[’']ять|шість|сім|вісім|дев[’']ять|десять)\s+)?"
+    r"(фізичн[аіи][йх]?\s+ос[оі]б|фіз\.?\s+ос[оі]б|юридичн[аі]\s+(та\s+фізичн[аі]\s+)?особ|невідом[аі]\s+особ"
+    r"|невизначен[аі]\s+особ"
+    r"|приватн[аі]\s+особ|громадян[ие]\b|акціонер(и|а|ів)?\b|учасник(и|а|ів)?\b"
+    r"|член(и|а|ів)\b|засновник(и|а|ів)?\b|\[засновник\]|трудов[иа]й\s+колектив"
+    r"|інформація\s+про\s+засновник|власник(и|ів)\s+(акцій|часток|паїв)|пайовик(и|ів)?\b"
+    r"|співвласник(и|ів)\b)",
+    re.I,
+)
+
+#: A founder with no EDRPOU that is nonetheless a legal person — a foreign
+#: company (a Cypriot "… ЛІМІТЕД", a Dutch "… Б.В.") or a body the register
+#: names without its code. The register types no founder; carrying a code
+#: is the usual sign of a legal person, and these are the ones that carry
+#: none. Told from legal-form words on either side of the transliteration
+#: line; the party is an entity with **no jurisdiction** (the register files
+#: no country for it, and an assumed one would corroborate a name match it
+#: has no right to — Phase 295). Measured on the 27 Oct 2026 index: the
+#: commonest codeless founders are "КЛАРІКС КЕПІТАЛ ЛІМІТЕД" (261 rows) and
+#: "ПРИВАТНА АКЦІОНЕРНА КОМПАНІЯ «БІЗ КОРП. ЛТД»" (90).
+_UA_ORG_TOKENS = frozenset(
+    {
+        "ЛІМІТЕД", "ЛТД", "ЛІМІТИД", "ЛІМІТЕТ", "ІНК", "КОРП", "КОРПОРАЦІЯ", "ГМБХ",
+        "ГМБГ", "ХОЛДИНГ", "ХОЛДИНГС", "ХОЛДІНГ", "ХОЛДІНГС", "КОМПАНІ", "КОМПАНІЯ",
+        "ТОВАРИСТВО", "ПІДПРИЄМСТВО", "АКЦІОНЕРНЕ", "АКЦІОНЕРНА", "ФОНД", "ОРГАНІЗАЦІЯ",
+        # "РАДА" and "СПІЛКА" are also given names and surnames — left out.
+        "КООПЕРАТИВ", "ОБ'ЄДНАННЯ", "ОБ’ЄДНАННЯ", "АСОЦІАЦІЯ", "МІНІСТЕРСТВО",
+        "ДЕРЖАВА", "УПРАВЛІННЯ", "АДМІНІСТРАЦІЯ", "УСТАНОВА", "ЗАКЛАД",
+        "ЕНТЕРПРАЙЗ", "ЕНТЕРПРАЙЗИЗ", "ЕНТЕРПРАЙЗЕС", "ІНВЕСТМЕНТС", "ІНВЕСТМЕНТ",
+        "ТРЕЙДИНГ", "ТРЕЙДІНГ", "ГРУП", "ГРУПП", "ПАРТНЕРС", "ВЕНЧУРС", "ТРАСТ",
+        "LIMITED", "LTD", "LTD.", "LLC", "INC", "INC.", "CORP", "CORP.", "CORPORATION",
+        "GMBH", "AG", "SA", "S.A.", "S.A", "BV", "B.V.", "B.V", "NV", "N.V.", "SE",
+        "PLC", "LLP", "LP", "SARL", "S.A.R.L.", "SRL", "S.R.L.", "OÜ", "AS", "A/S",
+        "AB", "OY", "KFT", "ZRT", "SPZOO", "SP.", "Z", "O.O.", "HOLDING", "HOLDINGS",
+        "GROUP", "TRUST", "FOUNDATION", "PARTNERS", "INVESTMENTS", "ENTERPRISES",
+        "TRADING", "CAPITAL", "VENTURES", "COMPANY", "CO.", "FUND", "PTE", "PTY",
+    }
+)
+_UA_ORG_TOKEN_SPLIT = re.compile(r"[\s,;:«»\"'()\[\]/]+")
+
+
+def founder_is_organisation(name: str) -> bool:
+    """True for a codeless founder that names a legal person by its form."""
+    words = {w.strip(".") for w in _UA_ORG_TOKEN_SPLIT.split((name or "").upper()) if w}
+    words |= {w for w in _UA_ORG_TOKEN_SPLIT.split((name or "").upper()) if w}
+    return bool(words & _UA_ORG_TOKENS)
+
+
+#: BODS ``unspecifiedReason`` for a placeholder founder: the register has the
+#: holding but not the names — "A publisher does not have access to
+#: information on this person or entity." ``unknown`` would say the reason
+#: itself is not known, and it is.
+_UA_PLACEHOLDER_REASON = "informationUnknownToPublisher"
+
+
+def founder_is_placeholder(name: str) -> bool:
+    """True for a founder row that names a class of people, not a person."""
+    return bool(_UA_PLACEHOLDER_FOUNDER.match((name or "").strip()))
+
 
 def _ua_person_or_entity(name: str, code: str | None) -> str:
-    """"entity" when the ЄДР gives the party its own EDRPOU, else "person".
+    """"entity" when the ЄДР gives the party its own EDRPOU, or names a legal
+    person by its form (``founder_is_organisation``); else "person".
 
     The register does not type founders explicitly; carrying a registration
-    code is what distinguishes a legal person from a natural one.
+    code is what usually distinguishes a legal person from a natural one, and
+    a foreign company carries none.
     """
-    return "entity" if code else "person"
+    return "entity" if code or founder_is_organisation(name) else "person"
 
 
 def _ua_derived_shares(
@@ -263,16 +336,62 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         party_type = _ua_person_or_entity(party_name, code)
         seq = row.get("seq", idx)
         local = f"{edrpou}:founder:{seq}"
+        pct = (shares or {}).get(idx)
+
+        if not code and founder_is_placeholder(party_name):
+            # "ФІЗИЧНІ ОСОБИ" and its kin: a holding with no one named. An
+            # unspecified party carrying the register's words, the GEM
+            # placeholder-owner shape — never a person statement.
+            placeholder_interest: dict[str, Any] = {
+                "type": "shareholding" if pct is not None else "unknownInterest",
+                "directOrIndirect": "direct",
+            }
+            if pct is not None:
+                placeholder_interest["share"] = {"exact": pct}
+            if row.get("amount_uah") is not None:
+                placeholder_interest["details"] = (
+                    f"Holding filed as {row['amount_uah']:,.2f} UAH under "
+                    f"\"{party_name}\"; the register names no one."
+                )
+            set_beneficial_ownership(
+                placeholder_interest, "edr_ukraine", record_kind="founder"
+            )
+            rel = make_relationship_statement(
+                source_id="edr_ukraine",
+                local_id=f"{edrpou}:founder-rel:{seq}",
+                subject_statement_id=company_id,
+                interested_party_unspecified={
+                    "reason": _UA_PLACEHOLDER_REASON,
+                    "description": party_name,
+                },
+                interests=[placeholder_interest],
+                source_url=source_url,
+            )
+            if pct is not None:
+                annotate(
+                    rel,
+                    transformation(
+                        "Share percentage derived by OpenCheck from the filed "
+                        "hryvnia holding and the declared authorised capital; the "
+                        "register publishes no percentage.",
+                        pointer("/recordDetails/interests/0/share"),
+                    ),
+                )
+            yield rel
+            continue
 
         if party_type == "entity":
             party = make_entity_statement(
                 source_id="edr_ukraine",
                 local_id=local,
                 name=party_name,
-                jurisdiction=_UA_JURISDICTION,
-                identifiers=[
-                    {"id": code, "scheme": _UA_SCHEME, "schemeName": _UA_SCHEME_NAME}
-                ],
+                # A codeless legal person is usually foreign and the register
+                # files no country for it: no jurisdiction (Phase 295).
+                jurisdiction=_UA_JURISDICTION if code else None,
+                identifiers=(
+                    [{"id": code, "scheme": _UA_SCHEME, "schemeName": _UA_SCHEME_NAME}]
+                    if code else []
+                ),
                 source_url=source_url,
             )
         else:
@@ -289,7 +408,6 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             )
         yield party
 
-        pct = (shares or {}).get(idx)
         interest: dict[str, Any] = {
             "type": "shareholding" if pct is not None else "unknownInterest",
             "directOrIndirect": "direct",

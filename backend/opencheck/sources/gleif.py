@@ -68,6 +68,7 @@ from .jar_lithuania import LT_RA_CODE as _LT_RA_CODE, normalise_code as _normali
 from .bce_belgium import BCE_RA_CODE as _BCE_RA_CODE, normalise_enterprise_number as _normalise_enterprise_number
 from .rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
 from .ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
+from .edr_ukraine import UA_RA_CODES as _UA_RA_CODES
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 from .cvr_denmark import DK_CVR_RA_CODE as _DK_CVR_RA_CODE, normalise_cvr as _normalise_cvr
 
@@ -1210,6 +1211,9 @@ class GleifAdapter(SourceAdapter):
         if ra_code in _INPI_RA_CODES:
             values = _siren_spellings(local_id)
             ra_codes = tuple(sorted(_INPI_RA_CODES))
+        elif ra_code in _UA_RA_CODES:
+            # Three Ukrainian authorities file the EDRPOU (the French shape).
+            ra_codes = tuple(sorted(_UA_RA_CODES))
         value_param = ",".join(quote(v, safe="") for v in values)
 
         for field in _LOCAL_ID_FILTER_FIELDS:

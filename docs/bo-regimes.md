@@ -176,7 +176,7 @@ are not.
   - <https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7>
   - <https://zakon.rada.gov.ua/laws/show/361-20>
   - <https://zakon.rada.gov.ua/laws/show/755-15>
-- **Last verified:** 2026-09-14 — **review status: draft**
+- **Last verified:** 2026-10-29 — **review status: verified**
 
 ## `ur_latvia` — Uzņēmumu reģistrs — patiesie labuma guvēji (PLG) register
 

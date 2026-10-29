@@ -587,17 +587,22 @@ def _assert_details_not_subtype(statements: list[dict[str, Any]], label: str) ->
     assert "subtype" not in entity_type, f"{label}: {entity_type}"
 
 
-async def test_libcovebods_cyprus_drcor():
-    """The bundle comes from the adapter's own ``fetch`` over the in-memory
-    register DB, so the mapper reads the keys the adapter actually emits."""
+async def test_libcovebods_cyprus_drcor(tmp_path):
+    """The bundle comes from the adapter's own ``fetch`` over an index the
+    real builder wrote, so the mapper reads the keys the adapter emits."""
+    from opencheck import provenance
     from opencheck.bods.mapper import map_cyprus_drcor
     from opencheck.sources.cyprus_drcor import CyprusDrcorAdapter
-    from tests.test_cyprus_drcor import _make_db
+    from tests.test_cyprus_drcor import _build, _point_at
 
-    adapter = CyprusDrcorAdapter()
-    adapter._db = _make_db()
-    bundle = await adapter.fetch("ΗΕ 489243", legal_name="VELRY GROUP LTD")
-    statements = list(map_cyprus_drcor(bundle))
+    out, _ = _build(tmp_path)
+    _point_at(out)
+    try:
+        with provenance.recording():
+            bundle = await CyprusDrcorAdapter().fetch("ΗΕ 449149", legal_name="BERN INVESTMENTS LIMITED")
+            statements = list(map_cyprus_drcor(bundle))
+    finally:
+        _point_at(None)
     _assert_details_not_subtype(statements, "Cyprus DRCOR")
     assert_valid(statements, "Cyprus DRCOR")
 
