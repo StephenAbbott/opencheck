@@ -18,6 +18,7 @@ import pytest
 from opencheck import meip as meip_mod
 from opencheck.bods import map_meip
 from opencheck.bods.validator import validate_shape
+from opencheck.cache import data_root
 from opencheck.config import get_settings
 from opencheck.findings import finding_meip
 from opencheck.meip import meip_declared, reload_store, store
@@ -278,9 +279,12 @@ def test_declared_falls_back_to_the_committed_subset(no_db) -> None:
 
 @pytest.fixture
 def real_db(monkeypatch):
-    path = Path(__file__).resolve().parents[2] / "data" / "meip.sqlite"
-    if not path.exists():
-        pytest.skip("data/meip.sqlite (the meip-bods-2024 release asset) is not on disk")
+    """The meip-bods-2024 release asset under the developer's data root. Every
+    test using this takes ``@pytest.mark.local_data("meip.sqlite")``, which
+    points ``data_root()`` there and skips when the file is absent."""
+    path = data_root() / "meip.sqlite"
+    if not path.exists():  # the marker's skip should already have fired
+        pytest.skip("meip.sqlite (the meip-bods-2024 release asset) is not on disk")
     monkeypatch.setenv("OPENCHECK_MEIP_DB_FILE", str(path))
     get_settings.cache_clear()
     reload_store()
@@ -289,6 +293,7 @@ def real_db(monkeypatch):
     get_settings.cache_clear()
 
 
+@pytest.mark.local_data("meip.sqlite")
 def test_real_register_matches_the_review_figures(real_db) -> None:
     st = store()
     assert st.meta["entities"] == "126658" and st.meta["relationships"] == "126158"
@@ -315,6 +320,7 @@ def test_real_register_matches_the_review_figures(real_db) -> None:
     assert not re.search(r"\bown(s|ed|ership)?\b", sentence.lower())
 
 
+@pytest.mark.local_data("meip.sqlite")
 def test_real_register_statements_validate(real_db) -> None:
     """libcovebods over the re-published statements of one real lookup."""
     pytest.importorskip("libcovebods")

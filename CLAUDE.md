@@ -2251,6 +2251,25 @@ extra wiring.
   (`tests/test_offline_suite.py::stub_every_warm_up`, which fails if the
   warm-up grows a step it does not name). Verified with the network namespace
   removed (`unshare -rn`), not only by the guard.
+- **The suite is dataless by construction too** (the "test suite reads whatever
+  release assets a developer has on disk" ticket, 28 Oct 2026). A local asset
+  must never change a verdict: one commit gave 40, 31 and 25 failures on one
+  machine depending on what sat in `data/`. `tests/_data_root.py`, installed
+  at conftest import, points `OPENCHECK_DATA_ROOT` at a per-session temp tree
+  **seeded from the tracked `data/` files** (real directories, one symlink per
+  file — `git ls-files`, else `TRACKED_FALLBACK`), so the curated bundles
+  resolve and every write lands in the temp tree; and it removes asset paths
+  exported in the shell (every `Settings` alias ending `_FILE` / `_DB` /
+  `_DIR`, plus `DIRECT_ENV_ASSET_PATHS`). A developer's own
+  `OPENCHECK_DATA_ROOT` is overridden. A test that reads a real asset takes
+  `@pytest.mark.local_data("meip.sqlite", …)` (paths relative to the data
+  root): it runs against the developer's real root when every named asset is
+  there and skips otherwise, so it skips in CI. Read assets through
+  `data_root()` / the module's `db_path()`, never `Path(__file__)…/"data"`,
+  or no test can isolate it. A new `os.environ.get("X_PATH")` in the package
+  fails `test_dataless_suite.py` until it is named in
+  `DIRECT_ENV_ASSET_PATHS`; a new process-wide store on a data-root file
+  joins `_STORE_RESETS`.
 - Async adapter tests use `pytest-asyncio` with `asyncio_mode = "auto"` (set in `pyproject.toml`).
 - HTTP mocking: use `respx` for httpx-based adapters; use `unittest.mock.AsyncMock` with `patch("...build_client", ...)` for adapters that call `build_client()` directly.
 - GraphQL adapters (CVR): mock by inspecting the request body (`request.content`) to route different query strings to different fixture responses.

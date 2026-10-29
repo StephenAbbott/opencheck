@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 414** — A GEM share the tracker marks as an imputed value now carries a commenting annotation, and a GEM share of 0 is published as no stated size rather than share.exact 0.
+**Latest: Phase 415** — The backend test suite now reads a temporary data root seeded from the tracked data files, so a developer's downloaded release assets never change a test result.
 
 → [Full development history](docs/status.md)
 
