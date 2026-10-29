@@ -35,3 +35,8 @@ class EdrUkraineBundle(_Base):
     executive_power: dict[str, Any] | None = None
     legal_name: str | None = None
     link: str | None = None
+    # The register's cut, from the index's ``meta.export_date``.
+    export_date: str | None = None
+    # A code the index does not hold: the note card (``is_stub`` False).
+    not_found: bool = False
+    coverage_note: str | None = None

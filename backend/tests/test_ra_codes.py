@@ -70,6 +70,8 @@ VERIFIED: dict[str, str] = {
     "SE": "RA000544",  # Bolagsverket
     "SG": "RA000523",  # ACRA
     "SK": "RA000526",  # Business Register
+    "UA": "RA000567",  # ЄДР — verified 2026-09-14, 238 of 303 UA records; the
+    # other two authorities carrying the EDRPOU are sameNumberAuthorities
 }
 
 #: RA codes that are NOT company registries and must never appear in a
@@ -240,9 +242,13 @@ def test_frontend_widens_a_french_search_to_every_inpi_authority() -> None:
     """
     from opencheck.sources.inpi import INPI_RA_CODES
 
+    from opencheck.sources.edr_ukraine import UA_RA_CODES
+
     declared = _frontend_same_number_authorities()
-    assert set(declared) == {"FR"}, "a new sameNumberAuthorities entry needs a test"
+    assert set(declared) == {"FR", "UA"}, "a new sameNumberAuthorities entry needs a test"
     assert {RA_BY_COUNTRY["FR"], *declared["FR"]} == set(INPI_RA_CODES)
+    # Ukraine (the EDR wiring): three authorities file the EDRPOU.
+    assert {RA_BY_COUNTRY["UA"], *declared["UA"]} == set(UA_RA_CODES)
 
 
 def test_only_gb_declares_sub_registries() -> None:

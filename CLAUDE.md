@@ -1282,6 +1282,57 @@ Things that will be re-derived otherwise:
 
 ---
 
+## Ukraine's ЄДР is an index tier with beneficial owners (the EDR wiring, 29 Oct 2026)
+
+`sources/edr_ukraine.py`, `scripts/build_edr_ukraine_index.py`,
+`scripts/refresh_edr_ukraine_index.sh`, `bods/mappers/ukraine.py`. Phase 206
+built the adapter and left it unregistered because "a 967 MB index cannot live
+on Render"; Phase 180's persistent disk made that false, and the source is now
+wired in the `jar_lithuania` shape. Things that will be re-derived otherwise:
+
+- **data.gov.ua refuses the download from every datacentre address** (HTTP
+  403, Cloudflare — the cloud and a GitHub runner alike; a ranged GET from a
+  home connection answers 206), while its CKAN API answers everywhere. So the
+  index is built by hand with `refresh_edr_ukraine_index.sh` (download →
+  build `--gzip` → `replace_release_asset.sh`) and shipped as the
+  `edr-ukraine-index` asset; `warm_index` downloads it at boot when absent or
+  changed (`EDR_UKRAINE_DB_URL`), onto `/var/data`. It cannot be a workflow.
+- **The index is the ownership graph, not the register** (`--tier graph`):
+  live entities with a BO record, a corporate founder or a state authority,
+  plus every founder target — ~800,000 of 2.0M, ~1 GB. A code outside it is a
+  **note card** (`not_found`, `COVERAGE_NOT_IN_INDEX` says what the index
+  holds), never a degradation; a `sqlite3.Error` is a `source_read`
+  degradation; no index is `covers_lei` False and the source is not announced.
+  The reader requires `meta.schema_version == INDEX_SCHEMA_VERSION` ("1").
+- **Three authorities file the EDRPOU** — `UA_RA_CODES` (RA000567, RA001026,
+  RA001027), one `LookupDeriver` over the set; `RA_BY_COUNTRY["UA"]` is
+  RA000567 and the picker's UA entry names the other two as
+  `sameNumberAuthorities`, which `GleifAdapter.search_by_local_id` widens to
+  (the French arrangement). `UA-EDR` is a FullCheck register hop by
+  construction.
+- **A founder row naming a class of people is an unspecified party.**
+  "ФІЗИЧНІ ОСОБИ", "НЕВІДОМІ ОСОБИ", "ПРИВАТНІ ОСОБИ В КІЛЬКОСТІ 112 ОСІБ",
+  "АКЦІОНЕРИ"… (10,110 rows) → `interestedParty.unspecified` with
+  `informationUnknownToPublisher` and the register's words (the Phase 199
+  GEM placeholder rule), never a person statement — a phantom person would
+  reach the graph and the related-party screens. `founder_is_placeholder`
+  is the one place that decides it.
+- **Nothing here reconstructs a withheld field** (addresses, locations, KVED
+  — Law 4576-IX). The pre-2022 Open Ownership Ukraine data carries BO
+  addresses and must never be joined in to fill them.
+- **Cross-source name matching is weaker for Ukrainian persons**: the BO
+  string carries name, citizenship, influence and percentage — no birth
+  date, so the `cross_check` birth-year corroboration can never fire. A
+  stricter gate for UA-sourced person names is an open follow-up on the
+  ticket, not a reason to drop the names.
+- The `bo_regimes` entry is `verified` (Stephen, 29 Oct 2026); founders
+  `omit` the flag and are emitted (a percentage only where the hryvnia
+  holdings reconcile to the declared capital within 1 %, annotated as
+  OpenCheck's arithmetic); `EXECUTIVE_POWER` → `stateBody` +
+  `controlByLegalFramework` → `STATE_CONTROLLED`.
+
+---
+
 ## Estonia is an index first, the page second (Phase 330)
 
 `sources/ariregister.py`, `scripts/build_ariregister_index.py`,

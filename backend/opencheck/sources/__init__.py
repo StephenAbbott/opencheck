@@ -40,6 +40,7 @@ from .firmenbuch import FirmenbuchAdapter
 from .gemi_greece import GemiGreeceAdapter
 from .gleif import GleifAdapter
 from .inpi import InpiAdapter
+from .edr_ukraine import EdrUkraineAdapter
 from .jar_lithuania import JarLithuaniaAdapter
 from .krs_poland import KrsPolandAdapter
 from .kvk import KvKAdapter
@@ -94,6 +95,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "gleif": GleifAdapter(),
     "inpi": InpiAdapter(),
     "jar_lithuania": JarLithuaniaAdapter(),
+    "edr_ukraine": EdrUkraineAdapter(),
     "krs_poland": KrsPolandAdapter(),
     "kvk": KvKAdapter(),
     "malta_mbr": MaltaMbrAdapter(),

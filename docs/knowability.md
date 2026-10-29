@@ -1134,7 +1134,7 @@ Data generated 2026-10-29T11:16:48+00:00; sentences rendered as of 2026-10-29. *
 
 ### Ukraine (UA) — verified 2026-09-18
 
-> Unified State Registry is open to the public (current arrangement since 19 Jan 2026). OpenCheck reads no Ukraine register, so an owner absent from this report says nothing about what Ukraine holds.
+> Unified State Registry is open to the public (current arrangement since 19 Jan 2026). OpenCheck reads beneficial owners from ЄДР — Unified State Register of Legal Entities (Ukraine).
 
 | Field | Value |
 |---|---|
@@ -1148,7 +1148,7 @@ Data generated 2026-10-29T11:16:48+00:00; sentences rendered as of 2026-10-29. *
 | Covers | — |
 | Verification | — |
 | 6AMLD LIA / BORIS | Not applicable / Not applicable |
-| OpenCheck reads | *no adapter for this jurisdiction* |
+| OpenCheck reads | `edr_ukraine` (BO) |
 | OpenCheck source (note) | edr_ukraine (bulk only) Untitled |
 | Sources | https://data.gov.ua/dataset/a1799820-195b-4982-8141-6e84f58103e7 |
 | Notes | MONEYVAL 5th round: date TBD on the FATF calendar |

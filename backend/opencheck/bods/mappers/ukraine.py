@@ -6,6 +6,7 @@ re-exports every name defined here.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
@@ -61,6 +62,33 @@ _UA_CAPITAL_TOLERANCE = 0.01
 
 #: Role text marking a governing-body member as the chair rather than a member.
 _UA_CHAIR_TOKENS = ("голова", "президент", "head", "chair")
+
+#: Founder rows that name nobody — 10,110 in the 8 Sep 2026 export: "ФІЗИЧНІ
+#: ОСОБИ" (natural persons), "НЕВІДОМІ ОСОБИ" (unknown persons), "ПРИВАТНІ
+#: ОСОБИ В КІЛЬКОСТІ 112 ОСІБ" (private persons, 112 of them), "ГРОМАДЯНИ
+#: УКРАЇНИ", "ЮРИДИЧНІ ТА ФІЗИЧНІ ОСОБИ"… The register files them where a
+#: company's shareholders are not listed by name (most joint-stock companies).
+#: They are a placeholder, never a person: mapped as an **unspecified** party
+#: in the GEM shape (Phase 199), so no phantom person node reaches the graph
+#: or the related-party screens. Matched on the first word(s) of the row
+#: after case folding; a row naming a real person never starts this way.
+_UA_PLACEHOLDER_FOUNDER = re.compile(
+    r"^(фізичн[аі]\s+особ|юридичн[аі]\s+(та\s+фізичн[аі]\s+)?особ|невідом[аі]\s+особ"
+    r"|приватн[аі]\s+особ|громадян[ие]\b|акціонер[иа]?\b|учасник[иа]?\b"
+    r"|член[иа]?\b|засновник[иа]?\b|трудов[иа]й\s+колектив)",
+    re.I,
+)
+
+#: BODS ``unspecifiedReason`` for a placeholder founder: the register has the
+#: holding but not the names — "A publisher does not have access to
+#: information on this person or entity." ``unknown`` would say the reason
+#: itself is not known, and it is.
+_UA_PLACEHOLDER_REASON = "informationUnknownToPublisher"
+
+
+def founder_is_placeholder(name: str) -> bool:
+    """True for a founder row that names a class of people, not a person."""
+    return bool(_UA_PLACEHOLDER_FOUNDER.match((name or "").strip()))
 
 
 def _ua_person_or_entity(name: str, code: str | None) -> str:
@@ -263,6 +291,49 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         party_type = _ua_person_or_entity(party_name, code)
         seq = row.get("seq", idx)
         local = f"{edrpou}:founder:{seq}"
+        pct = (shares or {}).get(idx)
+
+        if not code and founder_is_placeholder(party_name):
+            # "ФІЗИЧНІ ОСОБИ" and its kin: a holding with no one named. An
+            # unspecified party carrying the register's words, the GEM
+            # placeholder-owner shape — never a person statement.
+            placeholder_interest: dict[str, Any] = {
+                "type": "shareholding" if pct is not None else "unknownInterest",
+                "directOrIndirect": "direct",
+            }
+            if pct is not None:
+                placeholder_interest["share"] = {"exact": pct}
+            if row.get("amount_uah") is not None:
+                placeholder_interest["details"] = (
+                    f"Holding filed as {row['amount_uah']:,.2f} UAH under "
+                    f"\"{party_name}\"; the register names no one."
+                )
+            set_beneficial_ownership(
+                placeholder_interest, "edr_ukraine", record_kind="founder"
+            )
+            rel = make_relationship_statement(
+                source_id="edr_ukraine",
+                local_id=f"{edrpou}:founder-rel:{seq}",
+                subject_statement_id=company_id,
+                interested_party_unspecified={
+                    "reason": _UA_PLACEHOLDER_REASON,
+                    "description": party_name,
+                },
+                interests=[placeholder_interest],
+                source_url=source_url,
+            )
+            if pct is not None:
+                annotate(
+                    rel,
+                    transformation(
+                        "Share percentage derived by OpenCheck from the filed "
+                        "hryvnia holding and the declared authorised capital; the "
+                        "register publishes no percentage.",
+                        pointer("/recordDetails/interests/0/share"),
+                    ),
+                )
+            yield rel
+            continue
 
         if party_type == "entity":
             party = make_entity_statement(
@@ -289,7 +360,6 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             )
         yield party
 
-        pct = (shares or {}).get(idx)
         interest: dict[str, Any] = {
             "type": "shareholding" if pct is not None else "unknownInterest",
             "directOrIndirect": "direct",

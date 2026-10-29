@@ -708,6 +708,44 @@ def _bh_jar_lithuania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_edr_ukraine(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Ukrainian ЄДР, from the index.
+
+    * **An entity.** Asserts the EDRPOU the register published — the index
+      key. The name is the register's (Ukrainian), GLEIF's only as a last
+      resort; the finding carries the status, the form and the counts.
+    * **Not in the index.** A note card in the KvK / INPI / JAR shape: the
+      row sentence says what the index holds, no identifier is asserted, and
+      it is not a degradation — nothing failed.
+
+    Dispatch is gated on the index file (``covers_lei``), so this builder
+    never runs on a deployment with no index.
+    """
+    from ..findings import finding_edr_ukraine
+    from ..sources.edr_ukraine import ACTIVE_STAN, status_label
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "edr_ukraine", local_id,
+            name=ctx.legal_name or "",
+            summary=f"UA-EDR {local_id} · not in the index",
+            finding=finding_edr_ukraine(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    summary = f"UA-EDR {local_id}"
+    stan = ((r.get("entity") or {}).get("stan") or "").strip()
+    if stan and stan != ACTIVE_STAN:
+        summary += f" · {(status_label(stan) or stan).lower()}"
+    return _hit(
+        "edr_ukraine", local_id,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=summary,
+        finding=finding_edr_ukraine(r),
+        identifiers={"ua_edrpou": local_id}, raw=r,
+    )
+
+
 def _bh_ares(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     e = r.get("entity") or {}
     return _hit(

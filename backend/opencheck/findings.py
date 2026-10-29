@@ -1662,6 +1662,77 @@ def finding_jar_lithuania(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence([lead, form, withheld])
 
 
+def finding_edr_ukraine(bundle: dict[str, Any]) -> str | None:
+    """What the Ukrainian ЄДР says: the register status, the legal form, and
+    how many beneficial owners, founders and signatories it lists — each in
+    the same voice when it is zero (rule 6), because the register files a
+    *stated reason* for the absence of a beneficial owner and that filing is
+    a finding, not silence.
+
+    * **Not in the index** says so, with what the index holds, rather than
+      that the company does not exist: the index is the ownership graph, not
+      the whole register.
+    * A **termination, bankruptcy or cancellation** leads, because it changes
+      a decision; a live company leads with its legal form.
+    * A filed **absence** is worded by its class: no qualifying person, an
+      exemption, or a reason left blank — the register's own Ukrainian text
+      is in the BODS statement, not here.
+    * A **state executive authority** above the company is said, since the
+      register records it only for state enterprises and state holdings of
+      25 % or more.
+    """
+    from .sources.edr_ukraine import (
+        ACTIVE_STAN,
+        classify_absence,
+        form_label,
+        status_label,
+    )
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        return (
+            "Not in OpenCheck's index of the ЄДР open data, which holds the "
+            "register's ownership graph: live entities with a beneficial-"
+            "ownership record, a corporate founder or a state authority."
+        )
+    entity = bundle.get("entity") or {}
+    stan = str(entity.get("stan") or "").strip()
+    form = form_label(entity.get("opf"))
+    if stan and stan != ACTIVE_STAN:
+        lead = status_label(stan)
+    else:
+        lead = "On the register"
+
+    beneficiaries = bundle.get("beneficiaries") or []
+    named = [b for b in beneficiaries if b.get("kind") == "named"]
+    absences = [b for b in beneficiaries if b.get("kind") == "absence"]
+    if named:
+        bo = f"{len(named)} beneficial owner{'s' if len(named) != 1 else ''} declared"
+    elif absences:
+        code = classify_absence(absences[0].get("reason_text") or "")
+        bo = {
+            "no_qualifying_person": "no beneficial owner declared: no natural person qualifies",
+            "structure_filed": "no beneficial owner declared: reason in the filed ownership structure",
+            "state_or_municipal": "no beneficial owner declared: state or municipal founder",
+            "statutory_exemption": "no beneficial owner declared: statutory exemption",
+            "legal_form_exemption": "no beneficial owner declared: legal form exempt",
+        }.get(code, "no beneficial owner declared, reason not stated")
+    else:
+        bo = "no beneficial-ownership record"
+
+    founders = [f for f in bundle.get("founders") or [] if (f.get("name") or "").strip()]
+    founder_clause = f"{len(founders)} founder{'s' if len(founders) != 1 else ''} on file"
+    signers = [r for r in bundle.get("signers") or [] if (r.get("name") or "").strip()]
+    signer_clause = (
+        f"{len(signers)} signator{'ies' if len(signers) != 1 else 'y'}" if signers else None
+    )
+    authority = ((bundle.get("executive_power") or {}).get("name") or "").strip()
+    state_clause = "under a state executive authority" if authority else None
+
+    return clauses_to_sentence([lead, form, bo, founder_clause, signer_clause, state_clause])
+
+
 def finding_ariregister(bundle: dict[str, Any]) -> str | None:
     """What the Estonian e-Business Register says: the company's status and
     legal form, and how many shareholders, persons on the registry card and
