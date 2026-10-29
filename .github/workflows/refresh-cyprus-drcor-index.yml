@@ -1,0 +1,83 @@
+name: Refresh Cyprus DRCOR index
+
+# Rebuilds the index of Cyprus's Registrar of Companies from the three CSV
+# distributions on data.gov.cy (organisations, registered offices, officials)
+# and replaces the `cyprus-drcor-index` release asset the backend downloads at
+# boot (CYPRUS_DRCOR_DB_URL). The Cyprus wiring, 29 Oct 2026.
+#
+# Why here and not on Render: the portal republishes the three files roughly
+# monthly (each as a new `<name>_N.csv`); the builder scrapes the dataset page
+# for the current links, checks each file's header and row count, and refuses
+# anything that is not the register. Parsing 1.7M rows is ~30 s of CPU-bound
+# Python that would hold the GIL against live lookups. The result is ~235 MB
+# (~62 MB gzipped).
+#
+# Why a workflow and not a hand-run script (the JAR / ЄДР arrangement):
+# data.gov.cy answers a datacentre address — verified from a GitHub runner's
+# address family on 29 Oct 2026 — so nothing here needs a home connection.
+#
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "17 5 6 * *" # 05:17 UTC on the 6th — the portal's monthly files are usually up by then
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-cyprus-drcor-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Download the three current files and build the index
+        working-directory: backend
+        run: |
+          uv sync
+          uv run python scripts/build_cyprus_drcor_index.py --download \
+            --work "$RUNNER_TEMP/cy" \
+            --out "$RUNNER_TEMP/cyprus_drcor.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "cyprus_drcor.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM entity WHERE type_code = 'C'").fetchone()[0]
+          o = conn.execute("SELECT COUNT(*) FROM official").fetchone()[0]
+          print(f"{n} companies, {o} officials, cut {meta.get('cut')}, schema {meta.get('schema_version')}")
+          if n < 400_000 or o < 800_000:
+              sys.exit(f"Refusing to publish: {n} companies / {o} officials — likely a source/format change.")
+          PY
+
+      - name: Replace the `cyprus-drcor-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view cyprus-drcor-index >/dev/null 2>&1 || gh release create cyprus-drcor-index \
+            --title "Cyprus DRCOR index" \
+            --notes "Built monthly by refresh-cyprus-drcor-index.yml from data.gov.cy's three CSV distributions of the Registrar of Companies (CC BY 4.0 — Department of Registrar of Companies and Intellectual Property). Downloaded by the backend at boot (CYPRUS_DRCOR_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh cyprus-drcor-index \
+            "$RUNNER_TEMP/cyprus_drcor.sqlite.gz" cyprus_drcor.sqlite.gz \
+            "Rebuilt automatically by refresh-cyprus-drcor-index on $(date -u +%Y-%m-%d)."
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"

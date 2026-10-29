@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 22 countries that have
+ * GLEIF Registration Authority codes for the 23 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
@@ -220,6 +220,14 @@ export const RA_CODES: Record<string, RaEntry> = {
     placeholder: "302511363",
     formatHint: "9 digits",
     formatPattern: /^\d{9}$/,
+  },
+  CY: {
+    raCode: "RA000161",
+    countryName: "Cyprus",
+    idLabel: "Registration number (HE number)",
+    placeholder: "HE 449149",
+    formatHint: "HE followed by up to 6 digits",
+    formatPattern: /^(HE|ΗΕ)?\s?\d{1,6}$/i,
   },
   MT: {
     raCode: "RA000443",

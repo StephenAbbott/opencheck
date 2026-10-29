@@ -197,6 +197,22 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # The Cyprus wiring: the DRCOR register index, rebuilt monthly by a
+    # GitHub workflow (data.gov.cy answers a datacentre) and downloaded here
+    # when absent or changed. Until it lands ``cyprus_drcor`` is not announced.
+    try:
+        from .sources.cyprus_drcor import warm_index as warm_cyprus_drcor_index
+
+        stats = await asyncio.to_thread(warm_cyprus_drcor_index)
+        log.info("Cyprus DRCOR index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "Cyprus DRCOR index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # Phase 208: the OECD-UNSD MEIP register (BODS) — download the SQLite
     # release asset when absent, replace it when the asset changed, keep it
     # otherwise. Until it lands the ``meip`` source covers nothing and the

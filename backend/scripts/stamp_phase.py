@@ -414,6 +414,38 @@ def changed_against(base: str) -> set[str]:
     return {line for line in out.splitlines() if line}
 
 
+def readme_latest_line(text: str) -> str | None:
+    m = README_LATEST_RE.search(text)
+    return m.group(0) if m else None
+
+
+def stamped_files_touched(base: str, changed: set[str]) -> list[str]:
+    """The stamped files this branch hand-edits.
+
+    ``docs/status.md`` and the changelog JSON are the stamp's alone, so any
+    diff counts. ``README.md`` is shared: a new source edits its intro (the
+    source count, the identifier list) by the adapter checklist, and only the
+    ``**Latest: Phase N**`` line is the stamp's — so the README counts as
+    touched only when that line differs from the base's (the Ukraine and
+    Cyprus wirings, PRs #502 / #503, were refused for a count bump).
+    """
+    touched = []
+    for name in STAMPED_FILES:
+        if name not in changed:
+            continue
+        if name == "README.md":
+            try:
+                base_text = _git("show", f"{base}:README.md")
+            except subprocess.CalledProcessError:
+                touched.append(name)
+                continue
+            head_text = README_MD.read_text(encoding="utf-8")
+            if readme_latest_line(base_text) == readme_latest_line(head_text):
+                continue
+        touched.append(name)
+    return touched
+
+
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
@@ -441,7 +473,7 @@ def cmd_check(base: str | None) -> int:
         except subprocess.CalledProcessError as exc:
             print(f"stamp-phase: git diff against {base} failed: {exc.stderr.strip()}", file=sys.stderr)
             return 1
-        touched = sorted(f for f in STAMPED_FILES if f in changed)
+        touched = stamped_files_touched(base, changed)
         if pending and touched:
             print(
                 "stamp-phase: this branch adds a pending changeset AND edits "

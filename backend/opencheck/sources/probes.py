@@ -538,6 +538,31 @@ PROBES: dict[str, SourceProbe] = {
             "Registrų centras stopped publishing."
         ),
     ),
+    "cyprus_drcor": _p(
+        tier="index",
+        subject="BERN INVESTMENTS LIMITED (CY HE 449149)",
+        args=("449149",),
+        kwargs={"legal_name": "BERN INVESTMENTS LIMITED"},
+        expect_fields=("name", "org_type", "registered_on", "status"),
+        # SKIP without an index (the jar_lithuania shape), never allow_empty.
+        # warm_bulk_stores.py downloads the asset first.
+        requires_files=("cyprus_drcor.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt monthly by refresh-cyprus-drcor-index.yml (data.gov.cy
+        # answers a datacentre, unlike JAR); the register republishes the
+        # three CSVs roughly monthly. Seven weeks means a missed rebuild or
+        # two, not a broken source.
+        snapshot_max_age_days=49,
+        anchor_lei="254900YI1OJO26HFY821",
+        bods_mapper="map_cyprus_drcor",
+        notes=(
+            "The Cyprus wiring (29 Oct 2026): an index of the register's "
+            "three CSV distributions (organisations, registered offices, "
+            "officials), the whole register — companies, business names, "
+            "partnerships and overseas companies. The register publishes no "
+            "shareholders and no beneficial owners."
+        ),
+    ),
     "krs_poland": _p(
         tier="live",
         subject="ORLEN Spółka Akcyjna",
