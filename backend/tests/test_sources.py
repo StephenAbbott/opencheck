@@ -25,7 +25,6 @@ _DELIBERATELY_UNREGISTERED = {
     "bods_gleif",       # Open Ownership bulk BODS — wired via lookup pipeline only
     "bods_uk_psc",      # Open Ownership bulk BODS (UK PSC)
     "brightquery",      # paid source, not enabled
-    "edr_ukraine",      # bulk download only — 3.16 GB weekly XML, no live API
 }
 
 
@@ -128,6 +127,9 @@ _IDENTIFIER_KEYED = {
     # the onrc_romania case. The scraper it replaced returned an invented
     # "<query> (stub)" row naming a real company's code; nothing does now.
     "jar_lithuania",
+    # edr_ukraine: the same shape over the ЄДР index, reached from the EDRPOU
+    # GLEIF files under three authorities; no stub row without an index.
+    "edr_ukraine",
     # cyprus_drcor (the Cyprus wiring): the same LIKE over the local index;
     # a fresh test process has none.
     "cyprus_drcor",

@@ -243,6 +243,7 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         "meip": PROBES["meip"].requires_files,
         "chilecompra": PROBES["chilecompra"].requires_files,
         "jar_lithuania": PROBES["jar_lithuania"].requires_files,
+        "edr_ukraine": PROBES["edr_ukraine"].requires_files,
         "cyprus_drcor": PROBES["cyprus_drcor"].requires_files,
         # Two tiers, one source (Phase 330): the probe deliberately declares
         # no required file — without the index the page answers, and that is

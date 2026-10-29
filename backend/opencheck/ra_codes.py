@@ -84,6 +84,11 @@ RA_BY_COUNTRY: dict[str, str] = {
     "BR": "RA000681",  # Receita Federal CNPJ (Brazil)
     "GR": "RA000685",  # ΓΕΜΗ — General Commercial Registry (Greece)
     "RS": "RA000517",  # APR — Business Registers Agency (Serbia)
+    "UA": "RA000567",  # ЄДР — Unified State Register (Ukraine). RA001026 (NSSMC)
+    # and RA001027 (National Bank) file the same EDRPOU — 15 % of Ukrainian
+    # LEIs; GleifAdapter.search_by_local_id widens a Ukrainian scope to all
+    # three, and the frontend mirrors that through the UA entry's
+    # ``sameNumberAuthorities`` in raCodes.ts (the French arrangement).
 }
 
 

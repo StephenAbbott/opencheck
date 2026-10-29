@@ -445,11 +445,17 @@ from .mappers.ukraine import (  # noqa: F401  (re-exported, Phase 246)
     _UA_CAPITAL_TOLERANCE,
     _UA_CHAIR_TOKENS,
     _UA_JURISDICTION,
+    _UA_PLACEHOLDER_FOUNDER,
+    _UA_PLACEHOLDER_REASON,
     _UA_SCHEME,
     _UA_SCHEME_NAME,
     _ua_bo_interests,
     _ua_derived_shares,
     _ua_person_or_entity,
+    _UA_ORG_TOKENS,
+    _UA_ORG_TOKEN_SPLIT,
+    founder_is_organisation,
+    founder_is_placeholder,
     map_edr_ukraine,
 )
 from .mappers.romania import (  # noqa: F401  (re-exported, Phase 246)

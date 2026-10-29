@@ -197,6 +197,24 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # The Ukrainian ЄДР index — the same arrangement as Lithuania's: built
+    # off-datacentre (data.gov.ua refuses the download from every datacentre
+    # address) and downloaded here when absent or when the asset changed,
+    # onto the persistent disk. Until it lands ``edr_ukraine`` is not
+    # announced (``covers_lei``).
+    try:
+        from .sources.edr_ukraine import warm_index as warm_edr_ukraine_index
+
+        stats = await asyncio.to_thread(warm_edr_ukraine_index)
+        log.info("EDR Ukraine index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "EDR Ukraine index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # The Cyprus wiring: the DRCOR register index, rebuilt monthly by a
     # GitHub workflow (data.gov.cy answers a datacentre) and downloaded here
     # when absent or changed. Until it lands ``cyprus_drcor`` is not announced.

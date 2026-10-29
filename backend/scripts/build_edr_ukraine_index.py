@@ -12,9 +12,14 @@ weekly ZIP of XML on data.gov.ua and that is the only official channel.
 Usage
 -----
     curl -L -o UO.zip "https://data.gov.ua/dataset/03cc1239-3988-4451-aa0d-aadb77448714/resource/d40cc921-39bb-44fd-be06-dc02589f45c6/download/uo.zip"
-    python scripts/build_edr_ukraine_index.py --zip UO.zip --out edr_ukraine.sqlite
+    python3 scripts/build_edr_ukraine_index.py --zip UO.zip --out edr_ukraine.sqlite --gzip
 
-Then point the adapter at it:
+``scripts/refresh_edr_ukraine_index.sh`` wraps the download, this build and
+the upload of ``edr_ukraine.sqlite.gz`` to the ``edr-ukraine-index`` release
+asset, which production downloads at boot (``EDR_UKRAINE_DB_URL``). Run it on
+a home connection: data.gov.ua refuses the download from every datacentre
+address (HTTP 403, Cloudflare), so this is built off-datacentre like the
+Lithuanian index. For a local run, point the adapter at the file:
 
     EDR_UKRAINE_DB_FILE=/abs/path/to/edr_ukraine.sqlite
 
@@ -28,8 +33,9 @@ plus any entity another company's founder list points at, so no edge dangles.
 
 Sizes are measured against the 8 Sep 2026 export, not estimated. See the
 counts the script prints at the end; the graph tier is roughly 800k entities
-and about 1 GB, which is an offline artefact, not something to download on a
-web host's cold start.
+and about 1 GB on disk (a quarter of that gzipped). It lives on the
+persistent disk production has had since Phase 180 and is downloaded only
+when the release asset changes, so a cold start pays nothing for it.
 
 Traps this script exists to absorb
 ----------------------------------
@@ -51,7 +57,9 @@ Traps this script exists to absorb
 from __future__ import annotations
 
 import argparse
+import gzip
 import io
+import shutil
 import logging
 import os
 import sqlite3
@@ -65,6 +73,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from opencheck.sources.edr_ukraine import (  # noqa: E402
     ACTIVE_STAN,
+    INDEX_SCHEMA_VERSION,
     normalise_edrpou,
     parse_beneficiary,
     parse_capital,
@@ -351,6 +360,7 @@ def build(
     con.executemany(
         "INSERT OR REPLACE INTO meta VALUES (?,?)",
         [
+            ("schema_version", INDEX_SCHEMA_VERSION),
             ("source", "data.gov.ua ЄДР UO.zip"),
             ("source_file", zip_path.name),
             ("export_date", export_date or export_date_of(zip_path)),
@@ -380,6 +390,11 @@ def main() -> None:
         help="graph = ownership-bearing entities only (default); full = all 2.0M",
     )
     ap.add_argument(
+        "--gzip",
+        action="store_true",
+        help="also write <out>.gz, the shape the release asset is served in",
+    )
+    ap.add_argument(
         "--export-date",
         metavar="YYYY-MM-DD",
         help="the register's cut date, when the ZIP member's timestamp is wrong "
@@ -391,6 +406,11 @@ def main() -> None:
 
     stats = build(args.zip, args.out, args.tier, args.export_date)
     log.info("wrote %s (%s MB, %ss)", args.out, stats["megabytes"], stats["seconds"])
+    if args.gzip:
+        gz_path = args.out.with_name(args.out.name + ".gz")
+        with open(args.out, "rb") as src, gzip.open(gz_path, "wb", compresslevel=6) as dst:
+            shutil.copyfileobj(src, dst, 1 << 20)
+        log.info("wrote %s (%s MB)", gz_path, int(os.path.getsize(gz_path) / 1e6))
     for key in (
         "subjects", "entities", "duplicate_edrpou", "blank_edrpou",
         "beneficiaries_named", "beneficiaries_absent", "beneficiaries_unparsed",

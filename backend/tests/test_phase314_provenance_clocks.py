@@ -316,12 +316,10 @@ class TestEdrUkraine:
         assert edr.export_date_of(zpath) == "2026-09-08"
 
     def test_the_adapter_declares_both_clocks(self):
-        from opencheck.sources.edr_ukraine import EdrUkraineAdapter
+        from opencheck.sources.edr_ukraine import declare_snapshot
 
-        adapter = EdrUkraineAdapter()
-        adapter._meta = {"built_at": "2026-09-14T10:00:00Z", "export_date": "2026-09-08"}
         with provenance.recording() as rec:
-            adapter._record_index_provenance()
+            declare_snapshot({"built_at": "2026-09-14T10:00:00Z", "export_date": "2026-09-08"})
         resolved = rec.resolve()
         assert resolved.liveness == "snapshot"
         assert resolved.source_as_of == datetime(2026, 9, 8, tzinfo=UTC)

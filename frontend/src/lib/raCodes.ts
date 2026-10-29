@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 23 countries that have
+ * GLEIF Registration Authority codes for the 24 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
@@ -289,6 +289,18 @@ export const RA_CODES: Record<string, RaEntry> = {
     placeholder: "17162543",
     // 295 of the 304 Serbian GLEIF records sit under RA000517 (APR), every one
     // an 8-digit matični broj, 2026-09-17.
+    formatHint: "8 digits",
+    formatPattern: /^\d{8}$/,
+  },
+  UA: {
+    raCode: "RA000567",
+    sameNumberAuthorities: ["RA001026", "RA001027"],
+    // The National Securities and Stock Market Commission and the National
+    // Bank file the same EDRPOU for the companies they register — 15 % of
+    // Ukrainian LEIs, read off all 303 UA records on 2026-09-14.
+    countryName: "Ukraine",
+    idLabel: "EDRPOU code",
+    placeholder: "35265987",
     formatHint: "8 digits",
     formatPattern: /^\d{8}$/,
   },
