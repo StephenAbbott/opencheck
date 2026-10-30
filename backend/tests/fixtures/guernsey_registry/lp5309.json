@@ -1,0 +1,18 @@
+{
+ "number": "LP5309",
+ "search": {
+  "data": [
+   {
+    "entityId": 1152469,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Limited Partnership (no separate legal personality)",
+    "entityTypeId": 209,
+    "registeredName": "Hedosophia Defence Technologies L.P.  ",
+    "registeredNumber": "LP5309"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ }
+}

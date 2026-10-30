@@ -337,6 +337,23 @@ from .mappers.taiwan import (  # noqa: F401  (re-exported)
     _tw_suspension_note,
     map_gcis_taiwan,
 )
+from .mappers.guernsey import (  # noqa: F401  (re-exported)
+    GG_ROLE_INTERESTS,
+    GG_STATUS_LIVE,
+    GG_STATUS_PENDING,
+    GG_STATUS_TERMINAL,
+    gg_individuals_note,
+    gg_interest,
+    gg_liveness,
+    gg_role,
+    _GG_ISLANDS,
+    _ROLE_DETAILS,
+    _apply_status,
+    _country_code,
+    _entity_statement,
+    _role_counts,
+    map_guernsey_registry,
+)
 from .mappers.brazil import (  # noqa: F401  (re-exported, Phase 246)
     _BR_OWNER_KEYWORDS,
     _br_country_code,
@@ -658,6 +675,17 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # 8-digit Unified Business Number on every ISSUED record but three (504
     # checked, 29 Oct 2026). RA001009 (Financial Supervisory Commission)
     # files funds, which the company register lacks, and is left unmapped.
+    # Guernsey Registry (verified 30 Oct 2026): five registers, one numbering
+    # with a register prefix (CMP, LP, LLP, FND, CH, NP) that GLEIF does not
+    # file. ``gleif_registration_scheme`` writes GG-RCE only for a prefixed
+    # number; the GLEIF statement adds the prefix only where the RA and ELF
+    # codes agree (``gleif_prefixed_number``). Listed here so register_hops
+    # builds the GG-RCE hop. RA000777 (Alderney) and RA000886 (GFSC) are not.
+    "RA000383": ("GG-RCE", "Guernsey Registry registration number"),
+    "RA000666": ("GG-RCE", "Guernsey Registry registration number"),
+    "RA000667": ("GG-RCE", "Guernsey Registry registration number"),
+    "RA000668": ("GG-RCE", "Guernsey Registry registration number"),
+    "RA001134": ("GG-RCE", "Guernsey Registry registration number"),
     "RA000551": ("TW-CR", "Unified Business Number (統一編號), Ministry of Economic Affairs company register"),
     # Singapore — ACRA Business Registry. ``registeredAs`` is the Unique Entity
     # Number on 12,292 of 13,326 active SG LEI records (2026-09-10).
@@ -781,7 +809,11 @@ CL_RUT_SCHEME_NAME = "RUT — Rol Único Tributario (Chile)"
 
 #: RA codes whose scheme is decided by the value, not the code (Phase 280) —
 #: so they are absent from ``_GLEIF_RA_TO_ORG_ID`` on purpose.
-_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES
+#: Alderney (RA000777) is value-schemed too: a Guernsey Registry number GLEIF
+#: filed there with its prefix (``LP5558``) is ``GG-RCE``; anything else keeps
+#: the RA code — Alderney's own register has no adapter.
+_GG_ALDERNEY_RA = "RA000777"
+_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES | {_GG_ALDERNEY_RA}
 
 
 def chilean_rut(value: str | None) -> str | None:
@@ -819,6 +851,15 @@ def normalise_registered_as(value: Any) -> str:
     return compact if compact.isdigit() else text
 
 
+#: The Guernsey Registry's RA codes and the shape of a prefixed number —
+#: copies of ``sources.guernsey_registry`` (which imports nothing from bods);
+#: ``tests/test_guernsey_registry.py`` pins them equal.
+_GG_RCE_RA_CODES: frozenset[str] = frozenset(
+    {"RA000383", "RA000666", "RA000667", "RA000668", "RA001134"}
+)
+_GG_PREFIXED = re.compile(r"(?:CMP|LLP|LP|FND|CH|NP)\d+")
+
+
 def gleif_registration_scheme(
     ra_id: str,
     jurisdiction_code: str | None,
@@ -853,6 +894,12 @@ def gleif_registration_scheme(
         return "NZ-NZBN", "New Zealand Business Number"
     if ra in _CL_RA_CODES and chilean_rut(registered_as):
         return CL_RUT_SCHEME, CL_RUT_SCHEME_NAME
+    if ra == _GG_ALDERNEY_RA and _GG_PREFIXED.fullmatch(registered_as or ""):
+        return _GLEIF_RA_TO_ORG_ID["RA000383"]
+    if ra in _GG_RCE_RA_CODES and not _GG_PREFIXED.fullmatch(registered_as or ""):
+        # A Guernsey number GLEIF filed without its register prefix names no
+        # single register: said as GLEIF filed it, under the RA code.
+        return ra, f"GLEIF Registration Authorities List — {ra}"
     if ra in _GLEIF_RA_TO_ORG_ID:
         return _GLEIF_RA_TO_ORG_ID[ra]
     jur = (jurisdiction_code or "").strip().upper()
@@ -1665,6 +1712,16 @@ def _gleif_entity_statement(
     registered_as = normalise_registered_as(entity_block.get("registeredAs"))
     registered_at = entity_block.get("registeredAt") or {}
     ra_id = registered_at.get("id")
+    if registered_as and ra_id and ra_id.strip().upper() in (_GG_RCE_RA_CODES | {_GG_ALDERNEY_RA}):
+        # Stephen's decision 4 (30 Oct 2026): the prefix only where the RA
+        # code and the ELF code name the same Guernsey register.
+        from ..sources.guernsey_registry import gleif_prefixed_number
+
+        registered_as = gleif_prefixed_number(
+            registered_as,
+            registered_at=ra_id,
+            legal_form=(entity_block.get("legalForm") or {}).get("id") or "",
+        ) or registered_as
     if registered_as and ra_id:
         org_id_scheme, org_id_name = gleif_registration_scheme(
             ra_id, jurisdiction_code, registered_at.get("other"), registered_as

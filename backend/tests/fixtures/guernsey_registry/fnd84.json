@@ -1,0 +1,103 @@
+{
+ "number": "FND84",
+ "search": {
+  "data": [
+   {
+    "entityId": 119540,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Foundation",
+    "entityTypeId": 208,
+    "registeredName": "The Mantex Foundation",
+    "registeredNumber": "FND84"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "entity": {
+  "data": {
+   "entityId": 119540,
+   "entityRegAddress": {
+    "activeInd": true,
+    "address1": "La Maison Frie au Four",
+    "address2": "Le Frie au Four",
+    "address3": "",
+    "addressId": 1186838,
+    "attentionTo": "",
+    "city": "St Saviours",
+    "cityId": null,
+    "country": "Guernsey",
+    "countryId": 250,
+    "firmName": null,
+    "postcode": "GY7 9TG",
+    "state": "",
+    "stateId": null,
+    "addressOneLine": "La Maison Frie au Four, Le Frie au Four, St Saviours, GY7 9TG, Guernsey"
+   },
+   "entityMailAddress": null,
+   "entityRegDate": "2018-02-20T16:21:56.05",
+   "entityRegName": "The Mantex Foundation",
+   "entityRegNumber": "FND84",
+   "entityStatusDesc": "Normal",
+   "entityStatusExtDesc": null,
+   "entityStatusEffectiveDate": "2018-02-20T16:21:56.017",
+   "entityTypeId": 208,
+   "entityTypeDesc": "Foundation",
+   "personInd": false,
+   "entityTitle": null,
+   "entityLastName": null,
+   "entityFirstName": null,
+   "entityMiddleName": null,
+   "entityExpiryDate": null,
+   "entityRegEmail": "",
+   "entityMobile": null,
+   "entitySuffix": null,
+   "entityAttributes": [],
+   "annualReturnDueDate": "2027-03-31T00:00:00"
+  },
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "relationships": {
+  "data": [
+   {
+    "relationshipId": 255925,
+    "displayName": "Mr Person Placeholder E",
+    "effectiveDate": "2018-02-20T00:00:00",
+    "relationshipTypeId": 251,
+    "relationshipTypeDesc": "Councillor",
+    "relationshipToEntityId": 151632
+   },
+   {
+    "relationshipId": 255926,
+    "displayName": "Mr Person Placeholder E",
+    "effectiveDate": "2018-02-20T00:00:00",
+    "relationshipTypeId": 203,
+    "relationshipTypeDesc": "Resident Agent",
+    "relationshipToEntityId": 151632
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "names": {
+  "data": [],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "officials": {
+  "151632": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  }
+ }
+}

@@ -48,6 +48,9 @@ class _LookupCtx:
     #: GLEIF ``registeredAt.id`` — the RA code ``registered_as`` is filed
     #: under. Set by ``_build_derived``; ChileCompra keys on it (Phase 281).
     registered_at: str = ""
+    #: GLEIF ``legalForm.id`` (ISO 20275 ELF code), for adapters that declare
+    #: ``lookup_pass_anchor`` (the Guernsey Registry).
+    legal_form: str = ""
     derived: dict[str, str] = dc_field(default_factory=dict)
     ocid: str | None = None
     #: GLEIF-published S&P Global / Capital IQ id — corroborates MEIP's CapIQ id.
@@ -970,6 +973,46 @@ def _bh_mca_india(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_guernsey_registry(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Guernsey Registry.
+
+    * **A record** asserts the prefixed number the registry returned
+      (``CMP48295``) — never the LEI, and never GLEIF's bare digits.
+    * **A note card** — the number belongs to another entity, to no entity,
+      or to Alderney's register: no identifier, because the registry
+      confirmed none for this company.
+    """
+    from ..findings import finding_guernsey_registry
+    from ..sources.guernsey_registry import GG_SCHEME
+
+    if r.get("not_found"):
+        return _hit(
+            "guernsey_registry", local_id,
+            name=ctx.legal_name or "",
+            summary=f"{GG_SCHEME} {local_id} · no record attached",
+            finding=finding_guernsey_registry(r),
+            identifiers={},
+            raw={
+                "not_found": True,
+                "coverage_note": r.get("coverage_note"),
+                "alderney": bool(r.get("alderney")),
+                "name_mismatch": bool(r.get("name_mismatch")),
+                "registered_name": r.get("registered_name"),
+            },
+        )
+    entity = r.get("entity") or {}
+    number = str(entity.get("number") or r.get("gg_registry_number") or local_id).strip().upper()
+    status = str(entity.get("status") or "").strip()
+    return _hit(
+        "guernsey_registry", number,
+        name=str(entity.get("name") or "").strip() or ctx.legal_name or "",
+        summary=f"{GG_SCHEME} {number}" + (f" · {status}" if status else ""),
+        identifiers={"gg_registry_number": number},
+        raw=r,
+        finding=finding_guernsey_registry(r),
+    )
+
+
 @dataclass(frozen=True)
 class _RegistrySource:
     """Dispatch + hit-build spec for a derived-identifier registry adapter."""
@@ -978,6 +1021,7 @@ class _RegistrySource:
     derived_keys: tuple[str, ...]  # first present key wins (ABR: ACN over ABN)
     pass_legal_name: bool
     build: Any  # Callable[[dict, str, _LookupCtx], SourceHit]
+    pass_anchor: bool = False
 
 
 def _collect_registry_sources() -> list[_RegistrySource]:
@@ -1000,7 +1044,13 @@ def _collect_registry_sources() -> list[_RegistrySource]:
                 f"routers/hit_builders.py has no _bh_{source_id}() hit builder"
             )
         specs.append(
-            _RegistrySource(source_id, keys, adapter.lookup_pass_legal_name, builder)
+            _RegistrySource(
+                source_id,
+                keys,
+                adapter.lookup_pass_legal_name,
+                builder,
+                pass_anchor=adapter.lookup_pass_anchor,
+            )
         )
     return specs
 

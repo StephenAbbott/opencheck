@@ -1,0 +1,190 @@
+{
+ "number": "CMP70222",
+ "search": {
+  "data": [
+   {
+    "entityId": 126610,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Davos Investments Limited",
+    "registeredNumber": "CMP70222"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "entity": {
+  "data": {
+   "entityId": 126610,
+   "entityRegAddress": {
+    "activeInd": true,
+    "address1": "PO Box 296",
+    "address2": "Regency Court",
+    "address3": "Glategny Esplanade",
+    "addressId": 1973044,
+    "attentionTo": "",
+    "city": "St Peter Port",
+    "cityId": null,
+    "country": "Guernsey",
+    "countryId": 250,
+    "firmName": null,
+    "postcode": "GY1 4NA",
+    "state": "",
+    "stateId": null,
+    "addressOneLine": "PO Box 296, Regency Court, Glategny Esplanade, St Peter Port, GY1 4NA, Guernsey"
+   },
+   "entityMailAddress": null,
+   "entityRegDate": "2022-01-20T11:12:44",
+   "entityRegName": "Davos Investments Limited",
+   "entityRegNumber": "CMP70222",
+   "entityStatusDesc": "Normal",
+   "entityStatusExtDesc": null,
+   "entityStatusEffectiveDate": "2022-01-20T11:12:43.993",
+   "entityTypeId": 201,
+   "entityTypeDesc": "Non Cellular Company",
+   "personInd": false,
+   "entityTitle": null,
+   "entityLastName": null,
+   "entityFirstName": null,
+   "entityMiddleName": null,
+   "entityExpiryDate": null,
+   "entityRegEmail": "",
+   "entityMobile": null,
+   "entitySuffix": null,
+   "entityAttributes": [],
+   "annualReturnDueDate": "2027-02-28T00:00:00"
+  },
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "relationships": {
+  "data": [
+   {
+    "relationshipId": 305384,
+    "displayName": "PraxisIFM Trust Limited",
+    "effectiveDate": "2022-01-20T00:00:00",
+    "relationshipTypeId": 203,
+    "relationshipTypeDesc": "Resident Agent",
+    "relationshipToEntityId": 72546
+   },
+   {
+    "relationshipId": 305385,
+    "displayName": "Praxis Directors One Limited",
+    "effectiveDate": "2022-01-20T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 86291
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "names": {
+  "data": [],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "officials": {
+  "72546": {
+   "status": 200,
+   "body": {
+    "data": {
+     "entityId": 72546,
+     "entityRegAddress": {
+      "activeInd": true,
+      "address1": "PO Box 296",
+      "address2": "Regency Court",
+      "address3": "Glategny Esplanade",
+      "addressId": 1971939,
+      "attentionTo": "",
+      "city": "St. Peter Port",
+      "cityId": null,
+      "country": "Guernsey",
+      "countryId": 250,
+      "firmName": null,
+      "postcode": "GY1 4NA",
+      "state": null,
+      "stateId": null,
+      "addressOneLine": "PO Box 296, Regency Court, Glategny Esplanade, St. Peter Port, GY1 4NA, Guernsey"
+     },
+     "entityMailAddress": null,
+     "entityRegDate": "1990-05-10T00:00:00",
+     "entityRegName": "PraxisIFM Trust Limited",
+     "entityRegNumber": "CMP22546",
+     "entityStatusDesc": "Normal",
+     "entityStatusExtDesc": null,
+     "entityStatusEffectiveDate": "1990-05-10T00:00:00",
+     "entityTypeId": 201,
+     "entityTypeDesc": "Non Cellular Company",
+     "personInd": false,
+     "entityTitle": null,
+     "entityLastName": null,
+     "entityFirstName": null,
+     "entityMiddleName": null,
+     "entityExpiryDate": null,
+     "entityRegEmail": "",
+     "entityMobile": null,
+     "entitySuffix": null,
+     "entityAttributes": [],
+     "annualReturnDueDate": "2027-02-28T00:00:00"
+    },
+    "message": null,
+    "statusCode": 200,
+    "success": true
+   }
+  },
+  "86291": {
+   "status": 200,
+   "body": {
+    "data": {
+     "entityId": 86291,
+     "entityRegAddress": {
+      "activeInd": true,
+      "address1": "PO Box 296",
+      "address2": "Regency Court",
+      "address3": "Glategny Esplanade",
+      "addressId": 1972064,
+      "attentionTo": "",
+      "city": "St. Peter Port",
+      "cityId": null,
+      "country": "Guernsey",
+      "countryId": 250,
+      "firmName": null,
+      "postcode": "GY1 4NA",
+      "state": null,
+      "stateId": null,
+      "addressOneLine": "PO Box 296, Regency Court, Glategny Esplanade, St. Peter Port, GY1 4NA, Guernsey"
+     },
+     "entityMailAddress": null,
+     "entityRegDate": "2000-01-28T00:00:00",
+     "entityRegName": "Praxis Directors One Limited",
+     "entityRegNumber": "CMP36291",
+     "entityStatusDesc": "Normal",
+     "entityStatusExtDesc": null,
+     "entityStatusEffectiveDate": "2000-01-28T00:00:00",
+     "entityTypeId": 201,
+     "entityTypeDesc": "Non Cellular Company",
+     "personInd": false,
+     "entityTitle": null,
+     "entityLastName": null,
+     "entityFirstName": null,
+     "entityMiddleName": null,
+     "entityExpiryDate": null,
+     "entityRegEmail": "",
+     "entityMobile": null,
+     "entitySuffix": null,
+     "entityAttributes": [],
+     "annualReturnDueDate": "2027-02-28T00:00:00"
+    },
+    "message": null,
+    "statusCode": 200,
+    "success": true
+   }
+  }
+ }
+}

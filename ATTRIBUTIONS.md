@@ -250,6 +250,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `tw_ubn` (8-digit Unified Business Number, check digit verified) derived from GLEIF RA code `RA000551`; also name search
 - **Note:** No API key. The platform asks API users to file a usage notification form (使用告知書) with opendata.gcis@gmail.com and whitelists the caller's IP, with per-user connection and daily caps it does not publish; OpenCheck paces its calls. Natural persons' names in this data remain personal data under Taiwan's Personal Data Protection Act. Simplified-to-traditional conversion for name search uses [OpenCC](https://github.com/yichen0831/opencc-python) (Apache-2.0).
 
+## Guernsey Registry
+
+- **Data:** the registered entity (name, prefixed registration number, form, status and its date, registration date, registered office, former names) and its current officials — role, appointment date, and for a corporate official its name and, where it is registered in Guernsey, its own number
+- **API:** the Guernsey Registry's public search, <https://portal.guernseyregistry.com/> — `POST api/entity/quick-search`, `GET api/entity/{id}`, `api/entity/relationships/{id}`, `api/entity/names/{id}`. Undocumented; read from the portal's own bundle (30 Oct 2026)
+- **License:** no reuse terms published for the API (checked 30 Oct 2026). OpenCheck has asked the Registrar; the pull request that added this source is held until the Registry answers
+- **Attribution:** "Guernsey Registry (Registrar of Companies, States of Guernsey), public search at portal.guernseyregistry.com."
+- **Entry point:** `gg_registry_number` from GLEIF RA codes `RA000383`, `RA000666`, `RA000667`, `RA000668`, `RA001134` (and `RA000777` for a misfiled Guernsey number); the prefix (`CMP`, `LP`, `LLP`, `FND`, `CH`, `NP`) is chosen from the ELF code and checked by name; also name search
+- **Note:** No API key; 60 requests a minute per client (the API's `X-Rate-Limit-*` headers). **Individuals' names are not republished** — the registry sells its officials list as a "Statement of the Register" — so an individual official is kept as a role and a date only. No shareholders; Guernsey's beneficial ownership register is open to authorities and obliged entities only.
+
 ## Ministry of Corporate Affairs — Company Master Data (India)
 
 - **Data:** CIN, company name, status, class/category/sub-category, authorised and paid-up capital, registration date, Registrar of Companies, registered office address, listing status, and NIC industrial classification, from the "Registrars of Companies (RoC)-wise Company Master Data" resource (~3.67M companies) on the Open Government Data (OGD) Platform India. Entity-level only — no officers or beneficial owners — mapped to a single BODS entity statement.

@@ -202,6 +202,17 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "form is a condition: without it the licence is void from the start."
         ),
     ),
+    "guernsey-registry-terms-unstated": _terms(
+        "Guernsey-Registry-Terms-Unstated", "Guernsey Registry — reuse terms not published",
+        commercial="conditional", attribution=True, share_alike=False, redistribution="conditional",
+        url="https://www.guernseyregistry.com/",
+        summary=(
+            "The Guernsey Registry publishes no reuse terms for its public "
+            "search API. OpenCheck has asked the Registry; until it answers, "
+            "verify before commercial use or redistribution. Individuals' "
+            "names are not republished."
+        ),
+    ),
     "open-ny-terms": _terms(
         "OPEN-NY-Terms", "OPEN-NY Terms of Use (data.ny.gov)",
         commercial="yes", attribution=False, share_alike=False, redistribution="yes",

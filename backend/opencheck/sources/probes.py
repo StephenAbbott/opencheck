@@ -447,6 +447,22 @@ PROBES: dict[str, SourceProbe] = {
             "the shared client sends before suspecting the data."
         ),
     ),
+    "guernsey_registry": _p(
+        tier="live",
+        subject="Sirius Real Estate Limited",
+        args=("CMP46442",),
+        expect_fields=("entity", "officials"),
+        anchor_lei="213800NURUF5W8QSK566",
+        bods_mapper="map_guernsey_registry",
+        notes=(
+            "Prefixed number as the registry writes it (GLEIF files the bare digits "
+            "under RA000383). Reads: number search, record, officials, former names. "
+            "Sirius has individual directors only, so the probe also proves no "
+            "individual's name reaches the bundle (the schema refuses one). "
+            "The API is undocumented; a degradation naming HTTP 404 on "
+            "entity/quick-search means the portal moved its routes."
+        ),
+    ),
     "gcis_taiwan": _p(
         tier="live",
         subject="Taiwan Semiconductor Manufacturing Company Limited",

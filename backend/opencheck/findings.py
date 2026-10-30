@@ -1473,6 +1473,71 @@ def finding_gcis_taiwan(bundle: dict[str, Any]) -> str | None:
 
 
 # --------------------------------------------------------------------------
+# Guernsey Registry
+# --------------------------------------------------------------------------
+
+
+def finding_guernsey_registry(bundle: dict[str, Any]) -> str | None:
+    """What the Guernsey Registry says: the kind of entity and when it was
+    registered, a status that is not plain "Normal", who its current officials
+    are by role, and its former name.
+
+    * Officials are counted by role. Individuals are **not named** on this
+      register's row or anywhere else (Stephen, 30 Oct 2026), and the sentence
+      says so when there are any — silence would read as "no people".
+    * The register files no shareholders and no beneficial owners; the
+      sentence says nothing about them rather than "none on file" (the JAR /
+      ACRA precedent).
+    * A note card's sentence is its coverage note.
+    """
+    from .bods.mappers.guernsey import gg_liveness
+
+    if not bundle:
+        return None
+    if bundle.get("not_found"):
+        return bundle.get("coverage_note") or None
+    if bundle.get("is_stub"):
+        return None
+    entity = bundle.get("entity") or {}
+    # "Charity: Domestic - compulsorily registered" → "Charity".
+    kind = " ".join(str(entity.get("type") or "").split()).split(":")[0].strip() or "entity"
+    registered = human_date(entity.get("registered_on"))
+    lead = f"{kind[0].upper()}{kind[1:].lower()}" + (f" registered {registered}" if registered else "")
+
+    status = " ".join(str(entity.get("status") or "").split())
+    status_clause = None
+    if status and gg_liveness(status) != "live":
+        since = human_date(entity.get("status_since"))
+        status_clause = f"status {status}" + (f" since {since}" if since and gg_liveness(status) != "unknown" else "")
+
+    officials = [o for o in bundle.get("officials") or [] if isinstance(o, dict)]
+    officials_clause = None
+    people_clause = None
+    if not bundle.get("officials_read", True):
+        officials_clause = "officials not read"
+    elif not officials:
+        officials_clause = "no current officials published"
+    else:
+        counts: dict[str, int] = {}
+        for o in officials:
+            role = " ".join(str(o.get("role") or "official").split()).lower()
+            counts[role] = counts.get(role, 0) + 1
+        parts = [plural(n, r, r if r.endswith("s") else None) for r, n in counts.items()]
+        if len(parts) > 3:
+            # Many kinds of role: the total, so the clauses after it still fit.
+            officials_clause = plural(len(officials), "official") + " on file"
+        else:
+            officials_clause = (", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0]) + " on file"
+        if any(o.get("kind") == "person" for o in officials):
+            people_clause = "individuals not named"
+
+    former = [f.get("name") for f in bundle.get("former_names") or [] if f.get("name")]
+    former_clause = f"formerly {former[0]}" if former else None
+
+    return clauses_to_sentence([lead, status_clause, officials_clause, people_clause, former_clause])
+
+
+# --------------------------------------------------------------------------
 # Singapore ACRA
 # --------------------------------------------------------------------------
 

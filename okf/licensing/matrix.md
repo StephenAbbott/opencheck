@@ -45,6 +45,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Taiwan company register (MOEA GCIS) (`gcis_taiwan`) | `OGDL-Taiwan-1.0` | yes | yes | no |
 | ΓΕΜΗ — Greek General Commercial Registry (`gemi_greece`) | `ODC-BY-1.0` | yes | yes | no |
 | GLEIF (`gleif`) | `CC0-1.0` | yes | no | no |
+| Guernsey Registry (`guernsey_registry`) | `Guernsey-Registry-Terms-Unstated` | conditional | yes | no |
 | INPI — Registre National des Entreprises (`inpi`) | `Licence Ouverte / Open Licence 2.0` | yes | yes | no |
 | JAR — Lithuanian Register of Legal Entities (`jar_lithuania`) | `CC-BY-4.0` | yes | yes | no |
 | KRS — Polish National Court Register (`krs_poland`) | `PL-OGD` | yes | yes | no |

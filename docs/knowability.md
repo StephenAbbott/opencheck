@@ -478,7 +478,7 @@ Data generated 2026-10-30T06:21:38+00:00; sentences rendered as of 2026-10-30. *
 
 ### Guernsey (GG) — verified 2026-09-18
 
-> Guernsey Beneficial Ownership Registry is open to authorities and obliged entities only. OpenCheck reads no Guernsey register, so an owner absent from this report says nothing about what Guernsey holds.
+> Guernsey Beneficial Ownership Registry is open to authorities and obliged entities only. OpenCheck reads Guernsey Registry for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -494,7 +494,7 @@ Data generated 2026-10-30T06:21:38+00:00; sentences rendered as of 2026-10-30. *
 | 6AMLD LIA / BORIS | Not applicable / Not applicable |
 | 6AMLD details | LIA consultation launched 27 Feb 2026. |
 | Next FATF/FSRB assessment | MONEYVAL (4th round); onsite 2032-04-01; plenary 2032-12-01 |
-| OpenCheck reads | *no adapter for this jurisdiction* |
+| OpenCheck reads | `guernsey_registry` |
 | Sources | https://gov.gg/beneficial-ownership-consultation-launched |
 
 ### Hong Kong (HK) — **unverified draft**

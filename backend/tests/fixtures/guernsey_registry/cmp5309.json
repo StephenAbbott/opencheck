@@ -1,0 +1,98 @@
+{
+ "number": "CMP5309",
+ "search": {
+  "data": [
+   {
+    "entityId": 55309,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Olympus Sportswear (Guernsey) Limited",
+    "registeredNumber": "CMP5309"
+   },
+   {
+    "entityId": 105395,
+    "entityStatusDesc": "Dissolved (voluntary strike off)",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "PHOENIX MEDICAL LIMITED",
+    "registeredNumber": "CMP53090"
+   },
+   {
+    "entityId": 105396,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "K DELTA INVESTMENTS NO. 11 LIMITED",
+    "registeredNumber": "CMP53091"
+   },
+   {
+    "entityId": 105397,
+    "entityStatusDesc": "Dissolved (voluntary liquidation)",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Consilium Trust Company Limited",
+    "registeredNumber": "CMP53092"
+   },
+   {
+    "entityId": 105398,
+    "entityStatusDesc": "Dissolved (voluntary liquidation)",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Consilium Secretaries Limited",
+    "registeredNumber": "CMP53093"
+   },
+   {
+    "entityId": 105399,
+    "entityStatusDesc": "Dissolved (voluntary liquidation)",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Consilium Nominees Limited",
+    "registeredNumber": "CMP53094"
+   },
+   {
+    "entityId": 105400,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "EXCEPTIONAL HOTELS AND RESORTS LIMITED",
+    "registeredNumber": "CMP53095"
+   },
+   {
+    "entityId": 105401,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "PHIL HILL-SMITH LIMITED",
+    "registeredNumber": "CMP53096"
+   },
+   {
+    "entityId": 105402,
+    "entityStatusDesc": "Dissolved (voluntary strike off)",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "AMTIGER LIMITED",
+    "registeredNumber": "CMP53097"
+   },
+   {
+    "entityId": 105403,
+    "entityStatusDesc": "Dissolved (voluntary strike off)",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "PACIFIC FINANCE LIMITED",
+    "registeredNumber": "CMP53098"
+   },
+   {
+    "entityId": 105404,
+    "entityStatusDesc": "Dissolved (voluntary strike off)",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "ZIONIC LIMITED",
+    "registeredNumber": "CMP53099"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ }
+}

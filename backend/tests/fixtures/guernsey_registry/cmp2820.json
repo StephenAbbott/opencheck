@@ -1,0 +1,156 @@
+{
+ "number": "CMP2820",
+ "search": {
+  "data": [
+   {
+    "entityId": 52820,
+    "entityStatusDesc": "Compulsorily Wound Up",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Crouchley de la Fosse Associates Ltd.",
+    "registeredNumber": "CMP2820"
+   },
+   {
+    "entityId": 78200,
+    "entityStatusDesc": "Compulsorily Wound Up",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Pennant Marine Ltd.",
+    "registeredNumber": "CMP28200"
+   },
+   {
+    "entityId": 78201,
+    "entityStatusDesc": "Compulsorily Wound Up",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "GAP Systems Ltd.",
+    "registeredNumber": "CMP28201"
+   },
+   {
+    "entityId": 78202,
+    "entityStatusDesc": "Compulsorily Wound Up",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Rockstone Ltd.",
+    "registeredNumber": "CMP28202"
+   },
+   {
+    "entityId": 78203,
+    "entityStatusDesc": "Compulsorily Wound Up",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Sandybank Ltd.",
+    "registeredNumber": "CMP28203"
+   },
+   {
+    "entityId": 78204,
+    "entityStatusDesc": "Compulsorily Wound Up",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Seawolf Ltd.",
+    "registeredNumber": "CMP28204"
+   },
+   {
+    "entityId": 78205,
+    "entityStatusDesc": "Compulsorily Wound Up",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Stone & Stone Trading & Handling Corporation Ltd.",
+    "registeredNumber": "CMP28205"
+   },
+   {
+    "entityId": 78206,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Temuroh Limited",
+    "registeredNumber": "CMP28206"
+   },
+   {
+    "entityId": 78207,
+    "entityStatusDesc": "Compulsorily Wound Up",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "3G Ltd.",
+    "registeredNumber": "CMP28207"
+   },
+   {
+    "entityId": 78208,
+    "entityStatusDesc": "Wound Up",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "A P G Ltd.",
+    "registeredNumber": "CMP28208"
+   },
+   {
+    "entityId": 78209,
+    "entityStatusDesc": "Migrated",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Bretline Ltd.",
+    "registeredNumber": "CMP28209"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "entity": {
+  "data": {
+   "entityId": 52820,
+   "entityRegAddress": {
+    "activeInd": true,
+    "address1": "The Studio",
+    "address2": "Le Marchant House",
+    "address3": "Market Street",
+    "addressId": 53063,
+    "attentionTo": "",
+    "city": "St Peter Port",
+    "cityId": null,
+    "country": "Guernsey",
+    "countryId": 250,
+    "firmName": null,
+    "postcode": "",
+    "state": null,
+    "stateId": null,
+    "addressOneLine": "The Studio, Le Marchant House, Market Street, St Peter Port, Guernsey"
+   },
+   "entityMailAddress": null,
+   "entityRegDate": "1973-01-05T00:00:00",
+   "entityRegName": "Crouchley de la Fosse Associates Ltd.",
+   "entityRegNumber": "CMP2820",
+   "entityStatusDesc": "Compulsorily Wound Up",
+   "entityStatusExtDesc": null,
+   "entityStatusEffectiveDate": "1980-07-21T00:00:00",
+   "entityTypeId": 201,
+   "entityTypeDesc": "Non Cellular Company",
+   "personInd": false,
+   "entityTitle": null,
+   "entityLastName": null,
+   "entityFirstName": null,
+   "entityMiddleName": null,
+   "entityExpiryDate": null,
+   "entityRegEmail": "",
+   "entityMobile": null,
+   "entitySuffix": null,
+   "entityAttributes": [],
+   "annualReturnDueDate": null
+  },
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "relationships": {
+  "data": [],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "names": {
+  "data": [],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "officials": {}
+}
