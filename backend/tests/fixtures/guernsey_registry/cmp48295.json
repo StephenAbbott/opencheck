@@ -1,0 +1,146 @@
+{
+ "number": "CMP48295",
+ "search": {
+  "data": [
+   {
+    "entityId": 98287,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Incorporated Cell",
+    "entityTypeId": 204,
+    "registeredName": "PARTNERS GROUP FINANCE EUR IC LIMITED",
+    "registeredNumber": "CMP48295"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "entity": {
+  "data": {
+   "entityId": 98287,
+   "entityRegAddress": {
+    "activeInd": true,
+    "address1": "PO Box 477",
+    "address2": "Tudor House",
+    "address3": "Le Bordage",
+    "addressId": 107960,
+    "attentionTo": "",
+    "city": "St Peter Port",
+    "cityId": null,
+    "country": "Guernsey",
+    "countryId": 250,
+    "firmName": null,
+    "postcode": "GY1 6BD",
+    "state": null,
+    "stateId": null,
+    "addressOneLine": "PO Box 477, Tudor House, Le Bordage, St Peter Port, GY1 6BD, Guernsey"
+   },
+   "entityMailAddress": null,
+   "entityRegDate": "2008-01-02T00:00:00",
+   "entityRegName": "PARTNERS GROUP FINANCE EUR IC LIMITED",
+   "entityRegNumber": "CMP48295",
+   "entityStatusDesc": "Normal",
+   "entityStatusExtDesc": null,
+   "entityStatusEffectiveDate": "2008-01-02T00:00:00",
+   "entityTypeId": 204,
+   "entityTypeDesc": "Incorporated Cell",
+   "personInd": false,
+   "entityTitle": null,
+   "entityLastName": null,
+   "entityFirstName": null,
+   "entityMiddleName": null,
+   "entityExpiryDate": null,
+   "entityRegEmail": "",
+   "entityMobile": null,
+   "entitySuffix": null,
+   "entityAttributes": [],
+   "annualReturnDueDate": "2027-02-28T00:00:00"
+  },
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "relationships": {
+  "data": [
+   {
+    "relationshipId": 238642,
+    "displayName": "Mr. Person Placeholder A",
+    "effectiveDate": "2016-12-19T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 174000
+   },
+   {
+    "relationshipId": 260723,
+    "displayName": "Mr. Person Placeholder B",
+    "effectiveDate": "2018-07-10T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 176245
+   },
+   {
+    "relationshipId": 428632,
+    "displayName": "Mr. Person Placeholder C",
+    "effectiveDate": "2026-01-01T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 165235
+   },
+   {
+    "relationshipId": 436930,
+    "displayName": "Mr Person Placeholder D",
+    "effectiveDate": "2026-06-05T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 1235543
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "names": {
+  "data": [],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "officials": {
+  "174000": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "176245": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "165235": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "1235543": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  }
+ }
+}

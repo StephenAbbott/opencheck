@@ -255,6 +255,14 @@ class SourceAdapter(ABC):
     #: Whether ``fetch()`` should receive ``legal_name=`` from the anchor.
     lookup_pass_legal_name: ClassVar[bool] = False
 
+    #: Whether ``fetch()`` should receive ``anchor=`` — the GLEIF record's
+    #: ``registered_at`` (RA code) and ``legal_form`` (ELF code). For a register
+    #: whose number GLEIF files without the part that says which of its
+    #: registers holds it (the Guernsey Registry's CMP / LP / FND prefix).
+    #: The derived key stays GLEIF's own number, so the GLEIF row asserts
+    #: nothing it did not file.
+    lookup_pass_anchor: ClassVar[bool] = False
+
     #: Whether ``fetch()`` keeps a ``legal_name`` it is given for later calls
     #: (KvK, whose open data carries no name). Such a ``fetch`` takes
     #: ``remember_name=``; ``/deepen`` passes ``False``, so a name a caller

@@ -1444,6 +1444,32 @@ will be re-derived otherwise:
   partnerships, History, and resolving a legal-person holder to its UBN for
   FullCheck hops (decision D — a v2 follow-up ticket, exact name match only).
 
+## Guernsey is a live search, prefix chosen by form and checked by name (the Guernsey ticket, 30 Oct 2026)
+
+`sources/guernsey_registry.py`, `bods/mappers/guernsey.py`,
+`finding_guernsey_registry`. The registry's portal API
+(`portal.guernseyregistry.com/api`) is undocumented and keyless; **the PR was
+held until the Registry answered about reuse terms**. Things that will be
+re-derived otherwise:
+
+- **The number carries its register** (`CMP`, `LP`, `LLP`, `FND`, `CH`, `NP`);
+  GLEIF files the digits only and its RA code is often wrong. The prefix comes
+  from the ELF code (`ELF_PREFIX`, every Guernsey code in GLEIF's ELF list),
+  then the RA code, then the rest, each accepted only on a name match.
+  `lookup_pass_anchor` (on `SourceAdapter`) is how `fetch` gets the RA and ELF
+  codes; the derived key stays GLEIF's number as filed.
+- **The search prefix-matches**: only an exact `registeredNumber` counts.
+- **Individuals are never named** (Stephen): an individual official is a role
+  and a date in the bundle, dropped before cache; the schema refuses a name or
+  an id on one, and the fixtures' individuals are placeholders. An official
+  with an honorific costs no call; otherwise `GET entity/{officialId}` — 200 is
+  a Guernsey entity with its own number, the "not publicly available" 400 is
+  an individual **or a body registered elsewhere**, told apart by name.
+- **GLEIF's statement** writes `GG-RCE` with a prefix only where RA and ELF
+  agree (`gleif_prefixed_number`), else the RA code; `RA000777` is
+  value-schemed (a prefixed number is `GG-RCE`). Alderney (`NDC3`, `C/…`) is a
+  note card; `RA000886` and `RA999999` are not dispatched.
+
 ## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
 
 `sources/cyprus_drcor.py`, `scripts/build_cyprus_drcor_index.py`,

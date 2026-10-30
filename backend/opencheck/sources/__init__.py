@@ -30,6 +30,7 @@ from .companies_house import CompaniesHouseAdapter
 from .corporations_canada import CorporationsCanadaAdapter
 from .cr_hongkong import CrHongKongAdapter
 from .gcis_taiwan import GcisTaiwanAdapter
+from .guernsey_registry import GuernseyRegistryAdapter
 from .cro import CroAdapter
 from .eiti import EitiAdapter
 from .eiti_assessment import EitiAssessmentAdapter
@@ -95,6 +96,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "firmenbuch": FirmenbuchAdapter(),
     "gemi_greece": GemiGreeceAdapter(),
     "gcis_taiwan": GcisTaiwanAdapter(),
+    "guernsey_registry": GuernseyRegistryAdapter(),
     "gleif": GleifAdapter(),
     "inpi": InpiAdapter(),
     "jar_lithuania": JarLithuaniaAdapter(),

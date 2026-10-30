@@ -1,0 +1,230 @@
+{
+ "number": "CMP46442",
+ "search": {
+  "data": [
+   {
+    "entityId": 96434,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Non Cellular Company",
+    "entityTypeId": 201,
+    "registeredName": "Sirius Real Estate Limited",
+    "registeredNumber": "CMP46442"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "entity": {
+  "data": {
+   "entityId": 96434,
+   "entityRegAddress": {
+    "activeInd": true,
+    "address1": "Plaza House, Fifth Floor",
+    "address2": "",
+    "address3": "Admiral Park",
+    "addressId": 1967816,
+    "attentionTo": "",
+    "city": "St. Peter Port",
+    "cityId": null,
+    "country": "Guernsey",
+    "countryId": 250,
+    "firmName": null,
+    "postcode": "GY1 2HU",
+    "state": null,
+    "stateId": null,
+    "addressOneLine": "Plaza House, Fifth Floor, Admiral Park, St. Peter Port, GY1 2HU, Guernsey"
+   },
+   "entityMailAddress": null,
+   "entityRegDate": "2007-02-20T00:00:00",
+   "entityRegName": "Sirius Real Estate Limited",
+   "entityRegNumber": "CMP46442",
+   "entityStatusDesc": "Normal",
+   "entityStatusExtDesc": null,
+   "entityStatusEffectiveDate": "2007-02-20T00:00:00",
+   "entityTypeId": 201,
+   "entityTypeDesc": "Non Cellular Company",
+   "personInd": false,
+   "entityTitle": null,
+   "entityLastName": null,
+   "entityFirstName": null,
+   "entityMiddleName": null,
+   "entityExpiryDate": null,
+   "entityRegEmail": "",
+   "entityMobile": null,
+   "entitySuffix": null,
+   "entityAttributes": [],
+   "annualReturnDueDate": "2027-02-28T00:00:00"
+  },
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "relationships": {
+  "data": [
+   {
+    "relationshipId": 204181,
+    "displayName": "Mr. Person Placeholder F",
+    "effectiveDate": "2014-05-01T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 170154
+   },
+   {
+    "relationshipId": 262779,
+    "displayName": "Mr. Person Placeholder G",
+    "effectiveDate": "2018-09-24T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 176463
+   },
+   {
+    "relationshipId": 271487,
+    "displayName": "Mr. Person Placeholder H",
+    "effectiveDate": "2019-06-14T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 177508
+   },
+   {
+    "relationshipId": 282444,
+    "displayName": "Mrs. Person Placeholder I",
+    "effectiveDate": "2020-06-01T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 178680
+   },
+   {
+    "relationshipId": 300558,
+    "displayName": "Mrs. Person Placeholder J",
+    "effectiveDate": "2021-09-01T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 180313
+   },
+   {
+    "relationshipId": 325085,
+    "displayName": "Mr. Person Placeholder K",
+    "effectiveDate": "2023-08-29T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 183510
+   },
+   {
+    "relationshipId": 349694,
+    "displayName": "Ms. Person Placeholder L",
+    "effectiveDate": "2024-12-01T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 1056015
+   },
+   {
+    "relationshipId": 430731,
+    "displayName": "Mr Person Placeholder M",
+    "effectiveDate": "2026-02-11T00:00:00",
+    "relationshipTypeId": 201,
+    "relationshipTypeDesc": "Director",
+    "relationshipToEntityId": 1233849
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "names": {
+  "data": [
+   {
+    "entityNameId": 62033,
+    "entityId": 96434,
+    "name": "DAWNAY, DAY SIRIUS LIMITED",
+    "firstName": null,
+    "lastName": null,
+    "middleName": null,
+    "nameStd": "DAWNAI DAI SIRIU",
+    "nameKeys": "TN T SR",
+    "currentInd": false,
+    "effectiveFrom": "2007-02-20T00:00:00",
+    "effectiveTo": null,
+    "nameProtectInd": false,
+    "numberedNameInd": false
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "officials": {
+  "170154": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "176463": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "177508": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "178680": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "180313": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "183510": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "1056015": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "1233849": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  }
+ }
+}

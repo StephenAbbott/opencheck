@@ -318,7 +318,7 @@ def test_every_ra_code_an_adapter_dispatches_on_has_a_scheme() -> None:
     assert missing == []
 
 
-@pytest.mark.parametrize("ra", sorted(_GLEIF_VALUE_SCHEMED_RA))
+@pytest.mark.parametrize("ra", sorted(_GLEIF_VALUE_SCHEMED_RA - {"RA000777"}))
 def test_value_schemed_ra_codes_give_a_rut_its_scheme(ra: str) -> None:
     assert gleif_registration_scheme(ra, "CL", None, "76.481.921-7")[0] == "CL-RUT"
     # An inscription filed under the same code is not a RUT.

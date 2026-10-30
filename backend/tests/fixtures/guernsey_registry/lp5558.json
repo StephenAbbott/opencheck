@@ -1,0 +1,190 @@
+{
+ "number": "LP5558",
+ "search": {
+  "data": [
+   {
+    "entityId": 1234554,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Incorporated Limited Partnership (with separate legal personality)",
+    "entityTypeId": 210,
+    "registeredName": "Dark Sky Capital Investments LP Inc.  ",
+    "registeredNumber": "LP5558"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "entity": {
+  "data": {
+   "entityId": 1234554,
+   "entityRegAddress": {
+    "activeInd": true,
+    "address1": "Suite G, St Peter Port House",
+    "address2": "Sausmarez Street",
+    "address3": null,
+    "addressId": 2143397,
+    "attentionTo": "",
+    "city": "St Peter Port",
+    "cityId": null,
+    "country": "Guernsey",
+    "countryId": 250,
+    "firmName": null,
+    "postcode": "GY1 2PT",
+    "state": null,
+    "stateId": null,
+    "addressOneLine": "Suite G, St Peter Port House, Sausmarez Street, St Peter Port, GY1 2PT, Guernsey"
+   },
+   "entityMailAddress": null,
+   "entityRegDate": "2026-03-23T00:00:00",
+   "entityRegName": "Dark Sky Capital Investments LP Inc.  ",
+   "entityRegNumber": "LP5558",
+   "entityStatusDesc": "Normal",
+   "entityStatusExtDesc": null,
+   "entityStatusEffectiveDate": "2026-03-23T00:00:00",
+   "entityTypeId": 210,
+   "entityTypeDesc": "Incorporated Limited Partnership (with separate legal personality)",
+   "personInd": false,
+   "entityTitle": null,
+   "entityLastName": null,
+   "entityFirstName": null,
+   "entityMiddleName": null,
+   "entityExpiryDate": null,
+   "entityRegEmail": "",
+   "entityMobile": null,
+   "entitySuffix": null,
+   "entityAttributes": [],
+   "annualReturnDueDate": "2027-03-31T23:59:59"
+  },
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "relationships": {
+  "data": [
+   {
+    "relationshipId": 432491,
+    "displayName": "Dark Sky General Partner Limited",
+    "effectiveDate": "2026-03-23T00:00:00",
+    "relationshipTypeId": 352,
+    "relationshipTypeDesc": "General Partner",
+    "relationshipToEntityId": 1234466
+   },
+   {
+    "relationshipId": 432492,
+    "displayName": "Semper Fiduciary Limited",
+    "effectiveDate": "2026-03-23T00:00:00",
+    "relationshipTypeId": 203,
+    "relationshipTypeDesc": "Resident Agent",
+    "relationshipToEntityId": 120905
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "names": {
+  "data": [],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "officials": {
+  "1234466": {
+   "status": 200,
+   "body": {
+    "data": {
+     "entityId": 1234466,
+     "entityRegAddress": {
+      "activeInd": true,
+      "address1": "Suite G, St Peter Port House",
+      "address2": "Sausmarez Street",
+      "address3": "",
+      "addressId": 2143204,
+      "attentionTo": "",
+      "city": "St Peter Port",
+      "cityId": null,
+      "country": "Guernsey",
+      "countryId": 250,
+      "firmName": null,
+      "postcode": "GY1 2PT",
+      "state": null,
+      "stateId": null,
+      "addressOneLine": "Suite G, St Peter Port House, Sausmarez Street, St Peter Port, GY1 2PT, Guernsey"
+     },
+     "entityMailAddress": null,
+     "entityRegDate": "2026-03-18T00:00:00",
+     "entityRegName": "Dark Sky General Partner Limited",
+     "entityRegNumber": "CMP77744",
+     "entityStatusDesc": "Normal",
+     "entityStatusExtDesc": null,
+     "entityStatusEffectiveDate": "2026-03-18T00:00:00",
+     "entityTypeId": 201,
+     "entityTypeDesc": "Non Cellular Company",
+     "personInd": false,
+     "entityTitle": null,
+     "entityLastName": null,
+     "entityFirstName": null,
+     "entityMiddleName": null,
+     "entityExpiryDate": null,
+     "entityRegEmail": "",
+     "entityMobile": null,
+     "entitySuffix": null,
+     "entityAttributes": [],
+     "annualReturnDueDate": "2027-02-28T23:59:59"
+    },
+    "message": null,
+    "statusCode": 200,
+    "success": true
+   }
+  },
+  "120905": {
+   "status": 200,
+   "body": {
+    "data": {
+     "entityId": 120905,
+     "entityRegAddress": {
+      "activeInd": true,
+      "address1": "Suite G, St Peter Port House",
+      "address2": "Sausmarez Street",
+      "address3": "",
+      "addressId": 2098914,
+      "attentionTo": "",
+      "city": "St Peter Port",
+      "cityId": null,
+      "country": "Guernsey",
+      "countryId": 250,
+      "firmName": null,
+      "postcode": "GY1 2PT",
+      "state": null,
+      "stateId": null,
+      "addressOneLine": "Suite G, St Peter Port House, Sausmarez Street, St Peter Port, GY1 2PT, Guernsey"
+     },
+     "entityMailAddress": null,
+     "entityRegDate": "2018-11-30T00:00:00",
+     "entityRegName": "Semper Fiduciary Limited",
+     "entityRegNumber": "CMP65788",
+     "entityStatusDesc": "Normal",
+     "entityStatusExtDesc": null,
+     "entityStatusEffectiveDate": "2018-11-30T00:00:00",
+     "entityTypeId": 201,
+     "entityTypeDesc": "Non Cellular Company",
+     "personInd": false,
+     "entityTitle": null,
+     "entityLastName": null,
+     "entityFirstName": null,
+     "entityMiddleName": null,
+     "entityExpiryDate": null,
+     "entityRegEmail": "",
+     "entityMobile": null,
+     "entitySuffix": null,
+     "entityAttributes": [],
+     "annualReturnDueDate": "2027-02-28T00:00:00"
+    },
+    "message": null,
+    "statusCode": 200,
+    "success": true
+   }
+  }
+ }
+}

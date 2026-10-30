@@ -1,0 +1,223 @@
+{
+ "number": "LLP70",
+ "search": {
+  "data": [
+   {
+    "entityId": 117570,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Limited Liability Partnerships",
+    "entityTypeId": 207,
+    "registeredName": "iCON GP LLP",
+    "registeredNumber": "LLP70"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "entity": {
+  "data": {
+   "entityId": 117570,
+   "entityRegAddress": {
+    "activeInd": true,
+    "address1": "Plaza House",
+    "address2": "Third Floor",
+    "address3": "Elizabeth Avenue",
+    "addressId": 1962195,
+    "attentionTo": "",
+    "city": "St Peter Port",
+    "cityId": null,
+    "country": "Guernsey",
+    "countryId": 250,
+    "firmName": null,
+    "postcode": "GY1 2HU",
+    "state": "",
+    "stateId": null,
+    "addressOneLine": "Plaza House, Third Floor, Elizabeth Avenue, St Peter Port, GY1 2HU, Guernsey"
+   },
+   "entityMailAddress": null,
+   "entityRegDate": "2017-03-10T00:00:00",
+   "entityRegName": "iCON GP LLP",
+   "entityRegNumber": "LLP70",
+   "entityStatusDesc": "Normal",
+   "entityStatusExtDesc": null,
+   "entityStatusEffectiveDate": "2026-04-02T11:44:21.15",
+   "entityTypeId": 207,
+   "entityTypeDesc": "Limited Liability Partnerships",
+   "personInd": false,
+   "entityTitle": null,
+   "entityLastName": null,
+   "entityFirstName": null,
+   "entityMiddleName": null,
+   "entityExpiryDate": null,
+   "entityRegEmail": "",
+   "entityMobile": null,
+   "entitySuffix": null,
+   "entityAttributes": [],
+   "annualReturnDueDate": "2027-03-31T00:00:00"
+  },
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "relationships": {
+  "data": [
+   {
+    "relationshipId": 242331,
+    "displayName": "iCON Infrastructure Management IV Limited",
+    "effectiveDate": "2017-03-10T00:00:00",
+    "relationshipTypeId": 351,
+    "relationshipTypeDesc": "Member",
+    "relationshipToEntityId": 117565
+   },
+   {
+    "relationshipId": 242332,
+    "displayName": "iCON Infrastructure LLP",
+    "effectiveDate": "2017-03-10T00:00:00",
+    "relationshipTypeId": 351,
+    "relationshipTypeDesc": "Member",
+    "relationshipToEntityId": 116024
+   },
+   {
+    "relationshipId": 244093,
+    "displayName": "CSC Management (Guernsey) Limited  ",
+    "effectiveDate": "2017-03-10T00:00:00",
+    "relationshipTypeId": 203,
+    "relationshipTypeDesc": "Resident Agent",
+    "relationshipToEntityId": 65831
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "names": {
+  "data": [
+   {
+    "entityNameId": 86511,
+    "entityId": 117570,
+    "name": "iCON GP IV LLP",
+    "firstName": null,
+    "lastName": null,
+    "middleName": null,
+    "nameStd": "ICON GP IV",
+    "nameKeys": "AKN KP AF",
+    "currentInd": false,
+    "effectiveFrom": "2017-03-10T15:02:06.94",
+    "effectiveTo": null,
+    "nameProtectInd": false,
+    "numberedNameInd": false
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "officials": {
+  "117565": {
+   "status": 200,
+   "body": {
+    "data": {
+     "entityId": 117565,
+     "entityRegAddress": {
+      "activeInd": true,
+      "address1": "Plaza House",
+      "address2": "Third Floor",
+      "address3": "Elizabeth Avenue",
+      "addressId": 1961839,
+      "attentionTo": "",
+      "city": "St Peter Port",
+      "cityId": null,
+      "country": "Guernsey",
+      "countryId": 250,
+      "firmName": null,
+      "postcode": "GY1 2HU",
+      "state": null,
+      "stateId": null,
+      "addressOneLine": "Plaza House, Third Floor, Elizabeth Avenue, St Peter Port, GY1 2HU, Guernsey"
+     },
+     "entityMailAddress": null,
+     "entityRegDate": "2017-03-10T10:21:39.273",
+     "entityRegName": "iCON Infrastructure Management IV Limited",
+     "entityRegNumber": "CMP63250",
+     "entityStatusDesc": "Normal",
+     "entityStatusExtDesc": null,
+     "entityStatusEffectiveDate": "2017-03-10T10:21:39.257",
+     "entityTypeId": 201,
+     "entityTypeDesc": "Non Cellular Company",
+     "personInd": false,
+     "entityTitle": null,
+     "entityLastName": null,
+     "entityFirstName": null,
+     "entityMiddleName": null,
+     "entityExpiryDate": null,
+     "entityRegEmail": "",
+     "entityMobile": null,
+     "entitySuffix": null,
+     "entityAttributes": [],
+     "annualReturnDueDate": "2027-02-28T00:00:00"
+    },
+    "message": null,
+    "statusCode": 200,
+    "success": true
+   }
+  },
+  "116024": {
+   "status": 400,
+   "body": {
+    "data": null,
+    "message": "These information are not publicly available. Please refer to the Register.",
+    "statusCode": 400,
+    "success": false
+   }
+  },
+  "65831": {
+   "status": 200,
+   "body": {
+    "data": {
+     "entityId": 65831,
+     "entityRegAddress": {
+      "activeInd": true,
+      "address1": "Plaza House",
+      "address2": "Third Floor",
+      "address3": "Elizabeth Avenue",
+      "addressId": 1962259,
+      "attentionTo": "",
+      "city": "St. Peter Port",
+      "cityId": null,
+      "country": "Guernsey",
+      "countryId": 250,
+      "firmName": null,
+      "postcode": "GY1 2HU",
+      "state": null,
+      "stateId": null,
+      "addressOneLine": "Plaza House, Third Floor, Elizabeth Avenue, St. Peter Port, GY1 2HU, Guernsey"
+     },
+     "entityMailAddress": null,
+     "entityRegDate": "1986-08-14T00:00:00",
+     "entityRegName": "CSC Management (Guernsey) Limited  ",
+     "entityRegNumber": "CMP15831",
+     "entityStatusDesc": "Normal",
+     "entityStatusExtDesc": null,
+     "entityStatusEffectiveDate": "1986-08-14T00:00:00",
+     "entityTypeId": 201,
+     "entityTypeDesc": "Non Cellular Company",
+     "personInd": false,
+     "entityTitle": null,
+     "entityLastName": null,
+     "entityFirstName": null,
+     "entityMiddleName": null,
+     "entityExpiryDate": null,
+     "entityRegEmail": "",
+     "entityMobile": null,
+     "entitySuffix": null,
+     "entityAttributes": [],
+     "annualReturnDueDate": "2027-02-28T00:00:00"
+    },
+    "message": null,
+    "statusCode": 200,
+    "success": true
+   }
+  }
+ }
+}

@@ -113,6 +113,7 @@ from .hit_builders import (  # noqa: F401
     _bh_corporations_canada,
     _bh_cr_hongkong,
     _bh_gcis_taiwan,
+    _bh_guernsey_registry,
     _bh_cro,
     _bh_cvr_denmark,
     _bh_dlcp_dc,
@@ -1080,10 +1081,15 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         # through the same helper as the LEI-keyed offline adapters.
         if not _offline_index_covers(adapter, ctx.lei):
             continue
+        fetch_kwargs: dict[str, Any] = {}
         if spec.pass_legal_name:
-            tasks.append((spec.source_id, adapter.fetch(local_id, legal_name=ctx.legal_name)))
-        else:
-            tasks.append((spec.source_id, adapter.fetch(local_id)))
+            fetch_kwargs["legal_name"] = ctx.legal_name
+        if spec.pass_anchor:
+            fetch_kwargs["anchor"] = {
+                "registered_at": ctx.registered_at,
+                "legal_form": ctx.legal_form,
+            }
+        tasks.append((spec.source_id, adapter.fetch(local_id, **fetch_kwargs)))
     if ctx.ocid and _want("opencorporates"):
         tasks.append(("opencorporates", REGISTRY["opencorporates"].fetch(ctx.ocid)))
     if ctx.qid and _want("wikidata"):
@@ -1586,6 +1592,7 @@ async def _resolve_ctx(lei: str) -> tuple[_LookupCtx, dict[str, Any]]:
             ctx.legal_name = (entity_block.get("legalName") or {}).get("name") or ""
             ctx.jurisdiction = entity_block.get("jurisdiction") or ""
             ctx.registered_as = entity_block.get("registeredAs") or ""
+            ctx.legal_form = (entity_block.get("legalForm") or {}).get("id") or ""
             registered_at_id = (entity_block.get("registeredAt") or {}).get("id") or ""
             ctx.lei_registration = _lei_registration.from_gleif_record(
                 gleif_bundle.get("record")

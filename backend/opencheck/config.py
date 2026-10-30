@@ -305,6 +305,17 @@ class Settings(BaseSettings):
     gcis_throttle_max_wait_s: float = Field(
         default=10.0, alias="OPENCHECK_GCIS_THROTTLE_MAX_WAIT_S"
     )
+    # Guernsey Registry (portal.guernseyregistry.com/api): 60 requests a
+    # minute per client, from the API's own X-Rate-Limit-* headers (30 Oct
+    # 2026). A lookup sends 2-14 (a number search per register tried, the
+    # record, officials, names, up to 10 official reads). 0 disables the
+    # pacing (the test suite does).
+    guernsey_rate_limit_per_minute: int = Field(
+        default=60, alias="OPENCHECK_GUERNSEY_RATE_LIMIT_PER_MINUTE"
+    )
+    guernsey_throttle_max_wait_s: float = Field(
+        default=20.0, alias="OPENCHECK_GUERNSEY_THROTTLE_MAX_WAIT_S"
+    )
     # Phase 144: when the anchor LEI exists in the entity-pages Golden Copy,
     # don't make the user sit out the full max-wait — if the live anchor fetch
     # hasn't completed within this many seconds, serve the snapshot instead

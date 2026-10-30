@@ -1,0 +1,190 @@
+{
+ "number": "LP2820",
+ "search": {
+  "data": [
+   {
+    "entityId": 117746,
+    "entityStatusDesc": "Normal",
+    "entityTypeDesc": "Limited Partnership (no separate legal personality)",
+    "entityTypeId": 209,
+    "registeredName": "Naudi Investments LP",
+    "registeredNumber": "LP2820"
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "entity": {
+  "data": {
+   "entityId": 117746,
+   "entityRegAddress": {
+    "activeInd": true,
+    "address1": "PO Box 387",
+    "address2": "Challenge House",
+    "address3": "The Grange",
+    "addressId": 1189976,
+    "attentionTo": "",
+    "city": "St Peter Port",
+    "cityId": null,
+    "country": "Guernsey",
+    "countryId": 250,
+    "firmName": null,
+    "postcode": "GY1 4NQ",
+    "state": "",
+    "stateId": null,
+    "addressOneLine": "PO Box 387, Challenge House, The Grange, St Peter Port, GY1 4NQ, Guernsey"
+   },
+   "entityMailAddress": null,
+   "entityRegDate": "2017-04-04T00:00:00",
+   "entityRegName": "Naudi Investments LP",
+   "entityRegNumber": "LP2820",
+   "entityStatusDesc": "Normal",
+   "entityStatusExtDesc": null,
+   "entityStatusEffectiveDate": "2017-04-04T00:00:00",
+   "entityTypeId": 209,
+   "entityTypeDesc": "Limited Partnership (no separate legal personality)",
+   "personInd": false,
+   "entityTitle": null,
+   "entityLastName": null,
+   "entityFirstName": null,
+   "entityMiddleName": null,
+   "entityExpiryDate": null,
+   "entityRegEmail": "",
+   "entityMobile": null,
+   "entitySuffix": null,
+   "entityAttributes": [],
+   "annualReturnDueDate": "2027-03-31T00:00:00"
+  },
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "relationships": {
+  "data": [
+   {
+    "relationshipId": 248129,
+    "displayName": "Naudi Limited",
+    "effectiveDate": "2017-04-04T00:00:00",
+    "relationshipTypeId": 352,
+    "relationshipTypeDesc": "General Partner",
+    "relationshipToEntityId": 117738
+   },
+   {
+    "relationshipId": 330761,
+    "displayName": "L&S Services LP",
+    "effectiveDate": "2018-03-15T00:00:00",
+    "relationshipTypeId": 203,
+    "relationshipTypeDesc": "Resident Agent",
+    "relationshipToEntityId": 102610
+   }
+  ],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "names": {
+  "data": [],
+  "message": null,
+  "statusCode": 200,
+  "success": true
+ },
+ "officials": {
+  "117738": {
+   "status": 200,
+   "body": {
+    "data": {
+     "entityId": 117738,
+     "entityRegAddress": {
+      "activeInd": true,
+      "address1": "P.O. Box 387",
+      "address2": "Challenge House",
+      "address3": "The Grange ",
+      "addressId": 1190121,
+      "attentionTo": "",
+      "city": "St Peter Port",
+      "cityId": null,
+      "country": "Guernsey",
+      "countryId": 250,
+      "firmName": null,
+      "postcode": "GY1 4NQ",
+      "state": "",
+      "stateId": null,
+      "addressOneLine": "P.O. Box 387, Challenge House, The Grange, St Peter Port, GY1 4NQ, Guernsey"
+     },
+     "entityMailAddress": null,
+     "entityRegDate": "2017-04-03T00:00:00",
+     "entityRegName": "Naudi Limited",
+     "entityRegNumber": "CMP63388",
+     "entityStatusDesc": "Normal",
+     "entityStatusExtDesc": null,
+     "entityStatusEffectiveDate": "2018-06-29T00:00:00",
+     "entityTypeId": 201,
+     "entityTypeDesc": "Non Cellular Company",
+     "personInd": false,
+     "entityTitle": null,
+     "entityLastName": null,
+     "entityFirstName": null,
+     "entityMiddleName": null,
+     "entityExpiryDate": null,
+     "entityRegEmail": "",
+     "entityMobile": null,
+     "entitySuffix": null,
+     "entityAttributes": [],
+     "annualReturnDueDate": "2027-02-28T00:00:00"
+    },
+    "message": null,
+    "statusCode": 200,
+    "success": true
+   }
+  },
+  "102610": {
+   "status": 200,
+   "body": {
+    "data": {
+     "entityId": 102610,
+     "entityRegAddress": {
+      "activeInd": true,
+      "address1": "PO Box 387",
+      "address2": "Challenge House",
+      "address3": "The Grange",
+      "addressId": 1085711,
+      "attentionTo": "",
+      "city": "St Peter Port",
+      "cityId": null,
+      "country": "Guernsey",
+      "countryId": 250,
+      "firmName": null,
+      "postcode": "GY1 4NQ",
+      "state": "",
+      "stateId": null,
+      "addressOneLine": "PO Box 387, Challenge House, The Grange, St Peter Port, GY1 4NQ, Guernsey"
+     },
+     "entityMailAddress": null,
+     "entityRegDate": "2009-10-08T00:00:00",
+     "entityRegName": "L&S Services LP",
+     "entityRegNumber": "LP1227",
+     "entityStatusDesc": "Normal",
+     "entityStatusExtDesc": null,
+     "entityStatusEffectiveDate": "2009-10-08T00:00:00",
+     "entityTypeId": 209,
+     "entityTypeDesc": "Limited Partnership (no separate legal personality)",
+     "personInd": false,
+     "entityTitle": null,
+     "entityLastName": null,
+     "entityFirstName": null,
+     "entityMiddleName": null,
+     "entityExpiryDate": null,
+     "entityRegEmail": "",
+     "entityMobile": null,
+     "entitySuffix": null,
+     "entityAttributes": [],
+     "annualReturnDueDate": "2027-03-31T00:00:00"
+    },
+    "message": null,
+    "statusCode": 200,
+    "success": true
+   }
+  }
+ }
+}
