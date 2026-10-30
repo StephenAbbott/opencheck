@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 424** — Florida's Division of Corporations (Sunbiz) is now a source, read from a quarterly index of the register's bulk data, with status dated by the event that ended a company and up to six officers as managing officials.
+**Latest: Phase 425** — Three post-deploy fixes for the Ukrainian, Belgian and Cypriot registers — signer names without their role word, and a National ID picker that finds Belgian and Cypriot companies.
 
 → [Full development history](docs/status.md)
 
