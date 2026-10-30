@@ -419,6 +419,14 @@ from .mappers.cyprus import (  # noqa: F401  (re-exported, Phase 246)
     _cy_official_is_org,
     map_cyprus_drcor,
 )
+from .mappers.us_fl import (  # noqa: F401  (re-exported; the Florida wiring)
+    _FL_SOURCE,
+    _fl_address,
+    _fl_entity_details,
+    _fl_officer_interest,
+    map_sunbiz_florida,
+    sunbiz_officer_record_id,
+)
 from .mappers.australia import (  # noqa: F401  (re-exported, Phase 246)
     map_abr_australia,
 )
@@ -596,6 +604,12 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # fallback below labelled those numbers ``US-DE``, i.e. as Delaware file
     # numbers. The scheme follows the number, not the jurisdiction.
     "RA000628": ("US-NY", "New York Department of State, Division of Corporations"),
+    # United States — Florida Department of State, Division of Corporations
+    # (Sunbiz; the Florida wiring, 30 Oct 2026). ``registeredAs`` is the
+    # document number on 12,842 US-FL LEI records — and on 43 elsewhere
+    # (foreign companies authorised in Florida), which the jurisdiction
+    # fallback labelled with their home state's scheme until this entry.
+    "RA000603": ("US-FL", "Florida Department of State, Division of Corporations"),
     # United States — New York State Department of Financial Services,
     # Registry of insurance companies. Its ``registeredAs`` is an NAIC company
     # code (ShelterPoint Life, 81434), not a DOS ID, so it must NOT take the

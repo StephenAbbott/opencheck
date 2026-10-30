@@ -204,6 +204,19 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "attributes the Department of State anyway (terms read 29 Sept 2026)."
         ),
     ),
+    "fl-public-records": _terms(
+        "FL-Public-Records", "Florida public records (Fla. Const. art. I §24; Fla. Stat. ch. 119)",
+        commercial="yes", attribution=False, share_alike=False, redistribution="yes",
+        url="https://dos.fl.gov/sunbiz/other-services/data-downloads/",
+        summary=(
+            "No licence is stated: the Division of Corporations offers its bulk "
+            "data free \u201cfor informational purposes\u201d, as is. Florida "
+            "public records are open to anyone for any purpose, and an agency "
+            "cannot assert copyright in them without statutory authority "
+            "(Microdecisions, Inc. v. Skinner, 889 So.2d 871, Fla. 2d DCA 2004). "
+            "OpenCheck attributes the Division anyway (recorded 29 Oct 2026)."
+        ),
+    ),
     "sodl-1.0": _terms(
         "SODL-1.0", "Data License — Serbian Open Data Portal (SODL 1.0)",
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",

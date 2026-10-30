@@ -587,6 +587,28 @@ PROBES: dict[str, SourceProbe] = {
             "shareholders and no beneficial owners."
         ),
     ),
+    "sunbiz_florida": _p(
+        tier="index",
+        subject="ALTA NEW RIVER LLC (US-FL L22000385605)",
+        args=("L22000385605",),
+        kwargs={"legal_name": "ALTA NEW RIVER LLC"},
+        expect_fields=("name", "status", "filing_type", "file_date"),
+        # SKIP without an index (the jar_lithuania shape), never allow_empty.
+        # warm_bulk_stores.py downloads the asset first.
+        requires_files=("sunbiz_florida.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # The Division publishes quarterly (Jan / Apr / Jul / Oct): four
+        # months means a missed rebuild, not a broken source.
+        snapshot_max_age_days=125,
+        anchor_lei="254900U0350DLRN7AR49",
+        bods_mapper="map_sunbiz_florida",
+        notes=(
+            "The Florida wiring (30 Oct 2026): an index of the Division of "
+            "Corporations' quarterly corporate data and events files — every "
+            "active record and every record a GLEIF LEI names. Up to six "
+            "officers per record; no shareholders or beneficial owners."
+        ),
+    ),
     "krs_poland": _p(
         tier="live",
         subject="ORLEN Spółka Akcyjna",

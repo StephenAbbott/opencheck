@@ -214,6 +214,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Changes made:** OpenCheck reads the four datasets for one DOS ID and derives the current name, status, formation date and chief executive(s) from them. **Assumed-name filings are dropped** — they sit under a separate numbering that collides with DOS IDs. A title the filer appended to the CEO's name after a comma ("…, PRESIDENT") is removed. The CEO is carried by **name and role only**: the address DOS publishes beside it is not. Service-of-process and registered-agent addresses are not read.
 - **Entry point:** `us_ny_dos_id` derived from GLEIF RA code `RA000628` (Corporation and Business Entity Database), whatever the entity's jurisdiction; no name search. Optional `SOCRATA_APP_TOKEN` lifts Socrata's shared per-IP throttle.
 
+## Florida — Department of State, Division of Corporations (Sunbiz)
+
+- **Data:** corporations, limited liability companies, limited partnerships and foreign qualifications filed in Florida — name, status, filing type, file date, FEI number, principal and mailing address, registered agent, annual reports, up to six officers (name, title, city and state), and the events that dissolved, revoked, renamed or merged them. No shareholders or beneficial owners are published.
+- **Portal:** <https://dos.fl.gov/sunbiz/other-services/data-downloads/>. Public search UI: <https://search.sunbiz.org/>
+- **Access:** The Division's quarterly bulk files (`cordata.zip`, `corevent.zip`) on its public SFTP server (`sftp.floridados.gov`, credentials published on the data-downloads page), built into a SQLite index by `scripts/build_sunbiz_florida_index.py` quarterly on GitHub Actions (`refresh-sunbiz-florida-index.yml`; `scripts/refresh_sunbiz_florida_index.sh` by hand as the fallback), shipped as the `sunbiz-florida-index` release asset and downloaded by the backend at boot. Officers' and the registered agent's street addresses and ZIP codes are not carried.
+- **License:** Florida public records (Chapter 119, Florida Statutes) — the Division publishes the files for anyone to download, with no licence terms attached.
+- **Attribution:** "Contains information from the Florida Department of State, Division of Corporations (sunbiz.org) bulk data downloads — Florida public records."
+- **Entry point:** `us_fl_doc` (the Division's document number) derived from GLEIF RA code `RA000603`
+
 ## Moldova — ASP (Agenția Servicii Publice), State Register of Legal Entities
 
 - **Data:** companies on the State Register of Legal Entities (*Registrul de stat al unităților de drept*) — name, IDNO, legal form, registration date, registered address and activity codes — with their **directors** and the register's word for each role, and their **founders** with each founder's percentage of the share capital. Names only: no dates of birth, nationalities or identifiers for people or for corporate founders. No beneficial owners.

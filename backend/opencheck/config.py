@@ -629,6 +629,24 @@ class Settings(BaseSettings):
         alias="CYPRUS_DRCOR_DB_URL",
     )
 
+    # --- Florida Division of Corporations (Sunbiz; Florida public records) ---
+    # No API key: the Division's quarterly bulk files (SFTP, published public
+    # credentials), built into a SQLite index by
+    # scripts/build_sunbiz_florida_index.py — every active record plus every
+    # record a GLEIF LEI names (~3.8M, ~1.2 GB) — and shipped as the
+    # ``sunbiz-florida-index`` release asset. On Render it lives on the
+    # persistent disk (render.yaml). Unset: the data-root default.
+    sunbiz_florida_db_file: str | None = Field(default=None, alias="SUNBIZ_FLORIDA_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed —
+    # the ONRC / JAR rule. ~350 MB gzipped. Empty string disables it.
+    sunbiz_florida_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "sunbiz-florida-index/sunbiz_florida.sqlite.gz"
+        ),
+        alias="SUNBIZ_FLORIDA_DB_URL",
+    )
+
     # --- Ukraine ЄДР (data.gov.ua open data, CC BY 4.0) ---
     # No API key, and no government API of any kind — the weekly XML bulk
     # export is the only official channel. A SQLite index of it, built

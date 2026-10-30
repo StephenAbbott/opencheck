@@ -1817,6 +1817,56 @@ def finding_cyprus_drcor(bundle: dict[str, Any]) -> str | None:
         n = len(officials)
         counts.append(f"{n} official{'' if n == 1 else 's'} on file")
     return clauses_to_sentence([lead, form, *counts])
+def finding_sunbiz_florida(bundle: dict[str, Any]) -> str | None:
+    """What the Florida Division of Corporations says: the status (with the
+    dated event behind an inactive one), the filing type, how many officers
+    the record lists and the latest annual report (the Florida wiring,
+    30 Oct 2026).
+
+    * **Not in the index / a different company** says so rather than that
+      the company does not exist.
+    * The officer count is said in the same voice when it is zero (rule 6),
+      and "list incomplete" when the register records more than six.
+    * Deliberately **not** said: shareholders or beneficial owners — Florida
+      publishes neither for any company, so the clause would read the same
+      on every row (the JAR / ACRA precedent). Officers are never "owners".
+    """
+    from .sources.sunbiz_florida import filing_type_label
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("name_mismatch"):
+        return (
+            "The Division of Corporations holds this document number for a "
+            "differently named company; the number GLEIF files may be wrong."
+        )
+    if bundle.get("not_found"):
+        return (
+            "Not in the Florida Division of Corporations' quarterly data as "
+            "indexed (active records and records an LEI names)."
+        )
+    cls = bundle.get("status_class")
+    words = str(bundle.get("status_words") or "").strip()
+    since = human_date(bundle.get("status_since"))
+    filed = human_date(bundle.get("file_date"))
+    if cls == "live":
+        lead = f"Active, filed {filed}" if filed else "Active"
+    elif cls == "inactive_foreign":
+        lead = (words[0].upper() + words[1:]) if words else "Inactive in Florida"
+        lead += f" on {since}" if since else ""
+    else:
+        lead = (words[0].upper() + words[1:]) if words and words != "inactive" else "Inactive"
+        lead += f" on {since}" if since else ""
+    form = filing_type_label(bundle.get("filing_type"))
+    n = len(bundle.get("officers") or [])
+    officers = f"{n} officer{'' if n == 1 else 's'} listed"
+    if bundle.get("more_than_six_officers"):
+        officers = "more than six officers (list incomplete)"
+    reports = bundle.get("annual_reports") or []
+    report = f"last annual report {reports[0]['year']}" if reports else None
+    return clauses_to_sentence([lead, form, officers, report])
+
+
 def finding_ariregister(bundle: dict[str, Any]) -> str | None:
     """What the Estonian e-Business Register says: the company's status and
     legal form, and how many shareholders, persons on the registry card and
