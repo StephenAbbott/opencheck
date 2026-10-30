@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 422** — The Belgium index builder reads the daily full file the KBO portal now publishes and logs what it saw when no full file is listed.
+**Latest: Phase 423** — Taiwan's company register (MOEA GCIS open data) is now a live source, giving each Taiwanese company's status, directors, supervisors and the holdings the register publishes for them.
 
 → [Full development history](docs/status.md)
 
