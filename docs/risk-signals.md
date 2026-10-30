@@ -170,10 +170,10 @@ Not a risk signal, and listed here so nobody makes it one. For every party above
 
 ## FATF jurisdiction signals (BODS v0.4 derived)
 
-For the subject and every entity on the ownership chain above it (Phase 273 — see [Jurisdiction list signals](#jurisdiction-list-signals) for the scope and the subsidiary note), OpenCheck checks `recordDetails.jurisdiction.code` against the FATF lists current as of the June 2026 plenary (refreshed each FATF plenary: typically February, June, and October). Two independent signals, with different confidence levels reflecting FATF's own severity distinction:
+For the subject and every entity on the ownership chain above it (Phase 273 — see [Jurisdiction list signals](#jurisdiction-list-signals) for the scope and the subsidiary note), OpenCheck checks `recordDetails.jurisdiction.code` against the FATF lists current as of the October 2026 plenary (refreshed each FATF plenary: typically February, June, and October). Two independent signals, with different confidence levels reflecting FATF's own severity distinction:
 
 - `FATF_BLACK_LIST` — `high` — entity in the FATF High-Risk Jurisdictions (Call for Action) list: **Democratic People's Republic of Korea (KP), Iran (IR), Myanmar (MM)**.
-- `FATF_GREY_LIST` — `medium` — entity in the FATF Jurisdictions under Increased Monitoring list (June 2026 plenary): Angola, Bolivia, Bosnia and Herzegovina, Bulgaria, Cameroon, Côte d'Ivoire, Democratic Republic of Congo, Haiti, Iraq, Kenya, Kuwait, Laos, Lebanon, Monaco, Nepal, Papua New Guinea, South Sudan, Syria, Venezuela, Vietnam, British Virgin Islands, Yemen.
+- `FATF_GREY_LIST` — `medium` — entity in the FATF Jurisdictions under Increased Monitoring list (October 2026 plenary): Angola, Bolivia, Bosnia and Herzegovina, Cameroon, Haiti, Iraq, Kenya, Kuwait, Laos, Lebanon, Nepal, Papua New Guinea, South Sudan, Syria, Venezuela, Vietnam, British Virgin Islands, Yemen.
 
 Both signals are derived purely from the BODS jurisdiction codes — they fire independently of the structural signals (which also read them, for the `high_risk_jurisdiction` complexity element) and require no additional source calls. The country code sets live in `risk.py` (`FATF_BLACK_LIST_CODES` / `FATF_GREY_LIST_CODES`) and should be updated after each FATF plenary.
 

@@ -196,27 +196,50 @@ def test_trust_signal_fires_on_entity_type_subtype() -> None:
 
 
 # ---------------------------------------------------------------------
-# FATF grey list — June 2026 plenary
+# FATF grey list — October 2026 plenary
 # ---------------------------------------------------------------------
 
 
-def test_fatf_grey_list_june_2026_membership() -> None:
-    # Added at the June 2026 plenary.
+def test_fatf_grey_list_october_2026_membership() -> None:
+    # Added at the June 2026 plenary, still listed.
     assert "BA" in FATF_GREY_LIST_CODES  # Bosnia and Herzegovina
     assert "IQ" in FATF_GREY_LIST_CODES  # Iraq
     # Removed at the June 2026 plenary.
     assert "DZ" not in FATF_GREY_LIST_CODES  # Algeria
     assert "NA" not in FATF_GREY_LIST_CODES  # Namibia
-    assert len(FATF_GREY_LIST_CODES) == 22
+    # Removed at the October 2026 plenary (no additions).
+    assert "BG" not in FATF_GREY_LIST_CODES  # Bulgaria
+    assert "CI" not in FATF_GREY_LIST_CODES  # Côte d'Ivoire
+    assert "CD" not in FATF_GREY_LIST_CODES  # Democratic Republic of the Congo
+    assert "MC" not in FATF_GREY_LIST_CODES  # Monaco
+    assert len(FATF_GREY_LIST_CODES) == 18
+    assert FATF_BLACK_LIST_CODES == frozenset({"KP", "IR", "MM"})
 
 
-def test_fatf_grey_signal_fires_for_newly_added_jurisdiction() -> None:
+def test_fatf_grey_signal_fires_for_listed_jurisdiction() -> None:
     bods = [_entity("E1", jurisdiction_code="IQ", jurisdiction_name="Iraq")]
     signals = assess_amla("openaleph", {"entity_id": "X"}, bods)
     sig = next(s for s in signals if s.code == FATF_GREY_LIST)
     assert sig.confidence == "medium"
-    assert "June 2026" in sig.summary
+    assert "October 2026" in sig.summary
     assert sig.evidence["jurisdictions"][0]["code"] == "IQ"
+
+
+@pytest.mark.parametrize(
+    ("code", "name"),
+    [
+        ("BG", "Bulgaria"),
+        ("CI", "Côte d'Ivoire"),
+        ("CD", "Democratic Republic of the Congo"),
+        ("MC", "Monaco"),
+    ],
+)
+def test_fatf_grey_signal_does_not_fire_after_october_2026_removal(
+    code: str, name: str
+) -> None:
+    bods = [_entity("E1", jurisdiction_code=code, jurisdiction_name=name)]
+    signals = assess_amla("openaleph", {"entity_id": "X"}, bods)
+    assert FATF_GREY_LIST not in {s.code for s in signals}
 
 
 def test_fatf_grey_signal_does_not_fire_for_removed_jurisdiction() -> None:
@@ -784,21 +807,22 @@ def test_high_risk_element_is_scoped_to_the_layered_path() -> None:
 
 def test_high_risk_lists_are_configurable(monkeypatch) -> None:
     """OPENCHECK_HIGH_RISK_JURISDICTION_LISTS=eu narrows the element to the
-    EU list: Bulgaria (FATF grey, not EU-listed) stops counting, the BVI
+    EU list: Kuwait (FATF grey, not EU-listed) stops counting, the BVI
     (on both) still counts, and the standalone FATF signal is untouched."""
     monkeypatch.setenv("OPENCHECK_HIGH_RISK_JURISDICTION_LISTS", "eu")
     get_settings.cache_clear()
-    assert high_risk_lists_for("BG") == []
+    assert high_risk_lists_for("KW") == []
     assert high_risk_lists_for("VG") == ["eu"]
     bods = _three_layer_chain()
-    bods[2]["recordDetails"]["jurisdiction"] = {"code": "BG", "name": "Bulgaria"}
+    bods[2]["recordDetails"]["jurisdiction"] = {"code": "KW", "name": "Kuwait"}
     signals = assess_amla("companies_house", {"entity_id": "E1"}, bods)
     assert FATF_GREY_LIST in {s.code for s in signals}
     assert "high_risk_jurisdiction" not in _elements(_layers(signals))
 
 
 def test_high_risk_lists_default_to_all_three() -> None:
-    assert high_risk_lists_for("BG") == ["fatf_grey"]
+    assert high_risk_lists_for("KW") == ["fatf_grey"]
+    assert high_risk_lists_for("BG") == []  # off the grey list, October 2026
     assert high_risk_lists_for("RU") == ["eu"]
     assert high_risk_lists_for("KP") == ["eu", "fatf_black"]
     assert high_risk_lists_for("DE") == []
