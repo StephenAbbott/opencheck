@@ -219,6 +219,20 @@ def test_the_newest_full_zip_is_picked_off_the_listing():
     assert builder.newest_full_zip("<html>login</html>") is None
 
 
+def test_the_daily_full_file_the_portal_publishes_since_2026_is_picked_too():
+    # Read off the listing on 29 Oct 2026: a full file beside each day's
+    # update, named with the day. The highest extract number wins, whatever
+    # the dates say.
+    html = (
+        '<a href="files/KboOpenData_0517_2026_10_19_Full.zip">x</a>'
+        '<a href="files/KboOpenData_0517_2026_10_19_Update.zip">x</a>'
+        '<a href="files/KboOpenData_0518_2026_10_20_Full.zip">x</a>'
+        '<a href="files/KboOpenData_0518_2026_10_20_Update.zip">x</a>'
+        '<a href="files/KboOpenData_0140_2026_10_Full.zip">x</a>'
+    )
+    assert builder.newest_full_zip(html) == ("KboOpenData_0518_2026_10_20_Full.zip", "2026-10-20")
+
+
 # ---------------------------------------------------------------------------
 # Numbers
 # ---------------------------------------------------------------------------
