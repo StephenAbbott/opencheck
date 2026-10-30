@@ -1,0 +1,89 @@
+name: Refresh Sunbiz Florida index
+
+# Rebuilds the index of the Florida Department of State, Division of
+# Corporations from its quarterly bulk files (cordata.zip — every record on
+# file — and corevent.zip, the events) and replaces the
+# `sunbiz-florida-index` release asset the backend downloads at boot
+# (SUNBIZ_FLORIDA_DB_URL). The Florida wiring, 30 Oct 2026.
+#
+# The files are on the Division's SFTP server (sftp.floridados.gov:22, user
+# `Public`, with the password printed on its data-downloads page — the
+# builder carries both, overridable with SUNBIZ_SFTP_USER /
+# SUNBIZ_SFTP_PASSWORD). The Division generates them in January, April, July
+# and October; the cron runs mid-month after each. ~2 GB of zips at ~2 MB/s
+# is ~17 minutes of download, the build ~10 minutes more.
+#
+# Whether a GitHub runner can reach the SFTP server had not been tested when
+# this was written (only a home connection had). If the download step fails
+# on a connection error, use the hand-run fallback,
+# backend/scripts/refresh_sunbiz_florida_index.sh, from a home connection.
+#
+# Reading the zips needs zipfile-deflate64 (cordata.zip is Deflate64) and
+# downloading needs paramiko; neither is a backend dependency, so both come
+# in with `uv run --with`.
+on:
+  schedule:
+    - cron: "41 6 14 1,4,7,10 *" # 06:41 UTC on the 14th of each quarter's first month
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-sunbiz-florida-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Download the quarterly files and build the index
+        working-directory: backend
+        run: |
+          uv sync
+          uv run --with paramiko --with zipfile-deflate64 \
+            python scripts/build_sunbiz_florida_index.py --download \
+            --work "$RUNNER_TEMP/fl" \
+            --out "$RUNNER_TEMP/sunbiz_florida.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "sunbiz_florida.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM entity").fetchone()[0]
+          lei = conn.execute("SELECT COUNT(*) FROM entity WHERE lei_named = 1").fetchone()[0]
+          o = conn.execute("SELECT COUNT(*) FROM officer").fetchone()[0]
+          print(f"{n} records ({lei} LEI-named), {o} officers, cut {meta.get('cut')}, schema {meta.get('schema_version')}")
+          if n < 3_000_000 or lei < 10_000 or o < 4_000_000:
+              sys.exit(f"Refusing to publish: {n} records / {lei} LEI-named / {o} officers — likely a source/format change.")
+          PY
+
+      - name: Replace the `sunbiz-florida-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view sunbiz-florida-index >/dev/null 2>&1 || gh release create sunbiz-florida-index \
+            --title "Sunbiz Florida index" \
+            --notes "Built quarterly by refresh-sunbiz-florida-index.yml from the Florida Department of State, Division of Corporations' bulk data downloads (Florida public records). Downloaded by the backend at boot (SUNBIZ_FLORIDA_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh sunbiz-florida-index \
+            "$RUNNER_TEMP/sunbiz_florida.sqlite.gz" sunbiz_florida.sqlite.gz \
+            "Rebuilt automatically by refresh-sunbiz-florida-index on $(date -u +%Y-%m-%d)."
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"

@@ -51,6 +51,7 @@
       "rpo_slovakia",
       "rpvs_slovakia",
       "sudreg_croatia",
+      "sunbiz_florida",
       "ur_latvia",
       "zefix"
     ],
@@ -113,6 +114,7 @@
       "rpo_slovakia",
       "rpvs_slovakia",
       "sudreg_croatia",
+      "sunbiz_florida",
       "ur_latvia",
       "zefix"
     ],
@@ -174,6 +176,7 @@
     "rpvs_slovakia": "RPVS — Slovak Public Sector Partners Register",
     "sec_edgar": "SEC EDGAR — U.S. Securities and Exchange Commission",
     "sudreg_croatia": "Sudski registar — Croatian Court Register",
+    "sunbiz_florida": "Florida Department of State — Division of Corporations (Sunbiz)",
     "ted_eu": "TED — Tenders Electronic Daily (EU procurement notices)",
     "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
     "wikidata": "Wikidata",

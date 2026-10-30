@@ -135,6 +135,17 @@ services:
       # re-check. Without it the meip source covers nothing.
       - key: OPENCHECK_MEIP_DB_FILE
         value: /var/data/meip.sqlite
+      # --- The Florida wiring (30 Oct 2026): the Sunbiz index ---
+      # sunbiz_florida.sqlite (~1.2 GB; ~350 MB gzipped) — every active record
+      # and every record an LEI names, built quarterly from the Division of
+      # Corporations' bulk files by refresh-sunbiz-florida-index.yml and
+      # published as the sunbiz-florida-index release asset (the URL is the
+      # config default, SUNBIZ_FLORIDA_DB_URL). On the disk, not the
+      # ephemeral data root, so a deploy does not re-download it. Disk budget:
+      # mirror 1.8 + PSC graph 2.2 + Florida 1.2 + the small files ≈ 5.6 GB,
+      # plus one replace in flight (≤ 2.2 GB) — inside the 10 GB.
+      - key: SUNBIZ_FLORIDA_DB_FILE
+        value: /var/data/sunbiz_florida.sqlite
       # --- Phase 258: GLEIF's ISIN-to-LEI file behind /securities ---
       # Built on this server from GLEIF's daily keyless zip (~32 MB in,
       # ~90 MB of SQLite out, ~40 s) at boot when absent, then whenever

@@ -821,6 +821,56 @@ def _bh_cyprus_drcor(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_sunbiz_florida(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Florida Division of Corporations (the Florida
+    wiring, 30 Oct 2026).
+
+    * **A record.** Asserts the document number the register published
+      (``us_fl_doc``) and, where filed, the FEI number as an EIN
+      (``us_ein``, the key the EITI US crosswalk asserts too).
+    * **A note card** — the number is outside the index, or the register
+      holds it for a differently named company. No identifier: the register
+      did not confirm the number for this company.
+
+    Dispatch is gated on the index file (``covers_lei``).
+    """
+    from ..findings import finding_sunbiz_florida
+    from ..sources.sunbiz_florida import FL_SCHEME, filing_type_label, format_ein
+
+    if r.get("is_stub") or r.get("not_found"):
+        shown = r.get("doc") or local_id
+        return _hit(
+            "sunbiz_florida", shown,
+            name=ctx.legal_name or "",
+            summary=f"{FL_SCHEME} {shown} · no record attached",
+            finding=finding_sunbiz_florida(r),
+            identifiers={},
+            raw={
+                "not_found": True,
+                "coverage_note": r.get("coverage_note"),
+                "name_mismatch": bool(r.get("name_mismatch")),
+                "registered_name": r.get("registered_name"),
+            },
+        )
+    doc = r.get("doc") or local_id
+    segments = [f"{FL_SCHEME} {doc}"]
+    form = filing_type_label(r.get("filing_type"))
+    if form:
+        segments.append(form)
+    if r.get("status_class") != "live":
+        segments.append(r.get("status_words") or "inactive")
+    identifiers = {"us_fl_doc": doc}
+    if r.get("fei"):
+        identifiers["us_ein"] = format_ein(r["fei"])
+    return _hit(
+        "sunbiz_florida", doc,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=" · ".join(segments),
+        finding=finding_sunbiz_florida(r),
+        identifiers=identifiers, raw=r,
+    )
+
+
 def _bh_ares(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     e = r.get("entity") or {}
     return _hit(

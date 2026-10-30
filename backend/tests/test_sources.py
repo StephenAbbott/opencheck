@@ -136,6 +136,9 @@ _IDENTIFIER_KEYED = {
     # cyprus_drcor (the Cyprus wiring): the same LIKE over the local index;
     # a fresh test process has none.
     "cyprus_drcor",
+    # sunbiz_florida (the Florida wiring): an FTS5 search over the local
+    # index; a fresh test process has none.
+    "sunbiz_florida",
     # gcis_taiwan: a live register with no stub tier; offline its search
     # returns nothing rather than an invented row.
     "gcis_taiwan",
