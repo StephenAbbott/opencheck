@@ -1,0 +1,8 @@
+{
+ "ubn": "70440190",
+ "retrieved": "2026-10-29",
+ "note": "Real GCIS answers of 29 Oct 2026, bodies verbatim",
+ "type": "[{\"Year\":\"115\",\"exist\":\"Y\",\"TYPE\":\"公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"分公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"商業\"}]",
+ "basic": "[{\"Business_Accounting_NO\":\"70440190\",\"Company_Status_Desc\":\"核准設立\",\"Company_Name\":\"侑容投資有限公司\",\"Capital_Stock_Amount\":500000,\"Paid_In_Capital_Amount\":0,\"Share_Val\":0,\"Equity_Amt\":0,\"Responsible_Name\":\"吳長軒\",\"Company_Location\":\"臺北市中山區五常街67號1樓\",\"Register_Organization_Desc\":\"臺北市政府\",\"Company_Setup_Date\":\"0880930\",\"Change_Of_Approval_Data\":\"1150602\",\"Revoke_App_Date\":\"\",\"Case_Status\":\"\",\"Case_Status_Desc\":\"\",\"Sus_App_Date\":\"\",\"Sus_Beg_Date\":\"\",\"Sus_End_Date\":\"\"}]",
+ "dirs": "[{\"Person_Position_Name\":\"董事\",\"Person_Name\":\"吳長軒\",\"Juristic_Person_Name\":\"\",\"Person_Shareholding\":500000}]"
+}

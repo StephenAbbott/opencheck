@@ -139,6 +139,9 @@ _IDENTIFIER_KEYED = {
     # sunbiz_florida (the Florida wiring): an FTS5 search over the local
     # index; a fresh test process has none.
     "sunbiz_florida",
+    # gcis_taiwan: a live register with no stub tier; offline its search
+    # returns nothing rather than an invented row.
+    "gcis_taiwan",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "eiti_zambia", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "meip", "nz_companies", "opencorporates", "inpi", "kvk",

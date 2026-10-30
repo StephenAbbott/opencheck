@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 421** — The Belgian Crossroads Bank for Enterprises joins the lookup as a monthly index of the KBO Open Data full file, built by a workflow with the portal's free login.
+**Latest: Phase 423** — Taiwan's company register (MOEA GCIS open data) is now a live source, giving each Taiwanese company's status, directors, supervisors and the holdings the register publishes for them.
 
 → [Full development history](docs/status.md)
 

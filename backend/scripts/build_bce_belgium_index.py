@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Build the Belgian BCE / KBO index from the monthly KBO Open Data ZIP.
+"""Build the Belgian BCE / KBO index from the KBO Open Data full ZIP.
 
 The Crossroads Bank for Enterprises (Banque-Carrefour des Entreprises /
-Kruispuntbank van Ondernemingen) publishes its open data as one full ZIP a
-month — ``KboOpenData_<extract>_<year>_<month>_Full.zip`` (~240 MB, nine
-CSVs, 1.5 GB unzipped) — plus interim update files, behind a free account
-(``j_spring_security_check``, a plain form login; the portal answers a
-datacentre address). This script reads the **full** file, the register's
-monthly cut, into one SQLite index the backend downloads at boot — the
+Kruispuntbank van Ondernemingen) publishes its open data as a full ZIP —
+``KboOpenData_<extract>_<year>_<month>_Full.zip`` in the cookbook, and since
+at least September 2026 one a day, ``KboOpenData_<extract>_<year>_<month>_<day>_Full.zip``
+(~240 MB, nine CSVs, 1.5 GB unzipped) — beside each day's update file, behind
+a free account (``j_spring_security_check``, a plain form login; the portal
+answers a datacentre address). This script reads the newest **full** file,
+the register's own cut, into one SQLite index the backend downloads at boot — the
 ``jar_lithuania`` / ``cyprus_drcor`` arrangement (the Belgium wiring,
 29 Oct 2026; replaces Phase 35's ``extract_bce.py``).
 
@@ -57,7 +58,12 @@ log = logging.getLogger("build_bce_belgium_index")
 PORTAL = "https://kbopub.economie.fgov.be/kbo-open-data"
 LOGIN_URL = f"{PORTAL}/static/j_spring_security_check"
 FILES_URL = f"{PORTAL}/affiliation/xml/?files"
-FULL_ZIP_RE = re.compile(r"KboOpenData_(\d{4})_(\d{4})_(\d{2})_Full\.zip")
+#: The cookbook's monthly name ``KboOpenData_0140_2026_10_Full.zip`` and the
+#: daily name the portal has published since at least September 2026
+#: (``KboOpenData_0518_2026_10_20_Full.zip`` — a full file beside each
+#: day's update, read off the listing on 29 Oct 2026). The extract number is
+#: what orders them; the date is kept for the log.
+FULL_ZIP_RE = re.compile(r"KboOpenData_(\d{4})_(\d{4})_(\d{2})(?:_(\d{2}))?_Full\.zip")
 
 INDEX_SCHEMA_VERSION = "1"
 
@@ -77,9 +83,12 @@ HEADERS: dict[str, list[str]] = {
     "code.csv": ["Category", "Code", "Language", "Description"],
     "meta.csv": ["Variable", "Value"],
 }
-#: Far below these and it is not the register (1.9M enterprises, 3.2M names,
-#: 2.7M addresses on the October 2024 file).
-MIN_ROWS = {"enterprise.csv": 1_200_000, "denomination.csv": 2_000_000, "address.csv": 1_500_000}
+#: Far below these and it is not the register. Measured on the 29 Oct 2026
+#: full file: 1,265,258 denomination rows — a natural-person enterprise
+#: (a sole trader) files no denomination, so the file is well short of the
+#: enterprise count, and the first run refused the real register against a
+#: 2,000,000 floor taken from the cookbook's headline figures.
+MIN_ROWS = {"enterprise.csv": 1_000_000, "denomination.csv": 1_000_000, "address.csv": 1_000_000}
 MAX_MALFORMED = 1_000
 
 #: KBO language codes.
@@ -163,13 +172,36 @@ def iso_day(raw: str) -> str | None:
 
 
 def newest_full_zip(listing_html: str) -> tuple[str, str] | None:
-    """``(filename, year-month)`` of the newest full file named on the listing."""
-    found = sorted({(m.group(1), m.group(0), f"{m.group(2)}-{m.group(3)}")
-                    for m in FULL_ZIP_RE.finditer(listing_html)})
+    """``(filename, date)`` of the newest full file named on the listing —
+    the highest extract number; the date is ``YYYY-MM`` or ``YYYY-MM-DD`` as
+    the name spells it."""
+    found = sorted({
+        (m.group(1), m.group(0),
+         "-".join(part for part in (m.group(2), m.group(3), m.group(4)) if part))
+        for m in FULL_ZIP_RE.finditer(listing_html)
+    })
     if not found:
         return None
-    _, name, ym = found[-1]
-    return name, ym
+    _, name, when = found[-1]
+    return name, when
+
+
+def describe_listing(html: str) -> str:
+    """The page's ``<title>``, or its first 200 characters of text."""
+    m = re.search(r"<title[^>]*>(.*?)</title>", html, re.S | re.I)
+    if m:
+        return " ".join(m.group(1).split())
+    text = " ".join(re.sub(r"<[^>]+>", " ", html).split())
+    return text[:200]
+
+
+def listing_links(html: str) -> list[str]:
+    """Every distinct ``href``/``src`` on the page, in order of appearance."""
+    seen: list[str] = []
+    for m in re.finditer(r"""(?:href|src)\s*=\s*["']([^"']+)["']""", html, re.I):
+        if m.group(1) not in seen:
+            seen.append(m.group(1))
+    return seen
 
 
 def download(work: Path, username: str, password: str) -> Path:
@@ -185,11 +217,20 @@ def download(work: Path, username: str, password: str) -> Path:
     opener.open(f"{PORTAL}/login", timeout=60).read()
     body = urllib.parse.urlencode({"j_username": username, "j_password": password}).encode()
     resp = opener.open(LOGIN_URL, data=body, timeout=60)
-    listing = opener.open(FILES_URL, timeout=60).read().decode("utf-8", "replace")
+    log.info("login answered HTTP %s at %s", resp.status, resp.geturl())
+    files = opener.open(FILES_URL, timeout=60)
+    listing = files.read().decode("utf-8", "replace")
     if "j_spring_security_check" in listing or "j_username" in listing:
         raise RefusedInput(f"KBO open data: login refused (HTTP {resp.status})")
     newest = newest_full_zip(listing)
     if newest is None:
+        # Say what the portal served instead, so a changed listing page or
+        # file name can be read off the workflow log: the final URL, the
+        # title and the links — never the credentials or the session.
+        log.error("files listing: HTTP %s at %s (%d bytes)", files.status, files.geturl(), len(listing))
+        log.error("files listing title: %s", describe_listing(listing))
+        for href in listing_links(listing)[:60]:
+            log.error("files listing link: %s", href)
         raise RefusedInput("KBO open data: no KboOpenData_*_Full.zip on the files listing")
     name, ym = newest
     work.mkdir(parents=True, exist_ok=True)

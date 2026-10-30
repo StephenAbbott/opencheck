@@ -447,6 +447,25 @@ PROBES: dict[str, SourceProbe] = {
             "the shared client sends before suspecting the data."
         ),
     ),
+    "gcis_taiwan": _p(
+        tier="live",
+        subject="Taiwan Semiconductor Manufacturing Company Limited",
+        args=("22099131",),
+        expect_fields=("company", "directors"),
+        anchor_lei="549300KB6NK5SBD14S87",
+        bods_mapper="map_gcis_taiwan",
+        notes=(
+            "UBN exactly as GLEIF files it under RA000551. Two reads: the company "
+            "and its directors and supervisors. The platform answers a miss with "
+            "HTTP 200 and an empty body, and refuses with a Chinese sentence on a "
+            "200 (非授權介接之IP — an IP not on its whitelist; 超出… — a per-user "
+            "cap): if this probe degrades with 'refused this server's IP address', "
+            "the usage notification (使用告知書, opendata.gcis@gmail.com) has not "
+            "covered the runner's IP. The adapter clears Python 3.13's strict "
+            "X.509 flag for this host only (TWCA chain); a TLS error here means "
+            "that context is not in use."
+        ),
+    ),
     "cro": _p(
         tier="live",
         subject="Ryanair Finance DAC",

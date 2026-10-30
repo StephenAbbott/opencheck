@@ -1,6 +1,6 @@
 {
   "_comment": "mypy errors per module (non-strict config in pyproject.toml). A module may never carry more than this; see scripts/mypy_ratchet.py.",
-  "total": 133,
+  "total": 128,
   "errors": {
     "opencheck/app.py": 1,
     "opencheck/backups.py": 1,

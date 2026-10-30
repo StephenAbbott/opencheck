@@ -1,0 +1,8 @@
+{
+ "ubn": "52332424",
+ "retrieved": "2026-10-29",
+ "note": "Real GCIS answers of 29 Oct 2026, bodies verbatim",
+ "type": "[{\"Year\":\"115\",\"exist\":\"Y\",\"TYPE\":\"公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"分公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"商業\"}]",
+ "basic": "[{\"Business_Accounting_NO\":\"52332424\",\"Company_Status_Desc\":\"核准設立\",\"Company_Name\":\"創維風力發電股份有限公司\",\"Capital_Stock_Amount\":705431880,\"Paid_In_Capital_Amount\":705431880,\"Share_Val\":10,\"Equity_Amt\":63703315,\"Responsible_Name\":\"廖惠恩\",\"Company_Location\":\"臺北市松山區光復北路11巷35號3樓\",\"Register_Organization_Desc\":\"商業發展署(實收資本額未達5億元)\",\"Company_Setup_Date\":\"1051004\",\"Change_Of_Approval_Data\":\"1120209\",\"Revoke_App_Date\":\"\",\"Case_Status\":\"\",\"Case_Status_Desc\":\"\",\"Sus_App_Date\":\"\",\"Sus_Beg_Date\":\"\",\"Sus_End_Date\":\"\"}]",
+ "dirs": "[{\"Person_Position_Name\":\"董事長\",\"Person_Name\":\"廖惠恩\",\"Juristic_Person_Name\":\"德商 wind farm chuangwei GmbH\",\"Person_Shareholding\":70543188},{\"Person_Position_Name\":\"董事\",\"Person_Name\":\"曾葳葳\",\"Juristic_Person_Name\":\"德商 wind farm chuangwei GmbH\",\"Person_Shareholding\":70543188}]"
+}

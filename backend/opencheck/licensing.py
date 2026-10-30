@@ -192,6 +192,16 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "Government, the data provider and DATA.GOV.HK."
         ),
     ),
+    "ogdl-taiwan-1.0": _terms(
+        "OGDL-Taiwan-1.0", "Open Government Data License, version 1.0 (Taiwan)",
+        commercial="yes", attribution=True, share_alike=False, redistribution="yes",
+        url="https://data.gov.tw/license",
+        summary=(
+            "Use for any purpose, commercial included, sub-licensable and "
+            "compatible with CC BY 4.0. Attribution in the licence's Exhibit "
+            "form is a condition: without it the licence is void from the start."
+        ),
+    ),
     "open-ny-terms": _terms(
         "OPEN-NY-Terms", "OPEN-NY Terms of Use (data.ny.gov)",
         commercial="yes", attribution=False, share_alike=False, redistribution="yes",
