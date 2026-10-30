@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 421** — The Belgian Crossroads Bank for Enterprises joins the lookup as a monthly index of the KBO Open Data full file, built by a workflow with the portal's free login.
+**Latest: Phase 422** — The Belgium index builder reads the daily full file the KBO portal now publishes and logs what it saw when no full file is listed.
 
 → [Full development history](docs/status.md)
 
