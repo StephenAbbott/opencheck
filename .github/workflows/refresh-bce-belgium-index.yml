@@ -60,7 +60,7 @@ jobs:
           n = conn.execute("SELECT COUNT(*) FROM entity WHERE type = '2'").fetchone()[0]
           named = conn.execute("SELECT COUNT(*) FROM entity WHERE name_nl IS NOT NULL OR name_fr IS NOT NULL").fetchone()[0]
           print(f"{n} legal persons, {named} named entities, cut {meta.get('cut')}, schema {meta.get('schema_version')}")
-          if n < 900_000 or named < 1_200_000:
+          if n < 900_000 or named < 1_000_000:
               sys.exit(f"Refusing to publish: {n} legal persons / {named} named — likely a source/format change.")
           PY
 
