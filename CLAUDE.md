@@ -1487,6 +1487,60 @@ be re-derived otherwise:
 - A search ranks companies before the other types and an exact name first.
   Nothing touches the response `Cache` (the Phase 325 rule).
 
+## Florida is a quarterly index of the Sunbiz bulk files (the Florida wiring, 30 Oct 2026)
+
+`sources/sunbiz_florida.py`, `scripts/build_sunbiz_florida_index.py`,
+`.github/workflows/refresh-sunbiz-florida-index.yml` (fallback
+`scripts/refresh_sunbiz_florida_index.sh`), `bods/mappers/us_fl.py`.
+Stephen's decisions D1–D9 are on the Notion ticket "Florida / Sunbiz corporate
+data downloads". Things that will be re-derived otherwise:
+
+- **SFTP, not HTTPS.** `sftp.floridados.gov:22`, user `Public`, the password
+  printed on the Division's data-downloads page (`SUNBIZ_SFTP_*` override).
+  The HTTPS side (search.sunbiz.org) is behind a Cloudflare challenge, so
+  there is **no record link** — statements cite the data-downloads page
+  (`record_url`). Paramiko's prefetch must be capped
+  (`max_concurrent_requests=48`) or the server refuses it. `cordata.zip` is
+  **Deflate64**: the builder needs `zipfile-deflate64`, brought in with
+  `uv run --with` (not a backend dependency). Whether a GitHub runner reaches
+  port 22 was untested when the workflow was written.
+- **The quarterly `cordata.zip` holds every record on file** (12,987,601 in
+  Oct 2026, 3.8M active), not active only. The index keeps every active record
+  plus every record an LEI names under `RA000603` — by document number, or by
+  FEI where the LEI filed an EIN (`normalise_doc` → `FEI:<9 digits>`; only a
+  unique FEI matches). An inactive record nobody names is a note card.
+- **Records are 1,440-character fixed width, latin-1**; events 662. Offsets
+  are in `parse_record` / `parse_event`; the layout is the Division's
+  `corporate-data-file` page and `COREVENTREADME.txt`. The three annual-report
+  slots usually repeat the latest report — kept once.
+- **Officers are a four-character free field**, not the six letters the layout
+  documents: `title_label` reads exact codes, separated codes ("P, C") and
+  letter runs ("PSTD"), and shows anything else as filed (~5% of rows).
+  Every officer is `seniorManagingOfficial` — "authorized member" and
+  "managing member" included — never an owner, never `beneficialOwnershipOrControl`
+  (D5). Name, city and state only: an officer's or the agent's street and ZIP
+  never reach the index (D4; the schema refuses one). The registered agent is
+  in the bundle and the finding, not a party. More than six officers is a
+  flag in the data, said as "list incomplete".
+- **Status is the record's `A`/`I` plus its events.** `I` is dated by the
+  latest `TERMINAL_EVENTS` event not undone by a `REVERSAL_EVENTS` one; a
+  foreign filing's `I` only ended its authority in Florida (`inactive_foreign`,
+  annotated, not terminal), and its jurisdiction is its home state, with no
+  `foundingDate` (the Florida file date is not a founding).
+- **The name gate has three answers** (`name_check`): `agrees` (current or a
+  recorded former name), `renamed` (no match, but the register records a name
+  change — a name-change event carries the name *after* the change, so the
+  formation name is in no file; passed with an annotation), `differs` (a
+  note card: the number is probably wrong).
+- **Merger / conversion partners are named, never related** (the ClimateTRACE
+  successor rule). General partnerships and LLPs (separate files) and the
+  undocumented `AG/corprindata` file are not read (D7, D8); the daily overlay
+  is a follow-up (D6).
+- **On the persistent disk** (`SUNBIZ_FLORIDA_DB_FILE=/var/data/…`, ~1.2 GB),
+  not the ephemeral data root. Nothing touches the response `Cache` (the
+  Phase 325 rule). Scheme `US-FL`, in `register_hops._NO_COUNTRY_ALIAS`; not
+  in `RA_BY_COUNTRY` (the DC / NY rule).
+
 ## Estonia is an index first, the page second (Phase 330)
 
 `sources/ariregister.py`, `scripts/build_ariregister_index.py`,
@@ -2611,6 +2665,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | Serbia | apr_serbia | `RA000517` — Business Registers Agency (APR) | 2026-09-17 — all 304 GLEIF records with jurisdiction RS: 295 RA000517, 6 RA999999, 2 RA000684 (Securities Commission fund numbers), 1 RA000518 (APR's entrepreneurs register); **every RA000517 record files the 8-digit matični broj**, no zero-padding needed. 141 of 146 ISSUED records resolve against the 31 Aug 2026 cut (misses: 2 sole traders, the Chamber of Commerce, 2 RA999999 state bodies). Scheme `RS-APR` (org-id.guide). In `RA_BY_COUNTRY` — one authority |
 | United States — District of Columbia | dlcp_dc | `RA000601` — DC Corporations Division (DLCP) | 2026-09-18 — 502 of the 726 GLEIF records with jurisdiction `US-DC` use it (the rest: RA999999 ×209, RA888888 ×4, RA000602 ×4, others ×7), **every one with the Corporations Division file number in `registeredAs`**. The file number is an opaque string in at least six live shapes (`000347`, `L00005029230`, `L21249`, `N00008414776`, `P00454`, `US-DC-LL012601299`) — never normalise it. 487 of 500 resolve against the register; by LEI status `ISSUED` 144/145, `LAPSED` 322/333, `RETIRED` 22/23, the misses being lapsed LEIs on legacy identifiers. **A name check is mandatory**: GLEIF files `L21249` for American Foreign Policy Council and DLCP's `L21249` is CONNIE-19 STREET LLC. Scheme `US-DC` — the ISO 3166-2 subdivision code the BODS mapper already stamps on a DC entity reached through GLEIF, so the two corroborate rather than each asserting an identifier the other lacks. **Not in `RA_BY_COUNTRY`**: the US has fifty-odd company registers and `US` cannot mean DC's; for the same reason `US-DC` is in `register_hops._NO_COUNTRY_ALIAS`, so no `REG-US` alias is built from it |
 | United States — New York | ny_dos | `RA000628` — Corporation and Business Entity Database (Department of State, Division of Corporations) · `RA000747` — Registry of insurance companies (Department of Financial Services) | 2026-09-29 — all 16,819 GLEIF records with jurisdiction `US-NY`: 13,442 RA000628, 3,050 RA999999, 55 RA000747, 33 RA888888; ISSUED 3,921 of 4,848 under RA000628. **RA000628 also appears on 53 records in other jurisdictions** — foreign companies authorised in New York (Quantexa Inc, `US-DE`, `5215193`) — so the deriver keys on the RA code, never the jurisdiction. `registeredAs` is the bare DOS ID, 1–9 digits, unpadded on both sides. Resolution over the ISSUED records: 3,878 agree on the current name, 8 more only on a former name, 23 resolve only in the All Filings family (dissolved, or newer than the snapshot), **8 are wrong numbers** (Salt City FCU files `8512`, THE MUNICIPAL WASTE PAPER RECEPTACLE COMPANY) → note card, 4 are in no DOS dataset. RA000747 files an **NAIC code**, not a DOS ID: it maps to its own RA code in `_GLEIF_RA_TO_ORG_ID` so the US-state jurisdiction fallback cannot label it `US-NY` and hop it to DOS. Scheme `US-NY` (the DC rule); in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
+| United States — Florida | sunbiz_florida | `RA000603` — Florida Department of State, Division of Corporations | 2026-10-29 — 12,885 GLEIF records file under it (3,079 ISSUED); `registeredAs` is the 6- or 12-character document number, except five ISSUED records that filed the company's EIN (`59-1234567`), matched on the FEI. 3,054 ISSUED agree on the current name, 25 more on an event-recorded name; the 15 ISSUED general-partnership / LLP numbers are in files OpenCheck does not read. Scheme `US-FL`; in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
 | Taiwan | gcis_taiwan | `RA000551` — Ministry of Economic Affairs (經濟部) · `RA001009` — Financial Supervisory Commission | 2026-10-29 — all 1,784 GLEIF records with legal address TW: RA000551 504 ISSUED (492 GENERAL, 12 BRANCH), RA001009 ~240 ISSUED, almost all FUND, RA999999 ~670. **RA000551 files the bare 8-digit Unified Business Number** on every record but three (2 ANNULLED 9-digit, 1 failing the check digit); 500 of 504 ISSUED resolve to a company record (a branch, two limited partnerships and one with no director rows do not). **RA001009 files funds' tax numbers — not in the company register (25 of 25), not dispatched.** RA000551 also sits on HK/SG/CH/GB/US-DE-jurisdiction records (foreign companies' Taiwan branches), so the deriver keys on the RA code. Scheme `TW-CR` (org-id); in `RA_BY_COUNTRY` — one authority |
 
 ### ✅ FIXED 2026-08-28: Scotland/Northern Ireland, and two more RA maps
