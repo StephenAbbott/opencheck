@@ -99,6 +99,22 @@ def format_enterprise_number(raw: str) -> str:
     return digits
 
 
+def enterprise_number_spellings(raw: str) -> tuple[str, ...]:
+    """Both ways an enterprise number is written: dotted and plain.
+
+    GLEIF files it dotted under RA000025 (``0202.239.951``, 197 of 200
+    sampled) and its ``registeredAs`` filter matches the stored string
+    exactly, so a reverse lookup for the ten digits found nothing — the
+    National ID picker asked for ten digits and could not find a single
+    Belgian company (post-deploy test, 30 Oct 2026). Returns the input
+    unchanged (one spelling) when it is not a ten-digit number.
+    """
+    digits = normalise_enterprise_number(raw)
+    if len(digits) != 10:
+        return ((raw or "").strip(),)
+    return (format_enterprise_number(digits), digits)
+
+
 def _kbo_date(raw: str | None) -> datetime | None:
     """KBO's ``SnapshotDate`` as an aware UTC datetime (day-first, or ISO)."""
     value = (raw or "").strip()

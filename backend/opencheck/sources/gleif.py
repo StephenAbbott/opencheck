@@ -65,7 +65,12 @@ from .ares import CZ_RA_CODE as _CZ_RA_CODE, normalise_ico as _normalise_ico
 from .krs_poland import PL_KRS_RA_CODE as _PL_KRS_RA_CODE, normalise_krs as _normalise_krs
 from .firmenbuch import AT_FB_RA_CODE as _AT_FB_RA_CODE, normalise_fn as _normalise_fn
 from .jar_lithuania import LT_RA_CODE as _LT_RA_CODE, normalise_code as _normalise_lt_code
-from .bce_belgium import BCE_RA_CODE as _BCE_RA_CODE, normalise_enterprise_number as _normalise_enterprise_number
+from .bce_belgium import (
+    BCE_RA_CODE as _BCE_RA_CODE,
+    enterprise_number_spellings as _enterprise_number_spellings,
+    normalise_enterprise_number as _normalise_enterprise_number,
+)
+from .cyprus_drcor import CY_DRCOR_RA_CODE as _CY_DRCOR_RA_CODE, he_number_spellings as _he_number_spellings
 from .rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
 from .ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
 from .edr_ukraine import UA_RA_CODES as _UA_RA_CODES
@@ -1196,7 +1201,10 @@ class GleifAdapter(SourceAdapter):
         (``542051180`` and ``542 051 180``) — the ``registeredAs`` filter is an
         exact string match. GLEIF reads a comma in a filter value as OR, so
         this is still one request per field: before it, ``country=FR`` could
-        not find TotalEnergies SE by its SIREN at all.
+        not find TotalEnergies SE by its SIREN at all. The same widening
+        covers Belgium (RA000025, dotted ``0202.239.951`` beside the ten
+        digits) and Cyprus (RA000161, Greek ``ΗΕ 449149`` beside the Latin
+        and bare spellings) — found by the post-deploy tests of 30 Oct 2026.
 
         Returns an empty list when live mode is disabled.
         """
@@ -1214,6 +1222,12 @@ class GleifAdapter(SourceAdapter):
         elif ra_code in _UA_RA_CODES:
             # Three Ukrainian authorities file the EDRPOU (the French shape).
             ra_codes = tuple(sorted(_UA_RA_CODES))
+        elif ra_code == _BCE_RA_CODE:
+            # GLEIF files the Belgian number dotted; the picker asked for digits.
+            values = _enterprise_number_spellings(local_id)
+        elif ra_code == _CY_DRCOR_RA_CODE:
+            # GLEIF files ``ΗΕ 449149`` in Greek letters; a caller types Latin.
+            values = _he_number_spellings(local_id)
         value_param = ",".join(quote(v, safe="") for v in values)
 
         for field in _LOCAL_ID_FILTER_FIELDS:

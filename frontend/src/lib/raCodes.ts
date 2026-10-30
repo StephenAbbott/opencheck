@@ -159,9 +159,10 @@ export const RA_CODES: Record<string, RaEntry> = {
     raCode: "RA000025",
     countryName: "Belgium",
     idLabel: "CBE / KBO number",
-    placeholder: "0403838524",
-    formatHint: "10 digits",
-    formatPattern: /^\d{10}$/,
+    placeholder: "0403.838.524",
+    formatHint: "10 digits, with or without the dots (0403.838.524)",
+    // GLEIF files the number dotted; the resolver searches both spellings.
+    formatPattern: /^\d{4}\.?\d{3}\.?\d{3}$/,
   },
   BR: {
     raCode: "RA000681",

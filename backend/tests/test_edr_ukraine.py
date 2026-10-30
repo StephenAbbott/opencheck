@@ -749,3 +749,38 @@ async def test_the_hit_builder_asserts_the_code_only_when_the_register_did(live_
     assert card.name == "NOBODY LLC"
     assert "not in the index" in card.summary
     assert card.raw["coverage_note"] == edr_ukraine.COVERAGE_NOT_IN_INDEX
+
+
+# --- the role tail (post-deploy test, 30 Oct 2026) --------------------------
+
+
+@pytest.mark.parametrize(
+    "raw, name, role",
+    [
+        ("КОМАРОВ ОЛЕКСАНДР ВАЛЕРІЙОВИЧ - керівник", "КОМАРОВ ОЛЕКСАНДР ВАЛЕРІЙОВИЧ", "керівник"),
+        ("ОЛІЙНИК ОКСАНА ВІКТОРІВНА; (Повноваження: x) - представник",
+         "ОЛІЙНИК ОКСАНА ВІКТОРІВНА", "(Повноваження: x) - представник"),
+        (SIGNER, "КОВАЛЬЧУК АНДРІЙ ЛЕОНІДОВИЧ", "(згідно статуту) - керівник"),
+        # A dash that is not a role word is left alone.
+        ("ІВАНОВ ІВАН - ПЕТРОВ ПЕТРО", "ІВАНОВ ІВАН - ПЕТРОВ ПЕТРО", None),
+    ],
+)
+def test_a_trailing_role_word_never_stays_on_the_name(raw, name, role):
+    parsed = parse_role_holder(raw)
+    assert parsed["name"] == name
+    assert parsed["role"] == role
+
+
+def test_an_index_row_built_before_the_tail_rule_is_read_right():
+    """The 27 Oct 2026 asset holds 398,929 signer rows with the tail on the
+    name; the read-time strip means no rebuild is needed to say the person's
+    name correctly."""
+    from opencheck.sources.edr_ukraine import strip_role_tail
+
+    row = {"edrpou": "21673832", "seq": 0, "name": "КОМАРОВ ОЛЕКСАНДР ВАЛЕРІЙОВИЧ - керівник", "role": None}
+    fixed = strip_role_tail(row)
+    assert fixed["name"] == "КОМАРОВ ОЛЕКСАНДР ВАЛЕРІЙОВИЧ"
+    assert fixed["role"] == "керівник"
+    assert row["name"].endswith("керівник")  # the input is not mutated
+    clean = {"edrpou": "x", "seq": 1, "name": "ОЛІЙНИК ОКСАНА ВІКТОРІВНА", "role": "x - представник"}
+    assert strip_role_tail(clean) is clean
