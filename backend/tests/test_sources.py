@@ -136,6 +136,9 @@ _IDENTIFIER_KEYED = {
     # cyprus_drcor (the Cyprus wiring): the same LIKE over the local index;
     # a fresh test process has none.
     "cyprus_drcor",
+    # gcis_taiwan: a live register with no stub tier; offline its search
+    # returns nothing rather than an invented row.
+    "gcis_taiwan",
     "anaf_romania", "acra_singapore", "eiti", "eiti_assessment", "eiti_bo", "eiti_soe", "eiti_zambia", "cac_nigeria", "ariregister", "bolagsverket",
     "cnpj_brazil", "cr_hongkong", "cvr_denmark", "firmenbuch", "gemi_greece", "krs_poland",
     "malta_mbr", "meip", "nz_companies", "opencorporates", "inpi", "kvk",

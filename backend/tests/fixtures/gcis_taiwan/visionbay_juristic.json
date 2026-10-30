@@ -1,0 +1,8 @@
+{
+ "ubn": "24757737",
+ "retrieved": "2026-10-29",
+ "note": "Real GCIS answers of 29 Oct 2026, bodies verbatim",
+ "type": "[{\"Year\":\"115\",\"exist\":\"Y\",\"TYPE\":\"公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"分公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"商業\"}]",
+ "basic": "[{\"Business_Accounting_NO\":\"24757737\",\"Company_Status_Desc\":\"核准設立\",\"Company_Name\":\"亞灣超算股份有限公司\",\"Capital_Stock_Amount\":30100000000,\"Paid_In_Capital_Amount\":13100000000,\"Share_Val\":10,\"Equity_Amt\":1310000000,\"Responsible_Name\":\"黃英士\",\"Company_Location\":\"臺北市內湖區基湖路32號10樓\",\"Register_Organization_Desc\":\"商業發展署\",\"Company_Setup_Date\":\"1031017\",\"Change_Of_Approval_Data\":\"1150918\",\"Revoke_App_Date\":\"\",\"Case_Status\":\"\",\"Case_Status_Desc\":\"\",\"Sus_App_Date\":\"\",\"Sus_Beg_Date\":\"\",\"Sus_End_Date\":\"\"}]",
+ "dirs": "[{\"Person_Position_Name\":\"董事長\",\"Person_Name\":\"黃英士\",\"Juristic_Person_Name\":\"鴻海精密工業股份有限公司\",\"Person_Shareholding\":1310000000},{\"Person_Position_Name\":\"董事\",\"Person_Name\":\"陳偉銘\",\"Juristic_Person_Name\":\"鴻海精密工業股份有限公司\",\"Person_Shareholding\":1310000000},{\"Person_Position_Name\":\"董事\",\"Person_Name\":\"姚延宗\",\"Juristic_Person_Name\":\"鴻海精密工業股份有限公司\",\"Person_Shareholding\":1310000000},{\"Person_Position_Name\":\"監察人\",\"Person_Name\":\"藍瑗文\",\"Juristic_Person_Name\":\"鴻海精密工業股份有限公司\",\"Person_Shareholding\":1310000000}]"
+}

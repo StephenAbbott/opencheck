@@ -1,0 +1,8 @@
+{
+ "ubn": "22818694",
+ "retrieved": "2026-10-29",
+ "note": "Real GCIS answers of 29 Oct 2026, bodies verbatim",
+ "type": "[{\"Year\":\"115\",\"exist\":\"Y\",\"TYPE\":\"公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"分公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"商業\"}]",
+ "basic": "[{\"Business_Accounting_NO\":\"22818694\",\"Company_Status_Desc\":\"核准登記\",\"Company_Name\":\"賴比瑞亞商台塑海運股份有限公司\",\"Capital_Stock_Amount\":0,\"Paid_In_Capital_Amount\":0,\"Share_Val\":0,\"Equity_Amt\":0,\"Responsible_Name\":\"呂學修\",\"Company_Location\":\"臺北市內湖區南京東路六段388號1樓\",\"Register_Organization_Desc\":\"經濟部商業司\",\"Company_Setup_Date\":\"0770301\",\"Change_Of_Approval_Data\":\"1130903\",\"Revoke_App_Date\":\"\",\"Case_Status\":\"\",\"Case_Status_Desc\":\"\",\"Sus_App_Date\":\"\",\"Sus_Beg_Date\":\"\",\"Sus_End_Date\":\"\"}]",
+ "dirs": "[{\"Person_Position_Name\":\"在中華民國境內負責人/代表人\",\"Person_Name\":\"呂學修\",\"Juristic_Person_Name\":\"\",\"Person_Shareholding\":0}]"
+}

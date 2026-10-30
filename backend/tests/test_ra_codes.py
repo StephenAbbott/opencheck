@@ -71,6 +71,8 @@ VERIFIED: dict[str, str] = {
     "SE": "RA000544",  # Bolagsverket
     "SG": "RA000523",  # ACRA
     "SK": "RA000526",  # Business Register
+    "TW": "RA000551",  # Ministry of Economic Affairs — verified 2026-10-29,
+    # 504 ISSUED records, every one a bare 8-digit Unified Business Number
     "UA": "RA000567",  # ЄДР — verified 2026-09-14, 238 of 303 UA records; the
     # other two authorities carrying the EDRPOU are sameNumberAuthorities
 }

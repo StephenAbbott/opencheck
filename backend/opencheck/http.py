@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import ssl
 from collections.abc import Awaitable, Callable, Collection
 
 import httpx
@@ -107,8 +108,13 @@ def sanitize_name_query(name: str) -> str:
     return " ".join(tokens)
 
 
-def build_client() -> httpx.AsyncClient:
+def build_client(*, verify: ssl.SSLContext | None = None) -> httpx.AsyncClient:
     """Build a new async client. Callers own the lifecycle (use ``async with``).
+
+    ``verify`` replaces the default TLS context for one adapter's client —
+    only for a host whose certificate chain the default refuses (GCIS
+    Taiwan's TWCA chain under Python 3.13's strict X.509 checks). Pacing,
+    the GLEIF throttle and provenance are the same as for any client.
 
     Building a client is the moment an adapter commits to going to the network,
     so it is where a ``live`` retrieval is recorded. Adapters that build a
@@ -117,7 +123,11 @@ def build_client() -> httpx.AsyncClient:
     cache read wins.
     """
     provenance.record_live()
-    transport: httpx.AsyncBaseTransport = httpx.AsyncHTTPTransport(retries=2)
+    transport: httpx.AsyncBaseTransport = (
+        httpx.AsyncHTTPTransport(retries=2, verify=verify)
+        if verify is not None
+        else httpx.AsyncHTTPTransport(retries=2)
+    )
     # Pacing for hosts with a per-IP quota other than GLEIF (KvK open data:
     # one request a minute) — opencheck/host_throttle.py. Hosts it does not
     # govern pass straight through.

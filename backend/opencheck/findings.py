@@ -1373,6 +1373,106 @@ def finding_cr_hongkong(bundle: dict[str, Any]) -> str | None:
 
 
 # --------------------------------------------------------------------------
+# Taiwan — Ministry of Economic Affairs company register (GCIS)
+# --------------------------------------------------------------------------
+
+#: The register's status wording in English, for the lead clause. A wording
+#: not listed is quoted as filed.
+_TW_STATUS_WORDS: dict[str, str] = {
+    "核准設立": "Active",
+    "核准登記": "Registered",
+    "解散": "Dissolved, in liquidation",
+    "撤銷": "Registration revoked",
+    "廢止": "Registration annulled",
+    "破產": "Bankrupt",
+    "重整": "In reorganisation",
+    "合併解散": "Dissolved by merger",
+    "分割解散": "Dissolved by division",
+    "解散已清算完結": "Dissolved, liquidation completed",
+    "撤銷已清算完結": "Revoked, liquidation completed",
+    "廢止已清算完結": "Annulled, liquidation completed",
+}
+
+
+def finding_gcis_taiwan(bundle: dict[str, Any]) -> str | None:
+    """What Taiwan's company register says: status and form, when it was set
+    up, who sits on the board, and how much of the company the board holds.
+
+    * **Not found** says what the number is instead (a branch, a sole-trader
+      business) when the platform knows, from the coverage note.
+    * The **holdings** clause says what the register files and nothing more:
+      the directors' and supervisors' holdings (Company Act art. 393), never
+      "the shareholders" or ownership — the register keeps no list of
+      shareholders, and the 10%-shareholder filings are not public.
+    * Legal-person directors are counted because they are the register's
+      corporate parents; they are never called owners.
+    """
+    from .bods.mappers.taiwan import (  # local import avoids circular
+        tw_foreign_prefix,
+        tw_holders,
+        tw_legal_form,
+        tw_percentages,
+        tw_position,
+    )
+    from .sources.gcis_taiwan import parse_roc_date
+
+    if not bundle:
+        return None
+    if bundle.get("not_found"):
+        return bundle.get("coverage_note") or None
+    if bundle.get("is_stub"):
+        return None
+    company = bundle.get("company")
+    if not isinstance(company, dict):
+        return None
+
+    name = str(company.get("Company_Name") or "")
+    status = str(company.get("Company_Status_Desc") or "").strip()
+    status_words = _TW_STATUS_WORDS.get(status) or (f"Status {status}" if status else None)
+    form = tw_legal_form(name)
+    form_words = form.split(" (")[0].lower() if form else None
+    if tw_foreign_prefix(name):
+        # A foreign company's Taiwan registration: "Registered" would repeat
+        # itself, so only a non-live status is said.
+        form_words = "foreign company registered in Taiwan"
+        if status in ("核准登記", "核准設立"):
+            status_words = None
+    lead = " ".join(p for p in (status_words, form_words) if p) or None
+    if lead:
+        lead = lead[0].upper() + lead[1:]
+    setup = human_date(parse_roc_date(company.get("Company_Setup_Date")))
+
+    rows = [r for r in (bundle.get("directors") or []) if isinstance(r, dict)]
+    if not bundle.get("directors_read", True):
+        return clauses_to_sentence(
+            [lead, f"set up {setup}" if setup else None, "directors and supervisors not read"]
+        )
+    board = sum(1 for r in rows if tw_position(str(r.get("Person_Position_Name") or ""))[0] in ("boardChair", "boardMember"))
+    supervisors = sum(1 for r in rows if str(r.get("Person_Position_Name") or "").strip() == "監察人")
+    legal_persons = {str(r.get("Juristic_Person_Name") or "").strip() for r in rows} - {""}
+    pcts = tw_percentages(company, rows)
+    held = tw_holders(rows)
+    holding_clause = None
+    if pcts:
+        total = round(sum(pcts.values()), 2)
+        holding_clause = f"directors and supervisors hold {percent(total)} between them"
+    elif any(held.values()):
+        holding_clause = "directors' and supervisors' holdings filed"
+
+    return clauses_to_sentence(
+        [
+            lead,
+            f"set up {setup}" if setup else None,
+            plural(board, "director") if board else ("no directors on file" if rows == [] else None),
+            holding_clause,
+            plural(len(legal_persons), "legal person", "legal persons") + " on the board"
+            if legal_persons else None,
+            plural(supervisors, "supervisor") if supervisors else None,
+        ]
+    )
+
+
+# --------------------------------------------------------------------------
 # Singapore ACRA
 # --------------------------------------------------------------------------
 

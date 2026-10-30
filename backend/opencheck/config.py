@@ -295,6 +295,16 @@ class Settings(BaseSettings):
     kvk_throttle_max_wait_s: float = Field(
         default=20.0, alias="OPENCHECK_KVK_THROTTLE_MAX_WAIT_S"
     )
+    # Taiwan GCIS (data.gcis.nat.gov.tw) caps each API user's concurrent
+    # connections and daily calls without publishing the numbers. A lookup
+    # sends two or three requests; 60 a minute keeps a burst of lookups
+    # polite. 0 disables the pacing (the test suite does).
+    gcis_rate_limit_per_minute: int = Field(
+        default=60, alias="OPENCHECK_GCIS_RATE_LIMIT_PER_MINUTE"
+    )
+    gcis_throttle_max_wait_s: float = Field(
+        default=10.0, alias="OPENCHECK_GCIS_THROTTLE_MAX_WAIT_S"
+    )
     # Phase 144: when the anchor LEI exists in the entity-pages Golden Copy,
     # don't make the user sit out the full max-wait — if the live anchor fetch
     # hasn't completed within this many seconds, serve the snapshot instead

@@ -609,6 +609,44 @@ def _bh_cr_hongkong(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_gcis_taiwan(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Taiwan's company register (MOEA GCIS).
+
+    * **A record** asserts only the UBN the register returned — never the LEI
+      the lookup arrived by (the identifier corroboration rule).
+    * **No company under the number** is a note card (the INPI shape): the
+      coverage note says what the number is instead, and **no** identifier,
+      because the register confirmed none.
+    """
+    from ..findings import finding_gcis_taiwan
+    from ..sources.gcis_taiwan import TW_CR_SCHEME
+
+    if r.get("not_found"):
+        return _hit(
+            "gcis_taiwan", local_id,
+            name=ctx.legal_name or "",
+            summary=f"{TW_CR_SCHEME} {local_id} · no company record",
+            finding=finding_gcis_taiwan(r),
+            identifiers={},
+            raw={
+                "coverage_note": r.get("coverage_note"),
+                "not_found": True,
+                "register_kinds": r.get("register_kinds") or [],
+            },
+        )
+    c = r.get("company") or {}
+    ubn = str(c.get("Business_Accounting_NO") or local_id).strip()
+    status = str(c.get("Company_Status_Desc") or "").strip()
+    return _hit(
+        "gcis_taiwan", ubn,
+        name=str(c.get("Company_Name") or "").strip() or ctx.legal_name or "",
+        summary=f"{TW_CR_SCHEME} {ubn}" + (f" · {status}" if status else ""),
+        identifiers={"tw_ubn": ubn},
+        raw=c,
+        finding=finding_gcis_taiwan(r),
+    )
+
+
 def _bh_malta_mbr(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     c = r.get("company") or {}
     return _hit(

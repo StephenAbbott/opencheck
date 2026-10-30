@@ -56,6 +56,9 @@ log = logging.getLogger(__name__)
 #: The KvK open-data host (High-Value Datasets API).
 KVK_OPENDATA_HOST = "opendata.kvk.nl"
 
+#: The Taiwan GCIS open-data host (MOEA company register API).
+GCIS_TAIWAN_HOST = "data.gcis.nat.gov.tw"
+
 #: Ceiling for honouring a server-sent Retry-After — a hostile or confused
 #: header must not park the process for longer than this.
 _MAX_RETRY_AFTER_S = 300.0
@@ -80,11 +83,21 @@ def _kvk_limits(settings: Settings) -> HostLimits:
     )
 
 
+def _gcis_limits(settings: Settings) -> HostLimits:
+    return HostLimits(
+        host=GCIS_TAIWAN_HOST,
+        limit=settings.gcis_rate_limit_per_minute,
+        window_s=60.0,
+        max_wait_s=settings.gcis_throttle_max_wait_s,
+    )
+
+
 #: host → how to read its limits from settings. Add a host here, give it two
 #: settings, and every adapter that reaches it through ``build_client`` is
 #: paced. GLEIF is deliberately not here: it keeps its own throttle.
 _LIMIT_READERS: dict[str, Callable[[Settings], HostLimits]] = {
     KVK_OPENDATA_HOST: _kvk_limits,
+    GCIS_TAIWAN_HOST: _gcis_limits,
 }
 
 

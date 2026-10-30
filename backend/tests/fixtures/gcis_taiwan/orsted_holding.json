@@ -1,0 +1,8 @@
+{
+ "ubn": "60741502",
+ "retrieved": "2026-10-29",
+ "note": "Real GCIS answers of 29 Oct 2026, bodies verbatim",
+ "type": "[{\"Year\":\"115\",\"exist\":\"Y\",\"TYPE\":\"公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"分公司\"},{\"Year\":\"115\",\"exist\":\"N\",\"TYPE\":\"商業\"}]",
+ "basic": "[{\"Business_Accounting_NO\":\"60741502\",\"Company_Status_Desc\":\"核准設立\",\"Company_Name\":\"沃旭西南大彰化控股股份有限公司\",\"Capital_Stock_Amount\":5002000,\"Paid_In_Capital_Amount\":5002000,\"Share_Val\":10,\"Equity_Amt\":500200,\"Responsible_Name\":\"楊雅雯\",\"Company_Location\":\"臺北市信義區松智路1號19樓\",\"Register_Organization_Desc\":\"臺北市政府\",\"Company_Setup_Date\":\"1140317\",\"Change_Of_Approval_Data\":\"1140619\",\"Revoke_App_Date\":\"\",\"Case_Status\":\"\",\"Case_Status_Desc\":\"\",\"Sus_App_Date\":\"\",\"Sus_Beg_Date\":\"\",\"Sus_End_Date\":\"\"}]",
+ "dirs": "[{\"Person_Position_Name\":\"董事長\",\"Person_Name\":\"楊雅雯\",\"Juristic_Person_Name\":\"丹麥商 Orsted Wind Power TW Holding A/S\",\"Person_Shareholding\":500200},{\"Person_Position_Name\":\"董事\",\"Person_Name\":\"Jack Maxwell Sawyer\",\"Juristic_Person_Name\":\"丹麥商 Orsted Wind Power TW Holding A/S\",\"Person_Shareholding\":500200},{\"Person_Position_Name\":\"董事\",\"Person_Name\":\"林靖苹\",\"Juristic_Person_Name\":\"丹麥商 Orsted Wind Power TW Holding A/S\",\"Person_Shareholding\":500200},{\"Person_Position_Name\":\"董事\",\"Person_Name\":\"連玉君\",\"Juristic_Person_Name\":\"丹麥商 Orsted Wind Power TW Holding A/S\",\"Person_Shareholding\":500200}]"
+}
