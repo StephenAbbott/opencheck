@@ -410,3 +410,29 @@ async def test_other_countries_are_searched_exactly_as_before() -> None:
     )
     unscoped = await _search_paths("00102498", "")
     assert unscoped[0] == "/lei-records?page[size]=5&filter[entity.registeredAs]=00102498"
+
+
+# ---------------------------------------------------------------------------
+# 5. The same widening for Belgium and Cyprus (post-deploy tests, 30 Oct 2026)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_belgian_number_is_searched_dotted_and_plain() -> None:
+    """GLEIF files ``0202.239.951`` under RA000025; the picker sent ten
+    digits and found nothing. Both spellings go in one request."""
+    for typed in ("0202239951", "0202.239.951", "BE 0202.239.951"):
+        paths = await _search_paths(typed, "RA000025")
+        assert len(paths) == 3
+        assert "=0202.239.951,0202239951&" in paths[0], paths[0]
+        assert paths[0].endswith("&filter[entity.registeredAt]=RA000025")
+
+
+async def test_a_cypriot_he_number_is_searched_in_greek_latin_and_bare() -> None:
+    """GLEIF files ``ΗΕ 449149`` with Greek eta and epsilon; the picker's own
+    placeholder ``HE 449149`` found nothing."""
+    from urllib.parse import unquote
+
+    for typed in ("HE 449149", "HE449149", "ΗΕ 449149", "449149"):
+        paths = await _search_paths(typed, "RA000161")
+        values = unquote(paths[0].split("registeredAs]=")[1].split("&")[0])
+        assert values == "ΗΕ 449149,ΗΕ449149,HE 449149,HE449149,449149", values

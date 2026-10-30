@@ -226,6 +226,22 @@ def register_identifier(type_code: str, reg_no: str) -> str:
     return f"{prefix} {reg_no}" if prefix else reg_no
 
 
+def he_number_spellings(raw: str) -> tuple[str, ...]:
+    """Every way an HE number is written, for GLEIF's exact-match filter.
+
+    GLEIF files ``ΗΕ 449149`` (Greek eta/epsilon, a space), occasionally
+    without the space; a caller types ``HE 449149`` (Latin) or ``449149``.
+    ``registeredAs`` matches the stored string exactly, so the National ID
+    picker's own placeholder found nothing (post-deploy test, 30 Oct 2026).
+    Greek first, then Latin, then the bare digits; the input unchanged when
+    it holds no digits.
+    """
+    digits = normalise_he_number(raw)
+    if not digits:
+        return ((raw or "").strip(),)
+    return (f"ΗΕ {digits}", f"ΗΕ{digits}", f"HE {digits}", f"HE{digits}", digits)
+
+
 # ---------------------------------------------------------------------------
 # Index access
 # ---------------------------------------------------------------------------

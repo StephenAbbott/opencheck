@@ -129,6 +129,14 @@ describe("validateNationalId", () => {
     expect(validateNationalId("ZZ", "whatever")).toBe(true);
   });
 
+  it("accepts a Belgian enterprise number with or without its dots", () => {
+    // GLEIF files the number dotted (0202.239.951) and the resolver searches
+    // both spellings; until 30 Oct 2026 the field asked for ten digits, the
+    // one spelling GLEIF never matched.
+    expect(validateNationalId("BE", "0202.239.951")).toBe(true);
+    expect(validateNationalId("BE", "0202239951")).toBe(true);
+  });
+
   it("accepts a ΓΕΜΗ number in both the padded and unpadded forms", () => {
     // GLEIF stores some zero-padded to 12 and some not, and the ΓΕΜΗ API
     // accepts either, so neither may be rejected here.

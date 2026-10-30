@@ -341,16 +341,51 @@ def parse_role_holder(raw: str) -> dict[str, Any]:
     members of governing bodies (``Голова Правління``, ``Член Ради``). Both are
     ``name; <role and qualifiers>``; the role half is kept verbatim because the
     register writes it freely and translating it would invent precision.
+
+    The register also ends a SIGNER string with `` - керівник`` (the head)
+    or `` - представник`` (a representative) — after the powers when there
+    are any, straight after the name when there are none. Until 30 Oct
+    2026 only ``;`` was read, so a signer with no stated powers became the
+    person "КОМАРОВ ОЛЕКСАНДР ВАЛЕРІЙОВИЧ - керівник" (398,929 of 1,094,376
+    rows on the 27 Oct 2026 export). The tail is the role; it never stays on
+    the name.
     """
     text = (raw or "").strip()
     if not text:
         return {"name": "", "role": None}
     parts = [p.strip() for p in text.split(";") if p.strip()]
-    return {
-        "name": parts[0] if parts else "",
-        "role": "; ".join(parts[1:]) or None,
-        "raw": text,
-    }
+    name, role = split_role_tail(parts[0] if parts else "", "; ".join(parts[1:]) or None)
+    return {"name": name, "role": role, "raw": text}
+
+
+#: The two role words the register appends to a SIGNER string after `` - ``.
+_ROLE_TAIL = re.compile(r"^(?P<name>.*\S)\s+-\s+(?P<role>керівник|представник)\s*$", re.IGNORECASE)
+
+
+def split_role_tail(name: str, role: str | None) -> tuple[str, str | None]:
+    """Move a trailing `` - керівник`` / `` - представник`` off ``name``.
+
+    Returns the name without the tail and the role with it: the tail alone
+    when there was no role text, else the role text followed by the tail,
+    which is where the register writes it (``(згідно статуту) - керівник``).
+    Anything else — a second person after a dash, a note — is left as it
+    is: the rule is the two words, not the dash.
+    """
+    m = _ROLE_TAIL.match(name or "")
+    if not m:
+        return (name or "").strip(), role
+    tail = m.group("role")
+    return m.group("name").strip(), f"{role} - {tail}" if role else tail
+
+
+def strip_role_tail(row: dict[str, Any]) -> dict[str, Any]:
+    """The read-time form of :func:`split_role_tail` for an index row built
+    before the parser learned the tail — the current asset stays right
+    without a rebuild."""
+    name, role = split_role_tail(row.get("name") or "", row.get("role"))
+    if name != (row.get("name") or "") or role != row.get("role"):
+        row = {**row, "name": name, "role": role}
+    return row
 
 
 def parse_capital(raw: str) -> float | None:
@@ -785,8 +820,8 @@ class EdrUkraineAdapter(SourceAdapter):
                 "entity": entity,
                 "beneficiaries": _rows("beneficiary", edrpou),
                 "founders": _rows("founder", edrpou),
-                "signers": _rows("signer", edrpou),
-                "members": _rows("member", edrpou),
+                "signers": [strip_role_tail(r) for r in _rows("signer", edrpou)],
+                "members": [strip_role_tail(r) for r in _rows("member", edrpou)],
                 "executive_power": exec_rows[0] if exec_rows else None,
                 "legal_name": legal_name,
                 "export_date": meta.get("export_date"),
