@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 423** — Taiwan's company register (MOEA GCIS open data) is now a live source, giving each Taiwanese company's status, directors, supervisors and the holdings the register publishes for them.
+**Latest: Phase 424** — Florida's Division of Corporations (Sunbiz) is now a source, read from a quarterly index of the register's bulk data, with status dated by the event that ended a company and up to six officers as managing officials.
 
 → [Full development history](docs/status.md)
 
