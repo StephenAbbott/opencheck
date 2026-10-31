@@ -41,7 +41,6 @@ from ..statements import (
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
-    record_date,
 )
 
 _FL_SOURCE = "sunbiz_florida"
@@ -78,7 +77,10 @@ def _fl_entity_details(bundle: dict[str, Any]) -> str:
         if filed:
             text += f"; authorised to transact business in Florida on {filed}"
         home = (bundle.get("state_country") or "").strip()
-        if home and jurisdiction_of(home) is None:
+        if home.upper() == "OC":
+            # The layout's "other country": the register does not say which.
+            text += "; incorporated in a country outside the United States the register does not name"
+        elif home and jurisdiction_of(home) is None:
             text += f"; state or country of incorporation filed as “{home}”"
     return text
 
@@ -159,10 +161,14 @@ def map_sunbiz_florida(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     reports = bundle.get("annual_reports") or []
     latest_report = latest_record_date(r.get("filed") for r in reports)
+    # The record's "last transaction" date leaves out annual reports (D.D.A.
+    # CORPORATION: 2003, with a report filed in January 2026), so the record
+    # is dated by whichever of the two is later.
+    record_day = latest_record_date([bundle.get("last_transaction"), latest_report])
     company = make_entity_statement(
         source_id=_FL_SOURCE,
         local_id=doc,
-        statement_date=record_date(bundle.get("last_transaction")),
+        statement_date=record_day,
         name=name,
         jurisdiction=jurisdiction,
         identifiers=identifiers,
@@ -259,7 +265,7 @@ def map_sunbiz_florida(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 "record outside the index (inactive and named by no LEI).",
             ))
 
-    officer_date = latest_report or record_date(bundle.get("last_transaction"))
+    officer_date = latest_report or record_day
     seen: dict[str, str] = {}
     for idx, officer in enumerate(bundle.get("officers") or []):
         full_name = (officer.get("name") or "").strip()
