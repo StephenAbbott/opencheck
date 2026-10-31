@@ -298,16 +298,28 @@ def _member_day(info: zipfile.ZipInfo) -> date:
     return date(y, m, d)
 
 
-def gleif_registered_as() -> tuple[set[str], set[str]]:
+#: The values GLEIF's ``filter[registration.status]`` accepts — any other
+#: value is an HTTP 400 ("Invalid enum value", checked 31 Oct 2026; the first
+#: workflow run failed on TRANSFERRED). ``gleif_registered_as`` also checks
+#: that the per-status totals add up to the unfiltered total, so a status
+#: GLEIF adds later cannot drop records unnoticed.
+GLEIF_REGISTRATION_STATUSES = (
+    "ISSUED", "LAPSED", "RETIRED", "MERGED", "DUPLICATE", "ANNULLED",
+    "PENDING_TRANSFER", "PENDING_ARCHIVAL",
+)
+
+
+def gleif_registered_as(fetch=None) -> tuple[set[str], set[str]]:
     """Every ``registeredAs`` GLEIF files under RA000603, as document numbers
     and as FEIs. Split by registration status — the API stops paginating at
-    10,000 rows — and by entity status when one status passes it."""
+    10,000 rows — and by entity status when one status passes it.
+    ``fetch`` (URL → JSON) is injectable for tests."""
     base = (
         "https://api.gleif.org/api/v1/lei-records?page%5Bsize%5D=200"
         f"&filter%5Bentity.registeredAt%5D={FL_RA_CODE}"
     )
 
-    def fetch(url: str) -> dict:
+    def _fetch(url: str) -> dict:
         for attempt in range(8):
             try:
                 req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/vnd.api+json"})
@@ -318,6 +330,8 @@ def gleif_registered_as() -> tuple[set[str], set[str]]:
                 time.sleep(3 + attempt * 3)
         raise RefusedInput(f"GLEIF did not answer: {url}")
 
+    if fetch is None:
+        fetch = _fetch
     values: set[str] = set()
 
     def walk(filters: str) -> int:
@@ -334,15 +348,24 @@ def gleif_registered_as() -> tuple[set[str], set[str]]:
                     values.add(ra)
         return total
 
-    statuses = ("ISSUED", "LAPSED", "RETIRED", "MERGED", "DUPLICATE", "ANNULLED",
-                "PENDING_TRANSFER", "PENDING_ARCHIVAL", "TRANSFERRED", "CANCELLED")
-    for status in statuses:
+    expected = fetch(base + "&page%5Bnumber%5D=1")["meta"]["pagination"]["total"]
+    seen = 0
+    for status in GLEIF_REGISTRATION_STATUSES:
         got = walk(f"&filter%5Bregistration.status%5D={status}")
         if got < 0:
+            got = 0
             for entity_status in ("ACTIVE", "INACTIVE", "NULL"):
                 sub = walk(f"&filter%5Bregistration.status%5D={status}&filter%5Bentity.status%5D={entity_status}")
                 if sub < 0:
                     raise RefusedInput(f"GLEIF {status}/{entity_status} holds more than 10,000 records")
+                got += sub
+        seen += got
+    if seen != expected:
+        raise RefusedInput(
+            f"GLEIF holds {expected:,} records under {FL_RA_CODE} but the "
+            f"registration statuses add up to {seen:,} — a status is missing "
+            "from GLEIF_REGISTRATION_STATUSES"
+        )
     docs, feis = set(), set()
     for value in values:
         try:

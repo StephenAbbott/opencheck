@@ -623,3 +623,45 @@ async def test_the_note_card_survives_the_pipelines_stub_drop(index):
     assert hit is not None
     assert hit.identifiers == {}
     assert hit.finding and hit.finding.startswith("Not in the Florida")
+
+
+# ---------------------------------------------------------------------------
+# Reading GLEIF's registeredAs values (the first workflow run, 31 Oct 2026)
+# ---------------------------------------------------------------------------
+
+
+def _fake_gleif(per_status: dict[str, list[str]], total: int):
+    """A fetch that answers like GLEIF: 400 for a status outside its enum."""
+    import re as _re
+
+    def fetch(url: str) -> dict:
+        m = _re.search(r"registration\.status%5D=([A-Z_]+)", url)
+        if m is None:
+            return {"meta": {"pagination": {"total": total, "lastPage": 1}}, "data": []}
+        status = m.group(1)
+        if status not in builder.GLEIF_REGISTRATION_STATUSES:
+            raise AssertionError(f"GLEIF answers 400 for {status}")
+        values = per_status.get(status, [])
+        return {
+            "meta": {"pagination": {"total": len(values), "lastPage": 1}},
+            "data": [{"attributes": {"entity": {"registeredAs": v}}} for v in values],
+        }
+
+    return fetch
+
+
+def test_only_statuses_gleif_accepts_are_asked_for():
+    # GLEIF's own enum, from its 400 message: TRANSFERRED / CANCELLED / PENDING_VALIDATION are not in it.
+    assert set(builder.GLEIF_REGISTRATION_STATUSES) == {
+        "ISSUED", "LAPSED", "ANNULLED", "PENDING_TRANSFER", "PENDING_ARCHIVAL",
+        "DUPLICATE", "RETIRED", "MERGED",
+    }
+    docs, feis = builder.gleif_registered_as(
+        fetch=_fake_gleif({"ISSUED": [ALTA, "59-0896138"], "LAPSED": [DISSOLVED]}, total=3)
+    )
+    assert docs == {ALTA, DISSOLVED} and feis == {"590896138"}
+
+
+def test_statuses_that_do_not_add_up_to_the_total_are_refused():
+    with pytest.raises(builder.RefusedInput, match="a status is missing"):
+        builder.gleif_registered_as(fetch=_fake_gleif({"ISSUED": [ALTA]}, total=2))
