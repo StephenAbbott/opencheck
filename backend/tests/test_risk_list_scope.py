@@ -256,7 +256,7 @@ def test_note_names_every_list_regardless_of_the_element_setting(monkeypatch) ->
     """OPENCHECK_HIGH_RISK_JURISDICTION_LISTS narrows the Phase 272 complexity
     element only — like the standalone signals, the note is not narrowed."""
     monkeypatch.setenv("OPENCHECK_HIGH_RISK_JURISDICTION_LISTS", "eu")
-    bods = [_subject(), _entity("C", "BG", "Bulgaria"), _rel("R1", "C", "S")]
+    bods = [_subject(), _entity("C", "KW", "Kuwait"), _rel("R1", "C", "S")]
     note = _by_code(_run(bods))[SUBSIDIARY_LISTED_JURISDICTION]
     assert note.evidence["jurisdictions"][0]["lists"] == ["fatf_grey"]
 

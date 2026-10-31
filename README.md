@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 425** — Three post-deploy fixes for the Ukrainian, Belgian and Cypriot registers — signer names without their role word, and a National ID picker that finds Belgian and Cypriot companies.
+**Latest: Phase 426** — The FATF grey and black lists now match the 30 October 2026 plenary, with Bulgaria, Côte d'Ivoire, the Democratic Republic of the Congo and Monaco removed from increased monitoring.
 
 → [Full development history](docs/status.md)
 

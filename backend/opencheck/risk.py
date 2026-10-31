@@ -324,33 +324,30 @@ def _eu_eea_codes() -> frozenset[str]:
     return frozenset(DEFAULT_EU_EEA_COUNTRY_CODES | extras)
 
 # FATF High-Risk Jurisdictions subject to a Call for Action ("black list")
-# as of February 2026 — Democratic People's Republic of Korea, Iran, Myanmar.
-# Source: https://www.fatf-gafi.org/en/countries/black-and-grey-lists.html
+# as of the October 2026 plenary (30 October 2026, unchanged since February
+# 2026) — Democratic People's Republic of Korea, Iran, Myanmar.
+# Source: https://www.fatf-gafi.org/en/publications/High-risk-and-other-monitored-jurisdictions/call-for-action-october-2026.html
 FATF_BLACK_LIST_CODES: frozenset[str] = frozenset({"KP", "IR", "MM"})
 
 # FATF Jurisdictions under Increased Monitoring ("grey list") as of the
-# June 2026 plenary (19 June 2026).  Note that Bulgaria (BG) is an EU
-# member-state — if NON_EU_JURISDICTION is suppressed via
-# OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS, FATF_GREY_LIST will still fire for it.
+# October 2026 plenary (30 October 2026).
+# October 2026 changes: no additions; removed Bulgaria (BG), Côte d'Ivoire
+# (CI), the Democratic Republic of the Congo (CD) and Monaco (MC).
 # June 2026 changes: added Bosnia and Herzegovina (BA) and Iraq (IQ); removed
 # Algeria (DZ) and Namibia (NA).
-# Source: https://www.fatf-gafi.org/en/publications/High-risk-and-other-monitored-jurisdictions/increased-monitoring-june-2026.html
+# Source: https://www.fatf-gafi.org/en/publications/High-risk-and-other-monitored-jurisdictions/increased-monitoring-october-2026.html
 FATF_GREY_LIST_CODES: frozenset[str] = frozenset(
     {
         "AO",  # Angola
         "BA",  # Bosnia and Herzegovina
         "BO",  # Bolivia
-        "BG",  # Bulgaria
         "CM",  # Cameroon
-        "CI",  # Côte d'Ivoire
-        "CD",  # Democratic Republic of Congo
         "HT",  # Haiti
         "IQ",  # Iraq
         "KE",  # Kenya
         "KW",  # Kuwait
         "LA",  # Laos (Lao PDR)
         "LB",  # Lebanon
-        "MC",  # Monaco
         "NP",  # Nepal
         "PG",  # Papua New Guinea
         "SS",  # South Sudan
@@ -374,9 +371,10 @@ FATF_GREY_LIST_CODES: frozenset[str] = frozenset(
 # prompted them:
 #
 #   * DZ (Algeria) and NA (Namibia) are on this list but were REMOVED
-#     from the FATF grey list at the June 2026 plenary.
+#     from the FATF grey list at the June 2026 plenary; CI (Côte d'Ivoire),
+#     CD (DR Congo) and MC (Monaco) likewise at the October 2026 plenary.
 #   * MM (Myanmar) is FATF black but sits in the EU's Section I.
-#   * BA, BG, IQ, KW, PG are FATF grey but not EU-listed.
+#   * BA, IQ, KW, PG are FATF grey but not EU-listed.
 #   * RU (Russian Federation) is EU-listed in Section IV and appears on
 #     NO FATF list at all — see the Section IV note below. This is the
 #     widest case of the divergence: the EU listing rests on a category
@@ -3803,11 +3801,11 @@ def _chain_location(hits: list[dict[str, Any]], *, qualified: bool) -> str:
 _FATF_TAILS = {
     FATF_BLACK_LIST: (
         "a jurisdiction on the FATF High-Risk list "
-        "(Call for Action / black list, June 2026)."
+        "(Call for Action / black list, October 2026)."
     ),
     FATF_GREY_LIST: (
         "a jurisdiction under FATF Increased Monitoring "
-        "(grey list, June 2026)."
+        "(grey list, October 2026)."
     ),
 }
 
@@ -3864,7 +3862,7 @@ def _fatf_jurisdiction_signals(
     are kept and said (Phase 220).
 
     Two separate signals — one per list — so the UI can present them with
-    different severities. Lists current as of the June 2026 plenary. Update
+    different severities. Lists current as of the October 2026 plenary. Update
     ``FATF_BLACK_LIST_CODES`` and ``FATF_GREY_LIST_CODES`` at each FATF
     plenary (typically February, June, October).
     """
