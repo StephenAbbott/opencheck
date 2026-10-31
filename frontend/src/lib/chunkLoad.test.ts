@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { bustedUrl, chunkUrlFrom, importWithRetry, isChunkLoadError } from "./chunkLoad";
+import {
+  bustedUrl,
+  chunkUrlFrom,
+  importNamedWithRetry,
+  importWithRetry,
+  isChunkLoadError,
+} from "./chunkLoad";
 
 const CHROME = new TypeError(
   "Failed to fetch dynamically imported module: https://opencheck.world/assets/FullCheckPanel-DQ5mKt65.js",
@@ -73,5 +79,39 @@ describe("importWithRetry", () => {
     await expect(importWithRetry(factory, { sleep })).rejects.toBe(boom);
     expect(factory).toHaveBeenCalledTimes(1);
     expect(sleep).not.toHaveBeenCalled();
+  });
+});
+
+describe("importNamedWithRetry", () => {
+  it("picks the named export from the first load", async () => {
+    const factory = vi.fn<() => Promise<{ ChangelogPage: string }>>().mockResolvedValue({
+      ChangelogPage: "page",
+    });
+    await expect(importNamedWithRetry(factory, "ChangelogPage", { sleep: noSleep })).resolves.toEqual({
+      default: "page",
+    });
+  });
+
+  it("picks the named export from the retried copy too", async () => {
+    // The retry imports the chunk's own URL, so the module comes back with
+    // its named exports and no default: picking after the retry is the fix
+    // for React error 306 on a page whose first load failed.
+    const factory = vi.fn<() => Promise<{ ChangelogPage: string }>>().mockRejectedValue(CHROME);
+    const importUrl = vi.fn().mockResolvedValue({ ChangelogPage: "page" });
+    await expect(
+      importNamedWithRetry(factory, "ChangelogPage", { importUrl, sleep: noSleep }),
+    ).resolves.toEqual({ default: "page" });
+    expect(importUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so when the module has no such export", async () => {
+    const factory = vi.fn<() => Promise<Record<string, string>>>().mockResolvedValue({
+      Other: "page",
+    });
+    await expect(
+      importNamedWithRetry(factory, "ChangelogPage", {
+        sleep: noSleep,
+      }),
+    ).rejects.toThrow("no export named ChangelogPage");
   });
 });

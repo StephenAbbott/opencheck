@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trackEvent } from "./lib/analytics";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import SearchLoadingGrid from "./components/SearchLoadingGrid";
@@ -18,7 +18,6 @@ import {
 import { countLeiConfirmingSources } from "./lib/identifierBadge";
 import { rank } from "./components/risk/RiskChip";
 import { partitionByKind } from "./lib/signalKind";
-import { ChangelogPage } from "./components/ChangelogPage";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
 import { addRetried, mergeRetryLiveness, retriedSinceRunNote } from "./lib/sourceRetry";
@@ -44,12 +43,6 @@ import {
 import { SavedReportBanner, SavedReportExcluded } from "./components/cdd/SavedReportBanner";
 import { SavedReportContext } from "./components/cdd/savedReportContext";
 import type { CheckMode } from "./lib/checkMode";
-import { SourcesPage } from "./components/SourcesPage";
-import BatchPage from "./components/BatchPage";
-import WatchlistPage from "./components/WatchlistPage";
-import { ApiPage } from "./components/ApiPage";
-import { BehindTheScenesPage } from "./components/BehindTheScenesPage";
-import { FeaturesPage } from "./components/FeaturesPage";
 import {
   ExampleLeiPicker,
   HowItWorks,
@@ -58,7 +51,6 @@ import {
 import {
   type SourceBucket,
 } from "./components/cdd/SourceBucketCard";
-import { EsgPanel } from "./components/cdd/EsgPanel";
 import { clearPanelError, mergePanelError, type PanelError } from "./lib/panelErrors";
 import {
   PAGE_TITLES,
@@ -71,7 +63,7 @@ import { DegradedScreensNotice, PanelErrorsNotice } from "./components/cdd/Repor
 import { ModeBlurb, ModeTabs } from "./components/cdd/ModeTabs";
 import { PanelBoundary, PanelLoading } from "./components/ui/PanelBoundary";
 import { NewVersionBanner } from "./components/ui/NewVersionBanner";
-import { lazyWithRetry } from "./lib/chunkLoad";
+import { lazyNamedWithRetry, lazyWithRetry } from "./lib/chunkLoad";
 import { SiteFooter, SiteHeader } from "./components/SiteChrome";
 import { SearchPanel } from "./components/SearchPanel";
 import { useSearchForm } from "./hooks/useSearchForm";
@@ -92,6 +84,28 @@ const QuickCheckPanel = lazyWithRetry(() => import("./components/cdd/QuickCheckP
 const PersonReportPage = lazyWithRetry(
   () => import("./components/cdd/PersonReportPage")
 );
+// The pages a homepage visitor does not open, and the ESG tab, are their own
+// chunks too: the changelog page alone carried the 882 KB status table into
+// the entry chunk, which every first visit had to download and run before
+// anything was drawn (the "Speed up first load" ticket, 31 Oct 2026).
+const ChangelogPage = lazyNamedWithRetry(() => import("./components/ChangelogPage"), "ChangelogPage");
+const SourcesPage = lazyNamedWithRetry(() => import("./components/SourcesPage"), "SourcesPage");
+const BatchPage = lazyWithRetry(() => import("./components/BatchPage"));
+const WatchlistPage = lazyWithRetry(() => import("./components/WatchlistPage"));
+const ApiPage = lazyNamedWithRetry(() => import("./components/ApiPage"), "ApiPage");
+const BehindTheScenesPage = lazyNamedWithRetry(() => import("./components/BehindTheScenesPage"), "BehindTheScenesPage");
+const FeaturesPage = lazyNamedWithRetry(() => import("./components/FeaturesPage"), "FeaturesPage");
+const EsgPanel = lazyNamedWithRetry(() => import("./components/cdd/EsgPanel"), "EsgPanel");
+
+/** A page reached from the header or footer: its own chunk, inside a boundary
+ *  so a chunk that fails to load says so here rather than blanking the app. */
+function LazyPage({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <PanelBoundary label={`${label} page`} kind="part">
+      <Suspense fallback={<PanelLoading label={label} />}>{children}</Suspense>
+    </PanelBoundary>
+  );
+}
 
 /** Parse `?person=` + `?person_birth_year=` from a search string. */
 function personReportFromSearch(
@@ -1383,17 +1397,21 @@ export default function App() {
             <PanelCard>
               <ModeBlurb mode="esg" />
               {esgBuckets.length > 0 || pendingEsgSources.length > 0 ? (
-                <EsgPanel
-                  buckets={esgBuckets}
-                  pendingCount={pendingEsgSources.length}
-                  bodsCountMap={bodsCountMap}
-                  bodsBreakdownMap={bodsBreakdownMap}
-                  onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
-                  onRecovered={(panel) =>
-                    setPanelErrors((prev) => clearPanelError(prev, panel))
-                  }
-                  onOpenSubsidiaries={() => selectMode("subsidiaries")}
-                />
+<PanelBoundary label="Climate & ESG">
+                  <Suspense fallback={<PanelLoading label="Climate & ESG" />}>
+                    <EsgPanel
+                      buckets={esgBuckets}
+                      pendingCount={pendingEsgSources.length}
+                      bodsCountMap={bodsCountMap}
+                      bodsBreakdownMap={bodsBreakdownMap}
+                      onPanelError={(e) => setPanelErrors((prev) => mergePanelError(prev, e))}
+                      onRecovered={(panel) =>
+                        setPanelErrors((prev) => clearPanelError(prev, panel))
+                      }
+                      onOpenSubsidiaries={() => selectMode("subsidiaries")}
+                    />
+                  </Suspense>
+                </PanelBoundary>
               ) : (
                 <PanelSection>
                   <p className="text-oo-small text-oo-muted">
@@ -1464,29 +1482,49 @@ export default function App() {
         )}
 
         {view === "sources" && (
-          <SourcesPage sources={sourcesQuery.data?.sources} loading={sourcesQuery.isLoading} />
+          <LazyPage label="Sources">
+            <SourcesPage sources={sourcesQuery.data?.sources} loading={sourcesQuery.isLoading} />
+          </LazyPage>
         )}
 
         {view === "features" && (
-          <FeaturesPage sourceCount={sourcesQuery.data?.sources.length ?? null} />
+          <LazyPage label="Features">
+            <FeaturesPage sourceCount={sourcesQuery.data?.sources.length ?? null} />
+          </LazyPage>
         )}
 
-        {view === "behind" && <BehindTheScenesPage />}
+        {view === "behind" && (
+          <LazyPage label="About">
+            <BehindTheScenesPage />
+          </LazyPage>
+        )}
 
-        {view === "api" && <ApiPage />}
+        {view === "api" && (
+          <LazyPage label="API">
+            <ApiPage />
+          </LazyPage>
+        )}
 
-        {view === "changelog" && <ChangelogPage />}
+        {view === "changelog" && (
+          <LazyPage label="Changelog">
+            <ChangelogPage />
+          </LazyPage>
+        )}
 
         {view === "batch" && (
-          <BatchPage
-            registryTotal={sourcesQuery.data?.sources.length ?? null}
-            sourceNames={sourceNameIndex}
-            onOpen={(lei) => lookupLei(lei)}
-          />
+          <LazyPage label="Batch">
+            <BatchPage
+              registryTotal={sourcesQuery.data?.sources.length ?? null}
+              sourceNames={sourceNameIndex}
+              onOpen={(lei) => lookupLei(lei)}
+            />
+          </LazyPage>
         )}
 
         {view === "watchlist" && (
-          <WatchlistPage sourceNames={sourceNameIndex} onOpen={(lei) => lookupLei(lei)} />
+          <LazyPage label="Watchlist">
+            <WatchlistPage sourceNames={sourceNameIndex} onOpen={(lei) => lookupLei(lei)} />
+          </LazyPage>
         )}
       </main>
 
