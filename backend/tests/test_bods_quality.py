@@ -452,3 +452,29 @@ def test_a_stale_statement_id_is_a_finding() -> None:
     assert "stale_statement_id" in {f.check for f in bq.check_statements([stmt], today=today)}
     refresh_statement_id(stmt)
     assert [f.check for f in bq.check_statements([stmt], today=today)] == []
+
+
+def test_an_annotation_pointing_at_nothing_is_a_finding() -> None:
+    """The ЄДР percentage-note fix: a sentence in ``statementPointerTarget``
+    fails the sweep on a relationship statement, which lib-cove-bods does not
+    check, as well as on an entity."""
+    from opencheck.bods.statements import make_entity_statement
+
+    with provenance.recording() as rec:
+        provenance.record_live("companies_house")
+    with provenance.mapping_provenance(rec.resolve(is_stub=False)):
+        stmt = make_entity_statement(
+            source_id="companies_house", local_id="1", name="ACME LIMITED"
+        )
+    today = dt.date.today().isoformat()
+    stmt["annotations"] = [{
+        "statementPointerTarget": "/recordDetails/name",
+        "motivation": "commenting",
+        "description": "fine",
+    }]
+    assert [f.check for f in bq.check_statements([stmt], today=today)] == []
+    for bad in ("Share percentage derived by OpenCheck", "/", "/recordDetails/nope"):
+        stmt["annotations"][0]["statementPointerTarget"] = bad
+        found = [f for f in bq.check_statements([stmt], today=today)]
+        assert [f.check for f in found] == ["annotation_pointer_invalid"], bad
+        assert found[0].severity == bq.FAIL
