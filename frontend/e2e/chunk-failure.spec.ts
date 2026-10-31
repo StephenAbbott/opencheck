@@ -99,3 +99,49 @@ test("a chunk that will not load breaks only its tab, and says OpenCheck was upd
   await page.getByRole("tab", { name: /QuickCheck/ }).click();
   await expect(page.locator("#panel-quick").getByRole("alert")).toHaveCount(0);
 });
+
+/**
+ * The pages off the homepage are lazy chunks too (the "Speed up first load"
+ * ticket, 31 Oct 2026): the changelog page alone carried 882 KB of status
+ * table into the entry chunk. A page reached from the header retries a
+ * failed chunk once, and one that will not load breaks only itself.
+ */
+const CHANGELOG_CHUNK = /\/assets\/ChangelogPage-[^/]+\.js$/;
+
+test("a page chunk that fails once is retried, and the page opens", async ({ page }) => {
+  await localOnly(page);
+  let attempt = 0;
+  await page.route(
+    (url) => CHANGELOG_CHUNK.test(url.pathname),
+    async (route) => {
+      attempt += 1;
+      if (attempt === 1) return route.fulfill({ status: 502, body: "Bad Gateway" });
+      return route.continue();
+    },
+  );
+  await page.goto("/changelog");
+  await expect.poll(() => attempt, { timeout: 30_000 }).toBe(2);
+  await expect(page.getByText("Loading Changelog…")).toHaveCount(0, { timeout: 30_000 });
+  await expect(page.locator("h1")).toHaveCount(1);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  expect(attempt, "the chunk was asked for twice: the 502, then the retry").toBe(2);
+});
+
+test("a page chunk that will not load says so, and the rest of the site still works", async ({
+  page,
+}) => {
+  await localOnly(page);
+  await page.route(
+    (url) => CHANGELOG_CHUNK.test(url.pathname),
+    (route) => route.fulfill({ status: 404, body: "Not Found" }),
+  );
+  await page.goto("/");
+  await expect(page.locator("h1")).toHaveCount(1);
+  await page.goto("/changelog");
+  await expect(page.getByRole("alert")).toContainText("Changelog page", { timeout: 30_000 });
+  await expect(page.locator("header")).toHaveCount(1);
+  await expect(page.getByRole("contentinfo")).toHaveCount(1);
+
+  await page.getByRole("link", { name: "Sources", exact: true }).first().click();
+  await expect(page.getByRole("heading", { name: "About the sources" })).toBeVisible();
+});
