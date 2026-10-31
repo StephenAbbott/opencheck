@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from .annotations import resolve_pointer
+
 
 class ValidationError(Exception):
     """Raised when a BODS statement fails shape validation."""
@@ -199,6 +201,40 @@ def address_type_issues(stmt: dict[str, Any]) -> list[str]:
             )
     return issues
 
+
+
+def annotation_pointer_issues(stmt: dict[str, Any]) -> list[str]:
+    """Why a statement's annotations point at nothing.
+
+    Each ``statementPointerTarget`` must be an RFC6901 pointer that resolves
+    on the statement it sits on: it starts with ``/``, is not ``/`` alone (the
+    empty key — libcove's ``annotation_statement_pointer_target_invalid``),
+    and names a fragment that exists. lib-cove-bods runs this check on entity
+    statements only; this one runs on every record kind, because the ЄДР
+    founder-share notes sat on relationship statements with a sentence as
+    their target and nothing noticed.
+    """
+    if not isinstance(stmt, dict):
+        return []
+    issues: list[str] = []
+    for annotation in stmt.get("annotations") or []:
+        if not isinstance(annotation, dict):
+            continue
+        target = annotation.get("statementPointerTarget")
+        if not isinstance(target, str) or not target.startswith("/") or target == "/":
+            issues.append(
+                f"annotation statementPointerTarget {str(target)[:60]!r} is not "
+                "a JSON Pointer into the statement"
+            )
+            continue
+        try:
+            resolve_pointer(stmt, target)
+        except (KeyError, IndexError, ValueError, TypeError):
+            issues.append(
+                f"annotation statementPointerTarget {target!r} does not resolve "
+                "on the statement"
+            )
+    return issues
 
 _VALID_PERSON_TYPES = {"knownPerson", "anonymousPerson", "unknownPerson"}
 # Complete BODS v0.4 interestType codelist.

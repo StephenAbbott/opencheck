@@ -551,6 +551,48 @@ def test_derived_share_is_annotated_as_opencheck_arithmetic():
     assert "derived by OpenCheck" in json.dumps(annotations, ensure_ascii=False)
 
 
+def _share_note(rel: dict) -> dict:
+    (note,) = [
+        a for a in rel.get("annotations") or []
+        if "derived by OpenCheck" in (a.get("description") or "")
+    ]
+    return note
+
+
+def test_derived_share_note_points_at_the_share_field():
+    """The pointer is the target and the sentence the description — the two
+    were swapped until the ЄДР percentage-annotation fix, and the pointer was
+    built from a pre-joined path that escaped every ``/``. The "As filed"
+    toggle matches the pointer exactly, so it never found the note."""
+    from opencheck.bods.annotations import resolve_pointer
+
+    f = parse_founder(FOUNDER_PERSON)
+    stmts = _by_type(list(map_edr_ukraine(_bundle(founders=[{"seq": 0, **f}]))))
+    rel = stmts["relationship"][0]
+    note = _share_note(rel)
+    assert note["statementPointerTarget"] == "/recordDetails/interests/0/share"
+    assert note["motivation"] == "transformation"
+    assert resolve_pointer(rel, note["statementPointerTarget"]) == {"exact": 100.0}
+
+
+def test_a_placeholder_founders_derived_share_note_points_at_the_share_field():
+    """The second call site: a class of people ("ФІЗИЧНІ ОСОБИ") holding the
+    whole capital is an unspecified party with a derived share."""
+    from opencheck.bods.annotations import resolve_pointer
+
+    bundle = _bundle(founders=[{
+        "seq": 0, "name": "ФІЗИЧНІ ОСОБИ", "code": None,
+        "amount_uah": None,
+    }])
+    bundle["founders"][0]["amount_uah"] = bundle["entity"]["capital"]
+    stmts = _by_type(list(map_edr_ukraine(bundle)))
+    (rel,) = stmts["relationship"]
+    assert rel["recordDetails"]["interestedParty"]["reason"] == "informationUnknownToPublisher"
+    note = _share_note(rel)
+    assert note["statementPointerTarget"] == "/recordDetails/interests/0/share"
+    assert resolve_pointer(rel, note["statementPointerTarget"])["exact"] == 100.0
+
+
 def test_corporate_founder_is_an_entity_party():
     f = parse_founder(FOUNDER_ENTITY)
     stmts = _by_type(list(map_edr_ukraine(_bundle(founders=[{"seq": 0, **f}]))))

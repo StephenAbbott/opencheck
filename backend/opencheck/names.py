@@ -59,6 +59,7 @@ from __future__ import annotations
 import difflib
 import re
 import unicodedata
+from typing import Iterable
 
 try:  # pragma: no cover - exercised via the ftm extra in CI/prod
     from rigour.names import remove_org_types as _rigour_remove_org_types
@@ -562,7 +563,19 @@ def _person_token_agrees(token: str, candidates: list[str]) -> bool:
     if token in candidates:
         return True
     if _HAS_RIGOUR_NAMES and len(token) >= 4:
-        return any(_rigour_lev_sim(token, c) > 0.0 for c in candidates)
+        if any(_rigour_lev_sim(token, c) > 0.0 for c in candidates):
+            return True
+    # A patronymic agrees with the same father's name spelt the other way:
+    # "volodimirovich" (ВОЛОДИМИРОВИЧ) with "vladimirovich" is five edits
+    # apart, past any edit budget, and is one father (the ЄДР name-gate
+    # ticket). ``_father_key`` is the fold ``patronymics_conflict`` uses.
+    mine = _PATRONYMIC.match(token)
+    if mine:
+        key = _father_key(mine.group(1))
+        for c in candidates:
+            theirs = _PATRONYMIC.match(c)
+            if theirs and _father_keys_agree(key, _father_key(theirs.group(1))):
+                return True
     return False
 
 
@@ -596,6 +609,117 @@ def person_token_agreement(a: str | None, b: str | None) -> bool:
     small, large = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
     return all(_person_token_agrees(t, large) for t in small)
 
+
+
+# ----------------------------------------------------------------------
+# Patronymics (the ЄДР name-gate ticket, 31 Oct 2026)
+# ----------------------------------------------------------------------
+# A Ukrainian, Russian or Belarusian name carries the father's given name as
+# a patronymic: ШЕВЧЕНКО ОЛЕКСАНДР ВОЛОДИМИРОВИЧ. The ЄДР publishes no birth
+# date, so a name is all its persons can be matched on — and two people who
+# share a surname and a given name but not a father are different people.
+#
+# The one trap: OpenSanctions often spells a Ukrainian person's patronymic in
+# its Russian form ("Vladimirovich" for ВОЛОДИМИРОВИЧ, 0.59 similar), so a
+# rule that demanded the strings agree would drop true sanctions matches.
+# Stephen's decision: reject only a *clear* conflict — both sides carry a
+# patronymic, and none of the record's forms names the same father once the
+# Ukrainian/Russian spellings of one name are folded together. A record with
+# no patronymic cannot refute anything and keeps the match.
+
+#: Patronymic endings on a normalised (Latin, lower-case) token. The stem is
+#: everything before the ending; three letters at least, so a short surname
+#: such as "Lovich" is not read as one.
+_PATRONYMIC = re.compile(r"^([a-z]{3,}?)(ovych|evych|ovich|evich|ivna|ovna|evna)$")
+
+#: Ukrainian spellings of a given name's opening, folded onto the Russian one,
+#: applied after the letter folds below. Only openings that differ beyond a
+#: letter or two: the rest the similarity floor absorbs.
+_FATHER_OPENINGS = (
+    ("volodi", "vladi"),   # Володимир / Владимир
+    ("olek", "alek"),      # Олександр, Олексій / Александр, Алексей
+    ("mikol", "nikol"),    # Микола / Николай
+)
+
+#: Two father keys this close are the same name spelt two ways.
+_FATHER_KEY_FLOOR = 0.85
+
+
+def _father_key(stem: str) -> str:
+    """Fold a father's given name to a key its Ukrainian and Russian
+    spellings share: Volodymyr / Vladimir → "vladimir", Serhii / Sergei →
+    "serg", Mykola / Nikolai → "nikol", Yevhen / Evgenii → "evgen"."""
+    s = stem.lower()
+    # h → g (Ukrainian Г romanised as h), keeping the digraphs kh zh sh ch.
+    s = re.sub(r"(?<![kzsc])h", "g", s)
+    s = s.replace("y", "i")
+    s = re.sub(r"^ie", "e", s)        # Yevhen / Evgenii
+    for ua, ru in _FATHER_OPENINGS:
+        if s.startswith(ua):
+            s = ru + s[len(ua):]
+            break
+    s = re.sub(r"(.)\1+", r"\1", s)  # Kyrylo / Kirill, Danylo / Daniil
+    s = re.sub(r"[aeiou]+$", "", s)   # Serhii / Sergei, Yurii / Yuri
+    return s
+
+
+def patronymic_keys(name: str | None) -> set[str]:
+    """The father keys of every patronymic in *name* (usually one).
+
+    A surname with a patronymic's ending (Abramovich) is read as one too;
+    that only ever makes two names *more* likely to agree, never a conflict
+    out of nothing, since the same surname is on both sides of a match.
+    """
+    keys: set[str] = set()
+    for token in normalise_name(name).split():
+        m = _PATRONYMIC.match(token)
+        if m:
+            keys.add(_father_key(m.group(1)))
+    return keys
+
+
+def father_name_keys(value: str | None) -> set[str]:
+    """Keys from a record's own patronymic field (FtM ``fatherName``), which
+    holds either the patronymic ("Volodymyrovych") or the father's given
+    name ("Volodymyr")."""
+    keys = patronymic_keys(value)
+    if keys:
+        return keys
+    tokens = normalise_name(value).split()
+    return {_father_key(t) for t in tokens if len(t) >= 3}
+
+
+def _father_keys_agree(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    return difflib.SequenceMatcher(None, a, b).ratio() >= _FATHER_KEY_FLOOR
+
+
+def patronymics_conflict(
+    ours: str | None,
+    their_names: Iterable[str | None],
+    their_father_names: Iterable[str | None] = (),
+) -> bool:
+    """True only when the two parties clearly have different fathers.
+
+    *ours* is the related party's name; *their_names* every name the matched
+    record carries (caption, aliases, previous names) and *their_father_names*
+    its patronymic field. A conflict needs a patronymic on both sides and no
+    agreement between any of ours and any of theirs. Anything less — our name
+    has none, the record has none — is not a conflict, and the match stands
+    on the gates it already passed.
+    """
+    mine = patronymic_keys(ours)
+    if not mine:
+        return False
+    theirs: set[str] = set()
+    for n in their_names:
+        theirs |= patronymic_keys(n)
+    for f in their_father_names:
+        theirs |= father_name_keys(f)
+    if not theirs:
+        return False
+    return not any(_father_keys_agree(a, b) for a in mine for b in theirs)
 
 def despace(comparable: str) -> str:
     """Space-stripped variant of an already-comparable form, used as a
