@@ -665,3 +665,43 @@ def test_only_statuses_gleif_accepts_are_asked_for():
 def test_statuses_that_do_not_add_up_to_the_total_are_refused():
     with pytest.raises(builder.RefusedInput, match="a status is missing"):
         builder.gleif_registered_as(fetch=_fake_gleif({"ISSUED": [ALTA]}, total=2))
+
+
+# ---------------------------------------------------------------------------
+# Post-deploy fixes (31 Oct 2026, the first production index)
+# ---------------------------------------------------------------------------
+
+
+def test_a_record_is_dated_by_its_latest_annual_report_when_that_is_later():
+    # D.D.A. CORPORATION: last transaction 2003, a report filed in January 2026.
+    bundle = {
+        "doc": "J85146", "name": "D.D.A. CORPORATION", "status": "A", "status_class": "live",
+        "status_words": "active", "filing_type": "DOMP", "file_date": "1987-07-27",
+        "last_transaction": "2003-05-12",
+        "annual_reports": [{"year": "2026", "filed": "2026-01-19"}],
+        "officers": [], "events": [], "is_stub": False,
+    }
+    with provenance.recording():
+        (company,) = list(map_sunbiz_florida(bundle))
+    assert company["statementDate"] == "2026-01-19"
+
+
+def test_revocation_is_worded_for_domestic_and_foreign_filings_alike():
+    reading = status_reading("I", "DOMLP", [{"seq": 1, "code": "CORAMREVAR", "effective": "2026-09-25"}])
+    assert reading["words"] == "revoked for not filing an annual report"
+    assert "authority" not in reading["words"]
+
+
+def test_the_other_country_code_is_said_in_words_and_never_a_jurisdiction():
+    bundle = {
+        "doc": "F99000002337", "name": "BANCO DE CREDITO E INVERSIONES, S.A.", "status": "A",
+        "status_class": "live", "status_words": "active", "filing_type": "FORP",
+        "file_date": "1999-05-06", "state_country": "OC", "officers": [], "events": [],
+        "is_stub": False,
+    }
+    with provenance.recording():
+        (company,) = list(map_sunbiz_florida(bundle))
+    rd = company["recordDetails"]
+    assert "jurisdiction" not in rd
+    assert "a country outside the United States the register does not name" in rd["entityType"]["details"]
+    assert "“OC”" not in rd["entityType"]["details"]

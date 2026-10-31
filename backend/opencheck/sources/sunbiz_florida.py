@@ -197,10 +197,13 @@ TERMINAL_EVENTS: dict[str, str] = {
     "CORAMCANNP": "cancelled for non-payment",
     "CORAMADVCN": "cancelled",
     "CORAMEXP": "expired",
-    "CORAMREVAR": "authority revoked for not filing an annual report",
-    "CORAMREVRA": "authority revoked for want of a registered agent",
-    "CORAMREV": "authority revoked",
-    "CORAMADREV": "authority revoked",
+    # Revocation ends a foreign filing's authority and a domestic limited
+    # partnership's certificate alike (GHRELIN PARTNERS, LP, 31 Oct 2026), so
+    # the words do not say "authority".
+    "CORAMREVAR": "revoked for not filing an annual report",
+    "CORAMREVRA": "revoked for want of a registered agent",
+    "CORAMREV": "revoked",
+    "CORAMADREV": "revoked",
     "CORAPWITH": "withdrawn from Florida",
     "CORLCWITH": "withdrawn from Florida",
     "CORLCSWITH": "withdrawn from Florida",
