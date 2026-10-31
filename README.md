@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 427** — The knowability table no longer lists Botswana as an OpenCheck source, after CIPA refused permission to republish its register data.
+**Latest: Phase 428** — The Florida index builder now asks GLEIF only for registration statuses it accepts, so the quarterly rebuild can publish its first index.
 
 → [Full development history](docs/status.md)
 
