@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 426** — The FATF grey and black lists now match the 30 October 2026 plenary, with Bulgaria, Côte d'Ivoire, the Democratic Republic of the Congo and Monaco removed from increased monitoring.
+**Latest: Phase 427** — The knowability table no longer lists Botswana as an OpenCheck source, after CIPA refused permission to republish its register data.
 
 → [Full development history](docs/status.md)
 
