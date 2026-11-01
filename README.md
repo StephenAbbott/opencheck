@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 431** — A CI check now fails any change that grows what a first-time visitor downloads before the homepage can draw.
+**Latest: Phase 432** — Logos, illustrations and flags are now cached by the browser and Render's edge, file downloads are marked never to be cached, and the footer logo is served from the site.
 
 → [Full development history](docs/status.md)
 
