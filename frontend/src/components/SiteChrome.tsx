@@ -199,9 +199,16 @@ export function SiteFooter({ onNavigate }: { onNavigate: (v: View) => void }) {
             rel="noreferrer"
             aria-label="GODIN — Global Open Data Integration Network (opens in new tab)"
           >
+            {/* Served from this site (the "Speed up first load" ticket): a
+                third-party origin in the footer cost a DNS and TLS round trip
+                on every cold visit. The file is GODIN's own, unchanged. */}
             <img
-              src="https://godin.gleif.org/images/512/14456540/GODINRGBColourWide.png"
+              src="/godin-logo.png"
               alt="GODIN logo"
+              width={127}
+              height={32}
+              loading="lazy"
+              decoding="async"
               className="h-8 w-auto"
               style={{ filter: "brightness(0) invert(1)" }}
             />

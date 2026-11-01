@@ -631,8 +631,9 @@ bundle, under `ares/bundle-v2/`, only when VR returned data).
 ## Deployment
 
 - Backend is deployed on **Render** (https://api.opencheck.world). Environment variables (API keys, etc.) must be set in the Render dashboard as well as in `.env` for local development.
-- Frontend is served separately. The backend CORS origin is configured via `OPENCHECK_CORS_ORIGIN` in `.env`.
-- Render free-tier instances spin down when idle — the first request after inactivity may be slow.
+- **The frontend is served by the same service** (the Phase 88 single-service cutover): `opencheck.world` and `api.opencheck.world` both point at `opencheck-api`, which serves the built SPA from `/app/frontend_dist` (`OPENCHECK_FRONTEND_DIST`, `app.py`'s `spa_fallback`). The CORS origin is `OPENCHECK_CORS_ORIGIN`.
+- **The `server: cloudflare` / `cf-cache-status` headers are Render's edge**, not a Cloudflare zone of ours: DNS is at GoDaddy. Render **Edge Caching** is on at "Common static files" (a dashboard setting, not in `render.yaml`; every deploy purges it). What it may keep is decided by our `Cache-Control` headers — `static_cache.py`: hashed `assets/*` a year, the HTML shell, `version.json`, `robots.txt` and `sitemap.xml` never, other static files an hour; a file download with no header of its own is `no-store`. Never choose "All files": JSON answers without a `Cache-Control` would be held for two hours.
+- **First-load size is measured**: `frontend/scripts/measure-cold-load.mjs` (cold load, unthrottled and slow 4G). The "Speed up first load" ticket has the before/after tables.
 
 ---
 

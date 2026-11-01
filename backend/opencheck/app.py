@@ -40,6 +40,7 @@ from slowapi.errors import RateLimitExceeded
 from . import __version__, memwatch
 from .config import get_settings
 from .lookup_budget import ClientScopeMiddleware
+from .static_cache import DownloadNoStoreMiddleware, spa_cache_control
 from .ratelimit import limiter, rate_limit_exceeded_handler
 from .secret_scrub import safe_message
 from .routers import health, search, lookup, expand, national_id, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports, knowability, leads
@@ -502,6 +503,11 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 # Pure ASGI; added last so it is outermost and wraps the /mcp routes too.
 app.add_middleware(ClientScopeMiddleware)
 
+# A file download (Content-Disposition: attachment) that names no
+# Cache-Control is no-store, so Render's edge cache never keeps an export
+# (static_cache.py). Pure ASGI, like the one above.
+app.add_middleware(DownloadNoStoreMiddleware)
+
 app.include_router(health.router)
 app.include_router(search.router)
 app.include_router(lookup.router)
@@ -599,24 +605,17 @@ if _frontend_dist:
             Registered after every API route, so it only sees paths nothing
             else claimed — the SPA's client-routed views (/, /sources,
             /about, …) and the build's asset files. Hashed assets cache
-            forever; the HTML shell never caches (matching the static-site
-            headers in render.yaml).
+            forever; the HTML shell never caches; everything else is kept an
+            hour (``static_cache.spa_cache_control``).
             """
             candidate = (_DIST / spa_path).resolve() if spa_path else _INDEX
             inside = candidate.is_relative_to(_DIST)  # traversal guard
             if inside and candidate.is_file():
-                immutable = spa_path.startswith("assets/")
                 return FileResponse(
                     candidate,
-                    headers={
-                        "Cache-Control": (
-                            "public, max-age=31536000, immutable"
-                            if immutable
-                            else "no-cache"
-                        )
-                    },
+                    headers={"Cache-Control": spa_cache_control(spa_path)},
                 )
-            return FileResponse(_INDEX, headers={"Cache-Control": "no-cache"})
+            return FileResponse(_INDEX, headers={"Cache-Control": spa_cache_control("index.html")})
 
 
 # Access log + per-window request counters (opencheck/memwatch.py). Registered
