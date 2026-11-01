@@ -207,6 +207,30 @@ def _ua_bo_interests(row: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+#: Where the derived percentage sits on every founder relationship this
+#: mapper builds: one interest, its ``share``.
+_UA_DERIVED_SHARE_POINTER = pointer("recordDetails", "interests", 0, "share")
+
+
+def _derived_share_note() -> dict[str, Any]:
+    """The note on a founder share OpenCheck computed from hryvnia.
+
+    The percentage is OpenCheck's arithmetic, not the register's claim — the
+    ЄДР publishes hryvnia and nothing else. Keyword arguments, because
+    ``transformation`` takes the pointer first and both are strings: until
+    the fix the sentence went into ``statementPointerTarget`` and the pointer
+    (escaped, from a pre-joined path) into ``description``.
+    """
+    return transformation(
+        target=_UA_DERIVED_SHARE_POINTER,
+        description=(
+            "Share percentage derived by OpenCheck from the filed hryvnia "
+            "holding and the declared authorised capital; the register "
+            "publishes no percentage."
+        ),
+    )
+
+
 @content_addressed
 def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map an EdrUkraineAdapter fetch bundle to BODS v0.4 statements.
@@ -370,12 +394,7 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             if pct is not None:
                 annotate(
                     rel,
-                    transformation(
-                        "Share percentage derived by OpenCheck from the filed "
-                        "hryvnia holding and the declared authorised capital; the "
-                        "register publishes no percentage.",
-                        pointer("/recordDetails/interests/0/share"),
-                    ),
+                    _derived_share_note(),
                 )
             yield rel
             continue
@@ -441,16 +460,9 @@ def map_edr_ukraine(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             source_url=source_url,
         )
         if pct is not None:
-            # The percentage is OpenCheck's arithmetic, not the register's
-            # claim — the ЄДР publishes hryvnia and nothing else.
             annotate(
                 rel,
-                transformation(
-                    "Share percentage derived by OpenCheck from the filed "
-                    "hryvnia holding and the declared authorised capital; the "
-                    "register publishes no percentage.",
-                    pointer("/recordDetails/interests/0/share"),
-                ),
+                _derived_share_note(),
             )
         yield rel
 

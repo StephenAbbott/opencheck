@@ -477,11 +477,13 @@ from .mappers.eiti_bo import (  # noqa: F401  (re-exported, Phase 246)
 from .mappers.ukraine import (  # noqa: F401  (re-exported, Phase 246)
     _UA_CAPITAL_TOLERANCE,
     _UA_CHAIR_TOKENS,
+    _UA_DERIVED_SHARE_POINTER,
     _UA_JURISDICTION,
     _UA_PLACEHOLDER_FOUNDER,
     _UA_PLACEHOLDER_REASON,
     _UA_SCHEME,
     _UA_SCHEME_NAME,
+    _derived_share_note,
     _ua_bo_interests,
     _ua_derived_shares,
     _ua_person_or_entity,

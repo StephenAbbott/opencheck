@@ -65,6 +65,13 @@ Every finding names its class, its source and the statement it is about.
     statementId phase). Two statements with one id and different content,
     or one record whose change produced no new id, are what this catches.
 
+``annotation_pointer_invalid``
+    An annotation whose ``statementPointerTarget`` is not a JSON Pointer that
+    resolves on its own statement. lib-cove-bods checks this on entity
+    statements only; this checks every record kind (the ЄДР percentage-note
+    fix: two founder-share notes on relationship statements carried a
+    sentence as their target).
+
 ``warn`` — honest but weaker than it should be, or a known backlog:
 
 ``cut_as_retrieval``
@@ -125,6 +132,7 @@ from datetime import date, datetime, timezone
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from .bods.statements import stale_statement_id
+from .bods.validator import annotation_pointer_issues
 
 FAIL = "fail"
 WARN = "warn"
@@ -317,6 +325,8 @@ def check_statements(
                 "stale_statement_id", FAIL,
                 "statementId is not the content-addressed id of recordDetails + recordStatus",
             )
+        for issue in annotation_pointer_issues(dict(st)):
+            add("annotation_pointer_invalid", FAIL, issue)
         if (
             read_as == "snapshot"
             and sid in no_cut

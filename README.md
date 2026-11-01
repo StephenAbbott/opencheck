@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 428** — The Florida index builder now asks GLEIF only for registration statuses it accepts, so the quarterly rebuild can publish its first index.
+**Latest: Phase 429** — Related-party person matches are dropped when the two names carry clearly different patronymics, and the Ukrainian register's derived-percentage notes now point at the share field.
 
 → [Full development history](docs/status.md)
 
