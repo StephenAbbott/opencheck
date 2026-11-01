@@ -98,10 +98,39 @@ export async function importWithRetry<T>(
   }
 }
 
-/** `React.lazy` with `importWithRetry` in front of the factory. */
+/** `React.lazy` with `importWithRetry` in front of the factory.
+ *
+ *  The factory must be a bare `import()` of a module with a default export.
+ *  The retry imports the chunk's URL directly, so anything chained onto the
+ *  `import()` (`.then((m) => ({ default: m.Page }))`) runs on the first try
+ *  only, and the retry renders `undefined` (React error 306). For a named
+ *  export use `lazyNamedWithRetry`, which picks the export after the retry. */
 export function lazyWithRetry<T extends ComponentType<any>>( // eslint-disable-line @typescript-eslint/no-explicit-any
   factory: () => Promise<{ default: T }>,
   options: RetryOptions = {},
 ): LazyExoticComponent<T> {
   return lazy(() => importWithRetry(factory, options));
+}
+
+/** `importWithRetry`, then the named export as `{ default }` — picked after
+ *  the retry, so the second attempt yields the same component as the first. */
+export async function importNamedWithRetry<M, K extends keyof M>(
+  factory: () => Promise<M>,
+  name: K,
+  options: RetryOptions = {},
+): Promise<{ default: M[K] }> {
+  const mod = await importWithRetry(factory, options);
+  const component = mod?.[name];
+  if (component === undefined) {
+    throw new Error(`Lazy chunk has no export named ${String(name)}`);
+  }
+  return { default: component };
+}
+
+/** `lazyWithRetry` for a module whose component is a named export. */
+export function lazyNamedWithRetry<
+  M extends Record<K, ComponentType<any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
+  K extends keyof M,
+>(factory: () => Promise<M>, name: K, options: RetryOptions = {}): LazyExoticComponent<M[K]> {
+  return lazy(() => importNamedWithRetry(factory, name, options));
 }
