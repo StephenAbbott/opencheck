@@ -1,0 +1,5 @@
+{
+  "criticalBrotliBytes": 123904,
+  "measuredBrotliBytes": 112441,
+  "note": "Brotli bytes the homepage downloads before first paint: the module entry, its modulepreloads and the stylesheet. Written by `npm run check:bundle -- --update`."
+}

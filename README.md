@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 430** — The homepage loads a quarter of the JavaScript it did, because the changelog, sources, features, about, API, batch and watchlist pages and the Climate & ESG tab now load only when opened.
+**Latest: Phase 432** — Logos, illustrations and flags are now cached by the browser and Render's edge, file downloads are marked never to be cached, and the footer logo is served from the site.
 
 → [Full development history](docs/status.md)
 

@@ -76,6 +76,13 @@ jobs:
         # frontend/scripts/lint-design-system.mjs for why it is not a hard ban.
         run: npm run lint:design
         working-directory: frontend
+      - name: First-load bundle budget
+        # What a first visit downloads before the homepage can draw (entry +
+        # modulepreloads + stylesheet, brotli), against bundle-budget.json.
+        # A ratchet like the lint above: it fails on growth and on a stale
+        # budget. Reads the dist/ the build step wrote.
+        run: npm run check:bundle
+        working-directory: frontend
 
   e2e:
     # The smoke tier: a real backend and a production build of the SPA, driven

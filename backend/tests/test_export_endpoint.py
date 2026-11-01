@@ -208,6 +208,9 @@ def test_export_json_returns_bods_array(
     assert "attachment" in cd
     assert _LEI.lower() in cd.lower()
     assert ".json" in cd
+    # A download is never kept by a cache (static_cache.DownloadNoStoreMiddleware):
+    # Render's edge would otherwise hold a header-less GET answer for two hours.
+    assert r.headers["cache-control"] == "no-store"
 
     body = json.loads(r.content)
     assert isinstance(body, list)
@@ -298,6 +301,7 @@ def test_export_zip_includes_senzing_jsonl(
 ) -> None:
     _mock_full(httpx_mock)
     r = client.get("/export", params={"lei": _LEI, "format": "zip"})
+    assert r.headers["cache-control"] == "no-store"
     with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
         prefix = zf.namelist()[0].split("/", 1)[0]
         assert f"{prefix}/senzing.jsonl" in zf.namelist()
