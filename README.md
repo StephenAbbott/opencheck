@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 429** — Related-party person matches are dropped when the two names carry clearly different patronymics, and the Ukrainian register's derived-percentage notes now point at the share field.
+**Latest: Phase 430** — The homepage loads a quarter of the JavaScript it did, because the changelog, sources, features, about, API, batch and watchlist pages and the Climate & ESG tab now load only when opened.
 
 → [Full development history](docs/status.md)
 
