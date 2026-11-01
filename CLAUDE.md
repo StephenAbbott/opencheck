@@ -1371,9 +1371,25 @@ wired in the `jar_lithuania` shape. Things that will be re-derived otherwise:
   addresses and must never be joined in to fill them.
 - **Cross-source name matching is weaker for Ukrainian persons**: the BO
   string carries name, citizenship, influence and percentage — no birth
-  date, so the `cross_check` birth-year corroboration can never fire. A
-  stricter gate for UA-sourced person names is an open follow-up on the
-  ticket, not a reason to drop the names.
+  date, so the `cross_check` birth-year corroboration can never fire. The
+  patronymic gate (the ЄДР name-gate ticket, 31 Oct 2026) is the answer:
+  `cross_check._patronymic_compatible` drops a person match only when both
+  names carry a patronymic and none of the record's names or its
+  `fatherName` names the same father, after `names._father_key` folds the
+  Ukrainian and Russian spellings of one given name together (Stephen:
+  reject *clear* conflicts only — OpenSanctions spells many Ukrainian
+  patronymics in Russian, and a strict string rule would drop true sanctions
+  matches). Every person target, on the OpenSanctions, EveryPolitician and
+  OpenAleph screens; `person_token_agreement` (ICIJ) folds the same
+  spellings. Agreement is never corroboration — still "name match only".
+- **An annotation's pointer comes first.** `transformation(target,
+  description)` takes the pointer first and both are strings; the two
+  founder-share notes had them swapped (and built the pointer from a joined
+  path, which `pointer()` escaped to `/~1recordDetails~1…`) until the ЄДР
+  percentage-note fix. Pass both by keyword. The conftest mapper guard and
+  the BODS quality sweep (`annotation_pointer_invalid`) now fail any
+  annotation whose `statementPointerTarget` does not resolve on its own
+  statement — lib-cove-bods checks entity statements only.
 - The `bo_regimes` entry is `verified` (Stephen, 29 Oct 2026); founders
   `omit` the flag and are emitted (a percentage only where the hryvnia
   holdings reconcile to the declared capital within 1 %, annotated as

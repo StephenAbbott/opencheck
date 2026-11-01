@@ -38,6 +38,7 @@ from opencheck import provenance as _provenance
 from opencheck.bods.statements import stale_statement_id
 from opencheck.bods.validator import (
     address_type_issues,
+    annotation_pointer_issues,
     entity_subtype_issue,
     jurisdiction_input_issues,
 )
@@ -96,6 +97,10 @@ def check_statement(mapper: str, stmt: Any) -> None:
     # person's ``registered``). A publisher's own BODS is theirs to fix.
     if mapper not in PUBLISHER_VERBATIM:
         for issue in address_type_issues(stmt):
+            VIOLATIONS.append((mapper, sid, issue))
+        # An annotation must point at a fragment of its own statement — the
+        # ЄДР founder-share notes carried a sentence as their target.
+        for issue in annotation_pointer_issues(stmt):
             VIOLATIONS.append((mapper, sid, issue))
     # The content-addressed statementId phase: a statement edited after the
     # factory built it must have been through ``refresh_statement_id``, or

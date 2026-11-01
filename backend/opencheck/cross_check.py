@@ -681,6 +681,8 @@ def _signals_from_os(
         return []
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return []
+    if not _patronymic_compatible(target, hit):
+        return []
     # Distinctive-token gate — the ICIJ screen's Phase 120 rule, on this
     # surface too. A similarity score cannot tell a true organisation match
     # from two names that share only legal-form and filler text: Rosneft's
@@ -777,6 +779,8 @@ def _signal_from_ep(
     if score < min_score:
         return None
     if not _birth_year_compatible(target.get("birth_year"), hit):
+        return None
+    if not _patronymic_compatible(target, hit):
         return None
     # Phase 247: the record's own position, not a label for it. This used to
     # say "political office-holder" for every EveryPolitician record — an
@@ -1161,6 +1165,32 @@ def corroborating_attributes(
         if mine and theirs and (mine & theirs):
             found.append("country")
     return tuple(found)
+
+
+#: FtM properties that hold a name of the matched record, for the
+#: patronymic gate: every spelling it carries, not only the caption.
+_HIT_NAME_PROPS = ("name", "alias", "weakAlias", "previousName")
+
+
+def _patronymic_compatible(target: dict[str, Any], hit: SourceHit) -> bool:
+    """Reject a person match whose patronymics clearly *conflict*.
+
+    The hard filter beside :func:`_birth_year_compatible`, for the screens'
+    biggest pool of names with no birth date: the ЄДР's 674,413 beneficial
+    owners and its founders (the ЄДР name-gate ticket, 31 Oct 2026). A
+    conflict needs a patronymic on both sides and none of the record's
+    names — caption, aliases, previous names — nor its ``fatherName`` naming
+    the same father once Ukrainian and Russian spellings are folded
+    (``names.patronymics_conflict``). A record without a patronymic keeps the
+    match, and the match is still reported as a name match only: agreeing
+    patronymics are part of the name, not corroboration.
+    """
+    if target.get("kind") != _KIND_PERSON:
+        return True
+    raw = hit.raw or {}
+    their_names = [hit.name, *_prop_values(raw, *_HIT_NAME_PROPS)]
+    fathers = _prop_values(raw, "fatherName")
+    return not names.patronymics_conflict(target["name"], their_names, fathers)
 
 
 def _birth_year_compatible(year: int | None, hit: SourceHit) -> bool:
