@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 433** — The web app now serves Bitter, DM Sans and DM Mono itself, so a first visit no longer waits on Google Fonts.
+**Latest: Phase 434** — The server-rendered entity pages now take their fonts from the site's own stylesheet, the same files the app uses, instead of Google Fonts.
 
 → [Full development history](docs/status.md)
 
