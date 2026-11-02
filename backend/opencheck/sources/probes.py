@@ -850,7 +850,10 @@ PROBES: dict[str, SourceProbe] = {
             "pinned offline by real fixtures in tests/fixtures/wikirate/. The old probe allowed an "
             "empty answer on the list path, so the card shape failed in production (Eli Lilly, "
             "Rosneft, 10 Oct 2026) with the sweep green. BP's card is a company that exists: an "
-            "empty or stub answer is a failure, and expect_fields asserts the two fields that broke."
+            "empty or stub answer is a failure, and expect_fields asserts the two fields that broke. "
+            "Since 2 Nov 2026 the adapter reads legacy.wikirate.org (Wikirate 2.0 took over "
+            "wikirate.org on 1 Nov and answers the old API paths with HTML); the legacy API is "
+            "retired after 31 Dec 2026, so this probe must move to the new REST API before then."
         ),
     ),
     "ted_eu": _p(

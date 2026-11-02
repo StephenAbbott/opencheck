@@ -52,19 +52,29 @@ Two shapes for one company (verified live 2026-10-10, Phase 321)
   identifier dicts would have been stringified into asserted identifiers.
   ``_flatten_card`` reads both shapes; it is the only place either is read.
 
-The new platform (Wikirate 2.0, launching 1 Nov 2026)
------------------------------------------------------
-Wikirate's legacy platform went read-only on 1 Oct 2026 and stays
-available read-only after the 1 Nov launch "for a transitional period"
-with no end date; the legacy (Decko) API keeps working through it, which
-is what this adapter still calls. ``platform.wikirate.org`` keeps the
-legacy card ids (BP is 637 on both), and ``/company/{card_id}`` redirects
-to the company's slugged page there, so the bundle carries that link as
-``platform_url``. The new platform reads its data from a Supabase back end
-(``data.wikirate.org/rest/v1/rpc/c_get_company?p_company_id=…``) — its own
-front end's API, not the public REST API Wikirate has announced for
-October 2026 with documentation to follow. Move to that one when it is
-published, not to the RPCs.
+The legacy host (from 1 Nov 2026)
+---------------------------------
+On 1 Nov 2026 Wikirate 2.0 took over ``wikirate.org`` and the legacy
+platform and its API moved to ``legacy.wikirate.org``, where they stay
+until **31 Dec 2026** (Wikirate's email to API users, read 2 Nov 2026).
+The legacy API answers there exactly as it did on ``wikirate.org``, with
+the same ``X-API-Key``; this adapter calls it. The new ``wikirate.org``
+answers every old API path — ``/Companies.json``, ``/~637.json``,
+``view=count`` — with **HTTP 200 and its website's HTML**. Until
+2 Nov 2026 the adapter caught the failed JSON parse and returned "no
+record", so the Climate & ESG tab said Wikirate had nothing on BP, Eli
+Lilly and Rosneft. ``_get_json`` now refuses a body that is not JSON
+(``WikirateUnexpectedResponse``), and a failed resolution or card read
+records a ``source_fetch`` degradation, so the lookup reports Wikirate as
+not answering instead of as answering with no record.
+
+The new platform keeps the legacy card ids (BP is 637 on both) and
+``wikirate.org/company/{card_id}`` is the company's page there, carried as
+``platform_url``. Its REST API launched with it and needs a new account
+and a new token; moving onto it before the legacy API is retired is
+stage 2 of the Notion ticket "Update Wikirate source for its platform
+changes". The cache namespace changed with the host so no payload from
+the old host is replayed.
 """
 
 from __future__ import annotations
@@ -73,6 +83,9 @@ import asyncio
 import logging
 from typing import Any
 
+import httpx
+
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -82,10 +95,37 @@ from .schemas.wikirate import WikirateBundle
 
 log = logging.getLogger(__name__)
 
-_API_BASE = "https://wikirate.org"
-#: Wikirate 2.0 — same card ids; ``/company/{id}`` redirects to the slug.
-_PLATFORM_BASE = "https://platform.wikirate.org"
-_CACHE_NS = "wikirate"
+#: The legacy platform and its API, moved here on 1 Nov 2026; retired after
+#: 31 Dec 2026 (``LEGACY_RETIRES``).
+_API_BASE = "https://legacy.wikirate.org"
+#: Wikirate 2.0 — same card ids; ``/company/{id}`` is the company's page.
+_PLATFORM_BASE = "https://wikirate.org"
+#: Changed with the host, so nothing cached from ``wikirate.org`` is replayed.
+_CACHE_NS = "wikirate-legacy"
+#: The last day Wikirate keeps the legacy API up.
+LEGACY_RETIRES = "2026-12-31"
+
+#: Fixed sentences for the degradations (no company name can reach them).
+_NOT_ANSWERED = "Wikirate's legacy API did not answer ({failure})"
+_CARD_NOT_READ = "Wikirate's company card could not be read ({failure})"
+_ANSWERS_NOT_READ = "Wikirate's answers could not be read ({failure})"
+
+
+class WikirateUnexpectedResponse(Exception):
+    """Wikirate answered, but not with the JSON this endpoint returns.
+
+    The new ``wikirate.org`` answers the legacy API paths with HTTP 200 and
+    its website's HTML; a parse failure must never read as "no record".
+    """
+
+
+def _failure_label(exc: BaseException) -> str:
+    """A short label for a failure — no URL, so no key or company can leak."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"HTTP {exc.response.status_code}"
+    if isinstance(exc, WikirateUnexpectedResponse):
+        return str(exc)
+    return type(exc).__name__
 
 #: How many latest-per-metric answers to include in the bundle.
 _MAX_LATEST_ANSWERS = 12
@@ -201,9 +241,10 @@ class WikirateAdapter(SourceAdapter):
     ) -> dict[str, Any] | None:
         """Resolve LEI (falling back to Wikidata QID) to a Wikirate company.
 
-        Returns ``None`` when the key is unset, the company is not on
-        Wikirate, or the API is unreachable — the ESG section simply
-        omits the card.
+        Returns ``None`` when the key is unset or the company is not on
+        Wikirate. When Wikirate does not answer it also returns ``None``,
+        after recording a ``source_fetch`` degradation, which the pipeline
+        reports as the source not answering — never as "no record".
         """
         if not _api_key():
             return None
@@ -216,7 +257,13 @@ class WikirateAdapter(SourceAdapter):
                 item = await self._resolve_company(qid)
                 matched_by = "wikidata_qid"
         except Exception as exc:  # noqa: BLE001
-            log.warning("Wikirate company resolution failed: %s", exc)
+            failure = _failure_label(exc)
+            log.warning("Wikirate company resolution failed: %s", failure)
+            degradation.record(
+                self.id,
+                _NOT_ANSWERED.format(failure=failure),
+                reason=degradation.reason_for_failure(failure),
+            )
             return None
         if item is None:
             return None
@@ -228,8 +275,12 @@ class WikirateAdapter(SourceAdapter):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
         try:
             card = await self._get_json(f"/~{hit_id}.json")
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 404:
+                self._card_failed(exc)
+            card = None
         except Exception as exc:  # noqa: BLE001
-            log.warning("Wikirate card fetch failed for %s: %s", hit_id, exc)
+            self._card_failed(exc)
             card = None
         if not isinstance(card, dict) or not card.get("id"):
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
@@ -240,13 +291,35 @@ class WikirateAdapter(SourceAdapter):
     # Internal
     # ------------------------------------------------------------------
 
+    def _card_failed(self, exc: BaseException) -> None:
+        """A card read that failed (not a 404, which is an answer)."""
+        failure = _failure_label(exc)
+        log.warning("Wikirate card fetch failed: %s", failure)
+        degradation.record(
+            self.id,
+            _CARD_NOT_READ.format(failure=failure),
+            reason=degradation.reason_for_failure(failure),
+        )
+
+    def _answers_failed(self, exc: BaseException) -> None:
+        """The company resolved but its answers could not be read in full."""
+        failure = _failure_label(exc)
+        degradation.record(
+            self.id,
+            _ANSWERS_NOT_READ.format(failure=failure),
+            check=degradation.CHECK_SOURCE_READ,
+            reason=degradation.reason_for_failure(failure),
+        )
+
     async def _resolve_company(self, identifier: str) -> dict[str, Any] | None:
         """One ``filter[company_identifier[value]]`` query → first item."""
         payload = await self._get_json(
             "/Companies.json",
             params={"filter[company_identifier[value]]": identifier, "limit": 5},
         )
-        items = (payload or {}).get("items") or []
+        if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+            raise WikirateUnexpectedResponse("a company list without items")
+        items = payload["items"]
         return items[0] if items else None
 
     async def _build_bundle(
@@ -298,6 +371,7 @@ class WikirateAdapter(SourceAdapter):
             return int(payload)
         except Exception as exc:  # noqa: BLE001
             log.warning("Wikirate answer count failed for ~%s: %s", card_id, exc)
+            self._answers_failed(exc)
             return 0
 
     async def _fetch_latest_answers(self, card_id: int) -> list[dict[str, Any]]:
@@ -313,6 +387,7 @@ class WikirateAdapter(SourceAdapter):
             )
         except Exception as exc:  # noqa: BLE001
             log.warning("Wikirate answers fetch failed for ~%s: %s", card_id, exc)
+            self._answers_failed(exc)
             return []
         answers: list[dict[str, Any]] = []
         for raw in (payload or {}).get("items") or []:
@@ -341,6 +416,12 @@ class WikirateAdapter(SourceAdapter):
                 headers={"X-API-Key": _api_key() or "", "Accept": "application/json"},
             )
             response.raise_for_status()
+            content_type = response.headers.get("content-type", "")
+            if "json" not in content_type.lower():
+                raise WikirateUnexpectedResponse(
+                    f"HTTP {response.status_code} {content_type.split(';')[0] or 'no content type'}"
+                    " instead of JSON"
+                )
             payload = response.json()
         self._cache.put(cache_key, payload)
         return payload
