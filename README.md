@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 432** — Logos, illustrations and flags are now cached by the browser and Render's edge, file downloads are marked never to be cached, and the footer logo is served from the site.
+**Latest: Phase 433** — The web app now serves Bitter, DM Sans and DM Mono itself, so a first visit no longer waits on Google Fonts.
 
 → [Full development history](docs/status.md)
 

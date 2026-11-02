@@ -561,3 +561,7 @@ If you export OpenCheck data that includes content derived from any CC BY-NC sou
 
 - **Bitter** (Bold) — copyright The Bitter Project Authors, licensed under the SIL Open Font License 1.1 (<https://openfontlicense.org>). Bundled at `backend/opencheck/assets/fonts/` for server-side rendering of the `/og/{lei}.png` share card.
 - **DM Sans** (Regular/Medium/Bold) — copyright The DM Sans Project Authors, licensed under the SIL Open Font License 1.1. Same location and purpose.
+
+## Bundled fonts (web app)
+
+- **Bitter** (variable), **DM Sans** (variable) and **DM Mono** (400, 500) — copyright The Bitter Project Authors, The DM Sans Project Authors and The DM Mono Project Authors, each licensed under the SIL Open Font License 1.1 (<https://openfontlicense.org>). The woff2 files come from Fontsource 5.3.0 and are served by the app itself from `frontend/src/assets/fonts/` (licence texts beside them), declared in `frontend/src/fonts.css`, in place of Google Fonts.
