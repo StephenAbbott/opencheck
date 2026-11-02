@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 434** — The server-rendered entity pages now take their fonts from the site's own stylesheet, the same files the app uses, instead of Google Fonts.
+**Latest: Phase 435** — Wikirate data is back on the Climate & ESG tab, read from legacy.wikirate.org after Wikirate 2.0 took over wikirate.org, and a failed Wikirate read now says so instead of reading as no record.
 
 → [Full development history](docs/status.md)
 
