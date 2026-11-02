@@ -1,0 +1,30 @@
+[
+  {
+    "id": 637,
+    "name": "BP plc.",
+    "headquarters": {
+      "id": 14908,
+      "name": "United Kingdom",
+      "type": "region",
+      "ilo_region": "Europe and Central Asia",
+      "country_code": "GB"
+    },
+    "logo_url": "https://wikirate-production-storage.fra1.cdn.digitaloceanspaces.com/files/3091/12604171-medium.jpg",
+    "type": "company",
+    "company_identifiers": {
+      "wikidata": "Q152057",
+      "open_corporates_id": "00102498",
+      "sec_central_index_key": "313807",
+      "legal_entity_identifier": "213800LH1BZH3DI6G760",
+      "international_security_identification_number": [
+        "DE0008618737",
+        "GB0001385250",
+        "GB0001385474"
+      ]
+    },
+    "website": "https://www.bp.com/",
+    "wikipedia": "BP",
+    "created_at": "2012-03-14T16:47:16+00:00",
+    "updated_at": "2024-07-30T13:50:42+00:00"
+  }
+]

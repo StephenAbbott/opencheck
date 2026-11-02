@@ -29,7 +29,11 @@ Copy `.env.example` to `.env` and fill in the keys you have. None are required t
 | `FIRMENBUCH_API_KEY` | Free API key for the Austrian Firmenbuch (Justiz Online) SOAP service. |
 | `OPENSANCTIONS_API_KEY` | OpenSanctions API key (also unlocks the EveryPolitician PEPs dataset). |
 | `OPENALEPH_API_KEY` | OpenAleph API key (optional — unlocks restricted collections **and enables the two POST steps** in the lookup cascade: the FtM `POST /api/2/match` step and the text-based percolation name step (`POST /api/2/beta/percolate`, OpenAleph 5.3.1). The flagship instance rejects anonymous POSTs to both paths, so without the key both steps are skipped and only the free-text name fallback runs). Set on Render as well as in `.env`. |
-| `WIKIRATE_API_KEY` | Wikirate REST API key (effectively required for the `wikirate` ESG source — anonymous server-side requests are blocked by Wikirate's Cloudflare bot protection; the adapter skips silently without it). Sent as the `X-API-Key` header; rate limit 60 req/min. Set on Render as well as in `.env`. |
+| `WIKIRATE_API_URL` | Wikirate REST API base URL (default `https://data.wikirate.org`). |
+| `WIKIRATE_PUBLISHABLE_KEY` | Wikirate REST API publishable key — the same for every user, from the account's API access page; sent as the `apikey` header. |
+| `WIKIRATE_API_TOKEN` | Wikirate REST API personal token (`wr_…`, secret); sent as `x-api-token`. With this and the publishable key set, the `wikirate` source reads the REST API. Set on Render as well as in `.env`. |
+| `WIKIRATE_BACKEND` | Which Wikirate API to read: `auto` (default — REST when its credentials are set, else legacy), `rest` or `legacy`. Set `legacy` on Render to roll back without a deploy. |
+| `WIKIRATE_API_KEY` | Wikirate legacy API key (`legacy.wikirate.org`, retired after 31 Dec 2026; read when the REST API's credentials are not set or `WIKIRATE_BACKEND=legacy` — anonymous server-side requests are blocked by Wikirate's Cloudflare bot protection; the adapter skips silently without it). Sent as the `X-API-Key` header; rate limit 60 req/min. Set on Render as well as in `.env`. |
 | `WIKIDATA_SPARQL_ENDPOINT` | Override the default Wikidata Query Service endpoint. |
 | `OPENCHECK_AMLA_EQUIVALENT_JURISDICTIONS` | Comma-separated ISO codes added to the EU+EEA set used by `NON_EU_JURISDICTION` (e.g. `GB,CH`). |
 | `OPENCHECK_AMLA_EU_EEA_OVERRIDE` | When set, replaces the EU+EEA default entirely. (Both `AMLA_` names are legacy: since Phase 272 they affect only the `NON_EU_JURISDICTION` context note.) |
