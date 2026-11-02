@@ -119,8 +119,10 @@ export function BehindTheScenesPage() {
               ["Person statement", "violet", "A natural person (or anonymous/unknown person)."],
               ["Ownership/Control statement", "teal", "A relationship linking an interested party to a subject entity, with typed interests and share bands."],
             ].map(([term, colour, def]) => (
-              <div key={term as string} className="flex gap-2 items-baseline">
-                <dt className={`shrink-0 font-semibold text-[11px] px-1.5 py-0.5 rounded border font-mono
+              // Stacked on a phone: the monospace term is too wide to share a
+              // 320px line with its definition (the self-hosted-fonts PR).
+              <div key={term as string} className="flex flex-col gap-1 sm:flex-row sm:gap-2 sm:items-baseline">
+                <dt className={`self-start shrink-0 font-semibold text-[11px] px-1.5 py-0.5 rounded border font-mono
                   ${colour === "blue" ? "bg-blue-50 text-blue-700 border-blue-200" : ""}
                   ${colour === "violet" ? "bg-violet-50 text-violet-700 border-violet-200" : ""}
                   ${colour === "teal" ? "bg-teal-50 text-teal-700 border-teal-200" : ""}
