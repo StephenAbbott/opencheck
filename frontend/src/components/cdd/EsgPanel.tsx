@@ -8,6 +8,11 @@ import PanelSection from "../ui/PanelSection";
 import { Chip } from "../ui/Chip";
 import { EitiAssessmentCard } from "./EitiAssessmentCard";
 import { ESG_SOURCE_META } from "./esgSources";
+import {
+  WIKIRATE_LEGACY_HOST,
+  wikirateLegacyEntityUrl,
+  wikiratePlatformUrl,
+} from "../../lib/wikirateLinks";
 import { EitiZambiaCard } from "./EitiZambiaCard";
 import {
   eitiIdentLine,
@@ -324,7 +329,8 @@ interface WikirateBundle {
   card_id: number;
   name: string;
   wikirate_url: string;
-  // Wikirate 2.0 company page (same card id); absent on pre-Phase-321 runs.
+  // Wikirate 2.0 company page (same card id); absent on pre-Phase-321 runs,
+  // platform.wikirate.org on runs from 10 Oct to 1 Nov 2026.
   platform_url?: string | null;
   matched_by: string;
   identifiers: Record<string, unknown>;
@@ -342,22 +348,12 @@ function formatAnswerValue(value: unknown): string {
   return text.length > 60 ? `${text.slice(0, 57)}…` : text;
 }
 
-// `wikirate_url` (the ``~{card_id}`` form) is stable and encoding-proof for
-// machine use (BODS provenance, API refetches), but Wikirate's own HTML
-// front-end redirects that numbered-card form to a sign-in page for
-// anonymous visitors. The named-card form (e.g. "Shell_plc") reaches the
-// entity page directly with no redirect, so browser-facing links use a
-// slug built from the company name instead of the card id.
-function wikirateEntityUrl(name: string): string {
-  const slug = name.trim().replace(/\.+$/, "").replace(/\s+/g, "_");
-  return `https://wikirate.org/${encodeURIComponent(slug)}`;
-}
-
 function WikirateCard({ hit }: { hit: SourceHit }) {
   const raw = hit.raw as unknown as WikirateBundle;
   const answers = (raw.latest_answers ?? []).slice(0, 6);
   const total = raw.total_answers ?? 0;
-  const entityUrl = wikirateEntityUrl(raw.name);
+  const entityUrl = wikirateLegacyEntityUrl(raw.name);
+  const platformUrl = wikiratePlatformUrl(raw.platform_url);
 
   return (
     <div className="rounded-oo border border-oo-esg-border bg-oo-esg-bg/40 overflow-hidden">
@@ -439,13 +435,13 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
           rel="noreferrer"
           className="mt-3 inline-block text-oo-meta font-semibold text-oo-esg-text underline underline-offset-2 hover:text-oo-esg-strong"
         >
-          View all {total.toLocaleString()} data points on wikirate.org →
+          View all {total.toLocaleString()} data points on {WIKIRATE_LEGACY_HOST} →
           <span className="sr-only"> (opens in new tab)</span>
         </a>
 
-        {raw.platform_url && (
+        {platformUrl && (
           <a
-            href={raw.platform_url}
+            href={platformUrl}
             target="_blank"
             rel="noreferrer"
             className="mt-1 block text-oo-meta font-semibold text-oo-esg-text underline underline-offset-2 hover:text-oo-esg-strong"

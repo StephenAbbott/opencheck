@@ -5,6 +5,11 @@ HTTP is mocked with respx. Fixtures mirror the live API shapes verified
 ``~{card_id}`` addressing, and bare-integer ``view=count`` responses.
 Per the Wikirate team (2026-07-24), the answers list now queries
 ``filter[metric_type][]=researched&sort_by=year&sort_dir=desc``.
+
+Since 1 Nov 2026 the legacy API is at ``legacy.wikirate.org`` and
+``wikirate.org`` is Wikirate 2.0, which answers the legacy paths with HTTP
+200 and HTML (``fixtures/wikirate/new_platform_card_path.html``, captured
+2 Nov 2026). The JSON fixtures were re-captured from the legacy host that day.
 """
 
 from __future__ import annotations
@@ -17,15 +22,17 @@ import pytest
 import respx
 
 import opencheck.sources.wikirate as wikirate_mod
+from opencheck import degradation
 from opencheck.bods import map_wikirate
 from opencheck.sources.wikirate import WikirateAdapter
 
-BASE = "https://wikirate.org"
+BASE = "https://legacy.wikirate.org"
 FIXTURES = Path(__file__).parent / "fixtures" / "wikirate"
 
 
 def _fixture(name: str):
-    """Real Wikirate responses for BP plc. (card ~637), captured 2026-10-10."""
+    """Real Wikirate responses for BP plc. (card ~637), from the legacy host
+    (``legacy.wikirate.org``), captured 2026-11-02."""
     return json.loads((FIXTURES / name).read_text())
 
 LEI = "213800LH1BZH3DI6G760"
@@ -35,7 +42,7 @@ COMPANY_ITEM = {
     "id": 637,
     "name": "BP plc.",
     "type": "Company",
-    "url": "https://wikirate.org/BP_plc.json",
+    "url": "https://legacy.wikirate.org/BP_plc.json",
     "headquarters": "United Kingdom",
     "website": "https://www.bp.com/",
     "legal_entity_identifier": LEI,
@@ -56,7 +63,7 @@ ANSWER_ITEMS = {
             "company": "BP plc.",
             "year": 2024,
             "value": "Not Specified",
-            "answer_url": "https://wikirate.org/Net_Zero_Tracker+Accountability+BP_plc.json",
+            "answer_url": "https://legacy.wikirate.org/Net_Zero_Tracker+Accountability+BP_plc.json",
         },
         {
             "id": 1,
@@ -65,7 +72,7 @@ ANSWER_ITEMS = {
             "company": "BP plc.",
             "year": 2024,
             "value": 248111000000.0,
-            "answer_url": "https://wikirate.org/GreenDex+Annual_Revenue+BP_plc.json",
+            "answer_url": "https://legacy.wikirate.org/GreenDex+Annual_Revenue+BP_plc.json",
         },
     ]
 }
@@ -112,7 +119,7 @@ async def test_fetch_by_lei_resolves_and_builds_bundle(adapter, respx_mock):
     assert bundle["card_id"] == 637
     assert bundle["name"] == "BP plc."
     assert bundle["matched_by"] == "lei"
-    assert bundle["wikirate_url"] == "https://wikirate.org/~637"
+    assert bundle["wikirate_url"] == "https://legacy.wikirate.org/~637"
     assert bundle["total_answers"] == 2290
     assert bundle["identifiers"]["legal_entity_identifier"] == LEI
     assert bundle["identifiers"]["wikidata_id"] == QID
@@ -196,7 +203,7 @@ async def test_fetch_by_card_id_reads_the_nested_card_shape(adapter, respx_mock)
     assert bundle["is_stub"] is False
     assert bundle["headquarters"] == "United Kingdom"
     assert bundle["website"] == "https://www.bp.com/"
-    assert bundle["platform_url"] == "https://platform.wikirate.org/company/637"
+    assert bundle["platform_url"] == "https://wikirate.org/company/637"
     ids = bundle["identifiers"]
     assert ids["legal_entity_identifier"] == [LEI]
     assert ids["wikidata_id"] == [QID]
@@ -267,7 +274,7 @@ async def test_real_answer_page_maps_to_answers(adapter, respx_mock):
     assert bundle["total_answers"] == 2290
     first = bundle["latest_answers"][0]
     assert first["metric_designer"] and first["metric_name"] and first["year"]
-    assert first["answer_url"].startswith("https://wikirate.org/")
+    assert first["answer_url"].startswith("https://legacy.wikirate.org/")
     assert not first["answer_url"].endswith(".json")
 
 
@@ -301,7 +308,7 @@ def _bundle() -> dict:
         "source_id": "wikirate",
         "card_id": 637,
         "name": "BP plc.",
-        "wikirate_url": "https://wikirate.org/~637",
+        "wikirate_url": "https://legacy.wikirate.org/~637",
         "matched_by": "lei",
         "identifiers": {
             "legal_entity_identifier": LEI,
@@ -331,7 +338,7 @@ def test_map_wikirate_entity_statement():
     assert schemes["OPENCORPORATES-COMPANY-NUMBER"] == "00102498"
     assert all(i.get("scheme") for i in details["identifiers"])
     src = stmt["source"]
-    assert src["url"] == "https://wikirate.org/~637"
+    assert src["url"] == "https://legacy.wikirate.org/~637"
 
 
 def test_map_wikirate_stub_and_empty():
@@ -349,3 +356,122 @@ def test_map_wikirate_list_identifier_uses_first():
         for i in statements[0]["recordDetails"]["identifiers"]
     }
     assert schemes["XI-LEI"] == LEI
+
+
+# ----------------------------------------------------------------------
+# The host move (1 Nov 2026): a failure is never "no record"
+# ----------------------------------------------------------------------
+
+
+def _new_platform_html() -> httpx.Response:
+    """What wikirate.org answered on the legacy API paths on 2 Nov 2026."""
+    return httpx.Response(
+        200,
+        text=(FIXTURES / "new_platform_card_path.html").read_text(),
+        headers={"content-type": "text/html; charset=utf-8"},
+    )
+
+
+def test_the_adapter_calls_the_legacy_host_and_links_the_new_one():
+    assert wikirate_mod._API_BASE == "https://legacy.wikirate.org"
+    assert wikirate_mod._PLATFORM_BASE == "https://wikirate.org"
+    assert wikirate_mod.LEGACY_RETIRES == "2026-12-31"
+    # A new namespace, so no payload cached from wikirate.org is replayed.
+    assert wikirate_mod._CACHE_NS != "wikirate"
+
+
+@respx.mock
+async def test_an_html_answer_is_a_failure_not_no_record(adapter, respx_mock):
+    """The production bug of 1-2 Nov 2026: BP, Eli Lilly and Rosneft read as
+    having no Wikirate record because wikirate.org answered with its website."""
+    respx_mock.get(f"{BASE}/Companies.json").mock(return_value=_new_platform_html())
+
+    degradation.begin()
+    assert await adapter.fetch_by_lei(LEI, qid=QID) is None
+    recorded = degradation.unanswered_fetch("wikirate")
+    degradation.collect()
+
+    # What the pipeline reads to report the source as "Did not answer".
+    assert recorded is not None
+    assert recorded.check == degradation.CHECK_SOURCE_FETCH
+    assert recorded.reason == degradation.REASON_UPSTREAM_ERROR
+    assert "text/html instead of JSON" in recorded.detail
+    assert LEI not in recorded.detail and "BP" not in recorded.detail
+
+
+@respx.mock
+async def test_an_html_answer_is_never_cached(monkeypatch, respx_mock):
+    monkeypatch.setattr(wikirate_mod, "_api_key", lambda: "test-key")
+    a = WikirateAdapter()
+    stored: list[str] = []
+    a._cache.get_payload = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    a._cache.put = lambda key, payload: stored.append(key)  # type: ignore[method-assign]
+    respx_mock.get(f"{BASE}/Companies.json").mock(return_value=_new_platform_html())
+
+    assert await a.fetch_by_lei(LEI) is None
+    assert stored == []
+
+
+@respx.mock
+async def test_a_company_list_without_items_is_a_failure(adapter, respx_mock):
+    respx_mock.get(f"{BASE}/Companies.json").mock(
+        return_value=httpx.Response(200, json={"error": "something else"})
+    )
+    degradation.begin()
+    assert await adapter.fetch_by_lei(LEI) is None
+    recorded = degradation.unanswered_fetch("wikirate")
+    degradation.collect()
+    assert recorded is not None
+
+
+@respx.mock
+async def test_no_match_records_nothing(adapter, respx_mock):
+    """An empty list is an answer: no degradation, the card is simply absent."""
+    _mock_companies(respx_mock, [], LEI)
+    degradation.begin()
+    assert await adapter.fetch_by_lei(LEI) is None
+    assert degradation.collect() == []
+
+
+@respx.mock
+async def test_card_path_html_is_a_stub_and_a_degradation(adapter, respx_mock):
+    respx_mock.get(f"{BASE}/~637.json").mock(return_value=_new_platform_html())
+    degradation.begin()
+    bundle = await adapter.fetch("637")
+    recorded = degradation.unanswered_fetch("wikirate")
+    degradation.collect()
+    assert bundle["is_stub"] is True
+    assert recorded is not None
+
+
+@respx.mock
+async def test_an_unknown_card_records_nothing(adapter, respx_mock):
+    respx_mock.get(f"{BASE}/~999.json").mock(return_value=httpx.Response(404))
+    degradation.begin()
+    bundle = await adapter.fetch("999")
+    assert bundle["is_stub"] is True
+    assert degradation.collect() == []
+
+
+@respx.mock
+async def test_answers_that_cannot_be_read_say_so(adapter, respx_mock):
+    """The company resolved, so the card shows — with a note that its answers
+    were not read in full, instead of a silent "0 data points"."""
+    _mock_companies(respx_mock, [COMPANY_ITEM], LEI)
+    respx_mock.get(f"{BASE}/~637+Answer.json").mock(return_value=_new_platform_html())
+    degradation.begin()
+    bundle = await adapter.fetch_by_lei(LEI)
+    recorded = degradation.collect()
+    assert bundle is not None and bundle["total_answers"] == 0
+    assert [(d.check, d.source_id) for d in recorded] == [
+        (degradation.CHECK_SOURCE_READ, "wikirate")
+    ]
+
+
+@respx.mock
+async def test_nothing_is_sent_to_the_new_platform(adapter, respx_mock):
+    new_host = respx_mock.route(host="wikirate.org").mock(return_value=_new_platform_html())
+    _mock_companies(respx_mock, [COMPANY_ITEM], LEI)
+    _mock_answers(respx_mock)
+    assert await adapter.fetch_by_lei(LEI) is not None
+    assert not new_host.called

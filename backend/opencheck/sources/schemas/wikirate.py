@@ -37,7 +37,7 @@ class WikirateAnswer(_Base):
     metric_name: str | None = None
     year: int | None = None
     value: Any = None
-    answer_url: str | None = None  # HTML page on wikirate.org
+    answer_url: str | None = None  # HTML page on legacy.wikirate.org
 
 
 class WikirateBundle(_Base):
@@ -45,9 +45,12 @@ class WikirateBundle(_Base):
 
     card_id: int
     name: str
-    wikirate_url: str  # HTML page on wikirate.org (stable ~id form)
-    # The company on Wikirate 2.0 (platform.wikirate.org/company/{card_id},
-    # same ids; Phase 321). Absent on bundles built before it.
+    # HTML page on legacy.wikirate.org (stable ~id form); bundles built before
+    # 2 Nov 2026 name wikirate.org, which is now Wikirate 2.0.
+    wikirate_url: str
+    # The company on Wikirate 2.0 (wikirate.org/company/{card_id}, same ids;
+    # platform.wikirate.org on bundles built 10 Oct–1 Nov 2026). Absent on
+    # bundles built before Phase 321.
     platform_url: str | None = None
     matched_by: str  # "lei" | "wikidata_qid" | "card"
     identifiers: dict[str, Any] = Field(default_factory=dict)

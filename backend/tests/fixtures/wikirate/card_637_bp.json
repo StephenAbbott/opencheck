@@ -5,22 +5,22 @@
     "id": 651,
     "name": "Company",
     "type": "Cardtype",
-    "url": "https://wikirate.org/Company.json",
+    "url": "https://legacy.wikirate.org/Company.json",
     "codename": "company"
   },
-  "url": "https://wikirate.org/~637.json",
+  "url": "https://legacy.wikirate.org/~637.json",
   "image": {
     "id": 3091,
     "name": "BP plc.+Image",
     "type": "Image",
-    "url": "https://wikirate.org/BP_plc+Image.json",
+    "url": "https://legacy.wikirate.org/BP_plc+Image.json",
     "content": "https://wikirate-production-storage.fra1.cdn.digitaloceanspaces.com/files/3091/12604171-medium.jpg"
   },
   "headquarters": {
     "id": 2923148,
     "name": "BP plc.+Headquarters",
     "type": "Pointer",
-    "url": "https://wikirate.org/BP_plc+Headquarters.json",
+    "url": "https://legacy.wikirate.org/BP_plc+Headquarters.json",
     "content": [
       "United Kingdom"
     ]
@@ -29,14 +29,14 @@
     "id": 16978368,
     "name": "BP plc.+Website",
     "type": "Phrase",
-    "url": "https://wikirate.org/BP_plc+Website.json",
+    "url": "https://legacy.wikirate.org/BP_plc+Website.json",
     "content": "https://www.bp.com/"
   },
   "alias": {
     "id": 60923,
     "name": "BP plc.+Alias",
     "type": "Pointer",
-    "url": "https://wikirate.org/BP_plc+Alias.json",
+    "url": "https://legacy.wikirate.org/BP_plc+Alias.json",
     "content": [
       "BP",
       "Bpost SA",
@@ -49,7 +49,7 @@
     "id": 19519655,
     "name": "BP plc.+International Securities Identification Number",
     "type": "RichText",
-    "url": "https://wikirate.org/BP_plc+International_Securities_Identification_Number.json",
+    "url": "https://legacy.wikirate.org/BP_plc+International_Securities_Identification_Number.json",
     "content": [
       "DE0008618737",
       "GB0001385250",
@@ -174,7 +174,7 @@
     "id": 19545542,
     "name": "BP plc.+Legal Entity Identifier",
     "type": "RichText",
-    "url": "https://wikirate.org/BP_plc+Legal_Entity_Identifier.json",
+    "url": "https://legacy.wikirate.org/BP_plc+Legal_Entity_Identifier.json",
     "content": [
       "213800LH1BZH3DI6G760"
     ]
@@ -183,7 +183,7 @@
     "id": 2923147,
     "name": "BP plc.+OpenCorporates ID",
     "type": "Phrase",
-    "url": "https://wikirate.org/BP_plc+OpenCorporates_ID.json",
+    "url": "https://legacy.wikirate.org/BP_plc+OpenCorporates_ID.json",
     "content": [
       "00102498"
     ]
@@ -193,7 +193,7 @@
     "id": 12535320,
     "name": "BP plc.+SEC Central Index Key",
     "type": "Phrase",
-    "url": "https://wikirate.org/BP_plc+SEC_Central_Index_Key.json",
+    "url": "https://legacy.wikirate.org/BP_plc+SEC_Central_Index_Key.json",
     "content": [
       "313807"
     ]
@@ -203,7 +203,7 @@
     "id": 22063891,
     "name": "BP plc.+Wikidata ID",
     "type": "RichText",
-    "url": "https://wikirate.org/BP_plc+Wikidata_ID.json",
+    "url": "https://legacy.wikirate.org/BP_plc+Wikidata_ID.json",
     "content": [
       "Q152057"
     ]
@@ -212,7 +212,7 @@
     "id": 2784495,
     "name": "BP plc.+Wikipedia",
     "type": "Phrase",
-    "url": "https://wikirate.org/BP_plc+Wikipedia.json",
+    "url": "https://legacy.wikirate.org/BP_plc+Wikipedia.json",
     "content": [
       "BP"
     ]
@@ -220,10 +220,10 @@
   "items": [],
   "links": [],
   "ancestors": [],
-  "html_url": "https://wikirate.org/BP_plc",
+  "html_url": "https://legacy.wikirate.org/BP_plc",
   "created_at": "2012-03-14 16:47:16 UTC",
   "updated_at": "2024-07-30 13:50:42 UTC",
-  "answers_url": "https://wikirate.org/BP_plc+Answer.json",
-  "requested_at": "2026-10-10 11:21:31 UTC",
-  "license": "Wikirate.org, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0). See https://wikirate.org/Attribution_Guide."
+  "answers_url": "https://legacy.wikirate.org/BP_plc+Answer.json",
+  "requested_at": "2026-11-02 13:15:31 UTC",
+  "license": "Wikirate.org, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0). See https://legacy.wikirate.org/Attribution_Guide."
 }
