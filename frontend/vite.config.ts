@@ -90,8 +90,45 @@ function versionManifest(): Plugin {
   };
 }
 
+/**
+ * Write `fonts.css` beside `index.html`: the same `@font-face` rules as
+ * `src/fonts.css`, pointing at the same hashed woff2 files the app's own
+ * stylesheet uses (the "Speed up first load" ticket, 2 Nov 2026). The entity
+ * pages are rendered by the backend, which cannot know the build's hashes, so
+ * they link this stable name instead of Google Fonts — and a reader who has
+ * opened the app already has the fonts cached. A font the bundle does not
+ * contain fails the build rather than writing a rule that 404s.
+ */
+function fontsStylesheet(): Plugin {
+  return {
+    name: "opencheck-fonts-stylesheet",
+    apply: "build",
+    generateBundle(_options, bundle) {
+      const hashed = new Map<string, string>();
+      for (const file of Object.values(bundle)) {
+        if (file.type !== "asset") continue;
+        for (const original of file.originalFileNames ?? []) {
+          if (original.endsWith(".woff2")) {
+            hashed.set(original.split("/").pop() as string, file.fileName);
+          }
+        }
+      }
+      const source = readFileSync(resolve(__dirname, "src/fonts.css"), "utf-8");
+      const css = source.replace(
+        /url\('\.\/assets\/fonts\/([^']+\.woff2)'\)/g,
+        (_match, name: string) => {
+          const fileName = hashed.get(name);
+          if (!fileName) this.error(`fonts.css: ${name} is not in the bundle`);
+          return `url('/${fileName}')`;
+        },
+      );
+      this.emitFile({ type: "asset", fileName: "fonts.css", source: css });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), versionManifest()],
+  plugins: [react(), versionManifest(), fontsStylesheet()],
   server: {
     port: 5173,
     host: true,

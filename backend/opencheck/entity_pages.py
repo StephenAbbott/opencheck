@@ -87,7 +87,17 @@ log = logging.getLogger(__name__)
 # Bump when the rendered HTML changes materially — part of the ETag, so
 # crawlers re-fetch pages after a template change even when the row didn't.
 # "2": Phase 227 added the per-jurisdiction "What can be known" section.
-TEMPLATE_VERSION = "2"
+# "3": fonts from the site's own /fonts.css, not Google Fonts.
+TEMPLATE_VERSION = "3"
+
+#: The design-system fonts, served by this site (the "Speed up first load"
+#: ticket, 2 Nov 2026). The frontend build writes ``fonts.css`` beside
+#: ``index.html`` (``fontsStylesheet`` in vite.config.ts), pointing at the
+#: same hashed woff2 files the app uses, so a reader who has opened the app
+#: has them cached and no page opens Google's two origins. Without a built
+#: frontend (tests, a backend-only dev run) the link misses and the page
+#: draws in the fallback faces its CSS already names.
+FONTS_STYLESHEET = "/fonts.css"
 
 #: Max slug length. Cut at a word boundary; URLs stay readable and stable.
 _SLUG_MAX = 60
@@ -1306,10 +1316,7 @@ def _head(
 <meta name="twitter:description" content="{html.escape(description)}">
 {og_img}{robots}
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700&family=DM+Mono:wght@400&family=DM+Sans:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="{FONTS_STYLESHEET}">
 <style>{_PAGE_CSS}</style>
 {extra}
 </head>"""

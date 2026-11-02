@@ -235,6 +235,10 @@ def test_entity_page_furniture_exact(client: TestClient) -> None:
     assert f'href="https://opencheck.world/?lei={ACME_LEI}" rel="nofollow"' in body
     # Parent link resolved to the parent's canonical path.
     assert f'href="/entity/{PARENT_LEI}-acme-holdings-plc"' in body
+    # Fonts from the site's own stylesheet, never Google Fonts (the "Speed
+    # up first load" ticket): no third-party origin before text is drawn.
+    assert '<link rel="stylesheet" href="/fonts.css">' in body
+    assert "googleapis" not in body and "gstatic" not in body
     # Cacheable + ETagged.
     assert r.headers["cache-control"].startswith("public, max-age=86400")
     assert r.headers.get("etag")
