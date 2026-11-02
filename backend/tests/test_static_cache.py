@@ -41,6 +41,7 @@ def test_what_names_the_current_deploy_is_never_kept(path: str) -> None:
     "path",
     [
         "godin-logo.png",
+        "fonts.css",
         "new-features/watchlist.svg",
         "bods-dagre-images/flags/gb.svg",
         "favicon.svg",
