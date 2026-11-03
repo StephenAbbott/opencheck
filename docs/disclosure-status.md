@@ -148,8 +148,17 @@ read `none_filed` until the adapter followed the link.
   reports — `sources[<id>]` with `values`, `entries` (`value`, `covers`,
   `count`, `details`, `reasons`) and `ownership_source`; `not_covered`;
   `as_of`.
-- **MCP**: `disclosure_status` on `opencheck_lookup` and
-  `opencheck_register_lookup` — `by_source[]` with a `line` per source.
+- **MCP**: `disclosure_status` on `opencheck_lookup`,
+  `opencheck_register_lookup` and `opencheck_export_bods` — `by_source[]` with
+  a `line` per source.
+- **Batch**: each row's `disclosure` — `{source: ["covers=value", …]}` for
+  every source that is not `not_covered` (a value with no `covers`, such as
+  `no_record`, is the bare value) — on `/batch`, `opencheck_batch_lookup` and
+  the browser batch; the batch CSV (`rows.csv` in the ZIP and the page's
+  download) ends with a `disclosure` column of space-separated
+  `source/covers=value` tokens, e.g.
+  `companies_house/beneficial_owners=exempt gleif/parent=exempt`. It is the
+  last column so every earlier column keeps its position.
 - **PDF and Markdown**: "What each source says about owners", after "What each
   source found".
 - **BODS**: one `commenting` annotation on OpenCheck's own subject statement
@@ -157,4 +166,6 @@ read `none_filed` until the adapter followed the link.
   No new statement is written: `unreachable`, `restricted` and `not_covered`
   are about OpenCheck or the jurisdiction, not something the source said about
   the company, and the existing `unspecifiedReason` relationships already carry
-  what the sources did say.
+  what the sources did say. The BODS JSON, JSON Lines, XML and RDF exports carry
+  it; the Senzing and FollowTheMoney exports do not, because those formats drop
+  annotations.

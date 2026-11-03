@@ -464,6 +464,29 @@ def report_rows(payload: Mapping[str, Any] | None) -> list[tuple[str, str]]:
     return out
 
 
+def row_tokens(payload: Mapping[str, Any] | None) -> dict[str, list[str]]:
+    """``{source_id: ["covers=value", …]}`` for the batch row — every source
+    that is not ``not_covered``; a value with no ``covers`` (``no_record``)
+    is the bare value. Order is the entries' order."""
+    out: dict[str, list[str]] = {}
+    for sid, s in ((payload or {}).get("sources") or {}).items():
+        if s.get("values") == ["not_covered"]:
+            continue
+        out[sid] = [
+            f"{e['covers']}={e['value']}" if e.get("covers") else str(e["value"])
+            for e in s.get("entries") or []
+        ]
+    return out
+
+
+def csv_cell(tokens: Mapping[str, list[str]] | None) -> str:
+    """The batch CSV's ``disclosure`` cell: ``source/covers=value`` tokens,
+    space-separated, the way the row's code columns are written —
+    ``companies_house/beneficial_owners=exempt gleif/parent=exempt``.
+    ``frontend/src/lib/batch.ts`` writes the same cell."""
+    return " ".join(f"{sid}/{t}" for sid, ts in (tokens or {}).items() for t in ts)
+
+
 REPORT_HEADING = "What each source says about owners"
 REPORT_COLUMNS: tuple[str, ...] = ("Source", "Disclosure")
 

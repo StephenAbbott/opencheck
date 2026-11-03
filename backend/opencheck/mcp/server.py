@@ -312,9 +312,19 @@ async def opencheck_export_bods(
         # ownership, per source — context, never a signal. The same figures
         # ride in the statements as a ``commenting`` annotation on the subject.
         "integrated_ownership": _integrated_ownership_block(resp),
+        # What each source says about the owners — the same block
+        # opencheck_lookup returns. It also rides in the statements as a
+        # ``commenting`` annotation on the subject.
+        "disclosure_status": _disclosure_status_block(resp),
         "bods_issues": resp.bods_issues,
         "license_notices": resp.license_notices,
     }
+
+
+def _disclosure_status_block(resp: Any) -> dict[str, Any] | None:
+    from .shaping import _disclosure_status
+
+    return _disclosure_status(resp)
 
 
 def _integrated_ownership_block(resp: Any) -> dict[str, Any] | None:

@@ -4879,7 +4879,12 @@ otherwise:
   `LookupResponse.disclosure_status`. BODS gets one `commenting` annotation on
   the integrated-ownership `annotation_target` (`apply_to_bods`, in
   `fold_lookup_events`) — never a new statement. PDF/Markdown: "What each source
-  says about owners". MCP: `disclosure_status.by_source[]`.
+  says about owners". MCP: `disclosure_status.by_source[]` on
+  `opencheck_lookup`, `opencheck_register_lookup` and `opencheck_export_bods`.
+  Batch: a row's `disclosure` (`row_tokens`) and the CSV's **last** column
+  `disclosure` (`csv_cell`, mirrored by `disclosureCell` in
+  `frontend/src/lib/batch.ts`) — add a later batch column after it, never
+  before. Senzing and FtM exports drop annotations, so carry no status.
 - **Words** (`VALUE_WORDS`, `COVERS_WORDS`) are parsed from the TypeScript by
   `test_disclosure_status.py`; both pass `knowability.BANNED_VOCABULARY`.
 - **Findings regression**: class `disclosure`; a golden file may carry

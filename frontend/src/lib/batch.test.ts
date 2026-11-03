@@ -158,6 +158,24 @@ describe("rowsToCsv", () => {
     expect(line[header.indexOf("register_status")]).toBe("live");
   });
 
+  it("writes what each ownership source says in a last `disclosure` column", () => {
+    const csv = rowsToCsv([
+      {
+        state: "done",
+        lei: SHELL,
+        row: row({ disclosure: { companies_house: ["beneficial_owners=exempt"], gleif: ["parent=exempt"] } }),
+      },
+      { state: "done", lei: BOV, row: row({}) },
+    ]);
+    const [header, shell, bov] = csv.trimEnd().split("\r\n").map((l) => l.split(","));
+    expect(header[header.length - 1]).toBe("disclosure");
+    expect(shell[header.indexOf("disclosure")]).toBe(
+      "companies_house/beneficial_owners=exempt gleif/parent=exempt",
+    );
+    // A row served before the field existed leaves the cell empty.
+    expect(bov[header.indexOf("disclosure")]).toBe("");
+  });
+
   it("names the file by the day", () => {
     expect(csvFilename(new Date("2026-09-03T15:00:00Z"))).toBe("opencheck-batch-2026-09-03.csv");
   });

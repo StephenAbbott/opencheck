@@ -2164,6 +2164,9 @@ export interface BatchRow {
   licensing: { commercial_use: boolean; headline: string } | null;
   replayed: boolean;
   report_url: string;
+  /** What each ownership source says about owners — `{source: ["covers=value"]}`;
+   *  absent on rows served before the disclosure status. */
+  disclosure?: Record<string, string[]> | null;
 }
 
 /** A company that could not be screened at all — a row, not an exception. */

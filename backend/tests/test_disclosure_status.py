@@ -348,6 +348,52 @@ def test_the_mcp_lookup_carries_one_line_per_ownership_source(afpc_client) -> No
     assert "not an exemption" in block["hint"]
 
 
+def test_the_batch_row_and_csv_cell() -> None:
+    payload = {
+        "sources": {
+            "companies_house": {"values": ["exempt"], "entries": [
+                {"value": "exempt", "covers": "beneficial_owners"}]},
+            "gleif": {"values": ["exempt"], "entries": [{"value": "exempt", "covers": "parent"}]},
+            "opencorporates": {"values": ["no_record"], "entries": [{"value": "no_record"}]},
+            "wikidata": {"values": ["not_covered"], "entries": [{"value": "not_covered"}]},
+        },
+    }
+    tokens = disclosure.row_tokens(payload)
+    assert tokens == {
+        "companies_house": ["beneficial_owners=exempt"],
+        "gleif": ["parent=exempt"],
+        "opencorporates": ["no_record"],
+    }
+    assert disclosure.csv_cell(tokens) == (
+        "companies_house/beneficial_owners=exempt gleif/parent=exempt opencorporates/no_record"
+    )
+    assert disclosure.csv_cell(None) == ""
+
+
+def test_the_batch_row_carries_the_field_and_the_csv_its_column(afpc_client) -> None:  # noqa: F811
+    from opencheck import batch as _batch
+    from opencheck.mcp.shaping import shape_batch_row
+    from opencheck.routers.lookup import LookupResponse
+    from tests.test_lei_registration import AFPC
+
+    body = afpc_client.get("/lookup", params={"lei": AFPC}).json()
+    row = shape_batch_row(LookupResponse.model_validate(body))
+    assert row["disclosure"]["gleif"][0].startswith("parent=")
+    assert _batch.CSV_COLUMNS[-1] == "disclosure"
+    text = _batch.rows_csv(_batch.BatchResult(rows=[row]), origin="https://opencheck.world")
+    assert text.strip().split("\r\n")[1].endswith(disclosure.csv_cell(row["disclosure"]))
+
+
+def test_the_export_tool_carries_the_block(afpc_client) -> None:  # noqa: F811
+    from opencheck.mcp.server import _disclosure_status_block
+    from opencheck.routers.lookup import LookupResponse
+    from tests.test_lei_registration import AFPC
+
+    body = afpc_client.get("/lookup", params={"lei": AFPC}).json()
+    block = _disclosure_status_block(LookupResponse.model_validate(body))
+    assert any(r["source"] == "gleif" for r in block["by_source"])
+
+
 def test_an_older_payload_shapes_to_null() -> None:
     from types import SimpleNamespace
 

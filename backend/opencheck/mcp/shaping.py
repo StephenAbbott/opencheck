@@ -283,6 +283,12 @@ def _disclosure_status(payload: Any) -> dict[str, Any] | None:
     }
 
 
+def _disclosure_row_tokens(status: Any) -> dict[str, list[str]] | None:
+    from ..disclosure import row_tokens
+
+    return row_tokens(status) if isinstance(status, dict) else None
+
+
 def _knowability(payload: Any) -> dict[str, Any] | None:
     """``knowability: {subject, chain[], as_of, hint}`` from the frozen
     ``knowability`` / ``knowability_chain`` fields, or None for an older
@@ -689,6 +695,12 @@ def shape_batch_row(payload: Any) -> dict[str, Any]:
             dict.fromkeys(d.get("source_id") for d in degraded if d.get("source_id"))
         ),
         "licensing": licensing,
+        # What each source says about the owners, per source: "covers=value"
+        # tokens, ownership sources only. Null on a run recorded before the
+        # field existed. Describes; never a signal.
+        "disclosure": (
+            _disclosure_row_tokens(getattr(payload, "disclosure_status", None))
+        ),
         "replayed": bool(getattr(payload, "replayed", False)),
         "report_url": f"/?lei={payload.lei}",
     }
