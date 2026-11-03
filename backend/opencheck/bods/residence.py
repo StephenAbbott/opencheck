@@ -145,6 +145,11 @@ def resolve_country(text: str | None) -> dict[str, str] | None:
     return {"name": name, "code": country.alpha_2}
 
 
+def _alpha3(code: str) -> str:
+    country = pycountry.countries.get(alpha_2=code)
+    return getattr(country, "alpha_3", "") or ""
+
+
 def residence_address(text: str | None) -> dict[str, Any] | None:
     """``{"type": "residence", "country": …}`` for a filed country of
     residence, or ``None`` when nothing was filed."""
@@ -172,7 +177,12 @@ def residence_note(
             "ISO 3166-1 country could be read from it, so it is given as "
             "filed, with no country code.",
         )
-    if country["name"].casefold() == filed.casefold():
+    if country["name"].casefold() == filed.casefold() or filed.upper() in (
+        country["code"],
+        _alpha3(country["code"]),
+    ):
+        # The filed words are the published name, or the register files the
+        # ISO code itself (Latvia "LV", New Zealand "NZ"): nothing to record.
         return None
     return transformation(
         target,

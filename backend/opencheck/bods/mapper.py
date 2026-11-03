@@ -402,6 +402,7 @@ from .mappers.lithuania import (  # noqa: F401  (re-exported, Phase 246)
     map_jar_lithuania,
 )
 from .mappers.czechia import (  # noqa: F401  (re-exported, Phase 246)
+    _ares_person,
     map_ares,
 )
 from .mappers.poland import (  # noqa: F401  (re-exported, Phase 246)

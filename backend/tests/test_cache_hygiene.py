@@ -140,7 +140,7 @@ async def test_ares_vr_failure_is_not_cached_and_is_a_degradation(status, reason
     assert [(d.source_id, d.reason) for d in recorded] == [("ares", reason)]
     cache = Cache()
     assert cache.get_payload(f"ares/vr/{ICO}") is None
-    assert cache.get_payload(f"ares/bundle-v2/{ICO}") is None
+    assert cache.get_payload(f"ares/bundle-v3/{ICO}") is None
 
     # The register recovers: the next lookup asks again and gets the board.
     vr.mock(return_value=httpx.Response(200, json=VR))
@@ -161,7 +161,7 @@ async def test_ares_vr_network_error_is_not_cached():
         ("ares", degradation.REASON_TIMEOUT)
     ]
     assert Cache().get_payload(f"ares/vr/{ICO}") is None
-    assert Cache().get_payload(f"ares/bundle-v2/{ICO}") is None
+    assert Cache().get_payload(f"ares/bundle-v3/{ICO}") is None
 
 
 @respx.mock
