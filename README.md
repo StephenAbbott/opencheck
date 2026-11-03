@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 436** — The Wikirate source now reads Wikirate 2.0's REST API, with a setting to fall back to the legacy API until that is retired at the end of 2026.
+**Latest: Phase 437** — Companies House PSCs and officers now carry the country of residence the register files, as a BODS residence address.
 
 → [Full development history](docs/status.md)
 
