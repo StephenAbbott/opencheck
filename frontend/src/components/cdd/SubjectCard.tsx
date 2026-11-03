@@ -52,6 +52,7 @@ export function SubjectCard({
   savedShare,
   onboardingReportId = null,
   save,
+  note,
   notice,
   listing = null,
   registerRecord = null,
@@ -113,6 +114,8 @@ export function SubjectCard({
   onboardingReportId?: string | null;
   /** Phase 217: the Keep item of Share and export (see `ExportMenu`). */
   save?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
+  /** The discrepancy-note item of Share and export (see `ExportMenu`). */
+  note?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
   /** Phase 217: a one-line outcome of a save, under the header row. */
   notice?: string | null;
   /** Phase 236: the primary stock-exchange listing from PermID, as the
@@ -256,6 +259,7 @@ export function SubjectCard({
               savedShare ? "Opens this saved report — not a new check" : undefined
             }
             save={save}
+            note={note}
           />
           {onOpenWatchlist && (
             <WatchButton lei={lei} onOpenWatchlist={onOpenWatchlist} onboardingReportId={onboardingReportId} />

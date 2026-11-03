@@ -768,6 +768,62 @@ def _license_notice(adapter: Any) -> dict[str, str] | None:
 
 
 @mcp.tool()
+async def opencheck_discrepancy_note(
+    lei: str | None = None, scheme: str | None = None, id: str | None = None, deepen_top: int = 5
+) -> dict[str, Any]:
+    """A discrepancy note to hand a register-record disagreement back to the
+    register that holds it — one note per register, as Markdown.
+
+    Runs (or reuses) the same check as opencheck_lookup / opencheck_register_lookup
+    and reads its "Records compared" finding: where two published records of the
+    company disagree on register status or jurisdiction, each register holding a
+    disputed value (GLEIF included) gets a note stating the field, its own value,
+    the conflicting value and source with its licence, the dates each was stated
+    and retrieved, and where that register takes discrepancy reports. It describes
+    and never alleges which record is right, and it is not a beneficial-ownership
+    discrepancy report under the AMLR or the UK PSC rules — the note says so.
+
+    Args:
+        lei: ISO 17442 Legal Entity Identifier (20 chars), or
+        scheme + id: a register scheme and number (e.g. GB-COH, OC346224) for a
+            company with no LEI.
+        deepen_top: How many top sources to deepen (0-10, default 5).
+
+    Returns ``markdown`` (the notes, separated by a rule), ``notes`` (who each is
+    addressed to, the fields, the reporting route) and ``saved_report`` null —
+    save the report with opencheck_save_report first and use the REST route with
+    saved_report_id to get a verifiable link and SHA-256 in the footer. With no
+    qualifying disagreement the result says so (``status`` 404) and carries no
+    note.
+    """
+    from ..discrepancy_note import build_notes, render_markdown, summary
+    from ..routers.lookup import _lookup_impl as _lookup
+    from ..routers.lookup import _register_lookup_impl as _register_lookup
+
+    try:
+        if lei:
+            resp = await _lookup(lei=lei, deepen_top=deepen_top)
+        elif scheme and id:
+            resp = await _register_lookup(scheme, id, deepen_top=deepen_top)
+        else:
+            return {"error": "Give an LEI, or a register scheme and id.", "status": 400}
+    except HTTPException as exc:
+        return _err(exc)
+    notes = build_notes(resp.model_dump())
+    if not notes:
+        return {
+            "error": "This run found no disagreement between register records, so there is no discrepancy note.",
+            "status": 404,
+            "subject": resp.lei or f"{scheme}:{id}",
+        }
+    out = summary(notes)
+    out["subject"] = resp.lei or f"{scheme}:{id}"
+    out["markdown"] = render_markdown(notes)
+    out["saved_report"] = None
+    return out
+
+
+@mcp.tool()
 async def opencheck_list_sources() -> dict[str, Any]:
     """List the data sources OpenCheck consults, with licence and live status."""
     from ..routers.health import sources as _sources
@@ -790,5 +846,6 @@ TOOL_NAMES = [
     "opencheck_person_check",
     "opencheck_person_positions",
     "opencheck_save_report",
+    "opencheck_discrepancy_note",
     "opencheck_list_sources",
 ]

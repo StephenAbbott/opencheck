@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { trackEvent } from "../lib/analytics";
 import {
+  downloadDiscrepancyNote,
   downloadReportMarkdown,
   downloadReportPdf,
   saveReport,
@@ -109,6 +110,26 @@ export function useSavedReport({
       setMdBusy(false);
     }
   }, [streamingLei, exportPayload, savedReport]);
+
+  const [noteBusy, setNoteBusy] = useState(false);
+  const downloadNote = useCallback(async () => {
+    if (!streamingLei) return;
+    setNoteBusy(true);
+    setExportError(null);
+    try {
+      // The discrepancy-report ticket: the register notes for this run's
+      // "Records compared" disagreements. A saved report renders its own run,
+      // so the note's footer can carry the saved link and hash.
+      await downloadDiscrepancyNote(streamingLei, savedReport?.report_id ?? null);
+      trackEvent("discrepancy_note_export");
+    } catch (e) {
+      setExportError(
+        e instanceof Error ? e.message : "Could not generate the discrepancy note."
+      );
+    } finally {
+      setNoteBusy(false);
+    }
+  }, [streamingLei, savedReport]);
 
   // Phase 217: a saved report is shared by link and never indexed. robots.txt
   // already disallows /report on this host; the meta tag covers a crawler that
@@ -252,5 +273,7 @@ export function useSavedReport({
     mdBusy,
     downloadPdf,
     downloadMarkdown,
+    downloadNote,
+    noteBusy,
   };
 }

@@ -45,6 +45,7 @@ would `421` in production.
 | `opencheck_person_check(name, birth_year=None)` | Screen one person (PEP / sanctions / offshore-leaks) — evidence-shaped: signals from strong matches only, per-source outcomes, caveats |
 | `opencheck_person_positions(scheme, id)` | One person's positions across companies, keyed by a register's own person key, never a name: `EE-ARIREGISTER-HASH` (the Estonian register's pseudonymous key, read off an Estonian person statement's `identifying` annotation) lists every company whose current lists name the person — list, role, since, share — from the daily index; `GB-COH-OFFICER` gives a Companies House officer's appointments. Neither register guarantees one key per person (`caveat`); the Estonian files are current rows only. At most 100 rows (`total_results` counts all) |
 | `opencheck_save_report(lei, deepen_top=5)` | Runs (or reuses a held) check and keeps it as a saved report — `url`, `json_url`, `content_hash`, `saved_at` / `expires_at`, `manage_token`, `verdict`, licence headline (Phase 218; see [saved reports](saved-reports.md)) |
+| `opencheck_discrepancy_note(lei=None, scheme=None, id=None, deepen_top=5)` | A register record discrepancy note (the discrepancy-report ticket): reads the run's "Records compared" finding and returns `markdown` — one note per register holding a disputed value, GLEIF included — plus `notes` (addressee, fields, reporting route). Describes, never alleges; not a beneficial-ownership discrepancy report and says so. `status` 404 when the run found no disagreement. See [record consistency](record-consistency.md#the-discrepancy-note) |
 | `opencheck_list_sources()` | Adapter inventory with licence + live status |
 
 `narrative` is deliberately **not** exposed (it spends model tokens per call).
@@ -60,7 +61,7 @@ also spends the tier its REST counterpart is on — `opencheck_lookup`,
 `opencheck_register_lookup`, `opencheck_export_bods`, `opencheck_search`, `opencheck_person_check`,
 `opencheck_person_positions`, `opencheck_owners` and `opencheck_ownership_map` the lookup tier (10/min; at `depth` > 1 every extra
 lookup is also charged to the shared lookup budget), `opencheck_subsidiaries` the default tier `GET
-/subsidiaries` is on (its GLEIF calls are discretionary, as on the REST route), `opencheck_batch_lookup` and `opencheck_save_report` the
+/subsidiaries` is on (its GLEIF calls are discretionary, as on the REST route), `opencheck_batch_lookup`, `opencheck_save_report` and `opencheck_discrepancy_note` the
 heavy tier (3/min). A refusal is HTTP `429` with `Retry-After` and a JSON-RPC
 error per message.
 

@@ -4593,6 +4593,63 @@ rules, each a decision Stephen took and not to be reopened:
   § Record consistency, `docs/risk-signals.md`. The readings live on the Notion
   plan's child page.
 
+## The discrepancy note hands a disagreement back to the register (the discrepancy-report ticket, 3 Nov 2026)
+
+`opencheck/discrepancy_note.py`, `POST /export/discrepancy-note`
+(`routers/export.py`), the MCP tool `opencheck_discrepancy_note`,
+`lib/discrepancyNote.ts` + the `note` item of `ExportMenu` + the button under
+the Records compared table in `SignalEvidence.tsx`; reader's page
+`docs/record-consistency.md#the-discrepancy-note`. Stephen's decisions
+(3 Nov 2026) and the things that will be re-derived otherwise:
+
+- **Only the shown `RECORD_CONSISTENCY` disagreements qualify** —
+  `qualifying_items` reads the signal's `disagree` items and nothing else.
+  Nothing is compared at export time; a field the gate counts but does not
+  show stays out; name / address comparisons are their own consistency
+  ticket with the Phase 337 two-week gate first. A lapsed LEI is GLEIF's
+  record of the LEI, not the company (Phase 242), and a GLEIF parent is
+  consolidation, not a shareholder — neither is a register discrepancy. The
+  frontend's `discrepancyNoteAvailable` is the same rule (a backend test
+  parses the TypeScript), so the menu item is disabled with its reason
+  before a click can find the route's 404.
+- **One note per register that holds a disputed value, GLEIF included.**
+  `ADDRESSEE_SOURCES` = `OFFICIAL_REGISTER_SOURCES` + `gleif` (derived, never
+  typed); GLEIF's route is its data challenge facility (`GLEIF_CHALLENGE`).
+  Either side can be the stale one, so a Companies House ↔ GLEIF disagreement
+  is two notes. A non-register side (OpenAleph, OpenCorporates) is quoted as
+  the conflicting record and never addressed.
+- **Describe, never allege.** Values are the registers' own (`said`);
+  every fixed sentence is in `FIXED_TEXT` and `wording_issues` holds it to
+  the knowability `BANNED_VOCABULARY` (a test pins every one and the
+  rendered golden-shape note). `SCOPE_SENTENCE` says it is a register-record
+  note and **not** an AMLR / PSC beneficial-ownership discrepancy report —
+  nothing compared is BO information. Keep that sentence on every note.
+- **Routes come from the jurisdictions table**: `bo_register.discrepancy_route`
+  / `discrepancy_note` and `company_register.discrepancy_route`, three Notion
+  properties on *Beneficial ownership access status* synced by
+  `sync_jurisdictions.py` (`_COLUMNS`), keyed on the addressee adapter's
+  `SourceInfo.country`. GB, EE, LV, DK, NO drafted 3 Nov 2026 from the
+  registers' own pages and **left unverified** — the note text carries
+  "Drafted by Claude … unverified" until Stephen edits the row. A register
+  with no route prints `NO_ROUTE_SENTENCE`. Never type a route in code.
+- **Dates and licences come off the frozen BODS** (`statementDate`,
+  `source.retrievedAt`, `source.url`, `source_licensing`), so a saved
+  report's note carries its own day; the footer prints the saved-report
+  link and SHA-256 only when `saved` is passed (`open_for_export`), else
+  `NO_SAVED_SENTENCE`. The export never saves on the reader's behalf.
+  `REPORTER_FIELDS` are blank lines; nothing about the reader is stored.
+- **The route takes `lei` or `scheme` + `id`** (`_register_lookup_impl`),
+  Markdown or PDF (the report toolchain, 503 without it), `saved_report_id`
+  (never runs the check); 404 when nothing qualifies. The MCP tool is on the
+  heavy tier (`TOOL_TIERS`), Markdown plus `summary()`; `TOOL_NAMES` is 14.
+- **`ExportMenu`'s three Report items are one `ReportItem`** (forwardRef,
+  `busy` → `disabled`, `unavailable` → `aria-disabled` with the reason as the
+  description, the Keep item's rule). The design-system raw-button ratchet
+  went 6 → 5 on the file; a fourth raw `<button>` there would fail it.
+- No findings-golden file asserts a `RECORD_CONSISTENCY` disagreement, so
+  `tests/test_discrepancy_note.py` pins the golden *shape* (Companies House
+  dissolved since 3 Apr 2019 beside GLEIF ACTIVE) on a fixture.
+
 ## STATE_CONTROLLED states one accumulated share per state (Phase 338)
 
 `opencheck/ownership_math.py` (pure: `Edge`s in, an interval out) +

@@ -1720,6 +1720,48 @@ export async function downloadReportMarkdown(
   return downloadReport("/export/markdown", "md", lei, narrative, dispositions, savedReportId);
 }
 
+/**
+ * Download the discrepancy note — one page per register whose record
+ * differs — as Markdown (the discrepancy-report ticket). Same download
+ * mechanics as the report routes; a saved report renders its own run. The
+ * route answers 404 when the run found no disagreement, which the menu item
+ * prevents by being disabled first (`lib/discrepancyNote.ts`).
+ */
+export async function downloadDiscrepancyNote(
+  lei: string,
+  savedReportId?: string | null,
+  format: "markdown" | "pdf" = "markdown",
+): Promise<void> {
+  const r = await fetch(`${BASE_URL}/export/discrepancy-note`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lei, format, saved_report_id: savedReportId ?? null }),
+  });
+  if (!r.ok) {
+    let detail = `${r.status} ${r.statusText}`;
+    try {
+      const body = await r.json();
+      if (body?.detail) detail = body.detail;
+    } catch {
+      /* fall through */
+    }
+    throw new Error(detail);
+  }
+  const blob = await r.blob();
+  const cd = r.headers.get("Content-Disposition") ?? "";
+  const filename =
+    /filename="?([^"]+)"?/.exec(cd)?.[1] ??
+    `opencheck-discrepancy-note-${lei}.${format === "pdf" ? "pdf" : "md"}`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** ISO 17442 LEI: 20-char alphanumeric. */
 export const LEI_PATTERN = /^[A-Z0-9]{20}$/;
 export function isValidLei(lei: string): boolean {
