@@ -8,11 +8,7 @@ import PanelSection from "../ui/PanelSection";
 import { Chip } from "../ui/Chip";
 import { EitiAssessmentCard } from "./EitiAssessmentCard";
 import { ESG_SOURCE_META } from "./esgSources";
-import {
-  WIKIRATE_LEGACY_HOST,
-  wikirateLegacyEntityUrl,
-  wikiratePlatformUrl,
-} from "../../lib/wikirateLinks";
+import { wikirateCardLinks } from "../../lib/wikirateLinks";
 import { EitiZambiaCard } from "./EitiZambiaCard";
 import {
   eitiIdentLine,
@@ -332,6 +328,8 @@ interface WikirateBundle {
   // Wikirate 2.0 company page (same card id); absent on pre-Phase-321 runs,
   // platform.wikirate.org on runs from 10 Oct to 1 Nov 2026.
   platform_url?: string | null;
+  // "rest" when Wikirate 2.0's REST API answered; absent on legacy runs.
+  api?: string | null;
   matched_by: string;
   identifiers: Record<string, unknown>;
   total_answers: number;
@@ -352,8 +350,8 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
   const raw = hit.raw as unknown as WikirateBundle;
   const answers = (raw.latest_answers ?? []).slice(0, 6);
   const total = raw.total_answers ?? 0;
-  const entityUrl = wikirateLegacyEntityUrl(raw.name);
-  const platformUrl = wikiratePlatformUrl(raw.platform_url);
+  const links = wikirateCardLinks(raw);
+  const entityUrl = links.entity;
 
   return (
     <div className="rounded-oo border border-oo-esg-border bg-oo-esg-bg/40 overflow-hidden">
@@ -429,27 +427,18 @@ function WikirateCard({ hit }: { hit: SourceHit }) {
           </div>
         )}
 
-        <a
-          href={entityUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-3 inline-block text-oo-meta font-semibold text-oo-esg-text underline underline-offset-2 hover:text-oo-esg-strong"
-        >
-          View all {total.toLocaleString()} data points on {WIKIRATE_LEGACY_HOST} →
-          <span className="sr-only"> (opens in new tab)</span>
-        </a>
-
-        {platformUrl && (
+        {links.footer.map((link, i) => (
           <a
-            href={platformUrl}
+            key={link.href + link.label}
+            href={link.href}
             target="_blank"
             rel="noreferrer"
-            className="mt-1 block text-oo-meta font-semibold text-oo-esg-text underline underline-offset-2 hover:text-oo-esg-strong"
+            className={`${i === 0 ? "mt-3 inline-block" : "mt-1 block"} text-oo-meta font-semibold text-oo-esg-text underline underline-offset-2 hover:text-oo-esg-strong`}
           >
-            Company page on the new Wikirate platform →
+            {link.label}
             <span className="sr-only"> (opens in new tab)</span>
           </a>
-        )}
+        ))}
 
         <p className="mt-3 text-[10px] text-oo-esg-text">
           Open ESG metric answers researched by the Wikirate community ·

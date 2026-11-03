@@ -1102,9 +1102,9 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
     ct_adapter = REGISTRY.get("climatetrace")
     if ct_adapter is not None and hasattr(ct_adapter, "fetch_by_lei") and _want("climatetrace"):
         tasks.append(("climatetrace", ct_adapter.fetch_by_lei(ctx.lei)))
-    # Wikirate keys on LEI with a Wikidata-QID fallback — both resolve via
-    # the same company_identifier filter. The adapter returns None without
-    # a WIKIRATE_API_KEY (Cloudflare blocks anonymous server-side calls).
+    # Wikirate keys on LEI with a Wikidata-QID fallback, on its REST API when
+    # WIKIRATE_PUBLISHABLE_KEY + WIKIRATE_API_TOKEN are set and on the legacy
+    # API (WIKIRATE_API_KEY) otherwise. Unconfigured, the adapter returns None.
     wr_adapter = REGISTRY.get("wikirate")
     if wr_adapter is not None and hasattr(wr_adapter, "fetch_by_lei") and _want("wikirate"):
         tasks.append((

@@ -511,6 +511,22 @@ class Settings(BaseSettings):
     # are blocked by Wikirate's Cloudflare bot protection (verified
     # 2026-07-07), so the adapter skips silently when unset. 60 req/min.
     wikirate_api_key: str | None = Field(default=None, alias="WIKIRATE_API_KEY")
+    # Wikirate's new REST API (https://wikirate.org/api, launched 1 Nov 2026):
+    # three values from the account's "API access" page, under Wikirate's own
+    # .env names. The publishable key is the same for every user; the token
+    # (``wr_…``) is personal and secret. With both set the adapter reads the
+    # REST API; the legacy API (WIKIRATE_API_KEY) is retired after 31 Dec 2026.
+    wikirate_api_url: str = Field(
+        default="https://data.wikirate.org", alias="WIKIRATE_API_URL"
+    )
+    wikirate_publishable_key: str | None = Field(
+        default=None, alias="WIKIRATE_PUBLISHABLE_KEY"
+    )
+    wikirate_api_token: str | None = Field(default=None, alias="WIKIRATE_API_TOKEN")
+    # Which Wikirate API the adapter reads: ``auto`` (the REST API when its
+    # credentials are set, else the legacy API), ``rest`` or ``legacy``. Set
+    # ``legacy`` on Render to roll back without a deploy.
+    wikirate_backend: str = Field(default="auto", alias="WIKIRATE_BACKEND")
 
     # --- OpenFIGI (securities enrichment: ISIN → FIGI / security type) ---
     # Free key from https://www.openfigi.com/api — sent as the X-OPENFIGI-APIKEY

@@ -171,6 +171,9 @@ jobs:
           SUDREG_CLIENT_ID: ${{ secrets.SUDREG_CLIENT_ID }}
           SUDREG_CLIENT_SECRET: ${{ secrets.SUDREG_CLIENT_SECRET }}
           WIKIRATE_API_KEY: ${{ secrets.WIKIRATE_API_KEY }}
+          # With both REST secrets set the probe reads Wikirate's REST API.
+          WIKIRATE_PUBLISHABLE_KEY: ${{ secrets.WIKIRATE_PUBLISHABLE_KEY }}
+          WIKIRATE_API_TOKEN: ${{ secrets.WIKIRATE_API_TOKEN }}
           ZEFIX_USERNAME: ${{ secrets.ZEFIX_USERNAME }}
           ZEFIX_PASSWORD: ${{ secrets.ZEFIX_PASSWORD }}
         run: |
