@@ -4885,6 +4885,15 @@ otherwise:
 - **Findings regression**: class `disclosure`; a golden file may carry
   `"disclosure": {"gleif": ["exempt"]}` (a floor). Measured on production
   exports, 3 Nov 2026: Bank Saderat PLC (Companies House declared, GLEIF parent
-  declared), Eli Lilly and Shell (GLEIF exempt). Shell's Companies House reads
-  `none_filed`: a company on a UK regulated market keeps no PSC register, and
-  OpenCheck does not infer that exemption from a listing.
+  declared), Eli Lilly and Shell (GLEIF exempt; Shell's Companies House
+  exempt).
+- **Companies House exemptions are read, never inferred from a listing**
+  (Stephen, 3 Nov 2026). `CompaniesHouseAdapter._exemptions` follows the PSC
+  list's `links.exemptions` to `/company/{n}/exemptions` (no link, no call; a
+  404 is `{}`, cached; a failure is `None`, uncached, and a `source_read`
+  degradation for the subject). `current_exemptions` keeps periods not yet
+  ended; each is `exempt` with the register's own sentence
+  (`CH_EXEMPTION_DESCRIPTIONS`, pinned to a verbatim copy of
+  api-enumerations' `exemption_descriptions.yml` in `tests/fixtures/companies_house/`),
+  and the card's finding says it ("no person with significant control named;
+  exempt from the PSC register, with shares on a UK regulated market").

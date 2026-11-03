@@ -120,6 +120,9 @@ class CHBundle(_Base):
     profile: CHProfile
     pscs: CHPscList | None = None
     psc_statements: CHPscStatementList | None = None
+    # The disclosure-status ticket: ``/company/{n}/exemptions`` — ``{}`` when
+    # the PSC list links to none, ``None`` when the read failed.
+    exemptions: dict[str, Any] | None = None
     officers: dict[str, Any] = Field(default_factory=dict)
     related_companies: dict[str, Any] = Field(default_factory=dict)
     # Phase 188: how the chain in ``related_companies`` was found — counts and

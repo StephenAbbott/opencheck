@@ -40,6 +40,9 @@
   "disclosure": {
     "gleif": [
       "exempt"
+    ],
+    "companies_house": [
+      "exempt"
     ]
   }
 }

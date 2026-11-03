@@ -158,7 +158,11 @@ def bundle_hints(source_id: str, raw: Mapping[str, Any] | None) -> list[dict[str
     ``none_filed``, not ``not_provided``: an entry can be withheld for a
     person at risk or a minor, and the open data does not say so.
     """
-    if source_id != "ariregister" or not isinstance(raw, Mapping):
+    if not isinstance(raw, Mapping):
+        return []
+    if source_id == "companies_house":
+        return _companies_house_hints(raw)
+    if source_id != "ariregister":
         return []
     if raw.get("bo_not_read"):
         return [_entry("unreachable", "beneficial_owners",
@@ -182,6 +186,34 @@ def bundle_hints(source_id: str, raw: Mapping[str, Any] | None) -> list[dict[str
     if general.get("bo_obliged") is True:
         return [_entry("none_filed", "beneficial_owners", detail="due, none published")]
     return []
+
+
+def _companies_house_hints(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """A company on a regulated market keeps no PSC register: Companies House
+    says so at ``/company/{n}/exemptions``, which the adapter reads when the
+    PSC list links to it. Each current exemption type is ``exempt`` with the
+    register's own sentence (Stephen, 3 Nov 2026: Shell plc read "None on
+    record" until this). A failed read is ``unreachable``, never silence."""
+    if "exemptions" not in raw:
+        return []  # a bundle from before the read: nothing to say
+    if raw.get("exemptions") is None:
+        return [_entry("unreachable", "beneficial_owners",
+                       detail="PSC exemptions not read")]
+    from .bods.lifecycle import today_iso
+    from .findings import human_date
+    from .sources.companies_house import CH_EXEMPTION_DESCRIPTIONS, current_exemptions
+
+    out = []
+    for kind, since in current_exemptions(dict(raw["exemptions"]), today_iso()):
+        template = CH_EXEMPTION_DESCRIPTIONS.get(kind)
+        if template is None:
+            detail = f"exempt from the PSC register ({kind})"
+        elif since:
+            detail = template.format(exempt_from=human_date(since) or since)
+        else:
+            detail = template.replace("From {exempt_from} t", "T")
+        out.append(_entry("exempt", "beneficial_owners", detail=detail, reason=kind))
+    return out
 
 
 # --- reading one source's statements ----------------------------------------

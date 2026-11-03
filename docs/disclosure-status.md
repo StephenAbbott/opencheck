@@ -23,7 +23,7 @@ changes the verdict or reaches the AI summary. `OPAQUE_OWNERSHIP` and
 |---|---|---|
 | `declared` | Declared (N) | The source names N current owners or controllers (or, for GLEIF, a consolidating parent). An owner the source says exists but does not name (`informationUnknownToPublisher`) counts as declared. |
 | `none_exist` | Source says none exist | The source says there is no owner to declare: a Companies House "no registrable person" statement, a Ukrainian filed absence with a reason, Estonia's fallback (no owner identified; board members named instead). |
-| `exempt` | Exempt | A lawful exemption from filing: a Ukrainian statutory or legal-form exemption, Estonia's "need not file", a GLEIF reporting exception that says there is no consolidating parent. |
+| `exempt` | Exempt | A lawful exemption from filing: a Companies House PSC exemption (shares on a regulated market), a Ukrainian statutory or legal-form exemption, Estonia's "need not file", a GLEIF reporting exception that says there is no consolidating parent. |
 | `not_provided` | Not provided | Required but not supplied: Companies House "PSC exists but not identified", "contacted but no response", restriction notices; GLEIF's `NON_PUBLIC` family. |
 | `none_filed` | None on record | The source holds the company's record but no owner and no reason. Never worded as an exemption or as non-compliance. |
 | `restricted` | Not public | The source is the national register of a country whose beneficial-ownership tier is closed to the public under the [knowability](knowability.md) access status. |
@@ -80,8 +80,30 @@ There is no precedence rule. Companies House can name two PSCs and also file
 | `psc-contacted-but-no-response`, `psc-has-failed-to-confirm-changed-details`, `restrictions-notice-issued-to-psc`, `information-not-provided-for-at-least-one-beneficial-owner`, and the combined unidentified-and-not-provided statement | `interestedPartyHasNotProvidedInformation` | `not_provided` |
 | Positive update-period declarations (`all-beneficial-owners-identified`, …) | none (no statement) | — |
 
-The `-partnership` variants map the same way. A company with no PSC and no
-statement reads `none_filed`.
+The `-partnership` variants map the same way.
+
+### Companies House PSC exemptions
+
+A company with voting shares on a regulated market keeps no PSC register.
+Companies House links such a company's PSC list to
+`/company/{number}/exemptions` (`links.exemptions`); the adapter reads it only
+when that link is there. Every exemption period that has not ended
+(`exempt_to` absent or not yet passed) is `exempt`, with Companies House's own
+sentence from
+[`exemption_descriptions.yml`](https://github.com/companieshouse/api-enumerations/blob/master/exemption_descriptions.yml):
+
+| `exemption_type` | Value |
+|---|---|
+| `psc-exempt-as-trading-on-uk-regulated-market` | `exempt` |
+| `psc-exempt-as-trading-on-eu-regulated-market` | `exempt` |
+| `psc-exempt-as-trading-on-regulated-market` (other than the UK) | `exempt` |
+| `psc-exempt-as-shares-admitted-on-market` (a market listed in the PSC Regulations 2016) | `exempt` |
+| `disclosure-transparency-rules-chapter-five-applies` | `exempt` — the register's own words say the DTR5 issuer "may be exempt", and the chip carries them |
+
+A failed read of the exemptions is `unreachable` ("PSC exemptions not read")
+and a `source_read` degradation; it is never cached. A company with no PSC, no
+statement and no current exemption reads `none_filed`. Shell plc (04366849)
+read `none_filed` until the adapter followed the link.
 
 ### GLEIF reporting exceptions (`covers: parent`)
 
