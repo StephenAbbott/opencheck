@@ -9,6 +9,8 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
+from ..annotations import annotate
+from ..residence import residence_address, residence_note
 from ..statements import (
     content_addressed,
     SOURCE_NAMES,
@@ -109,7 +111,8 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     seen: set[str] = set()
 
     def _emit_party(kind: str, name_: str, *, nzbn_: str | None = None,
-                    number_: str | None = None, idx: int = 0) -> tuple[str, str]:
+                    number_: str | None = None, idx: int = 0,
+                    residence: str | None = None) -> tuple[str, str]:
         """Emit a person/entity statement (deduped) and return (ip_id, ip_type)."""
         if kind == "entity":
             local = nzbn_ or number_ or f"{local_company_id}:e:{idx}"
@@ -124,8 +127,17 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             return _stable_id("nz_companies", "entity", local), "entity"
         local = f"{local_company_id}:p:{name_}"
         if local not in seen:
+            # The residential block's country (never an alternative address);
+            # the first role or holding naming the person supplies it.
+            residence_addr = residence_address(residence)
             yield_stmt = make_person_statement(
-                source_id="nz_companies", local_id=local, full_name=name_, source_url=source_url,
+                source_id="nz_companies", local_id=local, full_name=name_,
+                addresses=[residence_addr] if residence_addr else (),
+                source_url=source_url,
+            )
+            annotate(
+                yield_stmt,
+                residence_note(residence, 0, register="The New Zealand Companies Office"),
             )
             _emit_party.pending.append(yield_stmt)
             seen.add(local)
@@ -142,6 +154,7 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             continue
         ip_id, ip_type = _emit_party(
             role.get("kind", "person"), rname, nzbn_=role.get("nzbn"), idx=i,
+            residence=role.get("residence_country"),
         )
         for s in _emit_party.pending:
             yield s
@@ -172,6 +185,7 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         kind = sh.get("kind", "person")
         ip_id, ip_type = _emit_party(
             kind, sname, nzbn_=sh.get("nzbn"), number_=sh.get("company_number"), idx=1000 + i,
+            residence=sh.get("residence_country"),
         )
         for s in _emit_party.pending:
             yield s

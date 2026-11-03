@@ -179,6 +179,25 @@ def _role_address(r: dict[str, Any]) -> dict[str, Any]:
     return asic if isinstance(asic, dict) else {}
 
 
+def _residence_country(blocks: Any) -> str | None:
+    """The person's country of residence: the ``countryCode`` of a current
+    residential block (``PHYSICAL``, or untyped — the pre-Act spelling of
+    residential). Never an ``ALTERNATIVE`` block: under the Address Act that
+    is typically an agent's office and says nothing about where the person
+    lives. Never ``roleAsicAddress``. Country only — the street stays out."""
+    if isinstance(blocks, dict):
+        blocks = [blocks]
+    for a in blocks or []:
+        if not isinstance(a, dict) or a.get("endDate"):
+            continue
+        if _address_type(a) not in (None, "PHYSICAL"):
+            continue
+        code = str(a.get("countryCode") or "").strip().upper()
+        if code:
+            return code
+    return None
+
+
 def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Normalise governance roles (directors etc.) → person/entity role-holders."""
     out: list[dict[str, Any]] = []
@@ -209,6 +228,7 @@ def _norm_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "search_name": _person_search_name(person),
                 "role_type": role_type, "status": status, "start": start, "end": end,
                 "address": addr_str, "paf_id": paf, "address_type": addr_type,
+                "residence_country": _residence_country(r.get("roleAddress")),
             })
     return out
 
@@ -263,6 +283,7 @@ def _norm_shareholders(company_details: dict[str, Any]) -> list[dict[str, Any]]:
                     "search_name": _person_search_name(indiv),
                     "shares": shares, "percent": percent, "jointly_held": joint, "start": start,
                     "address": addr_str, "paf_id": paf, "address_type": addr_type,
+                    "residence_country": _residence_country(addr),
                 })
     return out
 
@@ -350,7 +371,9 @@ class NzCompaniesAdapter(SourceAdapter):
         if not number:
             return _bundle(None, [], [], None, "", True)
 
-        cache_key = f"{_CACHE_NS}/company/{number}"
+        # company-v2: the normalised rows gained ``residence_country`` (the
+        # country-of-residence ticket); a v1 entry never expires and lacks it.
+        cache_key = f"{_CACHE_NS}/company-v2/{number}"
         if not self.info.live_available and not self._cache.has(cache_key):
             return _bundle(None, [], [], None, "", True)
 

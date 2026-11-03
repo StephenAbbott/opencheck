@@ -591,7 +591,7 @@ then cached the bundle built from it, and OpenCorporates' `_get_optional`
 cached `None` on any exception — neither expired, so one outage made a
 company read "found, nothing filed" until the next deploy. A bundle built
 while a part was absent or failed must not be cached either (ARES caches its
-bundle, under `ares/bundle-v2/`, only when VR returned data).
+bundle, under `ares/bundle-v3/`, only when VR returned data).
 `tests/test_cache_hygiene.py` pins both.
 
 ## Other conventions
