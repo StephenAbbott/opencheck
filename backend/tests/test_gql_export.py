@@ -232,8 +232,11 @@ def test_export_csv_is_the_tables_without_the_property_graph(monkeypatch):
         names = zf.namelist()
         prefix = names[0].split("/", 1)[0]
         members = {n.split("/", 1)[1] for n in names}
+    # The data dictionary says what the columns mean; it is not the property
+    # graph coming back (the DDL and the queries are what must stay out).
     assert members == {
-        "entity_nodes.csv", "person_nodes.csv", "ownership_edges.csv", "LICENSES.md"
+        "entity_nodes.csv", "person_nodes.csv", "ownership_edges.csv",
+        "LICENSES.md", "DATA-DICTIONARY.md",
     }, members
     assert prefix.endswith("-csv")
 
