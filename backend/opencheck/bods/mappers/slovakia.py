@@ -251,7 +251,7 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             nationality = _rpvs_country(countries.get("nationality"))
             nationalities = [nationality] if nationality else []
             residence_country = _rpvs_country(countries.get("residence"))
-            addresses = (
+            addresses: list[dict[str, Any]] = (
                 [{"type": "residence", "country": residence_country}]
                 if residence_country
                 else []
