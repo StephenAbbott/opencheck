@@ -4126,6 +4126,44 @@ will be re-derived otherwise:
 
 ---
 
+## The output data dictionary is generated, and a new output key must be described (the data-dictionary ticket)
+
+`opencheck/data_dictionary.py` renders `docs/data-dictionary.md`;
+`scripts/generate_data_dictionary.py --check` runs in the drift-checks
+workflow beside the OKF check. Things that will be re-derived otherwise:
+
+- **Do not hand-edit `docs/data-dictionary.md`.** Regenerate it
+  (`uv run python scripts/generate_data_dictionary.py` from `backend/`)
+  after any change to a response model, `RiskSignal` / `DegradedSource`, a
+  degradation reason or check label, an export writer, an MCP tool's return
+  dict or the registries below — CI fails on a stale file.
+- **A field's words live beside the field.** The API tables are read from
+  the source with `ast`: `Field(description=)` first, else the `#:` (or `#`)
+  comment block directly above the field. Models in
+  `data_dictionary.STRICT_MODELS` must describe every field
+  (`test_data_dictionary.py`); a new model in a documented router renders
+  with whatever comments it has — add it to `API_MODELS` and, once every
+  field is described, to the strict set.
+- **A new `opencheck*` key in a BODS statement is registered in
+  `EXTENSIONS`** (where it sits, what it means, an example, the phase)
+  before it ships: the conftest mapper guard fails any yielded statement
+  carrying an unregistered one, and a string literal of that shape anywhere
+  in the package fails the suite. `gleifLegalEntityEvent` is the one
+  documented key outside the prefix.
+- **A new export column or row key needs a sentence in
+  `COLUMN_DESCRIPTIONS`** — the bods-gql dataclasses, `batch.CSV_COLUMNS`,
+  and the Senzing / FtM / AML AI keys the writers produce for
+  `sample_bundle()`. An undescribed one is `UndescribedColumnError`, never a
+  blank row. A key a writer stops producing is simply no longer rendered.
+- **The CSV, BigQuery and AML AI zips carry `DATA-DICTIONARY.md`**
+  (`render_zip_dictionary(family)`), and `LICENSES.md` links the page; both
+  read the same descriptions, so there is nothing to keep in step.
+- MCP keys are harvested from the tool bodies (`_KeyHarvester`: a returned
+  dict literal, a name assigned one plus `name["k"] = …` / `.update({…})`,
+  and one hop into `mcp.shaping` or `owners`). A tool whose answer is a
+  model dump the harvester cannot follow gets a sentence in
+  `MCP_RESPONSE_NOTES` instead of a key list.
+
 ## A statement names its source by id, and a miss is loud (Phase 267)
 
 `opencheck/bods/source_ids.py`. Every licence decision about a statement —

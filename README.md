@@ -61,6 +61,7 @@ The BOVS icons and country-flag SVGs are committed under `frontend/public/`, so 
 | [How it works](docs/how-it-works.md) | Step-by-step lookup flow, per-adapter detail, Open Ownership BODS bundles, API surface, project structure |
 | [Dates](docs/dates.md) | The four date clocks, which sources supply a declaration date, how precision is recorded |
 | [Sources](docs/sources.md) | Full adapter table — active sources plus inactive bulk-only adapters, license, entry point, description |
+| [Output data dictionary](docs/data-dictionary.md) | Every output field, generated from the code: API responses, the BODS extension keys and annotations, signal and degradation objects, export columns (CSV / Excel / Senzing / FtM / AML AI), MCP tool responses |
 | [Risk signals](docs/risk-signals.md) | All signal codes: source-derived, structural complexity (with regulatory crosswalk), FATF / EU jurisdiction, state-controlled/SOE, cross-source name match, ICIJ Offshore Leaks |
 | [Subsidiary network](docs/subsidiary-network.md) | Lazy GLEIF Level-2 reveal — direct + ultimate children mapped to BODS, graph (small) or table + export (large) |
 | [Configuration](docs/configuration.md) | Environment variables, Render deployment, running the test suite |

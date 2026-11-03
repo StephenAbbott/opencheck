@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 
 from .. import __version__
 from .. import consistency as _consistency
+from .. import data_dictionary as _data_dictionary
 from ..bods import (
     aml_ai_counts,
     build_aml_ai_files,
@@ -592,6 +593,7 @@ def _build_gql_zip(
         for name, content in build_gql_files(bods).items():
             zf.writestr(f"{base}/{name}", content)
         zf.writestr(f"{base}/LICENSES.md", licenses_md)
+        zf.writestr(f"{base}/DATA-DICTIONARY.md", _data_dictionary.render_zip_dictionary("csv"))
     return buf.getvalue()
 
 
@@ -616,6 +618,9 @@ def _build_csv_zip(
             if name.endswith(".csv"):
                 zf.writestr(f"{base}/{name}", content)
         zf.writestr(f"{base}/LICENSES.md", licenses_md)
+        # The columns' meanings travel with the tables (the data dictionary,
+        # rendered from the same descriptions as docs/data-dictionary.md).
+        zf.writestr(f"{base}/DATA-DICTIONARY.md", _data_dictionary.render_zip_dictionary("csv"))
     return buf.getvalue()
 
 
@@ -690,6 +695,7 @@ def _build_aml_ai_zip(
         for name, content in build_aml_ai_files(bods).items():
             zf.writestr(f"{base}/{name}", content)
         zf.writestr(f"{base}/LICENSES.md", licenses_md)
+        zf.writestr(f"{base}/DATA-DICTIONARY.md", _data_dictionary.render_zip_dictionary("amlai"))
     return buf.getvalue()
 
 
@@ -1035,6 +1041,12 @@ def _build_licenses_md(
         "It combines data from multiple open-data sources, each with its own "
         "licence. The **most restrictive** licence applies to the combined "
         "dataset for re-use."
+    )
+    lines.append("")
+    lines.append(
+        "What each field and column means is in the output data dictionary, "
+        f"generated from OpenCheck's code: {_data_dictionary.DOC_URL} — the tabular "
+        "packages (CSV, BigQuery, AML AI) also carry their own `DATA-DICTIONARY.md`."
     )
     lines.append("")
 

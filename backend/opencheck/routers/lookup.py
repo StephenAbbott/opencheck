@@ -404,27 +404,56 @@ class SearchResponse(BaseModel):
 
 
 class DeepenResponse(BaseModel):
+    """One source's full record for one hit — the Data drawer's payload."""
+
+    #: Adapter id of the source read.
     source_id: str
+    #: The adapter-local id of the record read (``SourceHit.hit_id``).
     hit_id: str
+    #: The source's own payload, as fetched — redacted to a notice for a
+    #: source whose licence forbids republishing it (OpenCorporates).
     raw: dict[str, Any]
+    #: The BODS v0.4 statements mapped from this one source's record.
     bods: list[dict[str, Any]]
+    #: Shape problems the BODS validator found in ``bods`` — empty when clean.
     bods_issues: list[str]
+    #: The source's licence identifier (``OGL-3.0``, ``CC-BY-NC-4.0`` …).
     license: str
+    #: A per-record licence notice the adapter attached (a non-commercial
+    #: source's wording), or None.
     license_notice: str | None = None
+    #: The signals this one source's record produced on its own — never the
+    #: cross-source RELATED_* screens, which need the merged graph.
     risk_signals: list[dict[str, Any]] = []
 
 
 class ReportResponse(BaseModel):
     """Aggregate post-search synthesis for a single subject."""
 
+    #: What was looked up: the LEI, the ``SCHEME:id`` register reference or
+    #: the search string.
     query: str
+    #: ``entity`` or ``person`` — what the query names.
     kind: SearchKind
+    #: One ``SourceHit`` per source that answered with a record or a note card.
     hits: list[SourceHit]
+    #: Sources that failed, keyed by source id, each a secret-scrubbed one-line
+    #: error. A source here is also a ``degraded_sources`` entry.
     errors: dict[str, str]
+    #: Confirmed bridges between hits that describe the same subject — one
+    #: ``CrossSourceLink`` per shared identifier (see *Objects inside lists*).
     cross_source_links: list[dict[str, Any]]
+    #: Every ``RiskSignal`` the run produced, after merging — see *Risk
+    #: signals and degraded sources*.
     risk_signals: list[dict[str, Any]]
+    #: The merged BODS v0.4 bundle: every deepened source's statements, one
+    #: per id, the subject's own records folded onto one node.
     bods: list[dict[str, Any]]
+    #: Shape problems the BODS validator found in ``bods`` — empty when clean.
     bods_issues: list[str]
+    #: Per-record licence notices adapters attached, each ``source_id`` /
+    #: ``hit_id`` / ``notice`` — a non-commercial source's wording to carry
+    #: with the data.
     license_notices: list[dict[str, str]]
     #: Name-only "likely same" entity candidates (same name + jurisdiction, no
     #: shared identifier) — human-review suggestions, never auto-merges.
@@ -528,14 +557,22 @@ class LookupResponse(ReportResponse):
     """Same shape as /report, with the LEI echoed back and the GLEIF
     bundle surfaced separately so the UI doesn't have to dig for it."""
 
+    #: The LEI the run was anchored on.
     lei: str
+    #: GLEIF's legal name for it.
     legal_name: str | None = None
+    #: GLEIF's jurisdiction code — ISO 3166-1 alpha-2, or 3166-2 for a US
+    #: state (``US-DE``).
     jurisdiction: str | None = None
+    #: The register numbers derived from the LEI record for dispatching the
+    #: national adapters, keyed by the adapter's lookup key (``gb_coh``,
+    #: ``no_orgnr`` …). Dispatch keys, not corroborated identifiers.
     derived_identifiers: dict[str, str] = {}
-    # Provenance: True when served from the short-lived replay cache rather
-    # than a fresh run, with the wall-clock completion time of the original
-    # run. ``?refresh=true`` always yields a fresh run.
+    #: True when served from the short-lived replay cache rather than a fresh
+    #: run. ``?refresh=true`` always yields a fresh run.
     replayed: bool = False
+    #: The wall-clock completion time of the original run when ``replayed``;
+    #: None on a live run, so a live run is never badged as cached.
     fetched_at: str | None = None
     # Phase 164: the source ids the pipeline announced as applicable to this
     # company (the ``sources_applicable`` stream event; the GLEIF anchor is
@@ -2348,8 +2385,11 @@ class RegisterLookupResponse(LookupResponse):
     ``LookupResponse`` (exports, the MCP shaping, saved reports) reads this
     one unchanged."""
 
+    #: Always None: a register-anchored subject has no LEI.
     lei: str | None = None  # type: ignore[assignment]
+    #: The register scheme the subject was anchored on (``GB-COH``, ``LT-JAR``).
     scheme: str
+    #: The subject's number on that register, in the register's canonical form.
     id: str
 
 
@@ -2967,9 +3007,13 @@ async def _lookup_sse_events(
 class LookupSourceResponse(BaseModel):
     """Result of re-running a single source within an existing lookup."""
 
+    #: The LEI of the run the source was retried in.
     lei: str
+    #: The adapter id retried.
     source_id: str
+    #: The hits the retry produced — the same shape the run's ``hits[]`` carry.
     hits: list[SourceHit]
+    #: A secret-scrubbed one-line error when the retry failed, else None.
     error: str | None = None
     #: ``schema_changed`` / ``timeout`` / ``fetch_error`` when ``error`` is set
     #: — the same words a ``source_error`` event carries (Phase 331).
