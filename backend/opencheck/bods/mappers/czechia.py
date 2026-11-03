@@ -12,6 +12,7 @@ import pycountry
 
 from .. import liveness as _liveness
 from ..annotations import annotate, entry_date_as_start
+from ..residence import residence_address, residence_note
 from ..statements import (
     content_addressed,
     SOURCE_NAMES,
@@ -25,6 +26,32 @@ from ..statements import (
 # ----------------------------------------------------------------------
 # ARES (Czechia) → BODS
 # ----------------------------------------------------------------------
+
+
+def _ares_person(
+    local_id: str,
+    name: str,
+    nationalities: list[dict[str, str]],
+    birth_date: str | None,
+    residence_code: str | None,
+    source_url: str,
+) -> dict[str, Any]:
+    """A person named on the commercial register, with the country of the
+    residence (bydliště) the register files — the country only."""
+    residence = residence_address(residence_code)
+    stmt = make_person_statement(
+        source_id="ares",
+        local_id=local_id,
+        full_name=name,
+        nationalities=nationalities,
+        birth_date=birth_date,
+        addresses=[residence] if residence else (),
+        source_url=source_url,
+    )
+    return annotate(
+        stmt,
+        residence_note(residence_code, 0, register="The Czech commercial register"),
+    )
 
 
 @content_addressed
@@ -173,13 +200,9 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                     pass
 
             person_local_id = f"{prefix}-person-{ico}-{idx}"
-            person_stmt = make_person_statement(
-                source_id="ares",
-                local_id=person_local_id,
-                full_name=o_name,
-                nationalities=nationalities,
-                birth_date=birth_date,
-                source_url=source_url,
+            person_stmt = _ares_person(
+                person_local_id, o_name, nationalities, birth_date,
+                owner.get("residence_country"), source_url,
             )
             yield person_stmt
             interested_party_id = person_stmt["recordId"]
@@ -284,13 +307,9 @@ def map_ares(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                     pass
 
             dir_local_id = f"director-person-{ico}-{idx}"
-            dir_stmt = make_person_statement(
-                source_id="ares",
-                local_id=dir_local_id,
-                full_name=d_name,
-                nationalities=nats_d,
-                birth_date=birth_date_d,
-                source_url=source_url,
+            dir_stmt = _ares_person(
+                dir_local_id, d_name, nats_d, birth_date_d,
+                director.get("residence_country"), source_url,
             )
         else:
             d_ico: str | None = director.get("ico")

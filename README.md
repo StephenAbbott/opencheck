@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 436** — The Wikirate source now reads Wikirate 2.0's REST API, with a setting to fall back to the legacy API until that is retired at the end of 2026.
+**Latest: Phase 439** — Officers from France's Registre National des Entreprises now carry their country of residence, read from the country of their home address.
 
 → [Full development history](docs/status.md)
 

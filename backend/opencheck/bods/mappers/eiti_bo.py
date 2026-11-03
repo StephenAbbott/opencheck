@@ -11,6 +11,7 @@ import re
 from typing import Any, Iterable
 
 from ..annotations import annotate, commenting, pointer, transformation
+from ..residence import residence_address, residence_note
 from ..statements import (
     content_addressed,
     _addr,
@@ -461,15 +462,36 @@ def _eiti_bo_map_armenia(
             pep_exposure = None
             if s.get("hasPepStatus"):
                 pep_exposure = {"status": "isPep", "details": s.get("pepStatusDetails") or []}
+            # The register's v0.2 person addresses are residential. The
+            # street stays out (data-minimisation, below); the country is
+            # published as the person's residence — the first address that
+            # names one.
+            am_residence_filed = next(
+                (
+                    str(a.get("country")).strip()
+                    for a in (s.get("addresses") or [])
+                    if isinstance(a, dict) and str(a.get("country") or "").strip()
+                ),
+                None,
+            )
+            am_residence = residence_address(am_residence_filed)
             stmt = make_person_statement(
                 source_id="eiti_bo",
                 local_id=f"am:{orig}",
                 full_name=full_name,
                 nationalities=nationalities,
                 birth_date=birth_out,
+                addresses=[am_residence] if am_residence else (),
                 source_url=source_url,
                 statement_date=stmt_date,
                 political_exposure=pep_exposure,
+            )
+            annotate(
+                stmt,
+                residence_note(
+                    am_residence_filed, 0,
+                    register="The Armenian beneficial ownership register",
+                ),
             )
             # The register publishes its own Latin transliteration of every
             # name, and it beats the factory's. ``make_person_statement``
@@ -504,8 +526,9 @@ def _eiti_bo_map_armenia(
                         "to year-month by OpenCheck.",
                     ),
                 )
-            # Residential addresses are published by the register but omitted
-            # here (data-minimisation; matches the cac_nigeria precedent).
+            # Residential street addresses are published by the register but
+            # omitted here (data-minimisation; matches the cac_nigeria
+            # precedent). Only their country is carried, as residence above.
             yield stmt
 
         elif kind == "ownershipOrControlStatement":

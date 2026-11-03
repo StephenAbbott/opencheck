@@ -72,7 +72,9 @@ _CACHE_NS = "ares"
 # because the register was down, remembered for good. Nothing is migrated:
 # the old entries are simply never read again, and the next lookup rebuilds
 # from the (still valid) aggregate cache plus a fresh VR answer.
-_BUNDLE_NS = f"{_CACHE_NS}/bundle-v2"
+# bundle-v3: person rows gained ``residence_country`` (the country-of-residence
+# ticket).
+_BUNDLE_NS = f"{_CACHE_NS}/bundle-v3"
 
 # Degradation details — fixed sentences, never an entity name (the
 # ``DegradedSource`` privacy contract).
@@ -195,6 +197,9 @@ def _extract_person(member: dict) -> dict[str, Any] | None:
             "birth_date": fo.get("datumNarozeni"),
             "nationality": fo.get("statniObcanstvi"),
             "address": addr.get("textovaAdresa"),
+            # A natural person's address in the commercial register is their
+            # residence (bydliště); only its country is published as BODS.
+            "residence_country": addr.get("kodStatu"),
         }
     po = member.get("pravnickaOsoba")
     if po:

@@ -101,6 +101,7 @@ from .mappers.wikidata import (  # noqa: F401  (re-exported: see the module docs
 
 from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _CH_PUBLIC,
+    _CH_REGISTER,
     _COUNTRY_TEXT_ALIASES,
     _ChCompany,
     _ChPscHop,
@@ -108,7 +109,9 @@ from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _PSC_STATEMENT_NO_BO,
     _PSC_STATEMENT_REASON,
     _annotate_verified_people,
+    _ch_add_residence,
     _ch_appointments_are_corporate,
+    _ch_appointments_residence,
     _ch_corporate_officer_entity,
     _ch_corporate_officer_statements,
     _ch_director_statements,
@@ -163,9 +166,11 @@ from .mappers.netherlands import (  # noqa: F401  (re-exported, Phase 246)
 )
 from .mappers.france import (  # noqa: F401  (re-exported, Phase 246)
     _INPI_OTHER_INFLUENCE_CODES,
+    _INPI_REGISTER,
     _INPI_ROLE_LABELS,
     _inpi_address,
     _inpi_individu_statements,
+    _inpi_residence_country,
     _inpi_role_interest_type,
     map_inpi,
 )
@@ -399,6 +404,7 @@ from .mappers.lithuania import (  # noqa: F401  (re-exported, Phase 246)
     map_jar_lithuania,
 )
 from .mappers.czechia import (  # noqa: F401  (re-exported, Phase 246)
+    _ares_person,
     map_ares,
 )
 from .mappers.poland import (  # noqa: F401  (re-exported, Phase 246)
