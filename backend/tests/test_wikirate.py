@@ -78,6 +78,15 @@ ANSWER_ITEMS = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _legacy_api_only(monkeypatch):
+    """These tests are the legacy API's: no REST credentials, whatever is set.
+
+    The REST API's tests are in ``test_wikirate_rest.py``.
+    """
+    monkeypatch.setattr(wikirate_mod, "_rest_credentials", lambda: None)
+
+
 @pytest.fixture
 def adapter(monkeypatch) -> WikirateAdapter:
     monkeypatch.setattr(wikirate_mod, "_api_key", lambda: "test-key")

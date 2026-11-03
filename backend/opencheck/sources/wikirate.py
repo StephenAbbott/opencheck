@@ -75,11 +75,44 @@ and a new token; moving onto it before the legacy API is retired is
 stage 2 of the Notion ticket "Update Wikirate source for its platform
 changes". The cache namespace changed with the host so no payload from
 the old host is replayed.
+
+The REST API (Wikirate 2.0, read 2 Nov 2026)
+--------------------------------------------
+``https://data.wikirate.org/rest/v1`` (documented at wikirate.org/api) is a
+read-only PostgREST API. Every request carries three headers: ``apikey`` (the
+publishable key, the same for every user), ``x-api-token`` (the personal
+``wr_…`` token) and ``Accept-Profile: api`` — without the last every endpoint
+answers 404 ``PGRST205``. A bad token is 401 ``PT401``; an empty match is
+``200 []``; a total comes back in ``Content-Range`` (``0-0/2295``) when
+``Prefer: count=exact`` is sent, and that answer is **HTTP 206**.
+
+Measured against the docs on 2 Nov 2026, with BP (637), Eli Lilly (56477) and
+Rosneft (47340):
+
+* ``company_identifiers`` uses the legacy key names, not the docs' ``lei`` /
+  ``isin``: ``legal_entity_identifier``, ``wikidata``, ``open_corporates_id``,
+  ``sec_central_index_key``, ``international_security_identification_number``
+  (sic), ``open_supply_id``. 22,037 companies carry an LEI, none as a list.
+  ``_REST_IDENTIFIER_KEYS`` maps the two renamed keys onto the bundle's names,
+  so the BODS mapper and the hit builder read both APIs alike.
+* Company ids are the legacy card ids. Totals: BP 2,295 (legacy 2,290), Eli
+  Lilly 2,223 (2,223), Rosneft 1,369 (1,317) — the new platform has answers
+  the read-only legacy one does not.
+* Every answer carries its own ``license``; all of the three companies' were
+  CC BY 4.0. A sample answer under another licence is left out and counted
+  (``answers_other_licence``), never shown under the source's CC BY line.
+* Answers have no public page: the data-exploration page needs a login. The
+  card links to the company's page, ``wikirate.org/company/{id}``.
+
+``WIKIRATE_BACKEND`` picks the API (``auto``: REST when its credentials are
+set, else legacy), so a rollback is a Render setting, not a deploy.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 from typing import Any
 
@@ -105,8 +138,22 @@ _CACHE_NS = "wikirate-legacy"
 #: The last day Wikirate keeps the legacy API up.
 LEGACY_RETIRES = "2026-12-31"
 
+#: The REST API's cache namespace and path; the base URL is a setting.
+_REST_CACHE_NS = "wikirate-rest"
+_REST_PATH = "/rest/v1"
+#: REST ``company_identifiers`` keys that differ from the bundle's names.
+_REST_IDENTIFIER_KEYS = {
+    "wikidata": "wikidata_id",
+    "international_security_identification_number": (
+        "international_securities_identification_number"
+    ),
+}
+#: The answer licence the source is attributed under.
+_SOURCE_LICENCE = "CC BY 4.0"
+_API_WORDS = {"rest": "REST API", "legacy": "legacy API"}
+
 #: Fixed sentences for the degradations (no company name can reach them).
-_NOT_ANSWERED = "Wikirate's legacy API did not answer ({failure})"
+_NOT_ANSWERED = "Wikirate's {api} did not answer ({failure})"
 _CARD_NOT_READ = "Wikirate's company card could not be read ({failure})"
 _ANSWERS_NOT_READ = "Wikirate's answers could not be read ({failure})"
 
@@ -126,6 +173,54 @@ def _failure_label(exc: BaseException) -> str:
     if isinstance(exc, WikirateUnexpectedResponse):
         return str(exc)
     return type(exc).__name__
+
+
+def _rest_credentials() -> tuple[str, str, str] | None:
+    """``(base URL, publishable key, token)`` when the REST API is configured."""
+    settings = get_settings()
+    if not (settings.wikirate_publishable_key and settings.wikirate_api_token):
+        return None
+    base = (settings.wikirate_api_url or "https://data.wikirate.org").rstrip("/")
+    return base, settings.wikirate_publishable_key, settings.wikirate_api_token
+
+
+def _mode() -> str | None:
+    """Which API to read — ``"rest"``, ``"legacy"`` or ``None`` (unconfigured).
+
+    ``WIKIRATE_BACKEND`` = ``auto`` (the default) reads the REST API when its
+    credentials are set and the legacy API otherwise; ``rest`` / ``legacy``
+    force one, and an unconfigured forced choice reads nothing.
+    """
+    choice = (get_settings().wikirate_backend or "auto").strip().lower()
+    rest = _rest_credentials() is not None
+    legacy = bool(_api_key())
+    if choice == "rest":
+        return "rest" if rest else None
+    if choice == "legacy":
+        return "legacy" if legacy else None
+    if rest:
+        return "rest"
+    return "legacy" if legacy else None
+
+
+def _content_range_total(value: str | None) -> int | None:
+    """``Content-Range: 0-0/2295`` → 2295; ``*/0`` → 0; ``*/*`` → None."""
+    if not value or "/" not in value:
+        return None
+    total = value.rsplit("/", 1)[1].strip()
+    return int(total) if total.isdigit() else None
+
+
+def _rest_identifiers(raw: Any) -> dict[str, Any]:
+    """REST ``company_identifiers`` → the bundle's identifier names."""
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for key, value in raw.items():
+        name = _REST_IDENTIFIER_KEYS.get(key, key)
+        if name in _IDENTIFIER_FIELDS and value not in (None, "", []):
+            out[name] = value
+    return out
 
 #: How many latest-per-metric answers to include in the bundle.
 _MAX_LATEST_ANSWERS = 12
@@ -221,7 +316,7 @@ class WikirateAdapter(SourceAdapter):
             attribution="Wikirate.org, licensed under CC BY 4.0",
             supports=[SearchKind.ENTITY],
             requires_api_key=True,
-            live_available=settings.allow_live and bool(settings.wikirate_api_key),
+            live_available=settings.allow_live and _mode() is not None,
             category="esg",
         )
 
@@ -246,8 +341,11 @@ class WikirateAdapter(SourceAdapter):
         after recording a ``source_fetch`` degradation, which the pipeline
         reports as the source not answering — never as "no record".
         """
-        if not _api_key():
+        mode = _mode()
+        if mode is None:
             return None
+        if mode == "rest":
+            return await self._rest_fetch_by_lei(lei, qid)
         item, matched_by = None, None
         try:
             if lei:
@@ -261,7 +359,7 @@ class WikirateAdapter(SourceAdapter):
             log.warning("Wikirate company resolution failed: %s", failure)
             degradation.record(
                 self.id,
-                _NOT_ANSWERED.format(failure=failure),
+                _NOT_ANSWERED.format(api=_API_WORDS["legacy"], failure=failure),
                 reason=degradation.reason_for_failure(failure),
             )
             return None
@@ -271,8 +369,11 @@ class WikirateAdapter(SourceAdapter):
 
     async def fetch(self, hit_id: str) -> dict[str, Any]:
         """Fetch by Wikirate card id (deepen / retry path)."""
-        if not _api_key():
+        mode = _mode()
+        if mode is None:
             return {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
+        if mode == "rest":
+            return await self._rest_fetch_card(hit_id)
         try:
             card = await self._get_json(f"/~{hit_id}.json")
         except httpx.HTTPStatusError as exc:
@@ -290,6 +391,198 @@ class WikirateAdapter(SourceAdapter):
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # REST API (Wikirate 2.0)
+    # ------------------------------------------------------------------
+
+    async def _rest_fetch_by_lei(
+        self, lei: str, qid: str | None
+    ) -> dict[str, Any] | None:
+        company, matched_by = None, None
+        try:
+            if lei:
+                company = await self._rest_company(
+                    "company_identifiers->>legal_entity_identifier", lei
+                )
+                matched_by = "lei"
+            if company is None and qid:
+                company = await self._rest_company("company_identifiers->>wikidata", qid)
+                matched_by = "wikidata_qid"
+        except Exception as exc:  # noqa: BLE001
+            failure = _failure_label(exc)
+            log.warning("Wikirate REST company lookup failed: %s", failure)
+            degradation.record(
+                self.id,
+                _NOT_ANSWERED.format(api=_API_WORDS["rest"], failure=failure),
+                reason=degradation.reason_for_failure(failure),
+            )
+            return None
+        if company is None:
+            return None
+        return await self._rest_bundle(company, matched_by=matched_by or "lei")
+
+    async def _rest_fetch_card(self, hit_id: str) -> dict[str, Any]:
+        stub = {"source_id": self.id, "hit_id": hit_id, "is_stub": True}
+        if not str(hit_id).isdigit():
+            return stub
+        try:
+            company = await self._rest_company("id", str(hit_id))
+        except Exception as exc:  # noqa: BLE001
+            self._card_failed(exc)
+            return stub
+        if company is None:
+            return stub
+        return await self._rest_bundle(company, matched_by="card") or stub
+
+    async def _rest_company(self, column: str, value: str) -> dict[str, Any] | None:
+        """One ``v1_companies`` filter → the lowest-id match, or None."""
+        rows, _ = await self._rest_get(
+            "v1_companies", {column: f"eq.{value}", "order": "id.asc", "limit": "5"}
+        )
+        return rows[0] if rows else None
+
+    async def _rest_bundle(
+        self, company: dict[str, Any], matched_by: str
+    ) -> dict[str, Any] | None:
+        card_id = company.get("id")
+        name = _first(company.get("name")) or ""
+        if not isinstance(card_id, int) or not name:
+            return None
+        total, (latest, other_licence) = await asyncio.gather(
+            self._rest_answer_count(card_id),
+            self._rest_latest_answers(card_id),
+        )
+        headquarters = company.get("headquarters")
+        company_url = f"{_PLATFORM_BASE}/company/{card_id}"
+        bundle: dict[str, Any] = {
+            "source_id": self.id,
+            "api": "rest",
+            "card_id": card_id,
+            "name": name,
+            # Answers have no public page and the data explorer needs a
+            # login, so the company page is the record's link.
+            "wikirate_url": company_url,
+            "platform_url": company_url,
+            "matched_by": matched_by,
+            "identifiers": _rest_identifiers(company.get("company_identifiers")),
+            "headquarters": (
+                _first(headquarters.get("name")) if isinstance(headquarters, dict) else None
+            ),
+            "website": _first(company.get("website")),
+            "total_answers": total,
+            "latest_answers": latest,
+            "answers_other_licence": other_licence,
+            "is_stub": False,
+        }
+        validate_raw("wikirate", WikirateBundle, bundle)
+        return bundle
+
+    async def _rest_answer_count(self, card_id: int) -> int:
+        try:
+            _, total = await self._rest_get(
+                "v1_answers",
+                {"company_id": f"eq.{card_id}", "select": "id", "limit": "1"},
+                count=True,
+            )
+            return total or 0
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Wikirate REST answer count failed for %s: %s", card_id, exc)
+            self._answers_failed(exc)
+            return 0
+
+    async def _rest_latest_answers(
+        self, card_id: int
+    ) -> tuple[list[dict[str, Any]], int]:
+        try:
+            rows, _ = await self._rest_get(
+                "v1_answers",
+                {
+                    "company_id": f"eq.{card_id}",
+                    "metric_type": "eq.researched",
+                    "select": "id,metric_name,metric_designer,year,value,"
+                    "value_numeric,unit,license",
+                    "order": "year.desc,id.asc",
+                    "limit": str(_MAX_LATEST_ANSWERS),
+                },
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Wikirate REST answers failed for %s: %s", card_id, exc)
+            self._answers_failed(exc)
+            return [], 0
+        answers: list[dict[str, Any]] = []
+        other_licence = 0
+        for raw in rows:
+            if not isinstance(raw, dict):
+                continue
+            licence = raw.get("license")
+            abbreviation = licence.get("abbreviation") if isinstance(licence, dict) else None
+            if abbreviation and abbreviation != _SOURCE_LICENCE:
+                other_licence += 1
+                continue
+            numeric = raw.get("value_numeric")
+            answers.append(
+                {
+                    "metric_designer": raw.get("metric_designer"),
+                    "metric_name": raw.get("metric_name"),
+                    "year": raw.get("year"),
+                    "value": numeric if isinstance(numeric, (int, float)) else raw.get("value"),
+                    "answer_url": None,
+                }
+            )
+        return answers, other_licence
+
+    async def _rest_get(
+        self, endpoint: str, params: dict[str, str], *, count: bool = False
+    ) -> tuple[list[Any], int | None]:
+        """GET a REST endpoint → ``(rows, total)``, cached.
+
+        Anything but a JSON list is ``WikirateUnexpectedResponse``; with
+        ``count`` the total must be in ``Content-Range``. Nothing that failed
+        is cached.
+        """
+        credentials = _rest_credentials()
+        if credentials is None:
+            raise WikirateUnexpectedResponse("REST API not configured")
+        base, publishable_key, token = credentials
+        cache_key = (
+            f"{_REST_CACHE_NS}/{endpoint}/"
+            + hashlib.sha1(
+                json.dumps([sorted(params.items()), count]).encode()
+            ).hexdigest()
+        )
+        cached = self._cache.get_payload(cache_key)
+        if cached is not None and isinstance(cached[0], dict):
+            return cached[0].get("rows") or [], cached[0].get("total")
+        headers = {
+            "apikey": publishable_key,
+            "x-api-token": token,
+            "Accept-Profile": "api",
+            "Accept": "application/json",
+        }
+        if count:
+            headers["Prefer"] = "count=exact"
+        async with build_client() as client:
+            response = await client.get(
+                f"{base}{_REST_PATH}/{endpoint}", params=params, headers=headers
+            )
+            response.raise_for_status()
+            content_type = response.headers.get("content-type", "")
+            if "json" not in content_type.lower():
+                raise WikirateUnexpectedResponse(
+                    f"HTTP {response.status_code} {content_type.split(';')[0] or 'no content type'}"
+                    " instead of JSON"
+                )
+            rows = response.json()
+            if not isinstance(rows, list):
+                raise WikirateUnexpectedResponse("a JSON object where rows were expected")
+            total = None
+            if count:
+                total = _content_range_total(response.headers.get("content-range"))
+                if total is None:
+                    raise WikirateUnexpectedResponse("no total in Content-Range")
+        self._cache.put(cache_key, {"rows": rows, "total": total})
+        return rows, total
 
     def _card_failed(self, exc: BaseException) -> None:
         """A card read that failed (not a 404, which is an answer)."""

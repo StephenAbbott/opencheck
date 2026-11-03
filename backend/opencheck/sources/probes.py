@@ -853,7 +853,10 @@ PROBES: dict[str, SourceProbe] = {
             "empty or stub answer is a failure, and expect_fields asserts the two fields that broke. "
             "Since 2 Nov 2026 the adapter reads legacy.wikirate.org (Wikirate 2.0 took over "
             "wikirate.org on 1 Nov and answers the old API paths with HTML); the legacy API is "
-            "retired after 31 Dec 2026, so this probe must move to the new REST API before then."
+            "retired after 31 Dec 2026. With WIKIRATE_PUBLISHABLE_KEY and WIKIRATE_API_TOKEN also set "
+            "(GitHub secrets of the same names) the adapter reads the REST API, so this probe does: "
+            "the same card, the same fields. Before the legacy key is removed, requires_env must name "
+            "the two REST values instead."
         ),
     ),
     "ted_eu": _p(

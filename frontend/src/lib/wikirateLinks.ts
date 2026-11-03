@@ -37,3 +37,52 @@ export function wikiratePlatformUrl(url: string | null | undefined): string | nu
   if (!url) return null;
   return url.replace(/^https:\/\/platform\.wikirate\.org\//, `${WIKIRATE_PLATFORM_BASE}/`);
 }
+
+/** The fields of a Wikirate bundle the card's links are built from. */
+export interface WikirateLinkFields {
+  name: string;
+  card_id: number;
+  total_answers?: number | null;
+  platform_url?: string | null;
+  /** "rest" when Wikirate 2.0's REST API answered; absent from legacy runs. */
+  api?: string | null;
+}
+
+export interface WikirateCardLinks {
+  /** The "Wikirate" link beside the data-point count. */
+  entity: string;
+  /** The links under the sample answers, in order. */
+  footer: { href: string; label: string }[];
+}
+
+/**
+ * The card's links, by the API that answered.
+ *
+ * Legacy runs link the data points to the legacy platform and add the
+ * company's page on Wikirate 2.0. A REST run has no public page listing every
+ * data point (the new site's data explorer needs a login), so it links the
+ * company's page once and says how many data points Wikirate holds.
+ */
+export function wikirateCardLinks(raw: WikirateLinkFields): WikirateCardLinks {
+  const total = (raw.total_answers ?? 0).toLocaleString("en-GB");
+  const platform =
+    wikiratePlatformUrl(raw.platform_url) ??
+    `${WIKIRATE_PLATFORM_BASE}/company/${raw.card_id}`;
+  if (raw.api === "rest") {
+    return {
+      entity: platform,
+      footer: [
+        { href: platform, label: `${raw.name} on wikirate.org (${total} data points) →` },
+      ],
+    };
+  }
+  const legacy = wikirateLegacyEntityUrl(raw.name);
+  const footer = [
+    { href: legacy, label: `View all ${total} data points on ${WIKIRATE_LEGACY_HOST} →` },
+  ];
+  if (raw.platform_url) {
+    footer.push({ href: platform, label: "Company page on the new Wikirate platform →" });
+  }
+  return { entity: legacy, footer };
+}
+

@@ -53,6 +53,10 @@ class WikirateBundle(_Base):
     # bundles built before Phase 321.
     platform_url: str | None = None
     matched_by: str  # "lei" | "wikidata_qid" | "card"
+    # Which Wikirate API answered: "rest" (Wikirate 2.0) or absent (legacy).
+    api: str | None = None
+    # REST sample answers left out because their licence is not CC BY 4.0.
+    answers_other_licence: int = 0
     identifiers: dict[str, Any] = Field(default_factory=dict)
     headquarters: str | None = None
     website: str | None = None
