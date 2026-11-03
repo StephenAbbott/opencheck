@@ -17,6 +17,8 @@ from ..statements import (
     make_relationship_statement,
     record_date,
 )
+from ..annotations import annotate
+from ..residence import residence_address, residence_note
 
 
 # ----------------------------------------------------------------------
@@ -329,6 +331,24 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             yield stmt
 
 
+_INPI_REGISTER = "The Registre National des Entreprises (INPI)"
+
+
+def _inpi_residence_country(individu: dict[str, Any]) -> str | None:
+    """The country of an officer's home address (``adresseDomicile``), as
+    filed: the ISO 3166-1 alpha-3 ``codePays`` where the RNE gives one, else
+    the French ``pays`` name. The RNE withholds the street of a home
+    address, and nothing but the country is read here."""
+    domicile = individu.get("adresseDomicile")
+    if not isinstance(domicile, dict):
+        return None
+    for key in ("codePays", "pays"):
+        value = str(domicile.get(key) or "").strip()
+        if value:
+            return value
+    return None
+
+
 def _inpi_individu_statements(
     siren: str,
     pouvoir: dict[str, Any],
@@ -390,6 +410,8 @@ def _inpi_individu_statements(
     )
 
     nationalities: list[dict[str, str]] = [{"name": nationalite}] if nationalite else []
+    filed_residence = _inpi_residence_country(individu)
+    residence = residence_address(filed_residence)
     person = make_person_statement(
         source_id="inpi",
         local_id=person_local_id,
@@ -397,8 +419,10 @@ def _inpi_individu_statements(
         full_name=full_name,
         person_type="knownPerson",
         nationalities=nationalities,
+        addresses=[residence] if residence else (),
         source_url=source_url,
     )
+    annotate(person, residence_note(filed_residence, 0, register=_INPI_REGISTER))
     person_sid = person["recordId"]
 
     stmts: list[dict[str, Any]] = []
