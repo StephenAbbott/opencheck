@@ -166,9 +166,11 @@ from .mappers.netherlands import (  # noqa: F401  (re-exported, Phase 246)
 )
 from .mappers.france import (  # noqa: F401  (re-exported, Phase 246)
     _INPI_OTHER_INFLUENCE_CODES,
+    _INPI_REGISTER,
     _INPI_ROLE_LABELS,
     _inpi_address,
     _inpi_individu_statements,
+    _inpi_residence_country,
     _inpi_role_interest_type,
     map_inpi,
 )
