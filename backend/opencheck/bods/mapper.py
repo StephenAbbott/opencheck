@@ -405,6 +405,7 @@ from .mappers.poland import (  # noqa: F401  (re-exported, Phase 246)
     map_krs_poland,
 )
 from .mappers.slovakia import (  # noqa: F401  (re-exported, Phase 246)
+    _rpvs_country,
     map_rpo_slovakia,
     map_rpvs_slovakia,
 )

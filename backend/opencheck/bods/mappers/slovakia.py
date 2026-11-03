@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+import pycountry
+
 from .. import liveness as _liveness
 from ..statements import (
     content_addressed,
@@ -105,6 +107,23 @@ def map_rpo_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # RPVS Slovakia
 # ---------------------------------------------------------------------------
+
+
+def _rpvs_country(stat: Any) -> dict[str, str] | None:
+    """A BODS country from RPVS's ``Stat`` (Slovak name + ISO 3166-1 numeric
+    code): the ISO country where the numeric code resolves, else the
+    register's own name with no code — never a stand-in."""
+    if not isinstance(stat, dict):
+        return None
+    numeric = str(stat.get("numeric") or "").strip()
+    country = pycountry.countries.get(numeric=numeric.zfill(3)) if numeric.isdigit() else None
+    if country is not None:
+        return {
+            "name": getattr(country, "common_name", None) or country.name,
+            "code": country.alpha_2,
+        }
+    name = str(stat.get("name") or "").strip()
+    return {"name": name} if name else None
 
 
 @content_addressed
@@ -223,15 +242,20 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 # DateTimeOffset like "1969-12-15T00:00:00+01:00"
                 person_dob = person_dob_raw[:10]
 
-            nationalities = []
-            obcanstvo = kuv.get("Obcanstvo") or kuv.get("statObcanstva")
-            if obcanstvo:
-                nationalities.append({"name": obcanstvo})
-
-            addresses = []
-            adresa = kuv.get("Adresa")
-            if adresa:
-                addresses.append(_addr("service", adresa))
+            # The owner's nationality and country of residence, read from the
+            # owners collection (``kuv_countries``; the country-of-residence
+            # ticket). Until then this read ``Obcanstvo`` / ``statObcanstva``
+            # and a string ``Adresa`` — keys RPVS does not have — so neither
+            # was ever filled. The address is published as its country only.
+            countries = (bundle.get("kuv_countries") or {}).get(str(kuv_id_raw)) or {}
+            nationality = _rpvs_country(countries.get("nationality"))
+            nationalities = [nationality] if nationality else []
+            residence_country = _rpvs_country(countries.get("residence"))
+            addresses = (
+                [{"type": "residence", "country": residence_country}]
+                if residence_country
+                else []
+            )
 
             is_pep: bool = bool(kuv.get("JeVerejnyCinitel"))
             pep_exposure: dict[str, Any] | None = (
