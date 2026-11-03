@@ -20,6 +20,7 @@ from ..annotations import annotate, commenting, identifying, pointer, transforma
 from ..ch_constants import describe_company_type, describe_officer_role
 from ..officer_roles import mark_officer
 from ..psc_natures import describe_statement, describe_super_secure
+from ..residence import residence_address, residence_note
 from ..statements import (
     content_addressed,
     BODSBundle,
@@ -612,6 +613,9 @@ def _ch_director_statements(
                 addresses.append(
                     _addr("service", joined, address_block.get("country", ""))
                 )
+        residence_annotation = _ch_add_residence(
+            addresses, officer.get("country_of_residence")
+        )
 
         local_id = _ch_officer_local_id(company_number, officer)
         officer_id = _ch_officer_id(officer)
@@ -629,6 +633,7 @@ def _ch_director_statements(
             person,
             _birth_date_precision_note(birth_date),
             _ch_officer_grouping_note(officer_id),
+            residence_annotation,
         )
         person_sid = person["recordId"]
         # First writer wins, and the subject is always mapped first
@@ -1353,6 +1358,24 @@ def _profile_addresses(profile: dict[str, Any]) -> list[dict[str, str]]:
     return [_addr("registered", joined, ra.get("country", ""))]
 
 
+#: How a residence annotation names the register.
+_CH_REGISTER = "Companies House"
+
+
+def _ch_add_residence(
+    addresses: list[dict[str, Any]], filed: Any
+) -> dict[str, Any] | None:
+    """Append the residence country Companies House files for a person to
+    *addresses* and return its annotation (or ``None``). Country only — the
+    register publishes no residential street, and the service address beside
+    it is usually the company's own office (Phase 282)."""
+    residence = residence_address(filed if isinstance(filed, str) else None)
+    if residence is None:
+        return None
+    addresses.append(residence)
+    return residence_note(filed, len(addresses) - 1, register=_CH_REGISTER)
+
+
 def _map_individual_psc(
     company_number: str, psc: dict[str, Any], source_url: str
 ) -> dict[str, Any]:
@@ -1390,6 +1413,7 @@ def _map_individual_psc(
         joined = ", ".join([p for p in parts if p])
         if joined:
             addresses.append(_addr("service", joined, address_block.get("country", "")))
+    residence_annotation = _ch_add_residence(addresses, psc.get("country_of_residence"))
 
     return annotate(
         make_person_statement(
@@ -1404,6 +1428,7 @@ def _map_individual_psc(
             source_url=source_url,
         ),
         _birth_date_precision_note(birth_date),
+        residence_annotation,
     )
 
 
@@ -1422,6 +1447,34 @@ def _ch_appointments_are_corporate(
     return bool(roles) and all(r.startswith("corporate-") for r in roles)
 
 
+def _ch_appointments_residence(
+    appointments: dict[str, Any], items: list[dict[str, Any]]
+) -> str | None:
+    """The country of residence for an officer looked up by officer id.
+
+    The appointments list's envelope carries no ``country_of_residence``
+    (checked against cached live answers, 3 Nov 2026); each appointment
+    does, as filed for that company, and a person who moved files different
+    countries on different boards. The current appointments are read first,
+    latest appointment first, then the resigned ones latest first — the
+    most recent filing wins. An envelope value, should the register add one,
+    is taken before any of them.
+    """
+    envelope = appointments.get("country_of_residence")
+    if isinstance(envelope, str) and envelope.strip():
+        return envelope
+
+    current = [i for i in items if not i.get("resigned_on")]
+    resigned = [i for i in items if i.get("resigned_on")]
+    current.sort(key=lambda i: str(i.get("appointed_on") or ""), reverse=True)
+    resigned.sort(key=lambda i: str(i.get("resigned_on") or ""), reverse=True)
+    for item in current + resigned:
+        value = item.get("country_of_residence")
+        if isinstance(value, str) and value.strip():
+            return value
+    return None
+
+
 def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
     """Map a Companies House officer-appointments bundle to BODS.
 
@@ -1433,10 +1486,11 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
     from historical board membership.
 
     The Companies House appointments endpoint returns the officer's
-    canonical name + DOB + nationality + occupation + country of
-    residence on the *appointments envelope* — those fields are used
-    for the personStatement; the per-appointment block carries
-    appointment-specific data.
+    canonical name + DOB on the *appointments envelope* — those fields
+    are used for the personStatement. Nationality, occupation and
+    country of residence are on each appointment, not the envelope;
+    the residence is read from the appointments
+    (:func:`_ch_appointments_residence`).
     """
     result = BODSBundle()
 
@@ -1482,6 +1536,10 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
         person = _ch_corporate_officer_entity(anchor_number, officer_like, person_url)
         party_type = "entity"
     else:
+        addresses: list[dict[str, Any]] = []
+        residence_annotation = _ch_add_residence(
+            addresses, _ch_appointments_residence(appointments, items)
+        )
         person = make_person_statement(
             source_id="companies_house",
             local_id=f"officer:{officer_id}",
@@ -1489,12 +1547,14 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
             person_type="knownPerson",
             nationalities=nationalities,
             birth_date=birth_date,
+            addresses=addresses,
             source_url=person_url,
         )
         annotate(
             person,
             _birth_date_precision_note(birth_date),
             _ch_officer_grouping_note(officer_id),
+            residence_annotation,
         )
         party_type = "person"
     result.statements.append(person)
