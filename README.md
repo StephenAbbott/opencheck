@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 437** — Companies House PSCs and officers now carry the country of residence the register files, as a BODS residence address.
+**Latest: Phase 440** — Beneficial owners from Slovakia's public-sector partners register now carry the nationality and country of residence the register publishes.
 
 → [Full development history](docs/status.md)
 

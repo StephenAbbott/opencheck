@@ -166,9 +166,11 @@ from .mappers.netherlands import (  # noqa: F401  (re-exported, Phase 246)
 )
 from .mappers.france import (  # noqa: F401  (re-exported, Phase 246)
     _INPI_OTHER_INFLUENCE_CODES,
+    _INPI_REGISTER,
     _INPI_ROLE_LABELS,
     _inpi_address,
     _inpi_individu_statements,
+    _inpi_residence_country,
     _inpi_role_interest_type,
     map_inpi,
 )
@@ -402,12 +404,14 @@ from .mappers.lithuania import (  # noqa: F401  (re-exported, Phase 246)
     map_jar_lithuania,
 )
 from .mappers.czechia import (  # noqa: F401  (re-exported, Phase 246)
+    _ares_person,
     map_ares,
 )
 from .mappers.poland import (  # noqa: F401  (re-exported, Phase 246)
     map_krs_poland,
 )
 from .mappers.slovakia import (  # noqa: F401  (re-exported, Phase 246)
+    _rpvs_country,
     map_rpo_slovakia,
     map_rpvs_slovakia,
 )

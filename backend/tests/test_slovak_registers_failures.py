@@ -151,7 +151,7 @@ async def test_rpvs_raises_when_the_partner_record_does_not_answer():
     respx.get(RPVS_DETAIL).mock(return_value=httpx.Response(503))
     with pytest.raises(httpx.HTTPStatusError):
         await RpvsSlovakiaAdapter().fetch(ICO)
-    assert not _cached("rpvs_slovakia/partner/4242")
+    assert not _cached("rpvs_slovakia/partner-v2/4242")
 
 
 @respx.mock

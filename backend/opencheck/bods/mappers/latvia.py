@@ -12,6 +12,7 @@ import pycountry
 
 from .. import liveness as _liveness
 from ..annotations import annotate, entry_date_as_start
+from ..residence import residence_address, residence_note
 from ..statements import (
     content_addressed,
     SOURCE_NAMES,
@@ -205,6 +206,9 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         # record, else its entry date. Was the retrieval date.
         bo_dated = _lv_date(bo.get("last_modified_at")) or registered_on
 
+        # The BO resource files the owner's country of residence as an ISO
+        # code (the officers and members resources carry none). Country only.
+        residence = residence_address(bo.get("residence"))
         person_local_id = f"bo-{regcode}-{bo_id or full_name}"
         person_stmt = make_person_statement(
             source_id="ur_latvia",
@@ -213,7 +217,14 @@ def map_ur_latvia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             full_name=full_name,
             nationalities=nationalities,
             birth_date=birth_date or None,
+            addresses=[residence] if residence else (),
             source_url=source_url,
+        )
+        annotate(
+            person_stmt,
+            residence_note(
+                bo.get("residence"), 0, register="The Latvian Register of Enterprises"
+            ),
         )
         yield person_stmt
 

@@ -62,6 +62,7 @@ import logging
 from typing import Any
 from urllib.parse import quote
 
+from .. import degradation
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -76,6 +77,19 @@ _CACHE_NS = "rpvs_slovakia"
 
 # OData expand for a full Partner record.
 _PARTNER_EXPAND = "KonecniUzivateliaVyhod,PartneriVerejnehoSektora,OpravneneOsoby"
+
+# The owners' countries (the country-of-residence ticket, 3 Nov 2026). A KUV
+# carries ``StatnaPrislusnost`` (nationality) and ``Adresa`` → ``Stat`` (the
+# country of the owner's address, their residence). RPVS caps ``$expand`` at
+# depth 2, so from ``Partneri`` the address's ``Stat`` is out of reach; read
+# from the owners collection it is depth 2. The answer is paged
+# (``@odata.nextLink``, 20 a page on 3 Nov 2026).
+_KUV_COUNTRY_EXPAND = "StatnaPrislusnost,Adresa($expand=Stat)"
+_KUV_COUNTRY_MAX_PAGES = 10
+KUV_COUNTRIES_NOT_READ = (
+    "The register's record of the beneficial owners' nationality and country "
+    "of residence was not read; the owners are listed without them"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +137,35 @@ def _person_name(kuv: dict[str, Any]) -> str:
     if kuv.get("TitulZa"):
         parts.append(kuv["TitulZa"].strip())
     return " ".join(p for p in parts if p) or kuv.get("ObchodneMeno") or "Unknown"
+
+
+def _stat(stat: Any) -> dict[str, str] | None:
+    """The register's country (``Rpvs.Stat``): its Slovak name and its
+    ISO 3166-1 numeric code (``StatistickyKod``), and nothing else."""
+    if not isinstance(stat, dict):
+        return None
+    name = str(stat.get("Meno") or "").strip()
+    code = str(stat.get("StatistickyKod") or "").strip()
+    if not name and not code:
+        return None
+    return {"name": name, "numeric": code}
+
+
+def kuv_countries_from(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Reduce owner rows to ``{kuv_id: {"nationality", "residence"}}`` —
+    country name and numeric code only. The address's street, number, town
+    and postcode are dropped here, before anything is cached: OpenCheck
+    publishes a person's country of residence, never their street."""
+    out: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict) or row.get("Id") is None:
+            continue
+        adresa = row.get("Adresa")
+        out[str(row["Id"])] = {
+            "nationality": _stat(row.get("StatnaPrislusnost")),
+            "residence": _stat(adresa.get("Stat")) if isinstance(adresa, dict) else None,
+        }
+    return out
 
 
 def _partner_link(partner_id: int) -> str:
@@ -270,8 +313,9 @@ class RpvsSlovakiaAdapter(SourceAdapter):
 
             self._cache.put(resolve_key, partner_id)
 
-        # Step 2 — fetch full Partner record
-        detail_key = f"{_CACHE_NS}/partner/{partner_id}"
+        # Step 2 — fetch full Partner record. partner-v2: the raw record
+        # carries ``kuv_countries`` (the country-of-residence ticket).
+        detail_key = f"{_CACHE_NS}/partner-v2/{partner_id}"
         if self._cache.has(detail_key):
             cached = self._cache.get_payload(detail_key)
             if cached is not None:
@@ -296,8 +340,49 @@ class RpvsSlovakiaAdapter(SourceAdapter):
             _log.warning("RPVS fetch failed for partner %s: %s", partner_id, exc)
             raise
 
+        countries = await self._kuv_countries(partner_id)
+        if countries is None:
+            # The owners are still the register's answer; only their
+            # countries are missing, and that is said rather than cached.
+            degradation.record(
+                self.id,
+                KUV_COUNTRIES_NOT_READ,
+                check=degradation.CHECK_SOURCE_READ,
+            )
+            return self._build_bundle(raw, ico, partner_id)
+        raw = {**raw, "kuv_countries": countries}
         self._cache.put(detail_key, raw)
         return self._build_bundle(raw, ico, partner_id)
+
+    async def _kuv_countries(self, partner_id: int) -> dict[str, dict[str, Any]] | None:
+        """Every owner's nationality and country of residence, by KUV id, or
+        ``None`` when the register did not answer in full."""
+        url: str | None = (
+            f"{_BASE}/KonecniUzivateliaVyhod"
+            f"?$filter=Partner/Id%20eq%20{int(partner_id)}"
+            f"&$expand={quote(_KUV_COUNTRY_EXPAND, safe='=,$()')}"
+        )
+        rows: list[dict[str, Any]] = []
+        try:
+            async with build_client() as client:
+                for _ in range(_KUV_COUNTRY_MAX_PAGES):
+                    if not url:
+                        break
+                    resp = await client.get(url)
+                    resp.raise_for_status()
+                    payload = resp.json()
+                    rows.extend(payload.get("value") or [])
+                    url = payload.get("@odata.nextLink")
+                else:
+                    if url:
+                        _log.warning("RPVS owners list for partner %s passed %d pages",
+                                     partner_id, _KUV_COUNTRY_MAX_PAGES)
+                        return None
+        except Exception as exc:  # noqa: BLE001 — any failure is a partial read
+            _log.warning("RPVS owners' countries not read for partner %s: %s",
+                         partner_id, exc)
+            return None
+        return kuv_countries_from(rows)
 
     # ------------------------------------------------------------------
     # HTTP helpers
@@ -374,6 +459,9 @@ class RpvsSlovakiaAdapter(SourceAdapter):
             "active_kuvs": active_kuvs,
             "pvs_entries": pvs_entries,
             "opravnene_osoby": opravnene_osoby,
+            # None on a record read before the country-of-residence ticket or
+            # when the owners' countries did not answer; {} when there were none.
+            "kuv_countries": raw.get("kuv_countries"),
             "link": _partner_link(partner_id),
             "raw": raw,
             "is_stub": False,
