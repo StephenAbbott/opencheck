@@ -293,6 +293,21 @@ class SourceAdapter(ABC):
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
         """Search this source for a query of the given kind."""
 
+    #: The search filters this adapter applies itself (names from
+    #: ``opencheck.search_filters.ENTITY_FILTERS`` / ``PERSON_FILTERS``). A
+    #: search with an active filter the adapter does not name leaves the
+    #: adapter out and says so (``search_filters.filter_plan``); a national
+    #: register also answers a jurisdiction filter it covers by its country.
+    search_filters: ClassVar[frozenset[str]] = frozenset()
+
+    async def search_filtered(
+        self, query: str, kind: SearchKind, filters: Any
+    ) -> list[SourceHit]:
+        """Search with filters. Only called with filters this adapter names in
+        ``search_filters``; the default is the plain search, for an adapter
+        whose plan is "run plain" (a register covering the jurisdiction)."""
+        return await self.search(query, kind)
+
     @abstractmethod
     async def fetch(self, hit_id: str) -> dict[str, Any]:
         """Fetch full record detail for a previously-returned hit."""

@@ -737,7 +737,7 @@ def shape_search(payload: Any, *, limit: int = SEARCH_DEFAULT_LIMIT) -> dict[str
             f" Showing the top {len(shown)} of {total}; call again with a "
             f"higher limit (up to {SEARCH_MAX_LIMIT}) or a more specific query."
         )
-    return {
+    out = {
         "query": payload.query,
         "kind": payload.kind.value if hasattr(payload.kind, "value") else str(payload.kind),
         "count": len(shown),
@@ -746,6 +746,19 @@ def shape_search(payload: Any, *, limit: int = SEARCH_DEFAULT_LIMIT) -> dict[str
         "candidates": shown,
         "hint": hint,
     }
+    filters = getattr(payload, "filters", None)
+    if filters:
+        # The advanced-search-filters ticket: which sources applied the
+        # filters, and which were left out rather than shown unfiltered.
+        out["filters"] = filters
+        left_out = [row["source_id"] for row in filters.get("left_out") or []]
+        if left_out:
+            out["hint"] += (
+                f" Filters applied by {', '.join(filters.get('applied_by') or []) or 'no source'}; "
+                f"left out (they cannot apply them, or cover another jurisdiction): "
+                f"{', '.join(left_out)}."
+            )
+    return out
 
 
 def shape_sources(payload: Any) -> dict[str, Any]:

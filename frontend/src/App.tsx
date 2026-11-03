@@ -712,7 +712,7 @@ export default function App() {
     search.setSearchMode("name");
     setMobileSearchOpen(true);
     search.setNameQuery(q);
-    nameSearchMutation.mutate(q);
+    search.runNameSearch(q);
     // The results render in the panel this just opened, so the page follows.
     requestAnimationFrame(() => {
       document

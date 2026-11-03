@@ -74,7 +74,16 @@ def _err(exc: HTTPException) -> dict[str, Any]:
 
 @mcp.tool()
 async def opencheck_search(
-    query: str, kind: str = "entity", limit: int = 15
+    query: str,
+    kind: str = "entity",
+    limit: int = 15,
+    jurisdiction: str | None = None,
+    legal_form: str | None = None,
+    entity_status: str | None = None,
+    registration_status: str | None = None,
+    category: str | None = None,
+    nationality: str | None = None,
+    birth_year: int | None = None,
 ) -> dict[str, Any]:
     """Find a company's Legal Entity Identifier (LEI) from a name or free text.
 
@@ -82,14 +91,34 @@ async def opencheck_search(
         query: Company name or free-text query (e.g. "Rosneft").
         kind: "entity" (default) or "person".
         limit: How many ranked candidates to return (default 15, max 50).
+        jurisdiction: Entity filter — ISO 3166 code of the jurisdiction of
+            formation ("GB", "DE", "US", "US-DE"). Exact: "DE" never returns
+            Delaware companies.
+        legal_form: Entity filter — an ISO 20275 ELF code ("2HBR"), several
+            comma-separated, "no-elf-code", or an abbreviation or name
+            ("GmbH", "Aktiengesellschaft") resolved within ``jurisdiction``.
+            An ambiguous one returns the candidate codes to choose from.
+        entity_status: Entity filter — "ACTIVE" or "INACTIVE", as GLEIF records it.
+        registration_status: Entity filter — the LEI record's status ("ISSUED",
+            "LAPSED", "RETIRED"…; comma-separated for several). Not the
+            company's status.
+        category: Entity filter — "GENERAL", "BRANCH", "FUND", "SOLE_PROPRIETOR",
+            "RESIDENT_GOVERNMENT_ENTITY" or "INTERNATIONAL_ORGANIZATION".
+        nationality: Person filter — ISO 3166-1 alpha-2 nationality or citizenship.
+        birth_year: Person filter — year of birth. A record with no birth date
+            is not a match.
 
     Returns candidate matches ranked best-first across every source — exact
     name matches first, each tagged with ``match`` — with ``total`` and
     ``truncated`` saying whether more were found. Feed a candidate's ``lei`` to
     ``opencheck_lookup``. A candidate with ``lei: null`` and an entry in
     ``identifiers`` (a register scheme and number, e.g. GB-COH OC346224) is
-    looked up with ``opencheck_register_lookup`` instead.
+    looked up with ``opencheck_register_lookup`` instead. With a filter set,
+    only sources that can apply it are searched: ``filters.applied_by`` names
+    them and ``filters.left_out`` names the rest — read it before concluding
+    a company does not exist.
     """
+    from .. import search_filters as sf
     from ..sources import SearchKind
     from ..routers.search import _search_impl as _search
 
@@ -97,7 +126,33 @@ async def opencheck_search(
         k = SearchKind(kind)
     except ValueError:
         return {"error": f"kind must be 'entity' or 'person', got {kind!r}"}
-    resp = await _search(q=query, kind=k)
+    form_codes: list[str] | None = None
+    if legal_form:
+        form_codes, candidates = sf.resolve_legal_form(legal_form, jurisdiction)
+        if not form_codes:
+            return {
+                "error": (
+                    f"legal_form {legal_form!r} matches "
+                    + (f"{len(candidates)} legal forms" if candidates else "no legal form")
+                    + (f" in {jurisdiction}" if jurisdiction else "")
+                    + "; pass one ELF code"
+                    + ("" if jurisdiction else " or a jurisdiction")
+                ),
+                "candidates": candidates[:25],
+            }
+    try:
+        filters = sf.parse_filters(
+            jurisdiction=jurisdiction,
+            legal_form=form_codes,
+            entity_status=entity_status,
+            registration_status=registration_status,
+            category=category,
+            nationality=nationality,
+            birth_year=birth_year,
+        )
+    except sf.FilterError as exc:
+        return {"error": str(exc)}
+    resp = await _search(q=query, kind=k, filters=filters or None)
     return shaping.shape_search(resp, limit=limit)
 
 

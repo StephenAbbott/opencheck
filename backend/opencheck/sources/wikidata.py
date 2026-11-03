@@ -598,6 +598,55 @@ class WikidataAdapter(SourceAdapter):
             hits = await self._filter_to_humans(hits)
         return hits
 
+    # The advanced-search-filters ticket: birth year (P569) and citizenship
+    # (P27 → its ISO code, P297) are read for the person hits in one batched
+    # query. Unlike ``_filter_to_humans`` this fails CLOSED: a filter that
+    # could not be checked must not return the unfiltered hits as if it had
+    # been, so a failed query is an error the response names.
+    search_filters = frozenset(("nationality", "birth_year"))
+
+    async def search_filtered(
+        self, query: str, kind: SearchKind, filters: Any
+    ) -> list[SourceHit]:
+        from .. import search_filters as sf
+
+        hits = await self.search(query, kind)
+        if kind != SearchKind.PERSON or not (filters.nationality or filters.birth_year):
+            return hits
+        qids = [h.hit_id for h in hits if h.hit_id.startswith("Q")]
+        if not qids:
+            return []
+        values = " ".join(f"wd:{q}" for q in qids)
+        sparql = (
+            "SELECT ?item ?born ?cc WHERE { VALUES ?item { %s } "
+            "OPTIONAL { ?item wdt:P569 ?born } "
+            "OPTIONAL { ?item wdt:P27 ?c . ?c wdt:P297 ?cc } }" % values
+        )
+        payload = await self._sparql(
+            sparql, cache_key=f"{_CACHE_NS}/person-facts/{_slug('|'.join(sorted(qids)))}"
+        )
+        bindings = payload.get("results", {}).get("bindings")
+        if bindings is None:
+            raise RuntimeError("Wikidata did not answer the birth-year and citizenship check")
+        born: dict[str, list[str]] = {}
+        countries: dict[str, list[str]] = {}
+        for b in bindings:
+            qid = (b.get("item") or {}).get("value", "").rsplit("/", 1)[-1]
+            if (b.get("born") or {}).get("value"):
+                born.setdefault(qid, []).append(b["born"]["value"].lstrip("+"))
+            if (b.get("cc") or {}).get("value"):
+                countries.setdefault(qid, []).append(b["cc"]["value"])
+        kept: list[SourceHit] = []
+        for hit in hits:
+            if filters.birth_year and not sf.birth_year_matches(born.get(hit.hit_id, []), filters.birth_year):
+                continue
+            if filters.nationality and not sf.nationality_matches(
+                countries.get(hit.hit_id, []), filters.nationality
+            ):
+                continue
+            kept.append(hit)
+        return kept
+
     async def _filter_to_humans(self, hits: list[SourceHit]) -> list[SourceHit]:
         """Keep only hits whose item is an instance of human (P31 → Q5).
 

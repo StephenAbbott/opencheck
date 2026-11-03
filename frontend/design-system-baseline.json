@@ -71,9 +71,9 @@
   },
   "src/components/SearchPanel.tsx": {
     "hex": 0,
-    "text": 11,
+    "text": 7,
     "vocab": 0,
-    "palette": 21,
+    "palette": 12,
     "button": 11
   },
   "src/components/SiteChrome.tsx": {
