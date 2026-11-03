@@ -266,6 +266,77 @@ a new `statementId`, OO's `recordId` kept so the two link, OpenCheck's
 ownership closes by the rule above), and a `commenting` annotation on `/source`
 naming the OO statement and its publication date.
 
+## Who declared it, and on what filing
+
+Open Ownership's minimum *basic disclosure information* is **who disclosed the
+information and when**, and the submitter is not necessarily the beneficial
+owner. `statementDate` says when the register was told; this says on what.
+
+**Companies House (the declarant-and-filing-provenance ticket, 3 Nov 2026).**
+For every company in a Companies House bundle that has PSCs on file, the
+adapter reads one paged filing-history list —
+`/company/{number}/filing-history?category=persons-with-significant-control,incorporation,confirmation-statement`
+— and `backend/opencheck/bods/ch_filings.py` matches each PSC to the filing
+that notified it: a PSC01, PSC02 or PSC03 whose `notification_date` equals the
+PSC's `notified_on` **and** whose `psc_name` is the PSC's name (titles folded;
+the date alone is not enough — on Monzo Bank Limited one PSC02 of 6 April 2016
+names a different partnership than the one notified that day), and a PSC07
+whose `cessation_date` equals `ceased_on`. An LLP files the `LLPSC` forms. When
+no name agrees exactly, one — and only one — near match is accepted: a company
+named without the legal form it has since changed (Bellis Finco Limited, now
+Plc), or a person filed without a middle name (at least two names, the surname
+among them). Measured on 3 Nov 2026 over eight companies and their chains
+(Monzo, ASDA Stores, HSBC Bank, Vosper Thornycroft…): all 51 PSC events
+resolved — 25 to their own forms, 15 to a confirmation statement, 11 to the
+incorporation filing. The answer is one `commenting` annotation per event on
+the PSC's relationship statement:
+
+| Field | Value |
+|---|---|
+| `statementPointerTarget` | `/recordDetails/interests` (notification), `/recordDetails/interests/0/endDate` (cessation) |
+| `description` | one sentence: form, filing day and transaction id ("Notified to Companies House on form PSC02, filed 2023-10-30, transaction MzM5…") |
+| `url` | the filing's document on find-and-update.company-information.service.gov.uk (the company's filing history when the filing has no document) |
+| `companiesHouseFiling` | the same facts structured: `event`, `match`, `declarant`, `type`, `transactionId`, `date`, `documentUrl` — an extension field, like `gleifLegalEntityEvent` |
+
+The `source` block is unchanged — it still names the register record OpenCheck
+read — and annotations sit outside the content-addressed digest, so no
+`statementId` moves. The RDF export keeps the sentence and the link.
+
+`match` says how the filing was found:
+
+- `filing` — a PSC notification or cessation form names the party.
+- `incorporation` — the PSC was named at incorporation (`notified_on` is the
+  company's creation date), which has no separate PSC form: the incorporation
+  filing (NEWINC) is cited.
+- `confirmation_statement` — notified before 26 June 2017 with no PSC form
+  naming it. Until then a company gave its PSCs, and any change to them, on its
+  next confirmation statement (PSC forms within 14 days came in on 26 June
+  2017), so the first CS01 / LLCS01 made up to on or after the notification is
+  cited. ASDA Stores has no PSC filing at all; HSBC Bank plc's HSBC Holdings,
+  notified 26 Oct 2016, is on the CS01 made up to 7 Feb 2017. Legacy annual
+  returns share the category and are never cited.
+- `none` — the history was read whole and nothing names the notification.
+  Said in the same voice as a match, and **never a signal**: a missing PSC01 is
+  routine, so it feeds neither `RECORD_CONSISTENCY` nor the discrepancy note.
+  A history read in part (an error, a cap) claims no absence.
+
+Companies House publishes no presenter, so `declarant` is always `company`,
+the statutory filer, and nothing more is claimed. A failed filing-history read
+leaves the lookup whole and the edges without a filing; it is never cached.
+The relationship card says "Declared on 30 Oct 2023 via PSC02, filed by the
+company (filing)" (`frontend/src/lib/filingProvenance.ts`).
+
+**Other registers (sweep of 3 Nov 2026).**
+
+| Source | Declaration metadata | Carried |
+|---|---|---|
+| `companies_house` | form, transaction id, filing date, document; no presenter | yes, as above |
+| `ariregister` (Estonia) | entry (kanne) number and date per registry-card entry; the people rows carry their own start date but no link to the entry that recorded them | per entry on the History tab only; not joinable to a party |
+| `ur_latvia` | a beneficial owner's `registered_on` and `last_modified_at`; no decision or entry number in the open data | dates only (`startDate`, `statementDate`) |
+| `cac_nigeria` | `dateOfPsc` and the row's ACTIVE / INACTIVE history; no filing reference or filer | dates only |
+| `edr_ukraine` | beneficial owners are undated strings; the entity's `REGISTRATION` field is its founding record only | not published per owner |
+| `gleif` | `corroborationLevel` (the CDF's ValidationSources) and `managingLou`, held in the Golden Copy mirror | published, not yet in the BODS (a follow-up) |
+
 ## Precision, and how it is recorded
 
 BODS treats date precision differently depending on the field, and it is right

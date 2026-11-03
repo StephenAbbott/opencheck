@@ -7,6 +7,9 @@ Live endpoints (Phase 1):
 * ``GET /company/{number}`` — company profile
 * ``GET /company/{number}/officers`` — officers list
 * ``GET /company/{number}/persons-with-significant-control`` — PSCs
+* ``GET /company/{number}/filing-history?category=…`` — the PSC, incorporation
+  and confirmation-statement filings, matched to each PSC by
+  ``bods/ch_filings.py`` (read only for a company with PSCs)
 
 Authentication: HTTP Basic with the API key as the username and an empty
 password (Companies House convention).
@@ -30,6 +33,7 @@ from urllib.parse import quote
 import httpx
 
 from .. import degradation, psc_graph, signalstats
+from ..bods.ch_filings import FILING_CATEGORIES
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -105,11 +109,18 @@ def _list_is_whole(payload: Any) -> bool:
         return True
     if payload.get(_LIST_CAPPED):
         return True
-    total = payload.get("total_results")
+    total = _list_total(payload)
     items = payload.get("items")
     if not isinstance(total, int) or not isinstance(items, list):
         return True  # an endpoint that does not count is taken at its word
     return len(items) >= total
+
+
+def _list_total(payload: dict[str, Any]) -> Any:
+    """A list endpoint's own count of its records. Every list endpoint
+    says ``total_results`` except filing history, which says ``total_count``."""
+    total = payload.get("total_results")
+    return total if total is not None else payload.get("total_count")
 
 
 def _slug(text: str) -> str:
@@ -169,6 +180,14 @@ class _WalkStats:
     predicted: int = 0
     prefetched: set[str] = field(default_factory=set)
     prefetch_seconds: float = 0.0
+
+
+def _filing_history_path(number: str) -> str:
+    return f"/company/{number}/filing-history?category={FILING_CATEGORIES}"
+
+
+def _filing_history_key(number: str) -> str:
+    return f"{_CACHE_NS}/company/{number}/filing-history-psc"
 
 
 def _looks_like_company_number(value: str) -> bool:
@@ -463,6 +482,11 @@ class CompaniesHouseAdapter(SourceAdapter):
                 stats.prefetched.add(cache_key)
 
         await asyncio.gather(*(one(path, key, paged) for path, key, paged in paths))
+        # The filing history is read only for a company with PSCs on file (as
+        # the walk reads it), so it waits for the PSC list the gather warmed.
+        pscs = self._cache.get_payload(f"{_CACHE_NS}/company/{number}/pscs")
+        if pscs is not None and (pscs[0].get("items") or []):
+            await one(_filing_history_path(number), _filing_history_key(number), True)
 
     async def _fetch_company_data(
         self,
@@ -526,6 +550,8 @@ class CompaniesHouseAdapter(SourceAdapter):
             else:
                 raise
 
+        filing_history = await self._filing_history(number, pscs, stats)
+
         for psc in pscs.get("items") or []:
             if psc.get("ceased_on"):
                 continue
@@ -585,7 +611,37 @@ class CompaniesHouseAdapter(SourceAdapter):
             "officers": officers,
             "pscs": pscs,
             "psc_statements": psc_statements,
+            "filing_history": filing_history,
         }
+
+    async def _filing_history(
+        self, number: str, pscs: dict[str, Any], stats: _WalkStats | None
+    ) -> dict[str, Any] | None:
+        """The company's PSC, incorporation and confirmation-statement filings,
+        for matching each PSC to the filing that notified it (the
+        declarant-and-filing-provenance ticket; ``bods/ch_filings.py``).
+
+        Read only for a company with PSCs on file — a company with none has
+        nothing to match. A failure is never a failure of the lookup: the
+        bundle carries ``opencheck_unavailable`` and the PSC edges simply
+        carry no filing (Stephen, 3 Nov 2026). Never cached when it fails.
+        """
+        if not (pscs.get("items") or []):
+            return None
+        try:
+            return await self._get_list(
+                _filing_history_path(number),
+                cache_key=_filing_history_key(number),
+                stats=stats,
+            )
+        except httpx.HTTPError as exc:
+            log.warning("companies_house: filing history for %s not read: %s", number, exc)
+            reason = (
+                f"HTTP {exc.response.status_code}"
+                if isinstance(exc, httpx.HTTPStatusError)
+                else type(exc).__name__
+            )
+            return {"items": [], "opencheck_unavailable": reason}
 
     async def _fetch_officer_bundle(self, officer_id: str) -> dict[str, Any]:
         """Return appointments for a Companies House officer id.
@@ -690,7 +746,7 @@ class CompaniesHouseAdapter(SourceAdapter):
                 merged = dict(payload)
             page_items = payload.get("items") or []
             items.extend(page_items)
-            total = payload.get("total_results")
+            total = _list_total(payload)
             if not page_items or not isinstance(total, int) or len(items) >= total:
                 break
 
@@ -698,7 +754,7 @@ class CompaniesHouseAdapter(SourceAdapter):
         merged["items"] = items
         merged["start_index"] = 0
         merged["items_per_page"] = len(items)
-        total = merged.get("total_results")
+        total = _list_total(merged)
         if isinstance(total, int) and len(items) < total:
             merged[_LIST_CAPPED] = True
             log.warning(

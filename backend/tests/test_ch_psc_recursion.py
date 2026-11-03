@@ -24,6 +24,7 @@ from pytest_httpx import HTTPXMock
 
 from opencheck import degradation, signalstats
 from opencheck.bods import mapper
+from opencheck.bods.ch_filings import FILING_CATEGORIES
 from opencheck.config import get_settings
 from opencheck.identifiers import ch_identification_is_uk, normalise_ch_company_number
 from opencheck.sources.companies_house import CompaniesHouseAdapter
@@ -197,6 +198,20 @@ def _mock_company(httpx_mock: HTTPXMock, number: str, pscs: list[dict[str, Any]]
         status_code=404,
         json={"errors": [{"error": "not-found"}]},
     )
+    if pscs:
+        # A company with PSCs on file is also asked for its PSC filings
+        # (the declarant-and-filing-provenance ticket, ``bods/ch_filings.py``).
+        _mock_filing_history(httpx_mock, number)
+
+
+def _mock_filing_history(httpx_mock: HTTPXMock, number: str) -> None:
+    httpx_mock.add_response(
+        url=(
+            f"{_API}/company/{number}/filing-history?category={FILING_CATEGORIES}"
+            "&items_per_page=100&start_index=0"
+        ),
+        json={"filing_history_status": "filing-history-available", "total_count": 0, "items": []},
+    )
 
 
 def _mock_chain(httpx_mock: HTTPXMock, chain: dict[str, list[dict[str, Any]]]) -> None:
@@ -247,8 +262,9 @@ async def test_depth_cap_is_configurable_and_reported(httpx_mock: HTTPXMock, mon
     assert stopped[0]["subject_company_number"] == "01915771"
     assert [d.source_id for d in degraded] == ["companies_house"]
     assert "depth of 2 hops" in degraded[0].detail
-    # Register calls are the four-per-hop the docs promise: subject + 2 hops.
-    assert len(httpx_mock.get_requests()) == 12
+    # Register calls are the four-per-hop the docs promise, plus each
+    # company's filing history (all three have PSCs): subject + 2 hops.
+    assert len(httpx_mock.get_requests()) == 15
 
 
 async def test_default_depth_is_six(httpx_mock: HTTPXMock) -> None:
@@ -317,8 +333,9 @@ async def test_non_uk_and_unparseable_numbers_are_reported_not_guessed(
     # The residue is logged so it can be counted in production.
     logged = [r.getMessage() for r in caplog.records if "not followed" in r.getMessage()]
     assert len(logged) == 2
-    # No register call was fired for either — nothing to fetch.
-    assert len(httpx_mock.get_requests()) == 4
+    # No register call was fired for either — nothing to fetch. The fifth
+    # is the subject's own filing history, read because it has PSCs.
+    assert len(httpx_mock.get_requests()) == 5
 
 
 async def test_a_parent_that_cannot_be_fetched_does_not_sink_the_subject(
@@ -481,7 +498,8 @@ async def test_walk_records_its_shape_and_cost(
     w = signalstats.stats()["companies_house_walks"]
     lookup = w["by_origin"]["lookup"]
     assert lookup["walks"] == 1
-    assert lookup["calls_live"] == 20 and lookup["calls_cached"] == 0
+    # Four records per company and a filing history for the four with PSCs.
+    assert lookup["calls_live"] == 24 and lookup["calls_cached"] == 0
     assert lookup["max_related"] == 4 and lookup["max_depth"] == 4
     assert lookup["seconds"] >= 0
     assert w["related"] == {"lookup|4-6": 1}
@@ -508,8 +526,8 @@ async def test_walk_records_cache_hits_separately(
     await adapter.fetch("00070274")
     lookup = signalstats.stats()["companies_house_walks"]["by_origin"]["lookup"]
     assert lookup["walks"] == 2
-    assert lookup["calls_live"] == 20
-    assert lookup["calls_cached"] == 20
+    assert lookup["calls_live"] == 24
+    assert lookup["calls_cached"] == 24
 
 
 async def test_walk_records_why_it_stopped(
@@ -522,7 +540,7 @@ async def test_walk_records_why_it_stopped(
     w = signalstats.stats()["companies_house_walks"]
     assert w["unfollowed"] == {"lookup|max_depth_reached": 1}
     assert w["depth"] == {"lookup|2": 1}
-    assert w["by_origin"]["lookup"]["calls_live"] == 12
+    assert w["by_origin"]["lookup"]["calls_live"] == 15
 
 
 async def test_walk_under_the_hop_origin(

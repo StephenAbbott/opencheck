@@ -4431,6 +4431,39 @@ that will be re-derived otherwise:
   `recordId`, OpenCheck's publication/source blocks, a comment naming the OO
   statement.
 
+## Which filing declared a PSC (the declarant-and-filing-provenance ticket)
+
+`bods/ch_filings.py`, `CompaniesHouseAdapter._filing_history`,
+`frontend/src/lib/filingProvenance.ts`; `docs/dates.md` § "Who declared it".
+Stephen's decisions (3 Nov 2026) and the things that will be re-derived
+otherwise:
+
+- **An annotation, never the `source` block.** One `commenting` annotation per
+  event (notification → `/recordDetails/interests`, cessation →
+  `/recordDetails/interests/0/endDate`) with `url` = the filing's document and
+  the `companiesHouseFiling` extension property; `source` stays the register
+  record. Annotations are outside the content-addressed digest.
+- **Every company in the bundle with PSCs**, one paged call each
+  (`category=persons-with-significant-control,incorporation,confirmation-statement`,
+  cache key `…/filing-history-psc`). The graph-first prefetch reads it only
+  after the PSC list it warmed has items. Filing history counts in
+  `total_count`, not `total_results` (`_list_total`). A failure is
+  `{"opencheck_unavailable": reason}`, never cached, never a degradation.
+- **Date and name, never date alone** (Monzo's PSC02 of 6 April 2016 names
+  another partnership); LLPs file `LLPSC0n`; one unique near match (legal form
+  changed since, middle name left off) is accepted. Then the incorporation
+  filing (`notified_on` = creation date) and, for a notification before
+  26 June 2017, the first CS01/LLCS01 made up to on or after it (PSC changes
+  went on the confirmation statement until then), else `none` — said, never a
+  signal, and only from a history read whole.
+- **Declarant is always `company`**: Companies House publishes no presenter.
+- The frontend copies `FILING_PROPERTY` and the match words; `test_ch_filings.py`
+  parses `filingProvenance.ts`. A CH walk test that mocks the register must
+  mock the filing history for each company with PSCs
+  (`test_ch_psc_recursion._mock_filing_history`).
+- **Other registers** (sweep in `docs/dates.md`): only GLEIF publishes
+  something not yet carried (`corroborationLevel`, `managingLou`).
+
 ## Retrievals are moments; the dates guide is linked (Phase 318)
 
 Dates-audit Phase E plus the one warning the Phase 317 post-deploy sweep found.
