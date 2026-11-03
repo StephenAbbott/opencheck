@@ -33,5 +33,10 @@
     ]
   },
   "lei_confirmed_min": 3,
-  "intermediate_layers_min": null
+  "intermediate_layers_min": null,
+  "disclosure": {
+    "gleif": [
+      "exempt"
+    ]
+  }
 }
