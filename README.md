@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 435** — Wikirate data is back on the Climate & ESG tab, read from legacy.wikirate.org after Wikirate 2.0 took over wikirate.org, and a failed Wikirate read now says so instead of reading as no record.
+**Latest: Phase 436** — The Wikirate source now reads Wikirate 2.0's REST API, with a setting to fall back to the legacy API until that is retired at the end of 2026.
 
 → [Full development history](docs/status.md)
 
