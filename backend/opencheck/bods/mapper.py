@@ -101,6 +101,7 @@ from .mappers.wikidata import (  # noqa: F401  (re-exported: see the module docs
 
 from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _CH_PUBLIC,
+    _CH_REGISTER,
     _COUNTRY_TEXT_ALIASES,
     _ChCompany,
     _ChPscHop,
@@ -108,7 +109,9 @@ from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _PSC_STATEMENT_NO_BO,
     _PSC_STATEMENT_REASON,
     _annotate_verified_people,
+    _ch_add_residence,
     _ch_appointments_are_corporate,
+    _ch_appointments_residence,
     _ch_corporate_officer_entity,
     _ch_corporate_officer_statements,
     _ch_director_statements,
