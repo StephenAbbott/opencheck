@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 439** — Officers from France's Registre National des Entreprises now carry their country of residence, read from the country of their home address.
+**Latest: Phase 440** — Beneficial owners from Slovakia's public-sector partners register now carry the nationality and country of residence the register publishes.
 
 → [Full development history](docs/status.md)
 
