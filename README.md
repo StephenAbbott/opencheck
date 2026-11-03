@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 438** — Beneficial owners and officers from Latvia, New Zealand, Czechia and EITI's Armenia data now carry their country of residence.
+**Latest: Phase 439** — Officers from France's Registre National des Entreprises now carry their country of residence, read from the country of their home address.
 
 → [Full development history](docs/status.md)
 
