@@ -125,17 +125,19 @@ def test_owner_and_bo_events_reconstructed():
 
     added = _by(events, ChangeType.OWNER_ADDED)
     removed = _by(events, ChangeType.OWNER_REMOVED)
-    # ADDED: board Markus, OSAN Old Owner, BO Edith, BO Past = 4
-    assert len(added) == 4
+    # ADDED: OSAN Old Owner, BO Edith, BO Past = 3 (the board member is an
+    # office, on the Tier-4 board stream, since the Estonia–Latvia phase)
+    assert len(added) == 3
     # REMOVED: OSAN Old Owner (ended), BO Past (ended) = 2
     assert len(removed) == 2
 
-    board = next(e for e in added if "Markus Villig" in (e.counterparty or ""))
+    board = next(e for e in _by(events, ChangeType.OFFICER_APPOINTED) if "Markus Villig" in (e.counterparty or ""))
     assert board.record_type is RecordType.RELATIONSHIP
-    assert board.tier is Tier.OWNERSHIP_CONTROL
+    assert board.tier is Tier.BOARD_CHANGE
     assert "management board member" in board.counterparty
     assert board.event_date == "2013-02-07"
     assert board.subject_id == "10584597"
+    assert not any("Markus Villig" in (e.counterparty or "") for e in added)
 
     owner_out = next(e for e in removed if "Old Owner" in (e.counterparty or ""))
     assert owner_out.event_date == "2016-08-06"
@@ -188,3 +190,104 @@ def test_assembler_integrates_estonia_events():
     # Notable = the Tier-1/2 events, clustered: ownership entries are 1:1.
     assert tl.notable
     assert any(entry.sources == ["ariregister"] for entry in tl.notable)
+
+
+# --------------------------------------------------------------------------- #
+# Roles are tiered, re-registrations folded, account prefixes stripped
+# (the Estonia–Latvia emitters phase, 3 Nov 2026)
+# --------------------------------------------------------------------------- #
+
+_ROLES_XML = """<?xml version="1.0"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+ <SOAP-ENV:Body>
+  <detailandmed_v2Response xmlns="http://arireg.x-road.eu/producer/">
+   <keha><ettevotjad><item>
+    <ariregistri_kood>10421629</ariregistri_kood>
+    <isikuandmed>
+     <kaardile_kantud_isikud>
+      <item><isiku_roll>JUHL</isiku_roll><isiku_roll_tekstina>Management board member</isiku_roll_tekstina><eesnimi>Gunnar</eesnimi><nimi_arinimi>Okk</nimi_arinimi><algus_kpv>1998-03-31Z</algus_kpv><lopp_kpv>2005-12-28Z</lopp_kpv></item>
+      <item><isiku_roll>PROK</isiku_roll><isiku_roll_tekstina>Procurator</isiku_roll_tekstina><eesnimi>Ain</eesnimi><nimi_arinimi>Saarepuu</nimi_arinimi><algus_kpv>1998-03-31Z</algus_kpv><lopp_kpv>1998-06-25Z</lopp_kpv></item>
+     </kaardile_kantud_isikud>
+     <kaardivalised_isikud>
+      <item><isiku_roll>N</isiku_roll><isiku_roll_tekstina>Member of the supervisory board</isiku_roll_tekstina><eesnimi>Meelis</eesnimi><nimi_arinimi>Atonen</nimi_arinimi><algus_kpv>2008-05-20Z</algus_kpv><lopp_kpv>2011-05-19Z</lopp_kpv></item>
+      <item><isiku_roll>N</isiku_roll><isiku_roll_tekstina>Member of the supervisory board</isiku_roll_tekstina><eesnimi>Meelis</eesnimi><nimi_arinimi>Atonen</nimi_arinimi><algus_kpv>2011-05-19Z</algus_kpv><lopp_kpv>2014-05-20Z</lopp_kpv></item>
+      <item><isiku_roll>S</isiku_roll><isiku_roll_tekstina>Stockholder</isiku_roll_tekstina><nimi_arinimi>MAJANDUS- JA KOMMUNIKATSIOONIMINISTEERIUM</nimi_arinimi><osaluse_suurus>6000000</osaluse_suurus><osaluse_valuuta>EEK</osaluse_valuuta><algus_kpv>2001-04-27Z</algus_kpv><lopp_kpv>2005-04-01Z</lopp_kpv></item>
+      <item><isiku_roll>S</isiku_roll><isiku_roll_tekstina>Stockholder</isiku_roll_tekstina><nimi_arinimi>MAJANDUS- JA KOMMUNIKATSIOONIMINISTEERIUM</nimi_arinimi><osaluse_suurus>7500000</osaluse_suurus><osaluse_valuuta>EEK</osaluse_valuuta><algus_kpv>2005-04-01Z</algus_kpv><lopp_kpv>2008-04-01Z</lopp_kpv></item>
+      <item><isiku_roll>S</isiku_roll><isiku_roll_tekstina>Stockholder</isiku_roll_tekstina><nimi_arinimi>Lihtkonto: Rahandusministeerium</nimi_arinimi><osaluse_suurus>621645750</osaluse_suurus><osaluse_valuuta>EUR</osaluse_valuuta><algus_kpv>2017-12-22Z</algus_kpv><lopp_kpv>2023-08-16Z</lopp_kpv></item>
+      <item><isiku_roll>S</isiku_roll><isiku_roll_tekstina>Stockholder</isiku_roll_tekstina><nimi_arinimi>Omanikukonto: Rahandusministeerium</nimi_arinimi><osaluse_suurus>621645750</osaluse_suurus><osaluse_valuuta>EUR</osaluse_valuuta><algus_kpv>2023-08-16Z</algus_kpv></item>
+      <item><isiku_roll>D</isiku_roll><isiku_roll_tekstina>Audit firm</isiku_roll_tekstina><nimi_arinimi>Aktsiaselts PricewaterhouseCoopers</nimi_arinimi><algus_kpv>2002-11-14Z</algus_kpv></item>
+      <item><isiku_roll>ARP</isiku_roll><isiku_roll_tekstina>The registrar of the shares of the fund</isiku_roll_tekstina><nimi_arinimi>Nasdaq CSD SE</nimi_arinimi><algus_kpv>2017-09-28Z</algus_kpv></item>
+     </kaardivalised_isikud>
+    </isikuandmed>
+   </item></ettevotjad></keha>
+  </detailandmed_v2Response>
+ </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+"""
+
+
+def _roles_events():
+    return ariregister_change_events({"registry_code": "10421629", "detail_xml": _ROLES_XML, "bo_xml": None})
+
+
+def test_an_office_is_the_board_stream_not_an_owner():
+    events = _roles_events()
+    officers = [e for e in events if e.tier is Tier.BOARD_CHANGE]
+    assert {e.change_type for e in officers} == {ChangeType.OFFICER_APPOINTED, ChangeType.OFFICER_RESIGNED}
+    names = {e.counterparty for e in officers}
+    assert "Gunnar Okk — management board member" in names
+    assert "Ain Saarepuu — procurator" in names
+    assert "Meelis Atonen — member of the supervisory board" in names
+    # No office is a Tier-1 owner event any more.
+    owners = [e for e in events if e.tier is Tier.OWNERSHIP_CONTROL]
+    assert all("ministeerium" in (e.counterparty or "").casefold() for e in owners)
+
+
+def test_auditors_and_the_registrar_are_administrative_rows():
+    events = _roles_events()
+    admin = [e for e in events if e.tier is Tier.ADMIN_NOISE and e.change_type is None]
+    assert {e.counterparty for e in admin} >= {
+        "Aktsiaselts PricewaterhouseCoopers — audit firm",
+        "Nasdaq CSD SE — the registrar of the shares of the fund",
+    }
+    assert all(e.record_type is RecordType.RELATIONSHIP for e in admin)
+    assert not any("PricewaterhouseCoopers" in (e.counterparty or "") for e in events if e.tier is not Tier.ADMIN_NOISE)
+
+
+def test_a_holding_reregistered_at_a_new_size_is_one_band_change():
+    events = _roles_events()
+    ministry = [e for e in events if "KOMMUNIKATSIOONIMINISTEERIUM" in (e.counterparty or "")]
+    kinds = sorted((e.event_date, e.change_type.value) for e in ministry)
+    assert kinds == [
+        ("2001-04-27", "OWNER_ADDED"),
+        ("2005-04-01", "CONTROL_BAND_CHANGED"),
+        ("2008-04-01", "OWNER_REMOVED"),
+    ]
+    band = next(e for e in ministry if e.change_type is ChangeType.CONTROL_BAND_CHANGED)
+    assert band.tier is Tier.OWNERSHIP_CONTROL
+    assert (band.value_old, band.value_new) == ("6,000,000 EEK", "7,500,000 EEK")
+    assert band.raw_change_type == "re-registered"
+
+
+def test_an_office_renewed_on_the_day_it_ended_is_not_a_resignation():
+    events = _roles_events()
+    atonen = sorted((e.event_date, e.change_type.value, e.tier.value) for e in events if "Atonen" in (e.counterparty or ""))
+    assert atonen == [
+        ("2008-05-20", "OFFICER_APPOINTED", 4),
+        ("2011-05-19", "OFFICER_DETAILS_CHANGED", 3),
+        ("2014-05-20", "OFFICER_RESIGNED", 4),
+    ]
+
+
+def test_a_nasdaq_account_prefix_is_not_a_change_of_owner():
+    events = _roles_events()
+    rahandus = [e for e in events if "Rahandusministeerium" in (e.counterparty or "")]
+    assert all(e.counterparty == "Rahandusministeerium — stockholder" for e in rahandus)
+    # The holding moved from a simple account to an owner account at the
+    # same size: one administrative row, not a band change and never an
+    # owner leaving.
+    assert sorted((e.event_date, e.change_type.value if e.change_type else e.raw_change_type, e.tier.value) for e in rahandus) == [
+        ("2017-12-22", "OWNER_ADDED", 1),
+        ("2023-08-16", "re-registered", 3),
+    ]
+    assert not any(e.change_type is ChangeType.OWNER_REMOVED for e in rahandus)

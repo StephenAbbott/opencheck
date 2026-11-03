@@ -17,10 +17,29 @@ X-Road SOAP open-data API, parsed here from the documented XML responses):
   (``kasusaaja``) with start dates + manner of control.
 
 Identity blocks (names / addresses / legal forms / statuses) are dated intervals
-→ Tier-2 transition events. Persons and beneficial owners are dated holdings →
-Tier-1 ``OWNER_ADDED`` / ``OWNER_REMOVED`` relationship events (role / share /
-control manner ride in ``counterparty``, mirroring the NZ emitter — the codelist
-has no director- or BO-specific type).
+→ Tier-2 transition events. Persons are dated rows, tiered by what the role
+is (the Estonia–Latvia emitters phase, 3 Nov 2026 — until then every role on
+the card, the audit firm and the share registrar included, was a Tier-1 owner):
+
+* **ownership or control** — shareholders (``OSAN`` on the card, ``S`` off
+  it), founders (``A`` / ``B``), a sole proprietor or entrepreneur, a public
+  body's superior authority, a cooperative member — and the beneficial
+  owners: Tier-1 ``OWNER_ADDED`` / ``OWNER_REMOVED``;
+* **an office** — every role the mapper types as a board member, chair,
+  procurist, liquidator, trustee or representative, and the supervisory
+  board (``N`` / ``E``): Tier-4 ``OFFICER_APPOINTED`` / ``OFFICER_RESIGNED``,
+  the Companies House board stream;
+* **neither** — auditors, the audit committee, the share registrar, the
+  contact person: an administrative (Tier 3) row, kept raw-first.
+
+The role, share and control manner ride in ``counterparty``. A Nasdaq CSD
+account prefix ("Omanikukonto:", "Lihtkonto:") is stripped from a holder's
+name here as the mapper strips it from the statement, so a holding moved
+between account types is not a departure and an arrival. A row that ends on
+the day another row of the same party and role starts is one holding
+**re-registered** (the register writes a new row when a holding's size
+changes): one ``CONTROL_BAND_CHANGED`` naming the sizes, or one
+``OFFICER_DETAILS_CHANGED`` for an office renewed, never a remove + add pair.
 
 NOTE: beneficial-owner events are included for now. Estonia's planned switch
 to legitimate-interest BO access was POSTPONED on its 2026-07-10 start date
@@ -130,7 +149,83 @@ def _iso(raw: str | None) -> str | None:
 
 def _person_name(item: ET.Element) -> str:
     parts = [_text(item, "eesnimi"), _text(item, "nimi_arinimi")]
-    return " ".join(p for p in parts if p).strip()
+    return _holder_name(" ".join(p for p in parts if p).strip())
+
+
+def _holder_name(name: str) -> str:
+    """A party's name without its Nasdaq CSD account prefix — the mapper's
+    rule (``ee_strip_account_prefix``), applied here so the History tab names
+    the same party the graph draws."""
+    from ..bods.mappers.estonia import ee_strip_account_prefix
+
+    stripped, _kinds = ee_strip_account_prefix(name)
+    return stripped or name
+
+
+# --------------------------------------------------------------------------- #
+# Roles: what kind of change a dated person row is
+# --------------------------------------------------------------------------- #
+
+#: Role codes that are ownership or control of the company, on the card or
+#: off it. ``OSAN`` the OÜ shareholder, ``S`` the AS shareholder the register
+#: records, ``A`` / ``B`` founders; the sole proprietor, entrepreneur,
+#: superior authority and cooperative member are the mapper's
+#: ``otherInfluenceOrControl`` roles. Everything the mapper types as an
+#: office is an office; everything else is administrative.
+OWNERSHIP_ROLES: frozenset[str] = frozenset({"OSAN", "S", "A", "B", "FIE", "ETTEV", "KOAS", "YHL"})
+
+#: The register's role code for a beneficial-owner row (none: the BO list is
+#: its own service), used as the role key of the BO chain.
+_BO_ROLE = "kasusaaja"
+
+
+def role_kind(role_code: str | None) -> str:
+    """``"ownership"``, ``"officer"`` or ``"admin"`` for a registry-card or
+    off-card role code — the mapper's tables decide what is an office."""
+    from ..bods.mappers.estonia import _EE_OFF_CARD_ROLE_MAP, _EE_OFFICER_ROLE_MAP
+
+    code = (role_code or "").strip()
+    if code in OWNERSHIP_ROLES or code == _BO_ROLE:
+        return "ownership"
+    if code in _EE_OFFICER_ROLE_MAP or code in _EE_OFF_CARD_ROLE_MAP:
+        return "officer"
+    return "admin"
+
+
+class _Row:
+    """One dated person row: who, in what role, from when to when, and the
+    size of the holding where the register states one."""
+
+    __slots__ = ("label", "role", "kind", "start", "end", "share")
+
+    def __init__(self, label: str, role: str, start: str | None, end: str | None,
+                 share: str | None = None) -> None:
+        self.label = label
+        self.role = role
+        self.kind = role_kind(role)
+        self.start = start
+        self.end = end
+        self.share = share
+
+
+def _share_text(size: str | None, currency: str | None, percent: str | None) -> str | None:
+    """The holding's size as the register states it: ``"6,000,000 EEK"``,
+    ``"25.5%"``, or both; ``None`` when it states none."""
+    parts: list[str] = []
+    if size:
+        try:
+            number = float(size)
+            text = f"{number:,.0f}" if number == int(number) else f"{number:,}".rstrip("0").rstrip(".")
+        except ValueError:
+            text = size
+        parts.append(f"{text} {currency}".strip() if currency else text)
+    if percent:
+        try:
+            pct = float(percent)
+            parts.append(f"{pct:g}%")
+        except ValueError:
+            parts.append(f"{percent}%")
+    return ", ".join(parts) or None
 
 
 # --------------------------------------------------------------------------- #
@@ -148,18 +243,118 @@ def _entity_event(subject: str, change_type: ChangeType, *, value_old: str | Non
 
 
 def _emit_owner(events: list[ChangeEvent], subject: str, label: str,
-                start: str | None, end: str | None) -> None:
-    """Reconstruct add/remove relationship events from a dated holding/role."""
-    common = dict(
+                start: str | None, end: str | None, *, add: bool = True,
+                remove: bool = True) -> None:
+    """Reconstruct add/remove relationship events from a dated holding."""
+    common: dict[str, Any] = dict(
         source_id=_SOURCE, subject_id=subject, record_type=RecordType.RELATIONSHIP,
         raw_change_type="record", tier=Tier.OWNERSHIP_CONTROL, counterparty=label,
         interest_start_date=start, interest_end_date=end,
         date_basis=DateBasis.EFFECTIVE, date_confidence=DateConfidence.HIGH,
     )
-    if start:
+    if start and add:
         events.append(ChangeEvent(change_type=ChangeType.OWNER_ADDED, event_date=start, **common))
-    if end:
+    if end and remove:
         events.append(ChangeEvent(change_type=ChangeType.OWNER_REMOVED, event_date=end, **common))
+
+
+def _emit_officer(events: list[ChangeEvent], subject: str, label: str,
+                start: str | None, end: str | None, *, add: bool = True,
+                remove: bool = True) -> None:
+    """Appointment / resignation events from a dated office — the board
+    stream, not the ownership axis."""
+    common: dict[str, Any] = dict(
+        source_id=_SOURCE, subject_id=subject, record_type=RecordType.RELATIONSHIP,
+        raw_change_type="record", tier=Tier.BOARD_CHANGE, counterparty=label,
+        interest_start_date=start, interest_end_date=end,
+        date_basis=DateBasis.EFFECTIVE, date_confidence=DateConfidence.HIGH,
+    )
+    if start and add:
+        events.append(ChangeEvent(change_type=ChangeType.OFFICER_APPOINTED, event_date=start, **common))
+    if end and remove:
+        events.append(ChangeEvent(change_type=ChangeType.OFFICER_RESIGNED, event_date=end, **common))
+
+
+def _emit_admin(events: list[ChangeEvent], subject: str, label: str,
+                start: str | None, end: str | None, *, add: bool = True,
+                remove: bool = True) -> None:
+    """A dated row that is neither ownership nor an office — an auditor, the
+    share registrar — kept raw-first in the administrative stream."""
+    common: dict[str, Any] = dict(
+        source_id=_SOURCE, subject_id=subject, record_type=RecordType.RELATIONSHIP,
+        tier=Tier.ADMIN_NOISE, counterparty=label, value_new=label,
+        interest_start_date=start, interest_end_date=end,
+        date_basis=DateBasis.EFFECTIVE, date_confidence=DateConfidence.HIGH,
+    )
+    if start and add:
+        events.append(ChangeEvent(raw_change_type="entered", event_date=start, **common))
+    if end and remove:
+        events.append(ChangeEvent(raw_change_type="ended", event_date=end, **common))
+
+
+def _emit_reregistration(events: list[ChangeEvent], subject: str, prev: _Row,
+                         row: _Row) -> None:
+    """One event for a row that ended on the day the next row of the same
+    party and role began: a holding re-registered at a new size, or an
+    office renewed — never a departure and an arrival on one day."""
+    if row.kind == "ownership" and (row.share or prev.share) and row.share != prev.share:
+        events.append(ChangeEvent(
+            source_id=_SOURCE, subject_id=subject, record_type=RecordType.RELATIONSHIP,
+            raw_change_type="re-registered", change_type=ChangeType.CONTROL_BAND_CHANGED,
+            tier=Tier.OWNERSHIP_CONTROL, counterparty=row.label,
+            value_old=prev.share, value_new=row.share,
+            interest_start_date=row.start, interest_end_date=row.end,
+            event_date=row.start, date_basis=DateBasis.EFFECTIVE, date_confidence=DateConfidence.HIGH,
+        ))
+    elif row.kind == "officer":
+        events.append(ChangeEvent(
+            source_id=_SOURCE, subject_id=subject, record_type=RecordType.RELATIONSHIP,
+            raw_change_type="re-registered", change_type=ChangeType.OFFICER_DETAILS_CHANGED,
+            tier=Tier.ADMIN_NOISE, counterparty=row.label,
+            interest_start_date=row.start, interest_end_date=row.end,
+            event_date=row.start, date_basis=DateBasis.EFFECTIVE, date_confidence=DateConfidence.HIGH,
+        ))
+    else:
+        # An auditor's row renewed — or a holding re-registered at the same
+        # size (a Nasdaq CSD account moved between types, a row rewritten):
+        # the register wrote a new row and nothing about the holding moved.
+        events.append(ChangeEvent(
+            source_id=_SOURCE, subject_id=subject, record_type=RecordType.RELATIONSHIP,
+            raw_change_type="re-registered", tier=Tier.ADMIN_NOISE, counterparty=row.label,
+            value_new=row.label, interest_start_date=row.start, interest_end_date=row.end,
+            event_date=row.start, date_basis=DateBasis.EFFECTIVE, date_confidence=DateConfidence.HIGH,
+        ))
+
+
+def _emit_rows(events: list[ChangeEvent], subject: str, rows: list[_Row]) -> None:
+    """Emit the rows as chains: rows of one party in one role, each ending
+    the day the next begins, are one relationship that was re-registered —
+    added once, re-registered at every boundary, removed at the last end.
+    Rows that do not chain are emitted on their own. The party is matched
+    on its name regardless of case: the register filed the Ministry of
+    Finance as "RAHANDUSMINISTEERIUM" in 2020 and "Rahandusministeerium"
+    before and after."""
+    groups: dict[tuple[str, str], list[_Row]] = {}
+    for row in rows:
+        groups.setdefault((row.label.casefold(), row.kind), []).append(row)
+    for group in groups.values():
+        group.sort(key=lambda r: (r.start or "", r.end or "9999"))
+        prev: _Row | None = None
+        for row in group:
+            if prev is not None and prev.end and row.start and prev.end == row.start:
+                _emit_reregistration(events, subject, prev, row)
+            else:
+                if prev is not None:
+                    _emit_one(events, subject, prev, start=False, end=True)
+                _emit_one(events, subject, row, start=True, end=False)
+            prev = row
+        if prev is not None:
+            _emit_one(events, subject, prev, start=False, end=True)
+
+
+def _emit_one(events: list[ChangeEvent], subject: str, row: _Row, *, start: bool, end: bool) -> None:
+    emit = {"ownership": _emit_owner, "officer": _emit_officer}.get(row.kind, _emit_admin)
+    emit(events, subject, row.label, row.start, row.end, add=start, remove=end)
 
 
 def _emit_transitions(events: list[ChangeEvent], subject: str, items: list[ET.Element],
@@ -201,16 +396,21 @@ def _address_value(item: ET.Element) -> str | None:
     return line or None
 
 
-def _persons(events: list[ChangeEvent], subject: str, company: ET.Element,
-             list_name: str) -> None:
+def _person_rows(company: ET.Element, list_name: str) -> list[_Row]:
+    rows: list[_Row] = []
     for it in _items(company, list_name):
         name = _person_name(it)
         if not name:
             continue
-        role = (_text(it, "isiku_roll_tekstina") or _text(it, "isiku_roll") or "").strip()
+        code = (_text(it, "isiku_roll") or "").strip()
+        role = (_text(it, "isiku_roll_tekstina") or code).strip()
         label = f"{name} — {role.lower()}" if role else name
-        _emit_owner(events, subject, label,
-                    _iso(_text(it, "algus_kpv")), _iso(_text(it, "lopp_kpv")))
+        rows.append(_Row(
+            label, code, _iso(_text(it, "algus_kpv")), _iso(_text(it, "lopp_kpv")),
+            _share_text(_text(it, "osaluse_suurus"), _text(it, "osaluse_valuuta"),
+                        _text(it, "osaluse_protsent")),
+        ))
+    return rows
 
 
 def _bo_events(subject: str, bo_xml: str | None) -> list[ChangeEvent]:
@@ -220,20 +420,23 @@ def _bo_events(subject: str, bo_xml: str | None) -> list[ChangeEvent]:
     container = _first(root, "kasusaajad")
     if container is None:
         return []
-    events: list[ChangeEvent] = []
+    rows: list[_Row] = []
     for k in container:
         if _ln(k) != "kasusaaja":
             continue
         parts = [_text(k, "eesnimi"), _text(k, "nimi")]
-        name = " ".join(p for p in parts if p).strip()
+        name = _holder_name(" ".join(p for p in parts if p).strip())
         if not name:
             continue
         manner = (_text(k, "kontrolli_teostamise_viis_tekstina")
                   or _text(k, "kontrolli_teostamise_viis") or "").strip()
         label = f"{name} — beneficial owner" + (f" ({manner})" if manner else "")
-        _emit_owner(events, subject, label,
-                    _iso(_text(k, "algus_kpv")),
-                    _iso(_text(k, "lopp_kpv") or _text(k, "loppemise_kpv")))
+        rows.append(_Row(
+            label, _BO_ROLE, _iso(_text(k, "algus_kpv")),
+            _iso(_text(k, "lopp_kpv") or _text(k, "loppemise_kpv")),
+        ))
+    events: list[ChangeEvent] = []
+    _emit_rows(events, subject, rows)
     return events
 
 
@@ -440,13 +643,20 @@ def _rest_events(subject: str, body: dict[str, Any]) -> list[ChangeEvent]:
         if isinstance(f, dict) and (v := (f.get("contentAsText") or f.get("content") or "").strip())
     ], ChangeType.LEGAL_FORM_CHANGE)
     _emit_transition_rows(events, subject, _rest_statuses(general), ChangeType.STATUS_CHANGED)
+    rows: list[_Row] = []
     for row in rest_person_rows(body):   # no codes: names, roles and dates only
-        name = " ".join(p for p in (row.get("eesnimi"), row.get("nimi_arinimi")) if p).strip()
+        name = _holder_name(" ".join(p for p in (row.get("eesnimi"), row.get("nimi_arinimi")) if p).strip())
         if not name:
             continue
-        role = (row.get("isiku_roll_tekstina") or row.get("isiku_roll") or "").strip()
+        code = (row.get("isiku_roll") or "").strip()
+        role = (row.get("isiku_roll_tekstina") or code).strip()
         label = f"{name} — {role.lower()}" if role else name
-        _emit_owner(events, subject, label, _iso(row.get("algus_kpv")), _iso(row.get("lopp_kpv")))
+        rows.append(_Row(
+            label, code, _iso(row.get("algus_kpv")), _iso(row.get("lopp_kpv")),
+            _share_text(row.get("osaluse_suurus"), row.get("osaluse_valuuta"),
+                        row.get("osaluse_protsent")),
+        ))
+    _emit_rows(events, subject, rows)
     return events
 
 
@@ -484,12 +694,15 @@ def ariregister_change_events(data: dict[str, Any]) -> list[ChangeEvent]:
         _emit_transitions(events, subject, _items(company, "staatused"),
                           lambda it: _text(it, "staatus_tekstina") or _text(it, "staatus"),
                           ChangeType.STATUS_CHANGED)
-        # Persons on the card (board + OSAN shareholders) and off the card (O).
-        _persons(events, subject, company, "kaardile_kantud_isikud")
-        _persons(events, subject, company, "kaardivalised_isikud")
+        # Persons on the card (board + OSAN shareholders) and off the card
+        # (shareholders, founders, the supervisory board, auditors…), tiered
+        # by role and chained where a row re-registers another.
+        _emit_rows(events, subject,
+                   _person_rows(company, "kaardile_kantud_isikud")
+                   + _person_rows(company, "kaardivalised_isikud"))
 
     events += _bo_events(subject, data.get("bo_xml"))
     return events
 
 
-__all__ = ["CARD_ENTRY_LABELS", "ariregister_change_events", "card_entry_events", "card_entry_label", "general_events"]
+__all__ = ["CARD_ENTRY_LABELS", "OWNERSHIP_ROLES", "ariregister_change_events", "role_kind", "card_entry_events", "card_entry_label", "general_events"]
