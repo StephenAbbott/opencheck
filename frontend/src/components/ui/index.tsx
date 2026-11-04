@@ -27,3 +27,4 @@ export { IdentityTick } from "./IdentityTick";
 export { ActionChip, DataTile } from "./ActionChip";
 export { RowList } from "./RowList";
 export type { RowListItem } from "./RowList";
+export { FilterChip } from "./FilterChip";

@@ -280,6 +280,53 @@ class GleifAdapter(SourceAdapter):
         # that already resolve never reach this and pay no extra API calls.
         return await self._relaxed_search(query)
 
+    # The advanced-search-filters ticket: every entity filter is a GLEIF
+    # ``lei-records`` filter, so GLEIF applies them all.
+    search_filters = frozenset(
+        ("jurisdiction", "legal_form", "entity_status", "registration_status", "category")
+    )
+
+    async def search_filtered(
+        self, query: str, kind: SearchKind, filters: Any
+    ) -> list[SourceHit]:
+        """Fulltext search narrowed by the entity filters.
+
+        For a clashing jurisdiction (``search_filters.needs_exact_jurisdiction``
+        — ``PA`` also returns Pennsylvania) it reads up to
+        ``EXACT_SCAN_MAX_PAGES`` pages of ``EXACT_SCAN_PAGE`` and keeps the
+        rows whose jurisdiction is exact; every row is checked against the
+        filters either way, so nothing that slipped past an upstream filter
+        is shown. No typo-tolerant fallback: relaxing the name under a filter
+        would show near-misses as filtered matches.
+        """
+        from .. import search_filters as sf
+
+        if kind != SearchKind.ENTITY or not filters:
+            return await self.search(query, kind)
+        params = sf.gleif_filter_params(filters)
+        fingerprint = hashlib.sha256(repr(params).encode()).hexdigest()[:12]
+        base = f"{_CACHE_NS}/search-filtered/{_slug(query)}/{fingerprint}"
+        exact = sf.needs_exact_jurisdiction(filters)
+        size = sf.EXACT_SCAN_PAGE if exact else 10
+        if not self.info.live_available and not self._cache.has(f"{base}/{size}/1"):
+            return self._stub_search(query)
+        max_pages = sf.EXACT_SCAN_MAX_PAGES if exact else 1
+        query_string = "&".join(f"{k}={quote(v, safe=',-')}" for k, v in params)
+        hits: list[SourceHit] = []
+        for page in range(1, max_pages + 1):
+            payload = await self._get(
+                f"/lei-records?filter[fulltext]={quote(query)}&{query_string}"
+                f"&page[size]={size}&page[number]={page}",
+                cache_key=f"{base}/{size}/{page}",
+            )
+            for item in payload.get("data", []):
+                if sf.record_matches(item, filters):
+                    hits.append(self._entity_hit(item))
+            last = (payload.get("meta") or {}).get("pagination", {}).get("lastPage") or page
+            if len(hits) >= 10 or page >= last:
+                break
+        return hits[:10]
+
     async def _relaxed_search(self, query: str) -> list[SourceHit]:
         """Typo-tolerant fallback for :meth:`search` (issue #33).
 

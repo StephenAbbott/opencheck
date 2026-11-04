@@ -7,6 +7,7 @@
 
 import type { DisclosureStatusPayload } from "./disclosureStatus";
 import type { IntegratedOwnershipPayload } from "./integratedOwnership";
+import type { LegalFormList } from "./searchFilters";
 import { trackEvent } from "./analytics";
 import type { Liveness, SourceLiveness } from "../components/cdd/LivenessBadge";
 import type {
@@ -750,6 +751,21 @@ export function fetchKnowability(codes: string[]): Promise<KnowabilityResponse> 
     return Promise.resolve({ statements: [], known_codes: [], generated_at: null, as_of: "" });
   }
   return getJson(`/knowability?jurisdictions=${encodeURIComponent(unique.join(","))}`);
+}
+
+/** The legal forms of one jurisdiction for the search's legal-form filter
+ *  (the advanced-search-filters ticket). Cached per jurisdiction: a list is
+ *  fixed for the life of a page. */
+const elfFormCache = new Map<string, Promise<LegalFormList>>();
+export function fetchLegalForms(jurisdiction: string): Promise<LegalFormList> {
+  const key = jurisdiction.trim().toUpperCase();
+  let hit = elfFormCache.get(key);
+  if (!hit) {
+    hit = getJson<LegalFormList>(`/elf-forms?jurisdiction=${encodeURIComponent(key)}`);
+    hit.catch(() => elfFormCache.delete(key));
+    elfFormCache.set(key, hit);
+  }
+  return hit;
 }
 
 export function fetchSources(): Promise<{ sources: SourceInfo[] }> {
