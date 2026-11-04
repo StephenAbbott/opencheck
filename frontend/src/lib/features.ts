@@ -187,7 +187,7 @@ export const FEATURES: Feature[] = [
     accent: "#b45309", // oo.graph.same
     glyph: "#fcd34d", // oo.warn.border
     description:
-      "Merges how a company's ownership, control and identity have changed onto one axis, drawn from every register that keeps a change log — GLEIF, Companies House, New Zealand, Estonia and Denmark — with the routine administrative filings folded away. Each dated row names the register that recorded it, links back to that record, and says whether the date is when the change took effect or when the register noticed.",
+      "Merges how a company's ownership, control and identity have changed onto one axis, drawn from every register that keeps a change log — GLEIF, Companies House, New Zealand, Estonia, Denmark, New York and Latvia (additions only, as its open data publishes no removals) — with the routine administrative filings folded away. Each dated row names the register that recorded it, links back to that record, and says whether the date is when the change took effect or when the register noticed.",
     image: {
       src: "/features/history.png",
       alt: "The History tab for a company: a sentence counting the registers that publish a change log, then a timeline of dated changes, newest first, each carrying the register that recorded it and whether its date is the effective one or the recorded one.",
@@ -240,6 +240,29 @@ export const FEATURES: Feature[] = [
     cta: {
       label: "See the institutional shareholders of Moody's",
       href: "/?lei=549300GCEDD8YCF5WU84",
+    },
+  },
+  {
+    id: "downloadable-reports",
+    name: "Downloadable reports",
+    kind: "Workflow",
+    icon: "report",
+    // The logo's "Check" wordmark blue: the report is the check written down.
+    // A shipped token no other feature wears, and distinct from FullCheck's
+    // lighter node blue beside it in the rail.
+    accent: "#2563eb", // oo.mark.checkBlue
+    glyph: "#bfdbfe", // oo.graph.ownershipTintBorder
+    description:
+      "Every check can be downloaded from its Export menu as an accessible, tagged PDF or as Markdown, with the verdict, each risk signal and its evidence, what every source found, the ownership diagrams and each source's licence, and a report saved first carries its link and a SHA-256 so anyone can confirm it is the record you saw. Where two registers' records of the company disagree on its status or jurisdiction, a one-page discrepancy note per register sets out both values, their sources and dates and where to send it, describing the difference without saying which record is right and without claiming to be a beneficial ownership discrepancy report.",
+    image: {
+      src: "/features/downloadable-reports.png",
+      alt: "The Export menu open, with Report as PDF, Report as Markdown and Discrepancy note under Report, beside the first page of a PDF report and a one-page discrepancy note laid out as subject, the disputed field with each register's value and dates, where to send it and blank lines for who reported it. No company or value is shown.",
+      width: 1648,
+      height: 890,
+    },
+    cta: {
+      label: "Open a check on BP to download its report",
+      href: "/?lei=213800LH1BZH3DI6G760",
     },
   },
 ];

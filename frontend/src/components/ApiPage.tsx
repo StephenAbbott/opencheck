@@ -382,7 +382,7 @@ export function ApiPage() {
           <ApiEndpoint path="/history?lei=<LEI>&include_noise=<bool>">
             The <strong className="text-oo-ink font-semibold">change history</strong>{" "}
             behind the History tab: every register that keeps a change log — GLEIF,
-            Companies House, New Zealand, Estonia, Denmark — merged onto one shared
+            Companies House, New Zealand, Estonia, Denmark, New York, Latvia — merged onto one shared
             model, with <code className={mono}>registry_numbers</code> saying how each
             addresses the company; <code className={mono}>include_noise</code> folds in
             administrative changes.

@@ -3289,6 +3289,7 @@ def _disclosure_payload(
             knowability=knowability,
             hints=hints,
             as_of=_today_iso(),
+            subject_ids=list(subject_ids or []),
         )
     except Exception as exc:  # noqa: BLE001
         _LOG.warning("disclosure_status: payload failed: %s", exc)

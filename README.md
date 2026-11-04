@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 447** — Each Companies House PSC relationship now names the filing that notified it — form, transaction ID, filing date and a link to the document.
+**Latest: Phase 450** — The "what each source says about owners" chips count only the looked-up company's own owners, not those of other companies in a source's bundle.
 
 → [Full development history](docs/status.md)
 
