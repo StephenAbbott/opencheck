@@ -40,6 +40,7 @@ from typing import Any, AsyncIterator
 from fastapi import HTTPException
 
 from . import identifiers, lookup_budget
+from .disclosure import csv_cell as disclosure_csv_cell
 from .config import get_settings
 from .gleif_throttle import GleifRateLimitedError
 from .secret_scrub import describe_exception, scrub
@@ -280,6 +281,8 @@ CSV_COLUMNS = [
     "state",
     "reason",
     "report_url",
+    # Added last so every earlier column keeps its position.
+    "disclosure",
 ]
 
 
@@ -384,13 +387,14 @@ def _csv_row_done(row: dict[str, Any], origin: str) -> list[Any]:
         "degraded" if row.get("degraded") else "done",
         "",
         f"{origin}{row.get('report_url', '')}",
+        disclosure_csv_cell(row.get("disclosure")),
     ]
 
 
 def _csv_row_failed(row: dict[str, Any], origin: str) -> list[Any]:
     return [
         row["lei"], "", "", "", "", "", "", "", "", "", "", "", "", "", "true", "",
-        "not checked", row.get("reason") or "", f"{origin}/?lei={row['lei']}",
+        "not checked", row.get("reason") or "", f"{origin}/?lei={row['lei']}", "",
     ]
 
 

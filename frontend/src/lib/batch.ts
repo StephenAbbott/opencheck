@@ -201,7 +201,21 @@ const CSV_HEADER = [
   "state",
   "reason",
   "report_url",
+  // Added last so every earlier column keeps its position.
+  "disclosure",
 ];
+
+/**
+ * The `disclosure` cell: `source/covers=value` tokens, space-separated —
+ * `companies_house/beneficial_owners=exempt gleif/parent=exempt`. The same
+ * cell `backend/opencheck/disclosure.py` `csv_cell` writes.
+ */
+export function disclosureCell(tokens: Record<string, string[]> | null | undefined): string {
+  if (!tokens) return "";
+  return Object.entries(tokens)
+    .flatMap(([sid, ts]) => ts.map((t) => `${sid}/${t}`))
+    .join(" ");
+}
 
 function csvCell(v: unknown): string {
   const s = v === null || v === undefined ? "" : String(v);
@@ -221,7 +235,7 @@ export function rowsToCsv(rows: TableRow[], origin = ""): string {
       lines.push(
         [
           r.lei, "", "", "", "", "", "", "", "", "", "", "", "", "", "true", "", "not checked",
-          r.failed.reason, `${origin}/?lei=${r.lei}`,
+          r.failed.reason, `${origin}/?lei=${r.lei}`, "",
         ].map(csvCell).join(","),
       );
       continue;
@@ -248,6 +262,7 @@ export function rowsToCsv(rows: TableRow[], origin = ""): string {
         row.degraded ? "degraded" : "done",
         "",
         `${origin}${row.report_url}`,
+        disclosureCell(row.disclosure),
       ].map(csvCell).join(","),
     );
   }

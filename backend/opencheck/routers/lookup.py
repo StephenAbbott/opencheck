@@ -51,6 +51,8 @@ from .. import lei_successor as _lei_successor
 from ..subject_profile import build_subject_profile
 from ..knowability import chain_for_lei as knowability_chain_for_lei
 from .. import integrated_ownership as _integrated_ownership
+from .. import disclosure as _disclosure
+from ..coverage import source_coverage as _source_coverage
 from .. import sanctions_ownership as _sanctions_ownership
 from ..bods.lifecycle import today_iso as _today_iso
 from .. import listing as _listing
@@ -495,6 +497,12 @@ class ReportResponse(BaseModel):
     #: run time. Context only: no threshold, never a signal. None for a
     #: payload recorded before this field existed.
     integrated_ownership: dict[str, Any] | None = None
+    #: What each source says about the subject's owners — one normalised
+    #: value per source (``opencheck.disclosure``): ``sources[<id>]`` with
+    #: ``values`` and ``entries`` (``value``, ``covers``, ``count``,
+    #: ``details``, ``reasons``), ``not_covered`` and ``as_of``. Folded from
+    #: the ``disclosure_status`` event as recorded. Describes; raises nothing.
+    disclosure_status: dict[str, Any] | None = None
     #: The subject's primary stock-exchange listing (Phase 236), from LSEG
     #: PermID: ``status`` ("listed" / "not_listed" / "unavailable"),
     #: ``quote`` (ticker, MIC, RIC, security name, PermID ids), ``exchange``
@@ -1786,8 +1794,11 @@ async def _lookup_pipeline(
     # sentence is dated (``next_change_expected``) and a saved render reads
     # no clock (Phase 218). No jurisdiction → no event: there is nothing to
     # make a statement about, and the strip says nothing rather than guessing.
-    if ctx.jurisdiction:
-        yield ("knowability", _knowability_payload(ctx.jurisdiction))
+    knowability_payload = (
+        _knowability_payload(ctx.jurisdiction) if ctx.jurisdiction else None
+    )
+    if knowability_payload is not None:
+        yield ("knowability", knowability_payload)
 
     # Phase 236: the subject's primary stock-exchange listing, from PermID.
     # Started here so its three requests overlap the fan-out, and awaited
@@ -1958,6 +1969,9 @@ async def _lookup_pipeline(
 
     # Deepen the top N bundles (BODS mapping + per-bundle risk).
     bods_all: list[dict[str, Any]] = []
+    # What a source's raw bundle says about disclosure and its statements
+    # cannot (Estonia's "need not file") — read while the raw is in hand.
+    disclosure_hints: dict[str, list[dict[str, Any]]] = {}
     bods_issues: list[str] = []
     deepen_signals: list[dict[str, Any]] = []
     license_notices: list[dict[str, str]] = []
@@ -1998,6 +2012,9 @@ async def _lookup_pipeline(
         bods_all.extend(deep["bods"])
         bods_issues.extend(deep["bods_issues"])
         deepen_signals.extend(deep["risk_signals"])
+        disclosure_hints.setdefault(dsrc, []).extend(
+            _disclosure.bundle_hints(dsrc, deep.get("raw") if isinstance(deep, dict) else None)
+        )
         if deep.get("license_notice"):
             license_notices.append({
                 "source_id": dsrc, "hit_id": dhit, "notice": deep["license_notice"],
@@ -2274,6 +2291,21 @@ async def _lookup_pipeline(
     # for the same reason they ride together: a sentence about what was
     # found is only honest next to the count of screens that did not run,
     # and this way a replayed run replays the sentence too.
+    # What each source says about the subject's owners — one normalised value
+    # per source (opencheck.disclosure). Describes only: nothing above reads
+    # it, and it rides its own event so a saved report replays it.
+    disclosure_payload = _disclosure_payload(
+        bods=bods_all,
+        hits=hits,
+        errors={**deepen_errors, **errors},
+        applicable=applicable_ids,
+        degraded=degraded_dicts,
+        knowability=knowability_payload,
+        hints=disclosure_hints,
+        subject_ids=identity.statement_ids,
+    )
+    if disclosure_payload is not None:
+        yield ("disclosure_status", disclosure_payload)
     yield (
         "risk_signals",
         {
@@ -2537,8 +2569,11 @@ async def _register_lookup_pipeline(
         # Phase 296: the register was named by the caller, so no RA code.
         "register_record": _register_links.register_record(hop.source_id, local_id),
     })
-    if ctx.jurisdiction:
-        yield ("knowability", _knowability_payload(ctx.jurisdiction))
+    knowability_payload = (
+        _knowability_payload(ctx.jurisdiction) if ctx.jurisdiction else None
+    )
+    if knowability_payload is not None:
+        yield ("knowability", knowability_payload)
     yield ("hit", hit)
     yield ("source_completed", {"source_id": hop.source_id, "hit_count": 1})
 
@@ -2685,6 +2720,19 @@ async def _register_lookup_pipeline(
     )
     signalstats.record_degraded(degraded_dicts)
     signalstats.record_lookup()
+    disclosure_payload = _disclosure_payload(
+        bods=bods_all,
+        hits=hits,
+        errors=errors,
+        applicable=applicable_ids,
+        degraded=degraded_dicts,
+        knowability=knowability_payload,
+        hints={hop.source_id: _disclosure.bundle_hints(hop.source_id, raw)},
+        subject_ids=identity.statement_ids,
+        anchored=False,
+    )
+    if disclosure_payload is not None:
+        yield ("disclosure_status", disclosure_payload)
     yield (
         "risk_signals",
         {
@@ -3174,6 +3222,37 @@ def _stored_bundle_provenance(source_id: str, key: str | None = None) -> Provena
     )
 
 
+def _disclosure_payload(
+    *,
+    bods: list[dict[str, Any]],
+    hits: list[Any],
+    errors: dict[str, str],
+    applicable: list[str],
+    degraded: list[dict[str, Any]],
+    knowability: dict[str, Any] | None,
+    hints: dict[str, list[dict[str, Any]]],
+    subject_ids: Any,
+    anchored: bool = True,
+) -> dict[str, Any] | None:
+    """The ``disclosure_status`` event payload, or None if it could not be
+    built — a description must never fail a lookup."""
+    try:
+        cov = _source_coverage(hits, errors, applicable, anchored=anchored)
+        payload = _disclosure.for_lookup(
+            bods=bods,
+            coverage=cov,
+            degraded=degraded,
+            knowability=knowability,
+            hints=hints,
+            as_of=_today_iso(),
+        )
+    except Exception as exc:  # noqa: BLE001
+        _LOG.warning("disclosure_status: payload failed: %s", exc)
+        return None
+    payload["subject_ids"] = sorted(subject_ids or [])
+    return payload
+
+
 def _select_deepen_pairs(
     deepened_bundles: list[tuple[str, str]],
     deepen_top: int,
@@ -3209,6 +3288,11 @@ def _select_deepen_pairs(
         if (
             pair == anchor
             or pair[0] in _PERSON_CAPABLE_SOURCES
+            # Every ownership source is read, so its disclosure status is
+            # read from its statements and never from absence of a deepen.
+            # GLEIF is the anchor rule's alone: another LEI's GLEIF pair is not
+            # the subject's record.
+            or (pair[0] in _disclosure.DISCLOSES and pair[0] != "gleif")
             or _stored_bundle_key(pair[0], ctx) == pair[1]
         ):
             deepen_pairs.append(pair)

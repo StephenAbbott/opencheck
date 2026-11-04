@@ -12,6 +12,7 @@ import type {
   SourceLiveness,
   SubjectProfile,
 } from "../../lib/api";
+import { notCoveredLine, type DisclosureStatusPayload } from "../../lib/disclosureStatus";
 import { identityBandContents } from "../../lib/identifierBadge";
 import { coverageCopy, type SettledCount } from "../../lib/lookupProgress";
 import { scrollBehavior } from "../../lib/motion";
@@ -80,6 +81,7 @@ export default function QuickCheckPanel({
   oaScreening,
   primaryListing,
   form13f = null,
+  disclosureStatus = null,
   savedReport,
   savedNarrative,
   onExportPayload,
@@ -119,6 +121,9 @@ export default function QuickCheckPanel({
   primaryListing: PrimaryListing | null;
   /** Phase 336: the frozen `form13f` event. */
   form13f?: Form13fPayload | null;
+  /** What each source says about the owners: a chip per ownership source's
+   *  card, and one line naming the rest. Frozen with the run. */
+  disclosureStatus?: DisclosureStatusPayload | null;
   savedReport: SavedReport | null;
   savedNarrative: ReportExportPayload | null;
   onExportPayload: (payload: ReportExportPayload) => void;
@@ -127,6 +132,10 @@ export default function QuickCheckPanel({
   onPanelError: (e: PanelError) => void;
   onPanelRecovered: (panel: PanelId) => void;
 }) {
+  // Sources whose job does not include owners, named once under the cards.
+  const disclosureNotCovered = notCoveredLine(disclosureStatus, (id) =>
+    sourceLabel(id, sourceNames),
+  );
   // The identity band's profile rows (Phase 154) — derived once per profile.
   const profileRowsForBand = useMemo(
     () => profileRows(subjectProfile, sourceNames),
@@ -509,6 +518,7 @@ export default function QuickCheckPanel({
                   onRetry={b.error && !savedReport ? () => onRetrySource(b.sourceId) : undefined}
                   retrying={retryingSources.has(b.sourceId)}
                   liveness={sourceLiveness[b.sourceId]}
+                  disclosure={disclosureStatus?.sources[b.sourceId]}
                   footnote={
                     b.sourceId === "gleif" && gleifChildrenInfo && gleifChildrenInfo.total > 100
                       ? `Showing the first ${gleifChildrenInfo.fetched} of ${gleifChildrenInfo.total.toLocaleString()} direct subsidiaries in BODS statements (GLEIF Level 2) — the whole network is in the Subsidiaries tab`
@@ -528,6 +538,9 @@ export default function QuickCheckPanel({
             {pendingCddSources.map((id) => (
               <SkeletonSourceCard key={id} />
             ))}
+            {disclosureNotCovered && (
+              <p className="text-oo-meta text-oo-muted">{disclosureNotCovered}</p>
+            )}
             {answeredNoRecord.length > 0 && (
               <div id="sources-no-record" className="scroll-mt-4">
                 <SectionHeading as="h3">Answered with no record</SectionHeading>
