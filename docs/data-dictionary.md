@@ -164,6 +164,7 @@ A name search across every source that supports it, ranked.
 | `errors` | `dict[str, str]` | `required` | Sources that failed, keyed by source id, each a secret-scrubbed one-line error. |
 | `cross_source_links` | `list[dict[str, Any]]` | `required` | Confirmed bridges between candidates that share an identifier — one `CrossSourceLink` each. |
 | `risk_signals` | `list[dict[str, Any]]` | `required` | Signals the candidates' own records carry (a sanctioned hit); the cross-source screens need a lookup. |
+| `filters` | `dict[str, Any] \| None` | `None` | The advanced-search-filters ticket: present only when a filter was set — the filters, the sources that applied them and the sources left out (`reason`: `cannot_apply` \| `outside_jurisdiction`). |
 
 ### `GET /subsidiaries` and `GET /subsidiaries/declared`
 
@@ -1056,9 +1057,9 @@ Each tool, what it does and the top-level keys of the object it returns, read fr
 
 Find a company's Legal Entity Identifier (LEI) from a name or free text.
 
-Arguments: `query`, `kind`, `limit`.
+Arguments: `query`, `kind`, `limit`, `jurisdiction`, `legal_form`, `entity_status`, `registration_status`, `category`, `nationality`, `birth_year`.
 
-Keys: `query`, `kind`, `count`, `total`, `truncated`, `candidates`, `hint`.
+Keys: `candidates`, `query`, `kind`, `count`, `total`, `truncated`, `hint`, `filters`.
 
 On a refused call: `error`.
 
