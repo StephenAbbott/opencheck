@@ -865,6 +865,79 @@ async def export_markdown(request: Request, req: PdfExportRequest) -> Response:
     )
 
 
+class DiscrepancyNoteRequest(BaseModel):
+    """Body for ``POST /export/discrepancy-note`` (the discrepancy-report
+    ticket). The subject is an LEI, or a register number as ``scheme`` +
+    ``id`` (the Phase 290 anchor — a company with no LEI). A saved report is
+    rendered from its own frozen run, as the PDF and Markdown routes do."""
+
+    lei: str | None = Field(default=None, description="ISO 17442 Legal Entity Identifier.")
+    scheme: str | None = Field(default=None, description="Register scheme, e.g. GB-COH, for a subject with no LEI.")
+    id: str | None = Field(default=None, description="The number on that register.")
+    format: Literal["markdown", "pdf"] = "markdown"
+    deepen_top: int = Field(5, ge=0, le=10)
+    saved_report_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{22}$")
+
+
+async def _discrepancy_note_payload(req: DiscrepancyNoteRequest) -> tuple[Any, SavedForExport | None]:
+    """The folded run the note is built from: the saved report when one is
+    named, else the (cached) lookup for the LEI or the register number."""
+    if req.saved_report_id:
+        saved = await open_for_export(req.saved_report_id, req.lei)
+        return saved.response, saved
+    if req.lei:
+        return await _lookup_impl(lei=req.lei.strip().upper(), deepen_top=req.deepen_top), None
+    if req.scheme and req.id:
+        from .lookup import _register_lookup_impl
+
+        return await _register_lookup_impl(req.scheme, req.id, deepen_top=req.deepen_top), None
+    raise HTTPException(status_code=400, detail="Give an LEI, or a register scheme and id.")
+
+
+@router.post("/export/discrepancy-note")
+@limiter.limit(heavy_tier)
+async def export_discrepancy_note(request: Request, req: DiscrepancyNoteRequest) -> Response:
+    """A one-page discrepancy note per register that holds a disputed value,
+    built from the run's ``RECORD_CONSISTENCY`` disagreements and addressed
+    to that register (``opencheck.discrepancy_note``). Markdown by default,
+    PDF through the report toolchain (503 where it is missing). 404 when the
+    run found no register disagreement — the UI disables the item first, so a
+    404 here is a direct caller asking for a note that has nothing to say.
+    """
+    from ..discrepancy_note import build_discrepancy_note
+
+    payload, saved = await _discrepancy_note_payload(req)
+    report = payload.model_dump()
+    try:
+        rendered = await asyncio.to_thread(
+            build_discrepancy_note,
+            report,
+            fmt=req.format,
+            saved=saved.saved if saved else None,
+        )
+    except PdfUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if rendered is None:
+        raise HTTPException(
+            status_code=404,
+            detail="This run found no disagreement between register records, so there is no discrepancy note to export.",
+        )
+    subject = payload.legal_name or payload.lei or f"{req.scheme}-{req.id}"
+    slug = _filename_slug(subject) + ("-saved" if saved else "")
+    stamp = saved.stamp if saved else datetime.now(UTC).strftime("%Y%m%d")
+    if req.format == "pdf":
+        return Response(
+            content=rendered,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="opencheck-discrepancy-note-{slug}-{stamp}.pdf"'},
+        )
+    return Response(
+        content=str(rendered).encode("utf-8"),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="opencheck-discrepancy-note-{slug}-{stamp}.md"'},
+    )
+
+
 def _filename_slug(query: str) -> str:
     """Make a query safe to embed in a download filename."""
     slug = re.sub(r"[^a-z0-9]+", "-", query.lower()).strip("-")

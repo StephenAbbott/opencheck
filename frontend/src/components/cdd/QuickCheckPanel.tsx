@@ -89,6 +89,7 @@ export default function QuickCheckPanel({
   retryingSources,
   onPanelError,
   onPanelRecovered,
+  onDiscrepancyNote,
 }: {
   lei: string;
   legalName: string | null;
@@ -131,6 +132,9 @@ export default function QuickCheckPanel({
   retryingSources: Set<string>;
   onPanelError: (e: PanelError) => void;
   onPanelRecovered: (panel: PanelId) => void;
+  /** The discrepancy-report ticket: the link under the Records compared
+   *  evidence. Absent on a saved report. */
+  onDiscrepancyNote?: () => void;
 }) {
   // Sources whose job does not include owners, named once under the cards.
   const disclosureNotCovered = notCoveredLine(disclosureStatus, (id) =>
@@ -290,6 +294,7 @@ export default function QuickCheckPanel({
                       cddBuckets.some((b) => b.sourceId === id)
                     }
                     onShowSource={showSourceCard}
+                    onDiscrepancyNote={onDiscrepancyNote}
                   />
                 </div>
               )}
