@@ -31,6 +31,10 @@ would `421` in production.
 
 ## Tools (v1)
 
+The top-level keys each tool returns, and what every field means, are in the
+[output data dictionary](data-dictionary.md#mcp-tools), generated from the
+tool bodies.
+
 | Tool | Purpose |
 |---|---|
 | `opencheck_search(query, kind="entity", limit=15)` | Name → candidate entities with LEIs, ranked best-first across every source (Phase 292): exact name → same name under any legal form → every query token present → every distinctive token agrees → fuzzy, ties broken by register status (live or unstated before in a terminal process before dissolved) and then by whether the row carries an LEI. Each candidate says which rung it reached as `match` and carries `identifiers: [{scheme, id}]` for `opencheck_register_lookup`. Since Phase 309 the rungs are measured against the current name **or any former legal name** the source files (GLEIF's `PREVIOUS_LEGAL_NAME`, a register's previous names): a candidate carries `former_names[]` when it has any and `matched_former_name` when that, not the current name, is what the query matched — "Barrick Gold Corporation" ranks BARRICK MINING CORPORATION `exact` and says why. Cut at `limit` (max 50), with `total` and `truncated` saying so |
