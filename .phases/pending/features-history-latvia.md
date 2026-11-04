@@ -1,0 +1,5 @@
+---
+title: The Features page, the API page and docs/how-it-works.md name all seven registers the History tab reads.
+readme: The History feature description on /features, the API page and the how-it-works doc now name all seven registers the Time Machine reads, New York and Latvia included.
+---
+The History card on `/features#time-machine`, the `/history` endpoint's line on the API page and the endpoint table in `docs/how-it-works.md` all still listed the five registers Phase 190 documented — GLEIF, Companies House, New Zealand, Estonia and Denmark — after Phase 263 added the New York Department of State and Phase 442 added the Latvian Register of Enterprises. All three copies now name the seven, and the Features card says of Latvia what the tab's own read note says: additions only, because UR's open data publishes no removals. Copy only; `features.test.ts` holds the card to two sentences. Found while closing the Phase 442 post-deploy check on the Notion ticket "More Time Machine emitters: Estonia and Latvia historic entries".
