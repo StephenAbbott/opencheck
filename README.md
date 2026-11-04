@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 444** — An output data dictionary generated from the code now documents every API field, BODS extension key, annotation, signal object, export column and MCP response, and CI fails when it goes stale.
+**Latest: Phase 445** — Company-name search gains "More filters" — jurisdiction, ISO 20275 legal form, company and LEI status and category — with an exact jurisdiction and a legal-form picker per country, and the same filters on /search, /stream and opencheck_search.
 
 → [Full development history](docs/status.md)
 
