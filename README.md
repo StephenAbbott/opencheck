@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 449** — The features page now explains the downloadable reports — the accessible PDF and Markdown report, and the one-page discrepancy note for registers whose records disagree.
+**Latest: Phase 450** — The "what each source says about owners" chips count only the looked-up company's own owners, not those of other companies in a source's bundle.
 
 → [Full development history](docs/status.md)
 
