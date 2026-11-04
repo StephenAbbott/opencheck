@@ -36,6 +36,7 @@ from typing import Any, Callable, Iterator
 
 from opencheck import provenance as _provenance
 from opencheck.bods.statements import stale_statement_id
+from opencheck.data_dictionary import unregistered_extension_keys
 from opencheck.bods.validator import (
     address_type_issues,
     annotation_pointer_issues,
@@ -110,6 +111,15 @@ def check_statement(mapper: str, stmt: Any) -> None:
             mapper, sid,
             "statementId is stale: recordDetails or recordStatus were edited "
             "after the factory without refresh_statement_id",
+        ))
+    # The data dictionary: every ``opencheck*`` key a statement carries is a
+    # documented BODS extension (``opencheck.data_dictionary.EXTENSIONS``), or
+    # a reader meets a key nothing explains.
+    for path in unregistered_extension_keys(stmt):
+        VIOLATIONS.append((
+            mapper, sid,
+            f"undocumented BODS extension key at {path}: register it in "
+            "opencheck.data_dictionary.EXTENSIONS",
         ))
     if stmt.get("recordType") != "entity":
         return

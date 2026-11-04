@@ -4126,6 +4126,44 @@ will be re-derived otherwise:
 
 ---
 
+## The output data dictionary is generated, and a new output key must be described (the data-dictionary ticket)
+
+`opencheck/data_dictionary.py` renders `docs/data-dictionary.md`;
+`scripts/generate_data_dictionary.py --check` runs in the drift-checks
+workflow beside the OKF check. Things that will be re-derived otherwise:
+
+- **Do not hand-edit `docs/data-dictionary.md`.** Regenerate it
+  (`uv run python scripts/generate_data_dictionary.py` from `backend/`)
+  after any change to a response model, `RiskSignal` / `DegradedSource`, a
+  degradation reason or check label, an export writer, an MCP tool's return
+  dict or the registries below — CI fails on a stale file.
+- **A field's words live beside the field.** The API tables are read from
+  the source with `ast`: `Field(description=)` first, else the `#:` (or `#`)
+  comment block directly above the field. Models in
+  `data_dictionary.STRICT_MODELS` must describe every field
+  (`test_data_dictionary.py`); a new model in a documented router renders
+  with whatever comments it has — add it to `API_MODELS` and, once every
+  field is described, to the strict set.
+- **A new `opencheck*` key in a BODS statement is registered in
+  `EXTENSIONS`** (where it sits, what it means, an example, the phase)
+  before it ships: the conftest mapper guard fails any yielded statement
+  carrying an unregistered one, and a string literal of that shape anywhere
+  in the package fails the suite. `gleifLegalEntityEvent` is the one
+  documented key outside the prefix.
+- **A new export column or row key needs a sentence in
+  `COLUMN_DESCRIPTIONS`** — the bods-gql dataclasses, `batch.CSV_COLUMNS`,
+  and the Senzing / FtM / AML AI keys the writers produce for
+  `sample_bundle()`. An undescribed one is `UndescribedColumnError`, never a
+  blank row. A key a writer stops producing is simply no longer rendered.
+- **The CSV, BigQuery and AML AI zips carry `DATA-DICTIONARY.md`**
+  (`render_zip_dictionary(family)`), and `LICENSES.md` links the page; both
+  read the same descriptions, so there is nothing to keep in step.
+- MCP keys are harvested from the tool bodies (`_KeyHarvester`: a returned
+  dict literal, a name assigned one plus `name["k"] = …` / `.update({…})`,
+  and one hop into `mcp.shaping` or `owners`). A tool whose answer is a
+  model dump the harvester cannot follow gets a sentence in
+  `MCP_RESPONSE_NOTES` instead of a key list.
+
 ## A statement names its source by id, and a miss is loud (Phase 267)
 
 `opencheck/bods/source_ids.py`. Every licence decision about a statement —
@@ -4593,6 +4631,63 @@ rules, each a decision Stephen took and not to be reopened:
   § Record consistency, `docs/risk-signals.md`. The readings live on the Notion
   plan's child page.
 
+## The discrepancy note hands a disagreement back to the register (the discrepancy-report ticket, 3 Nov 2026)
+
+`opencheck/discrepancy_note.py`, `POST /export/discrepancy-note`
+(`routers/export.py`), the MCP tool `opencheck_discrepancy_note`,
+`lib/discrepancyNote.ts` + the `note` item of `ExportMenu` + the button under
+the Records compared table in `SignalEvidence.tsx`; reader's page
+`docs/record-consistency.md#the-discrepancy-note`. Stephen's decisions
+(3 Nov 2026) and the things that will be re-derived otherwise:
+
+- **Only the shown `RECORD_CONSISTENCY` disagreements qualify** —
+  `qualifying_items` reads the signal's `disagree` items and nothing else.
+  Nothing is compared at export time; a field the gate counts but does not
+  show stays out; name / address comparisons are their own consistency
+  ticket with the Phase 337 two-week gate first. A lapsed LEI is GLEIF's
+  record of the LEI, not the company (Phase 242), and a GLEIF parent is
+  consolidation, not a shareholder — neither is a register discrepancy. The
+  frontend's `discrepancyNoteAvailable` is the same rule (a backend test
+  parses the TypeScript), so the menu item is disabled with its reason
+  before a click can find the route's 404.
+- **One note per register that holds a disputed value, GLEIF included.**
+  `ADDRESSEE_SOURCES` = `OFFICIAL_REGISTER_SOURCES` + `gleif` (derived, never
+  typed); GLEIF's route is its data challenge facility (`GLEIF_CHALLENGE`).
+  Either side can be the stale one, so a Companies House ↔ GLEIF disagreement
+  is two notes. A non-register side (OpenAleph, OpenCorporates) is quoted as
+  the conflicting record and never addressed.
+- **Describe, never allege.** Values are the registers' own (`said`);
+  every fixed sentence is in `FIXED_TEXT` and `wording_issues` holds it to
+  the knowability `BANNED_VOCABULARY` (a test pins every one and the
+  rendered golden-shape note). `SCOPE_SENTENCE` says it is a register-record
+  note and **not** an AMLR / PSC beneficial-ownership discrepancy report —
+  nothing compared is BO information. Keep that sentence on every note.
+- **Routes come from the jurisdictions table**: `bo_register.discrepancy_route`
+  / `discrepancy_note` and `company_register.discrepancy_route`, three Notion
+  properties on *Beneficial ownership access status* synced by
+  `sync_jurisdictions.py` (`_COLUMNS`), keyed on the addressee adapter's
+  `SourceInfo.country`. GB, EE, LV, DK, NO drafted 3 Nov 2026 from the
+  registers' own pages and **left unverified** — the note text carries
+  "Drafted by Claude … unverified" until Stephen edits the row. A register
+  with no route prints `NO_ROUTE_SENTENCE`. Never type a route in code.
+- **Dates and licences come off the frozen BODS** (`statementDate`,
+  `source.retrievedAt`, `source.url`, `source_licensing`), so a saved
+  report's note carries its own day; the footer prints the saved-report
+  link and SHA-256 only when `saved` is passed (`open_for_export`), else
+  `NO_SAVED_SENTENCE`. The export never saves on the reader's behalf.
+  `REPORTER_FIELDS` are blank lines; nothing about the reader is stored.
+- **The route takes `lei` or `scheme` + `id`** (`_register_lookup_impl`),
+  Markdown or PDF (the report toolchain, 503 without it), `saved_report_id`
+  (never runs the check); 404 when nothing qualifies. The MCP tool is on the
+  heavy tier (`TOOL_TIERS`), Markdown plus `summary()`; `TOOL_NAMES` is 14.
+- **`ExportMenu`'s three Report items are one `ReportItem`** (forwardRef,
+  `busy` → `disabled`, `unavailable` → `aria-disabled` with the reason as the
+  description, the Keep item's rule). The design-system raw-button ratchet
+  went 6 → 5 on the file; a fourth raw `<button>` there would fail it.
+- No findings-golden file asserts a `RECORD_CONSISTENCY` disagreement, so
+  `tests/test_discrepancy_note.py` pins the golden *shape* (Companies House
+  dissolved since 3 Apr 2019 beside GLEIF ACTIVE) on a fixture.
+
 ## STATE_CONTROLLED states one accumulated share per state (Phase 338)
 
 `opencheck/ownership_math.py` (pure: `Edge`s in, an interval out) +
@@ -4835,3 +4930,70 @@ re-derived otherwise:
   carries the direct children to the live path's cap (`_DIRECT_CHILDREN_PAGE_CAP`
   × 100), not one page of 100. Go back to live-first by setting the
   `render.yaml` value to `"false"`; nothing else changes.
+
+## What each source says about owners — the disclosure status (the disclosure-status ticket)
+
+`opencheck/disclosure.py`, `frontend/src/lib/disclosureStatus.ts`; the mapping
+from every channel is `docs/disclosure-status.md`. One normalised value per
+source per lookup, from Open Ownership's "absence is not an exemption" point.
+Stephen's decisions (3 Nov 2026) and the things that will be re-derived
+otherwise:
+
+- **Describes, raises nothing.** No signal, no verdict clause, no narrative.
+  `OPAQUE_OWNERSHIP` (which already fires on GLEIF `NON_PUBLIC` and the two
+  Companies House "not provided" reasons) and `GLEIF_REPORTING_EXCEPTION` are
+  unchanged; an AST test fails if `risk.py`, `verdict.py`, `signalstats.py` or
+  `narrative/` imports the module.
+- **Nine values** (`VALUES`): the ticket's seven plus `none_filed` (record
+  held, no owner, no reason) and `no_record` (Stephen). **Every value a source
+  supports is listed** — no precedence rule. Each entry has `covers`:
+  `beneficial_owners`, `shareholders` or `parent` (GLEIF; its exceptions are
+  "Parent: Exempt", never a BO exemption). There is no `officers` value: an
+  officer role is never an owner.
+- **`DISCLOSES` decides what is an ownership source** — every `bo_register`
+  regime in `bo_regimes` (pinned) plus the shareholder lists. A source outside
+  it is `not_covered`, named once under the QuickCheck cards, never chipped.
+  Taiwan's GCIS is out on purpose (directors' holdings, never "the
+  shareholders"); SEC EDGAR is `shareholders`. Adding an owner-publishing
+  source means a row here. Every ownership source is always deepened
+  (`_select_deepen_pairs`), GLEIF only as the anchor.
+- **Read from the stamped statements**: relationships whose subject is the
+  source's own `declarationSubject`, current interests only, officer types and
+  `opencheckOfficerPosition` skipped; `gleif_reporting_exception` first; an
+  unspecified party through `REASON_VALUES`. Facts only the raw bundle has
+  (Estonia's `bo_obliged`, `J`/`C` fallback rows, the REST tier's
+  `bo_not_read`) come from `bundle_hints`, collected in the deepen loop.
+  Estonia's "due, none published" is `none_filed`, not `not_provided` (an
+  entry can be withheld for a person at risk).
+- **`restricted` only for a register in the subject's country** (`SourceInfo.country`
+  == the knowability code, access in `RESTRICTED_ACCESS` = `bo_access._RESTRICTED_NOW`,
+  pinned). `unreachable` from `source_fetch` (alone) or `source_read` (beside
+  what was read).
+- **One event, folded as recorded**: `disclosure_status`, yielded just before
+  `risk_signals` in both pipelines, in `LOOKUP_EVENT_HANDLERS`, folded into
+  `LookupResponse.disclosure_status`. BODS gets one `commenting` annotation on
+  the integrated-ownership `annotation_target` (`apply_to_bods`, in
+  `fold_lookup_events`) — never a new statement. PDF/Markdown: "What each source
+  says about owners". MCP: `disclosure_status.by_source[]` on
+  `opencheck_lookup`, `opencheck_register_lookup` and `opencheck_export_bods`.
+  Batch: a row's `disclosure` (`row_tokens`) and the CSV's **last** column
+  `disclosure` (`csv_cell`, mirrored by `disclosureCell` in
+  `frontend/src/lib/batch.ts`) — add a later batch column after it, never
+  before. Senzing and FtM exports drop annotations, so carry no status.
+- **Words** (`VALUE_WORDS`, `COVERS_WORDS`) are parsed from the TypeScript by
+  `test_disclosure_status.py`; both pass `knowability.BANNED_VOCABULARY`.
+- **Findings regression**: class `disclosure`; a golden file may carry
+  `"disclosure": {"gleif": ["exempt"]}` (a floor). Measured on production
+  exports, 3 Nov 2026: Bank Saderat PLC (Companies House declared, GLEIF parent
+  declared), Eli Lilly and Shell (GLEIF exempt; Shell's Companies House
+  exempt).
+- **Companies House exemptions are read, never inferred from a listing**
+  (Stephen, 3 Nov 2026). `CompaniesHouseAdapter._exemptions` follows the PSC
+  list's `links.exemptions` to `/company/{n}/exemptions` (no link, no call; a
+  404 is `{}`, cached; a failure is `None`, uncached, and a `source_read`
+  degradation for the subject). `current_exemptions` keeps periods not yet
+  ended; each is `exempt` with the register's own sentence
+  (`CH_EXEMPTION_DESCRIPTIONS`, pinned to a verbatim copy of
+  api-enumerations' `exemption_descriptions.yml` in `tests/fixtures/companies_house/`),
+  and the card's finding says it ("no person with significant control named;
+  exempt from the PSC register, with shares on a UK regulated market").

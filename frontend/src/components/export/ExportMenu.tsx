@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { scrollBehavior } from "../../lib/motion";
 
 /**
@@ -74,6 +74,37 @@ function GroupHeading({ children }: { children: string }) {
   );
 }
 
+/**
+ * One download item of the Report group. `busy` disables it while a
+ * download is being prepared; `unavailable` keeps it in the roving focus
+ * with `aria-disabled` and its reason in the description (the Keep item's
+ * rule) — a greyed-out control that does not say why is a dead end.
+ */
+const ReportItem = forwardRef<
+  HTMLButtonElement,
+  { busy?: boolean; unavailable?: boolean; onSelect: () => void; children: ReactNode }
+>(function ReportItem({ busy = false, unavailable = false, onSelect, children }, ref) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      role="menuitem"
+      disabled={busy}
+      aria-disabled={unavailable || undefined}
+      onClick={() => {
+        if (unavailable) return;
+        onSelect();
+      }}
+      className={`${ITEM_CLASSES} ${unavailable ? "cursor-default" : ""}`}
+    >
+      <span aria-hidden="true" className="text-oo-blue mt-px">
+        ⬇
+      </span>
+      <span className={unavailable ? "text-oo-muted" : undefined}>{children}</span>
+    </button>
+  );
+});
+
 export function ExportMenu({
   pdfBusy,
   mdBusy,
@@ -86,6 +117,7 @@ export function ExportMenu({
   shareLabel = "Copy share link",
   shareDescription = "Its preview shows a live summary card for this entity",
   save,
+  note,
 }: {
   pdfBusy: boolean;
   mdBusy: boolean;
@@ -107,6 +139,11 @@ export function ExportMenu({
    *  link"). Disabled items carry their reason as the description — a
    *  greyed-out control that does not say why is a dead end. */
   save?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
+  /** The discrepancy-report ticket: "Discrepancy note" under Report —
+   *  one page per register whose record differs. Disabled, with the reason
+   *  as its description, when the run found no disagreement
+   *  (`lib/discrepancyNote.ts` decides). */
+  note?: { label: string; description: string; disabled?: boolean; onSelect: () => void };
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -282,51 +319,48 @@ export function ExportMenu({
               </>
             )}
             <GroupHeading>Report</GroupHeading>
-            <button
+            <ReportItem
               ref={item(reportIndex)}
-              type="button"
-              role="menuitem"
-              disabled={pdfBusy}
-              onClick={() => {
+              busy={pdfBusy}
+              onSelect={() => {
                 close(false);
                 onPdf();
               }}
-              className={ITEM_CLASSES}
             >
-              <span aria-hidden="true" className="text-oo-blue mt-px">
-                ⬇
-              </span>
-              <span>
-                {pdfBusy ? "Preparing PDF…" : "Report as PDF"}
-                <span className="sr-only"> — an accessible PDF of these findings</span>
-              </span>
-            </button>
-            <button
+              {pdfBusy ? "Preparing PDF…" : "Report as PDF"}
+              <span className="sr-only"> — an accessible PDF of these findings</span>
+            </ReportItem>
+            <ReportItem
               ref={item(reportIndex + 1)}
-              type="button"
-              role="menuitem"
-              disabled={mdBusy}
-              onClick={() => {
+              busy={mdBusy}
+              onSelect={() => {
                 close(false);
                 onMarkdown();
               }}
-              className={ITEM_CLASSES}
             >
-              <span aria-hidden="true" className="text-oo-blue mt-px">
-                ⬇
-              </span>
-              <span>
-                {mdBusy ? "Preparing Markdown…" : "Report as Markdown"}
-                <span className="sr-only"> — the report as portable Markdown</span>
-              </span>
-            </button>
+              {mdBusy ? "Preparing Markdown…" : "Report as Markdown"}
+              <span className="sr-only"> — the report as portable Markdown</span>
+            </ReportItem>
+            {note && (
+              <ReportItem
+                ref={item(reportIndex + 2)}
+                unavailable={note.disabled}
+                onSelect={() => {
+                  close(false);
+                  note.onSelect();
+                }}
+              >
+                {note.label}
+                <span className="block text-oo-meta text-oo-muted">{note.description}</span>
+              </ReportItem>
+            )}
             <div
               className="my-1.5 border-t border-oo-rule"
               role="presentation"
             />
             <GroupHeading>Data</GroupHeading>
             <button
-              ref={item(reportIndex + 2)}
+              ref={item(reportIndex + (note ? 3 : 2))}
               type="button"
               role="menuitem"
               onClick={() => {

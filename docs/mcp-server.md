@@ -31,6 +31,10 @@ would `421` in production.
 
 ## Tools (v1)
 
+The top-level keys each tool returns, and what every field means, are in the
+[output data dictionary](data-dictionary.md#mcp-tools), generated from the
+tool bodies.
+
 | Tool | Purpose |
 |---|---|
 | `opencheck_search(query, kind="entity", limit=15, jurisdiction=, legal_form=, entity_status=, registration_status=, category=, nationality=, birth_year=)` | Name → candidate entities with LEIs, ranked best-first across every source (Phase 292): exact name → same name under any legal form → every query token present → every distinctive token agrees → fuzzy, ties broken by register status (live or unstated before in a terminal process before dissolved) and then by whether the row carries an LEI. Each candidate says which rung it reached as `match` and carries `identifiers: [{scheme, id}]` for `opencheck_register_lookup`. Since Phase 309 the rungs are measured against the current name **or any former legal name** the source files (GLEIF's `PREVIOUS_LEGAL_NAME`, a register's previous names): a candidate carries `former_names[]` when it has any and `matched_former_name` when that, not the current name, is what the query matched — "Barrick Gold Corporation" ranks BARRICK MINING CORPORATION `exact` and says why. Cut at `limit` (max 50), with `total` and `truncated` saying so. Optional filters ([search filters](search-filters.md)): `jurisdiction` (exact — `DE` never returns Delaware), `legal_form` (an ELF code, `no-elf-code`, or an abbreviation/name such as "GmbH" resolved within the jurisdiction; an ambiguous one returns `candidates`), `entity_status`, `registration_status` (the LEI record's), `category`; for people `nationality` and `birth_year`. With a filter set only sources that can apply it are searched — `filters.applied_by` names them and `filters.left_out` the rest |
@@ -45,6 +49,7 @@ would `421` in production.
 | `opencheck_person_check(name, birth_year=None)` | Screen one person (PEP / sanctions / offshore-leaks) — evidence-shaped: signals from strong matches only, per-source outcomes, caveats |
 | `opencheck_person_positions(scheme, id)` | One person's positions across companies, keyed by a register's own person key, never a name: `EE-ARIREGISTER-HASH` (the Estonian register's pseudonymous key, read off an Estonian person statement's `identifying` annotation) lists every company whose current lists name the person — list, role, since, share — from the daily index; `GB-COH-OFFICER` gives a Companies House officer's appointments. Neither register guarantees one key per person (`caveat`); the Estonian files are current rows only. At most 100 rows (`total_results` counts all) |
 | `opencheck_save_report(lei, deepen_top=5)` | Runs (or reuses a held) check and keeps it as a saved report — `url`, `json_url`, `content_hash`, `saved_at` / `expires_at`, `manage_token`, `verdict`, licence headline (Phase 218; see [saved reports](saved-reports.md)) |
+| `opencheck_discrepancy_note(lei=None, scheme=None, id=None, deepen_top=5)` | A register record discrepancy note (the discrepancy-report ticket): reads the run's "Records compared" finding and returns `markdown` — one note per register holding a disputed value, GLEIF included — plus `notes` (addressee, fields, reporting route). Describes, never alleges; not a beneficial-ownership discrepancy report and says so. `status` 404 when the run found no disagreement. See [record consistency](record-consistency.md#the-discrepancy-note) |
 | `opencheck_list_sources()` | Adapter inventory with licence + live status |
 
 `narrative` is deliberately **not** exposed (it spends model tokens per call).
@@ -60,7 +65,7 @@ also spends the tier its REST counterpart is on — `opencheck_lookup`,
 `opencheck_register_lookup`, `opencheck_export_bods`, `opencheck_search`, `opencheck_person_check`,
 `opencheck_person_positions`, `opencheck_owners` and `opencheck_ownership_map` the lookup tier (10/min; at `depth` > 1 every extra
 lookup is also charged to the shared lookup budget), `opencheck_subsidiaries` the default tier `GET
-/subsidiaries` is on (its GLEIF calls are discretionary, as on the REST route), `opencheck_batch_lookup` and `opencheck_save_report` the
+/subsidiaries` is on (its GLEIF calls are discretionary, as on the REST route), `opencheck_batch_lookup`, `opencheck_save_report` and `opencheck_discrepancy_note` the
 heavy tier (3/min). A refusal is HTTP `429` with `Retry-After` and a JSON-RPC
 error per message.
 

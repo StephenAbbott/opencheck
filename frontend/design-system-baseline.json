@@ -228,7 +228,7 @@
     "text": 2,
     "vocab": 0,
     "palette": 0,
-    "button": 6
+    "button": 5
   },
   "src/components/export/ExportPanel.tsx": {
     "hex": 0,

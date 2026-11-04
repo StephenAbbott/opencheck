@@ -437,6 +437,25 @@ def _integrated_ownership(report: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _disclosure(report: dict[str, Any]) -> list[str]:
+    """The text twin of ``html_report._disclosure``."""
+    from .. import disclosure as ds
+
+    raw = report.get("disclosure_status")
+    payload = raw if isinstance(raw, dict) else None
+    rows = ds.report_table(payload)
+    if not rows:
+        return []
+    lines = [f"## {ds.REPORT_HEADING}", ""]
+    lines.append("| " + " | ".join(ds.REPORT_COLUMNS) + " |")
+    lines.append("|" + "---|" * len(ds.REPORT_COLUMNS))
+    lines += ["| " + " | ".join(_cell(c) for c in row) + " |" for row in rows]
+    lines.append("")
+    for t in ds.report_footer(payload):
+        lines += [f"_{t}_", ""]
+    return lines
+
+
 def _sanctions_ownership(report: dict[str, Any]) -> list[str]:
     """Phase 342 — the text twin of ``html_report._sanctions_ownership``."""
     from .. import sanctions_ownership as so
@@ -580,6 +599,7 @@ def build_report_markdown(
     sections += _summary(narrative, dispositions)
     sections += _risk(report)
     sections += _sources_found(report)
+    sections += _disclosure(report)
     sections += _knowability(report)
     sections += _integrated_ownership(report)
     sections += _sanctions_ownership(report)

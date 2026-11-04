@@ -68,6 +68,7 @@ TOOL_TIERS: dict[str, Quota] = {
     "opencheck_ownership_map": _LOOKUP,
     "opencheck_batch_lookup": _HEAVY,
     "opencheck_save_report": _HEAVY,
+    "opencheck_discrepancy_note": _HEAVY,
 }
 
 

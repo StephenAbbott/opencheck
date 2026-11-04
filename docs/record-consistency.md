@@ -123,6 +123,52 @@ Each shown disagreement travels with the BODS export as a `commenting` annotatio
 status annotation), naming the other source, its statement and its value. A saved
 report exports what its run said; nothing is recomputed at export time.
 
+## The discrepancy note
+
+A disagreement is only useful if it can be handed back to the register that holds the
+stale record. The **discrepancy note** does that: `POST /export/discrepancy-note`
+(`lei`, or `scheme` + `id` for a company with no LEI; `format` `markdown` or `pdf`;
+`saved_report_id` to render a saved report's own run), the "Discrepancy note" item in
+the report's Export menu, the link under the "Records compared" table, and the MCP tool
+`opencheck_discrepancy_note`. The export is disabled, and the route answers 404, when the
+run found no disagreement.
+
+What it contains, and the rules behind it (the discrepancy-report ticket, 3 Nov 2026):
+
+- **Only the disagreements this page already shows qualify** — the `disagree` items on
+  the `RECORD_CONSISTENCY` evidence, which passed the gate above when the run was made.
+  Nothing is compared at export time. Fields the gate counts but does not show (the
+  incorporation date, a register-number clash) are not in a note; a name or address
+  comparison would be its own consistency change, with the two-week gate first. A lapsed
+  LEI is GLEIF's record of the LEI, not of the company, and a GLEIF parent is accounting
+  consolidation rather than a shareholder, so neither is a register discrepancy.
+- **One note per register that holds a disputed value, GLEIF included.** Either side
+  of a disagreement can be the stale one, so Companies House *and* GLEIF each get a note
+  when they differ; GLEIF's is addressed to its data challenge facility, which any user
+  of LEI data may use. A source that is not a register (an aggregator, a leak archive)
+  is quoted as the conflicting record and never addressed.
+- **It describes and never alleges.** Each item gives the field, the register's own
+  value in the register's own words, the conflicting value with its source and that
+  source's licence, and the dates each side was stated and retrieved — read off the
+  run's frozen BODS, so a saved report's note carries the dates of its own day. The
+  fixed sentences pass the same banned-vocabulary guard as the "What can be known"
+  statement.
+- **It is not a beneficial-ownership discrepancy report, and says so.** The fields
+  compared are the register's status and jurisdiction, not who owns or controls the
+  company; the AMLR Article 24 and UK PSC duties are about beneficial-ownership
+  information. The note points at the register's recorded reporting route and leaves
+  the reader to decide whether a duty applies.
+- **Where to send it comes from the jurisdictions table** — the `Discrepancy reporting
+  route`, `Discrepancy reporting note` and `Company register discrepancy route` columns
+  of the *Beneficial ownership access status* database, synced into
+  `jurisdictions.json` like every other legal fact there and never typed in code
+  (GB, EE, LV, DK and NO recorded first; a register with no recorded route says so).
+- **The footer carries the saved-report link and SHA-256 only when the run is saved.**
+  Saving is a deliberate act with a daily quota, so the export never saves on the
+  reader's behalf; an unsaved run's note says how to get a verifiable link.
+- **The reporter is blank lines** — name, organisation, capacity, contact, date — for
+  the reader to fill in. Nothing about the reader is asked for or stored.
+
 ## For operators
 
 - `GET /consistencystats` — the counters. `pairs` is `field|source_a|source_b` →

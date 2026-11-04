@@ -49,7 +49,7 @@ def test_descriptor_shape() -> None:
     assert d["transport"] == "streamable-http"
     assert d["endpoint"].endswith("/mcp")
     assert d["tools"] == TOOL_NAMES
-    assert len(TOOL_NAMES) == 13  # opencheck_person_positions (the Estonian person key)
+    assert len(TOOL_NAMES) == 14  # opencheck_discrepancy_note (the discrepancy-report ticket)
 
 
 def test_descriptor_route_served_with_cors(client: TestClient) -> None:

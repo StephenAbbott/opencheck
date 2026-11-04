@@ -24,11 +24,23 @@ router = APIRouter()
 
 
 class SearchResponse(BaseModel):
+    """A name search across every source that supports it, ranked."""
+
+    #: The search string as given.
     query: str
+    #: ``entity`` or ``person``.
     kind: SearchKind
+    #: Every candidate, ranked across sources by match tier, register status
+    #: and LEI (``opencheck.search_rank``), one ``SourceHit`` each.
     hits: list[SourceHit]
+    #: Sources that failed, keyed by source id, each a secret-scrubbed
+    #: one-line error.
     errors: dict[str, str]
+    #: Confirmed bridges between candidates that share an identifier — one
+    #: ``CrossSourceLink`` each.
     cross_source_links: list[dict[str, Any]]
+    #: Signals the candidates' own records carry (a sanctioned hit); the
+    #: cross-source screens need a lookup.
     risk_signals: list[dict[str, Any]]
     # The advanced-search-filters ticket: present only when a filter was
     # set — the filters, the sources that applied them and the sources left
