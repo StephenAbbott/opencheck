@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 440** — Beneficial owners from Slovakia's public-sector partners register now carry the nationality and country of residence the register publishes.
+**Latest: Phase 443** — A one-page discrepancy note per register can now be exported from a report's "Records compared" finding, addressed to the register and naming its reporting route.
 
 → [Full development history](docs/status.md)
 

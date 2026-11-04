@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Iterable, NamedTuple
 from fastapi import HTTPException
 
 from . import (
+    disclosure as _disclosure,
     integrated_ownership as _integrated_ownership,
     listing as _listing,
     lookup_budget as _lookup_budget,
@@ -538,6 +539,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     knowability_chain: dict[str, Any] | None = None
     declaration_subjects: dict[str, str] = {}
     integrated: dict[str, Any] | None = None
+    disclosure_status: dict[str, Any] | None = None
     listing: dict[str, Any] | None = None
     form13f: dict[str, Any] | None = None
     oa_screening: list[dict[str, Any]] = []
@@ -597,6 +599,8 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             declaration_subjects = payload.get("subjects") or {}
         elif event == "integrated_ownership":
             integrated = payload
+        elif event == "disclosure_status":
+            disclosure_status = payload
         elif event == "listing":
             listing = payload
         elif event == "form13f":
@@ -631,13 +635,19 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         # carries the listing that was true on the day it ran.
         # Phase 339: the integrated-ownership figures ride as one
         # ``commenting`` annotation on the subject, from the frozen event.
-        bods=_integrated_ownership.apply_to_bods(
-            _listing.apply_to_bods(
-                apply_network_subjects(unique_statements(bods_all), declaration_subjects),
-                norm_lei,
-                listing,
+        # The disclosure status rides as a second ``commenting`` annotation
+        # on the same statement, from its frozen event.
+        bods=_disclosure.apply_to_bods(
+            _integrated_ownership.apply_to_bods(
+                _listing.apply_to_bods(
+                    apply_network_subjects(unique_statements(bods_all), declaration_subjects),
+                    norm_lei,
+                    listing,
+                ),
+                integrated,
             ),
-            integrated,
+            disclosure_status,
+            (disclosure_status or {}).get("subject_ids") or [],
         ),
         bods_issues=bods_issues,
         license_notices=license_notices,
@@ -651,6 +661,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         knowability=knowability,
         knowability_chain=knowability_chain,
         integrated_ownership=integrated,
+        disclosure_status=disclosure_status,
         listing=listing,
         form13f=form13f,
         register_record=register_record,

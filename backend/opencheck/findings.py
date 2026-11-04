@@ -606,7 +606,7 @@ def finding_companies_house(bundle: dict[str, Any]) -> str | None:
                 if str(s.get("statement") or "") in _PSC_STATEMENT_PHRASES
             ),
             None,
-        )
+        ) or _ch_exemption_phrase(bundle)
         # "…named; the filing states…" — the absence and what stands in its
         # place are two statements, so they take a semicolon (rule 6).
         sep = "; "
@@ -614,6 +614,42 @@ def finding_companies_house(bundle: dict[str, Any]) -> str | None:
     officer_clause = f"{plural(len(officers), 'officer')} listed" if officers else None
 
     return clauses_to_sentence([lead, detail, officer_clause], sep=sep)
+
+
+#: A current PSC exemption (``/company/{n}/exemptions``) in the sentence's
+#: words — short, because the 140-character cap drops what follows. The full
+#: sentence, Companies House's own, is on the disclosure chip.
+_CH_EXEMPTION_PHRASES: dict[str, str] = {
+    "psc-exempt-as-trading-on-uk-regulated-market": (
+        "exempt from the PSC register, with shares on a UK regulated market"
+    ),
+    "psc-exempt-as-trading-on-eu-regulated-market": (
+        "exempt from the PSC register, with shares on an EU regulated market"
+    ),
+    "psc-exempt-as-trading-on-regulated-market": (
+        "exempt from the PSC register, with shares on a regulated market outside the UK"
+    ),
+    "psc-exempt-as-shares-admitted-on-market": (
+        "exempt from the PSC register, with shares on a market the PSC Regulations list"
+    ),
+    "disclosure-transparency-rules-chapter-five-applies": (
+        "a DTR5 issuer, which may be exempt from the PSC register"
+    ),
+}
+
+
+def _ch_exemption_phrase(bundle: dict[str, Any]) -> str | None:
+    """The first current exemption, worded; a full exemption before DTR5's
+    "may be exempt"."""
+    from .bods.lifecycle import today_iso
+    from .sources.companies_house import current_exemptions
+
+    kinds = [k for k, _ in current_exemptions(bundle.get("exemptions"), today_iso())]
+    dtr5 = "disclosure-transparency-rules-chapter-five-applies"
+    for kind in [*(k for k in kinds if k != dtr5), *(k for k in kinds if k == dtr5)]:
+        if kind in _CH_EXEMPTION_PHRASES:
+            return _CH_EXEMPTION_PHRASES[kind]
+    return None
 
 
 # ---------------------------------------------------------------------------

@@ -175,6 +175,11 @@ class BoRegister(BaseModel):
     boris: Literal["Yes", "No", "Not applicable"] | None = None
     amlr_alignment_watch: bool = False
     pending_changes: str | None = None
+    # The discrepancy-note export (the discrepancy-report ticket, Nov 2026):
+    # where an obliged entity reports a discrepancy in the BO record, and who
+    # may. Read by ``discrepancy_note``; never typed in code.
+    discrepancy_route: str | None = None
+    discrepancy_note: str | None = None
 
     @field_validator("url", "access_url")
     @classmethod
@@ -192,6 +197,9 @@ class CompanyRegister(BaseModel):
     url: str | None = None
     publishes: list[str] = Field(default_factory=list)
     public: Literal["Yes", "Partly", "No"] | None = None
+    #: Where anyone reports an error in the company register record, when the
+    #: route differs from the BO one (the discrepancy-report ticket).
+    discrepancy_route: str | None = None
 
 
 class FatfAssessment(BaseModel):
