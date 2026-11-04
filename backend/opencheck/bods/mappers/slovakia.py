@@ -261,7 +261,17 @@ def map_rpvs_slovakia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             pep_exposure: dict[str, Any] | None = (
                 {
                     "status": "isPep",
-                    "details": [{"type": "existingRelationship", "jurisdiction": {"name": "Slovakia", "code": "SK"}}],
+                    # BODS ``PepStatusDetails`` has ``reason``, not ``type``:
+                    # until the data-dictionary post-deploy check (4 Nov 2026)
+                    # this wrote ``"type": "existingRelationship"``, a key the
+                    # standard does not define, so no reader saw why.
+                    "details": [{
+                        "reason": (
+                            "Recorded by the Register of Public Sector Partners "
+                            "(RPVS) as a public official (verejný funkcionár)."
+                        ),
+                        "jurisdiction": {"name": "Slovakia", "code": "SK"},
+                    }],
                 }
                 if is_pep
                 else None

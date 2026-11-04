@@ -26,6 +26,7 @@ import pytest
 from opencheck import data_dictionary as dd
 from opencheck.bods.statements import make_entity_statement
 from tests import _entity_subtype_guard as guard
+from tests._bods_schema_keys import non_schema_keys
 
 PACKAGE = Path(dd.__file__).resolve().parent
 _LITERAL = re.compile(r"""["'](opencheck[A-Z][A-Za-z0-9]*)["']""")
@@ -54,15 +55,30 @@ def test_every_extension_key_literal_in_the_package_is_registered():
 
 
 def test_the_sample_bundle_carries_every_registered_extension():
-    seen = {key for _p, key in dd.extension_keys_in(dd.sample_bundle())}
-    seen |= {
-        k
-        for stmt in dd.sample_bundle()
-        for ann in stmt.get("annotations") or []
-        for k in ann
-        if k in dd.EXTENSION_KEYS
-    }
+    # Read against the BODS v0.4 schema, not the prefix: every key the sample
+    # carries that the schema does not define is a registered extension, and
+    # every registered extension appears somewhere in the sample.
+    seen = {key for stmt in dd.sample_bundle() for _p, key in non_schema_keys(stmt)}
     assert seen == dd.EXTENSION_KEYS
+
+
+def test_the_motivation_table_says_which_motivations_are_written():
+    written = dd.motivations_written()
+    assert written, "the AST scan found no annotation motivation at all"
+    assert set(dd.MOTIVATION_WORDS) >= set(written)
+    for motivation, words in dd.MOTIVATION_WORDS.items():
+        if motivation in written:
+            assert words != dd.NOT_WRITTEN, f"{motivation} is written but the table says not"
+        else:
+            assert words == dd.NOT_WRITTEN, f"{motivation} is described but nothing writes it"
+
+
+def test_the_mapper_guard_fails_an_unprefixed_extension_key():
+    stmt = make_entity_statement(source_id="gleif", local_id="dd-guard-2", name="X")
+    stmt["recordDetails"]["mysteryLabel"] = "x"
+    guard.check_statement("map_test", stmt)
+    violations = [v for v in guard.drain() if "mysteryLabel" in v[2]]
+    assert violations and "EXTENSIONS" in violations[0][2]
 
 
 def test_unregistered_extension_keys_are_found_at_any_depth():

@@ -4144,12 +4144,24 @@ workflow beside the OKF check. Things that will be re-derived otherwise:
   (`test_data_dictionary.py`); a new model in a documented router renders
   with whatever comments it has — add it to `API_MODELS` and, once every
   field is described, to the strict set.
-- **A new `opencheck*` key in a BODS statement is registered in
-  `EXTENSIONS`** (where it sits, what it means, an example, the phase)
-  before it ships: the conftest mapper guard fails any yielded statement
-  carrying an unregistered one, and a string literal of that shape anywhere
-  in the package fails the suite. `gleifLegalEntityEvent` is the one
-  documented key outside the prefix.
+- **Any key the BODS v0.4 schema does not define is an extension, and is
+  registered in `EXTENSIONS`** (where it sits, what it means, an example,
+  where it came from) before it ships — prefix or no prefix. The conftest
+  mapper guard reads every yielded statement against the vendored schema
+  (`tests/_bods_schema_keys.py::non_schema_keys`: `$ref` by `$id` URN,
+  combinators and `then`/`else` flattened, the union of what BODS allows at
+  each place) and fails a key nothing registers; a string literal starting
+  `opencheck` anywhere in the package fails the suite too. Until the
+  post-deploy check of 4 Nov 2026 the guard read the prefix only, and
+  production carried `legalFormLabel`, `primaryIndustryCode`, `formerName`,
+  `identityVerification` and `companiesHouseFiling` undocumented, plus the
+  Slovak PEP's `politicalExposure.details.type` (not a v0.4 field — now a
+  `reason`). **`sample_bundle()` carries every registered extension**
+  (`test_the_sample_bundle_carries_every_registered_extension`), built with
+  the real helpers that write each one, so a new extension needs a line
+  there too. **The motivation table is checked against the code**:
+  `motivations_written()` scans the package for the motivations it writes,
+  and `MOTIVATION_WORDS` must say `NOT_WRITTEN` for exactly the others.
 - **A new export column or row key needs a sentence in
   `COLUMN_DESCRIPTIONS`** — the bods-gql dataclasses, `batch.CSV_COLUMNS`,
   and the Senzing / FtM / AML AI keys the writers produce for
