@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 446** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, recording Germany's draft Geldwäschebekämpfungsgesetz and where its legitimate-interest rules come from.
+**Latest: Phase 447** — Each Companies House PSC relationship now names the filing that notified it — form, transaction ID, filing date and a link to the document.
 
 → [Full development history](docs/status.md)
 
