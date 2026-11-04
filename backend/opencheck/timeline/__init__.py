@@ -13,6 +13,7 @@ from .cvr_denmark import cvr_change_events
 from .gleif import classify_gleif_modification, relationship_interest_dates
 from .ny_dos import ny_dos_change_events
 from .nz_companies import nz_change_events
+from .ur_latvia import ur_latvia_change_events
 from .model import (
     CHANGE_TYPES,
     ChangeEvent,
@@ -43,4 +44,5 @@ __all__ = [
     "ny_dos_change_events",
     "nz_change_events",
     "relationship_interest_dates",
+    "ur_latvia_change_events",
 ]

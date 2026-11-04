@@ -80,6 +80,9 @@ Every field is a **lower bound or a shape**, never a snapshot:
   sources", counted the way the badge counts it (independent origins via
   `sources.lineage`).
 - `intermediate_layers_min` is the floor for `graph_shape.intermediate_layers`.
+- `disclosure` (optional) maps a source id to the disclosure values it must
+  carry (`"gleif": ["exempt"]`) — a floor, never the whole list. See
+  [disclosure-status.md](disclosure-status.md).
 
 Upstream data legitimately changes. Lithuania's PEP drop of 17 Aug 2026 would
 have failed a snapshot every week. A genuine change is fixed by editing the
@@ -100,6 +103,7 @@ Each finding names its failure class, because the class says where to look.
 | `card_drift` | `EXAMPLE_LEIS` differs from the live risk codes or their highest confidence | The open drift item |
 | `verdict` | The sentence misses a pattern, or matches a ruled-out one | 2 Sept verdict wording |
 | `source_not_found`, `liveness`, `lei_confirmation`, `layers`, `lei_registration` | The remaining shapes in the file | — |
+| `disclosure` | The run carries no `disclosure_status` (a warning unless the file asserts values), an applicable source has no value, or a source lacks a value the file expects | — |
 | `mcp_mismatch` | The MCP `opencheck_lookup` result disagrees with `/lookup` about the same run (codes by kind, verdict, degraded count, counts) | Phase 153 (MCP dropped `kind`) |
 | `lookup_failed` | `/lookup` did not answer after retries | — |
 

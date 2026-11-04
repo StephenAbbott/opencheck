@@ -4892,3 +4892,70 @@ re-derived otherwise:
   carries the direct children to the live path's cap (`_DIRECT_CHILDREN_PAGE_CAP`
   × 100), not one page of 100. Go back to live-first by setting the
   `render.yaml` value to `"false"`; nothing else changes.
+
+## What each source says about owners — the disclosure status (the disclosure-status ticket)
+
+`opencheck/disclosure.py`, `frontend/src/lib/disclosureStatus.ts`; the mapping
+from every channel is `docs/disclosure-status.md`. One normalised value per
+source per lookup, from Open Ownership's "absence is not an exemption" point.
+Stephen's decisions (3 Nov 2026) and the things that will be re-derived
+otherwise:
+
+- **Describes, raises nothing.** No signal, no verdict clause, no narrative.
+  `OPAQUE_OWNERSHIP` (which already fires on GLEIF `NON_PUBLIC` and the two
+  Companies House "not provided" reasons) and `GLEIF_REPORTING_EXCEPTION` are
+  unchanged; an AST test fails if `risk.py`, `verdict.py`, `signalstats.py` or
+  `narrative/` imports the module.
+- **Nine values** (`VALUES`): the ticket's seven plus `none_filed` (record
+  held, no owner, no reason) and `no_record` (Stephen). **Every value a source
+  supports is listed** — no precedence rule. Each entry has `covers`:
+  `beneficial_owners`, `shareholders` or `parent` (GLEIF; its exceptions are
+  "Parent: Exempt", never a BO exemption). There is no `officers` value: an
+  officer role is never an owner.
+- **`DISCLOSES` decides what is an ownership source** — every `bo_register`
+  regime in `bo_regimes` (pinned) plus the shareholder lists. A source outside
+  it is `not_covered`, named once under the QuickCheck cards, never chipped.
+  Taiwan's GCIS is out on purpose (directors' holdings, never "the
+  shareholders"); SEC EDGAR is `shareholders`. Adding an owner-publishing
+  source means a row here. Every ownership source is always deepened
+  (`_select_deepen_pairs`), GLEIF only as the anchor.
+- **Read from the stamped statements**: relationships whose subject is the
+  source's own `declarationSubject`, current interests only, officer types and
+  `opencheckOfficerPosition` skipped; `gleif_reporting_exception` first; an
+  unspecified party through `REASON_VALUES`. Facts only the raw bundle has
+  (Estonia's `bo_obliged`, `J`/`C` fallback rows, the REST tier's
+  `bo_not_read`) come from `bundle_hints`, collected in the deepen loop.
+  Estonia's "due, none published" is `none_filed`, not `not_provided` (an
+  entry can be withheld for a person at risk).
+- **`restricted` only for a register in the subject's country** (`SourceInfo.country`
+  == the knowability code, access in `RESTRICTED_ACCESS` = `bo_access._RESTRICTED_NOW`,
+  pinned). `unreachable` from `source_fetch` (alone) or `source_read` (beside
+  what was read).
+- **One event, folded as recorded**: `disclosure_status`, yielded just before
+  `risk_signals` in both pipelines, in `LOOKUP_EVENT_HANDLERS`, folded into
+  `LookupResponse.disclosure_status`. BODS gets one `commenting` annotation on
+  the integrated-ownership `annotation_target` (`apply_to_bods`, in
+  `fold_lookup_events`) — never a new statement. PDF/Markdown: "What each source
+  says about owners". MCP: `disclosure_status.by_source[]` on
+  `opencheck_lookup`, `opencheck_register_lookup` and `opencheck_export_bods`.
+  Batch: a row's `disclosure` (`row_tokens`) and the CSV's **last** column
+  `disclosure` (`csv_cell`, mirrored by `disclosureCell` in
+  `frontend/src/lib/batch.ts`) — add a later batch column after it, never
+  before. Senzing and FtM exports drop annotations, so carry no status.
+- **Words** (`VALUE_WORDS`, `COVERS_WORDS`) are parsed from the TypeScript by
+  `test_disclosure_status.py`; both pass `knowability.BANNED_VOCABULARY`.
+- **Findings regression**: class `disclosure`; a golden file may carry
+  `"disclosure": {"gleif": ["exempt"]}` (a floor). Measured on production
+  exports, 3 Nov 2026: Bank Saderat PLC (Companies House declared, GLEIF parent
+  declared), Eli Lilly and Shell (GLEIF exempt; Shell's Companies House
+  exempt).
+- **Companies House exemptions are read, never inferred from a listing**
+  (Stephen, 3 Nov 2026). `CompaniesHouseAdapter._exemptions` follows the PSC
+  list's `links.exemptions` to `/company/{n}/exemptions` (no link, no call; a
+  404 is `{}`, cached; a failure is `None`, uncached, and a `source_read`
+  degradation for the subject). `current_exemptions` keeps periods not yet
+  ended; each is `exempt` with the register's own sentence
+  (`CH_EXEMPTION_DESCRIPTIONS`, pinned to a verbatim copy of
+  api-enumerations' `exemption_descriptions.yml` in `tests/fixtures/companies_house/`),
+  and the card's finding says it ("no person with significant control named;
+  exempt from the PSC register, with shares on a UK regulated market").

@@ -5,6 +5,7 @@
  * Phase 2 surface: /lookup-stream (SSE, LEI-anchored progressive lookup).
  */
 
+import type { DisclosureStatusPayload } from "./disclosureStatus";
 import type { IntegratedOwnershipPayload } from "./integratedOwnership";
 import { trackEvent } from "./analytics";
 import type { Liveness, SourceLiveness } from "../components/cdd/LivenessBadge";
@@ -213,6 +214,10 @@ export interface LookupResponse {
    *  subject with its figure per source, frozen with the run. Context only,
    *  never a signal. Absent on payloads recorded before this field existed. */
   integrated_ownership?: IntegratedOwnershipPayload | null;
+  /** What each source says about the subject's owners — one normalised value
+   *  per source, frozen with the run (`lib/disclosureStatus.ts`). Describes;
+   *  never a signal. Absent on payloads recorded before this field existed. */
+  disclosure_status?: DisclosureStatusPayload | null;
   /** The subject's primary stock-exchange listing from LSEG PermID
    *  (Phase 236) — see `PrimaryListing`. Absent when no PermID key is
    *  configured and on payloads recorded before this field existed; absence
@@ -2023,6 +2028,7 @@ export type LookupStreamHandlers = {
   onKnowability?: (e: KnowabilityStatement) => void;
   onKnowabilityChain?: (e: KnowabilityChain) => void;
   onIntegratedOwnership?: (e: IntegratedOwnershipPayload) => void;
+  onDisclosureStatus?: (e: DisclosureStatusPayload) => void;
   onListing?: (e: PrimaryListing) => void;
   onForm13f?: (e: Form13fPayload) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
@@ -2061,6 +2067,7 @@ export const LOOKUP_EVENT_HANDLERS = {
   knowability: "onKnowability",
   knowability_chain: "onKnowabilityChain",
   integrated_ownership: "onIntegratedOwnership",
+  disclosure_status: "onDisclosureStatus",
   listing: "onListing",
   form13f: "onForm13f",
 } as const satisfies Record<string, keyof LookupStreamHandlers>;
@@ -2199,6 +2206,9 @@ export interface BatchRow {
   licensing: { commercial_use: boolean; headline: string } | null;
   replayed: boolean;
   report_url: string;
+  /** What each ownership source says about owners — `{source: ["covers=value"]}`;
+   *  absent on rows served before the disclosure status. */
+  disclosure?: Record<string, string[]> | null;
 }
 
 /** A company that could not be screened at all — a row, not an exception. */

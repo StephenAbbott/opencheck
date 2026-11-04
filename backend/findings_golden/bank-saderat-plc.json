@@ -29,5 +29,13 @@
   ],
   "liveness": {},
   "lei_confirmed_min": 2,
-  "intermediate_layers_min": null
+  "intermediate_layers_min": null,
+  "disclosure": {
+    "companies_house": [
+      "declared"
+    ],
+    "gleif": [
+      "declared"
+    ]
+  }
 }

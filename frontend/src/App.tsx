@@ -157,6 +157,7 @@ export default function App() {
     registerRecord,
     knowabilityChain,
     integratedOwnership,
+    disclosureStatus,
     riskSignals,
     degradedSources,
     verdict,
@@ -1476,6 +1477,7 @@ export default function App() {
                   oaScreening={oaScreening}
                   primaryListing={primaryListing}
                   form13f={form13f}
+                  disclosureStatus={disclosureStatus}
                   savedReport={savedReport}
                   savedNarrative={savedNarrative}
                   onExportPayload={setExportPayload}
