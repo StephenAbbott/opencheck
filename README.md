@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 450** — The "what each source says about owners" chips count only the looked-up company's own owners, not those of other companies in a source's bundle.
+**Latest: Phase 451** — The output data dictionary now documents every key OpenCheck adds to BODS, found by reading each statement against the v0.4 schema, after the post-deploy check found five undocumented in production.
 
 → [Full development history](docs/status.md)
 
