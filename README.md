@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 447** — Each Companies House PSC relationship now names the filing that notified it — form, transaction ID, filing date and a link to the document.
+**Latest: Phase 451** — The output data dictionary now documents every key OpenCheck adds to BODS, found by reading each statement against the v0.4 schema, after the post-deploy check found five undocumented in production.
 
 → [Full development history](docs/status.md)
 

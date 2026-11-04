@@ -430,3 +430,80 @@ def test_the_docs_page_maps_every_reason() -> None:
         assert f"`{reason}`" in doc, reason
     for value in disclosure.VALUES:
         assert f"`{value}`" in doc, value
+
+
+# --- another publisher's bundle: only the subject's relationships count -------
+
+
+def _oo_bundle() -> list[dict]:
+    """Open Ownership's stored UK PSC extract, as served for the curated
+    examples: the subject (an exempt listed company, no PSC of its own) and
+    two subsidiaries whose PSCs are filed, every record naming itself as its
+    ``declarationSubject``."""
+    src = {"type": ["officialRegister"], "description": "UK Companies House"}
+
+    def entity(sid: str, number: str, name: str) -> dict:
+        return {"statementId": sid, "recordId": f"GB-COH-{number}", "recordType": "entity",
+                "declarationSubject": f"GB-COH-{number}", "source": src,
+                "recordDetails": {"entityType": {"type": "registeredEntity"}, "name": name,
+                                  "identifiers": [{"scheme": "GB-COH", "id": number}]}}
+
+    def rel(sid: str, subject: str, party: str) -> dict:
+        return {"statementId": sid, "recordId": f"rel-{sid}", "recordType": "relationship",
+                "recordStatus": "new", "declarationSubject": subject, "source": src,
+                "recordDetails": {"subject": subject, "interestedParty": party,
+                                  "interests": [{"type": "shareholding",
+                                                 "beneficialOwnershipOrControl": True,
+                                                 "startDate": "2016-04-06"}]}}
+
+    return [
+        entity("s-parent", "00102498", "PARENT P.L.C."),
+        entity("s-sub1", "00000001", "SUB ONE LIMITED"),
+        entity("s-sub2", "00000002", "SUB TWO LIMITED"),
+        rel("r1", "GB-COH-00000001", "GB-COH-00102498"),
+        rel("r2", "GB-COH-00000002", "GB-COH-00000001"),
+    ]
+
+
+def test_another_publishers_subsidiary_pscs_are_not_the_subjects_owners() -> None:
+    # BP P.L.C., 4 Nov 2026: "28 declared" beside its PSC exemption, from its
+    # subsidiaries' PSCs in Open Ownership's bundle.
+    stmts = _oo_bundle()
+    assert disclosure.entries_from_statements(
+        "companies_house", stmts, AS_OF, subject_ids=["s-parent"]) == []
+    # Without the lookup's subject, several declaration subjects name no one.
+    assert disclosure.entries_from_statements("companies_house", stmts, AS_OF) == []
+
+    exempt = [{"value": "exempt", "covers": "beneficial_owners",
+               "reasons": ["psc-exempt-as-trading-on-uk-regulated-market"]}]
+    cov = source_coverage([_hit("companies_house")], {}, ["companies_house"])
+    out = disclosure.for_lookup(
+        bods=stmts, coverage=cov, degraded=[], knowability=None,
+        hints={"companies_house": exempt}, as_of=AS_OF, source_countries={},
+        subject_ids=iter(["s-parent", "s-gleif"]),
+    )
+    assert out["sources"]["companies_house"]["values"] == ["exempt"]
+
+
+def test_the_subjects_own_psc_in_another_publishers_bundle_still_counts() -> None:
+    stmts = _oo_bundle()
+    stmts.append({**stmts[3], "statementId": "r3", "recordId": "rel-r3",
+                  "declarationSubject": "GB-COH-00102498",
+                  "recordDetails": {**stmts[3]["recordDetails"],
+                                    "subject": "GB-COH-00102498",
+                                    "interestedParty": "GB-COH-00000002"}})
+    entries = disclosure.entries_from_statements(
+        "companies_house", stmts, AS_OF, subject_ids=["s-parent"])
+    assert entries == [{"value": "declared", "covers": "beneficial_owners", "count": 1}]
+
+
+def test_subject_ids_from_other_sources_fall_back_to_the_stamped_subject() -> None:
+    payload = {"company_number": "00012345",
+               "profile": {"company_name": "Owned Ltd", "company_number": "00012345"},
+               "officers": {"items": []},
+               "pscs": {"items": [{"kind": "individual-person-with-significant-control",
+                                   "name": "Jane Doe", "notified_on": "2017-01-01",
+                                   "natures_of_control": ["ownership-of-shares-75-to-100-percent"]}]}}
+    entries = disclosure.entries_from_statements(
+        "companies_house", _ch(payload), AS_OF, subject_ids=["gleif-only"])
+    assert [e["value"] for e in entries] == ["declared"]

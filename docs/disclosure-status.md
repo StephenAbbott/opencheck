@@ -51,6 +51,17 @@ exemption, and the chip says which it is.
 Taiwan's GCIS is deliberately not an ownership source here: it publishes
 directors' and supervisors' holdings, never "the shareholders".
 
+## Whose owners are counted
+
+Only relationships about the company that was looked up. A source's bundle can
+hold other companies too — a Companies House chain walk reads the owners of the
+subject's corporate owners, and Open Ownership's stored extract (used for the
+curated examples) holds a whole group — and their owners are not the subject's.
+The subject is the set of statements the lookup identified as the company
+itself; failing that, the one subject a source's statements all declare. A
+bundle whose statements name several subjects and none of them the looked-up
+company declares no one.
+
 ## Every value a source supports is listed
 
 There is no precedence rule. Companies House can name two PSCs and also file

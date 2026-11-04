@@ -36,13 +36,14 @@ from typing import Any, Callable, Iterator
 
 from opencheck import provenance as _provenance
 from opencheck.bods.statements import stale_statement_id
-from opencheck.data_dictionary import unregistered_extension_keys
 from opencheck.bods.validator import (
     address_type_issues,
     annotation_pointer_issues,
     entity_subtype_issue,
     jurisdiction_input_issues,
 )
+from opencheck.data_dictionary import EXTENSION_KEYS
+from tests._bods_schema_keys import non_schema_keys
 
 #: Violations recorded since the last :func:`drain`, as
 #: ``(mapper name, statementId, issue)``.
@@ -112,15 +113,20 @@ def check_statement(mapper: str, stmt: Any) -> None:
             "statementId is stale: recordDetails or recordStatus were edited "
             "after the factory without refresh_statement_id",
         ))
-    # The data dictionary: every ``opencheck*`` key a statement carries is a
-    # documented BODS extension (``opencheck.data_dictionary.EXTENSIONS``), or
-    # a reader meets a key nothing explains.
-    for path in unregistered_extension_keys(stmt):
-        VIOLATIONS.append((
-            mapper, sid,
-            f"undocumented BODS extension key at {path}: register it in "
-            "opencheck.data_dictionary.EXTENSIONS",
-        ))
+    # The data dictionary: every key a statement carries that BODS v0.4 does
+    # not define is a documented extension (``opencheck.data_dictionary.
+    # EXTENSIONS``), or a reader meets a key nothing explains. Judged against
+    # the schema, not a name prefix — the prefix rule missed legalFormLabel,
+    # formerName and identityVerification (post-deploy check, 4 Nov 2026).
+    # A publisher's own BODS is theirs to document.
+    if mapper not in PUBLISHER_VERBATIM:
+        for path, key in non_schema_keys(stmt):
+            if key not in EXTENSION_KEYS:
+                VIOLATIONS.append((
+                    mapper, sid,
+                    f"undocumented BODS extension key {key!r} at {path}: register "
+                    "it in opencheck.data_dictionary.EXTENSIONS",
+                ))
     if stmt.get("recordType") != "entity":
         return
     issue = entity_subtype_issue(stmt.get("recordDetails") or {})

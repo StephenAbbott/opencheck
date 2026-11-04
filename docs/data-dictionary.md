@@ -708,13 +708,18 @@ A name-only 'likely same' candidate between two entity statements.
 
 ### Extension keys
 
-Keys BODS v0.4 does not define. Its Source, Interest and Annotation objects are open, and libcovebods reports an unknown key as an additional field, not an error. Every key OpenCheck writes is registered in `opencheck.data_dictionary.EXTENSIONS`; a mapper that emits an unregistered `opencheck*` key fails the test suite.
+Keys BODS v0.4 does not define. Its objects are open, and libcovebods reports an unknown key as an additional field, not an error. Every such key OpenCheck writes is registered in `opencheck.data_dictionary.EXTENSIONS`: the test suite walks every statement every mapper produces against the v0.4 schema, and a key the schema does not define at that place that is not registered here fails it — whatever it is called. Statements another publisher made (the OECD's MEIP, Open Ownership's bundles) are carried as published and documented by them.
 
 | Key | Where | Type | Meaning | Example | Since |
 |---|---|---|---|---|---|
 | `opencheckSourceId` | /source (every statement OpenCheck publishes) | string | The adapter id of the source the statement was mapped from — `companies_house`, `gleif`, `meip` … — the key of the REGISTRY and of `/sources`. Beside `source.description` (a display name) so licence decisions never have to recover the adapter from a label: RDF `bods:license`, Senzing `DATA_LICENSE`, the FullCheck network's `contributing_source_ids` and `LICENSES.md` all read it. On the OECD's MEIP statements it is the one key OpenCheck adds. | `"companies_house"` | Phase 267 |
 | `opencheckOfficerPosition` | /recordDetails/interests[] (relationship statements) | string | The officer position behind an interest typed `otherInfluenceOrControl` or `seniorManagingOfficial` that is an appointment, not ownership or control — "Secretary", "Supervisor", "Authorised person". BODS has no role code for a secretary or an agent, so the mappers type the interest and mark it; the graph, the exported diagram and the ownership map read the mark and draw a *role* edge labelled with the position. A reader that does not know the key still reads the interest type. | `"Secretary"` | Phase 340 |
 | `gleifLegalEntityEvent` | /annotations[] (a `commenting` annotation on a GLEIF entity statement) | object | GLEIF's Legal Entity Event as published — `type`, `status`, `effectiveDate`, `recordedDate`, plus `effectiveDay`, the calendar day OpenCheck read from the filer's local-midnight timestamp. The annotation's sentence states the same event in words; the object lets a consumer key on GLEIF's codes. | `{"type": "MERGERS_AND_ACQUISITIONS", "status": "COMPLETED", "effectiveDate": "2024-10-24T22:00:00Z", "effectiveDay": "2024-10-25"}` | Phase 305 |
+| `legalFormLabel` | /recordDetails (entity statements) | string | The entity's legal form in words, as the source names it — GLEIF's ISO 20275 Entity Legal Form code resolved to its label ("Foundation", "Aktieselskab"), or the register's own wording (Danish CVR, Swiss Zefix). BODS `entityType.subtype` is a closed codelist that cannot hold it. The AMLA trust-or-arrangement rule reads it, so a foundation is caught by its legal form and never by its name; the subject profile shows it and the RDF export carries it. | `"Aktieselskab"` | the GLEIF, CVR Denmark and Zefix mappers (before Phase 100) |
+| `primaryIndustryCode` | /recordDetails (Danish CVR entity statements) | string | The company's main industry code as the Danish Central Business Register files it (Dansk Branchekode DB07, the Danish version of NACE Rev. 2). Carried as filed; nothing in OpenCheck reads it. | `"702200"` | the CVR Denmark mapper (before Phase 100) |
+| `formerName` | /annotations[] (a `commenting` annotation on `/recordDetails/alternateNames/<i>`) | object | Says the `alternateNames` entry the annotation points at is a former legal name, not a trading name or transliteration: `name`, and `from` / `until` where the register dates it (Companies House does; GLEIF dates only the change). Only names a source types as former get one. A reader that does not know the key still sees the name in `alternateNames`. | `{"name": "BARRICK GOLD CORPORATION", "until": "2024-05-06"}` | Phase 309 |
+| `identityVerification` | /annotations[] (a `commenting` annotation on a Companies House officer or PSC) | object | Companies House's record that an identity verification statement is in place: `status` (`verified`), `recordedBy`, `route` (`authorisedCorporateServiceProvider` or `companiesHouse`), and where the register says so `verifiedBy` (the provider, with its `antiMoneyLaunderingSupervisoryBodies`) and `identityVerifiedOn`. On a role, `verificationStatementSuppliedOn`; on a person, `firstVerificationStatementOn` — a statement date, never a verification date. Absent where nothing is verified. | `{"status": "verified", "route": "companiesHouse", "verificationStatementSuppliedOn": "2026-03-18"}` | Phase 203 |
+| `companiesHouseFiling` | /annotations[] (a `commenting` annotation on a Companies House PSC relationship) | object | The filing that notified, or ceased, a person with significant control: `event` (`notification` / `cessation`), `match` (how it was found — the PSC form, the incorporation filing, the next confirmation statement, or none), `declarant` (always the company: Companies House publishes no presenter), and where matched the form `type`, `transactionId`, filing `date` and `documentUrl`. The annotation's sentence says the same in words. | `{"event": "notification", "match": "filing", "declarant": "company", "type": "PSC02", "date": "2016-06-30"}` | the filing-provenance ticket (Nov 2026) |
 
 ### Annotations
 
@@ -727,10 +732,10 @@ One rule applies to every annotation: **the statement carries the usable value; 
 | Motivation | When OpenCheck writes it |
 |---|---|
 | `transformation` | OpenCheck changed the source's value on the way to BODS — a role label became an interest type, a date changed format, a partial date was dropped, a Nasdaq CSD account prefix was stripped from a name. `description` states what the source said; `transformedContent` mirrors the emitted value. |
-| `commenting` | The value is exactly what the source published, but a reader could misread it — an imprecise `birthDate`, a reporting exception, a succession partner, a GLEIF event, a founder's historic role, a discrepancy report the register flags. |
+| `commenting` | The value is exactly what the source published, but a reader could misread it — an imprecise `birthDate`, a reporting exception, a succession partner, a GLEIF event, a former name, an identity verification, the filing that notified a PSC, a founder's historic role, a discrepancy report the register flags. |
 | `identifying` | Which real-world thing the statement is about, where BODS gives the key no home: a register's own person key (`EE-ARIREGISTER-HASH`), a Wikidata Q-id, an OpenSanctions record id, an SEC CIK — written by `person_identifier_note` in one fixed sentence shape so exports can read the identifier back. |
+| `linking` | A value OpenCheck added from a source other than the statement's own, with a link to it: the subject's primary stock-exchange listing (`/recordDetails/publicListing`) on OpenCheck's GLEIF statement, from LSEG PermID, with the quote's page as `url` — so the listing is never read as something GLEIF published. |
 | `correcting` | Defined by BODS; OpenCheck does not write it. |
-| `linking` | Defined by BODS; OpenCheck does not write it. |
 
 #### Annotation helpers
 
@@ -995,7 +1000,9 @@ One [FollowTheMoney](https://followthemoney.tech/) entity per party and per inte
 | `jurisdiction` | `jurisdiction.code`. |
 | `incorporationDate` | `foundingDate`. |
 | `address` | Addresses, one line each. |
+| `wikidataId` | The Wikidata Q-id, from a `WIKIDATA` identifier (on a person, read back from its `identifying` annotation). |
 | `dissolutionDate` | `dissolutionDate`. |
+| `idNumber` | A person's other identifier — a tax or identity-document number from `identifiers`, or a register's person key read back from its `identifying` annotation. |
 | `birthDate` | `birthDate`. |
 | `nationality` | `nationalities[].code`. |
 | `notes` | On a `LegalEntity` placeholder: the same note — which side, the reason code and the register's words. |

@@ -39,7 +39,7 @@ function token(group: string, name: string): string {
 }
 
 describe("FEATURES", () => {
-  it("lists the nine features: the six the /features ticket names, Subsidiaries, the Watchlist and institutional shareholders", () => {
+  it("lists the ten features: the six the /features ticket names, Subsidiaries, the Watchlist, institutional shareholders and downloadable reports", () => {
     expect(FEATURES.map((f) => f.id)).toEqual([
       "quickcheck",
       "fullcheck",
@@ -50,6 +50,7 @@ describe("FEATURES", () => {
       "time-machine",
       "network-visualisations",
       "institutional-shareholders",
+      "downloadable-reports",
     ]);
   });
 
@@ -100,13 +101,15 @@ describe("FEATURES", () => {
     expect(featureById("subsidiaries")?.accent).toBe(token("graph", "control"));
   });
 
-  it("takes the three capability accents from existing tokens", () => {
+  it("takes the capability and report accents from existing tokens", () => {
     expect(featureById("time-machine")?.accent).toBe(token("graph", "same"));
     // The logo's network-EDGE colour, for the feature that draws them.
     expect(featureById("network-visualisations")?.accent).toBe(token("mark", "line"));
     // Phase 336: Form 13F is never in the graph, so it wears the graph's
     // neutral grey, never an ownership colour.
     expect(featureById("institutional-shareholders")?.accent).toBe(token("graph", "unknown"));
+    // The logo's "Check" wordmark blue, for the check written down.
+    expect(featureById("downloadable-reports")?.accent).toBe(token("mark", "checkBlue"));
   });
 
   it("knows the two invented accents: batch screening and the watchlist", () => {

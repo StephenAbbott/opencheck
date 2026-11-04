@@ -4144,12 +4144,24 @@ workflow beside the OKF check. Things that will be re-derived otherwise:
   (`test_data_dictionary.py`); a new model in a documented router renders
   with whatever comments it has — add it to `API_MODELS` and, once every
   field is described, to the strict set.
-- **A new `opencheck*` key in a BODS statement is registered in
-  `EXTENSIONS`** (where it sits, what it means, an example, the phase)
-  before it ships: the conftest mapper guard fails any yielded statement
-  carrying an unregistered one, and a string literal of that shape anywhere
-  in the package fails the suite. `gleifLegalEntityEvent` is the one
-  documented key outside the prefix.
+- **Any key the BODS v0.4 schema does not define is an extension, and is
+  registered in `EXTENSIONS`** (where it sits, what it means, an example,
+  where it came from) before it ships — prefix or no prefix. The conftest
+  mapper guard reads every yielded statement against the vendored schema
+  (`tests/_bods_schema_keys.py::non_schema_keys`: `$ref` by `$id` URN,
+  combinators and `then`/`else` flattened, the union of what BODS allows at
+  each place) and fails a key nothing registers; a string literal starting
+  `opencheck` anywhere in the package fails the suite too. Until the
+  post-deploy check of 4 Nov 2026 the guard read the prefix only, and
+  production carried `legalFormLabel`, `primaryIndustryCode`, `formerName`,
+  `identityVerification` and `companiesHouseFiling` undocumented, plus the
+  Slovak PEP's `politicalExposure.details.type` (not a v0.4 field — now a
+  `reason`). **`sample_bundle()` carries every registered extension**
+  (`test_the_sample_bundle_carries_every_registered_extension`), built with
+  the real helpers that write each one, so a new extension needs a line
+  there too. **The motivation table is checked against the code**:
+  `motivations_written()` scans the package for the motivations it writes,
+  and `MOTIVATION_WORDS` must say `NOT_WRITTEN` for exactly the others.
 - **A new export column or row key needs a sentence in
   `COLUMN_DESCRIPTIONS`** — the bods-gql dataclasses, `batch.CSV_COLUMNS`,
   and the Senzing / FtM / AML AI keys the writers produce for
@@ -4990,8 +5002,13 @@ otherwise:
   shareholders"); SEC EDGAR is `shareholders`. Adding an owner-publishing
   source means a row here. Every ownership source is always deepened
   (`_select_deepen_pairs`), GLEIF only as the anchor.
-- **Read from the stamped statements**: relationships whose subject is the
-  source's own `declarationSubject`, current interests only, officer types and
+- **Read from the subject's relationships only**: relationships whose subject
+  is one of the lookup's subject statements (`subject_identity`'s
+  `statement_ids`, passed as `subject_ids`), else the one `declarationSubject`
+  a source's statements share — never every `declarationSubject` in the
+  bundle: Open Ownership's stored bundles (the curated examples) name each
+  record as its own subject, and BP P.L.C. read "Declared (28)" beside its PSC
+  exemption from its subsidiaries' PSCs (4 Nov 2026). Current interests only, officer types and
   `opencheckOfficerPosition` skipped; `gleif_reporting_exception` first; an
   unspecified party through `REASON_VALUES`. Facts only the raw bundle has
   (Estonia's `bo_obliged`, `J`/`C` fallback rows, the REST tier's
