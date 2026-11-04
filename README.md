@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 445** — Company-name search gains "More filters" — jurisdiction, ISO 20275 legal form, company and LEI status and category — with an exact jurisdiction and a legal-form picker per country, and the same filters on /search, /stream and opencheck_search.
+**Latest: Phase 446** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, recording Germany's draft Geldwäschebekämpfungsgesetz and where its legitimate-interest rules come from.
 
 → [Full development history](docs/status.md)
 
