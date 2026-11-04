@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 443** — A one-page discrepancy note per register can now be exported from a report's "Records compared" finding, addressed to the register and naming its reporting route.
+**Latest: Phase 444** — An output data dictionary generated from the code now documents every API field, BODS extension key, annotation, signal object, export column and MCP response, and CI fails when it goes stale.
 
 → [Full development history](docs/status.md)
 
