@@ -187,7 +187,7 @@ export const FEATURES: Feature[] = [
     accent: "#b45309", // oo.graph.same
     glyph: "#fcd34d", // oo.warn.border
     description:
-      "Merges how a company's ownership, control and identity have changed onto one axis, drawn from every register that keeps a change log — GLEIF, Companies House, New Zealand, Estonia and Denmark — with the routine administrative filings folded away. Each dated row names the register that recorded it, links back to that record, and says whether the date is when the change took effect or when the register noticed.",
+      "Merges how a company's ownership, control and identity have changed onto one axis, drawn from every register that keeps a change log — GLEIF, Companies House, New Zealand, Estonia, Denmark, New York and Latvia (additions only, as its open data publishes no removals) — with the routine administrative filings folded away. Each dated row names the register that recorded it, links back to that record, and says whether the date is when the change took effect or when the register noticed.",
     image: {
       src: "/features/history.png",
       alt: "The History tab for a company: a sentence counting the registers that publish a change log, then a timeline of dated changes, newest first, each carrying the register that recorded it and whether its date is the effective one or the recorded one.",
