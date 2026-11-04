@@ -52,6 +52,11 @@ Every finding names its class, because the class says where to look:
     ``EXAMPLE_LEIS`` (the homepage cards) differs from the live risk codes or
     their highest confidence. The cards claim "every risk code production
     returns", so the comparison is the whole set.
+``disclosure``
+    The run carries no ``disclosure_status``, an applicable source has no
+    value in it, or a source the file names lacks a value the file expects
+    (``"disclosure": {"gleif": ["exempt"]}`` — lower bounds, never the whole
+    list).
 ``verdict``, ``source_not_found``, ``liveness``, ``lei_confirmation``,
 ``layers``, ``lei_registration``, ``mcp_mismatch``, ``lookup_failed``
     The remaining per-file shapes, and the MCP tool disagreeing with
@@ -135,6 +140,10 @@ _REQUIRED: dict[str, type | tuple[type, ...]] = {
     "lei_confirmed_min": int,
     "intermediate_layers_min": (int, type(None)),
 }
+#: Optional fields: absent from a file means "not asserted".
+_OPTIONAL: dict[str, type | tuple[type, ...]] = {
+    "disclosure": dict,
+}
 _LEI = re.compile(r"^[0-9A-Z]{18}[0-9]{2}$")
 
 
@@ -148,7 +157,10 @@ def validate_expectation(data: Mapping[str, Any], name: str = "<expectation>") -
             raise ValueError(f"{name}: {key!r} must be an integer")
         if not isinstance(data[key], typ):
             raise ValueError(f"{name}: {key!r} has the wrong type")
-    extra = set(data) - set(_REQUIRED)
+    for key, typ in _OPTIONAL.items():
+        if key in data and not isinstance(data[key], typ):
+            raise ValueError(f"{name}: {key!r} has the wrong type")
+    extra = set(data) - set(_REQUIRED) - set(_OPTIONAL)
     if extra:
         raise ValueError(f"{name}: unknown field(s) {sorted(extra)}")
     if not _LEI.match(data["lei"]):
@@ -179,6 +191,14 @@ def validate_expectation(data: Mapping[str, Any], name: str = "<expectation>") -
             raise ValueError(f"{name}: liveness[{sid!r}] must be a non-empty list")
     if data["lei_confirmed_min"] < 0:
         raise ValueError(f"{name}: lei_confirmed_min cannot be negative")
+    from .disclosure import VALUES as _DISCLOSURE_VALUES
+
+    for sid, values in (data.get("disclosure") or {}).items():
+        if not isinstance(values, list) or not values:
+            raise ValueError(f"{name}: disclosure[{sid!r}] must be a non-empty list")
+        bad = [v for v in values if v not in _DISCLOSURE_VALUES]
+        if bad:
+            raise ValueError(f"{name}: disclosure[{sid!r}] has unknown value(s) {bad}")
 
 
 def load_expectations(directory: Path = GOLDEN_DIR) -> list[dict[str, Any]]:
@@ -489,6 +509,9 @@ def evaluate(
                 f"{sid} returned records but is badged as placeholder data (liveness 'stub')",
             )
 
+    # disclosure — a value for every applicable source, and the file's floor.
+    findings.extend(_check_disclosure(exp, payload))
+
     # LEI confirmation, layers, LEI registration
     confirmed = len(summary["lei_confirmed_by"])
     if confirmed < exp["lei_confirmed_min"]:
@@ -542,6 +565,31 @@ def evaluate(
             findings.extend(_compare_mcp(payload, mcp))
 
     return findings, summary
+
+
+def _check_disclosure(exp: Mapping[str, Any], payload: Mapping[str, Any]) -> list[Finding]:
+    """The ``disclosure`` class: what each source says about the owners."""
+    status = payload.get("disclosure_status")
+    if not isinstance(status, Mapping):
+        # A fail only where the file asserts disclosure values; elsewhere a
+        # warning, so a run against a build from before the field reads amber.
+        severity = FAIL if exp.get("disclosure") else WARN
+        return [Finding("disclosure", "the run carries no disclosure_status", severity)]
+    sources = status.get("sources") or {}
+    out: list[Finding] = []
+    for sid in payload.get("sources_applicable") or []:
+        if not (sources.get(sid) or {}).get("values"):
+            out.append(Finding("disclosure", f"{sid} has no disclosure value", FAIL))
+    for sid, expected in (exp.get("disclosure") or {}).items():
+        got = list((sources.get(sid) or {}).get("values") or [])
+        for value in expected:
+            if value not in got:
+                out.append(Finding(
+                    "disclosure",
+                    f"{sid}: expected disclosure value {value!r}, got {got or 'none'}",
+                    FAIL,
+                ))
+    return out
 
 
 def _codes_by_kind(signals: Iterable[Mapping[str, Any]]) -> dict[str, set[str]]:

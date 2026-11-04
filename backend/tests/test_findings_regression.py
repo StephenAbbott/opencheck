@@ -85,6 +85,15 @@ def _payload(**over: Any) -> dict[str, Any]:
         "graph_shape": {},
         "subject_profile": {"lei_registration": {"status": "ISSUED"}},
         "sources_applicable": ["opensanctions", "climatetrace"],
+        "disclosure_status": {
+            "sources": {
+                "gleif": {"values": ["exempt"]},
+                "opensanctions": {"values": ["not_covered"]},
+                "climatetrace": {"values": ["no_record"]},
+            },
+            "not_covered": ["opensanctions"],
+            "as_of": "2026-11-03",
+        },
         "replayed": False,
     }
     base.update(over)
@@ -624,3 +633,44 @@ def test_the_script_refuses_to_start_without_golden_files(tmp_path: Path) -> Non
     assert module.main(["--golden", str(tmp_path), "--out", str(tmp_path / "r")]) == 2
     (tmp_path / "bad.json").write_text("{}")
     assert module.main(["--golden", str(tmp_path), "--out", str(tmp_path / "r")]) == 2
+
+
+# --- disclosure (the disclosure-status ticket, 3 Nov 2026) ---------------------
+
+
+def _disclosure_findings(exp_extra: dict[str, Any], **payload_over: Any) -> list[str]:
+    exp = {**_exp(), **exp_extra}
+    findings, _ = fr.evaluate(exp, _payload(**payload_over), rules=RULES)
+    return [f.message for f in findings if f.check == "disclosure"]
+
+
+def test_disclosure_floor_passes_and_fails() -> None:
+    assert _disclosure_findings({"disclosure": {"gleif": ["exempt"]}}) == []
+    msgs = _disclosure_findings({"disclosure": {"gleif": ["declared"]}})
+    assert msgs == ["gleif: expected disclosure value 'declared', got ['exempt']"]
+
+
+def test_every_applicable_source_needs_a_value() -> None:
+    status = _payload()["disclosure_status"]
+    status["sources"].pop("climatetrace")
+    assert _disclosure_findings({}, disclosure_status=status) == [
+        "climatetrace has no disclosure value"
+    ]
+
+
+def test_a_run_without_the_field_warns_unless_the_file_asserts_it() -> None:
+    exp = _exp()
+    findings, _ = fr.evaluate(exp, _payload(disclosure_status=None), rules=RULES)
+    d = [f for f in findings if f.check == "disclosure"]
+    assert [f.severity for f in d] == [fr.WARN]
+    findings, _ = fr.evaluate(
+        {**exp, "disclosure": {"gleif": ["exempt"]}}, _payload(disclosure_status=None), rules=RULES
+    )
+    assert [f.severity for f in findings if f.check == "disclosure"] == [fr.FAIL]
+
+
+def test_a_disclosure_expectation_is_validated() -> None:
+    with pytest.raises(ValueError, match="unknown value"):
+        fr.validate_expectation({**_exp(), "disclosure": {"gleif": ["hidden"]}})
+    with pytest.raises(ValueError, match="non-empty list"):
+        fr.validate_expectation({**_exp(), "disclosure": {"gleif": []}})

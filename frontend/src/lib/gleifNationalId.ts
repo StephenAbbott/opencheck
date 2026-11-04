@@ -21,6 +21,11 @@ export interface GleifSearchResult {
   /** Phase 309: GLEIF's other names with their type, so the picker can say
    *  which former legal name a search matched. */
   otherNames?: { name: string; type: string }[];
+  /** The advanced-search filters: the fields the filters act on, so a
+   *  result row can show them. Name search only. */
+  jurisdiction?: string;
+  legalForm?: string;
+  entityStatus?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

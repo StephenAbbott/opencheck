@@ -1,7 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { parseOtherNames, searchByNationalId, type GleifSearchResult } from "../lib/gleifNationalId";
+import { searchByNationalId, type GleifSearchResult } from "../lib/gleifNationalId";
+import { searchGleifByName, type NameSearchResult, type SearchCursor } from "../lib/gleifNameSearch";
+import { fetchLegalForms } from "../lib/api";
+import type { EntityFilters, LegalFormList } from "../lib/searchFilters";
 import { validateNationalId } from "../lib/raCodes";
+
+/** A name search as the panel shows it: the page(s) so far, the totals from
+ *  the first page, and what was asked, so "Show the next 10" asks the same. */
+export interface NameSearchState extends NameSearchResult {
+  query: string;
+  filters: EntityFilters;
+}
+
+interface NameSearchVars {
+  q: string;
+  filters: EntityFilters;
+  cursor?: SearchCursor | null;
+  previous?: NameSearchState;
+}
 
 /*
  * The homepage search panel's state: which tab is open, what is typed in each
@@ -41,35 +58,84 @@ export function useSearchForm() {
   // ── Name-search mutation ──────────────────────────────────────────────────
   // Queries GLEIF's public API on `entity.names` — every name a record
   // carries, former legal names included (Phase 309: `entity.legalName`
-  // could not find a renamed company under its old name at all). Returns a
-  // list of matching entities for the user to pick from; selection hands
-  // off to lookupMutation.
-  const nameSearchMutation = useMutation<GleifSearchResult[], Error, string>({
-    mutationFn: async (q: string) => {
-      const url =
-        `https://api.gleif.org/api/v1/lei-records` +
-        `?filter[entity.names]=${encodeURIComponent(q)}&page[size]=10`;
-      const resp = await fetch(url, { headers: { Accept: "application/vnd.api+json" } });
-      if (!resp.ok) throw new Error(`GLEIF API returned ${resp.status}`);
-      const json = await resp.json();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (json.data ?? []).map((item: any) => {
-        const attrs = item.attributes ?? {};
-        const entity = attrs.entity ?? {};
-        const reg = attrs.registration ?? {};
-        return {
-          lei: attrs.lei as string,
-          legalName:
-            (entity.legalName?.name as string) ??
-            (entity.legalName as string) ??
-            attrs.lei,
-          country: entity.legalAddress?.country ?? "—",
-          status: reg.status ?? "—",
-          otherNames: parseOtherNames(entity.otherNames),
-        } satisfies GleifSearchResult;
-      });
+  // could not find a renamed company under its old name at all). The
+  // advanced-search filters ride on the same request (`lib/gleifNameSearch`),
+  // which also brings back GLEIF's total and, for a jurisdiction code GLEIF
+  // also matches inside a US state or Canadian province, makes it exact.
+  const [filters, setFiltersState] = useState<EntityFilters>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const nameSearchMutation = useMutation<NameSearchState, Error, NameSearchVars>({
+    mutationFn: async ({ q, filters: f, cursor, previous }) => {
+      const page = await searchGleifByName(q, f, cursor ?? null);
+      if (!previous) return { ...page, query: q, filters: f };
+      return {
+        ...page,
+        results: [...previous.results, ...page.results],
+        total: previous.total,
+        rawTotal: previous.rawTotal,
+        recordsChecked: previous.recordsChecked + page.recordsChecked,
+        query: q,
+        filters: f,
+      };
     },
   });
+
+  /** Run a company-name search with the filters as they stand. */
+  function runNameSearch(q: string) {
+    nameSearchMutation.mutate({ q, filters });
+  }
+
+  /** "Show the next 10" / "Keep looking": continue the search on screen. */
+  function loadMoreNames() {
+    const current = nameSearchMutation.data;
+    if (!current?.next) return;
+    nameSearchMutation.mutate({
+      q: current.query,
+      filters: current.filters,
+      cursor: current.next,
+      previous: current,
+    });
+  }
+
+  /** Change the filters; a search already on screen re-runs under them, so a
+   *  removed chip widens the results the reader is looking at. */
+  function setFilters(next: EntityFilters) {
+    setFiltersState(next);
+    const current = nameSearchMutation.data;
+    if (current) nameSearchMutation.mutate({ q: current.query, filters: next });
+  }
+
+  // The legal forms of the chosen jurisdiction, for the picker and the chips.
+  const [legalForms, setLegalForms] = useState<LegalFormList | null>(null);
+  const [legalFormsLoading, setLegalFormsLoading] = useState(false);
+  const [legalFormsFailed, setLegalFormsFailed] = useState(false);
+  useEffect(() => {
+    const jurisdiction = filters.jurisdiction;
+    if (!jurisdiction) {
+      setLegalForms(null);
+      setLegalFormsFailed(false);
+      return;
+    }
+    let live = true;
+    setLegalFormsLoading(true);
+    setLegalFormsFailed(false);
+    fetchLegalForms(jurisdiction)
+      .then((list) => {
+        if (live) setLegalForms(list);
+      })
+      .catch(() => {
+        if (live) {
+          setLegalForms(null);
+          setLegalFormsFailed(true);
+        }
+      })
+      .finally(() => {
+        if (live) setLegalFormsLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [filters.jurisdiction]);
 
   // ── National-ID search mutation ──────────────────────────────────────────
   // Queries GLEIF's three registration-ID filter fields in parallel using
@@ -98,6 +164,8 @@ export function useSearchForm() {
     setSelectedCountry("GB");
     setNationalIdTouched(false);
     setSearchMode("name");
+    setFiltersState({});
+    setFiltersOpen(false);
   }
 
   return {
@@ -122,6 +190,15 @@ export function useSearchForm() {
     nationalIdFormatOk,
     nameSearchMutation,
     nationalIdSearchMutation,
+    runNameSearch,
+    loadMoreNames,
+    filters,
+    setFilters,
+    filtersOpen,
+    setFiltersOpen,
+    legalForms,
+    legalFormsLoading,
+    legalFormsFailed,
     reset,
   };
 }

@@ -17,6 +17,7 @@ import {
 } from "./lib/api";
 import { countLeiConfirmingSources } from "./lib/identifierBadge";
 import { rank } from "./components/risk/RiskChip";
+import { discrepancyNoteItem } from "./lib/discrepancyNote";
 import { partitionByKind } from "./lib/signalKind";
 import { SubjectCard } from "./components/cdd/SubjectCard";
 import { VerdictStrip } from "./components/cdd/VerdictStrip";
@@ -156,6 +157,7 @@ export default function App() {
     registerRecord,
     knowabilityChain,
     integratedOwnership,
+    disclosureStatus,
     riskSignals,
     degradedSources,
     verdict,
@@ -246,7 +248,15 @@ export default function App() {
     mdBusy,
     downloadPdf,
     downloadMarkdown,
+    downloadNote,
+    noteBusy,
   } = saved;
+  // The discrepancy-report ticket: the Export menu's "Discrepancy note" item,
+  // enabled only when the run's Records compared finding has a disagreement.
+  const noteItem = useMemo(
+    () => ({ ...discrepancyNoteItem(riskSignals, noteBusy), onSelect: downloadNote }),
+    [riskSignals, noteBusy, downloadNote],
+  );
   // Screen-reader announcement for per-source failures and retry outcomes,
   // rendered in the sr-only role="status" region in <main>.
   const [srAnnouncement, setSrAnnouncement] = useState("");
@@ -712,7 +722,7 @@ export default function App() {
     search.setSearchMode("name");
     setMobileSearchOpen(true);
     search.setNameQuery(q);
-    nameSearchMutation.mutate(q);
+    search.runNameSearch(q);
     // The results render in the panel this just opened, so the page follows.
     requestAnimationFrame(() => {
       document
@@ -1222,6 +1232,7 @@ export default function App() {
             }
             onboardingReportId={onboardingReportId}
             save={saveItem}
+            note={noteItem}
             notice={saveNotice}
             listing={primaryListing}
             registerRecord={registerRecord}
@@ -1448,6 +1459,7 @@ export default function App() {
                   sourceLiveness={sourceLiveness}
                   selectedSignalCode={selectedSignalCode}
                   onSelectSignal={setSelectedSignalCode}
+                  onDiscrepancyNote={noteItem.disabled ? undefined : downloadNote}
                   subjectProfile={subjectProfile}
                   crossSourceLinks={crossSourceLinks}
                   possiblySame={possiblySame}
@@ -1465,6 +1477,7 @@ export default function App() {
                   oaScreening={oaScreening}
                   primaryListing={primaryListing}
                   form13f={form13f}
+                  disclosureStatus={disclosureStatus}
                   savedReport={savedReport}
                   savedNarrative={savedNarrative}
                   onExportPayload={setExportPayload}

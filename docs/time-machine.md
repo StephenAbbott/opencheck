@@ -309,17 +309,21 @@ What the tab adds beyond a home:
 
 ## Emitters (current)
 
-Five sources now feed the timeline. GLEIF's modification log is `recorded`; the
-four registers that publish dated, effective-from records give
-`date_basis: "effective"` / `date_confidence: "high"`:
+Seven sources feed the timeline. GLEIF's modification log is `recorded`; the
+registers that publish dated, effective-from records give
+`date_basis: "effective"` / `date_confidence: "high"`, and Latvia's
+beneficial-owner and officer tables, which carry only the day the register
+entered the row, give `recorded` / `high`:
 
 | Emitter | Source of history | Date basis | Notes |
 |---|---|---|---|
 | `gleif` | field-modification change log (LEI + RR records) | recorded | the original; corporate-tree + identity diffs |
 | `companies_house` | filing-history API (typed categories) | effective | UK PSC / filing events |
 | `nz_companies` | NZBN `FullEntity` + `/history/*` endpoints | effective | directors/shareholders + name/status/address |
-| `ariregister` | RIK X-Road SOAP history (credentialed), and the `registrikaardid` open-data file in the daily index (no credentials) | effective | Estonian registry-card + beneficial-owner history; every numbered card entry (type and date) in the administrative stream — and, when the SOAP history was not read, the card's status, name and succession entries as notable rows; the general data's dated status changes (dissolution decisions, bankruptcies) and mergers, divisions and transformations, naming the other companies |
+| `ariregister` | RIK X-Road SOAP history (credentialed), and the `registrikaardid` open-data file in the daily index (no credentials) | effective | Estonian registry-card + beneficial-owner history; every numbered card entry (type and date) in the administrative stream — and, when the SOAP history was not read, the card's status, name and succession entries as notable rows; the general data's dated status changes (dissolution decisions, bankruptcies) and mergers, divisions and transformations, naming the other companies. Since the Estonia–Latvia emitters phase the person rows are **tiered by role**: shareholders, founders and beneficial owners are Tier-1 owner events; board members, procurists, liquidators and the supervisory board are Tier-4 officer events; auditors and the share registrar are Tier-3 rows. A row ending the day the next row of the same party and role begins is one re-registration — `CONTROL_BAND_CHANGED` naming both sizes when the holding changed, an administrative row when it did not (a Nasdaq CSD account moved between types), `OFFICER_DETAILS_CHANGED` for an office renewed — never a remove + add pair, and a Nasdaq account prefix is stripped from the holder's name |
 | `cvr_denmark` | CVR / Datafordeler bitemporal records (`virkningFra`/`virkningTil`) | effective | name / legal form / status / registered-seat address |
+| `ny_dos` | the All Filings, status, name and address rows the adapter fetch returns (Phase 263) | effective (CEO rows `snapshot_window`) | New York filings, status and name history; chief executive changes between two statements |
+| `ur_latvia` | UR's open data on data.gov.lv (CC0, no key): the lookup's tables plus six dated event tables read on the `/history` path only | effective; `recorded` for beneficial owners and officers | **Additions only for people** — UR publishes no end date on any people table, so the emitter says when each *current* shareholder, stockholder, beneficial owner and officer was entered and never a departure, and the tab says so. Former names dated by the day each ended; termination, liquidations, reorganisations (naming the other company), insolvency proceedings opened and ended, suspensions as Tier 2; securing measures and a depository's dematerialised-shares row as Tier 3 |
 
 **Denmark is the cheapest emitter to date.** CVR is bitemporal by design, so the
 full validity history is *already* in the lookup bundle's `_raw_*` blocks — the
@@ -369,6 +373,56 @@ literal Companies House filing-history PDF URLs
 (`find-and-update.company-information.service.gov.uk/company/00358949/…`) — GLEIF
 Level-2 is corroborated *by* CH filings. As a *change* it's noise, but it's a
 ready-made provenance link between the GLEIF and CH halves of the same timeline.
+
+## Seventh emitter — Latvia (dated current records, additions only)
+
+The Estonia–Latvia emitters ticket (3 Nov 2026) set out to add two registers
+and found one already there: Estonia has fed the timeline since the
+registry-card phases, so its share of the ticket became the role re-tiering
+in the table above. Latvia is the new emitter, and it is the first whose
+source publishes **no removals**. Measured on 3 Nov 2026: the
+`beneficial_owners` (200,381 rows), `members` (186,250), `stockholders`
+(22,491) and `officers` (283,108) tables on data.gov.lv carry current rows
+only — no `date_to`, no ended rows, no change log; a removed party leaves the
+next day's file and rows are edited in place (1,908 member, 5,412 BO and
+27,098 officer rows have `last_modified_at` after `registered_on`). UR's own
+open-data documentation names no history files beyond the name history, and
+the paid route (UR information services, resellers) is not openly licensed —
+the KvK rule. Diffing the daily files would reconstruct removals from now on,
+but only by OpenCheck storing person names over time, which the watchlist
+deliberately does not do; a count-only Latvian delta for the watchlist's
+register tier is a separate ticket.
+
+So `timeline/ur_latvia.py` is the New Zealand shape with one side missing:
+
+| UR table | ChangeEvent | Tier | Date |
+|---|---|---|---|
+| `members` (SIA), `stockholders` (AS) | `OWNER_ADDED` — share count and nominal value in `counterparty` | 1 | `date_from` (effective); `registered_on` (recorded) where none |
+| `beneficial_owners` | `OWNER_ADDED` | 1 | `registered_on` (recorded) |
+| `officers` | `OFFICER_APPOINTED` — position, governing body, representation rights | 4 | `registered_on` (recorded) |
+| `register` `terminated` / `closed` | `STATUS_CHANGED` | 2 | `terminated` |
+| `register` `registered` | administrative row (as a CH incorporation filing) | 3 | `registered` |
+| `historical_names` | `LEGAL_NAME_CHANGE`, each former name to the next by date, the last to the current name | 2 | `date_to` |
+| `liquidations` | `STATUS_CHANGED`, the grounds in `raw_field` | 2 | `date_from` |
+| `reorganizations` | `SUCCESSION`, the other company's number as `counterparty`, "into" from the source side and "from" on the final side | 2 | `registered` |
+| `maksatnespejas-procesi` | `STATUS_CHANGED` opened, and ended with the resolution | 2 | `proceeding_started_on` / `proceeding_ended_on` |
+| `suspensions-prohibitions` | `STATUS_CHANGED`, the authority's decision in `raw_field` | 2 | `date_from` |
+| `securing-measures` | administrative row — a prohibition on disposing of shares or reducing capital, the case and institution in `raw_field` | 3 | `date_from` |
+| a `DEPOSITORY` stockholder row | administrative row — shares held in dematerialised form, holders not named | 3 | `date_from` |
+
+Two readings of the register are kept honest by the frontend: a `recorded`
+row with no GLEIF source reads "as entered by the register" rather than "as
+recorded by GLEIF" (`basisLabel` in `lib/historyMode.ts`), and
+`REGISTER_READ_NOTES.ur_latvia` says beside the register list that a
+shareholder, beneficial owner or officer who has left does not appear. The
+historical names come from UR's daily raw file
+(`dati.ur.gov.lv/register/register_name_history.csv`, cached a day) for the
+lookup and the timeline alike, because the CKAN datastore's copy stopped
+being reloaded on 24 March 2025; the CKAN copy is the fallback when the
+download fails. The six event tables are fetched by
+`UrLatviaAdapter.fetch_timeline_data` on the `/history` path only, never per
+lookup, and a table that does not answer is named in `unavailable` and logged
+rather than read as empty.
 
 ## Third emitter — New Zealand (dated-record reconstruction)
 

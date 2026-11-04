@@ -181,6 +181,64 @@ def _looks_like_company_number(value: str) -> bool:
     return len(value) == 8 and value.replace(" ", "").isalnum()
 
 
+#: Companies House's own wording for each PSC exemption type, from
+#: ``exemption_description`` in companieshouse/api-enumerations
+#: (``exemption_descriptions.yml``). A verbatim copy of the file is
+#: ``tests/fixtures/companies_house/exemption_descriptions.yml`` and the test
+#: fails if the two differ. Each type exempts a company with voting shares on
+#: a regulated market from the PSC register (Companies Act 2006 s790B; SI
+#: 2016/339 Sch 1); DTR5 is worded "may be exempt" by the register itself.
+CH_EXEMPTION_DESCRIPTIONS: dict[str, str] = {
+    "disclosure-transparency-rules-chapter-five-applies": (
+        "From {exempt_from} this is a traded, DTR5 issuing company. Therefore it "
+        "may be exempt from updating its PSC information."
+    ),
+    "psc-exempt-as-trading-on-regulated-market": (
+        "From {exempt_from} the company is exempt from the requirement to obtain "
+        "information of its PSC because it has voting shares admitted to trading "
+        "on a regulated market other than the UK"
+    ),
+    "psc-exempt-as-shares-admitted-on-market": (
+        "From {exempt_from} the company is exempt from the requirement to obtain "
+        "information of its PSC because it has voting shares admitted to trading "
+        "on a market listed in the Register of People with Significant Control "
+        "Regulations 2016"
+    ),
+    "psc-exempt-as-trading-on-uk-regulated-market": (
+        "From {exempt_from} the company is exempt from the requirement to obtain "
+        "information of its PSC because it has voting shares admitted to trading "
+        "on a UK regulated market"
+    ),
+    "psc-exempt-as-trading-on-eu-regulated-market": (
+        "From {exempt_from} the company is exempt from the requirement to obtain "
+        "information of its PSC because it has voting shares admitted to trading "
+        "on an EU regulated market"
+    ),
+}
+
+
+def current_exemptions(
+    exemptions: dict[str, Any] | None, as_of: str
+) -> list[tuple[str, str | None]]:
+    """``(exemption_type, exempt_from)`` for every exemption period that has
+    not ended by ``as_of`` (no ``exempt_to``, or one on or after it), from a
+    ``/company/{n}/exemptions`` answer. A type with only ended periods is not
+    current: the company was exempt and no longer is."""
+    out: list[tuple[str, str | None]] = []
+    for key, block in ((exemptions or {}).get("exemptions") or {}).items():
+        if not isinstance(block, dict):
+            continue
+        kind = str(block.get("exemption_type") or key.replace("_", "-"))
+        open_periods = [
+            p for p in block.get("items") or []
+            if isinstance(p, dict) and (not p.get("exempt_to") or str(p["exempt_to"]) >= as_of)
+        ]
+        if open_periods:
+            starts = sorted(str(p["exempt_from"]) for p in open_periods if p.get("exempt_from"))
+            out.append((kind, starts[0] if starts else None))
+    return sorted(out)
+
+
 class CompaniesHouseAdapter(SourceAdapter):
     id = "companies_house"
 
@@ -526,6 +584,8 @@ class CompaniesHouseAdapter(SourceAdapter):
             else:
                 raise
 
+        exemptions = await self._exemptions(number, pscs, depth=depth, stats=stats)
+
         for psc in pscs.get("items") or []:
             if psc.get("ceased_on"):
                 continue
@@ -585,7 +645,51 @@ class CompaniesHouseAdapter(SourceAdapter):
             "officers": officers,
             "pscs": pscs,
             "psc_statements": psc_statements,
+            "exemptions": exemptions,
         }
+
+    async def _exemptions(
+        self,
+        number: str,
+        pscs: dict[str, Any],
+        *,
+        depth: int,
+        stats: _WalkStats | None,
+    ) -> dict[str, Any] | None:
+        """The company's PSC exemptions (``/company/{n}/exemptions``), read
+        only when the PSC list links to them — Companies House adds
+        ``links.exemptions`` for a company on a UK or EU regulated market
+        (Shell plc, 04366849), so an unlisted company costs no call.
+
+        ``{}`` when there is no link or the register answers 404 (cached: a
+        definitive answer). ``None`` when the read failed: never cached, and
+        for the subject a ``source_read`` degradation, because "exempt" would
+        otherwise read as "none on record" (the disclosure-status ticket).
+        """
+        if not ((pscs.get("links") or {}).get("exemptions")):
+            return {}
+        cache_key = f"{_CACHE_NS}/company/{number}/exemptions"
+        try:
+            return await self._get(
+                f"/company/{number}/exemptions", cache_key=cache_key, stats=stats
+            )
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                self._cache.put(cache_key, {})
+                return {}
+            failure = f"HTTP {exc.response.status_code}"
+        except httpx.HTTPError as exc:
+            failure = type(exc).__name__
+        log.warning("companies_house: exemptions for %s not read: %s", number, failure)
+        if depth == 0:
+            degradation.record(
+                self.id,
+                "Companies House did not answer for the company's PSC exemptions, "
+                "so whether it is exempt from the PSC register was not read",
+                check=degradation.CHECK_SOURCE_READ,
+                reason=degradation.reason_for_failure(failure),
+            )
+        return None
 
     async def _fetch_officer_bundle(self, officer_id: str) -> dict[str, Any]:
         """Return appointments for a Companies House officer id.

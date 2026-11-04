@@ -109,7 +109,7 @@ function NotableRow({
           <span className="text-oo-small font-mono text-oo-ink">
             {entry.date ?? "date unknown"}
             <span className="ml-1.5 text-oo-meta text-oo-muted">
-              {basisLabel(entry.date_basis)}
+              {basisLabel(entry.date_basis, entry.sources)}
             </span>
           </span>
           <span className="flex flex-wrap items-center gap-1 justify-end shrink-0">

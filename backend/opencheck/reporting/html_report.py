@@ -763,6 +763,29 @@ def _integrated_ownership(report: dict[str, Any]) -> str:
     )
 
 
+def _disclosure(report: dict[str, Any]) -> str:
+    """What each source says about the subject's owners, from the frozen
+    ``disclosure_status`` payload. Describes; empty for an older run."""
+    from .. import disclosure as ds
+
+    raw = report.get("disclosure_status")
+    payload = raw if isinstance(raw, dict) else None
+    rows = ds.report_table(payload)
+    if not rows:
+        return ""
+    head = "".join(f'<th scope="col">{escape(c)}</th>' for c in ds.REPORT_COLUMNS)
+    body = "".join(
+        "<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row) + "</tr>" for row in rows
+    )
+    notes = "".join(
+        f'<p style="font-size:8pt;color:#595959">{escape(t)}</p>' for t in ds.report_footer(payload)
+    )
+    return (
+        f'<section aria-labelledby="discl"><h2 id="discl">{escape(ds.REPORT_HEADING)}</h2>'
+        f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>{notes}</section>"
+    )
+
+
 def _sanctions_ownership(report: dict[str, Any]) -> str:
     """Phase 342: the sanctions 50% rule per regime and source, from the run's
     frozen ``SANCTIONS_OWNERSHIP_TEST`` / ``_POSSIBLE`` signal. Empty when the
@@ -977,6 +1000,7 @@ def build_report_html(
         + _summary(narrative, dispositions)
         + _risk(report)
         + _sources_found(report)
+        + _disclosure(report)
         + _knowability(report)
         + _integrated_ownership(report)
         + _sanctions_ownership(report)
