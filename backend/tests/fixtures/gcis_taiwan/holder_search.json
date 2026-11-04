@@ -1,0 +1,6 @@
+{
+ "retrieved": "2026-11-04",
+ "note": "Real answers of the GCIS keyword dataset (公司登記關鍵字查詢, 6BBA2268) for the legal-person holders in visionbay_juristic and tsmc, read 4 Nov 2026.",
+ "honhai": "[{\"Business_Accounting_NO\":\"04541302\",\"Company_Name\":\"鴻海精密工業股份有限公司\",\"Company_Status\":\"01\",\"Company_Status_Desc\":\"核准設立\",\"Capital_Stock_Amount\":180000000000,\"Paid_In_Capital_Amount\":140757464970,\"Responsible_Name\":\"劉揚偉\",\"Register_Organization\":\"01\",\"Register_Organization_Desc\":\"商業發展署\",\"Company_Location\":\"新北市土城區中山路66號\",\"Company_Setup_Date\":\"0630220\",\"Change_Of_Approval_Data\":\"1150901\"}]",
+ "tsmc": "[{\"Business_Accounting_NO\":\"22099131\",\"Company_Name\":\"台灣積體電路製造股份有限公司\",\"Company_Status\":\"01\",\"Company_Status_Desc\":\"核准設立\",\"Capital_Stock_Amount\":280500000000,\"Paid_In_Capital_Amount\":259323700670,\"Responsible_Name\":\"魏哲家\",\"Register_Organization\":\"05\",\"Register_Organization_Desc\":\"國家科學及技術委員會新竹科學園區管理局\",\"Company_Location\":\"新竹科學園區新竹市力行六路8號\",\"Company_Setup_Date\":\"0760221\",\"Change_Of_Approval_Data\":\"1150821\"}]"
+}

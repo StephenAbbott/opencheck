@@ -16,7 +16,9 @@ GUID per dataset, updated hourly:
 * ``673F0FC0-…`` 統編查是否為公司、分公司及商業 — whether a UBN is a company,
   a branch or a sole-trader business; read only when the company endpoint has
   no record, to say what the number is instead.
-* ``6BBA2268-…`` 公司登記關鍵字查詢 — name search, for ``search()``.
+* ``6BBA2268-…`` 公司登記關鍵字查詢 — name search, for ``search()`` and, since
+  the Taiwan GCIS v2 ticket, to find a legal-person director's own UBN by
+  exact name (see "Legal-person holders" below).
 
 Everything below was measured on 29 Oct 2026 against every ISSUED LEI GLEIF
 files under ``RA000551`` (504; 1,512 calls, all HTTP 200). The findings and
@@ -82,10 +84,12 @@ attribution format is the licence's Exhibit. https://data.gov.tw/license
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import re
 import ssl
+import unicodedata
 from functools import lru_cache
 from typing import Any
 from urllib.parse import urlencode
@@ -295,7 +299,90 @@ def findbiz_url(ubn: str) -> str:
 
 
 class _Unanswered(Exception):
-    """A dataset query that did not answer; the degradation is recorded."""
+    """A dataset query that did not answer. ``detail`` and ``reason`` are the
+    degradation it records (or, for a holder resolution, would have)."""
+
+    def __init__(self, what: str, detail: str = "", reason: str = degradation.REASON_UPSTREAM_ERROR):
+        super().__init__(what)
+        self.detail = detail or f"GCIS {what} did not answer"
+        self.reason = reason
+
+
+# ---------------------------------------------------------------------------
+# Legal-person holders → their UBN (the Taiwan GCIS v2 ticket, 4 Nov 2026)
+# ---------------------------------------------------------------------------
+#
+# The register of directors and supervisors names a legal person holding a seat
+# by name only. The keyword dataset (``SEARCH_DATASET``) can find its number,
+# but it has **no exact operator**: ``like`` and ``eq`` on ``Company_Name`` are
+# both a token search (``eq 台灣積體電路`` returns TSMC), it answers nothing
+# without a ``Company_Status`` filter, it folds width and case but not 台/臺, a
+# space in the value breaks the filter, and an answer is cut at ``$top``. So the
+# exact match is OpenCheck's, on the rows returned, after :func:`fold_name`.
+#
+# Measured on 4 Nov 2026 over the 503 ISSUED RA000551 LEIs: 563 distinct
+# legal-person holders; 365 resolve to exactly one live company, none to
+# several, 42 to none (ministries, funds, foundations, associations, foreign
+# companies); 156 carry a foreign prefix. Stephen's decisions on the ticket:
+# several matches are refused silently (A); a resolution that could not be read
+# is a ``source_read`` degradation (B); live companies (status 01) only (C); no
+# foreign-prefixed name is sent (D); the finding sentence is unchanged (E).
+
+#: At most this many holders are resolved per fetch; the measured maximum was
+#: 14. Any beyond it are ``not_read`` and said (decision B).
+HOLDER_RESOLVE_CAP = 15
+#: Concurrent keyword queries per fetch; ``host_throttle`` paces the host.
+_HOLDER_CONCURRENCY = 4
+#: Wall-clock budget for the whole holder phase. The company and its directors
+#: are already read; a slow name search must never spend the source's
+#: ``lookup_timeout_s`` and cost the company card. Holders still unanswered
+#: when it runs out are ``not_read`` (timeout) and said.
+HOLDER_PHASE_BUDGET_S = 12.0
+#: A resolution (or a refused several-match answer) is cached this long; a
+#: definitive none is a ``put_absent`` (``cache.ABSENT_TTL_DAYS``).
+_HOLDER_CACHE_DAYS = 7.0
+_HOLDER_CACHE_VERSION = "v1"
+
+HOLDER_RESOLVED = "resolved"
+HOLDER_NONE = "none"
+HOLDER_SEVERAL = "several"
+HOLDER_NOT_READ = "not_read"
+HOLDER_OUTCOMES = frozenset({HOLDER_RESOLVED, HOLDER_NONE, HOLDER_SEVERAL, HOLDER_NOT_READ})
+
+#: The live status, the only one a holder is resolved against (decision C).
+_LIVE_STATUS = "01"
+
+
+def fold_name(name: str) -> str:
+    """A company name as the comparison reads it: NFKC (full-width letters and
+    digits to their ordinary forms — the platform folds width too), casefold,
+    whitespace collapsed, and 臺 read as 台 (the register uses both, and the
+    platform does not fold them)."""
+    text = unicodedata.normalize("NFKC", str(name or "")).casefold()
+    return " ".join(text.split()).replace("臺", "台")
+
+
+def holder_is_resolvable(name: str) -> bool:
+    """Whether a legal-person holder's name is sent to the keyword search.
+
+    Only a domestic company: a name ending 公司, with no whitespace (a space
+    breaks the platform's filter, and every holder written with one is a
+    foreign company under a Latin name) and no foreign nationality prefix
+    (decision D). Ministries, government funds, foundations and associations
+    never end 公司, so a state body is never matched or classified by name
+    (Phase 240, decision E of the v1 ticket).
+    """
+    from ..bods.mappers.taiwan import tw_foreign_prefix
+
+    text = str(name or "").strip()
+    if not text or not text.endswith("公司") or re.search(r"\s", text):
+        return False
+    return tw_foreign_prefix(text) is None
+
+
+def _holder_cache_key(name: str) -> str:
+    digest = hashlib.sha256(fold_name(name).encode("utf-8")).hexdigest()[:24]
+    return f"{_CACHE_NS}/holder-ubn-{_HOLDER_CACHE_VERSION}/{digest}"
 
 
 class GcisTaiwanAdapter(SourceAdapter):
@@ -342,14 +429,25 @@ class GcisTaiwanAdapter(SourceAdapter):
     # HTTP — every outbound call funnels through here
     # ------------------------------------------------------------------
 
-    async def _query(self, dataset: str, filter_: str, *, what: str) -> list[dict[str, Any]]:
+    async def _query(
+        self, dataset: str, filter_: str, *, what: str, record: bool = True
+    ) -> list[dict[str, Any]]:
         """One dataset query: the rows, ``[]`` for the platform's empty answer.
 
-        Raises :class:`_Unanswered` (after recording a degradation) for
-        anything that is not an answer: a refusal by the pacing, a network
-        failure, a non-2xx, the platform's refusal sentences, a body that is
-        not a JSON list.
+        Raises :class:`_Unanswered` for anything that is not an answer: a
+        refusal by the pacing, a network failure, a non-2xx, the platform's
+        refusal sentences, a body that is not a JSON list. With ``record`` (the
+        default) the degradation is recorded here; a holder resolution passes
+        ``record=False`` and says its failures once, together (decision B).
         """
+        try:
+            return await self._query_rows(dataset, filter_, what=what)
+        except _Unanswered as exc:
+            if record:
+                degradation.record(self.id, exc.detail, reason=exc.reason)
+            raise
+
+    async def _query_rows(self, dataset: str, filter_: str, *, what: str) -> list[dict[str, Any]]:
         params = {"$format": "json", "$filter": filter_, "$skip": "0", "$top": str(_TOP)}
         try:
             async with build_client(verify=gcis_ssl_context()) as client:
@@ -357,48 +455,39 @@ class GcisTaiwanAdapter(SourceAdapter):
                     f"{_API_BASE}/{dataset}", params=params, timeout=_REQUEST_TIMEOUT
                 )
         except HostRateLimitedError:
-            degradation.record(
-                self.id,
+            raise _Unanswered(
+                what,
                 f"GCIS {what}: not sent — OpenCheck's request pacing for the platform was spent",
-                reason=degradation.REASON_RATE_LIMITED,
-            )
-            raise _Unanswered(what) from None
+                degradation.REASON_RATE_LIMITED,
+            ) from None
         except httpx.HTTPError as exc:
             # The detail names the exception type only; the URL carries the UBN.
             kind = type(exc).__name__
             _LOG.warning("GCIS %s did not answer: %s", what, kind)
-            degradation.record(
-                self.id,
-                f"GCIS {what} did not answer ({kind})",
-                reason=degradation.reason_for_failure(kind),
-            )
-            raise _Unanswered(what) from None
+            raise _Unanswered(
+                what, f"GCIS {what} did not answer ({kind})", degradation.reason_for_failure(kind)
+            ) from None
 
         if not response.is_success:
-            degradation.record(
-                self.id,
+            raise _Unanswered(
+                what,
                 f"GCIS {what} returned HTTP {response.status_code}",
-                reason=degradation.reason_for_failure(f"HTTP {response.status_code}"),
+                degradation.reason_for_failure(f"HTTP {response.status_code}"),
             )
-            raise _Unanswered(what)
 
         body = response.text.strip()
         if not body:
             return []  # the platform's "no record"
         if not body.startswith(("[", "{")):
-            degradation.record(self.id, f"GCIS {what}: {_refusal_detail(body)}",
-                               reason=_refusal_reason(body))
-            raise _Unanswered(what)
+            raise _Unanswered(what, f"GCIS {what}: {_refusal_detail(body)}", _refusal_reason(body))
         try:
             payload = json.loads(body)
         except ValueError:
-            degradation.record(self.id, f"GCIS {what} returned a body that is not JSON")
-            raise _Unanswered(what) from None
+            raise _Unanswered(what, f"GCIS {what} returned a body that is not JSON") from None
         if isinstance(payload, dict):
             payload = [payload]
         if not isinstance(payload, list):
-            degradation.record(self.id, f"GCIS {what} returned an unexpected shape")
-            raise _Unanswered(what)
+            raise _Unanswered(what, f"GCIS {what} returned an unexpected shape")
         return [row for row in payload if isinstance(row, dict)]
 
     # ------------------------------------------------------------------
@@ -471,8 +560,10 @@ class GcisTaiwanAdapter(SourceAdapter):
         cache_key = f"{_CACHE_NS}/company-{_CACHE_VERSION}/{ubn}"
         cached = self._cache.get_payload(cache_key, max_age_days=1)
         if cached is not None and isinstance(cached[0], dict):
+            directors = cached[0].get("directors")
             return self._bundle(
-                cached[0].get("company"), cached[0].get("directors"), ubn, legal_name
+                cached[0].get("company"), directors, ubn, legal_name,
+                holder_ubns=await self._resolve_holders(directors, ubn),
             )
         if not self.info.live_available:
             return self._bundle(None, None, ubn, legal_name)
@@ -517,10 +608,141 @@ class GcisTaiwanAdapter(SourceAdapter):
                 check=degradation.CHECK_SOURCE_READ,
                 reason=degradation.REASON_TRUNCATED,
             )
-            return self._bundle(company, director_rows, ubn, legal_name)
+            return self._bundle(
+                company, director_rows, ubn, legal_name,
+                holder_ubns=await self._resolve_holders(director_rows, ubn),
+            )
 
         self._cache.put(cache_key, {"company": company, "directors": director_rows})
-        return self._bundle(company, director_rows, ubn, legal_name)
+        return self._bundle(
+            company, director_rows, ubn, legal_name,
+            holder_ubns=await self._resolve_holders(director_rows, ubn),
+        )
+
+    # ------------------------------------------------------------------
+    # Legal-person holders → UBN
+    # ------------------------------------------------------------------
+
+    async def _resolve_holders(
+        self, directors: list[dict[str, Any]] | None, ubn: str
+    ) -> dict[str, dict[str, Any]]:
+        """Each sendable legal-person holder's outcome, keyed on its name as
+        filed. Cached outcomes answer without a call; offline, an uncached
+        holder is left out and nothing is said. A holder that could not be
+        read is ``not_read`` and the lot are said in one ``source_read``
+        degradation (decision B)."""
+        names: list[str] = []
+        for row in directors or []:
+            name = str(row.get("Juristic_Person_Name") or "").strip()
+            if name and name not in names and holder_is_resolvable(name):
+                names.append(name)
+        if not names:
+            return {}
+
+        outcomes: dict[str, dict[str, Any]] = {}
+        to_read: list[str] = []
+        for name in names:
+            cached = self._cached_holder(name)
+            if cached is not None:
+                outcomes[name] = cached
+            else:
+                to_read.append(name)
+
+        live = self.info.live_available
+        reasons: list[str] = []
+        if to_read and live:
+            sent, over_cap = to_read[:HOLDER_RESOLVE_CAP], to_read[HOLDER_RESOLVE_CAP:]
+            gate = asyncio.Semaphore(_HOLDER_CONCURRENCY)
+
+            async def _one(name: str) -> tuple[str, dict[str, Any], str | None]:
+                async with gate:
+                    return name, *(await self._read_holder(name))
+
+            tasks = {asyncio.ensure_future(_one(n)): n for n in sent}
+            done, pending = await asyncio.wait(tasks, timeout=HOLDER_PHASE_BUDGET_S)
+            for task in pending:
+                task.cancel()
+                outcomes[tasks[task]] = {"outcome": HOLDER_NOT_READ}
+                reasons.append(degradation.REASON_TIMEOUT)
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+            for task in done:
+                name, outcome, reason = task.result()
+                outcomes[name] = outcome
+                if reason:
+                    reasons.append(reason)
+            for name in over_cap:
+                outcomes[name] = {"outcome": HOLDER_NOT_READ}
+                reasons.append(degradation.REASON_TRUNCATED)
+
+        # Never point a holder at the company itself.
+        for outcome in outcomes.values():
+            if outcome.get("ubn") == ubn:
+                outcome.clear()
+                outcome["outcome"] = HOLDER_NONE
+
+        if reasons:
+            degradation.record(
+                self.id,
+                f"GCIS: {len(reasons)} of {len(names)} legal-person directors could not be "
+                "linked to their company-register record (the name search did not answer "
+                "in full)",
+                check=degradation.CHECK_SOURCE_READ,
+                reason=_worst_reason(reasons),
+            )
+        return {name: outcomes[name] for name in names if name in outcomes}
+
+    def _cached_holder(self, name: str) -> dict[str, Any] | None:
+        hit = self._cache.get_payload(_holder_cache_key(name), max_age_days=_HOLDER_CACHE_DAYS)
+        if hit is None:
+            return None
+        payload = hit[0]
+        if payload is None:
+            return {"outcome": HOLDER_NONE}
+        if isinstance(payload, dict) and payload.get("outcome") in HOLDER_OUTCOMES:
+            return dict(payload)
+        return None
+
+    async def _read_holder(self, name: str) -> tuple[dict[str, Any], str | None]:
+        """One holder against live companies: ``(outcome, degradation reason)``.
+
+        Exact means ``fold_name`` equal. One company → ``resolved``; several →
+        ``several`` (refused, never picked — decision A); a full answer with
+        none → ``none``. An answer cut at ``$top`` or a query that did not
+        answer → ``not_read``, never cached (the Phase 262 rule)."""
+        key = fold_name(name)
+        matches: dict[str, str] = {}
+        for spelling in search_spellings(name):
+            try:
+                rows = await self._query(
+                    SEARCH_DATASET,
+                    f"Company_Name like {spelling} and Company_Status eq {_LIVE_STATUS}",
+                    what="legal-person name search",
+                    record=False,
+                )
+            except _Unanswered as exc:
+                return {"outcome": HOLDER_NOT_READ}, exc.reason
+            if len(rows) >= _TOP:
+                return {"outcome": HOLDER_NOT_READ}, degradation.REASON_TRUNCATED
+            for row in rows:
+                number = text_field(row.get("Business_Accounting_NO"))
+                register_name = text_field(row.get("Company_Name"))
+                if fold_name(register_name) == key and _is_ubn(number):
+                    matches[number] = register_name
+            if matches:
+                break
+
+        cache_key = _holder_cache_key(name)
+        if not matches:
+            self._cache.put_absent(cache_key)
+            return {"outcome": HOLDER_NONE}, None
+        if len(matches) > 1:
+            outcome: dict[str, Any] = {"outcome": HOLDER_SEVERAL, "ubns": sorted(matches)}
+        else:
+            number, register_name = next(iter(matches.items()))
+            outcome = {"outcome": HOLDER_RESOLVED, "ubn": number, "register_name": register_name}
+        self._cache.put(cache_key, outcome)
+        return dict(outcome), None
 
     async def _not_found(self, ubn: str, legal_name: str) -> dict[str, Any]:
         """The company endpoint has no record: say what the number is, if the
@@ -562,6 +784,7 @@ class GcisTaiwanAdapter(SourceAdapter):
         legal_name: str,
         *,
         directors_read: bool = True,
+        holder_ubns: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         bundle: dict[str, Any] = {
             "source_id": self.id,
@@ -570,11 +793,35 @@ class GcisTaiwanAdapter(SourceAdapter):
             "directors": list(directors or []),
             "directors_read": directors_read if company is not None else False,
             "legal_name": legal_name,
+            "holder_ubns": dict(holder_ubns or {}),
             "is_stub": company is None,
         }
         if company is not None:
             validate_raw(self.id, GcisTaiwanBundle, bundle)
         return bundle
+
+
+def _is_ubn(value: str) -> bool:
+    try:
+        return normalise_ubn(value) == value
+    except ValueError:
+        return False
+
+
+#: Worst first: a refusal by the pacing says the most about what to do next.
+_REASON_ORDER = (
+    degradation.REASON_RATE_LIMITED,
+    degradation.REASON_TIMEOUT,
+    degradation.REASON_UPSTREAM_ERROR,
+    degradation.REASON_TRUNCATED,
+)
+
+
+def _worst_reason(reasons: list[str]) -> str:
+    for reason in _REASON_ORDER:
+        if reason in reasons:
+            return reason
+    return reasons[0]
 
 
 def _refusal_reason(body: str) -> str:
