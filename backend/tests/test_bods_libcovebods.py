@@ -522,7 +522,15 @@ def test_libcovebods_rpvs_slovakia_pep():
             }
         ],
     }
-    assert_valid(map_rpvs_slovakia(bundle), "RPVS Slovakia — PEP KUV")
+    statements = list(map_rpvs_slovakia(bundle))
+    assert_valid(statements, "RPVS Slovakia — PEP KUV")
+    # PepStatusDetails' own field, never a ``type`` key BODS does not define
+    # (the data-dictionary post-deploy check, 4 Nov 2026).
+    person = next(s for s in statements if s["recordType"] == "person")
+    assert person["recordDetails"]["politicalExposure"]["status"] == "isPep"
+    (detail,) = person["recordDetails"]["politicalExposure"]["details"]
+    assert set(detail) == {"reason", "jurisdiction"}
+    assert "public official" in detail["reason"]
 
 
 async def test_libcovebods_bce_belgium(tmp_path):

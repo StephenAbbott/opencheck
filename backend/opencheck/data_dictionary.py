@@ -54,11 +54,16 @@ DOC_URL = "https://github.com/StephenAbbott/opencheck/blob/main/docs/data-dictio
 # ---------------------------------------------------------------------------
 
 #: Every key OpenCheck writes into a BODS statement that BODS v0.4 does not
-#: define. v0.4's Source, Interest and Annotation objects are open, and
-#: libcovebods lists an unknown key as an *additional field*, not an error —
-#: but a reader has to be told what it means. A key here is documented; a
-#: key starting ``opencheck`` that is not here fails the mapper guard in
-#: ``tests/_entity_subtype_guard.py`` and ``tests/test_data_dictionary.py``.
+#: define. v0.4's objects are open, and libcovebods lists an unknown key as an
+#: *additional field*, not an error — but a reader has to be told what it
+#: means. A key here is documented. **Any** key a mapper writes that the v0.4
+#: schema does not define at that place, and that is not here, fails the
+#: mapper guard (``tests/_entity_subtype_guard.py``, judged against the schema
+#: by ``tests/_bods_schema_keys.py``) — whatever the key is called. The first
+#: version of this guard caught only keys starting ``opencheck``, and the
+#: post-deploy check of 4 Nov 2026 found five registered nowhere
+#: (``legalFormLabel``, ``primaryIndustryCode``, ``formerName``,
+#: ``identityVerification``, ``companiesHouseFiling``).
 #:
 #: ``where`` is the JSON path of the object the key sits on; ``example`` is
 #: a value as written; ``since`` the phase or ticket that introduced it.
@@ -113,6 +118,88 @@ EXTENSIONS: tuple[dict[str, str], ...] = (
         ),
         "since": "Phase 305",
     },
+    {
+        "key": "legalFormLabel",
+        "where": "/recordDetails (entity statements)",
+        "type": "string",
+        "description": (
+            "The entity's legal form in words, as the source names it — GLEIF's "
+            "ISO 20275 Entity Legal Form code resolved to its label "
+            "(\"Foundation\", \"Aktieselskab\"), or the register's own wording "
+            "(Danish CVR, Swiss Zefix). BODS `entityType.subtype` is a closed "
+            "codelist that cannot hold it. The AMLA trust-or-arrangement rule "
+            "reads it, so a foundation is caught by its legal form and never by "
+            "its name; the subject profile shows it and the RDF export carries it."
+        ),
+        "example": '"Aktieselskab"',
+        "since": "the GLEIF, CVR Denmark and Zefix mappers (before Phase 100)",
+    },
+    {
+        "key": "primaryIndustryCode",
+        "where": "/recordDetails (Danish CVR entity statements)",
+        "type": "string",
+        "description": (
+            "The company's main industry code as the Danish Central Business "
+            "Register files it (Dansk Branchekode DB07, the Danish version of "
+            "NACE Rev. 2). Carried as filed; nothing in OpenCheck reads it."
+        ),
+        "example": '"702200"',
+        "since": "the CVR Denmark mapper (before Phase 100)",
+    },
+    {
+        "key": "formerName",
+        "where": "/annotations[] (a `commenting` annotation on `/recordDetails/alternateNames/<i>`)",
+        "type": "object",
+        "description": (
+            "Says the `alternateNames` entry the annotation points at is a "
+            "former legal name, not a trading name or transliteration: `name`, "
+            "and `from` / `until` where the register dates it (Companies House "
+            "does; GLEIF dates only the change). Only names a source types as "
+            "former get one. A reader that does not know the key still sees the "
+            "name in `alternateNames`."
+        ),
+        "example": '{"name": "BARRICK GOLD CORPORATION", "until": "2024-05-06"}',
+        "since": "Phase 309",
+    },
+    {
+        "key": "identityVerification",
+        "where": "/annotations[] (a `commenting` annotation on a Companies House officer or PSC)",
+        "type": "object",
+        "description": (
+            "Companies House's record that an identity verification statement "
+            "is in place: `status` (`verified`), `recordedBy`, `route` "
+            "(`authorisedCorporateServiceProvider` or `companiesHouse`), and "
+            "where the register says so `verifiedBy` (the provider, with its "
+            "`antiMoneyLaunderingSupervisoryBodies`) and `identityVerifiedOn`. On "
+            "a role, `verificationStatementSuppliedOn`; on a person, "
+            "`firstVerificationStatementOn` — a statement date, never a "
+            "verification date. Absent where nothing is verified."
+        ),
+        "example": (
+            '{"status": "verified", "route": "companiesHouse", '
+            '"verificationStatementSuppliedOn": "2026-03-18"}'
+        ),
+        "since": "Phase 203",
+    },
+    {
+        "key": "companiesHouseFiling",
+        "where": "/annotations[] (a `commenting` annotation on a Companies House PSC relationship)",
+        "type": "object",
+        "description": (
+            "The filing that notified, or ceased, a person with significant "
+            "control: `event` (`notification` / `cessation`), `match` (how it "
+            "was found — the PSC form, the incorporation filing, the next "
+            "confirmation statement, or none), `declarant` (always the company: "
+            "Companies House publishes no presenter), and where matched the "
+            "form `type`, `transactionId`, filing `date` and `documentUrl`. The "
+            "annotation's sentence says the same in words."
+        ),
+        "example": (
+            '{"event": "notification", "match": "filing", "declarant": "company", '
+            '"type": "PSC02", "date": "2016-06-30"}'
+        ),
+        "since": "the filing-provenance ticket (Nov 2026)",
+    },
 )
 
 #: Keys that are documented extensions, by name.
@@ -141,6 +228,58 @@ def unregistered_extension_keys(statement: Any) -> list[str]:
     return [
         path for path, key in extension_keys_in(statement) if key not in EXTENSION_KEYS
     ]
+
+
+#: What each BODS annotation motivation means in OpenCheck's output. A
+#: motivation the package writes must not read :data:`NOT_WRITTEN`, and one
+#: it does not write must — :func:`motivations_written` reads the code and
+#: ``tests/test_data_dictionary.py`` holds the two together. Until the
+#: post-deploy check of 4 Nov 2026 this table said OpenCheck never writes
+#: ``linking``, while ``listing.py`` wrote it on every PermID listing.
+NOT_WRITTEN = "Defined by BODS; OpenCheck does not write it."
+MOTIVATION_WORDS: dict[str, str] = {
+    "transformation": "OpenCheck changed the source's value on the way to BODS — a role label became an interest type, a date changed format, a partial date was dropped, a Nasdaq CSD account prefix was stripped from a name. `description` states what the source said; `transformedContent` mirrors the emitted value.",
+    "commenting": "The value is exactly what the source published, but a reader could misread it — an imprecise `birthDate`, a reporting exception, a succession partner, a GLEIF event, a former name, an identity verification, the filing that notified a PSC, a founder's historic role, a discrepancy report the register flags.",
+    "identifying": "Which real-world thing the statement is about, where BODS gives the key no home: a register's own person key (`EE-ARIREGISTER-HASH`), a Wikidata Q-id, an OpenSanctions record id, an SEC CIK — written by `person_identifier_note` in one fixed sentence shape so exports can read the identifier back.",
+    "linking": "A value OpenCheck added from a source other than the statement's own, with a link to it: the subject's primary stock-exchange listing (`/recordDetails/publicListing`) on OpenCheck's GLEIF statement, from LSEG PermID, with the quote's page as `url` — so the listing is never read as something GLEIF published.",
+    "correcting": NOT_WRITTEN,
+}
+
+#: The annotation constructors in ``bods/annotations.py`` and the motivation
+#: each writes.
+_MOTIVATION_HELPERS = {
+    "transformation": "transformation",
+    "commenting": "commenting",
+    "identifying": "identifying",
+}
+
+
+def motivations_written() -> dict[str, list[str]]:
+    """Every motivation the package writes, with the modules that write it.
+
+    Read from the source: a dict literal with a constant ``"motivation"``
+    value, or a call to one of the constructors in ``bods/annotations.py``.
+    """
+    found: dict[str, set[str]] = {}
+    for path in _PACKAGE_ROOT.rglob("*.py"):
+        rel = str(path.relative_to(_PACKAGE_ROOT))
+        if rel in ("data_dictionary.py", "bods/annotations.py"):
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Dict):
+                for k, v in zip(node.keys, node.values, strict=True):
+                    if (
+                        isinstance(k, ast.Constant) and k.value == "motivation"
+                        and isinstance(v, ast.Constant) and isinstance(v.value, str)
+                    ):
+                        found.setdefault(v.value, set()).add(rel)
+            elif isinstance(node, ast.Call):
+                func = node.func
+                name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
+                if name in _MOTIVATION_HELPERS:
+                    found.setdefault(_MOTIVATION_HELPERS[name], set()).add(rel)
+    return {m: sorted(mods) for m, mods in sorted(found.items())}
 
 
 # ---------------------------------------------------------------------------
@@ -284,6 +423,8 @@ COLUMN_DESCRIPTIONS: dict[str, dict[str, str]] = {
         "alias": "Alternate names.",
         "leiCode": "The LEI.",
         "registrationNumber": "Register numbers from non-LEI identifier schemes.",
+        "wikidataId": "The Wikidata Q-id, from a `WIKIDATA` identifier (on a person, read back from its `identifying` annotation).",
+        "idNumber": "A person's other identifier — a tax or identity-document number from `identifiers`, or a register's person key read back from its `identifying` annotation.",
         "jurisdiction": "`jurisdiction.code`.",
         "incorporationDate": "`foundingDate`.",
         "dissolutionDate": "`dissolutionDate`.",
@@ -372,17 +513,26 @@ def sample_bundle() -> list[dict[str, Any]]:
     Two companies, two people, a shareholding with a share band, an officer
     appointment marked with ``opencheckOfficerPosition``, an ended interest,
     an unspecified owner, alternate names, a nationality, an address of each
-    kind and a GLEIF-event annotation — invented names, no real company.
+    kind, a PEP declaration, Wikidata and tax identifiers — and **every key in**
+    :data:`EXTENSIONS` and every motivation OpenCheck writes, each built by
+    the helper that writes it in production, so the export writers are run
+    over every shape they can meet (``tests/test_data_dictionary.py`` holds
+    the sample to that). Invented names, no real company.
     """
-    from .bods.annotations import commenting
+    from .bods.annotations import commenting, entry_date_as_start
+    from .bods.ch_filings import FILING_PROPERTY, describe
+    from .bods.former_names import former_name_annotation
     from .bods.gleif_events import EVENT_PROPERTY
+    from .bods.identity_verification import ROUTE_COMPANIES_HOUSE, Verification, role_annotation
     from .bods.officer_roles import mark_officer
     from .bods.statements import (
         _addr,
         make_entity_statement,
         make_person_statement,
         make_relationship_statement,
+        refresh_statement_id,
     )
+    from .listing import apply_to_bods
 
     holdco = make_entity_statement(
         source_id="gleif",
@@ -398,10 +548,12 @@ def sample_bundle() -> list[dict[str, Any]]:
             {**_addr("registered", "1 Example Street, London", "GB"), "postCode": "EC1A 1AA"},
             _addr("business", "2 Trading Row, Leeds", "GB"),
         ],
-        alternate_names=["Example Holdings PLC"],
+        alternate_names=["Example Holdings PLC", "Example Group Holdings Limited"],
         entity_details="Private limited company",
         source_url="https://example.invalid/holdco",
     )
+    holdco["recordDetails"]["legalFormLabel"] = "Private Limited Company"
+    refresh_statement_id(holdco)
     event = commenting(
         "/recordDetails",
         "GLEIF records a completed merger, effective 25 October 2024.",
@@ -413,16 +565,24 @@ def sample_bundle() -> list[dict[str, Any]]:
         "effectiveDay": "2024-10-25",
     }
     holdco.setdefault("annotations", []).append(event)
+    holdco["annotations"].append(
+        former_name_annotation(1, "Example Group Holdings Limited", until="2019-06-30")
+    )
     opco = make_entity_statement(
         source_id="companies_house",
         local_id="DD-OPCO",
         name="Example Trading Limited",
         jurisdiction=("United Kingdom", "GB"),
-        identifiers=[{"scheme": "GB-COH", "id": "07654321", "schemeName": "Companies House"}],
+        identifiers=[
+            {"scheme": "GB-COH", "id": "07654321", "schemeName": "Companies House"},
+            {"scheme": "WIKIDATA", "id": "Q4115189", "schemeName": "Wikidata"},
+        ],
         founding_date="2005-06-01",
         dissolution_date="2024-01-31",
         source_url="https://example.invalid/opco",
     )
+    opco["recordDetails"]["primaryIndustryCode"] = "702200"
+    refresh_statement_id(opco)
     owner = make_person_statement(
         source_id="companies_house",
         local_id="DD-OWNER",
@@ -430,7 +590,18 @@ def sample_bundle() -> list[dict[str, Any]]:
         nationalities=[{"name": "United Kingdom", "code": "GB"}],
         birth_date="1970-04",
         addresses=[_addr("service", "3 Service Lane, Bristol", "GB")],
+        identifiers=[
+            {"scheme": "GBR-TAXID", "id": "AB123456C", "schemeName": "National Insurance number"},
+            {"scheme": "WIKIDATA", "id": "Q4115189", "schemeName": "Wikidata"},
+        ],
         other_names=[("alternative", "A. Example")],
+        political_exposure={
+            "status": "isPep",
+            "details": [{
+                "reason": "Declared a public official by the register.",
+                "jurisdiction": {"name": "United Kingdom", "code": "GB"},
+            }],
+        },
         source_url="https://example.invalid/owner",
     )
     officer = make_person_statement(
@@ -458,6 +629,18 @@ def sample_bundle() -> list[dict[str, Any]]:
         ],
         source_url="https://example.invalid/psc",
     )
+    filing = {
+        "event": "notification", "match": "filing", "declarant": "company",
+        "type": "PSC01", "transactionId": "MzAwMDAwMDAwMGV4YW1wbGU",
+        "date": "2016-06-30", "documentUrl": "https://example.invalid/psc01.pdf",
+    }
+    notified = commenting(
+        "/recordDetails/interestedParty",
+        describe(filing, {"notified_on": "2016-04-06"}),
+    )
+    notified["url"] = filing["documentUrl"]
+    notified[FILING_PROPERTY] = filing
+    shareholding.setdefault("annotations", []).append(notified)
     consolidation = make_relationship_statement(
         source_id="gleif",
         local_id="DD-HOLDCO-OPCO",
@@ -487,6 +670,10 @@ def sample_bundle() -> list[dict[str, Any]]:
             )
         ],
     )
+    appointment.setdefault("annotations", []).append(role_annotation(
+        "/recordDetails/interestedParty",
+        Verification(statement_on="2026-03-18", route=ROUTE_COMPANIES_HOUSE),
+    ))
     directorship = make_relationship_statement(
         source_id="companies_house",
         local_id="DD-OWNER-DIRECTOR",
@@ -494,6 +681,9 @@ def sample_bundle() -> list[dict[str, Any]]:
         interested_party_statement_id=owner["recordId"],
         interested_party_type="person",
         interests=[{"type": "seniorManagingOfficial", "startDate": "2005-06-01", "details": "Director"}],
+    )
+    directorship.setdefault("annotations", []).append(
+        entry_date_as_start("The example register", "registered_on")
     )
     withheld = make_relationship_statement(
         source_id="companies_house",
@@ -505,7 +695,15 @@ def sample_bundle() -> list[dict[str, Any]]:
         },
         interests=[{"type": "shareholding", "directOrIndirect": "unknown"}],
     )
-    return [holdco, opco, owner, officer, shareholding, consolidation, appointment, directorship, withheld]
+    bundle = [holdco, opco, owner, officer, shareholding, consolidation, appointment, directorship, withheld]
+    # The PermID listing, through the code that adds it in production — a
+    # ``linking`` annotation and BODS ``publicListing`` on the GLEIF statement.
+    return apply_to_bods(bundle, "52990000EXAMPLE00001", {
+        "status": "listed",
+        "quote": {"ticker": "EXH", "mic": "XLON", "url": "https://example.invalid/quote"},
+        "exchange": {"name": "London Stock Exchange", "country": "GB"},
+        "as_of": "2026-11-04",
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -1331,11 +1529,13 @@ def render_markdown() -> str:
     w("### Extension keys")
     w("")
     w(
-        "Keys BODS v0.4 does not define. Its Source, Interest and Annotation objects are "
-        "open, and libcovebods reports an unknown key as an additional field, not an "
-        "error. Every key OpenCheck writes is registered in "
-        "`opencheck.data_dictionary.EXTENSIONS`; a mapper that emits an unregistered "
-        "`opencheck*` key fails the test suite."
+        "Keys BODS v0.4 does not define. Its objects are open, and libcovebods reports "
+        "an unknown key as an additional field, not an error. Every such key OpenCheck "
+        "writes is registered in `opencheck.data_dictionary.EXTENSIONS`: the test suite "
+        "walks every statement every mapper produces against the v0.4 schema, and a key "
+        "the schema does not define at that place that is not registered here fails it — "
+        "whatever it is called. Statements another publisher made (the OECD's MEIP, Open "
+        "Ownership's bundles) are carried as published and documented by them."
     )
     w("")
     out.extend(
@@ -1363,16 +1563,9 @@ def render_markdown() -> str:
     w("")
     w("#### Motivations")
     w("")
-    motivation_words = {
-        "transformation": "OpenCheck changed the source's value on the way to BODS — a role label became an interest type, a date changed format, a partial date was dropped, a Nasdaq CSD account prefix was stripped from a name. `description` states what the source said; `transformedContent` mirrors the emitted value.",
-        "commenting": "The value is exactly what the source published, but a reader could misread it — an imprecise `birthDate`, a reporting exception, a succession partner, a GLEIF event, a founder's historic role, a discrepancy report the register flags.",
-        "identifying": "Which real-world thing the statement is about, where BODS gives the key no home: a register's own person key (`EE-ARIREGISTER-HASH`), a Wikidata Q-id, an OpenSanctions record id, an SEC CIK — written by `person_identifier_note` in one fixed sentence shape so exports can read the identifier back.",
-        "correcting": "Defined by BODS; OpenCheck does not write it.",
-        "linking": "Defined by BODS; OpenCheck does not write it.",
-    }
-    missing = sorted(ann.MOTIVATIONS - motivation_words.keys())
+    missing = sorted(ann.MOTIVATIONS - MOTIVATION_WORDS.keys())
     assert not missing, missing
-    out.extend(_table(["Motivation", "When OpenCheck writes it"], _vocabulary_rows(motivation_words)))
+    out.extend(_table(["Motivation", "When OpenCheck writes it"], _vocabulary_rows(MOTIVATION_WORDS)))
     w("")
     w("#### Annotation helpers")
     w("")
@@ -1511,6 +1704,9 @@ __all__ = [
     "harvest_dataclass",
     "harvest_mcp_tools",
     "MCP_RESPONSE_NOTES",
+    "MOTIVATION_WORDS",
+    "NOT_WRITTEN",
+    "motivations_written",
     "documented_models",
     "harvest_models",
     "is_stale",
