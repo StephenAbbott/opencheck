@@ -719,12 +719,12 @@ def _ftm_person_statement(
         or payload.get("caption")
         or f"Person {ftm_id}"
     )
-    nationalities = [_ftm_resolve_nationality(n) for n in (props.get("nationality") or [])]
+    nationalities, from_citizenship = ftm_person_nationalities(props)
     birth_date = (props.get("birthDate") or [None])[0]
     addresses = _ftm_addresses(props)
     identifiers = _ftm_identifiers(ftm_id, source_id, props)
 
-    return make_person_statement(
+    stmt = make_person_statement(
         source_id=source_id,
         local_id=ftm_id,
         statement_date=_ftm_last_change(payload),
@@ -736,19 +736,92 @@ def _ftm_person_statement(
         other_names=_ftm_other_names(props, full_name),
         source_url=source_url,
     )
+    _annotations.annotate(stmt, citizenship_annotation(from_citizenship))
+    return stmt
+
+
+#: FtM country codes that are neither ISO 3166-1 nor a pycountry historic
+#: country, with the name FtM gives them. Name only: no ISO code exists, and
+#: the conftest guard refuses a code that is not ISO 3166.
+_FTM_NON_ISO_COUNTRIES = {"xk": "Kosovo"}
 
 
 def _ftm_resolve_nationality(raw: str) -> dict[str, str]:
     """Resolve a FtM nationality string (ISO code or full name) to a BODS entry.
 
     Returns ``{"name": ..., "code": ...}`` when pycountry can resolve the
-    value, or ``{"name": raw}`` as a safe fallback.
+    value to a current ISO 3166-1 country. A former state — FtM writes the
+    Soviet Union as ``suhh``, its ISO 3166-3 code — gets its name alone from
+    pycountry's historic list, never a code: it is said, and never compared
+    (``cross_check`` reads codes only). Anything else keeps the source's
+    text as the name.
     """
+    text = raw.strip()
     try:
-        country = pycountry.countries.lookup(raw.strip())
+        country = pycountry.countries.lookup(text)
         return {"name": country.name, "code": country.alpha_2}
     except LookupError:
-        return {"name": raw.strip()}
+        pass
+    if text.lower() in _FTM_NON_ISO_COUNTRIES:
+        return {"name": _FTM_NON_ISO_COUNTRIES[text.lower()]}
+    try:
+        former = pycountry.historic_countries.lookup(text)
+        return {"name": former.name}
+    except LookupError:
+        return {"name": text}
+
+
+def _nationality_key(entry: dict[str, str]) -> str:
+    return entry.get("code") or "name:" + (entry.get("name") or "").casefold()
+
+
+def ftm_person_nationalities(
+    props: dict[str, Any],
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """A FtM Person's ``nationality`` and ``citizenship``, as BODS nationalities.
+
+    BODS has one list; FtM keeps two properties, and OpenSanctions fills
+    ``citizenship`` for many people whose ``nationality`` is empty or
+    shorter. Both are read, ``nationality`` first, deduplicated on the ISO
+    code (then, for a name-only entry, on the name). Returns the list and the
+    entries that came from ``citizenship`` alone, which the statement says in
+    an annotation. ``country`` is never read: on a Person it is unscoped.
+    """
+    out: list[dict[str, str]] = []
+    from_citizenship: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for prop in ("nationality", "citizenship"):
+        for raw in props.get(prop) or []:
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            entry = _ftm_resolve_nationality(raw)
+            key = _nationality_key(entry)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(entry)
+            if prop == "citizenship":
+                from_citizenship.append(entry)
+    return out, from_citizenship
+
+
+def citizenship_annotation(
+    entries: list[dict[str, str]],
+) -> dict[str, Any] | None:
+    """Say which nationalities came from FtM ``citizenship``, not ``nationality``."""
+    if not entries:
+        return None
+    named = [
+        f"{e['name']} ({e['code']})" if e.get("code") else e["name"] for e in entries
+    ]
+    listed = ", ".join(named)
+    verb = "is" if len(named) == 1 else "are"
+    return _annotations.commenting(
+        _annotations.pointer("recordDetails", "nationalities"),
+        f"{listed} {verb} read from the record's FollowTheMoney citizenship "
+        "property, not its nationality property. FollowTheMoney keeps the two "
+        "apart; BODS has one list of nationalities, so OpenCheck lists both.",
+    )
 
 
 def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str | None] | None:
