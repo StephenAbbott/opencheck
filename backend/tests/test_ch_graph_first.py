@@ -30,7 +30,13 @@ from opencheck import psc_graph, signalstats
 from opencheck.config import get_settings
 from opencheck.routers.hit_builders import _bh_companies_house
 from opencheck.sources.companies_house import CompaniesHouseAdapter
-from tests.test_ch_psc_recursion import _API, _CHAIN, _mock_chain, _mock_company
+from tests.test_ch_psc_recursion import (
+    _API,
+    _CHAIN,
+    _mock_chain,
+    _mock_company,
+    _mock_filing_history,
+)
 from tests.test_psc_graph import CORP, _snapshot_zip
 
 # The Babcock stack as the *graph* holds it: one row per corporate PSC, the
@@ -186,17 +192,18 @@ async def test_the_walk_spends_the_same_register_budget_not_twice(
     httpx_mock: HTTPXMock, graph: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The prefetch's calls are the walk's calls, made earlier. Twenty live
-    calls for five companies — the same figure Phase 184 measured — and the
-    walk that follows adds none, because a hit on a key the prefetch filled
+    calls for five companies — the same figure Phase 184 measured — plus a
+    filing history for each of the four with PSCs, and the walk that follows
+    adds none, because a hit on a key the prefetch filled
     is that same call coming back, not a saving to claim."""
     _graph_first(monkeypatch, graph)
     _mock_chain(httpx_mock, _CHAIN)
     await CompaniesHouseAdapter().fetch("00070274")
 
     lookup = _walks()["by_origin"]["lookup"]
-    assert lookup["calls_live"] == 20
+    assert lookup["calls_live"] == 24
     assert lookup["calls_cached"] == 0
-    assert len(httpx_mock.get_requests()) == 20
+    assert len(httpx_mock.get_requests()) == 24
 
 
 async def test_a_second_walk_is_answered_from_the_cache_including_the_404(
@@ -215,8 +222,8 @@ async def test_a_second_walk_is_answered_from_the_cache_including_the_404(
     assert len(httpx_mock.get_requests()) == before  # not one more call
     lookup = _walks()["by_origin"]["lookup"]
     assert lookup["walks"] == 2
-    assert lookup["calls_live"] == 20
-    assert lookup["calls_cached"] == 20
+    assert lookup["calls_live"] == 24
+    assert lookup["calls_cached"] == 24
 
 
 async def test_the_chain_is_fetched_concurrently_not_hop_by_hop(
@@ -367,6 +374,7 @@ async def test_a_company_the_prefetch_could_not_reach_is_left_to_the_walk(
         status_code=404,
         json={"errors": [{"error": "not-found"}]},
     )
+    _mock_filing_history(httpx_mock, "02669327")
     _mock_chain(httpx_mock, {k: v for k, v in _CHAIN.items() if k != "02669327"})
     bundle = await CompaniesHouseAdapter().fetch("00070274")
 

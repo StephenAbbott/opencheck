@@ -44,6 +44,7 @@ import { isRiskFinding } from "../../lib/signalKind";
 import { useSavedReport } from "./savedReportContext";
 import { NOT_DEEPENED_IN_SAVED, RAW_NOT_SAVED } from "../../lib/savedReport";
 import { hitRegisterUrl, registerRecordUrl } from "../../lib/registerLinks";
+import { declaredLine, filingOf, type DeclaredLine } from "../../lib/filingProvenance";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
 // bundle) but only renders when a user clicks "Visualise". Code-split it so
@@ -496,6 +497,37 @@ function stmtLabel(
   return id.slice(0, 16) + "…";
 }
 
+/** Which register filing declared (or ceased) the relationship, when the
+ * source says — today Companies House PSCs (`lib/filingProvenance.ts`). */
+function DeclaredRow({ label, line }: { label: string; line: DeclaredLine | null }) {
+  if (!line) return null;
+  return (
+    <FieldRow
+      label={label}
+      value={
+        <span>
+          {line.text}
+          {line.url && (
+            <>
+              {" ("}
+              <a
+                href={line.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-dotted underline-offset-2"
+              >
+                {line.linkText}
+                <span className="sr-only"> (opens in new tab)</span>
+              </a>
+              {")"}
+            </>
+          )}
+        </span>
+      }
+    />
+  );
+}
+
 function RelationshipStatementCard({
   stmt,
   lookup,
@@ -563,6 +595,8 @@ function RelationshipStatementCard({
             }
           />
         )}
+        <DeclaredRow label="Declared" line={declaredLine(filingOf(stmt))} />
+        <DeclaredRow label="Ceased" line={declaredLine(filingOf(stmt, "cessation"))} />
         {sourceDesc && <FieldRow label="Source" value={sourceDesc} />}
         <details className="mt-1">
           <summary className="text-[10px] text-oo-muted cursor-pointer">

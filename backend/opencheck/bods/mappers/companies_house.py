@@ -15,6 +15,7 @@ from typing import Any
 import pycountry
 
 from ...identifiers import ch_identification_is_uk, ch_psc_item_id, normalise_ch_company_number
+from .. import ch_filings as _ch_filings
 from .. import former_names as _former_names, identity_verification as _idv, liveness as _liveness
 from ..annotations import annotate, commenting, identifying, pointer, transformation
 from ..ch_constants import describe_company_type, describe_officer_role
@@ -1287,6 +1288,20 @@ def _emit_company_statements(
                     creation_date=_today(),
                 ),
             )
+
+        # Which filing notified (and ceased) this PSC, from the company's
+        # filing history (the declarant-and-filing-provenance ticket): one
+        # commenting annotation per event, or a stated absence. Nothing when
+        # the history was not read.
+        annotate(
+            rel,
+            *_ch_filings.psc_annotations(
+                psc,
+                bundle.get("filing_history"),
+                number=number,
+                date_of_creation=profile.get("date_of_creation"),
+            ),
+        )
 
         # Phase 203: an individual PSC's identity verification statement, on
         # the notification it was supplied for. Corporate PSCs (relevant legal

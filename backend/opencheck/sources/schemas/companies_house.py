@@ -125,6 +125,10 @@ class CHBundle(_Base):
     exemptions: dict[str, Any] | None = None
     officers: dict[str, Any] = Field(default_factory=dict)
     related_companies: dict[str, Any] = Field(default_factory=dict)
+    # The PSC, incorporation and confirmation-statement filings, matched to
+    # each PSC by ``bods/ch_filings.py``. ``None`` for a company with no PSCs;
+    # ``{"opencheck_unavailable": reason}`` when the read failed.
+    filing_history: dict[str, Any] | None = None
     # Phase 188: how the chain in ``related_companies`` was found — counts and
     # the graph's own dates, never a company number or a name.
     chain_source: dict[str, Any] = Field(default_factory=dict)
