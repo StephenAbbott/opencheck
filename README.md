@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 441** — Each source now says what it discloses about a company's owners — declared, none exist, exempt, not provided, none on record, not public or not read — on its card, in the API, MCP, reports, batch CSV and BODS.
+**Latest: Phase 442** — The History tab now reads the Latvian Register of Enterprises' dated open data (additions only, since the register publishes no departures) and puts Estonia's board members, auditors and re-registered holdings on the right tiers.
 
 → [Full development history](docs/status.md)
 
