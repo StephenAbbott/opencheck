@@ -56,6 +56,7 @@ Aggregate post-search synthesis for a single subject.
 | `knowability` | `dict[str, Any] \| None` | `None` | What is knowable about a company in the subject's jurisdiction (Phase 224): the dated statement from `opencheck.knowability` — who may see beneficial owners there, what the register records, and what OpenCheck reads of it — as the `knowability` stream event carried it, plus `as_of`. Describes, never judges; nothing here is a signal. Frozen at run time so a saved report replays the sentence that was true that day. None for a name search, for a payload recorded before this field existed, or when the subject's jurisdiction is unknown. |
 | `knowability_chain` | `dict[str, Any] \| None` | `None` | What is knowable along the ownership path (Phase 226): `subject` (the subject's code), `codes` (every jurisdiction on the upward walk from the subject, subject first then path order, ended links included) and one `statements[]` entry per code, plus `as_of` — as the `knowability_chain` stream event carried it, frozen at run time. The chain is the run's own depth (the deepened sources); FullCheck extends it client-side as it expands. Describes, never judges. None for a payload recorded before this field existed. |
 | `integrated_ownership` | `dict[str, Any] \| None` | `None` | Integrated ownership along the path (Phase 339): for every party above the subject, how much of it that party holds directly and through companies it holds, one figure per source, never added across sources (`opencheck.integrated_ownership`). `holders[]` with `status` (current / voting_rights_only / formerly) and `figures[]`, plus `method`, `description`, `credit` and `as_of` — frozen at run time. Context only: no threshold, never a signal. None for a payload recorded before this field existed. |
+| `disclosure_status` | `dict[str, Any] \| None` | `None` | What each source says about the subject's owners — one normalised value per source (`opencheck.disclosure`): `sources[<id>]` with `values` and `entries` (`value`, `covers`, `count`, `details`, `reasons`), `not_covered` and `as_of`. Folded from the `disclosure_status` event as recorded. Describes; raises nothing. |
 | `listing` | `dict[str, Any] \| None` | `None` | The subject's primary stock-exchange listing (Phase 236), from LSEG PermID: `status` ("listed" / "not_listed" / "unavailable"), `quote` (ticker, MIC, RIC, security name, PermID ids), `exchange` (name + country, or None for a venue OpenCheck has no name for), `link` (a verified venue page, or None) and `as_of` — as the `listing` stream event carried it, frozen at run time (`opencheck.listing`). "unavailable" carries `reason` and a secret-scrubbed `detail` and is never "not listed" nor a degraded source. None when no PermID key is configured, or for a payload recorded before this field existed. |
 | `form13f` | `dict[str, Any] \| None` | `None` | Institutional shareholders from SEC Form 13F (Phase 334): the positions investment managers reported in the company's securities, as the `form13f` stream event carried them, frozen at run time (`opencheck.form13f`). `status` "found" (`securities[]`, each with its top twenty `positions`) or "out_of_date". **Not beneficial ownership**: never in `bods`, never read by a signal or the verdict, never totalled. None when there is no index or no matched security. |
 | `register_record` | `dict[str, Any] \| None` | `None` | The subject's own page on its home register (Phase 296): `source_id`, `register`, `identifier`, `url` and, on an LEI run, `ra_code` — as the anchor event carried it, built from the LEI record's registration authority and number alone (`opencheck.register_links`), so it is present even when that register's adapter did not answer. None when OpenCheck has no per-company address for the register, or for a payload recorded before this field existed. |
@@ -933,6 +934,7 @@ One row per LEI screened, in paste order. The same columns, in the same order, a
 | `state` | `done` for a screened row, `failed` for one that was not. |
 | `reason` | Why a row failed (an unknown LEI, a rate limit), empty when done. |
 | `report_url` | The report page for the LEI on opencheck.world. |
+| `disclosure` | Each source's disclosure status, as space-separated `source/covers=value` tokens (`companies_house/beneficial_owners=exempt gleif/parent=exempt`); empty when no source stated one. |
 
 ### Senzing — `format=senzing`
 
@@ -1074,7 +1076,7 @@ Run customer due diligence on a legal entity by its LEI.
 
 Arguments: `lei`, `deepen_top`.
 
-Keys: `lei`, `legal_name`, `jurisdiction`, `summary`, `verdict`, `profile`, `lei_successor`, `knowability`, `integrated_ownership`, `listing`, `institutional_shareholders`, `identifiers`, `derived_identifiers`, `risk_signals`, `degraded_sources`, `sources`, `coverage`, `counts`, `licensing`, `license_notices`, `hint`.
+Keys: `lei`, `legal_name`, `jurisdiction`, `summary`, `verdict`, `profile`, `lei_successor`, `knowability`, `integrated_ownership`, `disclosure_status`, `listing`, `institutional_shareholders`, `identifiers`, `derived_identifiers`, `risk_signals`, `degraded_sources`, `sources`, `coverage`, `counts`, `licensing`, `license_notices`, `hint`.
 
 On a refused call: `error`, `status`.
 
@@ -1084,7 +1086,7 @@ Run due diligence on a company that has no LEI, by its register number.
 
 Arguments: `scheme`, `id`, `deepen_top`, `name`.
 
-Keys: `lei`, `legal_name`, `jurisdiction`, `summary`, `verdict`, `profile`, `lei_successor`, `knowability`, `integrated_ownership`, `listing`, `institutional_shareholders`, `identifiers`, `derived_identifiers`, `risk_signals`, `degraded_sources`, `sources`, `coverage`, `counts`, `licensing`, `license_notices`, `hint`, `scheme`, `id`.
+Keys: `lei`, `legal_name`, `jurisdiction`, `summary`, `verdict`, `profile`, `lei_successor`, `knowability`, `integrated_ownership`, `disclosure_status`, `listing`, `institutional_shareholders`, `identifiers`, `derived_identifiers`, `risk_signals`, `degraded_sources`, `sources`, `coverage`, `counts`, `licensing`, `license_notices`, `hint`, `scheme`, `id`.
 
 On a refused call: `error`, `status`.
 
@@ -1102,7 +1104,7 @@ Export an entity's beneficial-ownership graph as BODS v0.4 statements.
 
 Arguments: `lei`, `format`, `deepen_top`, `include_subsidiaries`.
 
-Keys: `lei`, `format`, `record_count`, `records`, `bods_issues`, `license_notices`, `statement_count`, `subsidiary_statement_count`, `statements`, `integrated_ownership`.
+Keys: `lei`, `format`, `record_count`, `records`, `bods_issues`, `license_notices`, `statement_count`, `subsidiary_statement_count`, `statements`, `integrated_ownership`, `disclosure_status`.
 
 On a refused call: `error`, `status`.
 
@@ -1159,6 +1161,16 @@ What a legal entity consolidates: its GLEIF subsidiary network.
 Arguments: `lei`, `format`, `include_declared`.
 
 The `SubsidiariesResponse` object (API responses above) plus `statement_count` (for `format=bods`), `measures` (a sentence saying what GLEIF Level 2 measures), `declared` (the `DeclaredSubsidiariesResponse` object when `include_declared`) and `license_notices`. `error` on a refused call.
+
+### `opencheck_discrepancy_note`
+
+A discrepancy note to hand a register-record disagreement back to the register that holds it — one note per register, as Markdown.
+
+Arguments: `lei`, `scheme`, `id`, `deepen_top`.
+
+Keys: `subject`, `markdown`, `saved_report`.
+
+On a refused call: `error`, `status`.
 
 ### `opencheck_list_sources`
 

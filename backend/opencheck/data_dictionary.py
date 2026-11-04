@@ -241,6 +241,7 @@ COLUMN_DESCRIPTIONS: dict[str, dict[str, str]] = {
         "state": "`done` for a screened row, `failed` for one that was not.",
         "reason": "Why a row failed (an unknown LEI, a rate limit), empty when done.",
         "report_url": "The report page for the LEI on opencheck.world.",
+        "disclosure": "Each source's disclosure status, as space-separated `source/covers=value` tokens (`companies_house/beneficial_owners=exempt gleif/parent=exempt`); empty when no source stated one.",
     },
     "senzing": {
         "DATA_SOURCE": "Always `OPENCHECK` — the Senzing data source every record is loaded under.",
