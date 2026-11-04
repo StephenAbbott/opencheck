@@ -210,7 +210,7 @@ def test_director_person_has_birth_date_and_nationality() -> None:
     bundle = map_companies_house(_company_bundle_with_directors())
     person = next(s for s in bundle if s["recordType"] == "person")
     assert person["recordDetails"]["birthDate"] == "1975-03"
-    assert person["recordDetails"]["nationalities"] == [{"name": "British"}]
+    assert person["recordDetails"]["nationalities"] == [{"name": "British", "code": "GB"}]
 
 
 def test_director_person_name_matches_officer() -> None:
@@ -435,7 +435,7 @@ def test_the_subjects_own_filing_wins_where_two_boards_disagree() -> None:
 
     person = _persons(bundle)[0]
     assert person["recordDetails"]["names"][0]["fullName"] == "SMITH, Jane"
-    assert person["recordDetails"]["nationalities"] == [{"name": "British"}]
+    assert person["recordDetails"]["nationalities"] == [{"name": "British", "code": "GB"}]
     assert "London" in person["recordDetails"]["addresses"][0]["address"]
 
 

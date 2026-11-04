@@ -189,6 +189,8 @@ A name match is weak evidence about a *person*, and the scorer cannot be tuned o
 
 So discrimination comes from a second attribute. `corroborating_attributes()` reports which of **birth year** (±1) and **nationality** agree, requiring *both* sides to supply the attribute. A hit that publishes no birth date is not corroborated by our knowing one — it is unchecked, and reporting silence as agreement is exactly how the Liverpool FC false positive read as a finding.
 
+Nationality is compared on the ISO code only (`nationalities[].code`), never on the register's free-text name. Companies House files a demonym ("British", "Citizen Of Usa", "British,Australian"); since the Companies House officer-nationality ticket (4 Nov 2026) `bods/nationality.py` resolves each part to a code on every Companies House path — officers list, PSCs and officer-by-id — and a value it cannot resolve ("Other", "Kosovan", "Congolese") keeps its name and no code, so it is unchecked rather than a disagreement. Before that no Companies House person carried a code, and nationality never corroborated a match for anyone the register names.
+
 Person signals are then capped when nothing but the name agrees — never `high`, since "high confidence this is the same person" is the one claim a name alone cannot support:
 
 | | corroborated | name only |
