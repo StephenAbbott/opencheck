@@ -255,14 +255,48 @@ def _covers_of(interests: list[dict[str, Any]], offered: tuple[str, ...]) -> str
     return offered[0]
 
 
+def _subjects_of(
+    statements: list[dict[str, Any]],
+    resolve: Any,
+    subject_ids: Iterable[str] | None,
+) -> set[str]:
+    """The statementIds of the looked-up subject among one source's statements.
+
+    The lookup's subject identity (``subject_ids``) decides first. Without it,
+    or when none of this source's statements is in it, the source's own
+    ``declarationSubject`` decides — but only when every statement names the
+    same one: the declaration-subject phase stamps a source's statements with
+    one subject, while another publisher's bundle (Open Ownership's stored
+    UK PSC extract, served for the curated examples) names each record as its
+    own subject, so every company in it would read as the subject. BP P.L.C.
+    read "28 declared" beside its PSC exemption that way, counting its
+    subsidiaries' PSCs.
+    """
+    own = {s.get("statementId") for s in statements if s.get("statementId")}
+    if subject_ids is not None:
+        chosen = {i for i in subject_ids if i in own}
+        if chosen:
+            return chosen
+    declared = {
+        resolve(s.get("declarationSubject"))
+        for s in statements
+        if s.get("declarationSubject")
+    }
+    return declared if len(declared) == 1 else set()
+
+
 def entries_from_statements(
-    source_id: str, statements: list[dict[str, Any]], as_of: str
+    source_id: str,
+    statements: list[dict[str, Any]],
+    as_of: str,
+    subject_ids: Iterable[str] | None = None,
 ) -> list[dict[str, Any]]:
     """The entries for one source's own statements.
 
-    The subject is whatever the statements' ``declarationSubject`` names — the
-    declaration-subject phase stamps every source's statements with that
-    source's own subject record. Only relationships *about* the subject count.
+    Only relationships *about* the subject count (``_subjects_of``): the
+    lookup's subject statements when ``subject_ids`` names any of this
+    source's, else the one ``declarationSubject`` the source's statements
+    share.
     """
     from .bods.mapper import gleif_reporting_exception  # local: mapper is heavy
 
@@ -270,11 +304,7 @@ def entries_from_statements(
     if not offered:
         return []
     resolve = resolver(statements)
-    subjects = {
-        resolve(s.get("declarationSubject"))
-        for s in statements
-        if s.get("declarationSubject")
-    }
+    subjects = _subjects_of(statements, resolve, subject_ids)
 
     entries: list[dict[str, Any]] = []
     declared: dict[str, set[str]] = {}
@@ -356,19 +386,23 @@ def for_lookup(
     hints: Mapping[str, list[dict[str, Any]]] | None,
     as_of: str,
     source_countries: Mapping[str, str | None] | None = None,
+    subject_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """The ``disclosure_status`` event payload: a value for every applicable
     source.
 
     ``coverage`` is ``coverage.source_coverage(...)``; ``source_countries``
     maps a source id to its register's country (``SourceInfo.country``),
-    defaulting to the REGISTRY.
+    defaulting to the REGISTRY. ``subject_ids`` are the statementIds of the
+    looked-up subject (``subject_identity``), across every source.
     """
     if source_countries is None:
         from .sources import REGISTRY
 
         source_countries = {sid: a.info.country for sid, a in REGISTRY.items()}
     hints = hints or {}
+    if subject_ids is not None:
+        subject_ids = list(subject_ids)
 
     by_source: dict[str, list[dict[str, Any]]] = {}
     for stmt in bods:
@@ -408,7 +442,9 @@ def for_lookup(
         elif sid in no_record_ids and sid not in by_source:
             entries.append(_entry("no_record" if about else "not_covered", None))
         else:
-            entries.extend(entries_from_statements(sid, by_source.get(sid, []), as_of))
+            entries.extend(entries_from_statements(
+                sid, by_source.get(sid, []), as_of, subject_ids
+            ))
             entries.extend(copy.deepcopy(hints.get(sid) or []))
             covered = {e.get("covers") for e in entries}
             for covers in offered:

@@ -4990,8 +4990,13 @@ otherwise:
   shareholders"); SEC EDGAR is `shareholders`. Adding an owner-publishing
   source means a row here. Every ownership source is always deepened
   (`_select_deepen_pairs`), GLEIF only as the anchor.
-- **Read from the stamped statements**: relationships whose subject is the
-  source's own `declarationSubject`, current interests only, officer types and
+- **Read from the subject's relationships only**: relationships whose subject
+  is one of the lookup's subject statements (`subject_identity`'s
+  `statement_ids`, passed as `subject_ids`), else the one `declarationSubject`
+  a source's statements share — never every `declarationSubject` in the
+  bundle: Open Ownership's stored bundles (the curated examples) name each
+  record as its own subject, and BP P.L.C. read "Declared (28)" beside its PSC
+  exemption from its subsidiaries' PSCs (4 Nov 2026). Current interests only, officer types and
   `opencheckOfficerPosition` skipped; `gleif_reporting_exception` first; an
   unspecified party through `REASON_VALUES`. Facts only the raw bundle has
   (Estonia's `bo_obliged`, `J`/`C` fallback rows, the REST tier's
