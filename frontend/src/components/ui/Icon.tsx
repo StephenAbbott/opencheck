@@ -65,6 +65,15 @@ export const ICON_PATHS = {
   // the institution that reports, deliberately not a person or a network:
   // a 13F filer is an investment manager, never an owner in the graph.
   institutional: ["M3.5 8.5 12 4l8.5 4.5z", "M5.5 11v6.5", "M10 11v6.5", "M14 11v6.5", "M18.5 11v6.5", "M3.5 20h17"],
+  // Downloadable reports (the /features entry): a page with a folded corner
+  // and a download arrow on it — a document you take away, not `download`
+  // alone, which is the bare arrow used on buttons.
+  report: [
+    "M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z",
+    "M14 3v5h5",
+    "M12 11v6",
+    "m9.5 14.5 2.5 2.5 2.5-2.5",
+  ],
 } as const;
 
 /** Icons that need a circle or two the path list cannot express. */
