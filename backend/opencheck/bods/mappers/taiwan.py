@@ -402,7 +402,6 @@ def _tw_suspension_note(company: dict[str, Any]) -> str | None:
     return " ".join(parts) or None
 
 
-@content_addressed
 def tw_resolved_holder(outcome: Any, *, subject_ubn: str) -> str | None:
     """The UBN a legal-person holder resolved to, or None: only a ``resolved``
     outcome with a valid number, never the company itself (the Taiwan GCIS v2
@@ -430,6 +429,7 @@ def tw_holder_ubn_note(name: str, number: str) -> dict[str, Any]:
     )
 
 
+@content_addressed
 def map_gcis_taiwan(bundle: dict[str, Any]) -> BODSBundle:
     """Map a GcisTaiwanAdapter fetch bundle to BODS v0.4 statements."""
     statements = BODSBundle()
