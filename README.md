@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 447** — Each Companies House PSC relationship now names the filing that notified it — form, transaction ID, filing date and a link to the document.
+**Latest: Phase 448** — The History feature description on /features, the API page and the how-it-works doc now name all seven registers the Time Machine reads, New York and Latvia included.
 
 → [Full development history](docs/status.md)
 
