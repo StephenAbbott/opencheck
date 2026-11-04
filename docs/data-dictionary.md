@@ -1180,6 +1180,16 @@ Keys: `subject`, `markdown`, `saved_report`.
 
 On a refused call: `error`, `status`.
 
+### `opencheck_knowability`
+
+What can be known about a company's owners in each jurisdiction — before a lookup, without spending one.
+
+Arguments: `jurisdictions`.
+
+Keys: `statements`, `known_codes`, `generated_at`, `as_of`, `hint`.
+
+On a refused call: `error`, `status`.
+
 ### `opencheck_list_sources`
 
 List the data sources OpenCheck consults, with licence and live status.
