@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 451** — The output data dictionary now documents every key OpenCheck adds to BODS, found by reading each statement against the v0.4 schema, after the post-deploy check found five undocumented in production.
+**Latest: Phase 452** — OpenCheck's per-jurisdiction notes were updated from the Beneficial ownership access status table for Austria, Poland and Bulgaria.
 
 → [Full development history](docs/status.md)
 
