@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 448** — The History feature description on /features, the API page and the how-it-works doc now name all seven registers the Time Machine reads, New York and Latvia included.
+**Latest: Phase 449** — The features page now explains the downloadable reports — the accessible PDF and Markdown report, and the one-page discrepancy note for registers whose records disagree.
 
 → [Full development history](docs/status.md)
 
