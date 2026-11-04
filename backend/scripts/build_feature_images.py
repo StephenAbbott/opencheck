@@ -537,10 +537,108 @@ def institutional():
         22, f"border-top:3px solid {GREY}")
     return page(body)
 
+# ------------------------------------------------------------------ 10 Downloadable reports
+def reports():
+    """The Export menu's Report group beside the two things it hands over:
+    the first page of the PDF report and a one-page discrepancy note.
+
+    **No company is named and no value is shown.** On 4 Nov 2026 no lookup
+    on production produced a shown disagreement (the discrepancy-report
+    ticket's post-deploy check), so a note carrying a real company's name
+    would be an invented finding against it — the rule the watchlist
+    vignette states. Values are drawn as grey bars; the words are the
+    note's and the report's own fixed headings and sentences
+    (``discrepancy_note.TITLE`` / ``SCOPE_SENTENCE`` / ``REPORTER_FIELDS``,
+    ``html_report``'s section headings), so the picture changes only when
+    they do.
+    """
+    CB = "#2563eb"  # oo.mark.checkBlue — the feature's accent
+    def bar(w, h=7, col="#e5e7eb", mb=6):
+        return f'<div style="width:{w};height:{h}px;background:{col};border-radius:3px;margin-bottom:{mb}px"></div>'
+    def gh(t):
+        return (f'<div style="font-family:{BODY};font-size:10px;font-weight:700;text-transform:uppercase;'
+                f'letter-spacing:0.12em;color:{MUTED};padding:8px 14px 4px">{t}</div>')
+    def item(glyph, t, desc=None, col=BLUE):
+        d = (f'<div style="font-family:{BODY};font-size:11.5px;color:{MUTED};margin-top:2px">{desc}</div>' if desc else "")
+        return (f'<div style="display:flex;gap:9px;padding:7px 14px;font-family:{BODY};font-size:13px;color:{NAVY}">'
+                f'<span style="color:{col};width:12px">{glyph}</span><div>{t}{d}</div></div>')
+    rule = f'<div style="border-top:1px solid {RULE};margin:5px 0"></div>'
+    menu = (
+        f'<div style="display:flex;justify-content:flex-end;margin-bottom:8px">'
+        f'<span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid {SOFTB};color:{BLUE};'
+        f'border-radius:10px;padding:0 14px;height:36px;font-family:{BODY};font-size:13px;font-weight:500">Export ▾</span></div>'
+        f'<div style="background:#fff;border:1px solid {RULE};border-radius:10px;padding:6px 0;'
+        f'box-shadow:0 10px 30px rgba(61,48,212,0.14)">'
+        + gh("Share") + item("↗", "Copy share link", "Its preview shows a live summary card for this entity")
+        + rule + gh("Keep") + item("⧉", "Save this report", "A fixed record of these findings, with a link, kept for 90 days")
+        + rule + gh("Report")
+        + f'<div style="background:{SOFT};border-left:3px solid {CB}">' + item("↓", "Report as PDF") + '</div>'
+        + item("↓", "Report as Markdown")
+        + f'<div style="background:{SOFT};border-left:3px solid {CB}">'
+        + item("↓", "Discrepancy note", "One page per register whose record differs, with where to send it") + '</div>'
+        + rule + gh("Data") + item("↓", "Download data", "Jump to the data section")
+        + '</div>')
+    def sheet(inner, tag):
+        return (f'<div style="position:relative;background:#fff;border:1px solid {RULE};border-radius:4px;'
+                f'padding:22px 22px 18px;box-shadow:0 6px 18px rgba(25,29,35,0.10);aspect-ratio:210/297">'
+                f'<span style="position:absolute;top:-11px;right:14px;background:{CB};color:#fff;border-radius:999px;'
+                f'padding:3px 10px;font-family:{BODY};font-size:10.5px;font-weight:700;letter-spacing:0.04em">{tag}</span>'
+                f'{inner}</div>')
+    def h2(t):
+        return (f'<div style="font-family:{BODY};font-size:11px;font-weight:700;color:{NAVY};border-bottom:1px solid {SOFTB};'
+                f'padding-bottom:3px;margin:12px 0 7px">{t}</div>')
+    nodes = (
+        f'<svg width="100%" height="74" viewBox="0 0 200 74">'
+        f'<line x1="100" y1="18" x2="100" y2="56" stroke="{GO}" stroke-width="1.6"/>'
+        f'<line x1="45" y1="18" x2="92" y2="54" stroke="{GC}" stroke-width="1.6" stroke-dasharray="2 3"/>'
+        f'<line x1="155" y1="18" x2="108" y2="54" stroke="{GO}" stroke-width="1.6"/>'
+        f'<circle cx="45" cy="14" r="9" fill="#fff" stroke="{GC}" stroke-width="1.6"/>'
+        f'<circle cx="100" cy="14" r="9" fill="#fff" stroke="{GO}" stroke-width="1.6"/>'
+        f'<circle cx="155" cy="14" r="9" fill="#fff" stroke="{GO}" stroke-width="1.6"/>'
+        f'<circle cx="100" cy="60" r="11" fill="{GOTINT}" stroke="{GO}" stroke-width="1.8"/></svg>')
+    pdf = sheet(
+        f'<div style="font-family:{BODY};font-size:9.5px;color:{MUTED};margin-bottom:4px">OpenCheck · due diligence report</div>'
+        + bar("70%", 13, NAVY, 5) + bar("45%", 6, "#d1d5db", 4)
+        + h2("Summary") + bar("100%") + bar("92%") + bar("60%")
+        + h2("Risk signals")
+        + f'<div style="display:flex;gap:5px;margin-bottom:6px">{bar("60px", 14, "#fef3c7", 0)}{bar("74px", 14, INFOBG, 0)}</div>'
+        + bar("88%")
+        + h2("What each source found") + bar("100%") + bar("78%")
+        + h2("Ownership &amp; control structure") + nodes
+        + h2("Licensing &amp; attribution") + bar("94%") + bar("50%"),
+        "PDF · tagged, accessible")
+    def side(label, src):
+        return (f'<div style="font-family:{BODY};font-size:10px;line-height:1.5;color:{NAVY};margin-bottom:6px">'
+                f'<b>{label}:</b> {src} records <span style="display:inline-block;width:52px;height:8px;background:#e5e7eb;'
+                f'border-radius:2px;vertical-align:middle"></span><br>'
+                f'<span style="color:{MUTED}">Stated …; retrieved by OpenCheck …; licence …</span></div>')
+    reporter = "".join(
+        f'<div style="font-family:{BODY};font-size:10px;color:{NAVY};margin-bottom:5px">{f}: '
+        f'<span style="display:inline-block;width:70px;border-bottom:1px solid {MUTED}"></span></div>'
+        for f in ("Reported by", "Organisation", "Contact", "Date sent"))
+    note = sheet(
+        f'<div style="font-family:{HEAD};font-size:15px;font-weight:700;color:{NAVY};margin-bottom:6px">Register record discrepancy note</div>'
+        f'<div style="font-family:{BODY};font-size:11px;color:{NAVY};margin-bottom:6px"><b>To:</b> the register that holds the record</div>'
+        f'<div style="font-family:{BODY};font-size:9.5px;line-height:1.5;color:{MUTED}">This note describes a difference between '
+        f'two published records of the same company. It is not a beneficial-ownership discrepancy report under the EU AMLR '
+        f'or the UK PSC regulations.</div>'
+        + h2("Subject") + bar("62%") + bar("48%")
+        + h2("Discrepancies")
+        + f'<div style="font-family:{BODY};font-size:10.5px;font-weight:700;color:{NAVY};margin-bottom:5px">1. Register status</div>'
+        + side("This register", "the register") + side("Conflicting record", "another register")
+        + h2("Where to send this")
+        + f'<div style="font-family:{BODY};font-size:10px;color:{BLUE};text-decoration:underline;margin-bottom:2px">The register’s reporting route</div>'
+        + h2("Reported by") + reporter,
+        "Discrepancy note")
+    return page(
+        f'<div style="display:grid;grid-template-columns:300px 1fr 1fr;gap:24px;align-items:start">'
+        f'<div>{menu}</div><div style="padding-top:16px">{pdf}</div><div style="padding-top:16px">{note}</div></div>', 30)
+
 VIGS = {"quickcheck": quickcheck, "fullcheck": fullcheck, "backgroundcheck": backgroundcheck,
         "batch": batch, "history": history, "network": network,
         "subsidiaries": subsidiaries, "watchlist": watchlist,
-        "institutional-shareholders": institutional}
+        "institutional-shareholders": institutional,
+        "downloadable-reports": reports}
 
 
 WIDTH = 1648
