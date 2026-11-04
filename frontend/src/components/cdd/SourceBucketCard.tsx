@@ -7,6 +7,13 @@ import { NZ_PEOPLE_NOTE } from "../../lib/nzPerson";
 import { EstonianPersonCompanies } from "./EstonianPersonCompanies";
 import { EstonianLegalPersonRelations } from "./EstonianLegalPersonRelations";
 import { estonianRegistryCodeOf } from "../../lib/legalPersonRelations";
+import {
+  chipEntries,
+  entryDetails,
+  entryLabel,
+  entryTone,
+  type SourceDisclosure,
+} from "../../lib/disclosureStatus";
 import { groupHitsForDisplay, siblingNote } from "../../lib/hitGroups";
 import { rowFinding } from "../../lib/sourceFinding";
 import {
@@ -1485,6 +1492,7 @@ export function SourceBucketCard({
   footnote,
   liveness,
   extra,
+  disclosure,
 }: {
   bucket: SourceBucket;
   riskByHit: Record<string, RiskSignal[]>;
@@ -1508,8 +1516,13 @@ export function SourceBucketCard({
   /** How current this source's payload is — badged in the header when it is
    *  anything other than a fresh live call. */
   liveness?: SourceLiveness;
+  /** What this source says about the subject's owners (`disclosure_status`):
+   *  one chip per value, for what it covers. Describes; never a finding. */
+  disclosure?: SourceDisclosure;
 }) {
   const savedReport = useSavedReport();
+  const disclosureChips = chipEntries(disclosure, { cardFailed: Boolean(bucket.error) });
+  const disclosureWords = entryDetails(disclosureChips);
   // New Zealand: each director's and shareholder's other companies on the
   // register are on their BackgroundCheck card (moved from here, 19 Oct 2026);
   // the card says where, so a reader who looked here finds them. Not on a
@@ -1575,6 +1588,22 @@ export function SourceBucketCard({
             >
               {retrying ? <span role="status">Retrying…</span> : "Try again"}
             </button>
+          )}
+        </div>
+      )}
+      {disclosureChips.length > 0 && (
+        <div className="px-5 pt-3">
+          <ul className="flex flex-wrap items-center gap-1.5" aria-label="Owners disclosed by this source">
+            {disclosureChips.map((e) => (
+              <li key={`${e.value}:${e.covers ?? ""}`}>
+                <Chip tone={entryTone(e)}>{entryLabel(e)}</Chip>
+              </li>
+            ))}
+          </ul>
+          {disclosureWords.length > 0 && (
+            <p className="mt-1.5 text-oo-meta text-oo-muted">
+              As the source puts it: {disclosureWords.join("; ")}
+            </p>
           )}
         </div>
       )}

@@ -247,6 +247,48 @@ def _integrated_ownership(payload: Any) -> dict[str, Any] | None:
     }
 
 
+def _disclosure_status(payload: Any) -> dict[str, Any] | None:
+    """``disclosure_status`` from the frozen field: what each source says
+    about the subject's owners, one normalised value per source. Describes,
+    never a finding. None for a payload recorded before the field existed."""
+    from ..bods.statements import SOURCE_NAMES
+    from ..disclosure import source_line
+
+    ds = getattr(payload, "disclosure_status", None)
+    if not isinstance(ds, dict):
+        return None
+    rows = []
+    for sid, s in (ds.get("sources") or {}).items():
+        if not isinstance(s, dict) or s.get("values") == ["not_covered"]:
+            continue
+        entries = [e for e in s.get("entries") or [] if isinstance(e, dict)]
+        rows.append({
+            "source": sid,
+            "source_name": SOURCE_NAMES.get(sid, sid),
+            "values": list(s.get("values") or []),
+            "line": source_line(entries),
+            "entries": entries,
+        })
+    return {
+        "as_of": ds.get("as_of"),
+        "by_source": rows,
+        "not_covered": list(ds.get("not_covered") or []),
+        "hint": (
+            "What each source says about the company's owners, for what it "
+            "covers (beneficial owners, shareholders or the consolidating "
+            "parent). Absence from a source is not an exemption: none_filed "
+            "means the record carries no owner and no reason. Describes only; "
+            "no value here feeds the risk signals or the verdict."
+        ),
+    }
+
+
+def _disclosure_row_tokens(status: Any) -> dict[str, list[str]] | None:
+    from ..disclosure import row_tokens
+
+    return row_tokens(status) if isinstance(status, dict) else None
+
+
 def _knowability(payload: Any) -> dict[str, Any] | None:
     """``knowability: {subject, chain[], as_of, hint}`` from the frozen
     ``knowability`` / ``knowability_chain`` fields, or None for an older
@@ -505,6 +547,9 @@ def shape_lookup(payload: Any) -> dict[str, Any]:
         # per source (T-Rank's method). Context only, never a signal. Null on
         # a payload recorded before the field existed.
         "integrated_ownership": _integrated_ownership(payload),
+        # What each source says about the owners: one normalised value per
+        # source, for what it covers. Describes; never a signal.
+        "disclosure_status": _disclosure_status(payload),
         # The primary stock-exchange listing from LSEG PermID (Phase 236).
         # Null when not checked — never read null as "not listed".
         "listing": listing,
@@ -650,6 +695,12 @@ def shape_batch_row(payload: Any) -> dict[str, Any]:
             dict.fromkeys(d.get("source_id") for d in degraded if d.get("source_id"))
         ),
         "licensing": licensing,
+        # What each source says about the owners, per source: "covers=value"
+        # tokens, ownership sources only. Null on a run recorded before the
+        # field existed. Describes; never a signal.
+        "disclosure": (
+            _disclosure_row_tokens(getattr(payload, "disclosure_status", None))
+        ),
         "replayed": bool(getattr(payload, "replayed", False)),
         "report_url": f"/?lei={payload.lei}",
     }
@@ -737,7 +788,7 @@ def shape_search(payload: Any, *, limit: int = SEARCH_DEFAULT_LIMIT) -> dict[str
             f" Showing the top {len(shown)} of {total}; call again with a "
             f"higher limit (up to {SEARCH_MAX_LIMIT}) or a more specific query."
         )
-    return {
+    out = {
         "query": payload.query,
         "kind": payload.kind.value if hasattr(payload.kind, "value") else str(payload.kind),
         "count": len(shown),
@@ -746,6 +797,19 @@ def shape_search(payload: Any, *, limit: int = SEARCH_DEFAULT_LIMIT) -> dict[str
         "candidates": shown,
         "hint": hint,
     }
+    filters = getattr(payload, "filters", None)
+    if filters:
+        # The advanced-search-filters ticket: which sources applied the
+        # filters, and which were left out rather than shown unfiltered.
+        out["filters"] = filters
+        left_out = [row["source_id"] for row in filters.get("left_out") or []]
+        if left_out:
+            out["hint"] += (
+                f" Filters applied by {', '.join(filters.get('applied_by') or []) or 'no source'}; "
+                f"left out (they cannot apply them, or cover another jurisdiction): "
+                f"{', '.join(left_out)}."
+            )
+    return out
 
 
 def shape_sources(payload: Any) -> dict[str, Any]:

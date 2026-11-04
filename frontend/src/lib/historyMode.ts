@@ -3,8 +3,8 @@
  *
  * `/history` merges every register OpenCheck holds a change log for onto one
  * axis — GLEIF, Companies House, the New Zealand Companies Office, the
- * Estonian e-Äriregister, Danish CVR and (Phase 263) the New York Department
- * of State. This module holds what the tab
+ * Estonian e-Äriregister, Danish CVR, (Phase 263) the New York Department
+ * of State and the Latvian Register of Enterprises. This module holds what the tab
  * *says* about that merge: which register a row came from, how to get back to
  * the record that published it, and the sentence that opens the tab.
  *
@@ -15,7 +15,7 @@
  * Two claims this module is careful about, both of the same kind the
  * Subsidiaries tab makes:
  *
- * - **Publishing a change log is rare.** Six of the registers OpenCheck reads
+ * - **Publishing a change log is rare.** Seven of the registers OpenCheck reads
  *   expose entity history; the rest answer only about now. A change missing
  *   from this timeline is far more often a register that keeps no history than
  *   a change that did not happen, and the tab has to say so rather than let
@@ -40,6 +40,7 @@ export const HISTORY_SOURCES = [
   "ariregister",
   "cvr_denmark",
   "ny_dos",
+  "ur_latvia",
 ] as const;
 
 export type HistorySourceId = (typeof HISTORY_SOURCES)[number];
@@ -58,6 +59,7 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   ariregister: "e-Äriregister (EE)",
   cvr_denmark: "CVR (DK)",
   ny_dos: "Dept. of State (NY)",
+  ur_latvia: "Register of Enterprises (LV)",
 };
 
 export function historySourceLabel(sourceId: string): string {
@@ -123,7 +125,7 @@ export function silentRegisters(data: HistoryResponse): string[] {
 }
 
 function numberWord(n: number): string {
-  return ["No", "One", "Two", "Three", "Four", "Five", "Six"][n] ?? String(n);
+  return ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven"][n] ?? String(n);
 }
 
 /**
@@ -191,6 +193,8 @@ export const HISTORY_CAVEAT =
  * holdings start in 2013), so no 2023 boundary is claimed.
  */
 export const REGISTER_READ_NOTES: Record<string, string> = {
+  ur_latvia:
+    "From the Register of Enterprises' open data, which publishes current records only: when each current shareholder, beneficial owner and officer was entered, every former name with the day it ended, and every liquidation, reorganisation, insolvency proceeding and suspension with the register's own date. The register publishes no end dates for people, so a shareholder, beneficial owner or officer who has left does not appear here — their departure is not published, not a change that did not happen.",
   ariregister:
     "From the e-Äriregister: the registry card's dated history — names, addresses, legal forms, statuses and every person on and off the card, shareholders included — and the beneficial-owner history. Former shareholders and former beneficial owners are drawn in the ownership graph too. Every numbered entry on the registry card is listed with the administrative changes; where the dated history could not be read, the card's status, name and merger entries stand in for it. Decisions to dissolve, bankruptcies and every merger, division or transformation come from the register's general data, with the other companies named.",
 };
@@ -204,17 +208,26 @@ export function registerReadNotes(data: HistoryResponse): string[] {
  * The label under a date, saying what that date actually means.
  *
  * "as recorded by GLEIF" names GLEIF rather than "the register" because GLEIF
- * is the only emitter that produces a `recorded` basis — the national
- * registers all publish real effective dates. (New York's chief executive rows
- * are `snapshot_window`: DOS publishes the statement that names a CEO, not
- * the day they took office.) And because a cluster's shown
+ * was the only emitter that produced a `recorded` basis — the national
+ * registers publish real effective dates, except Latvia's beneficial-owner
+ * and officer tables, which carry only the day UR entered the row; those
+ * rows name no GLEIF source and read "as entered by the register". (New
+ * York's chief executive rows are `snapshot_window`: DOS publishes the
+ * statement that names a CEO, not the day they took office.) And because a cluster's shown
  * date is its most authoritative one (effective outranks recorded), a row
  * still reading `recorded` is one no register dated for us. Generalising the
  * wording would lose that, for no source it would become true of.
  */
-export function basisLabel(basis: string): string {
+export function basisLabel(basis: string, sources: readonly string[] = []): string {
   if (basis === "effective") return "as filed";
-  if (basis === "recorded") return "as recorded by GLEIF";
+  if (basis === "recorded") {
+    // The Latvian register dates a beneficial owner or officer only by the
+    // day it entered the row (the Estonia–Latvia emitters phase): a
+    // `recorded` row no GLEIF source contributed to is the register's entry
+    // date, and must not be credited to GLEIF.
+    if (sources.length > 0 && !sources.includes("gleif")) return "as entered by the register";
+    return "as recorded by GLEIF";
+  }
   if (basis === "snapshot_window") return "approximate";
   return "";
 }

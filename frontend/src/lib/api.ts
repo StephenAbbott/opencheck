@@ -5,7 +5,9 @@
  * Phase 2 surface: /lookup-stream (SSE, LEI-anchored progressive lookup).
  */
 
+import type { DisclosureStatusPayload } from "./disclosureStatus";
 import type { IntegratedOwnershipPayload } from "./integratedOwnership";
+import type { LegalFormList } from "./searchFilters";
 import { trackEvent } from "./analytics";
 import type { Liveness, SourceLiveness } from "../components/cdd/LivenessBadge";
 import type {
@@ -213,6 +215,10 @@ export interface LookupResponse {
    *  subject with its figure per source, frozen with the run. Context only,
    *  never a signal. Absent on payloads recorded before this field existed. */
   integrated_ownership?: IntegratedOwnershipPayload | null;
+  /** What each source says about the subject's owners — one normalised value
+   *  per source, frozen with the run (`lib/disclosureStatus.ts`). Describes;
+   *  never a signal. Absent on payloads recorded before this field existed. */
+  disclosure_status?: DisclosureStatusPayload | null;
   /** The subject's primary stock-exchange listing from LSEG PermID
    *  (Phase 236) — see `PrimaryListing`. Absent when no PermID key is
    *  configured and on payloads recorded before this field existed; absence
@@ -745,6 +751,21 @@ export function fetchKnowability(codes: string[]): Promise<KnowabilityResponse> 
     return Promise.resolve({ statements: [], known_codes: [], generated_at: null, as_of: "" });
   }
   return getJson(`/knowability?jurisdictions=${encodeURIComponent(unique.join(","))}`);
+}
+
+/** The legal forms of one jurisdiction for the search's legal-form filter
+ *  (the advanced-search-filters ticket). Cached per jurisdiction: a list is
+ *  fixed for the life of a page. */
+const elfFormCache = new Map<string, Promise<LegalFormList>>();
+export function fetchLegalForms(jurisdiction: string): Promise<LegalFormList> {
+  const key = jurisdiction.trim().toUpperCase();
+  let hit = elfFormCache.get(key);
+  if (!hit) {
+    hit = getJson<LegalFormList>(`/elf-forms?jurisdiction=${encodeURIComponent(key)}`);
+    hit.catch(() => elfFormCache.delete(key));
+    elfFormCache.set(key, hit);
+  }
+  return hit;
 }
 
 export function fetchSources(): Promise<{ sources: SourceInfo[] }> {
@@ -1720,6 +1741,48 @@ export async function downloadReportMarkdown(
   return downloadReport("/export/markdown", "md", lei, narrative, dispositions, savedReportId);
 }
 
+/**
+ * Download the discrepancy note — one page per register whose record
+ * differs — as Markdown (the discrepancy-report ticket). Same download
+ * mechanics as the report routes; a saved report renders its own run. The
+ * route answers 404 when the run found no disagreement, which the menu item
+ * prevents by being disabled first (`lib/discrepancyNote.ts`).
+ */
+export async function downloadDiscrepancyNote(
+  lei: string,
+  savedReportId?: string | null,
+  format: "markdown" | "pdf" = "markdown",
+): Promise<void> {
+  const r = await fetch(`${BASE_URL}/export/discrepancy-note`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lei, format, saved_report_id: savedReportId ?? null }),
+  });
+  if (!r.ok) {
+    let detail = `${r.status} ${r.statusText}`;
+    try {
+      const body = await r.json();
+      if (body?.detail) detail = body.detail;
+    } catch {
+      /* fall through */
+    }
+    throw new Error(detail);
+  }
+  const blob = await r.blob();
+  const cd = r.headers.get("Content-Disposition") ?? "";
+  const filename =
+    /filename="?([^"]+)"?/.exec(cd)?.[1] ??
+    `opencheck-discrepancy-note-${lei}.${format === "pdf" ? "pdf" : "md"}`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** ISO 17442 LEI: 20-char alphanumeric. */
 export const LEI_PATTERN = /^[A-Z0-9]{20}$/;
 export function isValidLei(lei: string): boolean {
@@ -1981,6 +2044,7 @@ export type LookupStreamHandlers = {
   onKnowability?: (e: KnowabilityStatement) => void;
   onKnowabilityChain?: (e: KnowabilityChain) => void;
   onIntegratedOwnership?: (e: IntegratedOwnershipPayload) => void;
+  onDisclosureStatus?: (e: DisclosureStatusPayload) => void;
   onListing?: (e: PrimaryListing) => void;
   onForm13f?: (e: Form13fPayload) => void;
   onDone?: (e: LookupStreamDoneEvent) => void;
@@ -2019,6 +2083,7 @@ export const LOOKUP_EVENT_HANDLERS = {
   knowability: "onKnowability",
   knowability_chain: "onKnowabilityChain",
   integrated_ownership: "onIntegratedOwnership",
+  disclosure_status: "onDisclosureStatus",
   listing: "onListing",
   form13f: "onForm13f",
 } as const satisfies Record<string, keyof LookupStreamHandlers>;
@@ -2157,6 +2222,9 @@ export interface BatchRow {
   licensing: { commercial_use: boolean; headline: string } | null;
   replayed: boolean;
   report_url: string;
+  /** What each ownership source says about owners — `{source: ["covers=value"]}`;
+   *  absent on rows served before the disclosure status. */
+  disclosure?: Record<string, string[]> | null;
 }
 
 /** A company that could not be screened at all — a row, not an exception. */

@@ -3,8 +3,10 @@ name: Drift checks
 # Fails the build when generated/vendored artefacts drift from their source:
 #  - the vendored Companies House enumerations vs upstream api-enumerations,
 #  - the vendored FtM edge-schema table vs the installed followthemoney model,
-#  - the FtM name properties OpenCheck reads vs that same model, and
-#  - the OKF knowledge bundle's generated concepts vs the live source registry.
+#  - the FtM name properties OpenCheck reads vs that same model,
+#  - the OKF knowledge bundle's generated concepts vs the live source registry,
+#  - the output data dictionary (docs/data-dictionary.md) vs the code it is
+#    generated from.
 # Runs on every push/PR, and weekly so upstream enum changes are caught even when
 # nobody has pushed. To fix a failure, run the named script locally (without
 # --check) and commit the regenerated files.
@@ -52,6 +54,9 @@ jobs:
         working-directory: backend
       - name: OKF bundle conformant + in sync with the registry
         run: uv run --no-dev python scripts/generate_okf.py --check
+        working-directory: backend
+      - name: Output data dictionary generated from the code is current
+        run: uv run --no-dev python scripts/generate_data_dictionary.py --check
         working-directory: backend
 
   ftm-edges:

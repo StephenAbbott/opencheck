@@ -185,6 +185,48 @@ class OpenSanctionsAdapter(SourceAdapter):
         )
         return [self._hit(item, kind) for item in payload.get("results", [])]
 
+    # The advanced-search-filters ticket: OpenSanctions person records carry
+    # ``birthDate`` and ``nationality`` / ``citizenship`` / ``country``, so the
+    # person filters are applied to its own data. A record with no birth date
+    # or no country is not a match — a filter that kept them would read as
+    # "born in 1952" for people whose birth date nobody published.
+    search_filters = frozenset(("nationality", "birth_year"))
+
+    async def search_filtered(
+        self, query: str, kind: SearchKind, filters: Any
+    ) -> list[SourceHit]:
+        from .. import search_filters as sf
+
+        if kind != SearchKind.PERSON or not (filters.nationality or filters.birth_year):
+            return await self.search(query, kind)
+        query = sanitize_name_query(query)
+        if not query:
+            return []
+        schema = _schema_for(kind)
+        cache_key = f"{_CACHE_NS}/search50/{schema}/{_TOPIC_FINGERPRINT}/{_slug(query)}"
+        if not self.info.live_available and not self._cache.has(cache_key):
+            return []
+        payload = await self._get(
+            f"/search/default?q={quote(query)}&schema={schema}&limit=50&{_TOPIC_PARAMS}",
+            cache_key=cache_key,
+        )
+        kept: list[SourceHit] = []
+        for item in payload.get("results", []):
+            props = item.get("properties") or {}
+            if filters.birth_year and not sf.birth_year_matches(
+                props.get("birthDate") or [], filters.birth_year
+            ):
+                continue
+            if filters.nationality and not sf.nationality_matches(
+                (props.get("nationality") or [])
+                + (props.get("citizenship") or [])
+                + (props.get("country") or []),
+                filters.nationality,
+            ):
+                continue
+            kept.append(self._hit(item, kind))
+        return kept[:10]
+
     # ------------------------------------------------------------------
     # Fetch
     # ------------------------------------------------------------------

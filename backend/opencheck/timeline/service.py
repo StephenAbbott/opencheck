@@ -1,7 +1,7 @@
 """Time Machine fetch service — pull raw change data and assemble a timeline.
 
 Lazy and never on the main lookup (same posture as ``/securities``). Fetches
-from every register OpenCheck holds a change log for — five, not the two this
+from every register OpenCheck holds a change log for — seven, not the two this
 docstring claimed until Phase 190:
 
 - **GLEIF** (key-free): the LEI record (to derive the national registry numbers
@@ -19,6 +19,10 @@ docstring claimed until Phase 190:
 - **New York Department of State** (key-free, Phase 263): events reconstructed
   from the All Filings, status, name and address rows the ordinary adapter
   fetch already returns, name-gated against the GLEIF legal name.
+- **Latvian Register of Enterprises** (key-free, the Estonia–Latvia emitters
+  phase): events reconstructed from UR's dated open data — the lookup's
+  tables plus six event tables read on this path only. Additions only for
+  people: UR publishes no end dates.
 
 Every one of them lands in the same ``ChangeEvent`` model and is merged onto one
 axis by :mod:`.assemble` — a national register that publishes history is not a
@@ -48,6 +52,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 from urllib.parse import quote
 
 import httpx
@@ -61,6 +66,7 @@ from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
 from .ny_dos import ny_dos_change_events
 from .nz_companies import nz_change_events
+from .ur_latvia import ur_latvia_change_events
 
 log = logging.getLogger(__name__)
 
@@ -74,6 +80,7 @@ _NZ_RA_CODE = "RA000466"   # NZ Companies Register
 _EE_RA_CODE = "RA000181"   # Estonian e-Business Register
 _DK_RA_CODE = "RA000170"   # Danish CVR / Erhvervsstyrelsen
 _NY_RA_CODE = "RA000628"   # New York Department of State (keyed on RA, not jurisdiction)
+_LV_RA_CODE = "RA000423"   # Latvian Register of Enterprises (Uzņēmumu reģistrs)
 
 #: The GLEIF adapter's own on-disk record for this LEI — the only local copy
 #: of ``registeredAs``/``registeredAt`` there is. Read with no age bound: a
@@ -98,14 +105,14 @@ _CH_PAGE_CAP = 50  # ≤ 5,000 filings
 _CH_OFFICERS_PAGE_CAP = 20
 
 
-_Numbers = tuple[str | None, str | None, str | None, str | None, str | None, str | None]
+_Numbers = tuple[str | None, str | None, str | None, str | None, str | None, str | None, str | None]
 
 
 async def _gleif_registration(client: httpx.AsyncClient, lei: str) -> _Numbers:
-    """Return ``(ch, nz, ee, dk, ny, legal_name)`` from GLEIF."""
+    """Return ``(ch, nz, ee, dk, ny, lv, legal_name)`` from GLEIF."""
     resp = await client.get(_GLEIF_RECORD_URL.format(lei=quote(lei)))
     if resp.status_code == 404:
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
     resp.raise_for_status()
     return _registration_numbers(resp.json())
 
@@ -121,11 +128,11 @@ def _cached_registration(lei: str) -> _Numbers | None:
     if hit is None:
         return None
     numbers = _registration_numbers(hit[0])
-    return numbers if any(numbers[:5]) else None
+    return numbers if any(numbers[:6]) else None
 
 
 def _registration_numbers(payload: dict | None) -> _Numbers:
-    """``(ch, nz, ee, dk, ny, legal_name)`` from a GLEIF Level-1 record payload.
+    """``(ch, nz, ee, dk, ny, lv, legal_name)`` from a GLEIF Level-1 record payload.
 
     The legal name rides along for New York: the DOS emitter is name-gated,
     because six ISSUED LEIs file a DOS ID that belongs to another entity, and
@@ -145,8 +152,9 @@ def _registration_numbers(payload: dict | None) -> _Numbers:
     ee = registered_as if (registered_as and registered_at == _EE_RA_CODE) else None
     dk = registered_as if (registered_as and registered_at == _DK_RA_CODE) else None
     ny = registered_as if (registered_as and registered_at == _NY_RA_CODE) else None
+    lv = registered_as if (registered_as and registered_at == _LV_RA_CODE) else None
     legal_name = ((entity.get("legalName") or {}).get("name") or "").strip() or None
-    return ch, nz, ee, dk, ny, legal_name
+    return ch, nz, ee, dk, ny, lv, legal_name
 
 
 async def _gleif_modifications(
@@ -276,6 +284,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     ee_code: str | None = None
     dk_cvr: str | None = None
     ny_dos_id: str | None = None
+    lv_regcode: str | None = None
     legal_name: str | None = None
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
@@ -296,7 +305,7 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         reg_res, mods_res = results
         if not isinstance(reg_res, BaseException):
-            company_number, nz_number, ee_code, dk_cvr, ny_dos_id, legal_name = reg_res
+            company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, legal_name = reg_res
             company_number_basis = "live"
         else:
             # A 429 handed back by the Phase 143 transport, the throttle
@@ -306,7 +315,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             gleif_record_available = False
             cached = _cached_registration(lei)
             if cached is not None:
-                company_number, nz_number, ee_code, dk_cvr, ny_dos_id, legal_name = cached
+                company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, legal_name = cached
                 company_number_basis = "cached"
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
@@ -424,6 +433,26 @@ async def fetch_timeline(lei: str) -> Timeline:
         if bundle:
             ny_events = ny_dos_change_events(bundle)
 
+    # Latvia — reconstruct events from UR's dated open data (no key; the
+    # lookup's cached read plus six event tables read here only). Additions
+    # only for people: the register publishes no end dates, and the tab says
+    # so. Best-effort; never sinks the timeline.
+    lv_events = []
+    if lv_regcode and settings.allow_live:
+        try:
+            from ..sources import REGISTRY
+            lv_adapter: Any = REGISTRY["ur_latvia"]
+            data = await lv_adapter.fetch_timeline_data(lv_regcode, legal_name=legal_name or "")
+        except Exception:  # noqa: BLE001
+            data = None
+        if data:
+            if data.get("unavailable"):
+                log.warning(
+                    "timeline: UR Latvia tables did not answer for %s: %s",
+                    lv_regcode, ", ".join(data["unavailable"]),
+                )
+            lv_events = ur_latvia_change_events(data)
+
     # The board stream. Emitted here rather than inside ``assemble_timeline``
     # because it comes from a second Companies House call, not from the filing
     # stream that function already classifies.
@@ -439,7 +468,7 @@ async def fetch_timeline(lei: str) -> Timeline:
         gleif_lei_mods=lei_mods,
         gleif_rr_mods=rr_mods,
         ch_filings=ch_filings,
-        extra_events=nz_events + ee_events + dk_events + ny_events + officer_events,
+        extra_events=nz_events + ee_events + dk_events + ny_events + lv_events + officer_events,
     )
     # Phase 190: the numbers above are how each register addresses this
     # company, and until now they were derived, used to decide which history
@@ -456,6 +485,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             ("ariregister", ee_code),
             ("cvr_denmark", dk_cvr),
             ("ny_dos", ny_dos_id),
+            ("ur_latvia", lv_regcode),
         )
         if number
     }

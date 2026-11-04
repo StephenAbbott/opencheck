@@ -195,6 +195,7 @@ describe("historySourceLabel", () => {
     expect(historySourceLabel("nz_companies")).toBe("Companies Office (NZ)");
     expect(historySourceLabel("ariregister")).toBe("e-Äriregister (EE)");
     expect(historySourceLabel("ny_dos")).toBe("Dept. of State (NY)");
+    expect(historySourceLabel("ur_latvia")).toBe("Register of Enterprises (LV)");
   });
 
   it("labels every source that can emit history — none falls back to its slug", () => {
@@ -212,6 +213,12 @@ describe("basisLabel", () => {
   it("labels effective vs recorded honestly", () => {
     expect(basisLabel("effective")).toBe("as filed");
     expect(basisLabel("recorded")).toBe("as recorded by GLEIF");
+    expect(basisLabel("recorded", ["gleif"])).toBe("as recorded by GLEIF");
+    expect(basisLabel("recorded", ["gleif", "ur_latvia"])).toBe("as recorded by GLEIF");
+    // A Latvian beneficial-owner or officer row is dated by the day the
+    // register entered it, and no GLEIF source contributed to it.
+    expect(basisLabel("recorded", ["ur_latvia"])).toBe("as entered by the register");
+    expect(basisLabel("effective", ["ur_latvia"])).toBe("as filed");
   });
 });
 
@@ -588,5 +595,13 @@ describe("registerReadNotes", () => {
     // The off-card shareholder list keeps dated history well before the
     // card's own shareholder role (1 Sept 2023): no such boundary is claimed.
     expect(ee[0]).not.toMatch(/2023/);
+  });
+
+  it("says the Latvian register publishes no departures, only when Latvia contributed", () => {
+    const lv = registerReadNotes({ ...RESP, sources: ["gleif", "ur_latvia"] });
+    expect(lv).toHaveLength(1);
+    expect(lv[0]).toContain("current records only");
+    expect(lv[0]).toContain("no end dates");
+    expect(lv[0]).toContain("not a change that did not happen");
   });
 });

@@ -2,8 +2,81 @@ import { COUNTRY_OPTIONS, RA_CODES, raCodeFor } from "../lib/raCodes";
 import { formerlyMatchedLine, matchedFormerName } from "../lib/formerNames";
 import { leiInputMessage } from "../lib/api";
 import { PERSON_VERB, resultCount } from "../lib/vocab";
-import type { SearchForm } from "../hooks/useSearchForm";
+import type { NameSearchState, SearchForm } from "../hooks/useSearchForm";
+import {
+  REGISTRATION_STATUS_WORDS,
+  countLine,
+  filterChips,
+  jurisdictionName,
+  legalFormShort,
+  scanCappedNote,
+  withoutFilter,
+  type EntityFilters,
+  type LegalForm,
+} from "../lib/searchFilters";
 import { GleifIcon } from "./icons";
+import { MoreFilters } from "./MoreFilters";
+import { Button, Chip, FilterChip, sectionLabelClasses } from "./ui";
+
+/** "LEI issued" — the LEI record's status, worded as such (Phase 242: it is
+ *  not the company's status, and green read as a clean bill of health). */
+function leiStatusWord(status: string): string {
+  const word = REGISTRATION_STATUS_WORDS[status];
+  return word ? `LEI ${word.toLowerCase()}` : status;
+}
+
+/** Nothing matched. With filters, an empty result is expected and common, so
+ *  it is information — which filters, how to widen — never an error box. */
+function NoNameResults({
+  state,
+  forms,
+  onRemove,
+  onClear,
+  onKeepLooking,
+}: {
+  state: NameSearchState;
+  forms: LegalForm[];
+  onRemove: (key: keyof EntityFilters) => void;
+  onClear: () => void;
+  onKeepLooking: () => void;
+}) {
+  const chips = filterChips(state.filters, forms);
+  if (chips.length === 0) {
+    return (
+      <div role="status" className="mt-4 rounded-oo border border-oo-rule bg-oo-bg p-3 text-oo-small text-oo-ink">
+        No GLEIF record matches “{state.query}”. Try a shorter or different spelling.
+      </div>
+    );
+  }
+  return (
+    <div role="status" className="mt-4 flex flex-col gap-3 rounded-oo border border-oo-rule bg-white p-4">
+      <p className="text-oo-body font-semibold text-oo-ink">
+        {state.scanCapped
+          ? `No match yet in the first ${state.recordsChecked.toLocaleString("en-GB")} GLEIF records named “${state.query}”.`
+          : `No GLEIF record named “${state.query}” matches these filters.`}
+      </p>
+      {state.scanCapped && state.filters.jurisdiction && (
+        <p className="text-oo-small text-oo-burst">{scanCappedNote(state.filters.jurisdiction)}</p>
+      )}
+      <p className="text-oo-small text-oo-burst">Remove a filter to widen the search:</p>
+      <div className="flex flex-wrap gap-2">
+        {chips.map((chip) => (
+          <FilterChip key={chip.key} label={chip.label} removeLabel={chip.removeLabel} onRemove={() => onRemove(chip.key)} />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {state.scanCapped && (
+          <Button variant="secondary" size="sm" onClick={onKeepLooking}>
+            Keep looking
+          </Button>
+        )}
+        <Button variant="secondary" size="sm" onClick={onClear}>
+          Search without filters
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 /*
  * The homepage's four-tab search panel — company name, national ID, a pasted
@@ -52,6 +125,15 @@ export function SearchPanel({
     nationalIdFormatOk,
     nameSearchMutation,
     nationalIdSearchMutation,
+    runNameSearch,
+    loadMoreNames,
+    filters,
+    setFilters,
+    filtersOpen,
+    setFiltersOpen,
+    legalForms,
+    legalFormsLoading,
+    legalFormsFailed,
   } = search;
   const searchPanelsCollapsed = collapsed;
 
@@ -94,7 +176,7 @@ export function SearchPanel({
     e.preventDefault();
     const q = nameQuery.trim();
     if (!q) return;
-    nameSearchMutation.mutate(q);
+    runNameSearch(q);
   }
 
   return (
@@ -228,19 +310,37 @@ export function SearchPanel({
               </div>
             </form>
 
+            {/* The advanced-search-filters ticket: hidden behind one quiet
+                control; set filters stay on screen as chips. */}
+            <div className="mt-2">
+              <MoreFilters
+                filters={filters}
+                onChange={setFilters}
+                open={filtersOpen}
+                onOpenChange={setFiltersOpen}
+                legalForms={legalForms}
+                legalFormsLoading={legalFormsLoading}
+                legalFormsFailed={legalFormsFailed}
+              />
+            </div>
+
             {/* No aria-live here — the role="alert" children announce themselves */}
             <div>
               {nameSearchMutation.isError && (
-                <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
+                <div role="alert" className="mt-4 bg-oo-risk-bg border border-oo-risk-border text-oo-risk-text rounded-oo p-3 text-oo-small">
                   {nameSearchMutation.error?.message ?? "Search failed"}
                 </div>
               )}
-              {nameSearchMutation.isSuccess && nameSearchMutation.data.length === 0 && (
-                <div role="alert" className="mt-4 bg-red-50 border border-red-200 text-red-800 rounded-oo p-3 text-sm">
-                  No entities found. Try a shorter or different spelling.
-                </div>
-              )}
             </div>
+            {nameSearchMutation.isSuccess && nameSearchMutation.data.results.length === 0 && (
+              <NoNameResults
+                state={nameSearchMutation.data}
+                forms={legalForms?.forms ?? []}
+                onRemove={(key) => setFilters(withoutFilter(nameSearchMutation.data!.filters, key))}
+                onClear={() => setFilters({})}
+                onKeepLooking={loadMoreNames}
+              />
+            )}
 
             {/* Phase 241: the count is announced once, by a status
                 region that is always mounted. The container used to be
@@ -248,17 +348,33 @@ export function SearchPanel({
                 which some readers ignore and others read in full, every
                 result button after the count. */}
             <p role="status" className="sr-only">
-              {nameSearchMutation.data && nameSearchMutation.data.length > 0
-                ? `${resultCount(nameSearchMutation.data.length)} — select one to search it`
+              {nameSearchMutation.data && nameSearchMutation.data.results.length > 0
+                ? `${countLine({
+                    shown: nameSearchMutation.data.results.length,
+                    total: nameSearchMutation.data.total,
+                    scanCapped: nameSearchMutation.data.scanCapped,
+                    recordsChecked: nameSearchMutation.data.recordsChecked,
+                    rawTotal: nameSearchMutation.data.rawTotal,
+                  })} — select one to search it`
                 : ""}
             </p>
-            {nameSearchMutation.data && nameSearchMutation.data.length > 0 && (
+            {nameSearchMutation.data && nameSearchMutation.data.results.length > 0 && (
               <div className="mt-4">
-                <p className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-3">
-                  {resultCount(nameSearchMutation.data.length)} — select one to search it
+                <p className={`${sectionLabelClasses()} mb-3`}>
+                  {countLine({
+                    shown: nameSearchMutation.data.results.length,
+                    total: nameSearchMutation.data.total,
+                    scanCapped: nameSearchMutation.data.scanCapped,
+                    recordsChecked: nameSearchMutation.data.recordsChecked,
+                    rawTotal: nameSearchMutation.data.rawTotal,
+                  })}{" "}
+                  — select one to search it
                 </p>
                 <ul aria-label="Search results" className="divide-y divide-oo-rule border border-oo-rule rounded-oo overflow-hidden">
-                  {nameSearchMutation.data.map((r) => (
+                  {nameSearchMutation.data.results.map((r) => {
+                    const form = r.legalForm ? legalForms?.forms.find((f) => f.code === r.legalForm) : undefined;
+                    const place = r.jurisdiction ? jurisdictionName(r.jurisdiction) : r.country;
+                    return (
                     <li key={r.lei}>
                       <button
                         type="button"
@@ -277,30 +393,42 @@ export function SearchPanel({
                         {/* Phase 309: a renamed company found under the name it
                             had says so, or the reader cannot see why it matched. */}
                         {(() => {
-                          const former = matchedFormerName(nameQuery, r.legalName, r.otherNames);
+                          const former = matchedFormerName(nameSearchMutation.data!.query, r.legalName, r.otherNames);
                           return former ? (
                             <div className="mt-0.5 text-oo-meta text-oo-muted">{formerlyMatchedLine(former)}</div>
                           ) : null;
                         })()}
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="font-mono text-[11px] text-oo-blue">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                          <span className="font-mono text-oo-meta text-oo-blue">
                             {r.lei}
                           </span>
-                          <span className="text-[11px] text-oo-muted">{r.country}</span>
-                          <span
-                            className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                              r.status === "ISSUED"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : "bg-oo-bg text-oo-muted border-oo-rule"
-                            }`}
-                          >
-                            {r.status}
+                          <span className="text-oo-meta text-oo-muted">
+                            {place}
+                            {form ? ` · ${legalFormShort(form)}` : ""}
                           </span>
+                          <Chip tone="neutral">{leiStatusWord(r.status)}</Chip>
                         </div>
                       </button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
+                {nameSearchMutation.data.next && (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <Button variant="secondary" size="sm" onClick={loadMoreNames} disabled={nameSearchMutation.isPending}>
+                      {nameSearchMutation.isPending
+                        ? "Searching…"
+                        : nameSearchMutation.data.scanCapped
+                          ? "Keep looking"
+                          : "Show the next 10"}
+                    </Button>
+                    {nameSearchMutation.data.scanCapped && nameSearchMutation.data.filters.jurisdiction && (
+                      <p className="text-oo-meta text-oo-muted">
+                        {scanCappedNote(nameSearchMutation.data.filters.jurisdiction)}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

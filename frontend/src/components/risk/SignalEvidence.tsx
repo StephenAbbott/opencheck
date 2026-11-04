@@ -43,15 +43,18 @@ import {
   splitEvidenceSources,
   type SignalEvidenceData,
 } from "../../lib/signalEvidence";
+import { DISCREPANCY_NOTE_LINK, discrepancyNoteAvailable } from "../../lib/discrepancyNote";
 import { recordConsistencyRows } from "../../lib/recordConsistency";
 import { sanctionsOwnershipNotes, sanctionsOwnershipRows } from "../../lib/sanctionsOwnership";
 import { sourceLabel } from "../../lib/vocab";
+import { Button } from "../ui";
 
 export function SignalEvidence({
   lead,
   sourceNames,
   hasCard = () => false,
   onShowSource,
+  onDiscrepancyNote,
 }: {
   lead: SignalEvidenceData;
   sourceNames?: Record<string, string>;
@@ -59,6 +62,11 @@ export function SignalEvidence({
   hasCard?: (sourceId: string) => boolean;
   /** Scroll to (and flash) a source card. */
   onShowSource?: (sourceId: string) => void;
+  /** The discrepancy-report ticket: download the register notes for this
+   *  run's disagreements. Rendered under the Records compared table only
+   *  when a shown disagreement exists and a handler is given — a saved
+   *  report's page passes none. */
+  onDiscrepancyNote?: () => void;
 }) {
   const label = RISK_PRESENTATION[lead.signal.code]?.label ?? lead.signal.code;
   const footer = evidenceFooter(lead);
@@ -93,6 +101,16 @@ export function SignalEvidence({
           findings about the same party. */}
       {attribution && <span className="text-oo-muted"> {attribution}</span>}
       <RecordConsistencyTable lead={lead} sourceNames={sourceNames} />
+      {onDiscrepancyNote && discrepancyNoteAvailable([lead.signal]) && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Button variant="secondary" size="sm" onClick={onDiscrepancyNote}>
+            {DISCREPANCY_NOTE_LINK}
+          </Button>
+          <span className="text-oo-muted">
+            One page per register whose record differs, with where to send it.
+          </span>
+        </div>
+      )}
       <SanctionsOwnershipTable lead={lead} />
     </div>
   );
