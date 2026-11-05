@@ -1,0 +1,190 @@
+{
+  "skill_name": "opencheck-due-diligence",
+  "notes": "Every case except bulk-exploration-goes-to-datasets is built on a real OpenCheck MCP response recorded from production (api.opencheck.world/mcp) on 5 Nov 2026 and saved verbatim under evals/files/ (tool, arguments, recorded_at, response). The runs read the saved response instead of calling the server, so the benchmark is repeatable and spends no lookup budget. Each case is a mistake an agent or a person has made, or would easily make, reading OpenCheck output.",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "degraded-batch-row-is-not-clean",
+      "prompt": "I screened four counterparties through OpenCheck for onboarding. The opencheck_batch_lookup response is in evals/files/batch-four.json. Which of these can I mark as clear, and which need a closer look? Keep it short — it's going in a ticket.",
+      "expected_output": "Does not mark any company 'clear' on the basis of risk_count alone. Says Heineken N.V. has no risk signals but its screen is incomplete because one source (KvK) did not answer, so it is not clean. Notes Bentcard Import LLP's LEI lapsed in 2015 and its 'ACTIVE' status is a stale GLEIF declaration. Keeps structural context counts apart from risk findings and does not rank companies by severity.",
+      "files": [
+        "evals/files/batch-four.json"
+      ],
+      "expectations": [
+        "The answer does not describe Heineken N.V. as clear, clean or safe to onboard without qualification",
+        "The answer says Heineken's screen is incomplete because a source (the Dutch KvK register, or 'one source') did not answer",
+        "The answer does not describe Bentcard Import LLP as an active company; it says the LEI lapsed and/or the status is not a current register reading",
+        "The answer does not treat context counts (context_count / context codes such as GLEIF_REPORTING_EXCEPTION or NON_EU_JURISDICTION) as risk findings",
+        "The answer does not grade the companies as high/medium/low risk or rank them by severity"
+      ]
+    },
+    {
+      "id": 2,
+      "eval_name": "shell-name-matches-and-truncated-screen",
+      "prompt": "For a compliance memo: summarise Shell plc's sanctions and PEP exposure from the OpenCheck lookup in evals/files/lookup-shell.json. Two or three paragraphs.",
+      "expected_output": "Reports the corroborated PEP matches (Jane Holl Lute, Gerrit Zalm, Nigel Sheinwald) as matches with what agreed, and the OpenAleph counter-sanction hit on Jane Holl Lute as a possible name match only. Says COUNTER_SANCTIONED is a designation by a state with weak democratic institutions, not a Western sanction, and RELATED_EXPORT_RISK (Clearstream) is a trade-risk flag. States that related-party screening covered only 25 of 133 parties (and Offshore Leaks 30 of 133), so the screen is incomplete. Keeps GLEIF_REPORTING_EXCEPTION, NON_EU_JURISDICTION and RECORD_CONSISTENCY as context. Notes the non-commercial licence.",
+      "files": [
+        "evals/files/lookup-shell.json"
+      ],
+      "expectations": [
+        "The answer describes the OpenAleph counter-sanctions hit on Jane Holl Lute as a possible / unconfirmed name match",
+        "The answer does not say Shell, or any related party, is sanctioned by the US, EU or UK; counter-sanctions are described as designation by another state (or not as an ordinary sanction)",
+        "The answer states that related-party screening was truncated or incomplete (e.g. 25 of 133 parties screened)",
+        "The answer does not present NON_EU_JURISDICTION or GLEIF_REPORTING_EXCEPTION as risk findings",
+        "The answer mentions that the data includes non-commercial (CC-BY-NC) sources or that it is not for commercial use"
+      ]
+    },
+    {
+      "id": 3,
+      "eval_name": "lapsed-lei-is-not-an-active-company",
+      "prompt": "Quick one: is BENTCARD IMPORT LLP still an active company? I searched OpenCheck (evals/files/search-bentcard.json) and then looked up the LEI (evals/files/lookup-bentcard.json).",
+      "expected_output": "Does not say it is active. Explains the LEI has been LAPSED since 5 Feb 2015 and GLEIF's ACTIVE is the last declaration, never re-checked. Points out the second search candidate, Companies House OC369315, whose summary says dissolved, and that the register is the authority on whether the company exists; recommends opencheck_register_lookup(GB-COH, OC369315) to confirm. Notes the LEI record files a Baku address (AZ), which is why the lookup never reached Companies House.",
+      "files": [
+        "evals/files/search-bentcard.json",
+        "evals/files/lookup-bentcard.json"
+      ],
+      "expectations": [
+        "The answer does not conclude that the company is active",
+        "The answer distinguishes the LEI's status (lapsed) from the company's status",
+        "The answer cites the Companies House record OC369315 as showing the LLP dissolved, or recommends checking it",
+        "The answer explains that GLEIF's 'ACTIVE' is an old or unverified declaration (not re-checked since 2015)"
+      ]
+    },
+    {
+      "id": 4,
+      "eval_name": "no-lei-goes-to-register-lookup",
+      "prompt": "I need to run due diligence on Metastar Invest LLP in OpenCheck. Here's what opencheck_search returned: evals/files/search-metastar.json. What exact OpenCheck call should I make next, with which arguments? Don't make the call — just tell me, and say why.",
+      "expected_output": "Recommends opencheck_register_lookup with scheme GB-COH and id OC346224 (optionally name 'METASTAR INVEST LLP'), because the exact match has no LEI but carries a Companies House identifier. Does not pick a fuzzy candidate with an LEI (Grainger Invest, Brabo Invest) and does not say the company cannot be checked without an LEI. May suggest opencheck_knowability(['GB']) first, which is free.",
+      "files": [
+        "evals/files/search-metastar.json"
+      ],
+      "expectations": [
+        "The answer recommends opencheck_register_lookup",
+        "The recommended arguments are scheme GB-COH and id OC346224",
+        "The answer does not recommend opencheck_lookup on the LEI of a different, fuzzy-matched company (e.g. Grainger Invest No. 1 LLP or Brabo Invest Ltd)",
+        "The answer does not claim the company cannot be checked because it has no LEI",
+        "The answer tells the user that the Companies House candidate is shown as dissolved, so the check is of a dissolved LLP"
+      ]
+    },
+    {
+      "id": 5,
+      "eval_name": "gleif-consolidation-is-not-ownership",
+      "prompt": "Using the OpenCheck subsidiaries result for Shell plc (evals/files/subsidiaries-shell.json), make me a table of Shell's subsidiaries in Norway and the Netherlands with the percentage Shell owns in each.",
+      "expected_output": "Lists the Norwegian and Dutch children but says GLEIF publishes no percentages, so there is no ownership percentage to give; explains the relationship is accounting consolidation (Shell consolidates them), which need not mean shareholding. Does not invent 100% or other figures. Notes the list covers only entities with an LEI that report Shell as parent, so it is not a complete list of subsidiaries.",
+      "files": [
+        "evals/files/subsidiaries-shell.json"
+      ],
+      "expectations": [
+        "The answer contains no ownership percentage for any subsidiary (no invented 100% or other figure in the table)",
+        "The answer says GLEIF does not publish percentages / the data has no ownership share",
+        "The answer describes the relationship as accounting consolidation rather than ownership or shareholding",
+        "The answer notes the list is limited to entities with an LEI that report Shell as parent (not every subsidiary)"
+      ]
+    },
+    {
+      "id": 6,
+      "eval_name": "per-source-figures-are-never-added",
+      "prompt": "From the OpenCheck owners result for Equinor (evals/files/owners-equinor.json): who owns more than 25% of Equinor, and what is the Norwegian state's total stake?",
+      "expected_output": "Explains that three sources each report the Norwegian state's 67% through a different body (FINANSDEPARTEMENTET per OpenSanctions, Government of Norway per GEM/Climate TRACE, Ministry of Trade, Industry and Fisheries per Wikidata); these are three readings of one stake, not three owners, so the state's stake is about 67%, not 201%. Notes the Ministry of Energy is listed as former, there are no declared beneficial owners, and the calculated figures are arithmetic on filings, not a beneficial-ownership determination.",
+      "files": [
+        "evals/files/owners-equinor.json"
+      ],
+      "expectations": [
+        "The answer gives the Norwegian state's stake as about 67%, not a sum such as 134% or 201%",
+        "The answer explains that the three bodies/figures are different sources' readings of the same state holding and should not be added",
+        "The answer does not list the Ministry of Energy of Norway as a current owner",
+        "The answer notes that no beneficial owners are declared by a register, or that calculated figures are not a beneficial-ownership determination"
+      ]
+    },
+    {
+      "id": 7,
+      "eval_name": "sanctions-ownership-test-is-not-a-designation",
+      "prompt": "Is Persia International Bank PLC a sanctioned entity? Here's OpenCheck's owners result: evals/files/owners-persia.json. Yes or no, then explain.",
+      "expected_output": "Does not answer a flat yes. Explains OpenCheck computed that designated parties' stated holdings meet the OFAC/EU/UK 50% ownership test (Mellat Bank, more than 50% up to 75% per Companies House), which is an ownership test, not a designation of the bank itself and not a determination that it is blocked; control tests were not computed. Treats Bank Tejarat's 25–50% band as 'may be above', i.e. unknown. Does not add the two Tejarat records or Companies House's band to OpenSanctions' unstated figure.",
+      "files": [
+        "evals/files/owners-persia.json"
+      ],
+      "expectations": [
+        "The answer does not state as fact that Persia International Bank itself is designated / on a sanctions list",
+        "The answer explains that the sanctions 50% ownership test is met (Mellat Bank, 50–75%) as computed by OpenCheck from filed shareholdings",
+        "The answer says the result is not a determination that the bank is sanctioned or blocked, or that control tests were not computed",
+        "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total"
+      ]
+    },
+    {
+      "id": 8,
+      "eval_name": "form-13f-managers-are-not-owners",
+      "prompt": "Who are Eli Lilly's biggest owners? Use the OpenCheck lookup in evals/files/lookup-eli-lilly.json.",
+      "expected_output": "Reports the Form 13F line as positions reported by institutional investment managers (Lilly Endowment reporting 9.60%, BlackRock 7.17%, Vanguard…), which OpenCheck says is not a record of beneficial ownership, and does not add 13F positions together. Points to the ownership source that does exist: SEC EDGAR Schedule 13D/13G, where three shareholders are declared (the lookup gives only the count; opencheck_owners or opencheck_export_bods shows them). Says the US has no central beneficial-ownership register. Any figure it gives names its source.",
+      "files": [
+        "evals/files/lookup-eli-lilly.json"
+      ],
+      "expectations": [
+        "The answer describes the Form 13F information as positions reported by investment managers, not as ownership or beneficial ownership",
+        "The answer does not total 13F positions or describe '4,604 managers' as owning the company",
+        "The answer points to the SEC EDGAR Schedule 13D/13G filings (three declared shareholders) as the ownership source, or to opencheck_owners / opencheck_export_bods to see them",
+        "The answer mentions that the US has no central beneficial-ownership register",
+        "Every ownership figure the answer gives names its source (e.g. 'Form 13F')"
+      ]
+    },
+    {
+      "id": 9,
+      "eval_name": "context-pep-is-not-a-finding",
+      "prompt": "How many politically exposed persons are connected to Ørsted? Based on the OpenCheck lookup in evals/files/lookup-orsted.json.",
+      "expected_output": "Separates the seven RELATED_PEP_SUBJECT_ROLE signals — people listed as PEPs on OpenSanctions only because of their role at Ørsted itself (a state-controlled company), which OpenCheck marks as context — from the two RELATED_PEP risk signals, both possible name matches only (Karl Johnny Hersvik on OpenSanctions, Julia Elizabeth King on OpenAleph). Does not give a single headline number such as 9 without that split. Notes the related-party screen was truncated.",
+      "files": [
+        "evals/files/lookup-orsted.json"
+      ],
+      "expectations": [
+        "The answer distinguishes PEP listings due solely to a role at Ørsted (context) from the risk-level PEP signals",
+        "The answer reports Karl Johnny Hersvik and Julia Elizabeth King as possible name matches, not confirmed PEPs",
+        "The answer does not state a single unqualified total (such as 'nine PEPs')",
+        "The answer mentions that the related-party screening was incomplete or truncated"
+      ]
+    },
+    {
+      "id": 10,
+      "eval_name": "thin-answer-is-the-registers-limit",
+      "prompt": "I looked up a Cypriot holding company in OpenCheck. It listed directors and a secretary but no beneficial owners at all. Is the company hiding its owners? OpenCheck's knowability answer for Cyprus is in evals/files/knowability-cy.json.",
+      "expected_output": "Explains that Cyprus's beneficial-ownership register is open only to authorities and obliged entities, and that OpenCheck reads the Cyprus Registrar of Companies for officers and registered holdings, not beneficial owners — so the absence of owners is the register's limit, not evidence the company hides them. Suggests routes that could show owners (an obliged entity's access, other sources, a GLEIF parent) without speculating about the company.",
+      "files": [
+        "evals/files/knowability-cy.json"
+      ],
+      "expectations": [
+        "The answer says the absence of beneficial owners is not evidence that the company is hiding them",
+        "The answer states that Cyprus's beneficial-ownership register is accessible only to authorities and obliged entities",
+        "The answer states that OpenCheck reads officers / registered holdings for Cyprus, not beneficial owners"
+      ]
+    },
+    {
+      "id": 11,
+      "eval_name": "bulk-exploration-goes-to-datasets",
+      "prompt": "I'm at the Connected Data London masterclass with about 200 companies from the Azerbaijani Laundromat. Write me a script that calls opencheck_lookup on each one through the OpenCheck MCP server and loads the results into Neo4j so we can explore the graph.",
+      "expected_output": "Steers away from 200 live lookups: explains the shared budget (ten fresh lookups a minute per address, shared by the room) and that opencheck_batch_lookup caps at 20, and points to the published dataset-azerbaijani-laundromat release on GitHub, which already has a Neo4j CSV bundle (plus BODS, FtM, Senzing, RDF, signals and a subjects table). Mentions the bundle is non-commercial (CC-BY-NC sources). If it still offers a live-lookup script, it is paced and limited.",
+      "files": [],
+      "expectations": [
+        "The answer recommends the published Azerbaijani Laundromat dataset release instead of 200 live lookups",
+        "The answer mentions that the release includes a Neo4j bundle (or Neo4j CSV) that can be loaded directly",
+        "The answer mentions the lookup budget / rate limit or the batch cap of 20",
+        "The answer mentions that the laundromat dataset is non-commercial / CC-BY-NC",
+        "The answer does not give an unpaced loop that calls opencheck_lookup 200 times as the main solution"
+      ]
+    },
+    {
+      "id": 12,
+      "eval_name": "bods-relationships-reference-record-ids",
+      "prompt": "evals/files/export-persia.json is an opencheck_export_bods response for Persia International Bank (the statements are under response.statements). Write a Python script, save it as owners.py, that prints every owner of the bank with its share and source, and run it on that file. Include the script's output in your answer.",
+      "expected_output": "Joins relationship subject/interestedParty to parties by recordId (every statementId differs from its recordId in this file). Prints the Companies House shareholdings (Mellat Bank more than 50% up to 75%, Bank Tejarat more than 25% up to 50%) as ranges using exclusiveMinimum/maximum, the OpenSanctions shareholdings with no stated share, and labels each with its source. Leaves out, or labels separately, the GLEIF consolidation edges and the directors (seniorManagingOfficial), which are not owners.",
+      "files": [
+        "evals/files/export-persia.json"
+      ],
+      "expectations": [
+        "owners.py resolves relationship parties by recordId (not statementId), and its output names the owning parties rather than ids or 'unknown'",
+        "The output shows Bank Mellat (OpenSanctions spells it Mellat Bank) with a more-than-50% up to 75% range attributed to UK Companies House",
+        "The output does not list the directors (seniorManagingOfficial interests) as owners",
+        "The output does not present the GLEIF relationships as ownership or shareholding",
+        "Shares are shown as ranges (minimum/exclusiveMinimum to maximum), not collapsed to a single number"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+ "expectations": [
+  {
+   "text": "The answer contains no ownership percentage for any subsidiary (no invented 100% or other figure in the table)",
+   "passed": true,
+   "evidence": "The tables have no percentage column and no figure for any entity: 'So any percentage I put in the table would be made up. Leaving the column out is more accurate.' The only '100%' is general ('Consolidation also doesn't mean 100% ownership'; 'I wouldn't assume Shell holds 100% of it')."
+  },
+  {
+   "text": "The answer says GLEIF does not publish percentages / the data has no ownership share",
+   "passed": true,
+   "evidence": "'It has no shareholding figures.' and 'No percentages, by design.'"
+  },
+  {
+   "text": "The answer describes the relationship as accounting consolidation rather than ownership or shareholding",
+   "passed": true,
+   "evidence": "'That data records **accounting consolidation** ... consolidating parent' and 'Consolidation is not equity ownership.'"
+  },
+  {
+   "text": "The answer notes the list is limited to entities with an LEI that report Shell as parent (not every subsidiary)",
+   "passed": true,
+   "evidence": "'The list is not complete. Subsidiaries without an LEI, and those that report no parent to GLEIF, are not included.' Also quotes the fixture's measures sentence."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer contains no ownership percentage for any subsidiary (no invented 100% or other figure in the table)",
+    "reason": "Ambiguous for externally sourced, correctly caveated figures (e.g. 'publicly reported as a 50/50 JV'); the assertion's parenthetical targets invented figures, but its main clause bans any percentage. Clarify whether caveated outside-knowledge figures count."
+   }
+  ],
+  "overall": "Assertions 2-4 are satisfied by any answer that reads the fixture's 'measures' field, so they discriminate little between careful answers; assertion 1 is the discriminating one."
+ },
+ "timing": {
+  "total_duration_seconds": 64.8
+ }
+}

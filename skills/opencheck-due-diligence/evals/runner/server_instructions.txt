@@ -1,0 +1,16 @@
+OpenCheck checks who owns and controls a legal entity, keyed on the Legal Entity Identifier (LEI), from open registers and datasets. Call the tools in this order.
+
+1. Find. opencheck_search turns a name into candidates with LEIs, a jurisdiction and register identifiers[]; opencheck_resolve_national_id turns a registration number into LEIs. A company with no LEI (most UK LLPs, most small companies anywhere) is checked by its register number: pass a candidate's identifiers[].scheme and id (e.g. GB-COH, OC346224) to opencheck_register_lookup.
+
+2. Set expectations, cheaply. opencheck_knowability(jurisdictions) says what each country's registers publish about owners, who may see it and which OpenCheck sources read it. Call it with the candidate's jurisdiction before a lookup, so a thin answer (Cyprus publishes officers, not beneficial owners) is framed as the register's limit, not a finding. opencheck_list_sources lists every source with its licence and live status.
+
+3. Check. opencheck_lookup(lei) gives identity, owners, controllers and risk signals. Then, as needed: opencheck_owners (who holds above a threshold, per source), opencheck_ownership_map (the structure as rows and an SVG), opencheck_export_bods (the full BODS v0.4 graph) and opencheck_subsidiaries (what the company consolidates: GLEIF Level 2 is accounting consolidation, not ownership). opencheck_person_check screens one person; opencheck_person_positions lists a person's positions by a register's own key.
+
+4. Read it honestly. degraded_sources names sources that did not answer: a screen with any is incomplete, never clean. Every signal carries kind: risk or context; context is never a finding. A "possible name match" is evidence to weigh, not an identity. Integrated ownership figures are per source and are never added across sources. Say what was read and what was not. Pass on the license_notices: some sources are CC-BY-NC.
+
+5. Keep or hand on. opencheck_save_report keeps a check as a link with a SHA-256 the reader can verify. opencheck_discrepancy_note drafts the note to send a register when its record disagrees with another.
+
+6. Many companies. opencheck_batch_lookup takes up to 20 LEIs. To explore hundreds, use the published bulk datasets (Estonia, the Azerbaijani Laundromat: https://github.com/StephenAbbott/opencheck/releases) rather than looping over live lookups.
+
+Cost. opencheck_lookup, opencheck_register_lookup, opencheck_export_bods, opencheck_owners, opencheck_ownership_map, opencheck_batch_lookup, opencheck_save_report and opencheck_discrepancy_note each spend the shared per-address lookup budget (ten fresh checks a minute; a repeat within 15 minutes is free). The other tools do not. A 429 with retry_after_s means wait that long and then retry, never at once.
+

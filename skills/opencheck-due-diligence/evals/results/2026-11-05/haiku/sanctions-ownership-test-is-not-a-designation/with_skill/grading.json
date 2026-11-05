@@ -1,0 +1,50 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not state as fact that Persia International Bank itself is designated / on a sanctions list",
+   "passed": true,
+   "evidence": "'No, not on this record. The OpenCheck owners result does not list Persia International Bank PLC ... as a designated party. The three designated matches are its shareholders, not the bank itself.'"
+  },
+  {
+   "text": "The answer explains that the sanctions 50% ownership test is met (Mellat Bank, 50–75%) as computed by OpenCheck from filed shareholdings",
+   "passed": true,
+   "evidence": "'Sanctions ownership test (computed by OpenCheck, as of 2026-11-05): OFAC 50 Percent Rule: meets, on the Companies House reading. Mellat Bank holds more than 50% up to 75%.' plus the table row 'Mellat Bank | 50–75%' and 'The test is arithmetic on filed shareholdings, not a designation.'"
+  },
+  {
+   "text": "The answer says the result is not a determination that the bank is sanctioned or blocked, or that control tests were not computed",
+   "passed": true,
+   "evidence": "Quotes 'not a determination that the company is sanctioned or blocked.' and 'Control is not tested ... OpenCheck computed ownership only.'"
+  },
+  {
+   "text": "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total",
+   "passed": true,
+   "evidence": "No combined figure. Mellat (50–75%) and Bank Tejarat (25–50%) are listed separately, and the Companies House and OpenSanctions readings are kept apart."
+  }
+ ],
+ "claims": [
+  {
+   "claim": "The UK result may be overstated because Mellat's Companies House band 'starts at exactly 50%', so the lower bound does not clear 'more than 50%'.",
+   "type": "factual",
+   "verified": false,
+   "evidence": "The fixture states the stake as 'more than 50% up to 75%' in every regime's holders entry (Companies House's 50-75% band is 'more than 50%'); the tool's 'minimum': 50.0 is an exclusive lower end, not a stake of exactly 50%. The answer reads it against the fixture's own wording."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total",
+    "reason": "Non-discriminating here: both answers passed easily and neither came close to adding the figures."
+   }
+  ],
+  "overall": "All four assertions pass. A frames the 'No' with a caveat that the bank is likely blocked under OFAC if the test holds. A also makes a questionable UK-threshold 'overstatement' claim."
+ },
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "timing": {
+  "total_duration_seconds": 28.2
+ }
+}

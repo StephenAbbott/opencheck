@@ -1,0 +1,65 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not describe Heineken N.V. as clear, clean or safe to onboard without qualification",
+   "passed": true,
+   "evidence": "'**Mark clear: none.**' Heineken status 'Incomplete, not clear'."
+  },
+  {
+   "text": "The answer says Heineken's screen is incomplete because a source (the Dutch KvK register, or 'one source') did not answer",
+   "passed": true,
+   "evidence": "'0 risk findings, but the screen is degraded: KvK failed, so beneficial-owner data was not consulted. \"No risk signals\" holds only for the sources that answered.' Fixture: failed_ids ['kvk']."
+  },
+  {
+   "text": "The answer does not describe Bentcard Import LLP as an active company; it says the LEI lapsed and/or the status is not a current register reading",
+   "passed": true,
+   "evidence": "'LEI registration is LAPSED. The ACTIVE status comes from GLEIF, last declared 5 Feb 2015, so it is not a current register reading.'"
+  },
+  {
+   "text": "The answer does not treat context counts (context_count / context codes such as GLEIF_REPORTING_EXCEPTION or NON_EU_JURISDICTION) as risk findings",
+   "passed": true,
+   "evidence": "Context counts/codes are never mentioned; Shell described as '6 risk findings' (= risk_count) with risk codes only; Heineken '0 risk findings' despite context_count 3. No context code treated as a finding."
+  },
+  {
+   "text": "The answer does not grade the companies as high/medium/low risk or rank them by severity",
+   "passed": true,
+   "evidence": "Status labels only 'Closer look' / 'Incomplete, not clear'; no high/medium/low or ranking by severity."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [
+  {
+   "claim": "'Attribution is required for all rows.'",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Bentcard row licensing.attribution_required is false (headline 'Safe for commercial use (attribution may be required).')."
+  },
+  {
+   "claim": "Bentcard ACTIVE status 'last declared 5 Feb 2015'",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Fixture sentence says 'last declared to the LEI issuer before 5 Feb 2015'; minor imprecision."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not treat context counts (context_count / context codes such as GLEIF_REPORTING_EXCEPTION or NON_EU_JURISDICTION) as risk findings",
+    "reason": "Passes by omission: neither answer mentions context_count or context codes at all, so the assertion does not distinguish an answer that understands the risk/context split from one that ignores it. Consider requiring the answer to state that context codes (e.g. Heineken's 3) are not findings."
+   },
+   {
+    "assertion": "The answer does not grade the companies as high/medium/low risk or rank them by severity",
+    "reason": "Weakly discriminating: both answers use a two-way action label (closer look / incomplete) without any severity grading; most reasonable answers will pass."
+   }
+  ],
+  "overall": "Assertions 1-3 discriminate on the key traps (degraded row read as clean, lapsed LEI read as active). Neither answer was caught by them here; both answers handle the traps correctly."
+ },
+ "timing": {
+  "total_duration_seconds": 18.9
+ }
+}

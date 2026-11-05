@@ -1,0 +1,41 @@
+LEI: 213800HTIY6D1KMBG757
+Bank: PERSIA INTERNATIONAL BANK PLC
+Bank records by source:
+  gleif            opencheck-87b3ba7f4db2637dd2a55f40
+  opensanctions    opencheck-1645fff766e1dea36edd3b79
+  companies_house  opencheck-d38f80e900bdf376c85ad686
+  openaleph        opencheck-42a98b75dcd07b67c0c47c7d
+
+Owners (4):
+- Mellat Bank
+    interest:  shareholding; share: no share stated
+    source:    OpenSanctions (opensanctions), retrieved 2026-11-05T13:35:07Z
+    url:       https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/
+    statement: opencheck-64f9c986800bb83f1fa75f53
+- TEJARAT BANK
+    interest:  shareholding; share: no share stated
+    source:    OpenSanctions (opensanctions), retrieved 2026-11-05T13:35:07Z
+    url:       https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/
+    statement: opencheck-c78308cd6756baabaeee3e4a
+- Bank Mellat
+    interest:  shareholding; share: more than 50% and up to 75%
+    source:    UK Companies House (companies_house), retrieved 2026-11-05T13:35:05Z
+    url:       https://find-and-update.company-information.service.gov.uk/company/04218020
+    statement: opencheck-3d55acf51252d92066cd0a30
+- Bank Tejarat
+    interest:  shareholding; share: more than 25% and up to 50%
+    source:    UK Companies House (companies_house), retrieved 2026-11-05T13:35:05Z
+    url:       https://find-and-update.company-information.service.gov.uk/company/04218020
+    statement: opencheck-b3eac9cabe452a6011ca96a3
+
+Other interests, not counted as owners (8):
+- Natural person(s) (GLEIF reporting exception) [otherInfluenceOrControl] via GLEIF (gleif)
+- Natural person(s) (GLEIF reporting exception) [otherInfluenceOrControl] via GLEIF (gleif)
+- Islamic Republic Of Iran [unknownInterest] via OpenSanctions (opensanctions)
+- AKHONDI- ASL, Aziz, Mr. [seniorManagingOfficial] via UK Companies House (companies_house)
+- FAROKHNEJAD, Farshid [seniorManagingOfficial] via UK Companies House (companies_house)
+- FEIZASAR, Hadi Akhlaghi, Dr [seniorManagingOfficial] via UK Companies House (companies_house)
+- REZAEIPOUR, Mohammad Reza [seniorManagingOfficial] via UK Companies House (companies_house)
+- SHAHMIR, Farrokh [seniorManagingOfficial] via UK Companies House (companies_house)
+
+Shares are per source and are not added across sources. Party names are as each source publishes them; no matching is applied.

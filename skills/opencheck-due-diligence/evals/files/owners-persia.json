@@ -1,0 +1,311 @@
+{
+ "tool": "opencheck_owners",
+ "arguments": {
+  "lei": "213800HTIY6D1KMBG757"
+ },
+ "recorded_at": "2026-11-05T13:35:10Z",
+ "is_error": false,
+ "response": {
+  "lei": "213800HTIY6D1KMBG757",
+  "legal_name": "PERSIA INTERNATIONAL BANK PLC",
+  "jurisdiction": "GB",
+  "rule": {
+   "operator": ">",
+   "threshold": 25.0,
+   "basis": "national",
+   "text": "more than 25% — United Kingdom (Companies Act 2006, Part 21A and Schedule 1A (inserted by SBEEA 2015))"
+  },
+  "calculated_owners": [
+   {
+    "party": "opencheck-a50f8238f0ccce0e40c84bef",
+    "name": "Mellat Bank",
+    "kind": "entity",
+    "position": "above",
+    "figures": [
+     {
+      "source": "UK Companies House",
+      "source_id": "companies_house",
+      "text": "50–75%",
+      "minimum": 50.0,
+      "maximum": 75.0,
+      "position": "above",
+      "route": "directly"
+     },
+     {
+      "source": "OpenSanctions",
+      "source_id": "opensanctions",
+      "text": "No figure — no share is stated on any path",
+      "minimum": null,
+      "maximum": null,
+      "position": "may_be_above",
+      "route": "directly"
+     }
+    ]
+   },
+   {
+    "party": "opencheck-9dac4f7d9808b7358051bc47",
+    "name": "Bank Tejarat",
+    "kind": "entity",
+    "position": "may_be_above",
+    "figures": [
+     {
+      "source": "UK Companies House",
+      "source_id": "companies_house",
+      "text": "25–50%",
+      "minimum": 25.0,
+      "maximum": 50.0,
+      "position": "may_be_above",
+      "route": "directly"
+     }
+    ]
+   },
+   {
+    "party": "opencheck-6a7fdfb5adbc0d686ff079c1",
+    "name": "TEJARAT BANK",
+    "kind": "entity",
+    "position": "may_be_above",
+    "figures": [
+     {
+      "source": "OpenSanctions",
+      "source_id": "opensanctions",
+      "text": "No figure — no share is stated on any path",
+      "minimum": null,
+      "maximum": null,
+      "position": "may_be_above",
+      "route": "directly"
+     }
+    ]
+   }
+  ],
+  "declared_beneficial_owners": [],
+  "in_both": [],
+  "listed_without_a_figure": [],
+  "chain_stops": [
+   {
+    "name": "Mellat Bank",
+    "lei": null,
+    "figures": [
+     "50–75%",
+     "No figure — no share is stated on any path"
+    ],
+    "reason": "no LEI to follow; its owners are not in the sources OpenCheck reached"
+   },
+   {
+    "name": "Bank Tejarat",
+    "lei": null,
+    "figures": [
+     "25–50%"
+    ],
+    "reason": "no LEI to follow; its owners are not in the sources OpenCheck reached"
+   },
+   {
+    "name": "TEJARAT BANK",
+    "lei": "5493007MJ3BLX55XSZ63",
+    "figures": [
+     "No figure — no share is stated on any path"
+    ],
+    "reason": "not followed: raise depth (up to 3) to look up its owners"
+   }
+  ],
+  "depth": {
+   "requested": 1,
+   "layers_reached": 1,
+   "extra_lookups": 0,
+   "hop_limit_reached": false,
+   "max_extra_lookups": 10
+  },
+  "as_of": "2026-11-05",
+  "method": {
+   "name": "Integrated ownership",
+   "description": "How much of the company each party holds, directly and through the companies it holds: shares are multiplied along each path and added across paths, and a company's own shares are given back to its other holders. Each source is computed on its own; figures from two sources are listed side by side, never added. Shareholdings only — voting rights, roles and control are not shares. For a person it is arithmetic on what was filed, not a determination of beneficial ownership. Context, not a finding.",
+   "credit": "Method: integrated ownership as published by T-Rank (https://docs.trank.no/white_papers)."
+  },
+  "note": "Calculated figures are arithmetic on what the sources filed — shares multiplied along each path and added across paths, one figure per source, never added across sources — not a determination that anyone is a beneficial owner. Declared beneficial owners are as each register publishes them.",
+  "fullcheck_url": "https://opencheck.world/?lei=213800HTIY6D1KMBG757&mode=full",
+  "license_notices": [
+   {
+    "source_id": "opensanctions",
+    "hit_id": "NK-DC4R48SCEMmbcURFzktAKy",
+    "notice": "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license."
+   }
+  ],
+  "hint": "Context, not a risk finding. 'may_be_above' means the figure could meet the threshold (a band that straddles it, or a path whose share is not stated); read it as unknown, never as above. Two figures for one party are two sources' readings: never add them. Call opencheck_ownership_map to see the structure, or opencheck_lookup for risk signals.",
+  "summary": "PERSIA INTERNATIONAL BANK PLC — rule applied: more than 25% — United Kingdom (Companies Act 2006, Part 21A and Schedule 1A (inserted by SBEEA 2015)). Calculated at or above the threshold: Mellat Bank (50–75% UK Companies House). 2 more may be above it (a band or an unstated share). 0 current declared beneficial owner(s). 3 chain(s) stop at a company whose owners were not reached. Sanctions ownership test (computed, ownership only): OFAC (US), EU and UK: meets — more than 50% up to 75% held by designated parties (UK Companies House).",
+  "sanctions_ownership_test": {
+   "finding": "SANCTIONS_OWNERSHIP_TEST",
+   "kind": "risk",
+   "confidence": "high",
+   "summary": "Designated parties' stated shareholdings meet the sanctions ownership test for OFAC (US), EU and UK. OFAC (US), EU and UK: meets — more than 50% up to 75% held by designated parties (UK Companies House). Computed by OpenCheck from stated shareholdings, one source at a time; ownership only — the EU and UK control tests are not computed — and not a determination that the company is sanctioned or blocked.",
+   "regimes": [
+    {
+     "regime": "OFAC",
+     "rule": "50% or more, held by blocked persons together (OFAC's 50 Percent Rule)",
+     "result": "meets",
+     "if_confirmed": false,
+     "sources": [
+      {
+       "source": "UK Companies House",
+       "result": "meets",
+       "holding": "more than 50% up to 75%",
+       "holders": [
+        {
+         "name": "Mellat Bank",
+         "stake": "more than 50% up to 75%",
+         "designated": true,
+         "basis": "identifier"
+        }
+       ]
+      },
+      {
+       "source": "OpenSanctions",
+       "result": "may_meet",
+       "holding": "share not stated",
+       "holders": [
+        {
+         "name": "Mellat Bank",
+         "stake": "share not stated",
+         "designated": true,
+         "basis": "identifier"
+        },
+        {
+         "name": "TEJARAT BANK",
+         "stake": "share not stated",
+         "designated": true,
+         "basis": "identifier"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "regime": "EU",
+     "rule": "50% or more of the proprietary rights, held by designated persons together",
+     "result": "meets",
+     "if_confirmed": false,
+     "sources": [
+      {
+       "source": "UK Companies House",
+       "result": "meets",
+       "holding": "more than 50% up to 75%",
+       "holders": [
+        {
+         "name": "Mellat Bank",
+         "stake": "more than 50% up to 75%",
+         "designated": true,
+         "basis": "identifier"
+        }
+       ]
+      },
+      {
+       "source": "OpenSanctions",
+       "result": "may_meet",
+       "holding": "share not stated",
+       "holders": [
+        {
+         "name": "Mellat Bank",
+         "stake": "share not stated",
+         "designated": true,
+         "basis": "identifier"
+        },
+        {
+         "name": "TEJARAT BANK",
+         "stake": "share not stated",
+         "designated": true,
+         "basis": "identifier"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "regime": "UK",
+     "rule": "more than 50%, held by one designated person directly or through companies it owns (no aggregation across designated persons)",
+     "result": "meets",
+     "if_confirmed": false,
+     "sources": [
+      {
+       "source": "UK Companies House",
+       "result": "meets",
+       "holding": "more than 50% up to 75%",
+       "holders": [
+        {
+         "name": "Mellat Bank",
+         "stake": "more than 50% up to 75%",
+         "designated": true,
+         "basis": "identifier"
+        }
+       ]
+      },
+      {
+       "source": "OpenSanctions",
+       "result": "may_meet",
+       "holding": "share not stated",
+       "holders": [
+        {
+         "name": "TEJARAT BANK",
+         "stake": "share not stated",
+         "designated": true,
+         "basis": "identifier"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "designated": [
+    {
+     "party": "opencheck-9dac4f7d9808b7358051bc47",
+     "name": "Bank Tejarat",
+     "regimes": [
+      "OFAC",
+      "EU",
+      "UK"
+     ],
+     "datasets": [
+      "eu_fsf",
+      "eu_journal_sanctions",
+      "gb_fcdo_sanctions",
+      "us_ofac_sdn"
+     ],
+     "basis": "name_only"
+    },
+    {
+     "party": "opencheck-a50f8238f0ccce0e40c84bef",
+     "name": "Mellat Bank",
+     "regimes": [
+      "OFAC",
+      "EU",
+      "UK"
+     ],
+     "datasets": [
+      "eu_fsf",
+      "eu_journal_sanctions",
+      "gb_fcdo_sanctions",
+      "us_ofac_sdn"
+     ],
+     "basis": "identifier"
+    },
+    {
+     "party": "opencheck-6a7fdfb5adbc0d686ff079c1",
+     "name": "TEJARAT BANK",
+     "regimes": [
+      "OFAC",
+      "EU",
+      "UK"
+     ],
+     "datasets": [
+      "eu_fsf",
+      "eu_journal_sanctions",
+      "gb_fcdo_sanctions",
+      "us_ofac_sdn"
+     ],
+     "basis": "identifier"
+    }
+   ],
+   "method": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only: the EU and UK control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
+   "not_computed": "Not computed: control — the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement); OFAC licences and general licences; holdings that have ended — OFAC treats property blocked while the test was met as still blocked after the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck reads current holdings only; programmes that block on ownership or control by a government without a 50% test (Cuba, Iran, North Korea, Syria, Venezuela and Crimea, FAQ 398); and OFAC's Sectoral Sanctions Identifications list, which is outside this test.",
+   "as_of": "2026-11-05",
+   "credit": "Method: the 50% rule as published by T-Rank (https://docs.trank.no/white_papers)."
+  }
+ }
+}

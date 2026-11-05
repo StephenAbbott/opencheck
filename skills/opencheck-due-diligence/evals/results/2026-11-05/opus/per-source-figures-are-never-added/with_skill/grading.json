@@ -1,0 +1,47 @@
+{
+ "expectations": [
+  {
+   "text": "The answer gives the Norwegian state's stake as about 67%, not a sum such as 134% or 201%",
+   "passed": true,
+   "evidence": "Bold: \"The Norwegian state's total stake is about 67%, not 201%.\" Fixture: each of three figures is 67%."
+  },
+  {
+   "text": "The answer explains that the three bodies/figures are different sources' readings of the same state holding and should not be added",
+   "passed": true,
+   "evidence": "\"The three rows are not three separate holders whose stakes add up. They are three sources each reporting the same state holding... OpenCheck works out each source's figure separately and says these figures are \\\"listed side by side, never added.\\\"\" Matches fixture method.description."
+  },
+  {
+   "text": "The answer does not list the Ministry of Energy of Norway as a current owner",
+   "passed": true,
+   "evidence": "Under \"Listed without a figure\": \"Ministry of Energy of Norway (Wikidata) is marked formerly... It's a past holder, not a current one.\" Not in the above-25% table."
+  },
+  {
+   "text": "The answer notes that no beneficial owners are declared by a register, or that calculated figures are not a beneficial-ownership determination",
+   "passed": true,
+   "evidence": "\"Declared beneficial owners - None. OpenCheck read no register that names beneficial owners for Equinor\" and \"They don't establish beneficial ownership.\" Fixture: declared_beneficial_owners: []."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not list the Ministry of Energy of Norway as a current owner",
+    "reason": "Non-discriminating here: the fixture marks the Ministry of Energy 'formerly' under listed_without_a_figure, so any answer that just reads calculated_owners passes; both answers passed."
+   },
+   {
+    "assertion": "The answer notes that no beneficial owners are declared by a register, or that calculated figures are not a beneficial-ownership determination",
+    "reason": "Weakly discriminating: the fixture's own note and summary say '0 current declared beneficial owner(s)' and 'not a determination', so restating them passes easily."
+   }
+  ],
+  "overall": "All four assertions clearly met. One out-of-fixture remark (the Ministry of Trade, Industry and Fisheries currently holding the shares) is clearly hedged as outside knowledge, and the answer notes the fixture can't confirm it. No claims contradict the fixture."
+ },
+ "timing": {
+  "total_duration_seconds": 16.6
+ }
+}

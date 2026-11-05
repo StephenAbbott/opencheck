@@ -1,0 +1,213 @@
+{
+ "tool": "opencheck_search",
+ "arguments": {
+  "query": "Bentcard Import LLP"
+ },
+ "recorded_at": "2026-11-05T13:32:44Z",
+ "is_error": false,
+ "response": {
+  "query": "Bentcard Import LLP",
+  "kind": "entity",
+  "count": 15,
+  "total": 31,
+  "truncated": true,
+  "candidates": [
+   {
+    "name": "BENTCARD IMPORT LLP",
+    "lei": "54930007FGRO3F0RZ382",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "54930007FGRO3F0RZ382"
+     }
+    ],
+    "match": "exact",
+    "source": "gleif",
+    "summary": "LEI 54930007FGRO3F0RZ382 · AZ · active"
+   },
+   {
+    "name": "BENTCARD IMPORT LLP",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "GB-COH",
+      "id": "OC369315"
+     }
+    ],
+    "match": "exact",
+    "source": "companies_house",
+    "summary": "Company OC369315 · dissolved · 175 Darkes Lane, Suite B, 2nd Floor, Potters Bar, Hertfordshire, EN6 1BW"
+   },
+   {
+    "name": "BENTCRD PTY LTD",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "AU-ABN",
+      "id": "47691641120"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "abr_australia",
+    "summary": "AU-ABN 47691641120 · VIC 3173"
+   },
+   {
+    "name": "B. JULED IMPORTS",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "AU-ABN",
+      "id": "97513804439"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "abr_australia",
+    "summary": "AU-ABN 97513804439 · NSW 2070"
+   },
+   {
+    "name": "B Imports",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "AU-ABN",
+      "id": "27242053931"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "abr_australia",
+    "summary": "AU-ABN 27242053931 · NSW 2046"
+   },
+   {
+    "name": "TRIPLE B IMPORTS",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "AU-ABN",
+      "id": "86339152692"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "abr_australia",
+    "summary": "AU-ABN 86339152692 · QLD 4123"
+   },
+   {
+    "name": "AAA IMPORT CARS LIMITED",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "GB-COH",
+      "id": "15640436"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "companies_house",
+    "summary": "Company 15640436 · active · 292 Manchester Road, Bolton, England, BL3 2QS"
+   },
+   {
+    "name": "W.A.B. IMPORTS",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "AU-ABN",
+      "id": "80063598970"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "abr_australia",
+    "summary": "AU-ABN 80063598970 · VIC 3038"
+   },
+   {
+    "name": "AADESH IMPORT LTD",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "GB-COH",
+      "id": "16554736"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "companies_house",
+    "summary": "Company 16554736 · active · 38 Langley Crescent, Dagenham, England, RM9 4RX"
+   },
+   {
+    "name": "BIG B IMPORTS PTY LTD",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "AU-ABN",
+      "id": "16643295827"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "abr_australia",
+    "summary": "AU-ABN 16643295827 · WA 6069"
+   },
+   {
+    "name": "BABY B IMPORTS",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "AU-ABN",
+      "id": "37696942541"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "abr_australia",
+    "summary": "AU-ABN 37696942541 · NT 0872"
+   },
+   {
+    "name": "BABY B IMPORTS",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "AU-ABN",
+      "id": "65908422477"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "abr_australia",
+    "summary": "AU-ABN 65908422477 · QLD 4650"
+   },
+   {
+    "name": "AA IMPORTOS LIMITED",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "GB-COH",
+      "id": "16048835"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "companies_house",
+    "summary": "Company 16048835 · active · 79 Court Road, Wolverhampton, England, WV6 0JN"
+   },
+   {
+    "name": "A&A IMPORTEXPORT LTD",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "GB-COH",
+      "id": "15256188"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "companies_house",
+    "summary": "Company 15256188 · active · The Thatched Cottage, Shelford Bottom, Cambridge, England, CB22 3AD"
+   },
+   {
+    "name": "AA IMPORT AND EXPORT LTD",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "GB-COH",
+      "id": "14475428"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "companies_house",
+    "summary": "Company 14475428 · active · 60 Lower Meadow Court, Northampton, England, NN3 8AX"
+   }
+  ],
+  "hint": "Candidates are ranked best-first across sources; match says how closely the name matches the query (exact, same_name, all_tokens, distinctive_tokens, fuzzy) — measured against the current name or, where a candidate carries matched_former_name, against that former legal name the source files. Pass a candidate's lei to opencheck_lookup to run due diligence. A candidate with lei null and an identifiers entry (e.g. scheme GB-COH) is looked up with opencheck_register_lookup(scheme, id). Showing the top 15 of 31; call again with a higher limit (up to 50) or a more specific query."
+ }
+}

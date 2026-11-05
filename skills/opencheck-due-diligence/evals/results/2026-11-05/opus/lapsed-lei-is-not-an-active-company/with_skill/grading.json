@@ -1,0 +1,47 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not conclude that the company is active",
+   "passed": true,
+   "evidence": "\"No, OpenCheck doesn't show it as active. The register record it found says it is dissolved.\""
+  },
+  {
+   "text": "The answer distinguishes the LEI's status (lapsed) from the company's status",
+   "passed": true,
+   "evidence": "\"The LEI has lapsed... OpenCheck's wording: 'This is the status of the LEI record, not of the company.'\" and separately discusses GLEIF's entity status ACTIVE and the register's dissolved status."
+  },
+  {
+   "text": "The answer cites the Companies House record OC369315 as showing the LLP dissolved, or recommends checking it",
+   "passed": true,
+   "evidence": "\"Companies House: BENTCARD IMPORT LLP, OC369315, dissolved\" and \"To confirm: run opencheck_register_lookup(\\\"GB-COH\\\", \\\"OC369315\\\")\""
+  },
+  {
+   "text": "The answer explains that GLEIF's 'ACTIVE' is an old or unverified declaration (not re-checked since 2015)",
+   "passed": true,
+   "evidence": "\"GLEIF still says 'ACTIVE', but that is old information... 'last declared to the LEI issuer before 5 Feb 2015; the LEI has not been renewed since, so no issuer has re-checked it.'\""
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not conclude that the company is active",
+    "reason": "Low bar: the lookup summary itself says the status is not a current register reading, so any answer that reads the summary passes; both answers pass easily. Consider asserting a positive conclusion (e.g. 'states there is no current evidence it is active / points to the dissolved register record')."
+   },
+   {
+    "assertion": "The answer explains that GLEIF's 'ACTIVE' is an old or unverified declaration (not re-checked since 2015)",
+    "reason": "Largely satisfied by quoting the fixture's own sentence verbatim; non-discriminating between careful and careless readings."
+   }
+  ],
+  "overall": "All four assertions passed for both answers; the set does not discriminate here. A discriminating addition could test whether the answer flags that the GLEIF and Companies House records are not linked by any identifier (both answers did this)."
+ },
+ "timing": {
+  "total_duration_seconds": 20.7
+ }
+}

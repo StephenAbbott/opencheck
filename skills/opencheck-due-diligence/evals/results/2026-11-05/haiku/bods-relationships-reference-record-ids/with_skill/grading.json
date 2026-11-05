@@ -1,0 +1,59 @@
+{
+ "expectations": [
+  {
+   "text": "owners.py resolves relationship parties by recordId (not statementId), and its output names the owning parties rather than ids or 'unknown'",
+   "passed": true,
+   "evidence": "records dict keyed on s['recordId']; party = records.get(d.get('interestedParty')); subjects matched by recordId. Fixture check: 28/28 statements have statementId != recordId and all 24 party references are recordIds. Output names 'Bank Mellat', 'Bank Tejarat', 'Mellat Bank', 'TEJARAT BANK', 'Islamic Republic Of Iran' (re-run output identical to owners-output.txt)."
+  },
+  {
+   "text": "The output shows Bank Mellat (OpenSanctions spells it Mellat Bank) with a more-than-50% up to 75% range attributed to UK Companies House",
+   "passed": true,
+   "evidence": "Under the UK Companies House subject record: '- Bank Mellat [entity] share: more than 50% and up to 75% ... source: UK Companies House [companies_house]'."
+  },
+  {
+   "text": "The output does not list the directors (seniorManagingOfficial interests) as owners",
+   "passed": true,
+   "evidence": "Directors are under 'Officers (directors, not owners, no shares): 5' and are not counted in 'Owner entries printed: 5'."
+  },
+  {
+   "text": "The output does not present the GLEIF relationships as ownership or shareholding",
+   "passed": true,
+   "evidence": "GLEIF entries appear under 'Control without a named party (not counted as owners)' with interest otherInfluenceOrControl; the GLEIF record shows 'Owners ... none in this record'."
+  },
+  {
+   "text": "Shares are shown as ranges (minimum/exclusiveMinimum to maximum), not collapsed to a single number",
+   "passed": true,
+   "evidence": "'more than 50% and up to 75%', 'more than 25% and up to 50%' (exclusiveMinimum..maximum); integrated figures shown as '50–75%'."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [
+  {
+   "claim": "The two Mellat and the two Tejarat entries carry the same register numbers (REG-IR 38077 and REG-IR 38027) in both sources.",
+   "type": "factual",
+   "verified": false,
+   "evidence": "In the fixture OpenSanctions' TEJARAT BANK carries scheme 'REG' id '38027', not 'REG-IR' (the Mellat pair is REG-IR 38077 on both sides). The script's own output prints 'REG 38027' correctly, so only the prose overstates this."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The output does not present the GLEIF relationships as ownership or shareholding",
+    "reason": "Weakly discriminating: the GLEIF relationships are typed otherInfluenceOrControl with a reporting-exception party, so any script filtering on shareholding passes without reasoning about GLEIF."
+   },
+   {
+    "assertion": "owners.py resolves relationship parties by recordId (not statementId), and its output names the owning parties rather than ids or 'unknown'",
+    "reason": "In this fixture every relationship reference is a recordId and statementId differs on all 28 statements, so the assertion does discriminate; it would be non-discriminating on an export where the two ids are equal."
+   }
+  ],
+  "overall": "Assertions 2, 3 and 5 are verifiable from the script output; both answers pass all five. The differences between the answers (A counts the unknownInterest party Islamic Republic of Iran as an owner; B lists it separately) are not covered by any assertion."
+ },
+ "timing": {
+  "total_duration_seconds": 99.3
+ }
+}

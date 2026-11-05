@@ -1,0 +1,104 @@
+{
+ "tool": "opencheck_knowability",
+ "arguments": {
+  "jurisdictions": [
+   "CY"
+  ]
+ },
+ "recorded_at": "2026-11-05T13:32:52Z",
+ "is_error": false,
+ "response": {
+  "statements": [
+   {
+    "code": "CY",
+    "name": "Cyprus",
+    "sentence": "Cyprus Register of Beneficial Owners is open to authorities and obliged entities only. OpenCheck reads Cyprus DRCOR — Registrar of Companies for officers and registered holdings, not beneficial owners.",
+    "sentences": [
+     "Cyprus Register of Beneficial Owners is open to authorities and obliged entities only.",
+     "OpenCheck reads Cyprus DRCOR — Registrar of Companies for officers and registered holdings, not beneficial owners."
+    ],
+    "stated_absence": false,
+    "review_status": "verified",
+    "last_verified": "2026-10-21",
+    "access": "authorities_and_obliged_entities_only",
+    "access_since": null,
+    "next_change_expected": null,
+    "register": {
+     "name": "Cyprus Register of Beneficial Owners",
+     "url": "https://ubo.meci.gov.cy/"
+    },
+    "amld6_legitimate_interest_access": "No",
+    "opencheck_reads": [
+     {
+      "source_id": "cyprus_drcor",
+      "name": "Cyprus DRCOR — Registrar of Companies",
+      "requires_api_key": false,
+      "reads_beneficial_owners": false
+     }
+    ],
+    "sources": []
+   }
+  ],
+  "known_codes": [
+   "AI",
+   "AT",
+   "AU",
+   "BE",
+   "BG",
+   "BM",
+   "BR",
+   "BW",
+   "CA",
+   "CH",
+   "CY",
+   "CZ",
+   "DE",
+   "DK",
+   "EE",
+   "ES",
+   "FI",
+   "FR",
+   "GB",
+   "GG",
+   "GI",
+   "GR",
+   "HK",
+   "HR",
+   "HU",
+   "IE",
+   "IM",
+   "IN",
+   "IS",
+   "IT",
+   "JE",
+   "KY",
+   "LI",
+   "LT",
+   "LU",
+   "LV",
+   "MD",
+   "MT",
+   "NG",
+   "NL",
+   "NO",
+   "NZ",
+   "PL",
+   "PT",
+   "RO",
+   "RS",
+   "SE",
+   "SG",
+   "SH",
+   "SI",
+   "SK",
+   "TC",
+   "TW",
+   "UA",
+   "US",
+   "VG"
+  ],
+  "generated_at": "2026-11-04T10:39:42+00:00",
+  "as_of": "2026-11-05",
+  "hint": "Dated facts about each jurisdiction's registers — what they publish about beneficial owners, who may see it, and which OpenCheck sources read the country. Read a lookup's result against these: an owner missing where the register publishes none is the register's limit, not a finding. stated_absence means OpenCheck holds no notes for the code, which says nothing about what it publishes. Describes, never judges; nothing here is a risk signal."
+ }
+}

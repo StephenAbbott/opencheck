@@ -1,0 +1,42 @@
+{
+ "expectations": [
+  {
+   "text": "The answer says the absence of beneficial owners is not evidence that the company is hiding them",
+   "passed": true,
+   "evidence": "\"Short answer: not on this evidence. The gap is most likely the register's limit, not the company hiding anything.\" and \"The absence of beneficial owners reflects that restriction. It is not a finding about the company.\""
+  },
+  {
+   "text": "The answer states that Cyprus's beneficial-ownership register is accessible only to authorities and obliged entities",
+   "passed": true,
+   "evidence": "\"The Cyprus Register of Beneficial Owners is open to authorities and obliged entities only.\""
+  },
+  {
+   "text": "The answer states that OpenCheck reads officers / registered holdings for Cyprus, not beneficial owners",
+   "passed": true,
+   "evidence": "\"OpenCheck reads Cyprus DRCOR (Registrar of Companies) for officers and registered holdings. It does not read beneficial owners.\""
+  }
+ ],
+ "summary": {
+  "passed": 3,
+  "failed": 0,
+  "total": 3,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer states that Cyprus's beneficial-ownership register is accessible only to authorities and obliged entities",
+    "reason": "Fixture states this verbatim in the knowability sentence; any answer that reads the file passes, so it discriminates little between careful answers."
+   },
+   {
+    "assertion": "The answer states that OpenCheck reads officers / registered holdings for Cyprus, not beneficial owners",
+    "reason": "Same: verbatim from the fixture's second sentence; low discrimination."
+   }
+  ],
+  "overall": "All three assertions are verifiable against the fixture but largely restate it; both answers pass all. Consider an assertion that the answer acknowledges not having the company's own lookup / degraded_sources, which both did here but weaker answers may not."
+ },
+ "timing": {
+  "total_duration_seconds": 23.5
+ }
+}

@@ -1,0 +1,2343 @@
+{
+ "tool": "opencheck_export_bods",
+ "arguments": {
+  "lei": "213800HTIY6D1KMBG757"
+ },
+ "recorded_at": "2026-11-05T13:36:08Z",
+ "is_error": false,
+ "response": {
+  "lei": "213800HTIY6D1KMBG757",
+  "format": "json",
+  "statement_count": 28,
+  "subsidiary_statement_count": 0,
+  "statements": [
+   {
+    "statementId": "opencheck-d4e2e22336b1e91805568902",
+    "recordId": "opencheck-87b3ba7f4db2637dd2a55f40",
+    "declarationSubject": "opencheck-87b3ba7f4db2637dd2a55f40",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2025-12-13",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity"
+     },
+     "name": "PERSIA INTERNATIONAL BANK PLC",
+     "identifiers": [
+      {
+       "id": "213800HTIY6D1KMBG757",
+       "scheme": "XI-LEI",
+       "schemeName": "Global Legal Entity Identifier Index"
+      },
+      {
+       "id": "04218020",
+       "scheme": "GB-COH",
+       "schemeName": "Companies House"
+      },
+      {
+       "id": "QGBV7QPFYS",
+       "scheme": "QCC Code",
+       "schemeName": "QCC Global Enterprise Identifier (QCC Code)"
+      },
+      {
+       "id": "PIBPGB21TGT",
+       "scheme": "ISO-9362",
+       "schemeName": "Bank Identifier Code (ISO 9362)"
+      },
+      {
+       "id": "PIBPGB21XXX",
+       "scheme": "ISO-9362",
+       "schemeName": "Bank Identifier Code (ISO 9362)"
+      },
+      {
+       "id": "27922027",
+       "scheme": "S&P CIQ Company ID",
+       "schemeName": "S&P CIQ Company ID"
+      }
+     ],
+     "jurisdiction": {
+      "name": "United Kingdom",
+      "code": "GB"
+     },
+     "foundingDate": "2001-05-16",
+     "addresses": [
+      {
+       "type": "registered",
+       "address": "6 LOTHBURY, LONDON, EC2R 7HH, GB",
+       "country": {
+        "name": "United Kingdom",
+        "code": "GB"
+       }
+      },
+      {
+       "type": "business",
+       "address": "6 LOTHBURY, LONDON, EC2R 7HH, GB",
+       "country": {
+        "name": "United Kingdom",
+        "code": "GB"
+       }
+      }
+     ],
+     "legalFormLabel": "Public Limited Company"
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "GLEIF",
+     "opencheckSourceId": "gleif",
+     "retrievedAt": "2026-11-05T10:09:02Z",
+     "url": "https://www.gleif.org/lei/213800HTIY6D1KMBG757"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "GLEIF records this entity as active — register status: “ACTIVE”.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      }
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "GLEIF records this LEI as lapsed: its renewal was due on 13 Dec 2025 and has not been made, so no issuer has re-checked its reference data since then. GLEIF last updated the record on 13 Dec 2025. This is the status of the LEI record, not of the company.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      }
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "Integrated ownership, added by OpenCheck: Mellat Bank — 50–75% (UK Companies House, directly); No figure — no share is stated on any path (OpenSanctions, directly); Bank Tejarat — 25–50% (UK Companies House, directly); TEJARAT BANK — No figure — no share is stated on any path (OpenSanctions, directly). How much of the company each party holds, directly and through the companies it holds: shares are multiplied along each path and added across paths, and a company's own shares are given back to its other holders. Each source is computed on its own; figures from two sources are listed side by side, never added. Shareholdings only — voting rights, roles and control are not shares. For a person it is arithmetic on what was filed, not a determination of beneficial ownership. Context, not a finding. Method: integrated ownership as published by T-Rank (https://docs.trank.no/white_papers).",
+      "url": "https://docs.trank.no/white_papers",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "Disclosure status by source, added by OpenCheck: what each source says about this company's owners. GLEIF — Parent: Exempt — the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent | UK Companies House — Beneficial owners: Declared (2) | Global Energy Monitor / Climate TRACE — No record of the company. Absence from a source is not an exemption; see https://github.com/StephenAbbott/opencheck/blob/main/docs/disclosure-status.md for how each value maps to the BODS unspecifiedReason codelist.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-1e8a2decbcec3975a40c7179",
+    "recordId": "opencheck-8310d4b44f872a4f42f207f1",
+    "declarationSubject": "opencheck-87b3ba7f4db2637dd2a55f40",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2025-12-13",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "personType": "unknownPerson",
+     "names": [
+      {
+       "type": "legal",
+       "fullName": "Natural person(s) (GLEIF reporting exception)"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "GLEIF",
+     "opencheckSourceId": "gleif",
+     "retrievedAt": "2026-11-05T10:09:02Z",
+     "url": "https://www.gleif.org/lei/213800HTIY6D1KMBG757"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "This statement was created due to a NATURAL_PERSONS GLEIF Reporting Exception for 213800HTIY6D1KMBG757. Reporting exceptions are permitted reasons, defined by the LEI ROC policy, for an entity not to report an accounting consolidation parent.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-66e57f682bb5472a7f4d1402",
+    "recordId": "opencheck-366c7f13940460d4c3840b84",
+    "declarationSubject": "opencheck-87b3ba7f4db2637dd2a55f40",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2025-12-13",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-87b3ba7f4db2637dd2a55f40",
+     "interestedParty": "opencheck-8310d4b44f872a4f42f207f1",
+     "interests": [
+      {
+       "type": "otherInfluenceOrControl",
+       "directOrIndirect": "direct",
+       "beneficialOwnershipOrControl": false,
+       "details": "GLEIF reporting exception NATURAL_PERSONS: the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent (ExceptionCategory: DIRECT_ACCOUNTING_CONSOLIDATION_PARENT)"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "GLEIF",
+     "opencheckSourceId": "gleif",
+     "retrievedAt": "2026-11-05T10:09:02Z",
+     "url": "https://www.gleif.org/lei/213800HTIY6D1KMBG757"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "This statement was created due to a NATURAL_PERSONS GLEIF Reporting Exception for 213800HTIY6D1KMBG757. Reporting exceptions are permitted reasons, defined by the LEI ROC policy, for an entity not to report an accounting consolidation parent.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-ed616e34dd7c5deecb40aefa",
+    "recordId": "opencheck-99e559dd7d9de6bf33e9f2f0",
+    "declarationSubject": "opencheck-87b3ba7f4db2637dd2a55f40",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2025-12-13",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "personType": "unknownPerson",
+     "names": [
+      {
+       "type": "legal",
+       "fullName": "Natural person(s) (GLEIF reporting exception)"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "GLEIF",
+     "opencheckSourceId": "gleif",
+     "retrievedAt": "2026-11-05T10:09:02Z",
+     "url": "https://www.gleif.org/lei/213800HTIY6D1KMBG757"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "This statement was created due to a NATURAL_PERSONS GLEIF Reporting Exception for 213800HTIY6D1KMBG757. Reporting exceptions are permitted reasons, defined by the LEI ROC policy, for an entity not to report an accounting consolidation parent.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-af7d9fefe46e71f8285805a9",
+    "recordId": "opencheck-391806ec20a0033810a8e9b0",
+    "declarationSubject": "opencheck-87b3ba7f4db2637dd2a55f40",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2025-12-13",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-87b3ba7f4db2637dd2a55f40",
+     "interestedParty": "opencheck-99e559dd7d9de6bf33e9f2f0",
+     "interests": [
+      {
+       "type": "otherInfluenceOrControl",
+       "directOrIndirect": "indirect",
+       "beneficialOwnershipOrControl": false,
+       "details": "GLEIF reporting exception NATURAL_PERSONS: the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent (ExceptionCategory: ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT)"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "GLEIF",
+     "opencheckSourceId": "gleif",
+     "retrievedAt": "2026-11-05T10:09:02Z",
+     "url": "https://www.gleif.org/lei/213800HTIY6D1KMBG757"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "This statement was created due to a NATURAL_PERSONS GLEIF Reporting Exception for 213800HTIY6D1KMBG757. Reporting exceptions are permitted reasons, defined by the LEI ROC policy, for an entity not to report an accounting consolidation parent.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-5a6a8e4c7ccfa9ca562d9ae2",
+    "recordId": "opencheck-1645fff766e1dea36edd3b79",
+    "declarationSubject": "opencheck-1645fff766e1dea36edd3b79",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-10-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity"
+     },
+     "name": "PERSIA INTERNATIONAL BANK PLC",
+     "identifiers": [
+      {
+       "id": "NK-DC4R48SCEMmbcURFzktAKy",
+       "scheme": "OPENSANCTIONS",
+       "schemeName": "OpenSanctions"
+      },
+      {
+       "id": "213800HTIY6D1KMBG757",
+       "scheme": "XI-LEI",
+       "schemeName": "Legal Entity Identifier"
+      },
+      {
+       "id": "'04218020",
+       "scheme": "REG",
+       "schemeName": "Local registry identifier"
+      }
+     ],
+     "jurisdiction": {
+      "name": "United Kingdom",
+      "code": "GB"
+     },
+     "foundingDate": "2001-05-16",
+     "addresses": [
+      {
+       "type": "alternative",
+       "address": "United Arab Emirates"
+      },
+      {
+       "type": "alternative",
+       "address": "6 Lothbury, London Post Code: EC2R 7HH, United Kingdom"
+      },
+      {
+       "type": "alternative",
+       "address": "6 LOTHBURY, EC2R 7HH, United Kingdom"
+      },
+      {
+       "type": "alternative",
+       "address": "6 Lothbury, EC2R 7HH, London"
+      },
+      {
+       "type": "alternative",
+       "address": "No.6 Lothbury, London EC2R 7HH"
+      },
+      {
+       "type": "alternative",
+       "address": "6 Lothbury, Londres EC2R 7HH"
+      },
+      {
+       "type": "alternative",
+       "address": "6 LOTHBURY, EC2R 7HH, LONDON"
+      },
+      {
+       "type": "alternative",
+       "address": "PIAZZA DELLA REPUBBLICA, 32, 20124 MILANO"
+      },
+      {
+       "type": "alternative",
+       "address": "6 Lothbury, LONDON, EC2R 7HH, United Kingdom"
+      },
+      {
+       "type": "alternative",
+       "address": "6 Lothbury, London :EC2R 7HH, UNITED KINGDOM"
+      },
+      {
+       "type": "alternative",
+       "address": "6 Lothbury, Londres EC2R 7HH, Royaume-Uni"
+      },
+      {
+       "type": "alternative",
+       "address": "6 Lothbury, EC2R 7HH London United Kingdom"
+      },
+      {
+       "type": "alternative",
+       "address": "VIA SANTA MARIA VALLE 3 MILANO 20123 MILANO ITALY"
+      },
+      {
+       "type": "alternative",
+       "address": "6 LOTHBURY, LONDON EC2R 7HH"
+      },
+      {
+       "type": "alternative",
+       "address": "Emirates Financial North Tower, 18th Floor, Office 1802, Sheikh Zayed Street, Dubai International Financial Centre, P.O. Box 119871, DUBAI, DUBAI, United Arab Emirates"
+      },
+      {
+       "type": "alternative",
+       "address": "PO Box 119871, No 209, 2nd Floor, Tower II, Al Fattan Currency House, Dubai International Financial Centre, Dubai"
+      },
+      {
+       "type": "alternative",
+       "address": "PERSIA INTERNATIONAL BANK 6 LOTHBURY LONDON EC2R 7HH UNITED KINGDOM"
+      },
+      {
+       "type": "alternative",
+       "address": "6 LOTHBURY LONDON, EC2R 7HH"
+      },
+      {
+       "type": "alternative",
+       "address": "6 Lothbury London, United Kingdom, EC2R 7HH"
+      },
+      {
+       "type": "alternative",
+       "address": "United Kingdom"
+      },
+      {
+       "type": "alternative",
+       "address": "6 LOTHBURY LONDON LONDON EC2R7HH UNITED KINGDOM"
+      },
+      {
+       "type": "alternative",
+       "address": "VIA SANTA MARIA VALLE 3 MILANO 20123 ITALY"
+      },
+      {
+       "type": "alternative",
+       "address": "PO Box 119871, No 209, 2nd Floor, Tower II, Al Fattan Currency House, Dubai International Financial Centre Dubai United Arab Emirates"
+      },
+      {
+       "type": "alternative",
+       "address": "6 Lothbury, London EC2R 7HH, United Kingdom"
+      }
+     ],
+     "alternateNames": [
+      "PERSIA INTERNATIONAL BANK PLC FILIALE DI MILANO",
+      "Persia International Bank",
+      "Persia International Bank UAE PLC"
+     ]
+    },
+    "source": {
+     "type": [
+      "thirdParty"
+     ],
+     "description": "OpenSanctions",
+     "opencheckSourceId": "opensanctions",
+     "retrievedAt": "2026-11-05T13:35:07Z",
+     "url": "https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/"
+    }
+   },
+   {
+    "statementId": "opencheck-a50f8238f0ccce0e40c84bef",
+    "recordId": "opencheck-ec6f2bc0dc02475d517e2866",
+    "declarationSubject": "opencheck-1645fff766e1dea36edd3b79",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-10-06",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity"
+     },
+     "name": "Mellat Bank",
+     "identifiers": [
+      {
+       "id": "NK-cdNHfj9Kizbgp6gAApBNya",
+       "scheme": "OPENSANCTIONS",
+       "schemeName": "OpenSanctions"
+      },
+      {
+       "id": "38077",
+       "scheme": "REG-IR",
+       "schemeName": "Local registry identifier"
+      }
+     ],
+     "jurisdiction": {
+      "name": "Iran, Islamic Republic of",
+      "code": "IR"
+     },
+     "addresses": [
+      {
+       "type": "alternative",
+       "address": "Taleghani Ave,Corner of Forsat St, Central Building of Bank Mellat, TEHRAN, TEHRAN, 1591614311, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Head Office Building, 327 Takeghani (Taleghani) Avenue, Tehran, Iran, 15817"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, Head Office Bldg, 276 Taleghani Ave"
+      },
+      {
+       "type": "alternative",
+       "address": "Head Office Building, 327 Takeghani (Taleghani) Avenue, Téhéran 15817, IRAN"
+      },
+      {
+       "type": "alternative",
+       "address": "P.O. Box 11365-5964, Tehran, 15817, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, Taleghani Street, 276, 15817, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "TEHRAN, HEAD OFFICE BLDG, 276 TALEGHANI AVE"
+      },
+      {
+       "type": "alternative",
+       "address": "P.O. Box 11365-5964, Téhéran, 15817, IRAN"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, Head Office Bldg, 327 Taleghani Ave, 15817"
+      },
+      {
+       "type": "alternative",
+       "address": "11365-5964, Tehran, 327 Takeghani (Taleghani) Avenue, 15817, IRAN (ISLAMIC REPUBLIC OF)"
+      },
+      {
+       "type": "alternative",
+       "address": "Head Office Building, 327 Takeghani (Taleghani) Avenue, Téhéran 15817, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Head Office Bldg, 276 Taleghani Ave Tehran Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Head Office Building, 327 Takeghani (Taleghani) Avenue, Tehran 15817, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, Head Office Building, 327 Takeghani (Taleghani) Avenue, 15817, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "P.O. Box 11365-5964, Tehran 15817, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "FORSAT TALEGHANI AVE.CORNER OF MOSAVI ST TALEGHANI AVE. TEHRAN 1581736911 TEHRAN IRAN (ISLAMIC REPUBLIC OF)"
+      },
+      {
+       "type": "alternative",
+       "address": "FORSAT FLOOR 10 TALEGHANI AVE. CORNER OF MOSAVI ST. TEHRAN 1581736911 IRAN (ISLAMIC REPUBLIC OF)"
+      },
+      {
+       "type": "alternative",
+       "address": "P.O. Box 11365-5964, Téhéran, 15817"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, Ayatollah Taleghani Ave, Iran"
+      }
+     ],
+     "alternateNames": [
+      "Nation's Bank",
+      "Bank Mellat",
+      "Mellat International Bank",
+      "בנק מלת",
+      "بانک ملت"
+     ]
+    },
+    "source": {
+     "type": [
+      "thirdParty"
+     ],
+     "description": "OpenSanctions",
+     "opencheckSourceId": "opensanctions",
+     "retrievedAt": "2026-11-05T13:35:07Z",
+     "url": "https://www.opensanctions.org/entities/NK-cdNHfj9Kizbgp6gAApBNya/"
+    }
+   },
+   {
+    "statementId": "opencheck-64f9c986800bb83f1fa75f53",
+    "recordId": "opencheck-de13563129e734a3a54eb536",
+    "declarationSubject": "opencheck-1645fff766e1dea36edd3b79",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-25",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-1645fff766e1dea36edd3b79",
+     "interestedParty": "opencheck-ec6f2bc0dc02475d517e2866",
+     "interests": [
+      {
+       "type": "shareholding",
+       "directOrIndirect": "direct"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "thirdParty"
+     ],
+     "description": "OpenSanctions",
+     "opencheckSourceId": "opensanctions",
+     "retrievedAt": "2026-11-05T13:35:07Z",
+     "url": "https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/"
+    }
+   },
+   {
+    "statementId": "opencheck-6a7fdfb5adbc0d686ff079c1",
+    "recordId": "opencheck-d5ba28dff2edf2e8c538d3c9",
+    "declarationSubject": "opencheck-1645fff766e1dea36edd3b79",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-10-25",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity"
+     },
+     "name": "TEJARAT BANK",
+     "identifiers": [
+      {
+       "id": "NK-fESDfWffPatY7M2kneRinJ",
+       "scheme": "OPENSANCTIONS",
+       "schemeName": "OpenSanctions"
+      },
+      {
+       "id": "5493007MJ3BLX55XSZ63",
+       "scheme": "XI-LEI",
+       "schemeName": "Legal Entity Identifier"
+      },
+      {
+       "id": "38027",
+       "scheme": "REG",
+       "schemeName": "Local registry identifier"
+      }
+     ],
+     "jurisdiction": {
+      "name": "Iran, Islamic Republic of",
+      "code": "IR"
+     },
+     "foundingDate": "2009-02-21",
+     "addresses": [
+      {
+       "type": "alternative",
+       "address": "PO Box 119871, 4th Floor, c/o Persia International Bank PLC, The Gate Bldg, Dubai"
+      },
+      {
+       "type": "alternative",
+       "address": "TEHRAN, 152 TALEGHANI AVENUE"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehrān, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Esfahan Region Management Bldg, Sheikh Bahayee Ave & Abuzar St Junction Esfahan Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, No. 247, Taleghani Avenue"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, Taleghani Avenue, 152, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "124-126 RUE DE PROVENCE PARIS 75008 FRANCE"
+      },
+      {
+       "type": "alternative",
+       "address": "P.O. Box 11365 -5416, Taleghani Br. 130, Taleghani Ave., Tehran"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, 130 Taleghani Avenue, Nejatoullahie, P.O. Box 11365-5416, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "124-126 Rue de Provence, (Angle 76 bd Haussmann), 75008 Paris"
+      },
+      {
+       "type": "alternative",
+       "address": "Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "124/126 AVENUE DE PROVENCE, 75008 Paris"
+      },
+      {
+       "type": "alternative",
+       "address": "No. 130, Taleghani Avenue, Tehran, Iran, TEHRAN, TEHRAN, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "No.247 - Ayatullah Talaqani St, Ostad Najatullah St., P.O.Box : 11365-5416 And 3139-11365, TEHRAN, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "HEAD OFFICE TELEGHANI AVENUE ZAND ALLY TEHRAN 11365-3139 TEHRAN POB 11365-5416 IRAN (ISLAMIC REPUBLIC OF)"
+      },
+      {
+       "type": "alternative",
+       "address": "TEHERAN, NO. 130, TALEGHANI AVENUE, 23, 1598617818"
+      },
+      {
+       "type": "alternative",
+       "address": "Shiraz, PO Box 71345, Karim Khan Zand Blv, Nouri Ave, Opposite Eram Hotel"
+      },
+      {
+       "type": "alternative",
+       "address": "HEAD OFFICE FLOOR 3 TALEGHANI AVE ZAND ALLY TEHERAN 11365-3139 11365-5416 IRAN (ISLAMIC REPUBLIC OF)"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, PO Box 11365-5416, 152 Taleghani Avenue, 15994"
+      },
+      {
+       "type": "alternative",
+       "address": "PO Box 119871, 4th Floor, c/o Persia International Bank PLC, The Gate Bldg Dubai United Arab Emirates"
+      },
+      {
+       "type": "alternative",
+       "address": "130 Taleghani Avenue Nejatoullahie, P.O. Box 11365-5416, Tehran, Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Office C208, Beijing Lufthansa Center No 50, Liangmaqiao Rd, Chaoyang District, 100016 Beijing"
+      },
+      {
+       "type": "alternative",
+       "address": "152 Taleghani Avenue Tehran Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "RUDAKI 88 DUSHANBE 734001 TAJIKISTAN"
+      },
+      {
+       "type": "alternative",
+       "address": "PO Box 734001, Rudaki Ave 88 Dushanbe 734001 Tajikistan"
+      },
+      {
+       "type": "alternative",
+       "address": "PO Box 734001, Rudaki Ave 88, 734001 Dushanbe"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, PO Box 11365-3139, 130 Taleghani Avenue"
+      },
+      {
+       "type": "alternative",
+       "address": "Esfahan, Esfahan Region Management Bldg, Sheikh Bahayee Ave & Abuzar St Junction"
+      },
+      {
+       "type": "alternative",
+       "address": "124-126 RUE DE PROVENCE PARIS 75008 PARIS FRANCE"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, PO Box 1598617818"
+      },
+      {
+       "type": "alternative",
+       "address": "11365 -5416, Tehran, Taleghani Br. 130, Taleghani Ave., IRAN (ISLAMIC REPUBLIC OF)"
+      },
+      {
+       "type": "alternative",
+       "address": "Office C208, Beijing Lufthansa Center No 50, Liangmaqiao Rd, Chaoyang District Beijing 100016 China"
+      },
+      {
+       "type": "alternative",
+       "address": "PO Box 71345, Karim Khan Zand Blv, Nouri Ave, Opposite Eram Hotel Shiraz Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "PO Box 11365-3139, 130 Taleghani Avenue Tehran Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Tehran, 152 Taleghani Avenue"
+      },
+      {
+       "type": "alternative",
+       "address": "PO Box 1598617818 Tehran Iran"
+      },
+      {
+       "type": "alternative",
+       "address": "Taleghani Br. 130, Taleghani Ave. P.O. Box: 11365-5416, Téhéran"
+      },
+      {
+       "type": "alternative",
+       "address": "Taleghani Br. 130, Taleghani Ave. P.O. Box: 11365 -5416, Tehran"
+      },
+      {
+       "type": "alternative",
+       "address": "124-126 Rue de Provence, (Angle 76 bd Haussmann) Paris 75008 France"
+      },
+      {
+       "type": "alternative",
+       "address": "RUDAKI AVENUE 88 DUSHANBE 734001 DUSHANBE TAJIKISTAN"
+      },
+      {
+       "type": "alternative",
+       "address": "No. 247, Taleghani Avenue Tehran Iran"
+      }
+     ],
+     "alternateNames": [
+      "Tejarat Bank PJS",
+      "Bank Tejarat",
+      "بانک تجارت",
+      "BANK TEJARAT DUSHANBE BRANCH"
+     ]
+    },
+    "source": {
+     "type": [
+      "thirdParty"
+     ],
+     "description": "OpenSanctions",
+     "opencheckSourceId": "opensanctions",
+     "retrievedAt": "2026-11-05T13:35:07Z",
+     "url": "https://www.opensanctions.org/entities/NK-fESDfWffPatY7M2kneRinJ/"
+    }
+   },
+   {
+    "statementId": "opencheck-c78308cd6756baabaeee3e4a",
+    "recordId": "opencheck-8aa62cfac1c938c85e4a5df3",
+    "declarationSubject": "opencheck-1645fff766e1dea36edd3b79",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-05-25",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-1645fff766e1dea36edd3b79",
+     "interestedParty": "opencheck-d5ba28dff2edf2e8c538d3c9",
+     "interests": [
+      {
+       "type": "shareholding",
+       "directOrIndirect": "direct"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "thirdParty"
+     ],
+     "description": "OpenSanctions",
+     "opencheckSourceId": "opensanctions",
+     "retrievedAt": "2026-11-05T13:35:07Z",
+     "url": "https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/"
+    }
+   },
+   {
+    "statementId": "opencheck-84a6e50829208620e5cf6f2c",
+    "recordId": "opencheck-24ce8e62cb0878240b402f08",
+    "declarationSubject": "opencheck-1645fff766e1dea36edd3b79",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-08-30",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity"
+     },
+     "name": "Islamic Republic Of Iran",
+     "identifiers": [
+      {
+       "id": "NK-g9otNs5vgss4kvR62bJiW7",
+       "scheme": "OPENSANCTIONS",
+       "schemeName": "OpenSanctions"
+      }
+     ],
+     "addresses": [
+      {
+       "type": "alternative",
+       "address": "Tehran, Hafez Crossing Taleghani Avenue, Ministry Of Petroleum, 15900, Iran"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "thirdParty"
+     ],
+     "description": "OpenSanctions",
+     "opencheckSourceId": "opensanctions",
+     "retrievedAt": "2026-11-05T13:35:07Z",
+     "url": "https://www.opensanctions.org/entities/NK-g9otNs5vgss4kvR62bJiW7/"
+    }
+   },
+   {
+    "statementId": "opencheck-74091ed4567050866a12a7e3",
+    "recordId": "opencheck-67b478e285b761d0198bdf14",
+    "declarationSubject": "opencheck-1645fff766e1dea36edd3b79",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-07-27",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-1645fff766e1dea36edd3b79",
+     "interestedParty": "opencheck-24ce8e62cb0878240b402f08",
+     "interests": [
+      {
+       "type": "unknownInterest"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "thirdParty"
+     ],
+     "description": "OpenSanctions",
+     "opencheckSourceId": "opensanctions",
+     "retrievedAt": "2026-11-05T13:35:07Z",
+     "url": "https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/"
+    }
+   },
+   {
+    "statementId": "opencheck-cb999871c51301310dc991e1",
+    "recordId": "opencheck-d38f80e900bdf376c85ad686",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity",
+      "details": "Public limited company"
+     },
+     "name": "PERSIA INTERNATIONAL BANK PLC",
+     "identifiers": [
+      {
+       "id": "04218020",
+       "scheme": "GB-COH",
+       "schemeName": "Companies House"
+      }
+     ],
+     "jurisdiction": {
+      "name": "United Kingdom",
+      "code": "GB"
+     },
+     "foundingDate": "2001-05-16",
+     "addresses": [
+      {
+       "type": "registered",
+       "address": "6 Lothbury, London, EC2R 7HH"
+      }
+     ],
+     "alternateNames": [
+      "PERSIA INTERNATIONAL LIMITED"
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/alternateNames/0",
+      "motivation": "commenting",
+      "description": "Former legal name, as filed: PERSIA INTERNATIONAL LIMITED (from 16 May 2001 until 18 March 2002).",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "formerName": {
+       "name": "PERSIA INTERNATIONAL LIMITED",
+       "until": "2002-03-18",
+       "from": "2001-05-16"
+      }
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "UK Companies House records this entity as active — register status: “active”.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      }
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-c82f1ba84b1a1d4fe558f768",
+    "recordId": "opencheck-1307e449a8402a0861059d41",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity"
+     },
+     "name": "Bank Mellat",
+     "identifiers": [
+      {
+       "id": "38077",
+       "scheme": "REG-IR",
+       "schemeName": "Companies Registry Administration, Iran"
+      }
+     ],
+     "jurisdiction": {
+      "name": "Iran",
+      "code": "IR"
+     }
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "identifying",
+      "description": "Companies House PSC item id 1-9eMIL50GKYnoq6MpCVDuK4NYM (scheme GB-COH-PSC): the register's own key for this PSC filing, which this statement is keyed on. It addresses the filing at the company, not the company itself — the registration number above is the company's identifier.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/company/04218020/persons-with-significant-control/corporate-entity/1-9eMIL50GKYnoq6MpCVDuK4NYM"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-3d55acf51252d92066cd0a30",
+    "recordId": "opencheck-761d209b85c5bac59d177157",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2016-05-16",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-d38f80e900bdf376c85ad686",
+     "interestedParty": "opencheck-1307e449a8402a0861059d41",
+     "interests": [
+      {
+       "type": "shareholding",
+       "directOrIndirect": "unknown",
+       "details": "Ownership of shares – More than 50% but less than 75%",
+       "share": {
+        "exclusiveMinimum": 50,
+        "maximum": 75
+       },
+       "beneficialOwnershipOrControl": false
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/interests/0/type",
+      "motivation": "transformation",
+      "description": "Companies House nature-of-control code 'ownership-of-shares-50-to-75-percent', mapped to the closest BODS interest type.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "transformedContent": "shareholding",
+      "creationDate": "2026-11-05"
+     },
+     {
+      "statementPointerTarget": "/recordDetails/interests",
+      "motivation": "commenting",
+      "description": "No PSC notification form names this party. Until 26 June 2017 a company gave its PSCs, and changes to them, on its next confirmation statement; the first made up to on or after 2016-05-16 is CS01, filed 2017-05-18, transaction MzE3NjA3NjYxM2FkaXF6a2N4. Companies House records the company as the filer and does not publish who presented it.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/company/04218020/filing-history/MzE3NjA3NjYxM2FkaXF6a2N4/document?format=pdf&download=0",
+      "companiesHouseFiling": {
+       "event": "notification",
+       "match": "confirmation_statement",
+       "declarant": "company",
+       "type": "CS01",
+       "transactionId": "MzE3NjA3NjYxM2FkaXF6a2N4",
+       "date": "2017-05-18",
+       "documentUrl": "https://find-and-update.company-information.service.gov.uk/company/04218020/filing-history/MzE3NjA3NjYxM2FkaXF6a2N4/document?format=pdf&download=0",
+       "description": "confirmation-statement-with-updates"
+      }
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-9dac4f7d9808b7358051bc47",
+    "recordId": "opencheck-6e1917060d7699b09de34cd7",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity"
+     },
+     "name": "Bank Tejarat",
+     "identifiers": [
+      {
+       "id": "38027",
+       "scheme": "REG-IR",
+       "schemeName": "Companies Registry Administration"
+      }
+     ],
+     "jurisdiction": {
+      "name": "Iran",
+      "code": "IR"
+     }
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "identifying",
+      "description": "Companies House PSC item id 1F52ztEbkHD08o7_8k3mP4w3W0I (scheme GB-COH-PSC): the register's own key for this PSC filing, which this statement is keyed on. It addresses the filing at the company, not the company itself — the registration number above is the company's identifier.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/company/04218020/persons-with-significant-control/corporate-entity/1F52ztEbkHD08o7_8k3mP4w3W0I"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-b3eac9cabe452a6011ca96a3",
+    "recordId": "opencheck-0e7d14daa9df2fd608d82f0b",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2016-05-16",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-d38f80e900bdf376c85ad686",
+     "interestedParty": "opencheck-6e1917060d7699b09de34cd7",
+     "interests": [
+      {
+       "type": "shareholding",
+       "directOrIndirect": "unknown",
+       "details": "Ownership of shares – More than 25% but not more than 50%",
+       "share": {
+        "exclusiveMinimum": 25,
+        "maximum": 50
+       },
+       "beneficialOwnershipOrControl": false
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/interests/0/type",
+      "motivation": "transformation",
+      "description": "Companies House nature-of-control code 'ownership-of-shares-25-to-50-percent', mapped to the closest BODS interest type.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "transformedContent": "shareholding",
+      "creationDate": "2026-11-05"
+     },
+     {
+      "statementPointerTarget": "/recordDetails/interests",
+      "motivation": "commenting",
+      "description": "No PSC notification form names this party. Until 26 June 2017 a company gave its PSCs, and changes to them, on its next confirmation statement; the first made up to on or after 2016-05-16 is CS01, filed 2017-05-18, transaction MzE3NjA3NjYxM2FkaXF6a2N4. Companies House records the company as the filer and does not publish who presented it.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/company/04218020/filing-history/MzE3NjA3NjYxM2FkaXF6a2N4/document?format=pdf&download=0",
+      "companiesHouseFiling": {
+       "event": "notification",
+       "match": "confirmation_statement",
+       "declarant": "company",
+       "type": "CS01",
+       "transactionId": "MzE3NjA3NjYxM2FkaXF6a2N4",
+       "date": "2017-05-18",
+       "documentUrl": "https://find-and-update.company-information.service.gov.uk/company/04218020/filing-history/MzE3NjA3NjYxM2FkaXF6a2N4/document?format=pdf&download=0",
+       "description": "confirmation-statement-with-updates"
+      }
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-c12fccc148e081f63fab089e",
+    "recordId": "opencheck-0763b8c8fb8d66bf1e56f856",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "personType": "knownPerson",
+     "names": [
+      {
+       "type": "legal",
+       "fullName": "AKHONDI- ASL, Aziz, Mr."
+      }
+     ],
+     "nationalities": [
+      {
+       "name": "Iranian",
+       "code": "IR"
+      }
+     ],
+     "birthDate": "1951-03",
+     "addresses": [
+      {
+       "type": "service",
+       "address": "6 Lothbury, London, EC2R 7HH"
+      },
+      {
+       "type": "residence",
+       "country": {
+        "name": "United Kingdom",
+        "code": "GB"
+       }
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/officers/8vOpgbsBAHo_vRzGTgaJkNCEBVE/appointments"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/birthDate",
+      "motivation": "commenting",
+      "description": "Source publishes month and year only for this person's date of birth; the remaining precision was never disclosed, not withheld or lost by OpenCheck. BODS permits an imprecise birthDate for this reason.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "identifying",
+      "description": "Grouped on Companies House officer id 8vOpgbsBAHo_vRzGTgaJkNCEBVE: the register's own grouping of one person's appointments, published so this statement can be regrouped or rejected. Companies House derives it from the name, date of birth and address it holds, and it is not an assertion of identity — the register sometimes holds two ids for one person.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      }
+     },
+     {
+      "statementPointerTarget": "/recordDetails/addresses/1/country",
+      "motivation": "transformation",
+      "description": "Companies House files the country of residence as 'England'; OpenCheck gives it as the ISO 3166-1 country United Kingdom (GB).",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "transformedContent": "GB"
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "Companies House records this person's identity as verified. The register names no authorised corporate service provider, so the identity was verified with Companies House directly; Companies House does not publish the date of verification for that route. The first identity verification statement for a role in this data was supplied on 10 June 2026.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "companiesHouse",
+       "firstVerificationStatementOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/8vOpgbsBAHo_vRzGTgaJkNCEBVE/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-e5f6d67531c276a0238eade5",
+    "recordId": "opencheck-27defb8b90a5b7a40b335ee9",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-d38f80e900bdf376c85ad686",
+     "interestedParty": "opencheck-0763b8c8fb8d66bf1e56f856",
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "directOrIndirect": "direct",
+       "details": "Director, from 2019-03-29",
+       "startDate": "2019-03-29"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/interestedParty",
+      "motivation": "commenting",
+      "description": "Companies House records an identity verification statement for this role, supplied on 10 June 2026. The register names no authorised corporate service provider, so the identity was verified with Companies House directly; Companies House does not publish the date of verification for that route.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "companiesHouse",
+       "verificationStatementSuppliedOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/8vOpgbsBAHo_vRzGTgaJkNCEBVE/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-0609880d63bfc84a0cf65ca5",
+    "recordId": "opencheck-cc6b11064c582d1d304fe90a",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "personType": "knownPerson",
+     "names": [
+      {
+       "type": "legal",
+       "fullName": "FAROKHNEJAD, Farshid"
+      }
+     ],
+     "nationalities": [
+      {
+       "name": "Iranian",
+       "code": "IR"
+      }
+     ],
+     "birthDate": "1974-09",
+     "addresses": [
+      {
+       "type": "service",
+       "address": "6 Lothbury, London, EC2R 7HH"
+      },
+      {
+       "type": "residence",
+       "country": {
+        "name": "Iran",
+        "code": "IR"
+       }
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/officers/EPw_31nv9NzzVPnrbk6nYS1kXiw/appointments"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/birthDate",
+      "motivation": "commenting",
+      "description": "Source publishes month and year only for this person's date of birth; the remaining precision was never disclosed, not withheld or lost by OpenCheck. BODS permits an imprecise birthDate for this reason.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "identifying",
+      "description": "Grouped on Companies House officer id EPw_31nv9NzzVPnrbk6nYS1kXiw: the register's own grouping of one person's appointments, published so this statement can be regrouped or rejected. Companies House derives it from the name, date of birth and address it holds, and it is not an assertion of identity — the register sometimes holds two ids for one person.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      }
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "Companies House records this person's identity as verified. The identity was verified on 3 June 2026 by ARBED ACCOUNTANCY SERVICES LIMITED ACSP, an authorised corporate service provider supervised for anti-money laundering by Association of Chartered Certified Accountants (ACCA). The first identity verification statement for a role in this data was supplied on 10 June 2026.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "authorisedCorporateServiceProvider",
+       "verifiedBy": {
+        "name": "ARBED ACCOUNTANCY SERVICES LIMITED ACSP",
+        "antiMoneyLaunderingSupervisoryBodies": [
+         "Association of Chartered Certified Accountants (ACCA)"
+        ]
+       },
+       "identityVerifiedOn": "2026-06-03",
+       "firstVerificationStatementOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/EPw_31nv9NzzVPnrbk6nYS1kXiw/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-2173c36fe35c1958b1c97e49",
+    "recordId": "opencheck-d8fcee2870545fc8567dc3d7",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-d38f80e900bdf376c85ad686",
+     "interestedParty": "opencheck-cc6b11064c582d1d304fe90a",
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "directOrIndirect": "direct",
+       "details": "Director, from 2022-09-01",
+       "startDate": "2022-09-01"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/interestedParty",
+      "motivation": "commenting",
+      "description": "Companies House records an identity verification statement for this role, supplied on 10 June 2026. The identity was verified on 3 June 2026 by ARBED ACCOUNTANCY SERVICES LIMITED ACSP, an authorised corporate service provider supervised for anti-money laundering by Association of Chartered Certified Accountants (ACCA).",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "authorisedCorporateServiceProvider",
+       "verifiedBy": {
+        "name": "ARBED ACCOUNTANCY SERVICES LIMITED ACSP",
+        "antiMoneyLaunderingSupervisoryBodies": [
+         "Association of Chartered Certified Accountants (ACCA)"
+        ]
+       },
+       "identityVerifiedOn": "2026-06-03",
+       "verificationStatementSuppliedOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/EPw_31nv9NzzVPnrbk6nYS1kXiw/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-1b4dfdecf53f828cf68efad1",
+    "recordId": "opencheck-3640149e2e277c0d43b3e944",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "personType": "knownPerson",
+     "names": [
+      {
+       "type": "legal",
+       "fullName": "FEIZASAR, Hadi Akhlaghi, Dr"
+      }
+     ],
+     "nationalities": [
+      {
+       "name": "Iranian",
+       "code": "IR"
+      }
+     ],
+     "birthDate": "1966-12",
+     "addresses": [
+      {
+       "type": "service",
+       "address": "6 Lothbury, London, EC2R 7HH"
+      },
+      {
+       "type": "residence",
+       "country": {
+        "name": "Iran",
+        "code": "IR"
+       }
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/officers/WgpxIERK25R7iF8sjp3Vj5uE4b0/appointments"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/birthDate",
+      "motivation": "commenting",
+      "description": "Source publishes month and year only for this person's date of birth; the remaining precision was never disclosed, not withheld or lost by OpenCheck. BODS permits an imprecise birthDate for this reason.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "identifying",
+      "description": "Grouped on Companies House officer id WgpxIERK25R7iF8sjp3Vj5uE4b0: the register's own grouping of one person's appointments, published so this statement can be regrouped or rejected. Companies House derives it from the name, date of birth and address it holds, and it is not an assertion of identity — the register sometimes holds two ids for one person.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      }
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "Companies House records this person's identity as verified. The identity was verified on 8 June 2026 by ARBED ACCOUNTANCY SERVICES LIMITED ACSP, an authorised corporate service provider supervised for anti-money laundering by Association of Chartered Certified Accountants (ACCA). The first identity verification statement for a role in this data was supplied on 10 June 2026.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "authorisedCorporateServiceProvider",
+       "verifiedBy": {
+        "name": "ARBED ACCOUNTANCY SERVICES LIMITED ACSP",
+        "antiMoneyLaunderingSupervisoryBodies": [
+         "Association of Chartered Certified Accountants (ACCA)"
+        ]
+       },
+       "identityVerifiedOn": "2026-06-08",
+       "firstVerificationStatementOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/WgpxIERK25R7iF8sjp3Vj5uE4b0/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-888d11c7638813cb4ff624e7",
+    "recordId": "opencheck-6fc5ee1ea64a4a55b54be4e5",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-d38f80e900bdf376c85ad686",
+     "interestedParty": "opencheck-3640149e2e277c0d43b3e944",
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "directOrIndirect": "direct",
+       "details": "Director, from 2022-03-08",
+       "startDate": "2022-03-08"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/interestedParty",
+      "motivation": "commenting",
+      "description": "Companies House records an identity verification statement for this role, supplied on 10 June 2026. The identity was verified on 8 June 2026 by ARBED ACCOUNTANCY SERVICES LIMITED ACSP, an authorised corporate service provider supervised for anti-money laundering by Association of Chartered Certified Accountants (ACCA).",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "authorisedCorporateServiceProvider",
+       "verifiedBy": {
+        "name": "ARBED ACCOUNTANCY SERVICES LIMITED ACSP",
+        "antiMoneyLaunderingSupervisoryBodies": [
+         "Association of Chartered Certified Accountants (ACCA)"
+        ]
+       },
+       "identityVerifiedOn": "2026-06-08",
+       "verificationStatementSuppliedOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/WgpxIERK25R7iF8sjp3Vj5uE4b0/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-aa781db41c6924f30eff2112",
+    "recordId": "opencheck-9598f40c2f569e3f1332ea03",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "personType": "knownPerson",
+     "names": [
+      {
+       "type": "legal",
+       "fullName": "REZAEIPOUR, Mohammad Reza"
+      }
+     ],
+     "nationalities": [
+      {
+       "name": "Iranian",
+       "code": "IR"
+      }
+     ],
+     "birthDate": "1971-01",
+     "addresses": [
+      {
+       "type": "service",
+       "address": "6 Lothbury, London, EC2R 7HH"
+      },
+      {
+       "type": "residence",
+       "country": {
+        "name": "United Kingdom",
+        "code": "GB"
+       }
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/officers/no8vx8MN1yrznTzBV-91-uGbGi4/appointments"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/birthDate",
+      "motivation": "commenting",
+      "description": "Source publishes month and year only for this person's date of birth; the remaining precision was never disclosed, not withheld or lost by OpenCheck. BODS permits an imprecise birthDate for this reason.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "identifying",
+      "description": "Grouped on Companies House officer id no8vx8MN1yrznTzBV-91-uGbGi4: the register's own grouping of one person's appointments, published so this statement can be regrouped or rejected. Companies House derives it from the name, date of birth and address it holds, and it is not an assertion of identity — the register sometimes holds two ids for one person.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      }
+     },
+     {
+      "statementPointerTarget": "/recordDetails/addresses/1/country",
+      "motivation": "transformation",
+      "description": "Companies House files the country of residence as 'England'; OpenCheck gives it as the ISO 3166-1 country United Kingdom (GB).",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "transformedContent": "GB"
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "Companies House records this person's identity as verified. The register names no authorised corporate service provider, so the identity was verified with Companies House directly; Companies House does not publish the date of verification for that route. The first identity verification statement for a role in this data was supplied on 10 June 2026.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "companiesHouse",
+       "firstVerificationStatementOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/no8vx8MN1yrznTzBV-91-uGbGi4/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-c88de641a72991937b5f35fe",
+    "recordId": "opencheck-036927094871c6a5bb0b0f98",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-d38f80e900bdf376c85ad686",
+     "interestedParty": "opencheck-9598f40c2f569e3f1332ea03",
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "directOrIndirect": "direct",
+       "details": "Director, from 2022-06-01",
+       "startDate": "2022-06-01"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/interestedParty",
+      "motivation": "commenting",
+      "description": "Companies House records an identity verification statement for this role, supplied on 10 June 2026. The register names no authorised corporate service provider, so the identity was verified with Companies House directly; Companies House does not publish the date of verification for that route.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "companiesHouse",
+       "verificationStatementSuppliedOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/no8vx8MN1yrznTzBV-91-uGbGi4/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-b7ac76a9555d3d4027e65af0",
+    "recordId": "opencheck-d699a141422ed24f78970690",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "person",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "personType": "knownPerson",
+     "names": [
+      {
+       "type": "legal",
+       "fullName": "SHAHMIR, Farrokh"
+      }
+     ],
+     "nationalities": [
+      {
+       "name": "British",
+       "code": "GB"
+      }
+     ],
+     "birthDate": "1955-08",
+     "addresses": [
+      {
+       "type": "service",
+       "address": "24, Lower Mardley Hill, Welwyn, AL6 0UQ, England",
+       "country": {
+        "name": "United Kingdom",
+        "code": "GB"
+       }
+      },
+      {
+       "type": "residence",
+       "country": {
+        "name": "United Kingdom",
+        "code": "GB"
+       }
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/officers/1LbwWP2lrzn1VJHeKgSbmgDk-5g/appointments"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/birthDate",
+      "motivation": "commenting",
+      "description": "Source publishes month and year only for this person's date of birth; the remaining precision was never disclosed, not withheld or lost by OpenCheck. BODS permits an imprecise birthDate for this reason.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "creationDate": "2026-11-05"
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "identifying",
+      "description": "Grouped on Companies House officer id 1LbwWP2lrzn1VJHeKgSbmgDk-5g: the register's own grouping of one person's appointments, published so this statement can be regrouped or rejected. Companies House derives it from the name, date of birth and address it holds, and it is not an assertion of identity — the register sometimes holds two ids for one person.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      }
+     },
+     {
+      "statementPointerTarget": "/recordDetails/addresses/1/country",
+      "motivation": "transformation",
+      "description": "Companies House files the country of residence as 'England'; OpenCheck gives it as the ISO 3166-1 country United Kingdom (GB).",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "transformedContent": "GB"
+     },
+     {
+      "statementPointerTarget": "/recordDetails",
+      "motivation": "commenting",
+      "description": "Companies House records this person's identity as verified. The register names no authorised corporate service provider, so the identity was verified with Companies House directly; Companies House does not publish the date of verification for that route. The first identity verification statement for a role in this data was supplied on 10 June 2026.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "companiesHouse",
+       "firstVerificationStatementOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/1LbwWP2lrzn1VJHeKgSbmgDk-5g/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-bc7fe65d5f375c6937a2396d",
+    "recordId": "opencheck-83e161002c3ed77022c1b5c0",
+    "declarationSubject": "opencheck-d38f80e900bdf376c85ad686",
+    "recordType": "relationship",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "subject": "opencheck-d38f80e900bdf376c85ad686",
+     "interestedParty": "opencheck-d699a141422ed24f78970690",
+     "interests": [
+      {
+       "type": "seniorManagingOfficial",
+       "directOrIndirect": "direct",
+       "details": "Director, from 2017-06-30",
+       "startDate": "2017-06-30"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "officialRegister"
+     ],
+     "description": "UK Companies House",
+     "opencheckSourceId": "companies_house",
+     "retrievedAt": "2026-11-05T13:35:05Z",
+     "url": "https://find-and-update.company-information.service.gov.uk/company/04218020"
+    },
+    "annotations": [
+     {
+      "statementPointerTarget": "/recordDetails/interestedParty",
+      "motivation": "commenting",
+      "description": "Companies House records an identity verification statement for this role, supplied on 10 June 2026. The register names no authorised corporate service provider, so the identity was verified with Companies House directly; Companies House does not publish the date of verification for that route.",
+      "createdBy": {
+       "name": "OpenCheck",
+       "uri": "https://opencheck.world"
+      },
+      "identityVerification": {
+       "status": "verified",
+       "recordedBy": {
+        "name": "Companies House",
+        "uri": "https://www.gov.uk/government/organisations/companies-house"
+       },
+       "route": "companiesHouse",
+       "verificationStatementSuppliedOn": "2026-06-10"
+      },
+      "url": "https://find-and-update.company-information.service.gov.uk/officers/1LbwWP2lrzn1VJHeKgSbmgDk-5g/appointments"
+     }
+    ]
+   },
+   {
+    "statementId": "opencheck-0df83bdf57ec9b8bed33d452",
+    "recordId": "opencheck-42a98b75dcd07b67c0c47c7d",
+    "declarationSubject": "opencheck-42a98b75dcd07b67c0c47c7d",
+    "recordType": "entity",
+    "recordStatus": "new",
+    "statementDate": "2026-11-05",
+    "publicationDetails": {
+     "bodsVersion": "0.4",
+     "publicationDate": "2026-11-05",
+     "publisher": {
+      "name": "OpenCheck"
+     }
+    },
+    "recordDetails": {
+     "isComponent": false,
+     "entityType": {
+      "type": "registeredEntity"
+     },
+     "name": "PERSIA INTERNATIONAL BANK PLC",
+     "identifiers": [
+      {
+       "id": "oc-companies-gb-04218020.798a6a36cbd4d42268543e47ff8fa80c246053cc",
+       "scheme": "OPENALEPH",
+       "schemeName": "OpenAleph"
+      },
+      {
+       "id": "04218020",
+       "scheme": "REG-GB",
+       "schemeName": "Local registry identifier"
+      }
+     ],
+     "jurisdiction": {
+      "name": "United Kingdom",
+      "code": "GB"
+     },
+     "foundingDate": "2001-05-16",
+     "addresses": [
+      {
+       "type": "alternative",
+       "address": "6 LOTHBURY LONDON, EC2R 7HH"
+      }
+     ]
+    },
+    "source": {
+     "type": [
+      "thirdParty"
+     ],
+     "description": "OpenAleph",
+     "opencheckSourceId": "openaleph",
+     "retrievedAt": "2026-11-05T13:07:29Z",
+     "url": "https://search.openaleph.org/entities/oc-companies-gb-04218020.798a6a36cbd4d42268543e47ff8fa80c246053cc"
+    }
+   }
+  ],
+  "integrated_ownership": {
+   "method": "Integrated ownership",
+   "description": "How much of the company each party holds, directly and through the companies it holds: shares are multiplied along each path and added across paths, and a company's own shares are given back to its other holders. Each source is computed on its own; figures from two sources are listed side by side, never added. Shareholdings only — voting rights, roles and control are not shares. For a person it is arithmetic on what was filed, not a determination of beneficial ownership. Context, not a finding.",
+   "credit": "Method: integrated ownership as published by T-Rank (https://docs.trank.no/white_papers).",
+   "as_of": "2026-11-05",
+   "holders": [
+    {
+     "name": "Mellat Bank",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "UK Companies House",
+       "text": "50–75%",
+       "minimum": 50.0,
+       "maximum": 75.0,
+       "incomplete": false,
+       "route": "directly"
+      },
+      {
+       "source": "OpenSanctions",
+       "text": "No figure — no share is stated on any path",
+       "minimum": null,
+       "maximum": null,
+       "incomplete": true,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Bank Tejarat",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "UK Companies House",
+       "text": "25–50%",
+       "minimum": 25.0,
+       "maximum": 50.0,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "TEJARAT BANK",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "OpenSanctions",
+       "text": "No figure — no share is stated on any path",
+       "minimum": null,
+       "maximum": null,
+       "incomplete": true,
+       "route": "directly"
+      }
+     ]
+    }
+   ],
+   "holders_total": 3,
+   "hint": "Context, not a risk finding: no threshold is applied and none of these figures feeds the risk signals or the verdict. Each source is computed on its own; two figures for one party are two publishers' readings, never to be added."
+  },
+  "disclosure_status": {
+   "as_of": "2026-11-05",
+   "by_source": [
+    {
+     "source": "gleif",
+     "source_name": "GLEIF",
+     "values": [
+      "exempt"
+     ],
+     "line": "Parent: Exempt — the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent",
+     "entries": [
+      {
+       "value": "exempt",
+       "covers": "parent",
+       "details": [
+        "the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent"
+       ],
+       "reasons": [
+        "NATURAL_PERSONS"
+       ]
+      }
+     ]
+    },
+    {
+     "source": "companies_house",
+     "source_name": "UK Companies House",
+     "values": [
+      "declared"
+     ],
+     "line": "Beneficial owners: Declared (2)",
+     "entries": [
+      {
+       "value": "declared",
+       "covers": "beneficial_owners",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "source": "climatetrace",
+     "source_name": "Global Energy Monitor / Climate TRACE",
+     "values": [
+      "no_record"
+     ],
+     "line": "No record of the company",
+     "entries": [
+      {
+       "value": "no_record",
+       "covers": null
+      }
+     ]
+    }
+   ],
+   "not_covered": [
+    "opensanctions",
+    "openaleph",
+    "wikirate",
+    "eiti",
+    "ted_eu",
+    "everypolitician"
+   ],
+   "hint": "What each source says about the company's owners, for what it covers (beneficial owners, shareholders or the consolidating parent). Absence from a source is not an exemption: none_filed means the record carries no owner and no reason. Describes only; no value here feeds the risk signals or the verdict."
+  },
+  "bods_issues": [],
+  "license_notices": [
+   {
+    "source_id": "opensanctions",
+    "hit_id": "NK-DC4R48SCEMmbcURFzktAKy",
+    "notice": "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license."
+   }
+  ]
+ }
+}

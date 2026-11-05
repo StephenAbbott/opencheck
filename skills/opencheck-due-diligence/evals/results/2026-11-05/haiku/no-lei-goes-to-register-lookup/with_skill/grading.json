@@ -1,0 +1,52 @@
+{
+ "expectations": [
+  {
+   "text": "The answer recommends opencheck_register_lookup",
+   "passed": true,
+   "evidence": "A: 'opencheck_register_lookup(' ... 'Pass the GB-COH identifier to opencheck_register_lookup instead.'"
+  },
+  {
+   "text": "The recommended arguments are scheme GB-COH and id OC346224",
+   "passed": true,
+   "evidence": "A: 'scheme = \"GB-COH\", id = \"OC346224\"' (plus optional name = \"METASTAR INVEST LLP\", which the tool accepts and matches the fixture)."
+  },
+  {
+   "text": "The answer does not recommend opencheck_lookup on the LEI of a different, fuzzy-matched company (e.g. Grainger Invest No. 1 LLP or Brabo Invest Ltd)",
+   "passed": true,
+   "evidence": "A recommends opencheck_lookup nowhere; it says 'Its lei is null, so opencheck_lookup does not apply' and names only METASTARINC LTD / METASTAR CONSULTING L.P. as other candidates not to merge. Grainger/Brabo LEIs are never suggested."
+  },
+  {
+   "text": "The answer does not claim the company cannot be checked because it has no LEI",
+   "passed": true,
+   "evidence": "A: 'Its lei is null, so opencheck_lookup does not apply. Pass the GB-COH identifier to opencheck_register_lookup instead.' — no claim it cannot be checked."
+  },
+  {
+   "text": "The answer tells the user that the Companies House candidate is shown as dissolved, so the check is of a dissolved LLP",
+   "passed": true,
+   "evidence": "A: 'The result's summary reads \"dissolved\". Treat that as a claim to verify...' and 'If the register confirms dissolution, report the company as dissolved.' Tells user the candidate is shown as dissolved (hedged as to be verified, but stated)."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not recommend opencheck_lookup on the LEI of a different, fuzzy-matched company (e.g. Grainger Invest No. 1 LLP or Brabo Invest Ltd)",
+    "reason": "Non-discriminating here: neither answer mentions the GLEIF fuzzy candidates at all; passes by omission."
+   },
+   {
+    "assertion": "The answer does not claim the company cannot be checked because it has no LEI",
+    "reason": "Non-discriminating: both answers pass trivially once they recommend opencheck_register_lookup."
+   }
+  ],
+  "overall": "Assertions 1, 2 and 5 carry the signal; both answers satisfy all five. The eval does not test whether the answer gives a single 'next call' (B puts opencheck_knowability first) or whether extra arguments (A's optional name) are acceptable."
+ },
+ "timing": {
+  "total_duration_seconds": 12.2
+ }
+}

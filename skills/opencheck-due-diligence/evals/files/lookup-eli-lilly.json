@@ -1,0 +1,614 @@
+{
+ "tool": "opencheck_lookup",
+ "arguments": {
+  "lei": "FRDRIPF3EKNDJ2CQJL29"
+ },
+ "recorded_at": "2026-11-05T13:34:04Z",
+ "is_error": false,
+ "response": {
+  "lei": "FRDRIPF3EKNDJ2CQJL29",
+  "legal_name": "ELI LILLY AND COMPANY",
+  "jurisdiction": "US-IN",
+  "summary": "ELI LILLY AND COMPANY (LEI FRDRIPF3EKNDJ2CQJL29, US-IN). Risk signals: RELATED_PEP, RELATED_DEBARMENT, OFFSHORE_LEAKS. Structural context (not risk findings): GLEIF_REPORTING_EXCEPTION, NON_EU_JURISDICTION, RECORD_CONSISTENCY. 11 of 11 sources answered (7 with records, 4 with no record); 116 BODS statements (55 ownership/control relationships). CAUTION: 2 screening check(s) did not fully run (see degraded_sources) — the absence of their signals is not a clean screen. Licensing: NOT for commercial use — a non-commercial source is included. What can be known (US): United States keeps no central register of beneficial owners. OpenCheck reads beneficial owners from DLCP — Department of Licensing and Consumer Protection Corporations Division (Washington, DC). Primary listing (PermID): New York Stock Exchange · LLY.",
+  "verdict": "The records show possible procurement debarment findings and a politically exposed person among the parties named. No parent is filed with GLEIF, which the LEI reporting rules permit.",
+  "profile": {
+   "legal_form": {
+    "value": "For-Profit Corporation",
+    "sources": [
+     "gleif"
+    ],
+    "independent_sources": 1,
+    "other_values": []
+   },
+   "register_status": {
+    "liveness": "live",
+    "since": null,
+    "raw": "ACTIVE",
+    "source_id": "gleif",
+    "sources": [
+     "gleif",
+     "opencorporates"
+    ],
+    "independent_sources": 2,
+    "other_values": []
+   },
+   "founding_date": {
+    "value": "1901-01-17",
+    "sources": [
+     "gleif",
+     "opencorporates"
+    ],
+    "independent_sources": 2,
+    "other_values": [
+     {
+      "source_id": "wikidata",
+      "value": "1875-01-01"
+     }
+    ]
+   },
+   "registered_address": {
+    "value": "Lilly Corporation Centre, Indianapolis, US-IN, 46285, US",
+    "sources": [
+     "gleif"
+    ],
+    "independent_sources": 1,
+    "other_values": [],
+    "country": "US"
+   },
+   "jurisdiction": "US",
+   "lei_registration": {
+    "status": "ISSUED",
+    "label": "Issued",
+    "flag": false,
+    "since": null,
+    "next_renewal_date": "2027-07-12",
+    "last_update_date": "2026-05-15",
+    "initial_registration_date": "2012-06-06",
+    "managing_lou": "529900T8BM49AURSDO55",
+    "source_id": "gleif",
+    "sentence": "GLEIF records this LEI as issued: its reference data is maintained by its issuer, and its next renewal is due on 12 Jul 2027."
+   },
+   "lei_successor": null,
+   "former_names": [],
+   "name_changed_on": null,
+   "statement_ids": [
+    "opencheck-d34ff5eeb362edda69df959b",
+    "4344ffa818fcb8123922042441a0ad51eaecefcef3f4dfffff488b46ff39f3bf",
+    "opencheck-52353349227a2cbd7d3b696a",
+    "opencheck-465c46880cf41be3374767ae",
+    "opencheck-554bbe46d4ec5f57629c7cca"
+   ]
+  },
+  "lei_successor": null,
+  "knowability": {
+   "subject": {
+    "code": "US",
+    "name": "United States",
+    "sentence": "United States keeps no central register of beneficial owners. OpenCheck reads beneficial owners from DLCP — Department of Licensing and Consumer Protection Corporations Division (Washington, DC).",
+    "access": "no_register",
+    "stated_absence": false,
+    "review_status": "verified",
+    "last_verified": "2026-09-18",
+    "opencheck_reads": [
+     "dlcp_dc",
+     "ny_dos",
+     "sunbiz_florida"
+    ]
+   },
+   "chain": [],
+   "as_of": "2026-11-05",
+   "hint": "Dated facts about each register — who may see beneficial owners there and what OpenCheck reads of it. Describes, never judges: an absent owner is read against these, and none of them is a risk signal."
+  },
+  "integrated_ownership": {
+   "method": "Integrated ownership",
+   "description": "How much of the company each party holds, directly and through the companies it holds: shares are multiplied along each path and added across paths, and a company's own shares are given back to its other holders. Each source is computed on its own; figures from two sources are listed side by side, never added. Shareholdings only — voting rights, roles and control are not shares. For a person it is arithmetic on what was filed, not a determination of beneficial ownership. Context, not a finding.",
+   "credit": "Method: integrated ownership as published by T-Rank (https://docs.trank.no/white_papers).",
+   "as_of": "2026-11-05",
+   "holders": [],
+   "holders_total": 0,
+   "hint": "Context, not a risk finding: no threshold is applied and none of these figures feeds the risk signals or the verdict. Each source is computed on its own; two figures for one party are two publishers' readings, never to be added."
+  },
+  "disclosure_status": {
+   "as_of": "2026-11-05",
+   "by_source": [
+    {
+     "source": "gleif",
+     "source_name": "GLEIF",
+     "values": [
+      "exempt"
+     ],
+     "line": "Parent: Exempt — the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent",
+     "entries": [
+      {
+       "value": "exempt",
+       "covers": "parent",
+       "details": [
+        "the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent"
+       ],
+       "reasons": [
+        "NATURAL_PERSONS"
+       ]
+      }
+     ]
+    },
+    {
+     "source": "wikidata",
+     "source_name": "Wikidata",
+     "values": [
+      "none_filed"
+     ],
+     "line": "Shareholders: None on record",
+     "entries": [
+      {
+       "value": "none_filed",
+       "covers": "shareholders"
+      }
+     ]
+    },
+    {
+     "source": "climatetrace",
+     "source_name": "Global Energy Monitor / Climate TRACE",
+     "values": [
+      "no_record"
+     ],
+     "line": "No record of the company",
+     "entries": [
+      {
+       "value": "no_record",
+       "covers": null
+      }
+     ]
+    },
+    {
+     "source": "sec_edgar",
+     "source_name": "SEC EDGAR — U.S. Securities and Exchange Commission",
+     "values": [
+      "declared"
+     ],
+     "line": "Shareholders: Declared (3)",
+     "entries": [
+      {
+       "value": "declared",
+       "covers": "shareholders",
+       "count": 3
+      }
+     ]
+    }
+   ],
+   "not_covered": [
+    "opencorporates",
+    "opensanctions",
+    "openaleph",
+    "wikirate",
+    "eiti",
+    "meip",
+    "everypolitician"
+   ],
+   "hint": "What each source says about the company's owners, for what it covers (beneficial owners, shareholders or the consolidating parent). Absence from a source is not an exemption: none_filed means the record carries no owner and no reason. Describes only; no value here feeds the risk signals or the verdict."
+  },
+  "listing": {
+   "status": "listed",
+   "reason": null,
+   "line": "New York Stock Exchange · LLY",
+   "exchange": "New York Stock Exchange",
+   "exchange_country": "US",
+   "mic": "XNYS",
+   "ticker": "LLY",
+   "ric": "LLY.N",
+   "security_name": "ELI LILLY ORD",
+   "url": "https://www.nyse.com/quote/XNYS:LLY",
+   "url_kind": "listing",
+   "permid_url": "https://permid.org/1-55838323825",
+   "as_of": "2026-11-05",
+   "attribution": "LSEG PermID (CC-BY 4.0)",
+   "hint": "The primary listing according to PermID: one main quote. Other listings of the same company are not shown. A venue URL is a listing or search page, not a filings page."
+  },
+  "institutional_shareholders": {
+   "status": "found",
+   "period": "2026-06-30",
+   "line": "4,604 institutional investment managers reported a position in ELI LILLY & CO (COM) on Form 13F, as at 30 June 2026; the largest is LILLY ENDOWMENT INC with 90,376,978 shares, 9.60%.",
+   "securities": [
+    {
+     "cusip": "532457108",
+     "issuer_name": "ELI LILLY & CO",
+     "title_of_class": "COM",
+     "is_adr": false,
+     "managers_reported": 4604,
+     "shares_outstanding": {
+      "shares": 941357065,
+      "as_of": "2026-08-03",
+      "accession": "0000059478-26-000081",
+      "basis": "Of 941.4 million shares outstanding on ELI LILLY AND COMPANY's 10-Q/10-K cover, 3 Aug 2026 — computed by OpenCheck."
+     },
+     "positions": [
+      {
+       "manager": "LILLY ENDOWMENT INC",
+       "shares": 90376978,
+       "value_usd": 108400858723,
+       "value_note": null,
+       "percent_computed": 9.6
+      },
+      {
+       "manager": "BlackRock, Inc.",
+       "shares": 67540400,
+       "value_usd": 81009980560,
+       "value_note": null,
+       "percent_computed": 7.17
+      },
+      {
+       "manager": "VANGUARD CAPITAL MANAGEMENT LLC",
+       "shares": 53528868,
+       "value_usd": 64204130146,
+       "value_note": null,
+       "percent_computed": 5.69
+      },
+      {
+       "manager": "PNC Financial Services Group, Inc.",
+       "shares": 51322720,
+       "value_usd": 61558009786,
+       "value_note": null,
+       "percent_computed": 5.45
+      },
+      {
+       "manager": "STATE STREET CORP",
+       "shares": 36215754,
+       "value_usd": 43438261820,
+       "value_note": null,
+       "percent_computed": 3.85
+      },
+      {
+       "manager": "FMR LLC",
+       "shares": 28462475,
+       "value_usd": 34138746040,
+       "value_note": null,
+       "percent_computed": 3.02
+      },
+      {
+       "manager": "Capital Research Global Investors",
+       "shares": 20873140,
+       "value_usd": 25037481632,
+       "value_note": null,
+       "percent_computed": 2.22
+      },
+      {
+       "manager": "VANGUARD PORTFOLIO MANAGEMENT LLC",
+       "shares": 20859217,
+       "value_usd": 25019170646,
+       "value_note": null,
+       "percent_computed": 2.22
+      },
+      {
+       "manager": "GEODE CAPITAL MANAGEMENT, LLC",
+       "shares": 20310858,
+       "value_usd": 24275623749,
+       "value_note": null,
+       "percent_computed": 2.16
+      },
+      {
+       "manager": "MORGAN STANLEY",
+       "shares": 16226398,
+       "value_usd": 19462430096,
+       "value_note": null,
+       "percent_computed": 1.72
+      }
+     ],
+     "managers_not_shown": 4594
+    }
+   ],
+   "securities_not_listed": 1,
+   "disclaimer": "Form 13F lists the positions institutional investment managers have discretion over for funds and clients. It is not a record of beneficial ownership: it never enters the ownership graph and no risk signal reads it.",
+   "notes": [
+    "Positions overlap — a manager's report can include another manager that also reported the same shares — so they are never added together.",
+    "Long positions only, as at the quarter end and filed up to 45 days later. A manager may be allowed to leave a position out under confidential treatment, so a manager missing here says nothing.",
+    "A manager's Form 13F figure and its Schedule 13D/13G figure can differ: they are dated differently and filed under different rules."
+   ],
+   "attribution": "Contains data from the SEC's Form 13F data sets (U.S. Securities and Exchange Commission), public domain.",
+   "caveat": "Reported by the filers and not verified by the SEC; no substitute for the filings themselves.",
+   "hint": "Positions investment managers reported having discretion over on Form 13F, as at the quarter end. Not beneficial ownership and not a risk signal; never add the figures together, because positions overlap. percent_computed is OpenCheck's arithmetic, given only with its basis."
+  },
+  "identifiers": [
+   {
+    "scheme": "XI-LEI",
+    "schemeName": "Global Legal Entity Identifier Index",
+    "id": "FRDRIPF3EKNDJ2CQJL29"
+   },
+   {
+    "scheme": "US-IN",
+    "schemeName": "Indiana Secretary of State",
+    "id": "183025-143"
+   },
+   {
+    "scheme": "OpenCorporates",
+    "schemeName": "OpenCorporates company ID",
+    "id": "us_in/183025-143",
+    "uri": "https://opencorporates.com/companies/us_in/183025-143"
+   },
+   {
+    "scheme": "ISO-9362",
+    "schemeName": "Bank Identifier Code (ISO 9362)",
+    "id": "LLYCUS33XXX"
+   },
+   {
+    "scheme": "S&P CIQ Company ID",
+    "schemeName": "S&P CIQ Company ID",
+    "id": "285467"
+   }
+  ],
+  "derived_identifiers": {
+   "lei": "FRDRIPF3EKNDJ2CQJL29",
+   "ocid": "us_in/183025-143",
+   "wikidata_qid": "Q632240"
+  },
+  "risk_signals": [
+   {
+    "code": "GLEIF_REPORTING_EXCEPTION",
+    "confidence": "high",
+    "summary": "No accounting-consolidation parent is reported to GLEIF: NATURAL_PERSONS for the direct and ultimate parent (the entity is controlled directly by natural person(s), with no intermediate legal entity that consolidates it — common for founder-, family-owned and widely held companies). Structural context, not a risk finding — these are permitted exceptions under the LEI ROC policy, and GLEIF Level 2 records accounting consolidation, not beneficial ownership.",
+    "kind": "context",
+    "sources": [
+     "gleif"
+    ]
+   },
+   {
+    "code": "NON_EU_JURISDICTION",
+    "confidence": "low",
+    "summary": "Ownership chain reaches jurisdictions outside the EU/EEA: US. Structural context, not a risk finding — being outside the EU/EEA is not a risk factor in itself. Jurisdiction risk comes only from the FATF lists, the EU high-risk list and the EU tax list, which have their own signals.",
+    "kind": "context",
+    "sources": [
+     "sec_edgar"
+    ]
+   },
+   {
+    "code": "RELATED_PEP",
+    "confidence": "high",
+    "summary": "Related party 'Katherine Baicker' matches a record on OpenSanctions (birth year also agrees): PEP. The same record is also reported by EveryPolitician.",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP",
+    "confidence": "medium",
+    "summary": "Possible name match only: related party 'Christopher Anderson' shares a name with a record on OpenSanctions, with no birth date or nationality in common to confirm they are the same person — PEP. The same record is also reported by EveryPolitician.",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP",
+    "confidence": "medium",
+    "summary": "Possible name match only: related party 'Kimberly Johnson' shares a name with a record on OpenSanctions, with no birth date or nationality in common to confirm they are the same person — PEP. The same record is also reported by EveryPolitician.",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_DEBARMENT",
+    "confidence": "low",
+    "summary": "Possible name match only: related party 'Kimberly Johnson' shares a name with a record on OpenSanctions, with no birth date or nationality in common to confirm they are the same person — debarred from public contracts.",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP",
+    "confidence": "medium",
+    "summary": "Possible name match only: related party 'Patrik Jonsson' shares a name with a record on OpenSanctions, with no birth date or nationality in common to confirm they are the same person — PEP. The same record is also reported by EveryPolitician.",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "OFFSHORE_LEAKS",
+    "confidence": "low",
+    "summary": "Related party 'Christopher Anderson' matches a record in the Panama Papers.",
+    "kind": "risk",
+    "sources": [
+     "icij"
+    ]
+   },
+   {
+    "code": "OFFSHORE_LEAKS",
+    "confidence": "low",
+    "summary": "Related party 'Christopher Anderson' matches a record in the Paradise Papers (Appleby).",
+    "kind": "risk",
+    "sources": [
+     "icij"
+    ]
+   },
+   {
+    "code": "OFFSHORE_LEAKS",
+    "confidence": "low",
+    "summary": "Related party 'Jon Moeller' matches a record in the Paradise Papers (Appleby).",
+    "kind": "risk",
+    "sources": [
+     "icij"
+    ]
+   },
+   {
+    "code": "RECORD_CONSISTENCY",
+    "confidence": "high",
+    "summary": "Five sources describe this entity (five independent). They agree on register status and jurisdiction.",
+    "kind": "context",
+    "sources": [
+     "opencheck"
+    ]
+   }
+  ],
+  "degraded_sources": [
+   {
+    "source_id": "opencheck",
+    "check": "cross_source_names",
+    "affected_signals": [
+     "RELATED_SANCTIONED",
+     "RELATED_COUNTER_SANCTIONED",
+     "RELATED_SANCTIONS_CONTROLLED",
+     "RELATED_SANCTIONS_LINKED",
+     "RELATED_DEBARMENT",
+     "RELATED_EXPORT_CONTROLLED",
+     "RELATED_EXPORT_CONTROL_LINKED",
+     "RELATED_EXPORT_RISK",
+     "RELATED_PEP"
+    ],
+    "detail": "Related-party sanctions and PEP screening covered the 25 highest-ranked of 48 related parties; 23 were not screened (1 former; 7 current with no ownership or board role recorded; 15 current owners, controllers or officers beyond the limit).",
+    "reason": "truncated"
+   },
+   {
+    "source_id": "opencheck",
+    "check": "icij_offshore_leaks",
+    "affected_signals": [
+     "OFFSHORE_LEAKS"
+    ],
+    "detail": "Offshore Leaks screening covered the 30 highest-ranked of 48 related parties; 18 were not screened (1 former; 7 current with no ownership or board role recorded; 10 current owners, controllers or officers beyond the limit).",
+    "reason": "truncated"
+   }
+  ],
+  "sources": [
+   {
+    "id": "everypolitician",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "EveryPolitician",
+    "license": "CC-BY-NC-4.0"
+   },
+   {
+    "id": "gleif",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "GLEIF",
+    "license": "CC0-1.0"
+   },
+   {
+    "id": "meip",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "OECD-UNSD Multinational Enterprise Information Platform (MEIP)",
+    "license": "OECD-Terms"
+   },
+   {
+    "id": "opencorporates",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "OpenCorporates",
+    "license": "OC-Terms"
+   },
+   {
+    "id": "sec_edgar",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "SEC EDGAR (Schedule 13D/13G)",
+    "license": "Public Domain"
+   },
+   {
+    "id": "wikidata",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "Wikidata",
+    "license": "CC0-1.0"
+   },
+   {
+    "id": "wikirate",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "Wikirate",
+    "license": "CC-BY-4.0"
+   },
+   {
+    "id": "climatetrace",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "Global Energy Monitor / Climate TRACE",
+    "license": "CC-BY-4.0"
+   },
+   {
+    "id": "eiti",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "EITI — Extractive Industries Transparency Initiative",
+    "license": "EITI open data (free reuse with attribution)"
+   },
+   {
+    "id": "openaleph",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "OpenAleph",
+    "license": "per-collection"
+   },
+   {
+    "id": "opensanctions",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "OpenSanctions",
+    "license": "CC-BY-NC-4.0"
+   }
+  ],
+  "coverage": {
+   "applicable_ids": [
+    "gleif",
+    "opencorporates",
+    "wikidata",
+    "opensanctions",
+    "openaleph",
+    "climatetrace",
+    "wikirate",
+    "eiti",
+    "meip",
+    "sec_edgar",
+    "everypolitician"
+   ],
+   "with_data_ids": [
+    "gleif",
+    "opencorporates",
+    "wikidata",
+    "wikirate",
+    "meip",
+    "sec_edgar",
+    "everypolitician"
+   ],
+   "no_record_ids": [
+    "opensanctions",
+    "openaleph",
+    "climatetrace",
+    "eiti"
+   ],
+   "failed_ids": []
+  },
+  "counts": {
+   "bods_statements": 116,
+   "relationships": 55,
+   "sources_with_data": 7,
+   "sources_applicable": 11,
+   "sources_answered": 11,
+   "risk_signals": 8,
+   "context_signals": 3
+  },
+  "licensing": {
+   "commercial_use": "no",
+   "attribution_required": true,
+   "share_alike": true,
+   "headline": "NOT for commercial use — a non-commercial source is included.",
+   "warnings": [
+    "Not for commercial use — this bundle includes non-commercial source(s): EveryPolitician (CC-BY-NC-4.0). Remove their statements before any commercial use.",
+    "Share-alike obligations apply — derivative works of OpenCorporates (OC-Terms) must be released under the same licence."
+   ]
+  },
+  "license_notices": [],
+  "hint": "risk_signals rows carry kind='risk' (a finding) or kind='context' (how the company is put together, not a finding against it) — never report a context row as a risk. Call opencheck_export_bods for the full machine-readable ownership graph."
+ }
+}

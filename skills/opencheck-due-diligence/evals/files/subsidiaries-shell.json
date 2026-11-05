@@ -1,0 +1,3231 @@
+{
+ "tool": "opencheck_subsidiaries",
+ "arguments": {
+  "lei": "21380068P1DRHMJ8KU70"
+ },
+ "recorded_at": "2026-11-05T13:32:52Z",
+ "is_error": false,
+ "response": {
+  "lei": "21380068P1DRHMJ8KU70",
+  "available": true,
+  "reason": null,
+  "children_available": true,
+  "direct_available": true,
+  "ultimate_available": true,
+  "snapshot_fallback": true,
+  "snapshot_date": "2026-11-05",
+  "snapshot_source": "mirror",
+  "degraded_detail": null,
+  "unavailable_reason": null,
+  "direct_total": 105,
+  "ultimate_total": 152,
+  "distinct_fetched": 154,
+  "indirect_only": 49,
+  "node_estimate": 154,
+  "render_mode": "table",
+  "truncated": false,
+  "jurisdictions": [
+   {
+    "code": "NL",
+    "count": 30
+   },
+   {
+    "code": "GB",
+    "count": 30
+   },
+   {
+    "code": "US-DE",
+    "count": 17
+   },
+   {
+    "code": "CH",
+    "count": 7
+   },
+   {
+    "code": "CA-AB",
+    "count": 6
+   },
+   {
+    "code": "SG",
+    "count": 6
+   },
+   {
+    "code": "CA",
+    "count": 5
+   },
+   {
+    "code": "MY",
+    "count": 5
+   },
+   {
+    "code": "AU",
+    "count": 4
+   },
+   {
+    "code": "IN",
+    "count": 4
+   },
+   {
+    "code": "DE",
+    "count": 3
+   },
+   {
+    "code": "PH",
+    "count": 3
+   },
+   {
+    "code": "MX",
+    "count": 3
+   },
+   {
+    "code": "IT",
+    "count": 3
+   },
+   {
+    "code": "BR",
+    "count": 3
+   },
+   {
+    "code": "NO",
+    "count": 2
+   },
+   {
+    "code": "ID",
+    "count": 2
+   },
+   {
+    "code": "BM",
+    "count": 2
+   },
+   {
+    "code": "BE",
+    "count": 1
+   },
+   {
+    "code": "KY",
+    "count": 1
+   },
+   {
+    "code": "CN",
+    "count": 1
+   },
+   {
+    "code": "AT",
+    "count": 1
+   },
+   {
+    "code": "ZA",
+    "count": 1
+   },
+   {
+    "code": "ES",
+    "count": 1
+   },
+   {
+    "code": "FR",
+    "count": 1
+   },
+   {
+    "code": "LU",
+    "count": 1
+   },
+   {
+    "code": "PL",
+    "count": 1
+   },
+   {
+    "code": "SK",
+    "count": 1
+   },
+   {
+    "code": "QA",
+    "count": 1
+   },
+   {
+    "code": "OM",
+    "count": 1
+   }
+  ],
+  "countries": [
+   {
+    "code": "GB",
+    "count": 30
+   },
+   {
+    "code": "NL",
+    "count": 30
+   },
+   {
+    "code": "US",
+    "count": 18
+   },
+   {
+    "code": "CA",
+    "count": 11
+   },
+   {
+    "code": "CH",
+    "count": 7
+   },
+   {
+    "code": "SG",
+    "count": 6
+   },
+   {
+    "code": "MY",
+    "count": 5
+   },
+   {
+    "code": "AU",
+    "count": 4
+   },
+   {
+    "code": "IN",
+    "count": 4
+   },
+   {
+    "code": "BR",
+    "count": 3
+   },
+   {
+    "code": "DE",
+    "count": 3
+   },
+   {
+    "code": "IT",
+    "count": 3
+   },
+   {
+    "code": "MX",
+    "count": 3
+   },
+   {
+    "code": "PH",
+    "count": 3
+   },
+   {
+    "code": "BM",
+    "count": 2
+   },
+   {
+    "code": "ID",
+    "count": 2
+   },
+   {
+    "code": "NO",
+    "count": 2
+   },
+   {
+    "code": "AE",
+    "count": 1
+   },
+   {
+    "code": "AT",
+    "count": 1
+   },
+   {
+    "code": "BE",
+    "count": 1
+   },
+   {
+    "code": "BN",
+    "count": 1
+   },
+   {
+    "code": "CN",
+    "count": 1
+   },
+   {
+    "code": "CZ",
+    "count": 1
+   },
+   {
+    "code": "DK",
+    "count": 1
+   },
+   {
+    "code": "ES",
+    "count": 1
+   },
+   {
+    "code": "FR",
+    "count": 1
+   },
+   {
+    "code": "JP",
+    "count": 1
+   },
+   {
+    "code": "KY",
+    "count": 1
+   },
+   {
+    "code": "LU",
+    "count": 1
+   },
+   {
+    "code": "MU",
+    "count": 1
+   },
+   {
+    "code": "OM",
+    "count": 1
+   },
+   {
+    "code": "PL",
+    "count": 1
+   },
+   {
+    "code": "QA",
+    "count": 1
+   },
+   {
+    "code": "SK",
+    "count": 1
+   },
+   {
+    "code": "ZA",
+    "count": 1
+   }
+  ],
+  "enriched": true,
+  "relationships_read": true,
+  "parents_read": true,
+  "children": [
+   {
+    "lei": "549300EEMI8D3L4L2096",
+    "name": "3095381 Nova Scotia Company",
+    "jurisdiction": "CA",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300EEMI8D3L4L2096",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2018-11-29",
+     "next_renewal_date": "2018-11-29"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-11-29",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800F4ETX85XLF5K47",
+    "name": "A/S NORSKE SHELL",
+    "jurisdiction": "NO",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800F4ETX85XLF5K47",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-17"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2021-05-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138008FIL755M9UH213",
+    "name": "B.V. DORDTSCHE PETROLEUM MAATSCHAPPIJ",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138008FIL755M9UH213",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800QML24OFSK9A222",
+    "name": "BELGIAN SHELL",
+    "jurisdiction": "BE",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800QML24OFSK9A222",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-03-24"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2019-03-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300W081T1J1U4GW30",
+    "name": "BG Canada Ltd.",
+    "jurisdiction": "CA",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300W081T1J1U4GW30",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2019-09-18",
+     "next_renewal_date": "2019-09-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-09-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "S2M8QDKEE05NZN8JD460",
+    "name": "BG ENERGY CAPITAL PLC",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/S2M8QDKEE05NZN8JD460",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-08"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2022-11-08",
+    "relationship_end": null
+   },
+   {
+    "lei": "V1LV067AJN766PCJIG11",
+    "name": "BG ENERGY HOLDINGS LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/V1LV067AJN766PCJIG11",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-05-25"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2023-05-25",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300G28363730H8134",
+    "name": "BG EXPLORATION AND PRODUCTION INDIA LIMITED",
+    "jurisdiction": "KY",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300G28363730H8134",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-03-25"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2023-03-23",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300PM7ZTRSEBUN003",
+    "name": "BG GROUP PENSION TRUSTEES LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300PM7ZTRSEBUN003",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-09-12"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-02",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800NHY5QDMAWYGJ09",
+    "name": "BG NORTH SEA HOLDINGS LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800NHY5QDMAWYGJ09",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-30"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-01-27",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138004VFYZFYLELHT92",
+    "name": "BRAZIL SHIPPING I LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138004VFYZFYLELHT92",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-04-01"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2025-03-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138008D5LLZ65AU8R94",
+    "name": "CORAL CIBOLA CANADA INC.",
+    "jurisdiction": "CA-AB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138008D5LLZ65AU8R94",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2014-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800LZT3VHLC9GTW24",
+    "name": "DERIVATIVES TRADING ATLANTIC LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800LZT3VHLC9GTW24",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-02-17"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2019-02-14",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800HML5VL7IIM9G57",
+    "name": "ENERGIEPARK POTTENDIJK B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800HML5VL7IIM9G57",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-06-22"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2023-06-14",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800WIHSFSGMYPTK39",
+    "name": "ENTERPRISE OIL LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800WIHSFSGMYPTK39",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-30"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-01-29",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300P5UUSTGZSUO841",
+    "name": "METHANE SERVICES LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300P5UUSTGZSUO841",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-29"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-01-08",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800TBZMU2HKQA6W02",
+    "name": "MOLGAS NORWAY AS",
+    "jurisdiction": "NO",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800TBZMU2HKQA6W02",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2021-05-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138004JQD1KA2GSC430",
+    "name": "NEDERLANDSE AARDOLIE MAATSCHAPPIJ B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138004JQD1KA2GSC430",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-05-04"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-04-30",
+    "relationship_end": null
+   },
+   {
+    "lei": "254900U3GMANJV34XM45",
+    "name": "PAVILION ENERGY SINGAPORE PTE. LTD.",
+    "jurisdiction": "SG",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/254900U3GMANJV34XM45",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-06-16"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2012-05-10",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300YAWIFS8273O417",
+    "name": "PT SHELL MANUFACTURING INDONESIA",
+    "jurisdiction": "ID",
+    "status": "ACTIVE",
+    "relation": "direct",
+    "link": "https://search.gleif.org/#/record/549300YAWIFS8273O417",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-03-31",
+     "next_renewal_date": "2022-03-31"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2020-04-06",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300XSPZ26RK6HXZ74",
+    "name": "PT. SHELL INDONESIA",
+    "jurisdiction": "ID",
+    "status": "ACTIVE",
+    "relation": "direct",
+    "link": "https://search.gleif.org/#/record/549300XSPZ26RK6HXZ74",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-03-31",
+     "next_renewal_date": "2022-03-31"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2020-04-06",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800HL1LDDZOFOHP21",
+    "name": "QATAR SHELL GTL LIMITED",
+    "jurisdiction": "BM",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800HL1LDDZOFOHP21",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2021-12-17",
+     "next_renewal_date": "2021-12-17"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800J66OH9C7FUCN18",
+    "name": "SABAH SHELL PETROLEUM COMPANY LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800J66OH9C7FUCN18",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2023-10-18",
+     "next_renewal_date": "2023-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-10-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300MH1CA06T7E7F09",
+    "name": "SHELL (CHINA) LIMITED",
+    "jurisdiction": "CN",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300MH1CA06T7E7F09",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2019-10-03",
+     "next_renewal_date": "2019-10-03"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2021-11-03",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800CRAXJ9RKL17151",
+    "name": "SHELL (SWITZERLAND) AG",
+    "jurisdiction": "CH",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800CRAXJ9RKL17151",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138004F93X61K6AI365",
+    "name": "SHELL AIRCRAFT LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138004F93X61K6AI365",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-20"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-01-10",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300DCKGGB1GK5HB49",
+    "name": "SHELL AMERICAS FUNDING (CANADA) LIMITED",
+    "jurisdiction": "CA",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300DCKGGB1GK5HB49",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2020-02-01",
+     "next_renewal_date": "2020-02-01"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-02-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "21380062EZANCJTT2O28",
+    "name": "SHELL ASSET MANAGEMENT COMPANY B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/21380062EZANCJTT2O28",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2026-01-15",
+     "next_renewal_date": "2026-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2014-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138007KLN4GYUX57M02",
+    "name": "SHELL AUSTRIA GESELLSCHAFT M.B.H.",
+    "jurisdiction": "AT",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138007KLN4GYUX57M02",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-20"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-12-17",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800VI3V7JBB9S4F28",
+    "name": "SHELL BRANDS INTERNATIONAL AG",
+    "jurisdiction": "CH",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800VI3V7JBB9S4F28",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138008DL1UU9QGACF51",
+    "name": "SHELL BRAZIL HOLDING B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138008DL1UU9QGACF51",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2024-10-18",
+     "next_renewal_date": "2024-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800SOEJGBSFCBNZ80",
+    "name": "SHELL CANADA ENERGY",
+    "jurisdiction": "CA-AB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800SOEJGBSFCBNZ80",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2014-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800EC94U7MNTLTG82",
+    "name": "SHELL CATALYSTS & TECHNOLOGIES CANADA INC.",
+    "jurisdiction": "CA-AB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800EC94U7MNTLTG82",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2014-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138001KPMR6PD83HC08",
+    "name": "SHELL CATALYSTS & TECHNOLOGIES PTE. LTD.",
+    "jurisdiction": "SG",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138001KPMR6PD83HC08",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-08-02"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2023-07-17",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138001O1DFAN7FVH171",
+    "name": "SHELL CHEMICALS EUROPE B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138001O1DFAN7FVH171",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-07-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-12-17",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300C63TY5E3U3HI12",
+    "name": "SHELL CHINA EXPLORATION AND PRODUCTION COMPANY LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300C63TY5E3U3HI12",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2020-04-24",
+     "next_renewal_date": "2020-04-24"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-05-03",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138006IGRYMYIBZEA22",
+    "name": "SHELL COMPANY OF TÜRKIYE LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138006IGRYMYIBZEA22",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-17"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-12-14",
+    "relationship_end": null
+   },
+   {
+    "lei": "54930033O06M4CMIUB77",
+    "name": "SHELL CORPORATE SERVICES SWITZERLAND AG",
+    "jurisdiction": "CH",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/54930033O06M4CMIUB77",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-01-15",
+     "next_renewal_date": "2022-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-01-29",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800VBMNEKDCASIO50",
+    "name": "SHELL DEUTSCHLAND GMBH",
+    "jurisdiction": "DE",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800VBMNEKDCASIO50",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-07"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138003B6BTXS8WOZX93",
+    "name": "SHELL DOWNSTREAM SOUTH AFRICA (PTY) LTD",
+    "jurisdiction": "ZA",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138003B6BTXS8WOZX93",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2024-12-23",
+     "next_renewal_date": "2024-12-23"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-12-17",
+    "relationship_end": null
+   },
+   {
+    "lei": "5493004E0NSW70161F83",
+    "name": "SHELL EASTERN TRADING (PTE) LTD",
+    "jurisdiction": "SG",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/5493004E0NSW70161F83",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-04-03"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2026-05-22",
+    "relationship_end": null
+   },
+   {
+    "lei": "5493004HI1BTGJI1ID10",
+    "name": "SHELL ENERGY AUSTRALIA PTY LTD",
+    "jurisdiction": "AU",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/5493004HI1BTGJI1ID10",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-08-30"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-07-26",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800EHW4PSBXR1JK51",
+    "name": "SHELL ENERGY ENVIRONMENTAL PRODUCTS AUSTRALIA PTY LTD",
+    "jurisdiction": "AU",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800EHW4PSBXR1JK51",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-06-19"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2025-06-02",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138001BE7467RUBQS88",
+    "name": "SHELL ENERGY EUROPE B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138001BE7467RUBQS88",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-09-22"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-09-21",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800N2KMLRLESXG409",
+    "name": "SHELL ENERGY HOLDINGS AUSTRALIA LIMITED",
+    "jurisdiction": "AU",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800N2KMLRLESXG409",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800HWMZMN3KCGN612",
+    "name": "SHELL ENERGY PHILIPPINES, INC.",
+    "jurisdiction": "PH",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800HWMZMN3KCGN612",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-04-04"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2022-04-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800NFRU34IKER5284",
+    "name": "SHELL ESPANA SA",
+    "jurisdiction": "ES",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800NFRU34IKER5284",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-10-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800X65BJZAEPM4W02",
+    "name": "SHELL EXPLORATION AND PRODUCTION (84) B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800X65BJZAEPM4W02",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-20"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2023-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800WQ36VBEPHQOX52",
+    "name": "SHELL EXPLORATION AND PRODUCTION (LXI) B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800WQ36VBEPHQOX52",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-20"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2023-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800BKRTTJIF5R3Q22",
+    "name": "SHELL FINANCE (NETHERLANDS) B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800BKRTTJIF5R3Q22",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2024-10-18",
+     "next_renewal_date": "2024-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138009AGE4DW1J76R35",
+    "name": "SHELL FINANCE SWITZERLAND AG",
+    "jurisdiction": "CH",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138009AGE4DW1J76R35",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2020-10-18",
+     "next_renewal_date": "2020-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800TZ4772M9VVFE92",
+    "name": "SHELL FRANCE",
+    "jurisdiction": "FR",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800TZ4772M9VVFE92",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-17"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-12-14",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800C2Y6KDQCD2WZ09",
+    "name": "SHELL GAS (LPG) HOLDINGS B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800C2Y6KDQCD2WZ09",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2019-10-18",
+     "next_renewal_date": "2019-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138005GO89SL7POC895",
+    "name": "SHELL GAS HOLDINGS (MALAYSIA) LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138005GO89SL7POC895",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-11-21"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2002-07-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300BNUNV6S8FNT410",
+    "name": "SHELL GLOBAL LNG LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300BNUNV6S8FNT410",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-03-03"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-03-21",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300GGKGGXSU0X3E48",
+    "name": "SHELL GLOBAL SOLUTIONS (DEUTSCHLAND) GMBH",
+    "jurisdiction": "DE",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300GGKGGXSU0X3E48",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2025-09-12",
+     "next_renewal_date": "2025-09-12"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-08-21",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800YZKS1E81URDE35",
+    "name": "SHELL GLOBAL SOLUTIONS CANADA INC.",
+    "jurisdiction": "CA-AB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800YZKS1E81URDE35",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2014-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138001LEZWU9YYE5N65",
+    "name": "SHELL GLOBAL SOLUTIONS INTERNATIONAL B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138001LEZWU9YYE5N65",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2023-10-18",
+     "next_renewal_date": "2023-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300S7ZG818QR7D018",
+    "name": "SHELL INDIA MARKETS PRIVATE LIMITED",
+    "jurisdiction": "IN",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300S7ZG818QR7D018",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-12-06"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-24",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800EUIXDMYNUJ4462",
+    "name": "SHELL INTERNATIONAL EXPLORATION AND PRODUCTION B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800EUIXDMYNUJ4462",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-03-28"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800ITMMKU4Z7I4F78",
+    "name": "SHELL INTERNATIONAL FINANCE B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800ITMMKU4Z7I4F78",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2014-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800TUEBQ8SX1DFN77",
+    "name": "SHELL INTERNATIONAL PETROLEUM COMPANY LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800TUEBQ8SX1DFN77",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-07-08"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2026-07-06",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300466KCJI317XO26",
+    "name": "SHELL INTERNATIONAL TRADING AND SHIPPING COMPANY LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300466KCJI317XO26",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-04-03"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2021-05-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800JKIJQICV4VAV93",
+    "name": "SHELL LUXEMBOURGEOISE",
+    "jurisdiction": "LU",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800JKIJQICV4VAV93",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-05"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2020-10-29",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800Y74U3ETGXOC947",
+    "name": "SHELL MALAYSIA LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800Y74U3ETGXOC947",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-10-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300KUNZLT7SM2TY17",
+    "name": "SHELL MALAYSIA TRADING SDN BHD",
+    "jurisdiction": "MY",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300KUNZLT7SM2TY17",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-07-06"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2021-07-14",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800NZMULWDBYUAN72",
+    "name": "SHELL NEDERLAND CHEMIE B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800NZMULWDBYUAN72",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-20"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-01-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138009FAB375EZDNU25",
+    "name": "SHELL NEDERLAND RAFFINADERIJ B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138009FAB375EZDNU25",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-17"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-12-17",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800TUUTV73BQKPL24",
+    "name": "SHELL NEDERLAND VERKOOPMAATSCHAPPIJ B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800TUUTV73BQKPL24",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-17"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-12-17",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800E99C3JVZGDPV44",
+    "name": "SHELL NEW ENERGIES NL B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800E99C3JVZGDPV44",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-11"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2023-01-05",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300V8KJQNTCQJZ216",
+    "name": "SHELL OFFSHORE INC.",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300V8KJQNTCQJZ216",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2019-11-27",
+    "relationship_end": null
+   },
+   {
+    "lei": "21380018Z33A3VAKQQ62",
+    "name": "SHELL OLIE- OG GASUDVINDING DANMARK B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/21380018Z33A3VAKQQ62",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2019-11-03",
+     "next_renewal_date": "2019-11-03"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138007T8JHOSVJUR255",
+    "name": "SHELL OVERSEAS HOLDINGS LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138007T8JHOSVJUR255",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-10-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800J8M689LDFS4K06",
+    "name": "SHELL OVERSEAS INVESTMENTS B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800J8M689LDFS4K06",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-08-04"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800U43H56YKOIF596",
+    "name": "SHELL PETROLEUM B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800U43H56YKOIF596",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-10-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800EDPV6T4K835K83",
+    "name": "SHELL PETROLEUM COMPANY LIMITED(THE)",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800EDPV6T4K835K83",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-10-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "5493000I1ONBQLNMP873",
+    "name": "SHELL PHILIPPINES EXPLORATION B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/5493000I1ONBQLNMP873",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2023-05-26",
+     "next_renewal_date": "2023-05-26"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-05-04",
+    "relationship_end": null
+   },
+   {
+    "lei": "54930056H8W5F37SB423",
+    "name": "SHELL PILIPINAS CORPORATION",
+    "jurisdiction": "PH",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/54930056H8W5F37SB423",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-06-22"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2021-06-30",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800T7PH72BH2SZB46",
+    "name": "SHELL POLSKA SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ",
+    "jurisdiction": "PL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800T7PH72BH2SZB46",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-01"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2016-01-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800DWOM4CZ22IEQ48",
+    "name": "SHELL RESEARCH LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800DWOM4CZ22IEQ48",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2024-10-18",
+     "next_renewal_date": "2024-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800UMF9YOU2JJKU17",
+    "name": "SHELL SERVICIOS MEXICO, S.A. DE C.V.",
+    "jurisdiction": "MX",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800UMF9YOU2JJKU17",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2014-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300IRNZELANQIAW38",
+    "name": "SHELL SHARED SERVICES (ASIA) B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300IRNZELANQIAW38",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-02-02"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-05-04",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138001J7ZLHVNRTA718",
+    "name": "SHELL SLOVAKIA, S.R.O.",
+    "jurisdiction": "SK",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138001J7ZLHVNRTA718",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2021-05-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138008C61FDWXDY5169",
+    "name": "SHELL TANKERS (SINGAPORE) PRIVATE LIMITED",
+    "jurisdiction": "SG",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138008C61FDWXDY5169",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-02-01"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2024-01-04",
+    "relationship_end": null
+   },
+   {
+    "lei": "5493007IMYFZMDMCYI21",
+    "name": "SHELL TIMUR SDN.BHD.",
+    "jurisdiction": "MY",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/5493007IMYFZMDMCYI21",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-03-24"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2022-04-04",
+    "relationship_end": null
+   },
+   {
+    "lei": "3KOZR7QKFIBI8HS4WD63",
+    "name": "SHELL TRADING (US) COMPANY",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/3KOZR7QKFIBI8HS4WD63",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-16"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-05-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800ERCB3TBHSX4O67",
+    "name": "SHELL TRADING MEXICO, S. DE R.L. DE C.V.",
+    "jurisdiction": "MX",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800ERCB3TBHSX4O67",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2025-01-15",
+     "next_renewal_date": "2025-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2014-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138008WK9V1AC9LWU43",
+    "name": "SHELL TRADING RUSSIA B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138008WK9V1AC9LWU43",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2024-10-18",
+     "next_renewal_date": "2024-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300A4TSX0VE71GX53",
+    "name": "SHELL TREASURY CENTER (WEST) INC.",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300A4TSX0VE71GX53",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-13"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2019-01-29",
+    "relationship_end": null
+   },
+   {
+    "lei": "5493008LFEFSN1CR8I42",
+    "name": "SHELL TREASURY CENTRE LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/5493008LFEFSN1CR8I42",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-24"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-12-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300H3II6EHZLEEE25",
+    "name": "SHELL TREASURY COMPANY SWITZERLAND AG",
+    "jurisdiction": "CH",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300H3II6EHZLEEE25",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-01-15",
+     "next_renewal_date": "2022-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2019-01-25",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800UFZSMODL7XP424",
+    "name": "SHELL TREASURY DOLLAR COMPANY LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800UFZSMODL7XP424",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2024-10-19",
+     "next_renewal_date": "2024-10-19"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-10-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138002JVA2ZUA57SF18",
+    "name": "SHELL U.K. LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138002JVA2ZUA57SF18",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-17"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-12-17",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138008C2D8YCSIHGT37",
+    "name": "SHELL U.K. OIL PRODUCTS LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138008C2D8YCSIHGT37",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-05"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-11-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300WW482N6G7Q3O71",
+    "name": "SHELL UPSTREAM INDONESIA SERVICES B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300WW482N6G7Q3O71",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-04-15",
+     "next_renewal_date": "2022-04-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-05-02",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300WVOTTC0QW0ZM23",
+    "name": "SHELL UPSTREAM OVERSEAS SERVICES (I) LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300WVOTTC0QW0ZM23",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-04-15",
+     "next_renewal_date": "2022-04-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-05-04",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300UYFI41EIQ10304",
+    "name": "SHELL USA, INC.",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300UYFI41EIQ10304",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-02-13"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2023-04-13",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138003779624KDFO823",
+    "name": "SHELL VENTURES B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138003779624KDFO823",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-02-05"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-02-05",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800WLF1JDFN72BU20",
+    "name": "SOLEN INSURANCE LIMITED",
+    "jurisdiction": "BM",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800WLF1JDFN72BU20",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2020-10-18",
+     "next_renewal_date": "2020-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800CS5FNII1SF4S30",
+    "name": "SOLEN VERSICHERUNGEN AG",
+    "jurisdiction": "CH",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800CS5FNII1SF4S30",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2017-10-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300WG0L370P0UP204",
+    "name": "STT (DAS BENEFICIARY) LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/549300WG0L370P0UP204",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2019-10-31",
+    "relationship_end": null
+   },
+   {
+    "lei": "21380042XUTN3V9YGL02",
+    "name": "THE SHELL COMPANY OF THAILAND LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/21380042XUTN3V9YGL02",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2013-10-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800MEC3WO2AV1J143",
+    "name": "شركة خدمات قطر شل",
+    "jurisdiction": "QA",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/213800MEC3WO2AV1J143",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2021-01-15",
+     "next_renewal_date": "2021-01-15"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2014-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138008UOLCF8WQDUV64",
+    "name": "شـركة شـل العمـانية للتسويق",
+    "jurisdiction": "OM",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/2138008UOLCF8WQDUV64",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-04-21"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2016-02-09",
+    "relationship_end": null
+   },
+   {
+    "lei": "5493009V2TKX7TKLBP02",
+    "name": "シェルジャパン株式会社",
+    "jurisdiction": "JP",
+    "status": "ACTIVE",
+    "relation": "both",
+    "link": "https://search.gleif.org/#/record/5493009V2TKX7TKLBP02",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-07-06"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2020-07-21",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300OKOJZB4UQ78K85",
+    "name": "BG ASIA PACIFIC SERVICES PTE. LTD.",
+    "jurisdiction": "SG",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300OKOJZB4UQ78K85",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-11-18"
+    },
+    "direct_parent_lei": "213800NHY5QDMAWYGJ09",
+    "direct_parent_in_network": true,
+    "relationship_start": "2014-12-24",
+    "relationship_end": null
+   },
+   {
+    "lei": "Z8LEF8NXXY27VEVU9469",
+    "name": "BG Energy Merchants, LLC",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/Z8LEF8NXXY27VEVU9469",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2019-06-05",
+     "next_renewal_date": "2019-06-05"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2018-06-04",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300OIFC2Y24RT7689",
+    "name": "BG INTERNATIONAL LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300OIFC2Y24RT7689",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-18"
+    },
+    "direct_parent_lei": "213800Q7JGGZ17BFJK36",
+    "direct_parent_in_network": false,
+    "relationship_start": "2012-12-21",
+    "relationship_end": null
+   },
+   {
+    "lei": "254900ZGVUK7OG3JVZ09",
+    "name": "BG Mauritius LNG Holdings Ltd.",
+    "jurisdiction": "MU",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/254900ZGVUK7OG3JVZ09",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-06-24"
+    },
+    "direct_parent_lei": "M1D2H7Z5XUU7AGMR0F78",
+    "direct_parent_in_network": false,
+    "relationship_start": "2000-02-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "254900O9AGY62PYKHO98",
+    "name": "Brunei Shell Petroleum Company Sendirian Berhad",
+    "jurisdiction": "BN",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/254900O9AGY62PYKHO98",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-08-23"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "1957-01-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "894500FWRZ06S121KO37",
+    "name": "Deutsche Shell Holding GmbH",
+    "jurisdiction": "DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/894500FWRZ06S121KO37",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-08-21"
+    },
+    "direct_parent_lei": "213800U43H56YKOIF596",
+    "direct_parent_in_network": true,
+    "relationship_start": "2026-05-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300OE6NZ0XHOOF154",
+    "name": "EGO ENERGY SOCIETA' A RESPONSABILITA' LIMITATA",
+    "jurisdiction": "IT",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300OE6NZ0XHOOF154",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-06"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2020-09-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300FQ1U0LF0DHR745",
+    "name": "EQUILON ENTERPRISES LLC",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300FQ1U0LF0DHR745",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-03-03"
+    },
+    "direct_parent_lei": "549300UYFI41EIQ10304",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-03-20",
+    "relationship_end": null
+   },
+   {
+    "lei": "254900CEFSJXVQZS5W34",
+    "name": "EUROSHELL CARDS B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/254900CEFSJXVQZS5W34",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-15"
+    },
+    "direct_parent_lei": "213800U43H56YKOIF596",
+    "direct_parent_in_network": true,
+    "relationship_start": "1996-04-12",
+    "relationship_end": null
+   },
+   {
+    "lei": "54930058W6B3EWHGMG17",
+    "name": "HAZIRA PORT PRIVATE LIMITED",
+    "jurisdiction": "IN",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/54930058W6B3EWHGMG17",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-16"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2020-01-30",
+    "relationship_end": null
+   },
+   {
+    "lei": "25490086IF7TBL3HV171",
+    "name": "Limejump Energy Limited",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/25490086IF7TBL3HV171",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-02-24",
+     "next_renewal_date": "2022-02-24"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2019-03-01",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300E6GPBIKXRDKE15",
+    "name": "MAYFLOWER WIND ENERGY LLC",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300E6GPBIKXRDKE15",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2021-07-22",
+     "next_renewal_date": "2021-07-22"
+    },
+    "direct_parent_lei": "5299004YFU3YM1X9EM02",
+    "direct_parent_in_network": false,
+    "relationship_start": "2020-11-19",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300YVYP1QE8BX0F59",
+    "name": "MP2 ENERGY RETAIL HOLDINGS LLC",
+    "jurisdiction": "US-TX",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300YVYP1QE8BX0F59",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-09-26"
+    },
+    "direct_parent_lei": "43Y7WACCQ8YM30PD3683",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-05-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800Y17U9X5943J241",
+    "name": "NOORDZEEWIND C.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/213800Y17U9X5943J241",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-20"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2022-12-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "25490012OY5CSUVSAY40",
+    "name": "PAVILION ENERGY PTE. LTD.",
+    "jurisdiction": "SG",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/25490012OY5CSUVSAY40",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-05-22"
+    },
+    "direct_parent_lei": "5493004E0NSW70161F83",
+    "direct_parent_in_network": true,
+    "relationship_start": "2026-05-21",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300M7Q76O4NYFDP66",
+    "name": "PERTINI VISTA SDN. BHD.",
+    "jurisdiction": "MY",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300M7Q76O4NYFDP66",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2023-07-11",
+     "next_renewal_date": "2023-07-11"
+    },
+    "direct_parent_lei": "549300KUNZLT7SM2TY17",
+    "direct_parent_in_network": true,
+    "relationship_start": "2021-07-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800S8OSBDNN4FO816",
+    "name": "POWERSHOP AUSTRALIA PTY LIMITED",
+    "jurisdiction": "AU",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/213800S8OSBDNN4FO816",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-10-11"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2024-10-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "54930084IPZ4BDC28S71",
+    "name": "PULSE POWER, LLC",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/54930084IPZ4BDC28S71",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-05-19",
+     "next_renewal_date": "2022-05-19"
+    },
+    "direct_parent_lei": "549300YVYP1QE8BX0F59",
+    "direct_parent_in_network": true,
+    "relationship_start": "2021-05-19",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300OL7CXQNL7DH250",
+    "name": "SARAWAK SHELL BERHAD.",
+    "jurisdiction": "MY",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300OL7CXQNL7DH250",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-02-18"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2021-07-26",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300EV3W9Z0M4CIP05",
+    "name": "SHELL CANADA LIMITED",
+    "jurisdiction": "CA-AB",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300EV3W9Z0M4CIP05",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-21"
+    },
+    "direct_parent_lei": "213800U43H56YKOIF596",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-01-07",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300RW7KJASD21SB03",
+    "name": "SHELL CANADA PRODUCTS",
+    "jurisdiction": "CA",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300RW7KJASD21SB03",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-09-20"
+    },
+    "direct_parent_lei": "549300EV3W9Z0M4CIP05",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-06-04",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300H40C1OXL2BDO74",
+    "name": "SHELL CHEMICAL LP",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300H40C1OXL2BDO74",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-03-03"
+    },
+    "direct_parent_lei": "549300UYFI41EIQ10304",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-03-20",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800GFNAQ5J7UO4C22",
+    "name": "SHELL CZECH REPUBLIC A.S.",
+    "jurisdiction": "CZ",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/213800GFNAQ5J7UO4C22",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-16"
+    },
+    "direct_parent_lei": "213800J8M689LDFS4K06",
+    "direct_parent_in_network": true,
+    "relationship_start": "2004-12-31",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300ITTCUVVN26ZO30",
+    "name": "SHELL ENERGY DO BRASIL GAS LTDA",
+    "jurisdiction": "BR",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300ITTCUVVN26ZO30",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-05"
+    },
+    "direct_parent_lei": "2138008DL1UU9QGACF51",
+    "direct_parent_in_network": true,
+    "relationship_start": "2021-01-14",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300BWG8U3ZAL38Y61",
+    "name": "SHELL ENERGY DO BRASIL LTDA",
+    "jurisdiction": "BR",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300BWG8U3ZAL38Y61",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2026-12-05"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2021-01-15",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300U2TCJFO2K1HQ52",
+    "name": "SHELL ENERGY INDIA PRIVATE LIMITED",
+    "jurisdiction": "IN",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300U2TCJFO2K1HQ52",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-16"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2020-01-30",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800H6ZV5N6ZIT7759",
+    "name": "SHELL ENERGY ITALIA S.R.L.",
+    "jurisdiction": "IT",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/213800H6ZV5N6ZIT7759",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-08-15"
+    },
+    "direct_parent_lei": "213800EDPV6T4K835K83",
+    "direct_parent_in_network": true,
+    "relationship_start": "2014-08-13",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300EWBF02D33DKJ49",
+    "name": "SHELL ENERGY MARKETING AND TRADING INDIA PRIVATE LIMITED",
+    "jurisdiction": "IN",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300EWBF02D33DKJ49",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-12-08"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2019-02-14",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300P5ZLR35B251Q52",
+    "name": "SHELL ENERGY NORTH AMERICA (CANADA) INC.",
+    "jurisdiction": "CA-AB",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300P5ZLR35B251Q52",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-27"
+    },
+    "direct_parent_lei": "43Y7WACCQ8YM30PD3683",
+    "direct_parent_in_network": true,
+    "relationship_start": "2017-11-28",
+    "relationship_end": null
+   },
+   {
+    "lei": "43Y7WACCQ8YM30PD3683",
+    "name": "SHELL ENERGY NORTH AMERICA (US), L.P.",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/43Y7WACCQ8YM30PD3683",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-31"
+    },
+    "direct_parent_lei": "549300UYFI41EIQ10304",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-05-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "25490086WQ90FWHQ8L98",
+    "name": "SHELL Information Technology International B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/25490086WQ90FWHQ8L98",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-03-26"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "1993-12-30",
+    "relationship_end": null
+   },
+   {
+    "lei": "5493006B6VXQ5LPDTW63",
+    "name": "SHELL MARKETS (MIDDLE EAST) LIMITED",
+    "jurisdiction": "AE-DU",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/5493006B6VXQ5LPDTW63",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-04-14"
+    },
+    "direct_parent_lei": "213800J8M689LDFS4K06",
+    "direct_parent_in_network": true,
+    "relationship_start": "2022-04-20",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800GVCIEH4RYAC102",
+    "name": "SHELL MOBILITY ITALIA S.R.L.",
+    "jurisdiction": "IT",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/213800GVCIEH4RYAC102",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-11-30"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2023-11-28",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300VCXRX5JX9A7P89",
+    "name": "SHELL NA LNG LLC",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300VCXRX5JX9A7P89",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-02-03"
+    },
+    "direct_parent_lei": "549300UYFI41EIQ10304",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-03-20",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300U8Y52MRCVNHF78",
+    "name": "SHELL QGC HOLDINGS LIMITED",
+    "jurisdiction": "GB",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300U8Y52MRCVNHF78",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2025-05-25",
+     "next_renewal_date": "2025-05-25"
+    },
+    "direct_parent_lei": "V1LV067AJN766PCJIG11",
+    "direct_parent_in_network": true,
+    "relationship_start": "2023-05-24",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300L412XKXEI0ES35",
+    "name": "SHELL SABAH SELATAN SENDIRIAN BERHAD",
+    "jurisdiction": "MY",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300L412XKXEI0ES35",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-07-26",
+     "next_renewal_date": "2022-07-26"
+    },
+    "direct_parent_lei": "213800U43H56YKOIF596",
+    "direct_parent_in_network": true,
+    "relationship_start": "2021-07-26",
+    "relationship_end": null
+   },
+   {
+    "lei": "2138004NCPKEMXY5RL10",
+    "name": "SHELL TRADING BRASIL LTDA",
+    "jurisdiction": "BR",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/2138004NCPKEMXY5RL10",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-06-07"
+    },
+    "direct_parent_lei": "213800J8M689LDFS4K06",
+    "direct_parent_in_network": true,
+    "relationship_start": "2022-05-31",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300F1V8LI4UW0Q245",
+    "name": "SHELL TRADING RISK MANAGEMENT, LLC",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300F1V8LI4UW0Q245",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-01-27"
+    },
+    "direct_parent_lei": "43Y7WACCQ8YM30PD3683",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-05-18",
+    "relationship_end": null
+   },
+   {
+    "lei": "213800TZ4SM2ZOULUH56",
+    "name": "SHELL TRADING SWITZERLAND AG",
+    "jurisdiction": "CH",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/213800TZ4SM2ZOULUH56",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-07-18"
+    },
+    "direct_parent_lei": "2138007T8JHOSVJUR255",
+    "direct_parent_in_network": true,
+    "relationship_start": "2014-06-20",
+    "relationship_end": null
+   },
+   {
+    "lei": "5493004CSEQMXW0KLQ78",
+    "name": "SHELL VENTURES LLC",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/5493004CSEQMXW0KLQ78",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-06-30"
+    },
+    "direct_parent_lei": "549300UYFI41EIQ10304",
+    "direct_parent_in_network": true,
+    "relationship_start": "2021-11-05",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300CPDQEMFP5MHD79",
+    "name": "SHELL WINDENERGY INC.",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300CPDQEMFP5MHD79",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2019-03-20",
+     "next_renewal_date": "2019-03-20"
+    },
+    "direct_parent_lei": "549300UYFI41EIQ10304",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-03-20",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300XNL1VRVIODFM92",
+    "name": "SWEPI LP",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300XNL1VRVIODFM92",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-10-28",
+     "next_renewal_date": "2022-10-28"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2020-11-02",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300K8V061P1GZYL97",
+    "name": "Shell Chemicals Canada",
+    "jurisdiction": "CA",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300K8V061P1GZYL97",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-09-12"
+    },
+    "direct_parent_lei": "549300EV3W9Z0M4CIP05",
+    "direct_parent_in_network": true,
+    "relationship_start": "2018-08-16",
+    "relationship_end": null
+   },
+   {
+    "lei": "6488N221P8URN766AU62",
+    "name": "Shell EV Charging Solutions B.V.",
+    "jurisdiction": "NL",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/6488N221P8URN766AU62",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-02-09"
+    },
+    "direct_parent_lei": "213800J8M689LDFS4K06",
+    "direct_parent_in_network": true,
+    "relationship_start": "2017-10-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300XB91NR9ATUWU42",
+    "name": "Shell Energy México, S.A. de C.V.",
+    "jurisdiction": "MX",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300XB91NR9ATUWU42",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2024-10-14",
+     "next_renewal_date": "2024-10-14"
+    },
+    "direct_parent_lei": "M1D2H7Z5XUU7AGMR0F78",
+    "direct_parent_in_network": false,
+    "relationship_start": "2022-10-12",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300TX0RL3M8J5VM65",
+    "name": "Shell Green Gas Sales A/S",
+    "jurisdiction": "DK",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300TX0RL3M8J5VM65",
+    "lei_registration": {
+     "status": "ISSUED",
+     "label": "Issued",
+     "flag": false,
+     "since": null,
+     "next_renewal_date": "2027-06-02"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2024-05-28",
+    "relationship_end": null
+   },
+   {
+    "lei": "549300Q6ZG12PUZSTD12",
+    "name": "TABANGAO REALTY, INC.",
+    "jurisdiction": "PH",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/549300Q6ZG12PUZSTD12",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2022-06-30",
+     "next_renewal_date": "2022-06-30"
+    },
+    "direct_parent_lei": "213800J8M689LDFS4K06",
+    "direct_parent_in_network": true,
+    "relationship_start": "2021-06-30",
+    "relationship_end": null
+   },
+   {
+    "lei": "6488CH198N8W5VI47M58",
+    "name": "Zeco Holdings, Inc.",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/6488CH198N8W5VI47M58",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2026-08-31",
+     "next_renewal_date": "2026-08-31"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2015-03-11",
+    "relationship_end": null
+   },
+   {
+    "lei": "6488A03P2M515IIF3C93",
+    "name": "Zeco Systems, Inc.",
+    "jurisdiction": "US-DE",
+    "status": "ACTIVE",
+    "relation": "ultimate",
+    "link": "https://search.gleif.org/#/record/6488A03P2M515IIF3C93",
+    "lei_registration": {
+     "status": "LAPSED",
+     "label": "Lapsed",
+     "flag": true,
+     "since": "2026-08-31",
+     "next_renewal_date": "2026-08-31"
+    },
+    "direct_parent_lei": null,
+    "direct_parent_in_network": null,
+    "relationship_start": "2012-12-05",
+    "relationship_end": null
+   }
+  ],
+  "measures": "GLEIF Level 2 accounting consolidation: entities that hold an LEI and report this entity as their direct or ultimate consolidating parent. Subsidiaries without an LEI, or that report no parent, are not here.",
+  "license_notices": [
+   {
+    "source_id": "gleif",
+    "license": "CC0-1.0",
+    "attribution": "Contains LEI data from GLEIF, available under CC0 1.0."
+   }
+  ]
+ }
+}

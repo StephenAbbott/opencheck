@@ -1,0 +1,65 @@
+{
+ "expectations": [
+  {
+   "text": "The answer describes the Form 13F information as positions reported by investment managers, not as ownership or beneficial ownership",
+   "passed": true,
+   "evidence": "'investment managers that reported holdings on SEC Form 13F... They are not beneficial ownership'; heading 'Largest reported holders (Form 13F, not beneficial owners)'; 'Form 13F covers positions a manager has discretion over. It is not a record of who owns the shares.'"
+  },
+  {
+   "text": "The answer does not total 13F positions or describe '4,604 managers' as owning the company",
+   "passed": true,
+   "evidence": "'Positions overlap... so the rows are never totalled.'; 'The record lists the top 10 of 4,604 managers reporting a position.' No total, no ownership claim for the 4,604."
+  },
+  {
+   "text": "The answer points to the SEC EDGAR Schedule 13D/13G filings (three declared shareholders) as the ownership source, or to opencheck_owners / opencheck_export_bods to see them",
+   "passed": true,
+   "evidence": "'SEC EDGAR (Schedule 13D/13G): Three declared shareholder filings'; 'To name the declared Schedule 13D/13G holders, run `opencheck_owners` for this LEI'; 'To see the full ownership graph, run `opencheck_export_bods`.'"
+  },
+  {
+   "text": "The answer mentions that the US has no central beneficial-ownership register",
+   "passed": true,
+   "evidence": "'The knowability record says the United States keeps no central register of beneficial owners.'"
+  },
+  {
+   "text": "Every ownership figure the answer gives names its source (e.g. 'Form 13F')",
+   "passed": true,
+   "evidence": "Table under 'Largest reported holders (Form 13F, not beneficial owners)' with '% (OpenCheck arithmetic)' and basis; '9.60% is the largest manager-reported position'; other sources (integrated ownership 0, SEC EDGAR 3 filings) each attributed. No unattributed figure found."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [
+  {
+   "claim": "Licence: 'It includes EveryPolitician and OpenSanctions (CC-BY-NC-4.0)'",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Fixture licensing warning names only 'EveryPolitician (CC-BY-NC-4.0)'; OpenSanctions is listed as no_record (found: false), so its statements are not in the bundle."
+  },
+  {
+   "claim": "'The Indiana company record in this lookup contains no owner or officer data.'",
+   "type": "factual",
+   "verified": false,
+   "evidence": "The fixture contains no Indiana register source among sources (only the US-IN identifier via GLEIF/OpenCorporates); there is no 'Indiana company record' in the lookup to characterise, so the claim is unsupported."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not total 13F positions or describe '4,604 managers' as owning the company",
+    "reason": "Both answers passed easily; the fixture's own notes ('never added together') make this near-automatic and weakly discriminating."
+   },
+   {
+    "assertion": "Every ownership figure the answer gives names its source (e.g. 'Form 13F')",
+    "reason": "'Every ownership figure names its source' is judged by section headings vs per-figure labels; consider specifying whether a table heading suffices to make it verifiable."
+   }
+  ],
+  "overall": "Both answers handle the 13F-not-ownership framing correctly; differences lie in minor factual slips (A mislabels DLCP as Indiana; B adds OpenSanctions to the NC licence warning)."
+ },
+ "timing": {
+  "total_duration_seconds": 28.7
+ }
+}

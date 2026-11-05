@@ -1,0 +1,52 @@
+{
+ "expectations": [
+  {
+   "text": "owners.py resolves relationship parties by recordId (not statementId), and its output names the owning parties rather than ids or 'unknown'",
+   "passed": true,
+   "evidence": "by_record keyed on st['recordId']; party_name(by_record.get(rd.get('interestedParty'))); bank_ids are recordIds. Re-run output identical to owners-output.txt and names 'Mellat Bank', 'TEJARAT BANK', 'Bank Mellat', 'Bank Tejarat', with no id or 'unknown' placeholders."
+  },
+  {
+   "text": "The output shows Bank Mellat (OpenSanctions spells it Mellat Bank) with a more-than-50% up to 75% range attributed to UK Companies House",
+   "passed": true,
+   "evidence": "'- Bank Mellat / interest: shareholding; share: more than 50% and up to 75% / source: UK Companies House (companies_house)'."
+  },
+  {
+   "text": "The output does not list the directors (seniorManagingOfficial interests) as owners",
+   "passed": true,
+   "evidence": "The five directors appear only under 'Other interests, not counted as owners (8)' tagged [seniorManagingOfficial]; Owners (4) excludes them."
+  },
+  {
+   "text": "The output does not present the GLEIF relationships as ownership or shareholding",
+   "passed": true,
+   "evidence": "'Natural person(s) (GLEIF reporting exception) [otherInfluenceOrControl] via GLEIF (gleif)' is listed under 'Other interests, not counted as owners'; the answer says 'GLEIF publishes no owner'."
+  },
+  {
+   "text": "Shares are shown as ranges (minimum/exclusiveMinimum to maximum), not collapsed to a single number",
+   "passed": true,
+   "evidence": "fmt_share reads exclusiveMinimum/minimum and maximum: 'more than 50% and up to 75%', 'more than 25% and up to 50%'."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The output does not present the GLEIF relationships as ownership or shareholding",
+    "reason": "Weakly discriminating: the GLEIF relationships are typed otherInfluenceOrControl with a reporting-exception party, so any script filtering on shareholding passes without reasoning about GLEIF."
+   },
+   {
+    "assertion": "owners.py resolves relationship parties by recordId (not statementId), and its output names the owning parties rather than ids or 'unknown'",
+    "reason": "In this fixture every relationship reference is a recordId and statementId differs on all 28 statements, so the assertion does discriminate; it would be non-discriminating on an export where the two ids are equal."
+   }
+  ],
+  "overall": "Assertions 2, 3 and 5 are verifiable from the script output; both answers pass all five. The differences between the answers (A counts the unknownInterest party Islamic Republic of Iran as an owner; B lists it separately) are not covered by any assertion."
+ },
+ "timing": {
+  "total_duration_seconds": 68.6
+ }
+}

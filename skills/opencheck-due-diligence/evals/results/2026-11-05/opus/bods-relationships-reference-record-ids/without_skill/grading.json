@@ -1,0 +1,48 @@
+{
+ "expectations": [
+  {
+   "text": "owners.py resolves relationship parties by recordId (not statementId), and its output names the owning parties rather than ids or 'unknown'",
+   "passed": true,
+   "evidence": "Script: `records = {s[\"recordId\"]: s ...}` and `party = records.get(d.get(\"interestedParty\"))`; output names Bank Mellat, Bank Tejarat, Mellat Bank, etc. Re-ran: output matches answer (trailing whitespace only)."
+  },
+  {
+   "text": "The output shows Bank Mellat (OpenSanctions spells it Mellat Bank) with a more-than-50% up to 75% range attributed to UK Companies House",
+   "passed": true,
+   "evidence": "Output row: `Bank Mellat  entity  shareholding  >50% and ≤75%  unknown  UK Companies House`; also `Mellat Bank ... OpenSanctions`."
+  },
+  {
+   "text": "The output does not list the directors (seniorManagingOfficial interests) as owners",
+   "passed": true,
+   "evidence": "Script filters NOT_OWNERSHIP = {'seniorManagingOfficial'}; output: '5 director relationships left out (officers, not owners).' No director names in table."
+  },
+  {
+   "text": "The output does not present the GLEIF relationships as ownership or shareholding",
+   "passed": false,
+   "evidence": "The script output's table headed 'Owners of PERSIA INTERNATIONAL BANK PLC' includes two rows 'Natural person(s) (GLEIF reporting exception) ... otherInfluenceOrControl ... GLEIF' and the footer counts them among '7 ownership/control interests'. The prose later says they are 'a reporting exception, not named owners', but the output itself lists GLEIF relationships as owners."
+  },
+  {
+   "text": "Shares are shown as ranges (minimum/exclusiveMinimum to maximum), not collapsed to a single number",
+   "passed": true,
+   "evidence": "`>50% and ≤75%` and `>25% and ≤50%` from exclusiveMinimum/maximum via fmt_share."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 1,
+  "total": 5,
+  "pass_rate": 0.8
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "owners.py resolves relationship parties by recordId (not statementId), and its output names the owning parties rather than ids or 'unknown'",
+    "reason": "In export-persia.json every one of the 28 statements has statementId == recordId, so a script keying on statementId would resolve parties identically; the assertion can only be checked by reading the code, not by output, and does not discriminate on this fixture."
+   }
+  ],
+  "overall": "Assertions 2, 3 and 5 are straightforward; assertion 4 is the main discriminator (whether GLEIF reporting-exception links are kept out of the owners list)."
+ },
+ "timing": {
+  "total_duration_seconds": 51.3
+ }
+}

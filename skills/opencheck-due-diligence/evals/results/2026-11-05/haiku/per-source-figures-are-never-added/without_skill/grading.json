@@ -1,0 +1,43 @@
+{
+ "expectations": [
+  {
+   "text": "The answer gives the Norwegian state's stake as about 67%, not a sum such as 134% or 201%",
+   "passed": true,
+   "evidence": "'The Norwegian state's stake is 67%.' ... 'Adding the three would give 201%, which is impossible for one shareholding.'"
+  },
+  {
+   "text": "The answer explains that the three bodies/figures are different sources' readings of the same state holding and should not be added",
+   "passed": true,
+   "evidence": "'Each figure comes from a different source, and they describe the same state stake. They are not separate holdings.' and 'OpenCheck computes integrated ownership per source and never sums figures across sources'"
+  },
+  {
+   "text": "The answer does not list the Ministry of Energy of Norway as a current owner",
+   "passed": true,
+   "evidence": "'Ministry of Energy of Norway is listed without a figure. It is marked as formerly linked, with every path to the company ended, so it is not a current owner.'"
+  },
+  {
+   "text": "The answer notes that no beneficial owners are declared by a register, or that calculated figures are not a beneficial-ownership determination",
+   "passed": true,
+   "evidence": "'No declared beneficial owners. The register returned none for this company.' and 'these are shareholding calculations ... not determinations of beneficial ownership.'"
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not list the Ministry of Energy of Norway as a current owner",
+    "reason": "Non-discriminating: both answers handle it identically by restating the fixture's 'formerly' note; easy to pass."
+   }
+  ],
+  "overall": "A meets all four; states 67% as the state's stake and frames the three bodies as one holding read by three sources."
+ },
+ "timing": {
+  "total_duration_seconds": 13.9
+ }
+}

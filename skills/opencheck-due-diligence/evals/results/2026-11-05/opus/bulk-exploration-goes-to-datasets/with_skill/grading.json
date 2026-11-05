@@ -1,0 +1,43 @@
+{
+ "expectations": [
+  {
+   "text": "The answer recommends the published Azerbaijani Laundromat dataset release instead of 200 live lookups",
+   "passed": true,
+   "evidence": "\"I wouldn't loop `opencheck_lookup` over 200 companies... The release `dataset-azerbaijani-laundromat-2026-10-06`...\"; load_laundromat.sh downloads it from github.com/StephenAbbott/opencheck/releases."
+  },
+  {
+   "text": "The answer mentions that the release includes a Neo4j bundle (or Neo4j CSV) that can be loaded directly",
+   "passed": true,
+   "evidence": "\"It ships with a `.neo4j.zip` (node/edge CSVs plus `import.sh` / `import.cypher`)\"; script unzips *neo4j.zip and runs the bundle importer."
+  },
+  {
+   "text": "The answer mentions the lookup budget / rate limit or the batch cap of 20",
+   "passed": true,
+   "evidence": "\"OpenCheck allows ten fresh lookups a minute per IP address\"; refresh_live.py: \"ONE opencheck_batch_lookup call (cap 20)\"."
+  },
+  {
+   "text": "The answer mentions that the laundromat dataset is non-commercial / CC-BY-NC",
+   "passed": true,
+   "evidence": "\"Licence. The dataset is non-commercial only. It includes OpenSanctions and EveryPolitician data (CC-BY-NC-4.0).\""
+  },
+  {
+   "text": "The answer does not give an unpaced loop that calls opencheck_lookup 200 times as the main solution",
+   "passed": true,
+   "evidence": "Main solution is load_laundromat.sh (download release); only live call is one opencheck_batch_lookup for <=20 LEIs honouring retry_after_s."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [],
+  "overall": "Assertions discriminate well; A matches all release facts (name, .neo4j.zip contents, licence, budget)."
+ },
+ "timing": {
+  "total_duration_seconds": 115.2
+ }
+}

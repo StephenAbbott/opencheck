@@ -1,0 +1,43 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not state as fact that Persia International Bank itself is designated / on a sanctions list",
+   "passed": true,
+   "evidence": "Opens 'Not established by this result. The owners result doesn't say whether Persia International Bank PLC is itself on a sanctions list'; the only own-listing remark is hedged: 'From memory (not from this output), the EU and UK have listed this bank in its own right in the past. Check whether that listing is still current.'"
+  },
+  {
+   "text": "The answer explains that the sanctions 50% ownership test is met (Mellat Bank, 50–75%) as computed by OpenCheck from filed shareholdings",
+   "passed": true,
+   "evidence": "'It does find that the bank meets the sanctions ownership test under the OFAC, EU and UK rules'; table 'Mellat Bank | 50–75%, held directly'; 'All three results rest on one Companies House filing: Mellat Bank holds \"more than 50% up to 75%\"'; quotes 'arithmetic on the records'."
+  },
+  {
+   "text": "The answer says the result is not a determination that the bank is sanctioned or blocked, or that control tests were not computed",
+   "passed": true,
+   "evidence": "'OpenCheck describes this test as \"arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.\"' and 'It did not check the EU and UK control tests, OFAC licences or general licences, or holdings that have since ended.'"
+  },
+  {
+   "text": "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total",
+   "passed": true,
+   "evidence": "No combined figure anywhere; explicitly: 'The two sources' figures sit side by side and must not be added together.' and notes the Tejarat 25–50% stake 'is not counted towards the test'."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not state as fact that Persia International Bank itself is designated / on a sanctions list",
+    "reason": "Both answers add hedged from-memory remarks about the bank's own past listing, which is not checkable against the fixture; the assertion passes on hedging but the eval cannot verify whether those recollections are right."
+   }
+  ],
+  "overall": "A is accurate against the fixture: correct regimes, bases (identifier vs name-only), chain stops, licence notice, and not_computed scope including FAQ 398."
+ },
+ "timing": {
+  "total_duration_seconds": 30.1
+ }
+}

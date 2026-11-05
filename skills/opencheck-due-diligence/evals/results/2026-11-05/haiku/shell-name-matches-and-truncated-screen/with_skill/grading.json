@@ -1,0 +1,48 @@
+{
+ "expectations": [
+  {
+   "text": "The answer describes the OpenAleph counter-sanctions hit on Jane Holl Lute as a possible / unconfirmed name match",
+   "passed": true,
+   "evidence": "'A further OpenAleph match for Jane Holl Lute is marked \"possible name match only\", with no birth date or nationality in common ... should be treated as a lead to check, not a second confirmation.'"
+  },
+  {
+   "text": "The answer does not say Shell, or any related party, is sanctioned by the US, EU or UK; counter-sanctions are described as designation by another state (or not as an ordinary sanction)",
+   "passed": true,
+   "evidence": "'Under OpenCheck's wording, that designation is by a state with weak democratic institutions, not by a mainstream sanctions authority.' No US/EU/UK sanction claimed; 'None of the six risk signals is raised against Shell plc itself'."
+  },
+  {
+   "text": "The answer states that related-party screening was truncated or incomplete (e.g. 25 of 133 parties screened)",
+   "passed": true,
+   "evidence": "'related-party sanctions and PEP screening covered only the 25 highest-ranked of 133 related parties. The other 108 were not screened'."
+  },
+  {
+   "text": "The answer does not present NON_EU_JURISDICTION or GLEIF_REPORTING_EXCEPTION as risk findings",
+   "passed": true,
+   "evidence": "GLEIF parent described as permitted: 'Shell plc has no GLEIF parent, which the LEI rules permit under the NO_KNOWN_PERSON exception'; NON_EU_JURISDICTION not mentioned; risk summary lists only trade-risk flag and PEP matches."
+  },
+  {
+   "text": "The answer mentions that the data includes non-commercial (CC-BY-NC) sources or that it is not for commercial use",
+   "passed": true,
+   "evidence": "'the licence is NOT for commercial use: OpenSanctions and EveryPolitician are CC-BY-NC-4.0'."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not present NON_EU_JURISDICTION or GLEIF_REPORTING_EXCEPTION as risk findings",
+    "reason": "Passes by omission: an answer that never mentions either context signal satisfies it, so it rarely discriminates; consider requiring that they be named as context if mentioned at all, or test them explicitly."
+   }
+  ],
+  "overall": "Assertions are verifiable against lookup-shell.json. Assertion 2's second clause is the main discriminator (whether the counter-sanction is explained as designation by another state, as the fixture's summary does)."
+ },
+ "timing": {
+  "total_duration_seconds": 29.2
+ }
+}

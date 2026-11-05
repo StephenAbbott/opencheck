@@ -1,0 +1,245 @@
+{
+ "tool": "opencheck_search",
+ "arguments": {
+  "query": "Metastar Invest LLP"
+ },
+ "recorded_at": "2026-11-05T13:32:51Z",
+ "is_error": false,
+ "response": {
+  "query": "Metastar Invest LLP",
+  "kind": "entity",
+  "count": 15,
+  "total": 44,
+  "truncated": true,
+  "candidates": [
+   {
+    "name": "METASTAR INVEST LLP",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "GB-COH",
+      "id": "OC346224"
+     }
+    ],
+    "match": "exact",
+    "source": "companies_house",
+    "summary": "Company OC346224 · dissolved · Cornwall Buildings 45-51 Newhall Street Office 330, Birmingham, B3 3QR"
+   },
+   {
+    "name": "GRAINGER INVEST NO . 1 LLP",
+    "lei": "2138001NEXHGV6QT7208",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "2138001NEXHGV6QT7208"
+     },
+     {
+      "scheme": "GB-COH",
+      "id": "OC312947"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 2138001NEXHGV6QT7208 · GB · active · approximate match",
+    "former_names": [
+     "GRAINGER GENINVEST LLP"
+    ]
+   },
+   {
+    "name": "BRABO INVEST LTD",
+    "lei": "213800FBK8447ZEDEA03",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "213800FBK8447ZEDEA03"
+     },
+     {
+      "scheme": "GB-COH",
+      "id": "13781245"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 213800FBK8447ZEDEA03 · GB · active · approximate match"
+   },
+   {
+    "name": "Montagu VI Swordfish Co-Invest L.P.",
+    "lei": "54930003IFSA1XUSLO48",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "54930003IFSA1XUSLO48"
+     },
+     {
+      "scheme": "GB-COH",
+      "id": "LP022448"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 54930003IFSA1XUSLO48 · GB · active · approximate match",
+    "former_names": [
+     "MONTAGU VI PHOENIX III CO-INVEST"
+    ]
+   },
+   {
+    "name": "KINDRED CAPITAL CO-INVEST VI LP",
+    "lei": "213800IYDK1XTOP9E330",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "213800IYDK1XTOP9E330"
+     },
+     {
+      "scheme": "GB-COH",
+      "id": "LP024687"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 213800IYDK1XTOP9E330 · GB · active · approximate match"
+   },
+   {
+    "name": "ARK INVEST INTERNATIONAL LTD",
+    "lei": "549300PA68BHYYXVGN73",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "549300PA68BHYYXVGN73"
+     },
+     {
+      "scheme": "GB-COH",
+      "id": "11770079"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 549300PA68BHYYXVGN73 · GB · active · approximate match",
+    "former_names": [
+     "RIZE ETF LIMITED"
+    ]
+   },
+   {
+    "name": "TDR Capital Co-Invest V Holdings L.P.",
+    "lei": "254900NCASH9448VFQ94",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "254900NCASH9448VFQ94"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 254900NCASH9448VFQ94 · JE · active · approximate match"
+   },
+   {
+    "name": "OAKTREE CRUISE YACHT CO-INVEST, L.P.",
+    "lei": "254900OPFR7SF8VEF028",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "254900OPFR7SF8VEF028"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 254900OPFR7SF8VEF028 · KY · active · approximate match"
+   },
+   {
+    "name": "TDR CAPITAL SPECIAL OPPORTUNITIES FUND I CO-INVEST HOLDINGS L.P.",
+    "lei": "254900KFJ9S1HIVNM469",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "254900KFJ9S1HIVNM469"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 254900KFJ9S1HIVNM469 · JE · active · approximate match"
+   },
+   {
+    "name": "Cheyne Cayman SPC - Cheyne Co-Invest 2023-1 SP",
+    "lei": "39120089403VARD3CF75",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "39120089403VARD3CF75"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 39120089403VARD3CF75 · KY · active · approximate match"
+   },
+   {
+    "name": "BAILLIE GIFFORD PRIVATE COMPANIES LEADERS FUND I L.P.",
+    "lei": "213800DB1CDIWNMDXV88",
+    "identifiers": [
+     {
+      "scheme": "XI-LEI",
+      "id": "213800DB1CDIWNMDXV88"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "gleif",
+    "summary": "LEI 213800DB1CDIWNMDXV88 · KY · active · approximate match",
+    "former_names": [
+     "BAILLIE GIFFORD CO-INVEST (NO. 7) FUND LP"
+    ]
+   },
+   {
+    "name": "METASTARINC LTD",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "GB-COH",
+      "id": "16583658"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "companies_house",
+    "summary": "Company 16583658 · active · 124 Great Ancoats Street, Manchester, England, M4 6DE"
+   },
+   {
+    "name": "METASTAR PTY LTD",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "AU-ABN",
+      "id": "76658558117"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "abr_australia",
+    "summary": "AU-ABN 76658558117 · NSW 2133"
+   },
+   {
+    "name": "NPEP INVEST I LLP",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "NO-BRC",
+      "id": "937100671"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "brreg",
+    "summary": "NO-ORGNR 937100671 · UTLA"
+   },
+   {
+    "name": "METASTAR CONSULTING L.P.",
+    "lei": null,
+    "identifiers": [
+     {
+      "scheme": "GB-COH",
+      "id": "SL027540"
+     }
+    ],
+    "match": "fuzzy",
+    "source": "companies_house",
+    "summary": "Company SL027540 · active · Office 1 145 Kilmarnock Road, Glasgow, Scotland, G41 3JA"
+   }
+  ],
+  "hint": "Candidates are ranked best-first across sources; match says how closely the name matches the query (exact, same_name, all_tokens, distinctive_tokens, fuzzy) — measured against the current name or, where a candidate carries matched_former_name, against that former legal name the source files. Pass a candidate's lei to opencheck_lookup to run due diligence. A candidate with lei null and an identifiers entry (e.g. scheme GB-COH) is looked up with opencheck_register_lookup(scheme, id). Showing the top 15 of 44; call again with a higher limit (up to 50) or a more specific query."
+ }
+}

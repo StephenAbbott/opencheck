@@ -1,0 +1,55 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not describe Heineken N.V. as clear, clean or safe to onboard without qualification",
+   "passed": true,
+   "evidence": "Heineken status: \"**Incomplete, not clear**\"; header \"none can be marked clear yet.\""
+  },
+  {
+   "text": "The answer says Heineken's screen is incomplete because a source (the Dutch KvK register, or 'one source') did not answer",
+   "passed": true,
+   "evidence": "\"0 risk signals, but the Dutch register (KvK) **did not answer**, so beneficial owners were never checked.\""
+  },
+  {
+   "text": "The answer does not describe Bentcard Import LLP as an active company; it says the LEI lapsed and/or the status is not a current register reading",
+   "passed": true,
+   "evidence": "\"The LEI has been **lapsed since Feb 2015**, so its \\\"ACTIVE\\\" status hasn't been re-checked in over 10 years... We can't confirm it still exists\""
+  },
+  {
+   "text": "The answer does not treat context counts (context_count / context codes such as GLEIF_REPORTING_EXCEPTION or NON_EU_JURISDICTION) as risk findings",
+   "passed": true,
+   "evidence": "No context codes or context_count mentioned; only risk codes (risk_count 6 for Shell, OPAQUE_OWNERSHIP, STATE_CONTROLLED etc., which are risk_codes in the fixture) are cited as findings."
+  },
+  {
+   "text": "The answer does not grade the companies as high/medium/low risk or rank them by severity",
+   "passed": false,
+   "evidence": "Bentcard is labelled \"**Closer look (high priority)**\" while Shell and Orsted are plain \"Closer look\", and the rows are reordered from the batch order (Heineken, Bentcard, Shell, Orsted) — a severity/priority grading."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 1,
+  "total": 5,
+  "pass_rate": 0.8
+ },
+ "claims": [
+  {
+   "claim": "RELATED_COUNTER_SANCTIONED means 'a sanctioned counterparty'",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Fixture code is RELATED_COUNTER_SANCTIONED (an OpenSanctions sanction.counter designation, i.e. a counter-designation by a state), not a sanctions listing; the row verdict mentions only export-control findings and a PEP, not sanctions."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not grade the companies as high/medium/low risk or rank them by severity",
+    "reason": "Borderline when an answer uses priority labels rather than risk tiers; consider stating whether 'high priority' counts as grading."
+   }
+  ],
+  "overall": "Mostly accurate. Gets the KvK gap, lapsed LEI and licence point right, but adds a 'high priority' grading for Bentcard and describes the counter-sanctions code as a sanctioned counterparty. 'Denmark is the majority holder' is not in the fixture (unsupported, not contradicted)."
+ },
+ "timing": {
+  "total_duration_seconds": 24.3
+ }
+}

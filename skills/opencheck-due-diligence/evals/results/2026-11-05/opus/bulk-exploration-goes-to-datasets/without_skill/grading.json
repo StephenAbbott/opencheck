@@ -1,0 +1,61 @@
+{
+ "expectations": [
+  {
+   "text": "The answer recommends the published Azerbaijani Laundromat dataset release instead of 200 live lookups",
+   "passed": true,
+   "evidence": "\"I'd advise against calling `opencheck_lookup` 200 times... Instead, load OpenCheck's published Azerbaijani Laundromat dataset straight into Neo4j.\" (release tag left as <laundromat-tag>)."
+  },
+  {
+   "text": "The answer mentions that the release includes a Neo4j bundle (or Neo4j CSV) that can be loaded directly",
+   "passed": false,
+   "evidence": "No mention of the .neo4j.zip / CSV + import.cypher bundle; B assumes the release is BODS JSON and writes its own BODS->Neo4j loader (load_bods_neo4j.py): \"I've assumed it's BODS v0.4 in one of the layouts above\"."
+  },
+  {
+   "text": "The answer mentions the lookup budget / rate limit or the batch cap of 20",
+   "passed": true,
+   "evidence": "\"Each `opencheck_lookup` counts against a lookup budget of 10 fresh checks a minute per IP address.\""
+  },
+  {
+   "text": "The answer mentions that the laundromat dataset is non-commercial / CC-BY-NC",
+   "passed": true,
+   "evidence": "Under the loaded-graph notes: \"Licences. OpenSanctions and EveryPolitician data is CC-BY-NC-4.0. A masterclass is fine.\" (Weak: it frames NC as per-source and filterable rather than stating the release is non-commercial.)"
+  },
+  {
+   "text": "The answer does not give an unpaced loop that calls opencheck_lookup 200 times as the main solution",
+   "passed": true,
+   "evidence": "Main solution is load_bods_neo4j.py over the downloaded release; no opencheck_lookup loop in the script."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 1,
+  "total": 5,
+  "pass_rate": 0.8
+ },
+ "claims": [
+  {
+   "claim": "For any commercial reuse, load with `--exclude-nc`, or filter on `licence_nc = false` (implies the release can be made commercially usable by filtering)",
+   "type": "factual",
+   "verified": false,
+   "evidence": "The release as published is non-commercial (CC-BY-NC sources); B does not say the release itself is non-commercial."
+  },
+  {
+   "claim": "Implied release layout is BODS JSON needing a custom loader; no Neo4j bundle mentioned",
+   "type": "factual",
+   "verified": false,
+   "evidence": "The release ships a .neo4j.zip (CSV + import.cypher/import.sh) that loads directly."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer mentions that the laundromat dataset is non-commercial / CC-BY-NC",
+    "reason": "Ambiguous whether naming CC-BY-NC sources inside the dataset suffices versus stating the release itself is non-commercial; consider tightening the wording."
+   }
+  ],
+  "overall": "Assertion 2 discriminates (B missed the Neo4j bundle). Others are reasonable."
+ },
+ "timing": {
+  "total_duration_seconds": 87.3
+ }
+}
