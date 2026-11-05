@@ -246,8 +246,7 @@ export function SiteFooter({ onNavigate }: { onNavigate: (v: View) => void }) {
                 Open<span className="text-oo-blue">Check</span>
               </div>
               <p className="mt-2 text-oo-meta text-oo-muted leading-relaxed max-w-[220px]">
-                Customer due diligence checks powered by the Legal Entity
-                Identifier and open standards.
+                See who owns and controls a company, from open data.
               </p>
             </div>
             {/* Right: link groups */}

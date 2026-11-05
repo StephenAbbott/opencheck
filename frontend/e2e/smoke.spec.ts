@@ -113,7 +113,7 @@ test.describe("every page a reader can reach", () => {
     // Deep-linking and the back button are the same mechanism; the nav
     // pushes history, so a reload of /sources has to serve /sources.
     await page.goto("/sources");
-    await expect(page.getByRole("heading", { name: "About the sources" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sources", exact: true, level: 2 })).toBeVisible();
     await page.goto("/");
     await page.getByRole("link", { name: "Sources", exact: true }).first().click();
     await expect(page).toHaveURL(/\/sources$/);

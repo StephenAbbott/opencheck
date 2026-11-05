@@ -20,13 +20,26 @@ import { shortSourceName } from "./CrossSourceIdentifiersTable";
  * closing principle, different sentence: a section that is not on screen
  * because its fetch failed must not be read as a section with nothing in it.
  */
-export function PanelErrorsNotice({ errors }: { errors: PanelError[] }) {
+export function PanelErrorsNotice({
+  errors,
+  attached = false,
+}: {
+  errors: PanelError[];
+  /** Drawn as a strip along the bottom of the card it sits in (the subject
+   *  and verdict card) rather than as a box of its own. See
+   *  `DegradedScreensNotice`'s `attached`. */
+  attached?: boolean;
+}) {
   if (errors.length === 0) return null;
   return (
     <section
       role="status"
       aria-label="Part of this report could not be loaded"
-      className="mt-6 mb-8 rounded-oo border border-oo-warn-border bg-oo-warn-bg p-5"
+      className={
+        attached
+          ? "border-t border-oo-warn-border bg-oo-warn-bg p-5"
+          : "mt-6 mb-8 rounded-oo border border-oo-warn-border bg-oo-warn-bg p-5"
+      }
     >
       <h2 className="font-head font-bold text-oo-body text-oo-warn-text">
         Part of this report could not be loaded
@@ -73,6 +86,12 @@ const DEGRADED_REASON_LABELS: Record<string, string> = {
  * closing principle and the re-run sit behind "Show more", the same
  * disclosure pattern as the "Is this the right company?" band.
  *
+ * `attached` (the report's own notice): drawn as the bottom strip of the
+ * subject-and-verdict card, under the verdict's "see which" link, instead of
+ * as a box between the mode tabs and the panel they control. As a box there it
+ * cut the active tab off from its content (the Ørsted FullCheck screenshot,
+ * 5 Nov 2026), and the gap is report-wide, not about one tab.
+ *
  * Uncontrolled unless `open` is passed. The report controls it so the verdict
  * strip's "see which" link can open it on the way there — a link promising
  * "which" must not land on a bar that hides which.
@@ -86,6 +105,7 @@ export function DegradedScreensNotice({
   className = "mt-6 mb-8",
   open,
   onToggle,
+  attached = false,
 }: {
   degraded: DegradedSource[];
   sourceNames?: Record<string, string>;
@@ -101,6 +121,9 @@ export function DegradedScreensNotice({
   /** Controlled disclosure state. Omit to let the notice manage its own. */
   open?: boolean;
   onToggle?: (open: boolean) => void;
+  /** A strip along the bottom of its card, not a box: no outer margin, no
+   *  rounding, a top rule only. `className` is ignored when set. */
+  attached?: boolean;
 }) {
   const [ownOpen, setOwnOpen] = useState(false);
   if (degraded.length === 0) return null;
@@ -116,7 +139,11 @@ export function DegradedScreensNotice({
       id={id}
       role="status"
       aria-label={title}
-      className={`scroll-mt-4 ${className} rounded-oo border border-oo-warn-border bg-oo-warn-bg`}
+      className={
+        attached
+          ? "scroll-mt-4 border-t border-oo-warn-border bg-oo-warn-bg"
+          : `scroll-mt-4 ${className} rounded-oo border border-oo-warn-border bg-oo-warn-bg`
+      }
     >
       <div className="flex items-center justify-between gap-3 py-0.5 pl-4 pr-1">
         <div className="flex items-center gap-2.5 min-w-0">

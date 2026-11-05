@@ -28,7 +28,7 @@ export function ChangelogPage() {
         Changelog
       </h2>
       <p className="text-oo-body leading-[1.75] text-oo-muted mb-6 max-w-2xl">
-        Every change to OpenCheck, newest first. Each pull request is given the
+        What's new in OpenCheck, newest first. Each pull request is given the
         next phase number when it merges and is recorded in the project's{" "}
         <a
           href={`${REPO_URL}/blob/main/docs/status.md`}

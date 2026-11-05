@@ -182,7 +182,7 @@ describe("FEATURES", () => {
 
 describe("ledeSentence", () => {
   it("names the live count when it has arrived", () => {
-    expect(ledeSentence(41)).toContain("one lookup over 41 open sources");
+    expect(ledeSentence(41)).toContain("from 41 open sources");
   });
 
   it("loses the figure rather than guessing while the count is unknown", () => {

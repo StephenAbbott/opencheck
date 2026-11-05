@@ -91,10 +91,8 @@ export function ApiPage() {
         API
       </h2>
       <p className="text-oo-body leading-[1.75] text-oo-muted mb-6 max-w-2xl">
-        OpenCheck exposes a small, read-only REST API. Every endpoint is a{" "}
-        <code className={mono}>GET</code> that returns JSON — except{" "}
-        <code className={mono}>/export</code> (a downloadable bundle) and the
-        streaming endpoints (Server-Sent Events). Every result is expressed in the{" "}
+        Everything OpenCheck shows on the website is available as a free,
+        read-only API, with no key needed. Results are published in the{" "}
         <a
           href="https://standard.openownership.org/en/0.4.0/"
           target="_blank"
@@ -103,9 +101,13 @@ export function ApiPage() {
         >
           Beneficial Ownership Data Standard (BODS) v0.4
         </a>
-        . No API key is required to read. OpenCheck also runs a{" "}
+        , keyed on the Legal Entity Identifier (LEI). Every endpoint is a{" "}
+        <code className={mono}>GET</code> that returns JSON, except{" "}
+        <code className={mono}>/export</code> (a downloadable bundle) and the
+        streaming endpoints (Server-Sent Events). AI agents can call the same
+        checks as tools through the{" "}
         <strong className="text-oo-ink font-semibold">Model Context Protocol (MCP)</strong>{" "}
-        server, so AI agents can call the same pipeline as typed tools.
+        server.
       </p>
 
       <nav aria-label="On this page" className="mb-6 flex flex-wrap gap-x-5 gap-y-1 text-oo-small">

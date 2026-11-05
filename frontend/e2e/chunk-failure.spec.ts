@@ -143,5 +143,5 @@ test("a page chunk that will not load says so, and the rest of the site still wo
   await expect(page.getByRole("contentinfo")).toHaveCount(1);
 
   await page.getByRole("link", { name: "Sources", exact: true }).first().click();
-  await expect(page.getByRole("heading", { name: "About the sources" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sources", exact: true, level: 2 })).toBeVisible();
 });
