@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 458** — OpenSanctions, OpenAleph and EveryPolitician person statements now list a person's FollowTheMoney citizenship among their nationalities, saying which entries came from it.
+**Latest: Phase 459** — The note on a person's nationalities read from FollowTheMoney citizenship now separates countries with semicolons, so a former state's comma no longer splits it.
 
 → [Full development history](docs/status.md)
 
