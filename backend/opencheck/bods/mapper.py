@@ -341,6 +341,8 @@ from .mappers.taiwan import (  # noqa: F401  (re-exported)
     _tw_no_percentage_note,
     _tw_entity_details,
     _tw_suspension_note,
+    tw_resolved_holder,
+    tw_holder_ubn_note,
     map_gcis_taiwan,
 )
 from .mappers.brazil import (  # noqa: F401  (re-exported, Phase 246)
