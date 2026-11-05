@@ -65,7 +65,7 @@ def test_both_lists_are_read_and_deduplicated_on_code():
     ]
     # Only what nationality did not already say is attributed to citizenship.
     assert note["description"].startswith(
-        "Uzbekistan (UZ), USSR, Union of Soviet Socialist Republics are read from"
+        "Uzbekistan (UZ); USSR, Union of Soviet Socialist Republics are read from"
     )
     assert "Russian Federation" not in note["description"]
 
