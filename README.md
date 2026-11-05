@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 460** — The /api page's MCP section is rebuilt as a step-by-step guide that lists all fifteen tools, marks the ones that spend the lookup budget and says how to read the answers.
+**Latest: Phase 461** — The main pages now describe OpenCheck the same way — who owns and controls a company, from open data — and the screening-incomplete bar sits at the foot of the verdict card instead of between the mode tabs and their panel.
 
 → [Full development history](docs/status.md)
 
