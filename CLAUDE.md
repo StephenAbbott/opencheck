@@ -1458,8 +1458,32 @@ will be re-derived otherwise:
   revocation or bankruptcy is pending (the liquidation follows), a completed
   liquidation, merger or division is terminal. A test pins the 33.
 - **Not in v1**: key managers (經理人, in no open API), branch records, limited
-  partnerships, History, and resolving a legal-person holder to its UBN for
-  FullCheck hops (decision D — a v2 follow-up ticket, exact name match only).
+  partnerships and History.
+- **A legal-person holder's UBN (the Taiwan GCIS v2 ticket, 4 Nov 2026).**
+  `_resolve_holders` in the adapter, `tw_resolved_holder` /
+  `tw_holder_ubn_note` in the mapper. The keyword dataset (`6BBA2268-…`) has
+  **no exact operator** — `like` and `eq` on `Company_Name` are both a token
+  search (`eq 台灣積體電路` returns TSMC) — answers nothing without a
+  `Company_Status` filter (`ne` is ignored), folds width and case but not
+  台/臺, breaks on a space in the value, and cuts answers at `$top`. So the
+  match is ours: `fold_name` (NFKC, casefold, whitespace, 臺→台) equal on
+  the rows returned. Stephen's decisions: only a name ending 公司, with no
+  whitespace and no foreign prefix, is sent (`holder_is_resolvable` — state
+  bodies, funds and foundations never end 公司, so the Phase 240 rule holds
+  by construction; decision D keeps out even a foreign registration written
+  in Chinese); live companies (status 01) only (C); several matches are
+  refused silently (A); a search that did not answer, a `$top` answer, the
+  15-holder cap (`HOLDER_RESOLVE_CAP`) or the 12 s phase budget
+  (`HOLDER_PHASE_BUDGET_S`, so a slow search never costs the company card)
+  is `not_read` and **one** `source_read` degradation for the lot (B, via
+  `_query(record=False)`); the finding is unchanged (E). Cached per folded
+  name for 7 days (`gcis_taiwan/holder-ubn-v1/…`); a definitive none is
+  `put_absent`; `not_read` is never cached. The holder gets `TW-CR`, TW
+  jurisdiction and a `transformation` note on `/recordDetails/identifiers/0`;
+  its `recordId` does not move, and the company's own number is refused.
+  Measured over the 503 ISSUED RA000551 LEIs: 563 holders, 365 resolve, 0
+  several, 42 none, 156 foreign. `TW_FOREIGN_PREFIXES` gained 荷商,
+  英屬安吉拉商 and 英屬蓋曼群島商 / 蓋曼群島商, spellings the register files.
 
 ## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
 
@@ -3635,6 +3659,21 @@ GLEIF mapper exported most registration numbers with `scheme: ""`.
   mapped statement (`map_meip` exempt). When a source does not say what an
   address is for, use `alternative`, not `registered` — the FtM mapper's
   `registered` on people reached production as a schema error.
+- **One resolver for a country name** (the country-lookup ticket, 4 Nov
+  2026): `bods/countries.py::country_code` — one alias table (`ALIASES`),
+  then an ISO 3166-2 subdivision → its country, then pycountry. `statements.
+  _country_code`, `statements._country_obj`, `residence.resolve_country` and
+  Wikidata's label fallback are wrappers; they agree on the code and differ
+  only in what they return (a bare code, a Country with pycountry's ISO name,
+  a residence country with its common name). Until then "Russia" had no code
+  in either statements helper and "Turkey" none in `_country_code`, so a
+  Russian or Turkish party whose country was filed as a name drew no FATF /
+  non-EU / tax-list signal. **Add a spelling to `ALIASES`, never a table in a
+  mapper**; "Korea" and "Channel Islands" stay uncoded. A jurisdiction that
+  should keep its subdivision ("US-DE") must be read before the resolver —
+  the FtM path does (`_ftm_jurisdiction`). Companies House and OpenCorporates
+  nationalities are demonyms ("British", "Iranian") and stay name-only: a
+  demonym is not a country name and is not read here.
 - **One reader for an entity's jurisdiction:** `bods/jurisdiction.py` (`read`
   accepts the v0.4 key and both v0.3 placements; `upgrade` renames in place).
   `bods_data.load_bundle` upgrades the committed `data/cache/bods_data/`

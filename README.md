@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 452** — OpenCheck's per-jurisdiction notes were updated from the Beneficial ownership access status table for Austria, Poland and Bulgaria.
+**Latest: Phase 456** — A Taiwanese company's corporate directors are now linked to their own register record by exact name, so FullCheck can follow a Taiwanese ownership chain upwards.
 
 → [Full development history](docs/status.md)
 

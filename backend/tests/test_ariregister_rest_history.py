@@ -376,3 +376,20 @@ def test_a_natural_persons_rows_join_by_code_and_lose_it() -> None:
     assert by_id["9001"]["osaluse_protsent"] == "50.000000"
     text = json.dumps(history)
     assert code_now not in text and code_gone not in text
+
+
+def test_the_ou_shareholder_history_is_ownership_on_both_paths() -> None:
+    """``O`` — the OÜ shareholder off the card — was in no role table, so a
+    private limited company's whole shareholder history sat on Tier 3
+    (the History-tiering follow-up, 4 Nov 2026)."""
+    from opencheck.timeline import Tier
+
+    for data in (
+        {"registry_code": BOLT, "detail_xml": _soap(BOLT), "bo_xml": None},
+        {"registry_code": BOLT, "detail_rest": _rest(BOLT), "bo_xml": None},
+    ):
+        events = ariregister_change_events(data)
+        shareholders = [e for e in events if (e.counterparty or "").endswith("— shareholder")]
+        assert shareholders
+        assert all(e.tier is not Tier.ADMIN_NOISE or e.raw_change_type == "re-registered" for e in shareholders)
+        assert any(e.change_type is ChangeType.OWNER_ADDED and e.tier is Tier.OWNERSHIP_CONTROL for e in shareholders)

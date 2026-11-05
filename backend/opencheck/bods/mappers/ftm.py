@@ -22,6 +22,7 @@ from ..statements import (
     BODSBundle,
     _addr,
     _country_code,
+    _country_obj,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
@@ -749,19 +750,19 @@ _FTM_NON_ISO_COUNTRIES = {"xk": "Kosovo"}
 def _ftm_resolve_nationality(raw: str) -> dict[str, str]:
     """Resolve a FtM nationality string (ISO code or full name) to a BODS entry.
 
-    Returns ``{"name": ..., "code": ...}`` when pycountry can resolve the
-    value to a current ISO 3166-1 country. A former state — FtM writes the
+    Returns ``{"name": ..., "code": ...}`` when the one country resolver
+    (``_country_obj`` → ``countries.country_code``) reads the value as a
+    current ISO 3166-1 country. Only when it finds no code does this fall
+    back to FtM's own name-only spellings below. A former state — FtM writes the
     Soviet Union as ``suhh``, its ISO 3166-3 code — gets its name alone from
     pycountry's historic list, never a code: it is said, and never compared
     (``cross_check`` reads codes only). Anything else keeps the source's
     text as the name.
     """
     text = raw.strip()
-    try:
-        country = pycountry.countries.lookup(text)
-        return {"name": country.name, "code": country.alpha_2}
-    except LookupError:
-        pass
+    entry = _country_obj(text) or {"name": text}
+    if entry.get("code"):
+        return entry
     if text.lower() in _FTM_NON_ISO_COUNTRIES:
         return {"name": _FTM_NON_ISO_COUNTRIES[text.lower()]}
     try:
@@ -844,9 +845,12 @@ def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str | None] | None:
         # is ISO 3166 or absent (Phase 239). This used to fall back to the raw
         # string, so an OpenAleph "BVI" went out as ``code: "BVI"`` and the
         # EU high-risk / non-EU checks skipped it.
+        # A subdivision ("US-DE") is a valid ``jurisdiction.code`` in its own
+        # right and is kept as it is, before the shared resolver reduces it
+        # to its country.
+        if pycountry.subdivisions.get(code=jur.strip().upper()):
+            return (jur.strip(), jur.strip().upper())
         code = _country_code(jur)
-        if not code and pycountry.subdivisions.get(code=jur.strip().upper()):
-            code = jur.strip().upper()
         return (jur.strip(), code or None)
 
 

@@ -44,11 +44,15 @@ services:
     # rebuild published a newer one, otherwise use what is there. Trade-off
     # per https://render.com/docs/disks: a service with a disk runs as a
     # single instance and deploys are not zero-downtime (a few seconds).
-    # 10 GB leaves room for the download-and-rename (2 x 1.8 GB) and growth.
+    # 20 GB leaves room for the download-and-rename (2 x 1.8 GB) and growth.
+    # Raised from 10 GB on 4 Nov 2026, when the disk filled ("No space left
+    # on device" on the ISIN index rebuild; the watchlist, saved reports and
+    # consistencystats files then failed with "disk I/O error"). The size is
+    # set in the Render dashboard too; a disk can grow, never shrink.
     disk:
       name: entity-pages
       mountPath: /var/data
-      sizeGB: 10
+      sizeGB: 20
     envVars:
       - key: OPENCHECK_ALLOW_LIVE
         value: "true"
@@ -123,7 +127,7 @@ services:
       # replace when the asset changed, keep otherwise; re-checked every six
       # hours in-process so the daily seed lands without a deploy. Shares the
       # disk above: mirror 1.8 GB + graph 2.2 GB + one replace in flight fits
-      # in 10 GB. Nothing walks it until OPENCHECK_CH_GRAPH_FIRST is flipped
+      # in 20 GB. Nothing walks it until OPENCHECK_CH_GRAPH_FIRST is flipped
       # (Phase 188); until then the Companies House adapter walks live.
       - key: OPENCHECK_PSC_GRAPH_DB_FILE
         value: /var/data/psc_graph.sqlite
@@ -143,7 +147,11 @@ services:
       # config default, SUNBIZ_FLORIDA_DB_URL). On the disk, not the
       # ephemeral data root, so a deploy does not re-download it. Disk budget:
       # mirror 1.8 + PSC graph 2.2 + Florida 1.2 + the small files ≈ 5.6 GB,
-      # plus one replace in flight (≤ 2.2 GB) — inside the 10 GB.
+      # plus one replace in flight (≤ 2.2 GB). That sum left out the ISIN index
+      # below (9.4M ISINs, rebuilt beside the old file) and the other indexes
+      # on the disk: it was ~9.3 GB in late Oct 2026 before Florida landed,
+      # and full on 4 Nov. Check `du -sh /var/data/*` in the Render shell
+      # before adding another index here.
       - key: SUNBIZ_FLORIDA_DB_FILE
         value: /var/data/sunbiz_florida.sqlite
       # --- Phase 258: GLEIF's ISIN-to-LEI file behind /securities ---
