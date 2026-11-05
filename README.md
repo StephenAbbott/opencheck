@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 459** — The note on a person's nationalities read from FollowTheMoney citizenship now separates countries with semicolons, so a former state's comma no longer splits it.
+**Latest: Phase 460** — The /api page's MCP section is rebuilt as a step-by-step guide that lists all fifteen tools, marks the ones that spend the lookup budget and says how to read the answers.
 
 → [Full development history](docs/status.md)
 
