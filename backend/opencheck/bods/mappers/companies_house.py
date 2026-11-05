@@ -19,6 +19,7 @@ from .. import ch_filings as _ch_filings
 from .. import former_names as _former_names, identity_verification as _idv, liveness as _liveness
 from ..annotations import annotate, commenting, identifying, pointer, transformation
 from ..ch_constants import describe_company_type, describe_officer_role
+from ..nationality import ch_nationalities
 from ..officer_roles import mark_officer
 from ..psc_natures import describe_statement, describe_super_secure
 from ..residence import residence_address, residence_note
@@ -592,9 +593,7 @@ def _ch_director_statements(
             else:
                 birth_date = f"{dob['year']:04d}"
 
-        nationalities: list[dict[str, str]] = []
-        if officer.get("nationality"):
-            nationalities.append({"name": officer["nationality"]})
+        nationalities = ch_nationalities(officer.get("nationality"))
 
         # Service address — same structure as individual PSC address.
         address_block = officer.get("address") or {}
@@ -1408,9 +1407,7 @@ def _map_individual_psc(
         else:
             birth_date = f"{dob['year']:04d}"
 
-    nationalities = []
-    if psc.get("nationality"):
-        nationalities.append({"name": psc["nationality"]})
+    nationalities = ch_nationalities(psc.get("nationality"))
 
     # Companies House returns addresses for PSCs under "address".
     address_block = psc.get("address") or {}
@@ -1490,6 +1487,28 @@ def _ch_appointments_residence(
     return None
 
 
+def _ch_appointments_nationalities(
+    appointments: dict[str, Any], items: list[dict[str, Any]]
+) -> list[dict[str, str]]:
+    """Every nationality an officer looked up by officer id has filed.
+
+    The appointments list's envelope carries no ``nationality`` (checked
+    against cached live answers, 3 Nov 2026); each appointment does, as filed
+    for that company, and one person can file "British" on one board and
+    "Irish,British" on another. Every distinct value is kept (the officer
+    nationality ticket, 4 Nov 2026), in the residence order — current
+    appointments latest first, then resigned latest first — with an envelope
+    value, should the register add one, before them all.
+    """
+    current = [i for i in items if not i.get("resigned_on")]
+    resigned = [i for i in items if i.get("resigned_on")]
+    current.sort(key=lambda i: str(i.get("appointed_on") or ""), reverse=True)
+    resigned.sort(key=lambda i: str(i.get("resigned_on") or ""), reverse=True)
+    return ch_nationalities(
+        [appointments.get("nationality")] + [i.get("nationality") for i in current + resigned]
+    )
+
+
 def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
     """Map a Companies House officer-appointments bundle to BODS.
 
@@ -1504,8 +1523,9 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
     canonical name + DOB on the *appointments envelope* — those fields
     are used for the personStatement. Nationality, occupation and
     country of residence are on each appointment, not the envelope;
-    the residence is read from the appointments
-    (:func:`_ch_appointments_residence`).
+    the residence and nationalities are read from the appointments
+    (:func:`_ch_appointments_residence`,
+    :func:`_ch_appointments_nationalities`).
     """
     result = BODSBundle()
 
@@ -1522,10 +1542,7 @@ def _map_companies_house_officer(bundle: dict[str, Any]) -> BODSBundle:
         else:
             birth_date = f"{dob['year']:04d}"
 
-    nationalities: list[dict[str, str]] = []
-    nationality = appointments.get("nationality")
-    if nationality:
-        nationalities.append({"name": nationality})
+    nationalities = _ch_appointments_nationalities(appointments, items)
 
     person_url = (
         f"https://find-and-update.company-information.service.gov.uk/officers/"

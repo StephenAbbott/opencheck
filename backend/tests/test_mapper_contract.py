@@ -258,9 +258,13 @@ def test_summary_carries_the_iso_code_wikidata_states() -> None:
         ({"qid": "Q43", "label": "Turkey", "iso": "TR"}, ("Turkey", "TR")),
         ({"qid": "Q974", "label": "Democratic Republic of the Congo", "iso": "CD"},
          ("Democratic Republic of the Congo", "CD")),
-        # A summary cached before P297 was read: the label, then nothing.
+        # A summary cached before P297 was read: the label through the shared
+        # country resolver (the country-lookup ticket: "Russia" and "Turkey"
+        # are names pycountry no longer knows), then nothing.
         ({"qid": "Q145", "label": "United Kingdom"}, ("United Kingdom", "GB")),
-        ({"qid": "Q159", "label": "Russia"}, ("Russia", None)),
+        ({"qid": "Q159", "label": "Russia"}, ("Russia", "RU")),
+        ({"qid": "Q43", "label": "Turkey"}, ("Turkey", "TR")),
+        ({"qid": "Q884", "label": "Korea"}, ("Korea", None)),
         ({"qid": "Q15180", "label": "Soviet Union"}, ("Soviet Union", None)),
         # No English label: Wikidata's label service hands back the Q-ID.
         ({"qid": "Q159", "label": "Q159", "iso": "RU"}, ("Russian Federation", "RU")),
@@ -285,8 +289,10 @@ def test_rosneft_never_exports_a_qid_as_a_code() -> None:
             "country": {"qid": "Q159", "label": "Russia"},  # cached, no iso
         },
     }
+    # The label alone resolves too, since the country-lookup ticket; until
+    # then a cached Rosneft had no code and the ISO-keyed lists skipped it.
     entity = next(s for s in map_wikidata(bundle) if s["recordType"] == "entity")
-    assert entity["recordDetails"]["jurisdiction"] == {"name": "Russia"}
+    assert entity["recordDetails"]["jurisdiction"] == {"name": "Russia", "code": "RU"}
     bundle["summary"]["country"]["iso"] = "RU"
     entity = next(s for s in map_wikidata(bundle) if s["recordType"] == "entity")
     assert entity["recordDetails"]["jurisdiction"] == {"name": "Russia", "code": "RU"}

@@ -14,6 +14,7 @@ import pycountry
 
 from .. import liveness as _liveness
 from ..annotations import annotate, commenting, pointer
+from ..countries import country_code
 from ..officer_roles import mark_officer
 from ..statements import (
     content_addressed,
@@ -436,10 +437,10 @@ def _wikidata_country(country: dict[str, Any]) -> tuple[str, str | None] | None:
     if iso:
         match = pycountry.countries.get(alpha_2=iso)
     if match is None and name and not _QID_RE.match(name):
-        try:
-            match = pycountry.countries.lookup(name)
-        except LookupError:
-            match = None
+        # The shared resolver, so an English label pycountry does not know
+        # ("Russia", "Turkey") still yields its code.
+        alpha2 = country_code(name)
+        match = pycountry.countries.get(alpha_2=alpha2) if alpha2 else None
     code = match.alpha_2 if match is not None else None
     if not name or _QID_RE.match(name):
         if match is None:
