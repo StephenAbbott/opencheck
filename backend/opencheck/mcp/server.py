@@ -25,29 +25,66 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 from . import shaping
 
-_INSTRUCTIONS = (
-    "OpenCheck performs customer due diligence on legal entities using the "
-    "Legal Entity Identifier (LEI) as the key. Typical flow: if you only have a "
-    "company name, call opencheck_search to get its LEI (or "
-    "opencheck_resolve_national_id if you have a national registration number); "
-    "then call opencheck_lookup with the LEI for owners, controllers and risk "
-    "signals. A company with no LEI — most UK LLPs, most small companies "
-    "anywhere — is looked up by its register number instead: pass a search "
-    "candidate's identifiers[].scheme and id (e.g. GB-COH, OC346224) to "
-    "opencheck_register_lookup; call opencheck_export_bods for the full machine-readable ownership "
-    "graph in BODS v0.4 (include_subsidiaries=true folds in the GLEIF subsidiary "
-    "network), or opencheck_subsidiaries for what the company consolidates. "
-    "To ask who owns a company above a threshold, call opencheck_owners "
-    "(calculated owners per source, declared beneficial owners, and who is in "
-    "both); opencheck_ownership_map draws the structure as an SVG image with a "
-    "text table. "
-    "For a list of companies call opencheck_batch_lookup "
-    "with up to 20 LEIs and read each row's verdict, counts and degraded flag. "
-    "To keep a check as a record the reader can share and verify, call "
-    "opencheck_save_report with the LEI; it returns a link and a SHA-256. "
-    "Data is open; some sources are CC-BY-NC — respect the license_notices in "
-    "responses."
-)
+# The handshake text every client receives at ``initialize``. It says the
+# order of calls and how to read the answers, because a model left to itself
+# reaches straight for the expensive tool (the MCP handshake-instructions
+# ticket, 4 Nov 2026): find, set expectations cheaply, check, read honestly,
+# keep, many. ``test_mcp.py`` pins that every tool in ``TOOL_NAMES`` is named
+# here and that it stays under ``_INSTRUCTIONS_MAX_WORDS``, so a new tool
+# cannot be left out and the text cannot grow into something clients drop.
+_INSTRUCTIONS = """\
+OpenCheck checks who owns and controls a legal entity, keyed on the Legal \
+Entity Identifier (LEI), from open registers and datasets. Call the tools in \
+this order.
+
+1. Find. opencheck_search turns a name into candidates with LEIs, a \
+jurisdiction and register identifiers[]; opencheck_resolve_national_id turns \
+a registration number into LEIs. A company with no LEI (most UK LLPs, most \
+small companies anywhere) is checked by its register number: pass a \
+candidate's identifiers[].scheme and id (e.g. GB-COH, OC346224) to \
+opencheck_register_lookup.
+
+2. Set expectations, cheaply. opencheck_knowability(jurisdictions) says what \
+each country's registers publish about owners, who may see it and which \
+OpenCheck sources read it. Call it with the candidate's jurisdiction before a \
+lookup, so a thin answer (Cyprus publishes officers, not beneficial owners) is \
+framed as the register's limit, not a finding. opencheck_list_sources lists \
+every source with its licence and live status.
+
+3. Check. opencheck_lookup(lei) gives identity, owners, controllers and risk \
+signals. Then, as needed: opencheck_owners (who holds above a threshold, per \
+source), opencheck_ownership_map (the structure as rows and an SVG), \
+opencheck_export_bods (the full BODS v0.4 graph) and opencheck_subsidiaries \
+(what the company consolidates: GLEIF Level 2 is accounting consolidation, \
+not ownership). opencheck_person_check screens one person; \
+opencheck_person_positions lists a person's positions by a register's own key.
+
+4. Read it honestly. degraded_sources names sources that did not answer: a \
+screen with any is incomplete, never clean. Every signal carries kind: risk \
+or context; context is never a finding. A "possible name match" is evidence \
+to weigh, not an identity. Integrated ownership figures are per source and \
+are never added across sources. Say what was read and what was not. Pass on \
+the license_notices: some sources are CC-BY-NC.
+
+5. Keep or hand on. opencheck_save_report keeps a check as a link with a \
+SHA-256 the reader can verify. opencheck_discrepancy_note drafts the note to \
+send a register when its record disagrees with another.
+
+6. Many companies. opencheck_batch_lookup takes up to 20 LEIs. To explore \
+hundreds, use the published bulk datasets (Estonia, the Azerbaijani \
+Laundromat: https://github.com/StephenAbbott/opencheck/releases) rather than \
+looping over live lookups.
+
+Cost. opencheck_lookup, opencheck_register_lookup, opencheck_export_bods, \
+opencheck_owners, opencheck_ownership_map, opencheck_batch_lookup, \
+opencheck_save_report and opencheck_discrepancy_note each spend the shared \
+per-address lookup budget (ten fresh checks a minute; a repeat within 15 \
+minutes is free). The other tools do not. A 429 with retry_after_s means wait \
+that long and then retry, never at once.
+"""
+
+#: ``test_mcp.py`` fails the build when the handshake grows past this.
+_INSTRUCTIONS_MAX_WORDS = 450
 
 # DNS-rebinding protection guards localhost-bound dev servers from malicious
 # browser pages; OpenCheck's MCP runs as a public, read-only API behind a reverse
@@ -888,6 +925,58 @@ async def opencheck_discrepancy_note(
     return out
 
 
+#: The same cap ``GET /knowability`` applies.
+_KNOWABILITY_MAX_CODES = 40
+
+
+@mcp.tool()
+async def opencheck_knowability(jurisdictions: list[str]) -> dict[str, Any]:
+    """What can be known about a company's owners in each jurisdiction —
+    before a lookup, without spending one.
+
+    One dated statement per ISO 3166-1 alpha-2 code (``US-DE`` style
+    subdivisions accepted): what the beneficial ownership register publishes,
+    who may see it (``access``: public · public_with_registration_or_justification
+    · legitimate_interest · restricted_no_lia_route_yet ·
+    authorities_and_obliged_entities_only · no_register · in_progress), when
+    that changed or will change, the sources behind the row, and which
+    OpenCheck sources read the country (``opencheck_reads``, with whether each
+    reads beneficial owners or only officers and shareholders). The sentence
+    is rendered verbatim on the results page; ``as_of`` dates it.
+
+    Call it with a search candidate's ``jurisdiction`` before
+    opencheck_lookup / opencheck_register_lookup, to set expectations — a
+    Cypriot company's check can list officers but no beneficial owners because
+    Cyprus publishes none — and afterwards, to explain a thin result as the
+    register's limit rather than a finding. A code OpenCheck holds no notes for
+    is answered with ``stated_absence: true``, never an error; ``known_codes``
+    lists the codes the table holds. Reads a synced table and the adapter
+    registry only: no source is called and no lookup budget is spent.
+
+    Args:
+        jurisdictions: Country codes, subject first — e.g. ``["CY"]`` or
+            ``["GB", "KY", "US-DE"]``. At most 40.
+    """
+    from datetime import date
+
+    from ..knowability import GENERATED_AT, JURISDICTIONS, statements_for
+
+    codes = [c.strip().upper() for c in jurisdictions or [] if isinstance(c, str) and c.strip()]
+    if not codes:
+        return {"error": "Give at least one ISO 3166-1 alpha-2 country code.", "status": 400}
+    bad = [c for c in codes if not (2 <= len(c) <= 6 and c[:2].isalpha())]
+    if bad:
+        return {"error": f"Not a country code: {', '.join(bad)}", "status": 400}
+    codes = codes[:_KNOWABILITY_MAX_CODES]
+    today = date.today()
+    return shaping.shape_knowability(
+        statements_for(codes, today),
+        sorted(JURISDICTIONS),
+        GENERATED_AT,
+        today.isoformat(),
+    )
+
+
 @mcp.tool()
 async def opencheck_list_sources() -> dict[str, Any]:
     """List the data sources OpenCheck consults, with licence and live status."""
@@ -912,5 +1001,6 @@ TOOL_NAMES = [
     "opencheck_person_positions",
     "opencheck_save_report",
     "opencheck_discrepancy_note",
+    "opencheck_knowability",
     "opencheck_list_sources",
 ]

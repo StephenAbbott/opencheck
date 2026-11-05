@@ -50,11 +50,31 @@ tool bodies.
 | `opencheck_person_positions(scheme, id)` | One person's positions across companies, keyed by a register's own person key, never a name: `EE-ARIREGISTER-HASH` (the Estonian register's pseudonymous key, read off an Estonian person statement's `identifying` annotation) lists every company whose current lists name the person — list, role, since, share — from the daily index; `GB-COH-OFFICER` gives a Companies House officer's appointments. Neither register guarantees one key per person (`caveat`); the Estonian files are current rows only. At most 100 rows (`total_results` counts all) |
 | `opencheck_save_report(lei, deepen_top=5)` | Runs (or reuses a held) check and keeps it as a saved report — `url`, `json_url`, `content_hash`, `saved_at` / `expires_at`, `manage_token`, `verdict`, licence headline (Phase 218; see [saved reports](saved-reports.md)) |
 | `opencheck_discrepancy_note(lei=None, scheme=None, id=None, deepen_top=5)` | A register record discrepancy note (the discrepancy-report ticket): reads the run's "Records compared" finding and returns `markdown` — one note per register holding a disputed value, GLEIF included — plus `notes` (addressee, fields, reporting route). Describes, never alleges; not a beneficial-ownership discrepancy report and says so. `status` 404 when the run found no disagreement. See [record consistency](record-consistency.md#the-discrepancy-note) |
+| `opencheck_knowability(jurisdictions)` | **Pre-flight** (the MCP pre-flight ticket): what each jurisdiction's registers publish about beneficial owners, who may see it (`access`, `access_since`, `next_change_expected`), the register, the sources behind the row and which OpenCheck sources read the country (`opencheck_reads`, with `reads_beneficial_owners`) — one dated statement per ISO 3166-1 alpha-2 code (`US-DE` style accepted, at most 40), the same table `GET /knowability` and the results page's "What can be known" band read. An unknown code is `stated_absence: true`, never an error; `known_codes` lists what the table holds. Reads the synced `jurisdictions.json` and the adapter registry only — no source is called and no lookup budget is spent — so an agent asked "who owns this Cypriot company?" learns before any lookup that Cyprus publishes officers but no beneficial owners, and frames a thin result as the register's limit rather than a finding |
 | `opencheck_list_sources()` | Adapter inventory with licence + live status |
 
 `narrative` is deliberately **not** exposed (it spends model tokens per call).
 Responses are flattened by `mcp/shaping.py` into compact, agent-readable
 structures.
+
+### The handshake instructions (the MCP handshake-instructions ticket)
+
+Every client receives `_INSTRUCTIONS` (`mcp/server.py`) at `initialize`. Until
+4 Nov 2026 it described the search → lookup flow and left four tools unnamed;
+a model left to itself reaches straight for the expensive tool. It is now a
+short ordered guide — **find** (search, resolve, register lookup), **set
+expectations cheaply** (`opencheck_knowability`, `opencheck_list_sources`),
+**check** (lookup, owners, map, export, subsidiaries, the person tools),
+**read it honestly** (`degraded_sources` means incomplete, `kind: context` is
+never a finding, a name match is not an identity, integrated figures are never
+added across sources, pass on `license_notices`), **keep or hand on** (save
+report, discrepancy note) and **many companies** (batch, then the published
+[bulk datasets](datasets.md) rather than a loop of live lookups) — closing
+with which tools spend the lookup budget and what a `429` with
+`retry_after_s` means. `test_mcp.py` pins that every name in `TOOL_NAMES`
+appears in it and that it stays under `_INSTRUCTIONS_MAX_WORDS` (450), so a
+new tool cannot be left out and the text cannot grow into something clients
+drop. Detail belongs in each tool's docstring, not here.
 
 ### Rate limits (Phase 234)
 
@@ -65,7 +85,7 @@ also spends the tier its REST counterpart is on — `opencheck_lookup`,
 `opencheck_register_lookup`, `opencheck_export_bods`, `opencheck_search`, `opencheck_person_check`,
 `opencheck_person_positions`, `opencheck_owners` and `opencheck_ownership_map` the lookup tier (10/min; at `depth` > 1 every extra
 lookup is also charged to the shared lookup budget), `opencheck_subsidiaries` the default tier `GET
-/subsidiaries` is on (its GLEIF calls are discretionary, as on the REST route), `opencheck_batch_lookup`, `opencheck_save_report` and `opencheck_discrepancy_note` the
+/subsidiaries` is on (its GLEIF calls are discretionary, as on the REST route), `opencheck_knowability` and `opencheck_list_sources` the default tier only (a table read: no source is called), `opencheck_batch_lookup`, `opencheck_save_report` and `opencheck_discrepancy_note` the
 heavy tier (3/min). A refusal is HTTP `429` with `Retry-After` and a JSON-RPC
 error per message.
 

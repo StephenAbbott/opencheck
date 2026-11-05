@@ -26,6 +26,10 @@ opencheck_batch_lookup         heavy       ``POST /batch``
 opencheck_save_report          heavy       ``POST /saved-reports``
 =============================  ==========  ===========================
 
+A tool absent from the table (``opencheck_subsidiaries``,
+``opencheck_knowability``, ``opencheck_list_sources``) spends the default
+unit only: no pipeline runs for it, so there is nothing more to charge.
+
 That is the *request* limit. The *work* limit is separate and shared with REST:
 every fresh pipeline a tool starts is charged to the caller's one lookup
 budget (``lookup_budget.charge``, via the client context the app's middleware

@@ -3423,6 +3423,17 @@ otherwise:
   chainCodes`), fetches statements for new codes through `GET /knowability`
   only; a frozen sentence is never replaced by a fetched one (`mergeChain`),
   and a saved report fetches nothing.
+- **The MCP pre-flight tool `opencheck_knowability(jurisdictions)`** (the
+  MCP pre-flight ticket, 4 Nov 2026) is the statement's way to an agent
+  *before* a lookup: `statements_for` plus `known_codes`, shaped by
+  `shaping.shape_knowability` to the same public subset the results page
+  shows (sentence, access, register, 6AMLD LIA Yes/No for EU/EEA, sources,
+  `opencheck_reads` in full) — never the working-tracker fields. It is not
+  in `TOOL_TIERS` (default unit only) and charges no lookup budget, so an
+  agent can learn that Cyprus publishes no beneficial owners without
+  spending a check. The handshake `_INSTRUCTIONS` tell it to; `test_mcp.py`
+  pins that every `TOOL_NAMES` entry is named there and the text stays
+  under `_INSTRUCTIONS_MAX_WORDS`.
 - **Entity pages (Phase 227)** carry the statement too, as
   `entity_pages.knowability_section(row.jurisdiction, today)` between the
   reference-data `<dl>` and the children — a local table read keyed on the

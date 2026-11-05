@@ -830,6 +830,73 @@ def shape_sources(payload: Any) -> dict[str, Any]:
     return {"count": len(rows), "sources": rows}
 
 
+def _knowability_statement(st: Any) -> dict[str, Any]:
+    """The agent-facing slice of one jurisdiction's statement, for the
+    pre-flight tool: the sentences, who may see the register, the register
+    itself, the sources behind the row and the OpenCheck sources that read the
+    country. The rest of the jurisdiction table (threshold wording, reporting
+    basis, BORIS, FATF dates, pending changes, notes) is Stephen's working
+    tracker and stays out, as it does on the results page."""
+    d = st.model_dump() if hasattr(st, "model_dump") else dict(st)
+    fields = d.get("fields") or {}
+    row: dict[str, Any] = {
+        "code": d.get("code"),
+        "name": d.get("name"),
+        "sentence": d.get("sentence"),
+        "sentences": list(d.get("sentences") or []),
+        "stated_absence": bool(d.get("stated_absence")),
+        "review_status": d.get("review_status"),
+        "last_verified": d.get("last_verified"),
+        "access": d.get("access"),
+        "access_since": d.get("access_since"),
+        "next_change_expected": d.get("next_change_expected"),
+        "register": None,
+        "amld6_legitimate_interest_access": None,
+        "opencheck_reads": [
+            {
+                "source_id": r.get("source_id"),
+                "name": r.get("name"),
+                "requires_api_key": bool(r.get("requires_api_key")),
+                "reads_beneficial_owners": bool(r.get("reads_beneficial_owners")),
+            }
+            for r in d.get("opencheck_reads") or []
+        ],
+        "sources": [
+            {"url": src.get("url"), "title": src.get("title")} for src in d.get("sources") or []
+        ],
+    }
+    if row["stated_absence"]:
+        return row
+    if fields.get("register") or fields.get("register_url"):
+        row["register"] = {"name": fields.get("register"), "url": fields.get("register_url")}
+    if fields.get("eu_eea") is True:
+        # Yes / No only — "Not applicable" says nothing inside the EU/EEA.
+        lia = fields.get("amld6_lia")
+        row["amld6_legitimate_interest_access"] = lia if lia in ("Yes", "No") else None
+    return row
+
+
+def shape_knowability(
+    statements: list[Any], known_codes: list[str], generated_at: str | None, as_of: str
+) -> dict[str, Any]:
+    """``opencheck_knowability``'s answer: one statement per code asked for,
+    the codes the table holds, and when the table was synced."""
+    return {
+        "statements": [_knowability_statement(st) for st in statements],
+        "known_codes": list(known_codes),
+        "generated_at": generated_at,
+        "as_of": as_of,
+        "hint": (
+            "Dated facts about each jurisdiction's registers — what they publish about "
+            "beneficial owners, who may see it, and which OpenCheck sources read the country. "
+            "Read a lookup's result against these: an owner missing where the register "
+            "publishes none is the register's limit, not a finding. stated_absence means "
+            "OpenCheck holds no notes for the code, which says nothing about what it "
+            "publishes. Describes, never judges; nothing here is a risk signal."
+        ),
+    }
+
+
 def shape_person_check(payload: Any) -> dict[str, Any]:
     """Flatten a ``PersonCheckResponse`` into an agent-friendly report.
 

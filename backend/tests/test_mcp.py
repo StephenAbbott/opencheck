@@ -49,7 +49,7 @@ def test_descriptor_shape() -> None:
     assert d["transport"] == "streamable-http"
     assert d["endpoint"].endswith("/mcp")
     assert d["tools"] == TOOL_NAMES
-    assert len(TOOL_NAMES) == 14  # opencheck_discrepancy_note (the discrepancy-report ticket)
+    assert len(TOOL_NAMES) == 15  # opencheck_knowability (the MCP pre-flight ticket)
 
 
 def test_descriptor_route_served_with_cors(client: TestClient) -> None:
@@ -436,3 +436,121 @@ async def test_search_tool_ranks_caps_and_carries_identifiers(monkeypatch) -> No
     abr = next(c for c in full["candidates"] if c["source"] == "abr_australia")
     assert abr["identifiers"] == [{"scheme": "AU-ABN", "id": "51000000001"}]
     assert abr["match"] == "fuzzy" and full["candidates"][-1] is abr
+
+
+# --------------------------------------------------------------------------
+# The MCP pre-flight ticket: opencheck_knowability, and the handshake
+# instructions that say the order of calls
+# --------------------------------------------------------------------------
+
+
+def _tool_json(result: object) -> dict:
+    """The dict a ``mcp.call_tool`` answer carries, whichever shape the SDK
+    returns it in (structured content, or a single text part)."""
+    import json
+
+    if isinstance(result, tuple):
+        parts, structured = result
+        if isinstance(structured, dict):
+            return structured.get("result", structured)
+        return json.loads(parts[0].text)
+    if isinstance(result, dict):
+        return result
+    return json.loads(result[0].text)
+
+
+async def test_knowability_tool_answers_known_and_unknown_codes_through_call_tool() -> None:
+    """Through ``mcp.call_tool`` (the Phase 341 lesson), not only as a direct
+    function: a code the table holds gets its dated sentence and the sources
+    that read it; an unknown code is a stated absence, never an error."""
+    out = _tool_json(
+        await mcp_server.mcp.call_tool(
+            "opencheck_knowability", {"jurisdictions": ["gb", "ZZ", "GB"]}
+        )
+    )
+    assert "error" not in out
+    assert [st["code"] for st in out["statements"]] == ["GB", "ZZ"]  # upper-cased, de-duplicated
+    gb, zz = out["statements"]
+    assert gb["stated_absence"] is False
+    assert gb["sentence"] and gb["sentences"]
+    assert gb["access"] in {
+        "public", "public_with_registration_or_justification", "legitimate_interest",
+        "restricted_no_lia_route_yet", "authorities_and_obliged_entities_only", "no_register",
+        "in_progress",
+    }
+    assert gb["register"] and gb["register"]["name"]
+    assert gb["amld6_legitimate_interest_access"] is None  # not EU/EEA
+    reads = {r["source_id"] for r in gb["opencheck_reads"]}
+    assert "companies_house" in reads
+    expected = {"source_id", "name", "requires_api_key", "reads_beneficial_owners"}
+    assert expected <= set(gb["opencheck_reads"][0])
+    assert all({"url", "title"} <= set(src) for src in gb["sources"])
+    assert zz["stated_absence"] is True and zz["review_status"] == "absent"
+    assert "no register notes" in zz["sentence"]
+    assert zz["register"] is None and zz["opencheck_reads"] == []
+    assert "GB" in out["known_codes"] and "ZZ" not in out["known_codes"]
+    assert out["as_of"] and out["generated_at"]
+    assert "hint" in out
+    # The working-tracker fields stay out, as on the results page.
+    assert "fields" not in gb and "pending_changes" not in gb and "fatf" not in gb
+
+
+async def test_knowability_tool_says_which_sources_read_beneficial_owners() -> None:
+    out = _tool_json(
+        await mcp_server.mcp.call_tool("opencheck_knowability", {"jurisdictions": ["CY", "EE"]})
+    )
+    cy, ee = out["statements"]
+    # EU/EEA: Yes / No only, else null.
+    assert cy["amld6_legitimate_interest_access"] in {"Yes", "No", None}
+    # Estonia's register publishes beneficial owners and the adapter reads them.
+    assert any(r["reads_beneficial_owners"] for r in ee["opencheck_reads"])
+
+
+async def test_knowability_tool_validates_input() -> None:
+    out = await mcp_server.opencheck_knowability(jurisdictions=[])
+    assert out["status"] == 400 and "error" in out
+    out = await mcp_server.opencheck_knowability(jurisdictions=["  ", ""])
+    assert out["status"] == 400
+    out = await mcp_server.opencheck_knowability(jurisdictions=["United Kingdom"])
+    assert out["status"] == 400 and "United Kingdom".upper() in out["error"]
+    # US-DE style subdivisions are accepted (and fall back to the country row).
+    out = await mcp_server.opencheck_knowability(jurisdictions=["US-DE"])
+    assert out["statements"][0]["code"] == "US-DE" or out["statements"][0]["code"] == "US"
+    # Capped like GET /knowability.
+    many = [f"A{chr(65 + i % 26)}" for i in range(60)]
+    out = await mcp_server.opencheck_knowability(jurisdictions=many)
+    assert len(out["statements"]) <= mcp_server._KNOWABILITY_MAX_CODES
+
+
+def test_knowability_tool_is_on_the_default_tier_and_spends_no_budget() -> None:
+    """No pipeline runs, so the tool is not on a lookup/heavy request tier
+    (the guard's default per-request unit still applies)."""
+    from opencheck.mcp.guard import TOOL_TIERS
+
+    assert "opencheck_knowability" not in TOOL_TIERS
+
+
+def test_instructions_name_every_tool_and_stay_short() -> None:
+    """The handshake instructions ticket: a new tool cannot be left out of the
+    guide again, and the guide stays short enough for clients to load."""
+    text = mcp_server._INSTRUCTIONS
+    missing = [name for name in TOOL_NAMES if name not in text]
+    assert missing == [], f"tools missing from _INSTRUCTIONS: {missing}"
+    assert len(text.split()) <= mcp_server._INSTRUCTIONS_MAX_WORDS
+    # The order of calls and how to read the answers, as the ticket asks.
+    steps = (
+        "1. Find", "2. Set expectations", "3. Check", "4. Read it honestly", "5. Keep", "6. Many",
+        "Cost.",
+    )
+    for phrase in steps:
+        assert phrase in text
+    keys = (
+        "degraded_sources", "kind: risk", "context", "license_notices", "retry_after_s", "releases",
+    )
+    for key in keys:
+        assert key in text
+
+
+def test_instructions_reach_the_client_at_initialize() -> None:
+    assert mcp_server.mcp._mcp_server.instructions == mcp_server._INSTRUCTIONS
+
