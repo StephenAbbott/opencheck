@@ -114,7 +114,11 @@ def test_an_ftm_subdivision_jurisdiction_keeps_its_subdivision_code() -> None:
     assert _ftm_jurisdiction({"jurisdiction": ["US-DE"]}) == ("US-DE", "US-DE")
     assert _ftm_jurisdiction({"jurisdiction": ["Russia"]}) == ("Russia", "RU")
     assert _ftm_resolve_nationality("ru") == {"name": "Russian Federation", "code": "RU"}
-    assert _ftm_resolve_nationality("suhh") == {"name": "suhh"}
+    # A former state still gets no code; since the FtM citizenship change it
+    # is named from pycountry's historic list rather than left as "suhh".
+    assert _ftm_resolve_nationality("suhh") == {
+        "name": "USSR, Union of Soviet Socialist Republics"
+    }
 
 
 def _corporate_officer(country: str) -> dict:

@@ -1,0 +1,43 @@
+{
+  "id": "Q503147",
+  "schema": "Person",
+  "caption": "Alisher Usmanov",
+  "datasets": [
+    "gb_fcdo_sanctions",
+    "us_ofac_sdn",
+    "wikidata",
+    "wd_oligarchs"
+  ],
+  "first_seen": "2021-02-08T00:00:00",
+  "last_seen": "2026-11-04T06:53:07",
+  "last_change": "2026-11-02T15:49:54",
+  "target": true,
+  "properties": {
+    "name": [
+      "Alisher Usmanov",
+      "Алишер Бурханович Усманов",
+      "Alisher Burkhanovich USMANOV"
+    ],
+    "nationality": [
+      "ru"
+    ],
+    "citizenship": [
+      "uz",
+      "ru",
+      "suhh"
+    ],
+    "country": [
+      "mc",
+      "ru"
+    ],
+    "birthDate": [
+      "1953-09-09"
+    ],
+    "gender": [
+      "male"
+    ],
+    "wikidataId": [
+      "Q503147"
+    ]
+  }
+}
