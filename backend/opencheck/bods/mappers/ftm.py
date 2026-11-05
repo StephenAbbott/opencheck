@@ -815,7 +815,9 @@ def citizenship_annotation(
     named = [
         f"{e['name']} ({e['code']})" if e.get("code") else e["name"] for e in entries
     ]
-    listed = ", ".join(named)
+    # "; " not ", ": pycountry names a former state with a comma
+    # ("USSR, Union of Soviet Socialist Republics"), which a comma list splits.
+    listed = "; ".join(named)
     verb = "is" if len(named) == 1 else "are"
     return _annotations.commenting(
         _annotations.pointer("recordDetails", "nationalities"),
