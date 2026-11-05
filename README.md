@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 455** — Every country-name helper now shares one resolver, so "Russia", "Turkey" and other names pycountry no longer knows get their ISO code and reach the FATF, EU high-risk, non-EU and tax-list checks.
+**Latest: Phase 456** — A Taiwanese company's corporate directors are now linked to their own register record by exact name, so FullCheck can follow a Taiwanese ownership chain upwards.
 
 → [Full development history](docs/status.md)
 
