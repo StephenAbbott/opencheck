@@ -564,3 +564,265 @@ def test_the_finding_never_claims_ownership(fixture: str) -> None:
     lowered = sentence.lower()
     for word in ("owner", "owns", "owned", "beneficial", "shareholder"):
         assert word not in lowered, (word, sentence)
+
+
+# ---------------------------------------------------------------------------
+# Legal-person holders → their UBN (the Taiwan GCIS v2 ticket, 4 Nov 2026)
+# ---------------------------------------------------------------------------
+#
+# ``holder_search.json`` holds real answers of the keyword dataset read on
+# 4 Nov 2026; the edge cases below change only what the case needs.
+
+_HONHAI = "鴻海精密工業股份有限公司"
+_HONHAI_UBN = "04541302"
+
+
+def _search_rows(key: str) -> list[dict[str, Any]]:
+    return json.loads(_fixture("holder_search")[key])
+
+
+def _search_route(router: respx.MockRouter, answer: Any) -> respx.Route:
+    """The keyword dataset; ``answer`` maps the ``like`` value to a body (str)
+    or an HTTP status (int), or is one body for every query."""
+
+    def _reply(request: httpx.Request) -> httpx.Response:
+        filter_ = request.url.params["$filter"]
+        value = filter_.split("Company_Name like ", 1)[1].split(" and ", 1)[0]
+        body = answer.get(value, "") if isinstance(answer, dict) else answer
+        if isinstance(body, int):
+            return httpx.Response(body, text="")
+        return httpx.Response(200, text=body, headers={"content-type": "application/json"})
+
+    return router.get(f"{_API}/{tw.SEARCH_DATASET}").mock(side_effect=_reply)
+
+
+def _company_routes(router: respx.MockRouter, fixture: str = "visionbay_juristic") -> None:
+    data = _fixture(fixture)
+    _route(router, tw.COMPANY_DATASET, data["basic"])
+    _route(router, tw.DIRECTORS_DATASET, data["dirs"])
+
+
+def _with_holders(names: list[str]) -> str:
+    """The visionbay directors, with its one legal person replaced by ``names``."""
+    rows = json.loads(_fixture("visionbay_juristic")["dirs"])
+    template = next(r for r in rows if r.get("Juristic_Person_Name"))
+    out = [r for r in rows if not r.get("Juristic_Person_Name")]
+    out += [{**template, "Juristic_Person_Name": n} for n in names]
+    return json.dumps(out, ensure_ascii=False)
+
+
+def test_fold_name_reads_width_case_space_and_tai_as_the_platform_does() -> None:
+    assert tw.fold_name("美商美國信託ＡＴＢ金控公司") == tw.fold_name("美商美國信託atb金控公司")
+    assert tw.fold_name("臺灣積體電路製造股份有限公司") == tw.fold_name("台灣積體電路製造股份有限公司")
+    assert tw.fold_name(" 鴻海  精密 ") == "鴻海 精密"
+    assert tw.fold_name("鴻海精密工業股份有限公司") != tw.fold_name("鴻海精密工業股份有限公司台北分公司")
+
+
+@pytest.mark.parametrize(
+    ("name", "sent"),
+    [
+        (_HONHAI, True),
+        ("鼎墱A木業股份有限公司", True),  # a Latin letter in a domestic name is still domestic
+        ("莫理仕有限公司", True),
+        ("行政院國家發展基金管理會", False),  # a state body never ends 公司 (Phase 240)
+        ("經濟部", False),
+        ("財團法人中技社", False),
+        ("臺北市北投區農會", False),
+        ("丹麥商凱得股份有限公司", False),  # decision D: no foreign-prefixed name
+        ("荷商卜內門歐美康公司", False),
+        ("丹麥商 Orsted Wind Power TW Holding A/S", False),
+        ("Air Liquide Japan G.K.", False),
+        ("台灣 積體電路股份有限公司", False),  # a space breaks the platform's filter
+        ("", False),
+    ],
+)
+def test_which_holders_are_sent(name: str, sent: bool) -> None:
+    assert tw.holder_is_resolvable(name) is sent
+
+
+@pytest.mark.parametrize(
+    ("name", "code"),
+    [
+        ("荷商 Covestro (Netherlands) B.V.", "NL"),
+        ("荷商卜內門歐美康公司", "NL"),
+        ("荷蘭商台灣恩智浦有限公司", "NL"),
+        ("英屬安吉拉商 Transnational Investment", "AI"),
+        ("英屬蓋曼群島商 MORGAN STANLEY ASIA SECURITIES PRODUCTS LLC", "KY"),
+        ("英屬開曼群島商台達電子股份有限公司", "KY"),
+    ],
+)
+def test_the_prefix_spellings_the_register_files(name: str, code: str) -> None:
+    prefix = tw_foreign_prefix(name)
+    assert prefix is not None and prefix[1] == code
+
+
+def test_a_legal_person_director_resolves_to_its_ubn(adapter: tw.GcisTaiwanAdapter) -> None:
+    with _live(), respx.mock(assert_all_called=True) as router:
+        _company_routes(router)
+        search = _search_route(router, {_HONHAI: _fixture("holder_search")["honhai"]})
+        result, recorded = _fetch(adapter, "24757737")
+        assert search.call_count == 1
+        sent = search.calls[0].request.url.params["$filter"]
+        assert sent == f"Company_Name like {_HONHAI} and Company_Status eq 01"  # live only (C)
+    assert recorded == []
+    assert result["holder_ubns"] == {
+        _HONHAI: {"outcome": "resolved", "ubn": _HONHAI_UBN, "register_name": _HONHAI}
+    }
+
+    # Both the company and the resolution are cached: nothing is sent again.
+    with _live(), respx.mock(assert_all_called=False) as router:
+        route = router.get(url__startswith=_API)
+        again, recorded = _fetch(adapter, "24757737")
+        assert route.call_count == 0
+    assert again["holder_ubns"] == result["holder_ubns"] and recorded == []
+
+
+def test_a_resolved_holder_carries_a_derived_tw_cr_identifier() -> None:
+    plain = _map("visionbay_juristic")
+    resolved = _map(
+        "visionbay_juristic",
+        holder_ubns={_HONHAI: {"outcome": "resolved", "ubn": _HONHAI_UBN, "register_name": _HONHAI}},
+    )
+    before = next(s for s in plain if s["recordType"] == "entity" and _name(s) == _HONHAI)
+    after = next(s for s in resolved if s["recordType"] == "entity" and _name(s) == _HONHAI)
+    assert before["recordDetails"].get("identifiers", []) == []
+    assert after["recordDetails"]["identifiers"] == [
+        {"id": _HONHAI_UBN, "scheme": "TW-CR", "schemeName": tw.TW_CR_SCHEME_NAME}
+    ]
+    assert after["recordDetails"]["jurisdiction"]["code"] == "TW"
+    # Same record, new content: the recordId holds and the statementId moves.
+    assert after["recordId"] == before["recordId"]
+    assert after["statementId"] != before["statementId"]
+    notes = [a for a in after.get("annotations", []) if a["statementPointerTarget"] == "/recordDetails/identifiers/0"]
+    assert len(notes) == 1 and notes[0]["motivation"] == "transformation"
+    assert "not published on the directors register" in notes[0]["description"]
+    assert ann.resolve_pointer(after, notes[0]["statementPointerTarget"]) is not None
+    # The subject's own relationships still name the holder by its recordId.
+    assert _rels_of(resolved, _HONHAI)
+    # The TW-CR scheme is a FullCheck register hop, so the holder is a frontier node.
+    assert hop_for("TW-CR") is not None
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        {"outcome": "several", "ubns": ["04541302", "22099131"]},
+        {"outcome": "none"},
+        {"outcome": "not_read"},
+        {"outcome": "resolved", "ubn": "24757737", "register_name": _HONHAI},  # the company itself
+        {"outcome": "resolved", "ubn": "12345678", "register_name": _HONHAI},  # fails the check digit
+    ],
+)
+def test_anything_but_a_clean_resolution_adds_nothing(outcome: dict[str, Any]) -> None:
+    statements = _map("visionbay_juristic", holder_ubns={_HONHAI: outcome})
+    party = next(s for s in statements if s["recordType"] == "entity" and _name(s) == _HONHAI)
+    assert party["recordDetails"].get("identifiers", []) == []
+    assert not [a for a in party.get("annotations", []) if "identifiers" in a["statementPointerTarget"]]
+
+
+def test_several_exact_matches_are_refused_never_picked(adapter: tw.GcisTaiwanAdapter) -> None:
+    row = _search_rows("honhai")[0]
+    twins = json.dumps([row, {**row, "Business_Accounting_NO": "22099131"}], ensure_ascii=False)
+    with _live(), respx.mock() as router:
+        _company_routes(router)
+        _search_route(router, twins)
+        result, recorded = _fetch(adapter, "24757737")
+    assert result["holder_ubns"][_HONHAI] == {"outcome": "several", "ubns": ["04541302", "22099131"]}
+    assert recorded == []  # decision A: refused and silent
+
+
+def test_a_substring_match_is_not_a_match_and_none_is_remembered(adapter: tw.GcisTaiwanAdapter) -> None:
+    row = _search_rows("honhai")[0]
+    branch = json.dumps([{**row, "Company_Name": _HONHAI + "台北分公司"}], ensure_ascii=False)
+    with _live(), respx.mock() as router:
+        _company_routes(router)
+        _search_route(router, branch)
+        result, recorded = _fetch(adapter, "24757737")
+    assert result["holder_ubns"][_HONHAI] == {"outcome": "none"} and recorded == []
+    with _live(), respx.mock(assert_all_called=False) as router:
+        route = router.get(url__startswith=_API)
+        again, _ = _fetch(adapter, "24757737")
+        assert route.call_count == 0  # a definitive none is a cached absence
+    assert again["holder_ubns"][_HONHAI] == {"outcome": "none"}
+
+
+def test_the_other_tai_spelling_is_tried_second(adapter: tw.GcisTaiwanAdapter) -> None:
+    filed, register = "台灣測試精密股份有限公司", "臺灣測試精密股份有限公司"
+    row = {**_search_rows("honhai")[0], "Company_Name": register, "Business_Accounting_NO": "22099131"}
+    with _live(), respx.mock() as router:
+        _route(router, tw.COMPANY_DATASET, _fixture("visionbay_juristic")["basic"])
+        _route(router, tw.DIRECTORS_DATASET, _with_holders([filed]))
+        search = _search_route(router, {register: json.dumps([row], ensure_ascii=False)})
+        result, _ = _fetch(adapter, "24757737")
+        assert search.call_count == 2
+    assert result["holder_ubns"][filed]["ubn"] == "22099131"
+
+
+def test_a_cut_answer_is_not_read_said_and_never_cached(adapter: tw.GcisTaiwanAdapter) -> None:
+    row = _search_rows("honhai")[0]
+    page = json.dumps([{**row, "Company_Name": f"鴻海{i}"} for i in range(tw._TOP)], ensure_ascii=False)
+    with _live(), respx.mock() as router:
+        _company_routes(router)
+        _search_route(router, page)
+        result, recorded = _fetch(adapter, "24757737")
+    assert result["is_stub"] is False  # the company is still shown
+    assert result["holder_ubns"][_HONHAI] == {"outcome": "not_read"}
+    assert len(recorded) == 1
+    assert recorded[0].check == degradation.CHECK_SOURCE_READ
+    assert recorded[0].reason == degradation.REASON_TRUNCATED
+    assert _HONHAI not in recorded[0].detail  # counts, never names
+    assert not list(adapter._cache._root().rglob("*holder-ubn*"))
+
+
+def test_a_name_search_that_fails_is_one_source_read_degradation(adapter: tw.GcisTaiwanAdapter) -> None:
+    names = [_HONHAI, "台灣積體電路製造股份有限公司"]
+    with _live(), respx.mock() as router:
+        _route(router, tw.COMPANY_DATASET, _fixture("visionbay_juristic")["basic"])
+        _route(router, tw.DIRECTORS_DATASET, _with_holders(names))
+        _search_route(router, 503)
+        result, recorded = _fetch(adapter, "24757737")
+    assert {result["holder_ubns"][n]["outcome"] for n in names} == {"not_read"}
+    assert len(recorded) == 1  # one sentence for the lot, not one per call (decision B)
+    assert recorded[0].check == degradation.CHECK_SOURCE_READ
+    assert recorded[0].detail.startswith("GCIS: 2 of 2 legal-person directors")
+    assert not list(adapter._cache._root().rglob("*holder-ubn*"))
+
+
+def test_holders_beyond_the_cap_are_not_read_and_said(adapter: tw.GcisTaiwanAdapter) -> None:
+    names = [f"測試{i:02d}股份有限公司" for i in range(tw.HOLDER_RESOLVE_CAP + 2)]
+    with _live(), respx.mock() as router:
+        _route(router, tw.COMPANY_DATASET, _fixture("visionbay_juristic")["basic"])
+        _route(router, tw.DIRECTORS_DATASET, _with_holders(names))
+        search = _search_route(router, "")
+        result, recorded = _fetch(adapter, "24757737")
+        assert search.call_count == tw.HOLDER_RESOLVE_CAP
+    outcomes = [result["holder_ubns"][n]["outcome"] for n in names]
+    assert outcomes.count("none") == tw.HOLDER_RESOLVE_CAP and outcomes.count("not_read") == 2
+    assert len(recorded) == 1 and recorded[0].reason == degradation.REASON_TRUNCATED
+
+
+def test_a_state_holder_and_foreign_holders_are_never_sent(adapter: tw.GcisTaiwanAdapter) -> None:
+    with _live(), respx.mock(assert_all_called=False) as router:
+        _company_routes(router, "tsmc")  # 行政院國家發展基金管理會
+        search = _search_route(router, "")
+        result, _ = _fetch(adapter, "22099131")
+        assert search.call_count == 0
+    assert result["holder_ubns"] == {}
+    with _live(), respx.mock(assert_all_called=False) as router:
+        _company_routes(router, "orsted_holding")
+        search = _search_route(router, "")
+        _fetch(adapter, _fixture("orsted_holding")["ubn"])
+        assert search.call_count == 0
+
+
+def test_offline_a_holder_is_left_unresolved_and_nothing_is_said(adapter: tw.GcisTaiwanAdapter) -> None:
+    data = _fixture("visionbay_juristic")
+    adapter._cache.put(
+        "gcis_taiwan/company-v1/24757737",
+        {"company": json.loads(data["basic"])[0], "directors": json.loads(data["dirs"])},
+    )
+    with respx.mock(assert_all_called=False) as router:
+        route = router.get(url__startswith=_API)
+        result, recorded = _fetch(adapter, "24757737")
+        assert route.call_count == 0
+    assert result["is_stub"] is False and result["holder_ubns"] == {} and recorded == []

@@ -8,6 +8,8 @@ schema. ``extra="allow"`` on ``_Base`` keeps anything the platform adds later.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from . import _Base
 
 
@@ -43,6 +45,17 @@ class GcisTaiwanDirector(_Base):
     Person_Shareholding: int | float | str | None = None
 
 
+class GcisTaiwanHolderUbn(_Base):
+    """A legal-person holder's resolution against the keyword search: one of
+    ``resolved`` / ``none`` / ``several`` / ``not_read``, with the number and
+    the register's name only when resolved."""
+
+    outcome: Literal["resolved", "none", "several", "not_read"]
+    ubn: str | None = None
+    register_name: str | None = None
+    ubns: list[str] = []
+
+
 class GcisTaiwanBundle(_Base):
     """Top-level shape returned by ``GcisTaiwanAdapter.fetch``."""
 
@@ -51,3 +64,4 @@ class GcisTaiwanBundle(_Base):
     directors: list[GcisTaiwanDirector] = []
     directors_read: bool = True
     legal_name: str | None = None
+    holder_ubns: dict[str, GcisTaiwanHolderUbn] = {}

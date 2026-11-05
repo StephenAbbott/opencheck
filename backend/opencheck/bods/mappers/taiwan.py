@@ -28,6 +28,15 @@ registration open data"), which are what this module implements:
 * **E.** A state holder (行政院國家發展基金管理會, a ministry) stays a
   ``legalEntity``: Phase 240 forbids classifying the state by name.
 
+**A legal-person holder's number (the Taiwan GCIS v2 ticket, 4 Nov 2026).**
+The directors register names a legal person by name only. When the adapter
+found exactly one live company with that exact name (``holder_ubns`` on the
+bundle; see ``sources/gcis_taiwan.py``), the holder's statement carries that
+company's ``TW-CR`` identifier, the Taiwan jurisdiction, and a
+``transformation`` annotation on the identifier saying OpenCheck derived it
+from a name match. Its ``recordId`` is unchanged. Several matches, none, a
+search that did not answer, or the company's own number add nothing.
+
 ``beneficialOwnershipOrControl`` is never set (the GEMI rule): this is a
 commercial register, and Taiwan's 10%-shareholder filings (Company Act art.
 22-1) are restricted to the authorities.
@@ -121,6 +130,11 @@ TW_FOREIGN_PREFIXES: tuple[tuple[str, str, str], ...] = tuple(sorted(
         ("英屬百慕達商", "BM", "Bermuda"),
         ("百慕達商", "BM", "Bermuda"),
         ("英屬安圭拉商", "AI", "Anguilla"),
+        # Variant spellings the register files (4 Nov 2026): 安吉拉 for 安圭拉,
+        # 蓋曼 for 開曼, and 荷商, the short form of 荷蘭商.
+        ("英屬安吉拉商", "AI", "Anguilla"),
+        ("英屬蓋曼群島商", "KY", "Cayman Islands"),
+        ("蓋曼群島商", "KY", "Cayman Islands"),
         ("英屬澤西島商", "JE", "Jersey"),
         ("英屬根西島商", "GG", "Guernsey"),
         ("英屬曼島商", "IM", "Isle of Man"),
@@ -130,6 +144,7 @@ TW_FOREIGN_PREFIXES: tuple[tuple[str, str, str], ...] = tuple(sorted(
         ("德商", "DE", "Germany"),
         ("法商", "FR", "France"),
         ("荷蘭商", "NL", "Netherlands"),
+        ("荷商", "NL", "Netherlands"),
         ("瑞士商", "CH", "Switzerland"),
         ("瑞典商", "SE", "Sweden"),
         ("丹麥商", "DK", "Denmark"),
@@ -387,6 +402,33 @@ def _tw_suspension_note(company: dict[str, Any]) -> str | None:
     return " ".join(parts) or None
 
 
+def tw_resolved_holder(outcome: Any, *, subject_ubn: str) -> str | None:
+    """The UBN a legal-person holder resolved to, or None: only a ``resolved``
+    outcome with a valid number, never the company itself (the Taiwan GCIS v2
+    ticket — a refused several-match answer says nothing, decision A)."""
+    if not isinstance(outcome, dict) or outcome.get("outcome") != "resolved":
+        return None
+    number = str(outcome.get("ubn") or "").strip()
+    try:
+        number = _tw().normalise_ubn(number)
+    except ValueError:
+        return None
+    return None if number == subject_ubn else number
+
+
+def tw_holder_ubn_note(name: str, number: str) -> dict[str, Any]:
+    """Says the identifier is OpenCheck's, not the directors register's."""
+    return transformation(
+        pointer("recordDetails", "identifiers", 0),
+        f"The register of directors and supervisors names this legal person only as "
+        f"\u300c{name}\u300d and publishes no number for it. OpenCheck found Unified "
+        f"Business Number {number} by an exact match of that name against the company "
+        "register's name search (公司登記關鍵字查詢) among live companies; exactly one "
+        "company carries the name. The identifier is derived by OpenCheck from a name "
+        "match, not published on the directors register.",
+    )
+
+
 @content_addressed
 def map_gcis_taiwan(bundle: dict[str, Any]) -> BODSBundle:
     """Map a GcisTaiwanAdapter fetch bundle to BODS v0.4 statements."""
@@ -487,13 +529,22 @@ def map_gcis_taiwan(bundle: dict[str, Any]) -> BODSBundle:
         if pct is not None:
             rel_notes.append(_tw_percentage_note(len(interests) - 1, unit))
 
+    holder_ubns = bundle.get("holder_ubns") or {}
     for juristic, rows in legal_persons.items():
         jp_prefix = tw_foreign_prefix(juristic)
+        resolved = tw_resolved_holder(holder_ubns.get(juristic), subject_ubn=ubn)
         party = make_entity_statement(
             source_id=source_id,
             local_id=f"{ubn}|legal-person|{juristic}",
             name=juristic,
-            jurisdiction=(jp_prefix[2], jp_prefix[1]) if jp_prefix else None,
+            identifiers=(
+                [{"id": resolved, "scheme": tw.TW_CR_SCHEME, "schemeName": tw.TW_CR_SCHEME_NAME}]
+                if resolved else []
+            ),
+            jurisdiction=(
+                (jp_prefix[2], jp_prefix[1]) if jp_prefix
+                else ("Taiwan", "TW") if resolved else None
+            ),
             entity_type="legalEntity",
             entity_details=(
                 f"Legal person holding a seat (法人董事/法人監察人) on {name}"
@@ -501,6 +552,8 @@ def map_gcis_taiwan(bundle: dict[str, Any]) -> BODSBundle:
             source_url=directors_url,
             statement_date=as_of,
         )
+        if resolved:
+            annotate(party, tw_holder_ubn_note(juristic, resolved))
         statements.extend([party])
         interests = [
             _tw_seat_interest(

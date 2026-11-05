@@ -1458,8 +1458,32 @@ will be re-derived otherwise:
   revocation or bankruptcy is pending (the liquidation follows), a completed
   liquidation, merger or division is terminal. A test pins the 33.
 - **Not in v1**: key managers (經理人, in no open API), branch records, limited
-  partnerships, History, and resolving a legal-person holder to its UBN for
-  FullCheck hops (decision D — a v2 follow-up ticket, exact name match only).
+  partnerships and History.
+- **A legal-person holder's UBN (the Taiwan GCIS v2 ticket, 4 Nov 2026).**
+  `_resolve_holders` in the adapter, `tw_resolved_holder` /
+  `tw_holder_ubn_note` in the mapper. The keyword dataset (`6BBA2268-…`) has
+  **no exact operator** — `like` and `eq` on `Company_Name` are both a token
+  search (`eq 台灣積體電路` returns TSMC) — answers nothing without a
+  `Company_Status` filter (`ne` is ignored), folds width and case but not
+  台/臺, breaks on a space in the value, and cuts answers at `$top`. So the
+  match is ours: `fold_name` (NFKC, casefold, whitespace, 臺→台) equal on
+  the rows returned. Stephen's decisions: only a name ending 公司, with no
+  whitespace and no foreign prefix, is sent (`holder_is_resolvable` — state
+  bodies, funds and foundations never end 公司, so the Phase 240 rule holds
+  by construction; decision D keeps out even a foreign registration written
+  in Chinese); live companies (status 01) only (C); several matches are
+  refused silently (A); a search that did not answer, a `$top` answer, the
+  15-holder cap (`HOLDER_RESOLVE_CAP`) or the 12 s phase budget
+  (`HOLDER_PHASE_BUDGET_S`, so a slow search never costs the company card)
+  is `not_read` and **one** `source_read` degradation for the lot (B, via
+  `_query(record=False)`); the finding is unchanged (E). Cached per folded
+  name for 7 days (`gcis_taiwan/holder-ubn-v1/…`); a definitive none is
+  `put_absent`; `not_read` is never cached. The holder gets `TW-CR`, TW
+  jurisdiction and a `transformation` note on `/recordDetails/identifiers/0`;
+  its `recordId` does not move, and the company's own number is refused.
+  Measured over the 503 ISSUED RA000551 LEIs: 563 holders, 365 resolve, 0
+  several, 42 none, 156 foreign. `TW_FOREIGN_PREFIXES` gained 荷商,
+  英屬安吉拉商 and 英屬蓋曼群島商 / 蓋曼群島商, spellings the register files.
 
 ## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
 
