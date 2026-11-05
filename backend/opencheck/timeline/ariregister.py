@@ -21,14 +21,16 @@ Identity blocks (names / addresses / legal forms / statuses) are dated intervals
 is (the Estonia–Latvia emitters phase, 3 Nov 2026 — until then every role on
 the card, the audit firm and the share registrar included, was a Tier-1 owner):
 
-* **ownership or control** — shareholders (``OSAN`` on the card, ``S`` off
-  it), founders (``A`` / ``B``), a sole proprietor or entrepreneur, a public
-  body's superior authority, a cooperative member — and the beneficial
-  owners: Tier-1 ``OWNER_ADDED`` / ``OWNER_REMOVED``;
+* **ownership or control** — shareholders (``OSAN`` on the card, ``O`` and
+  ``S`` off it), founders (``A`` / ``B``), a sole proprietor or
+  entrepreneur, a public body's superior authority, a cooperative member —
+  and the beneficial owners: Tier-1 ``OWNER_ADDED`` / ``OWNER_REMOVED``;
 * **an office** — every role the mapper types as a board member, chair,
-  procurist, liquidator, trustee or representative, and the supervisory
-  board (``N`` / ``E``): Tier-4 ``OFFICER_APPOINTED`` / ``OFFICER_RESIGNED``,
-  the Companies House board stream;
+  procurist, liquidator, trustee, representative or partner, the
+  supervisory board (``N`` / ``E``), and a beneficial-owner-list row coded
+  ``J`` / ``C`` (a board or council member named because no owner was
+  identified, worded so): Tier-4 ``OFFICER_APPOINTED`` /
+  ``OFFICER_RESIGNED``, the Companies House board stream;
 * **neither** — auditors, the audit committee, the share registrar, the
   contact person: an administrative (Tier 3) row, kept raw-first.
 
@@ -167,16 +169,29 @@ def _holder_name(name: str) -> str:
 # --------------------------------------------------------------------------- #
 
 #: Role codes that are ownership or control of the company, on the card or
-#: off it. ``OSAN`` the OÜ shareholder, ``S`` the AS shareholder the register
-#: records, ``A`` / ``B`` founders; the sole proprietor, entrepreneur,
-#: superior authority and cooperative member are the mapper's
-#: ``otherInfluenceOrControl`` roles. Everything the mapper types as an
-#: office is an office; everything else is administrative.
-OWNERSHIP_ROLES: frozenset[str] = frozenset({"OSAN", "S", "A", "B", "FIE", "ETTEV", "KOAS", "YHL"})
+#: off it. ``OSAN`` the OÜ shareholder on the card, ``O`` the OÜ shareholder
+#: off it (the dated rows the history carries back to 2013 — Bolt Technology
+#: OÜ: 643 of them), ``S`` the AS shareholder the register records, ``A`` /
+#: ``B`` founders; the sole proprietor, entrepreneur, superior authority and
+#: both cooperative members (``YHL``, ``YHLLV`` with additional liability)
+#: are the mapper's ``otherInfluenceOrControl`` roles. Everything else the
+#: mapper types as an office is an office; everything else is administrative.
+#: ``O`` and ``YHLLV`` were missing until the History-tiering follow-up
+#: (4 Nov 2026): every OÜ's shareholder history sat on Tier 3.
+OWNERSHIP_ROLES: frozenset[str] = frozenset({
+    "OSAN", "O", "S", "A", "B", "FIE", "ETTEV", "KOAS", "YHL", "YHLLV",
+})
 
 #: The register's role code for a beneficial-owner row (none: the BO list is
 #: its own service), used as the role key of the BO chain.
 _BO_ROLE = "kasusaaja"
+
+#: The role key of a beneficial-owner-list row coded ``J`` / ``C``: a board
+#: or council member the register names because no owner reached the
+#: threshold. Not an owner (the mapper's ``kasusaaja_fallback``,
+#: ``beneficialOwnershipOrControl: false``), so it is the board stream
+#: (Tier 4), worded as a fallback designation (Stephen, 4 Nov 2026).
+_BO_FALLBACK_ROLE = "kasusaaja_fallback"
 
 
 def role_kind(role_code: str | None) -> str:
@@ -187,6 +202,8 @@ def role_kind(role_code: str | None) -> str:
     code = (role_code or "").strip()
     if code in OWNERSHIP_ROLES or code == _BO_ROLE:
         return "ownership"
+    if code == _BO_FALLBACK_ROLE:
+        return "officer"
     if code in _EE_OFFICER_ROLE_MAP or code in _EE_OFF_CARD_ROLE_MAP:
         return "officer"
     return "admin"
@@ -415,7 +432,13 @@ def _person_rows(company: ET.Element, list_name: str) -> list[_Row]:
 
 def _bo_events(subject: str, bo_xml: str | None) -> list[ChangeEvent]:
     """Beneficial owners from ``tegelikudKasusaajad_v2``. Isolated so it can be
-    dropped wholesale when RIK's BO access rules change on 10 July 2026."""
+    dropped wholesale when RIK's BO access rules change on 10 July 2026.
+
+    A row coded ``J`` / ``C`` names a board or council member because no
+    owner was identified: it is an office on the board stream, never an
+    owner added or removed."""
+    from ..bods.mappers.estonia import EE_BO_FALLBACK_CODES
+
     root = _parse(bo_xml)
     container = _first(root, "kasusaajad")
     if container is None:
@@ -428,11 +451,14 @@ def _bo_events(subject: str, bo_xml: str | None) -> list[ChangeEvent]:
         name = _holder_name(" ".join(p for p in parts if p).strip())
         if not name:
             continue
-        manner = (_text(k, "kontrolli_teostamise_viis_tekstina")
-                  or _text(k, "kontrolli_teostamise_viis") or "").strip()
-        label = f"{name} — beneficial owner" + (f" ({manner})" if manner else "")
+        code = (_text(k, "kontrolli_teostamise_viis") or "").strip()
+        manner = (_text(k, "kontrolli_teostamise_viis_tekstina") or code).strip()
+        fallback = code in EE_BO_FALLBACK_CODES
+        what = ("named on the beneficial-owner list because no owner was identified"
+                if fallback else "beneficial owner")
+        label = f"{name} — {what}" + (f" ({manner})" if manner else "")
         rows.append(_Row(
-            label, _BO_ROLE, _iso(_text(k, "algus_kpv")),
+            label, _BO_FALLBACK_ROLE if fallback else _BO_ROLE, _iso(_text(k, "algus_kpv")),
             _iso(_text(k, "lopp_kpv") or _text(k, "loppemise_kpv")),
         ))
     events: list[ChangeEvent] = []

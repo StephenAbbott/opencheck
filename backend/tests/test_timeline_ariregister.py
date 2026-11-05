@@ -125,9 +125,11 @@ def test_owner_and_bo_events_reconstructed():
 
     added = _by(events, ChangeType.OWNER_ADDED)
     removed = _by(events, ChangeType.OWNER_REMOVED)
-    # ADDED: OSAN Old Owner, BO Edith, BO Past = 3 (the board member is an
-    # office, on the Tier-4 board stream, since the Estonia–Latvia phase)
-    assert len(added) == 3
+    # ADDED: OSAN Old Owner, BO Past = 2 (the board member is an office, on
+    # the Tier-4 board stream, since the Estonia–Latvia phase; Edith's BO
+    # row is coded J — named because no owner was identified — and is the
+    # board stream too, since the History-tiering follow-up)
+    assert len(added) == 2
     # REMOVED: OSAN Old Owner (ended), BO Past (ended) = 2
     assert len(removed) == 2
 
@@ -144,10 +146,16 @@ def test_owner_and_bo_events_reconstructed():
     assert owner_out.interest_start_date == "2010-01-01"
     assert owner_out.interest_end_date == "2016-08-06"
 
-    bo = next(e for e in added if "Edith Rik" in (e.counterparty or ""))
-    assert "beneficial owner" in bo.counterparty
+    assert not any("Edith Rik" in (e.counterparty or "") for e in added)
+    bo = next(e for e in _by(events, ChangeType.OFFICER_APPOINTED) if "Edith Rik" in (e.counterparty or ""))
+    assert bo.tier is Tier.BOARD_CHANGE
+    assert "named on the beneficial-owner list because no owner was identified" in bo.counterparty
     assert "highest management body" in bo.counterparty
     assert bo.event_date == "2022-01-31"
+
+    past = next(e for e in added if "Past Beneficiary" in (e.counterparty or ""))
+    assert past.counterparty == "Past Beneficiary — beneficial owner (direct ownership)"
+    assert past.tier is Tier.OWNERSHIP_CONTROL
 
     bo_out = next(e for e in removed if "Past Beneficiary" in (e.counterparty or ""))
     assert bo_out.event_date == "2021-12-31"
@@ -168,7 +176,7 @@ def test_bo_branch_is_isolated():
         {"registry_code": "10584597", "detail_xml": _DETAIL_XML, "bo_xml": None}
     )
     assert detail_only
-    assert all("beneficial owner" not in (e.counterparty or "") for e in detail_only)
+    assert all("beneficial" not in (e.counterparty or "") for e in detail_only)
 
     bo_only = ariregister_change_events(
         {"registry_code": "10584597", "detail_xml": None, "bo_xml": _BO_XML}
@@ -291,3 +299,99 @@ def test_a_nasdaq_account_prefix_is_not_a_change_of_owner():
         ("2023-08-16", "re-registered", 3),
     ]
     assert not any(e.change_type is ChangeType.OWNER_REMOVED for e in rahandus)
+
+
+# --------------------------------------------------------------------------- #
+# The History-tiering follow-up (4 Nov 2026): no role silently demoted
+# --------------------------------------------------------------------------- #
+
+#: Every person-role code in the register's own vocabulary (the ``role``
+#: kind of the daily index's ``vocab`` table, cut 25 Oct 2026: 47 codes),
+#: with the stream the History tab puts it on. A code the register adds
+#: later falls to ``admin`` until it is listed here and in the mapper.
+_REGISTER_ROLE_KINDS = {
+    # ownership or control — Tier 1
+    "OSAN": "ownership", "O": "ownership", "S": "ownership",
+    "A": "ownership", "B": "ownership",
+    "FIE": "ownership", "ETTEV": "ownership", "KOAS": "ownership",
+    "YHL": "ownership", "YHLLV": "ownership",
+    # offices — Tier 4 (partners follow the mapper's boardMember: Stephen,
+    # 4 Nov 2026)
+    "JUHL": "officer", "JUHJ": "officer", "JUHA": "officer", "JUHE": "officer",
+    "HNKL": "officer", "PROK": "officer", "LIKV": "officer", "LIKVJ": "officer",
+    "PANKR": "officer", "AJUTPH": "officer", "AJPH": "officer", "JPNKR": "officer",
+    "ERIH": "officer", "TOSAN": "officer", "UOSAN": "officer", "EUSOS": "officer",
+    "EUSOS2": "officer", "ASES": "officer", "ESIS": "officer", "ESIS2": "officer",
+    "SJESI": "officer", "VFILJ": "officer", "FV": "officer", "VALIT": "officer",
+    "N": "officer", "E": "officer",
+    # no interest in the company — Tier 3
+    "KISIK": "admin", "ORP": "admin", "ARP": "admin", "MDKPI": "admin",
+    "D": "admin", "J": "admin", "M": "admin", "P": "admin", "V": "admin",
+    "R": "admin", "L": "admin",
+}
+
+
+def test_every_register_role_code_has_its_stream():
+    from opencheck.timeline.ariregister import role_kind
+
+    assert len(_REGISTER_ROLE_KINDS) == 47
+    assert {code: role_kind(code) for code in _REGISTER_ROLE_KINDS} == _REGISTER_ROLE_KINDS
+
+
+def test_ownership_roles_agree_with_the_mapper_and_the_history_reader():
+    """A shareholder the ended-ownership reader counts, and a role the
+    mapper types ``otherInfluenceOrControl``, is ownership on History too —
+    ``O`` (the OÜ shareholder off the card) and ``YHLLV`` were not."""
+    from opencheck.bods.mappers.estonia import _EE_OFFICER_ROLE_MAP
+    from opencheck.sources.ariregister_history import SHAREHOLDER_ROLES
+    from opencheck.timeline.ariregister import OWNERSHIP_ROLES
+
+    assert SHAREHOLDER_ROLES <= OWNERSHIP_ROLES
+    assert {c for c, (kind, _) in _EE_OFFICER_ROLE_MAP.items() if kind == "otherInfluenceOrControl"} <= OWNERSHIP_ROLES
+
+
+_FALLBACK_BO_XML = """<?xml version="1.0"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+ <SOAP-ENV:Body>
+  <tegelikudKasusaajad_v2Response xmlns="http://arireg.x-road.eu/producer/">
+   <keha>
+    <kasusaajad>
+     <kasusaaja>
+      <eesnimi>Janek</eesnimi><nimi>Stalmeister</nimi>
+      <kontrolli_teostamise_viis>J</kontrolli_teostamise_viis>
+      <kontrolli_teostamise_viis_tekstina>Senior managing official i.e. management board member or member of the supervisory board</kontrolli_teostamise_viis_tekstina>
+      <algus_kpv>2018-03-01Z</algus_kpv><lopp_kpv>2021-06-30Z</lopp_kpv>
+     </kasusaaja>
+     <kasusaaja>
+      <eesnimi>Board</eesnimi><nimi>Member</nimi>
+      <kontrolli_teostamise_viis>C</kontrolli_teostamise_viis>
+      <algus_kpv>2019-01-01Z</algus_kpv>
+     </kasusaaja>
+     <kasusaaja>
+      <eesnimi>Janek</eesnimi><nimi>Stalmeister</nimi>
+      <kontrolli_teostamise_viis>O</kontrolli_teostamise_viis>
+      <kontrolli_teostamise_viis_tekstina>Direct ownership</kontrolli_teostamise_viis_tekstina>
+      <algus_kpv>2021-06-30Z</algus_kpv>
+     </kasusaaja>
+    </kasusaajad>
+   </keha>
+  </tegelikudKasusaajad_v2Response>
+ </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+
+
+def test_a_fallback_bo_designation_is_the_board_stream_worded_as_such():
+    events = ariregister_change_events({"registry_code": "10421629", "detail_xml": None, "bo_xml": _FALLBACK_BO_XML})
+    rows = sorted((e.event_date, e.change_type.value, e.tier.value, e.counterparty) for e in events)
+    fallback = "named on the beneficial-owner list because no owner was identified"
+    assert rows == [
+        ("2018-03-01", "OFFICER_APPOINTED", 4,
+         f"Janek Stalmeister — {fallback} (Senior managing official i.e. management board member or member of the supervisory board)"),
+        ("2019-01-01", "OFFICER_APPOINTED", 4, f"Board Member — {fallback} (C)"),
+        # The same person becoming an owner the day the designation ends is
+        # an owner arriving and a designation ending — two streams, never a
+        # re-registration of one row.
+        ("2021-06-30", "OFFICER_RESIGNED", 4,
+         f"Janek Stalmeister — {fallback} (Senior managing official i.e. management board member or member of the supervisory board)"),
+        ("2021-06-30", "OWNER_ADDED", 1, "Janek Stalmeister — beneficial owner (Direct ownership)"),
+    ]

@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 452** — OpenCheck's per-jurisdiction notes were updated from the Beneficial ownership access status table for Austria, Poland and Bulgaria.
+**Latest: Phase 454** — Companies House officers looked up by id now carry the nationalities filed on their appointments, and every Companies House person's nationality is resolved to an ISO code the related-party screens can compare.
 
 → [Full development history](docs/status.md)
 

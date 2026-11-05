@@ -111,6 +111,7 @@ from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _annotate_verified_people,
     _ch_add_residence,
     _ch_appointments_are_corporate,
+    _ch_appointments_nationalities,
     _ch_appointments_residence,
     _ch_corporate_officer_entity,
     _ch_corporate_officer_statements,
