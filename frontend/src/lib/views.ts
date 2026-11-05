@@ -27,7 +27,7 @@ export type SelfTitledView = "main" | "batch" | "watchlist";
  *  `Exclude` is the point: a new view cannot be added without either giving
  *  it a title here or declaring that it titles itself. */
 export const PAGE_TITLES: Record<Exclude<View, SelfTitledView>, string> = {
-  sources: "The sources OpenCheck queries",
+  sources: "Sources",
   features: "What OpenCheck can do",
   behind: "About OpenCheck",
   api: "The OpenCheck API",
@@ -80,9 +80,9 @@ export function viewToPath(v: View): string {
 /** `document.title` for every view but a report, whose title names the
  *  subject (`documentTitleFor` in lib/checkMode.ts). */
 export const VIEW_DOCUMENT_TITLES: Record<Exclude<View, "main">, string> = {
-  sources: "Data Sources — OpenCheck",
+  sources: "Sources — OpenCheck",
   features: "Features — OpenCheck",
-  behind: "Behind the Scenes — OpenCheck",
+  behind: "About — OpenCheck",
   api: "API — OpenCheck",
   changelog: "Changelog — OpenCheck",
   batch: "Screen a list — OpenCheck",

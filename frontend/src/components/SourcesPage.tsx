@@ -82,13 +82,16 @@ export function SourcesPage({
   return (
     <section>
       <SectionLabel as="h2" className="border-b border-oo-rule pb-2 mb-4">
-        About the sources
+        Sources
       </SectionLabel>
       <p className="text-oo-body leading-relaxed text-oo-muted mb-6 max-w-2xl">
-        OpenCheck queries the open data sources below. GLEIF is the entry point
-        — the LEI acts as a connector across the rest. Each source ships its
-        data under its own license; non-commercial sources propagate that
-        obligation through the export bundle.
+        OpenCheck reads {sources ? `${sources.length} ` : ""}open registers and
+        datasets. The Legal Entity Identifier (LEI) connects them: GLEIF, which
+        issues LEIs, links each one to national register numbers, and each
+        source is asked with the identifier it understands. Each source below
+        is listed with what it covers, its licence, and whether it answered in
+        the latest weekly health check. Some sources allow non-commercial use
+        only; when you export, those terms travel with the data.
       </p>
 
       {summary && (

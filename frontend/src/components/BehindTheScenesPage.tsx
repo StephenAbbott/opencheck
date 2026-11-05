@@ -14,13 +14,16 @@ export function BehindTheScenesPage() {
         id="bts-heading"
         className="font-head font-bold text-[clamp(1.35rem,3vw,1.8rem)] text-oo-ink mb-2 leading-tight"
       >
-        Behind the Scenes
+        About OpenCheck
       </h2>
       <p className="text-oo-body leading-[1.75] text-oo-muted mb-8 max-w-2xl">
-        OpenCheck is a proof-of-concept that shows what becomes possible when
-        open data is anchored on the Legal Entity Identifier (LEI) and
-        expressed in a common standard. This page explains how it works and
-        the open ecosystem it draws on.
+        OpenCheck is a free, open-source tool that shows who owns and controls
+        a company, and the risk signals around it, by bringing together open
+        registers and datasets through its Legal Entity Identifier (LEI). It is
+        an open-source demonstration of what becomes possible when open data
+        is anchored on the LEI and published in the Beneficial Ownership Data
+        Standard (BODS). This page explains how a check works and the open
+        data ecosystem it draws on.
       </p>
 
       <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 500px), 1fr))" }}>
@@ -230,7 +233,7 @@ export function BehindTheScenesPage() {
         {/* Tech stack */}
         <BtsCard title="Technical stack">
           <p className="text-[13.5px] leading-[1.75] text-oo-muted mb-3">
-            OpenCheck is fully open-source under the MIT license.
+            OpenCheck is fully open-source under the MIT licence.
           </p>
           <div className="space-y-3 text-oo-small text-oo-muted">
             <div>

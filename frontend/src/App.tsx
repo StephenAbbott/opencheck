@@ -1032,6 +1032,33 @@ export default function App() {
 
   const modeTabs = <ModeTabs mode={mode} onSelect={selectMode} />;
 
+  // The two "part of this report did not run" notices, drawn as the bottom
+  // strip of the subject-and-verdict card. They used to sit between the mode
+  // tabs and the panel, which cut the active tab off from what it controls;
+  // here they sit under the verdict's "see which" link they expand, and the
+  // tabs meet their panel. The wrapper rounds the strip's lower corners to
+  // the card's (the card itself cannot clip: its export menu overflows it).
+  const reportNotices =
+    streamingLei && (degradedSources.length > 0 || panelErrors.length > 0) ? (
+      <div className="overflow-hidden rounded-b-oo">
+        {degradedSources.length > 0 && (
+          <DegradedScreensNotice
+            attached
+            degraded={degradedSources}
+            sourceNames={sourceNameIndex}
+            open={degradedOpen}
+            onToggle={setDegradedOpen}
+            onRetry={
+              !streaming && !savedReport
+                ? () => lookupLei(streamingLei, { refresh: true })
+                : undefined
+            }
+          />
+        )}
+        <PanelErrorsNotice attached errors={panelErrors} />
+      </div>
+    ) : null;
+
   return (
     <SavedReportContext.Provider value={savedCtx}>
     <div className="min-h-screen flex flex-col bg-oo-bg">
@@ -1111,10 +1138,10 @@ export default function App() {
         {!streamingLei && (
         <div className="mb-3">
           <HeroHeading className="font-head font-bold text-oo-ink leading-tight text-[20px] sm:text-oo-display">
-            Conduct due diligence on <span className="text-oo-blue">3.4 million</span> companies, starting from a single ID
+            See who owns and controls <span className="text-oo-blue">3.4 million</span> companies, starting from a single ID
           </HeroHeading>
           <p className="text-oo-small sm:text-sm text-oo-muted leading-snug mt-2">
-            With a Legal Entity Identifier, OpenCheck pulls open corporate data from 56 sources into one graph using the Beneficial Ownership Data Standard
+            With a Legal Entity Identifier (LEI), OpenCheck joins open data from 56 sources into one ownership graph and names the source behind every finding
           </p>
         </div>
         )}
@@ -1245,6 +1272,7 @@ export default function App() {
             One card with the subject (Phase 126): the verdict is what the
             subject amounts to, not a separate object floating beneath it. */}
           {!phoneLayout && verdictStrip}
+          {!phoneLayout && reportNotices}
           </div>
         )}
 
@@ -1258,7 +1286,10 @@ export default function App() {
         {streamingLei && phoneLayout && (
           <>
             {modeTabs}
-            <div className="mb-3 rounded-oo border border-oo-rule bg-white">{verdictStrip}</div>
+            <div className="mb-3 rounded-oo border border-oo-rule bg-white">
+              {verdictStrip}
+              {reportNotices}
+            </div>
           </>
         )}
 
@@ -1296,21 +1327,16 @@ export default function App() {
             is the detail behind it, and it stays independent of the risk
             panel because zero signals with a degraded screen is exactly the
             case that must not read as a clean screen. */}
-        {degradedSources.length > 0 && (
+        {/* Without a report on screen there is no card to attach to, so the
+            notice keeps its own box (see `reportNotices`). */}
+        {!streamingLei && degradedSources.length > 0 && (
           <DegradedScreensNotice
             degraded={degradedSources}
             sourceNames={sourceNameIndex}
             open={degradedOpen}
             onToggle={setDegradedOpen}
-            onRetry={
-              streamingLei && !streaming && !savedReport
-                ? () => lookupLei(streamingLei, { refresh: true })
-                : undefined
-            }
           />
         )}
-
-        {streamingLei && panelErrors.length > 0 && <PanelErrorsNotice errors={panelErrors} />}
 
         {/* Each mode's content is a labelled tabpanel with tabIndex={-1},
             so selectMode can move focus into it after the switch. Without

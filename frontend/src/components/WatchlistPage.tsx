@@ -254,10 +254,10 @@ export default function WatchlistPage({
       <section className="mb-6 bg-white border border-oo-rule rounded-oo p-7">
         <h1 className={sectionLabelClasses("muted")}>Watchlist</h1>
         <p className="mt-2 max-w-2xl text-oo-small text-oo-muted">
-          The companies this browser watches. Each is re-checked only when GLEIF or OpenSanctions
-          publish a change to its record, or — for an Estonian company — when the e-Business
-          Register's daily data shows one; the re-run then fetches every source a normal check
-          would, and what differed is logged below and in the feed. No account, no email.
+          Get told when something changes about a company you watch. OpenCheck re-checks a
+          company only when GLEIF, OpenSanctions or (for Estonian companies) the e-Business
+          Register publishes a change, then logs what differed here and in your feed. No
+          account, no email.
         </p>
 
         {phase === "none" && (

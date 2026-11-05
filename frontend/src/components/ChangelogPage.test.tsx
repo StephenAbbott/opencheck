@@ -15,7 +15,7 @@ import { ChangelogPage } from "./ChangelogPage";
 describe("ChangelogPage", () => {
   it("says every change is listed, not only significant ones", () => {
     render(<ChangelogPage />);
-    const intro = screen.getByText(/Every change to OpenCheck, newest first/);
+    const intro = screen.getByText(/What's new in OpenCheck, newest first/);
     expect(intro.textContent).not.toMatch(/significant enough/);
     expect(intro.textContent).toMatch(/when it merges/);
   });

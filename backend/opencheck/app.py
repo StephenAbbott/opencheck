@@ -448,9 +448,10 @@ app = FastAPI(
     title="OpenCheck",
     version=__version__,
     description=(
-        "Customer due diligence risk checks driven by the Legal Entity "
-        "Identifier (LEI) and open data — mapped to the "
-        "Beneficial Ownership Data Standard (BODS)."
+        "A free, open-source tool that shows who owns and controls a company, "
+        "and the risk signals around it, by bringing together open registers "
+        "and datasets through its Legal Entity Identifier (LEI). Results follow "
+        "the Beneficial Ownership Data Standard (BODS)."
     ),
     lifespan=_lifespan,
 )

@@ -477,7 +477,7 @@ Saderat PLC, ASDA Stores, Regulatory DataCorp, Persia International Bank, two cl
       pointer line) and the social card `docs/social/opencheck-social-b.html`
 - [ ] **Frontend homepage source count** — two hard-coded counts, in **two
       different files**: the hero subline in `frontend/src/App.tsx` ("…from N
-      sources into one graph…") **and** the "How it works" step-3 title in
+      sources into one ownership graph…") **and** the "How it works" step-3 title in
       `frontend/src/components/HomePanels.tsx` ("N open sources, in parallel").
       Easy to miss — separate from the README/social-card ones. This checklist
       said both were in `App.tsx` until the `eiti_assessment` adapter went

@@ -306,8 +306,9 @@ export function ledeSentence(sourceCount: number | null): string {
   const scope =
     sourceCount === null ? "every open source that can answer" : `${sourceCount} open sources`;
   return (
-    `OpenCheck is one lookup over ${scope}, anchored on the Legal Entity ` +
-    "Identifier and mapped into the Beneficial Ownership Data Standard. These " +
+    `OpenCheck shows who owns and controls a company, from ${scope}, ` +
+    "brought together through its Legal Entity Identifier (LEI) and published " +
+    "in the Beneficial Ownership Data Standard (BODS). These " +
     "are the ways to ask it a question — each free, each naming the sources " +
     "behind its answer."
   );

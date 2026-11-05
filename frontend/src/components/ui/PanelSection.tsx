@@ -139,9 +139,10 @@ export function PanelCard({
       // squared the top-left corner to weld the card to the active tab; the
       // degraded-screens and panel-error notices can sit between the two, so
       // it pointed at empty grey and read as a rendering glitch. Phase 128
-      // removed the tablist's bottom margin so the two meet when no notice
-      // intervenes — the seam is then the tablist's rule over this border,
-      // which is exactly what the template renders.
+      // removed the tablist's bottom margin so the two meet — the seam is the
+      // tablist's rule over this border, which is exactly what the template
+      // renders. Since the page-copy-and-screening-bar change the notices sit
+      // at the foot of the subject-and-verdict card, so nothing intervenes.
       className={`mb-8 overflow-hidden rounded-oo border border-oo-rule bg-white [&>*:last-child]:border-b-0 ${className}`.trim()}
       {...rest}
     >
