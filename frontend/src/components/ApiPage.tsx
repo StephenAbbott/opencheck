@@ -9,7 +9,9 @@
 import { useState } from "react";
 
 import { BASE_URL, EXPORT_FORMATS } from "../lib/api";
+import { MCP_STEPS, type McpTool } from "../lib/mcpTools";
 import { BtsCard } from "./BtsCard";
+import { Chip, SectionLabel } from "./ui";
 
 // ---------------------------------------------------------------------
 // API page — documents the read-only REST surface (api.opencheck.world).
@@ -103,8 +105,17 @@ export function ApiPage() {
         </a>
         . No API key is required to read. OpenCheck also runs a{" "}
         <strong className="text-oo-ink font-semibold">Model Context Protocol (MCP)</strong>{" "}
-        server, so AI agents can call the same pipeline as typed tools — see below.
+        server, so AI agents can call the same pipeline as typed tools.
       </p>
+
+      <nav aria-label="On this page" className="mb-6 flex flex-wrap gap-x-5 gap-y-1 text-oo-small">
+        <a href="#rest" className="underline text-oo-blue hover:text-oo-burst">
+          REST endpoints
+        </a>
+        <a href="#mcp" className="underline text-oo-blue hover:text-oo-burst">
+          MCP server for AI agents
+        </a>
+      </nav>
 
       <div className="mb-8 max-w-2xl">
         <div className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
@@ -114,7 +125,8 @@ export function ApiPage() {
       </div>
 
       <div
-        className="grid gap-6"
+        id="rest"
+        className="grid gap-6 scroll-mt-6"
         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 560px), 1fr))" }}
       >
         <BtsCard title="Lookup">
@@ -187,65 +199,6 @@ export function ApiPage() {
             restrictive licence in the set applies to the whole bundle. Rows that could not be
             screened are listed in the manifest and the CSV, never omitted. Heavy rate tier.
           </ApiEndpoint>
-        </BtsCard>
-
-        <BtsCard title="MCP server — for AI agents">
-          <p className="text-oo-small leading-[1.7] text-oo-muted mb-3">
-            OpenCheck speaks the{" "}
-            <a
-              href="https://modelcontextprotocol.io"
-              target="_blank"
-              rel="noreferrer"
-              className="underline text-oo-blue hover:text-oo-burst"
-            >
-              Model Context Protocol
-            </a>
-            , exposing the same pipeline as typed tools an AI agent can call
-            directly — no glue code. It uses streamable HTTP, needs no API key,
-            and carries the same source licence notices as the REST API.
-          </p>
-          <div className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mb-2">
-            Endpoint
-          </div>
-          <CopyField value={`${base}/mcp`} />
-          <div className="text-[11px] font-semibold tracking-oo-eyebrow uppercase text-oo-muted mt-4 mb-2">
-            Tools
-          </div>
-          <dl className="space-y-1.5">
-            {([
-              ["opencheck_search", "Find a company’s LEI from a name or free text."],
-              ["opencheck_resolve_national_id", "Resolve a national company-registration number to its LEI."],
-              ["opencheck_lookup", "Due diligence by LEI: identity, identifiers, risk signals, source coverage."],
-              ["opencheck_register_lookup", "The same for a company with no LEI, by its register number (scheme + id from a search candidate’s identifiers)."],
-              ["opencheck_batch_lookup", "Up to 20 LEIs at once: one compact row each, with failed rows kept apart."],
-              ["opencheck_export_bods", "The full ownership-and-control graph as BODS v0.4 statements; include_subsidiaries folds in the GLEIF subsidiary network."],
-              ["opencheck_subsidiaries", "What a company consolidates: its GLEIF subsidiary network as counts, rows or BODS, optionally with the MEIP, EITI and GEM lists kept apart."],
-              ["opencheck_owners", "Who owns a company above a threshold (its national rule by default): owners calculated from shareholdings per source, the beneficial owners registers declare, and who is in both — plus the computed sanctions 50% test for OFAC, the EU and the UK, ownership only."],
-              ["opencheck_ownership_map", "The ownership structure as an SVG image, with every edge as a text table and a link to the interactive FullCheck view."],
-              ["opencheck_person_positions", "One person’s positions across companies, by a register’s own person key — the Estonian register’s pseudonymous key or a Companies House officer id; never by name."],
-              ["opencheck_save_report", "Keep a check as a saved report: a link and a SHA-256 of exactly what was found, not re-checked."],
-              ["opencheck_list_sources", "Inventory of the data sources, with licence and live status."],
-            ] as [string, string][]).map(([name, desc]) => (
-              <div key={name} className="flex gap-2 text-[12.5px] leading-[1.6]">
-                <dt className="font-mono text-oo-blue min-w-0 break-all">{name}</dt>
-                <dd className="min-w-0 text-oo-muted [overflow-wrap:anywhere]">{desc}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="text-oo-small leading-[1.7] text-oo-muted mt-4">
-            Add it as a custom connector in any MCP client (e.g. Claude Desktop →
-            Settings → Connectors). It is discoverable via{" "}
-            <a
-              href="https://agenticresourcediscovery.org/"
-              target="_blank"
-              rel="noreferrer"
-              className="underline text-oo-blue hover:text-oo-burst"
-            >
-              Agentic Resource Discovery
-            </a>
-            ; the server descriptor is at{" "}
-            <code className={mono}>/.well-known/mcp.json</code>.
-          </p>
         </BtsCard>
 
         <BtsCard title="Search &amp; drill-down">
@@ -424,6 +377,199 @@ export function ApiPage() {
           </p>
         </BtsCard>
       </div>
+
+      <McpSection endpoint={`${base}/mcp`} mono={mono} />
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------
+// The MCP server, explained in the order the handshake gives an agent.
+//
+// A full-width section rather than one card in the endpoint grid: the old
+// card squeezed tool names into a 560px column beside their descriptions,
+// so long names broke mid-word and the list read as a wall. Each tool is now
+// a row of its own, name over description, grouped under the step of the
+// handshake it belongs to. The data is `lib/mcpTools.ts`, pinned to the
+// server's TOOL_NAMES and its "Cost." paragraph by
+// `backend/tests/test_api_page_mcp.py`.
+// ---------------------------------------------------------------------
+
+/** A tool name that may wrap only at its underscores, never mid-word. */
+function ToolName({ name }: { name: string }) {
+  const parts = name.split("_");
+  return (
+    <code className="font-mono text-oo-small font-semibold text-oo-blue">
+      {parts.map((part, i) => (
+        <span key={i}>
+          {part}
+          {i < parts.length - 1 ? (
+            <>
+              _<wbr />
+            </>
+          ) : null}
+        </span>
+      ))}
+    </code>
+  );
+}
+
+function ToolRow({ tool }: { tool: McpTool }) {
+  return (
+    <li className="py-3">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <ToolName name={tool.name} />
+        <span className="font-mono text-oo-meta text-oo-muted">({tool.args})</span>
+        {tool.spendsBudget ? (
+          <Chip className="sm:ml-auto">Lookup budget</Chip>
+        ) : null}
+      </div>
+      <p className="mt-1 text-oo-small leading-[1.65] text-oo-muted">{tool.summary}</p>
+    </li>
+  );
+}
+
+function McpSection({ endpoint, mono }: { endpoint: string; mono: string }) {
+  return (
+    <section id="mcp" aria-labelledby="mcp-heading" className="mt-12 scroll-mt-6">
+      <h3
+        id="mcp-heading"
+        className="font-head font-bold text-oo-title text-oo-ink leading-tight mb-2"
+      >
+        MCP server for AI agents
+      </h3>
+      <p className="text-oo-body leading-[1.75] text-oo-muted mb-6 max-w-2xl">
+        OpenCheck speaks the{" "}
+        <a
+          href="https://modelcontextprotocol.io"
+          target="_blank"
+          rel="noreferrer"
+          className="underline text-oo-blue hover:text-oo-burst"
+        >
+          Model Context Protocol
+        </a>
+        : the same pipeline as the REST API, as typed tools an AI agent calls directly. It
+        uses streamable HTTP, needs no API key, and carries the same source licence notices.
+      </p>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] mb-10 max-w-4xl">
+        <div className="bg-white border border-oo-rule rounded-oo p-6">
+          <SectionLabel as="h4" className="mb-2">
+            Connect
+          </SectionLabel>
+          <CopyField value={endpoint} />
+          <ol className="mt-4 space-y-2 list-decimal pl-5 text-oo-small leading-[1.7] text-oo-muted">
+            <li>
+              Add the address as a custom connector in your MCP client (in Claude: Settings →
+              Connectors).
+            </li>
+            <li>
+              When it connects, the server gives your agent a short guide to the order of calls
+              and how to read the answers. The guide is reproduced below, so you can see what
+              your agent is told.
+            </li>
+            <li>
+              Agents can also find the server through{" "}
+              <a
+                href="https://agenticresourcediscovery.org/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline text-oo-blue hover:text-oo-burst"
+              >
+                Agentic Resource Discovery
+              </a>
+              ; its descriptor, listing every tool, is at{" "}
+              <code className={mono}>/.well-known/mcp.json</code>.
+            </li>
+          </ol>
+        </div>
+
+        <aside
+          aria-labelledby="mcp-cost-heading"
+          className="bg-oo-soft border border-oo-softBorder rounded-oo p-6"
+        >
+          <SectionLabel as="h4" id="mcp-cost-heading" tone="accent" className="mb-2">
+            What a call costs
+          </SectionLabel>
+          <p className="text-oo-small leading-[1.7] text-oo-ink">
+            Tools marked <Chip>Lookup budget</Chip> share one budget per network address: ten
+            fresh checks a minute. Repeating a check within 15 minutes is free. The other tools
+            do not use it.
+          </p>
+          <p className="mt-3 text-oo-small leading-[1.7] text-oo-ink">
+            When it runs out, the answer is a 429 with <code className={mono}>retry_after_s</code>:
+            wait that long, then retry, never at once. Everyone behind one address (a
+            conference room, an office) shares the budget.
+          </p>
+        </aside>
+      </div>
+
+      <h4 id="mcp-order" className="font-head font-bold text-oo-head text-oo-ink mb-4">
+        Call the tools in this order
+      </h4>
+      <ol role="list" aria-labelledby="mcp-order" className="space-y-4 max-w-4xl">
+        {MCP_STEPS.map((step, i) => (
+          <li
+            key={step.id}
+            id={`mcp-step-${step.id}`}
+            className="bg-white border border-oo-rule rounded-oo p-5 sm:p-6 flex gap-4"
+          >
+            <span
+              aria-hidden="true"
+              className="shrink-0 w-8 h-8 rounded-full bg-oo-soft border border-oo-softBorder text-oo-blue font-head font-bold text-oo-small flex items-center justify-center"
+            >
+              {i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <h5 className="font-head font-bold text-oo-lead text-oo-ink leading-snug">
+                <span className="sr-only">Step {i + 1}: </span>
+                {step.title}
+              </h5>
+              <p className="mt-1 text-oo-small leading-[1.7] text-oo-muted">{step.lede}</p>
+
+              {step.tools.length > 0 ? (
+                <ul className="mt-3 border-t border-oo-rule divide-y divide-oo-rule">
+                  {step.tools.map((tool) => (
+                    <ToolRow key={tool.name} tool={tool} />
+                  ))}
+                </ul>
+              ) : null}
+
+              {step.rules ? (
+                <dl className="mt-3 border-t border-oo-rule divide-y divide-oo-rule">
+                  {step.rules.map((rule) => (
+                    <div key={rule.term} className="py-2.5 text-oo-small leading-[1.65]">
+                      <dt
+                        className={`inline font-semibold text-oo-ink ${
+                          /^[a-z_]+$/.test(rule.term) ? "font-mono" : ""
+                        }`}
+                      >
+                        {rule.term}
+                      </dt>{" "}
+                      <dd className="inline text-oo-muted">{rule.text}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+
+              {step.note ? (
+                <p className="mt-3 text-oo-small leading-[1.7] text-oo-muted">
+                  {step.note.text}{" "}
+                  <a
+                    href={step.note.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline text-oo-blue hover:text-oo-burst"
+                  >
+                    {step.note.linkLabel}
+                  </a>
+                  .
+                </p>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
