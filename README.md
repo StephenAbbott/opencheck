@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 456** — A Taiwanese company's corporate directors are now linked to their own register record by exact name, so FullCheck can follow a Taiwanese ownership chain upwards.
+**Latest: Phase 457** — The MCP server gained a pre-flight knowability tool that spends no lookup budget, and handshake instructions that name every tool, the order to call them in and how to read the answers.
 
 → [Full development history](docs/status.md)
 
