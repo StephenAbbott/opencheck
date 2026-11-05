@@ -12,7 +12,8 @@ def _officer_bundle() -> dict:
         "appointments": {
             "name": "Jane SMITH",
             "date_of_birth": {"year": 1975, "month": 8},
-            "nationality": "British",
+            # The live envelope carries no nationality: it is on each
+            # appointment (the officer nationality ticket, 4 Nov 2026).
             "items": [
                 {
                     "appointed_to": {
@@ -21,6 +22,7 @@ def _officer_bundle() -> dict:
                     },
                     "officer_role": "director",
                     "appointed_on": "2020-01-15",
+                    "nationality": "British",
                 },
                 {
                     "appointed_to": {
@@ -29,6 +31,7 @@ def _officer_bundle() -> dict:
                     },
                     "officer_role": "secretary",
                     "appointed_on": "2018-03-01",
+                    "nationality": "English",
                     "resigned_on": "2022-06-30",
                 },
             ],
@@ -75,7 +78,8 @@ def test_map_ch_officer_sets_birth_date_and_nationality_on_person() -> None:
     bundle = map_companies_house(_officer_bundle())
     person = next(s for s in bundle if s["recordType"] == "person")
     assert person["recordDetails"]["birthDate"] == "1975-08"
-    assert person["recordDetails"]["nationalities"] == [{"name": "British"}]
+    # "British" (current) and "English" (resigned) are one nationality, GB.
+    assert person["recordDetails"]["nationalities"] == [{"name": "British", "code": "GB"}]
 
 
 def test_map_ch_officer_carries_officer_id_as_an_annotation() -> None:

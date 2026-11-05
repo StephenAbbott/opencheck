@@ -249,7 +249,6 @@ def test_libcovebods_companies_house_officer_appointments():
             "appointments": {
                 "name": "Jane EXAMPLE",
                 "date_of_birth": {"year": 1980, "month": 6},
-                "nationality": "British",
                 "items": [
                     {
                         "appointed_to": {
@@ -258,6 +257,7 @@ def test_libcovebods_companies_house_officer_appointments():
                         },
                         "officer_role": "director",
                         "appointed_on": "2018-06-01",
+                        "nationality": "British",
                     },
                     {
                         "appointed_to": {

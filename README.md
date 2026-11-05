@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 452** — OpenCheck's per-jurisdiction notes were updated from the Beneficial ownership access status table for Austria, Poland and Bulgaria.
+**Latest: Phase 455** — Every country-name helper now shares one resolver, so "Russia", "Turkey" and other names pycountry no longer knows get their ISO code and reach the FATF, EU high-risk, non-EU and tax-list checks.
 
 → [Full development history](docs/status.md)
 

@@ -3659,6 +3659,21 @@ GLEIF mapper exported most registration numbers with `scheme: ""`.
   mapped statement (`map_meip` exempt). When a source does not say what an
   address is for, use `alternative`, not `registered` — the FtM mapper's
   `registered` on people reached production as a schema error.
+- **One resolver for a country name** (the country-lookup ticket, 4 Nov
+  2026): `bods/countries.py::country_code` — one alias table (`ALIASES`),
+  then an ISO 3166-2 subdivision → its country, then pycountry. `statements.
+  _country_code`, `statements._country_obj`, `residence.resolve_country` and
+  Wikidata's label fallback are wrappers; they agree on the code and differ
+  only in what they return (a bare code, a Country with pycountry's ISO name,
+  a residence country with its common name). Until then "Russia" had no code
+  in either statements helper and "Turkey" none in `_country_code`, so a
+  Russian or Turkish party whose country was filed as a name drew no FATF /
+  non-EU / tax-list signal. **Add a spelling to `ALIASES`, never a table in a
+  mapper**; "Korea" and "Channel Islands" stay uncoded. A jurisdiction that
+  should keep its subdivision ("US-DE") must be read before the resolver —
+  the FtM path does (`_ftm_jurisdiction`). Companies House and OpenCorporates
+  nationalities are demonyms ("British", "Iranian") and stay name-only: a
+  demonym is not a country name and is not read here.
 - **One reader for an entity's jurisdiction:** `bods/jurisdiction.py` (`read`
   accepts the v0.4 key and both v0.3 placements; `upgrade` renames in place).
   `bods_data.load_bundle` upgrades the committed `data/cache/bods_data/`

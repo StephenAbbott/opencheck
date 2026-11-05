@@ -22,6 +22,7 @@ from ..statements import (
     BODSBundle,
     _addr,
     _country_code,
+    _country_obj,
     make_entity_statement,
     make_person_statement,
     make_relationship_statement,
@@ -744,11 +745,7 @@ def _ftm_resolve_nationality(raw: str) -> dict[str, str]:
     Returns ``{"name": ..., "code": ...}`` when pycountry can resolve the
     value, or ``{"name": raw}`` as a safe fallback.
     """
-    try:
-        country = pycountry.countries.lookup(raw.strip())
-        return {"name": country.name, "code": country.alpha_2}
-    except LookupError:
-        return {"name": raw.strip()}
+    return _country_obj(raw) or {"name": raw.strip()}
 
 
 def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str | None] | None:
@@ -771,9 +768,12 @@ def _ftm_jurisdiction(props: dict[str, Any]) -> tuple[str, str | None] | None:
         # is ISO 3166 or absent (Phase 239). This used to fall back to the raw
         # string, so an OpenAleph "BVI" went out as ``code: "BVI"`` and the
         # EU high-risk / non-EU checks skipped it.
+        # A subdivision ("US-DE") is a valid ``jurisdiction.code`` in its own
+        # right and is kept as it is, before the shared resolver reduces it
+        # to its country.
+        if pycountry.subdivisions.get(code=jur.strip().upper()):
+            return (jur.strip(), jur.strip().upper())
         code = _country_code(jur)
-        if not code and pycountry.subdivisions.get(code=jur.strip().upper()):
-            code = jur.strip().upper()
         return (jur.strip(), code or None)
 
 

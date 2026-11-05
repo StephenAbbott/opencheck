@@ -320,7 +320,7 @@ entered the row, give `recorded` / `high`:
 | `gleif` | field-modification change log (LEI + RR records) | recorded | the original; corporate-tree + identity diffs |
 | `companies_house` | filing-history API (typed categories) | effective | UK PSC / filing events |
 | `nz_companies` | NZBN `FullEntity` + `/history/*` endpoints | effective | directors/shareholders + name/status/address |
-| `ariregister` | RIK X-Road SOAP history (credentialed), and the `registrikaardid` open-data file in the daily index (no credentials) | effective | Estonian registry-card + beneficial-owner history; every numbered card entry (type and date) in the administrative stream — and, when the SOAP history was not read, the card's status, name and succession entries as notable rows; the general data's dated status changes (dissolution decisions, bankruptcies) and mergers, divisions and transformations, naming the other companies. Since the Estonia–Latvia emitters phase the person rows are **tiered by role**: shareholders, founders and beneficial owners are Tier-1 owner events; board members, procurists, liquidators and the supervisory board are Tier-4 officer events; auditors and the share registrar are Tier-3 rows. A row ending the day the next row of the same party and role begins is one re-registration — `CONTROL_BAND_CHANGED` naming both sizes when the holding changed, an administrative row when it did not (a Nasdaq CSD account moved between types), `OFFICER_DETAILS_CHANGED` for an office renewed — never a remove + add pair, and a Nasdaq account prefix is stripped from the holder's name |
+| `ariregister` | RIK X-Road SOAP history (credentialed), and the `registrikaardid` open-data file in the daily index (no credentials) | effective | Estonian registry-card + beneficial-owner history; every numbered card entry (type and date) in the administrative stream — and, when the SOAP history was not read, the card's status, name and succession entries as notable rows; the general data's dated status changes (dissolution decisions, bankruptcies) and mergers, divisions and transformations, naming the other companies. Since the Estonia–Latvia emitters phase the person rows are **tiered by role**: shareholders (`OSAN`, `O`, `S`), founders and beneficial owners are Tier-1 owner events; board members, procurists, liquidators, partners and the supervisory board are Tier-4 officer events, and so is a beneficial-owner-list row coded `J` / `C` — a board or council member the register names because no owner was identified, worded "named on the beneficial-owner list because no owner was identified", never as an owner; auditors and the share registrar are Tier-3 rows. A row ending the day the next row of the same party and role begins is one re-registration — `CONTROL_BAND_CHANGED` naming both sizes when the holding changed, an administrative row when it did not (a Nasdaq CSD account moved between types), `OFFICER_DETAILS_CHANGED` for an office renewed — never a remove + add pair, and a Nasdaq account prefix is stripped from the holder's name |
 | `cvr_denmark` | CVR / Datafordeler bitemporal records (`virkningFra`/`virkningTil`) | effective | name / legal form / status / registered-seat address |
 | `ny_dos` | the All Filings, status, name and address rows the adapter fetch returns (Phase 263) | effective (CEO rows `snapshot_window`) | New York filings, status and name history; chief executive changes between two statements |
 | `ur_latvia` | UR's open data on data.gov.lv (CC0, no key): the lookup's tables plus six dated event tables read on the `/history` path only | effective; `recorded` for beneficial owners and officers | **Additions only for people** — UR publishes no end date on any people table, so the emitter says when each *current* shareholder, stockholder, beneficial owner and officer was entered and never a departure, and the tab says so. Former names dated by the day each ended; termination, liquidations, reorganisations (naming the other company), insolvency proceedings opened and ended, suspensions as Tier 2; securing measures and a depository's dematerialised-shares row as Tier 3 |
@@ -392,6 +392,30 @@ the KvK rule. Diffing the daily files would reconstruct removals from now on,
 but only by OpenCheck storing person names over time, which the watchlist
 deliberately does not do; a count-only Latvian delta for the watchlist's
 register tier is a separate ticket.
+
+**What the role re-tiering left on the wrong tier** (the History-tiering
+follow-up, 4 Nov 2026). Two things, both checked against every person-role
+code in the register's vocabulary (47, read off the daily index of 25 Oct
+2026) and the real SOAP and REST history of Eesti Energia AS and Bolt
+Technology OÜ:
+
+- **`O`, the OÜ shareholder off the card, was in no role table**, so it fell
+  to the administrative stream — every private limited company's shareholder
+  history sat on Tier 3 (Bolt Technology OÜ: 643 rows). `YHLLV`, a
+  cooperative member with additional liability, was on the board stream while
+  `YHL` was ownership. Both are ownership now, and a test pins the stream of
+  all 47 codes and that every shareholder role the ended-ownership reader
+  counts is ownership here too.
+- **`J` / `C` beneficial-owner-list rows are the board stream** (Stephen):
+  the register names the person because no owner reached the threshold, the
+  mapper marks the interest `beneficialOwnershipOrControl: false`, and Tier 1
+  says ownership moved. Eesti Energia: 36 of its 42 BO history rows. The
+  same person becoming an owner the day the designation ends is a designation
+  ending and an owner arriving, never a re-registration of one row.
+
+Partners (`TOSAN`, `UOSAN`, `EUSOS`, `EUSOS2`) stay on the board stream, as
+the mapper types them (Stephen), although the ownership-chain walk follows a
+corporate partner as a holder.
 
 So `timeline/ur_latvia.py` is the New Zealand shape with one side missing:
 
