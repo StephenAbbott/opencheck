@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 453** — The Estonian History tab now shows private limited companies' shareholder changes as ownership and moves board members named only because no beneficial owner was identified to the board stream.
+**Latest: Phase 454** — Companies House officers looked up by id now carry the nationalities filed on their appointments, and every Companies House person's nationality is resolved to an ISO code the related-party screens can compare.
 
 → [Full development history](docs/status.md)
 
