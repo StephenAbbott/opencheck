@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 454** — Companies House officers looked up by id now carry the nationalities filed on their appointments, and every Companies House person's nationality is resolved to an ISO code the related-party screens can compare.
+**Latest: Phase 455** — Every country-name helper now shares one resolver, so "Russia", "Turkey" and other names pycountry no longer knows get their ISO code and reach the FATF, EU high-risk, non-EU and tax-list checks.
 
 → [Full development history](docs/status.md)
 
