@@ -12,11 +12,12 @@ and a residential street is not ours to publish even where one is filed).
 Registers file the country as free text. Companies House's
 ``country_of_residence`` is typed by the filer: "England", "Uk", "U.K.",
 "Untied Kingdom", "Gb-Eng", "Hong Kong Sar", "Channel Islands", "New York".
-:func:`resolve_country` reads it in a fixed order and never guesses:
+:func:`resolve_country` reads it with :func:`countries.country_code` — the
+one resolver every country helper shares, in a fixed order and never guessing:
 
 1. a table of spellings registers use that pycountry does not resolve
-   (:data:`ALIASES`) — UK nations, abbreviations, old or common names, and
-   misspellings measured in OpenCheck's Companies House cache;
+   (:data:`countries.ALIASES`) — UK nations, abbreviations, old or common
+   names, and misspellings measured in OpenCheck's Companies House cache;
 2. an ISO 3166-2 subdivision code ("GB-ENG") → its country;
 3. pycountry: alpha-2, alpha-3, then a name / official name / common name.
 
@@ -43,100 +44,26 @@ from typing import Any
 import pycountry
 
 from .annotations import commenting, pointer, transformation
+from .countries import ALIASES, UNRESOLVABLE_EXAMPLES, country_code
 
-#: Normalised spelling (lower case, dots removed, whitespace collapsed) →
-#: ISO 3166-1 alpha-2. Only whole strings; never a substring match.
-#: Measured on 3 Nov 2026 against 5,500 ``country_of_residence`` values in
-#: OpenCheck's local Companies House cache, where every entry below that is
-#: not a UK nation appeared at least once.
-ALIASES: dict[str, str] = {
-    # The UK and its nations, and how filers spell them.
-    "uk": "GB",
-    "united kingdom": "GB",
-    "untied kingdom": "GB",
-    "great britain": "GB",
-    "britain": "GB",
-    "england": "GB",
-    "scotland": "GB",
-    "wales": "GB",
-    "northern ireland": "GB",
-    "england and wales": "GB",
-    "england & wales": "GB",
-    # The United States.
-    "usa": "US",
-    "us": "US",
-    "united states america": "US",
-    "united states of america": "US",
-    # Names pycountry no longer resolves, or never did.
-    "russia": "RU",
-    "turkey": "TR",
-    "south korea": "KR",
-    "north korea": "KP",
-    "hong kong sar": "HK",
-    "macau": "MO",
-    "macao": "MO",
-    "macau sar": "MO",
-    "republic of ireland": "IE",
-    "eire": "IE",
-    "holland": "NL",
-    "the netherlands": "NL",
-    "phillipines": "PH",
-    "ivory coast": "CI",
-    "cape verde": "CV",
-    "swaziland": "SZ",
-    "burma": "MM",
-    "brunei": "BN",
-    "palestine": "PS",
-    "vatican": "VA",
-    "vatican city": "VA",
-    "uae": "AE",
-    "bvi": "VG",
-    "british virgin islands": "VG",
-    "czech republic": "CZ",
-    "the bahamas": "BS",
-    "the gambia": "GM",
-}
-
-#: Strings that name a place but not one ISO 3166-1 country. Listed so a test
-#: can pin that they stay unresolved; resolution would refuse them anyway.
-UNRESOLVABLE_EXAMPLES: tuple[str, ...] = (
-    "Channel Islands",
-    "Korea",
-    "Kosovo",
-    "New York",
-)
-
-_SUBDIVISION = re.compile(r"^[a-z]{2}-[a-z0-9]{1,3}$")
-
-
-def _key(text: str) -> str:
-    return re.sub(r"\s+", " ", text.replace(".", "").strip()).lower()
-
+__all__ = [
+    "ALIASES",
+    "UNRESOLVABLE_EXAMPLES",
+    "residence_address",
+    "residence_note",
+    "resolve_country",
+]
 
 def resolve_country(text: str | None) -> dict[str, str] | None:
     """The BODS country object for a free-text country, or ``None`` for an
-    empty value. An unresolvable string is ``{"name": <as filed>}``."""
+    empty value. An unresolvable string is ``{"name": <as filed>}``. The code
+    is :func:`countries.country_code`'s — the one reading every country helper
+    shares."""
     filed = re.sub(r"\s+", " ", str(text or "")).strip()
     if not filed:
         return None
-    key = _key(filed)
-    code = ALIASES.get(key)
-    if code is None and _SUBDIVISION.match(key):
-        sub = pycountry.subdivisions.get(code=key.upper())
-        if sub is not None:
-            code = sub.country_code
-    country = None
-    if code:
-        country = pycountry.countries.get(alpha_2=code)
-    elif len(key) == 2 and key.isalpha():
-        country = pycountry.countries.get(alpha_2=key.upper())
-    elif len(key) == 3 and key.isalpha():
-        country = pycountry.countries.get(alpha_3=key.upper())
-    if country is None and not code and len(key) > 3:
-        try:
-            country = pycountry.countries.lookup(filed)
-        except LookupError:
-            country = None
+    code = country_code(filed)
+    country = pycountry.countries.get(alpha_2=code) if code else None
     if country is None:
         return {"name": filed}
     # pycountry's common name where it has one ("Iran", "Taiwan", "Bolivia")

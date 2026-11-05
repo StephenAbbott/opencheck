@@ -48,6 +48,7 @@ from .annotations import (
     transformation,
 )
 from . import lifecycle as _lifecycle
+from .countries import country_code
 from .psc_natures import describe_nature
 
 # ----------------------------------------------------------------------
@@ -355,87 +356,28 @@ def _country_obj(code: str) -> dict[str, str] | None:
     """Return a BODS-compliant country object ``{"name": ..., "code": ...}`` or
     ``None`` if *code* is empty.
 
-    Accepts ISO 3166-1 alpha-2 codes, alpha-3 codes, or full country names in
-    any language supported by pycountry.  Falls back gracefully: if pycountry
-    can't resolve the string we still emit an object with the raw value so
-    nothing is silently lost.
+    Accepts ISO 3166-1 alpha-2 or alpha-3 codes, ISO 3166-2 subdivision codes
+    or free-text country names. The code is :func:`countries.country_code`'s —
+    the one resolver ``_country_code`` and ``residence.resolve_country`` share,
+    so the helpers cannot disagree (the country-lookup ticket: "Russia" had no
+    code here and "Turkey" had none in ``_country_code``). The name is
+    pycountry's ISO name.
+
+    An unknown value keeps the name and OMITS the code: BODS Country requires
+    ``name`` and only SHOULD carry a two-letter ISO code, and a raw string as
+    ``code`` breaks the length-2 constraint and the risk engine's ISO-keyed
+    lists. Name-only is conformant and loses nothing.
     """
     if not code:
         return None
     stripped = code.strip()
-    upper = stripped.upper()
-    # Direct alpha-2 lookup.
-    c = pycountry.countries.get(alpha_2=upper)
-    if c:
-        return {"name": c.name, "code": c.alpha_2}
-    # Try alpha-3 (some sources emit 3-letter codes).
-    c = pycountry.countries.get(alpha_3=upper)
-    if c:
-        return {"name": c.name, "code": c.alpha_2}
-    # Try pycountry name/common-name lookup (handles many language variants).
-    try:
-        c = pycountry.countries.lookup(stripped)
-        return {"name": c.name, "code": c.alpha_2}
-    except LookupError:
-        pass
-    # Overrides for native-language names pycountry can't resolve.
-    # Includes UK sub-regions (England, Scotland, Wales, Northern Ireland) which
-    # are ISO 3166-2 subdivisions, not ISO 3166-1 countries, so they must map to
-    # "GB".  Mainly needed for Companies House addresses and other UK sources.
-    # Also covers Bolagsverket (Swedish API) and other European sources.
-    _NATIVE_NAMES: dict[str, str] = {
-        # UK sub-regions + English variants pycountry no longer resolves
-        "England": "GB",
-        "ENGLAND": "GB",
-        "Scotland": "GB",
-        "SCOTLAND": "GB",
-        "Wales": "GB",
-        "WALES": "GB",
-        "Northern Ireland": "GB",
-        "NORTHERN IRELAND": "GB",
-        "Great Britain": "GB",
-        "GREAT BRITAIN": "GB",
-        "United Kingdom": "GB",
-        "UNITED KINGDOM": "GB",
-        # pycountry renamed Turkey -> Türkiye, so the English name no longer resolves
-        "Turkey": "TR",
-        "TURKEY": "TR",
-        # Bolagsverket / other Scandinavian sources
-        "Sverige": "SE",
-        "SVERIGE": "SE",
-        "Norge": "NO",
-        "NORGE": "NO",
-        "Danmark": "DK",
-        "DANMARK": "DK",
-        "Finland": "FI",
-        "FINLAND": "FI",
-        "Suomi": "FI",
-        "SUOMI": "FI",
-        "Deutschland": "DE",
-        "DEUTSCHLAND": "DE",
-        "Frankreich": "FR",
-        "Österreich": "AT",
-        "Schweiz": "CH",
-        "SCHWEIZ": "CH",
-        "Pays-Bas": "NL",
-        "España": "ES",
-        "ESPAÑA": "ES",
-        "Italia": "IT",
-        "ITALIA": "IT",
-        "Polska": "PL",
-        "POLSKA": "PL",
-    }
-    alpha2 = _NATIVE_NAMES.get(stripped) or _NATIVE_NAMES.get(upper)
-    if alpha2:
-        c = pycountry.countries.get(alpha_2=alpha2)
-        if c:
-            return {"name": c.name, "code": c.alpha_2}
-    # Unknown value — preserve the name but OMIT the code. BODS Country requires
-    # `name` and only SHOULD carry a 2-letter ISO code; emitting the raw string as
-    # a `code` violates the maxLength:2 / minLength:2 constraint (e.g. real PSC
-    # addresses with country "Great Britain" or "Turkey" that pycountry can't
-    # resolve). Name-only is conformant and loses nothing.
-    return {"name": stripped}
+    if not stripped:
+        return None
+    alpha2 = country_code(stripped)
+    c = pycountry.countries.get(alpha_2=alpha2) if alpha2 else None
+    if c is None:
+        return {"name": stripped}
+    return {"name": c.name, "code": c.alpha_2}
 
 
 def _addr(type_: str, address: str, country_code: str = "") -> dict[str, Any]:
@@ -1037,51 +979,16 @@ _CH_UK_COUNTRY_STRINGS: frozenset[str] = frozenset({
 
 
 def _country_code(name: str | None) -> str:
-    """Resolve a free-text country name to an ISO 3166-1 alpha-2 code.
+    """Resolve a free-text country name or code to an ISO 3166-1 alpha-2 code,
+    or ``""`` when it names no single country.
 
-    Uses pycountry for the bulk of lookups (handles ~250 countries and
-    many common aliases such as "Cayman Islands", "British Virgin Islands",
-    "Isle of Man", etc.).  A small overrides dict handles names that
-    pycountry cannot resolve — primarily UK constituent nations and common
-    abbreviations that companies registries use but that aren't in ISO 3166-1.
+    A thin wrapper over :func:`countries.country_code`, the resolver
+    ``_country_obj`` and ``residence.resolve_country`` share. Two letters are
+    an ISO code or nothing (Phase 239: "UK" is read as GB by the alias table,
+    and any other non-ISO pair is ``""`` rather than reaching
+    ``jurisdiction.code``).
     """
-    if not name:
-        return ""
-    stripped = name.strip()
-    # Already a two-letter code — pass through normalised, if it is one.
-    # Phase 239: any two letters used to pass, so "UK" (not an ISO code; the
-    # UK's is GB) or a typo reached ``jurisdiction.code`` and the ISO-keyed
-    # risk lists silently skipped it.
-    if len(stripped) == 2 and stripped.isalpha():
-        upper = stripped.upper()
-        if upper == "UK":
-            return "GB"
-        return upper if pycountry.countries.get(alpha_2=upper) else ""
-    # Overrides for names pycountry can't look up.
-    _OVERRIDES: dict[str, str] = {
-        # UK constituent nations and common CH sub-jurisdiction strings.
-        "england": "GB",
-        "england and wales": "GB",
-        "england & wales": "GB",
-        "scotland": "GB",
-        "wales": "GB",
-        "northern ireland": "GB",
-        "great britain": "GB",
-        "united kingdom": "GB",
-        # Common abbreviations.
-        "bvi": "VG",
-        "british virgin islands": "VG",
-        "uae": "AE",
-        "usa": "US",
-        "us": "US",
-    }
-    override = _OVERRIDES.get(stripped.lower())
-    if override:
-        return override
-    try:
-        return pycountry.countries.lookup(stripped).alpha_2
-    except LookupError:
-        return ""
+    return country_code(name)
 
 
 # ----------------------------------------------------------------------
