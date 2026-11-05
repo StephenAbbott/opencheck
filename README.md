@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 452** — OpenCheck's per-jurisdiction notes were updated from the Beneficial ownership access status table for Austria, Poland and Bulgaria.
+**Latest: Phase 453** — The Estonian History tab now shows private limited companies' shareholder changes as ownership and moves board members named only because no beneficial owner was identified to the board stream.
 
 → [Full development history](docs/status.md)
 
