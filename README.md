@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 457** — The MCP server gained a pre-flight knowability tool that spends no lookup budget, and handshake instructions that name every tool, the order to call them in and how to read the answers.
+**Latest: Phase 458** — OpenSanctions, OpenAleph and EveryPolitician person statements now list a person's FollowTheMoney citizenship among their nationalities, saying which entries came from it.
 
 → [Full development history](docs/status.md)
 
