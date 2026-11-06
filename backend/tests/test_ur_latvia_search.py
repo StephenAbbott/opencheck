@@ -196,7 +196,7 @@ async def test_offline_without_a_cache_is_still_the_labelled_stub(adapter, monke
 # Cross-source ranking reads the register's bare name (6 Nov 2026 follow-up)
 # ---------------------------------------------------------------------------
 #
-# Production /search?q=Latvenergo on 6 Nov 2026 put AS "Latvenergo" ninth of
+# Production /search?q=Latvenergo on 6 Nov 2026 put AS "Latvenergo" tenth of
 # 33: its full name 'Akciju sabiedrība "Latvenergo"' was "same_name" while
 # four other sources' "Latvenergo" records were "exact". The hits below are
 # those records' names and order as served that day.
