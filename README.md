@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 461** — The main pages now describe OpenCheck the same way — who owns and controls a company, from open data — and the screening-incomplete bar sits at the foot of the verdict card instead of between the mode tabs and their panel.
+**Latest: Phase 462** — Latvian company-name searches query data.gov.lv's datastore again after the portal dropped its SQL action, and a failed search is reported instead of a placeholder.
 
 → [Full development history](docs/status.md)
 

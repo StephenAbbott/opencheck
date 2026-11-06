@@ -1,0 +1,382 @@
+{
+ "success": true,
+ "result": {
+  "records": [
+   {
+    "regcode": 40003326589,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Latvenergo telekomunikācijas\"",
+    "name_in_quotes": "Latvenergo telekomunikācijas",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1997-01-29T00:00:00",
+    "terminated": "2007-07-02T00:00:00",
+    "closed": "L",
+    "address": "Rīga, Ventspils iela 56/58"
+   },
+   {
+    "regcode": 40003172919,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Latvenergo projekts\"",
+    "name_in_quotes": "Latvenergo projekts",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1994-01-10T00:00:00",
+    "terminated": "2006-06-12T00:00:00",
+    "closed": "L",
+    "address": "Rīga, Pulkveža Brieža iela 12"
+   },
+   {
+    "regcode": 303310,
+    "name": "Valsts uzņēmuma \"LATVENERGO\" filiāle pansionāts \"LIESMA\"",
+    "name_in_quotes": "LIESMA",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-11-29T00:00:00",
+    "terminated": "1999-12-07T00:00:00",
+    "closed": "L",
+    "address": "Jūrmala, Dubultu prospekts 101"
+   },
+   {
+    "regcode": 303307,
+    "name": "Valsts akciju sabiedrības \"LATVENERGO\" filiāle \"ENERGOKONTROLE\"",
+    "name_in_quotes": "ENERGOKONTROLE",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-25T00:00:00",
+    "terminated": "1995-07-12T00:00:00",
+    "closed": "R",
+    "address": "Rīga, Pulkveža Brieža iela 12"
+   },
+   {
+    "regcode": 40003033003,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Augstsprieguma tīkls\"",
+    "name_in_quotes": "Augstsprieguma tīkls",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-23T00:00:00",
+    "terminated": "2006-01-04T00:00:00",
+    "closed": "L",
+    "address": "Rīga, Dārzciema iela 86"
+   },
+   {
+    "regcode": 40003258812,
+    "name": "Valsts akciju sabiedrības \"Latvenergo\" filiāle \"Serviss\"",
+    "name_in_quotes": "Serviss",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1995-07-06T00:00:00",
+    "terminated": "2005-04-01T00:00:00",
+    "closed": "L",
+    "address": "Rīga, Pulkveža Brieža iela 12"
+   },
+   {
+    "regcode": 40003033041,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Ziemeļaustrumu elektriskie tīkli\"",
+    "name_in_quotes": "Ziemeļaustrumu elektriskie tīkli",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-23T00:00:00",
+    "terminated": "2007-09-03T00:00:00",
+    "closed": "L",
+    "address": "Madonas rajons, Kalsnavas pagasts, \"Aiviekste\""
+   },
+   {
+    "regcode": 40003033018,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Rīgas elektrotīkls\"",
+    "name_in_quotes": "Rīgas elektrotīkls",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-24T00:00:00",
+    "terminated": "2007-09-03T00:00:00",
+    "closed": "L",
+    "address": "Rīga, Pērnavas iela 19"
+   },
+   {
+    "regcode": 40003033111,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Mācību un energopētniecības centrs\"",
+    "name_in_quotes": "Mācību un energopētniecības centrs",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-24T00:00:00",
+    "terminated": "2007-09-03T00:00:00",
+    "closed": "L",
+    "address": "Rīga, Pulkveža Brieža iela 12"
+   },
+   {
+    "regcode": 40003055123,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Liesma\"",
+    "name_in_quotes": "Liesma",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1992-02-03T00:00:00",
+    "terminated": "2005-09-01T00:00:00",
+    "closed": "L",
+    "address": "Jūrmala, Dubultu prospekts 101"
+   },
+   {
+    "regcode": 40003033022,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Centrālie elektriskie tīkli\"",
+    "name_in_quotes": "Centrālie elektriskie tīkli",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-23T00:00:00",
+    "terminated": "2007-09-03T00:00:00",
+    "closed": "L",
+    "address": "Rīgas rajons, Stopiņu pagasts, \"Līči\""
+   },
+   {
+    "regcode": 40003032972,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Rietumu elektriskie tīkli\"",
+    "name_in_quotes": "Rietumu elektriskie tīkli",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-24T00:00:00",
+    "terminated": "2007-09-10T00:00:00",
+    "closed": "L",
+    "address": "Liepāja, Rīgas iela 56"
+   },
+   {
+    "regcode": 40003032987,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Austrumu elektriskie tīkli\"",
+    "name_in_quotes": "Austrumu elektriskie tīkli",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-24T00:00:00",
+    "terminated": "2007-09-03T00:00:00",
+    "closed": "L",
+    "address": "Daugavpils, Klusā iela 2"
+   },
+   {
+    "regcode": 40003033056,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Dienvidu elektriskie tīkli\"",
+    "name_in_quotes": "Dienvidu elektriskie tīkli",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-23T00:00:00",
+    "terminated": "2007-09-03T00:00:00",
+    "closed": "L",
+    "address": "Jelgava, Elektrības iela 10"
+   },
+   {
+    "regcode": 40008262566,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" arodorganizācija \"Centrs\"",
+    "name_in_quotes": "",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2017-03-17T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Rīga, Pulkveža Brieža iela 12"
+   },
+   {
+    "regcode": 40008262496,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" arodorganizācija \"Termoelektrocentrāles\"",
+    "name_in_quotes": "",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2017-03-17T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Salaspils nov., Salaspils pag., Acone, Granīta iela 31"
+   },
+   {
+    "regcode": 90000417264,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" Ziemeļaustrumu reģiona arodorganizācija",
+    "name_in_quotes": "\"Latvenergo\" Ziemeļaustrumu reģiona arodorganizācija",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2016-12-19T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Madonas nov., Kalsnavas pag., Aiviekste, \"Aiviekste 22\""
+   },
+   {
+    "regcode": 40008263881,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" Pierīgas reģiona arodorganizācija",
+    "name_in_quotes": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" Pierīgas reģiona arodorganizācija",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2017-04-25T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Ropažu nov., Stopiņu pag., Līči, Rīgas iela 14"
+   },
+   {
+    "regcode": 90000442806,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" arodorganizācija \"Kaskāde\"",
+    "name_in_quotes": "\"Latvenergo\" arodorganizācija \"Kaskāde\"",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2016-08-17T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Aizkraukles nov., Aizkraukle, Enerģētiķu iela 2"
+   },
+   {
+    "regcode": 40003531327,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Daugavas hidroelektrostacijas\"",
+    "name_in_quotes": "Daugavas hidroelektrostacijas",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "2001-02-12T00:00:00",
+    "terminated": "2006-10-02T00:00:00",
+    "closed": "L",
+    "address": "Aizkraukle, Tilta iela 1"
+   },
+   {
+    "regcode": 40008264317,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" Rīgas reģiona arodorganizācija",
+    "name_in_quotes": "",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2017-05-11T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Rīga, Šmerļa iela 1"
+   },
+   {
+    "regcode": 40003033037,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Ziemeļu elektriskie tīkli\"",
+    "name_in_quotes": "Ziemeļu elektriskie tīkli",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-25T00:00:00",
+    "terminated": "2007-09-03T00:00:00",
+    "closed": "L",
+    "address": "Valmiera, Raiņa iela 14"
+   },
+   {
+    "regcode": 90000372585,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" Austrumu reģiona arodorganizācija",
+    "name_in_quotes": "\"Latvenergo\" Austrumu reģiona arodorganizācija",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2016-08-17T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Daugavpils, Klusā iela 2"
+   },
+   {
+    "regcode": 40003033094,
+    "name": "Valsts akciju sabiedrības \"LATVENERGO\" filiāle \"RĪGAS HES\"",
+    "name_in_quotes": "RĪGAS HES",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-11-29T00:00:00",
+    "terminated": "2005-03-03T00:00:00",
+    "closed": "L",
+    "address": "Rīgas rajons, Salaspils"
+   },
+   {
+    "regcode": 40003032968,
+    "name": "Valsts akciju sabiedrības \"LATVENERGO\" filiāle \"RĪGAS TEC-2\"",
+    "name_in_quotes": "RĪGAS TEC-2",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-25T00:00:00",
+    "terminated": "2001-02-09T00:00:00",
+    "closed": "L",
+    "address": "Rīgas rajons, Salaspils lauku teritorija, Acone"
+   },
+   {
+    "regcode": 40003032991,
+    "name": "Valsts akciju sabiedrības \"Latvenergo\" filiāle \"Daugavas HES kaskāde\"",
+    "name_in_quotes": "Daugavas HES kaskāde",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-23T00:00:00",
+    "terminated": "2001-02-09T00:00:00",
+    "closed": "L",
+    "address": "Aizkraukle, Tilta iela 1"
+   },
+   {
+    "regcode": 40003032953,
+    "name": "Valsts akciju sabiedrības \"LATVENERGO\" filiāle \"RĪGAS TEC-1\"",
+    "name_in_quotes": "RĪGAS TEC-1",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-23T00:00:00",
+    "terminated": "2001-02-09T00:00:00",
+    "closed": "L",
+    "address": "Rīga, Viskaļu iela 16"
+   },
+   {
+    "regcode": 40003032949,
+    "name": "Akciju sabiedrība \"Latvenergo\"",
+    "name_in_quotes": "Latvenergo",
+    "type": "AS",
+    "type_text": "Akciju sabiedrība",
+    "registered": "1991-10-08T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Rīga, Pulkveža Brieža iela 12"
+   },
+   {
+    "regcode": 90001878664,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" Dienvidu reģiona arodorganizācija",
+    "name_in_quotes": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" Dienvidu reģiona arodorganizācija",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2016-06-13T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Jelgava, Elektrības iela 10"
+   },
+   {
+    "regcode": 40008262551,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" Ziemeļu reģiona arodorganizācija",
+    "name_in_quotes": "",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2017-03-17T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Valmieras nov., Valmiera, Raiņa iela 12B"
+   },
+   {
+    "regcode": 90000444031,
+    "name": "Latvijas arodbiedrības \"Enerģija\" arodbiedrības patstāvīgā vienība \"Latvenergo\" Rietumu reģiona arodorganizācija",
+    "name_in_quotes": "\"Latvenergo\" Rietumu reģiona arodorganizācija",
+    "type": "ARV",
+    "type_text": "Arodbiedrības patstāvīgā vienība",
+    "registered": "2016-08-17T00:00:00",
+    "terminated": null,
+    "closed": " ",
+    "address": "Liepāja, Cukura iela 7"
+   },
+   {
+    "regcode": 303306,
+    "name": "Valsts akciju sabiedrības \"Latvenergo\" filiāle \"TERMOFIKĀCIJAS PĀRVALDE\"",
+    "name_in_quotes": "TERMOFIKĀCIJAS PĀRVALDE",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-23T00:00:00",
+    "terminated": "1997-12-15T00:00:00",
+    "closed": "L",
+    "address": "Rīga, Cēsu iela 3"
+   },
+   {
+    "regcode": 40003531295,
+    "name": "Akciju sabiedrības \"Latvenergo\" filiāle \"Rīgas termoelektrostacijas\"",
+    "name_in_quotes": "Rīgas termoelektrostacijas",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "2001-02-12T00:00:00",
+    "terminated": "2006-10-02T00:00:00",
+    "closed": "L",
+    "address": "Rīgas rajons, Salaspils novads, Acone"
+   },
+   {
+    "regcode": 303308,
+    "name": "Valsts uzņēmuma \"LATVENERGO\" filiāle \"ENERGOREMONTS\"",
+    "name_in_quotes": "ENERGOREMONTS",
+    "type": "FIL",
+    "type_text": "Filiāle",
+    "registered": "1991-10-24T00:00:00",
+    "terminated": "1994-06-27T00:00:00",
+    "closed": "L",
+    "address": "Rīga, Krustpils iela 15"
+   }
+  ],
+  "total": 34
+ }
+}

@@ -66,6 +66,7 @@ from urllib.parse import quote
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
+from ..search_rank import match_tier
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _log = logging.getLogger(__name__)
@@ -98,8 +99,28 @@ _CACHE_NS = "ur_latvia"
 # GLEIF Registration Authority code for Latvia's UR.
 LV_RA_CODE: str = "RA000423"
 
-# CKAN datastore_search_sql limit — keep generous for officers/members.
+# CKAN datastore_search page size — keep generous for officers/members.
 _PAGE = 100
+
+#: Name search (the ur_latvia name-search ticket, 5 Nov 2026). data.gov.lv
+#: dropped CKAN's ``datastore_search_sql`` action (HTTP 400 "Action name not
+#: known") by 3 Nov 2026, so the name search is ``datastore_search`` with a
+#: full-text ``q`` scoped to the ``name`` column. CKAN ranks a company's
+#: branches and trade-union locals above the company itself (34 rows match
+#: "Latvenergo"; AS "Latvenergo" is eighth), so a page of
+#: ``_SEARCH_FETCH`` rows is read and :func:`rank_records` keeps the best
+#: ``_SEARCH_LIMIT``.
+_SEARCH_FETCH = 100
+_SEARCH_LIMIT = 10
+_SEARCH_FIELDS = (
+    "regcode", "name", "name_in_quotes", "type", "type_text", "registered",
+    "terminated", "closed", "address",
+)
+_SEARCH_TIMEOUT_S = 20.0
+#: Register types that are part of another legal person — a branch, a
+#: foreign company's branch or representative, a union's local unit —
+#: listed after the legal persons at the same match tier.
+_DEPENDENT_TYPES = frozenset({"FIL", "AKF", "PAR", "ASF", "ARV"})
 
 # Latvian entity-type codes → English labels.
 _ENTITY_TYPES: dict[str, str] = {
@@ -168,6 +189,85 @@ def _slug(text: str) -> str:
     return hashlib.sha256(text.lower().strip().encode()).hexdigest()[:16]
 
 
+class UrLatviaSearchError(RuntimeError):
+    """The register's name search did not answer.
+
+    Raised rather than returning the stub, so ``/search`` records the source
+    in ``errors`` ("did not answer") instead of reading as no match. The
+    message never carries the request URL or the response body.
+    """
+
+
+def search_url(query: str) -> str:
+    """The ``datastore_search`` request for a name search — pinned by tests,
+    because the previous shape asked for an action the portal stopped
+    serving and its test mocked that action."""
+    q = json.dumps({"name": query}, ensure_ascii=False)
+    return (
+        f"{_CKAN_BASE}/datastore_search"
+        f"?resource_id={_RES_BUSINESS}"
+        f"&q={quote(q)}"
+        f"&fields={','.join(_SEARCH_FIELDS)}"
+        f"&limit={_SEARCH_FETCH}"
+    )
+
+
+def parse_search_response(resp: Any) -> list[dict[str, Any]]:
+    """The records of a ``datastore_search`` answer, or
+    :class:`UrLatviaSearchError` for anything that is not a successful CKAN
+    answer — an HTTP error, a non-JSON body, ``success: false``."""
+    if not resp.is_success:
+        raise UrLatviaSearchError(
+            f"data.gov.lv name search answered HTTP {resp.status_code}"
+        )
+    try:
+        data = resp.json()
+    except ValueError as exc:
+        raise UrLatviaSearchError(
+            "data.gov.lv name search answered with a body that is not JSON"
+        ) from exc
+    if not isinstance(data, dict) or not data.get("success"):
+        raise UrLatviaSearchError("data.gov.lv name search answered success: false")
+    records = (data.get("result") or {}).get("records")
+    if not isinstance(records, list):
+        raise UrLatviaSearchError("data.gov.lv name search answered without records")
+    return records
+
+
+def _is_closed(rec: dict[str, Any]) -> bool:
+    return bool(rec.get("terminated") or str(rec.get("closed") or "").strip())
+
+
+def _record_tier(query: str, rec: dict[str, Any]) -> int:
+    """The better ``search_rank.match_tier`` of the full name and the
+    register's ``name_in_quotes`` — the name without its legal form.
+    ``names`` knows no Latvian legal form, so 'Akciju sabiedrība
+    "Latvenergo"' alone ties with every branch on the query "Latvenergo"."""
+    tiers = [match_tier(query, str(rec.get("name") or ""))]
+    bare = str(rec.get("name_in_quotes") or "").strip().strip('",').strip()
+    if bare:
+        tiers.append(match_tier(query, bare))
+    return min(tiers)
+
+
+def rank_records(query: str, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Best ``_SEARCH_LIMIT`` records: the cross-source match tier first
+    (``search_rank.match_tier`` — the one ``/search`` orders by — on the name
+    or its bare form), then live before closed, then a legal person before
+    its branch or local unit, then CKAN's own order."""
+    def key(item: tuple[int, dict[str, Any]]) -> tuple[int, int, int, int]:
+        position, rec = item
+        return (
+            _record_tier(query, rec),
+            1 if _is_closed(rec) else 0,
+            1 if str(rec.get("type") or "").strip() in _DEPENDENT_TYPES else 0,
+            position,
+        )
+
+    ranked = sorted(enumerate(records), key=key)
+    return [rec for _, rec in ranked[:_SEARCH_LIMIT]]
+
+
 def _entity_url(regcode: str) -> str:
     return f"https://www.latvija.lv/lv/bizness/uznemumu-registrs/{regcode}"
 
@@ -217,14 +317,17 @@ class UrLatviaAdapter(SourceAdapter):
         )
 
     # ------------------------------------------------------------------
-    # Search — SQL ILIKE on the business register name column
+    # Search — full text on the business register's name column
     # ------------------------------------------------------------------
 
     async def search(self, query: str, kind: SearchKind) -> list[SourceHit]:
         if kind != SearchKind.ENTITY:
             return []
+        query = " ".join(query.split())
+        if not query:
+            return []
 
-        cache_key = f"{_CACHE_NS}/search/{_slug(query)}"
+        cache_key = f"{_CACHE_NS}/search-v2/{_slug(query)}"
         if not self.info.live_available and not self._cache.has(cache_key):
             return self._stub_search(query)
 
@@ -232,28 +335,14 @@ class UrLatviaAdapter(SourceAdapter):
         if cached is not None:
             records = cached[0]
         else:
-            # Use SQL ILIKE for reliable Latvian-text matching.
-            safe_q = query.replace("'", "''")
-            sql = (
-                f"SELECT regcode, name, type, type_text, registered, terminated, closed, address "
-                f"FROM \"{_RES_BUSINESS}\" "
-                f"WHERE name ILIKE '%{safe_q}%' "
-                f"LIMIT 10"
-            )
-            url = f"{_CKAN_BASE}/datastore_search_sql?sql={quote(sql)}"
             async with build_client() as client:
-                resp = await client.get(url)
-            if not resp.is_success:
-                _log.warning("UR Latvia search failed: %s", resp.status_code)
-                return self._stub_search(query)
-            data = resp.json()
-            if not data.get("success"):
-                _log.warning("UR Latvia search CKAN error: %s", data.get("error"))
-                return self._stub_search(query)
-            records = data.get("result", {}).get("records", [])
+                resp = await client.get(
+                    search_url(query), timeout=_SEARCH_TIMEOUT_S
+                )
+            records = parse_search_response(resp)
             self._cache.put(cache_key, records)
 
-        return [self._entity_hit(rec) for rec in records]
+        return [self._entity_hit(rec) for rec in rank_records(query, records)]
 
     # ------------------------------------------------------------------
     # Fetch — join all five datasets for a given regcode
