@@ -216,6 +216,39 @@ def former_names_of_hit(hit: Any) -> list[str]:
     return unique
 
 
+#: Registers that publish the company's name without its legal form beside
+#: the full name, keyed by source id → the hit's ``raw`` field holding it.
+#: ``names`` strips the legal forms ``rigour`` knows; Latvian forms written
+#: out in full ("Akciju sabiedrība", "Sabiedrība ar ierobežotu atbildību")
+#: are not among them, so 'Akciju sabiedrība "Latvenergo"' ranked a tier
+#: below every other source's "Latvenergo" until the register's own bare
+#: name was read (the ur_latvia name-ranking follow-up, 6 Nov 2026).
+BARE_NAME_FIELDS: dict[str, str] = {"ur_latvia": "name_in_quotes"}
+
+
+def clean_bare_name(value: Any) -> str:
+    """A register's bare-name field, tidied: UR writes a few with the
+    quotes and trailing comma of the full name still on
+    ('"Air Baltic Training",')."""
+    return " ".join(str(value or "").split()).strip().strip('",').strip()
+
+
+def bare_names_of_hit(hit: Any) -> list[str]:
+    """The name without its legal form, as the hit's own register publishes
+    it (:data:`BARE_NAME_FIELDS`) — ``[]`` for any other source, a blank
+    field, or one equal to the full name. It is the *current* name, so a
+    match on it is never reported as a former name."""
+    key = BARE_NAME_FIELDS.get(getattr(hit, "source_id", ""))
+    raw = getattr(hit, "raw", None)
+    if not key or not isinstance(raw, dict):
+        return []
+    bare = clean_bare_name(raw.get(key))
+    full = {names.display_name_key(hit.name), names.display_name_key(clean_bare_name(hit.name))}
+    if not bare or names.display_name_key(bare) in full:
+        return []
+    return [bare]
+
+
 def best_match(query: str, hit: Any, *, person: bool = False) -> tuple[int, str | None]:
     """The best tier across the hit's name and its former names (Phase 309),
     with the former name that won — ``None`` when the current name matched
@@ -225,6 +258,8 @@ def best_match(query: str, hit: Any, *, person: bool = False) -> tuple[int, str 
     tier = match_tier(query, hit.name, person=person)
     matched: str | None = None
     if not person:
+        for bare in bare_names_of_hit(hit):
+            tier = min(tier, match_tier(query, bare, person=False))
         for former in former_names_of_hit(hit):
             candidate = match_tier(query, former, person=False)
             if candidate < tier:
@@ -234,13 +269,19 @@ def best_match(query: str, hit: Any, *, person: bool = False) -> tuple[int, str 
 
 def rank_key(query: str, hit: Any, position: int, *, person: bool = False) -> RankKey:
     tier, matched = best_match(query, hit, person=person)
-    compared = matched or hit.name
+    if matched:
+        similarity = names.name_similarity(query, matched)
+    else:
+        similarity = max(
+            names.name_similarity(query, n)
+            for n in [hit.name, *([] if person else bare_names_of_hit(hit))]
+        )
     return RankKey(
         stub=1 if getattr(hit, "is_stub", False) else 0,
         tier=tier,
         status=status_rank(hit.summary),
         no_lei=0 if _has_lei(hit) else 1,
-        neg_similarity=-round(names.name_similarity(query, compared), 4),
+        neg_similarity=-round(similarity, 4),
         position=position,
     )
 

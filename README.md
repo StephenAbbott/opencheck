@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 463** — Added opencheck-due-diligence, an agent skill that teaches Claude to call the OpenCheck MCP server cheaply and read its answers honestly, with evals and a benchmark.
+**Latest: Phase 464** — Search ranks a Latvian Register of Enterprises result on the register's own name without the legal form, so AS "Latvenergo" is an exact match for "Latvenergo".
 
 → [Full development history](docs/status.md)
 
