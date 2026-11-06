@@ -66,7 +66,7 @@ from urllib.parse import quote
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
-from ..search_rank import match_tier
+from ..search_rank import clean_bare_name, match_tier
 from .base import LookupDeriver, SearchKind, SourceAdapter, SourceHit, SourceInfo
 
 _log = logging.getLogger(__name__)
@@ -244,7 +244,7 @@ def _record_tier(query: str, rec: dict[str, Any]) -> int:
     ``names`` knows no Latvian legal form, so 'Akciju sabiedrība
     "Latvenergo"' alone ties with every branch on the query "Latvenergo"."""
     tiers = [match_tier(query, str(rec.get("name") or ""))]
-    bare = str(rec.get("name_in_quotes") or "").strip().strip('",').strip()
+    bare = clean_bare_name(rec.get("name_in_quotes"))
     if bare:
         tiers.append(match_tier(query, bare))
     return min(tiers)

@@ -16,16 +16,19 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
 
 from opencheck.cache import Cache
+from opencheck import search_rank
 from opencheck.config import get_settings
+from opencheck.mcp import shaping
 from opencheck.routers import search as search_router
 from opencheck.sources import ur_latvia as lv
-from opencheck.sources.base import SearchKind
+from opencheck.sources.base import SearchKind, SourceHit
 
 FIXTURE = Path(__file__).parent / "fixtures" / "ur_latvia" / "search_latvenergo.json"
 LATVENERGO = "40003032949"
@@ -187,3 +190,79 @@ async def test_offline_without_a_cache_is_still_the_labelled_stub(adapter, monke
     finally:
         get_settings.cache_clear()
     assert hit.is_stub
+
+
+# ---------------------------------------------------------------------------
+# Cross-source ranking reads the register's bare name (6 Nov 2026 follow-up)
+# ---------------------------------------------------------------------------
+#
+# Production /search?q=Latvenergo on 6 Nov 2026 put AS "Latvenergo" tenth of
+# 33: its full name 'Akciju sabiedrība "Latvenergo"' was "same_name" while
+# four other sources' "Latvenergo" records were "exact". The hits below are
+# those records' names and order as served that day.
+
+
+def _hit(source_id: str, hit_id: str, name: str, raw: dict | None = None, **kw) -> SourceHit:
+    return SourceHit(
+        source_id=source_id, hit_id=hit_id, kind=SearchKind.ENTITY, name=name,
+        summary=kw.pop("summary", ""), raw=raw or {}, is_stub=False, **kw,
+    )
+
+
+def _latvenergo_hits() -> list[SourceHit]:
+    [rec] = [r for r in _answer()["result"]["records"] if str(r["regcode"]) == LATVENERGO]
+    return [
+        _hit("opensanctions", "gem-own-e100000", "Latvenergo"),
+        _hit("openaleph", "oa-1", "Latvenergo"),
+        _hit("wikidata", "Q3736450", "Latvenergo"),
+        _hit("openaleph", "oa-2", "AS “Latvenergo”"),
+        _hit("climatetrace", "E100000001565", "Latvenergo AS"),
+        _hit("gleif", "213800DJRB539Q1EMW75", 'Akciju sabiedrība "Latvenergo"'),
+        _hit("ur_latvia", LATVENERGO, rec["name"], raw=rec,
+             summary=f"LV {LATVENERGO} · active · Akciju sabiedrība (Joint-stock company)"),
+    ]
+
+
+def test_the_register_hit_matches_exactly_on_its_bare_name():
+    reg = _latvenergo_hits()[-1]
+    assert search_rank.bare_names_of_hit(reg) == ["Latvenergo"]
+    tier, matched_former = search_rank.best_match("Latvenergo", reg)
+    assert search_rank.MATCH_TIERS[tier] == "exact"
+    assert matched_former is None  # the current name, never a former one
+
+
+def test_the_register_hit_joins_the_exact_matches_in_search():
+    ranked = search_rank.rank_hits("Latvenergo", _latvenergo_hits())
+    position = [h.source_id for h in ranked].index("ur_latvia")
+    exact = [
+        h for h in ranked
+        if search_rank.MATCH_TIERS[search_rank.best_match("Latvenergo", h)[0]] == "exact"
+    ]
+    assert ranked[position] in exact
+    assert position < [h.source_id for h in ranked].index("climatetrace")
+
+
+def test_the_mcp_candidate_says_exact_and_names_no_former_name():
+    payload = SimpleNamespace(query="Latvenergo", kind=SearchKind.ENTITY, hits=_latvenergo_hits(), filters=None)
+    [cand] = [c for c in shaping.shape_search(payload)["candidates"] if c["source"] == "ur_latvia"]
+    assert cand["match"] == "exact"
+    assert "matched_former_name" not in cand
+    assert cand["name"] == 'Akciju sabiedrība "Latvenergo"'
+
+
+@pytest.mark.parametrize(
+    "source_id,raw",
+    [
+        ("gleif", {"name_in_quotes": "Latvenergo"}),   # another source's field is not read
+        ("ur_latvia", {"name_in_quotes": "   "}),
+        ("ur_latvia", {}),
+        ("ur_latvia", {"name_in_quotes": 'Akciju sabiedrība "Latvenergo"'}),  # same as the name
+    ],
+)
+def test_no_bare_name_unless_the_register_publishes_a_different_one(source_id, raw):
+    hit = _hit(source_id, "x", 'Akciju sabiedrība "Latvenergo"', raw=raw)
+    assert search_rank.bare_names_of_hit(hit) == []
+
+
+def test_the_bare_name_is_tidied_of_the_full_names_punctuation():
+    assert search_rank.clean_bare_name(' "Air Baltic Training", ') == "Air Baltic Training"
