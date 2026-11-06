@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 462** — Latvian company-name searches query data.gov.lv's datastore again after the portal dropped its SQL action, and a failed search is reported instead of a placeholder.
+**Latest: Phase 463** — Added opencheck-due-diligence, an agent skill that teaches Claude to call the OpenCheck MCP server cheaply and read its answers honestly, with evals and a benchmark.
 
 → [Full development history](docs/status.md)
 
