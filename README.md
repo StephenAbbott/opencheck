@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 464** — Search ranks a Latvian Register of Enterprises result on the register's own name without the legal form, so AS "Latvenergo" is an exact match for "Latvenergo".
+**Latest: Phase 465** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, moving Austria to legitimate-interest access from 5 Nov 2026 and recording the Greek bill that will open its register the same way.
 
 → [Full development history](docs/status.md)
 
