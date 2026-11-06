@@ -1,0 +1,48 @@
+{
+ "expectations": [
+  {
+   "text": "The answer recommends the published Azerbaijani Laundromat dataset release instead of 200 live lookups",
+   "passed": false,
+   "evidence": "Main deliverable is a live fetch loop over 200 LEIs (\"200 companies take about 40 minutes\"); release only mentioned as \"Use the bulk release for the full graph\" with a generic releases URL, no release named, and the script still targets all 200 live."
+  },
+  {
+   "text": "The answer mentions that the release includes a Neo4j bundle (or Neo4j CSV) that can be loaded directly",
+   "passed": false,
+   "evidence": "No mention of a Neo4j bundle/CSV in the release; it builds its own graph model via the neo4j driver."
+  },
+  {
+   "text": "The answer mentions the lookup budget / rate limit or the batch cap of 20",
+   "passed": true,
+   "evidence": "\"At ten fresh checks a minute, 200 companies take about 40 minutes\"; script has a Pacer and waits on 429/retry_after_s"
+  },
+  {
+   "text": "The answer mentions that the laundromat dataset is non-commercial / CC-BY-NC",
+   "passed": false,
+   "evidence": "CC-BY-NC is attributed to OpenSanctions/EveryPolitician data in the graph it builds from live lookups; never says the laundromat dataset/release is non-commercial."
+  },
+  {
+   "text": "The answer does not give an unpaced loop that calls opencheck_lookup 200 times as the main solution",
+   "passed": true,
+   "evidence": "Loop is paced: class Pacer (gap = 60/per_minute), pacer.wait() before each fresh call, sleeps on 429 and retry_after_s. Not unpaced."
+  }
+ ],
+ "summary": {
+  "passed": 2,
+  "failed": 3,
+  "total": 5,
+  "pass_rate": 0.4
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not give an unpaced loop that calls opencheck_lookup 200 times as the main solution",
+    "reason": "Only 'unpaced' is tested; a paced 200-lookup loop as the main deliverable passes even though it ignores the dataset guidance. Consider 'does not make a 200-call live loop the main solution'."
+   }
+  ],
+  "overall": "No fixture for this case; facts judged against the stated release contents, budget (10/min) and batch cap (20)."
+ },
+ "timing": {
+  "total_duration_seconds": 159.3
+ }
+}

@@ -1,0 +1,272 @@
+{
+ "tool": "opencheck_lookup",
+ "arguments": {
+  "lei": "54930007FGRO3F0RZ382"
+ },
+ "recorded_at": "2026-11-05T13:33:37Z",
+ "is_error": false,
+ "response": {
+  "lei": "54930007FGRO3F0RZ382",
+  "legal_name": "BENTCARD IMPORT LLP",
+  "jurisdiction": "AZ",
+  "summary": "BENTCARD IMPORT LLP (LEI 54930007FGRO3F0RZ382, AZ). LEI registration (GLEIF): Lapsed — renewal was due 5 Feb 2015 — the status of the LEI record, not of the company. Register status: GLEIF holds the entity status as ACTIVE, last declared to the LEI issuer before 5 Feb 2015; the LEI has not been renewed since, so no issuer has re-checked it. This is not a current register reading. Risk signals: OPAQUE_OWNERSHIP. 6 of 6 sources answered (1 with a record, 5 with no record); 5 BODS statements (2 ownership/control relationships). Licensing: Safe for commercial use (attribution may be required). What can be known (AZ): OpenCheck holds no register notes for Azerbaijan; an owner absent from this report says nothing about what Azerbaijan publishes.",
+  "verdict": "The records show ownership recorded in a form that obscures who benefits.",
+  "profile": {
+   "legal_form": {
+    "value": "LIMITED LIABILITY PARTNERSHIP",
+    "sources": [
+     "gleif"
+    ],
+    "independent_sources": 1,
+    "other_values": []
+   },
+   "register_status": {
+    "liveness": "declared",
+    "since": "2015-02-05",
+    "raw": "ACTIVE",
+    "source_id": "gleif",
+    "sources": [
+     "gleif"
+    ],
+    "independent_sources": 1,
+    "other_values": [],
+    "lei_registration_status": "LAPSED",
+    "sentence": "GLEIF holds the entity status as ACTIVE, last declared to the LEI issuer before 5 Feb 2015; the LEI has not been renewed since, so no issuer has re-checked it. This is not a current register reading."
+   },
+   "founding_date": null,
+   "registered_address": {
+    "value": "BAKIKHANOV ST.18, BAKU, AZ 1035, AZ",
+    "sources": [
+     "gleif"
+    ],
+    "independent_sources": 1,
+    "other_values": [],
+    "country": "AZ"
+   },
+   "jurisdiction": "AZ",
+   "lei_registration": {
+    "status": "LAPSED",
+    "label": "Lapsed",
+    "flag": true,
+    "since": "2015-02-05",
+    "next_renewal_date": "2015-02-05",
+    "last_update_date": "2023-07-31",
+    "initial_registration_date": "2014-02-07",
+    "managing_lou": "213800WAVVOPS85N2205",
+    "source_id": "gleif",
+    "sentence": "GLEIF records this LEI as lapsed: its renewal was due on 5 Feb 2015 and has not been made, so no issuer has re-checked its reference data since then. GLEIF last updated the record on 31 Jul 2023. This is the status of the LEI record, not of the company."
+   },
+   "lei_successor": null,
+   "former_names": [],
+   "name_changed_on": null,
+   "statement_ids": [
+    "opencheck-39bf065d56ad8b5aeaed6d1e"
+   ]
+  },
+  "lei_successor": null,
+  "knowability": {
+   "subject": {
+    "code": "AZ",
+    "name": "Azerbaijan",
+    "sentence": "OpenCheck holds no register notes for Azerbaijan; an owner absent from this report says nothing about what Azerbaijan publishes.",
+    "access": null,
+    "stated_absence": true,
+    "review_status": "absent",
+    "last_verified": null,
+    "opencheck_reads": []
+   },
+   "chain": [],
+   "as_of": "2026-11-05",
+   "hint": "Dated facts about each register — who may see beneficial owners there and what OpenCheck reads of it. Describes, never judges: an absent owner is read against these, and none of them is a risk signal."
+  },
+  "integrated_ownership": {
+   "method": "Integrated ownership",
+   "description": "How much of the company each party holds, directly and through the companies it holds: shares are multiplied along each path and added across paths, and a company's own shares are given back to its other holders. Each source is computed on its own; figures from two sources are listed side by side, never added. Shareholdings only — voting rights, roles and control are not shares. For a person it is arithmetic on what was filed, not a determination of beneficial ownership. Context, not a finding.",
+   "credit": "Method: integrated ownership as published by T-Rank (https://docs.trank.no/white_papers).",
+   "as_of": "2026-11-05",
+   "holders": [],
+   "holders_total": 0,
+   "hint": "Context, not a risk finding: no threshold is applied and none of these figures feeds the risk signals or the verdict. Each source is computed on its own; two figures for one party are two publishers' readings, never to be added."
+  },
+  "disclosure_status": {
+   "as_of": "2026-11-05",
+   "by_source": [
+    {
+     "source": "gleif",
+     "source_name": "GLEIF",
+     "values": [
+      "not_provided"
+     ],
+     "line": "Parent: Not provided — a parent exists but the relationship is non-public and is not disclosed",
+     "entries": [
+      {
+       "value": "not_provided",
+       "covers": "parent",
+       "details": [
+        "a parent exists but the relationship is non-public and is not disclosed"
+       ],
+       "reasons": [
+        "NON_PUBLIC"
+       ]
+      }
+     ]
+    },
+    {
+     "source": "climatetrace",
+     "source_name": "Global Energy Monitor / Climate TRACE",
+     "values": [
+      "no_record"
+     ],
+     "line": "No record of the company",
+     "entries": [
+      {
+       "value": "no_record",
+       "covers": null
+      }
+     ]
+    }
+   ],
+   "not_covered": [
+    "opensanctions",
+    "openaleph",
+    "wikirate",
+    "everypolitician"
+   ],
+   "hint": "What each source says about the company's owners, for what it covers (beneficial owners, shareholders or the consolidating parent). Absence from a source is not an exemption: none_filed means the record carries no owner and no reason. Describes only; no value here feeds the risk signals or the verdict."
+  },
+  "listing": {
+   "status": "not_listed",
+   "reason": null,
+   "line": null,
+   "exchange": null,
+   "exchange_country": null,
+   "mic": null,
+   "ticker": null,
+   "ric": null,
+   "security_name": null,
+   "url": null,
+   "url_kind": null,
+   "permid_url": "https://permid.org/1-5057521187",
+   "as_of": "2026-11-05",
+   "attribution": "LSEG PermID (CC-BY 4.0)",
+   "hint": "The primary listing according to PermID: one main quote. Other listings of the same company are not shown. A venue URL is a listing or search page, not a filings page."
+  },
+  "institutional_shareholders": null,
+  "identifiers": [
+   {
+    "scheme": "XI-LEI",
+    "schemeName": "Global Legal Entity Identifier Index",
+    "id": "54930007FGRO3F0RZ382"
+   },
+   {
+    "scheme": "S&P CIQ Company ID",
+    "schemeName": "S&P CIQ Company ID",
+    "id": "257080523"
+   }
+  ],
+  "derived_identifiers": {
+   "lei": "54930007FGRO3F0RZ382"
+  },
+  "risk_signals": [
+   {
+    "code": "OPAQUE_OWNERSHIP",
+    "confidence": "high",
+    "summary": "GLEIF records a reporting exception withholding a known parent: NON_PUBLIC for the direct parent (a parent exists but the relationship is non-public and is not disclosed); NON_PUBLIC for the ultimate parent (a parent exists but the relationship is non-public and is not disclosed). A consolidating parent exists but is deliberately not published — permitted under the LEI ROC policy, but a transparency gap worth reviewing.",
+    "kind": "risk",
+    "sources": [
+     "gleif"
+    ]
+   }
+  ],
+  "degraded_sources": [],
+  "sources": [
+   {
+    "id": "gleif",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "GLEIF",
+    "license": "CC0-1.0"
+   },
+   {
+    "id": "climatetrace",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "Global Energy Monitor / Climate TRACE",
+    "license": "CC-BY-4.0"
+   },
+   {
+    "id": "everypolitician",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "EveryPolitician",
+    "license": "CC-BY-NC-4.0"
+   },
+   {
+    "id": "openaleph",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "OpenAleph",
+    "license": "per-collection"
+   },
+   {
+    "id": "opensanctions",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "OpenSanctions",
+    "license": "CC-BY-NC-4.0"
+   },
+   {
+    "id": "wikirate",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "Wikirate",
+    "license": "CC-BY-4.0"
+   }
+  ],
+  "coverage": {
+   "applicable_ids": [
+    "gleif",
+    "opensanctions",
+    "openaleph",
+    "climatetrace",
+    "wikirate",
+    "everypolitician"
+   ],
+   "with_data_ids": [
+    "gleif"
+   ],
+   "no_record_ids": [
+    "opensanctions",
+    "openaleph",
+    "climatetrace",
+    "wikirate",
+    "everypolitician"
+   ],
+   "failed_ids": []
+  },
+  "counts": {
+   "bods_statements": 5,
+   "relationships": 2,
+   "sources_with_data": 1,
+   "sources_applicable": 6,
+   "sources_answered": 6,
+   "risk_signals": 1,
+   "context_signals": 0
+  },
+  "licensing": {
+   "commercial_use": "yes",
+   "attribution_required": false,
+   "share_alike": false,
+   "headline": "Safe for commercial use (attribution may be required).",
+   "warnings": []
+  },
+  "license_notices": [],
+  "hint": "risk_signals rows carry kind='risk' (a finding) or kind='context' (how the company is put together, not a finding against it) — never report a context row as a risk. Call opencheck_export_bods for the full machine-readable ownership graph."
+ }
+}

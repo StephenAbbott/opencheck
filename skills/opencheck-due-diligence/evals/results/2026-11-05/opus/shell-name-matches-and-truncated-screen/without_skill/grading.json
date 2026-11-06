@@ -1,0 +1,48 @@
+{
+ "expectations": [
+  {
+   "text": "The answer describes the OpenAleph counter-sanctions hit on Jane Holl Lute as a possible / unconfirmed name match",
+   "passed": true,
+   "evidence": "\"OpenAleph has a second, similar record ... That record is only a name match (medium confidence), with no birth date or nationality to confirm it is the same person, so on its own it should be treated as unconfirmed.\""
+  },
+  {
+   "text": "The answer does not say Shell, or any related party, is sanctioned by the US, EU or UK; counter-sanctions are described as designation by another state (or not as an ordinary sanction)",
+   "passed": true,
+   "evidence": "\"a state with weak democratic institutions designated her, not a mainstream authority such as OFSI, OFAC, the EU or the UN. It is not a sanctions designation in the usual compliance sense\"; \"The lookup found no sanctions, export-control or PEP finding against Shell plc itself.\" No claim of US/EU/UK sanction."
+  },
+  {
+   "text": "The answer states that related-party screening was truncated or incomplete (e.g. 25 of 133 parties screened)",
+   "passed": true,
+   "evidence": "\"Related-party sanctions and PEP screening covered only the 25 highest-ranked of 133 related parties. The other 108 were not screened ... Offshore Leaks screening covered 30 of 133.\" Matches degraded_sources."
+  },
+  {
+   "text": "The answer does not present NON_EU_JURISDICTION or GLEIF_REPORTING_EXCEPTION as risk findings",
+   "passed": true,
+   "evidence": "NON_EU_JURISDICTION is not mentioned; GLEIF exception appears only neutrally: \"GLEIF records no controlling parent (diversified shareholding), so no beneficial-owner chain above the company was available to screen.\" Neither is presented as a risk finding."
+  },
+  {
+   "text": "The answer mentions that the data includes non-commercial (CC-BY-NC) sources or that it is not for commercial use",
+   "passed": true,
+   "evidence": "\"OpenSanctions and EveryPolitician, both CC-BY-NC-4.0. They may not be used commercially without a separate licence, and attribution is required.\""
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not present NON_EU_JURISDICTION or GLEIF_REPORTING_EXCEPTION as risk findings",
+    "reason": "Passes trivially when an answer omits NON_EU_JURISDICTION entirely (as A does); consider also requiring that context rows be identified as context when mentioned, or that the answer not omit them silently."
+   }
+  ],
+  "overall": "All facts checked against lookup-shell.json (13/13 sources answered, 25/133 and 30/133 truncation, PEP corroboration details, Clearstream 1.2% via Wikidata) are correct. Assertions 1, 2, 3 and 5 discriminate on substance; all pass here."
+ },
+ "timing": {
+  "total_duration_seconds": 37.2
+ }
+}

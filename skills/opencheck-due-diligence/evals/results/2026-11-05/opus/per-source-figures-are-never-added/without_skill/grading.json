@@ -1,0 +1,47 @@
+{
+ "expectations": [
+  {
+   "text": "The answer gives the Norwegian state's stake as about 67%, not a sum such as 134% or 201%",
+   "passed": true,
+   "evidence": "\"the Norwegian state, with about 67%\" and \"The state's stake is 67%, not 201%.\""
+  },
+  {
+   "text": "The answer explains that the three bodies/figures are different sources' readings of the same state holding and should not be added",
+   "passed": true,
+   "evidence": "\"They are not three separate holders. They are one holding, the state's, which three sources record under three different names... OpenCheck works out each source's figure separately and never adds figures from different sources. Adding these three would count the same block of shares three times.\""
+  },
+  {
+   "text": "The answer does not list the Ministry of Energy of Norway as a current owner",
+   "passed": true,
+   "evidence": "\"Wikidata also lists the Ministry of Energy as a *former* holder with no figure (\\\"every path to the company has ended\\\").\" Not in owners table."
+  },
+  {
+   "text": "The answer notes that no beneficial owners are declared by a register, or that calculated figures are not a beneficial-ownership determination",
+   "passed": true,
+   "evidence": "\"No beneficial owners have been declared. The result has no declared beneficial owners from a register... They are context, not a finding that anyone is a beneficial owner.\""
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not list the Ministry of Energy of Norway as a current owner",
+    "reason": "Non-discriminating here: the fixture marks the Ministry of Energy 'formerly' under listed_without_a_figure, so any answer that just reads calculated_owners passes; both answers passed."
+   },
+   {
+    "assertion": "The answer notes that no beneficial owners are declared by a register, or that calculated figures are not a beneficial-ownership determination",
+    "reason": "Weakly discriminating: the fixture's own note and summary say '0 current declared beneficial owner(s)' and 'not a determination', so restating them passes easily."
+   }
+  ],
+  "overall": "All four assertions clearly met. Minor over-readings are not contradicted by the fixture, so none is listed as wrong: 'three independent sources' (the fixture doesn't say they are independent), 'The response reports no failed sources (no degraded_sources)' (the opencheck_owners fixture has no degraded_sources field at all, so this is inferred from its absence), and the ~33% free-float remark comes from outside knowledge."
+ },
+ "timing": {
+  "total_duration_seconds": 20.2
+ }
+}

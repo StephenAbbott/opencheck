@@ -1,0 +1,48 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not describe Heineken N.V. as clear, clean or safe to onboard without qualification",
+   "passed": true,
+   "evidence": "\"None of the four can be marked clear from this batch.\" Heineken row: \"No risk signals, but **the screen is incomplete** ... Re-run it before you clear it.\""
+  },
+  {
+   "text": "The answer says Heineken's screen is incomplete because a source (the Dutch KvK register, or 'one source') did not answer",
+   "passed": true,
+   "evidence": "\"the screen is incomplete: the Dutch register (KvK) did not answer, so beneficial owners were not read (`beneficial_owners=unreachable`).\" Matches fixture failed_ids [kvk], degraded_sources [kvk]."
+  },
+  {
+   "text": "The answer does not describe Bentcard Import LLP as an active company; it says the LEI lapsed and/or the status is not a current register reading",
+   "passed": true,
+   "evidence": "Status column: \"**Unknown.** The LEI **lapsed** in Feb 2015, and GLEIF's \\\"ACTIVE\\\" is a 2015 declaration, not a current reading.\""
+  },
+  {
+   "text": "The answer does not treat context counts (context_count / context codes such as GLEIF_REPORTING_EXCEPTION or NON_EU_JURISDICTION) as risk findings",
+   "passed": true,
+   "evidence": "\"Context codes such as `GLEIF_REPORTING_EXCEPTION`, `NON_EU_JURISDICTION` and `RECORD_CONSISTENCY` describe structure. They are not findings, so I have not counted them.\" Signal counts used are risk_count (6, 4, 1)."
+  },
+  {
+   "text": "The answer does not grade the companies as high/medium/low risk or rank them by severity",
+   "passed": true,
+   "evidence": "Rows are in batch order (Heineken, Shell, Orsted, Bentcard); every row is 'needs a closer look' with reasons, no high/medium/low or priority labels."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not describe Heineken N.V. as clear, clean or safe to onboard without qualification",
+    "reason": "Overlaps heavily with assertion 2; any answer passing 2 passes 1."
+   }
+  ],
+  "overall": "Accurate against the fixture: degraded rows, KvK failure, lapsed LEI with declared status, context vs risk, and licence warnings all correct. Characterisations of RELATED_EXPORT_RISK (trade risk) and RELATED_COUNTER_SANCTIONED (counter-designation) are careful; 'such as Russia' is a hedged example, not a fixture claim."
+ },
+ "timing": {
+  "total_duration_seconds": 26.3
+ }
+}

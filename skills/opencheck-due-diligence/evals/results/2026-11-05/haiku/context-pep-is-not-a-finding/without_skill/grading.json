@@ -1,0 +1,56 @@
+{
+ "expectations": [
+  {
+   "text": "The answer distinguishes PEP listings due solely to a role at Ørsted (context) from the risk-level PEP signals",
+   "passed": true,
+   "evidence": "Table splits 'Possible name match ... risk (name match only)' (Hersvik, King) from 'PEP only because of a role at Ørsted | 7 | context'; 'The 7 role-based PEPs are context.' Matches fixture: 7 RELATED_PEP_SUBJECT_ROLE kind=context, 2 RELATED_PEP kind=risk."
+  },
+  {
+   "text": "The answer reports Karl Johnny Hersvik and Julia Elizabeth King as possible name matches, not confirmed PEPs",
+   "passed": true,
+   "evidence": "'The 2 name matches are not identities. Hersvik and King share a name with a PEP record, but no birth date or nationality confirms the match... not as confirmed PEPs.'"
+  },
+  {
+   "text": "The answer does not state a single unqualified total (such as 'nine PEPs')",
+   "passed": false,
+   "evidence": "Leads with the bolded headline '**Answer: 9 people connected to Ørsted A/S are flagged as politically exposed (PEP).**' The only qualifier in that statement is 'treat 9 as a floor, not a total', which reinforces 9 as a PEP count rather than qualifying it; the risk/context split comes afterwards. Presents 'nine PEPs' as the answer."
+  },
+  {
+   "text": "The answer mentions that the related-party screening was incomplete or truncated",
+   "passed": true,
+   "evidence": "'Related-party PEP screening covered only the 25 highest-ranked of 47 related parties. The other 22 were not screened' (matches degraded_sources detail)."
+  }
+ ],
+ "summary": {
+  "passed": 3,
+  "failed": 1,
+  "total": 4,
+  "pass_rate": 0.75
+ },
+ "claims": [
+  {
+   "claim": "Ørsted's PEP-linked people are context, not findings.",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Two of the nine (RELATED_PEP for Hersvik and King) are kind='risk' in risk_signals/7 and /11; the answer contradicts itself in the next sentence."
+  },
+  {
+   "claim": "STATE_CONTROLLED ... is medium confidence and corroborating only.",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Fixture gives STATE_CONTROLLED kind=risk, confidence=medium; nothing in the fixture describes it as 'corroborating only'."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not state a single unqualified total (such as 'nine PEPs')",
+    "reason": "'Unqualified' is ambiguous: an answer can lead with 'Answer: 9 PEPs' and add only 'a floor' as qualifier. Consider rewording to 'does not present a single total of PEPs as the answer without separating risk from context in the same statement'."
+   }
+  ],
+  "overall": "Assertions 1, 2 and 4 are verifiable against the fixture and were passed by both answers; assertion 3 is the only discriminating one and needs a sharper definition of 'qualified'."
+ },
+ "timing": {
+  "total_duration_seconds": 13.4
+ }
+}

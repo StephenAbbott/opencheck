@@ -1,0 +1,56 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not state as fact that Persia International Bank itself is designated / on a sanctions list",
+   "passed": true,
+   "evidence": "'No. Nothing in this OpenCheck result designates Persia International Bank PLC ... The three designated parties are its shareholders or possible shareholders.'"
+  },
+  {
+   "text": "The answer explains that the sanctions 50% ownership test is met (Mellat Bank, 50–75%) as computed by OpenCheck from filed shareholdings",
+   "passed": true,
+   "evidence": "'OpenCheck computed a SANCTIONS_OWNERSHIP_TEST ... From UK Companies House, Mellat Bank holds 50–75% of Persia. On that figure the test \"meets\" for OFAC, EU, UK' and 'It is arithmetic on shareholdings that one source filed.'"
+  },
+  {
+   "text": "The answer says the result is not a determination that the bank is sanctioned or blocked, or that control tests were not computed",
+   "passed": true,
+   "evidence": "Quotes 'not a determination that the company is sanctioned or blocked.' and 'Not computed: control (the EU and UK also treat a company as caught when a designated person controls it)...'"
+  },
+  {
+   "text": "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total",
+   "passed": true,
+   "evidence": "No total. It says Bank Tejarat's 25–50% 'does not enter the test', and OpenSanctions' readings are reported separately as may_meet."
+  }
+ ],
+ "claims": [
+  {
+   "claim": "At the lowest reading (50%) 'more than 50%' is not met, so the UK result should arguably be may_meet, not meets.",
+   "type": "factual",
+   "verified": false,
+   "evidence": "The fixture states the stake as 'more than 50% up to 75%' in every regime's holders entry (Companies House's 50-75% band is 'more than 50%'); the tool's 'minimum': 50.0 is an exclusive lower end, not a stake of exactly 50%. The answer reads it against the fixture's own wording."
+  },
+  {
+   "claim": "'Not a finding of sanctions status: if_confirmed is false.' This presents if_confirmed=false as the reason the result is not a determination.",
+   "type": "factual",
+   "verified": false,
+   "evidence": "In the fixture, if_confirmed is a per-regime field. It concerns whether name-only matches would change the result, and it says nothing about whether the result is a determination. The 'not a determination' wording comes from the summary and method text, not from if_confirmed."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total",
+    "reason": "Non-discriminating here: both answers passed easily and neither came close to adding the figures."
+   }
+  ],
+  "overall": "All four assertions pass. B misreads if_confirmed and shares the questionable UK-threshold claim."
+ },
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "timing": {
+  "total_duration_seconds": 29.6
+ }
+}

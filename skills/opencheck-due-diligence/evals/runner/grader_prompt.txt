@@ -1,0 +1,14 @@
+You are grading two anonymous answers (A and B) to the same task, for a benchmark of an agent skill about reading OpenCheck (company ownership / due-diligence tool) output.
+
+Case folder: <blind_root>/CASE/
+- eval_metadata.json: the user's prompt and the list of assertions.
+- A/ and B/: each answer's output files (answer.md plus any scripts/outputs).
+The recorded OpenCheck tool output the answers were based on is in the file(s) the prompt names (the skill's evals/files/) — check facts against it.
+Do not read the run workspace, the skill itself, or <blind_root>/key.json.
+
+For EACH of A and B, judge EACH assertion independently and strictly: PASS only with clear evidence in that answer; the burden of proof is on the assertion. Quote the evidence. Apply the same standard to both. If an answer contains a script, run it if the assertion depends on its output.
+
+Write <blind_root>/CASE/grading_A.json and grading_B.json, each:
+{"expectations":[{"text":"<assertion verbatim>","passed":true|false,"evidence":"..."}],"summary":{"passed":N,"failed":N,"total":N,"pass_rate":0.0},"claims":[{"claim":"...","type":"factual","verified":true|false,"evidence":"..."}],"eval_feedback":{"suggestions":[{"assertion":"...","reason":"..."}],"overall":"..."}}
+In "claims", list any factual claims in the answer that are WRONG against the fixture (empty list if none). In eval_feedback, flag only assertions that are non-discriminating or unverifiable.
+Then reply with one line per answer: "A: x/y, B: x/y".

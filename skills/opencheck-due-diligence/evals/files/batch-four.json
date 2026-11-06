@@ -1,0 +1,430 @@
+{
+ "tool": "opencheck_batch_lookup",
+ "arguments": {
+  "leis": [
+   "21380068P1DRHMJ8KU70",
+   "54930007FGRO3F0RZ382",
+   "724500K5PTPSST86UQ23",
+   "W9NG6WMZIYEU8VEDOG48"
+  ]
+ },
+ "recorded_at": "2026-11-05T13:35:31Z",
+ "is_error": false,
+ "response": {
+  "cap": 20,
+  "accepted": [
+   "21380068P1DRHMJ8KU70",
+   "54930007FGRO3F0RZ382",
+   "724500K5PTPSST86UQ23",
+   "W9NG6WMZIYEU8VEDOG48"
+  ],
+  "rejected": [],
+  "overflow": 0,
+  "rows": [
+   {
+    "lei": "21380068P1DRHMJ8KU70",
+    "legal_name": "SHELL PLC",
+    "jurisdiction": "GB",
+    "register_status": {
+     "liveness": "live",
+     "raw": "active",
+     "source_id": "companies_house"
+    },
+    "verdict": "The records show export-control findings on parties connected to it and a politically exposed person among the parties named. No parent is filed with GLEIF, which the LEI reporting rules permit.",
+    "lei_registration": {
+     "status": "ISSUED"
+    },
+    "primary_listing": "London Stock Exchange · SHEL",
+    "risk_count": 6,
+    "context_count": 3,
+    "risk_codes": [
+     "RELATED_EXPORT_RISK",
+     "RELATED_COUNTER_SANCTIONED",
+     "RELATED_PEP"
+    ],
+    "context_codes": [
+     "GLEIF_REPORTING_EXCEPTION",
+     "NON_EU_JURISDICTION",
+     "RECORD_CONSISTENCY"
+    ],
+    "coverage": {
+     "applicable": 13,
+     "answered": 13,
+     "with_data": 12,
+     "applicable_ids": [
+      "gleif",
+      "companies_house",
+      "opencorporates",
+      "wikidata",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "eiti",
+      "meip",
+      "eiti_assessment",
+      "ted_eu",
+      "everypolitician"
+     ],
+     "answered_ids": [
+      "gleif",
+      "companies_house",
+      "opencorporates",
+      "wikidata",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "eiti",
+      "meip",
+      "eiti_assessment",
+      "ted_eu",
+      "everypolitician"
+     ],
+     "with_data_ids": [
+      "gleif",
+      "companies_house",
+      "opencorporates",
+      "wikidata",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "eiti",
+      "meip",
+      "eiti_assessment",
+      "everypolitician"
+     ],
+     "no_record_ids": [
+      "ted_eu"
+     ],
+     "failed_ids": []
+    },
+    "degraded": true,
+    "degraded_sources": [
+     "opencheck"
+    ],
+    "licensing": {
+     "commercial_use": "no",
+     "attribution_required": true,
+     "share_alike": true,
+     "headline": "NOT for commercial use — a non-commercial source is included.",
+     "warnings": [
+      "Not for commercial use — this bundle includes non-commercial source(s): EveryPolitician (CC-BY-NC-4.0), OpenSanctions (CC-BY-NC-4.0). Remove their statements before any commercial use.",
+      "Share-alike obligations apply — derivative works of OpenCorporates (OC-Terms) must be released under the same licence.",
+      "Verify terms — bespoke or per-collection licence(s): EITI Company Assessment (EITI content-use policy (free reuse with attribution)), OpenAleph (per-collection)."
+     ]
+    },
+    "disclosure": {
+     "gleif": [
+      "parent=exempt"
+     ],
+     "companies_house": [
+      "beneficial_owners=exempt"
+     ],
+     "wikidata": [
+      "shareholders=declared"
+     ],
+     "climatetrace": [
+      "shareholders=declared"
+     ]
+    },
+    "replayed": true,
+    "report_url": "/?lei=21380068P1DRHMJ8KU70"
+   },
+   {
+    "lei": "54930007FGRO3F0RZ382",
+    "legal_name": "BENTCARD IMPORT LLP",
+    "jurisdiction": "AZ",
+    "register_status": {
+     "liveness": "declared",
+     "since": "2015-02-05",
+     "raw": "ACTIVE",
+     "source_id": "gleif",
+     "sentence": "GLEIF holds the entity status as ACTIVE, last declared to the LEI issuer before 5 Feb 2015; the LEI has not been renewed since, so no issuer has re-checked it. This is not a current register reading."
+    },
+    "verdict": "The records show ownership recorded in a form that obscures who benefits.",
+    "lei_registration": {
+     "status": "LAPSED",
+     "since": "2015-02-05"
+    },
+    "primary_listing": null,
+    "risk_count": 1,
+    "context_count": 0,
+    "risk_codes": [
+     "OPAQUE_OWNERSHIP"
+    ],
+    "context_codes": [],
+    "coverage": {
+     "applicable": 6,
+     "answered": 6,
+     "with_data": 1,
+     "applicable_ids": [
+      "gleif",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "everypolitician"
+     ],
+     "answered_ids": [
+      "gleif",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "everypolitician"
+     ],
+     "with_data_ids": [
+      "gleif"
+     ],
+     "no_record_ids": [
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "everypolitician"
+     ],
+     "failed_ids": []
+    },
+    "degraded": false,
+    "degraded_sources": [],
+    "licensing": {
+     "commercial_use": "yes",
+     "attribution_required": false,
+     "share_alike": false,
+     "headline": "Safe for commercial use (attribution may be required).",
+     "warnings": []
+    },
+    "disclosure": {
+     "gleif": [
+      "parent=not_provided"
+     ],
+     "climatetrace": [
+      "no_record"
+     ]
+    },
+    "replayed": true,
+    "report_url": "/?lei=54930007FGRO3F0RZ382"
+   },
+   {
+    "lei": "724500K5PTPSST86UQ23",
+    "legal_name": "Heineken N.V.",
+    "jurisdiction": "NL",
+    "register_status": {
+     "liveness": "live",
+     "raw": "ACTIVE",
+     "source_id": "gleif"
+    },
+    "verdict": "No risk signals surfaced, but one source did not answer, so its records were not consulted. No parent is filed with GLEIF, which the LEI reporting rules permit.",
+    "lei_registration": {
+     "status": "ISSUED"
+    },
+    "primary_listing": "Euronext Amsterdam · HEIA",
+    "risk_count": 0,
+    "context_count": 3,
+    "risk_codes": [],
+    "context_codes": [
+     "GLEIF_REPORTING_EXCEPTION",
+     "SUBSIDIARY_LISTED_JURISDICTION",
+     "RECORD_CONSISTENCY"
+    ],
+    "coverage": {
+     "applicable": 12,
+     "answered": 11,
+     "with_data": 8,
+     "applicable_ids": [
+      "gleif",
+      "kvk",
+      "opencorporates",
+      "wikidata",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "eiti",
+      "meip",
+      "ted_eu",
+      "everypolitician"
+     ],
+     "answered_ids": [
+      "gleif",
+      "opencorporates",
+      "wikidata",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "eiti",
+      "meip",
+      "ted_eu",
+      "everypolitician"
+     ],
+     "with_data_ids": [
+      "gleif",
+      "opencorporates",
+      "wikidata",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "meip"
+     ],
+     "no_record_ids": [
+      "eiti",
+      "ted_eu",
+      "everypolitician"
+     ],
+     "failed_ids": [
+      "kvk"
+     ]
+    },
+    "degraded": true,
+    "degraded_sources": [
+     "kvk"
+    ],
+    "licensing": {
+     "commercial_use": "no",
+     "attribution_required": true,
+     "share_alike": true,
+     "headline": "NOT for commercial use — a non-commercial source is included.",
+     "warnings": [
+      "Not for commercial use — this bundle includes non-commercial source(s): OpenSanctions (CC-BY-NC-4.0). Remove their statements before any commercial use.",
+      "Share-alike obligations apply — derivative works of OpenCorporates (OC-Terms) must be released under the same licence.",
+      "Verify terms — bespoke or per-collection licence(s): OpenAleph (per-collection)."
+     ]
+    },
+    "disclosure": {
+     "gleif": [
+      "parent=exempt"
+     ],
+     "kvk": [
+      "beneficial_owners=unreachable"
+     ],
+     "wikidata": [
+      "shareholders=declared"
+     ],
+     "climatetrace": [
+      "shareholders=declared"
+     ]
+    },
+    "replayed": false,
+    "report_url": "/?lei=724500K5PTPSST86UQ23"
+   },
+   {
+    "lei": "W9NG6WMZIYEU8VEDOG48",
+    "legal_name": "ØRSTED A/S",
+    "jurisdiction": "DK",
+    "register_status": {
+     "liveness": "live",
+     "raw": "active",
+     "source_id": "cvr_denmark"
+    },
+    "verdict": "The records show a possible politically exposed person among the parties named and a possible appearance in offshore-leaks data. No parent is filed with GLEIF, which the LEI reporting rules permit.",
+    "lei_registration": {
+     "status": "ISSUED"
+    },
+    "primary_listing": "Nasdaq Copenhagen · ORSTED",
+    "risk_count": 4,
+    "context_count": 10,
+    "risk_codes": [
+     "STATE_CONTROLLED",
+     "RELATED_PEP",
+     "OFFSHORE_LEAKS"
+    ],
+    "context_codes": [
+     "GLEIF_REPORTING_EXCEPTION",
+     "NON_EU_JURISDICTION",
+     "RELATED_PEP_SUBJECT_ROLE",
+     "RECORD_CONSISTENCY"
+    ],
+    "coverage": {
+     "applicable": 11,
+     "answered": 11,
+     "with_data": 9,
+     "applicable_ids": [
+      "gleif",
+      "cvr_denmark",
+      "opencorporates",
+      "wikidata",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "eiti",
+      "ted_eu",
+      "everypolitician"
+     ],
+     "answered_ids": [
+      "gleif",
+      "cvr_denmark",
+      "opencorporates",
+      "wikidata",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "eiti",
+      "ted_eu",
+      "everypolitician"
+     ],
+     "with_data_ids": [
+      "gleif",
+      "cvr_denmark",
+      "opencorporates",
+      "wikidata",
+      "opensanctions",
+      "openaleph",
+      "climatetrace",
+      "wikirate",
+      "everypolitician"
+     ],
+     "no_record_ids": [
+      "eiti",
+      "ted_eu"
+     ],
+     "failed_ids": []
+    },
+    "degraded": true,
+    "degraded_sources": [
+     "opencheck"
+    ],
+    "licensing": {
+     "commercial_use": "no",
+     "attribution_required": true,
+     "share_alike": true,
+     "headline": "NOT for commercial use — a non-commercial source is included.",
+     "warnings": [
+      "Not for commercial use — this bundle includes non-commercial source(s): EveryPolitician (CC-BY-NC-4.0), OpenSanctions (CC-BY-NC-4.0). Remove their statements before any commercial use.",
+      "Share-alike obligations apply — derivative works of OpenCorporates (OC-Terms) must be released under the same licence.",
+      "Verify terms — bespoke or per-collection licence(s): OpenAleph (per-collection)."
+     ]
+    },
+    "disclosure": {
+     "gleif": [
+      "parent=exempt"
+     ],
+     "cvr_denmark": [
+      "beneficial_owners=restricted"
+     ],
+     "wikidata": [
+      "shareholders=declared"
+     ],
+     "climatetrace": [
+      "shareholders=declared"
+     ]
+    },
+    "replayed": true,
+    "report_url": "/?lei=W9NG6WMZIYEU8VEDOG48"
+   }
+  ],
+  "failed": [],
+  "counts": {
+   "requested": 4,
+   "done": 4,
+   "failed": 0,
+   "degraded": 3
+  },
+  "hint": "Each row's risk_count counts findings (kind='risk'); context_count is structural context, not a finding. A failed row or degraded=true means that company was not fully screened. Call opencheck_lookup with a row's lei for the full report."
+ }
+}

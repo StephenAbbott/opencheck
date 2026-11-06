@@ -1,0 +1,38 @@
+OWNERS (shareholding / voting rights) — 4 interest(s); shares are per source and must not be added across sources
+
+- Mellat Bank (registeredEntity, IR)
+    share:  no share stated  (shareholding, direct, current)
+    BO flag: not stated
+    source: OpenSanctions [opensanctions], statement dated 2026-05-25
+    of:     PERSIA INTERNATIONAL BANK PLC (registeredEntity, GB)
+- TEJARAT BANK (registeredEntity, IR)
+    share:  no share stated  (shareholding, direct, current)
+    BO flag: not stated
+    source: OpenSanctions [opensanctions], statement dated 2026-05-25
+    of:     PERSIA INTERNATIONAL BANK PLC (registeredEntity, GB)
+- Bank Mellat (registeredEntity, IR)
+    share:  >50% and ≤75%  (shareholding, unknown, current)
+    filed:  Ownership of shares – More than 50% but less than 75%
+    BO flag: no (not declared as beneficial owner)
+    source: UK Companies House [companies_house], statement dated 2016-05-16
+    of:     PERSIA INTERNATIONAL BANK PLC (registeredEntity, GB)
+- Bank Tejarat (registeredEntity, IR)
+    share:  >25% and ≤50%  (shareholding, unknown, current)
+    filed:  Ownership of shares – More than 25% but not more than 50%
+    BO flag: no (not declared as beneficial owner)
+    source: UK Companies House [companies_house], statement dated 2016-05-16
+    of:     PERSIA INTERNATIONAL BANK PLC (registeredEntity, GB)
+
+OTHER RELATIONSHIPS (not ownership) — 8
+
+- Natural person(s) (GLEIF reporting exception) (unknownPerson): otherInfluenceOrControl (current) [GLEIF [gleif]] — GLEIF reporting exception NATURAL_PERSONS: the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent (ExceptionCategory: DIRECT_ACCOUNTING_CONSOLIDATION_PARENT)
+- Natural person(s) (GLEIF reporting exception) (unknownPerson): otherInfluenceOrControl (current) [GLEIF [gleif]] — GLEIF reporting exception NATURAL_PERSONS: the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent (ExceptionCategory: ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT)
+- Islamic Republic Of Iran (registeredEntity): unknownInterest (current) [OpenSanctions [opensanctions]]
+- AKHONDI- ASL, Aziz, Mr. (knownPerson, IR): seniorManagingOfficial (current) [UK Companies House [companies_house]] — Director, from 2019-03-29
+- FAROKHNEJAD, Farshid (knownPerson, IR): seniorManagingOfficial (current) [UK Companies House [companies_house]] — Director, from 2022-09-01
+- FEIZASAR, Hadi Akhlaghi, Dr (knownPerson, IR): seniorManagingOfficial (current) [UK Companies House [companies_house]] — Director, from 2022-03-08
+- REZAEIPOUR, Mohammad Reza (knownPerson, IR): seniorManagingOfficial (current) [UK Companies House [companies_house]] — Director, from 2022-06-01
+- SHAHMIR, Farrokh (knownPerson, GB): seniorManagingOfficial (current) [UK Companies House [companies_house]] — Director, from 2017-06-30
+
+LICENCE NOTICES
+- opensanctions: OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license.

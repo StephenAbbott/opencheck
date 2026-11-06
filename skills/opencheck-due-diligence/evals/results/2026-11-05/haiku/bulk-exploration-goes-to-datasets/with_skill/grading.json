@@ -1,0 +1,48 @@
+{
+ "expectations": [
+  {
+   "text": "The answer recommends the published Azerbaijani Laundromat dataset release instead of 200 live lookups",
+   "passed": true,
+   "evidence": "\"I'd skip a loop of live opencheck_lookup calls for about 200 companies. OpenCheck has a published bulk dataset for exactly this set\" and names dataset-azerbaijani-laundromat-2026-10-06"
+  },
+  {
+   "text": "The answer mentions that the release includes a Neo4j bundle (or Neo4j CSV) that can be loaded directly",
+   "passed": true,
+   "evidence": "\"*.neo4j.zip: CSVs plus an import script\"; script finds import.sh / import.cypher in the bundle"
+  },
+  {
+   "text": "The answer mentions the lookup budget / rate limit or the batch cap of 20",
+   "passed": true,
+   "evidence": "\"ten fresh checks a minute per address ... opencheck_batch_lookup takes 20 LEIs per call\""
+  },
+  {
+   "text": "The answer mentions that the laundromat dataset is non-commercial / CC-BY-NC",
+   "passed": true,
+   "evidence": "\"The bundle includes OpenSanctions and EveryPolitician data under CC-BY-NC-4.0. Non-commercial use only.\" (also in script header)"
+  },
+  {
+   "text": "The answer does not give an unpaced loop that calls opencheck_lookup 200 times as the main solution",
+   "passed": true,
+   "evidence": "Script only runs gh release download + unzip; \"This does NOT call the live OpenCheck MCP server.\""
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not give an unpaced loop that calls opencheck_lookup 200 times as the main solution",
+    "reason": "Only 'unpaced' is tested; a paced 200-lookup loop as the main deliverable passes even though it ignores the dataset guidance. Consider 'does not make a 200-call live loop the main solution'."
+   }
+  ],
+  "overall": "No fixture for this case; facts judged against the stated release contents, budget (10/min) and batch cap (20)."
+ },
+ "timing": {
+  "total_duration_seconds": 49.6
+ }
+}

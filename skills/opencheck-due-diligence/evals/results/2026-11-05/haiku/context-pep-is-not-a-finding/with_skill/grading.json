@@ -1,0 +1,43 @@
+{
+ "expectations": [
+  {
+   "text": "The answer distinguishes PEP listings due solely to a role at Ørsted (context) from the risk-level PEP signals",
+   "passed": true,
+   "evidence": "Separate sections 'Risk findings (2): possible name matches only' and 'Context only (7): PEP status comes from their Ørsted role ... These are not findings against the company.'"
+  },
+  {
+   "text": "The answer reports Karl Johnny Hersvik and Julia Elizabeth King as possible name matches, not confirmed PEPs",
+   "passed": true,
+   "evidence": "'Short answer: no confirmed PEP.' Table: Hersvik and King each 'Shares a name with a PEP record ... No birth date or nationality in common'; 'Check ... before treating either as a PEP.'"
+  },
+  {
+   "text": "The answer does not state a single unqualified total (such as 'nine PEPs')",
+   "passed": true,
+   "evidence": "Headline is 'no confirmed PEP'; the 9 is stated only as '9 related people with a PEP flag, but only 2 of those are risk findings, and both are possible name matches... The other 7 are flagged only because of their role', qualified in the same statement."
+  },
+  {
+   "text": "The answer mentions that the related-party screening was incomplete or truncated",
+   "passed": true,
+   "evidence": "'Related-party PEP and sanctions screening covered 25 of 47 related parties. The other 22 were not screened.' plus Offshore Leaks 30 of 47."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not state a single unqualified total (such as 'nine PEPs')",
+    "reason": "'Unqualified' is ambiguous: an answer can lead with 'Answer: 9 PEPs' and add only 'a floor' as qualifier. Consider rewording to 'does not present a single total of PEPs as the answer without separating risk from context in the same statement'."
+   }
+  ],
+  "overall": "Assertions 1, 2 and 4 are verifiable against the fixture and were passed by both answers; assertion 3 is the only discriminating one and needs a sharper definition of 'qualified'."
+ },
+ "timing": {
+  "total_duration_seconds": 17.1
+ }
+}

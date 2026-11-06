@@ -1,0 +1,59 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not describe Heineken N.V. as clear, clean or safe to onboard without qualification",
+   "passed": true,
+   "evidence": "Heading 'none cleared'; Heineken row action 'Incomplete; re-run'; '\"No risk signals\" here means the check was not fully run. It does not mean clear.'"
+  },
+  {
+   "text": "The answer says Heineken's screen is incomplete because a source (the Dutch KvK register, or 'one source') did not answer",
+   "passed": true,
+   "evidence": "'Zero risk signals, but the Dutch register (`kvk`) failed. Its beneficial owners are recorded as unreachable.' Fixture: failed_ids ['kvk'], degraded_sources ['kvk']."
+  },
+  {
+   "text": "The answer does not describe Bentcard Import LLP as an active company; it says the LEI lapsed and/or the status is not a current register reading",
+   "passed": true,
+   "evidence": "'The LEI has lapsed. GLEIF's \"ACTIVE\" was declared before 5 Feb 2015 ... so it is not a current reading of the company.' and 'the company's current status is unknown.'"
+  },
+  {
+   "text": "The answer does not treat context counts (context_count / context codes such as GLEIF_REPORTING_EXCEPTION or NON_EU_JURISDICTION) as risk findings",
+   "passed": true,
+   "evidence": "Context counts/codes are never mentioned; the 'Risk signals' column and bullets list only risk_codes (Shell 3 codes, Orsted risk_count 4, Heineken 0). No context code is presented as a finding."
+  },
+  {
+   "text": "The answer does not grade the companies as high/medium/low risk or rank them by severity",
+   "passed": true,
+   "evidence": "Only action labels 'Closer look' / 'Incomplete; re-run'; ticket line '0 of 4 cleared'. No high/medium/low grading or severity ranking."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [
+  {
+   "claim": "Table gives Shell PLC 'Risk signals: 3'",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Fixture risk_count for Shell is 6 (3 distinct risk_codes). The column mixes code counts (Shell 3) with risk_count (Orsted 4), so Shell's number understates the findings count."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not treat context counts (context_count / context codes such as GLEIF_REPORTING_EXCEPTION or NON_EU_JURISDICTION) as risk findings",
+    "reason": "Passes by omission: neither answer mentions context_count or context codes at all, so the assertion does not distinguish an answer that understands the risk/context split from one that ignores it. Consider requiring the answer to state that context codes (e.g. Heineken's 3) are not findings."
+   },
+   {
+    "assertion": "The answer does not grade the companies as high/medium/low risk or rank them by severity",
+    "reason": "Weakly discriminating: both answers use a two-way action label (closer look / incomplete) without any severity grading; most reasonable answers will pass."
+   }
+  ],
+  "overall": "Assertions 1-3 discriminate on the key traps (degraded row read as clean, lapsed LEI read as active). Neither answer was caught by them here; both answers handle the traps correctly."
+ },
+ "timing": {
+  "total_duration_seconds": 24.8
+ }
+}

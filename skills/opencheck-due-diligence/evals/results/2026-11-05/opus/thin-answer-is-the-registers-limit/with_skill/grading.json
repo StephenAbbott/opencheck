@@ -1,0 +1,46 @@
+{
+ "expectations": [
+  {
+   "text": "The answer says the absence of beneficial owners is not evidence that the company is hiding them",
+   "passed": true,
+   "evidence": "'Short answer: no, this doesn't show the company is hiding anything.' and 'It can't count as evidence of concealment either.'"
+  },
+  {
+   "text": "The answer states that Cyprus's beneficial-ownership register is accessible only to authorities and obliged entities",
+   "passed": true,
+   "evidence": "Quotes the fixture: 'Cyprus Register of Beneficial Owners is open to authorities and obliged entities only.' and says 'Access is `authorities_and_obliged_entities_only`, and there is no \"legitimate interest\" route'."
+  },
+  {
+   "text": "The answer states that OpenCheck reads officers / registered holdings for Cyprus, not beneficial owners",
+   "passed": true,
+   "evidence": "'OpenCheck reads the Department of Registrar of Companies (DRCOR), and the record marks it `reads_beneficial_owners: false`. DRCOR gives officers (directors, secretary) and registered holdings.'"
+  }
+ ],
+ "summary": {
+  "passed": 3,
+  "failed": 0,
+  "total": 3,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer says the absence of beneficial owners is not evidence that the company is hiding them",
+    "reason": "Non-discriminating: both answers pass easily; the core reframing is the obvious answer once the knowability fixture is read."
+   },
+   {
+    "assertion": "The answer states that Cyprus's beneficial-ownership register is accessible only to authorities and obliged entities",
+    "reason": "Non-discriminating: the fixture sentence states this verbatim, so any answer that quotes or paraphrases it passes."
+   },
+   {
+    "assertion": "The answer states that OpenCheck reads officers / registered holdings for Cyprus, not beneficial owners",
+    "reason": "Non-discriminating: also a verbatim fixture sentence. A harder assertion could check whether the answer warns that absent shareholders may mean an incomplete check (degraded_sources), or that nominee/legal owners are not beneficial owners."
+   }
+  ],
+  "overall": "All three assertions are restatements of the fixture's two sentences plus the hint, so both answers score 3/3. Neither contains a factual error against the fixture."
+ },
+ "timing": {
+  "total_duration_seconds": 22.4
+ }
+}

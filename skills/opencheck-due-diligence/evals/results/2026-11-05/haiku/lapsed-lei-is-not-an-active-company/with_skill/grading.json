@@ -1,0 +1,47 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not conclude that the company is active",
+   "passed": true,
+   "evidence": "Opens 'Short answer: I can't confirm that BENTCARD IMPORT LLP is active. Nothing in the recorded OpenCheck output shows it as active today.' and 'I am not reporting the company as active on that basis.'"
+  },
+  {
+   "text": "The answer distinguishes the LEI's status (lapsed) from the company's status",
+   "passed": true,
+   "evidence": "Separates the two: 'The LEI has **lapsed**. Its renewal was due on 5 Feb 2015 and was not made.' versus \"GLEIF's 'ACTIVE' status for the company was last declared ... not a current reading\". It treats them as two distinct statuses, though it never says in so many words 'the status of the LEI record, not of the company' (the fixture's wording). B is more explicit."
+  },
+  {
+   "text": "The answer cites the Companies House record OC369315 as showing the LLP dissolved, or recommends checking it",
+   "passed": true,
+   "evidence": "'The search also returned **BENTCARD IMPORT LLP**, Companies House OC369315, listed as **dissolved**, at Potters Bar' plus next step 2: 'For OC369315, check whether it is the same company (officers, registered office, filing history).' It does not assume the two are the same entity."
+  },
+  {
+   "text": "The answer explains that GLEIF's 'ACTIVE' is an old or unverified declaration (not re-checked since 2015)",
+   "passed": true,
+   "evidence": "\"GLEIF's 'ACTIVE' status for the company was last declared to the LEI issuer before 5 Feb 2015. That is the last thing anyone declared, not a current reading.\" This is an old declaration dated to 2015; the fixture's 'no issuer has re-checked it' is implied rather than quoted."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not conclude that the company is active",
+    "reason": "Non-discriminating here: both answers (and any answer that reads the fixture summary, which says 'This is not a current register reading') pass easily."
+   },
+   {
+    "assertion": "The answer cites the Companies House record OC369315 as showing the LLP dissolved, or recommends checking it",
+    "reason": "The 'or recommends checking it' branch lets an answer pass while it says the CH record is probably a different entity. Both answers cite OC369315 as dissolved, but both treat it as an unlinked namesake, not as evidence that the LLP is dissolved. If the intended reading is that the CH record IS this LLP (an LLP is a UK legal form), the assertion should say so."
+   }
+  ],
+  "overall": "Both answers are accurate against the fixtures and pass all four assertions. B words the LEI-versus-company distinction and the 're-checked' point more explicitly than A. The assertions barely discriminate between them."
+ },
+ "timing": {
+  "total_duration_seconds": 20.2
+ }
+}

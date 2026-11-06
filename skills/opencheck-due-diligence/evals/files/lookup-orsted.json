@@ -1,0 +1,699 @@
+{
+ "tool": "opencheck_lookup",
+ "arguments": {
+  "lei": "W9NG6WMZIYEU8VEDOG48"
+ },
+ "recorded_at": "2026-11-05T13:34:33Z",
+ "is_error": false,
+ "response": {
+  "lei": "W9NG6WMZIYEU8VEDOG48",
+  "legal_name": "ØRSTED A/S",
+  "jurisdiction": "DK",
+  "summary": "ØRSTED A/S (LEI W9NG6WMZIYEU8VEDOG48, DK). Risk signals: STATE_CONTROLLED, RELATED_PEP, OFFSHORE_LEAKS. Structural context (not risk findings): GLEIF_REPORTING_EXCEPTION, NON_EU_JURISDICTION, RELATED_PEP_SUBJECT_ROLE, RECORD_CONSISTENCY. 11 of 11 sources answered (9 with records, 2 with no record); 108 BODS statements (50 ownership/control relationships). CAUTION: 2 screening check(s) did not fully run (see degraded_sources) — the absence of their signals is not a clean screen. Licensing: NOT for commercial use — a non-commercial source is included. What can be known (DK): Centrale Virksomhedsregister (CVR) is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Sep 2025. OpenCheck reads CVR — Det Centrale Virksomhedsregister for officers and registered holdings, not beneficial owners. Primary listing (PermID): Nasdaq Copenhagen · ORSTED.",
+  "verdict": "The records show a possible politically exposed person among the parties named and a possible appearance in offshore-leaks data. No parent is filed with GLEIF, which the LEI reporting rules permit.",
+  "profile": {
+   "legal_form": {
+    "value": "Aktieselskab",
+    "sources": [
+     "cvr_denmark",
+     "gleif"
+    ],
+    "independent_sources": 2,
+    "other_values": []
+   },
+   "register_status": {
+    "liveness": "live",
+    "since": null,
+    "raw": "active",
+    "source_id": "cvr_denmark",
+    "sources": [
+     "cvr_denmark",
+     "gleif",
+     "opencorporates"
+    ],
+    "independent_sources": 2,
+    "other_values": []
+   },
+   "founding_date": {
+    "value": "1972-03-27",
+    "sources": [
+     "cvr_denmark",
+     "gleif",
+     "opencorporates"
+    ],
+    "independent_sources": 2,
+    "other_values": [
+     {
+      "source_id": "wikidata",
+      "value": "1972-01-01"
+     }
+    ]
+   },
+   "registered_address": {
+    "value": "Kraftværksvej 53, 7000 Fredericia",
+    "sources": [
+     "cvr_denmark"
+    ],
+    "independent_sources": 1,
+    "other_values": [
+     {
+      "source_id": "gleif",
+      "value": "KRAFTVÆRKSVEJ 53, SKÆRBÆK, FREDERICIA, DK-83, 7000, DK"
+     }
+    ],
+    "country": "DK"
+   },
+   "jurisdiction": "DK",
+   "lei_registration": {
+    "status": "ISSUED",
+    "label": "Issued",
+    "flag": false,
+    "since": null,
+    "next_renewal_date": "2027-11-12",
+    "last_update_date": "2026-09-21",
+    "initial_registration_date": "2012-06-27",
+    "managing_lou": "213800WAVVOPS85N2205",
+    "source_id": "gleif",
+    "sentence": "GLEIF records this LEI as issued: its reference data is maintained by its issuer, and its next renewal is due on 12 Nov 2027."
+   },
+   "lei_successor": null,
+   "former_names": [
+    {
+     "name": "DONG ENERGY A/S",
+     "until": null,
+     "from": null,
+     "sources": [
+      "gleif"
+     ]
+    }
+   ],
+   "name_changed_on": null,
+   "statement_ids": [
+    "opencheck-d51bbe15af772367ac62880b",
+    "opencheck-4d0248e1279424e4ec8d3af4",
+    "opencheck-7c55e7a78c40bec2be7e0873",
+    "opencheck-611b444ac91173be127beeba",
+    "opencheck-9fc8aaea0266bd9cc4e87161",
+    "opencheck-b39677b2b3b9138287352b98",
+    "opencheck-047f72bdb2c66c9b3cb52da7",
+    "opencheck-3f08ed79670c0c253a60f0d0",
+    "opencheck-ee5f2247a2cf77bb761a4ccb"
+   ]
+  },
+  "lei_successor": null,
+  "knowability": {
+   "subject": {
+    "code": "DK",
+    "name": "Denmark",
+    "sentence": "Centrale Virksomhedsregister (CVR) is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Sep 2025. OpenCheck reads CVR — Det Centrale Virksomhedsregister for officers and registered holdings, not beneficial owners.",
+    "access": "legitimate_interest",
+    "stated_absence": false,
+    "review_status": "verified",
+    "last_verified": "2026-09-18",
+    "opencheck_reads": [
+     "cvr_denmark"
+    ]
+   },
+   "chain": [
+    {
+     "code": "US",
+     "name": "United States",
+     "sentence": "United States keeps no central register of beneficial owners. OpenCheck reads beneficial owners from DLCP — Department of Licensing and Consumer Protection Corporations Division (Washington, DC).",
+     "access": "no_register",
+     "stated_absence": false,
+     "review_status": "verified",
+     "last_verified": "2026-09-18",
+     "opencheck_reads": [
+      "dlcp_dc",
+      "ny_dos",
+      "sunbiz_florida"
+     ]
+    },
+    {
+     "code": "NO",
+     "name": "Norway",
+     "sentence": "Registeret over reelle rettighetshavere is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Oct 2024. OpenCheck reads Brønnøysundregistrene — Norwegian Register Centre for officers and registered holdings, not beneficial owners.",
+     "access": "legitimate_interest",
+     "stated_absence": false,
+     "review_status": "verified",
+     "last_verified": "2026-09-18",
+     "opencheck_reads": [
+      "brreg"
+     ]
+    }
+   ],
+   "as_of": "2026-11-05",
+   "hint": "Dated facts about each register — who may see beneficial owners there and what OpenCheck reads of it. Describes, never judges: an absent owner is read against these, and none of them is a risk signal."
+  },
+  "integrated_ownership": {
+   "method": "Integrated ownership",
+   "description": "How much of the company each party holds, directly and through the companies it holds: shares are multiplied along each path and added across paths, and a company's own shares are given back to its other holders. Each source is computed on its own; figures from two sources are listed side by side, never added. Shareholdings only — voting rights, roles and control are not shares. For a person it is arithmetic on what was filed, not a determination of beneficial ownership. Context, not a finding.",
+   "credit": "Method: integrated ownership as published by T-Rank (https://docs.trank.no/white_papers).",
+   "as_of": "2026-11-05",
+   "holders": [
+    {
+     "name": "Government of Denmark",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Global Energy Monitor / Climate TRACE",
+       "text": "50.12%",
+       "minimum": 50.12,
+       "maximum": 50.12,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Ministry of Finance of Denmark",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "50.1%",
+       "minimum": 50.1,
+       "maximum": 50.1,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Goldman Sachs",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "13%",
+       "minimum": 13.0,
+       "maximum": 13.0,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Equinor ASA",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Global Energy Monitor / Climate TRACE",
+       "text": "10%",
+       "minimum": 10.0,
+       "maximum": 10.0,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Andel Energy",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "7.28%",
+       "minimum": 7.28,
+       "maximum": 7.28,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Capital Group Companies",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "6%",
+       "minimum": 6.0,
+       "maximum": 6.0,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Andel AMBA",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Global Energy Monitor / Climate TRACE",
+       "text": "5.01%",
+       "minimum": 5.01,
+       "maximum": 5.01,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    }
+   ],
+   "holders_total": 7,
+   "hint": "Context, not a risk finding: no threshold is applied and none of these figures feeds the risk signals or the verdict. Each source is computed on its own; two figures for one party are two publishers' readings, never to be added."
+  },
+  "disclosure_status": {
+   "as_of": "2026-11-05",
+   "by_source": [
+    {
+     "source": "gleif",
+     "source_name": "GLEIF",
+     "values": [
+      "exempt"
+     ],
+     "line": "Parent: Exempt — the entity is controlled by legal entities not subject to preparing consolidated financial statements",
+     "entries": [
+      {
+       "value": "exempt",
+       "covers": "parent",
+       "details": [
+        "the entity is controlled by legal entities not subject to preparing consolidated financial statements"
+       ],
+       "reasons": [
+        "NON_CONSOLIDATING"
+       ]
+      }
+     ]
+    },
+    {
+     "source": "cvr_denmark",
+     "source_name": "CVR — Det Centrale Virksomhedsregister (Danish Business Authority)",
+     "values": [
+      "restricted"
+     ],
+     "line": "Beneficial owners: Not public",
+     "entries": [
+      {
+       "value": "restricted",
+       "covers": "beneficial_owners"
+      }
+     ]
+    },
+    {
+     "source": "wikidata",
+     "source_name": "Wikidata",
+     "values": [
+      "declared"
+     ],
+     "line": "Shareholders: Declared (4)",
+     "entries": [
+      {
+       "value": "declared",
+       "covers": "shareholders",
+       "count": 4
+      }
+     ]
+    },
+    {
+     "source": "climatetrace",
+     "source_name": "Global Energy Monitor / Climate TRACE",
+     "values": [
+      "declared"
+     ],
+     "line": "Shareholders: Declared (4)",
+     "entries": [
+      {
+       "value": "declared",
+       "covers": "shareholders",
+       "count": 4
+      }
+     ]
+    }
+   ],
+   "not_covered": [
+    "opencorporates",
+    "opensanctions",
+    "openaleph",
+    "wikirate",
+    "eiti",
+    "ted_eu",
+    "everypolitician"
+   ],
+   "hint": "What each source says about the company's owners, for what it covers (beneficial owners, shareholders or the consolidating parent). Absence from a source is not an exemption: none_filed means the record carries no owner and no reason. Describes only; no value here feeds the risk signals or the verdict."
+  },
+  "listing": {
+   "status": "listed",
+   "reason": null,
+   "line": "Nasdaq Copenhagen · ORSTED",
+   "exchange": "Nasdaq Copenhagen",
+   "exchange_country": "DK",
+   "mic": "XCSE",
+   "ticker": "ORSTED",
+   "ric": "ORSTED.CO",
+   "security_name": "OERSTED ORD",
+   "url": "https://www.nasdaq.com/european-market-activity/shares/orsted",
+   "url_kind": "listing",
+   "permid_url": "https://permid.org/1-21562822882",
+   "as_of": "2026-11-05",
+   "attribution": "LSEG PermID (CC-BY 4.0)",
+   "hint": "The primary listing according to PermID: one main quote. Other listings of the same company are not shown. A venue URL is a listing or search page, not a filings page."
+  },
+  "institutional_shareholders": null,
+  "identifiers": [
+   {
+    "scheme": "XI-LEI",
+    "schemeName": "Global Legal Entity Identifier Index",
+    "id": "W9NG6WMZIYEU8VEDOG48"
+   },
+   {
+    "scheme": "DK-CVR",
+    "schemeName": "Central Business Register — CVR number (Denmark)",
+    "id": "36213728"
+   },
+   {
+    "scheme": "OpenCorporates",
+    "schemeName": "OpenCorporates company ID",
+    "id": "dk/36213728",
+    "uri": "https://opencorporates.com/companies/dk/36213728"
+   },
+   {
+    "scheme": "QCC Code",
+    "schemeName": "QCC Global Enterprise Identifier (QCC Code)",
+    "id": "QDKRTSBN20"
+   },
+   {
+    "scheme": "ISO-9362",
+    "schemeName": "Bank Identifier Code (ISO 9362)",
+    "id": "ORSTDK22XXX"
+   },
+   {
+    "scheme": "S&P CIQ Company ID",
+    "schemeName": "S&P CIQ Company ID",
+    "id": "6492833"
+   }
+  ],
+  "derived_identifiers": {
+   "lei": "W9NG6WMZIYEU8VEDOG48",
+   "dk_cvr": "36213728",
+   "ocid": "dk/36213728",
+   "wikidata_qid": "Q1241260"
+  },
+  "risk_signals": [
+   {
+    "code": "GLEIF_REPORTING_EXCEPTION",
+    "confidence": "high",
+    "summary": "No accounting-consolidation parent is reported to GLEIF: NON_CONSOLIDATING for the direct and ultimate parent (its controlling legal entities are not subject to preparing consolidated financial statements). Structural context, not a risk finding — these are permitted exceptions under the LEI ROC policy, and GLEIF Level 2 records accounting consolidation, not beneficial ownership.",
+    "kind": "context",
+    "sources": [
+     "gleif"
+    ]
+   },
+   {
+    "code": "NON_EU_JURISDICTION",
+    "confidence": "low",
+    "summary": "Ownership chain reaches jurisdictions outside the EU/EEA: US. Structural context, not a risk finding — being outside the EU/EEA is not a risk factor in itself. Jurisdiction risk comes only from the FATF lists, the EU high-risk list and the EU tax list, which have their own signals.",
+    "kind": "context",
+    "sources": [
+     "wikidata"
+    ]
+   },
+   {
+    "code": "STATE_CONTROLLED",
+    "confidence": "medium",
+    "summary": "A controlling owner is a state or state body — a possible state-owned enterprise. Denmark, 50.12% (Global Energy Monitor / Climate TRACE) or 50.1% (Wikidata) — Government of Denmark (Global Energy Monitor / Climate TRACE); Ministry of Finance of Denmark (Wikidata). Corroborating indicator (Global Energy Monitor ownership data — energy sector only; Wikidata-sourced — crowd-sourced, famous names only); not a determination, and its absence is not evidence the entity is privately owned.",
+    "kind": "risk",
+    "sources": [
+     "wikidata"
+    ]
+   },
+   {
+    "code": "RELATED_PEP_SUBJECT_ROLE",
+    "confidence": "medium",
+    "summary": "Related party 'Andrew Richard Dingley Brown' is listed as politically exposed on OpenSanctions only by virtue of a role at this company (Ørsted A/S, Board of Directors (Vice Chairman)). Context about who runs the company, not a finding against it. Also reported by EveryPolitician and OpenAleph.",
+    "kind": "context",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP_SUBJECT_ROLE",
+    "confidence": "medium",
+    "summary": "Related party 'Benny Gøbel' is listed as politically exposed on OpenSanctions only by virtue of a role at this company (Ørsted A/S, board of directors). Context about who runs the company, not a finding against it. Also reported by EveryPolitician and OpenAleph.",
+    "kind": "context",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP_SUBJECT_ROLE",
+    "confidence": "medium",
+    "summary": "Related party 'Julian David Waldron' is listed as politically exposed on OpenSanctions only by virtue of a role at this company (Ørsted A/S, board of directors). Context about who runs the company, not a finding against it. Also reported by EveryPolitician and OpenAleph.",
+    "kind": "context",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP_SUBJECT_ROLE",
+    "confidence": "medium",
+    "summary": "Related party 'Rasmus Errboe' is listed as politically exposed on OpenSanctions only by virtue of a role at this company (Ørsted A/S, Executive Management). Context about who runs the company, not a finding against it. Also reported by EveryPolitician and OpenAleph.",
+    "kind": "context",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP",
+    "confidence": "medium",
+    "summary": "Possible name match only: related party 'Karl Johnny Hersvik' shares a name with a record on OpenSanctions, with no birth date or nationality in common to confirm they are the same person — PEP. The same record is also reported by EveryPolitician and OpenAleph. The record also lists a role at this company (Ørsted A/S, board of directors).",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP_SUBJECT_ROLE",
+    "confidence": "medium",
+    "summary": "Related party 'Lene Skole-Sørensen' is listed as politically exposed on OpenSanctions only by virtue of a role at this company (Ørsted A/S, Chairman of the Board). Context about who runs the company, not a finding against it. Also reported by EveryPolitician.",
+    "kind": "context",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP_SUBJECT_ROLE",
+    "confidence": "medium",
+    "summary": "Related party 'Ruchit Majmudar' is listed as politically exposed on OpenSanctions only by virtue of a role at this company (Ørsted A/S, board of directors). Context about who runs the company, not a finding against it. Also reported by EveryPolitician.",
+    "kind": "context",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP_SUBJECT_ROLE",
+    "confidence": "medium",
+    "summary": "Related party 'Trond Ødegård Westlie' is listed as politically exposed on OpenSanctions only by virtue of a role at this company (Ørsted A/S, Executive Management). Context about who runs the company, not a finding against it. Also reported by EveryPolitician and OpenAleph.",
+    "kind": "context",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP",
+    "confidence": "medium",
+    "summary": "Possible name match only: related party 'Julia Elizabeth King' shares a name with a record on OpenAleph, with no birth date or nationality in common to confirm they are the same person — PEP via 'Denmark, Faroe Islands and Greenland PEPs'. The record also lists a role at this company (Ørsted A/S, board of directors).",
+    "kind": "risk",
+    "sources": [
+     "openaleph"
+    ]
+   },
+   {
+    "code": "OFFSHORE_LEAKS",
+    "confidence": "medium",
+    "summary": "Related entity 'Goldman Sachs' matches a record in the Paradise Papers (Appleby).",
+    "kind": "risk",
+    "sources": [
+     "icij"
+    ]
+   },
+   {
+    "code": "RECORD_CONSISTENCY",
+    "confidence": "high",
+    "summary": "Six sources describe this entity (four independent). They agree on register status and jurisdiction.",
+    "kind": "context",
+    "sources": [
+     "opencheck"
+    ]
+   }
+  ],
+  "degraded_sources": [
+   {
+    "source_id": "opencheck",
+    "check": "cross_source_names",
+    "affected_signals": [
+     "RELATED_SANCTIONED",
+     "RELATED_COUNTER_SANCTIONED",
+     "RELATED_SANCTIONS_CONTROLLED",
+     "RELATED_SANCTIONS_LINKED",
+     "RELATED_DEBARMENT",
+     "RELATED_EXPORT_CONTROLLED",
+     "RELATED_EXPORT_CONTROL_LINKED",
+     "RELATED_EXPORT_RISK",
+     "RELATED_PEP"
+    ],
+    "detail": "Related-party sanctions and PEP screening covered the 25 highest-ranked of 47 related parties; 22 were not screened (22 current with no ownership or board role recorded).",
+    "reason": "truncated"
+   },
+   {
+    "source_id": "opencheck",
+    "check": "icij_offshore_leaks",
+    "affected_signals": [
+     "OFFSHORE_LEAKS"
+    ],
+    "detail": "Offshore Leaks screening covered the 30 highest-ranked of 47 related parties; 17 were not screened (17 current with no ownership or board role recorded).",
+    "reason": "truncated"
+   }
+  ],
+  "sources": [
+   {
+    "id": "climatetrace",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "Global Energy Monitor / Climate TRACE",
+    "license": "CC-BY-4.0"
+   },
+   {
+    "id": "cvr_denmark",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "CVR — Det Centrale Virksomhedsregister",
+    "license": "Danish Open Government Data (CVR brugervilkår)"
+   },
+   {
+    "id": "everypolitician",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "EveryPolitician",
+    "license": "CC-BY-NC-4.0"
+   },
+   {
+    "id": "gleif",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "GLEIF",
+    "license": "CC0-1.0"
+   },
+   {
+    "id": "openaleph",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "OpenAleph",
+    "license": "per-collection"
+   },
+   {
+    "id": "opencorporates",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "OpenCorporates",
+    "license": "OC-Terms"
+   },
+   {
+    "id": "opensanctions",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "OpenSanctions",
+    "license": "CC-BY-NC-4.0"
+   },
+   {
+    "id": "wikidata",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "Wikidata",
+    "license": "CC0-1.0"
+   },
+   {
+    "id": "wikirate",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "Wikirate",
+    "license": "CC-BY-4.0"
+   },
+   {
+    "id": "eiti",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "EITI — Extractive Industries Transparency Initiative",
+    "license": "EITI open data (free reuse with attribution)"
+   },
+   {
+    "id": "ted_eu",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "TED — Tenders Electronic Daily (EU procurement)",
+    "license": "EU open data — Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)"
+   }
+  ],
+  "coverage": {
+   "applicable_ids": [
+    "gleif",
+    "cvr_denmark",
+    "opencorporates",
+    "wikidata",
+    "opensanctions",
+    "openaleph",
+    "climatetrace",
+    "wikirate",
+    "eiti",
+    "ted_eu",
+    "everypolitician"
+   ],
+   "with_data_ids": [
+    "gleif",
+    "cvr_denmark",
+    "opencorporates",
+    "wikidata",
+    "opensanctions",
+    "openaleph",
+    "climatetrace",
+    "wikirate",
+    "everypolitician"
+   ],
+   "no_record_ids": [
+    "eiti",
+    "ted_eu"
+   ],
+   "failed_ids": []
+  },
+  "counts": {
+   "bods_statements": 108,
+   "relationships": 50,
+   "sources_with_data": 9,
+   "sources_applicable": 11,
+   "sources_answered": 11,
+   "risk_signals": 4,
+   "context_signals": 10
+  },
+  "licensing": {
+   "commercial_use": "no",
+   "attribution_required": true,
+   "share_alike": true,
+   "headline": "NOT for commercial use — a non-commercial source is included.",
+   "warnings": [
+    "Not for commercial use — this bundle includes non-commercial source(s): EveryPolitician (CC-BY-NC-4.0), OpenSanctions (CC-BY-NC-4.0). Remove their statements before any commercial use.",
+    "Share-alike obligations apply — derivative works of OpenCorporates (OC-Terms) must be released under the same licence.",
+    "Verify terms — bespoke or per-collection licence(s): OpenAleph (per-collection)."
+   ]
+  },
+  "license_notices": [],
+  "hint": "risk_signals rows carry kind='risk' (a finding) or kind='context' (how the company is put together, not a finding against it) — never report a context row as a risk. Call opencheck_export_bods for the full machine-readable ownership graph."
+ }
+}

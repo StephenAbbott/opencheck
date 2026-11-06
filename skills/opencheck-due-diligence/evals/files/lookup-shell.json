@@ -1,0 +1,793 @@
+{
+ "tool": "opencheck_lookup",
+ "arguments": {
+  "lei": "21380068P1DRHMJ8KU70"
+ },
+ "recorded_at": "2026-11-05T13:33:20Z",
+ "is_error": false,
+ "response": {
+  "lei": "21380068P1DRHMJ8KU70",
+  "legal_name": "SHELL PLC",
+  "jurisdiction": "GB",
+  "summary": "SHELL PLC (LEI 21380068P1DRHMJ8KU70, GB). Risk signals: RELATED_EXPORT_RISK, RELATED_COUNTER_SANCTIONED, RELATED_PEP. Structural context (not risk findings): GLEIF_REPORTING_EXCEPTION, NON_EU_JURISDICTION, RECORD_CONSISTENCY. 13 of 13 sources answered (12 with records, 1 with no record); 300 BODS statements (146 ownership/control relationships). CAUTION: 2 screening check(s) did not fully run (see degraded_sources) — the absence of their signals is not a clean screen. Licensing: NOT for commercial use — a non-commercial source is included. What can be known (GB): Register of People with Significant Control and Register of Overseas Entities is open to the public. OpenCheck reads beneficial owners from UK Companies House. Primary listing (PermID): London Stock Exchange · SHEL.",
+  "verdict": "The records show export-control findings on parties connected to it and a politically exposed person among the parties named. No parent is filed with GLEIF, which the LEI reporting rules permit.",
+  "profile": {
+   "legal_form": {
+    "value": "Public limited company",
+    "sources": [
+     "companies_house",
+     "gleif"
+    ],
+    "independent_sources": 2,
+    "other_values": []
+   },
+   "register_status": {
+    "liveness": "live",
+    "since": null,
+    "raw": "active",
+    "source_id": "companies_house",
+    "sources": [
+     "companies_house",
+     "gleif",
+     "opencorporates"
+    ],
+    "independent_sources": 2,
+    "other_values": []
+   },
+   "founding_date": {
+    "value": "2002-02-05",
+    "sources": [
+     "companies_house",
+     "gleif",
+     "openaleph",
+     "opencorporates"
+    ],
+    "independent_sources": 2,
+    "other_values": [
+     {
+      "source_id": "wikidata",
+      "value": "1890-01-01"
+     }
+    ]
+   },
+   "registered_address": {
+    "value": "Shell Centre, London, SE1 7NA",
+    "sources": [
+     "companies_house"
+    ],
+    "independent_sources": 1,
+    "other_values": [
+     {
+      "source_id": "gleif",
+      "value": "SHELL CENTRE, LONDON, GB-LND, SE1 7NA, GB"
+     }
+    ],
+    "country": ""
+   },
+   "jurisdiction": "GB",
+   "lei_registration": {
+    "status": "ISSUED",
+    "label": "Issued",
+    "flag": false,
+    "since": null,
+    "next_renewal_date": "2027-07-04",
+    "last_update_date": "2026-05-12",
+    "initial_registration_date": "2016-06-30",
+    "managing_lou": "213800WAVVOPS85N2205",
+    "source_id": "gleif",
+    "sentence": "GLEIF records this LEI as issued: its reference data is maintained by its issuer, and its next renewal is due on 4 Jul 2027."
+   },
+   "lei_successor": null,
+   "former_names": [
+    {
+     "name": "ROYAL DUTCH SHELL PLC",
+     "until": "2022-01-21",
+     "from": "2004-10-27",
+     "sources": [
+      "gleif",
+      "companies_house"
+     ]
+    },
+    {
+     "name": "FORTHDEAL LIMITED",
+     "until": "2004-10-27",
+     "from": "2002-02-05",
+     "sources": [
+      "companies_house"
+     ]
+    }
+   ],
+   "name_changed_on": null,
+   "statement_ids": [
+    "opencheck-95025b0c31e3c24c8e00846f",
+    "opencheck-ee80fb18ea1869db6f4c4576",
+    "opencheck-614a74f46186e1e7310062bf",
+    "opencheck-5f6dab010a186e5ceb70b7d6",
+    "opencheck-1fee1ed7c0255b997f28070c",
+    "opencheck-0bc180ebc28c3c3e1f4b2281",
+    "opencheck-23a774cb38ffae4df7dbeac2",
+    "opencheck-d253ef3c4b25f1f22ce52ed5"
+   ]
+  },
+  "lei_successor": null,
+  "knowability": {
+   "subject": {
+    "code": "GB",
+    "name": "United Kingdom",
+    "sentence": "Register of People with Significant Control and Register of Overseas Entities is open to the public. OpenCheck reads beneficial owners from UK Companies House.",
+    "access": "public",
+    "stated_absence": false,
+    "review_status": "verified",
+    "last_verified": "2026-09-18",
+    "opencheck_reads": [
+     "companies_house"
+    ]
+   },
+   "chain": [
+    {
+     "code": "US",
+     "name": "United States",
+     "sentence": "United States keeps no central register of beneficial owners. OpenCheck reads beneficial owners from DLCP — Department of Licensing and Consumer Protection Corporations Division (Washington, DC).",
+     "access": "no_register",
+     "stated_absence": false,
+     "review_status": "verified",
+     "last_verified": "2026-09-18",
+     "opencheck_reads": [
+      "dlcp_dc",
+      "ny_dos",
+      "sunbiz_florida"
+     ]
+    },
+    {
+     "code": "NO",
+     "name": "Norway",
+     "sentence": "Registeret over reelle rettighetshavere is accessible to authorities and obliged entities, and to others on legitimate interest, since 1 Oct 2024. OpenCheck reads Brønnøysundregistrene — Norwegian Register Centre for officers and registered holdings, not beneficial owners.",
+     "access": "legitimate_interest",
+     "stated_absence": false,
+     "review_status": "verified",
+     "last_verified": "2026-09-18",
+     "opencheck_reads": [
+      "brreg"
+     ]
+    },
+    {
+     "code": "LU",
+     "name": "Luxembourg",
+     "sentence": "Registre de Bénéficiaires Effectifs (RBE) is accessible to authorities and obliged entities, and to others on legitimate interest, since 27 Jan 2025. OpenCheck reads no Luxembourg register, so an owner absent from this report says nothing about what Luxembourg holds.",
+     "access": "legitimate_interest",
+     "stated_absence": false,
+     "review_status": "verified",
+     "last_verified": "2026-09-18",
+     "opencheck_reads": []
+    }
+   ],
+   "as_of": "2026-11-05",
+   "hint": "Dated facts about each register — who may see beneficial owners there and what OpenCheck reads of it. Describes, never judges: an absent owner is read against these, and none of them is a risk signal."
+  },
+  "integrated_ownership": {
+   "method": "Integrated ownership",
+   "description": "How much of the company each party holds, directly and through the companies it holds: shares are multiplied along each path and added across paths, and a company's own shares are given back to its other holders. Each source is computed on its own; figures from two sources are listed side by side, never added. Shareholdings only — voting rights, roles and control are not shares. For a person it is arithmetic on what was filed, not a determination of beneficial ownership. Context, not a finding.",
+   "credit": "Method: integrated ownership as published by T-Rank (https://docs.trank.no/white_papers).",
+   "as_of": "2026-11-05",
+   "holders": [
+    {
+     "name": "BlackRock",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "8.32%",
+       "minimum": 8.322,
+       "maximum": 8.322,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "The Vanguard Group",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "4.75%",
+       "minimum": 4.754,
+       "maximum": 4.754,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Norges Bank Investment Management",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "3.03%",
+       "minimum": 3.033,
+       "maximum": 3.033,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Legal & General",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "1.32%",
+       "minimum": 1.324,
+       "maximum": 1.324,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "State Street Investment Management",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "1.29%",
+       "minimum": 1.287,
+       "maximum": 1.287,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Clearstream",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "1.2%",
+       "minimum": 1.195,
+       "maximum": 1.195,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    },
+    {
+     "name": "Geode Capital Management",
+     "kind": "entity",
+     "status": "current",
+     "figures": [
+      {
+       "source": "Wikidata",
+       "text": "0.73%",
+       "minimum": 0.7326,
+       "maximum": 0.7326,
+       "incomplete": false,
+       "route": "directly"
+      }
+     ]
+    }
+   ],
+   "holders_total": 7,
+   "hint": "Context, not a risk finding: no threshold is applied and none of these figures feeds the risk signals or the verdict. Each source is computed on its own; two figures for one party are two publishers' readings, never to be added."
+  },
+  "disclosure_status": {
+   "as_of": "2026-11-05",
+   "by_source": [
+    {
+     "source": "gleif",
+     "source_name": "GLEIF",
+     "values": [
+      "exempt"
+     ],
+     "line": "Parent: Exempt — there is no known person controlling the entity (e.g. diversified shareholding)",
+     "entries": [
+      {
+       "value": "exempt",
+       "covers": "parent",
+       "details": [
+        "there is no known person controlling the entity (e.g. diversified shareholding)"
+       ],
+       "reasons": [
+        "NO_KNOWN_PERSON"
+       ]
+      }
+     ]
+    },
+    {
+     "source": "companies_house",
+     "source_name": "UK Companies House",
+     "values": [
+      "exempt"
+     ],
+     "line": "Beneficial owners: Exempt — From 1 October 2018 the company is exempt from the requirement to obtain information of its PSC because it has voting shares admitted to trading on a UK regulated market",
+     "entries": [
+      {
+       "value": "exempt",
+       "covers": "beneficial_owners",
+       "details": [
+        "From 1 October 2018 the company is exempt from the requirement to obtain information of its PSC because it has voting shares admitted to trading on a UK regulated market"
+       ],
+       "reasons": [
+        "psc-exempt-as-trading-on-uk-regulated-market"
+       ]
+      }
+     ]
+    },
+    {
+     "source": "wikidata",
+     "source_name": "Wikidata",
+     "values": [
+      "declared"
+     ],
+     "line": "Shareholders: Declared (7)",
+     "entries": [
+      {
+       "value": "declared",
+       "covers": "shareholders",
+       "count": 7
+      }
+     ]
+    },
+    {
+     "source": "climatetrace",
+     "source_name": "Global Energy Monitor / Climate TRACE",
+     "values": [
+      "declared"
+     ],
+     "line": "Shareholders: Declared (1)",
+     "entries": [
+      {
+       "value": "declared",
+       "covers": "shareholders",
+       "count": 1
+      }
+     ]
+    }
+   ],
+   "not_covered": [
+    "opencorporates",
+    "opensanctions",
+    "openaleph",
+    "wikirate",
+    "eiti",
+    "meip",
+    "eiti_assessment",
+    "ted_eu",
+    "everypolitician"
+   ],
+   "hint": "What each source says about the company's owners, for what it covers (beneficial owners, shareholders or the consolidating parent). Absence from a source is not an exemption: none_filed means the record carries no owner and no reason. Describes only; no value here feeds the risk signals or the verdict."
+  },
+  "listing": {
+   "status": "listed",
+   "reason": null,
+   "line": "London Stock Exchange · SHEL",
+   "exchange": "London Stock Exchange",
+   "exchange_country": "GB",
+   "mic": "XLON",
+   "ticker": "SHEL",
+   "ric": "SHEL.L",
+   "security_name": "SHELL ORD",
+   "url": "https://www.londonstockexchange.com/stock/SHEL/x/company-page",
+   "url_kind": "listing",
+   "permid_url": "https://permid.org/1-55836049491",
+   "as_of": "2026-11-05",
+   "attribution": "LSEG PermID (CC-BY 4.0)",
+   "hint": "The primary listing according to PermID: one main quote. Other listings of the same company are not shown. A venue URL is a listing or search page, not a filings page."
+  },
+  "institutional_shareholders": {
+   "status": "found",
+   "period": "2026-06-30",
+   "line": "1,520 institutional investment managers reported a position in SHELL PLC (SPON ADS) on Form 13F, as at 30 June 2026; the largest is FMR LLC with 87,332,346 shares.",
+   "securities": [
+    {
+     "cusip": "780259305",
+     "issuer_name": "SHELL PLC",
+     "title_of_class": "SPON ADS",
+     "is_adr": true,
+     "managers_reported": 1520,
+     "shares_outstanding": null,
+     "positions": [
+      {
+       "manager": "FMR LLC",
+       "shares": 87332346,
+       "value_usd": 6771750157,
+       "value_note": null,
+       "percent_computed": null
+      },
+      {
+       "manager": "Fisher Asset Management, LLC",
+       "shares": 27633155,
+       "value_usd": 2142674975,
+       "value_note": null,
+       "percent_computed": null
+      },
+      {
+       "manager": "DIMENSIONAL FUND ADVISORS LP",
+       "shares": 25363810,
+       "value_usd": 1966660972,
+       "value_note": null,
+       "percent_computed": null
+      },
+      {
+       "manager": "MORGAN STANLEY",
+       "shares": 10779129,
+       "value_usd": 835813833,
+       "value_note": null,
+       "percent_computed": null
+      },
+      {
+       "manager": "GOLDMAN SACHS GROUP INC",
+       "shares": 10560692,
+       "value_usd": 818876067,
+       "value_note": null,
+       "percent_computed": null
+      },
+      {
+       "manager": "PRICE T ROWE ASSOCIATES INC /MD/",
+       "shares": 9835553,
+       "value_usd": null,
+       "value_note": "Value reported in thousands of dollars, as before 2023 — the shares are shown and the value is not.",
+       "percent_computed": null
+      },
+      {
+       "manager": "Orbis Allan Gray Ltd",
+       "shares": 8847436,
+       "value_usd": 686030188,
+       "value_note": null,
+       "percent_computed": null
+      },
+      {
+       "manager": "Mawer Investment Management Ltd.",
+       "shares": 8013792,
+       "value_usd": 621389432,
+       "value_note": null,
+       "percent_computed": null
+      },
+      {
+       "manager": "BANK OF AMERICA CORP /DE/",
+       "shares": 7709715,
+       "value_usd": 597811329,
+       "value_note": null,
+       "percent_computed": null
+      },
+      {
+       "manager": "ARROWSTREET CAPITAL, LIMITED PARTNERSHIP",
+       "shares": 6727122,
+       "value_usd": 521621040,
+       "value_note": null,
+       "percent_computed": null
+      }
+     ],
+     "managers_not_shown": 1510
+    }
+   ],
+   "securities_not_listed": 0,
+   "disclaimer": "Form 13F lists the positions institutional investment managers have discretion over for funds and clients. It is not a record of beneficial ownership: it never enters the ownership graph and no risk signal reads it.",
+   "notes": [
+    "Positions overlap — a manager's report can include another manager that also reported the same shares — so they are never added together.",
+    "Long positions only, as at the quarter end and filed up to 45 days later. A manager may be allowed to leave a position out under confidential treatment, so a manager missing here says nothing.",
+    "A manager's Form 13F figure and its Schedule 13D/13G figure can differ: they are dated differently and filed under different rules."
+   ],
+   "attribution": "Contains data from the SEC's Form 13F data sets (U.S. Securities and Exchange Commission), public domain.",
+   "caveat": "Reported by the filers and not verified by the SEC; no substitute for the filings themselves.",
+   "hint": "Positions investment managers reported having discretion over on Form 13F, as at the quarter end. Not beneficial ownership and not a risk signal; never add the figures together, because positions overlap. percent_computed is OpenCheck's arithmetic, given only with its basis."
+  },
+  "identifiers": [
+   {
+    "scheme": "XI-LEI",
+    "schemeName": "Global Legal Entity Identifier Index",
+    "id": "21380068P1DRHMJ8KU70"
+   },
+   {
+    "scheme": "GB-COH",
+    "schemeName": "Companies House",
+    "id": "04366849"
+   },
+   {
+    "scheme": "OpenCorporates",
+    "schemeName": "OpenCorporates company ID",
+    "id": "gb/04366849",
+    "uri": "https://opencorporates.com/companies/gb/04366849"
+   },
+   {
+    "scheme": "QCC Code",
+    "schemeName": "QCC Global Enterprise Identifier (QCC Code)",
+    "id": "QGBRY2413H"
+   },
+   {
+    "scheme": "S&P CIQ Company ID",
+    "schemeName": "S&P CIQ Company ID",
+    "id": "22385966"
+   }
+  ],
+  "derived_identifiers": {
+   "lei": "21380068P1DRHMJ8KU70",
+   "gb_coh": "04366849",
+   "ocid": "gb/04366849",
+   "wikidata_qid": "Q154950"
+  },
+  "risk_signals": [
+   {
+    "code": "GLEIF_REPORTING_EXCEPTION",
+    "confidence": "high",
+    "summary": "No accounting-consolidation parent is reported to GLEIF: NO_KNOWN_PERSON for the direct and ultimate parent (no known person controls the entity (e.g. diversified shareholding)). Structural context, not a risk finding — these are permitted exceptions under the LEI ROC policy, and GLEIF Level 2 records accounting consolidation, not beneficial ownership.",
+    "kind": "context",
+    "sources": [
+     "gleif"
+    ]
+   },
+   {
+    "code": "NON_EU_JURISDICTION",
+    "confidence": "low",
+    "summary": "Ownership chain reaches jurisdictions outside the EU/EEA: GB, US. Structural context, not a risk finding — being outside the EU/EEA is not a risk factor in itself. Jurisdiction risk comes only from the FATF lists, the EU high-risk list and the EU tax list, which have their own signals.",
+    "kind": "context",
+    "sources": [
+     "wikidata"
+    ]
+   },
+   {
+    "code": "RELATED_EXPORT_RISK",
+    "confidence": "high",
+    "summary": "Related entity 'Clearstream' matches a record on OpenSanctions: flagged for trade risk.",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_COUNTER_SANCTIONED",
+    "confidence": "high",
+    "summary": "Related party 'JANE HOLL LUTE' matches a record on OpenSanctions (nationality also agrees): counter-sanctioned — designated by a state with weak democratic institutions, not by a mainstream sanctions authority.",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP",
+    "confidence": "high",
+    "summary": "Related party 'JANE HOLL LUTE' matches a record on OpenSanctions (birth year and nationality also agree): PEP. The same record is also reported by EveryPolitician.",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_PEP",
+    "confidence": "high",
+    "summary": "Related party 'Gerrit Zalm' matches a record on OpenSanctions (birth year also agrees): PEP. The same record is also reported by EveryPolitician and OpenAleph.",
+    "kind": "risk",
+    "sources": [
+     "opensanctions"
+    ]
+   },
+   {
+    "code": "RELATED_COUNTER_SANCTIONED",
+    "confidence": "medium",
+    "summary": "Possible name match only: related party 'JANE HOLL LUTE' shares a name with a record on OpenAleph, with no birth date or nationality in common to confirm they are the same person — counter-sanctioned — designated by a state with weak democratic institutions, not by a mainstream sanctions authority via 'Russia Personal Sanctions Targeting US Citizens'.",
+    "kind": "risk",
+    "sources": [
+     "openaleph"
+    ]
+   },
+   {
+    "code": "RELATED_PEP",
+    "confidence": "high",
+    "summary": "Related party 'Nigel Sheinwald' matches a record on OpenAleph (birth year also agrees): PEP via 'Wikidata Politically Exposed Persons'.",
+    "kind": "risk",
+    "sources": [
+     "openaleph"
+    ]
+   },
+   {
+    "code": "RECORD_CONSISTENCY",
+    "confidence": "high",
+    "summary": "Six sources describe this entity (four independent). They agree on register status and jurisdiction.",
+    "kind": "context",
+    "sources": [
+     "opencheck"
+    ]
+   }
+  ],
+  "degraded_sources": [
+   {
+    "source_id": "opencheck",
+    "check": "cross_source_names",
+    "affected_signals": [
+     "RELATED_SANCTIONED",
+     "RELATED_COUNTER_SANCTIONED",
+     "RELATED_SANCTIONS_CONTROLLED",
+     "RELATED_SANCTIONS_LINKED",
+     "RELATED_DEBARMENT",
+     "RELATED_EXPORT_CONTROLLED",
+     "RELATED_EXPORT_CONTROL_LINKED",
+     "RELATED_EXPORT_RISK",
+     "RELATED_PEP"
+    ],
+    "detail": "Related-party sanctions and PEP screening covered the 25 highest-ranked of 133 related parties; 108 were not screened (106 current with no ownership or board role recorded; 2 current owners, controllers or officers beyond the limit).",
+    "reason": "truncated"
+   },
+   {
+    "source_id": "opencheck",
+    "check": "icij_offshore_leaks",
+    "affected_signals": [
+     "OFFSHORE_LEAKS"
+    ],
+    "detail": "Offshore Leaks screening covered the 30 highest-ranked of 133 related parties; 103 were not screened (103 current with no ownership or board role recorded).",
+    "reason": "truncated"
+   }
+  ],
+  "sources": [
+   {
+    "id": "climatetrace",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "Global Energy Monitor / Climate TRACE",
+    "license": "CC-BY-4.0"
+   },
+   {
+    "id": "companies_house",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "UK Companies House",
+    "license": "OGL-3.0"
+   },
+   {
+    "id": "eiti",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "EITI — Extractive Industries Transparency Initiative",
+    "license": "EITI open data (free reuse with attribution)"
+   },
+   {
+    "id": "eiti_assessment",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "EITI Company Assessment",
+    "license": "EITI content-use policy (free reuse with attribution)"
+   },
+   {
+    "id": "everypolitician",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "EveryPolitician",
+    "license": "CC-BY-NC-4.0"
+   },
+   {
+    "id": "gleif",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "GLEIF",
+    "license": "CC0-1.0"
+   },
+   {
+    "id": "meip",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "OECD-UNSD Multinational Enterprise Information Platform (MEIP)",
+    "license": "OECD-Terms"
+   },
+   {
+    "id": "openaleph",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "OpenAleph",
+    "license": "per-collection"
+   },
+   {
+    "id": "opencorporates",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "OpenCorporates",
+    "license": "OC-Terms"
+   },
+   {
+    "id": "opensanctions",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "OpenSanctions",
+    "license": "CC-BY-NC-4.0"
+   },
+   {
+    "id": "wikidata",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "Wikidata",
+    "license": "CC0-1.0"
+   },
+   {
+    "id": "wikirate",
+    "found": true,
+    "answered": true,
+    "no_record": false,
+    "name": "Wikirate",
+    "license": "CC-BY-4.0"
+   },
+   {
+    "id": "ted_eu",
+    "found": false,
+    "answered": true,
+    "no_record": true,
+    "name": "TED — Tenders Electronic Daily (EU procurement)",
+    "license": "EU open data — Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)"
+   }
+  ],
+  "coverage": {
+   "applicable_ids": [
+    "gleif",
+    "companies_house",
+    "opencorporates",
+    "wikidata",
+    "opensanctions",
+    "openaleph",
+    "climatetrace",
+    "wikirate",
+    "eiti",
+    "meip",
+    "eiti_assessment",
+    "ted_eu",
+    "everypolitician"
+   ],
+   "with_data_ids": [
+    "gleif",
+    "companies_house",
+    "opencorporates",
+    "wikidata",
+    "opensanctions",
+    "openaleph",
+    "climatetrace",
+    "wikirate",
+    "eiti",
+    "meip",
+    "eiti_assessment",
+    "everypolitician"
+   ],
+   "no_record_ids": [
+    "ted_eu"
+   ],
+   "failed_ids": []
+  },
+  "counts": {
+   "bods_statements": 300,
+   "relationships": 146,
+   "sources_with_data": 12,
+   "sources_applicable": 13,
+   "sources_answered": 13,
+   "risk_signals": 6,
+   "context_signals": 3
+  },
+  "licensing": {
+   "commercial_use": "no",
+   "attribution_required": true,
+   "share_alike": true,
+   "headline": "NOT for commercial use — a non-commercial source is included.",
+   "warnings": [
+    "Not for commercial use — this bundle includes non-commercial source(s): EveryPolitician (CC-BY-NC-4.0), OpenSanctions (CC-BY-NC-4.0). Remove their statements before any commercial use.",
+    "Share-alike obligations apply — derivative works of OpenCorporates (OC-Terms) must be released under the same licence.",
+    "Verify terms — bespoke or per-collection licence(s): EITI Company Assessment (EITI content-use policy (free reuse with attribution)), OpenAleph (per-collection)."
+   ]
+  },
+  "license_notices": [],
+  "hint": "risk_signals rows carry kind='risk' (a finding) or kind='context' (how the company is put together, not a finding against it) — never report a context row as a risk. Call opencheck_export_bods for the full machine-readable ownership graph."
+ }
+}

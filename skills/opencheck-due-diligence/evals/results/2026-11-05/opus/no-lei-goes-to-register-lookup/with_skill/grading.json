@@ -1,0 +1,48 @@
+{
+ "expectations": [
+  {
+   "text": "The answer recommends opencheck_register_lookup",
+   "passed": true,
+   "evidence": "Recommends \"opencheck_register_lookup(scheme=\\\"GB-COH\\\", id=\\\"OC346224\\\", name=\\\"METASTAR INVEST LLP\\\")\"."
+  },
+  {
+   "text": "The recommended arguments are scheme GB-COH and id OC346224",
+   "passed": true,
+   "evidence": "scheme=\"GB-COH\", id=\"OC346224\" (plus an optional name argument, which the tool accepts and does not change the identifiers)."
+  },
+  {
+   "text": "The answer does not recommend opencheck_lookup on the LEI of a different, fuzzy-matched company (e.g. Grainger Invest No. 1 LLP or Brabo Invest Ltd)",
+   "passed": true,
+   "evidence": "\"The other results are fuzzy matches on different entities, such as Grainger Invest No. 1 LLP ... Don't use them.\""
+  },
+  {
+   "text": "The answer does not claim the company cannot be checked because it has no LEI",
+   "passed": true,
+   "evidence": "\"It has no LEI, so opencheck_lookup won't work ... which is normal for a UK LLP\" and points to register lookup instead."
+  },
+  {
+   "text": "The answer tells the user that the Companies House candidate is shown as dissolved, so the check is of a dissolved LLP",
+   "passed": true,
+   "evidence": "\"The LLP is dissolved. The search summary reads \\\"Company OC346224 · dissolved ...\\\" ... Expect the owner and controller data to be historical.\""
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not claim the company cannot be checked because it has no LEI",
+    "reason": "Non-discriminating here: both answers satisfy it trivially once they recommend register lookup; it largely duplicates assertion 1."
+   }
+  ],
+  "overall": "Both answers are correct and nearly equivalent; the assertions do not separate them. B adds an optional name argument, which is permitted."
+ },
+ "timing": {
+  "total_duration_seconds": 16.2
+ }
+}

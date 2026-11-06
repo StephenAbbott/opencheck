@@ -1,0 +1,52 @@
+{
+ "expectations": [
+  {
+   "text": "The answer describes the Form 13F information as positions reported by investment managers, not as ownership or beneficial ownership",
+   "passed": true,
+   "evidence": "'**Form 13F (30 June 2026):** the largest institutional positions. These are **not ownership**. Form 13F lists the shares an investment manager has discretion over on behalf of its funds and clients. It does not show who beneficially owns them.' and 'Please don't read them as a ranked list of owners.'"
+  },
+  {
+   "text": "The answer does not total 13F positions or describe '4,604 managers' as owning the company",
+   "passed": true,
+   "evidence": "'4,604 managers reported a position.' and '**Don't add the rows together**, including the two Vanguard entities.' No total given."
+  },
+  {
+   "text": "The answer points to the SEC EDGAR Schedule 13D/13G filings (three declared shareholders) as the ownership source, or to opencheck_owners / opencheck_export_bods to see them",
+   "passed": true,
+   "evidence": "'**SEC EDGAR Schedule 13D/13G:** three shareholders have declared a stake above 5%. These are ownership filings.' and 'run `opencheck_owners` or `opencheck_export_bods` on `FRDRIPF3EKNDJ2CQJL29`. Those would name the three Schedule 13D/13G filers.'"
+  },
+  {
+   "text": "The answer mentions that the US has no central beneficial-ownership register",
+   "passed": true,
+   "evidence": "'**US:** there is no central register of beneficial owners.'"
+  },
+  {
+   "text": "Every ownership figure the answer gives names its source (e.g. 'Form 13F')",
+   "passed": true,
+   "evidence": "Percentages sit in the table under 'Largest Form 13F positions, 30 June 2026' with 'The percentages are OpenCheck's own calculation against 941,357,065 shares outstanding (from Lilly's 10-Q cover, 3 Aug 2026)'; the later 'about 9.6%' for Lilly Endowment is inside that 13F section ('On these figures'). 'Every owner figure above comes from SEC securities filings'."
+  }
+ ],
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not total 13F positions or describe '4,604 managers' as owning the company",
+    "reason": "Both answers pass easily; the fixture's own disclaimer and notes ('never added together') make this near-automatic for any answer that reads the institutional_shareholders block, so it discriminates little."
+   },
+   {
+    "assertion": "The answer mentions that the US has no central beneficial-ownership register",
+    "reason": "The 'no central register' sentence is in the fixture's summary and knowability block verbatim; any careful answer repeats it, so it is weakly discriminating."
+   }
+  ],
+  "overall": "Assertions are verifiable against the fixture. Assertion 5 is somewhat subjective at the edges (e.g. a percentage restated later in prose under a 13F heading); graded as pass when the figure sits in a section explicitly sourced to Form 13F."
+ },
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "timing": {
+  "total_duration_seconds": 34.6
+ }
+}

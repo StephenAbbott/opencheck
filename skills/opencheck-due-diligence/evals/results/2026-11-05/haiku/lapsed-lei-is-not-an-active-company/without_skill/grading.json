@@ -1,0 +1,47 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not conclude that the company is active",
+   "passed": true,
+   "evidence": "Opens 'Short answer: OpenCheck can't confirm that BENTCARD IMPORT LLP is active. The only status it holds for the Azerbaijani entity is stale.'"
+  },
+  {
+   "text": "The answer distinguishes the LEI's status (lapsed) from the company's status",
+   "passed": true,
+   "evidence": "'**LEI registration is lapsed.**' and the ACTIVE status 'is the status of the LEI record, not of the company.' The two are kept explicitly apart."
+  },
+  {
+   "text": "The answer cites the Companies House record OC369315 as showing the LLP dissolved, or recommends checking it",
+   "passed": true,
+   "evidence": "'The search also returned BENTCARD IMPORT LLP on the UK Companies House register (company OC369315, Potters Bar, Hertfordshire), with the status \"dissolved.\"' and 'If it turns out to be the UK company, use the Companies House record instead.' It warns against reading the dissolved status across without a link."
+  },
+  {
+   "text": "The answer explains that GLEIF's 'ACTIVE' is an old or unverified declaration (not re-checked since 2015)",
+   "passed": true,
+   "evidence": "\"**'ACTIVE' is a 2015 declaration, not a current reading.** GLEIF's entity status of ACTIVE was last declared to the LEI issuer before 5 Feb 2015.\" plus 'no issuer has re-checked the reference data since 2015.'"
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not conclude that the company is active",
+    "reason": "Non-discriminating here: both answers (and any answer that reads the fixture summary, which says 'This is not a current register reading') pass easily."
+   },
+   {
+    "assertion": "The answer cites the Companies House record OC369315 as showing the LLP dissolved, or recommends checking it",
+    "reason": "The 'or recommends checking it' branch lets an answer pass while it says the CH record is probably a different entity. Both answers cite OC369315 as dissolved, but both treat it as an unlinked namesake, not as evidence that the LLP is dissolved. If the intended reading is that the CH record IS this LLP (an LLP is a UK legal form), the assertion should say so."
+   }
+  ],
+  "overall": "Both answers are accurate against the fixtures and pass all four assertions. B words the LEI-versus-company distinction and the 're-checked' point more explicitly than A. The assertions barely discriminate between them."
+ },
+ "timing": {
+  "total_duration_seconds": 15.4
+ }
+}

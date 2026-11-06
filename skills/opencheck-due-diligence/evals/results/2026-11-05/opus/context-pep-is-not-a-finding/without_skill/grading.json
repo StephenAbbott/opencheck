@@ -1,0 +1,38 @@
+{
+ "expectations": [
+  {
+   "text": "The answer distinguishes PEP listings due solely to a role at Ørsted (context) from the risk-level PEP signals",
+   "passed": true,
+   "evidence": "Section '1. Seven people tagged as PEPs only because they work at Ørsted (context, not a finding)' listing RELATED_PEP_SUBJECT_ROLE, kind: context; section '2. Two possible name matches (risk signals, but unconfirmed)' — 'the only PEP items with kind: risk'. Matches fixture (7 context, 2 risk)."
+  },
+  {
+   "text": "The answer reports Karl Johnny Hersvik and Julia Elizabeth King as possible name matches, not confirmed PEPs",
+   "passed": true,
+   "evidence": "'Two possible name matches ... In both cases the only link is a shared name ... not established as the same person' naming Karl Johnny Hersvik and Julia Elizabeth King."
+  },
+  {
+   "text": "The answer does not state a single unqualified total (such as 'nine PEPs')",
+   "passed": true,
+   "evidence": "'Short answer: none are confirmed. The OpenCheck lookup names 9 people with a PEP tag, but they fall into two quite different groups. You shouldn't report \"9 PEPs\".' The 9 is explicitly qualified; bottom-line table splits 7 context / 2 unconfirmed / 0 confirmed."
+  },
+  {
+   "text": "The answer mentions that the related-party screening was incomplete or truncated",
+   "passed": true,
+   "evidence": "'Caveat: the PEP screening was incomplete — OpenCheck found 47 related parties but screened only the top 25 ... The other 22 were not checked' and offshore leaks 30 of 47. Matches degraded_sources (reason truncated)."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [],
+  "overall": "All four assertions are verifiable against lookup-orsted.json; both answers satisfied all of them, so the eval did not discriminate between A and B in this case, but no single assertion is inherently non-discriminating."
+ },
+ "timing": {
+  "total_duration_seconds": 28.6
+ }
+}

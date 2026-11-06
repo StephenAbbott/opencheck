@@ -1,0 +1,112 @@
+{
+ "tool": "opencheck_owners",
+ "arguments": {
+  "lei": "OW6OFBNCKXC4US5C7523"
+ },
+ "recorded_at": "2026-11-05T13:34:51Z",
+ "is_error": false,
+ "response": {
+  "lei": "OW6OFBNCKXC4US5C7523",
+  "legal_name": "EQUINOR ASA",
+  "jurisdiction": "NO",
+  "rule": {
+   "operator": ">=",
+   "threshold": 25.0,
+   "basis": "amlr",
+   "text": "25% or more — no national rule recorded for this jurisdiction, so the EU AML Regulation's reading"
+  },
+  "calculated_owners": [
+   {
+    "party": "opencheck-b2fe5e609d09565a39f51c2a",
+    "name": "FINANSDEPARTEMENTET",
+    "kind": "entity",
+    "position": "above",
+    "figures": [
+     {
+      "source": "OpenSanctions",
+      "source_id": "opensanctions",
+      "text": "67%",
+      "minimum": 67.0,
+      "maximum": 67.0,
+      "position": "above",
+      "route": "directly"
+     }
+    ]
+   },
+   {
+    "party": "opencheck-af4901e50efcc6fdd2bc6480",
+    "name": "Government of Norway",
+    "kind": "entity",
+    "position": "above",
+    "figures": [
+     {
+      "source": "Global Energy Monitor / Climate TRACE",
+      "source_id": "climatetrace",
+      "text": "67%",
+      "minimum": 67.0,
+      "maximum": 67.0,
+      "position": "above",
+      "route": "directly"
+     }
+    ]
+   },
+   {
+    "party": "opencheck-e323ee900429e35e6dc71d9a",
+    "name": "Ministry of Trade, Industry and Fisheries",
+    "kind": "entity",
+    "position": "above",
+    "figures": [
+     {
+      "source": "Wikidata",
+      "source_id": "wikidata",
+      "text": "67%",
+      "minimum": 67.0,
+      "maximum": 67.0,
+      "position": "above",
+      "route": "directly"
+     }
+    ]
+   }
+  ],
+  "declared_beneficial_owners": [],
+  "in_both": [],
+  "listed_without_a_figure": [
+   {
+    "party": "opencheck-ddab86b1cef7921f30bd79a0",
+    "name": "Ministry of Energy of Norway",
+    "kind": "entity",
+    "status": "formerly",
+    "note": "Formerly — every path to the company has ended",
+    "sources": [
+     "Wikidata"
+    ]
+   }
+  ],
+  "chain_stops": [],
+  "depth": {
+   "requested": 1,
+   "layers_reached": 1,
+   "extra_lookups": 0,
+   "hop_limit_reached": false,
+   "max_extra_lookups": 10
+  },
+  "as_of": "2026-11-05",
+  "method": {
+   "name": "Integrated ownership",
+   "description": "How much of the company each party holds, directly and through the companies it holds: shares are multiplied along each path and added across paths, and a company's own shares are given back to its other holders. Each source is computed on its own; figures from two sources are listed side by side, never added. Shareholdings only — voting rights, roles and control are not shares. For a person it is arithmetic on what was filed, not a determination of beneficial ownership. Context, not a finding.",
+   "credit": "Method: integrated ownership as published by T-Rank (https://docs.trank.no/white_papers)."
+  },
+  "note": "Calculated figures are arithmetic on what the sources filed — shares multiplied along each path and added across paths, one figure per source, never added across sources — not a determination that anyone is a beneficial owner. Declared beneficial owners are as each register publishes them.",
+  "fullcheck_url": "https://opencheck.world/?lei=OW6OFBNCKXC4US5C7523&mode=full",
+  "license_notices": [
+   {
+    "source_id": "opensanctions",
+    "hit_id": "NK-jsAdAZqk3fG7KumbmDM5LW",
+    "notice": "OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license."
+   }
+  ],
+  "hint": "Context, not a risk finding. 'may_be_above' means the figure could meet the threshold (a band that straddles it, or a path whose share is not stated); read it as unknown, never as above. Two figures for one party are two sources' readings: never add them. Call opencheck_ownership_map to see the structure, or opencheck_lookup for risk signals.",
+  "summary": "EQUINOR ASA — rule applied: 25% or more — no national rule recorded for this jurisdiction, so the EU AML Regulation's reading. Calculated at or above the threshold: FINANSDEPARTEMENTET (67% OpenSanctions); Government of Norway (67% Global Energy Monitor / Climate TRACE); Ministry of Trade, Industry and Fisheries (67% Wikidata). 0 current declared beneficial owner(s).",
+  "sanctions_ownership_test": null
+ }
+}

@@ -1,0 +1,65 @@
+{
+ "expectations": [
+  {
+   "text": "The answer describes the Form 13F information as positions reported by investment managers, not as ownership or beneficial ownership",
+   "passed": true,
+   "evidence": "'the largest institutional investment managers that reported positions in Eli Lilly on Form 13F. Those are positions managers have discretion over, not owners'; '13F is not beneficial ownership.'"
+  },
+  {
+   "text": "The answer does not total 13F positions or describe '4,604 managers' as owning the company",
+   "passed": true,
+   "evidence": "No total given; 'the figures must not be added together. The top ten do not sum to a total holding.'; '4,604 managers reported a position in total.' (reported a position, not owning)."
+  },
+  {
+   "text": "The answer points to the SEC EDGAR Schedule 13D/13G filings (three declared shareholders) as the ownership source, or to opencheck_owners / opencheck_export_bods to see them",
+   "passed": true,
+   "evidence": "'SEC EDGAR (Schedule 13D/13G): declares 3 shareholders'; next steps: 'Read the named Schedule 13D/13G filers on SEC EDGAR for the three declared shareholders. Those filings show beneficial ownership above the reporting threshold.' Does not name opencheck_owners/export_bods, but the first branch of the assertion is met."
+  },
+  {
+   "text": "The answer mentions that the US has no central beneficial-ownership register",
+   "passed": true,
+   "evidence": "'Register (DLCP, Indiana): no beneficial-owner register exists in the US.' (mislabels DLCP as Indiana, but the US-no-register point is made)."
+  },
+  {
+   "text": "Every ownership figure the answer gives names its source (e.g. 'Form 13F')",
+   "passed": true,
+   "evidence": "Table sits under heading 'Largest 13F-reporting managers (as at 30 June 2026)' with '% of shares outstanding (OpenCheck arithmetic)' and the shares-outstanding basis cited (10-Q/10-K cover); the SEC EDGAR count and integrated ownership (0) are each attributed. No unattributed ownership figure found."
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [
+  {
+   "claim": "'Register (DLCP, Indiana)' — DLCP is the Indiana register",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Fixture knowability: 'DLCP — Department of Licensing and Consumer Protection Corporations Division (Washington, DC)'; the Indiana identifier is US-IN Indiana Secretary of State 183025-143, and no DLCP source appears in this lookup's sources."
+  },
+  {
+   "claim": "'no beneficial-owner register exists in the US'",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Overstated: fixture says the US 'keeps no central register of beneficial owners' and that OpenCheck reads beneficial owners from DLCP (DC), NY DOS and Sunbiz Florida."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not total 13F positions or describe '4,604 managers' as owning the company",
+    "reason": "Both answers passed easily; the fixture's own notes ('never added together') make this near-automatic and weakly discriminating."
+   },
+   {
+    "assertion": "Every ownership figure the answer gives names its source (e.g. 'Form 13F')",
+    "reason": "'Every ownership figure names its source' is judged by section headings vs per-figure labels; consider specifying whether a table heading suffices to make it verifiable."
+   }
+  ],
+  "overall": "Both answers handle the 13F-not-ownership framing correctly; differences lie in minor factual slips (A mislabels DLCP as Indiana; B adds OpenSanctions to the NC licence warning)."
+ },
+ "timing": {
+  "total_duration_seconds": 20.4
+ }
+}

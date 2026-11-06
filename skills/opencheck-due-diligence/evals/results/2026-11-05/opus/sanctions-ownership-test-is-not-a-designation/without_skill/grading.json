@@ -1,0 +1,50 @@
+{
+ "expectations": [
+  {
+   "text": "The answer does not state as fact that Persia International Bank itself is designated / on a sanctions list",
+   "passed": true,
+   "evidence": "'No, this result doesn't show that it's a designated entity'; 'Why I still won't say \"yes, it is designated\"'; own-listing claim hedged: 'From memory, OFAC added it to the SDN list in 2007 alongside Bank Mellat. I haven't checked that against this data, so verify it before relying on it.'"
+  },
+  {
+   "text": "The answer explains that the sanctions 50% ownership test is met (Mellat Bank, 50–75%) as computed by OpenCheck from filed shareholdings",
+   "passed": true,
+   "evidence": "'Mellat Bank holds more than 50% and up to 75% directly (UK Companies House PSC band 50–75%)'; 'OpenCheck's computed sanctions ownership test therefore gives \"meets\" for OFAC, EU and UK, with confidence high'; 'It is arithmetic on filed shareholdings.'"
+  },
+  {
+   "text": "The answer says the result is not a determination that the bank is sanctioned or blocked, or that control tests were not computed",
+   "passed": true,
+   "evidence": "'In its own words: \"not a determination that the company is sanctioned, blocked or frozen.\"' and 'Some tests weren't run: The EU/UK control tests, such as power to appoint the board.'"
+  },
+  {
+   "text": "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total",
+   "passed": false,
+   "evidence": "It combines the two holders' stakes: 'Companies House lists Bank Tejarat at 25–50% ... If the two are the same bank, designated parties hold close to all of the company.' That aggregates Mellat's 50–75% and Tejarat's 25–50% into a combined total ('close to all'), even if conditionally. (It does say the two sources' figures for Mellat are 'never added together'.)"
+  }
+ ],
+ "summary": {
+  "passed": 3,
+  "failed": 1,
+  "total": 4,
+  "pass_rate": 0.75
+ },
+ "claims": [
+  {
+   "claim": "If Bank Tejarat and TEJARAT BANK are the same bank, designated parties hold close to all of the company",
+   "type": "factual",
+   "verified": false,
+   "evidence": "Fixture gives Mellat 50–75% and Bank Tejarat 25–50% (both Companies House bands); summing them gives only a 75–100% range, so 'close to all' overstates what the records support, and the fixture never makes this combination (method says figures are per source and Tejarat was name-only, not counted)."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total",
+    "reason": "Borderline when the aggregation is conditional and qualitative ('close to all') rather than a numeric sum; the assertion could state whether hypothetical combined totals count."
+   }
+  ],
+  "overall": "B is otherwise accurate against the fixture (regimes, identifier vs name-only bases, chain stops, depth 1, licence, FAQ 398/402). Its one slip is combining the two shareholders' bands into a near-total."
+ },
+ "timing": {
+  "total_duration_seconds": 32.4
+ }
+}

@@ -1,0 +1,38 @@
+{
+ "expectations": [
+  {
+   "text": "The answer distinguishes PEP listings due solely to a role at Ørsted (context) from the risk-level PEP signals",
+   "passed": true,
+   "evidence": "'1. Listed as PEPs only because of their role at Ørsted: 7 people (context, not a finding)' — RELATED_PEP_SUBJECT_ROLE, kind: context; '2. Possible name matches only: 2 people (risk signal, unconfirmed)' — RELATED_PEP, kind: risk."
+  },
+  {
+   "text": "The answer reports Karl Johnny Hersvik and Julia Elizabeth King as possible name matches, not confirmed PEPs",
+   "passed": true,
+   "evidence": "'OpenCheck tags these RELATED_PEP, with kind: risk and medium confidence. In both cases the match is on the name alone' naming Karl Johnny Hersvik and Julia Elizabeth King; 'None of the 9 is a confirmed PEP'."
+  },
+  {
+   "text": "The answer does not state a single unqualified total (such as 'nine PEPs')",
+   "passed": true,
+   "evidence": "'There is no single number. The lookup names 9 people next to a PEP label, but they fall into two different groups. None of the 9 is a confirmed PEP in their own right.' Qualified, not an unqualified total."
+  },
+  {
+   "text": "The answer mentions that the related-party screening was incomplete or truncated",
+   "passed": true,
+   "evidence": "'The screen is incomplete. Related-party PEP and sanctions screening covered \"the 25 highest-ranked of 47 related parties; 22 were not screened\"' — quoted verbatim from degraded_sources."
+  }
+ ],
+ "summary": {
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [],
+  "overall": "All four assertions are verifiable against lookup-orsted.json; both answers satisfied all of them, so the eval did not discriminate between A and B in this case, but no single assertion is inherently non-discriminating."
+ },
+ "timing": {
+  "total_duration_seconds": 29.0
+ }
+}

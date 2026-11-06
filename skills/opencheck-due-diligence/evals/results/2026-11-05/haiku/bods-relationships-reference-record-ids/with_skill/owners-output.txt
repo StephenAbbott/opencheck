@@ -1,0 +1,81 @@
+Owners of PERSIA INTERNATIONAL BANK PLC (LEI 213800HTIY6D1KMBG757)
+Statements: 28  |  subject records: 4  |  export as of 2026-11-05
+Shares are per source. Figures from different sources are not added.
+
+== Subject record opencheck-87b3ba7f4db2637dd2a55f40
+   PERSIA INTERNATIONAL BANK PLC | identifiers: XI-LEI 213800HTIY6D1KMBG757; GB-COH 04218020; QCC Code QGBV7QPFYS; ISO-9362 PIBPGB21TGT; ISO-9362 PIBPGB21XXX; S&P CIQ Company ID 27922027
+   described by: GLEIF [gleif], retrieved 2026-11-05T10:09:02Z, https://www.gleif.org/lei/213800HTIY6D1KMBG757
+
+   Owners (named parties with a shareholding or unknown interest):
+     none in this record
+
+   Control without a named party (not counted as owners):
+   - Natural person(s) (GLEIF reporting exception) | interest: otherInfluenceOrControl | GLEIF reporting exception NATURAL_PERSONS: the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent (ExceptionCategory: DIRECT_ACCOUNTING_CONSOLIDATION_PARENT)
+       source: GLEIF [gleif], retrieved 2026-11-05T10:09:02Z, https://www.gleif.org/lei/213800HTIY6D1KMBG757
+   - Natural person(s) (GLEIF reporting exception) | interest: otherInfluenceOrControl | GLEIF reporting exception NATURAL_PERSONS: the entity is controlled by natural person(s) without any intermediate legal entity meeting the definition of accounting consolidating parent (ExceptionCategory: ULTIMATE_ACCOUNTING_CONSOLIDATION_PARENT)
+       source: GLEIF [gleif], retrieved 2026-11-05T10:09:02Z, https://www.gleif.org/lei/213800HTIY6D1KMBG757
+
+   Officers (directors, not owners, no shares): 0
+
+== Subject record opencheck-1645fff766e1dea36edd3b79
+   PERSIA INTERNATIONAL BANK PLC | identifiers: OPENSANCTIONS NK-DC4R48SCEMmbcURFzktAKy; XI-LEI 213800HTIY6D1KMBG757; REG '04218020
+   described by: OpenSanctions [opensanctions], retrieved 2026-11-05T13:35:07Z, https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/
+
+   Owners (named parties with a shareholding or unknown interest):
+   - Mellat Bank [entity]
+       share: no share stated | direct/indirect: direct | statement date: 2026-05-25
+       holder identifiers: OPENSANCTIONS NK-cdNHfj9Kizbgp6gAApBNya; REG-IR 38077
+       source: OpenSanctions [opensanctions], retrieved 2026-11-05T13:35:07Z, https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/
+   - TEJARAT BANK [entity]
+       share: no share stated | direct/indirect: direct | statement date: 2026-05-25
+       holder identifiers: OPENSANCTIONS NK-fESDfWffPatY7M2kneRinJ; XI-LEI 5493007MJ3BLX55XSZ63; REG 38027
+       source: OpenSanctions [opensanctions], retrieved 2026-11-05T13:35:07Z, https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/
+   - Islamic Republic Of Iran [entity]
+       share: interest type unknown, no share stated | direct/indirect: not stated | statement date: 2026-07-27
+       holder identifiers: OPENSANCTIONS NK-g9otNs5vgss4kvR62bJiW7
+       source: OpenSanctions [opensanctions], retrieved 2026-11-05T13:35:07Z, https://www.opensanctions.org/entities/NK-DC4R48SCEMmbcURFzktAKy/
+
+   Officers (directors, not owners, no shares): 0
+
+== Subject record opencheck-d38f80e900bdf376c85ad686
+   PERSIA INTERNATIONAL BANK PLC | identifiers: GB-COH 04218020
+   described by: UK Companies House [companies_house], retrieved 2026-11-05T13:35:05Z, https://find-and-update.company-information.service.gov.uk/company/04218020
+
+   Owners (named parties with a shareholding or unknown interest):
+   - Bank Mellat [entity]
+       share: more than 50% and up to 75% | direct/indirect: unknown | statement date: 2016-05-16
+       filed as: Ownership of shares – More than 50% but less than 75%
+       holder identifiers: REG-IR 38077
+       source: UK Companies House [companies_house], retrieved 2026-11-05T13:35:05Z, https://find-and-update.company-information.service.gov.uk/company/04218020
+   - Bank Tejarat [entity]
+       share: more than 25% and up to 50% | direct/indirect: unknown | statement date: 2016-05-16
+       filed as: Ownership of shares – More than 25% but not more than 50%
+       holder identifiers: REG-IR 38027
+       source: UK Companies House [companies_house], retrieved 2026-11-05T13:35:05Z, https://find-and-update.company-information.service.gov.uk/company/04218020
+
+   Officers (directors, not owners, no shares): 5
+   - AKHONDI- ASL, Aziz, Mr. | Director, from 2019-03-29 | source: UK Companies House [companies_house], retrieved 2026-11-05T13:35:05Z, https://find-and-update.company-information.service.gov.uk/company/04218020
+   - FAROKHNEJAD, Farshid | Director, from 2022-09-01 | source: UK Companies House [companies_house], retrieved 2026-11-05T13:35:05Z, https://find-and-update.company-information.service.gov.uk/company/04218020
+   - FEIZASAR, Hadi Akhlaghi, Dr | Director, from 2022-03-08 | source: UK Companies House [companies_house], retrieved 2026-11-05T13:35:05Z, https://find-and-update.company-information.service.gov.uk/company/04218020
+   - REZAEIPOUR, Mohammad Reza | Director, from 2022-06-01 | source: UK Companies House [companies_house], retrieved 2026-11-05T13:35:05Z, https://find-and-update.company-information.service.gov.uk/company/04218020
+   - SHAHMIR, Farrokh | Director, from 2017-06-30 | source: UK Companies House [companies_house], retrieved 2026-11-05T13:35:05Z, https://find-and-update.company-information.service.gov.uk/company/04218020
+
+== Subject record opencheck-42a98b75dcd07b67c0c47c7d
+   PERSIA INTERNATIONAL BANK PLC | identifiers: OPENALEPH oc-companies-gb-04218020.798a6a36cbd4d42268543e47ff8fa80c246053cc; REG-GB 04218020
+   described by: OpenAleph [openaleph], retrieved 2026-11-05T13:07:29Z, https://search.openaleph.org/entities/oc-companies-gb-04218020.798a6a36cbd4d42268543e47ff8fa80c246053cc
+
+   Owners (named parties with a shareholding or unknown interest):
+     none in this record
+
+   Officers (directors, not owners, no shares): 0
+
+== T-Rank integrated ownership (as published, per source, not summed)
+   - Mellat Bank [entity] 50–75% | source: UK Companies House | route: directly
+   - Mellat Bank [entity] No figure — no share is stated on any path | source: OpenSanctions | route: directly (incomplete)
+   - Bank Tejarat [entity] 25–50% | source: UK Companies House | route: directly
+   - TEJARAT BANK [entity] No figure — no share is stated on any path | source: OpenSanctions | route: directly (incomplete)
+
+== Licence notices
+   - OpenSanctions is licensed under CC-BY-NC-4.0. Commercial re-use of this data is not permitted under the source license.
+
+Owner entries printed: 5

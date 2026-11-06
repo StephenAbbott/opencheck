@@ -1,0 +1,52 @@
+{
+ "expectations": [
+  {
+   "text": "The answer recommends opencheck_register_lookup",
+   "passed": true,
+   "evidence": "B: 'Next call: opencheck_knowability, then opencheck_register_lookup' with step 2 'Then, opencheck_register_lookup'."
+  },
+  {
+   "text": "The recommended arguments are scheme GB-COH and id OC346224",
+   "passed": true,
+   "evidence": "B: '{ \"scheme\": \"GB-COH\", \"id\": \"OC346224\" }'"
+  },
+  {
+   "text": "The answer does not recommend opencheck_lookup on the LEI of a different, fuzzy-matched company (e.g. Grainger Invest No. 1 LLP or Brabo Invest Ltd)",
+   "passed": true,
+   "evidence": "B never recommends opencheck_lookup on any LEI; 'a company with no LEI is checked by its register number, not by opencheck_lookup'. Grainger/Brabo not mentioned."
+  },
+  {
+   "text": "The answer does not claim the company cannot be checked because it has no LEI",
+   "passed": true,
+   "evidence": "B: 'a company with no LEI is checked by its register number' — explicitly says it can be checked."
+  },
+  {
+   "text": "The answer tells the user that the Companies House candidate is shown as dissolved, so the check is of a dissolved LLP",
+   "passed": true,
+   "evidence": "B: 'Its only identifier is Companies House GB-COH OC346224, and it is dissolved.' and 'The company is dissolved, so the record is historical. Say so in the write-up.'"
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not recommend opencheck_lookup on the LEI of a different, fuzzy-matched company (e.g. Grainger Invest No. 1 LLP or Brabo Invest Ltd)",
+    "reason": "Non-discriminating here: neither answer mentions the GLEIF fuzzy candidates at all; passes by omission."
+   },
+   {
+    "assertion": "The answer does not claim the company cannot be checked because it has no LEI",
+    "reason": "Non-discriminating: both answers pass trivially once they recommend opencheck_register_lookup."
+   }
+  ],
+  "overall": "Assertions 1, 2 and 5 carry the signal; both answers satisfy all five. The eval does not test whether the answer gives a single 'next call' (B puts opencheck_knowability first) or whether extra arguments (A's optional name) are acceptable."
+ },
+ "timing": {
+  "total_duration_seconds": 12.6
+ }
+}

@@ -1,0 +1,1060 @@
+{
+  "metadata": {
+    "skill_name": "opencheck-due-diligence",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-11-05T13:49:00Z",
+    "evals_run": [
+      "bods-relationships-reference-record-ids",
+      "bulk-exploration-goes-to-datasets",
+      "context-pep-is-not-a-finding",
+      "degraded-batch-row-is-not-clean",
+      "form-13f-managers-are-not-owners",
+      "gleif-consolidation-is-not-ownership",
+      "lapsed-lei-is-not-an-active-company",
+      "no-lei-goes-to-register-lookup",
+      "per-source-figures-are-never-added",
+      "sanctions-ownership-test-is-not-a-designation",
+      "shell-name-matches-and-truncated-screen",
+      "thin-answer-is-the-registers-limit"
+    ],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": "bods-relationships-reference-record-ids",
+      "eval_name": "bods-relationships-reference-record-ids",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 99.3,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "owners.py resolves relationship parties by recordId (not statementId), and its output names the owning parties rather than ids or 'unknown'",
+          "passed": true,
+          "evidence": "records dict keyed on s['recordId']; party = records.get(d.get('interestedParty')); subjects matched by recordId. Fixture check: 28/28 statements have statementId != recordId and all 24 party references are recordIds. Output names 'Bank Mellat', 'Bank Tejarat', 'Mellat Bank', 'TEJARAT BANK', 'Islamic Republic Of Iran' (re-run output identical to owners-output.txt)."
+        },
+        {
+          "text": "The output shows Bank Mellat (OpenSanctions spells it Mellat Bank) with a more-than-50% up to 75% range attributed to UK Companies House",
+          "passed": true,
+          "evidence": "Under the UK Companies House subject record: '- Bank Mellat [entity] share: more than 50% and up to 75% ... source: UK Companies House [companies_house]'."
+        },
+        {
+          "text": "The output does not list the directors (seniorManagingOfficial interests) as owners",
+          "passed": true,
+          "evidence": "Directors are under 'Officers (directors, not owners, no shares): 5' and are not counted in 'Owner entries printed: 5'."
+        },
+        {
+          "text": "The output does not present the GLEIF relationships as ownership or shareholding",
+          "passed": true,
+          "evidence": "GLEIF entries appear under 'Control without a named party (not counted as owners)' with interest otherInfluenceOrControl; the GLEIF record shows 'Owners ... none in this record'."
+        },
+        {
+          "text": "Shares are shown as ranges (minimum/exclusiveMinimum to maximum), not collapsed to a single number",
+          "passed": true,
+          "evidence": "'more than 50% and up to 75%', 'more than 25% and up to 50%' (exclusiveMinimum..maximum); integrated figures shown as '50\u201375%'."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "bulk-exploration-goes-to-datasets",
+      "eval_name": "bulk-exploration-goes-to-datasets",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 49.6,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer recommends the published Azerbaijani Laundromat dataset release instead of 200 live lookups",
+          "passed": true,
+          "evidence": "\"I'd skip a loop of live opencheck_lookup calls for about 200 companies. OpenCheck has a published bulk dataset for exactly this set\" and names dataset-azerbaijani-laundromat-2026-10-06"
+        },
+        {
+          "text": "The answer mentions that the release includes a Neo4j bundle (or Neo4j CSV) that can be loaded directly",
+          "passed": true,
+          "evidence": "\"*.neo4j.zip: CSVs plus an import script\"; script finds import.sh / import.cypher in the bundle"
+        },
+        {
+          "text": "The answer mentions the lookup budget / rate limit or the batch cap of 20",
+          "passed": true,
+          "evidence": "\"ten fresh checks a minute per address ... opencheck_batch_lookup takes 20 LEIs per call\""
+        },
+        {
+          "text": "The answer mentions that the laundromat dataset is non-commercial / CC-BY-NC",
+          "passed": true,
+          "evidence": "\"The bundle includes OpenSanctions and EveryPolitician data under CC-BY-NC-4.0. Non-commercial use only.\" (also in script header)"
+        },
+        {
+          "text": "The answer does not give an unpaced loop that calls opencheck_lookup 200 times as the main solution",
+          "passed": true,
+          "evidence": "Script only runs gh release download + unzip; \"This does NOT call the live OpenCheck MCP server.\""
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "context-pep-is-not-a-finding",
+      "eval_name": "context-pep-is-not-a-finding",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 17.1,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer distinguishes PEP listings due solely to a role at \u00d8rsted (context) from the risk-level PEP signals",
+          "passed": true,
+          "evidence": "Separate sections 'Risk findings (2): possible name matches only' and 'Context only (7): PEP status comes from their \u00d8rsted role ... These are not findings against the company.'"
+        },
+        {
+          "text": "The answer reports Karl Johnny Hersvik and Julia Elizabeth King as possible name matches, not confirmed PEPs",
+          "passed": true,
+          "evidence": "'Short answer: no confirmed PEP.' Table: Hersvik and King each 'Shares a name with a PEP record ... No birth date or nationality in common'; 'Check ... before treating either as a PEP.'"
+        },
+        {
+          "text": "The answer does not state a single unqualified total (such as 'nine PEPs')",
+          "passed": true,
+          "evidence": "Headline is 'no confirmed PEP'; the 9 is stated only as '9 related people with a PEP flag, but only 2 of those are risk findings, and both are possible name matches... The other 7 are flagged only because of their role', qualified in the same statement."
+        },
+        {
+          "text": "The answer mentions that the related-party screening was incomplete or truncated",
+          "passed": true,
+          "evidence": "'Related-party PEP and sanctions screening covered 25 of 47 related parties. The other 22 were not screened.' plus Offshore Leaks 30 of 47."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "degraded-batch-row-is-not-clean",
+      "eval_name": "degraded-batch-row-is-not-clean",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 24.8,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer does not describe Heineken N.V. as clear, clean or safe to onboard without qualification",
+          "passed": true,
+          "evidence": "Heading 'none cleared'; Heineken row action 'Incomplete; re-run'; '\"No risk signals\" here means the check was not fully run. It does not mean clear.'"
+        },
+        {
+          "text": "The answer says Heineken's screen is incomplete because a source (the Dutch KvK register, or 'one source') did not answer",
+          "passed": true,
+          "evidence": "'Zero risk signals, but the Dutch register (`kvk`) failed. Its beneficial owners are recorded as unreachable.' Fixture: failed_ids ['kvk'], degraded_sources ['kvk']."
+        },
+        {
+          "text": "The answer does not describe Bentcard Import LLP as an active company; it says the LEI lapsed and/or the status is not a current register reading",
+          "passed": true,
+          "evidence": "'The LEI has lapsed. GLEIF's \"ACTIVE\" was declared before 5 Feb 2015 ... so it is not a current reading of the company.' and 'the company's current status is unknown.'"
+        },
+        {
+          "text": "The answer does not treat context counts (context_count / context codes such as GLEIF_REPORTING_EXCEPTION or NON_EU_JURISDICTION) as risk findings",
+          "passed": true,
+          "evidence": "Context counts/codes are never mentioned; the 'Risk signals' column and bullets list only risk_codes (Shell 3 codes, Orsted risk_count 4, Heineken 0). No context code is presented as a finding."
+        },
+        {
+          "text": "The answer does not grade the companies as high/medium/low risk or rank them by severity",
+          "passed": true,
+          "evidence": "Only action labels 'Closer look' / 'Incomplete; re-run'; ticket line '0 of 4 cleared'. No high/medium/low grading or severity ranking."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "form-13f-managers-are-not-owners",
+      "eval_name": "form-13f-managers-are-not-owners",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 28.7,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer describes the Form 13F information as positions reported by investment managers, not as ownership or beneficial ownership",
+          "passed": true,
+          "evidence": "'investment managers that reported holdings on SEC Form 13F... They are not beneficial ownership'; heading 'Largest reported holders (Form 13F, not beneficial owners)'; 'Form 13F covers positions a manager has discretion over. It is not a record of who owns the shares.'"
+        },
+        {
+          "text": "The answer does not total 13F positions or describe '4,604 managers' as owning the company",
+          "passed": true,
+          "evidence": "'Positions overlap... so the rows are never totalled.'; 'The record lists the top 10 of 4,604 managers reporting a position.' No total, no ownership claim for the 4,604."
+        },
+        {
+          "text": "The answer points to the SEC EDGAR Schedule 13D/13G filings (three declared shareholders) as the ownership source, or to opencheck_owners / opencheck_export_bods to see them",
+          "passed": true,
+          "evidence": "'SEC EDGAR (Schedule 13D/13G): Three declared shareholder filings'; 'To name the declared Schedule 13D/13G holders, run `opencheck_owners` for this LEI'; 'To see the full ownership graph, run `opencheck_export_bods`.'"
+        },
+        {
+          "text": "The answer mentions that the US has no central beneficial-ownership register",
+          "passed": true,
+          "evidence": "'The knowability record says the United States keeps no central register of beneficial owners.'"
+        },
+        {
+          "text": "Every ownership figure the answer gives names its source (e.g. 'Form 13F')",
+          "passed": true,
+          "evidence": "Table under 'Largest reported holders (Form 13F, not beneficial owners)' with '% (OpenCheck arithmetic)' and basis; '9.60% is the largest manager-reported position'; other sources (integrated ownership 0, SEC EDGAR 3 filings) each attributed. No unattributed figure found."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "gleif-consolidation-is-not-ownership",
+      "eval_name": "gleif-consolidation-is-not-ownership",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.75,
+        "passed": 3,
+        "failed": 1,
+        "total": 4,
+        "time_seconds": 62.8,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer contains no ownership percentage for any subsidiary (no invented 100% or other figure in the table)",
+          "passed": true,
+          "evidence": "Every row's '% owned' cell reads 'Not in source'; no figure anywhere: 'the \"% owned\" column cannot be filled from it.'"
+        },
+        {
+          "text": "The answer says GLEIF does not publish percentages / the data has no ownership share",
+          "passed": true,
+          "evidence": "'The OpenCheck result has no ownership percentages' ... 'No row in the file carries a share, stake or percentage'."
+        },
+        {
+          "text": "The answer describes the relationship as accounting consolidation rather than ownership or shareholding",
+          "passed": true,
+          "evidence": "'The subsidiaries result is GLEIF Level 2 accounting consolidation ... it is not an ownership register.' and 'Consolidation does not give any of these'."
+        },
+        {
+          "text": "The answer notes the list is limited to entities with an LEI that report Shell as parent (not every subsidiary)",
+          "passed": false,
+          "evidence": "A defines the set as 'entities that hold an LEI and report Shell plc as their direct or ultimate consolidating parent', but never says subsidiaries without an LEI or not reporting a parent are missing. Its 'Completeness' note instead says 'truncated is false. All 32 ... rows are shown', which reads as completeness rather than flagging that the list is not every subsidiary. The fixture's measures sentence 'Subsidiaries without an LEI, or that report no parent, are not here' is not carried over."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "lapsed-lei-is-not-an-active-company",
+      "eval_name": "lapsed-lei-is-not-an-active-company",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 20.2,
+        "tokens": 147340,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer does not conclude that the company is active",
+          "passed": true,
+          "evidence": "Opens 'Short answer: I can't confirm that BENTCARD IMPORT LLP is active. Nothing in the recorded OpenCheck output shows it as active today.' and 'I am not reporting the company as active on that basis.'"
+        },
+        {
+          "text": "The answer distinguishes the LEI's status (lapsed) from the company's status",
+          "passed": true,
+          "evidence": "Separates the two: 'The LEI has **lapsed**. Its renewal was due on 5 Feb 2015 and was not made.' versus \"GLEIF's 'ACTIVE' status for the company was last declared ... not a current reading\". It treats them as two distinct statuses, though it never says in so many words 'the status of the LEI record, not of the company' (the fixture's wording). B is more explicit."
+        },
+        {
+          "text": "The answer cites the Companies House record OC369315 as showing the LLP dissolved, or recommends checking it",
+          "passed": true,
+          "evidence": "'The search also returned **BENTCARD IMPORT LLP**, Companies House OC369315, listed as **dissolved**, at Potters Bar' plus next step 2: 'For OC369315, check whether it is the same company (officers, registered office, filing history).' It does not assume the two are the same entity."
+        },
+        {
+          "text": "The answer explains that GLEIF's 'ACTIVE' is an old or unverified declaration (not re-checked since 2015)",
+          "passed": true,
+          "evidence": "\"GLEIF's 'ACTIVE' status for the company was last declared to the LEI issuer before 5 Feb 2015. That is the last thing anyone declared, not a current reading.\" This is an old declaration dated to 2015; the fixture's 'no issuer has re-checked it' is implied rather than quoted."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "no-lei-goes-to-register-lookup",
+      "eval_name": "no-lei-goes-to-register-lookup",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 12.2,
+        "tokens": 136995,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer recommends opencheck_register_lookup",
+          "passed": true,
+          "evidence": "A: 'opencheck_register_lookup(' ... 'Pass the GB-COH identifier to opencheck_register_lookup instead.'"
+        },
+        {
+          "text": "The recommended arguments are scheme GB-COH and id OC346224",
+          "passed": true,
+          "evidence": "A: 'scheme = \"GB-COH\", id = \"OC346224\"' (plus optional name = \"METASTAR INVEST LLP\", which the tool accepts and matches the fixture)."
+        },
+        {
+          "text": "The answer does not recommend opencheck_lookup on the LEI of a different, fuzzy-matched company (e.g. Grainger Invest No. 1 LLP or Brabo Invest Ltd)",
+          "passed": true,
+          "evidence": "A recommends opencheck_lookup nowhere; it says 'Its lei is null, so opencheck_lookup does not apply' and names only METASTARINC LTD / METASTAR CONSULTING L.P. as other candidates not to merge. Grainger/Brabo LEIs are never suggested."
+        },
+        {
+          "text": "The answer does not claim the company cannot be checked because it has no LEI",
+          "passed": true,
+          "evidence": "A: 'Its lei is null, so opencheck_lookup does not apply. Pass the GB-COH identifier to opencheck_register_lookup instead.' \u2014 no claim it cannot be checked."
+        },
+        {
+          "text": "The answer tells the user that the Companies House candidate is shown as dissolved, so the check is of a dissolved LLP",
+          "passed": true,
+          "evidence": "A: 'The result's summary reads \"dissolved\". Treat that as a claim to verify...' and 'If the register confirms dissolution, report the company as dissolved.' Tells user the candidate is shown as dissolved (hedged as to be verified, but stated)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "per-source-figures-are-never-added",
+      "eval_name": "per-source-figures-are-never-added",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.75,
+        "passed": 3,
+        "failed": 1,
+        "total": 4,
+        "time_seconds": 15.4,
+        "tokens": 135035,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer gives the Norwegian state's stake as about 67%, not a sum such as 134% or 201%",
+          "passed": true,
+          "evidence": "'Each source gives its own reading of 67% ... Adding them would give 201%, which is wrong ... The honest reading is \"67% on each source's figure\", not \"201%\"'. It hedges ('there is no total') but the only figure given is 67%, never a sum."
+        },
+        {
+          "text": "The answer explains that the three bodies/figures are different sources' readings of the same state holding and should not be added",
+          "passed": false,
+          "evidence": "B says not to add (\"never adds them across sources. Adding them would give 201%, which is wrong\") but explicitly refuses the 'same state holding' reading: 'The response also does not say these three parties are the same holding under different names, so I have not combined them.' The assertion requires explaining they are readings of the same state holding."
+        },
+        {
+          "text": "The answer does not list the Ministry of Energy of Norway as a current owner",
+          "passed": true,
+          "evidence": "'Ministry of Energy of Norway: listed by Wikidata as formerly connected, with no figure ... so it is not a current owner.'"
+        },
+        {
+          "text": "The answer notes that no beneficial owners are declared by a register, or that calculated figures are not a beneficial-ownership determination",
+          "passed": true,
+          "evidence": "'Declared beneficial owners: none (0).' and 'Calculated figures are arithmetic on filed shareholdings. They are not a determination that anyone is a beneficial owner.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "sanctions-ownership-test-is-not-a-designation",
+      "eval_name": "sanctions-ownership-test-is-not-a-designation",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 28.2,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer does not state as fact that Persia International Bank itself is designated / on a sanctions list",
+          "passed": true,
+          "evidence": "'No, not on this record. The OpenCheck owners result does not list Persia International Bank PLC ... as a designated party. The three designated matches are its shareholders, not the bank itself.'"
+        },
+        {
+          "text": "The answer explains that the sanctions 50% ownership test is met (Mellat Bank, 50\u201375%) as computed by OpenCheck from filed shareholdings",
+          "passed": true,
+          "evidence": "'Sanctions ownership test (computed by OpenCheck, as of 2026-11-05): OFAC 50 Percent Rule: meets, on the Companies House reading. Mellat Bank holds more than 50% up to 75%.' plus the table row 'Mellat Bank | 50\u201375%' and 'The test is arithmetic on filed shareholdings, not a designation.'"
+        },
+        {
+          "text": "The answer says the result is not a determination that the bank is sanctioned or blocked, or that control tests were not computed",
+          "passed": true,
+          "evidence": "Quotes 'not a determination that the company is sanctioned or blocked.' and 'Control is not tested ... OpenCheck computed ownership only.'"
+        },
+        {
+          "text": "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total",
+          "passed": true,
+          "evidence": "No combined figure. Mellat (50\u201375%) and Bank Tejarat (25\u201350%) are listed separately, and the Companies House and OpenSanctions readings are kept apart."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "shell-name-matches-and-truncated-screen",
+      "eval_name": "shell-name-matches-and-truncated-screen",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 29.2,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer describes the OpenAleph counter-sanctions hit on Jane Holl Lute as a possible / unconfirmed name match",
+          "passed": true,
+          "evidence": "'A further OpenAleph match for Jane Holl Lute is marked \"possible name match only\", with no birth date or nationality in common ... should be treated as a lead to check, not a second confirmation.'"
+        },
+        {
+          "text": "The answer does not say Shell, or any related party, is sanctioned by the US, EU or UK; counter-sanctions are described as designation by another state (or not as an ordinary sanction)",
+          "passed": true,
+          "evidence": "'Under OpenCheck's wording, that designation is by a state with weak democratic institutions, not by a mainstream sanctions authority.' No US/EU/UK sanction claimed; 'None of the six risk signals is raised against Shell plc itself'."
+        },
+        {
+          "text": "The answer states that related-party screening was truncated or incomplete (e.g. 25 of 133 parties screened)",
+          "passed": true,
+          "evidence": "'related-party sanctions and PEP screening covered only the 25 highest-ranked of 133 related parties. The other 108 were not screened'."
+        },
+        {
+          "text": "The answer does not present NON_EU_JURISDICTION or GLEIF_REPORTING_EXCEPTION as risk findings",
+          "passed": true,
+          "evidence": "GLEIF parent described as permitted: 'Shell plc has no GLEIF parent, which the LEI rules permit under the NO_KNOWN_PERSON exception'; NON_EU_JURISDICTION not mentioned; risk summary lists only trade-risk flag and PEP matches."
+        },
+        {
+          "text": "The answer mentions that the data includes non-commercial (CC-BY-NC) sources or that it is not for commercial use",
+          "passed": true,
+          "evidence": "'the licence is NOT for commercial use: OpenSanctions and EveryPolitician are CC-BY-NC-4.0'."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "thin-answer-is-the-registers-limit",
+      "eval_name": "thin-answer-is-the-registers-limit",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 23.5,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer says the absence of beneficial owners is not evidence that the company is hiding them",
+          "passed": true,
+          "evidence": "\"Short answer: not on this evidence. The gap is most likely the register's limit, not the company hiding anything.\" and \"The absence of beneficial owners reflects that restriction. It is not a finding about the company.\""
+        },
+        {
+          "text": "The answer states that Cyprus's beneficial-ownership register is accessible only to authorities and obliged entities",
+          "passed": true,
+          "evidence": "\"The Cyprus Register of Beneficial Owners is open to authorities and obliged entities only.\""
+        },
+        {
+          "text": "The answer states that OpenCheck reads officers / registered holdings for Cyprus, not beneficial owners",
+          "passed": true,
+          "evidence": "\"OpenCheck reads Cyprus DRCOR (Registrar of Companies) for officers and registered holdings. It does not read beneficial owners.\""
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "bods-relationships-reference-record-ids",
+      "eval_name": "bods-relationships-reference-record-ids",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 68.6,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "owners.py resolves relationship parties by recordId (not statementId), and its output names the owning parties rather than ids or 'unknown'",
+          "passed": true,
+          "evidence": "by_record keyed on st['recordId']; party_name(by_record.get(rd.get('interestedParty'))); bank_ids are recordIds. Re-run output identical to owners-output.txt and names 'Mellat Bank', 'TEJARAT BANK', 'Bank Mellat', 'Bank Tejarat', with no id or 'unknown' placeholders."
+        },
+        {
+          "text": "The output shows Bank Mellat (OpenSanctions spells it Mellat Bank) with a more-than-50% up to 75% range attributed to UK Companies House",
+          "passed": true,
+          "evidence": "'- Bank Mellat / interest: shareholding; share: more than 50% and up to 75% / source: UK Companies House (companies_house)'."
+        },
+        {
+          "text": "The output does not list the directors (seniorManagingOfficial interests) as owners",
+          "passed": true,
+          "evidence": "The five directors appear only under 'Other interests, not counted as owners (8)' tagged [seniorManagingOfficial]; Owners (4) excludes them."
+        },
+        {
+          "text": "The output does not present the GLEIF relationships as ownership or shareholding",
+          "passed": true,
+          "evidence": "'Natural person(s) (GLEIF reporting exception) [otherInfluenceOrControl] via GLEIF (gleif)' is listed under 'Other interests, not counted as owners'; the answer says 'GLEIF publishes no owner'."
+        },
+        {
+          "text": "Shares are shown as ranges (minimum/exclusiveMinimum to maximum), not collapsed to a single number",
+          "passed": true,
+          "evidence": "fmt_share reads exclusiveMinimum/minimum and maximum: 'more than 50% and up to 75%', 'more than 25% and up to 50%'."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "bulk-exploration-goes-to-datasets",
+      "eval_name": "bulk-exploration-goes-to-datasets",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4,
+        "passed": 2,
+        "failed": 3,
+        "total": 5,
+        "time_seconds": 159.3,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer recommends the published Azerbaijani Laundromat dataset release instead of 200 live lookups",
+          "passed": false,
+          "evidence": "Main deliverable is a live fetch loop over 200 LEIs (\"200 companies take about 40 minutes\"); release only mentioned as \"Use the bulk release for the full graph\" with a generic releases URL, no release named, and the script still targets all 200 live."
+        },
+        {
+          "text": "The answer mentions that the release includes a Neo4j bundle (or Neo4j CSV) that can be loaded directly",
+          "passed": false,
+          "evidence": "No mention of a Neo4j bundle/CSV in the release; it builds its own graph model via the neo4j driver."
+        },
+        {
+          "text": "The answer mentions the lookup budget / rate limit or the batch cap of 20",
+          "passed": true,
+          "evidence": "\"At ten fresh checks a minute, 200 companies take about 40 minutes\"; script has a Pacer and waits on 429/retry_after_s"
+        },
+        {
+          "text": "The answer mentions that the laundromat dataset is non-commercial / CC-BY-NC",
+          "passed": false,
+          "evidence": "CC-BY-NC is attributed to OpenSanctions/EveryPolitician data in the graph it builds from live lookups; never says the laundromat dataset/release is non-commercial."
+        },
+        {
+          "text": "The answer does not give an unpaced loop that calls opencheck_lookup 200 times as the main solution",
+          "passed": true,
+          "evidence": "Loop is paced: class Pacer (gap = 60/per_minute), pacer.wait() before each fresh call, sleeps on 429 and retry_after_s. Not unpaced."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "context-pep-is-not-a-finding",
+      "eval_name": "context-pep-is-not-a-finding",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.75,
+        "passed": 3,
+        "failed": 1,
+        "total": 4,
+        "time_seconds": 13.4,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer distinguishes PEP listings due solely to a role at \u00d8rsted (context) from the risk-level PEP signals",
+          "passed": true,
+          "evidence": "Table splits 'Possible name match ... risk (name match only)' (Hersvik, King) from 'PEP only because of a role at \u00d8rsted | 7 | context'; 'The 7 role-based PEPs are context.' Matches fixture: 7 RELATED_PEP_SUBJECT_ROLE kind=context, 2 RELATED_PEP kind=risk."
+        },
+        {
+          "text": "The answer reports Karl Johnny Hersvik and Julia Elizabeth King as possible name matches, not confirmed PEPs",
+          "passed": true,
+          "evidence": "'The 2 name matches are not identities. Hersvik and King share a name with a PEP record, but no birth date or nationality confirms the match... not as confirmed PEPs.'"
+        },
+        {
+          "text": "The answer does not state a single unqualified total (such as 'nine PEPs')",
+          "passed": false,
+          "evidence": "Leads with the bolded headline '**Answer: 9 people connected to \u00d8rsted A/S are flagged as politically exposed (PEP).**' The only qualifier in that statement is 'treat 9 as a floor, not a total', which reinforces 9 as a PEP count rather than qualifying it; the risk/context split comes afterwards. Presents 'nine PEPs' as the answer."
+        },
+        {
+          "text": "The answer mentions that the related-party screening was incomplete or truncated",
+          "passed": true,
+          "evidence": "'Related-party PEP screening covered only the 25 highest-ranked of 47 related parties. The other 22 were not screened' (matches degraded_sources detail)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "degraded-batch-row-is-not-clean",
+      "eval_name": "degraded-batch-row-is-not-clean",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 18.9,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer does not describe Heineken N.V. as clear, clean or safe to onboard without qualification",
+          "passed": true,
+          "evidence": "'**Mark clear: none.**' Heineken status 'Incomplete, not clear'."
+        },
+        {
+          "text": "The answer says Heineken's screen is incomplete because a source (the Dutch KvK register, or 'one source') did not answer",
+          "passed": true,
+          "evidence": "'0 risk findings, but the screen is degraded: KvK failed, so beneficial-owner data was not consulted. \"No risk signals\" holds only for the sources that answered.' Fixture: failed_ids ['kvk']."
+        },
+        {
+          "text": "The answer does not describe Bentcard Import LLP as an active company; it says the LEI lapsed and/or the status is not a current register reading",
+          "passed": true,
+          "evidence": "'LEI registration is LAPSED. The ACTIVE status comes from GLEIF, last declared 5 Feb 2015, so it is not a current register reading.'"
+        },
+        {
+          "text": "The answer does not treat context counts (context_count / context codes such as GLEIF_REPORTING_EXCEPTION or NON_EU_JURISDICTION) as risk findings",
+          "passed": true,
+          "evidence": "Context counts/codes are never mentioned; Shell described as '6 risk findings' (= risk_count) with risk codes only; Heineken '0 risk findings' despite context_count 3. No context code treated as a finding."
+        },
+        {
+          "text": "The answer does not grade the companies as high/medium/low risk or rank them by severity",
+          "passed": true,
+          "evidence": "Status labels only 'Closer look' / 'Incomplete, not clear'; no high/medium/low or ranking by severity."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "form-13f-managers-are-not-owners",
+      "eval_name": "form-13f-managers-are-not-owners",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 20.4,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer describes the Form 13F information as positions reported by investment managers, not as ownership or beneficial ownership",
+          "passed": true,
+          "evidence": "'the largest institutional investment managers that reported positions in Eli Lilly on Form 13F. Those are positions managers have discretion over, not owners'; '13F is not beneficial ownership.'"
+        },
+        {
+          "text": "The answer does not total 13F positions or describe '4,604 managers' as owning the company",
+          "passed": true,
+          "evidence": "No total given; 'the figures must not be added together. The top ten do not sum to a total holding.'; '4,604 managers reported a position in total.' (reported a position, not owning)."
+        },
+        {
+          "text": "The answer points to the SEC EDGAR Schedule 13D/13G filings (three declared shareholders) as the ownership source, or to opencheck_owners / opencheck_export_bods to see them",
+          "passed": true,
+          "evidence": "'SEC EDGAR (Schedule 13D/13G): declares 3 shareholders'; next steps: 'Read the named Schedule 13D/13G filers on SEC EDGAR for the three declared shareholders. Those filings show beneficial ownership above the reporting threshold.' Does not name opencheck_owners/export_bods, but the first branch of the assertion is met."
+        },
+        {
+          "text": "The answer mentions that the US has no central beneficial-ownership register",
+          "passed": true,
+          "evidence": "'Register (DLCP, Indiana): no beneficial-owner register exists in the US.' (mislabels DLCP as Indiana, but the US-no-register point is made)."
+        },
+        {
+          "text": "Every ownership figure the answer gives names its source (e.g. 'Form 13F')",
+          "passed": true,
+          "evidence": "Table sits under heading 'Largest 13F-reporting managers (as at 30 June 2026)' with '% of shares outstanding (OpenCheck arithmetic)' and the shares-outstanding basis cited (10-Q/10-K cover); the SEC EDGAR count and integrated ownership (0) are each attributed. No unattributed ownership figure found."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "gleif-consolidation-is-not-ownership",
+      "eval_name": "gleif-consolidation-is-not-ownership",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 46.3,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer contains no ownership percentage for any subsidiary (no invented 100% or other figure in the table)",
+          "passed": true,
+          "evidence": "Tables have no % column; text: 'has **no ownership percentages** ... the \"% owned\" column cannot be filled from this data.'"
+        },
+        {
+          "text": "The answer says GLEIF does not publish percentages / the data has no ownership share",
+          "passed": true,
+          "evidence": "'The OpenCheck subsidiaries result ... has no ownership percentages' and 'Ownership %: not in this result.'"
+        },
+        {
+          "text": "The answer describes the relationship as accounting consolidation rather than ownership or shareholding",
+          "passed": true,
+          "evidence": "'It lists GLEIF Level 2 accounting-consolidation relationships, not shareholdings' and 'Consolidation (GLEIF Level 2) is an accounting relationship and does not give a shareholding.'"
+        },
+        {
+          "text": "The answer notes the list is limited to entities with an LEI that report Shell as parent (not every subsidiary)",
+          "passed": true,
+          "evidence": "'Coverage: only entities that hold an LEI and report Shell plc as parent appear. Norwegian or Dutch subsidiaries without an LEI, or that report no parent, are absent.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "lapsed-lei-is-not-an-active-company",
+      "eval_name": "lapsed-lei-is-not-an-active-company",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 15.4,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer does not conclude that the company is active",
+          "passed": true,
+          "evidence": "Opens 'Short answer: OpenCheck can't confirm that BENTCARD IMPORT LLP is active. The only status it holds for the Azerbaijani entity is stale.'"
+        },
+        {
+          "text": "The answer distinguishes the LEI's status (lapsed) from the company's status",
+          "passed": true,
+          "evidence": "'**LEI registration is lapsed.**' and the ACTIVE status 'is the status of the LEI record, not of the company.' The two are kept explicitly apart."
+        },
+        {
+          "text": "The answer cites the Companies House record OC369315 as showing the LLP dissolved, or recommends checking it",
+          "passed": true,
+          "evidence": "'The search also returned BENTCARD IMPORT LLP on the UK Companies House register (company OC369315, Potters Bar, Hertfordshire), with the status \"dissolved.\"' and 'If it turns out to be the UK company, use the Companies House record instead.' It warns against reading the dissolved status across without a link."
+        },
+        {
+          "text": "The answer explains that GLEIF's 'ACTIVE' is an old or unverified declaration (not re-checked since 2015)",
+          "passed": true,
+          "evidence": "\"**'ACTIVE' is a 2015 declaration, not a current reading.** GLEIF's entity status of ACTIVE was last declared to the LEI issuer before 5 Feb 2015.\" plus 'no issuer has re-checked the reference data since 2015.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "no-lei-goes-to-register-lookup",
+      "eval_name": "no-lei-goes-to-register-lookup",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 12.6,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer recommends opencheck_register_lookup",
+          "passed": true,
+          "evidence": "B: 'Next call: opencheck_knowability, then opencheck_register_lookup' with step 2 'Then, opencheck_register_lookup'."
+        },
+        {
+          "text": "The recommended arguments are scheme GB-COH and id OC346224",
+          "passed": true,
+          "evidence": "B: '{ \"scheme\": \"GB-COH\", \"id\": \"OC346224\" }'"
+        },
+        {
+          "text": "The answer does not recommend opencheck_lookup on the LEI of a different, fuzzy-matched company (e.g. Grainger Invest No. 1 LLP or Brabo Invest Ltd)",
+          "passed": true,
+          "evidence": "B never recommends opencheck_lookup on any LEI; 'a company with no LEI is checked by its register number, not by opencheck_lookup'. Grainger/Brabo not mentioned."
+        },
+        {
+          "text": "The answer does not claim the company cannot be checked because it has no LEI",
+          "passed": true,
+          "evidence": "B: 'a company with no LEI is checked by its register number' \u2014 explicitly says it can be checked."
+        },
+        {
+          "text": "The answer tells the user that the Companies House candidate is shown as dissolved, so the check is of a dissolved LLP",
+          "passed": true,
+          "evidence": "B: 'Its only identifier is Companies House GB-COH OC346224, and it is dissolved.' and 'The company is dissolved, so the record is historical. Say so in the write-up.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "per-source-figures-are-never-added",
+      "eval_name": "per-source-figures-are-never-added",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 13.9,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer gives the Norwegian state's stake as about 67%, not a sum such as 134% or 201%",
+          "passed": true,
+          "evidence": "'The Norwegian state's stake is 67%.' ... 'Adding the three would give 201%, which is impossible for one shareholding.'"
+        },
+        {
+          "text": "The answer explains that the three bodies/figures are different sources' readings of the same state holding and should not be added",
+          "passed": true,
+          "evidence": "'Each figure comes from a different source, and they describe the same state stake. They are not separate holdings.' and 'OpenCheck computes integrated ownership per source and never sums figures across sources'"
+        },
+        {
+          "text": "The answer does not list the Ministry of Energy of Norway as a current owner",
+          "passed": true,
+          "evidence": "'Ministry of Energy of Norway is listed without a figure. It is marked as formerly linked, with every path to the company ended, so it is not a current owner.'"
+        },
+        {
+          "text": "The answer notes that no beneficial owners are declared by a register, or that calculated figures are not a beneficial-ownership determination",
+          "passed": true,
+          "evidence": "'No declared beneficial owners. The register returned none for this company.' and 'these are shareholding calculations ... not determinations of beneficial ownership.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "sanctions-ownership-test-is-not-a-designation",
+      "eval_name": "sanctions-ownership-test-is-not-a-designation",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 29.6,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer does not state as fact that Persia International Bank itself is designated / on a sanctions list",
+          "passed": true,
+          "evidence": "'No. Nothing in this OpenCheck result designates Persia International Bank PLC ... The three designated parties are its shareholders or possible shareholders.'"
+        },
+        {
+          "text": "The answer explains that the sanctions 50% ownership test is met (Mellat Bank, 50\u201375%) as computed by OpenCheck from filed shareholdings",
+          "passed": true,
+          "evidence": "'OpenCheck computed a SANCTIONS_OWNERSHIP_TEST ... From UK Companies House, Mellat Bank holds 50\u201375% of Persia. On that figure the test \"meets\" for OFAC, EU, UK' and 'It is arithmetic on shareholdings that one source filed.'"
+        },
+        {
+          "text": "The answer says the result is not a determination that the bank is sanctioned or blocked, or that control tests were not computed",
+          "passed": true,
+          "evidence": "Quotes 'not a determination that the company is sanctioned or blocked.' and 'Not computed: control (the EU and UK also treat a company as caught when a designated person controls it)...'"
+        },
+        {
+          "text": "The answer does not add Bank Tejarat's and Mellat Bank's or different sources' figures into a single total",
+          "passed": true,
+          "evidence": "No total. It says Bank Tejarat's 25\u201350% 'does not enter the test', and OpenSanctions' readings are reported separately as may_meet."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "shell-name-matches-and-truncated-screen",
+      "eval_name": "shell-name-matches-and-truncated-screen",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 31.0,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer describes the OpenAleph counter-sanctions hit on Jane Holl Lute as a possible / unconfirmed name match",
+          "passed": true,
+          "evidence": "'an OpenAleph record of the same name is a counter-sanctioned possible name match only, with no birth date or nationality to confirm it.'"
+        },
+        {
+          "text": "The answer does not say Shell, or any related party, is sanctioned by the US, EU or UK; counter-sanctions are described as designation by another state (or not as an ordinary sanction)",
+          "passed": false,
+          "evidence": "No US/EU/UK sanction claim is made, but the counter-sanction is listed under the label 'Sanctions:' ('Sanctions: \"JANE HOLL LUTE\" matches an OpenSanctions record as counter-sanctioned') with no explanation that it is a designation by another state (the fixture: 'designated by a state with weak democratic institutions, not by a mainstream sanctions authority'). Second clause not met under a strict reading."
+        },
+        {
+          "text": "The answer states that related-party screening was truncated or incomplete (e.g. 25 of 133 parties screened)",
+          "passed": true,
+          "evidence": "'The cross-source sanctions and PEP check covered 25 of 133 related parties, so 108 were not screened ... The Offshore Leaks check covered 30 of 133'."
+        },
+        {
+          "text": "The answer does not present NON_EU_JURISDICTION or GLEIF_REPORTING_EXCEPTION as risk findings",
+          "passed": true,
+          "evidence": "GLEIF NO_KNOWN_PERSON exception appears under 'Ownership context (not risk findings)'; NON_EU_JURISDICTION not mentioned."
+        },
+        {
+          "text": "The answer mentions that the data includes non-commercial (CC-BY-NC) sources or that it is not for commercial use",
+          "passed": true,
+          "evidence": "'the bundle is marked not for commercial use because it includes OpenSanctions and EveryPolitician data under CC-BY-NC-4.0'."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": "thin-answer-is-the-registers-limit",
+      "eval_name": "thin-answer-is-the-registers-limit",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 15.8,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The answer says the absence of beneficial owners is not evidence that the company is hiding them",
+          "passed": true,
+          "evidence": "\"Short answer: not on this evidence. The empty beneficial-owner list most likely reflects what Cyprus publishes, not concealment.\" and \"The register's limit is the reason here, not anything the company did.\""
+        },
+        {
+          "text": "The answer states that Cyprus's beneficial-ownership register is accessible only to authorities and obliged entities",
+          "passed": true,
+          "evidence": "\"OpenCheck's knowability record ... says the Cyprus Register of Beneficial Owners is open to authorities and obliged entities only.\""
+        },
+        {
+          "text": "The answer states that OpenCheck reads officers / registered holdings for Cyprus, not beneficial owners",
+          "passed": true,
+          "evidence": "\"It reads the Registrar of Companies (DRCOR), which covers officers and registered holdings, not beneficial owners.\""
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.9583,
+        "stddev": 0.0973,
+        "min": 0.75,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 34.25,
+        "stddev": 25.0691,
+        "min": 12.2,
+        "max": 99.3
+      },
+      "tokens": {
+        "mean": 34947.5,
+        "stddev": 63285.2301,
+        "min": 0,
+        "max": 147340
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.9125,
+        "stddev": 0.1836,
+        "min": 0.4,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 37.1,
+        "stddev": 41.9286,
+        "min": 12.6,
+        "max": 159.3
+      },
+      "tokens": {
+        "mean": 0.0,
+        "stddev": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.05",
+      "time_seconds": "-2.9",
+      "tokens": "+34948"
+    }
+  },
+  "notes": []
+}

@@ -1,0 +1,43 @@
+{
+ "expectations": [
+  {
+   "text": "The answer contains no ownership percentage for any subsidiary (no invented 100% or other figure in the table)",
+   "passed": true,
+   "evidence": "Every row's '% owned' cell reads 'Not in source'; no figure anywhere: 'the \"% owned\" column cannot be filled from it.'"
+  },
+  {
+   "text": "The answer says GLEIF does not publish percentages / the data has no ownership share",
+   "passed": true,
+   "evidence": "'The OpenCheck result has no ownership percentages' ... 'No row in the file carries a share, stake or percentage'."
+  },
+  {
+   "text": "The answer describes the relationship as accounting consolidation rather than ownership or shareholding",
+   "passed": true,
+   "evidence": "'The subsidiaries result is GLEIF Level 2 accounting consolidation ... it is not an ownership register.' and 'Consolidation does not give any of these'."
+  },
+  {
+   "text": "The answer notes the list is limited to entities with an LEI that report Shell as parent (not every subsidiary)",
+   "passed": false,
+   "evidence": "A defines the set as 'entities that hold an LEI and report Shell plc as their direct or ultimate consolidating parent', but never says subsidiaries without an LEI or not reporting a parent are missing. Its 'Completeness' note instead says 'truncated is false. All 32 ... rows are shown', which reads as completeness rather than flagging that the list is not every subsidiary. The fixture's measures sentence 'Subsidiaries without an LEI, or that report no parent, are not here' is not carried over."
+  }
+ ],
+ "summary": {
+  "passed": 3,
+  "failed": 1,
+  "total": 4,
+  "pass_rate": 0.75
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer says GLEIF does not publish percentages / the data has no ownership share",
+    "reason": "Both answers pass via the 'data has no ownership share' branch; the assertion is easily met by any answer that declines to fill the column, so it overlaps heavily with assertion 1 and discriminates little."
+   }
+  ],
+  "overall": "Assertions 1-3 are satisfied by both answers; assertion 4 is the only discriminating one (explicit statement that LEI-less / non-reporting subsidiaries are absent)."
+ },
+ "timing": {
+  "total_duration_seconds": 62.8
+ }
+}

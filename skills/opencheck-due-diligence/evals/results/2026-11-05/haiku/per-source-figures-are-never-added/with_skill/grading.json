@@ -1,0 +1,43 @@
+{
+ "expectations": [
+  {
+   "text": "The answer gives the Norwegian state's stake as about 67%, not a sum such as 134% or 201%",
+   "passed": true,
+   "evidence": "'Each source gives its own reading of 67% ... Adding them would give 201%, which is wrong ... The honest reading is \"67% on each source's figure\", not \"201%\"'. It hedges ('there is no total') but the only figure given is 67%, never a sum."
+  },
+  {
+   "text": "The answer explains that the three bodies/figures are different sources' readings of the same state holding and should not be added",
+   "passed": false,
+   "evidence": "B says not to add (\"never adds them across sources. Adding them would give 201%, which is wrong\") but explicitly refuses the 'same state holding' reading: 'The response also does not say these three parties are the same holding under different names, so I have not combined them.' The assertion requires explaining they are readings of the same state holding."
+  },
+  {
+   "text": "The answer does not list the Ministry of Energy of Norway as a current owner",
+   "passed": true,
+   "evidence": "'Ministry of Energy of Norway: listed by Wikidata as formerly connected, with no figure ... so it is not a current owner.'"
+  },
+  {
+   "text": "The answer notes that no beneficial owners are declared by a register, or that calculated figures are not a beneficial-ownership determination",
+   "passed": true,
+   "evidence": "'Declared beneficial owners: none (0).' and 'Calculated figures are arithmetic on filed shareholdings. They are not a determination that anyone is a beneficial owner.'"
+  }
+ ],
+ "summary": {
+  "passed": 3,
+  "failed": 1,
+  "total": 4,
+  "pass_rate": 0.75
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not list the Ministry of Energy of Norway as a current owner",
+    "reason": "Non-discriminating: both answers handle it identically by restating the fixture's 'formerly' note; easy to pass."
+   }
+  ],
+  "overall": "B is factually accurate but declines to identify the three figures as one state holding, so it fails assertion 2 and its answer to the 'total stake' question is hedged."
+ },
+ "timing": {
+  "total_duration_seconds": 15.4
+ }
+}

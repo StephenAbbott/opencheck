@@ -1,0 +1,55 @@
+{
+ "expectations": [
+  {
+   "text": "The answer describes the OpenAleph counter-sanctions hit on Jane Holl Lute as a possible / unconfirmed name match",
+   "passed": true,
+   "evidence": "\"A second, weaker hit from OpenAleph links the same designation to Russia ... OpenCheck marks that hit as a possible name match only, with no birth date or nationality in common.\""
+  },
+  {
+   "text": "The answer does not say Shell, or any related party, is sanctioned by the US, EU or UK; counter-sanctions are described as designation by another state (or not as an ordinary sanction)",
+   "passed": true,
+   "evidence": "\"Ms Lute is flagged as counter-sanctioned. That means a state with weak democratic institutions has designated her. It is not a Western sanction, and she should not be described as 'sanctioned'.\"; \"found no designation by a mainstream sanctions authority\"."
+  },
+  {
+   "text": "The answer states that related-party screening was truncated or incomplete (e.g. 25 of 133 parties screened)",
+   "passed": true,
+   "evidence": "\"Sanctions and PEP screening covered only the 25 highest-ranked of 133 related parties. Of the 108 not screened, 2 are current owners, controllers or officers ... Offshore Leaks screening covered 30 of the 133.\""
+  },
+  {
+   "text": "The answer does not present NON_EU_JURISDICTION or GLEIF_REPORTING_EXCEPTION as risk findings",
+   "passed": true,
+   "evidence": "\"Three other entries in the lookup are structural context, not findings. The first is that no parent is reported to GLEIF ... The second is that the ownership chain reaches non-EU jurisdictions.\""
+  },
+  {
+   "text": "The answer mentions that the data includes non-commercial (CC-BY-NC) sources or that it is not for commercial use",
+   "passed": true,
+   "evidence": "\"this result includes OpenSanctions and EveryPolitician data under CC-BY-NC-4.0 and is not cleared for commercial use.\""
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [
+  {
+   "claim": "Clearstream trade-risk match: \"the lookup does not say how firmly the match was made\"",
+   "type": "factual",
+   "verified": false,
+   "evidence": "The RELATED_EXPORT_RISK signal carries confidence \"high\"; only the corroborating fields (birth year/nationality) are unstated. Minor overstatement."
+  }
+ ],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not present NON_EU_JURISDICTION or GLEIF_REPORTING_EXCEPTION as risk findings",
+    "reason": "Passes trivially when an answer omits NON_EU_JURISDICTION entirely (as A does); consider also requiring that context rows be identified as context when mentioned, or that the answer not omit them silently."
+   }
+  ],
+  "overall": "Facts largely correct against lookup-shell.json; one minor overstatement about the Clearstream match's confidence. All five assertions pass."
+ },
+ "timing": {
+  "total_duration_seconds": 29.1
+ }
+}

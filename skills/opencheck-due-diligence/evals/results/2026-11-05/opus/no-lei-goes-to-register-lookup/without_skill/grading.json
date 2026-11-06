@@ -1,0 +1,48 @@
+{
+ "expectations": [
+  {
+   "text": "The answer recommends opencheck_register_lookup",
+   "passed": true,
+   "evidence": "Recommends \"opencheck_register_lookup(scheme=\\\"GB-COH\\\", id=\\\"OC346224\\\")\" under \"## Next call\"."
+  },
+  {
+   "text": "The recommended arguments are scheme GB-COH and id OC346224",
+   "passed": true,
+   "evidence": "Arguments exactly scheme=\"GB-COH\", id=\"OC346224\", matching the fixture's exact-match candidate identifier."
+  },
+  {
+   "text": "The answer does not recommend opencheck_lookup on the LEI of a different, fuzzy-matched company (e.g. Grainger Invest No. 1 LLP or Brabo Invest Ltd)",
+   "passed": true,
+   "evidence": "\"Ignore the results that do have LEIs. Grainger Invest No. 1 LLP, Brabo Invest ... Running opencheck_lookup on one of them would check the wrong company.\""
+  },
+  {
+   "text": "The answer does not claim the company cannot be checked because it has no LEI",
+   "passed": true,
+   "evidence": "States the opposite: \"Most UK LLPs have no LEI, so this is normal\" and routes it to register lookup."
+  },
+  {
+   "text": "The answer tells the user that the Companies House candidate is shown as dissolved, so the check is of a dissolved LLP",
+   "passed": true,
+   "evidence": "\"The LLP is dissolved. The summary says \\\"Company OC346224 · dissolved · ...\\\". Expect a historical record ... It won't show current control.\""
+  }
+ ],
+ "summary": {
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "pass_rate": 1.0
+ },
+ "claims": [],
+ "eval_feedback": {
+  "suggestions": [
+   {
+    "assertion": "The answer does not claim the company cannot be checked because it has no LEI",
+    "reason": "Non-discriminating here: both answers satisfy it trivially once they recommend register lookup; it largely duplicates assertion 1."
+   }
+  ],
+  "overall": "Both answers are correct and nearly equivalent; the assertions do not separate them. B adds an optional name argument, which is permitted."
+ },
+ "timing": {
+  "total_duration_seconds": 18.9
+ }
+}
