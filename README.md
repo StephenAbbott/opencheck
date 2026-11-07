@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 468** — The MCP ownership map now spaces every owner a whole node apart, draws a company's holding in its own owner as a curved arrow, and no longer clips figure labels.
+**Latest: Phase 469** — The MCP ownership map's figure list no longer drops one owner's figures when two records of different sources share a name.
 
 → [Full development history](docs/status.md)
 
