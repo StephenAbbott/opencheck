@@ -1,0 +1,13 @@
+{
+  "description": "The value an identifier-merge key compares, per scheme. Run by backend/tests/test_identifier_match.py (identifiers.match_value) and frontend/src/lib/reconcile.test.ts (matchValue). Added after the MCP testing of 7 Nov 2026: Eli Lilly's SEC EDGAR record (CIK 59478) never joined Wikirate's (CIK 0000059478).",
+  "cases": [
+    { "scheme": "US-SEC-CIK", "value": "0000059478", "match": "59478" },
+    { "scheme": "US-SEC-CIK", "value": "59478", "match": "59478" },
+    { "scheme": "us-sec-cik", "value": "0000320193", "match": "320193" },
+    { "scheme": "US-SEC-CIK", "value": "0000000000", "match": "0" },
+    { "scheme": "US-SEC-CIK", "value": "CIK0000059478", "match": "CIK0000059478" },
+    { "scheme": "GB-COH", "value": "00102498", "match": "00102498" },
+    { "scheme": "DK-CVR", "value": "0036213728", "match": "0036213728" },
+    { "scheme": "", "value": "0000059478", "match": "0000059478" }
+  ]
+}

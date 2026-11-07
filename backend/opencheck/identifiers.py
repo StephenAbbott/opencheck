@@ -84,6 +84,33 @@ def normalise_lei(value: object) -> str:
     return str(value).strip().upper()
 
 
+#: Schemes whose values are numbers written with or without leading zeros —
+#: one number, several spellings across publishers. The SEC's Central Index
+#: Key is the case: EDGAR's filings and SEC EDGAR's own statements write
+#: ``59478``, its URLs and Wikirate's metric ``0000059478``. Until the MCP
+#: testing of 7 Nov 2026 the two never formed one merge key, so Eli Lilly's
+#: SEC EDGAR record never joined the subject and its 13D/13G holders reached
+#: no owners list, map or integrated figure. Only schemes where a leading zero
+#: carries no meaning belong here: a Companies House number (``00102498``)
+#: does not. Mirror of ``ZERO_PADDED_SCHEMES`` in
+#: ``frontend/src/lib/reconcile.ts``; ``identifierMatchCases.json`` is run by
+#: both sides.
+ZERO_PADDED_SCHEMES: frozenset[str] = frozenset({"US-SEC-CIK"})
+
+
+def match_value(scheme: object, value: str) -> str:
+    """``value`` as identifier-merge keys compare it under ``scheme``.
+
+    Strips leading zeros from an all-digit value under a
+    ``ZERO_PADDED_SCHEMES`` scheme (keeping one zero for an all-zero value);
+    returns every other value unchanged. The published identifier is never
+    rewritten — this is the comparison form only.
+    """
+    if str(scheme or "").strip().upper() in ZERO_PADDED_SCHEMES and value.isdigit():
+        return value.lstrip("0") or "0"
+    return value
+
+
 def _mod97_ok(value: str) -> bool:
     """ISO 7064 mod 97-10: letters map to 10..35, whole number ≡ 1 (mod 97)."""
     try:

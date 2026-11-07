@@ -130,6 +130,24 @@ export function matchedLeiKey(s: Stmt): string | null {
   return null;
 }
 
+/** Schemes whose values are numbers written with or without leading zeros:
+ *  the SEC CIK is ``59478`` in EDGAR filings and ``0000059478`` in its URLs
+ *  and Wikirate's metric. Mirror of ``ZERO_PADDED_SCHEMES`` in
+ *  ``backend/opencheck/identifiers.py`` (the MCP testing of 7 Nov 2026);
+ *  ``identifierMatchCases.json`` is run by both sides. A Companies House
+ *  number's leading zeros carry meaning, so it is not here. */
+export const ZERO_PADDED_SCHEMES = new Set(["US-SEC-CIK"]);
+
+/** ``value`` as identifier-merge keys compare it under ``scheme``: an
+ *  all-digit value under a zero-padded scheme loses its leading zeros. The
+ *  published identifier is never rewritten. Mirror of ``match_value``. */
+export function matchValue(scheme: string, value: string): string {
+  if (ZERO_PADDED_SCHEMES.has(String(scheme ?? "").trim().toUpperCase()) && /^[0-9]+$/.test(value)) {
+    return value.replace(/^0+/, "") || "0";
+  }
+  return value;
+}
+
 /** Normalised identifier keys for an entity statement. LEIs are global (scheme
  *  ignored); everything else is scoped by its scheme so company numbers from
  *  different registers never collide.
@@ -150,13 +168,14 @@ function identKeys(s: Stmt): string[] {
     .split("-")[0];
   const keys: string[] = [];
   for (const i of ids) {
-    const val = String(i.id ?? "").trim().toUpperCase();
-    if (!val) continue;
-    if (LEI_RE.test(val)) {
-      keys.push(`LEI:${val}`);
+    const raw = String(i.id ?? "").trim().toUpperCase();
+    if (!raw) continue;
+    if (LEI_RE.test(raw)) {
+      keys.push(`LEI:${raw}`);
       continue;
     }
     const scheme = String(i.scheme ?? "?").trim().toUpperCase();
+    const val = matchValue(scheme, raw);
     keys.push(`${scheme}:${val}`);
     // Jurisdiction+bare-value key bridges the same registration number under
     // different scheme labels (CVR / COA / CC / empty). Unschemed identifiers
