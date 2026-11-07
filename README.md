@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 469** — The MCP ownership map's figure list no longer drops one owner's figures when two records of different sources share a name.
+**Latest: Phase 470** — The MCP owners answer now explains a sanctions ownership test that is not met, instead of returning nothing.
 
 → [Full development history](docs/status.md)
 
