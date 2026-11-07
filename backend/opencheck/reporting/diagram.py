@@ -391,10 +391,25 @@ def _node_svg(cx: float, cy: float, kind: str, label: str, sublabel: str = "") -
         f'fill="{_INK}">{title}{spans}</text>'
     )
     sub = ""
-    if sublabel:
-        sy = cy + _R + 30 + 13 * (len(lines) - 1)
-        sub = f'<text x="{cx}" y="{sy}" text-anchor="middle" font-size="9" fill="{_MUTE}">{escape(sublabel)}</text>'
+    # A sublabel may hold several lines, "\n"-separated: the ownership map
+    # gives each source's integrated figure its own line, so a long source
+    # name never runs off the node's column (the MCP testing, 7 Nov 2026).
+    for k, text in enumerate(_sublabel_lines(sublabel)):
+        sy = cy + _R + 30 + 13 * (len(lines) - 1) + 11 * k
+        sub += f'<text x="{cx}" y="{sy}" text-anchor="middle" font-size="9" fill="{_MUTE}">{escape(text)}</text>'
     return glyph + lab + sub
+
+
+def _sublabel_lines(sublabel: str | None) -> list[str]:
+    return [line for line in (sublabel or "").split("\n") if line]
+
+
+def _node_extent(nd: dict) -> float:
+    """How far a node's drawing reaches below its centre: the disc, its name
+    (one or two lines) and every sublabel line."""
+    name_lines = len(node_label_lines(nd["label"]))
+    sub_lines = len(_sublabel_lines(nd.get("sublabel")))
+    return _R + 16 + 13 * (name_lines - 1) + (14 + 11 * (sub_lines - 1) if sub_lines else 0) + 4
 
 
 # --- layout + render ---------------------------------------------------------
@@ -551,8 +566,10 @@ def _node_boxes(pos: dict[str, tuple[float, float]], nodes: dict) -> list[Box]:
     boxes: list[Box] = []
     for n, (cx, cy) in pos.items():
         nd = nodes[n]
-        text_w = max(len(nd["label"]) * 6.2, len(nd.get("sublabel") or "") * 5.0, 2 * _R)
-        bottom = cy + _R + (34 if nd.get("sublabel") else 20)
+        name_w = max(len(line) for line in node_label_lines(nd["label"])) * 6.2
+        sub_w = max((len(line) for line in _sublabel_lines(nd.get("sublabel"))), default=0) * 5.0
+        text_w = max(name_w, sub_w, 2 * _R)
+        bottom = cy + _node_extent(nd)
         boxes.append((cx - text_w / 2, cy - _R, cx + text_w / 2, bottom))
     return boxes
 
@@ -625,6 +642,32 @@ def _label_svg(wrapped: list[str], style: EdgeStyle, box: Box) -> str:
     )
 
 
+def _return_curve(
+    px: float, py: float, sx: float, sy: float
+) -> tuple[str, tuple[float, float, float, float]]:
+    """A quadratic curve from a node on the right (``px, py``) to one on the
+    left (``sx, sy``), bowed downward off the straight line between them, and
+    a short chord at its apex for the label. Returns ``(path d, (x1, y1, x2,
+    y2))``."""
+    x0, y0 = px - _R * 0.7, py + _R * 0.7          # leave the right node low-left
+    x2, y2 = sx + _R * 0.7, sy + _R * 0.7          # arrive at the left node low-right
+    dx, dy = x2 - x0, y2 - y0
+    length = max((dx * dx + dy * dy) ** 0.5, 1.0)
+    # The perpendicular that points down the canvas.
+    nx, ny = -dy / length, dx / length
+    if ny < 0:
+        nx, ny = -nx, -ny
+    bow = max(60.0, 0.22 * length)
+    cx, cy = (x0 + x2) / 2 + nx * bow, (y0 + y2) / 2 + ny * bow
+
+    def at(t: float) -> tuple[float, float]:
+        u = 1 - t
+        return (u * u * x0 + 2 * u * t * cx + t * t * x2, u * u * y0 + 2 * u * t * cy + t * t * y2)
+
+    (ax, ay), (bx, by) = at(0.3), at(0.7)
+    return f"M{x0:.0f} {y0:.0f} Q{cx:.0f} {cy:.0f} {x2:.0f} {y2:.0f}", (ax, ay, bx, by)
+
+
 def _render(
     nodes: dict,
     edges: list,
@@ -632,10 +675,19 @@ def _render(
     *,
     layer: dict[str, int] | None = None,
     view_w: int = _VIEW_W,
+    max_h: float | None = 980,
 ) -> tuple[str, str]:
     """Draw ``nodes`` / ``edges``. ``layer`` (Phase 340, the ownership map)
     gives each node its column — 0 the subject, rightmost — instead of the
-    longest-path layering, and ``view_w`` widens the canvas for deep maps."""
+    longest-path layering, and ``view_w`` widens the canvas for deep maps.
+
+    ``max_h`` caps the height so a PDF figure fits an A4 page; the MCP
+    ownership map passes ``None`` and the canvas grows with the column, one
+    node's full drawing apart (Rosneft's fifteen owners overprinted each other
+    in 980 units — the MCP testing, 7 Nov 2026). An edge that runs from a
+    column to one at or left of it — the company holding shares in one of its
+    own owners — is drawn as a curve, so it never lies on the owner's edge
+    back into the company."""
     layer = layer if layer is not None else _layer_nodes(nodes, edges)
     max_layer = max(layer.values())
     # Columns: layer 0 (subjects) rightmost.
@@ -651,16 +703,29 @@ def _render(
     # Cap the total height so even a full 10-node column fits within one A4 page
     # (at the figure's rendered width, ~980 units ≈ a page's usable height).
     # With few nodes the spacing stays at the comfortable 150.
-    max_h = 980
-    row_h = min(150, (max_h - 24) / rows_max) if rows_max else 150
-    height = max(rows_max * row_h, 150) + 24
     pos: dict[str, tuple[float, float]] = {}
-    for lyr, ns in by_layer.items():
-        ns.sort(key=lambda n: nodes[n]["label"])
-        n_ct = len(ns)
-        for i, n in enumerate(ns):
-            y = height * (i + 1) / (n_ct + 1)
-            pos[n] = (col_x[lyr], y)
+    if max_h is not None:
+        row_h = min(150, (max_h - 24) / rows_max) if rows_max else 150
+        height = max(rows_max * row_h, 150) + 24
+        for lyr, ns in by_layer.items():
+            ns.sort(key=lambda n: nodes[n]["label"])
+            n_ct = len(ns)
+            for i, n in enumerate(ns):
+                y = height * (i + 1) / (n_ct + 1)
+                pos[n] = (col_x[lyr], y)
+    else:
+        # One node's whole drawing per row (disc, name, sublabels) plus a gap;
+        # a shorter column is centred on the tallest.
+        reach = max(_node_extent(nd) for nd in nodes.values())
+        row_h = max(110.0, _R + reach + 18)
+        top = 24.0 + _R
+        # The last row's drawing, then the legend row beneath it.
+        height = max(top + (rows_max - 1) * row_h + reach + 34, 174)
+        for lyr, ns in by_layer.items():
+            ns.sort(key=lambda n: nodes[n]["label"])
+            offset = (rows_max - len(ns)) * row_h / 2
+            for i, n in enumerate(ns):
+                pos[n] = (col_x[lyr], top + offset + row_h * i)
 
     parts: list[str] = [
         f'<svg viewBox="0 0 {view_w} {int(height)}" role="img" '
@@ -700,6 +765,20 @@ def _render(
         (px, py), (sx, sy) = pos[e["from"]], pos[e["to"]]
         style = EDGE_STYLE[e["cat"]]
         stroke = style.ended_color if e.get("ended") else style.color
+        if px >= sx and e["from"] != e["to"]:
+            # A return edge: the owner sits left of (or level with) the party
+            # it owns. Curve below the straight corridor between the two.
+            path, label_seg = _return_curve(px, py, sx, sy)
+            parts.append(
+                f'<path d="{path}" fill="none" stroke="{stroke}" stroke-width="3"{_DASH_ATTRS[style.dash]} '
+                f'marker-end="url(#{_marker_id(e["cat"], bool(e.get("ended")))})"/>'
+            )
+            wrapped, _cx, _cy, box = _place_label(
+                e["lines"], *label_seg, from_fanned_start=None, avoid=avoid, view=view
+            )
+            avoid.append(box)
+            labels.append(_label_svg(wrapped, style, box))
+            continue
         x1, x2 = px + _R, sx - _R
         parts.append(
             f'<line x1="{x1:.0f}" y1="{py:.0f}" x2="{x2:.0f}" y2="{sy:.0f}" '
