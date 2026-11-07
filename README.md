@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 466** — SEC EDGAR's record of a US issuer now joins the subject when another source spells the same CIK with leading zeros, so 13D/13G holders reach the MCP owners and map answers.
+**Latest: Phase 467** — The MCP owners answer now lists legal entities a register names as controlling a company, such as a UK relevant legal entity, beside its beneficial owners.
 
 → [Full development history](docs/status.md)
 
