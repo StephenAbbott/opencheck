@@ -245,11 +245,51 @@ def state_groups(bods: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
     return out
 
 
+def filed_bodies(
+    bods: list[dict[str, Any]], states: Mapping[str, tuple[str, str]], as_of: str
+) -> dict[tuple[str, str], str]:
+    """(canonical party, source id) → the state body that source filed the
+    holding under, for every state body that holds the subject or a company
+    on the way. A current filing wins over an ended one.
+
+    The post-deploy re-test, 7 Nov 2026: two sources' records of one body can
+    be one party (Eesti Energia's e-Äriregister "Rahandusministeerium" and
+    OpenSanctions' "Government of Estonia" share an identifier), and the
+    party's single display name was given as every figure's ``as`` — while the
+    map's edge, read from the filing, said Rahandusministeerium."""
+    from .integrated_ownership import party_name, source_key
+
+    canon = io.lookup_canon(bods)
+    resolve = resolver(bods)
+    by_sid = {s.get("statementId"): s for s in bods if s.get("recordType") == "entity"}
+    out: dict[tuple[str, str], str] = {}
+    ended: dict[tuple[str, str], str] = {}
+    for s in bods:
+        if s.get("recordType") != "relationship":
+            continue
+        party = resolve((s.get("recordDetails") or {}).get("interestedParty"))
+        if not party or party not in states:
+            continue
+        name = party_name(by_sid.get(party))
+        if not name:
+            continue
+        key = (canon.get(party, party), source_key(s)[0])
+        target = ended if statement_lifecycle(s, as_of).ended else out
+        target.setdefault(key, name)
+    for key, name in ended.items():
+        out.setdefault(key, name)
+    return out
+
+
 def fold_states(
-    owners: list[dict[str, Any]], states: Mapping[str, tuple[str, str]]
+    owners: list[dict[str, Any]],
+    states: Mapping[str, tuple[str, str]],
+    filed: Mapping[tuple[str, str], str] | None = None,
 ) -> list[dict[str, Any]]:
     """One row per state: the bodies' figures listed side by side, each with
-    the body name it was filed under (``as``) — never added."""
+    the body name it was filed under (``as``) — never added. ``filed`` (from
+    ``filed_bodies``) gives that name per source; without it, or where it has
+    none, the party's own name stands."""
     out: list[dict[str, Any]] = []
     rows: dict[str, dict[str, Any]] = {}
     for o in owners:
@@ -263,9 +303,11 @@ def fold_states(
             row = rows[key] = {"party": key, "name": name, "kind": "state",
                                "position": o["position"], "bodies": [], "figures": []}
             out.append(row)
-        if o["name"] not in row["bodies"]:
-            row["bodies"].append(o["name"])
-        row["figures"].extend({**f, "as": o["name"]} for f in o["figures"])
+        for f in o["figures"]:
+            body = (filed or {}).get((str(o.get("party")), str(f.get("source_id") or ""))) or o["name"]
+            if body not in row["bodies"]:
+                row["bodies"].append(body)
+            row["figures"].append({**f, "as": body})
         if o["position"] == "above":
             row["position"] = "above"
     out.sort(key=lambda o: (o["position"] != "above",
@@ -666,7 +708,8 @@ def owners_answer(
     canon = party_canon(net.bods)
     both = in_both(calculated, declared + controllers, canon)
     stops = chain_stops(calculated, net.bods, canon, net.expanded, net.refused, net.capped)
-    shown = fold_states(calculated, state_groups(net.bods))
+    states = state_groups(net.bods)
+    shown = fold_states(calculated, states, filed_bodies(net.bods, states, as_of))
     return {
         "lei": lei,
         "legal_name": legal_name,
@@ -1008,8 +1051,12 @@ def ownership_map(
         rows.append({
             "owner": party_name(by_canon.get(party)) or party,
             **({"owner_as": body} if body else {}),
+            # A folded state is typed "state", as opencheck_owners types its
+            # row (the post-deploy re-test, 7 Nov 2026).
             "owner_kind": (
-                "person" if (by_canon.get(party) or {}).get("recordType") == "person" else "entity"
+                "state" if party.startswith(STATE_KEY_PREFIX)
+                else "person" if (by_canon.get(party) or {}).get("recordType") == "person"
+                else "entity"
             ),
             "interest": " · ".join(x for line in lines for x in line),
             "owned": party_name(by_canon.get(owned)) or owned,
