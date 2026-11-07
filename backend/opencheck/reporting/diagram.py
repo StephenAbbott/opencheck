@@ -717,7 +717,16 @@ def _render(
         # One node's whole drawing per row (disc, name, sublabels) plus a gap;
         # a shorter column is centred on the tallest.
         reach = max(_node_extent(nd) for nd in nodes.values())
-        row_h = max(110.0, _R + reach + 18)
+        # A bundled label (one line per source, the MCP map since issue 4)
+        # can be taller than a node; give it the room between two rows.
+        # Edges converge on the subject, so two neighbours are only part of
+        # a row apart where their labels sit: size the row to the label with
+        # that in mind.
+        tallest = max(
+            (len(wrap_label(e["lines"], _LABEL_MAX_CHARS)) * _LABEL_LINE_H for e in edges),
+            default=0,
+        )
+        row_h = max(110.0, _R + reach + 18, tallest * 1.6 + 30)
         top = 24.0 + _R
         # The last row's drawing, then the legend row beneath it.
         height = max(top + (rows_max - 1) * row_h + reach + 34, 174)
