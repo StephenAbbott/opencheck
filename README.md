@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 465** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, moving Austria to legitimate-interest access from 5 Nov 2026 and recording the Greek bill that will open its register the same way.
+**Latest: Phase 466** — SEC EDGAR's record of a US issuer now joins the subject when another source spells the same CIK with leading zeros, so 13D/13G holders reach the MCP owners and map answers.
 
 → [Full development history](docs/status.md)
 
