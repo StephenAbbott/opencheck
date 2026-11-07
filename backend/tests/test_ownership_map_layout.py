@@ -100,3 +100,56 @@ def test_the_pdf_figure_keeps_its_a4_cap():
     svg, _ = _render(nodes, edges, "PDF")
     height = float(re.search(r'viewBox="0 0 \d+ ([\d.]+)"', svg).group(1))
     assert height <= 980 + 24
+
+
+# --- the post-deploy re-test, 7 Nov 2026 -------------------------------------
+
+_LABEL = re.compile(
+    r'<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)" rx="3"[^>]*/><text[^>]*>(.*?)</text>'
+)
+
+
+def _label_boxes(svg):
+    return [(int(x), int(y), int(x) + int(w), int(y) + int(h), body)
+            for x, y, w, h, body in _LABEL.findall(svg)]
+
+
+def _rosneft_shape():
+    """Rosneft's shape: owners from two sources, two of them held back by the
+    company (RAO Rosneftegazstroy with no share stated, RN-NeftKapitalInvest
+    at 100%), the second also named — as a separate record — by GEM."""
+    bods = [ent("T", "Target")]
+    names = ["BP Russian Investments Ltd", "National Settlement Depository JSC",
+             "QH Oil Investments LLC", "Rosneftegaz JSC"]
+    for k, n in enumerate(names):
+        bods += [ent(f"G{k}", n, "climatetrace"), rel(f"g{k}", "T", f"G{k}", 10.0 + k, "climatetrace")]
+    bods += [ent("RAO", "RAO Rosneftegazstroy"), ent("RN", "RN-NeftKapitalInvest LLC"),
+             ent("RNG", "RN-NeftKapitalInvest LLC", "climatetrace"),
+             {**rel("raoup", "T", "RAO", 0), "recordDetails": {
+                 **rel("raoup", "T", "RAO", 0)["recordDetails"], "interests": [{"type": "shareholding"}]}},
+             rel("rnup", "T", "RN", 9.6), rel("rngup", "T", "RNG", 9.6, "climatetrace"),
+             {**rel("raodown", "RAO", "T", 0), "recordDetails": {
+                 **rel("raodown", "RAO", "T", 0)["recordDetails"], "interests": [{"type": "shareholding"}]}},
+             rel("rndown", "RN", "T", 100.0)]
+    return bods
+
+
+def test_a_cross_holding_label_clears_every_other_label():
+    _ans, svg = the_map(_rosneft_shape())
+    assert len(re.findall(r'<path d="M[\d.]+ [\d.]+ Q', svg)) == 2
+    boxes = _label_boxes(svg)
+    for i, a in enumerate(boxes):
+        for b in boxes[i + 1:]:
+            clear = a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1]
+            assert clear, (a[4][:60], b[4][:60])
+
+
+def test_a_wrapped_label_steps_one_whole_line_height():
+    # A bundled two-source label wraps to several lines; each must sit 13
+    # units below the last (12 and 14 alternately let an 11-unit face touch).
+    bods = [ent("T", "Target"), ent("P", "Parent"),
+            rel("a", "T", "P", 100.0, "opensanctions"), rel("b", "T", "P", 100.0, "climatetrace")]
+    _ans, svg = the_map(bods)
+    for _x0, _y0, _x1, _y1, body in _label_boxes(svg):
+        ys = [int(y) for y in re.findall(r'<tspan x="\d+" y="(\d+)"', body)]
+        assert all(b - a == 13 for a, b in zip(ys, ys[1:])), ys
