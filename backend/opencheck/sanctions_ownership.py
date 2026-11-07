@@ -865,3 +865,108 @@ def report_footer(signal: Mapping[str, Any] | None) -> list[str]:
         lines.append(f"Computed from the sources as they stood on {ev['as_of']}.")
     lines.append(str(ev.get("credit") or METHOD_CREDIT))
     return lines
+
+
+# ----------------------------------------------------------------------
+# The outcome when there is no signal (MCP testing, 7 Nov 2026, issue 7)
+# ----------------------------------------------------------------------
+
+STATUS_MEETS = "meets"
+STATUS_MAY_MEET = "may_meet"
+STATUS_NOT_MET = "not_met"
+STATUS_NO_HOLDER = "no_designated_holder"
+
+
+def subject_regimes(signals: Iterable[Mapping[str, Any]]) -> list[str]:
+    """The regimes under which the company itself is designated, read from
+    its own ``SANCTIONED`` signal's datasets (OpenSanctions)."""
+    found: set[str] = set()
+    for sig in signals:
+        if sig.get("code") == "SANCTIONED" and sig.get("source_id") in _DESIGNATION_SOURCES:
+            found.update(regimes_for((sig.get("evidence") or {}).get("datasets") or ()))
+    return [r.key for r in REGIMES if r.key in found]
+
+
+def _labels(keys: Iterable[str]) -> str:
+    by_key = {r.key: r.label for r in REGIMES}
+    return _join([by_key.get(k, k) for k in keys])
+
+
+def outcome(
+    statements: list[dict[str, Any]],
+    subject_ids: Iterable[str],
+    signals: Iterable[Mapping[str, Any]],
+    as_of: str,
+    canon: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """What the test found when it raised no signal — never a bare null.
+
+    Rosneft's MCP answer said ``sanctions_ownership_test: null``: the test had
+    run and was not met (the one designated shareholder in any source,
+    National Settlement Depository, holds 10.7% in GEM's data and is a
+    name-only match, so it is not counted), and the company is itself
+    designated — neither was said. ``status`` is ``not_met`` (a designated
+    party holds shares, below every regime's test on the counted parties) or
+    ``no_designated_holder``; the parties left out because their match is on
+    the name only are listed with their direct stake per source. The test's
+    rules are unchanged and nothing here is a signal."""
+    signals = list(signals)
+    subject_ids = [s for s in subject_ids if s]
+    canon = dict(canon or {})
+    payload = assess(statements, subject_ids, signals, as_of, canon)
+    own = subject_regimes(signals)
+    not_counted: list[dict[str, Any]] = []
+    if payload is None:
+        status = STATUS_NO_HOLDER
+        text = (
+            "No party designated under OFAC (US), the EU or the UK holds shares in the "
+            "company in any source read, so the ownership test does not apply."
+        )
+    else:
+        status = STATUS_NOT_MET
+        name_only = {d["party"]: d for d in payload["designated"] if d["basis"] == BASIS_NAME_ONLY}
+        by_source, labels = _source_edges(statements, subject_ids, canon, as_of)
+        for key in sorted(by_source):
+            for (owner, owned), stake in by_source[key].items():
+                if owned == _SUBJECT and owner in name_only:
+                    not_counted.append({
+                        "name": name_only[owner]["name"],
+                        "stake": stake_text(stake.lo, stake.lo_strict, stake.hi, stake.hi_strict),
+                        "source": labels.get(key, key),
+                        "regimes": name_only[owner]["regimes"],
+                        "basis": BASIS_NAME_ONLY,
+                    })
+        text = regimes_sentence(payload["regimes"]).rstrip(".") + "."
+        holds = any(
+            h.get("designated")
+            for r in payload["regimes"] for row in r["sources"] for h in row.get("holders") or []
+        )
+        if not holds:
+            text += (
+                " No designated party matched on an identifier or with corroboration "
+                "holds shares in the company in the sources read."
+            )
+        if not_counted:
+            text += " Not counted, because the match is on the name only: " + "; ".join(
+                f"{n['name']}, {n['stake']} ({n['source']})" for n in not_counted
+            ) + "."
+    if own:
+        text += (
+            f" The company is itself designated under {_labels(own)} (OpenSanctions); the "
+            "ownership test asks whether designated owners extend sanctions to a company "
+            "that is not listed itself."
+        )
+    return {
+        "finding": None,
+        "status": status,
+        "summary": text,
+        "subject_designated": own,
+        "not_counted": not_counted,
+        "regimes": [
+            {"regime": r["regime"], "rule": r["rule"], "result": r["result"]}
+            for r in (payload or {}).get("regimes") or []
+        ],
+        "method": METHOD_DESCRIPTION,
+        "not_computed": NOT_COMPUTED,
+        "as_of": as_of,
+    }
