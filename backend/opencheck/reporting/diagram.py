@@ -629,7 +629,11 @@ def _label_svg(wrapped: list[str], style: EdgeStyle, box: Box) -> str:
     its own ``y`` (WeasyPrint lays those out without relying on ``dy``)."""
     x0, y0, x1, y1 = box
     cx = (x0 + x1) / 2
-    first = y0 + _LABEL_FONT + 1
+    # Round the first baseline, then step whole line heights from it: rounding
+    # each line on its own drew alternate gaps of 12 and 14 units, and at 12 an
+    # 11-unit face touched the line above (Taqa Bratani's GLEIF + MEIP label —
+    # the post-deploy re-test, 7 Nov 2026).
+    first = round(y0 + _LABEL_FONT + 1)
     spans = "".join(
         f'<tspan x="{cx:.0f}" y="{first + k * _LABEL_LINE_H:.0f}">{escape(t)}</tspan>'
         for k, t in enumerate(wrapped)
@@ -644,11 +648,11 @@ def _label_svg(wrapped: list[str], style: EdgeStyle, box: Box) -> str:
 
 def _return_curve(
     px: float, py: float, sx: float, sy: float
-) -> tuple[str, tuple[float, float, float, float]]:
+) -> tuple[str, list[tuple[float, float]]]:
     """A quadratic curve from a node on the right (``px, py``) to one on the
-    left (``sx, sy``), bowed downward off the straight line between them, and
-    a short chord at its apex for the label. Returns ``(path d, (x1, y1, x2,
-    y2))``."""
+    left (``sx, sy``), bowed downward off the straight line between them.
+    Returns ``(path d, label anchors)``: points on the curve, apex first, then
+    alternately either side of it, for the label to try in turn."""
     x0, y0 = px - _R * 0.7, py + _R * 0.7          # leave the right node low-left
     x2, y2 = sx + _R * 0.7, sy + _R * 0.7          # arrive at the left node low-right
     dx, dy = x2 - x0, y2 - y0
@@ -664,8 +668,57 @@ def _return_curve(
         u = 1 - t
         return (u * u * x0 + 2 * u * t * cx + t * t * x2, u * u * y0 + 2 * u * t * cy + t * t * y2)
 
-    (ax, ay), (bx, by) = at(0.3), at(0.7)
-    return f"M{x0:.0f} {y0:.0f} Q{cx:.0f} {cy:.0f} {x2:.0f} {y2:.0f}", (ax, ay, bx, by)
+    anchors = [at(t) for t in _RETURN_LABEL_TS]
+    return f"M{x0:.0f} {y0:.0f} Q{cx:.0f} {cy:.0f} {x2:.0f} {y2:.0f}", anchors
+
+
+#: Where a return edge's label may sit, as a fraction along its curve: the
+#: apex first, then outward. A return edge is drawn after the straight edges,
+#: in the corridor they cross; the label used to try five points on a short
+#: chord at the apex and, finding none clear, take the first — on top of a
+#: straight edge's label (Rosneft's "Owns 100%" over RN-NeftKapitalInvest's
+#: "Owns 9.6%", the post-deploy re-test, 7 Nov 2026).
+_RETURN_LABEL_TS = (0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.15, 0.85)
+#: Then off the apex, below and above it in turn, in steps.
+_RETURN_LABEL_DROPS = tuple(d for k in range(1, 9) for d in (14 * k, -14 * k))
+
+
+def _place_return_label(
+    lines: list[list[str]],
+    anchors: list[tuple[float, float]],
+    *,
+    avoid: list[Box],
+    view: Box,
+) -> tuple[list[str], Box]:
+    """Place a return edge's label on its curve, centred on the first anchor
+    whose box clears every node and label already placed; failing that, off
+    the apex, stepping below and above it; failing that, wherever it covers
+    the least (the table under the figure still says everything)."""
+    wrapped = wrap_label(lines, _LABEL_MAX_CHARS)
+    w = max(len(line) for line in wrapped) * _LABEL_CHAR_W + 8
+    h = (len(wrapped) - 1) * _LABEL_LINE_H + _LABEL_FONT + 5
+    apex_x, apex_y = anchors[0]
+    tries = [*anchors, *((apex_x, apex_y + d) for d in _RETURN_LABEL_DROPS)]
+    best: tuple[float, Box] | None = None
+    for cx, cy in tries:
+        box = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+        inside = box[0] >= view[0] and box[1] >= view[1] and box[2] <= view[2] and box[3] <= view[3]
+        if not inside:
+            continue
+        if not any(_overlaps(box, other) for other in avoid):
+            return wrapped, box
+        covered = sum(_overlap_area(box, other) for other in avoid)
+        if best is None or covered < best[0]:
+            best = (covered, box)
+    if best is not None:
+        return wrapped, best[1]
+    return wrapped, (apex_x - w / 2, apex_y - h / 2, apex_x + w / 2, apex_y + h / 2)
+
+
+def _overlap_area(a: Box, b: Box, pad: float = 2) -> float:
+    w = min(a[2], b[2] + pad) - max(a[0], b[0] - pad)
+    h = min(a[3], b[3] + pad) - max(a[1], b[1] - pad)
+    return w * h if w > 0 and h > 0 else 0.0
 
 
 def _render(
@@ -770,21 +823,25 @@ def _render(
     avoid = _node_boxes(pos, nodes)
     view: Box = (0, 0, view_w, height - 16)  # clear of the legend row
     labels: list[str] = []
-    for e in edges:
+
+    def is_return(e: dict) -> bool:
+        return pos[e["from"]][0] >= pos[e["to"]][0] and e["from"] != e["to"]
+
+    # Straight edges first, so a return edge's label — which has the freer
+    # choice of spot — is placed around theirs, not the other way round.
+    for e in sorted(edges, key=is_return):
         (px, py), (sx, sy) = pos[e["from"]], pos[e["to"]]
         style = EDGE_STYLE[e["cat"]]
         stroke = style.ended_color if e.get("ended") else style.color
         if px >= sx and e["from"] != e["to"]:
             # A return edge: the owner sits left of (or level with) the party
             # it owns. Curve below the straight corridor between the two.
-            path, label_seg = _return_curve(px, py, sx, sy)
+            path, anchors = _return_curve(px, py, sx, sy)
             parts.append(
                 f'<path d="{path}" fill="none" stroke="{stroke}" stroke-width="3"{_DASH_ATTRS[style.dash]} '
                 f'marker-end="url(#{_marker_id(e["cat"], bool(e.get("ended")))})"/>'
             )
-            wrapped, _cx, _cy, box = _place_label(
-                e["lines"], *label_seg, from_fanned_start=None, avoid=avoid, view=view
-            )
+            wrapped, box = _place_return_label(e["lines"], anchors, avoid=avoid, view=view)
             avoid.append(box)
             labels.append(_label_svg(wrapped, style, box))
             continue
