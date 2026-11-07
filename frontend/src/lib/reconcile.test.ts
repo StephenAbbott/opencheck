@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { reconcileBods, remapSignals, possiblySameAs } from "./reconcile";
+import { reconcileBods, remapSignals, possiblySameAs, matchValue } from "./reconcile";
+import matchCases from "./identifierMatchCases.json";
 import { bodsToGraph } from "./bodsGraph";
 import type { RiskSignal } from "./api";
 
@@ -422,6 +423,46 @@ describe("reconcileBods", () => {
       },
     ]);
     expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(1);
+  });
+
+  it("merges a zero-padded SEC CIK with the unpadded one (MCP testing, 7 Nov 2026)", () => {
+    // Eli Lilly: Wikirate files CIK 0000059478 with the LEI; SEC EDGAR's own
+    // record of the issuer files 59478 and no LEI. One company.
+    const { statements } = reconcileBods([
+      {
+        statementId: "wikirate", recordType: "entity",
+        recordDetails: { name: "Eli Lilly & Co", jurisdiction: { code: "US" },
+          identifiers: [{ scheme: "XI-LEI", id: "FRDRIPF3EKNDJ2CQJL29" }, { scheme: "US-SEC-CIK", id: "0000059478" }] },
+        source: { description: "Wikirate" },
+      },
+      {
+        statementId: "sec", recordType: "entity",
+        recordDetails: { name: "ELI LILLY AND COMPANY", jurisdiction: { code: "US" },
+          identifiers: [{ scheme: "US-SEC-CIK", id: "59478" }, { scheme: "CUSIP", id: "532457108" }] },
+        source: { description: "SEC EDGAR" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(1);
+  });
+
+  it("keeps a Companies House number's leading zeros significant", () => {
+    const { statements } = reconcileBods([
+      {
+        statementId: "a", recordType: "entity",
+        recordDetails: { name: "A Ltd", jurisdiction: { code: "GB" }, identifiers: [{ scheme: "GB-COH", id: "00102498" }] },
+        source: { description: "S1" },
+      },
+      {
+        statementId: "b", recordType: "entity",
+        recordDetails: { name: "B Ltd", jurisdiction: { code: "GB" }, identifiers: [{ scheme: "GB-COH", id: "102498" }] },
+        source: { description: "S2" },
+      },
+    ]);
+    expect(statements.filter((s) => s.recordType === "entity")).toHaveLength(2);
+  });
+
+  it.each(matchCases.cases)("matchValue($scheme, $value) is $match", ({ scheme, value, match }) => {
+    expect(matchValue(scheme, value)).toBe(match);
   });
 
   it("does not cross-merge same-value ids in different jurisdictions", () => {

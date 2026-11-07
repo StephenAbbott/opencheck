@@ -267,8 +267,10 @@ def _identifier_keys(stmt: dict) -> set[str]:
         # one merge key — two records that share it are correctly treated as
         # identifier-linked rather than surfaced as a name-only "possibly same"
         # pair. Falls back to the raw value when StrictFormat yields nothing.
-        val = canonical_identifier(raw, min_len=0) or raw
         scheme = str(i.get("scheme") or "?").strip().upper()
+        # ``match_value``: a number some publishers zero-pad (the SEC CIK)
+        # compares without its leading zeros (the MCP testing of 7 Nov 2026).
+        val = identifiers.match_value(scheme, canonical_identifier(raw, min_len=0) or raw)
         keys.add(f"{scheme}:{val}")
         # A bare RA code (Phase 239) is GLEIF's registration number with its
         # authority named, where the scheme used to be blank.

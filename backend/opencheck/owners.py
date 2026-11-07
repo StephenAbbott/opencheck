@@ -697,7 +697,7 @@ def owners_answer(
         "hint": HINT,
         "summary": _summary(legal_name, rule, shown, declared, both, stops, controllers, disclosure)
         + _sanctions_sentence(risk_signals),
-        "sanctions_ownership_test": sanctions_ownership_block(risk_signals),
+        "sanctions_ownership_test": sanctions_ownership_block(risk_signals, net, as_of),
     }
 
 
@@ -714,20 +714,35 @@ def _sanctions_sentence(signals: list[Any] | None) -> str:
 _HOLDER_KEYS = ("name", "stake", "designated", "basis", "held_by")
 
 
-def sanctions_ownership_block(signals: list[Any] | None) -> dict[str, Any] | None:
+def sanctions_ownership_block(
+    signals: list[Any] | None, net: Network | None = None, as_of: str | None = None
+) -> dict[str, Any] | None:
     """Phase 342: the lookup's sanctions 50% rule, per regime — the one
     *finding* in this answer, carried over from the lookup's own
     ``SANCTIONS_OWNERSHIP_TEST`` / ``_POSSIBLE`` signal (never recomputed
     from the integrated figure above, which multiplies; the rule counts a
-    caught company's holding in full). None when the lookup has neither."""
+    caught company's holding in full).
+
+    Without a signal the answer is never a bare null (the MCP testing of 7
+    Nov 2026, issue 7): ``status`` says whether the test was not met or no
+    designated party holds shares, the parties left out as name-only matches
+    are listed, and ``subject_designated`` says when the company is itself
+    designated. None only when no network is passed (a caller predating it)."""
     from . import sanctions_ownership as so
 
     sig = so.signal_of(signals)
     if sig is None:
-        return None
+        if net is None:
+            return None
+        return so.outcome(
+            net.bods, net.subject_ids, list(signals or []), as_of or default_as_of(),
+            io.lookup_canon(net.bods),
+        )
     ev = sig.get("evidence") or {}
     return {
         "finding": sig.get("code"),
+        "status": so.STATUS_MEETS if sig.get("code") == so.SANCTIONS_OWNERSHIP_TEST else so.STATUS_MAY_MEET,
+        "subject_designated": so.subject_regimes(signals or []),
         "kind": sig.get("kind"),
         "confidence": sig.get("confidence"),
         "summary": sig.get("summary"),
@@ -1089,9 +1104,7 @@ def ownership_map(
         "edges_drawn": len(shown),
         "current_edges": len(drawable),
         "omitted_from_image": max(0, len(drawable) - len(shown)),
-        "integrated_figures": {
-            (party_name(by_canon.get(k)) or k): v for k, v in figures.items() if v
-        },
+        "integrated_figures": _figures_by_name(figures, by_canon),
         "depth": {
             "layers_reached": net.depth_reached,
             "extra_lookups": net.hops,
@@ -1155,3 +1168,24 @@ def _map_summary(
 
 def default_as_of() -> str:
     return today_iso()
+
+
+def _figures_by_name(
+    figures: Mapping[str, list[str]], by_canon: Mapping[str, Mapping[str, Any]]
+) -> dict[str, list[str]]:
+    """The map's ``integrated_figures``: display name → every figure for a
+    node of that name. Two nodes can share a name — Rosneft's "Rosneftegaz
+    JSC" from OpenSanctions and from GEM are two records with no shared
+    identifier — and a dict keyed by name kept only the last, so the JSON
+    disagreed with the image (the MCP testing of 7 Nov 2026, issue 3). Each
+    figure names its source, so the gathered list stays readable; nothing is
+    added."""
+    from .integrated_ownership import party_name
+
+    out: dict[str, list[str]] = {}
+    for k, v in figures.items():
+        if not v:
+            continue
+        bucket = out.setdefault(party_name(by_canon.get(k)) or k, [])
+        bucket.extend(f for f in v if f not in bucket)
+    return out
