@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 467** — The MCP owners answer now lists legal entities a register names as controlling a company, such as a UK relevant legal entity, beside its beneficial owners.
+**Latest: Phase 468** — The MCP ownership map now spaces every owner a whole node apart, draws a company's holding in its own owner as a curved arrow, and no longer clips figure labels.
 
 → [Full development history](docs/status.md)
 
