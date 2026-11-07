@@ -497,11 +497,14 @@ async def opencheck_owners(
     ``listed_without_a_figure`` (voting rights only, or formerly). Calculated
     figures are arithmetic on filings, never a determination that anyone is a
     beneficial owner; nothing here is a risk signal. The one finding is
-    ``sanctions_ownership_test`` (null when none applies): the lookup's own
-    computed sanctions 50% rule for OFAC, the EU and the UK, side by side —
-    from parties designated under each regime and matched on an identifier
-    or with corroboration, ownership only (control tests not computed), and
-    never a determination that the company is sanctioned.
+    ``sanctions_ownership_test``: the lookup's own computed sanctions 50%
+    rule for OFAC, the EU and the UK, side by side — from parties designated
+    under each regime and matched on an identifier or with corroboration,
+    ownership only (control tests not computed), and never a determination
+    that the company is sanctioned. ``status`` is meets, may_meet, not_met or
+    no_designated_holder; ``not_counted`` lists name-only matches left out;
+    ``subject_designated`` names the regimes the company itself is listed
+    under.
 
     Args:
         lei: ISO 17442 Legal Entity Identifier (20 chars).

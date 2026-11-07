@@ -632,7 +632,7 @@ def owners_answer(
         "hint": HINT,
         "summary": _summary(legal_name, rule, calculated, declared, both, stops, controllers, disclosure)
         + _sanctions_sentence(risk_signals),
-        "sanctions_ownership_test": sanctions_ownership_block(risk_signals),
+        "sanctions_ownership_test": sanctions_ownership_block(risk_signals, net, as_of),
     }
 
 
@@ -649,20 +649,35 @@ def _sanctions_sentence(signals: list[Any] | None) -> str:
 _HOLDER_KEYS = ("name", "stake", "designated", "basis", "held_by")
 
 
-def sanctions_ownership_block(signals: list[Any] | None) -> dict[str, Any] | None:
+def sanctions_ownership_block(
+    signals: list[Any] | None, net: Network | None = None, as_of: str | None = None
+) -> dict[str, Any] | None:
     """Phase 342: the lookup's sanctions 50% rule, per regime — the one
     *finding* in this answer, carried over from the lookup's own
     ``SANCTIONS_OWNERSHIP_TEST`` / ``_POSSIBLE`` signal (never recomputed
     from the integrated figure above, which multiplies; the rule counts a
-    caught company's holding in full). None when the lookup has neither."""
+    caught company's holding in full).
+
+    Without a signal the answer is never a bare null (the MCP testing of 7
+    Nov 2026, issue 7): ``status`` says whether the test was not met or no
+    designated party holds shares, the parties left out as name-only matches
+    are listed, and ``subject_designated`` says when the company is itself
+    designated. None only when no network is passed (a caller predating it)."""
     from . import sanctions_ownership as so
 
     sig = so.signal_of(signals)
     if sig is None:
-        return None
+        if net is None:
+            return None
+        return so.outcome(
+            net.bods, net.subject_ids, list(signals or []), as_of or default_as_of(),
+            io.lookup_canon(net.bods),
+        )
     ev = sig.get("evidence") or {}
     return {
         "finding": sig.get("code"),
+        "status": so.STATUS_MEETS if sig.get("code") == so.SANCTIONS_OWNERSHIP_TEST else so.STATUS_MAY_MEET,
+        "subject_designated": so.subject_regimes(signals or []),
         "kind": sig.get("kind"),
         "confidence": sig.get("confidence"),
         "summary": sig.get("summary"),
