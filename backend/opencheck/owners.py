@@ -956,9 +956,7 @@ def ownership_map(
         "edges_drawn": len(shown),
         "current_edges": len(drawable),
         "omitted_from_image": max(0, len(drawable) - len(shown)),
-        "integrated_figures": {
-            (party_name(by_canon.get(k)) or k): v for k, v in figures.items() if v
-        },
+        "integrated_figures": _figures_by_name(figures, by_canon),
         "depth": {
             "layers_reached": net.depth_reached,
             "extra_lookups": net.hops,
@@ -1022,3 +1020,24 @@ def _map_summary(
 
 def default_as_of() -> str:
     return today_iso()
+
+
+def _figures_by_name(
+    figures: Mapping[str, list[str]], by_canon: Mapping[str, Mapping[str, Any]]
+) -> dict[str, list[str]]:
+    """The map's ``integrated_figures``: display name → every figure for a
+    node of that name. Two nodes can share a name — Rosneft's "Rosneftegaz
+    JSC" from OpenSanctions and from GEM are two records with no shared
+    identifier — and a dict keyed by name kept only the last, so the JSON
+    disagreed with the image (the MCP testing of 7 Nov 2026, issue 3). Each
+    figure names its source, so the gathered list stays readable; nothing is
+    added."""
+    from .integrated_ownership import party_name
+
+    out: dict[str, list[str]] = {}
+    for k, v in figures.items():
+        if not v:
+            continue
+        bucket = out.setdefault(party_name(by_canon.get(k)) or k, [])
+        bucket.extend(f for f in v if f not in bucket)
+    return out
