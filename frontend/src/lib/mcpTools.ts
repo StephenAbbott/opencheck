@@ -101,7 +101,7 @@ export const MCP_STEPS: McpStep[] = [
         name: "opencheck_owners",
         args: "lei, threshold?",
         summary:
-          "Who holds above a threshold (the national rule by default): owners calculated from shareholdings per source, the beneficial owners registers declare, and who is in both. Adds the sanctions 50% test for OFAC, the EU and the UK, ownership only.",
+          "Who holds above a threshold (the national rule by default): owners calculated from shareholdings per source, the beneficial owners registers declare, the legal entities a register names as controlling it (a UK relevant legal entity, say), and who is in both. Adds the sanctions 50% test for OFAC, the EU and the UK, ownership only.",
         spendsBudget: true,
       },
       {

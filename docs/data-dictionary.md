@@ -1122,7 +1122,7 @@ Who owns this company above a threshold — calculated and declared.
 
 Arguments: `lei`, `threshold`, `rule`, `depth`, `deepen_top`.
 
-Keys: `lei`, `legal_name`, `jurisdiction`, `rule`, `calculated_owners`, `declared_beneficial_owners`, `in_both`, `listed_without_a_figure`, `chain_stops`, `depth`, `as_of`, `method`, `note`, `fullcheck_url`, `license_notices`, `hint`, `summary`, `sanctions_ownership_test`.
+Keys: `lei`, `legal_name`, `jurisdiction`, `rule`, `calculated_owners`, `declared_beneficial_owners`, `registered_controllers`, `in_both`, `listed_without_a_figure`, `chain_stops`, `depth`, `as_of`, `method`, `note`, `fullcheck_url`, `license_notices`, `hint`, `summary`, `sanctions_ownership_test`.
 
 On a refused call: `error`, `status`.
 

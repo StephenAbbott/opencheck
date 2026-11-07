@@ -478,7 +478,7 @@ async def opencheck_owners(
 ) -> dict[str, Any]:
     """Who owns this company above a threshold — calculated and declared.
 
-    Returns three lists:
+    Returns four lists:
     - ``calculated_owners``: every person or company whose integrated ownership
       of the company (shares multiplied along each path, added across paths)
       meets the threshold, one figure per source — never added across sources.
@@ -486,8 +486,12 @@ async def opencheck_owners(
       threshold or a share on the path is not stated (read that as unknown).
     - ``declared_beneficial_owners``: the people the registers themselves flag
       as beneficial owners of the company, with the nature of their interest.
-    - ``in_both``: the parties in both lists (same record or register
-      identifier, never a name alone).
+    - ``registered_controllers``: legal entities a beneficial-ownership
+      register names as controlling the company where its chain stops at a
+      company or public body (a UK relevant legal entity, say) — not natural
+      persons, so never in the beneficial-owner list.
+    - ``in_both``: the parties in a calculated list and a register list
+      (same record or register identifier, never a name alone).
     Plus ``rule`` (the threshold applied, and why), ``chain_stops`` (companies
     above the threshold whose own owners were not reached) and
     ``listed_without_a_figure`` (voting rights only, or formerly). Calculated
@@ -536,6 +540,7 @@ async def opencheck_owners(
         as_of=net.payload.get("as_of") or _owners.default_as_of(),
         license_notices=list(resp.license_notices or []),
         risk_signals=list(getattr(resp, "risk_signals", None) or []),
+        disclosure=_disclosure_status_block(resp),
     )
 
 
