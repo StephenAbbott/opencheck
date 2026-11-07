@@ -1027,9 +1027,9 @@ def ownership_map(
         for n in (party, owned):
             if n not in nodes:
                 st = by_canon.get(n)
-                # One line per source's figure (two at most), each short
-                # enough for the node's column.
-                sub = "\n".join(_clip(f, 56) for f in figures.get(n, [])[:2])
+                # One line per source's figure (three at most — a folded state
+                # can carry three sources), each short enough for the column.
+                sub = "\n".join(_clip(f, 56) for f in figures.get(n, [])[:3])
                 nodes[n] = {"kind": _node_kind(st), "label": _node_label(st) if st else n,
                             "sublabel": sub}
         interest, cat = _edge_label(stmt)
