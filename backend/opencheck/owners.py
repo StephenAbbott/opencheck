@@ -835,6 +835,40 @@ def _declared_lines(disclosure: Mapping[str, Any] | None) -> list[str]:
 # ----------------------------------------------------------------------
 # The map
 # ----------------------------------------------------------------------
+_ACRONYM = re.compile(r"\(([A-Z][A-Z0-9&-]{1,9})\)")
+
+
+def short_source(label: str) -> str:
+    """A source's name as the drawn map says it: the part before " — "
+    ("SEC EDGAR — U.S. Securities and Exchange Commission" → "SEC EDGAR"),
+    or, for a long name with no dash, its bracketed acronym after any
+    upper-case lead word ("OECD-UNSD Multinational Enterprise Information
+    Platform (MEIP), 'Group Register' sheet." → "OECD-UNSD MEIP"). Anything
+    else is unchanged. The map's JSON rows keep the full name.
+
+    The post-deploy re-test, 7 Nov 2026: Eli Lilly's figure lines were cut
+    at "SEC EDGAR — U.S. Securities and Exchange Commissi…", and Taqa
+    Bratani's MEIP label wrapped to four lines."""
+    label = label.strip()
+    head, dash, _rest = label.partition(" — ")
+    if dash and head:
+        return head
+    if len(label) <= _SHORT_SOURCE_MAX:
+        return label
+    m = _ACRONYM.search(label)
+    if not m:
+        return label
+    lead = label.split()[0]
+    if lead.upper() == lead and lead != m.group(1) and any(ch.isalpha() for ch in lead):
+        return f"{lead} {m.group(1)}"
+    return m.group(1)
+
+
+#: A name up to this long is drawn whole ("Estonian e-Business Register
+#: (e-Äriregister)" is 44).
+_SHORT_SOURCE_MAX = 45
+
+
 def _clip(text: str, n: int) -> str:
     return text if len(text) <= n else text[: n - 1].rstrip() + "…"
 
@@ -856,7 +890,7 @@ def _bundle_parallel(edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
         cats = [m["cat"] for m in members]
         cat = next((c for c in ("ownership", "control", "unknown") if c in cats), cats[0])
         def who(e: dict[str, Any]) -> str:
-            return e["source"] + (f" (as {'; '.join(e['bodies'])})" if e["bodies"] else "")
+            return short_source(e["source"]) + (f" (as {'; '.join(e['bodies'])})" if e["bodies"] else "")
 
         if all(m["interest"] == members[0]["interest"] for m in members):
             lines = [*members[0]["interest"], *([who(m)] for m in members)]
@@ -991,13 +1025,18 @@ def ownership_map(
         frontier = nxt
 
     figures: dict[str, list[str]] = {}
+    # The same figures as drawn under a node: the source by its short name,
+    # so the line fits the column (the JSON keeps the full name).
+    drawn_figures: dict[str, list[str]] = {}
     for h in io.with_figures(net.payload):
         if h.get("status") == io.STATUS_CURRENT:
             # extend, not assign: a folded state gathers each body's figures.
+            kept = [f for f in h.get("figures") or [] if f.get("minimum") is not None]
             figures.setdefault(c(str(h.get("party"))), []).extend(
-                f"{f.get('text')} ({f.get('source')})"
-                for f in h.get("figures") or []
-                if f.get("minimum") is not None
+                f"{f.get('text')} ({f.get('source')})" for f in kept
+            )
+            drawn_figures.setdefault(c(str(h.get("party"))), []).extend(
+                f"{f.get('text')} ({short_source(str(f.get('source') or ''))})" for f in kept
             )
 
     rows = []
@@ -1044,7 +1083,7 @@ def ownership_map(
                 st = by_canon.get(n)
                 # One line per source's figure (three at most — a folded state
                 # can carry three sources), each short enough for the column.
-                sub = "\n".join(_clip(f, 56) for f in figures.get(n, [])[:3])
+                sub = "\n".join(_clip(f, 56) for f in drawn_figures.get(n, [])[:3])
                 nodes[n] = {"kind": _node_kind(st), "label": _node_label(st) if st else n,
                             "sublabel": sub}
         interest, cat = _edge_label(stmt)
