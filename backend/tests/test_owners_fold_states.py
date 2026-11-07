@@ -118,3 +118,39 @@ def test_an_ownership_and_a_control_edge_between_one_pair_are_one_line():
     drawn = re.findall(r'<line x1="[\d.]+" y1="[\d.]+" x2="[\d.]+" y2="[\d.]+" stroke="(#[0-9a-f]+)"', svg)
     assert len(drawn) == 2  # one edge, plus the legend's ownership sample
     assert "Controls — Wikidata" in svg
+
+
+# --- the post-deploy re-test, 7 Nov 2026 -------------------------------------
+
+def _eesti():
+    """Two sources' records of one body that share an identifier, so they are
+    one party: each source's figure keeps the name that source filed under."""
+    NAMES["ariregister"] = "Estonian e-Business Register (e-Äriregister)"
+    ident = [{"scheme": "EE-RIK", "id": "70000350"}]
+    rik = ent("RIK", "Rahandusministeerium", "ariregister", "stateBody", "EE")
+    gov = ent("GOV", "Government of Estonia", "opensanctions", "state", "EE")
+    for e in (rik, gov):
+        e["recordDetails"]["identifiers"] = ident
+    return [ent("T", "Eesti Energia AS", "opensanctions"), rik, gov,
+            rel("a", "RIK", 100, "ariregister"), rel("b", "GOV", 100, "opensanctions")]
+
+
+def test_each_figure_names_the_body_its_source_filed():
+    net = _net(_eesti())
+    ans = O.owners_answer(lei="L", legal_name="Eesti Energia AS", jurisdiction="EE", net=net,
+                          rule=O.resolve_rule("EE"), depth=1, as_of=AS_OF)
+    [estonia] = [o for o in ans["calculated_owners"] if o["kind"] == "state"]
+    assert {f["source_id"]: f["as"] for f in estonia["figures"]} == {
+        "ariregister": "Rahandusministeerium", "opensanctions": "Government of Estonia"}
+    assert sorted(estonia["bodies"]) == ["Government of Estonia", "Rahandusministeerium"]
+    # The map's edge rows, read from the filings, say the same.
+    m, _svg = O.ownership_map(lei="L", legal_name="Eesti Energia AS", net=net, as_of=AS_OF)
+    assert {r["source"]: r.get("owner_as") for r in m["edges"]}["Estonian e-Business Register (e-Äriregister)"] \
+        == "Rahandusministeerium"
+
+
+def test_a_folded_state_edge_is_typed_state():
+    m, _svg = O.ownership_map(lei="L", legal_name="EQUINOR ASA", net=_net(_equinor()), as_of=AS_OF)
+    kinds = {r["owner"]: r["owner_kind"] for r in m["edges"]}
+    assert kinds["Norway (state)"] == "state"
+    assert kinds["Government Pension Fund Norway"] == "entity"
