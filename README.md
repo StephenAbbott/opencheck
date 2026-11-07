@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 473** — The MCP ownership map's drawing names sources by their short names, so figure lines and edge labels fit without being cut.
+**Latest: Phase 474** — The MCP owners answer now names, for each source's figure, the state body that source filed, and the map types a folded state as a state.
 
 → [Full development history](docs/status.md)
 
