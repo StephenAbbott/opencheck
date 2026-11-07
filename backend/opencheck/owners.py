@@ -210,6 +210,70 @@ def party_canon(bods: list[dict[str, Any]]) -> dict[str, str]:
     return out
 
 
+STATE_TYPES = frozenset({"state", "stateBody"})
+STATE_KEY_PREFIX = "state:"
+
+
+def state_groups(bods: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
+    """statementId → (``state:<ISO>``, "<Country> (state)") for every entity
+    statement typed ``state`` / ``stateBody`` with a country.
+
+    The MCP testing of 7 Nov 2026 (issue 4): Equinor's answer listed
+    FINANSDEPARTEMENTET (OpenSanctions), Government of Norway (GEM) and the
+    Ministry of Trade, Industry and Fisheries (Wikidata) as three 67% owners —
+    three publishers' names for one state. ``STATE_CONTROLLED`` has grouped
+    them by country since Phase 240; the owners answer and the map now group
+    them the same way (Stephen: states only, never companies by name). No
+    identity between the bodies is claimed: they are one *state*, each body
+    and its source kept beside its figure. A body whose source gives no
+    country stays a party of its own.
+    """
+    from .risk import _state_name
+
+    out: dict[str, tuple[str, str]] = {}
+    for st in bods:
+        if st.get("recordType") != "entity" or not isinstance(st.get("statementId"), str):
+            continue
+        rd = st.get("recordDetails") or {}
+        if (rd.get("entityType") or {}).get("type") not in STATE_TYPES:
+            continue
+        jur = rd.get("jurisdiction") if isinstance(rd.get("jurisdiction"), dict) else {}
+        code = str((jur or {}).get("code") or "").strip().upper().split("-")[0]
+        if len(code) != 2 or not code.isalpha():
+            continue
+        out[st["statementId"]] = (STATE_KEY_PREFIX + code, f"{_state_name(code)} (state)")
+    return out
+
+
+def fold_states(
+    owners: list[dict[str, Any]], states: Mapping[str, tuple[str, str]]
+) -> list[dict[str, Any]]:
+    """One row per state: the bodies' figures listed side by side, each with
+    the body name it was filed under (``as``) — never added."""
+    out: list[dict[str, Any]] = []
+    rows: dict[str, dict[str, Any]] = {}
+    for o in owners:
+        group = states.get(str(o.get("party")))
+        if group is None:
+            out.append(o)
+            continue
+        key, name = group
+        row = rows.get(key)
+        if row is None:
+            row = rows[key] = {"party": key, "name": name, "kind": "state",
+                               "position": o["position"], "bodies": [], "figures": []}
+            out.append(row)
+        if o["name"] not in row["bodies"]:
+            row["bodies"].append(o["name"])
+        row["figures"].extend({**f, "as": o["name"]} for f in o["figures"])
+        if o["position"] == "above":
+            row["position"] = "above"
+    out.sort(key=lambda o: (o["position"] != "above",
+                            -max((f.get("minimum") or 0.0) for f in o["figures"]),
+                            str(o["name"]).casefold()))
+    return out
+
+
 def lei_of(stmt: Mapping[str, Any] | None) -> str | None:
     for i in ((stmt or {}).get("recordDetails") or {}).get("identifiers") or []:
         if not isinstance(i, dict):
@@ -602,12 +666,13 @@ def owners_answer(
     canon = party_canon(net.bods)
     both = in_both(calculated, declared + controllers, canon)
     stops = chain_stops(calculated, net.bods, canon, net.expanded, net.refused, net.capped)
+    shown = fold_states(calculated, state_groups(net.bods))
     return {
         "lei": lei,
         "legal_name": legal_name,
         "jurisdiction": jurisdiction,
         "rule": rule.as_dict(),
-        "calculated_owners": calculated,
+        "calculated_owners": shown,
         "declared_beneficial_owners": declared,
         "registered_controllers": controllers,
         "in_both": both,
@@ -630,7 +695,7 @@ def owners_answer(
         "fullcheck_url": FULLCHECK_URL.format(lei=lei) if lei else None,
         "license_notices": license_notices or [],
         "hint": HINT,
-        "summary": _summary(legal_name, rule, calculated, declared, both, stops, controllers, disclosure)
+        "summary": _summary(legal_name, rule, shown, declared, both, stops, controllers, disclosure)
         + _sanctions_sentence(risk_signals),
         "sanctions_ownership_test": sanctions_ownership_block(risk_signals, net, as_of),
     }
@@ -722,7 +787,8 @@ def _summary(name, rule, calculated, declared, both, stops, controllers=(), disc
             "Calculated at or above the threshold: "
             + "; ".join(
                 o["name"] + " (" + ", ".join(
-                    f"{f['text']} {f['source']}" for f in o["figures"] if f["position"] == "above"
+                    f"{f['text']} {f['source']}" + (f" as {f['as']}" if f.get("as") else "")
+                    for f in o["figures"] if f["position"] == "above"
                 ) + ")"
                 for o in above[:8]
             )
@@ -773,6 +839,37 @@ def _clip(text: str, n: int) -> str:
     return text if len(text) <= n else text[: n - 1].rstrip() + "…"
 
 
+def _bundle_parallel(edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One drawn line per owner–owned pair, labelled once per
+    source. Two sources naming one party (a referent group, or a folded state)
+    used to draw two or three lines on the same corridor with their labels
+    stacked on top of each other (Eesti Energia, Equinor — the MCP testing, 7
+    Nov 2026). The interest wording is said once when every source words it
+    the same way; otherwise each source's line carries its own wording."""
+    groups: dict[tuple[str, str, bool], list[dict[str, Any]]] = {}
+    for e in edges:
+        groups.setdefault((e["from"], e["to"], bool(e["ended"])), []).append(e)
+    out = []
+    for (frm, to, ended), members in groups.items():
+        # The line's style: ownership if any source says ownership, else
+        # control, else unknown (roles are never drawn here).
+        cats = [m["cat"] for m in members]
+        cat = next((c for c in ("ownership", "control", "unknown") if c in cats), cats[0])
+        def who(e: dict[str, Any]) -> str:
+            return e["source"] + (f" (as {'; '.join(e['bodies'])})" if e["bodies"] else "")
+
+        if all(m["interest"] == members[0]["interest"] for m in members):
+            lines = [*members[0]["interest"], *([who(m)] for m in members)]
+        else:
+            lines = [[" · ".join(x for line in m["interest"] for x in line) + " — " + who(m)] for m in members]
+        out.append({
+            "from": frm, "to": to, "lines": lines,
+            "label": " · ".join(x for line in lines for x in line),
+            "cat": cat, "ended": ended,
+        })
+    return out
+
+
 def ownership_map(
     *,
     lei: str | None,
@@ -790,8 +887,13 @@ def ownership_map(
 
     bods = net.bods
     canon = party_canon(bods)
+    states = state_groups(bods)
+    state_of = {canon.get(sid, sid): group for sid, group in states.items()}
+
     def c(x: str) -> str:
-        return canon.get(x, x)
+        x = canon.get(x, x)
+        group = state_of.get(x)
+        return group[0] if group else x
 
     resolve = resolver(bods)
     subj = {c(s) for s in net.subject_ids}
@@ -802,6 +904,29 @@ def ownership_map(
             prev = by_canon.get(cid)
             if prev is None or (not party_name(prev) and party_name(s)):
                 by_canon[cid] = s
+    # A folded state is drawn under the country's name (issue 4).
+    for state_key, name in {g[0]: g[1] for g in states.values()}.items():
+        by_canon[state_key] = {"recordType": "entity",
+                         "recordDetails": {"name": name, "entityType": {"type": "state"}}}
+    by_sid = {s.get("statementId"): s for s in bods if s.get("recordType") in ("entity", "person")}
+
+    state_names = {g[0]: g[1] for g in states.values()}
+
+    def filed_as(stmt: Mapping[str, Any], party: str) -> str | None:
+        """The body a folded state's edge was filed under, else None."""
+        if not party.startswith(STATE_KEY_PREFIX):
+            return None
+        rd = stmt.get("recordDetails") or {}
+        return party_name(by_sid.get(resolve(rd.get("interestedParty")))) or None
+
+    def body_of(stmt: Mapping[str, Any], party: str) -> str | None:
+        """``filed_as`` for the drawing: None when the body is just
+        "Government of <country>", which the node's own name already says."""
+        body = filed_as(stmt, party)
+        country = state_names.get(party, "").removesuffix(" (state)").casefold()
+        if body and body.casefold().removeprefix("the ") == f"government of {country}":
+            return None
+        return body
 
     want = (source or "").strip().casefold() or None
     owners_of: dict[str, list[tuple[str, dict[str, Any], str]]] = {}
@@ -868,18 +993,21 @@ def ownership_map(
     figures: dict[str, list[str]] = {}
     for h in io.with_figures(net.payload):
         if h.get("status") == io.STATUS_CURRENT:
-            figures[c(str(h.get("party")))] = [
+            # extend, not assign: a folded state gathers each body's figures.
+            figures.setdefault(c(str(h.get("party"))), []).extend(
                 f"{f.get('text')} ({f.get('source')})"
                 for f in h.get("figures") or []
                 if f.get("minimum") is not None
-            ]
+            )
 
     rows = []
     for party, owned, stmt, label in ordered:
         life = statement_lifecycle(stmt, as_of)
         lines, _cat = _edge_label(stmt)
+        body = filed_as(stmt, party)
         rows.append({
             "owner": party_name(by_canon.get(party)) or party,
+            **({"owner_as": body} if body else {}),
             "owner_kind": (
                 "person" if (by_canon.get(party) or {}).get("recordType") == "person" else "entity"
             ),
@@ -892,15 +1020,20 @@ def ownership_map(
     # The image draws current edges only (an ended one is in the table, marked
     # "ended"), one per owner–owned–source–wording, nearest layers first.
     drawable: list[tuple[str, str, dict[str, Any], str]] = []
-    seen_edges: set[tuple[str, str, str, str]] = set()
+    seen_edges: dict[tuple[str, str, str, str], list[str]] = {}
     for party, owned, stmt, label in ordered:
         if statement_lifecycle(stmt, as_of).ended:
             continue
         lines, _cat = _edge_label(stmt)
-        key = (party, owned, label, repr(lines))
-        if key in seen_edges:
+        edge_key = (party, owned, label, repr(lines))
+        body = body_of(stmt, party)
+        if edge_key in seen_edges:
+            # One source naming two bodies of one state the same way is one
+            # drawn edge, both bodies named on it.
+            if body and body not in seen_edges[edge_key]:
+                seen_edges[edge_key].append(body)
             continue
-        seen_edges.add(key)
+        seen_edges[edge_key] = [body] if body else []
         drawable.append((party, owned, stmt, label))
     shown = drawable[:MAP_MAX_EDGES]
     nodes: dict[str, dict[str, Any]] = {}
@@ -909,18 +1042,18 @@ def ownership_map(
         for n in (party, owned):
             if n not in nodes:
                 st = by_canon.get(n)
-                # One line per source's figure (two at most), each short
-                # enough for the node's column.
-                sub = "\n".join(_clip(f, 56) for f in figures.get(n, [])[:2])
+                # One line per source's figure (three at most — a folded state
+                # can carry three sources), each short enough for the column.
+                sub = "\n".join(_clip(f, 56) for f in figures.get(n, [])[:3])
                 nodes[n] = {"kind": _node_kind(st), "label": _node_label(st) if st else n,
                             "sublabel": sub}
-        lines, cat = _edge_label(stmt)
-        lines = [*lines, [label]]
+        interest, cat = _edge_label(stmt)
+        bodies = seen_edges.get((party, owned, label, repr(interest))) or []
         edges.append({
-            "from": party, "to": owned, "lines": lines,
-            "label": " · ".join(x for line in lines for x in line),
-            "cat": cat, "ended": statement_lifecycle(stmt, as_of).ended,
+            "from": party, "to": owned, "interest": interest, "source": label,
+            "bodies": bodies, "cat": cat, "ended": statement_lifecycle(stmt, as_of).ended,
         })
+    edges = _bundle_parallel(edges)
 
     svg: str | None = None
     if edges:
