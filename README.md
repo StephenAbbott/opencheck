@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 470** — The MCP owners answer now explains a sanctions ownership test that is not met, instead of returning nothing.
+**Latest: Phase 471** — The MCP owners answer and ownership map now show a state that several sources name by different bodies as one owner, with each source's figure beside the body it used.
 
 → [Full development history](docs/status.md)
 
