@@ -648,6 +648,10 @@ def _summary(name, rule, calculated, declared, both, stops) -> str:
 # ----------------------------------------------------------------------
 # The map
 # ----------------------------------------------------------------------
+def _clip(text: str, n: int) -> str:
+    return text if len(text) <= n else text[: n - 1].rstrip() + "…"
+
+
 def ownership_map(
     *,
     lei: str | None,
@@ -784,9 +788,11 @@ def ownership_map(
         for n in (party, owned):
             if n not in nodes:
                 st = by_canon.get(n)
-                sub = "; ".join(figures.get(n, [])[:2])
+                # One line per source's figure (two at most), each short
+                # enough for the node's column.
+                sub = "\n".join(_clip(f, 56) for f in figures.get(n, [])[:2])
                 nodes[n] = {"kind": _node_kind(st), "label": _node_label(st) if st else n,
-                            "sublabel": sub[:60]}
+                            "sublabel": sub}
         lines, cat = _edge_label(stmt)
         lines = [*lines, [label]]
         edges.append({
@@ -803,8 +809,12 @@ def ownership_map(
         # remaining layer-0 node that points at another is pushed left.
         depth_max = max(layer.values())
         svg, _summ = _render(
-            nodes, edges, title, layer=layer, view_w=max(760, 270 + 250 * depth_max)
+            nodes, edges, title, layer=layer, view_w=max(760, 270 + 250 * depth_max),
+            max_h=None,
         )
+    returns = sum(
+        1 for e in edges if level.get(e["from"], 0) <= level.get(e["to"], 0) and e["from"] != e["to"]
+    )
     reporting_exceptions = []
     for entry in exceptions.values():
         levels = sorted(entry["levels"], key=["direct", "ultimate"].index)
@@ -829,6 +839,11 @@ def ownership_map(
         "source_filter": source,
         "summary": _map_summary(
             legal_name or lei, len(drawable), reporting_exceptions, undisclosed_parents
+        ) + (
+            f" {returns} edge{'s' if returns != 1 else ''} where the company holds part of one"
+            " of its own owners (a cross-holding) "
+            f"{'are' if returns != 1 else 'is'} drawn as a curved arrow back to that owner."
+            if svg and returns else ""
         ),
         "edges": rows,
         "edges_total": len(rows),
