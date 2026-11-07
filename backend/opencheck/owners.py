@@ -333,6 +333,83 @@ def declared_owners(
     return out
 
 
+def _bo_register_regime(stmt: Mapping[str, Any]) -> Any | None:
+    """The ``bo_register`` regime of the source that published ``stmt``."""
+    from .bods.bo_regimes import get_regime
+    from .bods.source_ids import source_id_of
+    from .integrated_ownership import source_key
+
+    for sid in (source_key(stmt)[0], source_id_of(stmt) or ""):
+        regime = get_regime(sid) if sid else None
+        if regime is not None:
+            return regime if regime.regime_kind == "bo_register" else None
+    return None
+
+
+def registered_controllers(
+    bods: list[dict[str, Any]], subject_ids: Iterable[str], as_of: str
+) -> list[dict[str, Any]]:
+    """Legal entities a beneficial-ownership register names as controlling
+    the subject — never as its beneficial owner.
+
+    A register records a legal entity where the chain stops at a company or
+    public body: a UK relevant legal entity (RLE) on the PSC register, a
+    Nigerian corporate PSC, a DC beneficial-owner entity. Its mapper writes
+    the interest with ``beneficialOwnershipOrControl: false`` (``bo_regimes``:
+    ``psc_corporate_rle``, ``psc_corporate``, ``bo_entity``), so the
+    beneficial-owner list rightly leaves it out — and until the MCP testing
+    of 7 Nov 2026 nothing else listed it: Taqa Bratani's answer said "0
+    current declared beneficial owner(s)" while Companies House names The
+    Abu Dhabi Government as its PSC. Read from three facts, never a name:
+    the relationship comes from a ``bo_register`` source, the interested
+    party is an entity statement, and an interest says
+    ``beneficialOwnershipOrControl: false`` and is not an officer role.
+    """
+    from .integrated_ownership import party_name, source_key
+    from .reporting.diagram import categorise
+
+    resolve = resolver(bods)
+    subjects = {s for s in subject_ids if s}
+    by_id = {s.get("statementId"): s for s in bods if s.get("recordType") in ("entity", "person")}
+    out: list[dict[str, Any]] = []
+    for s in bods:
+        if s.get("recordType") != "relationship" or _bo_register_regime(s) is None:
+            continue
+        rd = s.get("recordDetails") or {}
+        if resolve(rd.get("subject")) not in subjects:
+            continue
+        party = resolve(rd.get("interestedParty"))
+        stmt = by_id.get(party)
+        if not stmt or stmt.get("recordType") != "entity":
+            continue
+        named = [
+            i for i in rd.get("interests") or []
+            if isinstance(i, dict)
+            and i.get("beneficialOwnershipOrControl") is False
+            and categorise([i]) != "role"
+        ]
+        if not named:
+            continue
+        _, label = source_key(s)
+        life = statement_lifecycle(s, as_of)
+        erd = stmt.get("recordDetails") or {}
+        jur = erd.get("jurisdiction") if isinstance(erd.get("jurisdiction"), dict) else {}
+        out.append({
+            "party": party or None,
+            "name": party_name(stmt) or party or "Unnamed entity",
+            "kind": "entity",
+            "lei": lei_of(stmt),
+            "jurisdiction": (jur or {}).get("code") or (jur or {}).get("name"),
+            "source": label,
+            "interests": [_interest_words(i) for i in named],
+            "current": not life.ended,
+            **({"ended_on": life.ended_on} if life.ended and life.ended_on else {}),
+            "closed_record": record_closed(s),
+        })
+    out.sort(key=lambda d: (not d["current"], str(d["name"]).casefold(), d["source"]))
+    return out
+
+
 def in_both(
     calculated: list[dict[str, Any]],
     declared: list[dict[str, Any]],
@@ -517,11 +594,13 @@ def owners_answer(
     as_of: str,
     license_notices: list[Any] | None = None,
     risk_signals: list[Any] | None = None,
+    disclosure: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     calculated, unmeasured = calculated_owners(net.payload, rule)
     declared = declared_owners(net.bods, net.subject_ids, as_of)
+    controllers = registered_controllers(net.bods, net.subject_ids, as_of)
     canon = party_canon(net.bods)
-    both = in_both(calculated, declared, canon)
+    both = in_both(calculated, declared + controllers, canon)
     stops = chain_stops(calculated, net.bods, canon, net.expanded, net.refused, net.capped)
     return {
         "lei": lei,
@@ -530,6 +609,7 @@ def owners_answer(
         "rule": rule.as_dict(),
         "calculated_owners": calculated,
         "declared_beneficial_owners": declared,
+        "registered_controllers": controllers,
         "in_both": both,
         "listed_without_a_figure": unmeasured,
         "chain_stops": stops,
@@ -550,7 +630,7 @@ def owners_answer(
         "fullcheck_url": FULLCHECK_URL.format(lei=lei) if lei else None,
         "license_notices": license_notices or [],
         "hint": HINT,
-        "summary": _summary(legal_name, rule, calculated, declared, both, stops)
+        "summary": _summary(legal_name, rule, calculated, declared, both, stops, controllers, disclosure)
         + _sanctions_sentence(risk_signals),
         "sanctions_ownership_test": sanctions_ownership_block(risk_signals),
     }
@@ -616,10 +696,11 @@ def sanctions_ownership_block(signals: list[Any] | None) -> dict[str, Any] | Non
     }
 
 
-def _summary(name, rule, calculated, declared, both, stops) -> str:
+def _summary(name, rule, calculated, declared, both, stops, controllers=(), disclosure=None) -> str:
     above = [o for o in calculated if o["position"] == "above"]
     maybe = [o for o in calculated if o["position"] == "may_be_above"]
     current = [d for d in declared if d["current"]]
+    registered = [d for d in controllers if d["current"]]
     bits = [f"{name or 'The company'} — rule applied: {rule.text}."]
     if above:
         bits.append(
@@ -638,11 +719,36 @@ def _summary(name, rule, calculated, declared, both, stops) -> str:
         bits.append(f"{len(maybe)} more may be above it (a band or an unstated share).")
     bits.append(
         f"{len(current)} current declared beneficial owner(s)"
+        + (": " + "; ".join(f"{d['name']} ({d['source']})" for d in current[:8])
+           + ("; …" if len(current) > 8 else "") if current else "")
         + (f"; {len(both)} in both lists." if both else ".")
     )
+    if registered:
+        bits.append(
+            "Named on a beneficial-ownership register as a controlling legal entity, "
+            "not a natural person: "
+            + "; ".join(f"{d['name']} ({d['source']})" for d in registered[:8])
+            + ("; …" if len(registered) > 8 else "") + "."
+        )
+    if not above and not maybe and not current and not registered:
+        said = _declared_lines(disclosure)
+        if said:
+            bits.append("What the sources say about owners: " + "; ".join(said) + ".")
     if stops:
         bits.append(f"{len(stops)} chain(s) stop at a company whose owners were not reached.")
     return " ".join(bits)
+
+
+def _declared_lines(disclosure: Mapping[str, Any] | None) -> list[str]:
+    """The lookup's ``disclosure_status`` lines for sources that declare
+    owners — said when every list above is empty, so the answer never reads
+    as "no owners" beside a source that has them on record (Eli Lilly's SEC
+    EDGAR shareholders, the MCP testing of 7 Nov 2026)."""
+    out = []
+    for row in (disclosure or {}).get("by_source") or []:
+        if isinstance(row, Mapping) and "declared" in (row.get("values") or []) and row.get("line"):
+            out.append(f"{row.get('source_name') or row.get('source')} — {row['line']}")
+    return out
 
 
 # ----------------------------------------------------------------------
