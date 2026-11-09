@@ -937,6 +937,12 @@ def _build_gleif_hit(ctx: _LookupCtx, gleif_bundle: dict[str, Any]) -> SourceHit
     for key, value in ctx.derived.items():
         if key not in ("lei", "ocid", "wikidata_qid", "edgar_cik"):
             identifiers[key] = value
+    # A Business Number GLEIF filed under the federal authority derives the
+    # dispatch key ``BN<9 digits>`` — not a corporation number, and not a
+    # spelling GLEIF publishes. The Corporations Canada hit asserts the
+    # corporation it resolves to; GLEIF asserts nothing here.
+    if str(identifiers.get("ca_corp_id") or "").startswith("BN"):
+        del identifiers["ca_corp_id"]
     return _hit(
         "gleif", ctx.lei,
         name=ctx.legal_name or f"LEI {ctx.lei}",
