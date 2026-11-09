@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 475** — Canada's federal register is now read from a daily index of the Federal Corporations open data, with the ISED API adding dated activities and directors, so a Canadian lookup works without an API key, covers dissolved corporations and supports name search.
+**Latest: Phase 476** — A Canadian LEI filed with a Business Number now reaches the federal corporation the Business Number names, and the GLEIF card no longer shows that Business Number as a corporation number.
 
 → [Full development history](docs/status.md)
 
