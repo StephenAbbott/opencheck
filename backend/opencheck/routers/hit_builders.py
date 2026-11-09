@@ -958,19 +958,51 @@ def _bh_bce_belgium(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
 
 
 def _bh_corporations_canada(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Corporations Canada (the Canada index ticket, 9 Nov
+    2026): the open-data index row and/or the ISED API record.
+
+    * **A corporation.** Asserts the corporation number the register
+      published (``ca_corp_id``) — the resolved one, so a Business Number
+      GLEIF filed reads as the corporation it names — with the register's
+      status on the summary where it is not plainly active.
+    * **Not found.** A note card: the row sentence says so, no identifier is
+      asserted and nothing is degraded.
+    """
+    from ..findings import finding_corporations_canada
+    from ..sources.corporations_canada import (
+        extract_current_name,
+        status_class,
+        status_words,
+    )
+
+    corp_id = str(r.get("corp_id") or local_id)
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "corporations_canada", corp_id,
+            name=ctx.legal_name or "",
+            summary=f"CA-CC {corp_id} · not on the federal register",
+            finding=finding_corporations_canada(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
     corp = r.get("corporation") or {}
-    name = ""
-    for entry in (corp.get("corporationNames") or []):
-        cn = entry.get("CorporationName") or {}
-        if cn.get("current"):
-            name = (cn.get("name") or "").strip()
-            if (cn.get("nameType") or "").lower() == "primary":
-                break
+    row = r.get("index") or {}
+    name = extract_current_name(corp) or (row.get("name") or "")
+    summary = f"CA-CC {corp_id}"
+    if row:
+        cls = status_class(row.get("status"), row.get("detail"))
+        words = status_words(row.get("status"), row.get("detail"))
+    else:
+        words = status_words(corp.get("status"))
+        cls = status_class(words)
+    if cls != "live" and words:
+        summary += f" · {words.lower()}"
     return _hit(
-        "corporations_canada", local_id,
+        "corporations_canada", corp_id,
         name=name or ctx.legal_name or "",
-        summary=f"CA-CC {local_id}",
-        identifiers={"ca_corp_id": local_id}, raw=corp,
+        summary=summary,
+        finding=finding_corporations_canada(r),
+        identifiers={"ca_corp_id": corp_id}, raw=r,
     )
 
 

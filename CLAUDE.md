@@ -1485,6 +1485,44 @@ will be re-derived otherwise:
   several, 42 none, 156 foreign. `TW_FOREIGN_PREFIXES` gained 荷商,
   英屬安吉拉商 and 英屬蓋曼群島商 / 蓋曼群島商, spellings the register files.
 
+## Canada is an index first, the API second (the Canada index-tier ticket, 9 Nov 2026)
+
+`sources/corporations_canada.py`, `scripts/build_corporations_canada_index.py`,
+`.github/workflows/refresh-corporations-canada-index.yml`,
+`bods/mappers/canada.py`. Stephen's seven decisions are on the Notion ticket.
+Things that will be re-derived otherwise:
+
+- **Four daily CSVs, no key** (open.canada.ca "Federal Corporations", served
+  from CloudFront, one `Last-Modified` ≈ 11:06 UTC = the cut; the builder
+  refuses files more than a day apart). The **whole register**, dissolved
+  included: 1,578,206 corporations on 8 Nov 2026, ~366 MB. The files carry no
+  dissolution date, successor, name history or directors.
+- **The corporation number includes its check digit** and has no leading
+  zero: GLEIF's `035818-5` is `358185`. `normalise_corp_id` drops the hyphen
+  **and leading zeros** (the old adapter kept the zero and missed). 4–8 digits
+  are all valid — `register_links` used to demand 8.
+- **A BN filed under RA000072** (`123456789RC0001`, 9 records) becomes
+  `BN<9 digits>`: `resolve_bn` answers the one corporation with that BN, else
+  the one active one, else refuses (`COVERAGE_BN_UNRESOLVED`, a note card).
+  16,351 BNs are shared, at most one active. The GLEIF hit never asserts
+  `ca_corp_id` for a BN filing. **No name gate** (45 mismatches, all renames).
+- **On an index hit the API is still called** — the record for dated
+  activities (1-day cache), directors on the gateway only (key required, 7-day
+  cache, a 404 is `put_absent`). With no key the record comes from the keyless
+  legacy endpoint (`ised-isde.canada.ca/cc/lgcy/api`, same body, no
+  directors); a failed gateway call falls back to it. An API failure beside an
+  index record is a `source_read` degradation; with no index record either it
+  is `source_fetch` and a stub. **A failure is never a stub card or a cached
+  absence.** A code in neither is a note card (`COVERAGE_NOT_FOUND`).
+- **Status in the register's words** (`Status Detail` first): `status_class`
+  reads "Dissolution Pending" / "Discontinuance Pending" as pending, an
+  "Intent to Dissolve Filed" as live, dissolved / amalgamated / discontinued as
+  terminal. An amalgamated record carries no amalgamation activity, so no
+  date is invented. Amalgamation partners are not mapped (follow-up).
+- **Not on the persistent disk** (it was full on 4 Nov 2026): the default
+  data-root path, re-downloaded at boot. Nothing touches the response `Cache`
+  for the index (the Phase 325 rule); the API record and directors do.
+
 ## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
 
 `sources/cyprus_drcor.py`, `scripts/build_cyprus_drcor_index.py`,

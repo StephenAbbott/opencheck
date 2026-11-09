@@ -117,7 +117,7 @@ export const REGISTER_LINKS: Record<string, RegisterLinkEntry> = {
     "register": "Corporations Canada",
     "identifierKey": "ca_corp_id",
     "record": [
-      ["^\\d{8}$", "https://ised-isde.canada.ca/cc/lgcy/fdrlCrpDtls.html?corpId={id}"]
+      ["^\\d{4,8}$", "https://ised-isde.canada.ca/cc/lgcy/fdrlCrpDtls.html?corpId={id}"]
     ]
   },
   "abr_australia": {

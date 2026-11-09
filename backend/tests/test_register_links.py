@@ -108,6 +108,7 @@ VERIFIED = [
     ("ares", "24505285", "https://ares.gov.cz/ekonomicke-subjekty?ico=24505285"),
     ("bce_belgium", "0790703913", "https://kbopub.economie.fgov.be/kbopub/toonondernemingps.html?ondernemingsnummer=0790703913"),
     ("corporations_canada", "17197489", "https://ised-isde.canada.ca/cc/lgcy/fdrlCrpDtls.html?corpId=17197489"),
+    ("corporations_canada", "7286139", "https://ised-isde.canada.ca/cc/lgcy/fdrlCrpDtls.html?corpId=7286139"),
     ("abr_australia", "46211338152", "https://abr.business.gov.au/ABN/View?abn=46211338152"),
     # carried over unchanged, not re-verified
     ("inpi", "327048260", "https://data.inpi.fr/entreprises/327048260"),
@@ -136,7 +137,10 @@ def test_formatted_numbers_are_compacted_before_matching() -> None:
 @pytest.mark.parametrize(
     "source_id,number",
     [
-        ("corporations_canada", "1719748"),  # no check digit: the page renders empty
+        # Shorter than any corporation number. (A seven-digit number is a
+        # real one with its check digit — 7286139 — so length alone cannot
+        # tell a number missing its check digit; normalise_corp_id keeps it.)
+        ("corporations_canada", "123"),
         ("companies_house", "3751777"),  # 7 characters: not a company number
         ("kvk", "8323503"),
         ("zefix", "123456789"),
