@@ -117,6 +117,10 @@ COVERAGE_BN_UNRESOLVED = (
 _CORP_ID_RE = re.compile(r"^\d+$")
 #: A Business Number with its program account: ``123456789RC0001``.
 _BN_FILING_RE = re.compile(r"^\s*(\d{9})\s*[A-Z]{2}\s*\d{4}\s*$")
+#: The key ``normalise_corp_id`` gives a Business Number filing. The lookup
+#: normalises GLEIF's filing once in the deriver and ``fetch`` normalises its
+#: ``hit_id`` again, so the key must survive a second pass.
+_BN_KEY_RE = re.compile(r"^\s*BN\s*(\d{9})\s*$")
 
 
 def is_bn_filing(raw: str) -> bool:
@@ -130,10 +134,11 @@ def normalise_corp_id(corp_id: str) -> str:
     Digits only, leading zeros removed: ``"728613-9"`` → ``"7286139"``,
     ``"035818-5"`` → ``"358185"``, ``"CA-1007"`` → ``"1007"``. A Business
     Number filed with its program account (``"123456789RC0001"``) reads
-    ``"BN123456789"`` for ``fetch`` to resolve through the index.
+    ``"BN123456789"`` for ``fetch`` to resolve through the index, and that
+    key reads as itself (normalising twice must not drop the ``BN``).
     """
     text = str(corp_id or "").strip()
-    m = _BN_FILING_RE.match(text.upper())
+    m = _BN_FILING_RE.match(text.upper()) or _BN_KEY_RE.match(text.upper())
     if m:
         return f"BN{m.group(1)}"
     return re.sub(r"\D", "", text).lstrip("0")

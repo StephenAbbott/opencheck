@@ -195,6 +195,9 @@ def _directors_route(mock: respx.MockRouter, corp_id: str, body: Any = None, sta
         (" 1007 ", "1007"),
         ("123456789RC0001", "BN123456789"),
         ("123456789 rc 0001", "BN123456789"),
+        # The deriver's key, normalised again by ``fetch``: production read
+        # "BN103795266" as corporation 103795266 until this case (9 Nov 2026).
+        ("BN123456789", "BN123456789"),
         ("", ""),
     ],
 )
@@ -398,6 +401,18 @@ async def test_a_business_number_resolves_to_the_one_active_corporation(index) -
     assert bundle["resolved_from_bn"] == "100004092"
 
 
+@respx.mock
+async def test_the_derived_business_number_key_resolves_too(index) -> None:
+    """The lookup hands ``fetch`` the deriver's ``BN<9>`` key, not GLEIF's
+    filing; it must reach the BN resolution, not be read as a number."""
+    newco = {**CORP_8660115, "corporationId": "4111117"}
+    _record_route(respx.mock, GATEWAY, "4111117", [newco, None])
+    _directors_route(respx.mock, "4111117")
+    bundle = await _fetch(normalise_corp_id("100004092RC0001"))
+    assert bundle["corp_id"] == "4111117"
+    assert bundle["resolved_from_bn"] == "100004092"
+
+
 async def test_an_ambiguous_business_number_is_not_guessed(index) -> None:
     degradation.begin()
     bundle = await _fetch("100003888RC0001")
@@ -540,3 +555,17 @@ async def test_the_note_card_asserts_no_identifier(index) -> None:
     hit = _build_result_hit("corporations_canada", bundle, ctx)
     assert hit is not None and hit.identifiers == {}
     assert hit.finding and hit.finding.startswith("Not on Corporations Canada's federal register")
+
+
+def test_the_gleif_hit_never_asserts_a_business_number_key() -> None:
+    """GLEIF's ``123456789RC0001`` derives the dispatch key ``BN123456789``;
+    the GLEIF hit must not carry it as a corporation number (production did,
+    9 Nov 2026). A real corporation number stays."""
+    from opencheck.routers.lookup import _build_gleif_hit, _LookupCtx
+
+    ctx = _LookupCtx(lei="213800CQS7EASMVZ3G88", legal_name="MITUTOYO CANADA INC.")
+    ctx.derived = {"lei": ctx.lei, "ca_corp_id": normalise_corp_id("103795266RC0001")}
+    assert "ca_corp_id" not in _build_gleif_hit(ctx, {}).identifiers
+
+    ctx.derived = {"lei": ctx.lei, "ca_corp_id": normalise_corp_id("035818-5")}
+    assert _build_gleif_hit(ctx, {}).identifiers["ca_corp_id"] == "358185"
