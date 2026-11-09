@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 474** — The MCP owners answer now names, for each source's figure, the state body that source filed, and the map types a folded state as a state.
+**Latest: Phase 475** — Canada's federal register is now read from a daily index of the Federal Corporations open data, with the ISED API adding dated activities and directors, so a Canadian lookup works without an API key, covers dissolved corporations and supports name search.
 
 → [Full development history](docs/status.md)
 
