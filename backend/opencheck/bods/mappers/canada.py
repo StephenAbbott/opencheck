@@ -49,56 +49,96 @@ def _cc_current_name(corp: dict[str, Any]) -> str:
     return ""
 
 
+def _cc_index_address(row: dict[str, Any]) -> list[dict[str, Any]]:
+    """The registered office as the open data writes it."""
+    parts = [
+        str(row.get(k) or "").strip()
+        for k in ("street", "street2", "city", "province", "postal_code")
+    ]
+    text = ", ".join(p for p in parts if p)
+    if not text:
+        return []
+    return [_addr("registered", text, (row.get("country") or "CA").strip() or "CA")]
+
+
+def _cc_api_names(corp: dict[str, Any], current: str) -> list[str]:
+    """Names the API lists that are not the current one (former names, and
+    the other-language form where it lists one)."""
+    names: list[str] = []
+    for entry in corp.get("corporationNames") or []:
+        name = ((entry.get("CorporationName") or {}).get("name") or "").strip()
+        if name and name != current and name not in names:
+            names.append(name)
+    return names
+
+
 @content_addressed
 def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CorporationsCanadaAdapter fetch bundle to BODS v0.4 statements.
+
+    The bundle carries the daily open-data index row (``index``), the ISED
+    API record (``corporation``) and the current directors; either of the
+    first two may be missing (the Canada index ticket, 9 Nov 2026). The API
+    is preferred for what it dates (activities, the current name), the index
+    for what it words more finely (the Status Detail) and for everything when
+    the API did not answer.
 
     Yields:
     * One entityStatement for the Canadian federal corporation.
     * One personStatement per current director.
     * One relationshipStatement (seniorManagingOfficial) per director.
     """
-    if not bundle or bundle.get("is_stub"):
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
         return
+
+    from ...sources.corporations_canada import status_class, status_words
 
     corp_id: str = bundle.get("corp_id") or ""
     corp: dict[str, Any] = bundle.get("corporation") or {}
+    row: dict[str, Any] = bundle.get("index") or {}
     directors: list[dict[str, Any]] = bundle.get("directors") or []
 
-    name: str = _cc_current_name(corp) or bundle.get("legal_name") or corp_id
+    name: str = (
+        _cc_current_name(corp) or (row.get("name") or "").strip()
+        or bundle.get("legal_name") or corp_id
+    )
     if not corp_id or not name:
         return
 
     source_url = _cc_corp_url(corp_id)
 
-    # ── Founding date from activities ─────────────────────────────────────
+    # ── Founding and dissolution dates from activities ────────────────────
     founding_date: str | None = None
     dissolution_date: str | None = None
     for act_entry in corp.get("activities") or []:
         act = act_entry.get("activity") or {}
         act_type = (act.get("activity") or "").lower()
-        if act_type in ("incorporation", "continuance", "amalgamation") and not founding_date:
+        # "Continuance (Act)" is a continuance; "Discontinuance" is not.
+        if act_type.split(" (")[0] in ("incorporation", "continuance", "amalgamation") and not founding_date:
             founding_date = act.get("date") or None
         # The same activity log records the end of the corporation (Phase 151).
         if any(k in act_type for k in ("dissolution", "dissolved", "discontinuance", "amalgamated into")):
             dissolution_date = act.get("date") or dissolution_date
+    # The open data's anniversary date is the incorporation (or continuance,
+    # amalgamation) date — equal to the API's on every record checked.
+    founding_date = founding_date or row.get("anniversary") or None
 
-    # ── Address from adresses (documented API typo) ───────────────────────
+    # ── Address: the API's (documented typo ``adresses``), else the index's ─
     addresses: list[dict[str, Any]] = []
     for addr_entry in corp.get("adresses") or []:
         addr = addr_entry.get("address") or {}
         lines = addr.get("addressLine") or []
         city = (addr.get("city") or "").strip()
+        province = (addr.get("provinceCode") or "").strip()
         postal = (addr.get("postalCode") or "").strip()
         country = (addr.get("countryCode") or "CA").strip()
-        parts = [ln.strip() for ln in lines if ln.strip()]
-        if city:
-            parts.append(city)
-        if postal:
-            parts.append(postal)
+        parts = [ln.strip() for ln in lines if ln and ln.strip()]
+        parts += [p for p in (city, province, postal) if p]
         if parts:
             addresses.append(_addr("registered", ", ".join(parts), country))
         break  # use only the first address entry
+    if not addresses and row:
+        addresses = _cc_index_address(row)
 
     # ── Identifiers ───────────────────────────────────────────────────────
     identifiers: list[dict[str, str]] = [
@@ -108,17 +148,30 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             "schemeName": "Canada Corporation Number (Corporations Canada)",
         }
     ]
+    bn = ""
     bn_block = corp.get("businessNumbers") or {}
     if isinstance(bn_block, dict):
         bn = (bn_block.get("businessNumber") or "").strip()
-        if bn:
-            identifiers.append({
-                "id": bn,
-                "scheme": "CA-BN",
-                "schemeName": "Canada Revenue Agency Business Number",
-            })
+    bn = bn or (row.get("bn") or "").strip()
+    if bn:
+        identifiers.append({
+            "id": bn,
+            "scheme": "CA-BN",
+            "schemeName": "Canada Revenue Agency Business Number",
+        })
+
+    # The other-language form of the name (the open data's "form 2") and any
+    # name the API lists beside the current one.
+    alternate_names = _cc_api_names(corp, name)
+    other = (row.get("name_other") or "").strip()
+    if other and other != name and other not in alternate_names:
+        alternate_names.append(other)
+    row_name = (row.get("name") or "").strip()
+    if row_name and row_name != name and row_name not in alternate_names:
+        alternate_names.append(row_name)
 
     # ── 1. Entity statement ───────────────────────────────────────────────
+    act_name = (corp.get("act") or row.get("act") or "").strip()
     company_stmt = make_entity_statement(
         source_id="corporations_canada",
         local_id=corp_id,
@@ -127,25 +180,27 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         identifiers=identifiers,
         founding_date=founding_date,
         addresses=addresses,
+        alternate_names=alternate_names,
+        entity_details=f"Governed by the {act_name}" if act_name else None,
         source_url=source_url,
     )
-    # Corporation ``status`` (Active / Dissolved / Amalgamated / Discontinued /
-    # Inactive) plus any dissolution activity date (Phase 151).
-    cc_status = (corp.get("status") or "").strip()
-    cc_liveness = _liveness.classify(
-        cc_status,
-        live=("active",),
-        pending=("dissolution pending", "pending dissolution", "in liquidation"),
-        terminal=("dissolved", "amalgamated", "discontinued", "inactive", "revoked"),
-    )
+    # Status: the index's Status Detail where it has one ("Dissolved for
+    # non-compliance", "Active - Dissolution Pending (non-compliance)"), the
+    # API's status otherwise; dated by the API's dissolution activity.
+    if row:
+        raw_status = status_words(row.get("status"), row.get("detail"))
+        cc_liveness = status_class(row.get("status"), row.get("detail"))
+    else:
+        raw_status = (corp.get("status") or "").strip()
+        cc_liveness = status_class(raw_status)
     if cc_liveness == _liveness.UNKNOWN and dissolution_date:
         cc_liveness = _liveness.TERMINAL
     _liveness.apply_register_status(
         company_stmt,
         source_label=SOURCE_NAMES["corporations_canada"],
         liveness=cc_liveness,
-        raw=cc_status or None,
-        since=dissolution_date,
+        raw=raw_status or None,
+        since=dissolution_date if cc_liveness == _liveness.TERMINAL else None,
     )
     yield company_stmt
     company_stmt_id: str = company_stmt["recordId"]

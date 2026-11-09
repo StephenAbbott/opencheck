@@ -1,0 +1,76 @@
+name: Refresh Corporations Canada index
+
+# Rebuilds the index of the federal corporations register from the four
+# English CSVs of open.canada.ca's "Federal Corporations" dataset (active and
+# inactive/dissolved, CBCA and other federal acts) and replaces the
+# `corporations-canada-index` release asset the backend downloads at boot
+# (CORPORATIONS_CANADA_DB_URL). The Canada index-tier ticket, 9 Nov 2026.
+#
+# The dataset is published daily (CKAN frequency P1D); the four files carry
+# one Last-Modified (≈11:06 UTC on 8 Nov 2026), which is the index's cut. The
+# builder refuses files more than a day apart, a changed header, a short file
+# or more than 200 malformed rows, and writes nothing when it refuses. The
+# result is ~366 MB (~110 MB gzipped), 1.58M corporations, built in ~35 s.
+#
+# The CSVs are served by CloudFront with no key. The first run is triggered by
+# hand (Run workflow) to confirm a GitHub runner reaches it.
+#
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "23 12 * * *" # 12:23 UTC daily — after the ~11:06 UTC publication
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-corporations-canada-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Download the four CSVs and build the index
+        working-directory: backend
+        run: |
+          uv sync
+          uv run python scripts/build_corporations_canada_index.py --download \
+            --work "$RUNNER_TEMP/ca" \
+            --out "$RUNNER_TEMP/corporations_canada.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "corporations_canada.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM corp").fetchone()[0]
+          bn = conn.execute("SELECT COUNT(*) FROM corp WHERE bn IS NOT NULL").fetchone()[0]
+          print(f"{n} corporations, {bn} with a BN, cut {meta.get('cut')}, schema {meta.get('schema_version')}")
+          if n < 1_400_000 or bn < 1_000_000:
+              sys.exit(f"Refusing to publish: {n} corporations / {bn} with a BN — likely a source/format change.")
+          PY
+
+      - name: Replace the `corporations-canada-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view corporations-canada-index >/dev/null 2>&1 || gh release create corporations-canada-index \
+            --title "Corporations Canada index" \
+            --notes "Built daily by refresh-corporations-canada-index.yml from the four English CSVs of open.canada.ca's Federal Corporations dataset (Open Government Licence – Canada 2.0 — Corporations Canada, ISED). Downloaded by the backend at boot (CORPORATIONS_CANADA_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh corporations-canada-index \
+            "$RUNNER_TEMP/corporations_canada.sqlite.gz" corporations_canada.sqlite.gz \
+            "Rebuilt automatically by refresh-corporations-canada-index on $(date -u +%Y-%m-%d)."

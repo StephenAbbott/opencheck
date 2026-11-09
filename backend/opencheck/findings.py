@@ -1953,6 +1953,74 @@ def finding_cyprus_drcor(bundle: dict[str, Any]) -> str | None:
         n = len(officials)
         counts.append(f"{n} official{'' if n == 1 else 's'} on file")
     return clauses_to_sentence([lead, form, *counts])
+def finding_corporations_canada(bundle: dict[str, Any]) -> str | None:
+    """What Corporations Canada says: the status in the register's own words
+    (dated where the API dates a dissolution), the governing Act, how many
+    directors are on file, and the latest annual filing (the Canada index
+    ticket, 9 Nov 2026).
+
+    * **Not found** says so rather than that the company does not exist:
+      GLEIF may file a provincial number under the federal authority. A
+      Business Number that names no single corporation is its own sentence.
+    * The director count is said in the same voice when it is zero (rule 6),
+      but only when the directors were read — without the API key, or when
+      the call failed, nothing is said (the failure is a degradation).
+    * Deliberately **not** said: shareholders or individuals with significant
+      control. Neither the open data nor the API carries them for any
+      company (the ISC register is on ISED's website search only).
+    """
+    from .sources.corporations_canada import (
+        COVERAGE_BN_UNRESOLVED,
+        status_class,
+        status_words,
+    )
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        if bundle.get("coverage_note") == COVERAGE_BN_UNRESOLVED:
+            return (
+                "GLEIF files a Business Number, which the federal register's "
+                "open data does not tie to exactly one corporation."
+            )
+        return (
+            "Not on Corporations Canada's federal register; GLEIF may file a "
+            "provincial or other number under the federal authority."
+        )
+    row = bundle.get("index") or {}
+    corp = bundle.get("corporation") or {}
+    if row:
+        cls = status_class(row.get("status"), row.get("detail"))
+        words = status_words(row.get("status"), row.get("detail"))
+    else:
+        words = status_words(corp.get("status"))
+        cls = status_class(words)
+    dissolved_on: str | None = None
+    for entry in corp.get("activities") or []:
+        activity = entry.get("activity") or {}
+        if "dissolution" in str(activity.get("activity") or "").lower():
+            dissolved_on = activity.get("date") or dissolved_on
+    founded = row.get("anniversary")
+    if cls == "live":
+        lead = f"Active since {human_date(founded)}" if founded else "Active"
+    elif words:
+        text = re.sub(r"^(Active|Inactive) - ", "", words)
+        lead = text[0].upper() + text[1:]
+        if cls == "terminal" and dissolved_on:
+            lead += f" on {human_date(dissolved_on)}"
+    else:
+        lead = "On the federal register"
+    act = (corp.get("act") or row.get("act") or "").strip()
+    act_clause = f"under the {act}" if act and not act.startswith("More than") else None
+    directors_clause = None
+    if bundle.get("directors_read"):
+        n = len(bundle.get("directors") or [])
+        directors_clause = f"{n} director{'' if n == 1 else 's'} on file"
+    year = str(row.get("last_filing_year") or "").strip()
+    filing_clause = f"last annual return {year}" if year.isdigit() else None
+    return clauses_to_sentence([lead, act_clause, directors_clause, filing_clause])
+
+
 def finding_sunbiz_florida(bundle: dict[str, Any]) -> str | None:
     """What the Florida Division of Corporations says: the status (with the
     dated event behind an inactive one), the filing type, how many officers

@@ -504,6 +504,23 @@ class Settings(BaseSettings):
     corporations_canada_api_key: str | None = Field(
         default=None, alias="CORPORATIONS_CANADA_API_KEY"
     )
+    # The daily index of the Federal Corporations open data (four English
+    # CSVs on open.canada.ca, OGL-Canada), built by
+    # scripts/build_corporations_canada_index.py in
+    # .github/workflows/refresh-corporations-canada-index.yml and shipped as
+    # the ``corporations-canada-index`` release asset. ~435 MB on disk
+    # (/var/data on Render), ~125 MB gzipped. Unset: the data-root default
+    # (``corporations_canada.sqlite``); an empty URL disables the download.
+    corporations_canada_db_file: str | None = Field(
+        default=None, alias="CORPORATIONS_CANADA_DB_FILE"
+    )
+    corporations_canada_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "corporations-canada-index/corporations_canada.sqlite.gz"
+        ),
+        alias="CORPORATIONS_CANADA_DB_URL",
+    )
     opensanctions_api_key: str | None = Field(default=None, alias="OPENSANCTIONS_API_KEY")
     openaleph_api_key: str | None = Field(default=None, alias="OPENALEPH_API_KEY")
     # Wikirate REST API (https://wikirate.org/use_the_API) — sent as the

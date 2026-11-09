@@ -231,7 +231,7 @@ Data generated 2026-11-06T10:54:04+00:00; sentences rendered as of 2026-11-06. *
 | Verification | — |
 | 6AMLD LIA / BORIS | Not applicable / Not applicable |
 | Next FATF/FSRB assessment | FATF / APG; onsite 2025-11-01; plenary 2026-06-01 |
-| OpenCheck reads | `corporations_canada` (API key) |
+| OpenCheck reads | `corporations_canada` |
 | OpenCheck source (note) | corporations_canada Untitled |
 | Notes | Corporations Canada federal register launched on 1st January 2024 |
 

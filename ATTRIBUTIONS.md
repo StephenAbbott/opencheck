@@ -349,13 +349,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 ## Corporations Canada — Innovation, Science and Economic Development Canada (ISED)
 
 - **Data:** corporation records (name, status, act of incorporation, registered address, business number, directors) for companies incorporated under Canadian federal statutes including the Canada Business Corporations Act and the Boards of Trade Act
-- **API:** ISED API Gateway — `https://apigateway-passerelledapi.ised-isde.canada.ca/corporations/api`
+- **Open data:** the [Federal Corporations](https://open.canada.ca/data/en/dataset/0032ce54-c5dd-4b66-99a0-320a7b5e99f2) dataset on open.canada.ca — four daily English CSVs (active and inactive/dissolved, CBCA and other federal acts), rebuilt into the `corporations-canada-index` release asset by `.github/workflows/refresh-corporations-canada-index.yml`
+- **API:** ISED API Gateway — `https://apigateway-passerelledapi.ised-isde.canada.ca/corporations/api`; without a key, the record (no directors) from the keyless legacy endpoint `https://ised-isde.canada.ca/cc/lgcy/api/corporations/<corpId>.json`
   - `GET /v1/corporations/<corpId>.json?lang=eng` — full corporation record
   - `GET /v2/corporations/<corpId>/directors.json?lang=eng` — current directors
 - **License:** [Open Government Licence – Canada (OGL-Canada 2.0)](https://open.canada.ca/en/open-government-licence-canada)
 - **Attribution:** "Contains information licensed under the Open Government Licence – Canada. Source: Corporations Canada, Innovation, Science and Economic Development Canada."
 - **Entry point:** `ca_corp_id` (numeric corporation number) derived from GLEIF RA code `RA000072`
-- **Key registration:** Requires `CORPORATIONS_CANADA_API_KEY` (public-plan API key from <https://api.ised-isde.canada.ca/corporations/api>)
+- **Key registration:** `CORPORATIONS_CANADA_API_KEY` (public-plan API key from <https://api.ised-isde.canada.ca/corporations/api>) is needed for directors only; the index and the legacy record need none
 - **Note:** The V1 API always returns HTTP 200 even for unknown corporations; OpenCheck detects not-found responses by checking whether the first element of the response array is a dict (found) or a string (error message). Directors are mapped to BODS v0.4 `seniorManagingOfficial` relationship statements.
 
 ## CVR — Det Centrale Virksomhedsregister (Danish Central Business Register)

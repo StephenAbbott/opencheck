@@ -252,8 +252,12 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         # the adapter working, not a skip — so the file the warm-up must
         # write is named here instead.
         "ariregister": ("ariregister.sqlite",),
+        # The same arrangement for Canada (the Canada index-tier ticket):
+        # without the index the API answers the record.
+        "corporations_canada": ("corporations_canada.sqlite",),
     }
     assert PROBES["ariregister"].requires_files == ()
+    assert PROBES["corporations_canada"].requires_files == ()
     for name, _warm_fn, path_of in warm.WARMERS:
         if name == "asp_moldova":
             # Not a release asset and not under data_root(): the adapter

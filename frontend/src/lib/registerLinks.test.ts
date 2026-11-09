@@ -39,7 +39,7 @@ describe("registerRecordUrl", () => {
   });
 
   it.each([
-    ["corporations_canada", "1719748"],
+    ["corporations_canada", "123"],
     ["companies_house", "3751777"],
     ["ny_dos", "49779"],
     ["firmenbuch", "355240m"],

@@ -156,9 +156,10 @@ REGISTER_LINKS: dict[str, RegisterLink] = {
     "corporations_canada": RegisterLink(
         register="Corporations Canada",
         identifier_key="ca_corp_id",
-        # The corporation number with its check digit; without it the page
-        # renders empty.
-        record=((r"^\d{8}$", "https://ised-isde.canada.ca/cc/lgcy/fdrlCrpDtls.html?corpId={id}"),),
+        # The corporation number with its check digit (4–8 digits; the open
+        # data's spelling, never a leading zero); without the check digit
+        # the page renders empty. Seven-digit numbers checked 9 Nov 2026.
+        record=((r"^\d{4,8}$", "https://ised-isde.canada.ca/cc/lgcy/fdrlCrpDtls.html?corpId={id}"),),
     ),
     "abr_australia": RegisterLink(
         register="ABN Lookup",

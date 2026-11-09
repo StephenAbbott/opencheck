@@ -41,7 +41,7 @@ from .schemas import validate_raw
 from .schemas.gleif import GLEIFBundle
 from .bolagsverket import BV_RA_CODE as _BV_RA_CODE, normalise_org_number as _normalise_org_number
 from .brreg import NO_RA_CODE as _BRREG_RA_CODE, normalise_orgnr as _normalise_orgnr
-from .corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, normalise_corp_id as _normalise_corp_id
+from .corporations_canada import CA_CORP_RA_CODE as _CA_CORP_RA_CODE, is_bn_filing as _is_bn_filing, normalise_corp_id as _normalise_corp_id
 from .cro import IE_RA_CODE as _CRO_RA_CODE, normalise_crn as _normalise_crn
 from .malta_mbr import MT_RA_CODE as _MT_RA_CODE, normalise_mt_crn as _normalise_mt_crn
 from .asp_moldova import MD_RA_CODES as _MD_RA_CODES, normalise_idno as _normalise_md_idno
@@ -1195,7 +1195,10 @@ class GleifAdapter(SourceAdapter):
                 identifiers["be_enterprise_number"] = _normalise_enterprise_number(registered_as)
             # Canadian federal corporation number — expose as ``ca_corp_id`` so
             # the reconciler can bridge GLEIF ↔ Corporations Canada.
-            if registered_at_id == _CA_CORP_RA_CODE:
+            # A Business Number filing (``123456789RC0001``) is not a
+            # corporation number; the register's own hit asserts the one it
+            # resolves to.
+            if registered_at_id == _CA_CORP_RA_CODE and not _is_bn_filing(registered_as):
                 identifiers["ca_corp_id"] = _normalise_corp_id(registered_as)
             # Danish CVR number — expose as ``dk_cvr`` so the reconciler can
             # bridge GLEIF ↔ CVR Denmark.

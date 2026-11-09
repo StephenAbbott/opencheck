@@ -284,11 +284,20 @@ PROBES: dict[str, SourceProbe] = {
         bods_mapper="map_companies_house",
     ),
     "corporations_canada": _p(
-        tier="live",
+        tier="index",
         subject="Canadian National Railway Company",
         args=("0105333",),
-        requires_env=("CORPORATIONS_CANADA_API_KEY",),
         anchor_lei="3SU7BEP7TH9YEQOZCS77",
+        expect_fields=("corp_id", "corporation"),
+        # Two tiers, one source (the Canada index ticket, 9 Nov 2026): the
+        # daily open-data index answers as a snapshot when
+        # warm_bulk_stores.py has downloaded it; without it the record comes
+        # from the ISED API live — through the keyless legacy endpoint when
+        # CORPORATIONS_CANADA_API_KEY is not set, so no requires_env.
+        expect_liveness=frozenset({"snapshot", "live"}),
+        # Rebuilt daily by refresh-corporations-canada-index.yml; ten days
+        # means the workflow has failed for a week.
+        snapshot_max_age_days=10,
         bods_mapper="map_corporations_canada",
     ),
     "acra_singapore": _p(

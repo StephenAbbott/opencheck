@@ -37,4 +37,12 @@ class CorpCanadaBundle(_Base):
     corp_id: str  # required — mapper key
     corporation: CorpCanadaCorporation | None = None
     directors: list[dict[str, Any]] = Field(default_factory=list)
+    #: False when the directors could not be asked (no key) or the call failed.
+    directors_read: bool = False
+    #: The daily open-data index's row (``INDEX_COLUMNS``), None on the API tier.
+    index: dict[str, Any] | None = None
+    #: ``index`` when the open data held the corporation, ``api`` otherwise.
+    tier: str = "api"
+    #: The open data's cut (ISO day), on the index tier.
+    cut: str | None = None
     legal_name: str | None = None

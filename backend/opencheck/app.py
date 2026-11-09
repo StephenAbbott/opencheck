@@ -232,6 +232,24 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # The Canada index ticket: the Federal Corporations open-data index,
+    # rebuilt daily by a GitHub workflow and downloaded here when absent or
+    # changed. Until it lands ``corporations_canada`` reads the API alone.
+    try:
+        from .sources.corporations_canada import (
+            warm_index as warm_corporations_canada_index,
+        )
+
+        stats = await asyncio.to_thread(warm_corporations_canada_index)
+        log.info("Corporations Canada index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "Corporations Canada index warm-up failed (the API answers alone "
+            "until it is present): %s",
+            exc,
+        )
     # The Cyprus wiring: the DRCOR register index, rebuilt monthly by a
     # GitHub workflow (data.gov.cy answers a datacentre) and downloaded here
     # when absent or changed. Until it lands ``cyprus_drcor`` is not announced.

@@ -424,8 +424,10 @@ from .mappers.belgium import (  # noqa: F401  (re-exported, Phase 246)
     map_bce_belgium,
 )
 from .mappers.canada import (  # noqa: F401  (re-exported, Phase 246)
+    _cc_api_names,
     _cc_corp_url,
     _cc_current_name,
+    _cc_index_address,
     map_corporations_canada,
 )
 from .mappers.singapore import (  # noqa: F401  (re-exported, Phase 246)
