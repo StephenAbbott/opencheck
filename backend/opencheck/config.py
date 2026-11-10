@@ -784,6 +784,27 @@ class Settings(BaseSettings):
         ),
         alias="JAR_LITHUANIA_DB_URL",
     )
+    # --- South Korea Open DART (FSS disclosure filings) — the Open DART ticket ---
+    # The personal Open DART key (opendart.fss.or.kr). It travels in the
+    # ``crtfc_key`` query parameter, which secret_scrub redacts by name, and
+    # must never be shared with a third party (Open DART terms art. 19②).
+    opendart_api_key: str | None = Field(default=None, alias="OPENDART_API_KEY")
+    # Requests lookups may send per KST day. The FSS caps a key at 20,000; the
+    # weekly crosswalk build (same key) uses the rest. Capped at 20,000.
+    opendart_daily_budget: int = Field(default=15_000, alias="OPENDART_DAILY_BUDGET")
+    # The LEI → corp_code crosswalk built weekly by
+    # .github/workflows/refresh-dart-korea-index.yml. Unset: the data-root
+    # default (``dart_korea.sqlite``).
+    dart_korea_db_file: str | None = Field(default=None, alias="DART_KOREA_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    dart_korea_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "dart-korea-index/dart_korea.sqlite.gz"
+        ),
+        alias="DART_KOREA_DB_URL",
+    )
     # --- ChileCompra (Mercado Público procurement, CC0) — Phase 280 ---
     # The supplier index built monthly from ChileCompra's open-data files by
     # .github/workflows/refresh-chilecompra-index.yml. Unset: the data-root

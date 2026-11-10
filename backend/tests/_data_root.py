@@ -180,6 +180,7 @@ def install() -> Path:
 _STORE_RESETS: tuple[tuple[str, str], ...] = (
     ("opencheck.sources.ariregister", "reset_connection"),
     ("opencheck.sources.jar_lithuania", "reset_connection"),
+    ("opencheck.sources.dart_korea", "reset_connection"),
     ("opencheck.sources.onrc_romania", "reset_connection"),
     ("opencheck.sources.apr_serbia", "reset_connection"),
     ("opencheck.sources.asp_moldova", "reset_connection"),

@@ -198,6 +198,17 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # The Open DART crosswalk (LEI → DART corp_code), built weekly by a
+    # GitHub workflow. Until it lands ``dart_korea`` is not announced.
+    try:
+        from .sources.dart_korea import warm_index as warm_dart_korea_index
+
+        stats = await asyncio.to_thread(warm_dart_korea_index)
+        log.info("Open DART crosswalk warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Open DART crosswalk warm-up failed (not announced until present): %s", exc)
     # The Belgium wiring: the KBO Open Data index, rebuilt monthly by a GitHub
     # workflow with the portal's free login, downloaded here when absent or
     # changed. Until it lands ``bce_belgium`` is not announced.

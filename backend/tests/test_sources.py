@@ -142,6 +142,9 @@ _IDENTIFIER_KEYED = {
     # sunbiz_florida (the Florida wiring): an FTS5 search over the local
     # index; a fresh test process has none.
     "sunbiz_florida",
+    # dart_korea: name search reads the crosswalk index; a fresh test
+    # process has none, and there is no stub row.
+    "dart_korea",
     # gcis_taiwan: a live register with no stub tier; offline its search
     # returns nothing rather than an invented row.
     "gcis_taiwan",

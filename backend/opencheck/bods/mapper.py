@@ -345,6 +345,34 @@ from .mappers.taiwan import (  # noqa: F401  (re-exported)
     tw_holder_ubn_note,
     map_gcis_taiwan,
 )
+from .mappers.korea import (  # noqa: F401  (re-exported)
+    _kr,
+    KR_ORG_TOKENS,
+    _LATIN_ORG,
+    _ENTITY_RELATIONS,
+    KR_RELATION_WORDS,
+    _TOTAL_ROWS,
+    _SPECIAL_ACCOUNT,
+    KR_EXECUTIVE_KINDS,
+    KR_SHAREHOLDER_CAVEAT,
+    kr_number,
+    kr_has_org_token,
+    kr_holder_name,
+    kr_shareholder_is_entity,
+    kr_reporter_is_person,
+    kr_name_key,
+    kr_relation_words,
+    kr_birth_month,
+    kr_korean_date,
+    kr_executive_kind,
+    kr_executive_interests,
+    kr_shareholder_rows,
+    kr_largest_shareholder,
+    kr_latest_major_reports,
+    kr_listing_words,
+    _type_note,
+    map_dart_korea,
+)
 from .mappers.brazil import (  # noqa: F401  (re-exported, Phase 246)
     _BR_OWNER_KEYWORDS,
     _br_country_code,
@@ -687,6 +715,13 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # checked, 29 Oct 2026). RA001009 (Financial Supervisory Commission)
     # files funds, which the company register lacks, and is left unmapped.
     "RA000551": ("TW-CR", "Unified Business Number (統一編號), Ministry of Economic Affairs company register"),
+    # South Korea (the Open DART ticket, 10 Nov 2026). GLEIF files the National
+    # Tax Service business registration number under RA000657 (790 ISSUED,
+    # "124-81-00998") and the court registry's corporate registration number
+    # under RA000419 (208 ISSUED, "110111-6981206"); dart_korea writes the same
+    # schemes, so the two corroborate. Neither code is in org-id.guide yet.
+    "RA000657": ("KR-BRN", "Business registration number (사업자등록번호), National Tax Service"),
+    "RA000419": ("KR-CRN", "Corporate registration number (법인등록번호), court registry"),
     # Singapore — ACRA Business Registry. ``registeredAs`` is the Unique Entity
     # Number on 12,292 of 13,326 active SG LEI records (2026-09-10).
     "RA000523": ("SG-ACRA", "Unique Entity Number (UEN) — Accounting and Corporate Regulatory Authority (Singapore)"),

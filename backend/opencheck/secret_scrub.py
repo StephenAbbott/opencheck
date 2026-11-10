@@ -44,7 +44,7 @@ REDACTED = "[redacted]"
 # case-insensitively, so ``apiKey``, ``api_key``, ``API-KEY`` and ``api_token``
 # all match while ``keyword`` or ``tokens_used`` do not.
 _SECRET_PARAM = re.compile(
-    r"(?P<lead>[?&;](?:api[_-]?key|apikey|api[_-]?token|access[_-]?token|"
+    r"(?P<lead>[?&;](?:api[_-]?key|apikey|crtfc[_-]?key|api[_-]?token|access[_-]?token|"
     r"auth[_-]?token|token|key|secret|client[_-]?secret|password|passwd|pwd|"
     r"signature|sig)=)(?P<value>[^&#\s'\"<>]*)",
     re.IGNORECASE,
