@@ -1,6 +1,0 @@
----
-title: OpenCheck's own test agents can pass the bot gate with a secret header.
-readme: OpenCheck's scheduled test agents can now open report pages in a headless browser by sending a secret header, so post-deploy tests cover the web page as well as the API.
-tests: backend +8
----
-The scheduled post-deploy tester drives opencheck.world in headless Chromium, whose User-Agent says HeadlessChrome, so the bot gate refused `/lookup-stream` and every report page it opened showed "Unknown error" (first run, 10 Nov 2026). The gate now has one door: `opencheck/bot_gate.py` lets a declared bot through when it sends `X-OpenCheck-QA` equal to `OPENCHECK_QA_BYPASS_TOKEN` (compared in constant time). It covers `/lookup-stream`, `/lookup-register-stream`, `/batch-stream` and the saved-report routes, which now share `bot_gate.refuses`. Stephen chose this over a public `?qa=1` pass, which anyone could type. No token, or one shorter than 24 characters, means no door, and a let-through request is still rate-limited and charged to the lookup budget like any other. The agent also adds `?qa=1` to the page so GoatCounter leaves the run out. After deploy, set `OPENCHECK_QA_BYPASS_TOKEN` on Render and the same value in the test agents' cloud environment, then check that a headless run with the header gets an SSE stream from `/lookup-stream` and one without it still gets 403.

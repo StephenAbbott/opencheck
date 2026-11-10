@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 488** — South Korean companies are now checked against Open DART, the Financial Supervisory Service's disclosure filings — largest shareholders, executives and 5% holding reports, never called beneficial owners.
+**Latest: Phase 489** — OpenCheck's scheduled test agents can now open report pages in a headless browser by sending a secret header, so post-deploy tests cover the web page as well as the API.
 
 → [Full development history](docs/status.md)
 
