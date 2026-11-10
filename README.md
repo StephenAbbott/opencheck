@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 481** — OpenCheck's MCP tools now tell clients which calls only read, so read-only checks need no confirmation prompt.
+**Latest: Phase 482** — Related people are now screened against OpenSanctions in one batched match request that also sends their birth year and nationality, with every existing match gate unchanged.
 
 → [Full development history](docs/status.md)
 
