@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 476** — A Canadian LEI filed with a Business Number now reaches the federal corporation the Business Number names, and the GLEIF card no longer shows that Business Number as a corporation number.
+**Latest: Phase 477** — The weekly source-health sweep now warms the Serbian APR index first and probes Canada with the corporation number the GLEIF anchor derives.
 
 → [Full development history](docs/status.md)
 
