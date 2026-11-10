@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 483** — OpenSanctions' new corp.clone and geo.risk topics are fetched without raising a signal, a clone firm's record says it is the copy and not the real firm, and a weekly check now catches the next unannounced topic.
+**Latest: Phase 484** — OpenCheck's scheduled testing agents can browse the site without their visits being counted.
 
 → [Full development history](docs/status.md)
 
