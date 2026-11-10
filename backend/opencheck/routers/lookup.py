@@ -125,6 +125,7 @@ from .hit_builders import (  # noqa: F401
     _bh_eiti_bo,
     _bh_eiti_soe,
     _bh_eiti_zambia,
+    _bh_estma,
     _bh_firmenbuch,
     _bh_gemi_greece,
     _bh_inpi,
@@ -1250,6 +1251,18 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         and _offline_index_covers(zm_adapter, ctx.lei)
     ):
         tasks.append(("eiti_zambia", zm_adapter.fetch_by_lei(ctx.lei)))
+    # ESTMA — payments to governments reported under Canada's Extractive
+    # Sector Transparency Measures Act. LEI-keyed through the reviewed
+    # crosswalk (the file carries only the ESTMA ID); dispatched only when the
+    # crosswalk names the LEI and the index is present.
+    estma_adapter = REGISTRY.get("estma")
+    if (
+        estma_adapter is not None
+        and hasattr(estma_adapter, "fetch_by_lei")
+        and _want("estma")
+        and _offline_index_covers(estma_adapter, ctx.lei)
+    ):
+        tasks.append(("estma", estma_adapter.fetch_by_lei(ctx.lei)))
     # EITI Company Assessment — LEI-keyed offline match against the committed
     # snapshot of EITI's assessment of its supporting companies. A hit means
     # the LEI is one of the ~99 companies EITI assesses; the bundle carries
@@ -1342,6 +1355,8 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         return _bh_eiti_bo(result, ctx) if result.get("record") else None
     if source_id == "eiti_zambia":
         return _bh_eiti_zambia(result, ctx) if result.get("lei") else None
+    if source_id == "estma":
+        return _bh_estma(result, ctx) if result.get("entities") else None
     if source_id == "wikirate":
         return _bh_wikirate(result, ctx) if result.get("card_id") else None
     if source_id == "ted_eu":

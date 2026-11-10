@@ -10,6 +10,8 @@ import { EitiAssessmentCard } from "./EitiAssessmentCard";
 import { ESG_SOURCE_META } from "./esgSources";
 import { wikirateCardLinks } from "../../lib/wikirateLinks";
 import { EitiZambiaCard } from "./EitiZambiaCard";
+import { EstmaCard } from "./EstmaCard";
+import { estmaAndEitiNote, estmaTile, type EstmaBundle } from "../../lib/estma";
 import {
   eitiIdentLine,
   eitiLinkNote,
@@ -854,6 +856,9 @@ function tileStats(hit: SourceHit): { stat: string; unit: string; sub: string } 
   if (hit.source_id === "eiti_zambia") {
     return zambiaTile(hit.raw as unknown as EitiZambiaBundle);
   }
+  if (hit.source_id === "estma") {
+    return estmaTile(hit.raw as unknown as EstmaBundle);
+  }
   if (hit.source_id === "wikirate") {
     const raw = hit.raw as unknown as WikirateBundle;
     return {
@@ -1025,7 +1030,17 @@ export function EsgPanel({
                 Zambia EITI portal
                 <span className="sr-only"> (opens in new tab)</span>
               </a>{" "}
-              (ZEITI open data policy) and{" "}
+              (ZEITI open data policy),{" "}
+              <a
+                href="https://www150.statcan.gc.ca/n1/pub/71-607-x/71-607-x2022008-eng.htm"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-oo-esg-strong"
+              >
+                Statistics Canada's ESTMA data
+                <span className="sr-only"> (opens in new tab)</span>
+              </a>{" "}
+              (Statistics Canada Open Licence) and{" "}
               <a
                 href="https://wikirate.org/"
                 target="_blank"
@@ -1037,7 +1052,8 @@ export function EsgPanel({
               </a>{" "}
               (CC BY 4.0). Emissions are satellite-derived estimates for
               directly owned assets; payments to governments are company
-              disclosures under the EITI Standard; Wikirate metrics are
+              disclosures under the EITI Standard or Canada's Extractive
+              Sector Transparency Measures Act; Wikirate metrics are
               community-researched — not a beneficial ownership or
               sanctions check.
             </p>
@@ -1046,6 +1062,13 @@ export function EsgPanel({
             {twoEitiPublishersNote(allHits.map((h) => h.source_id)) && (
               <p className="rounded-oo border border-oo-esg-border bg-oo-esg-bg/40 px-4 py-3 text-oo-small text-oo-esg-strong">
                 {twoEitiPublishersNote(allHits.map((h) => h.source_id))}
+              </p>
+            )}
+
+            {/* An ESTMA card beside an EITI one: two disclosures, never added. */}
+            {estmaAndEitiNote(allHits.map((h) => h.source_id)) && (
+              <p className="rounded-oo border border-oo-esg-border bg-oo-esg-bg/40 px-4 py-3 text-oo-small text-oo-esg-strong">
+                {estmaAndEitiNote(allHits.map((h) => h.source_id))}
               </p>
             )}
 
@@ -1082,6 +1105,8 @@ export function EsgPanel({
                   />
                 ) : hit.source_id === "eiti_zambia" ? (
                   <EitiZambiaCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
+                ) : hit.source_id === "estma" ? (
+                  <EstmaCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
                 ) : hit.source_id === "wikirate" ? (
                   <WikirateCard key={`${hit.source_id}:${hit.hit_id}`} hit={hit} />
                 ) : (

@@ -202,6 +202,13 @@ from .mappers.eiti import (  # noqa: F401  (re-exported, Phase 246)
     _map_eiti_soe,
     _map_eiti_assessment,
 )
+from .mappers.estma import (  # noqa: F401  (re-exported)
+    ESTMA_SCHEME,
+    _map_estma,
+    _ESTMA_NRCAN_URL,
+    _estma_year_span,
+    map_estma,
+)
 from .mappers.wikirate import (  # noqa: F401  (re-exported, Phase 246)
     _WIKIRATE_IDENTIFIER_SCHEMES,
     map_wikirate,

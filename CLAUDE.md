@@ -848,10 +848,10 @@ or corroboration** (that is the signals layer, with its own confidence
 model), and **state absence in the same voice as presence** — silence reads
 as "nothing to see".
 
-**Twenty-three** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
+**Twenty-four** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`, `ariregister`, `brreg`, `gcis_taiwan`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`, `ariregister`, `brreg`, `gcis_taiwan`, `estma`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -1551,6 +1551,44 @@ Things that will be re-derived otherwise:
 - **Not on the persistent disk** (it was full on 4 Nov 2026): the default
   data-root path, re-downloaded at boot. Nothing touches the response `Cache`
   for the index (the Phase 325 rule); the API record and directors do.
+
+## ESTMA is a weekly index of Statistics Canada's file (the Canadian extractives ticket, 10 Nov 2026)
+
+`sources/estma.py`, `scripts/build_estma_index.py`,
+`.github/workflows/refresh-estma-index.yml`, `bods/mappers/estma.py`,
+`components/cdd/EstmaCard.tsx`, `lib/estma.ts`. Payments to governments under
+Canada's Extractive Sector Transparency Measures Act, on the Climate & ESG tab.
+SEDAR+ was ruled out by its terms of use. Things that will be re-derived
+otherwise:
+
+- **One keyless SDMX-CSV, rebuilt weekly** (`STC_DF_ESTMA-eng.csv`, 114,623
+  rows on 5 Nov 2026; 1,141 entities, 828 reporting). The builder refuses a
+  changed header, a non-CAD unit or multiplier, a malformed ESTMA ID or a
+  short file. IDs are `E` + six digits, and 36 carry a suffix (`E425485_1`).
+  Licence: the Statistics Canada Open Licence (`statcan-open-licence`).
+- **One payment, two views.** Each payment is filed by payee and again by
+  project. A report's total is the sum of its payee lines, said as
+  OpenCheck's sum; the project lines are shown as "the same payments" and
+  never added. Sub-lines of one payee are summed. Two reports for one year
+  (a stub period, a refiled report) are never added together.
+- **"Filed in another entity's report" is not "paid nothing" and not
+  ownership.** A row with no values and `PARENT` set is an entity included in
+  another's report. It is a reporting arrangement under the Act: a
+  `commenting` annotation, never a BODS relationship, never a subsidiary list.
+- **The file carries no LEI or business number.** The LEI comes from the
+  committed, hand-reviewed `data/estma_lei_crosswalk.csv` (only
+  `decision == accepted` rows are read; 704 on 10 Nov 2026, five confirmed
+  by Stephen). The card grades it a medium match; the hit asserts only
+  `ca_estma_id` (BODS scheme `CA-ESTMA`) and the LEI is an `identifying`
+  annotation. One LEI can name several ESTMA IDs (Minto: before and after a
+  rename). Extending the crosswalk means another reviewed pass, never a
+  fuzzy match at request time.
+- **The card never adds ESTMA to EITI**: `estmaAndEitiNote` says so once
+  when both are present (different reports, currencies and periods).
+- The index is the default data-root path, re-downloaded at boot
+  (`warm_index`); nothing touches the response `Cache` (the Phase 325 rule).
+  After merge, run the workflow once by hand: until the asset exists
+  `covers_lei` is False and the source is never announced.
 
 ## Colombia is a live read of RUES on datos.gov.co (the Colombia RUES ticket, 10 Nov 2026)
 

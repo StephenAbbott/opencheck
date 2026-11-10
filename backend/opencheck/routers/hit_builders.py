@@ -1451,6 +1451,30 @@ def _bh_eiti_zambia(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_estma(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """ESTMA card — the summary is an identifier fragment.
+
+    ``ca_estma_id`` is asserted: the dataset files the ESTMA ID on every row.
+    The LEI is OpenCheck's reviewed name match and is not.
+    """
+    from ..findings import finding_estma
+
+    entities = r.get("entities") or []
+    first = entities[0] if entities else {}
+    parts = [f"ESTMA {first.get('estma_id')}"] if first.get("estma_id") else ["ESTMA"]
+    years = sorted({str(x.get("year")) for e in entities for x in e.get("reports") or [] if x.get("year")})
+    if years:
+        parts.append(years[0] + (f"–{years[-1]}" if len(years) > 1 else ""))
+    return _hit(
+        "estma", ctx.lei,
+        name=first.get("name") or ctx.legal_name or ctx.lei,
+        summary=" · ".join(parts),
+        finding=finding_estma(r),
+        identifiers=dict(r.get("identifiers") or {}),
+        raw=r,
+    )
+
+
 def _psc_filings_phrase(pscs: list[dict]) -> str:
     """Say "N PSC filings", plus "· M current" when some are not — shared by
     the cac_nigeria and eiti_bo cards so one report cannot count them two ways.

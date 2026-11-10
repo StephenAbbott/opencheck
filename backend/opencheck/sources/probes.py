@@ -1173,6 +1173,28 @@ PROBES: dict[str, SourceProbe] = {
         snapshot_max_age_days=400,
         bods_mapper="map_eiti_zambia",
     ),
+    "estma": _p(
+        tier="index",
+        subject="Suncor Energy Inc. (ESTMA E405435)",
+        method="fetch_by_lei",
+        args=("894500XO86FKXQGPYV71",),
+        expect_fields=("lei", "entities", "latest_year", "identifiers"),
+        # SKIP without an index (the jar_lithuania shape), never allow_empty.
+        # warm_bulk_stores.py downloads the asset first.
+        requires_files=("estma.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        anchor_lei="894500XO86FKXQGPYV71",
+        # Statistics Canada rebuilds the file weekly and
+        # refresh-estma-index.yml rebuilds the index on Tuesdays; three weeks
+        # means a missed rebuild or two, not a broken source.
+        snapshot_max_age_days=21,
+        bods_mapper="map_estma",
+        notes=(
+            "ESTMA payments to governments, from Statistics Canada's weekly "
+            "SDMX-CSV of every report. LEI-keyed through the reviewed "
+            "crosswalk opencheck/data/estma_lei_crosswalk.csv."
+        ),
+    ),
     "bce_belgium": _p(
         tier="index",
         subject="Proximus (BE 0202.239.951)",
