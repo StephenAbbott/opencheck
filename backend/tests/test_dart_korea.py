@@ -444,3 +444,23 @@ def test_the_hit_asserts_the_numbers_dart_publishes() -> None:
     hit = _bh_dart_korea(_bundle(), SAMSUNG_BRN, _CTX)
     assert hit.identifiers == {"kr_bizr_no": SAMSUNG_BRN, "kr_jurir_no": SAMSUNG_CRN}
     assert hit.summary.startswith("KR-BRN 124-81-00998")
+
+
+def test_the_listing_is_a_note_and_never_the_legal_form():
+    """Open DART publishes a market, not a legal form: entityType.details,
+    which the subject profile reads as the legal form, stays empty and the
+    listing is said in a note."""
+    from opencheck.bods import map_dart_korea
+    from opencheck.subject_profile import _legal_form
+
+    bundle = _bundle()
+    subject = next(
+        s for s in map_dart_korea(bundle)
+        if s.get("recordType") == "entity"
+        and any(i.get("scheme") == "KR-BRN" for i in s["recordDetails"].get("identifiers", []))
+    )
+    assert not (subject["recordDetails"]["entityType"].get("details"))
+    assert _legal_form(subject) is None
+    notes = [a["description"] for a in subject.get("annotations", [])]
+    assert any("listed on KOSPI (stock code 005930)" in n for n in notes)
+    assert any("no legal form" in n for n in notes)
