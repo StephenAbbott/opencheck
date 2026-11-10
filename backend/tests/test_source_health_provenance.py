@@ -269,6 +269,14 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
             assert path_of is asp_moldova.index_path
             assert PROBES["asp_moldova"].requires_files == ()
             continue
+        if name == "apr_serbia":
+            # The same arrangement as Moldova: a self-built index, warmed
+            # since the 9 Nov 2026 sweep lost the 45 s build race.
+            from opencheck.sources import apr_serbia
+
+            assert path_of is apr_serbia.index_path
+            assert PROBES["apr_serbia"].requires_files == ()
+            continue
         assert declared[name], f"{name}: the probe declares no required file"
         assert path_of() == root / declared[name][0], (
             f"{name}: the warm-up writes to {path_of()} and the probe looks for "
