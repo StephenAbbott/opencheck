@@ -108,6 +108,17 @@ def hop_schemes() -> dict[str, RegisterHop]:
         hops["GB-COH"] = RegisterHop(
             "GB-COH", "companies_house", _ch_normalise, False, derived_key="gb_coh"
         )
+    # ``CO-RUE`` is value-schemed (the mapper's ``_GLEIF_VALUE_SCHEMED_RA``):
+    # GLEIF files a NIT *or* a chamber's matrícula under the same RA codes,
+    # and only a check-digit-valid NIT is written ``CO-RUE``, so the RA table
+    # above never names it. The NIT is the national key; RUES is the register.
+    if "rues_colombia" in REGISTRY:
+        from .sources.rues_colombia import CO_RUE_SCHEME, normalise_rues_key
+
+        hops[CO_RUE_SCHEME] = RegisterHop(
+            CO_RUE_SCHEME, "rues_colombia", normalise_rues_key, True,
+            derived_key="co_rues",
+        )
     # ``REG-<country>`` is the mappers' fallback scheme for "a number on that
     # country's company register" when the filing does not name the register
     # — the Companies House mapper emits ``REG-GB`` for a PSC whose

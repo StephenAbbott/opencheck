@@ -361,6 +361,24 @@ PROBES: dict[str, SourceProbe] = {
             "throttle."
         ),
     ),
+    "rues_colombia": _p(
+        tier="live",
+        subject="Banco de Bogotá (Colombia)",
+        args=("860002964-4",),
+        kwargs={"legal_name": "BANCO DE BOGOTA"},
+        expect_fields=("rows",),
+        anchor_lei="549300LYHE7LWSKDZT53",
+        bods_mapper="map_rues_colombia",
+        notes=(
+            "The NIT with its check digit exactly as GLEIF files it under "
+            "RA000093 (the RUE), on one ACTIVA matrícula (221830) at the Bogotá "
+            "chamber with a legal representative on the row (10 Nov 2026). "
+            "``expect_fields`` asserts the rows, so Confecámaras renaming "
+            "``nit`` or dropping the legal-person category reads as a failure "
+            "rather than a quiet no-record. Keyless; SOCRATA_APP_TOKEN, when "
+            "set, only lifts the shared per-IP throttle."
+        ),
+    ),
     "anaf_romania": _p(
         tier="live",
         subject="Dante International S.A. (eMAG)",

@@ -4,7 +4,7 @@ title: "DLCP \u2014 Department of Licensing and Consumer Protection Corporations
 description: "Washington DC company registrations from DLCP's Corporations Division, looked up by file number: name, status, entity type, address, registered agent, trade names, and the owners and controllers filed on the biennial report under D.C. Code \u00a7 29-102.11(a)(6)."
 resource: "https://opendata.dc.gov/datasets/DCGIS::beneficial-owners/about"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-09-18"
+timestamp: "2026-11-10"
 source_id: "dlcp_dc"
 license: "CC-BY-4.0"
 commercial_use: "yes"

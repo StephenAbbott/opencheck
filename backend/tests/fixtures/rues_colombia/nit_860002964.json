@@ -1,0 +1,28 @@
+[
+ {
+  "codigo_camara": "04",
+  "camara_comercio": "BOGOTA",
+  "matricula": "221830",
+  "razon_social": "BANCO DE BOGOTA",
+  "codigo_clase_identificacion": "02",
+  "clase_identificacion": "NIT",
+  "nit": "860002964",
+  "digito_verificacion": "4",
+  "cod_ciiu_act_econ_pri": "6412",
+  "fecha_matricula": "19841012",
+  "fecha_renovacion": "20260319",
+  "ultimo_ano_renovado": "2026",
+  "fecha_vigencia": "20700630",
+  "codigo_tipo_sociedad": "02",
+  "tipo_sociedad": "SOCIEDAD COMERCIAL",
+  "codigo_organizacion_juridica": "04",
+  "organizacion_juridica": "SOCIEDAD ANONIMA",
+  "codigo_categoria_matricula": "01",
+  "categoria_matricula": "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL ó ESAL",
+  "codigo_estado_matricula": "01",
+  "estado_matricula": "ACTIVA",
+  "clase_identificacion_rl": "CEDULA DE CIUDADANIA",
+  "representante_legal": "CESAR PRADO VILLEGAS",
+  "fecha_actualizacion": "2026/10/23 08:10:16.610000000"
+ }
+]

@@ -4,7 +4,7 @@ title: "Cyprus DRCOR \u2014 Registrar of Companies"
 description: "Cyprus's register of companies, business names, partnerships and overseas companies, published as open data by the Department of Registrar of Companies and Intellectual Property and read from a monthly index of its three CSV files: name, type and sub-type, registration date, the register's status with its date, the registered office, and the officials \u2014 directors, secretaries, partners, authorised persons. No shareholders or beneficial owners are published."
 resource: "https://www.companies.gov.cy/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-10-29"
+timestamp: "2026-11-10"
 source_id: "cyprus_drcor"
 license: "CC-BY-4.0"
 commercial_use: "yes"

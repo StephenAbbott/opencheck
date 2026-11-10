@@ -154,6 +154,15 @@ _CANONICAL: dict[str, LicenseTerms] = {
         url="https://creativecommons.org/licenses/by/4.0/",
         summary="Commercial use permitted with attribution.",
     ),
+    "cc-by-sa-4.0": _terms(
+        "CC-BY-SA-4.0", "Creative Commons Attribution-ShareAlike 4.0",
+        commercial="yes", attribution=True, share_alike=True, redistribution="yes",
+        url="https://creativecommons.org/licenses/by-sa/4.0/",
+        summary=(
+            "Commercial use permitted with attribution; adapted material must "
+            "be shared under the same licence (share-alike)."
+        ),
+    ),
     "cc-by-3.0-au": _terms(
         "CC-BY-3.0-AU", "Creative Commons Attribution 3.0 Australia",
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",

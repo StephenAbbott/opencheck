@@ -35,6 +35,8 @@ from opencheck import bods_data, risk
 from opencheck.bods import jurisdiction as bods_jurisdiction
 from opencheck.bods.mapper import (
     _GLEIF_RA_TO_ORG_ID,
+    _CL_RA_CODES,
+    _CO_RA_CODES,
     _GLEIF_VALUE_SCHEMED_RA,
     gleif_registration_scheme,
     map_gleif,
@@ -324,11 +326,22 @@ def test_every_ra_code_an_adapter_dispatches_on_has_a_scheme() -> None:
     assert missing == []
 
 
-@pytest.mark.parametrize("ra", sorted(_GLEIF_VALUE_SCHEMED_RA))
+@pytest.mark.parametrize("ra", sorted(_CL_RA_CODES))
 def test_value_schemed_ra_codes_give_a_rut_its_scheme(ra: str) -> None:
     assert gleif_registration_scheme(ra, "CL", None, "76.481.921-7")[0] == "CL-RUT"
     # An inscription filed under the same code is not a RUT.
     assert gleif_registration_scheme(ra, "CL", None, "fojas 59592 número 30591")[0] == ra
+
+
+@pytest.mark.parametrize("ra", sorted(_CO_RA_CODES))
+def test_value_schemed_ra_codes_give_a_nit_its_scheme(ra: str) -> None:
+    # The Colombia RUES ticket: a check-digit-valid NIT is CO-RUE in any of
+    # the shapes the issuers file; a matrícula number keeps the RA code.
+    for value in ("900396759-5", "900.396.759 - 5", "9003967595", "00000900396759 - 5"):
+        assert gleif_registration_scheme(ra, "CO", None, value)[0] == "CO-RUE"
+    assert gleif_registration_scheme(ra, "CO", None, "900396759-4")[0] == ra
+    assert gleif_registration_scheme(ra, "CO", None, "0000759723")[0] == ra
+    assert gleif_registration_scheme(ra, "CO", None, "21-075155-12")[0] == ra
 
 
 @pytest.mark.parametrize(

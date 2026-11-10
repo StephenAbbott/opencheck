@@ -19,6 +19,7 @@ from typing import Any, Iterator
 import pycountry
 
 from ..elf import resolve_elf
+from ..identifiers import colombian_nit
 from . import former_names as _former_names
 from . import gleif_events as _gleif_events
 from . import lifecycle as _lifecycle
@@ -553,6 +554,11 @@ from .mappers.us_dc import (  # noqa: F401  (re-exported, Phase 246)
     _dc_epoch_to_date,
     map_dlcp_dc,
 )
+from .mappers.colombia import (  # noqa: F401  (re-exported, the Colombia RUES ticket)
+    _rues_entity_details,
+    _rues_role_details,
+    map_rues_colombia,
+)
 from .mappers.us_ny import (  # noqa: F401  (re-exported, Phase 263)
     _NY_LIVE_STATUSES,
     _NY_TERMINAL_STATUSES,
@@ -814,9 +820,20 @@ _CL_RA_CODES: frozenset[str] = frozenset(
 CL_RUT_SCHEME = "CL-RUT"
 CL_RUT_SCHEME_NAME = "RUT — Rol Único Tributario (Chile)"
 
+#: Colombian registration authorities (the Colombia RUES ticket): the RUE
+#: (RA000093), the 58 chambers of commerce (RA000094–RA000150) and the
+#: Superintendencia Financiera (RA000848). Their issuers file a NIT for most
+#: records and a chamber's matrícula number for the rest, so ``CO-RUE`` is
+#: asserted only for a value whose DIAN check digit agrees.
+_CO_RA_CODES: frozenset[str] = frozenset(
+    {f"RA{n:06d}" for n in range(93, 151)} | {"RA000848"}
+)
+CO_RUE_SCHEME = "CO-RUE"
+CO_RUE_SCHEME_NAME = "NIT — Registro Único Empresarial y Social (RUES), Colombia"
+
 #: RA codes whose scheme is decided by the value, not the code (Phase 280) —
 #: so they are absent from ``_GLEIF_RA_TO_ORG_ID`` on purpose.
-_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES
+_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES | _CO_RA_CODES
 
 
 def chilean_rut(value: str | None) -> str | None:
@@ -888,6 +905,8 @@ def gleif_registration_scheme(
         return "NZ-NZBN", "New Zealand Business Number"
     if ra in _CL_RA_CODES and chilean_rut(registered_as):
         return CL_RUT_SCHEME, CL_RUT_SCHEME_NAME
+    if ra in _CO_RA_CODES and colombian_nit(registered_as):
+        return CO_RUE_SCHEME, CO_RUE_SCHEME_NAME
     if ra in _GLEIF_RA_TO_ORG_ID:
         return _GLEIF_RA_TO_ORG_ID[ra]
     jur = (jurisdiction_code or "").strip().upper()
@@ -1709,6 +1728,10 @@ def _gleif_entity_statement(
             # statements carry the same id: LEI issuers file it with and
             # without the dots (``76.338.588-4`` / ``77299208-4``).
             registered_as = chilean_rut(registered_as) or registered_as
+        elif org_id_scheme == CO_RUE_SCHEME:
+            # The same for a NIT (``900.396.759 - 5``, ``9003967595``): one
+            # written form, the one the RUES mapper writes.
+            registered_as = colombian_nit(registered_as) or registered_as
         identifiers.append(
             {
                 "id": registered_as,

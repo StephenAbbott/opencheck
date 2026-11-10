@@ -4,7 +4,7 @@ title: "Singapore ACRA \u2014 Accounting and Corporate Regulatory Authority"
 description: "Singapore company data from ACRA's registers on data.gov.sg, looked up by Unique Entity Number: name and former names, entity and company type, status, incorporation date and registered address."
 resource: "https://data.gov.sg/collections/2/view"
 tags: ["cdd", "national-register", "Singapore-OGL-1.0", "commercial-yes"]
-timestamp: "2026-09-10"
+timestamp: "2026-11-10"
 source_id: "acra_singapore"
 license: "Singapore-OGL-1.0"
 commercial_use: "yes"

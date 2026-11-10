@@ -4,7 +4,7 @@ title: "New York Department of State \u2014 Division of Corporations"
 description: "New York entity records from the Department of State's Division of Corporations, looked up by DOS ID: every filing, the status after each one, every name the entity has held, and the chief executive officer a corporation names on its biennial statement."
 resource: "https://data.ny.gov/Economic-Development/Corporations-and-Other-Entities-All-Filings/63wc-4exh"
 tags: ["cdd", "national-register", "OPEN-NY-Terms", "commercial-yes"]
-timestamp: "2026-09-29"
+timestamp: "2026-11-10"
 source_id: "ny_dos"
 license: "OPEN-NY-Terms"
 commercial_use: "yes"

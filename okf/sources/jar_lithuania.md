@@ -4,7 +4,7 @@ title: "JAR \u2014 Lithuanian Register of Legal Entities"
 description: "Lithuania's Register of Legal Entities (JAR), kept by Registr\u0173 centras and published as daily open data: every registered and deregistered entity's name, code, registered address, legal form, registration date, legal status and deregistration date. Read from a weekly index of the open data. The register withholds the names of sole proprietorships and partnerships; it publishes no officers or beneficial owners."
 resource: "https://www.registrucentras.lt/jar/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-10-12"
+timestamp: "2026-11-10"
 source_id: "jar_lithuania"
 license: "CC-BY-4.0"
 commercial_use: "yes"

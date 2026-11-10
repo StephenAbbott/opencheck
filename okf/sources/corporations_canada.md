@@ -4,7 +4,7 @@ title: "Corporations Canada \u2014 ISED federal register"
 description: "Federal Canadian company data from Corporations Canada (Innovation, Science and Economic Development Canada), covering companies incorporated under federal statutes including the Canada Business Corporations Act: a daily index of the Federal Corporations open data (every corporation, dissolved ones included, with its status, governing Act and registered office), and the ISED API for each lookup's dated activities and current directors."
 resource: "https://ised-isde.canada.ca/site/corporations-canada/en"
 tags: ["cdd", "national-register", "OGL-Canada-2.0", "commercial-yes"]
-timestamp: "2026-11-09"
+timestamp: "2026-11-10"
 source_id: "corporations_canada"
 license: "OGL-Canada-2.0"
 commercial_use: "yes"

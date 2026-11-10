@@ -4,7 +4,7 @@ title: "ANAF \u2014 Agen\u021bia Na\u021bional\u0103 de Administrare Fiscal\u010
 description: "Romanian taxpayer register, queried live by fiscal code (CUI) through ANAF's keyless public web service: registered name, fiscal domicile and registered office, trade-register number, legal form, activity code, registration and de-registration dates, VAT registration history, and the inactive-taxpayer and RO e-Factura registers."
 resource: "https://www.anaf.ro/anaf/internet/ANAF/servicii_online/servicii_web_anaf/"
 tags: ["cdd", "national-register", "No stated licence \u2014 public register, attribution requested", "commercial-conditional"]
-timestamp: "2026-09-14"
+timestamp: "2026-11-10"
 source_id: "anaf_romania"
 license: "No stated licence \u2014 public register, attribution requested"
 commercial_use: "conditional"
