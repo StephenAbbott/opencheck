@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 477** — The weekly source-health sweep now warms the Serbian APR index first and probes Canada with the corporation number the GLEIF anchor derives.
+**Latest: Phase 478** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, moving Ireland to legitimate-interest access from 10 Nov 2026.
 
 → [Full development history](docs/status.md)
 
