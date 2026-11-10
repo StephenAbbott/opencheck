@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 484** — OpenCheck's scheduled testing agents can browse the site without their visits being counted.
+**Latest: Phase 485** — The related-party sanctions screen now matches a record on any of its names and on a shared identifier, so a designated owner's signal lands on the node that holds the stake.
 
 → [Full development history](docs/status.md)
 
