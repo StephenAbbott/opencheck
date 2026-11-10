@@ -506,33 +506,11 @@ def _process_results(
 def _best_name_score(
     target_name: str, item: dict[str, Any]
 ) -> tuple[str, float]:
-    """Best (name, similarity) over the hit's FtM names group + caption.
-
-    ``cross_check`` scores against the display name only, but a percolator
-    match may have fired on an alias, a previousName or an abbreviation
-    (``percolator_match: ["other_name"]``) — the honest comparison is against
-    whichever of the hit's own names is closest to the target.
-
-    The group comes from ``names.FTM_NAME_PROPS``, the same constant the
-    adapter's ``_bears_name`` gate reads: a name good enough to admit a hit
-    must be a name good enough to score it against.
-    """
-    props = item.get("properties") or {}
-    candidates: list[str] = []
-    for prop in names.FTM_NAME_PROPS:
-        values = props.get(prop) or []
-        if isinstance(values, str):
-            values = [values]
-        candidates.extend(str(v) for v in values if v)
-    caption = item.get("caption")
-    if caption:
-        candidates.append(str(caption))
-    best_name, best_score = "", 0.0
-    for cand in candidates:
-        s = names.name_similarity(target_name, cand)
-        if s > best_score:
-            best_name, best_score = cand, s
-    return best_name, best_score
+    """Best (name, similarity) over the hit's FtM names group + caption —
+    ``names.best_ftm_name``, shared with ``cross_check`` since the
+    Rosneftegaz ticket (10 Nov 2026), when the OpenSanctions screen still
+    scored the caption alone."""
+    return names.best_ftm_name(target_name, item)
 
 
 def _as_hit(item: dict[str, Any], target: dict[str, Any]) -> Any:

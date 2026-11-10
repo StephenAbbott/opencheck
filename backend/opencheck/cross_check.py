@@ -742,18 +742,29 @@ def _signals_from_os(
     """
     if hit.is_stub:
         return []
-    # Single-token person names ("Fernández", "Ivanov") are too generic to
-    # base a related-party match on — a bare surname collides across unrelated
-    # people (ftmg drops single-token names from matching). Entities keep
-    # single-token names, which are distinctive ("Gazprom").
-    if target["kind"] == _KIND_PERSON and not (
-        is_matchable_name(_normalise(target["name"]))
-        and is_matchable_name(_normalise(hit.name))
-    ):
-        return []
-    score = _name_score(target["name"], hit.name)
-    if score < min_score:
-        return []
+    # The Rosneftegaz ticket (10 Nov 2026, Stephen: names + identifier
+    # match). The name is scored against every name the record files, not its
+    # caption alone; and a party that shares an identifier with the record —
+    # OpenSanctions' own owner node carrying the record's id, a register
+    # number the record lists — is that record whatever the name score, so
+    # the name gates below do not apply to it. The hard conflict filters
+    # (birth year, patronymic) still do.
+    matched_name, score = names.best_ftm_name(
+        target["name"], {**(hit.raw or {}), "caption": hit.name}
+    )
+    id_match = identifier_match(target, hit)
+    if not id_match:
+        # Single-token person names ("Fernández", "Ivanov") are too generic
+        # to base a related-party match on — a bare surname collides across
+        # unrelated people (ftmg drops single-token names from matching).
+        # Entities keep single-token names, which are distinctive ("Gazprom").
+        if target["kind"] == _KIND_PERSON and not (
+            is_matchable_name(_normalise(target["name"]))
+            and is_matchable_name(_normalise(matched_name))
+        ):
+            return []
+        if score < min_score:
+            return []
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return []
     if not _patronymic_compatible(target, hit):
@@ -767,9 +778,13 @@ def _signals_from_os(
     # agree. Persons with no legal form in either name bypass — their names
     # are all distinctive tokens and the corroboration ladder covers them.
     # The threshold does not move: this is a precision filter at 0.88.
-    if names.screens_as_organisation(
-        target["kind"] == _KIND_PERSON, target["name"], hit.name
-    ) and not names.distinctive_token_agreement(target["name"], hit.name):
+    if (
+        not id_match
+        and names.screens_as_organisation(
+            target["kind"] == _KIND_PERSON, target["name"], matched_name
+        )
+        and not names.distinctive_token_agreement(target["name"], matched_name)
+    ):
         return []
     topics = _extract_topics(hit.raw or {})
     sanctions = classify_sanction_topics(topics)
@@ -793,6 +808,7 @@ def _signals_from_os(
                 score=score,
                 summary_extra=extra,
                 topics=topics,
+                matched_name=matched_name,
             )
         )
 
@@ -906,6 +922,10 @@ def match_confidence(
     Either way the summary says "possible name match only", so the *prose*
     never asserts identity regardless of which rung it lands on.
     """
+    if "identifier" in corroboration:
+        # The party and the record share an identifier (the Rosneftegaz
+        # ticket): not a name match at all.
+        return "high"
     if target["kind"] == _KIND_PERSON and not corroboration:
         return "medium" if score >= 0.95 else "low"
     if target.get("officer_entity") and not corroboration:
@@ -970,7 +990,7 @@ def match_summary(
 
 #: The attribute names `corroborating_attributes` returns, as English. They are
 #: field names, and "confirmed on birth_year" read like a log line.
-_ATTRIBUTE_WORDS = {"birth_year": "birth year", "nationality": "nationality", "country": "country"}
+_ATTRIBUTE_WORDS = {"identifier": "an identifier", "birth_year": "birth year", "nationality": "nationality", "country": "country"}
 
 
 def _agreement_clause(corroboration: tuple[str, ...]) -> str:
@@ -992,6 +1012,7 @@ def _make_signal(
     score: float,
     summary_extra: str,
     topics: list[str] | None = None,
+    matched_name: str | None = None,
 ) -> RiskSignal:
     """One related-party signal.
 
@@ -1003,6 +1024,11 @@ def _make_signal(
     this is the same field, so a consumer reads one shape from both screens.
     """
     corroboration = corroborating_attributes(target, hit.raw or {})
+    if identifier_match(target, hit):
+        # The strongest agreement there is, said first ("identifier also
+        # agrees") and read by ``match_confidence`` as ``high``.
+        corroboration = ("identifier", *corroboration)
+    matched = matched_name or hit.name
     if target.get("subject"):
         # Phase 290: the looked-up company's own name (``_subject_targets``).
         # A subject-level code, anchored on ``statement_id`` the way the
@@ -1021,7 +1047,7 @@ def _make_signal(
             evidence={
                 "statement_id": target["statement_id"],
                 "subject": True,
-                "matched_name": hit.name,
+                "matched_name": matched,
                 "search_name": target["name"],
                 "score": round(score, 3),
                 "kind": target["kind"],
@@ -1044,7 +1070,7 @@ def _make_signal(
         hit_id=hit.hit_id,
         evidence={
             "subject_statement_id": target["statement_id"],
-            "matched_name": hit.name,
+            "matched_name": matched,
             "search_name": target["name"],
             "score": round(score, 3),
             "kind": target["kind"],
@@ -1066,7 +1092,7 @@ def _make_signal(
 _IDENTIFIER_PROPS = (
     "leiCode", "registrationNumber", "innCode", "ogrnCode", "taxNumber",
     "okpoCode", "vatCode", "swiftBic", "kppCode", "permId", "uniqueEntityId",
-    "dunsCode", "bikCode", "imoNumber", "idNumber", "npiCode",
+    "dunsCode", "bikCode", "imoNumber", "idNumber", "npiCode", "wikidataId",
 )
 #: Shorter values are too likely to collide across registers.
 _MIN_IDENTIFIER_LEN = 6
@@ -1118,10 +1144,18 @@ def _listing_evidence(target: dict[str, Any], hit: SourceHit) -> dict[str, Any]:
     datasets = (hit.raw or {}).get("datasets")
     if isinstance(datasets, list) and datasets:
         out["datasets"] = sorted({str(d) for d in datasets if d})
-    mine = set(target.get("identifier_keys") or ())
-    if mine and mine & _hit_identifier_keys(hit):
+    if identifier_match(target, hit):
         out["identifier_match"] = True
     return out
+
+
+def identifier_match(target: dict[str, Any], hit: SourceHit) -> bool:
+    """Whether the party's pooled identifiers (``_pool_identifiers``) share a
+    value with the record: its id, its referents, or an identifier property.
+    OpenSanctions' own node for an owner carries the record's id, so the
+    record always reaches the node that holds the stake."""
+    mine = set(target.get("identifier_keys") or ())
+    return bool(mine and mine & _hit_identifier_keys(hit))
 
 
 # ---------------------------------------------------------------------

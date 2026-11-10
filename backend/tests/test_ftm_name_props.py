@@ -151,7 +151,10 @@ def _string_tuples(path: pathlib.Path) -> list[tuple[str, ...]]:
 
 @pytest.mark.parametrize(
     "relpath",
-    ["opencheck/sources/openaleph.py", "opencheck/openaleph_check.py"],
+    [
+        "opencheck/sources/openaleph.py",
+        "opencheck/openaleph_check.py",
+    ],
 )
 def test_no_second_copy_of_the_names_group(relpath: str) -> None:
     """Neither call site may re-declare the group inline.
@@ -162,7 +165,11 @@ def test_no_second_copy_of_the_names_group(relpath: str) -> None:
     """
     path = _BACKEND / relpath
     source = path.read_text(encoding="utf-8")
-    assert "FTM_NAME_PROPS" in source, f"{relpath} should read the shared group"
+    # Directly, or through ``names.best_ftm_name`` — the scorer both related-
+    # party screens share since the Rosneftegaz ticket.
+    assert "FTM_NAME_PROPS" in source or "best_ftm_name" in source, (
+        f"{relpath} should read the shared group"
+    )
 
     group = set(names.FTM_NAME_PROPS)
     for literal in _string_tuples(path):
