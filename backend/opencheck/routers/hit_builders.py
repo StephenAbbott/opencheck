@@ -821,6 +821,43 @@ def _bh_cyprus_drcor(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_ica_israel(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Israel Corporations Authority, from the index
+    (the Israel wiring, 10 Nov 2026).
+
+    * **A company or partnership.** Asserts the 9-digit number the register
+      published (``il_roc``, the index key), with the register's status on
+      the summary where it is not plainly live.
+    * **Not in the index.** A note card (the JAR shape): the row sentence
+      says so, no identifier is asserted and nothing is degraded.
+
+    Dispatch is gated on the index file (``covers_lei``).
+    """
+    from ..findings import finding_ica_israel
+    from ..sources.ica_israel import status_label
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "ica_israel", local_id,
+            name=ctx.legal_name or "",
+            summary=f"IL {local_id} · not in the index",
+            finding=finding_ica_israel(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    summary = f"IL {local_id}"
+    cls = r.get("status_class") or "unknown"
+    if cls != "live":
+        summary += " · " + (status_label(r.get("status_words")) or cls).lower()
+    return _hit(
+        "ica_israel", local_id,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=summary,
+        finding=finding_ica_israel(r),
+        identifiers={"il_roc": local_id}, raw=r,
+    )
+
+
 def _bh_sunbiz_florida(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for the Florida Division of Corporations (the Florida
     wiring, 30 Oct 2026).

@@ -65,6 +65,8 @@ RA_BY_COUNTRY: dict[str, str] = {
     "LV": "RA000423",  # UR (Latvia)
     "LT": "RA000430",  # JAR (Lithuania)
     "CY": "RA000161",  # DRCOR Companies Section (Cyprus)
+    "IL": "RA000406",  # Registrar of Companies, Israel Corporations Authority —
+    # one authority files companies and partnerships alike (bare 9 digits).
     "FR": "RA000189",  # Sirene / INSEE (France) — RA000192 Infogreffe and
     # RA001129 the RNE (GLEIF RA list v1.9) file the same SIREN;
     # GleifAdapter.search_by_local_id widens a French scope to all three

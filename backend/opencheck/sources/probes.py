@@ -599,6 +599,29 @@ PROBES: dict[str, SourceProbe] = {
             "Ministry of Justice stopped publishing."
         ),
     ),
+    "ica_israel": _p(
+        tier="index",
+        subject="PAYPAL ISRAEL PAYMENT SERVICES LTD (IL 516478872)",
+        args=("516478872",),
+        kwargs={"legal_name": "PayPal Israel Payment Services Ltd."},
+        expect_fields=("name", "type_words", "status_words", "incorporated"),
+        # SKIP without an index, never allow_empty. warm_bulk_stores.py
+        # downloads the asset first.
+        requires_files=("ica_israel.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt daily by refresh-ica-israel-index.yml; data.gov.il
+        # regenerates both files every night. Ten days means the workflow
+        # stopped, not that the register did.
+        snapshot_max_age_days=10,
+        anchor_lei="25490039WF5R6PKDL402",
+        bods_mapper="map_ica_israel",
+        notes=(
+            "The Israel wiring (10 Nov 2026): an index of the Corporations "
+            "Authority's two data.gov.il registers, companies and "
+            "partnerships, harvested daily through the CKAN datastore. "
+            "Entity data only: no officers, shareholders or partners."
+        ),
+    ),
     "cyprus_drcor": _p(
         tier="index",
         subject="BERN INVESTMENTS LIMITED (CY HE 449149)",

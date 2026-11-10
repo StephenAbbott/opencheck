@@ -58,6 +58,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `ua_edrpou` (8-digit EDRPOU code) derived from GLEIF RA codes `RA000567` (ЄДР), `RA001026` (National Securities and Stock Market Commission) and `RA001027` (National Bank of Ukraine) — all three carry the EDRPOU in `registeredAs`.
 - **Note:** Open data from the ЄДР was suspended after the full-scale invasion in February 2022 and restored on 19 January 2026 under Law 4576-IX, which also withholds precise locations, addresses and KVED activity codes for the duration of martial law and one year afterwards. Those fields are withheld by the publisher, and OpenCheck does not reconstruct them from older copies of this register or from any other source.
 
+## Israel Corporations Authority (רשות התאגידים) — registers of companies and partnerships
+
+- **Data:** every company and partnership on the Registrar of Companies and the Registrar of Partnerships: number, Hebrew and English names, type, status and sub-status, incorporation date and registered address; for a company also the government-company flag, the limitation, the violating-company mark and the last annual report filed. No directors, shareholders or partners are published. The care-of field (`אצל`), the company's purpose and its description are not read.
+- **Portal:** <https://data.gov.il/dataset/ica_companies> and <https://data.gov.il/dataset/ica_partnerships> (updated daily). Public search UI: <https://ica.justice.gov.il/GenericCorporarionInfo/SearchCorporation?unit=8>
+- **Access:** the CKAN datastore API (`datastore_search`), paged 32,000 rows at a time — the CSV download answers 403 to datacentre addresses. Built into a SQLite index by `scripts/build_ica_israel_index.py`, daily on GitHub Actions (`refresh-ica-israel-index.yml`), shipped as the `ica-israel-index` release asset and downloaded by the backend at boot.
+- **License:** companies — data.gov.il "Other (Open)": free use, including commercial, citing data.gov.il, the dataset and its update date; partnerships — [CC BY](https://creativecommons.org/licenses/by/4.0/).
+- **Attribution:** "Contains information from the Israel Corporations Authority (רשות התאגידים) — the companies and partnerships databases (מאגר חברות, מאגר שותפויות), published on data.gov.il."
+- **Entry point:** `il_roc` (9-digit corporate number) derived from GLEIF RA code `RA000406`; companies and partnerships are both filed under it.
+
 ## DRCOR — Department of Registrar of Companies and Intellectual Property (Cyprus)
 
 - **Data:** organisations, registered office addresses, and officials (directors/secretaries) from the *Register of Registered Companies, Commercial Names and Cooperatives in Cyprus*. No shareholder/ownership data is published.
