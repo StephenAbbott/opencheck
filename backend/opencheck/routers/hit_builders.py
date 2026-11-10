@@ -400,6 +400,59 @@ def _bh_ny_dos(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_rues_colombia(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Colombia's RUES.
+
+    * **A record.** Asserts the NIT RUES's own rows carry (``co_nit``,
+      ``900396759-5``) — never the LEI, never the matrícula GLEIF filed.
+    * **A note card** — the number is not in RUES, the matrícula belongs to a
+      different company, or it matches several. No identifier, the
+      ``ny_dos`` shape.
+    """
+    from ..findings import finding_rues_colombia
+    from ..sources.rues_colombia import CO_RUE_SCHEME, summarise
+
+    if r.get("not_found"):
+        return _hit(
+            "rues_colombia", local_id,
+            name=ctx.legal_name or "",
+            summary=f"{CO_RUE_SCHEME} {local_id} · no record attached",
+            finding=finding_rues_colombia(r),
+            identifiers={},
+            raw={
+                "not_found": True,
+                "coverage_note": r.get("coverage_note"),
+                "name_mismatch": bool(r.get("name_mismatch")),
+                "ambiguous": bool(r.get("ambiguous")),
+                "registered_name": r.get("registered_name"),
+            },
+        )
+    s = summarise(r)
+    nit = s["nit"] or local_id
+    status = s.get("status") or ""
+    return _hit(
+        "rues_colombia", nit,
+        name=s.get("name") or ctx.legal_name or "",
+        summary=f"{CO_RUE_SCHEME} {s['nit_display']}" + (f" · {status}" if status else ""),
+        identifiers={"co_nit": s["nit_display"]},
+        raw={
+            "nit": s["nit_display"],
+            "name": s.get("name"),
+            "legal_form": s.get("legal_form"),
+            "status": status or None,
+            "chamber": s.get("chamber"),
+            "matricula": s.get("matricula"),
+            "registered_on": s.get("registered_on"),
+            "renewed_on": s.get("renewed_on"),
+            "cancelled_on": s.get("cancelled_on"),
+            "legal_representative": s.get("representative"),
+            "other_registrations": s.get("other_registrations") or [],
+            "matched_by": r.get("matched_by"),
+        },
+        finding=finding_rues_colombia(r),
+    )
+
+
 def _bh_anaf_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Romania's ANAF taxpayer register.
 

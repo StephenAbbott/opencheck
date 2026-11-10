@@ -1,0 +1,29 @@
+[
+ {
+  "codigo_camara": "21",
+  "camara_comercio": "MEDELLIN PARA ANTIOQUIA",
+  "matricula": "8396404",
+  "razon_social": "BANCOLOMBIA S.A, ADEMÁS  PODRÁ GIRAR BAJO LA DENOMINACIÓN BANCO DE COLOMBIA S.A.",
+  "codigo_clase_identificacion": "02",
+  "clase_identificacion": "NIT",
+  "nit": "890903938",
+  "digito_verificacion": "8",
+  "cod_ciiu_act_econ_pri": "6412",
+  "cod_ciiu_act_econ_sec": "6422",
+  "fecha_matricula": "19841122",
+  "fecha_renovacion": "20260324",
+  "ultimo_ano_renovado": "2026",
+  "fecha_vigencia": "21441208",
+  "codigo_tipo_sociedad": "02",
+  "tipo_sociedad": "SOCIEDAD COMERCIAL",
+  "codigo_organizacion_juridica": "04",
+  "organizacion_juridica": "SOCIEDAD ANONIMA",
+  "codigo_categoria_matricula": "01",
+  "categoria_matricula": "SOCIEDAD ó PERSONA JURIDICA PRINCIPAL ó ESAL",
+  "codigo_estado_matricula": "01",
+  "estado_matricula": "ACTIVA",
+  "clase_identificacion_rl": "CEDULA DE CIUDADANIA",
+  "representante_legal": "JUAN CARLOS MORA URIBE",
+  "fecha_actualizacion": "2026/11/03 15:09:26.350000000"
+ }
+]

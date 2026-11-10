@@ -2428,6 +2428,57 @@ def finding_apr_serbia(bundle: dict[str, Any]) -> str | None:
     return sentence
 
 
+def finding_rues_colombia(bundle: dict[str, Any]) -> str | None:
+    """What Colombia's RUES records: status, chamber, registration, representative.
+
+    * **A note card** — a number RUES does not hold, a matrícula that belongs
+      to another company, or one several chambers use — is its own sentence.
+    * A cancelled registration leads, dated: it changes a decision. A
+      company that only moved its domicile is not cancelled — the current
+      row is the new chamber's.
+    * The legal representative is named (name only — RUES's identity number
+      is never read). RUES publishes no shareholders and no beneficial
+      owners; the sentence never says "none on file" for them.
+    """
+    from .sources.rues_colombia import STATUS_ACTIVE, TERMINAL_STATUSES, summarise
+
+    if not bundle:
+        return None
+    if bundle.get("name_mismatch"):
+        return (
+            "The matrícula on the LEI record belongs to a different company in "
+            "RUES, so no record is attached."
+        )
+    if bundle.get("ambiguous"):
+        return (
+            "The matrícula on the LEI record matches more than one company in "
+            "RUES, so no record is attached."
+        )
+    if bundle.get("not_in_register"):
+        return "No company with this number in RUES, Colombia's chambers of commerce register."
+    if bundle.get("is_stub") or not bundle.get("rows"):
+        return None
+
+    s = summarise(bundle)
+    status = s.get("status") or ""
+    chamber = (s.get("chamber") or "").title()
+    at = f" at the {chamber} chamber of commerce" if chamber else ""
+    if status in TERMINAL_STATUSES:
+        when = human_date(s.get("cancelled_on"))
+        lead = "Registration cancelled in RUES" + (f" on {when}" if when else "")
+    else:
+        since = human_date(s.get("first_registered_on"))
+        lead = f"Registered{at}" + (f" since {since}" if since else "")
+        if status and status != STATUS_ACTIVE:
+            lead += f", status {status.lower()}"
+    clauses: list[str | None] = [lead]
+    if s.get("representative"):
+        clauses.append(f"legal representative on file: {s['representative']}")
+    form = (s.get("legal_form") or "").lower()
+    clauses.append(form or None)
+    return clauses_to_sentence(clauses)
+
+
 def finding_ny_dos(bundle: dict[str, Any]) -> str | None:
     """What the New York Department of State records: status, formation, CEO.
 
