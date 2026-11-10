@@ -1,0 +1,76 @@
+name: Refresh Israel Corporations Authority index
+
+# Rebuilds the index of the Israel Corporations Authority's registers of
+# companies and partnerships from data.gov.il (ica_companies, "Other (Open)";
+# ica_partnerships, CC BY) and replaces the `ica-israel-index` release asset
+# the backend downloads at boot (ICA_ISRAEL_DB_URL). The Israel wiring,
+# 10 Nov 2026.
+#
+# data.gov.il regenerates both files every night at about 02:10 UTC. The CSV
+# download answers 403 to datacentre addresses, but the CKAN datastore API
+# answers everywhere, so the builder pages `datastore_search` 32,000 rows at a
+# time (~760,000 rows, three to four minutes), checks the field set and that
+# the rows read equal the API's total, and refuses anything that is not the
+# register. The result is ~180 MB (~45 MB gzipped).
+#
+# No Render redeploy: the backend compares the asset's Last-Modified at boot
+# (the Estonia arrangement), and a daily redeploy would be churn.
+#
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "41 4 * * *" # 04:41 UTC daily — both files are up by ~02:15
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-ica-israel-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Harvest both registers and build the index
+        working-directory: backend
+        run: |
+          uv sync
+          uv run python scripts/build_ica_israel_index.py --download \
+            --out "$RUNNER_TEMP/ica_israel.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "ica_israel.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          c = conn.execute("SELECT COUNT(*) FROM entity WHERE kind = 'company'").fetchone()[0]
+          p = conn.execute("SELECT COUNT(*) FROM entity WHERE kind = 'partnership'").fetchone()[0]
+          print(f"{c} companies, {p} partnerships, cut {meta.get('cut')}, schema {meta.get('schema_version')}")
+          if c < 600_000 or p < 20_000:
+              sys.exit(f"Refusing to publish: {c} companies / {p} partnerships — likely a source/format change.")
+          PY
+
+      - name: Replace the `ica-israel-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view ica-israel-index >/dev/null 2>&1 || gh release create ica-israel-index \
+            --title "Israel Corporations Authority index" \
+            --notes "Built daily by refresh-ica-israel-index.yml from data.gov.il's companies (Other (Open)) and partnerships (CC BY) databases of the Israel Corporations Authority. Downloaded by the backend at boot (ICA_ISRAEL_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh ica-israel-index \
+            "$RUNNER_TEMP/ica_israel.sqlite.gz" ica_israel.sqlite.gz \
+            "Rebuilt automatically by refresh-ica-israel-index on $(date -u +%Y-%m-%d)."

@@ -98,6 +98,25 @@ ALIASES: dict[str, str] = {
     "españa": "ES",
     "italia": "IT",
     "polska": "PL",
+    # Hebrew names: every country word in the Israel Corporations Authority's
+    # open data on 10 Nov 2026 (the registered-address country column).
+    "ישראל": "IL",
+    "איי קיימן": "KY",
+    "ארצות הברית": "US",
+    "הממלכה המאוחדת-אנגליה": "GB",
+    "גרמניה": "DE",
+    "קנדה": "CA",
+    "ליבריה": "LR",
+    "אוסטריה": "AT",
+    "הולנד": "NL",
+    "גיברלטר": "GI",
+    "איטליה": "IT",
+    "שוויץ": "CH",
+    "ספרד": "ES",
+    "ברמודה": "BM",
+    "פנמה": "PA",
+    "איי הבתולה הבריטיים": "VG",
+    "בורונדי": "BI",
 }
 
 #: Strings that name a place but not one ISO 3166-1 country. Listed so a test

@@ -1321,6 +1321,62 @@
       "notion_page_id": "3df7f3dc-2928-8115-b15d-d82398dfb2f7"
     },
     {
+      "name": "Israel",
+      "code": "IL",
+      "groups": [
+        "OpenCheck source",
+        "Other"
+      ],
+      "bo_register": {
+        "name": null,
+        "url": null,
+        "access": "authorities_and_obliged_entities_only",
+        "access_since": null,
+        "next_change_expected": null,
+        "threshold_wording": null,
+        "fields_published": [],
+        "reporting_basis": null,
+        "covers": [],
+        "verification": null,
+        "verification_note": null,
+        "amld6_lia": "Not applicable",
+        "amld6_details": null,
+        "boris": "Not applicable",
+        "amlr_alignment_watch": false,
+        "pending_changes": null,
+        "discrepancy_route": null,
+        "discrepancy_note": null,
+        "access_url": "https://data.gov.il/dataset/ica_companies"
+      },
+      "company_register": {
+        "name": "Registrar of Companies and Registrar of Partnerships (Israel Corporations Authority)",
+        "url": "https://www.gov.il/en/departments/israeli_corporations_authority",
+        "publishes": [],
+        "public": "Yes",
+        "discrepancy_route": null
+      },
+      "fatf": {
+        "body": null,
+        "onsite": null,
+        "plenary": null
+      },
+      "opencheck_source_note": "ica_israel",
+      "notes": "Drafted by Claude on 10 Nov 2026 for the Israel adapter, unverified. No public central beneficial ownership register was found; the Corporations Authority publishes companies and partnerships (name, number, type, status, address) as open data on data.gov.il, not shareholders or beneficial owners. Please verify access status before setting Last verified.",
+      "last_verified": null,
+      "sources": [
+        {
+          "url": "https://data.gov.il/dataset/ica_companies"
+        },
+        {
+          "url": "https://data.gov.il/dataset/ica_partnerships"
+        },
+        {
+          "url": "https://www.gov.il/en/departments/israeli_corporations_authority"
+        }
+      ],
+      "notion_page_id": "4147f3dc-2928-819a-9c76-dd7d1ebfa4aa"
+    },
+    {
       "name": "Isle of Man",
       "code": "IM",
       "groups": [

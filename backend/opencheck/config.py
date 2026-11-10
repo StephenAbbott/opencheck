@@ -672,6 +672,25 @@ class Settings(BaseSettings):
         alias="CYPRUS_DRCOR_DB_URL",
     )
 
+    # --- Israel Corporations Authority (data.gov.il open data) ---
+    # No API key. The registers of companies and partnerships are harvested
+    # daily from data.gov.il's CKAN datastore by
+    # scripts/build_ica_israel_index.py on GitHub Actions
+    # (.github/workflows/refresh-ica-israel-index.yml; the CSV download is
+    # refused to datacentres, the datastore API is not) and shipped as the
+    # ``ica-israel-index`` release asset. Unset: the data-root default
+    # (``ica_israel.sqlite``).
+    ica_israel_db_file: str | None = Field(default=None, alias="ICA_ISRAEL_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    ica_israel_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "ica-israel-index/ica_israel.sqlite.gz"
+        ),
+        alias="ICA_ISRAEL_DB_URL",
+    )
+
     # --- Florida Division of Corporations (Sunbiz; Florida public records) ---
     # No API key: the Division's quarterly bulk files (SFTP, published public
     # credentials), built into a SQLite index by
