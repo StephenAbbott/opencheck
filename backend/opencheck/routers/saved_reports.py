@@ -28,7 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .. import saved_reports as sr
 from ..config import get_settings
-from ..memwatch import is_bot
+from .. import bot_gate
 from ..ratelimit import default_tier, heavy_tier, limiter
 from ..sqlite_schema import SchemaTooNewError
 
@@ -86,7 +86,7 @@ def _refuse(exc: sr.SavedReportError) -> HTTPException:
 
 
 def _refuse_bots(request: Request) -> None:
-    if get_settings().bot_gate_lookup_stream and is_bot(request.headers.get("user-agent")):
+    if bot_gate.refuses(request):
         raise HTTPException(
             status_code=403,
             detail=(

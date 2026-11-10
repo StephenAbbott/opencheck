@@ -100,3 +100,94 @@ def test_lookup_json_api_is_never_gated(client: TestClient) -> None:
     )
     assert r.status_code == 404
     assert "No GLEIF record" in r.json()["detail"]
+
+
+# --- The QA door (bot_gate.py): OpenCheck's own test agents ---------------
+
+_HEADLESS_UA = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) HeadlessChrome/131.0.0.0 Safari/537.36"
+)
+_TOKEN = "qa-" + "x" * 40
+
+
+def _with_token(monkeypatch, token: str) -> None:
+    monkeypatch.setenv("OPENCHECK_QA_BYPASS_TOKEN", token)
+    get_settings.cache_clear()
+
+
+def test_headless_chrome_is_refused_without_the_token(client, monkeypatch) -> None:
+    _with_token(monkeypatch, _TOKEN)
+    r = client.get(
+        "/lookup-stream", params={"lei": _LEI}, headers={"User-Agent": _HEADLESS_UA}
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.parametrize(
+    ("path", "params"),
+    [
+        ("/lookup-stream", {"lei": _LEI}),
+        ("/lookup-register-stream", {"scheme": "GB-COH", "id": "00000000"}),
+    ],
+    ids=["lookup-stream", "lookup-register-stream"],
+)
+def test_the_qa_token_passes_the_gate(client, monkeypatch, path, params) -> None:
+    _with_token(monkeypatch, _TOKEN)
+    r = client.get(
+        path,
+        params=params,
+        headers={"User-Agent": _HEADLESS_UA, "X-OpenCheck-QA": _TOKEN},
+    )
+    assert r.status_code != 403
+
+
+def test_a_wrong_token_is_refused(client, monkeypatch) -> None:
+    _with_token(monkeypatch, _TOKEN)
+    r = client.get(
+        "/lookup-stream",
+        params={"lei": _LEI},
+        headers={"User-Agent": _HEADLESS_UA, "X-OpenCheck-QA": _TOKEN + "y"},
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.parametrize("token", ["", "short-token"], ids=["unset", "too-short"])
+def test_no_door_without_a_long_token(client, monkeypatch, token) -> None:
+    """Unset or guessable: the header opens nothing, not even when it matches."""
+    _with_token(monkeypatch, token)
+    r = client.get(
+        "/lookup-stream",
+        params={"lei": _LEI},
+        headers={"User-Agent": _HEADLESS_UA, "X-OpenCheck-QA": token},
+    )
+    assert r.status_code == 403
+
+
+def test_qa_query_parameter_alone_opens_nothing(client, monkeypatch) -> None:
+    """``?qa=1`` is the analytics opt-out, typed by anyone; it is not a pass."""
+    _with_token(monkeypatch, _TOKEN)
+    r = client.get(
+        "/lookup-stream",
+        params={"lei": _LEI, "qa": "1"},
+        headers={"User-Agent": _HEADLESS_UA},
+    )
+    assert r.status_code == 403
+
+
+def test_the_batch_and_saved_report_gates_honour_the_token(client, monkeypatch) -> None:
+    from opencheck import bot_gate
+
+    _with_token(monkeypatch, _TOKEN)
+
+    class _Req:
+        def __init__(self, headers):
+            self.headers = headers
+
+    assert bot_gate.refuses(_Req({"user-agent": _HEADLESS_UA}))
+    assert not bot_gate.refuses(
+        _Req({"user-agent": _HEADLESS_UA, "X-OpenCheck-QA": _TOKEN})
+    )
+    for module in ("batch", "saved_reports"):
+        source = Path(__file__).parents[1] / "opencheck" / "routers" / f"{module}.py"
+        assert "bot_gate.refuses(request)" in source.read_text()
