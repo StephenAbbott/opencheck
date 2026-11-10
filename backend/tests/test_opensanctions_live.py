@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 
+import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
@@ -30,12 +31,14 @@ from opencheck.sources.opensanctions import (
 _API = "https://api.opensanctions.org"
 
 # OpenSanctions' ``target_topics`` as published in
-# https://data.opensanctions.org/meta/model.json on 2026-08-05. The adapter's
+# https://data.opensanctions.org/meta/model.json on 2026-11-06 (30 topics;
+# ``corp.clone`` and ``geo.risk`` joined the 2026-08-05 list unannounced). The adapter's
 # ``_RISK_TOPICS`` is meant to mirror this exactly; the drift canary below
 # fails if someone narrows the list by hand again. When OpenSanctions adds a
 # target topic, update this constant in the same commit as ``_RISK_TOPICS``.
 _PUBLISHED_TARGET_TOPICS = frozenset(
     {
+        "corp.clone",
         "corp.disqual",
         "crime",
         "crime.boss",
@@ -49,6 +52,7 @@ _PUBLISHED_TARGET_TOPICS = frozenset(
         "export.control",
         "export.control.linked",
         "export.risk",
+        "geo.risk",
         "invest.ban",
         "invest.risk",
         "mare.detained",
@@ -74,10 +78,37 @@ def test_risk_topics_mirror_opensanctions_target_topics() -> None:
     A hand-picked subset is how ``us_bis_mieu`` (``export.control`` only) came
     to be filtered out of screening results entirely — see the comment on
     ``_RISK_TOPICS``. This is an offline canary against the last-verified
-    published list; ``tests/live`` covers drift against the live model.
+    published list; ``test_risk_topics_match_the_live_published_target_topics``
+    covers drift against the live model (weekly, in the live-smoke workflow).
     """
     assert set(_RISK_TOPICS) == _PUBLISHED_TARGET_TOPICS
     assert len(_RISK_TOPICS) == len(set(_RISK_TOPICS)), "duplicate topic"
+
+
+_MODEL_URL = "https://data.opensanctions.org/meta/model.json"
+
+
+@pytest.mark.live
+def test_risk_topics_match_the_live_published_target_topics() -> None:
+    """Drift against the LIVE model, not the frozen copy above.
+
+    ``corp.clone`` and ``geo.risk`` reached ``target_topics`` unannounced
+    (found by chance on 6 Nov 2026), while the offline canary stayed green
+    because it compares two hand-kept lists. This reads the published model
+    — schema metadata, key-free, no listed entity in it — and runs in the
+    weekly live-smoke workflow. A red run means: add the topic to
+    ``_RISK_TOPICS`` and ``_PUBLISHED_TARGET_TOPICS``, then classify it or
+    allowlist it in ``risk._INFORMATIONAL_TOPICS``.
+    """
+    resp = httpx.get(_MODEL_URL, follow_redirects=True, timeout=30.0)
+    resp.raise_for_status()
+    live = set(resp.json()["target_topics"])
+    assert live, "model.json carried no target_topics"
+    added = sorted(live - set(_RISK_TOPICS))
+    removed = sorted(set(_RISK_TOPICS) - live)
+    assert not added and not removed, (
+        f"OpenSanctions target_topics moved: added {added}, removed {removed}"
+    )
 
 
 def test_sanction_family_is_fully_classified() -> None:

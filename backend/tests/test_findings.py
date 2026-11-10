@@ -614,6 +614,35 @@ def test_opensanctions_finding_names_topics_in_english_and_quotes_them() -> None
     assert "role.pep" not in finding_opensanctions(item)
 
 
+def test_opensanctions_finding_says_a_clone_record_is_not_the_firm_it_copies() -> None:
+    """``corp.clone`` (the FCA Warning List's clone firms) is the impersonator.
+
+    Its name is the real firm's, so a name screen of the real firm finds it;
+    the row must say the record is the copy before anything else, or the
+    "regulatory warning" beside it reads as a warning about the firm.
+    """
+    item = {
+        "id": "gb-fca-ntc-1",
+        "schema": "LegalEntity",
+        "datasets": ["gb_fca_notices"],
+        "topics": ["reg.warn", "corp.clone"],
+    }
+    finding = finding_opensanctions(item)
+    assert finding is not None
+    assert finding.startswith(
+        "A firm reported as copying a real firm's name; the record is the copy, "
+        "not that firm"
+    )
+    assert "corp.clone" not in finding
+    assert len(finding) <= 140
+    # Without the topic the sentence is unchanged.
+    plain = {**item, "topics": ["reg.warn"]}
+    assert finding_opensanctions(plain) == (
+        'Appears on 1 published listing, recorded under the topic '
+        '"regulatory warning".'
+    )
+
+
 def test_opensanctions_finding_is_none_when_the_record_says_nothing_countable() -> None:
     assert finding_opensanctions({"id": "NK-empty"}) is None
 

@@ -61,6 +61,10 @@ TOPIC_LABEL: dict[str, str] = {
     # well as to people, and naming the role would invent one.
     "debarment": "debarred from public contracts",
     "corp.disqual": "disqualified",
+    # The impersonator, never the firm it copies: upstream applies the topic
+    # to the clone only, and the label must not read as a fact about the
+    # company being looked up.
+    "corp.clone": "clone of a real firm",
     # Political exposure.
     "role.pep": "politically exposed person",
     "role.rca": "relative or close associate",
@@ -83,6 +87,8 @@ TOPIC_LABEL: dict[str, str] = {
     "reg.action": "regulatory action",
     "reg.warn": "regulatory warning",
     "poi": "person of interest",
+    # A designated place (FtM ``Territory``), not a party.
+    "geo.risk": "high-risk area",
     # Beyond OpenSanctions' target topics: FtM tags OpenAleph collections
     # carry, read by the same eyes on the archive-matches list.
     "asset.frozen": "frozen asset",

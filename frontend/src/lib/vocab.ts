@@ -421,6 +421,7 @@ export const OPENALEPH_TOPIC: Record<string, string> = {
   // Procurement exclusion and corporate disqualification.
   debarment: "debarred from public contracts",
   "corp.disqual": "disqualified",
+  "corp.clone": "clone of a real firm",
   // Political exposure.
   "role.pep": "politically exposed person",
   "role.rca": "relative or close associate",
@@ -442,6 +443,7 @@ export const OPENALEPH_TOPIC: Record<string, string> = {
   "reg.action": "regulatory action",
   "reg.warn": "regulatory warning",
   poi: "person of interest",
+  "geo.risk": "high-risk area",
   // Beyond OpenSanctions' target topics: tags OpenAleph collections carry.
   "asset.frozen": "frozen asset",
   "role.diplo": "diplomatic service",
