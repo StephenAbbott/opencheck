@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 478** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, moving Ireland to legitimate-interest access from 10 Nov 2026.
+**Latest: Phase 479** — OpenCheck's British Virgin Islands notes now name the Registry of Corporate Affairs' public search and the online beneficial ownership request route.
 
 → [Full development history](docs/status.md)
 
