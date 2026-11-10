@@ -1,0 +1,6 @@
+---
+title: Opening OpenCheck with ?qa=1 stops GoatCounter counting that browser, so the scheduled testing agents' page views do not read as readers.
+readme: OpenCheck's scheduled testing agents can browse the site without their visits being counted.
+tests: vitest +4
+---
+From the "Build troubleshooting / testing scheduled tasks (Fable 5.2)" ticket (Stephen's decision of 10 Nov 2026: add a small opt-out). The post-deploy tester and the weekly explorer will open production pages on opencheck.world, where analytics is live, and their visits would otherwise be counted as readers'. `lib/analytics.ts` gains `qaOptOut(search, stored)`, the pure rule: `?qa=1` marks the browser as a test run and stores the mark in localStorage (`opencheck:qa`), so it survives the in-app navigation that drops the query string; `?qa=0` clears it; any other value changes nothing. While the mark is set, neither page views nor `trackEvent` events are sent, and count.js is not loaded. Where storage is blocked, the query string alone decides for that page load. The parameter is never recorded: `canonicalPath` already drops every query string. After deploy: open https://opencheck.world/?qa=1 and confirm that no request reaches opencheck.goatcounter.com, then open https://opencheck.world/?qa=0 and confirm that the count request returns.
