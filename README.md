@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 487** — OpenCheck now reads Colombia's chambers-of-commerce register (RUES) live by NIT, with the legal representative by name and role and a share-alike licence flag.
+**Latest: Phase 488** — South Korean companies are now checked against Open DART, the Financial Supervisory Service's disclosure filings — largest shareholders, executives and 5% holding reports, never called beneficial owners.
 
 → [Full development history](docs/status.md)
 
