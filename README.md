@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 476** — A Canadian LEI filed with a Business Number now reaches the federal corporation the Business Number names, and the GLEIF card no longer shows that Business Number as a corporation number.
+**Latest: Phase 478** — OpenCheck's per-jurisdiction notes were re-synced from the Beneficial ownership access status table, moving Ireland to legitimate-interest access from 10 Nov 2026.
 
 → [Full development history](docs/status.md)
 

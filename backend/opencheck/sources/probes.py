@@ -286,7 +286,11 @@ PROBES: dict[str, SourceProbe] = {
     "corporations_canada": _p(
         tier="index",
         subject="Canadian National Railway Company",
-        args=("0105333",),
+        # The register's spelling, which is what the GLEIF anchor derives:
+        # normalise_corp_id drops leading zeros since the Canada index ticket
+        # (9 Nov 2026), and the dispatch-drift check compares the two
+        # strings — "0105333" here failed the 9 Nov sweep as drift.
+        args=("105333",),
         anchor_lei="3SU7BEP7TH9YEQOZCS77",
         expect_fields=("corp_id", "corporation"),
         # Two tiers, one source (the Canada index ticket, 9 Nov 2026): the
@@ -397,7 +401,12 @@ PROBES: dict[str, SourceProbe] = {
             "through a different intermediate, not that the register moved. "
             "APR cuts on the last day of the month and publishes a couple of "
             "weeks later, so a cut is routinely 45 days old; 70 means a missed "
-            "month."
+            "month. Since 10 Nov 2026 scripts/warm_bulk_stores.py builds the "
+            "index before the sweep (the asp_moldova arrangement): the 9 Nov "
+            "amber — stub, 45.2 s, 'still being downloaded and indexed' — was "
+            "the 45 s race lost on a GitHub runner while APR served its cut "
+            "normally, so an amber of that shape now means the warm step "
+            "failed and its log names apr_serbia."
         ),
     ),
     "asp_moldova": _p(

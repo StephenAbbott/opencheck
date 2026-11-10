@@ -32,6 +32,13 @@ file is written, and the warning below names it. Its file lives where
 ``ASP_MOLDOVA_DB_FILE`` is set), not under ``data_root()``: both steps run on
 one runner, so the sweep's process resolves the same path.
 
+``apr_serbia`` joined on the same terms on 10 Nov 2026. It builds itself from
+APR's open-data API (one ~58 MB JSON, about 36 s from a cloud container), and
+on the 9 Nov 2026 sweep it lost the same 45 s race — degraded at 45.2 s with
+"the register is still being downloaded and indexed" and a stub liveness,
+while APR itself served its 31 Oct cut normally. Its file lives where
+``apr_serbia.index_path()`` says, and it too needs ``OPENCHECK_ALLOW_LIVE``.
+
 Deliberately the production path, not a ``curl``
 ------------------------------------------------
 
@@ -59,6 +66,8 @@ if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
 from opencheck.cache import data_root  # noqa: E402
+from opencheck.sources.apr_serbia import index_path as apr_serbia_index_path  # noqa: E402
+from opencheck.sources.apr_serbia import warm_index as warm_apr_serbia_index  # noqa: E402
 from opencheck.sources.ariregister import db_path as ariregister_db_path  # noqa: E402
 from opencheck.sources.ariregister import warm_index as warm_ariregister_index  # noqa: E402
 from opencheck.sources.asp_moldova import index_path as asp_moldova_index_path  # noqa: E402
@@ -94,6 +103,7 @@ WARMERS = (
     ("sunbiz_florida", warm_sunbiz_index, sunbiz_db_path),
     ("ariregister", warm_ariregister_index, ariregister_db_path),
     ("asp_moldova", warm_asp_moldova_index, asp_moldova_index_path),
+    ("apr_serbia", warm_apr_serbia_index, apr_serbia_index_path),
 )
 
 
