@@ -4,7 +4,7 @@ title: "APR \u2014 Business Registers Agency company register (Serbia)"
 description: "Serbia's register of companies (\u0420\u0435\u0433\u0438\u0441\u0442\u0430\u0440 \u043f\u0440\u0438\u0432\u0440\u0435\u0434\u043d\u0438\u0445 \u0434\u0440\u0443\u0448\u0442\u0430\u0432\u0430), published monthly by the Agencija za privredne registre (Business Registers Agency) through its open-data API. Business name, registration number (mati\u010dni broj), legal form, status \u2014 active, in liquidation, in bankruptcy or in forced liquidation \u2014 founding date, municipality and activity code. No addresses and no people: no directors, shareholders or beneficial owners. Deleted companies and entrepreneurs are not published."
 resource: "https://www.apr.gov.rs/"
 tags: ["cdd", "national-register", "SODL-1.0", "commercial-yes"]
-timestamp: "2026-09-17"
+timestamp: "2026-11-10"
 source_id: "apr_serbia"
 license: "SODL-1.0"
 commercial_use: "yes"

@@ -496,7 +496,19 @@ def finding_opensanctions(item: dict[str, Any]) -> str | None:
         else None
     )
 
-    return clauses_to_sentence([lead, topic_clause])
+    # ``corp.clone`` marks a firm impersonating a real one, and the record
+    # carries the real firm's name — which is why a name screen of the real
+    # firm finds it. Said first, so the 140-character cap drops the topic
+    # list before it drops this: a reader of the real firm's lookup must not
+    # take the record (and its "regulatory warning") for the firm itself.
+    clone = (
+        "a firm reported as copying a real firm's name; the record is the "
+        "copy, not that firm"
+        if "corp.clone" in topics
+        else None
+    )
+
+    return clauses_to_sentence([clone, lead, topic_clause])
 
 
 # ---------------------------------------------------------------------------
@@ -1953,6 +1965,64 @@ def finding_cyprus_drcor(bundle: dict[str, Any]) -> str | None:
         n = len(officials)
         counts.append(f"{n} official{'' if n == 1 else 's'} on file")
     return clauses_to_sentence([lead, form, *counts])
+def finding_ica_israel(bundle: dict[str, Any]) -> str | None:
+    """What the Israel Corporations Authority says: the register status (with
+    a strike-off or insolvency sub-status), the type, the violating-company
+    mark, and for a company the last annual report filed (the Israel wiring,
+    10 Nov 2026).
+
+    * **Not in the index** says so rather than that the company does not
+      exist: GLEIF may file an association's or a cooperative's number, which
+      are on other registers.
+    * The violating mark is the register's own administrative mark, worded
+      as the register words it; it is said, never a signal (Stephen, 10 Nov
+      2026).
+    * The last annual report is said for a **private** company only: a
+      public company reports to the Securities Authority, and its register
+      year is often decades old (Bezeq: 2002). Its absence is not said:
+      118,000 live private companies have none recorded, new companies among
+      them, and the register does not say which are overdue.
+    * Deliberately **not** said: officers, shareholders or partners. The open
+      data carries none for any entity.
+    """
+    from .sources.ica_israel import (
+        PRIVATE_COMPANY_WORDS,
+        form_label,
+        status_class,
+        status_label,
+        sub_status_label,
+        violating_label,
+    )
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        return (
+            "Not in the Corporations Authority's open data as indexed; GLEIF "
+            "may file a number on another register."
+        )
+    kind = bundle.get("kind") or "company"
+    cls = bundle.get("status_class") or status_class(
+        kind, bundle.get("status_code"), bundle.get("sub_status")
+    )
+    incorporated = str(bundle.get("incorporated") or "").strip()
+    gloss = status_label(bundle.get("status_words")) or ""
+    if cls == "live" or not gloss:
+        lead = f"Registered since {incorporated}" if incorporated else "On the register"
+    else:
+        lead = f"{gloss[0].upper()}{gloss[1:]}"
+    sub = sub_status_label(bundle.get("sub_status"))
+    sub_clause = sub if sub and cls == "pending" else None
+    form = form_label(bundle.get("type_words"))
+    violating = violating_label(bundle.get("violating"))
+    violating_clause = f"marked a {violating} by the register" if violating else None
+    report_clause = None
+    year = bundle.get("last_report_year")
+    if year and bundle.get("type_words") == PRIVATE_COMPANY_WORDS:
+        report_clause = f"last annual report filed for {year}"
+    return clauses_to_sentence([lead, sub_clause, form, violating_clause, report_clause])
+
+
 def finding_corporations_canada(bundle: dict[str, Any]) -> str | None:
     """What Corporations Canada says: the status in the register's own words
     (dated where the API dates a dissolution), the governing Act, how many

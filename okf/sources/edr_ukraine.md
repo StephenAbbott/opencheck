@@ -4,7 +4,7 @@ title: "\u0404\u0414\u0420 \u2014 Unified State Register of Legal Entities (Ukra
 description: "Ukrainian company register published as open data by the Ministry of Justice on data.gov.ua, read from a local index of the weekly export. Carries founders with their hryvnia holdings, heads and signatories, governing-body members, and beneficial owners \u2014 or the register's stated reason for their absence. Addresses and activity codes are withheld at source under martial law."
 resource: "https://usr.minjust.gov.ua/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-10-29"
+timestamp: "2026-11-10"
 source_id: "edr_ukraine"
 license: "CC-BY-4.0"
 commercial_use: "yes"

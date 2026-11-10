@@ -4,7 +4,7 @@ title: "EITI Company Assessment"
 description: "EITI's assessment of its supporting companies against nine expectations, including whether the company discloses its beneficial owners and publishes a list of controlled subsidiaries \u2014 plus the declared subsidiary list itself. Records a company's disclosure posture, not its ownership. Snapshot of the EITI global database, resolved to LEIs offline and reviewed by hand."
 resource: "https://eiti-database.eiti.org/"
 tags: ["esg", "aggregator", "EITI content-use policy (free reuse with attribution)", "commercial-conditional"]
-timestamp: "2026-09-06"
+timestamp: "2026-11-10"
 source_id: "eiti_assessment"
 license: "EITI content-use policy (free reuse with attribution)"
 commercial_use: "conditional"

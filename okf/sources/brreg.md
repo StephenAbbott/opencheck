@@ -4,7 +4,7 @@ title: "Br\u00f8nn\u00f8ysundregistrene \u2014 Norwegian Register Centre"
 description: "Norwegian company data from the Enhetsregisteret (Central Coordinating Register for Legal Entities), including entity details and role-holders, and facts about the latest annual accounts filed with the Regnskapsregisteret."
 resource: "https://www.brreg.no/en/"
 tags: ["cdd", "national-register", "NLOD-2.0", "commercial-yes"]
-timestamp: "2026-10-26"
+timestamp: "2026-11-10"
 source_id: "brreg"
 license: "NLOD-2.0"
 commercial_use: "yes"

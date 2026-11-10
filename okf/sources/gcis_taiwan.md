@@ -4,7 +4,7 @@ title: "Taiwan company register (MOEA GCIS)"
 description: "Taiwan company data from the Ministry of Economic Affairs' GCIS open data platform: the company's name, status, capital and registered address, and its directors and supervisors with the holdings the Company Act requires them to disclose \u2014 including the companies that hold board seats through representatives."
 resource: "https://data.gcis.nat.gov.tw/"
 tags: ["cdd", "national-register", "OGDL-Taiwan-1.0", "commercial-yes"]
-timestamp: "2026-10-30"
+timestamp: "2026-11-10"
 source_id: "gcis_taiwan"
 license: "OGDL-Taiwan-1.0"
 commercial_use: "yes"

@@ -120,10 +120,14 @@ def record(
     # sentence once per iteration, and a degraded_sources list with four
     # identical rows reads as four problems. The detail text is deliberately
     # count-free, so a repeat carries no information the first does not.
+    # The reason is left out of the match: a read retried later in the same
+    # run (Corporations Canada's directors, asked once at dispatch and again
+    # by the deepen pass) can fail once with a 500 and once with a timeout,
+    # and two rows with one sentence still read as two problems. The first
+    # observation is kept.
     if any(
         d.source_id == source_id
         and d.check == check
-        and d.reason == reason
         and d.detail == detail
         for d in current
     ):

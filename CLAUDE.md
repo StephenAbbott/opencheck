@@ -261,6 +261,35 @@ bulk/offline adapters are allowlisted in `_DELIBERATELY_UNREGISTERED`.
 LEI-keyed sources (opensanctions, openaleph, climatetrace, bods_gleif) and
 SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
 
+### Related persons are screened through one batched OpenSanctions /match (the batched-/match ticket, 10 Nov 2026)
+
+`cross_check._os_person_batch` sends every related *person* target as a
+FollowTheMoney `Person` example (name, birth year, alpha-2 nationalities —
+`opensanctions.person_match_example`) in one `POST /match/default`
+(`OpenSanctionsAdapter.match_persons`, chunks of `MATCH_BATCH_SIZE` = 100).
+Entities, the Phase 290 subject screen and EveryPolitician stay on per-name
+`search`. Things that will be re-derived otherwise:
+
+- **Billing does not change**: the hosted API charges `/match` one credit per
+  *query* and `/search` one per *request* (metering FAQ, read 10 Nov 2026), so
+  25 people cost 25 credits either way. The batch saves round trips and the
+  per-key request quota, not credits.
+- **OpenSanctions' score orders, never decides.** `cutoff=0.0` (yente drops
+  candidates at or below 0.5 by default, before we would see them), `limit=10`
+  like `/search`, the `match` flag ignored. The hits go through
+  `_signals_from_os` and its gates (0.88, single-token guard, birth-year and
+  patronymic conflicts, distinctive tokens) and the Phase 106 ladder unchanged.
+- **A failure is per name, never a clean screen**: a failed request is an
+  exception for every key in its chunk, a non-200 `status` inside a 200 batch
+  one for that key (shaped as `httpx.HTTPStatusError`, so 429 reads
+  `rate_limited`); `_check_target` records either as an OpenSanctions failure,
+  so the `cross_source_names` degradation reads as it always has.
+  `match_persons` never raises.
+- **Each query's answer is cached on its own** (`opensanctions/match/Person/
+  <params fingerprint>/<example slug>`, 7-day expiry like `/search`).
+- **Test doubles that only answer `search`** keep the old per-name path:
+  `_os_person_batch` returns `None` when the adapter has no `match_persons`.
+
 ### Risk-signal instrumentation (Phase 110)
 
 `opencheck/signalstats.py` counts risk signals per `(code, source_id)`,

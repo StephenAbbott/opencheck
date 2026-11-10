@@ -59,6 +59,8 @@ VERIFIED: dict[str, str] = {
     "GR": "RA000685",  # ΓΕΜΗ
     "HR": "RA000156",  # Sudski registar
     "IE": "RA000402",  # CRO
+    "IL": "RA000406",  # Israel Corporations Authority — verified 2026-11-10,
+    # 1,378 ISSUED records, every one a bare 9-digit corporate number
     "LT": "RA000430",  # Registrų centras
     "CY": "RA000161",  # DRCOR — 7,449 ISSUED LEIs file "ΗΕ 449149" (Greek letters), 29 Oct 2026
     "LV": "RA000423",  # Uzņēmumu Reģistrs

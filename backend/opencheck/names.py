@@ -895,3 +895,34 @@ def normalise_language_code(code: str | None) -> str | None:
     except LookupError:
         return None
     return getattr(lang, "alpha_3", None) if lang else None
+
+
+def best_ftm_name(target_name: str, item: dict) -> tuple[str, float]:
+    """Best ``(name, similarity)`` of ``target_name`` against an FtM record's
+    names group (``FTM_NAME_PROPS``) and its caption.
+
+    A record's caption is one of its names, chosen for display. Scoring a
+    party against the caption alone missed OpenSanctions' Rosneftegaz record
+    (caption "Rosneftegaz") for the party its own data names "Rosneftegaz
+    JSC" — 0.846, under the gate — while the record lists "Rosneftegaz JSC"
+    among its names (the Rosneftegaz ticket, 10 Nov 2026). A name good enough
+    to file on the record is a name good enough to score against. ``weakAlias``
+    stays out (``FTM_NAME_PROPS_EXCLUDED``). Ties keep the caption, so a hit
+    whose caption already scores best reports the same name as before.
+    """
+    props = item.get("properties") or {}
+    candidates: list[str] = []
+    caption = item.get("caption")
+    if caption:
+        candidates.append(str(caption))
+    for prop in FTM_NAME_PROPS:
+        values = props.get(prop) or []
+        if isinstance(values, str):
+            values = [values]
+        candidates.extend(str(v) for v in values if v)
+    best_name, best_score = "", 0.0
+    for cand in candidates:
+        s = name_similarity(target_name, cand)
+        if s > best_score:
+            best_name, best_score = cand, s
+    return best_name, best_score

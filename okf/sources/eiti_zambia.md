@@ -4,7 +4,7 @@ title: "Zambia EITI data portal"
 description: "Zambia Revenue Authority tax receipts, the EITI reconciliation payment report, employment, mining rights and WARMA water-permit offences from the Zambia EITI portal, for Zambian LEI holders matched to the portal by name (12 of 69 Zambian LEIs). Rows are keyed on the ZRA TPIN; GLEIF files the PACRA number, so the link is a name match made offline."
 resource: "https://portal.zambiaeiti.org/"
 tags: ["esg", "aggregator", "ZEITI Open Data Policy (2016) \u2014 open data, no named licence", "commercial-yes"]
-timestamp: "2026-10-07"
+timestamp: "2026-11-10"
 source_id: "eiti_zambia"
 license: "ZEITI Open Data Policy (2016) \u2014 open data, no named licence"
 commercial_use: "yes"

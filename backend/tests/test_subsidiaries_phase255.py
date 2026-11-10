@@ -492,7 +492,9 @@ def test_the_new_schemes_add_no_register_hops():
     """No adapter claims these RA codes, so FullCheck cannot hop on them."""
     from opencheck.register_hops import hop_schemes
 
-    for scheme in ("MY-SSM", "PH-SEC", "IT-RI", "IL-ROC", "PA-PRP", "LK-DRC",
+    # IL-ROC left this list with the Israel wiring: ica_israel dispatches on
+    # RA000406, so FullCheck now hops on it.
+    for scheme in ("MY-SSM", "PH-SEC", "IT-RI", "PA-PRP", "LK-DRC",
                    "PK-SEC", "JP-JCN", "MX-RFC"):
         assert scheme not in hop_schemes()
 

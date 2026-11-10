@@ -4,7 +4,7 @@ title: "ONRC \u2014 Oficiul Na\u021bional al Registrului Comer\u021bului (Romani
 description: "Romanian Trade Register, published as a monthly open-data dump on data.gov.ro. Carries the company, its registration number in both of the register's formats, legal form, registered office, status, and its legal representatives with their filed roles and dates of birth. No beneficial ownership: shareholders remain behind the paid certificate."
 resource: "https://www.onrc.ro/"
 tags: ["cdd", "national-register", "CC-BY-4.0", "commercial-yes"]
-timestamp: "2026-09-15"
+timestamp: "2026-11-10"
 source_id: "onrc_romania"
 license: "CC-BY-4.0"
 commercial_use: "yes"

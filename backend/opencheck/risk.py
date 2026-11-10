@@ -789,9 +789,23 @@ _EXPORT_TOPIC_PREFIX = "export"
 # "role.oligarch", "invest.ban") is a deliberate edit with its own ticket, and
 # a NEW upstream topic fails the build instead of being fetched but silently
 # not understood, the way "sanction.control" and the export family both were.
+#
+# ``corp.clone`` and ``geo.risk`` (unannounced additions to ``target_topics``,
+# found 6 Nov 2026) are here by decision, not by default. ``corp.clone`` marks
+# a firm impersonating a real one — 3,235 records of the FCA Warning List
+# (``gb_fca_notices``) on 10 Nov 2026, every one ``LegalEntity``, every one
+# also ``reg.warn``, none with an LEI — and its name IS the real firm's name,
+# so a name screen of the real firm finds its own clone. Any signal would
+# rest on a name match alone and would assert the impersonation against its
+# victim; the hit row says what the record is instead
+# (``findings.finding_opensanctions``). ``geo.risk`` sits on FtM's
+# ``Territory`` schema (a designated place), which no company or person
+# search returns; OpenCheck's jurisdiction signals come from its own lists.
 _INFORMATIONAL_TOPICS = frozenset(
     {
+        "corp.clone",
         "corp.disqual",
+        "geo.risk",
         "invest.ban",
         "invest.risk",
         "mare.detained",

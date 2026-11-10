@@ -455,6 +455,13 @@ from .mappers.cyprus import (  # noqa: F401  (re-exported, Phase 246)
     _cy_official_is_org,
     map_cyprus_drcor,
 )
+from .mappers.israel import (  # noqa: F401  (re-exported; the Israel wiring)
+    _FOREIGN_TYPE_CODE,
+    _IL_SCHEME,
+    _IL_SCHEME_NAME,
+    _il_address,
+    map_ica_israel,
+)
 from .mappers.us_fl import (  # noqa: F401  (re-exported; the Florida wiring)
     _FL_SOURCE,
     _fl_address,
