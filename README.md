@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 482** — Related people are now screened against OpenSanctions in one batched match request that also sends their birth year and nationality, with every existing match gate unchanged.
+**Latest: Phase 483** — OpenSanctions' new corp.clone and geo.risk topics are fetched without raising a signal, a clone firm's record says it is the copy and not the real firm, and a weekly check now catches the next unannounced topic.
 
 → [Full development history](docs/status.md)
 
