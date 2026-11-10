@@ -211,13 +211,25 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "form is a condition: without it the licence is void from the start."
         ),
     ),
+    "kr-public-data": _terms(
+        "KR-Public-Data", "Korean public data, no restriction on the scope of use (공공데이터법; Open DART terms)",
+        commercial="yes", attribution=False, share_alike=False, redistribution="yes",
+        url="https://opendart.fss.or.kr/intro/terms.do",
+        summary=(
+            "Open DART's terms (art. 16④) defer to the Public Data Act, and "
+            "data.go.kr lists the FSS's DART APIs with “이용허락범위 "
+            "제한 없음” — no restriction on the scope of use, commercial "
+            "use included. The filings are the filers' responsibility (art. 23①); "
+            "OpenCheck attributes the Financial Supervisory Service anyway (read 10 Nov 2026)."
+        ),
+    ),
     "open-ny-terms": _terms(
         "OPEN-NY-Terms", "OPEN-NY Terms of Use (data.ny.gov)",
         commercial="yes", attribution=False, share_alike=False, redistribution="yes",
         url="https://data.ny.gov/download/77gx-ii52/application/pdf",
         summary=(
-            "\u201cSo long as you are not doing anything malicious with NYS data, "
-            "you may use it as you wish, subject to no other requirements.\u201d "
+            "“So long as you are not doing anything malicious with NYS data, "
+            "you may use it as you wish, subject to no other requirements.” "
             "No attribution, share-alike or pre-approval; a revocable licence, "
             "with the State's disclaimer of warranties and liability. OpenCheck "
             "attributes the Department of State anyway (terms read 29 Sept 2026)."
@@ -229,7 +241,7 @@ _CANONICAL: dict[str, LicenseTerms] = {
         url="https://dos.fl.gov/sunbiz/other-services/data-downloads/",
         summary=(
             "No licence is stated: the Division of Corporations offers its bulk "
-            "data free \u201cfor informational purposes\u201d, as is. Florida "
+            "data free “for informational purposes”, as is. Florida "
             "public records are open to anyone for any purpose, and an agency "
             "cannot assert copyright in them without statutory authority "
             "(Microdecisions, Inc. v. Skinner, 889 So.2d 871, Fla. 2d DCA 2004). "

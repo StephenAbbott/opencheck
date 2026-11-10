@@ -1521,6 +1521,80 @@ def finding_gcis_taiwan(bundle: dict[str, Any]) -> str | None:
 
 
 # --------------------------------------------------------------------------
+# South Korea — Open DART
+# --------------------------------------------------------------------------
+
+
+def finding_dart_korea(bundle: dict[str, Any]) -> str | None:
+    """What a Korean filer's DART filings say: its listing, the largest
+    shareholder and its share of common shares at the latest report's period
+    end, how many holders the largest-shareholder group files, the executives,
+    and how many reporters file a 5% holding report.
+
+    * Never "owner" or "beneficial owner": Korea has no beneficial-ownership
+      register, and the table is the largest shareholder **and its related
+      persons**, as the filing calls it.
+    * No periodic report in the last eighteen months is said, so an empty
+      shareholder table never reads as "none".
+    """
+    from .bods.mappers.korea import (  # local import avoids circular
+        kr_largest_shareholder,
+        kr_latest_major_reports,
+        kr_name_key,
+        kr_number,
+        kr_shareholder_rows,
+    )
+    from .sources.dart_korea import LISTING_CLASSES, REPORT_CODES
+
+    if not bundle:
+        return None
+    if bundle.get("not_found"):
+        return bundle.get("coverage_note") or None
+    if bundle.get("is_stub"):
+        return None
+    company = bundle.get("company")
+    if not isinstance(company, dict):
+        return None
+
+    listing = LISTING_CLASSES.get(str(company.get("corp_cls") or ""))
+    lead = (listing[0].upper() + listing[1:]) if listing else "DART filer"
+    report = bundle.get("report")
+    if not report:
+        return clauses_to_sentence([
+            lead,
+            "periodic reports not read" if not bundle.get("reports_read", True)
+            else "no periodic report filed on DART in the last eighteen months",
+        ])
+
+    kind = REPORT_CODES.get(str(report.get("reprt_code")), "periodic report")
+    rows = kr_shareholder_rows(bundle.get("shareholders") or [])
+    largest = kr_largest_shareholder(bundle.get("shareholders") or [])
+    if not bundle.get("shareholders_read", True):
+        largest_clause = "largest-shareholder table not read"
+    elif largest:
+        largest_clause = f"largest shareholder {largest[0]} {percent(largest[1])} ({kind})"
+    elif rows:
+        largest_clause = f"largest-shareholder group filed in the {kind}"
+    else:
+        largest_clause = f"no largest-shareholder table in the {kind}"
+    group = len({kr_name_key(str(r.get("nm") or "")) for r in rows})
+    executives = [r for r in (bundle.get("executives") or []) if isinstance(r, dict)]
+    registered = sum(1 for r in executives if "미등기" not in str(r.get("rgist_exctv_at") or ""))
+    reporters = [
+        r for r in kr_latest_major_reports(bundle.get("major_holders") or [])
+        if (kr_number(r.get("stkrt")) or 0) >= 5
+    ]
+    return clauses_to_sentence([
+        lead,
+        largest_clause,
+        plural(group, "holder") + " in the largest-shareholder group" if group > 1 else None,
+        (plural(registered, "registered executive") if registered else None)
+        if bundle.get("executives_read", True) else "executives not read",
+        plural(len(reporters), "holder") + " with a 5% holding report" if reporters else None,
+    ], sep="; ")
+
+
+# --------------------------------------------------------------------------
 # Singapore ACRA
 # --------------------------------------------------------------------------
 

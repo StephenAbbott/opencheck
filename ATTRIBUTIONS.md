@@ -268,6 +268,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `gr_argemi` (Αριθμός ΓΕΜΗ, zero-padded to 12 digits, e.g. `003031801000`) derived from GLEIF RA code `RA000685`
 - **Note:** Requires a free `GEMI_API_KEY`, issued on approval of the form at <https://opendata.businessportal.gr/register/>. **Rate limited to 8 requests per minute** (raise by request to support@uhc.gr), so the adapter paces its calls and caps how many a single lookup may spend. An **ΑΕ publishes no shareholders** — its share register is not part of ΓΕΜΗ publicity, which is the Greek regime rather than missing data. ΓΕΜΗ is a commercial register, not a beneficial ownership regime (Greece's Κεντρικό Μητρώο Πραγματικών Δικαιούχων is separate and non-public), so no `beneficialOwnershipOrControl` is asserted.
 
+## Open DART — Financial Supervisory Service (금융감독원 전자공시시스템, South Korea)
+
+- **Data:** a disclosure filer's company profile (names, business and corporate registration numbers, founding date, address, listing class) and, from its latest periodic report, the largest shareholder and its related persons (최대주주 및 특수관계인) and the executives (임원 현황), plus 5% holding reports (주식등의 대량보유상황보고서).
+- **API:** Open DART <https://opendart.fss.or.kr/> — `company.json`, `list.json`, `hyslrSttus.json`, `exctvSttus.json`, `majorstock.json`, and `corpCode.xml` for the weekly crosswalk
+- **License:** Korean public data with no restriction on the scope of use (이용허락범위 제한 없음 — data.go.kr lists the FSS DART APIs that way, e.g. dataset 15060609); Open DART's terms of use <https://opendart.fss.or.kr/intro/terms.do>
+- **Attribution:** "Source: Financial Supervisory Service, Open DART (opendart.fss.or.kr)" — not required, given anyway
+- **Entry point:** `kr_bizr_no` (10 digits) from GLEIF RA code `RA000657` or `kr_jurir_no` (13 digits) from `RA000419`, resolved to DART's `corp_code` through OpenCheck's crosswalk
+- **Note:** Requires a free individual API key (`OPENDART_API_KEY`), which the terms forbid sharing; 20,000 calls a key a day. The filings are the filers' own disclosures; the FSS does not vouch for their accuracy. Korea has no public beneficial-ownership register.
+
 ## Taiwan company register — Ministry of Economic Affairs (經濟部商工登記公示資料)
 
 - **Data:** the company (Chinese name, Unified Business Number, status, capital, issued shares, registered address, registering authority, setup and last-change dates) and the register of directors and supervisors — position, name, the legal person a director represents, and the holding Company Act art. 393 makes public.

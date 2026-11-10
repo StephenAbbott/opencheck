@@ -89,6 +89,11 @@ services:
       # for registered users; without it the listing line is simply absent.
       - key: PERMID_API_KEY
         sync: false
+      # Open DART (South Korea) — FSS disclosure filings. An individual key
+      # (the terms forbid sharing it); 20,000 calls a day. Without it the
+      # source is not announced.
+      - key: OPENDART_API_KEY
+        sync: false
       # --- Bulk-file adapters: stub-only on Render ---
       # ARIREGISTER_DB_FILE and BCE_BELGIUM_DB_FILE are intentionally omitted.
       # Both adapters return stub responses when no DB path is set.

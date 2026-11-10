@@ -483,6 +483,28 @@ PROBES: dict[str, SourceProbe] = {
             "the shared client sends before suspecting the data."
         ),
     ),
+    "dart_korea": _p(
+        tier="live",
+        subject="Samsung Electronics Co., Ltd. (KR-BRN 124-81-00998)",
+        args=("1248100998",),
+        kwargs={"legal_name": "Samsung Electronics Co., Ltd."},
+        expect_fields=("company", "report", "shareholders", "executives"),
+        # The crosswalk (LEI → DART corp_code) is a weekly index;
+        # warm_bulk_stores.py downloads it first. The filings themselves are
+        # read live with the key.
+        requires_files=("dart_korea.sqlite",),
+        requires_env=("OPENDART_API_KEY",),
+        expect_liveness=LIVE_OR_CACHED,
+        anchor_lei="9884007ER46L6N7EI764",
+        bods_mapper="map_dart_korea",
+        notes=(
+            "Business registration number exactly as GLEIF files it under "
+            "RA000657, without hyphens. Open DART answers every call HTTP 200 "
+            "and puts its status in the body: 020 is the key's daily cap, 800 "
+            "maintenance, 012 an IP the key does not allow. A degraded probe "
+            "naming one of those is the key or the service, not the data."
+        ),
+    ),
     "gcis_taiwan": _p(
         tier="live",
         subject="Taiwan Semiconductor Manufacturing Company Limited",

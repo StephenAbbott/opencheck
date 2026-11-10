@@ -79,6 +79,8 @@ from opencheck.meip import warm_meip_db  # noqa: E402
 from opencheck.sources.jar_lithuania import db_path as jar_db_path  # noqa: E402
 from opencheck.sources.jar_lithuania import warm_index as warm_jar_index  # noqa: E402
 from opencheck.sources.bce_belgium import db_path as bce_db_path  # noqa: E402
+from opencheck.sources.dart_korea import db_path as dart_korea_db_path  # noqa: E402
+from opencheck.sources.dart_korea import warm_index as warm_dart_korea_index  # noqa: E402
 from opencheck.sources.bce_belgium import warm_index as warm_bce_index  # noqa: E402
 from opencheck.sources.edr_ukraine import db_path as edr_db_path  # noqa: E402
 from opencheck.sources.edr_ukraine import warm_index as warm_edr_index  # noqa: E402
@@ -99,6 +101,7 @@ WARMERS = (
     ("chilecompra", warm_chilecompra_index, chilecompra_db_path),
     ("jar_lithuania", warm_jar_index, jar_db_path),
     ("bce_belgium", warm_bce_index, bce_db_path),
+    ("dart_korea", warm_dart_korea_index, dart_korea_db_path),
     ("edr_ukraine", warm_edr_index, edr_db_path),
     ("cyprus_drcor", warm_cyprus_index, cyprus_db_path),
     ("ica_israel", warm_ica_israel_index, ica_israel_db_path),

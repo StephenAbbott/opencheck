@@ -108,6 +108,7 @@ DISCLOSES: dict[str, tuple[str, ...]] = {
     "eiti_bo": ("beneficial_owners",),
     "gleif": ("parent",),
     "sec_edgar": ("shareholders",),
+    "dart_korea": ("shareholders",),
     "nz_companies": ("shareholders",),
     "ares": ("shareholders",),
     "firmenbuch": ("shareholders",),

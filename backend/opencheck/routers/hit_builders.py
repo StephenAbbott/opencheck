@@ -700,6 +700,48 @@ def _bh_gcis_taiwan(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_dart_korea(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Open DART (South Korea).
+
+    * **A filer** asserts the registration numbers DART's own profile returns
+      (``bizr_no``, ``jurir_no``) — never the LEI the lookup arrived by.
+    * **A number the crosswalk lacks** is a note card with no identifier: DART
+      confirmed nothing.
+    """
+    from ..findings import finding_dart_korea
+    from ..sources.dart_korea import KR_BRN_SCHEME, LISTING_CLASSES, _digits, format_bizr_no
+
+    if r.get("not_found"):
+        return _hit(
+            "dart_korea", local_id,
+            name=ctx.legal_name or "",
+            summary="Not in OpenCheck's crosswalk of DART filers",
+            finding=finding_dart_korea(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
+        )
+    c = r.get("company") or {}
+    bizr = _digits(c.get("bizr_no"))
+    jurir = _digits(c.get("jurir_no"))
+    identifiers: dict[str, str] = {}
+    if len(bizr) == 10:
+        identifiers["kr_bizr_no"] = bizr
+    if len(jurir) == 13:
+        identifiers["kr_jurir_no"] = jurir
+    segments = [f"{KR_BRN_SCHEME} {format_bizr_no(bizr)}" if bizr else f"DART {r.get('corp_code')}"]
+    listing = LISTING_CLASSES.get(str(c.get("corp_cls") or ""))
+    if listing:
+        segments.append(listing)
+    return _hit(
+        "dart_korea", local_id,
+        name=str(c.get("corp_name") or "").strip() or ctx.legal_name or "",
+        summary=" · ".join(segments),
+        identifiers=identifiers,
+        raw=c,
+        finding=finding_dart_korea(r),
+    )
+
+
 def _bh_malta_mbr(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     c = r.get("company") or {}
     return _hit(

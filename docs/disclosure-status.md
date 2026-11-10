@@ -41,7 +41,7 @@ Every entry also says what it is about:
 | `covers` | Used by |
 |---|---|
 | `beneficial_owners` | Beneficial-ownership registers: Companies House PSC, Estonia, Ukraine ЄДР, Latvia, Slovakia RPVS, Nigeria CAC, Washington DC, EITI beneficial-ownership declarations |
-| `shareholders` | Shareholder and founder lists: Estonia, Ukraine, Latvia, SEC EDGAR 13D/13G (the SEC's beneficial owners of 5% or more of a class), New Zealand, Czechia ARES, Austria, Brazil, Greece, Moldova, Global Energy Monitor (ClimateTRACE), Wikidata |
+| `shareholders` | Shareholder and founder lists: Estonia, Ukraine, Latvia, SEC EDGAR 13D/13G (the SEC's beneficial owners of 5% or more of a class), Open DART (the largest shareholder and its related persons, and 5% holding reports), New Zealand, Czechia ARES, Austria, Brazil, Greece, Moldova, Global Energy Monitor (ClimateTRACE), Wikidata |
 | `parent` | GLEIF Level 2 — the accounting consolidating parent, never an owner |
 
 GLEIF's "exempt" is therefore "Parent: Exempt": there is no consolidating

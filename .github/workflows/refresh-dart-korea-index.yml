@@ -1,0 +1,97 @@
+name: Refresh Open DART (South Korea) index
+
+# Rebuilds the LEI → Open DART crosswalk and replaces the `dart-korea-index`
+# release asset the backend downloads at boot (DART_KOREA_DB_URL). The Open
+# DART ticket, 10 Nov 2026.
+#
+# Why an index at all: GLEIF files a Korean company's business registration
+# number (RA000657) or corporate registration number (RA000419), and Open
+# DART is keyed on its own eight-digit corp_code. DART's bulk filer list
+# (corpCode.xml) carries no registration number, so the join is a name match
+# against that list, confirmed by company.json's bizr_no / jurir_no — one
+# call per candidate. That cannot run per lookup; it runs here, weekly.
+#
+# Calls: one corpCode.xml download plus at most --max-calls company.json
+# reads (a filer whose modify_date is unchanged since the last build is
+# reused, so a weekly run costs a few hundred). The key's daily cap is
+# 20,000, shared with live lookups (OPENDART_DAILY_BUDGET, 15,000 by default).
+# Open DART answers a datacentre address (checked 10 Nov 2026).
+#
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "41 20 * * 0" # 20:41 UTC Sunday = 05:41 KST Monday, off Korea's working hours
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-dart-korea-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Fetch the previous build (to reuse unchanged filers)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release download dart-korea-index --pattern dart_korea.sqlite.gz \
+               --dir "$RUNNER_TEMP/prev" --repo "$GITHUB_REPOSITORY" 2>/dev/null; then
+            gunzip "$RUNNER_TEMP/prev/dart_korea.sqlite.gz"
+          else
+            echo "No previous build; every candidate will be read."
+          fi
+
+      - name: Build the crosswalk
+        working-directory: backend
+        env:
+          OPENDART_API_KEY: ${{ secrets.OPENDART_API_KEY }}
+        run: |
+          uv sync
+          PREV=()
+          [ -f "$RUNNER_TEMP/prev/dart_korea.sqlite" ] && PREV=(--previous "$RUNNER_TEMP/prev/dart_korea.sqlite")
+          uv run python scripts/build_dart_korea_index.py "${PREV[@]}" \
+            --out "$RUNNER_TEMP/dart_korea.sqlite" --max-calls 4500 --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial build)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "dart_korea.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM crosswalk").fetchone()[0]
+          print({k: meta[k] for k in sorted(meta)})
+          if n < 1000:
+              sys.exit(f"Refusing to publish: {n} LEIs matched — likely a key, quota or format problem.")
+          PY
+
+      - name: Replace the `dart-korea-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view dart-korea-index >/dev/null 2>&1 || gh release create dart-korea-index \
+            --title "Open DART (South Korea) index" \
+            --notes "Built weekly by refresh-dart-korea-index.yml: GLEIF's Korean LEIs (RA000657, RA000419) joined to Open DART corp_codes, confirmed by company.json. Holds DART's company names and registration numbers (Open DART, Financial Supervisory Service — public data, no restriction on use). Downloaded by the backend at boot (DART_KOREA_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh dart-korea-index \
+            "$RUNNER_TEMP/dart_korea.sqlite.gz" dart_korea.sqlite.gz \
+            "Rebuilt automatically by refresh-dart-korea-index on $(date -u +%Y-%m-%d)."
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"
