@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 490** — The Climate & ESG tab shows payments to governments that Canadian extractive companies report under ESTMA, from Statistics Canada's weekly file, linked to LEIs through a hand-reviewed crosswalk.
+**Latest: Phase 491** — A Korean company's stock-market listing from Open DART is no longer shown as its legal form.
 
 → [Full development history](docs/status.md)
 
