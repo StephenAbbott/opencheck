@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 485** — The related-party sanctions screen now matches a record on any of its names and on a shared identifier, so a designated owner's signal lands on the node that holds the stake.
+**Latest: Phase 486** — Israel's Corporations Authority registers of companies and partnerships are now a source, read from a daily index of data.gov.il's open data.
 
 → [Full development history](docs/status.md)
 
