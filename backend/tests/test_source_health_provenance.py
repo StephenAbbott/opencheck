@@ -248,6 +248,7 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         "cyprus_drcor": PROBES["cyprus_drcor"].requires_files,
         "sunbiz_florida": PROBES["sunbiz_florida"].requires_files,
         "dart_korea": PROBES["dart_korea"].requires_files,
+        "ica_israel": PROBES["ica_israel"].requires_files,
         # Two tiers, one source (Phase 330): the probe deliberately declares
         # no required file — without the index the page answers, and that is
         # the adapter working, not a skip — so the file the warm-up must

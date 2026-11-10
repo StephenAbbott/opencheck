@@ -4,7 +4,7 @@ title: "EITI State-Owned Enterprises Database"
 description: "194 state-owned enterprises reported through the EITI across 39 implementing countries, 2017\u20132024, with a state-ownership classification, sectors, audited-financial-statement links and stock listings. Surfaces a state-ownership context signal by LEI. EITI publishes no LEI, OpenCorporates id or national registration number for any of them, so coverage is limited to the enterprises whose names match GLEIF exactly."
 resource: "https://eiti-database.eiti.org/eiti_database/view_soeList"
 tags: ["cdd", "aggregator", "EITI open data (free reuse with attribution)", "commercial-yes"]
-timestamp: "2026-09-06"
+timestamp: "2026-11-10"
 source_id: "eiti_soe"
 license: "EITI open data (free reuse with attribution)"
 commercial_use: "yes"

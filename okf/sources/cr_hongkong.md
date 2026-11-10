@@ -4,7 +4,7 @@ title: "Hong Kong Companies Registry"
 description: "Hong Kong company data from the Companies Registry's open data API on DATA.GOV.HK. Provides core entity details for live local companies \u2014 English and Chinese names, Business Registration Number, company type, registered office and incorporation date."
 resource: "https://www.cr.gov.hk/"
 tags: ["cdd", "national-register", "DATA.GOV.HK-Terms", "commercial-yes"]
-timestamp: "2026-09-10"
+timestamp: "2026-11-10"
 source_id: "cr_hongkong"
 license: "DATA.GOV.HK-Terms"
 commercial_use: "yes"

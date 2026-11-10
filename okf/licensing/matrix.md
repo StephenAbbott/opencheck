@@ -46,6 +46,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Taiwan company register (MOEA GCIS) (`gcis_taiwan`) | `OGDL-Taiwan-1.0` | yes | yes | no |
 | ΓΕΜΗ — Greek General Commercial Registry (`gemi_greece`) | `ODC-BY-1.0` | yes | yes | no |
 | GLEIF (`gleif`) | `CC0-1.0` | yes | no | no |
+| Israel Corporations Authority — Registrar of Companies and Partnerships (`ica_israel`) | `data.gov.il open data (free use with attribution; partnerships CC BY)` | yes | yes | no |
 | INPI — Registre National des Entreprises (`inpi`) | `Licence Ouverte / Open Licence 2.0` | yes | yes | no |
 | JAR — Lithuanian Register of Legal Entities (`jar_lithuania`) | `CC-BY-4.0` | yes | yes | no |
 | KRS — Polish National Court Register (`krs_poland`) | `PL-OGD` | yes | yes | no |
@@ -62,6 +63,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | PRH — Finnish Patent and Registration Office (`prh`) | `CC-BY-4.0` | yes | yes | no |
 | RPO Slovakia (`rpo_slovakia`) | `CC-BY-4.0` | yes | yes | no |
 | RPVS Slovakia (`rpvs_slovakia`) | `CC-BY-4.0` | yes | yes | no |
+| Colombia RUES — chambers of commerce (Confecámaras) (`rues_colombia`) | `CC-BY-SA-4.0` | yes | yes | yes |
 | SEC EDGAR (Schedule 13D/13G) (`sec_edgar`) | `Public Domain` | yes | no | no |
 | Sudski registar — Croatian Court Register (`sudreg_croatia`) | `HR-OpenData` | yes | yes | no |
 | Florida Division of Corporations (Sunbiz) (`sunbiz_florida`) | `FL-Public-Records` | yes | no | no |

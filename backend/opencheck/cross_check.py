@@ -32,6 +32,12 @@ Scope notes
   anyone unread is reported as a ``truncated`` ``DegradedSource``.
   Before, the first N in bundle order were read and the rest dropped
   silently, so the result depended on which sources happened to answer.
+* Related persons go to OpenSanctions as one batched ``POST /match``
+  (FollowTheMoney ``Person`` examples carrying the name, birth year and
+  nationalities; the batched-/match ticket, 10 Nov 2026) rather than one
+  ``/search`` each. OpenSanctions' score only orders the candidates; every
+  gate below still decides. Entities, the Phase 290 subject screen and
+  EveryPolitician stay name by name.
 * Persons get checked for both ``RELATED_PEP`` and
   ``RELATED_SANCTIONED``. Entities only for ``RELATED_SANCTIONED``
   (entities can't be PEPs).
@@ -297,12 +303,26 @@ async def assess_cross_source_names(
             )
         )
 
-    # Run the OS + EP probes concurrently — both adapters are cheap
-    # and each name yields at most ~10 hits to score.
+    # Related persons go to OpenSanctions together, as one batched
+    # ``/match`` (``_os_person_batch``); entities, and every EveryPolitician
+    # probe, still go name by name. The batch runs beside the per-target
+    # probes, and each person's probe waits only for its own answer.
+    os_batch = _os_person_batch(targets)
     tasks: list[asyncio.Task] = []
-    for target in targets:
-        tasks.append(asyncio.create_task(_check_target(target, min_score=min_score)))
+    for index, target in enumerate(targets):
+        tasks.append(
+            asyncio.create_task(
+                _check_target(
+                    target,
+                    min_score=min_score,
+                    os_batch=os_batch,
+                    batch_key=str(index),
+                )
+            )
+        )
     results = await asyncio.gather(*tasks, return_exceptions=True)
+    if os_batch is not None and not os_batch.done():
+        os_batch.cancel()
 
     signals: list[RiskSignal] = []
     # Failure bookkeeping. An adapter error must not poison the rest of
@@ -584,11 +604,63 @@ def _person_nationalities(rd: dict[str, Any]) -> tuple[str, ...]:
 # ---------------------------------------------------------------------
 
 
+def _os_person_batch(
+    targets: list[dict[str, Any]],
+) -> asyncio.Task[dict[str, list[SourceHit] | BaseException]] | None:
+    """Start one batched OpenSanctions ``/match`` for every person target
+    (the batched-/match ticket, 10 Nov 2026), keyed by the target's position.
+
+    Persons only: the ticket moves related-party *person* screening, where
+    ``/match`` scoring on birth date and nationality helps; entities stay on
+    ``/search``. ``None`` — every target probed name by name, as before —
+    when there is no person to screen or the registered adapter cannot batch
+    (a test double that only answers ``search``).
+
+    The batch decides nothing about a match: each person's hits go through
+    ``_signals_from_os`` and its gates exactly as ``/search`` hits did, and a
+    failed batch is that source failing for each of those names, so the
+    degraded-source records read as they always have.
+    """
+    os_adapter = REGISTRY.get("opensanctions")
+    match_persons = getattr(os_adapter, "match_persons", None)
+    if match_persons is None:
+        return None
+    queries = {
+        str(index): {
+            "name": target["name"],
+            "birth_year": target.get("birth_year"),
+            "nationalities": tuple(target.get("nationalities") or ()),
+        }
+        for index, target in enumerate(targets)
+        if target["kind"] == _KIND_PERSON
+    }
+    if not queries:
+        return None
+    return asyncio.create_task(match_persons(queries))
+
+
+async def _batched_os_hits(
+    os_batch: asyncio.Task[dict[str, list[SourceHit] | BaseException]], key: str
+) -> list[SourceHit]:
+    """This target's answer from the shared batch, raised if it failed so
+    ``_check_target`` records it exactly as a failed ``search``."""
+    answers = await asyncio.shield(os_batch)
+    answer = answers.get(key, [])
+    if isinstance(answer, BaseException):
+        raise answer
+    return answer
+
+
 async def _check_target(
-    target: dict[str, Any], *, min_score: float
+    target: dict[str, Any],
+    *,
+    min_score: float,
+    os_batch: asyncio.Task[dict[str, list[SourceHit] | BaseException]] | None = None,
+    batch_key: str | None = None,
 ) -> tuple[list[RiskSignal], dict[str, str], list[tuple[SourceHit, dict[str, Any]]]]:
     """Run OS (+ EP for persons) searches for one target and score the
-    matches.
+    matches. A person's OpenSanctions hits come from ``os_batch`` when one
+    is running (``_os_person_batch``); everything else is searched here.
 
     Returns ``(signals, failed_sources, ep_matches)``. ``failed_sources``
     maps a source id to a closed-vocabulary degradation reason; it lets the
@@ -608,7 +680,10 @@ async def _check_target(
 
     tasks: list[asyncio.Task[list[SourceHit]]] = []
     if os_adapter is not None:
-        tasks.append(asyncio.create_task(os_adapter.search(name, kind)))
+        if os_batch is not None and batch_key is not None and target["kind"] == _KIND_PERSON:
+            tasks.append(asyncio.create_task(_batched_os_hits(os_batch, batch_key)))
+        else:
+            tasks.append(asyncio.create_task(os_adapter.search(name, kind)))
     if ep_adapter is not None:
         tasks.append(asyncio.create_task(ep_adapter.search(name, SearchKind.PERSON)))
     if not tasks:
@@ -667,18 +742,29 @@ def _signals_from_os(
     """
     if hit.is_stub:
         return []
-    # Single-token person names ("Fernández", "Ivanov") are too generic to
-    # base a related-party match on — a bare surname collides across unrelated
-    # people (ftmg drops single-token names from matching). Entities keep
-    # single-token names, which are distinctive ("Gazprom").
-    if target["kind"] == _KIND_PERSON and not (
-        is_matchable_name(_normalise(target["name"]))
-        and is_matchable_name(_normalise(hit.name))
-    ):
-        return []
-    score = _name_score(target["name"], hit.name)
-    if score < min_score:
-        return []
+    # The Rosneftegaz ticket (10 Nov 2026, Stephen: names + identifier
+    # match). The name is scored against every name the record files, not its
+    # caption alone; and a party that shares an identifier with the record —
+    # OpenSanctions' own owner node carrying the record's id, a register
+    # number the record lists — is that record whatever the name score, so
+    # the name gates below do not apply to it. The hard conflict filters
+    # (birth year, patronymic) still do.
+    matched_name, score = names.best_ftm_name(
+        target["name"], {**(hit.raw or {}), "caption": hit.name}
+    )
+    id_match = identifier_match(target, hit)
+    if not id_match:
+        # Single-token person names ("Fernández", "Ivanov") are too generic
+        # to base a related-party match on — a bare surname collides across
+        # unrelated people (ftmg drops single-token names from matching).
+        # Entities keep single-token names, which are distinctive ("Gazprom").
+        if target["kind"] == _KIND_PERSON and not (
+            is_matchable_name(_normalise(target["name"]))
+            and is_matchable_name(_normalise(matched_name))
+        ):
+            return []
+        if score < min_score:
+            return []
     if not _birth_year_compatible(target.get("birth_year"), hit):
         return []
     if not _patronymic_compatible(target, hit):
@@ -692,9 +778,13 @@ def _signals_from_os(
     # agree. Persons with no legal form in either name bypass — their names
     # are all distinctive tokens and the corroboration ladder covers them.
     # The threshold does not move: this is a precision filter at 0.88.
-    if names.screens_as_organisation(
-        target["kind"] == _KIND_PERSON, target["name"], hit.name
-    ) and not names.distinctive_token_agreement(target["name"], hit.name):
+    if (
+        not id_match
+        and names.screens_as_organisation(
+            target["kind"] == _KIND_PERSON, target["name"], matched_name
+        )
+        and not names.distinctive_token_agreement(target["name"], matched_name)
+    ):
         return []
     topics = _extract_topics(hit.raw or {})
     sanctions = classify_sanction_topics(topics)
@@ -718,6 +808,7 @@ def _signals_from_os(
                 score=score,
                 summary_extra=extra,
                 topics=topics,
+                matched_name=matched_name,
             )
         )
 
@@ -831,6 +922,10 @@ def match_confidence(
     Either way the summary says "possible name match only", so the *prose*
     never asserts identity regardless of which rung it lands on.
     """
+    if "identifier" in corroboration:
+        # The party and the record share an identifier (the Rosneftegaz
+        # ticket): not a name match at all.
+        return "high"
     if target["kind"] == _KIND_PERSON and not corroboration:
         return "medium" if score >= 0.95 else "low"
     if target.get("officer_entity") and not corroboration:
@@ -895,7 +990,7 @@ def match_summary(
 
 #: The attribute names `corroborating_attributes` returns, as English. They are
 #: field names, and "confirmed on birth_year" read like a log line.
-_ATTRIBUTE_WORDS = {"birth_year": "birth year", "nationality": "nationality", "country": "country"}
+_ATTRIBUTE_WORDS = {"identifier": "an identifier", "birth_year": "birth year", "nationality": "nationality", "country": "country"}
 
 
 def _agreement_clause(corroboration: tuple[str, ...]) -> str:
@@ -917,6 +1012,7 @@ def _make_signal(
     score: float,
     summary_extra: str,
     topics: list[str] | None = None,
+    matched_name: str | None = None,
 ) -> RiskSignal:
     """One related-party signal.
 
@@ -928,6 +1024,11 @@ def _make_signal(
     this is the same field, so a consumer reads one shape from both screens.
     """
     corroboration = corroborating_attributes(target, hit.raw or {})
+    if identifier_match(target, hit):
+        # The strongest agreement there is, said first ("identifier also
+        # agrees") and read by ``match_confidence`` as ``high``.
+        corroboration = ("identifier", *corroboration)
+    matched = matched_name or hit.name
     if target.get("subject"):
         # Phase 290: the looked-up company's own name (``_subject_targets``).
         # A subject-level code, anchored on ``statement_id`` the way the
@@ -946,7 +1047,7 @@ def _make_signal(
             evidence={
                 "statement_id": target["statement_id"],
                 "subject": True,
-                "matched_name": hit.name,
+                "matched_name": matched,
                 "search_name": target["name"],
                 "score": round(score, 3),
                 "kind": target["kind"],
@@ -969,7 +1070,7 @@ def _make_signal(
         hit_id=hit.hit_id,
         evidence={
             "subject_statement_id": target["statement_id"],
-            "matched_name": hit.name,
+            "matched_name": matched,
             "search_name": target["name"],
             "score": round(score, 3),
             "kind": target["kind"],
@@ -991,7 +1092,7 @@ def _make_signal(
 _IDENTIFIER_PROPS = (
     "leiCode", "registrationNumber", "innCode", "ogrnCode", "taxNumber",
     "okpoCode", "vatCode", "swiftBic", "kppCode", "permId", "uniqueEntityId",
-    "dunsCode", "bikCode", "imoNumber", "idNumber", "npiCode",
+    "dunsCode", "bikCode", "imoNumber", "idNumber", "npiCode", "wikidataId",
 )
 #: Shorter values are too likely to collide across registers.
 _MIN_IDENTIFIER_LEN = 6
@@ -1043,10 +1144,18 @@ def _listing_evidence(target: dict[str, Any], hit: SourceHit) -> dict[str, Any]:
     datasets = (hit.raw or {}).get("datasets")
     if isinstance(datasets, list) and datasets:
         out["datasets"] = sorted({str(d) for d in datasets if d})
-    mine = set(target.get("identifier_keys") or ())
-    if mine and mine & _hit_identifier_keys(hit):
+    if identifier_match(target, hit):
         out["identifier_match"] = True
     return out
+
+
+def identifier_match(target: dict[str, Any], hit: SourceHit) -> bool:
+    """Whether the party's pooled identifiers (``_pool_identifiers``) share a
+    value with the record: its id, its referents, or an identifier property.
+    OpenSanctions' own node for an owner carries the record's id, so the
+    record always reaches the node that holds the stake."""
+    mine = set(target.get("identifier_keys") or ())
+    return bool(mine and mine & _hit_identifier_keys(hit))
 
 
 # ---------------------------------------------------------------------

@@ -4,7 +4,7 @@ title: "ASP \u2014 State Register of Legal Entities (Moldova)"
 description: "Moldova's State Register of Legal Entities (Registrul de stat al unit\u0103\u021bilor de drept), published every week by the Agen\u021bia Servicii Publice as a full open-data snapshot on dataset.gov.md. Company name, IDNO, legal form, registration date, registered address and activity codes, directors with their filed role, and founders with their share of the capital. No beneficial owners; joint-stock companies publish no founders. Liquidated companies, sole traders and peasant farms are not indexed."
 resource: "https://www.asp.gov.md/"
 tags: ["cdd", "national-register", "DATASET.GOV.MD-Reuse", "commercial-yes"]
-timestamp: "2026-09-15"
+timestamp: "2026-11-10"
 source_id: "asp_moldova"
 license: "DATASET.GOV.MD-Reuse"
 commercial_use: "yes"

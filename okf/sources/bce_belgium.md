@@ -4,7 +4,7 @@ title: "Belgian Crossroads Bank for Enterprises (BCE/KBO)"
 description: "Belgium's central business register, read from a monthly index of the KBO Open Data full file: name (NL/FR/DE), status, juridical situation and form, start date and registered office for every active registered entity. No shareholders, officers or beneficial owners \u2014 the Belgian UBO register is held separately and is not open."
 resource: "https://kbopub.economie.fgov.be/kbo-open-data/"
 tags: ["cdd", "national-register", "Custom-KBO-Reuse", "commercial-conditional"]
-timestamp: "2026-10-29"
+timestamp: "2026-11-10"
 source_id: "bce_belgium"
 license: "Custom-KBO-Reuse"
 commercial_use: "conditional"

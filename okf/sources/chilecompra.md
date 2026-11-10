@@ -4,7 +4,7 @@ title: "ChileCompra \u2014 Mercado P\u00fablico (Chilean public procurement)"
 description: "Chile's public procurement platform, run by the Direcci\u00f3n ChileCompra, published monthly as open data. For a company supplier: its latest tenders (won or bid) and purchase orders with buyer, value, procedure and a link to each on Mercado P\u00fablico, plus twelve-month totals. Matched on the RUT. Sole traders are not indexed. Procurement activity, not ownership."
 resource: "https://www.mercadopublico.cl/"
 tags: ["cdd", "aggregator", "CC0-1.0", "commercial-yes"]
-timestamp: "2026-10-02"
+timestamp: "2026-11-10"
 source_id: "chilecompra"
 license: "CC0-1.0"
 commercial_use: "yes"

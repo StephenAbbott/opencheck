@@ -569,3 +569,19 @@ def test_the_gleif_hit_never_asserts_a_business_number_key() -> None:
 
     ctx.derived = {"lei": ctx.lei, "ca_corp_id": normalise_corp_id("035818-5")}
     assert _build_gleif_hit(ctx, {}).identifiers["ca_corp_id"] == "358185"
+
+
+@respx.mock
+async def test_a_directors_read_failing_twice_in_one_run_is_one_degradation(index) -> None:
+    """Production, 10 Nov 2026: the dispatch read got a 500 and the deepen
+    pass's read timed out, and the lookup listed the same sentence twice."""
+    _record_route(respx.mock, GATEWAY, "8660115", [CORP_8660115, None])
+    route = respx.mock.get(f"{GATEWAY}/v2/corporations/8660115/directors.json")
+    route.side_effect = [httpx.Response(500, json={}), httpx.ReadTimeout("slow")]
+    degradation.begin()
+    await _fetch("8660115")
+    await _fetch("8660115")
+    collected = degradation.collect()
+    assert route.call_count == 2, "a failure is never cached, so the read is asked again"
+    assert len(collected) == 1
+    assert collected[0].reason == degradation.REASON_UPSTREAM_ERROR  # the first is kept

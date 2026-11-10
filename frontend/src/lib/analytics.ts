@@ -64,8 +64,60 @@ export function canonicalPath(pathname: string, search: string): string {
   return known.has(pathname) ? pathname : "/";
 }
 
+/**
+ * The QA opt-out. Opening any page with `?qa=1` marks this browser as a test
+ * run, and nothing it does is counted: the scheduled testing agents use it so
+ * their page views do not read as readers. `?qa=0` clears the mark. The mark
+ * lives in localStorage so it survives the in-app navigation that drops the
+ * query string; where storage is unavailable it holds for the one page load.
+ */
+export const QA_STORAGE_KEY = "opencheck:qa";
+
+/**
+ * Whether this browser has opted out. Pure, for tests: `search` is the
+ * current query string, `stored` the localStorage value. Returns the new
+ * opt-out state and the value to store (`null` to remove, `undefined` to
+ * leave it as it is).
+ */
+export function qaOptOut(
+  search: string,
+  stored: string | null,
+): { optedOut: boolean; store: string | null | undefined } {
+  const qa = new URLSearchParams(search).get("qa");
+  if (qa === "1") return { optedOut: true, store: "1" };
+  if (qa === "0") return { optedOut: false, store: null };
+  return { optedOut: stored === "1", store: undefined };
+}
+
+let qaOptedOut: boolean | null = null;
+
+function isQaRun(): boolean {
+  if (qaOptedOut !== null && !new URLSearchParams(window.location.search).has("qa")) {
+    return qaOptedOut;
+  }
+  let stored: string | null = null;
+  try {
+    stored = window.localStorage.getItem(QA_STORAGE_KEY);
+  } catch {
+    // Storage blocked: the query string alone decides, for this load.
+  }
+  const { optedOut, store } = qaOptOut(window.location.search, stored);
+  try {
+    if (store === null) window.localStorage.removeItem(QA_STORAGE_KEY);
+    else if (store !== undefined) window.localStorage.setItem(QA_STORAGE_KEY, store);
+  } catch {
+    // As above.
+  }
+  qaOptedOut = optedOut;
+  return optedOut;
+}
+
 function enabled(): boolean {
-  return typeof window !== "undefined" && LIVE_HOSTS.has(window.location.hostname);
+  return (
+    typeof window !== "undefined" &&
+    LIVE_HOSTS.has(window.location.hostname) &&
+    !isQaRun()
+  );
 }
 
 function record(path: string, event = false): void {

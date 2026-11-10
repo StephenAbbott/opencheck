@@ -261,6 +261,35 @@ bulk/offline adapters are allowlisted in `_DELIBERATELY_UNREGISTERED`.
 LEI-keyed sources (opensanctions, openaleph, climatetrace, bods_gleif) and
 SEC EDGAR are handled inside `_dispatch()` / `_lookup_pipeline()` directly.
 
+### Related persons are screened through one batched OpenSanctions /match (the batched-/match ticket, 10 Nov 2026)
+
+`cross_check._os_person_batch` sends every related *person* target as a
+FollowTheMoney `Person` example (name, birth year, alpha-2 nationalities —
+`opensanctions.person_match_example`) in one `POST /match/default`
+(`OpenSanctionsAdapter.match_persons`, chunks of `MATCH_BATCH_SIZE` = 100).
+Entities, the Phase 290 subject screen and EveryPolitician stay on per-name
+`search`. Things that will be re-derived otherwise:
+
+- **Billing does not change**: the hosted API charges `/match` one credit per
+  *query* and `/search` one per *request* (metering FAQ, read 10 Nov 2026), so
+  25 people cost 25 credits either way. The batch saves round trips and the
+  per-key request quota, not credits.
+- **OpenSanctions' score orders, never decides.** `cutoff=0.0` (yente drops
+  candidates at or below 0.5 by default, before we would see them), `limit=10`
+  like `/search`, the `match` flag ignored. The hits go through
+  `_signals_from_os` and its gates (0.88, single-token guard, birth-year and
+  patronymic conflicts, distinctive tokens) and the Phase 106 ladder unchanged.
+- **A failure is per name, never a clean screen**: a failed request is an
+  exception for every key in its chunk, a non-200 `status` inside a 200 batch
+  one for that key (shaped as `httpx.HTTPStatusError`, so 429 reads
+  `rate_limited`); `_check_target` records either as an OpenSanctions failure,
+  so the `cross_source_names` degradation reads as it always has.
+  `match_persons` never raises.
+- **Each query's answer is cached on its own** (`opensanctions/match/Person/
+  <params fingerprint>/<example slug>`, 7-day expiry like `/search`).
+- **Test doubles that only answer `search`** keep the old per-name path:
+  `_os_person_batch` returns `None` when the adapter has no `match_persons`.
+
 ### Risk-signal instrumentation (Phase 110)
 
 `opencheck/signalstats.py` counts risk signals per `(code, source_id)`,
@@ -1522,6 +1551,48 @@ Things that will be re-derived otherwise:
 - **Not on the persistent disk** (it was full on 4 Nov 2026): the default
   data-root path, re-downloaded at boot. Nothing touches the response `Cache`
   for the index (the Phase 325 rule); the API record and directors do.
+
+## Colombia is a live read of RUES on datos.gov.co (the Colombia RUES ticket, 10 Nov 2026)
+
+`sources/rues_colombia.py`, `bods/mappers/colombia.py`, `finding_rues_colombia`,
+`_bh_rues_colombia`, `identifiers.colombian_nit`. Measured on the 583 ISSUED
+LEIs with a Colombian legal address (10 Nov 2026); Stephen chose to ship under
+the dataset's licence, flagged share-alike. Things that will be re-derived
+otherwise:
+
+- **One Socrata dataset, `c82u-588k`** (Confecámaras, 9.47M rows, monthly,
+  **CC BY-SA 4.0** — `licensing` has a `cc-by-sa-4.0` row; the pattern
+  fallback would have read it as not share-alike). One row = one matrícula at
+  one chamber. A NIT query answers in under half a second, so there is no
+  index tier.
+- **Personal data is never asked for.** `_SELECT` names columns and leaves out
+  `num_identificacion_representante_legal`, `numero_identificacion` and the
+  natural persons' name columns; rows are filtered to the legal-person
+  category; `RuesColombiaBundle` refuses either kind. The legal representative
+  is a name and a role (`seniorManagingOfficial`, no BO flag); an entity when
+  `clase_identificacion_rl` is `NIT`, with no identifier.
+- **GLEIF files a NIT or a matrícula under the same RA codes** (RA000093 the
+  RUE, RA000094–RA000150 the chambers, RA000848 the Superintendencia
+  Financiera). A NIT with a valid DIAN check digit (`colombian_nit`, every
+  spelling: `900.396.759 - 5`, `00000900396759 - 5`, `9003967595`) is written
+  `CO-RUE` `900396759-5` by the GLEIF mapper and RUES alike — value-schemed
+  (`_GLEIF_VALUE_SCHEMED_RA`, the Chile rule); anything else keeps the RA code
+  as its scheme. `CO-RUE` is an explicit register hop (the RA table never
+  names it). **No name gate on a NIT** (37 of 440 differ, all the same
+  company).
+- **A matrícula is searched across every chamber and name-gated**: the
+  chamber the RA names is unreliable (FIBRATECH files Bogotá's RA with
+  Barranquilla's matrícula) and each chamber numbers its own. One agreeing
+  company or a note card (`name_mismatch`, `ambiguous`). Medellín writes
+  `21-075155-12` for `7515512`; Bogotá pads with zeros.
+- **The razón social lists alternative names** ("BANCOLOMBIA S.A, ADEMÁS
+  PODRÁ GIRAR BAJO…"): the name is cut there (`legal_name`) and the full text
+  kept in a `transformation` annotation. `foundingDate` is the earliest
+  matrícula date, annotated. A move between chambers cancels the old
+  matrícula "POR TRASLADO" — not terminal; `current_row` prefers ACTIVA.
+- **Not in RUES**: funds, patrimonios autónomos, universities, the Banco de la
+  República (~31 of 583) — a note card. CO has no row in the knowability
+  table yet.
 
 ## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
 

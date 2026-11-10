@@ -76,6 +76,22 @@ appears in it and that it stays under `_INSTRUCTIONS_MAX_WORDS` (450), so a
 new tool cannot be left out and the text cannot grow into something clients
 drop. Detail belongs in each tool's docstring, not here.
 
+### Tool annotations (the readOnlyHint ticket)
+
+Every tool declares MCP tool annotations, so a client can tell which calls
+change nothing and need no confirmation. Fourteen tools are `readOnlyHint:
+true`: a lookup spends the shared budget and may fill the replay cache, but
+changes nothing a caller can see, and `opencheck_discrepancy_note` drafts a
+note and sends nothing. `opencheck_save_report` is the one that writes — it
+stores a new saved report on every call — so it declares `readOnlyHint:
+false`, `destructiveHint: false` (it adds, never deletes or overwrites) and
+`idempotentHint: false` (each call mints a new report id and manage token).
+`openWorldHint` is `false` only for `opencheck_knowability` and
+`opencheck_list_sources`, which read OpenCheck's own tables and call no
+source. The hints are advice to a client, never a security boundary.
+`test_mcp.py` pins them: a new tool without annotations fails, and a new
+writing tool has to be named there.
+
 ### Rate limits (Phase 234)
 
 Until Phase 234 `/mcp` had no limit: slowapi's decorators cannot reach the

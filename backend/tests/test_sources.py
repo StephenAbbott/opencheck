@@ -119,6 +119,9 @@ _IDENTIFIER_KEYED = {
     # ny_dos: the same — reached from the DOS ID GLEIF files under RA000628;
     # it has no name search at all.
     "apr_serbia", "dlcp_dc", "ny_dos",
+    # rues_colombia: name search is a live SODA query; with live calls off
+    # (as here) it returns nothing and has no stub tier — the ny_dos case.
+    "rues_colombia",
     "asp_moldova", "onrc_romania",
     # chilecompra: reached from the RUT GLEIF files; procurement records are
     # not name-searchable here.
@@ -136,6 +139,8 @@ _IDENTIFIER_KEYED = {
     # cyprus_drcor (the Cyprus wiring): the same LIKE over the local index;
     # a fresh test process has none.
     "cyprus_drcor",
+    # ica_israel (the Israel wiring): the same LIKE over the local index.
+    "ica_israel",
     # corporations_canada (the Canada index ticket): an FTS5 search over the
     # open-data index; the gateway plan has none, so no stub row without it.
     "corporations_canada",

@@ -361,6 +361,24 @@ PROBES: dict[str, SourceProbe] = {
             "throttle."
         ),
     ),
+    "rues_colombia": _p(
+        tier="live",
+        subject="Banco de Bogotá (Colombia)",
+        args=("860002964-4",),
+        kwargs={"legal_name": "BANCO DE BOGOTA"},
+        expect_fields=("rows",),
+        anchor_lei="549300LYHE7LWSKDZT53",
+        bods_mapper="map_rues_colombia",
+        notes=(
+            "The NIT with its check digit exactly as GLEIF files it under "
+            "RA000093 (the RUE), on one ACTIVA matrícula (221830) at the Bogotá "
+            "chamber with a legal representative on the row (10 Nov 2026). "
+            "``expect_fields`` asserts the rows, so Confecámaras renaming "
+            "``nit`` or dropping the legal-person category reads as a failure "
+            "rather than a quiet no-record. Keyless; SOCRATA_APP_TOKEN, when "
+            "set, only lifts the shared per-IP throttle."
+        ),
+    ),
     "anaf_romania": _p(
         tier="live",
         subject="Dante International S.A. (eMAG)",
@@ -619,6 +637,29 @@ PROBES: dict[str, SourceProbe] = {
             "403 to every datacentre address. A refresh-due amber means "
             "refresh_edr_ukraine_index.sh has not been run, not that the "
             "Ministry of Justice stopped publishing."
+        ),
+    ),
+    "ica_israel": _p(
+        tier="index",
+        subject="PAYPAL ISRAEL PAYMENT SERVICES LTD (IL 516478872)",
+        args=("516478872",),
+        kwargs={"legal_name": "PayPal Israel Payment Services Ltd."},
+        expect_fields=("name", "type_words", "status_words", "incorporated"),
+        # SKIP without an index, never allow_empty. warm_bulk_stores.py
+        # downloads the asset first.
+        requires_files=("ica_israel.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt daily by refresh-ica-israel-index.yml; data.gov.il
+        # regenerates both files every night. Ten days means the workflow
+        # stopped, not that the register did.
+        snapshot_max_age_days=10,
+        anchor_lei="25490039WF5R6PKDL402",
+        bods_mapper="map_ica_israel",
+        notes=(
+            "The Israel wiring (10 Nov 2026): an index of the Corporations "
+            "Authority's two data.gov.il registers, companies and "
+            "partnerships, harvested daily through the CKAN datastore. "
+            "Entity data only: no officers, shareholders or partners."
         ),
     ),
     "cyprus_drcor": _p(

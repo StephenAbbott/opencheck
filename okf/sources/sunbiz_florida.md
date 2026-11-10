@@ -4,7 +4,7 @@ title: "Florida Division of Corporations (Sunbiz)"
 description: "Florida's register of corporations, LLCs, limited partnerships and foreign qualifications, read from a quarterly index of the Division of Corporations' bulk data: name, status with the dated event behind it, filing type, file date, FEI (EIN) number, principal address, registered agent, annual reports, former names and up to six officers. No shareholders or beneficial owners are published."
 resource: "https://dos.fl.gov/sunbiz/"
 tags: ["cdd", "national-register", "FL-Public-Records", "commercial-yes"]
-timestamp: "2026-10-30"
+timestamp: "2026-11-10"
 source_id: "sunbiz_florida"
 license: "FL-Public-Records"
 commercial_use: "yes"

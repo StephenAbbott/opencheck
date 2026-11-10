@@ -88,6 +88,8 @@ from opencheck.sources.corporations_canada import db_path as canada_db_path  # n
 from opencheck.sources.corporations_canada import warm_index as warm_canada_index  # noqa: E402
 from opencheck.sources.cyprus_drcor import db_path as cyprus_db_path  # noqa: E402
 from opencheck.sources.cyprus_drcor import warm_index as warm_cyprus_index  # noqa: E402
+from opencheck.sources.ica_israel import db_path as ica_israel_db_path  # noqa: E402
+from opencheck.sources.ica_israel import warm_index as warm_ica_israel_index  # noqa: E402
 from opencheck.sources.sunbiz_florida import db_path as sunbiz_db_path  # noqa: E402
 from opencheck.sources.sunbiz_florida import warm_index as warm_sunbiz_index  # noqa: E402
 from opencheck.sources.onrc_romania import db_path as onrc_db_path  # noqa: E402
@@ -102,6 +104,7 @@ WARMERS = (
     ("dart_korea", warm_dart_korea_index, dart_korea_db_path),
     ("edr_ukraine", warm_edr_index, edr_db_path),
     ("cyprus_drcor", warm_cyprus_index, cyprus_db_path),
+    ("ica_israel", warm_ica_israel_index, ica_israel_db_path),
     ("corporations_canada", warm_canada_index, canada_db_path),
     ("sunbiz_florida", warm_sunbiz_index, sunbiz_db_path),
     ("ariregister", warm_ariregister_index, ariregister_db_path),

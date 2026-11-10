@@ -400,6 +400,59 @@ def _bh_ny_dos(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_rues_colombia(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Colombia's RUES.
+
+    * **A record.** Asserts the NIT RUES's own rows carry (``co_nit``,
+      ``900396759-5``) — never the LEI, never the matrícula GLEIF filed.
+    * **A note card** — the number is not in RUES, the matrícula belongs to a
+      different company, or it matches several. No identifier, the
+      ``ny_dos`` shape.
+    """
+    from ..findings import finding_rues_colombia
+    from ..sources.rues_colombia import CO_RUE_SCHEME, summarise
+
+    if r.get("not_found"):
+        return _hit(
+            "rues_colombia", local_id,
+            name=ctx.legal_name or "",
+            summary=f"{CO_RUE_SCHEME} {local_id} · no record attached",
+            finding=finding_rues_colombia(r),
+            identifiers={},
+            raw={
+                "not_found": True,
+                "coverage_note": r.get("coverage_note"),
+                "name_mismatch": bool(r.get("name_mismatch")),
+                "ambiguous": bool(r.get("ambiguous")),
+                "registered_name": r.get("registered_name"),
+            },
+        )
+    s = summarise(r)
+    nit = s["nit"] or local_id
+    status = s.get("status") or ""
+    return _hit(
+        "rues_colombia", nit,
+        name=s.get("name") or ctx.legal_name or "",
+        summary=f"{CO_RUE_SCHEME} {s['nit_display']}" + (f" · {status}" if status else ""),
+        identifiers={"co_nit": s["nit_display"]},
+        raw={
+            "nit": s["nit_display"],
+            "name": s.get("name"),
+            "legal_form": s.get("legal_form"),
+            "status": status or None,
+            "chamber": s.get("chamber"),
+            "matricula": s.get("matricula"),
+            "registered_on": s.get("registered_on"),
+            "renewed_on": s.get("renewed_on"),
+            "cancelled_on": s.get("cancelled_on"),
+            "legal_representative": s.get("representative"),
+            "other_registrations": s.get("other_registrations") or [],
+            "matched_by": r.get("matched_by"),
+        },
+        finding=finding_rues_colombia(r),
+    )
+
+
 def _bh_anaf_romania(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Romania's ANAF taxpayer register.
 
@@ -860,6 +913,43 @@ def _bh_cyprus_drcor(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
         summary=summary,
         finding=finding_cyprus_drcor(r),
         identifiers={"cy_he": local_id}, raw=r,
+    )
+
+
+def _bh_ica_israel(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Israel Corporations Authority, from the index
+    (the Israel wiring, 10 Nov 2026).
+
+    * **A company or partnership.** Asserts the 9-digit number the register
+      published (``il_roc``, the index key), with the register's status on
+      the summary where it is not plainly live.
+    * **Not in the index.** A note card (the JAR shape): the row sentence
+      says so, no identifier is asserted and nothing is degraded.
+
+    Dispatch is gated on the index file (``covers_lei``).
+    """
+    from ..findings import finding_ica_israel
+    from ..sources.ica_israel import status_label
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "ica_israel", local_id,
+            name=ctx.legal_name or "",
+            summary=f"IL {local_id} · not in the index",
+            finding=finding_ica_israel(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    summary = f"IL {local_id}"
+    cls = r.get("status_class") or "unknown"
+    if cls != "live":
+        summary += " · " + (status_label(r.get("status_words")) or cls).lower()
+    return _hit(
+        "ica_israel", local_id,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=summary,
+        finding=finding_ica_israel(r),
+        identifiers={"il_roc": local_id}, raw=r,
     )
 
 

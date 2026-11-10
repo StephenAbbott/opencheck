@@ -22,6 +22,7 @@ from typing import Any
 from fastapi import HTTPException
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.types import ToolAnnotations
 
 from . import shaping
 
@@ -105,11 +106,27 @@ mcp = FastMCP(
 )
 
 
+# Tool annotations (the readOnlyHint ticket). Hints for a client deciding
+# whether to ask the user before a call; never a security boundary. Every
+# tool but opencheck_save_report only reads: a lookup spends the shared lookup
+# budget and may fill the replay cache, but changes nothing a caller can see
+# (a repeat within 15 minutes returns the same run). opencheck_discrepancy_note
+# drafts a note and sends nothing. opencheck_save_report stores a new report
+# on each call — additive, never destructive, not idempotent (each call mints
+# a new report id and manage token). openWorldHint is False only for the two
+# tools that read OpenCheck's own tables and call no source.
+_READS = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
+_READS_LOCAL = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+_SAVES = ToolAnnotations(
+    readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True
+)
+
+
 def _err(exc: HTTPException) -> dict[str, Any]:
     return {"error": exc.detail, "status": exc.status_code}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_search(
     query: str,
     kind: str = "entity",
@@ -193,7 +210,7 @@ async def opencheck_search(
     return shaping.shape_search(resp, limit=limit)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_resolve_national_id(
     number: str, country: str = "", ra_code: str = ""
 ) -> dict[str, Any]:
@@ -215,7 +232,7 @@ async def opencheck_resolve_national_id(
     return resp.model_dump()
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_lookup(lei: str, deepen_top: int = 5) -> dict[str, Any]:
     """Run customer due diligence on a legal entity by its LEI.
 
@@ -237,7 +254,7 @@ async def opencheck_lookup(lei: str, deepen_top: int = 5) -> dict[str, Any]:
     return shaping.shape_lookup(resp)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_register_lookup(
     scheme: str, id: str, deepen_top: int = 5, name: str = ""
 ) -> dict[str, Any]:
@@ -272,7 +289,7 @@ async def opencheck_register_lookup(
     return shaping.shape_register_lookup(resp)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_batch_lookup(leis: list[str], deepen_top: int = 5) -> dict[str, Any]:
     """Screen a list of companies by LEI — one compact row per company.
 
@@ -335,7 +352,7 @@ async def opencheck_batch_lookup(leis: list[str], deepen_top: int = 5) -> dict[s
     }
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_export_bods(
     lei: str, format: str = "json", deepen_top: int = 5, include_subsidiaries: bool = False
 ) -> dict[str, Any]:
@@ -468,7 +485,7 @@ def _depth_error(depth: int) -> dict[str, Any] | None:
     return None
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_owners(
     lei: str,
     threshold: float | None = None,
@@ -552,7 +569,7 @@ async def opencheck_owners(
 # content, which cannot hold an ``Image`` — every call failed in production
 # with "Unable to serialize unknown type". Unstructured, the list is returned
 # as the content blocks themselves: the JSON text and the SVG image.
-@mcp.tool(structured_output=False)
+@mcp.tool(structured_output=False, annotations=_READS)
 async def opencheck_ownership_map(
     lei: str, source: str | None = None, depth: int = 1, deepen_top: int = 5
 ) -> list[Any]:
@@ -608,7 +625,7 @@ async def opencheck_ownership_map(
     return out
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_person_check(
     name: str, birth_year: int | None = None
 ) -> dict[str, Any]:
@@ -639,7 +656,7 @@ async def opencheck_person_check(
     return shaping.shape_person_check(resp)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_person_positions(scheme: str, id: str, country: str | None = None) -> dict[str, Any]:
     """List one person's positions across companies, keyed by a register's
     own person key — never by name.
@@ -733,7 +750,7 @@ MCP_POSITIONS_SHOWN = 100
 MCP_RELATIONS_SHOWN = 100
 
 
-@mcp.tool()
+@mcp.tool(annotations=_SAVES)
 async def opencheck_save_report(lei: str, deepen_top: int = 5) -> dict[str, Any]:
     """Keep a check of an LEI as a saved report: a link to exactly what
     OpenCheck found, on this date, that does not change afterwards.
@@ -807,7 +824,7 @@ async def opencheck_save_report(lei: str, deepen_top: int = 5) -> dict[str, Any]
     }
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_subsidiaries(
     lei: str, format: str = "summary", include_declared: bool = False
 ) -> dict[str, Any]:
@@ -877,7 +894,7 @@ def _license_notice(adapter: Any) -> dict[str, str] | None:
     }
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS)
 async def opencheck_discrepancy_note(
     lei: str | None = None, scheme: str | None = None, id: str | None = None, deepen_top: int = 5
 ) -> dict[str, Any]:
@@ -937,7 +954,7 @@ async def opencheck_discrepancy_note(
 _KNOWABILITY_MAX_CODES = 40
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS_LOCAL)
 async def opencheck_knowability(jurisdictions: list[str]) -> dict[str, Any]:
     """What can be known about a company's owners in each jurisdiction —
     before a lookup, without spending one.
@@ -985,7 +1002,7 @@ async def opencheck_knowability(jurisdictions: list[str]) -> dict[str, Any]:
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READS_LOCAL)
 async def opencheck_list_sources() -> dict[str, Any]:
     """List the data sources OpenCheck consults, with licence and live status."""
     from ..routers.health import sources as _sources

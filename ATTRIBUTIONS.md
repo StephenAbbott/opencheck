@@ -58,6 +58,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `ua_edrpou` (8-digit EDRPOU code) derived from GLEIF RA codes `RA000567` (ЄДР), `RA001026` (National Securities and Stock Market Commission) and `RA001027` (National Bank of Ukraine) — all three carry the EDRPOU in `registeredAs`.
 - **Note:** Open data from the ЄДР was suspended after the full-scale invasion in February 2022 and restored on 19 January 2026 under Law 4576-IX, which also withholds precise locations, addresses and KVED activity codes for the duration of martial law and one year afterwards. Those fields are withheld by the publisher, and OpenCheck does not reconstruct them from older copies of this register or from any other source.
 
+## Israel Corporations Authority (רשות התאגידים) — registers of companies and partnerships
+
+- **Data:** every company and partnership on the Registrar of Companies and the Registrar of Partnerships: number, Hebrew and English names, type, status and sub-status, incorporation date and registered address; for a company also the government-company flag, the limitation, the violating-company mark and the last annual report filed. No directors, shareholders or partners are published. The care-of field (`אצל`), the company's purpose and its description are not read.
+- **Portal:** <https://data.gov.il/dataset/ica_companies> and <https://data.gov.il/dataset/ica_partnerships> (updated daily). Public search UI: <https://ica.justice.gov.il/GenericCorporarionInfo/SearchCorporation?unit=8>
+- **Access:** the CKAN datastore API (`datastore_search`), paged 32,000 rows at a time — the CSV download answers 403 to datacentre addresses. Built into a SQLite index by `scripts/build_ica_israel_index.py`, daily on GitHub Actions (`refresh-ica-israel-index.yml`), shipped as the `ica-israel-index` release asset and downloaded by the backend at boot.
+- **License:** companies — data.gov.il "Other (Open)": free use, including commercial, citing data.gov.il, the dataset and its update date; partnerships — [CC BY](https://creativecommons.org/licenses/by/4.0/).
+- **Attribution:** "Contains information from the Israel Corporations Authority (רשות התאגידים) — the companies and partnerships databases (מאגר חברות, מאגר שותפויות), published on data.gov.il."
+- **Entry point:** `il_roc` (9-digit corporate number) derived from GLEIF RA code `RA000406`; companies and partnerships are both filed under it.
+
 ## DRCOR — Department of Registrar of Companies and Intellectual Property (Cyprus)
 
 - **Data:** organisations, registered office addresses, and officials (directors/secretaries) from the *Register of Registered Companies, Commercial Names and Cooperatives in Cyprus*. No shareholder/ownership data is published.
@@ -213,6 +222,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution (given, not required):** "Corporations and Other Entities: All Filings, Entity Status History, Name Status History and Address datasets — New York State Department of State, Division of Corporations, State Records and Uniform Commercial Code, via data.ny.gov, used under the OPEN-NY Terms of Use."
 - **Changes made:** OpenCheck reads the four datasets for one DOS ID and derives the current name, status, formation date and chief executive(s) from them. **Assumed-name filings are dropped** — they sit under a separate numbering that collides with DOS IDs. A title the filer appended to the CEO's name after a comma ("…, PRESIDENT") is removed. The CEO is carried by **name and role only**: the address DOS publishes beside it is not. Service-of-process and registered-agent addresses are not read.
 - **Entry point:** `us_ny_dos_id` derived from GLEIF RA code `RA000628` (Corporation and Business Entity Database), whatever the entity's jurisdiction; no name search. Optional `SOCRATA_APP_TOKEN` lifts Socrata's shared per-IP throttle.
+
+## Colombia — RUES (Registro Único Empresarial y Social), Confecámaras
+
+- **Data:** the basic record of every company, sole trader and non-profit registered with Colombia's 58 chambers of commerce — chamber and matrícula, name (razón social) and acronym (sigla), NIT and check digit, CIIU activity codes, registration, renewal and cancellation dates, legal organisation, status, and the legal representative's name and identity number. OpenCheck reads **legal persons only** and never the identity number. No shareholders or beneficial owners are published.
+- **Source:** *Personas Naturales, Personas Jurídicas y Entidades Sin Ánimo de Lucro* on datos.gov.co (Socrata SODA 2.1, <https://www.datos.gov.co/d/c82u-588k>), published by Confecámaras, refreshed monthly.
+- **License:** **Creative Commons Attribution-ShareAlike 4.0 International** (<https://creativecommons.org/licenses/by-sa/4.0/>). Commercial use is permitted with attribution; **material adapted from it must be shared under the same licence**, which OpenCheck's licence matrix and exports flag.
+- **Attribution:** "Personas Naturales, Personas Jurídicas y Entidades Sin Ánimo de Lucro — Confecámaras, Registro Único Empresarial y Social (RUES), via datos.gov.co, licensed under CC BY-SA 4.0."
+- **Changes made:** OpenCheck selects named columns only (never `num_identificacion_representante_legal` or a natural person's name columns), keeps legal-person rows, picks the current row among a company's matrículas, cuts the razón social where it starts listing alternative names (the full text is kept in an annotation), and maps the legal representative by name and role. Dates are reformatted to ISO 8601.
+- **Entry point:** `co_rues` derived from GLEIF RA codes `RA000093`–`RA000150` and `RA000848` (a NIT with a valid DIAN check digit, or a matrícula that is then name-gated). Optional `SOCRATA_APP_TOKEN` lifts Socrata's shared per-IP throttle.
 
 ## Florida — Department of State, Division of Corporations (Sunbiz)
 

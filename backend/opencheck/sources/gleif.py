@@ -52,6 +52,8 @@ from .dlcp_dc import (
     DLCP_RA_CODE as _DLCP_RA_CODE,
     normalise_file_number as _normalise_dc_file_number,
 )
+from ..identifiers import colombian_nit as _colombian_nit
+from .rues_colombia import CO_RA_CODES as _CO_RA_CODES
 from .ny_dos import NY_DOS_RA_CODE as _NY_DOS_RA_CODE, normalise_dos_id as _normalise_ny_dos_id
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
 from .inpi import (
@@ -1157,6 +1159,14 @@ class GleifAdapter(SourceAdapter):
                     identifiers["us_ny_dos_id"] = _normalise_ny_dos_id(registered_as)
                 except ValueError:
                     pass
+            # Colombian NIT — expose as ``co_nit`` so the reconciler can bridge
+            # GLEIF ↔ RUES. Only a NIT whose check digit agrees: the same
+            # authorities file chamber matrícula numbers too, and those are
+            # not NITs (the Colombia RUES ticket).
+            if registered_at_id in _CO_RA_CODES:
+                nit = _colombian_nit(registered_as)
+                if nit:
+                    identifiers["co_nit"] = nit
             # Brazilian CNPJ — expose as ``br_cnpj`` so the reconciler can
             # bridge GLEIF ↔ Receita Federal CNPJ register.
             if registered_at_id == _BR_RA_CODE:

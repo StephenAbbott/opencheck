@@ -427,3 +427,51 @@ def ch_identification_is_uk(identification: dict | None) -> bool:
         if text in _CH_UK_SHORT or any(hint in text for hint in _CH_UK_HINTS):
             return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# Colombia — NIT (Número de Identificación Tributaria)
+# ---------------------------------------------------------------------------
+
+#: DIAN's check-digit weights, from the rightmost digit of the NIT.
+_NIT_DV_WEIGHTS = (3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71)
+
+
+def nit_check_digit(base: str) -> int:
+    """DIAN's check digit (dígito de verificación) for a Colombian NIT."""
+    digits = str(base)
+    if not digits.isdigit() or len(digits) > len(_NIT_DV_WEIGHTS):
+        raise ValueError(f"not a NIT: {base!r}")
+    total = sum(int(d) * _NIT_DV_WEIGHTS[i] for i, d in enumerate(reversed(digits)))
+    remainder = total % 11
+    return remainder if remainder < 2 else 11 - remainder
+
+
+def colombian_nit(value: object) -> str | None:
+    """A NIT with a valid check digit, written ``900396759-5``, or None.
+
+    Accepts the shapes GLEIF's LEI issuers file under the Colombian
+    registration authorities: dots, spaces, a hyphen or a space before the
+    check digit, leading zeros (``00000900625884 - 1``), or the check digit
+    appended to nine digits (``8300977829``). A value with no check digit is
+    not a NIT here — nine bare digits could as well be a matrícula number.
+    """
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    match = re.fullmatch(r"([\d.]+)\s*[-\s]\s*(\d)", text)
+    if match:
+        base, dv = match.group(1).replace(".", "").lstrip("0"), int(match.group(2))
+    elif re.fullmatch(r"[\d.]{10,}", text):
+        compact = text.replace(".", "").lstrip("0")
+        if len(compact) != 10:
+            return None
+        base, dv = compact[:-1], int(compact[-1])
+    else:
+        return None
+    if not (6 <= len(base) <= 10):
+        return None
+    try:
+        if nit_check_digit(base) != dv:
+            return None
+    except ValueError:
+        return None
+    return f"{base}-{dv}"

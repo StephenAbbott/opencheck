@@ -25,6 +25,7 @@ from .acra_singapore import AcraSingaporeAdapter
 from .cvr_denmark import CvrDenmarkAdapter
 from .dlcp_dc import DlcpDcAdapter
 from .ny_dos import NyDosAdapter
+from .rues_colombia import RuesColombiaAdapter
 from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
 from .corporations_canada import CorporationsCanadaAdapter
@@ -45,6 +46,7 @@ from .inpi import InpiAdapter
 from .edr_ukraine import EdrUkraineAdapter
 from .jar_lithuania import JarLithuaniaAdapter
 from .cyprus_drcor import CyprusDrcorAdapter
+from .ica_israel import IcaIsraelAdapter
 from .sunbiz_florida import SunbizFloridaAdapter
 from .krs_poland import KrsPolandAdapter
 from .kvk import KvKAdapter
@@ -89,6 +91,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "cvr_denmark": CvrDenmarkAdapter(),
     "dlcp_dc": DlcpDcAdapter(),
     "ny_dos": NyDosAdapter(),
+    "rues_colombia": RuesColombiaAdapter(),
     "eiti": EitiAdapter(),
     "eiti_assessment": EitiAssessmentAdapter(),
     "eiti_bo": EitiBoAdapter(),
@@ -103,6 +106,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "jar_lithuania": JarLithuaniaAdapter(),
     "edr_ukraine": EdrUkraineAdapter(),
     "cyprus_drcor": CyprusDrcorAdapter(),
+    "ica_israel": IcaIsraelAdapter(),
     "sunbiz_florida": SunbizFloridaAdapter(),
     "krs_poland": KrsPolandAdapter(),
     "kvk": KvKAdapter(),
