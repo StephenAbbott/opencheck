@@ -38,6 +38,13 @@ export const ESG_SOURCE_META: Record<string, EsgSourceMeta> = {
     href: "https://portal.zambiaeiti.org/",
     licence: "ZEITI open data policy",
   },
+  estma: {
+    // Statistics Canada republishes the reports NRCan collects; the tile names
+    // the Act, which is what a reader recognises.
+    org: "ESTMA · Statistics Canada",
+    href: "https://www150.statcan.gc.ca/n1/pub/71-607-x/71-607-x2022008-eng.htm",
+    licence: "Statistics Canada Open Licence",
+  },
   wikirate: {
     org: "Wikirate",
     href: "https://wikirate.org/",

@@ -133,6 +133,17 @@ _CANONICAL: dict[str, LicenseTerms] = {
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",
         summary="Commercial use permitted with attribution.",
     ),
+    # The ESTMA payments data, as Statistics Canada republishes it. Use,
+    # reproduction and distribution for any lawful purpose, commercial
+    # included, with the prescribed acknowledgement of the source; no
+    # share-alike. Assumed by Stephen's decision (10 Nov 2026) rather than
+    # confirmed with Natural Resources Canada, who collect the reports.
+    "statcan-open-licence": _terms(
+        "StatCan-Open-Licence", "Statistics Canada Open Licence",
+        commercial="yes", attribution=True, share_alike=False, redistribution="yes",
+        url="https://www.statcan.gc.ca/en/reference/licence",
+        summary="Commercial use permitted with acknowledgement of Statistics Canada as the source.",
+    ),
     "singapore-ogl-1.0": _terms(
         "Singapore-OGL-1.0", "Singapore Open Data Licence v1.0",
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",

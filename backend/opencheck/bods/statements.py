@@ -779,6 +779,7 @@ SOURCE_NAMES: dict[str, str] = {
     "eiti_assessment": "EITI Company Assessment",
     "eiti_soe": "EITI State-Owned Enterprises Database",
     "eiti_zambia": "Zambia EITI data portal (ZEITI)",
+    "estma": "ESTMA payments to governments (Statistics Canada)",
     "meip": "OECD-UNSD Multinational Enterprise Information Platform (MEIP)",
     "ur_latvia": "UR — Latvian Register of Enterprises (data.gov.lv)",
     "ares": "ARES — Czech Administrativní registr ekonomických subjektů",

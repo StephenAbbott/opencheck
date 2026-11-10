@@ -549,6 +549,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** subject LEI matched against the committed index
 - **Category:** ESG — payments, employment, mining rights and water-permit offences; asserts the portal-published TPIN (`zm_tpin`, BODS scheme `ZM-TPIN`), never the name-matched LEI
 
+## ESTMA — payments to governments (Natural Resources Canada, via Statistics Canada)
+
+- **Data:** Reports filed under Canada's Extractive Sector Transparency Measures Act (ESTMA): payments of CAD 100,000 or more to governments in Canada and abroad, by payee and by project, per reporting period. Collected by Natural Resources Canada and republished by Statistics Canada as one SDMX-CSV file, rebuilt weekly (`https://www150.statcan.gc.ca/n1/pub/71-607-x/2022008/STC_DF_ESTMA-eng.csv`, keyless; landing page <https://www150.statcan.gc.ca/n1/pub/71-607-x/71-607-x2022008-eng.htm>). `backend/scripts/build_estma_index.py` packs it into the `estma-index` release asset weekly (`.github/workflows/refresh-estma-index.yml`).
+- **License:** Statistics Canada Open Licence — <https://www.statcan.gc.ca/en/reference/licence> (commercial use permitted, attribution required, no share-alike)
+- **Attribution:** "Source: Statistics Canada, Extractive Sector Transparency Measures Act data, collected by Natural Resources Canada"
+- **Entry point:** subject LEI matched against the committed, hand-reviewed crosswalk `backend/opencheck/data/estma_lei_crosswalk.csv` (the ESTMA file carries no LEI or business number)
+- **Category:** ESG — asserts only the ESTMA entity ID (`ca_estma_id`, BODS scheme `CA-ESTMA`); the LEI is carried as an annotation, never an identifier
+
 ## Wikirate
 
 - **Data:** Open, community-researched corporate ESG metric answers (environment, human rights, supply chains, governance) from metric designers such as the World Benchmarking Alliance, Net Zero Tracker, Fashion Revolution and the Business & Human Rights Resource Centre. OpenCheck shows the total number of data points plus a sample of the most recent researched answers (sorted most-recent-year-first) and links out to wikirate.org for the full record. Wikirate Company cards independently publish LEI, Wikidata QID, OpenCorporates ID, UK company number, SEC CIK, ABN/ACN and ISIN identifiers, making Wikirate a strong cross-source corroborator. Wikirate is a GODIN member.

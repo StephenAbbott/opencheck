@@ -1372,6 +1372,61 @@ def finding_eiti_zambia(bundle: dict[str, Any]) -> str | None:
 
 
 # --------------------------------------------------------------------------
+# ESTMA (payments to governments reported under Canada's Act)
+# --------------------------------------------------------------------------
+
+
+def finding_estma(bundle: dict[str, Any]) -> str | None:
+    """One sentence for the ESTMA payments data.
+
+    Leads with the latest year: the payees and countries the company's own
+    report names, as **counts of what was filed** (rule 4 — the CAD totals
+    are OpenCheck's sums of the payee lines, and stay on the card, labelled).
+    An entity whose payments are filed in another entity's report says whose,
+    and never reads as having paid nothing (rule 6). Reporting on behalf of
+    other entities is said last; it is a reporting arrangement, never
+    ownership, so no ownership word is used (rule 7).
+    """
+    if not bundle or bundle.get("is_stub"):
+        return None
+    entities = bundle.get("entities") or []
+    if not entities:
+        return None
+    entity = entities[0]
+    reports = entity.get("reports") or []
+    if not reports:
+        return None
+    year = reports[0].get("year")
+    same_year = [r for r in reports if r.get("year") == year]
+    own = [r for r in same_year if not r.get("included_in")]
+    clauses: list[str | None] = []
+    if own:
+        report = own[0]
+        payees = int(report.get("payee_count") or 0)
+        countries = len(report.get("by_country") or [])
+        lead = (
+            f"Reported payments to {plural(payees, 'government payee')} in "
+            f"{plural(countries, 'country', 'countries')} for {year}"
+        )
+        if len(own) > 1:
+            lead += f", in {len(own)} reports for that year"
+        elif report.get("project_count"):
+            lead += f", across {plural(int(report['project_count']), 'project')}"
+        clauses.append(lead)
+    else:
+        parent = same_year[0].get("included_in") or {}
+        clauses.append(
+            f"Payments for {year} filed in the report of "
+            f"{parent.get('name') or parent.get('estma_id')}"
+        )
+    includes = entity.get("includes") or {}
+    others = len(includes.get("entities") or [])
+    if others:
+        clauses.append(f"its report also covers {plural(others, 'other entity', 'other entities')}")
+    return clauses_to_sentence(clauses, sep="; ")
+
+
+# --------------------------------------------------------------------------
 # Hong Kong Companies Registry
 # --------------------------------------------------------------------------
 

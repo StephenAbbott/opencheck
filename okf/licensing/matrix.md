@@ -41,6 +41,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | EITI countries — national beneficial ownership registers (`eiti_bo`) | `Public registers; DRC and Armenia state no licence — included with attribution (see the artifact manifest for per-register terms)` | conditional | yes | no |
 | EITI State-Owned Enterprises Database (`eiti_soe`) | `EITI open data (free reuse with attribution)` | yes | yes | no |
 | Zambia EITI data portal (`eiti_zambia`) | `ZEITI Open Data Policy (2016) — open data, no named licence` | yes | yes | no |
+| ESTMA payments to governments (Canada) (`estma`) | `StatCan-Open-Licence` | yes | yes | no |
 | EveryPolitician (`everypolitician`) | `CC-BY-NC-4.0` | no | yes | no |
 | Firmenbuch — Austrian Commercial Register (`firmenbuch`) | `CC-BY-4.0` | yes | yes | no |
 | Taiwan company register (MOEA GCIS) (`gcis_taiwan`) | `OGDL-Taiwan-1.0` | yes | yes | no |

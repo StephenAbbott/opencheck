@@ -1,0 +1,80 @@
+name: Refresh ESTMA index
+
+# Rebuilds the index of ESTMA payments to governments from Statistics
+# Canada's weekly SDMX-CSV of every report filed under the Extractive Sector
+# Transparency Measures Act, and replaces the `estma-index` release asset the
+# backend downloads at boot (ESTMA_DB_URL).
+#
+# Why here and not on Render: the file is ~53 MB and re-read whole every
+# week; parsing it is a few seconds of CPU-bound Python that would hold the
+# GIL against live lookups. The result is ~5 MB (~1.2 MB gzipped).
+#
+# StatCan answers a datacentre address (checked from the cloud on
+# 10 Nov 2026), so this is a workflow, not a hand-run script.
+#
+# The LEI join is not built here: it is the reviewed crosswalk committed at
+# backend/opencheck/data/estma_lei_crosswalk.csv, so a rebuild cannot move a
+# match.
+#
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "41 6 * * 2" # 06:41 UTC on Tuesdays — StatCan's weekly rebuild is usually up by then
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-estma-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - name: Download the CSV and build the index
+        working-directory: backend
+        run: |
+          python3 scripts/build_estma_index.py --download \
+            --work "$RUNNER_TEMP/estma" \
+            --out "$RUNNER_TEMP/estma.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "estma.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM entity WHERE reports_payments = 1").fetchone()[0]
+          p = conn.execute("SELECT COUNT(*) FROM payment").fetchone()[0]
+          print(f"{n} reporting entities, {p} payment lines, cut {meta.get('cut')}, schema {meta.get('schema_version')}")
+          if n < 600 or p < 30_000:
+              sys.exit(f"Refusing to publish: {n} reporting entities / {p} lines — likely a source/format change.")
+          PY
+
+      - name: Replace the `estma-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view estma-index >/dev/null 2>&1 || gh release create estma-index \
+            --title "ESTMA index" \
+            --notes "Built weekly by refresh-estma-index.yml from Statistics Canada's SDMX-CSV of ESTMA reports (dataflow STC:DF_ESTMA; Statistics Canada Open Licence — source: Statistics Canada, data collected by Natural Resources Canada). Downloaded by the backend at boot (ESTMA_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh estma-index \
+            "$RUNNER_TEMP/estma.sqlite.gz" estma.sqlite.gz \
+            "Rebuilt automatically by refresh-estma-index on $(date -u +%Y-%m-%d)."
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"

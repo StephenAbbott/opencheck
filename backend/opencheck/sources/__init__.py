@@ -38,6 +38,7 @@ from .eiti_assessment import EitiAssessmentAdapter
 from .eiti_bo import EitiBoAdapter
 from .eiti_soe import EitiSoeAdapter
 from .eiti_zambia import EitiZambiaAdapter
+from .estma import EstmaAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .firmenbuch import FirmenbuchAdapter
 from .gemi_greece import GemiGreeceAdapter
@@ -97,6 +98,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "eiti_bo": EitiBoAdapter(),
     "eiti_soe": EitiSoeAdapter(),
     "eiti_zambia": EitiZambiaAdapter(),
+    "estma": EstmaAdapter(),
     "firmenbuch": FirmenbuchAdapter(),
     "gemi_greece": GemiGreeceAdapter(),
     "gcis_taiwan": GcisTaiwanAdapter(),

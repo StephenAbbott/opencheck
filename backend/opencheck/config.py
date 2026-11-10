@@ -691,6 +691,25 @@ class Settings(BaseSettings):
         alias="ICA_ISRAEL_DB_URL",
     )
 
+    # --- ESTMA payments to governments (Statistics Canada Open Licence) ---
+    # No API key: Statistics Canada republishes every ESTMA report weekly as
+    # one SDMX-CSV, built into a SQLite index by scripts/build_estma_index.py
+    # on GitHub Actions (.github/workflows/refresh-estma-index.yml) and shipped
+    # as the ``estma-index`` release asset (~5 MB, ~1.2 MB gzipped). The LEI
+    # join is the committed, hand-reviewed crosswalk
+    # ``opencheck/data/estma_lei_crosswalk.csv``. Unset: the data-root default
+    # (``estma.sqlite``).
+    estma_db_file: str | None = Field(default=None, alias="ESTMA_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    estma_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "estma-index/estma.sqlite.gz"
+        ),
+        alias="ESTMA_DB_URL",
+    )
+
     # --- Florida Division of Corporations (Sunbiz; Florida public records) ---
     # No API key: the Division's quarterly bulk files (SFTP, published public
     # credentials), built into a SQLite index by

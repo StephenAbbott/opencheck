@@ -277,6 +277,22 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # ESTMA payments to governments: Statistics Canada's weekly file, rebuilt
+    # into an index by a GitHub workflow and downloaded here when absent or
+    # changed. Until it lands ``estma`` is not announced.
+    try:
+        from .sources.estma import warm_index as warm_estma_index
+
+        stats = await asyncio.to_thread(warm_estma_index)
+        log.info("ESTMA index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "ESTMA index warm-up failed (the source is not announced until "
+            "present): %s",
+            exc,
+        )
     # The Israel wiring: the Corporations Authority index, rebuilt daily by a
     # GitHub workflow and downloaded here when absent or changed. Until it
     # lands ``ica_israel`` is not announced.
