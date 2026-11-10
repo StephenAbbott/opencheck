@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 489** — OpenCheck's scheduled test agents can now open report pages in a headless browser by sending a secret header, so post-deploy tests cover the web page as well as the API.
+**Latest: Phase 490** — The Climate & ESG tab shows payments to governments that Canadian extractive companies report under ESTMA, from Statistics Canada's weekly file, linked to LEIs through a hand-reviewed crosswalk.
 
 → [Full development history](docs/status.md)
 
