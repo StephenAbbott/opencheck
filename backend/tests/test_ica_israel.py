@@ -431,7 +431,7 @@ def test_a_note_card_and_a_stub_map_to_nothing():
 
 async def test_the_finding_sentences(index):
     paypal = finding_ica_israel(await _fetch(PAYPAL))
-    assert paypal == "Registered since 2021-10-18, Israeli private company, last annual report filed for 2026."
+    assert paypal == "Registered since 18 October 2021, Israeli private company, last annual report filed for 2026."
     bezeq = finding_ica_israel(await _fetch(BEZEQ))
     assert "2002" not in bezeq, "a public company's register year is not said"
     struck = finding_ica_israel(await _fetch(STRUCK))

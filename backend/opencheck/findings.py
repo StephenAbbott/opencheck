@@ -2082,7 +2082,7 @@ def finding_ica_israel(bundle: dict[str, Any]) -> str | None:
     incorporated = str(bundle.get("incorporated") or "").strip()
     gloss = status_label(bundle.get("status_words")) or ""
     if cls == "live" or not gloss:
-        lead = f"Registered since {incorporated}" if incorporated else "On the register"
+        lead = f"Registered since {human_date(incorporated) or incorporated}" if incorporated else "On the register"
     else:
         lead = f"{gloss[0].upper()}{gloss[1:]}"
     sub = sub_status_label(bundle.get("sub_status"))
