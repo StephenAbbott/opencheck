@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 486** — Israel's Corporations Authority registers of companies and partnerships are now a source, read from a daily index of data.gov.il's open data.
+**Latest: Phase 487** — OpenCheck now reads Colombia's chambers-of-commerce register (RUES) live by NIT, with the legal representative by name and role and a share-alike licence flag.
 
 → [Full development history](docs/status.md)
 
