@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { canonicalPath } from "./analytics";
+import { canonicalPath, qaOptOut } from "./analytics";
 
 describe("canonicalPath", () => {
   it("rolls ?lei= lookups up to /lookup with no query string", () => {
@@ -53,5 +53,27 @@ describe("canonicalPath", () => {
       expect(out).not.toContain("?");
       expect(out).not.toMatch(/[0-9A-Z]{18}[0-9]{2}/);
     }
+  });
+});
+
+describe("qaOptOut", () => {
+  it("?qa=1 opts the browser out and remembers it", () => {
+    expect(qaOptOut("?qa=1", null)).toEqual({ optedOut: true, store: "1" });
+    expect(qaOptOut("?lei=213800LH1BZH3DI6G760&qa=1", null)).toEqual({ optedOut: true, store: "1" });
+  });
+
+  it("a remembered opt-out holds on pages without the parameter", () => {
+    expect(qaOptOut("", "1")).toEqual({ optedOut: true, store: undefined });
+    expect(qaOptOut("?lei=213800LH1BZH3DI6G760", "1")).toEqual({ optedOut: true, store: undefined });
+  });
+
+  it("?qa=0 clears it", () => {
+    expect(qaOptOut("?qa=0", "1")).toEqual({ optedOut: false, store: null });
+  });
+
+  it("a reader with no mark is counted, and any other value changes nothing", () => {
+    expect(qaOptOut("", null)).toEqual({ optedOut: false, store: undefined });
+    expect(qaOptOut("?qa=yes", null)).toEqual({ optedOut: false, store: undefined });
+    expect(qaOptOut("?qa=yes", "1")).toEqual({ optedOut: true, store: undefined });
   });
 });
