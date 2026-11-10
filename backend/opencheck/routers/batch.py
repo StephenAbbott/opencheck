@@ -51,7 +51,7 @@ from .. import batch as _batch
 from ..bods import validate_shape
 from ..config import get_settings
 from ..licensing import assess as assess_licensing
-from ..memwatch import is_bot
+from .. import bot_gate
 from ..ratelimit import heavy_tier, limiter
 from ..sources import SearchKind
 
@@ -62,9 +62,7 @@ UTC = timezone.utc
 
 
 def _refuse_bots(request: Request, route: str = "/batch-stream") -> None:
-    if get_settings().bot_gate_lookup_stream and is_bot(
-        request.headers.get("user-agent")
-    ):
+    if bot_gate.refuses(request):
         raise HTTPException(
             status_code=403,
             detail=(

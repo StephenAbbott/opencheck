@@ -42,7 +42,7 @@ from ..findings import (
 )
 from ..ftm import subject_to_ftm_entity
 from ..gleif_throttle import GleifRateLimitedError
-from ..memwatch import is_bot
+from .. import bot_gate
 from ..icij_check import assess_icij_names
 from ..names import normalise_name
 from ..openaleph_check import assess_openaleph_names
@@ -2939,9 +2939,7 @@ async def lookup_register_stream(
     ``/lookup-stream`` with ``register_done`` for ``gleif_done``. Gated against
     declared automated clients exactly as ``/lookup-stream`` is (Phase 144):
     the JSON route is the one for scripts and agents."""
-    if get_settings().bot_gate_lookup_stream and is_bot(
-        request.headers.get("user-agent")
-    ):
+    if bot_gate.refuses(request):
         raise HTTPException(
             status_code=403,
             detail=(
@@ -3028,9 +3026,7 @@ async def lookup_stream(
     legitimate callers — and the ``/entity`` pages serve crawlers from bulk
     data at any volume.
     """
-    if get_settings().bot_gate_lookup_stream and is_bot(
-        request.headers.get("user-agent")
-    ):
+    if bot_gate.refuses(request):
         raise HTTPException(
             status_code=403,
             detail=(

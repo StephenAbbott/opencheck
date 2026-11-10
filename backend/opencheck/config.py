@@ -409,6 +409,12 @@ class Settings(BaseSettings):
     bot_gate_lookup_stream: bool = Field(
         default=True, alias="OPENCHECK_BOT_GATE_LOOKUP_STREAM"
     )
+    # The bot gate's one door (bot_gate.py): a request carrying this value in
+    # the X-OpenCheck-QA header passes the gate. For OpenCheck's own scheduled
+    # test agents, which drive the site in headless Chromium. Unset (or under
+    # 24 characters) = no door. Secret: set it on Render and in the agents'
+    # environment, never in the repo.
+    qa_bypass_token: str = Field(default="", alias="OPENCHECK_QA_BYPASS_TOKEN")
 
     # Phase 164: pipelines in flight per /batch-stream request. Each cold
     # anchor costs 4–6 GLEIF calls against the shared 50/min budget (Phase
