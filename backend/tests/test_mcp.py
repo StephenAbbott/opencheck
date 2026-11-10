@@ -71,6 +71,41 @@ async def test_registered_tools_match_declared_names() -> None:
     assert all(t.inputSchema for t in tools)
 
 
+# The readOnlyHint ticket: every tool declares its annotations, and only
+# opencheck_save_report writes. A new tool must be placed in one of these sets.
+_WRITES = {"opencheck_save_report"}
+_CLOSED_WORLD = {"opencheck_knowability", "opencheck_list_sources"}
+
+
+async def test_every_tool_declares_its_annotations() -> None:
+    tools = {t.name: t for t in await mcp_server.mcp.list_tools()}
+    assert _WRITES | _CLOSED_WORLD <= set(tools)
+    for name, tool in tools.items():
+        ann = tool.annotations
+        assert ann is not None, f"{name} declares no annotations"
+        assert ann.readOnlyHint is (name not in _WRITES), name
+        assert ann.openWorldHint is (name not in _CLOSED_WORLD), name
+
+
+async def test_save_report_is_additive_and_not_idempotent() -> None:
+    tools = {t.name: t for t in await mcp_server.mcp.list_tools()}
+    ann = tools["opencheck_save_report"].annotations
+    # Stores a new report on each call: never destroys, never repeats itself.
+    assert ann.destructiveHint is False
+    assert ann.idempotentHint is False
+
+
+async def test_annotations_serialise_as_tools_list_sends_them() -> None:
+    tools = {t.name: t.model_dump(by_alias=True, exclude_none=True) for t in await mcp_server.mcp.list_tools()}
+    assert tools["opencheck_lookup"]["annotations"] == {"readOnlyHint": True, "openWorldHint": True}
+    assert tools["opencheck_save_report"]["annotations"] == {
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+
+
 # --------------------------------------------------------------------------
 # Tools (offline / deterministic)
 # --------------------------------------------------------------------------
