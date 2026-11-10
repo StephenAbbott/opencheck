@@ -20,8 +20,13 @@ Authentication: ``Authorization: ApiKey <key>``. Gated on
 from __future__ import annotations
 
 import hashlib
+import json
+import re
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import quote
+
+import httpx
 
 from ..cache import Cache
 from ..config import get_settings
@@ -117,6 +122,82 @@ _TOPIC_FINGERPRINT = hashlib.sha256(_TOPIC_PARAMS.encode("utf-8")).hexdigest()[:
 # (`Cache.get_payload` only ages the live tier), so the offline demo path is
 # untouched.
 _MAX_CACHE_AGE_DAYS = 7.0
+
+
+# ---------------------------------------------------------------------------
+# Batched ``/match`` for related-party person screening (the batched-/match
+# ticket, 10 Nov 2026)
+# ---------------------------------------------------------------------------
+#
+# ``cross_check`` used to send one ``GET /search`` per related person. It now
+# sends their names, with the birth year and nationalities the bundle holds,
+# as FollowTheMoney examples in one ``POST /match/default`` — up to
+# ``MATCH_BATCH_SIZE`` queries per request, OpenSanctions' own limit.
+#
+# Billing (OpenSanctions' metering FAQ, read 10 Nov 2026): ``/match`` is
+# charged one credit per *query* in the batch, ``/search`` one per request.
+# Batching therefore saves round trips and the per-key request quota, not
+# credits — a lookup screening 25 people spends 25 credits either way.
+#
+# OpenSanctions' score orders the candidates and decides nothing else:
+# ``cutoff=0`` returns every scored candidate (yente drops results at or
+# below the cutoff, 0.5 by default, before we would see them), and the
+# ``match`` flag is ignored. Which candidate becomes a signal is still
+# decided by ``cross_check``'s own gates — 0.88 similarity, the single-token
+# person guard, birth-year and patronymic conflicts — exactly as on the
+# ``/search`` path. ``match: true`` setting confidence is the ICIJ lesson of
+# Phase 237.
+MATCH_BATCH_SIZE = 100
+_MATCH_ALGORITHM = "logic-v2"
+_MATCH_LIMIT = 10
+_MATCH_PARAMS = (
+    f"algorithm={_MATCH_ALGORITHM}&limit={_MATCH_LIMIT}"
+    f"&threshold=0.7&cutoff=0.0&{_TOPIC_PARAMS}"
+)
+# The request parameters are part of every cached answer's meaning, so they
+# are in its key — the ``_TOPIC_FINGERPRINT`` rule.
+_MATCH_FINGERPRINT = hashlib.sha256(_MATCH_PARAMS.encode("utf-8")).hexdigest()[:8]
+
+
+def person_match_example(
+    name: str, birth_year: int | None = None, nationalities: tuple[str, ...] = ()
+) -> dict[str, Any] | None:
+    """The FollowTheMoney ``Person`` example ``/match`` scores against.
+
+    The name goes as JSON, never through the Lucene parser, so the
+    reserved-character bug class of ``/search`` (quotes, ``A/S``, a dangling
+    ``+``) cannot occur on this path. The birth year and nationalities are
+    the ones ``cross_check`` reads for its own corroboration; a value that is
+    not a four-digit year or an alpha-2 code is left out rather than sent in
+    a shape the matcher would misread.
+    """
+    name = " ".join(str(name or "").split())
+    if not name:
+        return None
+    props: dict[str, list[str]] = {"name": [name]}
+    if birth_year is not None and 1000 <= int(birth_year) <= 9999:
+        props["birthDate"] = [str(int(birth_year))]
+    codes = sorted(
+        {
+            str(c).strip().lower()
+            for c in nationalities
+            if re.fullmatch(r"[A-Za-z]{2}", str(c).strip())
+        }
+    )
+    if codes:
+        props["nationality"] = codes
+    return {"schema": "Person", "properties": props}
+
+
+def _query_status_error(status: int, request: httpx.Request) -> httpx.HTTPStatusError:
+    """A per-query failure inside a 200 batch, shaped like the HTTP error it
+    stands for so ``risk.classify_degradation_reason`` words it the same way
+    (a 429 is ``rate_limited``, anything else ``upstream_error``)."""
+    return httpx.HTTPStatusError(
+        f"OpenSanctions /match answered HTTP {status} for one query",
+        request=request,
+        response=httpx.Response(status, request=request),
+    )
 
 
 def _slug(text: str) -> str:
@@ -245,6 +326,100 @@ class OpenSanctionsAdapter(SourceAdapter):
             "entity_id": hit_id,
             "entity": payload,
         }
+
+    # ------------------------------------------------------------------
+    # Batched /match (persons)
+    # ------------------------------------------------------------------
+
+    async def match_persons(
+        self, queries: Mapping[str, dict[str, Any]]
+    ) -> dict[str, list[SourceHit] | BaseException]:
+        """Screen many people in as few ``POST /match/default`` calls as
+        possible.
+
+        ``queries`` maps a caller-chosen key to ``{name, birth_year,
+        nationalities}``. The answer maps every key to its hits — the same
+        ``SourceHit`` shape ``search`` returns — or to the exception that
+        stopped that query, so one failed chunk or one refused query is a
+        failure for those names only and never passes for "screened, nothing
+        found". Never raises.
+
+        Each query's answer is cached on its own (the example and the request
+        parameters are the key) and aged out after ``_MAX_CACHE_AGE_DAYS``
+        exactly as ``search`` is, so a repeat lookup sends only the names it
+        has not seen this week.
+        """
+        settings = get_settings()
+        can_refetch = bool(settings.opensanctions_api_key and settings.allow_live)
+        live = self.info.live_available
+        out: dict[str, list[SourceHit] | BaseException] = {}
+        pending: dict[str, tuple[dict[str, Any], str]] = {}
+        for key, q in queries.items():
+            example = person_match_example(
+                q.get("name") or "",
+                q.get("birth_year"),
+                tuple(q.get("nationalities") or ()),
+            )
+            if example is None:
+                out[key] = []
+                continue
+            canonical = json.dumps(example, sort_keys=True, ensure_ascii=False)
+            cache_key = f"{_CACHE_NS}/match/Person/{_MATCH_FINGERPRINT}/{_slug(canonical)}"
+            cached = self._cache.get_payload(
+                cache_key, max_age_days=_MAX_CACHE_AGE_DAYS if can_refetch else None
+            )
+            if cached is not None:
+                out[key] = self._match_hits(cached[0])
+            elif not live:
+                out[key] = self._stub_search(example["properties"]["name"][0], SearchKind.PERSON)
+            else:
+                pending[key] = (example, cache_key)
+
+        keys = list(pending)
+        for start in range(0, len(keys), MATCH_BATCH_SIZE):
+            chunk = keys[start : start + MATCH_BATCH_SIZE]
+            try:
+                responses, request = await self._post_match(
+                    {k: pending[k][0] for k in chunk}
+                )
+            except Exception as exc:  # noqa: BLE001 — recorded per query
+                for k in chunk:
+                    out[k] = exc
+                continue
+            for k in chunk:
+                answer = responses.get(k)
+                status = (answer or {}).get("status", 200) if isinstance(answer, dict) else None
+                if not isinstance(answer, dict) or status != 200:
+                    out[k] = _query_status_error(int(status or 502), request)
+                    continue
+                self._cache.put(pending[k][1], answer)
+                out[k] = self._match_hits(answer)
+        return out
+
+    async def _post_match(
+        self, queries: dict[str, dict[str, Any]]
+    ) -> tuple[dict[str, Any], httpx.Request]:
+        settings = get_settings()
+        assert settings.opensanctions_api_key, "live_available should have been false"
+        async with build_client() as client:
+            response = await client.post(
+                f"{_API_BASE}/match/default?{_MATCH_PARAMS}",
+                json={"queries": queries},
+                headers={"Authorization": f"ApiKey {settings.opensanctions_api_key}"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+        responses = payload.get("responses") if isinstance(payload, dict) else None
+        if not isinstance(responses, dict):
+            raise ValueError("OpenSanctions /match answered without a responses object")
+        return responses, response.request
+
+    def _match_hits(self, answer: dict[str, Any]) -> list[SourceHit]:
+        return [
+            self._hit(item, SearchKind.PERSON)
+            for item in answer.get("results") or []
+            if isinstance(item, dict)
+        ]
 
     # ------------------------------------------------------------------
     # HTTP with caching
