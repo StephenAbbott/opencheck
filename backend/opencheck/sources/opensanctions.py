@@ -49,7 +49,9 @@ _CACHE_NS = "opensanctions"
 #
 # Source of truth: https://data.opensanctions.org/meta/model.json → ``target_topics``
 # Human-readable: https://www.opensanctions.org/docs/topics/
-# Verified against the model published 2026-08-05 (28 topics).
+# Verified against the model published 2026-11-06 (30 topics: ``corp.clone``
+# and ``geo.risk`` joined the 2026-08-05 list of 28, unannounced). Both are
+# fetched and raise no signal — see ``risk._INFORMATIONAL_TOPICS``.
 _RISK_TOPICS: tuple[str, ...] = (
     # Sanctions and adjacent designations.
     "sanction",
@@ -66,6 +68,9 @@ _RISK_TOPICS: tuple[str, ...] = (
     # Procurement exclusion and corporate disqualification.
     "debarment",
     "corp.disqual",
+    # A firm impersonating a real one (the FCA Warning List's clone firms);
+    # applies to the impersonator only, never the firm it copies.
+    "corp.clone",
     # Political exposure.
     "role.pep",
     "role.rca",
@@ -87,6 +92,11 @@ _RISK_TOPICS: tuple[str, ...] = (
     "reg.action",
     "reg.warn",
     "poi",
+    # Designations of a whole place (FtM's ``Territory`` schema, 2 Sept 2026).
+    # No published dataset sets it yet, and a Territory is neither a
+    # LegalEntity nor a Person, so OpenCheck's schema-filtered search cannot
+    # return one; mirrored so the scope stays OpenSanctions' own list.
+    "geo.risk",
 )
 _TOPIC_PARAMS = "&".join(f"topic={t}" for t in _RISK_TOPICS)
 

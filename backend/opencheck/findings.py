@@ -496,7 +496,19 @@ def finding_opensanctions(item: dict[str, Any]) -> str | None:
         else None
     )
 
-    return clauses_to_sentence([lead, topic_clause])
+    # ``corp.clone`` marks a firm impersonating a real one, and the record
+    # carries the real firm's name — which is why a name screen of the real
+    # firm finds it. Said first, so the 140-character cap drops the topic
+    # list before it drops this: a reader of the real firm's lookup must not
+    # take the record (and its "regulatory warning") for the firm itself.
+    clone = (
+        "a firm reported as copying a real firm's name; the record is the "
+        "copy, not that firm"
+        if "corp.clone" in topics
+        else None
+    )
+
+    return clauses_to_sentence([clone, lead, topic_clause])
 
 
 # ---------------------------------------------------------------------------

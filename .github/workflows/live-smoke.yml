@@ -26,6 +26,8 @@ jobs:
       - name: Install backend (with test deps)
         run: uv sync
         working-directory: backend
-      - name: Live API smoke tests (GLEIF, Wikidata)
+      # Also reads OpenSanctions' published model.json (schema metadata, no
+      # listed entity) to catch a new target topic: test_opensanctions_live.
+      - name: Live API smoke tests (GLEIF, Wikidata, OpenSanctions topic drift)
         run: uv run pytest --run-live -m live
         working-directory: backend
