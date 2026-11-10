@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 480** — A source read that fails twice in one lookup, once by error and once by timeout, is now listed as one incomplete source rather than two.
+**Latest: Phase 481** — OpenCheck's MCP tools now tell clients which calls only read, so read-only checks need no confirmation prompt.
 
 → [Full development history](docs/status.md)
 
