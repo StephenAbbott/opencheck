@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 479** — OpenCheck's British Virgin Islands notes now name the Registry of Corporate Affairs' public search and the online beneficial ownership request route.
+**Latest: Phase 480** — A source read that fails twice in one lookup, once by error and once by timeout, is now listed as one incomplete source rather than two.
 
 → [Full development history](docs/status.md)
 
