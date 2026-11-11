@@ -259,6 +259,9 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         # The same arrangement for Canada (the Canada index-tier ticket):
         # without the index the API answers the record.
         "corporations_canada": ("corporations_canada.sqlite",),
+        # The RNA index is not a source of its own: ``sirene`` answers
+        # without it (the France Sirene + RNA ticket), so no probe names it.
+        "rna": ("rna.sqlite",),
     }
     assert PROBES["ariregister"].requires_files == ()
     assert PROBES["corporations_canada"].requires_files == ()

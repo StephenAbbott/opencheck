@@ -1,0 +1,76 @@
+name: Refresh RNA (France associations) index
+
+# Rebuilds the Répertoire national des associations index and replaces the
+# `rna-index` release asset the backend downloads at boot (RNA_DB_URL). The
+# France Sirene + RNA ticket, 11 Nov 2026.
+#
+# Inputs, both keyless and Licence Ouverte 2.0, found through data.gouv.fr's
+# API: the Ministry of the Interior's newest rna_waldec_YYYYMM01.zip (~410 MB,
+# published on the 1st) and INSEE's StockUniteLegale parquet (~720 MB,
+# published around the 3rd), of which only two columns are read. The index
+# keeps the associations a Sirene unit names (~1.1M of ~2.3M), because the
+# `sirene` adapter reaches the RNA only through a unit's RNA number, and only
+# the columns the mapper reads: never the management address (the
+# declarant's) or the director's title. ~540 MB, ~176 MB gzipped.
+#
+# media.interieur.gouv.fr answered an intermittent HTTP 503 HTML page from
+# the cloud on 11 Nov 2026: the builder retries, requires a zip, and falls
+# back to the month before. It writes nothing when it refuses.
+on:
+  schedule:
+    - cron: "17 4 5 * *" # 04:17 UTC on the 5th: after both monthly files
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-rna-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Build the index
+        working-directory: backend
+        run: |
+          uv sync
+          uv run python scripts/build_rna_index.py --out "$RUNNER_TEMP/rna.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial build)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "rna.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          cols = {r[1] for r in conn.execute("PRAGMA table_info(association)")}
+          n = conn.execute("SELECT COUNT(*) FROM association").fetchone()[0]
+          print({k: meta[k] for k in sorted(meta)})
+          if any(c.startswith("adrg_") or c == "dir_civilite" for c in cols):
+              sys.exit(f"Refusing to publish: personal columns in the index: {sorted(cols)}")
+          if n < 800_000:
+              sys.exit(f"Refusing to publish: {n} associations — likely a format or download problem.")
+          PY
+
+      - name: Replace the `rna-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view rna-index >/dev/null 2>&1 || gh release create rna-index \
+            --title "RNA (France associations) index" \
+            --notes "Built monthly by refresh-rna-index.yml from the Ministry of the Interior's Répertoire national des associations (waldec file) and INSEE's Sirene StockUniteLegale, both Licence Ouverte 2.0 (data.gouv.fr). Holds the associations a Sirene unit names, without the management address or the director's title. Downloaded by the backend at boot (RNA_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh rna-index \
+            "$RUNNER_TEMP/rna.sqlite.gz" rna.sqlite.gz \
+            "Rebuilt automatically by refresh-rna-index on $(date -u +%Y-%m-%d)."

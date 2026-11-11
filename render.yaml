@@ -94,6 +94,12 @@ services:
       # source is not announced.
       - key: OPENDART_API_KEY
         sync: false
+      # France — INSEE API Sirene 3.11 (the France Sirene + RNA ticket). Sent
+      # in the X-INSEE-Api-Key-Integration header; 30 requests a minute.
+      # Without it the `sirene` source is not announced. The RNA index is
+      # downloaded at boot from the rna-index release (RNA_DB_URL default).
+      - key: INSEE_SIRENE_API_KEY
+        sync: false
       # --- Bulk-file adapters: stub-only on Render ---
       # ARIREGISTER_DB_FILE and BCE_BELGIUM_DB_FILE are intentionally omitted.
       # Both adapters return stub responses when no DB path is set.

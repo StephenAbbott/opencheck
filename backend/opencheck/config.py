@@ -305,6 +305,15 @@ class Settings(BaseSettings):
     gcis_throttle_max_wait_s: float = Field(
         default=10.0, alias="OPENCHECK_GCIS_THROTTLE_MAX_WAIT_S"
     )
+    # INSEE's API Sirene (api.insee.fr) allows 30 requests a minute per key
+    # and answers a spent minute with a 429. A lookup sends two (the unit and
+    # its head office). 0 disables the pacing (the test suite does).
+    insee_rate_limit_per_minute: int = Field(
+        default=30, alias="OPENCHECK_INSEE_RATE_LIMIT_PER_MINUTE"
+    )
+    insee_throttle_max_wait_s: float = Field(
+        default=15.0, alias="OPENCHECK_INSEE_THROTTLE_MAX_WAIT_S"
+    )
     # Phase 144: when the anchor LEI exists in the entity-pages Golden Copy,
     # don't make the user sit out the full max-wait — if the live anchor fetch
     # hasn't completed within this many seconds, serve the snapshot instead
@@ -881,6 +890,25 @@ class Settings(BaseSettings):
             "dart-korea-index/dart_korea.sqlite.gz"
         ),
         alias="DART_KOREA_DB_URL",
+    )
+    # --- France Sirene (INSEE) + RNA (associations) — the France Sirene + RNA ticket ---
+    # The API Sirene 3.11 key from portail-api.insee.fr. It travels in the
+    # ``X-INSEE-Api-Key-Integration`` header (never the URL); 30 requests a
+    # minute per key, which the host throttle keeps to.
+    insee_sirene_api_key: str | None = Field(default=None, alias="INSEE_SIRENE_API_KEY")
+    # The Répertoire national des associations index built monthly from the
+    # Ministry of the Interior's waldec file by
+    # .github/workflows/refresh-rna-index.yml. Unset: the data-root default
+    # (``rna.sqlite``).
+    rna_db_file: str | None = Field(default=None, alias="RNA_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    rna_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "rna-index/rna.sqlite.gz"
+        ),
+        alias="RNA_DB_URL",
     )
     # --- ChileCompra (Mercado Público procurement, CC0) — Phase 280 ---
     # The supplier index built monthly from ChileCompra's open-data files by

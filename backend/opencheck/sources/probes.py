@@ -588,6 +588,23 @@ PROBES: dict[str, SourceProbe] = {
             "green."
         ),
     ),
+    "sirene": _p(
+        tier="live",
+        subject="Transparency International France (FR-SIREN 425138393, an association)",
+        args=("425138393",),
+        kwargs={"legal_name": "TRANSPARENCY INTERNATIONAL FRANCE"},
+        anchor_lei="969500AEH12X8M5XEO53",
+        requires_env=("INSEE_SIRENE_API_KEY",),
+        expect_fields=("unit",),
+        expect_liveness=LIVE_OR_CACHED,
+        bods_mapper="map_sirene",
+        notes=(
+            "An association: INPI answers 404 for it, Sirene holds it. The RNA "
+            "index (rna.sqlite) is not required — without it the bundle carries "
+            "rna_status 'no_index' and the card still answers. A 401 or 403 is "
+            "the key, a 429 the 30-a-minute allowance."
+        ),
+    ),
     "jar_lithuania": _p(
         tier="index",
         subject="AB Ignitis grupė (LT-JAR 301844044)",

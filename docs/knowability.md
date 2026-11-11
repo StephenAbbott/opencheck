@@ -438,7 +438,7 @@ Data generated 2026-11-10T16:58:19+00:00; sentences rendered as of 2026-11-10. *
 
 ### France (FR) — verified 2026-09-18
 
-> Registre National des Entreprises (RNE) is accessible to authorities and obliged entities, and to others on legitimate interest, since 3 May 2025. OpenCheck reads INPI — Registre National des Entreprises for officers and registered holdings, not beneficial owners.
+> Registre National des Entreprises (RNE) is accessible to authorities and obliged entities, and to others on legitimate interest, since 3 May 2025. OpenCheck reads INPI — Registre National des Entreprises, Sirene — INSEE register of legal units (France), with the RNA.
 
 | Field | Value |
 |---|---|
@@ -454,7 +454,7 @@ Data generated 2026-11-10T16:58:19+00:00; sentences rendered as of 2026-11-10. *
 | 6AMLD LIA / BORIS | Yes / Yes |
 | 6AMLD details | INPI acces_BE procedure. |
 | Next FATF/FSRB assessment | FATF; onsite 2029-06-01; plenary 2030-02-01 |
-| OpenCheck reads | `inpi` (API key) |
+| OpenCheck reads | `inpi` (API key), `sirene` (API key) |
 | OpenCheck source (note) | inpi Untitled |
 | Sources | https://data.inpi.fr/content/editorial/acces_BE |
 
