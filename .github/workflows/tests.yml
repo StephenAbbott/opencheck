@@ -112,7 +112,23 @@ jobs:
         working-directory: frontend
       - name: Install Chromium
         # Only the one browser, and only here: the unit job has no use for it.
-        run: npx playwright install --with-deps chromium
+        # The browser comes from Playwright's CDN; its system libraries come
+        # from apt, and Ubuntu's mirrors sometimes stop resolving from the
+        # runners (11 Nov 2026: every e2e job spent ten minutes on
+        # "Temporary failure resolving 'security.ubuntu.com'" and failed).
+        # So the browser is installed first, the libraries are tried twice
+        # under a time limit, and a failure there is a warning: the
+        # ubuntu-latest image already carries Chromium's libraries for its own
+        # Chrome, and the Smoke step fails loudly if one is missing.
+        run: |
+          npx playwright install chromium
+          for attempt in 1 2; do
+            timeout 240 npx playwright install-deps chromium && exit 0
+            echo "::warning::playwright install-deps failed (attempt $attempt)"
+            sleep 20
+          done
+          echo "::warning::Chromium's system libraries were not installed; relying on the runner image"
+        timeout-minutes: 12
         working-directory: frontend
       - name: Smoke
         # playwright.config.ts starts uvicorn and `vite build && vite preview`
