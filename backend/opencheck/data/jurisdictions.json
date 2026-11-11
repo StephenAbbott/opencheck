@@ -49,6 +49,62 @@
       "notion_page_id": "3df7f3dc-2928-81a9-b94e-cb913e6cdee4"
     },
     {
+      "name": "Argentina",
+      "code": "AR",
+      "groups": [
+        "OpenCheck source",
+        "Other"
+      ],
+      "bo_register": {
+        "name": "Registro de Beneficiarios Finales (ARCA)",
+        "url": null,
+        "access": "authorities_and_obliged_entities_only",
+        "access_since": null,
+        "next_change_expected": null,
+        "threshold_wording": null,
+        "fields_published": [],
+        "reporting_basis": null,
+        "covers": [],
+        "verification": null,
+        "verification_note": null,
+        "amld6_lia": "Not applicable",
+        "amld6_details": null,
+        "boris": "Not applicable",
+        "amlr_alignment_watch": false,
+        "pending_changes": null,
+        "discrepancy_route": null,
+        "discrepancy_note": null,
+        "access_url": "https://datos.jus.gob.ar/dataset/registro-nacional-de-sociedades"
+      },
+      "company_register": {
+        "name": "Registro Nacional de Sociedades (Ministerio de Justicia) and Inspección General de Justicia (City of Buenos Aires)",
+        "url": "https://datos.jus.gob.ar/dataset/registro-nacional-de-sociedades",
+        "publishes": [],
+        "public": "Partly",
+        "discrepancy_route": null
+      },
+      "fatf": {
+        "body": null,
+        "onsite": null,
+        "plenary": null
+      },
+      "opencheck_source_note": "registro_sociedades_argentina",
+      "notes": "Drafted by Claude on 11 Nov 2026 for the Argentina adapter, unverified. Beneficial owners are reported to ARCA (Registro de Beneficiarios Finales, RG AFIP 4697/2020) and declared to the IGJ (RG IGJ 7/2015); neither is published. The RNS and the IGJ entity file are open data on datos.jus.gob.ar (name, CUIT, form, founding date, addresses; the IGJ also names people in an entity's filings without dates or roles), not shareholders or beneficial owners. Please verify access status before setting Last verified.",
+      "last_verified": "2026-11-11",
+      "sources": [
+        {
+          "url": "https://datos.jus.gob.ar/dataset/registro-nacional-de-sociedades"
+        },
+        {
+          "url": "https://datos.jus.gob.ar/dataset/entidades-constituidas-en-la-inspeccion-general-de-justicia-igj"
+        },
+        {
+          "url": "https://www.argentina.gob.ar/normativa/nacional/resolución-4697-2020-337045"
+        }
+      ],
+      "notion_page_id": "4157f3dc-2928-8104-b1f5-f3f8ee27c0ec"
+    },
+    {
       "name": "Austria",
       "code": "AT",
       "groups": [

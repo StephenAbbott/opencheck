@@ -1,0 +1,104 @@
+name: Refresh Argentine companies index
+
+# Rebuilds the index of Argentina's Registro Nacional de Sociedades (RNS,
+# ARCA's CUIT file) and the Inspección General de Justicia's entity file
+# (City of Buenos Aires) from datos.jus.gob.ar (CC BY 4.0), and replaces the
+# `ar-sociedades-index` release asset the backend downloads at boot
+# (AR_SOCIEDADES_DB_URL). The Argentina ticket, 11 Nov 2026.
+#
+# The RNS is republished every few weeks and the IGJ file once a semester
+# (monthly cuts inside one ZIP). The builder reads the CKAN API for the newest
+# resource of each, and exits 3 without building when both are the ones the
+# last build read (the `ar_sociedades.sources.json` asset), so most weekly runs
+# download two small JSON answers and stop. A build reads ~250 MB of ZIPs, keeps
+# no person the IGJ names (a count only), and writes ~420 MB (~130 MB gzipped).
+#
+# No Render redeploy: the backend compares the asset's Last-Modified at boot.
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "17 5 * * 3" # 05:17 UTC every Wednesday
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-ar-sociedades-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Read what the last build read
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download ar-sociedades-index --pattern ar_sociedades.sources.json \
+            --dir "$RUNNER_TEMP" --repo "${{ github.repository }}" 2>/dev/null \
+            || echo "No earlier build recorded; building."
+
+      - name: Download both files and build the index
+        id: build
+        working-directory: backend
+        run: |
+          uv sync
+          previous=()
+          if [ -f "$RUNNER_TEMP/ar_sociedades.sources.json" ]; then
+            previous=(--skip-if-unchanged "$RUNNER_TEMP/ar_sociedades.sources.json")
+          fi
+          set +e
+          uv run python scripts/build_ar_sociedades_index.py --download \
+            --out "$RUNNER_TEMP/ar_sociedades.sqlite" --gzip \
+            --sources-out "$RUNNER_TEMP/ar_sociedades.sources.new.json" "${previous[@]}"
+          status=$?
+          set -e
+          if [ "$status" = 3 ]; then
+            echo "Both files are unchanged since the last build; nothing to publish."
+            echo "built=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [ "$status" = 0 ] || exit "$status"
+          echo "built=true" >> "$GITHUB_OUTPUT"
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        if: steps.build.outputs.built == 'true'
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "ar_sociedades.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          rns = conn.execute("SELECT COUNT(*) FROM rns").fetchone()[0]
+          igj = conn.execute("SELECT COUNT(*) FROM igj").fetchone()[0]
+          print(f"{rns} RNS CUITs, {igj} IGJ entities, RNS cut {meta.get('rns_cut')}, "
+                f"IGJ month {meta.get('igj_month')}, schema {meta.get('schema_version')}")
+          if rns < 1_000_000 or igj < 800_000:
+              sys.exit(f"Refusing to publish: {rns} CUITs / {igj} IGJ entities — likely a source/format change.")
+          PY
+
+      - name: Replace the `ar-sociedades-index` release assets
+        if: steps.build.outputs.built == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view ar-sociedades-index >/dev/null 2>&1 || gh release create ar-sociedades-index \
+            --title "Argentine companies index (RNS + IGJ)" \
+            --notes "Built by refresh-ar-sociedades-index.yml from the Registro Nacional de Sociedades and the Inspección General de Justicia's entity file on datos.jus.gob.ar (CC BY 4.0). Downloaded by the backend at boot (AR_SOCIEDADES_DB_URL). Holds no person the IGJ names."
+          bash backend/scripts/replace_release_asset.sh ar-sociedades-index \
+            "$RUNNER_TEMP/ar_sociedades.sqlite.gz" ar_sociedades.sqlite.gz \
+            "Rebuilt automatically by refresh-ar-sociedades-index on $(date -u +%Y-%m-%d)."
+          bash backend/scripts/replace_release_asset.sh ar-sociedades-index \
+            "$RUNNER_TEMP/ar_sociedades.sources.new.json" ar_sociedades.sources.json \
+            "The CKAN resources the last build read."
