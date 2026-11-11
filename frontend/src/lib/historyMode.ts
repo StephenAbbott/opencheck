@@ -15,7 +15,7 @@
  * Two claims this module is careful about, both of the same kind the
  * Subsidiaries tab makes:
  *
- * - **Publishing a change log is rare.** Seven of the registers OpenCheck reads
+ * - **Publishing a change log is rare.** Nine of the registers OpenCheck reads
  *   expose entity history; the rest answer only about now. A change missing
  *   from this timeline is far more often a register that keeps no history than
  *   a change that did not happen, and the tab has to say so rather than let
@@ -43,6 +43,7 @@ export const HISTORY_SOURCES = [
   "ny_dos",
   "ur_latvia",
   "ica_israel",
+  "joafe",
 ] as const;
 
 export type HistorySourceId = (typeof HISTORY_SOURCES)[number];
@@ -63,7 +64,22 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   ny_dos: "Dept. of State (NY)",
   ur_latvia: "Register of Enterprises (LV)",
   ica_israel: "Corporations Authority (IL)",
+  joafe: "Journal officiel (JOAFE)",
 };
+
+/** The JOAFE's notices on DILA's portal, filtered to this association: by its
+ *  RNA number (a W-number, how a notice names an association) or, for an
+ *  accounts deposit, by its SIREN. The JOAFE is not a register OpenCheck
+ *  looks a company up in, so it has no register-link entry. */
+export const JOAFE_TABLE_URL =
+  "https://journal-officiel-datadila.opendatasoft.com/explore/dataset/jo_associations/table/";
+
+function joafeUrl(number: string | undefined): string | null {
+  if (!number) return null;
+  if (/^W\d{9}$/.test(number)) return `${JOAFE_TABLE_URL}?q=${encodeURIComponent(`numero_rna:${number}`)}`;
+  if (/^\d{9}$/.test(number)) return `${JOAFE_TABLE_URL}?q=${encodeURIComponent(`dca_siren:${number}`)}`;
+  return null;
+}
 
 export function historySourceLabel(sourceId: string): string {
   return HISTORY_SOURCE_LABEL[sourceId] ?? sourceId;
@@ -90,6 +106,7 @@ export function recordUrl(
   if (sourceId === "gleif") {
     return `https://search.gleif.org/#/record/${encodeURIComponent(lei)}`;
   }
+  if (sourceId === "joafe") return joafeUrl(registryNumbers[sourceId]);
   // Phase 296: every register's address comes from the one register-link table
   // (lib/registerLinks.ts). The History tab reads its `history` entry where
   // there is one — Companies House's filing history; New York's open-data
@@ -128,7 +145,7 @@ export function silentRegisters(data: HistoryResponse): string[] {
 }
 
 function numberWord(n: number): string {
-  return ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven"][n] ?? String(n);
+  return ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"][n] ?? String(n);
 }
 
 /**
@@ -196,6 +213,8 @@ export const HISTORY_CAVEAT =
  * holdings start in 2013), so no 2023 boundary is claimed.
  */
 export const REGISTER_READ_NOTES: Record<string, string> = {
+  joafe:
+    "From the Journal officiel des associations et fondations d'entreprise: what the association declared to its prefecture — its creation, a change of name, seat, purpose or statutes, its dissolution — and every deposit of annual accounts. Associations' notices are reached through the RNA, so notices before 2009 are not; a fondation d'entreprise or fonds de dotation is reached through its accounts only. A seat transfer is shown by commune and postcode, never the street, and a change of purpose as filed, never its text. A corrected notice replaces the one it corrects.",
   ica_israel:
     "From the Israel Corporations Authority's change log, which publishes one year of filings and names only the kind of filing — never who or what changed. A share transfer is shown as filed, with its parties not published; a winding-up or a change of name as a filing, not as the status or name it led to. OpenCheck keeps the rows from build to build, so this history grows past the register's year; before the earliest day it holds, an empty timeline is a log that was not kept, not a quiet company.",
   ur_latvia:
@@ -305,10 +324,22 @@ export function buildTimelineRows(
  * near-empty timeline that read as "checked, nothing happened". These
  * sentences say which of those two things actually occurred.
  */
+/** A sentence for each register that was asked and did not answer. */
+export const REGISTER_UNAVAILABLE_NOTES: Record<string, string> = {
+  joafe:
+    "The Journal officiel (JOAFE) did not answer, so this association's notices and accounts deposits are missing from this timeline.",
+};
+
 export function historyDegradedNotice(data: HistoryResponse): string | null {
   const recordDown = data.gleif_record_available === false;
   const eventsDown = data.gleif_events_available === false;
-  if (!recordDown && !eventsDown) return null;
+  const unavailable = (data.registers_unavailable ?? [])
+    .map((s) => REGISTER_UNAVAILABLE_NOTES[s] ?? `${historySourceLabel(s)} did not answer.`);
+  if (!recordDown && !eventsDown) {
+    return unavailable.length
+      ? [...unavailable, "What is shown is not a finding that nothing changed."].join(" ")
+      : null;
+  }
 
   const parts: string[] = [];
   if (eventsDown && recordDown) {
@@ -331,6 +362,7 @@ export function historyDegradedNotice(data: HistoryResponse): string | null {
       "The company-registry histories were still attempted, using a registry number from OpenCheck's cached copy of the GLEIF record.",
     );
   }
+  parts.push(...unavailable);
   parts.push("What is shown is not a finding that nothing changed.");
   return parts.join(" ");
 }

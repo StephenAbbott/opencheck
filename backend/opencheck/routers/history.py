@@ -121,6 +121,10 @@ class HistoryResponse(BaseModel):
     #: the earliest day OpenCheck's kept copy reaches. Before it, an empty
     #: timeline from that register says nothing.
     registers_kept_since: dict[str, str] = {}
+    #: Source ids of registers asked for this company's history that did not
+    #: answer (the JOAFE's live query: a timeout, an error). Their absence
+    #: from the timeline is unchecked, not "no history".
+    registers_unavailable: list[str] = []
 
 
 @router.get("/history", response_model=HistoryResponse)
@@ -212,4 +216,5 @@ async def history(
         filings_truncated=tl.filings_truncated,
         officers_available=tl.officers_available,
         registers_kept_since=tl.registers_kept_since,
+        registers_unavailable=tl.registers_unavailable,
     )

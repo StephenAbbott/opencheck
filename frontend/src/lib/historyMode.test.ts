@@ -621,3 +621,29 @@ describe("registerReadNotes", () => {
     expect(bare[0]).not.toMatch(/copy reaches back/);
   });
 });
+
+describe("JOAFE on the History tab", () => {
+  it("links a notice row by the RNA number and an accounts row by the SIREN", () => {
+    expect(recordUrl("joafe", "x", { joafe: "W922001074" })).toBe(
+      "https://journal-officiel-datadila.opendatasoft.com/explore/dataset/jo_associations/table/?q=numero_rna%3AW922001074",
+    );
+    expect(recordUrl("joafe", "x", { joafe: "425138393" })).toContain("q=dca_siren%3A425138393");
+    expect(recordUrl("joafe", "x", { joafe: "nonsense" })).toBeNull();
+    expect(recordUrl("joafe", "x", {})).toBeNull();
+  });
+
+  it("says what the JOAFE covers and what it never shows", () => {
+    const fr = registerReadNotes({ ...RESP, sources: ["gleif", "joafe"] });
+    expect(fr).toHaveLength(1);
+    expect(fr[0]).toContain("commune and postcode, never the street");
+    expect(fr[0]).toContain("accounts only");
+    expect(fr[0]).toContain("2009");
+  });
+
+  it("says a JOAFE that did not answer, even when GLEIF did", () => {
+    const notice = historyDegradedNotice({ ...RESP, registers_unavailable: ["joafe"] });
+    expect(notice).toContain("Journal officiel (JOAFE) did not answer");
+    expect(notice).toContain("not a finding that nothing changed");
+    expect(historyDegradedNotice({ ...RESP, registers_unavailable: [] })).toBeNull();
+  });
+});

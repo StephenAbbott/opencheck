@@ -286,6 +286,7 @@ The Time Machine: how the company's records changed, merged across every registe
 | `filings_truncated` | `bool` | `False` | Phase 194 — Companies House holds more filings than this fetch read. The register answers newest-first, so the missing end is the oldest. |
 | `officers_available` | `bool` | `False` | Phase 198 — the officers list, which the board stream is built from, was read. False means it was not (no key, not a GB company, or the register refused), so an empty board stream is unchecked, not empty. |
 | `registers_kept_since` | `dict[str, str]` | `{}` | `{source_id: ISO day}` — for a register whose own change log keeps a limited window (the Israel Corporations Authority publishes one year), the earliest day OpenCheck's kept copy reaches. Before it, an empty timeline from that register says nothing. |
+| `registers_unavailable` | `list[str]` | `[]` | Source ids of registers asked for this company's history that did not answer (the JOAFE's live query: a timeout, an error). Their absence from the timeline is unchecked, not "no history". |
 
 #### `HistoryEntry`
 

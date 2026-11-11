@@ -1059,6 +1059,9 @@ export interface HistoryResponse {
   /** `{source_id: ISO day}` — for a register whose change log keeps a limited
    *  window (Israel: one year), the earliest day OpenCheck's kept copy reaches. */
   registers_kept_since?: Record<string, string>;
+  /** Registers asked for this company's history that did not answer (the
+   *  JOAFE's live query) — their absence is unchecked, not empty. */
+  registers_unavailable?: string[];
 }
 
 /** Fetch the merged change history for an LEI — every register OpenCheck

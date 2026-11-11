@@ -23,6 +23,12 @@ docstring claimed until Phase 190:
   phase): events reconstructed from UR's dated open data — the lookup's
   tables plus six event tables read on this path only. Additions only for
   people: UR publishes no end dates.
+- **Israel Corporations Authority** (key-free): the change log in the index.
+- **French JOAFE** (key-free, the JOAFE History ticket): an association's
+  notices and an association's or foundation's accounts deposits, read live
+  from DILA's portal and cached a day (:mod:`..sources.joafe`). Keyed on the
+  SIREN GLEIF files under any French authority; the association's RNA numbers
+  come from the RNA index. A failure lands in ``registers_unavailable``.
 
 Every one of them lands in the same ``ChangeEvent`` model and is merged onto one
 axis by :mod:`.assemble` — a national register that publishes history is not a
@@ -65,6 +71,7 @@ from .assemble import Timeline, assemble_timeline
 from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
 from .ica_israel import ica_israel_change_events
+from .joafe import joafe_change_events
 from .ny_dos import ny_dos_change_events
 from .nz_companies import nz_change_events
 from .ur_latvia import ur_latvia_change_events
@@ -108,15 +115,23 @@ _CH_OFFICERS_PAGE_CAP = 20
 
 
 _Numbers = tuple[
-    str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None
+    str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None,
+    str | None,
 ]
 
 
+def _padded(numbers: tuple) -> _Numbers:
+    """Nine slots from a registration tuple; an older eight-slot one (a test
+    double written before the French SIREN joined) reads as no SIREN."""
+    padded = tuple(numbers) + (None,) * (9 - len(numbers))
+    return padded[:9]  # type: ignore[return-value]
+
+
 async def _gleif_registration(client: httpx.AsyncClient, lei: str) -> _Numbers:
-    """Return ``(ch, nz, ee, dk, ny, lv, il, legal_name)`` from GLEIF."""
+    """Return ``(ch, nz, ee, dk, ny, lv, il, legal_name, fr_siren)`` from GLEIF."""
     resp = await client.get(_GLEIF_RECORD_URL.format(lei=quote(lei)))
     if resp.status_code == 404:
-        return None, None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None, None
     resp.raise_for_status()
     return _registration_numbers(resp.json())
 
@@ -132,11 +147,14 @@ def _cached_registration(lei: str) -> _Numbers | None:
     if hit is None:
         return None
     numbers = _registration_numbers(hit[0])
-    return numbers if any(numbers[:7]) else None
+    return numbers if any(numbers[:7]) or numbers[8] else None
 
 
 def _registration_numbers(payload: dict | None) -> _Numbers:
-    """``(ch, nz, ee, dk, ny, lv, il, legal_name)`` from a GLEIF Level-1 record payload.
+    """``(ch, nz, ee, dk, ny, lv, il, legal_name, fr_siren)`` from a GLEIF Level-1 record payload.
+
+    The French SIREN (any of the three French authorities, written plain or
+    grouped in threes) keys the JOAFE association notices.
 
     The legal name rides along for New York: the DOS emitter is name-gated,
     because six ISSUED LEIs file a DOS ID that belongs to another entity, and
@@ -159,7 +177,15 @@ def _registration_numbers(payload: dict | None) -> _Numbers:
     lv = registered_as if (registered_as and registered_at == _LV_RA_CODE) else None
     il = registered_as if (registered_as and registered_at == _IL_RA_CODE) else None
     legal_name = ((entity.get("legalName") or {}).get("name") or "").strip() or None
-    return ch, nz, ee, dk, ny, lv, il, legal_name
+    fr_siren: str | None = None
+    from ..sources.inpi import INPI_RA_CODES, normalise_siren
+
+    if registered_as and registered_at in INPI_RA_CODES:
+        try:
+            fr_siren = normalise_siren(registered_as)
+        except ValueError:
+            fr_siren = None
+    return ch, nz, ee, dk, ny, lv, il, legal_name, fr_siren
 
 
 async def _gleif_modifications(
@@ -292,6 +318,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     lv_regcode: str | None = None
     il_number: str | None = None
     legal_name: str | None = None
+    fr_siren: str | None = None
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
     ch_filings: list[dict] = []
@@ -311,7 +338,8 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         reg_res, mods_res = results
         if not isinstance(reg_res, BaseException):
-            company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name = reg_res
+            (company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number,
+             legal_name, fr_siren) = _padded(reg_res)
             company_number_basis = "live"
         else:
             # A 429 handed back by the Phase 143 transport, the throttle
@@ -321,7 +349,8 @@ async def fetch_timeline(lei: str) -> Timeline:
             gleif_record_available = False
             cached = _cached_registration(lei)
             if cached is not None:
-                company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name = cached
+                (company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number,
+                 legal_name, fr_siren) = _padded(cached)
                 company_number_basis = "cached"
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
@@ -476,6 +505,29 @@ async def fetch_timeline(lei: str) -> Timeline:
         il_events = ica_israel_change_events(il_number, il_rows)
         il_kept_since = (coverage or {}).get("kept_since")
 
+    # France — the JOAFE: an association's notices (keyed by its RNA numbers,
+    # read from the RNA index) and an association's or foundation's accounts
+    # deposits (keyed by the SIREN). One live query, cached a day. A failure
+    # is said (``registers_unavailable``), never read as "no notices".
+    fr_events = []
+    fr_number: str | None = None
+    fr_unavailable = False
+    if fr_siren:
+        from ..sources import joafe as _joafe
+
+        try:
+            fr_read = await _joafe.notices(fr_siren)
+        except Exception:  # noqa: BLE001
+            fr_read = {"status": "unavailable"}
+        if fr_read.get("status") == "read":
+            fr_events = joafe_change_events(fr_read.get("rows"))
+            rnas = fr_read.get("rnas") or []
+            # The RNA number is how the JOAFE names a notice; the SIREN is
+            # how it names an accounts deposit. One RNA → link by it.
+            fr_number = rnas[0] if len(rnas) == 1 else fr_siren
+        elif fr_read.get("reason") != "not_configured":
+            fr_unavailable = True
+
     # The board stream. Emitted here rather than inside ``assemble_timeline``
     # because it comes from a second Companies House call, not from the filing
     # stream that function already classifies.
@@ -492,7 +544,8 @@ async def fetch_timeline(lei: str) -> Timeline:
         gleif_rr_mods=rr_mods,
         ch_filings=ch_filings,
         extra_events=(
-            nz_events + ee_events + dk_events + ny_events + lv_events + il_events + officer_events
+            nz_events + ee_events + dk_events + ny_events + lv_events + il_events + fr_events
+            + officer_events
         ),
     )
     # Phase 190: the numbers above are how each register addresses this
@@ -512,9 +565,12 @@ async def fetch_timeline(lei: str) -> Timeline:
             ("ny_dos", ny_dos_id),
             ("ur_latvia", lv_regcode),
             ("ica_israel", il_number),
+            ("joafe", fr_number),
         )
         if number
     }
+    if fr_unavailable:
+        timeline.registers_unavailable = ["joafe"]
     if il_kept_since:
         timeline.registers_kept_since = {"ica_israel": il_kept_since}
     timeline.filings_truncated = ch_filings_truncated

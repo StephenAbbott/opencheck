@@ -124,6 +124,10 @@ class Timeline:
     #: keeps from build to build: the earliest day its copy reaches. Set only
     #: for the Israel Corporations Authority, whose file holds one year.
     registers_kept_since: dict[str, str] = field(default_factory=dict)
+    #: Source ids of registers that were asked for this company's history and
+    #: did not answer (the JOAFE's live query). An empty stream from one of
+    #: them is unchecked, not empty.
+    registers_unavailable: list[str] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #

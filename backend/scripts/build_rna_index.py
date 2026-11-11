@@ -93,6 +93,7 @@ SCHEMA = f"""
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE association ({", ".join(f"{c} TEXT" for c in COLUMNS + SIRENE_COLUMNS)});
 CREATE UNIQUE INDEX association_id ON association(id);
+CREATE INDEX association_siren ON association(siren);
 """
 
 

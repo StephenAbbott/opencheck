@@ -220,6 +220,25 @@ def association(rna: str) -> dict[str, Any] | None:
     return record
 
 
+def rnas_for_siren(siren: str) -> list[str] | None:
+    """Every RNA number whose association a Sirene unit with this SIREN names,
+    sorted; ``[]`` when none does; ``None`` when there is no index.
+
+    The JOAFE reader's join (the JOAFE History ticket, 11 Nov 2026): the index
+    keeps the naming unit's SIREN beside each association, so SIREN → RNA is
+    a local read. An index built before ``association_siren`` answers by scan
+    (about half a second) until the monthly rebuild. Raises ``sqlite3.Error``
+    on a broken index.
+    """
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    rows = conn.execute(
+        "SELECT id FROM association WHERE siren = ? ORDER BY id", (str(siren),)
+    ).fetchall()
+    return [str(r[0]) for r in rows if r[0]]
+
+
 def warm_index() -> dict[str, Any]:
     """Download the index at boot when absent; replace it when the release
     asset changed. Never raises — no index is a state (Sirene answers
