@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 491** — A Korean company's stock-market listing from Open DART is no longer shown as its legal form.
+**Latest: Phase 492** — Every OpenSanctions topic now reads in English in summaries and findings, not only the screening targets.
 
 → [Full development history](docs/status.md)
 

@@ -1,6 +1,0 @@
----
-title: Every FollowTheMoney topic OpenSanctions publishes now has an English label, so non-target topics stop reaching readers as raw slugs.
-readme: Every OpenSanctions topic now reads in English in summaries and findings, not only the screening targets.
-tests: backend +1
----
-On 10 Nov 2026 production printed "fin bank" and "fin" on Northern Trust Global Services SE's OpenSanctions row and "role pol" on Jane Hume: `TOPIC_LABEL` (`opencheck/topics.py`) and its frontend copy `OPENALEPH_TOPIC` (`lib/vocab.ts`) labelled only the 30 `target_topics` plus `asset.frozen`, `role.diplo` and `role.judge`, and every other topic fell through to the prettifier. Option (a) of the ticket: both maps now label all 75 keys of model.json's `model.types.topic.values` (read 11 Nov 2026) in OpenCheck's wording — lower case, British spelling, "politically exposed person" in full, upstream's `fin.adivsor` typo kept as the key. `test_topic_labels.py` freezes the list as `_PUBLISHED_TOPICS`, fails offline when either map misses a topic or labels one that is not published, and adds a live test (weekly live-smoke) that fails when the published list moves. After deploy, re-check Northern Trust Global Services SE and Jane Hume.
