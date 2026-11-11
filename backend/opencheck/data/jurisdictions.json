@@ -89,7 +89,7 @@
         "plenary": null
       },
       "opencheck_source_note": "registro_sociedades_argentina",
-      "notes": "Drafted by Claude on 11 Nov 2026 for the Argentina adapter, unverified. Beneficial owners are reported to ARCA (Registro de Beneficiarios Finales, RG AFIP 4697/2020) and declared to the IGJ (RG IGJ 7/2015); neither is published. The RNS and the IGJ entity file are open data on datos.jus.gob.ar (name, CUIT, form, founding date, addresses; the IGJ also names people in an entity's filings without dates or roles), not shareholders or beneficial owners. Please verify access status before setting Last verified.",
+      "notes": "Beneficial owners are reported to ARCA (Registro de Beneficiarios Finales, RG AFIP 4697/2020) and declared to the IGJ (RG IGJ 7/2015); neither is published. The RNS and the IGJ entity file are open data on datos.jus.gob.ar (name, CUIT, form, founding date, addresses; the IGJ also names people in an entity's filings without dates or roles), not shareholders or beneficial owners.",
       "last_verified": "2026-11-11",
       "sources": [
         {
@@ -1489,8 +1489,8 @@
         "plenary": null
       },
       "opencheck_source_note": "ica_israel",
-      "notes": "Drafted by Claude on 10 Nov 2026 for the Israel adapter, unverified. No public central beneficial ownership register was found; the Corporations Authority publishes companies and partnerships (name, number, type, status, address) as open data on data.gov.il, not shareholders or beneficial owners. Please verify access status before setting Last verified.",
-      "last_verified": null,
+      "notes": "No public central beneficial ownership register was found; the Corporations Authority publishes companies and partnerships (name, number, type, status, address) as open data on data.gov.il, not shareholders or beneficial owners.",
+      "last_verified": "2026-11-11",
       "sources": [
         {
           "url": "https://data.gov.il/dataset/ica_companies"
