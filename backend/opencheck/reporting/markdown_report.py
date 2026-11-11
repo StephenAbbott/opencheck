@@ -430,10 +430,17 @@ def _integrated_ownership(report: dict[str, Any]) -> list[str]:
     lines = [f"## {io.REPORT_HEADING}", ""]
     lines.append("| " + " | ".join(io.REPORT_COLUMNS) + " |")
     lines.append("|" + "---|" * len(io.REPORT_COLUMNS))
-    lines += ["| " + " | ".join(_cell(c) for c in row) + " |" for row in rows]
+    # The undated mark is an asterisk: escaped, so no reader takes it for
+    # emphasis or, opening the note, for a list bullet.
+    star = io.UNDATED_MARK
+    escaped = "\\" + star
+    lines += [
+        "| " + " | ".join(_cell(c).replace(star, escaped) for c in row) + " |"
+        for row in rows
+    ]
     lines.append("")
     for t in io.report_footer(raw):
-        lines += [f"_{t}_", ""]
+        lines += ["_" + t.replace(star, escaped) + "_", ""]
     return lines
 
 

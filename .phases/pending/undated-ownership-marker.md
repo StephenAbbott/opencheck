@@ -1,0 +1,6 @@
+---
+title: An undated integrated-ownership figure carries an asterisk that points to the note beneath the table.
+readme: Integrated ownership marks each figure that rests on a holding no source dates, so a reader of a mixed table knows which rows the undated note means.
+tests: backend +1, vitest +2
+---
+Follow-up to the undated-relationships ticket. The note "Includes holdings the sources do not date: they are read as current, and may have ended." was said once under the integrated ownership table, which on a network mixing dated and undated holdings did not say which figures it meant. Each figure already carried `undated`; now the FullCheck table puts an asterisk after it (hidden from screen readers, which hear "no date given, see the note below the table") and the note opens with the same asterisk. The PDF/HTML and Markdown report tables do the same from the frozen payload (`integrated_ownership.UNDATED_MARK`, `undated_note_line`; the Markdown escapes the asterisk so it never reads as emphasis or a bullet). A "Read as text" tree row has no note beneath it, so it says "no date given" in words. The payload, the BODS annotation and the MCP figures are unchanged: `undated_note` keeps its text, so saved reports render the mark from their frozen `undated` flags. `UNDATED_MARK` is parity-tested against `lib/integratedOwnership.ts`.

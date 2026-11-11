@@ -103,6 +103,13 @@ export interface IntegratedOwnershipPayload {
 export const UNDATED_NOTE =
   "Includes holdings the sources do not date: they are read as current, and may have ended.";
 
+/** Mirrors `integrated_ownership.UNDATED_MARK` (parity-tested): after an
+ *  undated figure in the table, and opening the note beneath it. */
+export const UNDATED_MARK = "*";
+
+/** What a screen reader hears in place of the mark. */
+export const UNDATED_MARK_SPOKEN = "no date given, see the note below the table";
+
 const SUBJECT = "\u0000subject";
 
 const rd = (s: Stmt): Stmt => (s.recordDetails ?? {}) as Stmt;
@@ -393,7 +400,8 @@ export function subjectIdsFor(statements: Stmt[], lei: string, leiOf: (s: Stmt) 
  *  (Wikidata)", or the status note for a holder with no figure. */
 export function ownershipCellText(h: Holder): string {
   if (h.status !== "current") return h.status === "formerly" ? "formerly held shares" : "voting rights, not shares";
-  return h.figures.map((f) => `${f.text} (${f.source})`).join("; ");
+  // A tree row has no note beneath it, so an undated figure says so in words.
+  return h.figures.map((f) => `${f.text} (${f.source}${f.undated ? ", no date given" : ""})`).join("; ");
 }
 
 /** Node id → the tree-row text, for every holder in a payload. */

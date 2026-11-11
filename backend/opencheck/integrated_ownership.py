@@ -93,6 +93,10 @@ UNDATED_NOTE = (
     "may have ended."
 )
 
+#: After an undated figure in a table, pointing the reader to the note
+#: beneath it, which then opens with the same mark (``undated_note_line``).
+UNDATED_MARK = "*"
+
 STATUS_CURRENT = "current"
 STATUS_VOTING = "voting_rights_only"
 STATUS_FORMERLY = "formerly"
@@ -565,10 +569,17 @@ def report_rows(payload: Mapping[str, Any] | None) -> list[tuple[str, str, str, 
             rows.append((name, str(h.get("note") or ""), "; ".join(h.get("sources") or []), ""))
             continue
         for f in h.get("figures") or []:
-            rows.append(
-                (name, str(f.get("text") or ""), str(f.get("source") or ""), route_words(f))
-            )
+            text = str(f.get("text") or "")
+            if f.get("undated"):
+                text += UNDATED_MARK
+            rows.append((name, text, str(f.get("source") or ""), route_words(f)))
     return rows
+
+
+def undated_note_line(note: str) -> str:
+    """The undated note under a table whose undated figures carry the mark:
+    "* Includes holdings the sources do not date: …"."""
+    return f"{UNDATED_MARK} {note}"
 
 
 def report_footer(payload: Mapping[str, Any] | None) -> list[str]:
@@ -579,7 +590,7 @@ def report_footer(payload: Mapping[str, Any] | None) -> list[str]:
     out = [str(payload.get("description") or METHOD_DESCRIPTION),
            str(payload.get("credit") or METHOD_CREDIT)]
     if payload.get("undated_note"):
-        out.append(str(payload["undated_note"]))
+        out.append(undated_note_line(str(payload["undated_note"])))
     if payload.get("as_of"):
         out.append(f"Computed from the sources as they stood on {payload['as_of']}.")
     extra = len(with_figures(payload)) - REPORT_LIMIT
