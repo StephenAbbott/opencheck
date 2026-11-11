@@ -44,7 +44,7 @@ Data generated 2026-11-10T16:58:19+00:00; sentences rendered as of 2026-11-10. *
 
 ### Argentina (AR) — verified 2026-11-11
 
-> Registro de Beneficiarios Finales (ARCA) is open to authorities and obliged entities only. OpenCheck reads no Argentina register, so an owner absent from this report says nothing about what Argentina holds.
+> Registro de Beneficiarios Finales (ARCA) is open to authorities and obliged entities only. OpenCheck reads Argentina — Registro Nacional de Sociedades and IGJ for officers and registered holdings, not beneficial owners.
 
 | Field | Value |
 |---|---|
@@ -59,7 +59,7 @@ Data generated 2026-11-10T16:58:19+00:00; sentences rendered as of 2026-11-10. *
 | Verification | — |
 | 6AMLD LIA / BORIS | Not applicable / Not applicable |
 | Company register | Registro Nacional de Sociedades (Ministerio de Justicia) and Inspección General de Justicia (City of Buenos Aires) — https://datos.jus.gob.ar/dataset/registro-nacional-de-sociedades; public: Partly; publishes: — |
-| OpenCheck reads | *no adapter for this jurisdiction* |
+| OpenCheck reads | `registro_sociedades_argentina` |
 | OpenCheck source (note) | registro_sociedades_argentina |
 | Sources | https://datos.jus.gob.ar/dataset/registro-nacional-de-sociedades · https://datos.jus.gob.ar/dataset/entidades-constituidas-en-la-inspeccion-general-de-justicia-igj · https://www.argentina.gob.ar/normativa/nacional/resolución-4697-2020-337045 |
 | Notes | Beneficial owners are reported to ARCA (Registro de Beneficiarios Finales, RG AFIP 4697/2020) and declared to the IGJ (RG IGJ 7/2015); neither is published. The RNS and the IGJ entity file are open data on datos.jus.gob.ar (name, CUIT, form, founding date, addresses; the IGJ also names people in an entity's filings without dates or roles), not shareholders or beneficial owners. |

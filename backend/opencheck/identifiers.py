@@ -475,3 +475,50 @@ def colombian_nit(value: object) -> str | None:
     except ValueError:
         return None
     return f"{base}-{dv}"
+
+
+# ---------------------------------------------------------------------------
+# Argentina — CUIT (Clave Única de Identificación Tributaria)
+# ---------------------------------------------------------------------------
+
+#: ARCA's (formerly AFIP's) check-digit weights over the first ten digits.
+_CUIT_WEIGHTS = (5, 4, 3, 2, 7, 6, 5, 4, 3, 2)
+
+
+def cuit_check_digit(base: str) -> int:
+    """The check digit for the first ten digits of a CUIT.
+
+    ``11 - (Σ digit × weight mod 11)``, with 11 read as 0 and 10 as 9 — the
+    old 23/33 re-prefixing leaves a 9 there (Toyota Argentina is
+    ``33-67913936-9``).
+    """
+    if not (len(base) == 10 and base.isdigit()):
+        raise ValueError(f"not a CUIT body: {base!r}")
+    total = sum(int(d) * w for d, w in zip(base, _CUIT_WEIGHTS, strict=True))
+    digit = 11 - total % 11
+    return {11: 0, 10: 9}.get(digit, digit)
+
+
+def argentine_cuit(value: object) -> str | None:
+    """The 11 digits of a CUIT whose check digit agrees, or None.
+
+    Accepts every spelling GLEIF's LEI issuers file under the Argentine
+    authorities — bare (``30500001735``) or hyphenated (``33-67913936-9``),
+    with stray spaces or dots. Anything else (an IGJ correlativo, a provincial
+    number, free text) is not a CUIT here.
+    """
+    text = re.sub(r"[\s.\-]", "", str(value or ""))
+    if not re.fullmatch(r"\d{11}", text):
+        return None
+    try:
+        if cuit_check_digit(text[:10]) != int(text[10]):
+            return None
+    except ValueError:  # pragma: no cover - guarded by the regex
+        return None
+    return text
+
+
+def format_cuit(digits: str) -> str:
+    """``30500001735`` → ``30-50000173-5``, the spelling the CUIT is printed
+    in and the one OpenCheck writes under ``AR-CUIT``."""
+    return f"{digits[:2]}-{digits[2:10]}-{digits[10]}"
