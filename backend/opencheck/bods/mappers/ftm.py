@@ -8,6 +8,7 @@ data in the mapping layer and has nothing to do with any other source.
 
 from __future__ import annotations
 
+from datetime import date as _date
 from typing import Any
 
 import pycountry
@@ -246,9 +247,7 @@ def _ftm_edge_interest(
         pct = _ftm_percentage(edge_props)
         if pct is not None:
             interest["share"] = {"exact": pct}
-        return interest
-
-    if policy == "directorship":
+    elif policy == "directorship":
         interest = {
             "type": _FTM_ROLE_TO_INTEREST_TYPE.get(
                 role.lower().strip(), "seniorManagingOfficial"
@@ -267,13 +266,34 @@ def _ftm_edge_interest(
         if role:
             interest["details"] = role
 
-    start = (edge_props.get("startDate") or [None])[0]
+    start = _ftm_interest_day(edge_props.get("startDate"))
     if start:
         interest["startDate"] = start
-    end = (edge_props.get("endDate") or [None])[0]
+    end = _ftm_interest_day(edge_props.get("endDate"))
     if end:
         interest["endDate"] = end
     return interest
+
+
+def _ftm_interest_day(values: Any) -> str | None:
+    """An FtM edge date as the ``YYYY-MM-DD`` a BODS interest requires.
+
+    The first value that is a full ISO day (a datetime is cut to its day) is
+    kept, future days included — an ``endDate`` can be announced. A partial
+    date ("2019", "2019-05") is left out rather than rounded: BODS asks for a
+    rounded date to be annotated, and the edge builder has no statement to
+    annotate. Ownership edges used to skip this step entirely, so every
+    OpenSanctions shareholding read as undated and current.
+    """
+    for value in values or []:
+        text = str(value or "").strip()
+        if len(text) < 10:
+            continue
+        try:
+            return _date.fromisoformat(text[:10]).isoformat()
+        except ValueError:
+            continue
+    return None
 
 
 _FTM_SUBJECT = object()  # sentinel: this edge endpoint is the payload subject
@@ -429,6 +449,7 @@ def _ftm_edge_relationships(
                         # where yente omits the edge's.
                         statement_date=_ftm_last_change(entry) or _ftm_last_change(payload),
                     )
+                    _ftm_label_edge(rel, entry, source_id)
                     result.statements.append(rel)
 
 
@@ -542,6 +563,87 @@ def map_ftm(
     # (Phase 235 — Rosneft's OpenSanctions record repeated 13 ids).
     result.statements = unique_statements(result.statements)
     return result
+
+
+#: FtM datasets that are Global Energy Monitor's Global Energy Ownership
+#: Tracker as OpenSanctions republishes it. OpenCheck reads the tracker
+#: directly (the ``climatetrace`` source), so an edge carried by these
+#: datasets alone is GEM's claim, not a second one (the undated-relationships
+#: ticket, 11 Nov 2026). ``bods.republished`` folds them into GEM's own read.
+GEM_REPUBLISHED_DATASETS: frozenset[str] = frozenset({"gem_energy_ownership"})
+
+#: ``source.assertedBy`` on such an edge — BODS v0.4's own field for who
+#: makes the claim, so a reader of the export sees GEM without an extension.
+GEM_ASSERTED_BY: dict[str, str] = {
+    "name": "Global Energy Monitor",
+    "uri": "https://globalenergymonitor.org/projects/global-energy-ownership-tracker/",
+}
+
+#: The note on a republished edge. ``{publisher}`` is the FtM source's name.
+GEM_REPUBLISHED_NOTE = (
+    "{publisher} republishes this relationship from Global Energy Monitor's "
+    "Global Energy Ownership Tracker; OpenCheck also reads the tracker "
+    "directly, as the Global Energy Monitor / Climate TRACE source."
+)
+
+#: The claim-age note on an undated edge, from the publisher's ``first_seen``.
+FIRST_SEEN_NOTE = "{publisher} first recorded this relationship on {day}."
+
+_FTM_PUBLISHER_NAMES: dict[str, str] = {
+    "opensanctions": "OpenSanctions",
+    "openaleph": "OpenAleph",
+    "everypolitician": "EveryPolitician",
+}
+
+
+def is_gem_republished(entry: dict[str, Any]) -> bool:
+    """True when an FtM edge is carried by GEM's republished tracker alone.
+
+    Reads the edge's own ``datasets`` — never the subject's: Rosneft's record
+    is in a dozen datasets, its BP edge in one. An edge another dataset also
+    carries (OFAC naming the same holding) is that dataset's claim too, and
+    stays.
+    """
+    datasets = {str(d) for d in entry.get("datasets") or [] if d}
+    return bool(datasets) and datasets <= GEM_REPUBLISHED_DATASETS
+
+
+def _ftm_label_edge(rel: dict[str, Any], entry: dict[str, Any], source_id: str) -> None:
+    """Say who asserts an edge, and since when, on its relationship statement.
+
+    A GEM-republished edge gets ``source.assertedBy`` GEM, a note saying so
+    and GEM's citation (the same words as the ``climatetrace`` mapper). An
+    edge with no start or end date gets the day the publisher first recorded
+    it — the only age a reader has for it.
+    """
+    publisher = _FTM_PUBLISHER_NAMES.get(source_id, source_id)
+    if is_gem_republished(entry):
+        rel.setdefault("source", {})["assertedBy"] = [dict(GEM_ASSERTED_BY)]
+        notes = [
+            _annotations.commenting(
+                "/source", GEM_REPUBLISHED_NOTE.format(publisher=publisher)
+            )
+        ]
+        urls = [
+            str(u) for u in (entry.get("properties") or {}).get("sourceUrl") or [] if u
+        ]
+        if urls:
+            notes.append(
+                _annotations.commenting(
+                    "/recordDetails/interests/0",
+                    "Global Energy Monitor cites: " + "; ".join(urls),
+                )
+            )
+        rel.setdefault("annotations", []).extend(notes)
+    interests = (rel.get("recordDetails") or {}).get("interests") or []
+    dated = any(i.get("startDate") or i.get("endDate") for i in interests if isinstance(i, dict))
+    first_seen = record_date(entry.get("first_seen"))
+    if not dated and first_seen:
+        rel.setdefault("annotations", []).append(
+            _annotations.commenting(
+                "/source", FIRST_SEEN_NOTE.format(publisher=publisher, day=first_seen)
+            )
+        )
 
 
 def _ftm_last_change(record: dict[str, Any]) -> str | None:

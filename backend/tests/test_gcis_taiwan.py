@@ -418,7 +418,7 @@ def test_a_natural_person_director_holds_a_seat_and_a_shareholding() -> None:
     assert "7,452,349 shares of 25,932,370,067 issued" in share["details"]
     assert "publishes no list of shareholders" in share["details"]
     # The percentage is OpenCheck's arithmetic, said on the share it computed.
-    (note,) = rel["annotations"]
+    (note,) = [a for a in rel["annotations"] if a["motivation"] == "transformation"]
     assert note["motivation"] == "transformation"
     assert note["statementPointerTarget"] == "/recordDetails/interests/1/share"
 

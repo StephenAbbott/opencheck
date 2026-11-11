@@ -301,22 +301,31 @@ def content_addressed(mapper: Callable[..., Any]) -> Callable[..., Any]:
     publisher's statements (no ``opencheck-`` recordId) are left alone.
     """
     import functools
+
+    from .undated import note_undated
+
+    def _finish_statement(stmt: dict[str, Any]) -> dict[str, Any]:
+        # The undated-relationship note (bods/undated.py) is decided here,
+        # after the mapper's last edit, like the id; annotations are outside
+        # the digest, so the order does not matter.
+        return refresh_statement_id(note_undated(stmt))
+
     import inspect
 
     def _refresh_all(result: Any) -> Any:
         if inspect.isgenerator(result) or (
             not isinstance(result, (list, BODSBundle)) and hasattr(result, "__next__")
         ):
-            return (refresh_statement_id(s) if isinstance(s, dict) else s for s in result)
+            return (_finish_statement(s) if isinstance(s, dict) else s for s in result)
         if isinstance(result, BODSBundle):
             for s in result.statements:
                 if isinstance(s, dict):
-                    refresh_statement_id(s)
+                    _finish_statement(s)
             return result
         if isinstance(result, list):
             for s in result:
                 if isinstance(s, dict):
-                    refresh_statement_id(s)
+                    _finish_statement(s)
             return result
         return result
 
@@ -324,7 +333,7 @@ def content_addressed(mapper: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(mapper)
         def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
             for s in mapper(*args, **kwargs):
-                yield refresh_statement_id(s) if isinstance(s, dict) else s
+                yield _finish_statement(s) if isinstance(s, dict) else s
         gen_wrapper.__opencheck_content_addressed__ = True  # type: ignore[attr-defined]
         return gen_wrapper
 

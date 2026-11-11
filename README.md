@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 493** — Climate TRACE's answer about owners now shows on the page, on its Climate & ESG card and in a line under the QuickCheck source cards.
+**Latest: Phase 496** — Ownership relationships no source dates now say "no date given" on the graph, in reports and in BODS, and OpenSanctions' copy of Global Energy Monitor's tracker no longer counts as a second source beside GEM.
 
 → [Full development history](docs/status.md)
 

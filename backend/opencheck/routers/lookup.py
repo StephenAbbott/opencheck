@@ -74,6 +74,7 @@ from ..risk import merge_listed_jurisdiction as _risk_merge_listed
 from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
 from ..risk import merge_subsidiary_listed_jurisdiction as _risk_merge_subsidiary_listed
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
+from ..bods import republished as _republished
 from ..bods.declaration import apply_network_subjects, network_subjects, stamp_bundle
 from ..bods.refs import resolve_signal_references
 from ..bods.state_bodies import classify_government_entities
@@ -2156,6 +2157,16 @@ async def _lookup_pipeline(
     declaration_subjects = network_subjects(bods_all, ctx.lei)
     bods_all = apply_network_subjects(bods_all, declaration_subjects)
     yield ("declaration_subjects", {"subjects": declaration_subjects})
+    # OpenSanctions' copy of GEM's ownership tracker is GEM's claim: when
+    # GEM's own read answered for the subject, the copy's edges about the
+    # subject are folded into it (bods.republished), before anything below
+    # counts them. Its own event, so the response folds the same way.
+    republished_payload = _republished.fold(
+        bods_all, subject_identity(ctx.lei, bods_all).statement_ids
+    )
+    if republished_payload["statement_ids"]:
+        bods_all = _republished.apply(bods_all, republished_payload)
+        yield ("republished_folded", republished_payload)
 
     if listing_task is not None:
         try:

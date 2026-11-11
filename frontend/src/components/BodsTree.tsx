@@ -227,7 +227,7 @@ export default function BodsTree({
                 the label's first line is shown here. */}
             {row.interestLabel && (
               <span className="flex-shrink-0 text-oo-meta text-oo-muted truncate max-w-[40%]">
-                {interestCellText(row.interestLabel, row.interestEnded, row.interestEndedOn)}
+                {interestCellText(row.interestLabel, row.interestEnded, row.interestEndedOn, row.interestUndated)}
               </span>
             )}
 

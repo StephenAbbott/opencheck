@@ -116,6 +116,11 @@ class HistoryResponse(BaseModel):
     #: was read. False means it was not (no key, not a GB company, or the
     #: register refused), so an empty board stream is unchecked, not empty.
     officers_available: bool = False
+    #: `{source_id: ISO day}` — for a register whose own change log keeps a
+    #: limited window (the Israel Corporations Authority publishes one year),
+    #: the earliest day OpenCheck's kept copy reaches. Before it, an empty
+    #: timeline from that register says nothing.
+    registers_kept_since: dict[str, str] = {}
 
 
 @router.get("/history", response_model=HistoryResponse)
@@ -206,4 +211,5 @@ async def history(
         registry_numbers=tl.registry_numbers,
         filings_truncated=tl.filings_truncated,
         officers_available=tl.officers_available,
+        registers_kept_since=tl.registers_kept_since,
     )

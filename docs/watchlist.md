@@ -263,6 +263,38 @@ register's own record of it is the news. It reads "The Estonian e-Business
 Register recorded a change to this company in its open data of 2026-10-17
 (registry code 10421629)", then "Shareholders: 3 → 4 entries."
 
+**Tier 3 — the Israel Corporations Authority (the ica-changes ticket, 11 Nov
+2026).** Israel is the second register OpenCheck rebuilds every day, and the
+same machinery reads it: `refresh-ica-israel-index.yml` downloads the build it
+is about to replace, builds today's (carrying the change log's rows past the
+register's one-year window with `--previous`), and diffs the two with
+`scripts/diff_ica_israel_index.py` (about a second) into
+`ica-israel-delta.json`. A change is (Stephen, 11 Nov 2026 — the recommended
+set) a **new filing in a material group** of the Authority's change log
+(`ica-changes`): shares, capital, directors, name, status (winding-up,
+liquidation, revival, strike-off), merger, attachment and classification
+(`ica_israel_changes.MATERIAL_GROUPS`) — **charges are not material**, nor
+are officers, the annual report or corrections — and the corporation's
+**name, status, sub-status and violating mark** in the companies and
+partnerships files. A filing is new when its row (number, request code, day,
+charge) was not in yesterday's build. The log names the kind of filing and
+its day, never who or what it changed to, so that is all the delta carries.
+The first build with a change log diffs no filings (`filings_diffed:
+false`) — every row of the year would read as new. A day with more than
+20,000 new material filings, or touching more than 10 % of the corporations,
+is `suspect`. `ica_israel_tick` is the Estonian tick with another feed
+(`_register_delta_tick` and `_RegisterFeed` in `watchlist.py`): its own
+watermark (`meta.ica_israel_cut`), gaps (`meta.ica_israel_gaps`, a catch-up
+with `register: "ica_israel"`), `il_*` counters on `/watchstats` and an hourly
+`ica_israel.refresh_loop` (`ICA_ISRAEL_REFRESH_INTERVAL_S`). A watch's number
+is GLEIF's `registeredAs` under RA000406, else the baseline's `IL-ROC`. The
+trigger lists each filing as `{code, day, group, label}` and reads "The
+Israel Corporations Authority recorded a change to this company in its open
+data of 2026-11-12 (corporate number 516478872)", then "Share transfer filed
+with the Corporations Authority on 2026-11-09; parties not published."
+Share transfers are on History and the watchlist only, never QuickCheck
+(Stephen).
+
 **Tier 4 — the Companies House PSC stream (pKYC stage E, Route 1).** The
 UK is the one register OpenCheck consumes as a push feed: the PSC graph has
 been live-fed from Companies House's own stream since Phases 184–189, and
@@ -704,6 +736,25 @@ status the re-run then reads is escalated by the snapshot's
 | `officers` | note |
 | `supervisory_board` | note |
 | `added` | note |
+
+The Israeli register's trigger (`IL_FILING_GROUP_TIER`, `IL_FIELD_TIER`)
+is graded by each filing's group and each field. The change log names a
+filing, never what it led to, so a filing that can change who owns the
+company or whether it exists is recheck — read the source:
+
+| Israeli key | Tier |
+|---|---|
+| filing: `status` (winding-up, liquidation, revival, strike-off) | recheck |
+| filing: `merger` | recheck |
+| filing: `shares` | recheck |
+| filing: `name` | recheck |
+| filing: `attachment` | recheck |
+| filing: `capital` | note |
+| filing: `directors` | note |
+| filing: `classification` | note |
+| field: `removed` | escalate |
+| field: `name`, `status`, `sub_status` | recheck |
+| field: `violating`, `added` | note |
 
 ### The PSC tier's own trigger (Tier 4)
 

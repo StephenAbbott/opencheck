@@ -1632,6 +1632,42 @@ otherwise:
   República (~31 of 583) — a note card. CO has no row in the knowability
   table yet.
 
+## Israel's change log on History and the watchlist (the ica-changes ticket, 11 Nov 2026)
+
+`sources/ica_israel_changes.py` (the one reading of a request code),
+`timeline/ica_israel.py`, the `change` table in `build_ica_israel_index.py`,
+`scripts/diff_ica_israel_index.py`, `ica_israel_tick` in `watchlist.py`.
+Stephen's decisions (11 Nov 2026) and the things that will be re-derived
+otherwise:
+
+- **`ica-changes` says that, never what.** One row = a request of one type
+  registered for one corporation on one day (number, code + Hebrew words,
+  day, charge id on charge rows) — no person, share count, old or new name,
+  new status. 564,796 rows, 97 codes; `(number, code, day, charge_id)` is
+  unique (`_id` is load order). Every wording says "filed": `value_new` on a
+  notable row is the filing ("Change of name (…) filed"), never a state
+  reached. Share filings are Tier-1 `SHARES_FILED` worded "filed; parties not
+  published", one entry each; never on QuickCheck.
+- **The file keeps exactly a year; the index keeps more.** `--previous`
+  carries rows older than the window forward from the build being replaced
+  (`retained=1`, `first_seen` kept; a row withdrawn inside the window is
+  counted, not kept). A build without `--previous` starts the history again —
+  the workflow fetches the previous asset first. `registers_kept_since` on
+  `/history` names the day OpenCheck's copy starts. An index built before the
+  change log has no `changes_cut` meta: `change_rows` answers None.
+- **Material for the watchlist** (`MATERIAL_GROUPS`): shares, capital,
+  directors, name, status, merger, attachment, classification — **charges are
+  not** (140k a year). The diff lists new material rows by key against the
+  build replaced, plus name / status / sub-status / violating-mark changes;
+  the first build with a log diffs no filings. The tick is Estonia's
+  (`_register_delta_tick` with an `_RegisterFeed`); a new register joins the
+  tier as another feed, its own `<prefix>_*` state fields and its words in
+  `routers/watch.py` (`register_sentence`, `_catch_up_sentence`) and
+  `lib/watchlist.ts` (`triggerSentence`, `registerTriggerLines`).
+- **After merge**, run `refresh-ica-israel-index` once by hand: the first
+  run builds the change log and publishes an empty delta day; the watchlist
+  reads filings from the second run on.
+
 ## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
 
 `sources/cyprus_drcor.py`, `scripts/build_cyprus_drcor_index.py`,
@@ -5244,3 +5280,25 @@ otherwise:
   api-enumerations' `exemption_descriptions.yml` in `tests/fixtures/companies_house/`),
   and the card's finding says it ("no person with significant control named;
   exempt from the PSC register, with shares on a UK regulated market").
+
+## Undated relationships, and OpenSanctions' copy of GEM's tracker (the undated-relationships ticket, 11 Nov 2026)
+
+`bods/undated.py` + `frontend/src/lib/undated.ts`, `bods/republished.py`; reader's
+page `docs/dates.md` § "Relationships no source dates". Stephen's decisions:
+
+- **Keep undated relationships and say so; never drop them.** Undated = a
+  relationship, not closed, with an ownership or control interest (roles and
+  officer-marked interests never count) and no interest carrying `startDate`
+  or `endDate`. `content_addressed` adds or removes one `commenting` note
+  (`UNDATED_NOTE`) as each OpenCheck statement leaves a mapper; no mapper
+  calls it. The canvas, the tree and the PDF diagram add "no date given" to a
+  current edge's label; `test_undated_relationships.py` parses the TypeScript.
+- **A GEM-republished OpenSanctions edge** (its own `datasets` only
+  `gem_energy_ownership`) carries `source.assertedBy` Global Energy Monitor
+  and a note. When GEM's own read (`climatetrace`) names an owner of the
+  subject, every such edge about the subject is dropped from the lookup
+  response by the `republished_folded` event (LEI pipeline only); per-source
+  views keep the labelled edge.
+- **Integrated ownership keeps undated figures** with `undated_note` on the
+  payload and `undated` per figure in MCP; a holder credited the company's own
+  shares is never routed "through" the subsidiary holding them.

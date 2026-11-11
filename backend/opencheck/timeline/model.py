@@ -86,6 +86,11 @@ class ChangeType(str, Enum):
     CONTROL_NATURE_CHANGED = "CONTROL_NATURE_CHANGED"
     PARENT_CHANGED = "PARENT_CHANGED"
     REPORTING_EXCEPTION_CHANGED = "REPORTING_EXCEPTION_CHANGED"
+    # A share transfer, allotment or shareholder update was filed, and the
+    # register's open data names no party (the Israeli change log). Ranked
+    # with ownership because that is where a reader looks for it; worded as a
+    # filing, never as an owner added or removed.
+    SHARES_FILED = "SHARES_FILED"
     # --- Tier 2: entity identity / status ---
     STATUS_CHANGED = "STATUS_CHANGED"
     SUCCESSION = "SUCCESSION"
@@ -154,6 +159,12 @@ CHANGE_TYPES: dict[ChangeType, ChangeTypeSpec] = {
         "Reporting exception changed", _UPDATED,
         "Flip between a reported parent and a reporting exception "
         "(e.g. NO_KNOWN_PERSON, NON_CONSOLIDATING).",
+    ),
+    ChangeType.SHARES_FILED: ChangeTypeSpec(
+        ChangeType.SHARES_FILED, Tier.OWNERSHIP_CONTROL, RecordType.RELATIONSHIP,
+        "Shares filed (parties not published)", _UPDATED,
+        "A share transfer, allotment or shareholder update was filed with the "
+        "register, which publishes neither the parties nor the shares.",
     ),
     ChangeType.STATUS_CHANGED: ChangeTypeSpec(
         ChangeType.STATUS_CHANGED, Tier.IDENTITY_STATUS, RecordType.ENTITY,

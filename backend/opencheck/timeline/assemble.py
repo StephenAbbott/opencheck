@@ -120,6 +120,10 @@ class Timeline:
     #: Estonian or Danish row nowhere, which is the opposite of what a
     #: provenance-first timeline is for.
     registry_numbers: dict[str, str] = field(default_factory=dict)
+    #: ``{source_id: ISO day}`` for a register whose change log OpenCheck
+    #: keeps from build to build: the earliest day its copy reaches. Set only
+    #: for the Israel Corporations Authority, whose file holds one year.
+    registers_kept_since: dict[str, str] = field(default_factory=dict)
 
 
 # --------------------------------------------------------------------------- #

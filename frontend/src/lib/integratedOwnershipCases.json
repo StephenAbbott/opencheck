@@ -2648,6 +2648,197 @@
     "S2": "S",
     "S3": "S"
    }
+  },
+  {
+   "name": "a holder credited the company's own shares is not routed through the subsidiary that holds them (the Rosneft shape)",
+   "as_of": "2026-11-11",
+   "subject_ids": [
+    "T"
+   ],
+   "statements": [
+    {
+     "statementId": "T",
+     "recordId": "T",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Target PJSC"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "BP",
+     "recordId": "BP",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "BP Holder Ltd"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "G",
+     "recordId": "G",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "State Holder JSC"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "R",
+     "recordId": "R",
+     "recordType": "entity",
+     "recordDetails": {
+      "entityType": {
+       "type": "registeredEntity"
+      },
+      "name": "Treasury Sub LLC"
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r1",
+     "recordId": "r1",
+     "recordType": "relationship",
+     "recordDetails": {
+      "subject": "T",
+      "interestedParty": "BP",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 20
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r2",
+     "recordId": "r2",
+     "recordType": "relationship",
+     "recordDetails": {
+      "subject": "T",
+      "interestedParty": "G",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 40
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r3",
+     "recordId": "r3",
+     "recordType": "relationship",
+     "recordDetails": {
+      "subject": "R",
+      "interestedParty": "T",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 100
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    },
+    {
+     "statementId": "r4",
+     "recordId": "r4",
+     "recordType": "relationship",
+     "recordDetails": {
+      "subject": "T",
+      "interestedParty": "R",
+      "interests": [
+       {
+        "type": "shareholding",
+        "share": {
+         "exact": 10
+        }
+       }
+      ]
+     },
+     "source": {
+      "description": "OpenSanctions",
+      "opencheckSourceId": "opensanctions"
+     }
+    }
+   ],
+   "expect": [
+    {
+     "party": "G",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "44.44%",
+       "route": "directly, with its share of the company's own shares held by Treasury Sub LLC"
+      }
+     ]
+    },
+    {
+     "party": "BP",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "22.22%",
+       "route": "directly, with its share of the company's own shares held by Treasury Sub LLC"
+      }
+     ]
+    },
+    {
+     "party": "R",
+     "status": "current",
+     "kind": "entity",
+     "figures": [
+      {
+       "source_id": "opensanctions",
+       "text": "11.11%",
+       "route": "directly"
+      }
+     ]
+    }
+   ]
   }
  ]
 }

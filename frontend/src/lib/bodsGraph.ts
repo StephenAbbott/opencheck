@@ -16,6 +16,7 @@
 import { refIndex, resolveRef as resolveRefById } from "./bodsRefs";
 import { BOVS_ICONS } from "./bovsIcons";
 import { isIdentityVerified } from "./identityVerification";
+import { isUndatedInterests, UNDATED_LABEL } from "./undated";
 import {
   endedPhrase,
   interestEnded,
@@ -117,6 +118,10 @@ export interface GraphEdge {
   /** The latest published `endDate` of an ended edge. Absent on an ended edge
    *  means the source closed the record without publishing a date. */
   endedOn?: string;
+  /** The undated-relationships ticket — a current ownership or control edge
+   *  whose interests carry no `startDate` or `endDate` (lib/undated.ts). The
+   *  label's "no date given" line is the cue; the line is drawn as current. */
+  undated?: true;
 }
 
 export interface GraphModel {
@@ -654,14 +659,17 @@ function toGraphEdge(e: RawEdge, asOf: string): GraphEdge {
       return `${capitalise(endedPhrase(end))}: ${interestLabel(i)}`;
     });
     const details = [combineDetails(current), ...new Set(endedLines)].filter(Boolean).join(" · ");
+    const label = consolidationFlavour(current) ?? buildEdgeLabel(current);
+    const undated = isUndatedInterests(current);
     return {
       id: e.id,
       source: e.source,
       target: e.target,
-      label: consolidationFlavour(current) ?? buildEdgeLabel(current),
+      label: undated ? (label ? `${label}\n${UNDATED_LABEL}` : UNDATED_LABEL) : label,
       category: current.length ? categorise(current) : categorise(all),
       details: details || undefined,
       sources: e.sources,
+      ...(undated ? { undated: true as const } : {}),
     };
   }
 
@@ -866,6 +874,8 @@ export interface TreeRow {
   interestEnded: boolean;
   /** The published end date of that edge, when there is one. */
   interestEndedOn?: string;
+  /** The edge from this row's parent is current and no source dates it. */
+  interestUndated: boolean;
   /** Has downstream children in the full graph (so it can expand/collapse). */
   hasChildren: boolean;
   /** Number of direct children. */
@@ -890,11 +900,18 @@ export interface TreeRow {
  */
 export function buildTree(model: GraphModel, collapsed: Set<string>): TreeRow[] {
   const byId = new Map(model.nodes.map((n) => [n.id, n] as const));
-  type ParentEdge = { label: string; category: EdgeCategory; ended?: true; endedOn?: string };
+  type ParentEdge = { label: string; category: EdgeCategory; ended?: true; endedOn?: string; undated?: true };
   const outEdges = new Map<string, (ParentEdge & { target: string })[]>();
   for (const e of model.edges) {
     const arr = outEdges.get(e.source) ?? [];
-    arr.push({ target: e.target, label: e.label, category: e.category, ended: e.ended, endedOn: e.endedOn });
+    arr.push({
+      target: e.target,
+      label: e.label,
+      category: e.category,
+      ended: e.ended,
+      endedOn: e.endedOn,
+      undated: e.undated,
+    });
     outEdges.set(e.source, arr);
   }
 
@@ -930,6 +947,7 @@ export function buildTree(model: GraphModel, collapsed: Set<string>): TreeRow[] 
       interestCategory: parentEdge?.category,
       interestEnded: parentEdge?.ended === true,
       ...(parentEdge?.endedOn ? { interestEndedOn: parentEdge.endedOn } : {}),
+      interestUndated: parentEdge?.undated === true,
       hasChildren: children.length > 0,
       childCount: children.length,
       collapsed: isCollapsed,
