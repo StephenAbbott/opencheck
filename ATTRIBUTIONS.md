@@ -141,6 +141,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains data from the Registre National des Entreprises (INPI / Infogreffe), open data."
 - **Entry point:** `siren` (9-digit SIREN number) derived from GLEIF RA codes `RA000189` (Sirene), `RA000192` (Infogreffe / RCS) and `RA001129` (Registre national des entreprises, INPI — added in GLEIF RA list v1.9)
 
+## Sirene and the Répertoire national des associations (France)
+
+- **Data:** the legal unit (name, legal category, creation date, state, head-office address) from INSEE's Sirene register; for an association, its RNA record (declaration, publication and dissolution dates, public-utility recognition, purpose) from the Ministry of the Interior's monthly waldec file
+- **API / files:** <https://api.insee.fr/api-sirene/3.11> (API Sirene, key required); RNA: <https://www.data.gouv.fr/fr/datasets/repertoire-national-des-associations/>; the RNA index also reads INSEE's StockUniteLegale file on data.gouv.fr to keep only associations a Sirene unit names
+- **License:** Licence Ouverte / Open Licence 2.0 (Etalab), both
+- **Attribution:** "Contains data from INSEE's Sirene register and the Répertoire national des associations (Ministère de l'Intérieur), Licence Ouverte 2.0."
+- **Entry point:** `siren` derived from GLEIF RA codes `RA000189`, `RA000192` and `RA001129`; the `FR-INSEE` register hop when INPI holds no record
+- **Note:** the RNA's management address (`adrg_*`, for most small associations the declarant's home) and director's title are never kept. Units INSEE does not publish (`statutDiffusionUniteLegale` `P`) are not shown.
+
 ## KvK — Kamer van Koophandel (Netherlands)
 
 - **Data:** company details and authorised representatives from the Dutch Chamber of Commerce Handelsregister

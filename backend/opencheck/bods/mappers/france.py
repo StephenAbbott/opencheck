@@ -496,3 +496,221 @@ def _inpi_address(block: dict[str, Any]) -> list[dict[str, str]]:
     if not joined:
         return []
     return [_addr("registered", joined, "FR")]
+
+
+# ----------------------------------------------------------------------
+# Sirene (INSEE) with the Répertoire national des associations → BODS
+# ----------------------------------------------------------------------
+#
+# One entity statement per legal unit, and nothing else: Sirene publishes no
+# officers, shareholders or beneficial owners, and the RNA file's director
+# and management-address columns are never kept. The France Sirene + RNA
+# ticket (11 Nov 2026), decisions A–G.
+
+_SIRENE_STATE_BODY_PREFIXES = ("71", "72", "73")
+
+
+def _sirene() -> Any:
+    from ...sources import sirene  # local import avoids a cycle
+
+    return sirene
+
+
+def _rna() -> Any:
+    from ...sources import rna_index
+
+    return rna_index
+
+
+def _sirene_category_labels() -> dict[str, str]:
+    import json
+    from functools import lru_cache
+    from pathlib import Path
+
+    @lru_cache(maxsize=1)
+    def _load() -> dict[str, str]:
+        path = Path(__file__).resolve().parents[2] / "data" / "insee_categories_juridiques.json"
+        return dict(json.loads(path.read_text(encoding="utf-8"))["labels"])
+
+    return _load()
+
+
+def sirene_category_label(code: Any) -> str | None:
+    """INSEE's wording for a catégorie juridique (niveau III), or None."""
+    text = str(code or "").strip()
+    return _sirene_category_labels().get(text) if text else None
+
+
+def _sirene_name(unit: dict[str, Any]) -> str:
+    name = " ".join(str(unit.get("denominationUniteLegale") or "").split())
+    if name:
+        return name
+    # An entrepreneur individuel has no denomination: Sirene names the unit
+    # by the person's name. Only a fully public unit reaches here.
+    given = str(unit.get("prenomUsuelUniteLegale") or unit.get("prenom1UniteLegale") or "").strip()
+    family = str(unit.get("nomUsageUniteLegale") or unit.get("nomUniteLegale") or "").strip()
+    return " ".join(p for p in (given, family) if p)
+
+
+def _rna_note(rna: dict[str, Any], cut: str | None) -> str:
+    ri = _rna()
+    parts = [f"Répertoire national des associations record {rna.get('id')}"]
+    if rna.get("titre"):
+        parts.append(f"title as declared: {rna['titre']}")
+    nature = ri.NATURES.get(str(rna.get("nature") or ""))
+    groupement = ri.GROUPEMENTS.get(str(rna.get("groupement") or ""))
+    kind = ", ".join(p for p in (nature, groupement) if p)
+    if kind:
+        parts.append(kind)
+    position = ri.POSITIONS.get(str(rna.get("position") or ""))
+    if position:
+        parts.append(f"recorded as {position}")
+    for column, words in (
+        ("date_creat", "created"),
+        ("date_publi", "declaration published"),
+        ("date_decla", "last declaration"),
+        ("date_disso", "dissolved"),
+    ):
+        if rna.get(column):
+            parts.append(f"{words} {rna[column]}")
+    if rna.get("rup_mi"):
+        parts.append(f"recognised as being of public utility (decree reference {rna['rup_mi']})")
+    sentence = "; ".join(parts) + "."
+    if cut:
+        sentence += f" From the RNA extract of {cut} (Ministry of the Interior)."
+    return sentence
+
+
+@content_addressed
+def map_sirene(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a SireneAdapter fetch bundle to BODS v0.4: one entity statement."""
+    from .. import liveness as _liveness
+    from ..annotations import commenting, pointer, transformation
+    from ..statements import SOURCE_NAMES
+
+    unit = bundle.get("unit") if isinstance(bundle, dict) else None
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found") or not isinstance(unit, dict):
+        return
+    if str(unit.get("statutDiffusionUniteLegale") or "O") != "O":
+        return
+    sir = _sirene()
+    siren = str(bundle.get("siren") or unit.get("siren") or "").strip()
+    name = _sirene_name(unit) or str(bundle.get("legal_name") or "").strip()
+    if not siren or not name:
+        return
+
+    identifiers = [{
+        "id": siren,
+        "scheme": sir.FR_INSEE_SCHEME,
+        "schemeName": "INSEE — Système d'Identification du Répertoire des Entreprises",
+    }]
+    rna_number = None
+    try:
+        rna_number = _rna().normalise_rna(unit.get("identifiantAssociationUniteLegale"))
+    except ValueError:
+        rna_number = None
+    if rna_number:
+        identifiers.append({"id": rna_number, "scheme": sir.FR_RNA_SCHEME, "schemeName": sir.FR_RNA_SCHEME_NAME})
+
+    rna = bundle.get("rna") if isinstance(bundle.get("rna"), dict) else None
+    notes: list[dict[str, Any]] = []
+
+    created = str(unit.get("dateCreationUniteLegale") or "")[:10] or None
+    founding = None
+    if created and created != sir.PLACEHOLDER_CREATION_DATE:
+        founding = created
+    elif created == sir.PLACEHOLDER_CREATION_DATE:
+        if rna and rna.get("date_creat"):
+            founding = rna["date_creat"]
+            notes.append(transformation(
+                pointer("recordDetails", "foundingDate"),
+                "Sirene records the creation date as 1900-01-01, INSEE's placeholder "
+                "for an unknown date; the founding date given is the association's "
+                "creation date in the Répertoire national des associations.",
+            ))
+        else:
+            notes.append(commenting(
+                pointer("recordDetails"),
+                "Sirene records the creation date as 1900-01-01, INSEE's placeholder "
+                "for an unknown date, so no founding date is given.",
+            ))
+
+    category = str(unit.get("categorieJuridiqueUniteLegale") or "").strip()
+    label = sirene_category_label(category)
+    details = f"{label} (catégorie juridique {category})" if label else (
+        f"catégorie juridique {category}" if category else None
+    )
+    entity_type = "stateBody" if category.startswith(_SIRENE_STATE_BODY_PREFIXES) else "registeredEntity"
+
+    head = bundle.get("head_office") if isinstance(bundle.get("head_office"), dict) else None
+    address = sir.address_line((head or {}).get("address") or {}) if head else ""
+    country = "FR"
+    foreign = str(((head or {}).get("address") or {}).get("libellePaysEtrangerEtablissement") or "")
+    addresses = [_addr("registered", address, "" if foreign else country)] if address else []
+
+    alternate: list[str] = []
+    sigle = " ".join(str(unit.get("sigleUniteLegale") or "").split())
+    if sigle and sigle != name:
+        alternate.append(sigle)
+    if rna and rna.get("titre") and str(rna["titre"]).casefold() != name.casefold():
+        alternate.append(str(rna["titre"]))
+
+    entity = make_entity_statement(
+        source_id=bundle.get("source_id") or "sirene",
+        local_id=siren,
+        name=name,
+        jurisdiction=("France", "FR"),
+        identifiers=identifiers,
+        founding_date=founding,
+        addresses=addresses,
+        alternate_names=alternate,
+        entity_type=entity_type,
+        entity_details=details,
+        source_url=bundle.get("link") or sir.annuaire_url(siren),
+        statement_date=record_date(str(unit.get("dateDernierTraitementUniteLegale") or "")[:10]),
+    )
+
+    etat = str(unit.get("etatAdministratifUniteLegale") or "").strip()
+    since = str(unit.get("dateDebut") or "")[:10] or None
+    _liveness.apply_register_status(
+        entity,
+        source_label=SOURCE_NAMES["sirene"],
+        liveness=_liveness.classify(etat, live=("A",), terminal=("C",)),
+        raw=sir.ETATS.get(etat, etat) or None,
+        since=since if etat == "C" else None,
+    )
+
+    if rna:
+        notes.append(commenting(pointer("recordDetails"), _rna_note(rna, bundle.get("rna_cut"))))
+        if rna.get("objet"):
+            notes.append(commenting(
+                pointer("recordDetails"),
+                "Purpose (objet) as declared to the Répertoire national des associations: "
+                + str(rna["objet"]),
+            ))
+        if rna.get("position") == "D" and etat == "A":
+            notes.append(commenting(
+                pointer("recordDetails"),
+                "The Répertoire national des associations records this association as "
+                f"dissolved{' on ' + rna['date_disso'] if rna.get('date_disso') else ''}; "
+                "Sirene still records the unit as active.",
+            ))
+    elif bundle.get("rna_status") in ("no_index", "failed", "not_in_index") and rna_number:
+        words = {
+            "no_index": "the RNA index is not loaded on this server",
+            "failed": "the RNA index could not be read",
+            "not_in_index": "OpenCheck's RNA extract has no record under it",
+        }[str(bundle["rna_status"])]
+        notes.append(commenting(
+            pointer("recordDetails"),
+            f"Sirene names RNA number {rna_number} for this unit; {words}, so the "
+            "association's RNA record is not shown.",
+        ))
+    if not bundle.get("head_office_read", True):
+        notes.append(commenting(
+            pointer("recordDetails"),
+            "INSEE did not answer for the head office in this lookup; no address is shown.",
+        ))
+    for note in notes:
+        annotate(entity, note)
+    yield entity

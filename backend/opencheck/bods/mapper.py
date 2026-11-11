@@ -174,7 +174,15 @@ from .mappers.france import (  # noqa: F401  (re-exported, Phase 246)
     _inpi_individu_statements,
     _inpi_residence_country,
     _inpi_role_interest_type,
+    _rna,
+    _rna_note,
+    _SIRENE_STATE_BODY_PREFIXES,
+    _sirene,
+    _sirene_category_labels,
+    _sirene_name,
     map_inpi,
+    map_sirene,
+    sirene_category_label,
 )
 from .mappers.sweden import (  # noqa: F401  (re-exported, Phase 246)
     _bv_address,

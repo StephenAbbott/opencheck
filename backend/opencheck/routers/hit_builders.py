@@ -181,6 +181,52 @@ def _bh_inpi(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_sirene(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for INSEE's Sirene register (France).
+
+    * **A unit** asserts the SIREN and, for an association, the RNA number —
+      both published by Sirene itself (``identifiantAssociationUniteLegale``).
+    * **A SIREN Sirene does not hold, or will not publish**, is a note card
+      with no identifier: INSEE confirmed nothing.
+    """
+    from ..findings import finding_sirene
+    from ..sources.rna_index import normalise_rna
+    from ..sources.sirene import ETATS
+
+    if r.get("not_found"):
+        return _hit(
+            "sirene", local_id,
+            name=ctx.legal_name or "",
+            summary=f"FR-SIREN {local_id} · "
+            + ("not published by INSEE" if r.get("not_found_kind") == "not_diffusible" else "not in Sirene"),
+            finding=finding_sirene(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
+        )
+    unit = r.get("unit") or {}
+    identifiers: dict[str, str] = {"siren": str(r.get("siren") or local_id)}
+    try:
+        identifiers["fr_rna"] = normalise_rna(unit.get("identifiantAssociationUniteLegale"))
+    except ValueError:
+        pass
+    segments = [f"FR-SIREN {identifiers['siren']}"]
+    if "fr_rna" in identifiers:
+        segments.append(f"FR-RNA {identifiers['fr_rna']}")
+    etat = ETATS.get(str(unit.get("etatAdministratifUniteLegale") or ""))
+    if etat:
+        segments.append(etat)
+    from ..bods.mappers.france import _sirene_name
+
+    return _hit(
+        "sirene", local_id,
+        name=_sirene_name(unit) or ctx.legal_name or "",
+        summary=" · ".join(segments),
+        identifiers=identifiers,
+        raw=unit,
+        finding=finding_sirene(r),
+    )
+
+
 def _bh_bolagsverket(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     c = r.get("company") or {}
     display = (

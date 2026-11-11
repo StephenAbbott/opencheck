@@ -26,7 +26,7 @@ deriver.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cache
 
 from .identifiers import normalise_ch_company_number
@@ -49,6 +49,12 @@ class RegisterHop:
     #: lookup's ``derived_identifiers``, so a register-anchored lookup (Phase
     #: 289) builds the same hit the LEI path does.
     derived_key: str = ""
+    #: A second register to ask when this one answers that it holds no
+    #: record (``not_found``) — FR-INSEE asks INPI first and Sirene on INPI's
+    #: 404 (the France Sirene + RNA ticket, decision F): the RNE holds no
+    #: association or foundation without a business activity, and Sirene
+    #: holds every SIREN.
+    fallback: "RegisterHop | None" = None
 
     @property
     def country(self) -> str:
@@ -104,6 +110,17 @@ def hop_schemes() -> dict[str, RegisterHop]:
                     break
             if scheme in hops:
                 break
+    # FR-INSEE: INPI first, Sirene when INPI has no record (decision F).
+    if "FR-INSEE" in hops and "sirene" in REGISTRY:
+        from .sources.inpi import normalise_siren
+
+        hops["FR-INSEE"] = replace(
+            hops["FR-INSEE"],
+            fallback=RegisterHop(
+                "FR-INSEE", "sirene", normalise_siren,
+                REGISTRY["sirene"].lookup_pass_legal_name, derived_key="siren",
+            ),
+        )
     if "companies_house" in REGISTRY:
         hops["GB-COH"] = RegisterHop(
             "GB-COH", "companies_house", _ch_normalise, False, derived_key="gb_coh"

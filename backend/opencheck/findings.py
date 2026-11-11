@@ -1764,6 +1764,61 @@ def finding_inpi(bundle: dict[str, Any]) -> str | None:
     return INPI_NOT_IN_RNE
 
 
+def finding_sirene(bundle: dict[str, Any]) -> str | None:
+    """What INSEE's Sirene register says about a legal unit: its legal
+    category, whether it is active or ceased, when it was created, and — for
+    an association — its RNA number and whether the RNA records it as
+    dissolved or recognised as of public utility.
+
+    * The 1900-01-01 placeholder is never a creation date; it reads "creation
+      date not recorded" unless the RNA gives one.
+    * Sirene publishes no officers or owners; the sentence says nothing about
+      them (it would be a claim about a list the register does not keep).
+    """
+    from .bods.mappers.france import sirene_category_label
+    from .sources.sirene import PLACEHOLDER_CREATION_DATE
+
+    if not bundle:
+        return None
+    if bundle.get("not_found"):
+        return bundle.get("coverage_note") or None
+    if bundle.get("is_stub"):
+        return None
+    unit = bundle.get("unit")
+    if not isinstance(unit, dict):
+        return None
+    rna_raw = bundle.get("rna")
+    rna: dict[str, Any] = rna_raw if isinstance(rna_raw, dict) else {}
+
+    label = sirene_category_label(unit.get("categorieJuridiqueUniteLegale"))
+    etat = str(unit.get("etatAdministratifUniteLegale") or "")
+    if etat == "C":
+        since = human_date(str(unit.get("dateDebut") or "")[:10] or None)
+        status = f"ceased{' on ' + since if since else ''}"
+    elif etat == "A":
+        status = "active"
+    else:
+        status = None
+    created = str(unit.get("dateCreationUniteLegale") or "")[:10]
+    if created and created != PLACEHOLDER_CREATION_DATE:
+        created_clause = f"created {human_date(created)}"
+    elif rna.get("date_creat"):
+        created_clause = f"created {human_date(rna['date_creat'])} (RNA)"
+    else:
+        created_clause = "creation date not recorded"
+    rna_clause = None
+    if rna.get("id"):
+        if rna.get("position") == "D":
+            disso = human_date(rna.get("date_disso"))
+            rna_clause = f"dissolved in the RNA{' on ' + disso if disso else ''}"
+        elif rna.get("rup_mi"):
+            rna_clause = "recognised as of public utility"
+        else:
+            rna_clause = f"RNA {rna['id']}"
+    lead = label or "Legal unit"
+    return clauses_to_sentence([lead, status, created_clause, rna_clause])
+
+
 def finding_anaf_romania(bundle: dict[str, Any]) -> str | None:
     """What ANAF's taxpayer register says: whether it still exists, and its
     VAT and inactive-taxpayer standing.

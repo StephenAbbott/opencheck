@@ -209,6 +209,18 @@ async def _warm_caches_background() -> None:
         raise
     except Exception as exc:  # noqa: BLE001
         log.warning("Open DART crosswalk warm-up failed (not announced until present): %s", exc)
+    # The Répertoire national des associations index (the France Sirene + RNA
+    # ticket), rebuilt monthly by a GitHub workflow. Without it ``sirene``
+    # still answers, without the associations' RNA records.
+    try:
+        from .sources.rna_index import warm_index as warm_rna_index
+
+        stats = await asyncio.to_thread(warm_rna_index)
+        log.info("RNA index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("RNA index warm-up failed (Sirene answers without it): %s", exc)
     # The Belgium wiring: the KBO Open Data index, rebuilt monthly by a GitHub
     # workflow with the portal's free login, downloaded here when absent or
     # changed. Until it lands ``bce_belgium`` is not announced.

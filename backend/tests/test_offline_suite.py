@@ -31,6 +31,7 @@ WARM_UPS: dict[str, tuple[str, str]] = {
     "ariregister": ("opencheck.sources.ariregister", "warm_index"),
     "jar_lithuania": ("opencheck.sources.jar_lithuania", "warm_index"),
     "dart_korea": ("opencheck.sources.dart_korea", "warm_index"),
+    "rna": ("opencheck.sources.rna_index", "warm_index"),
     "bce_belgium": ("opencheck.sources.bce_belgium", "warm_index"),
     "edr_ukraine": ("opencheck.sources.edr_ukraine", "warm_index"),
     "corporations_canada": ("opencheck.sources.corporations_canada", "warm_index"),
