@@ -210,6 +210,14 @@ def _tiers(
             "waiting": bool(wl.state().get("il_waiting")),
             "gaps": il_gaps or [],
         },
+        # The BODACC tier (11 Nov 2026): France's bulletin, read live for each
+        # watched SIREN — no index, so "available" is whether it is switched on.
+        "register_fr": {
+            "available": settings.watchlist_bodacc_interval_s > 0 and settings.allow_live,
+            "last_day": watcher.get("fr_last_day"),
+            "last_checked_at": watcher.get("fr_last_checked_at"),
+            "last_error": watcher.get("fr_last_error"),
+        },
         # pKYC stage E, Route 1: the Companies House PSC stream — whether the
         # consumer is on, connected and behind (its own counters are on
         # /pscgraph), and what the watchlist hook has done with it.
@@ -844,12 +852,27 @@ def _days_words(cuts: list[str]) -> str:
 REGISTER_NAMES: dict[str, tuple[str, str]] = {
     "ariregister": ("The Estonian e-Business Register", "registry code"),
     "ica_israel": ("The Israel Corporations Authority", "corporate number"),
+    "bodacc": ("BODACC", "SIREN"),
 }
 
 
 def register_sentence(trig: dict[str, Any]) -> str:
     """Why a register tier entry exists, in the feed's words."""
     code = trig.get("code")
+    if trig.get("register") == "bodacc":
+        n = len((trig.get("changes") or {}).get("notices") or [])
+        days = [c for c in trig.get("cuts") or [] if c]
+        on = (
+            f" on {days[0]}" if len(days) == 1
+            else f" on {', '.join(days[:-1])} and {days[-1]}" if days
+            else ""
+        )
+        return (
+            f"BODACC, France's official bulletin, published {n} notice{'' if n == 1 else 's'} "
+            f"about this company{on}"
+            + (f" (SIREN {code})" if code else "")
+            + "."
+        )
     if trig.get("register") == "ica_israel":
         register, number_words = REGISTER_NAMES["ica_israel"]
         return (
@@ -1090,6 +1113,8 @@ def _entry_headline(entry: dict[str, Any]) -> str:
     if not changes and entry["tier"] == wl.TIER_REGISTER:
         if (entry.get("trigger") or {}).get("register") == "ica_israel":
             return f"{name}: Israeli register record changed"
+        if (entry.get("trigger") or {}).get("register") == "bodacc":
+            return f"{name}: notice published in BODACC"
         return f"{name}: Estonian register record changed"
     if not changes and entry["tier"] == wl.TIER_PSC:
         return f"{name}: Companies House PSC register changed"

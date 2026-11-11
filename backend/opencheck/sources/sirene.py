@@ -286,8 +286,48 @@ class SireneAdapter(SourceAdapter):
     # ------------------------------------------------------------------
 
     async def fetch(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
-        """The legal unit, its head office and, for an association, its RNA
-        record, by SIREN."""
+        """The legal unit, its head office, for an association its RNA record
+        and, for a company on a trade register, its latest BODACC
+        collective-procedure notice — by SIREN."""
+        bundle = await self._fetch_register(hit_id, legal_name=legal_name)
+        if isinstance(bundle.get("unit"), dict) and not bundle.get("is_stub"):
+            await self._attach_bodacc(bundle)
+        return bundle
+
+    async def _attach_bodacc(self, bundle: dict[str, Any]) -> None:
+        """The QuickCheck clause (the BODACC ticket's decision E, 11 Nov 2026):
+        the latest collective-procedure notice about the company, said in the
+        card's sentence. Context only — never a risk signal, never a verdict
+        clause. A legal category with no trade-register filing (public bodies,
+        associations: first digit 4, 7, 8 or 9) is not asked. BODACC not
+        answering is a ``source_read`` degradation, never "no procedure"."""
+        from .. import bodacc
+
+        category = str((bundle.get("unit") or {}).get("categorieJuridiqueUniteLegale") or "")
+        if category[:1] in {"4", "7", "8", "9"} or not get_settings().allow_live:
+            return
+        try:
+            payload = await bodacc.notices_for(bundle.get("siren"))
+        except bodacc.BodaccUnavailable as exc:
+            bundle["bodacc_read"] = False
+            degradation.record(
+                self.id,
+                f"{exc.detail} The card does not say whether a collective procedure was published.",
+                check=degradation.CHECK_SOURCE_READ,
+                reason=exc.reason,
+            )
+            return
+        except ValueError:
+            return
+        bundle["bodacc_read"] = True
+        latest = bodacc.latest_collective(payload)
+        bundle["bodacc_collective"] = (
+            {k: latest.get(k) for k in ("id", "url", "kind", "label", "effective", "published")}
+            if latest
+            else None
+        )
+
+    async def _fetch_register(self, hit_id: str, *, legal_name: str = "") -> dict[str, Any]:
         try:
             siren = normalise_siren(str(hit_id or ""))
         except ValueError:

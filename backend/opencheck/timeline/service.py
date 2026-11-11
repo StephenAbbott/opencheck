@@ -57,11 +57,13 @@ from urllib.parse import quote
 
 import httpx
 
+from .. import bodacc as _bodacc
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .ariregister import ariregister_change_events, card_entry_events, general_events
 from .assemble import Timeline, assemble_timeline
+from .bodacc import bodacc_change_events
 from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
 from .ica_israel import ica_israel_change_events
@@ -83,6 +85,9 @@ _DK_RA_CODE = "RA000170"   # Danish CVR / Erhvervsstyrelsen
 _NY_RA_CODE = "RA000628"   # New York Department of State (keyed on RA, not jurisdiction)
 _LV_RA_CODE = "RA000423"   # Latvian Register of Enterprises (Uzņēmumu reģistrs)
 _IL_RA_CODE = "RA000406"   # Israel Corporations Authority (Registrar of Companies)
+#: France — Sirene, the RCS (Infogreffe) and the RNE all file the SIREN, plain
+#: or grouped in threes; BODACC is keyed on it (Phase 205's three codes).
+_FR_RA_CODES = frozenset({"RA000189", "RA000192", "RA001129"})
 
 #: The GLEIF adapter's own on-disk record for this LEI — the only local copy
 #: of ``registeredAs``/``registeredAt`` there is. Read with no age bound: a
@@ -108,15 +113,22 @@ _CH_OFFICERS_PAGE_CAP = 20
 
 
 _Numbers = tuple[
-    str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None
+    str | None, str | None, str | None, str | None, str | None, str | None, str | None,
+    str | None, str | None,
 ]
 
 
+def _unpack(numbers: tuple) -> _Numbers:
+    """Pad an older eight-number tuple (no French SIREN) to the current nine."""
+    padded = tuple(numbers) + (None,) * (9 - len(numbers))
+    return padded[:9]  # type: ignore[return-value]
+
+
 async def _gleif_registration(client: httpx.AsyncClient, lei: str) -> _Numbers:
-    """Return ``(ch, nz, ee, dk, ny, lv, il, legal_name)`` from GLEIF."""
+    """Return ``(ch, nz, ee, dk, ny, lv, il, legal_name, fr)`` from GLEIF."""
     resp = await client.get(_GLEIF_RECORD_URL.format(lei=quote(lei)))
     if resp.status_code == 404:
-        return None, None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None, None
     resp.raise_for_status()
     return _registration_numbers(resp.json())
 
@@ -132,11 +144,14 @@ def _cached_registration(lei: str) -> _Numbers | None:
     if hit is None:
         return None
     numbers = _registration_numbers(hit[0])
-    return numbers if any(numbers[:7]) else None
+    return numbers if (any(numbers[:7]) or numbers[8]) else None
 
 
 def _registration_numbers(payload: dict | None) -> _Numbers:
-    """``(ch, nz, ee, dk, ny, lv, il, legal_name)`` from a GLEIF Level-1 record payload.
+    """``(ch, nz, ee, dk, ny, lv, il, legal_name, fr)`` from a GLEIF Level-1 record payload.
+
+    ``fr`` is the nine-digit SIREN (spaces removed) for a French register; it
+    is last so the eight before it keep their positions.
 
     The legal name rides along for New York: the DOS emitter is name-gated,
     because six ISSUED LEIs file a DOS ID that belongs to another entity, and
@@ -159,7 +174,12 @@ def _registration_numbers(payload: dict | None) -> _Numbers:
     lv = registered_as if (registered_as and registered_at == _LV_RA_CODE) else None
     il = registered_as if (registered_as and registered_at == _IL_RA_CODE) else None
     legal_name = ((entity.get("legalName") or {}).get("name") or "").strip() or None
-    return ch, nz, ee, dk, ny, lv, il, legal_name
+    fr = (
+        _bodacc.normalise_siren(registered_as)
+        if (registered_as and registered_at in _FR_RA_CODES)
+        else None
+    )
+    return ch, nz, ee, dk, ny, lv, il, legal_name, fr
 
 
 async def _gleif_modifications(
@@ -291,6 +311,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     ny_dos_id: str | None = None
     lv_regcode: str | None = None
     il_number: str | None = None
+    fr_siren: str | None = None
     legal_name: str | None = None
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
@@ -311,7 +332,8 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         reg_res, mods_res = results
         if not isinstance(reg_res, BaseException):
-            company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name = reg_res
+            (company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number,
+             legal_name, fr_siren) = _unpack(reg_res)
             company_number_basis = "live"
         else:
             # A 429 handed back by the Phase 143 transport, the throttle
@@ -321,7 +343,8 @@ async def fetch_timeline(lei: str) -> Timeline:
             gleif_record_available = False
             cached = _cached_registration(lei)
             if cached is not None:
-                company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name = cached
+                (company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number,
+                 legal_name, fr_siren) = _unpack(cached)
                 company_number_basis = "cached"
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
@@ -476,6 +499,24 @@ async def fetch_timeline(lei: str) -> Timeline:
         il_events = ica_israel_change_events(il_number, il_rows)
         il_kept_since = (coverage or {}).get("kept_since")
 
+    # France — BODACC's notices, read live (keyless; one call a page, cached
+    # a day per SIREN). A failure is said on the tab, never read as "no
+    # notices". Best-effort; never sinks the timeline.
+    fr_events = []
+    fr_unavailable: str | None = None
+    fr_truncated = False
+    if fr_siren:
+        try:
+            fr_payload = await _bodacc.notices_for(fr_siren)
+        except _bodacc.BodaccUnavailable as exc:
+            log.warning("timeline: BODACC unavailable for %s: %s", fr_siren, exc.detail)
+            fr_payload, fr_unavailable = None, exc.reason
+        except Exception:  # noqa: BLE001
+            log.warning("timeline: BODACC read failed for %s", fr_siren, exc_info=True)
+            fr_payload, fr_unavailable = None, "upstream_error"
+        fr_events = bodacc_change_events(fr_siren, fr_payload)
+        fr_truncated = bool((fr_payload or {}).get("truncated"))
+
     # The board stream. Emitted here rather than inside ``assemble_timeline``
     # because it comes from a second Companies House call, not from the filing
     # stream that function already classifies.
@@ -492,7 +533,8 @@ async def fetch_timeline(lei: str) -> Timeline:
         gleif_rr_mods=rr_mods,
         ch_filings=ch_filings,
         extra_events=(
-            nz_events + ee_events + dk_events + ny_events + lv_events + il_events + officer_events
+            nz_events + ee_events + dk_events + ny_events + lv_events + il_events
+            + fr_events + officer_events
         ),
     )
     # Phase 190: the numbers above are how each register addresses this
@@ -512,11 +554,16 @@ async def fetch_timeline(lei: str) -> Timeline:
             ("ny_dos", ny_dos_id),
             ("ur_latvia", lv_regcode),
             ("ica_israel", il_number),
+            ("bodacc", fr_siren),
         )
         if number
     }
     if il_kept_since:
         timeline.registers_kept_since = {"ica_israel": il_kept_since}
+    if fr_unavailable:
+        timeline.registers_unavailable = {"bodacc": fr_unavailable}
+    if fr_truncated:
+        timeline.registers_truncated = {"bodacc": True}
     timeline.filings_truncated = ch_filings_truncated
     # Phase 198: whether the officers list was READ, not whether it had rows.
     # An empty board stream means one of two very different things and the tab

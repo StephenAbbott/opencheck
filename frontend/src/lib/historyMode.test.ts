@@ -30,6 +30,7 @@ import {
   noiseEventsOf,
   recordUrl,
   silentRegisters,
+  unavailableRegisterLines,
   VISIBLE_ROWS,
 } from "./historyMode";
 
@@ -619,5 +620,29 @@ describe("registerReadNotes", () => {
     // Without the day the note still stands, and claims no date.
     const bare = registerReadNotes({ ...RESP, sources: ["ica_israel"] });
     expect(bare[0]).not.toMatch(/copy reaches back/);
+  });
+});
+
+describe("BODACC on History (the BODACC ticket)", () => {
+  it("links the register chip to the notices for the SIREN", () => {
+    expect(recordUrl("bodacc", _LEI, { bodacc: "401251566" })).toBe(
+      "https://bodacc-datadila.opendatasoft.com/explore/dataset/annonces-commerciales/table/?q=401251566",
+    );
+    expect(historySourceLabel("bodacc")).toBe("BODACC (FR)");
+  });
+
+  it("says no person is named, and when the list was cut", () => {
+    const [note] = registerReadNotes({ ...RESP, sources: ["bodacc"], registers_truncated: { bodacc: true } });
+    expect(note).toContain("No person is named");
+    expect(note).toContain("seller's side");
+    expect(note).toMatch(/newest 1,000 notices; older ones are not shown\.$/);
+  });
+
+  it("says a BODACC that did not answer, and never counts it as silent", () => {
+    const data = { ...RESP, sources: ["gleif"], registry_numbers: { bodacc: "401251566" }, registers_unavailable: { bodacc: "timeout" } };
+    expect(silentRegisters(data)).toEqual([]);
+    expect(unavailableRegisterLines(data)).toEqual([
+      "BODACC (FR) did not answer in time, so its notices were not read. An empty timeline from it is unchecked, not a quiet company — try again later.",
+    ]);
   });
 });

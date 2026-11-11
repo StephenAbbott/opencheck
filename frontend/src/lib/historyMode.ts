@@ -43,6 +43,7 @@ export const HISTORY_SOURCES = [
   "ny_dos",
   "ur_latvia",
   "ica_israel",
+  "bodacc",
 ] as const;
 
 export type HistorySourceId = (typeof HISTORY_SOURCES)[number];
@@ -63,6 +64,7 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   ny_dos: "Dept. of State (NY)",
   ur_latvia: "Register of Enterprises (LV)",
   ica_israel: "Corporations Authority (IL)",
+  bodacc: "BODACC (FR)",
 };
 
 export function historySourceLabel(sourceId: string): string {
@@ -90,6 +92,13 @@ export function recordUrl(
   if (sourceId === "gleif") {
     return `https://search.gleif.org/#/record/${encodeURIComponent(lei)}`;
   }
+  // BODACC is a bulletin, not a register with a record page: the chip opens
+  // DILA's search of every notice naming the SIREN, and each row links to its
+  // own notice (`record_url`). Mirrors `bodacc.SEARCH_URL` in the backend.
+  if (sourceId === "bodacc") {
+    const siren = registryNumbers.bodacc;
+    return siren ? bodaccSearchUrl(siren) : null;
+  }
   // Phase 296: every register's address comes from the one register-link table
   // (lib/registerLinks.ts). The History tab reads its `history` entry where
   // there is one — Companies House's filing history; New York's open-data
@@ -98,6 +107,11 @@ export function recordUrl(
   // the company number addresses the record directly and must never go to
   // the register's `/search?q=` page, which renders an empty form.
   return registerHistoryUrl(sourceId, registryNumbers[sourceId]);
+}
+
+/** DILA's search of every BODACC notice naming a SIREN. */
+export function bodaccSearchUrl(siren: string): string {
+  return `https://bodacc-datadila.opendatasoft.com/explore/dataset/annonces-commerciales/table/?q=${encodeURIComponent(siren)}`;
 }
 
 /** Earliest and latest dated year across entries, or `null` when none is dated. */
@@ -122,8 +136,9 @@ export function corroboratedCount(entries: HistoryEntry[]): number {
  */
 export function silentRegisters(data: HistoryResponse): string[] {
   const answered = new Set(data.sources);
+  const unanswered = data.registers_unavailable ?? {};
   return Object.keys(data.registry_numbers ?? {})
-    .filter((id) => !answered.has(id))
+    .filter((id) => !answered.has(id) && !(id in unanswered))
     .sort();
 }
 
@@ -196,6 +211,8 @@ export const HISTORY_CAVEAT =
  * holdings start in 2013), so no 2023 boundary is claimed.
  */
 export const REGISTER_READ_NOTES: Record<string, string> = {
+  bodacc:
+    "From BODACC, the official bulletin in which French registers and courts publish notices about a company: collective proceedings, removals from the register, changes, sales of a business and accounts filed. Each row links to its notice. No person is named — not a sole trader, a director or a liquidator — and a sale is shown from the seller's side with the buyer named only where it is a company. Judgments of personal bankruptcy and management bans are left out: they are about a person, not the company. Notices start in 2008.",
   ica_israel:
     "From the Israel Corporations Authority's change log, which publishes one year of filings and names only the kind of filing — never who or what changed. A share transfer is shown as filed, with its parties not published; a winding-up or a change of name as a filing, not as the status or name it led to. OpenCheck keeps the rows from build to build, so this history grows past the register's year; before the earliest day it holds, an empty timeline is a log that was not kept, not a quiet company.",
   ur_latvia:
@@ -210,9 +227,35 @@ export function registerReadNotes(data: HistoryResponse): string[] {
     .map((s) => {
       const note = REGISTER_READ_NOTES[s];
       const since = data.registers_kept_since?.[s];
-      return note && since ? `${note} OpenCheck's copy reaches back to ${utcDate(since)}.` : note;
+      const truncated = data.registers_truncated?.[s]
+        ? " OpenCheck read the newest 1,000 notices; older ones are not shown."
+        : "";
+      if (!note) return note;
+      return since
+        ? `${note} OpenCheck's copy reaches back to ${utcDate(since)}.${truncated}`
+        : `${note}${truncated}`;
     })
     .filter((n): n is string => Boolean(n));
+}
+
+/** Words for why a register did not answer (`registers_unavailable`). */
+const UNAVAILABLE_WORDS: Record<string, string> = {
+  timeout: "did not answer in time",
+  rate_limited: "is limiting requests",
+};
+
+/**
+ * A sentence per register that was asked and did not answer. Its silence on
+ * the timeline is unchecked, so it is said apart from the registers that
+ * answered with nothing.
+ */
+export function unavailableRegisterLines(data: HistoryResponse): string[] {
+  return Object.entries(data.registers_unavailable ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([s, reason]) =>
+        `${historySourceLabel(s)} ${UNAVAILABLE_WORDS[reason] ?? "returned an error"}, so its notices were not read. An empty timeline from it is unchecked, not a quiet company — try again later.`,
+    );
 }
 
 /**
