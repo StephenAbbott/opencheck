@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 494** — OpenSanctions shareholdings now carry the start and end dates the source publishes, so ended holdings close instead of reading as current.
+**Latest: Phase 495** — Israeli companies' filings with the Corporations Authority now appear on the History tab and re-run a watched Israeli company, saying what was filed and never more than the register publishes.
 
 → [Full development history](docs/status.md)
 
