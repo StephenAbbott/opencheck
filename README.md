@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 493** — Climate TRACE's answer about owners now shows on the page, on its Climate & ESG card and in a line under the QuickCheck source cards.
+**Latest: Phase 495** — Israeli companies' filings with the Corporations Authority now appear on the History tab and re-run a watched Israeli company, saying what was filed and never more than the register publishes.
 
 → [Full development history](docs/status.md)
 

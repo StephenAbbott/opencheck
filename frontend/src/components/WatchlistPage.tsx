@@ -65,7 +65,7 @@ import {
   reviewChip,
   gleifLogLines,
   entryHeadline,
-  registerChangeLines,
+  registerTriggerLines,
   feedHelp,
   filterEntries,
   filterFromLocation,
@@ -579,7 +579,7 @@ function EntryView({
   const chip = tierChip(e.tier);
   const materiality = materialityChip(e.materiality);
   const decision = decisionChip(e.decision);
-  const registerLines = e.tier === "register" ? registerChangeLines(e.trigger?.changes) : [];
+  const registerLines = e.tier === "register" ? registerTriggerLines(e.trigger) : [];
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">

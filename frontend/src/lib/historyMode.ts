@@ -29,6 +29,7 @@
 
 import type { HistoryEntry, HistoryRawChange, HistoryResponse } from "./api";
 import { registerHistoryUrl } from "./registerLinks";
+import { utcDate } from "./savedReport";
 
 /** Every source that can emit change events, in the order the tab names them.
  *  `backend/tests/test_frontend_parity.py` (Phase 266) fails unless this is
@@ -41,6 +42,7 @@ export const HISTORY_SOURCES = [
   "cvr_denmark",
   "ny_dos",
   "ur_latvia",
+  "ica_israel",
 ] as const;
 
 export type HistorySourceId = (typeof HISTORY_SOURCES)[number];
@@ -60,6 +62,7 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   cvr_denmark: "CVR (DK)",
   ny_dos: "Dept. of State (NY)",
   ur_latvia: "Register of Enterprises (LV)",
+  ica_israel: "Corporations Authority (IL)",
 };
 
 export function historySourceLabel(sourceId: string): string {
@@ -193,6 +196,8 @@ export const HISTORY_CAVEAT =
  * holdings start in 2013), so no 2023 boundary is claimed.
  */
 export const REGISTER_READ_NOTES: Record<string, string> = {
+  ica_israel:
+    "From the Israel Corporations Authority's change log, which publishes one year of filings and names only the kind of filing — never who or what changed. A share transfer is shown as filed, with its parties not published; a winding-up or a change of name as a filing, not as the status or name it led to. OpenCheck keeps the rows from build to build, so this history grows past the register's year; before the earliest day it holds, an empty timeline is a log that was not kept, not a quiet company.",
   ur_latvia:
     "From the Register of Enterprises' open data, which publishes current records only: when each current shareholder, beneficial owner and officer was entered, every former name with the day it ended, and every liquidation, reorganisation, insolvency proceeding and suspension with the register's own date. The register publishes no end dates for people, so a shareholder, beneficial owner or officer who has left does not appear here — their departure is not published, not a change that did not happen.",
   ariregister:
@@ -201,7 +206,13 @@ export const REGISTER_READ_NOTES: Record<string, string> = {
 
 /** The notes for the registers that contributed to this timeline. */
 export function registerReadNotes(data: HistoryResponse): string[] {
-  return data.sources.map((s) => REGISTER_READ_NOTES[s]).filter((n): n is string => Boolean(n));
+  return data.sources
+    .map((s) => {
+      const note = REGISTER_READ_NOTES[s];
+      const since = data.registers_kept_since?.[s];
+      return note && since ? `${note} OpenCheck's copy reaches back to ${utcDate(since)}.` : note;
+    })
+    .filter((n): n is string => Boolean(n));
 }
 
 /**
