@@ -1446,6 +1446,7 @@ export default function App() {
                         setPanelErrors((prev) => clearPanelError(prev, panel))
                       }
                       onOpenSubsidiaries={() => selectMode("subsidiaries")}
+                      disclosureStatus={disclosureStatus}
                     />
                   </Suspense>
                 </PanelBoundary>
@@ -1504,6 +1505,7 @@ export default function App() {
                   primaryListing={primaryListing}
                   form13f={form13f}
                   disclosureStatus={disclosureStatus}
+                  esgSourceIds={esgSourceIds}
                   savedReport={savedReport}
                   savedNarrative={savedNarrative}
                   onExportPayload={setExportPayload}

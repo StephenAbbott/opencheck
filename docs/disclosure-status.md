@@ -154,7 +154,15 @@ read `none_filed` until the adapter followed the link.
 
 - **QuickCheck**: chips on each ownership source's card, with the source's own
   words beneath; the sources that are not ownership sources named on one line.
-  Not on FullCheck nodes.
+  Not on FullCheck nodes. An ownership source whose card is on another tab is
+  named with its values on a line of its own ("On the Climate & ESG tab:
+  Global Energy Monitor / Climate TRACE — Shareholders: Declared (1)."),
+  `no_record` included, so QuickCheck still carries every ownership source's
+  answer (`otherTabLine` in `lib/disclosureStatus.ts`).
+- **Climate & ESG tab**: Climate TRACE (GEM ownership data) is the one
+  ownership source on this tab; its card carries the same chips and "As the
+  source puts it:" line as a QuickCheck card (the shared
+  `components/cdd/DisclosureChips.tsx`).
 - **API**: `disclosure_status` on `/lookup`, `/lookup-register` and saved
   reports — `sources[<id>]` with `values`, `entries` (`value`, `covers`,
   `count`, `details`, `reasons`) and `ownership_source`; `not_covered`;

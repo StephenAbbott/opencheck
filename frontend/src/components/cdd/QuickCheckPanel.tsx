@@ -12,7 +12,7 @@ import type {
   SourceLiveness,
   SubjectProfile,
 } from "../../lib/api";
-import { notCoveredLine, type DisclosureStatusPayload } from "../../lib/disclosureStatus";
+import { notCoveredLine, otherTabLine, type DisclosureStatusPayload } from "../../lib/disclosureStatus";
 import { identityBandContents } from "../../lib/identifierBadge";
 import { coverageCopy, type SettledCount } from "../../lib/lookupProgress";
 import { scrollBehavior } from "../../lib/motion";
@@ -82,6 +82,7 @@ export default function QuickCheckPanel({
   primaryListing,
   form13f = null,
   disclosureStatus = null,
+  esgSourceIds,
   savedReport,
   savedNarrative,
   onExportPayload,
@@ -125,6 +126,9 @@ export default function QuickCheckPanel({
   /** What each source says about the owners: a chip per ownership source's
    *  card, and one line naming the rest. Frozen with the run. */
   disclosureStatus?: DisclosureStatusPayload | null;
+  /** Sources whose card is on the Climate & ESG tab, not here. Their
+   *  disclosure status is said on one line under the cards. */
+  esgSourceIds?: ReadonlySet<string>;
   savedReport: SavedReport | null;
   savedNarrative: ReportExportPayload | null;
   onExportPayload: (payload: ReportExportPayload) => void;
@@ -139,6 +143,13 @@ export default function QuickCheckPanel({
   // Sources whose job does not include owners, named once under the cards.
   const disclosureNotCovered = notCoveredLine(disclosureStatus, (id) =>
     sourceLabel(id, sourceNames),
+  );
+  // Ownership sources whose card is on the Climate & ESG tab (Climate
+  // TRACE), with what each said, so QuickCheck still names every answer.
+  const disclosureOtherTab = otherTabLine(
+    disclosureStatus,
+    new Set([...(esgSourceIds ?? []), ...esgBuckets.map((b) => b.sourceId)]),
+    (id) => sourceLabel(id, sourceNames),
   );
   // The identity band's profile rows (Phase 154) — derived once per profile.
   const profileRowsForBand = useMemo(
@@ -543,6 +554,9 @@ export default function QuickCheckPanel({
             {pendingCddSources.map((id) => (
               <SkeletonSourceCard key={id} />
             ))}
+            {disclosureOtherTab && (
+              <p className="text-oo-meta text-oo-muted">{disclosureOtherTab}</p>
+            )}
             {disclosureNotCovered && (
               <p className="text-oo-meta text-oo-muted">{disclosureNotCovered}</p>
             )}
