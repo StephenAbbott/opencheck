@@ -131,6 +131,7 @@ Maps to **relationship** `recordStatus` + interest `startDate` / `endDate`.
 | `CONTROL_NATURE_CHANGED` | — | ownership-of-shares ↔ voting-rights ↔ right-to-appoint |
 | `PARENT_CHANGED` | StartNode/EndNode change; direct vs ultimate parent | — |
 | `REPORTING_EXCEPTION_CHANGED` | ReportingException ↔ has-parent (NO_KNOWN_PERSON, NON_CONSOLIDATING, …) | — |
+| `SHARES_FILED` | — | — (Israel: a share transfer, allotment or shareholder update filed with the Corporations Authority — "filed, parties not published") |
 
 ### Tier 2 — entity identity / status changed
 
@@ -309,7 +310,7 @@ What the tab adds beyond a home:
 
 ## Emitters (current)
 
-Seven sources feed the timeline. GLEIF's modification log is `recorded`; the
+Eight sources feed the timeline. GLEIF's modification log is `recorded`; the
 registers that publish dated, effective-from records give
 `date_basis: "effective"` / `date_confidence: "high"`, and Latvia's
 beneficial-owner and officer tables, which carry only the day the register
@@ -324,6 +325,8 @@ entered the row, give `recorded` / `high`:
 | `cvr_denmark` | CVR / Datafordeler bitemporal records (`virkningFra`/`virkningTil`) | effective | name / legal form / status / registered-seat address |
 | `ny_dos` | the All Filings, status, name and address rows the adapter fetch returns (Phase 263) | effective (CEO rows `snapshot_window`) | New York filings, status and name history; chief executive changes between two statements |
 | `ur_latvia` | UR's open data on data.gov.lv (CC0, no key): the lookup's tables plus six dated event tables read on the `/history` path only | effective; `recorded` for beneficial owners and officers | **Additions only for people** — UR publishes no end date on any people table, so the emitter says when each *current* shareholder, stockholder, beneficial owner and officer was entered and never a departure, and the tab says so. Former names dated by the day each ended; termination, liquidations, reorganisations (naming the other company), insolvency proceedings opened and ended, suspensions as Tier 2; securing measures and a depository's dematerialised-shares row as Tier 3 |
+
+| `ica_israel` | the Israel Corporations Authority's change log (`ica-changes` on data.gov.il, CC BY) in the daily index, carried past its one-year window from build to build | effective | **The thinnest record of any emitter**: each row says that a request of one type was registered on one day, never what it changed to. Winding-up, liquidation, revival and strike-off requests are Tier-2 `STATUS_CHANGED`, mergers `SUCCESSION`, a change of name `LEGAL_NAME_CHANGE` — each with `value_new` the filing ("Change of name (…) filed"), never a status or name reached. Share transfers, allotments and shareholder updates are Tier-1 `SHARES_FILED`, one entry each, worded "filed; parties not published" (Stephen, 11 Nov 2026). Directors added or removed are Tier-4 with no person. Charges, officers, capital, articles, the annual report and corrections are Tier 3. `registers_kept_since` names the day OpenCheck's copy starts; the tab says an empty timeline before it is a log not kept |
 
 **Denmark is the cheapest emitter to date.** CVR is bitemporal by design, so the
 full validity history is *already* in the lookup bundle's `_raw_*` blocks — the

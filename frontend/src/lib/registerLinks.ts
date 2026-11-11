@@ -155,6 +155,14 @@ export const REGISTER_LINKS: Record<string, RegisterLinkEntry> = {
     "history": [
       ["^\\d+$", "https://data.ny.gov/resource/63wc-4exh.json?corpid_num={id}"]
     ]
+  },
+  "ica_israel": {
+    "register": "Israel Corporations Authority",
+    "identifierKey": "il_roc",
+    "record": [],
+    "history": [
+      ["^\\d{9}$", "https://data.gov.il/api/3/action/datastore_search?resource_id=28780ab5-3ef1-44c7-8377-da82c0aa6781&filters=%7B%22%D7%9E%D7%A1%D7%A4%D7%A8%20%D7%AA%D7%90%D7%92%D7%99%D7%93%22%3A{id}%7D"]
+    ]
   }
 };
 // END REGISTER_LINKS

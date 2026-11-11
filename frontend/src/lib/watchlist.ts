@@ -129,7 +129,7 @@ export interface Watch {
 
 export interface WatchRegisterTier {
   followed: boolean;
-  register: "companies_house" | "ariregister" | null;
+  register: "companies_house" | "ariregister" | "ica_israel" | null;
   reason: "no_register_number" | "register_not_covered" | null;
   words: string;
 }
@@ -543,6 +543,12 @@ export interface RegisterChanges {
   name?: [string | null, string | null];
   status?: [string | null, string | null];
   legal_form?: [string | null, string | null];
+  /** The Israeli register (11 Nov 2026): the change log's material filings
+   *  — the kind of request and its day, never who or what — and two more
+   *  fields of the companies file. */
+  filings?: { code: number; day: string; group: string; label: string }[];
+  sub_status?: [string | null, string | null];
+  violating?: [string | null, string | null];
   added?: boolean;
   removed?: boolean;
 }
@@ -578,7 +584,7 @@ export interface WatchEntry {
     /** The register tier: which register, the company's code there, the
      *  index days read, and each list's entries before and after. A
      *  catch-up for a register gap names the register too. */
-    register?: "ariregister" | "companies_house";
+    register?: "ariregister" | "companies_house" | "ica_israel";
     code?: string;
     cuts?: string[];
     changes?: RegisterChanges;
@@ -635,6 +641,15 @@ export interface WatchlistTiers {
   };
   /** The register tier (Estonia's daily index diff). Absent on an older server. */
   register?: {
+    available: boolean;
+    index_cut: string | null;
+    last_cut: string | null;
+    waiting: boolean;
+    gaps: { after: string | null; before: string | null; detail?: string; detected_at: string }[];
+  };
+  /** The second register: the Israel Corporations Authority's index diff
+   *  (11 Nov 2026), the same shape. Absent on an older server. */
+  register_il?: {
     available: boolean;
     index_cut: string | null;
     last_cut: string | null;
@@ -1105,6 +1120,43 @@ export function registerChangeLines(changes: RegisterChanges | undefined): strin
   return out;
 }
 
+// The Israeli register's field words. Keep in step with IL_CHANGE_WORDS in
+// opencheck/watchlist.py; test_watchlist_ica_israel.py parses this table.
+const IL_CHANGE_WORDS: Record<string, string> = {
+  name: "Name",
+  status: "Status",
+  sub_status: "Sub-status",
+  violating: "Violating mark",
+};
+
+const IL_FIELDS = ["name", "status", "sub_status", "violating"] as const;
+
+/** One sentence per filing and field of an Israeli register trigger — the
+ *  feed's `il_change_lines`. A filing is the kind of request and its day;
+ *  the change log never says what it changed to. */
+export function ilChangeLines(changes: RegisterChanges | undefined): string[] {
+  const c = changes ?? {};
+  const out: string[] = [];
+  if (c.removed) out.push("The corporation is no longer in the register's open data.");
+  if (c.added) out.push("The corporation appeared in the register's open data.");
+  for (const f of c.filings ?? []) {
+    const note = f.group === "shares" ? "; parties not published" : "";
+    out.push(`${f.label} filed with the Corporations Authority on ${f.day}${note}.`);
+  }
+  for (const key of IL_FIELDS) {
+    const pair = c[key];
+    if (!Array.isArray(pair) || pair.length !== 2) continue;
+    out.push(`${IL_CHANGE_WORDS[key]}: ${pair[0] || "—"} → ${pair[1] || "—"}.`);
+  }
+  return out;
+}
+
+/** The change lines of a register tier trigger, in its register's words. */
+export function registerTriggerLines(trigger: WatchEntry["trigger"] | undefined): string[] {
+  if (trigger?.register === "ica_israel") return ilChangeLines(trigger.changes);
+  return registerChangeLines(trigger?.changes);
+}
+
 function daysWords(cuts: string[] | undefined): string {
   const c = (cuts ?? []).filter(Boolean);
   if (!c.length) return "its latest open data";
@@ -1145,6 +1197,7 @@ export const REGISTER_NOT_FOLLOWED_WORDS: Record<string, string> = {
 export const REGISTER_FOLLOWED_WORDS: Record<string, string> = {
   companies_house: "Companies House PSC stream, live",
   ariregister: "e-Business Register open data, daily",
+  ica_israel: "Corporations Authority open data, daily",
 };
 const PSC_KINDS = ["individual", "corporate", "legal_person", "withheld", "statement", "unknown"] as const;
 const PSC_OUTCOMES = ["added", "changed", "ceased", "deleted"] as const;
@@ -1192,6 +1245,11 @@ export function triggerSentence(e: WatchEntry): string {
     const sets = t.datasets?.length ? ` — ${t.datasets.join(", ")}` : "";
     return `OpenSanctions ${op} ${who}, matching this company ${how}${sets}.`;
   }
+  if (e.tier === "register" && t.register === "ica_israel") {
+    return `The Israel Corporations Authority recorded a change to this company in ${daysWords(t.cuts)}${
+      t.code ? ` (corporate number ${t.code})` : ""
+    }.`;
+  }
   if (e.tier === "register") {
     return `The Estonian e-Business Register recorded a change to this company in ${daysWords(t.cuts)}${
       t.code ? ` (registry code ${t.code})` : ""
@@ -1212,6 +1270,9 @@ export function triggerSentence(e: WatchEntry): string {
   if (e.tier === "catch_up") {
     if (t.reason === "register_gap" && t.register === "companies_house") {
       return `The Companies House PSC stream was rejoined live at ${t.before ?? "?"}, so filings before that were not seen; every watched UK company was re-checked.`;
+    }
+    if (t.reason === "register_gap" && t.register === "ica_israel") {
+      return `The Israel Corporations Authority's changes between ${t.after ?? "?"} and ${t.before ?? "?"} could not be read, so every watched Israeli company was re-checked.`;
     }
     if (t.reason === "register_gap") {
       return `The Estonian e-Business Register's changes between ${t.after ?? "?"} and ${t.before ?? "?"} could not be read, so every watched Estonian company was re-checked.`;
@@ -1239,7 +1300,9 @@ export function entryHeadline(e: WatchEntry): string {
   if (e.tier === "review") return "This list: nobody has opened it for a while — it will be deleted unless opened";
   const name = e.legal_name || e.lei;
   const kinds = new Set(e.changes.map((c) => c.kind));
-  if (!e.changes.length && e.tier === "register") return `${name}: Estonian register record changed`;
+  if (!e.changes.length && e.tier === "register") {
+    return `${name}: ${e.trigger?.register === "ica_israel" ? "Israeli" : "Estonian"} register record changed`;
+  }
   if (!e.changes.length && e.tier === "psc") return `${name}: Companies House PSC register changed`;
   if (!e.changes.length) return `${name}: re-run found no difference`;
   if (e.changes.some((c) => c.kind === "gleif_field" && c.field === "corporate_events")) {
@@ -1314,6 +1377,20 @@ export function tierSentence(t: WatchlistTiers | null): string {
     if (regGap) {
       parts.push(
         `On ${regGap.detected_at.slice(0, 10)} some days of Estonian register changes could not be read, so every watched Estonian company was re-checked instead.`,
+      );
+    }
+  }
+  const il = t.register_il;
+  if (il?.available) {
+    parts.push(
+      `Israel: OpenCheck rebuilds the Corporations Authority's open data every day${
+        il.index_cut ? ` (this instance holds ${il.index_cut})` : ""
+      }, and a watched Israeli company with a new share, capital, director, name, status, merger, attachment or classification filing — or a changed name or status — is re-run. The change log names the kind of filing, never who or what changed.`,
+    );
+    const ilGap = il.gaps?.length ? il.gaps[il.gaps.length - 1] : null;
+    if (ilGap) {
+      parts.push(
+        `On ${ilGap.detected_at.slice(0, 10)} some days of Israeli register changes could not be read, so every watched Israeli company was re-checked instead.`,
       );
     }
   }

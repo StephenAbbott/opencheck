@@ -444,6 +444,13 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .sources.ariregister import refresh_loop as ee_refresh_loop
 
         ee_task = asyncio.create_task(ee_refresh_loop(ee_interval))
+    # The Israeli index and its change log, the same arrangement.
+    il_task: asyncio.Task[None] | None = None
+    il_interval = get_settings().ica_israel_refresh_interval_s
+    if il_interval > 0 and get_settings().warm_caches_on_start and get_settings().ica_israel_db_url:
+        from .sources.ica_israel import refresh_loop as il_refresh_loop
+
+        il_task = asyncio.create_task(il_refresh_loop(il_interval))
     # Phase 187: feed the PSC graph from the register's stream. Needs the
     # graph file and the streaming key; returns at once otherwise.
     stream_task: asyncio.Task[None] | None = None
@@ -495,6 +502,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 isin_task.cancel()
             if ee_task is not None and not ee_task.done():
                 ee_task.cancel()
+            if il_task is not None and not il_task.done():
+                il_task.cancel()
             if stream_task is not None and not stream_task.done():
                 stream_task.cancel()
             if watch_task is not None and not watch_task.done():

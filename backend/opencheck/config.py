@@ -696,6 +696,21 @@ class Settings(BaseSettings):
         ),
         alias="ICA_ISRAEL_DB_URL",
     )
+    # How often the asset check re-runs in-process, so the daily index (and
+    # its change log) lands without a restart — the watchlist's register tier
+    # needs the server to hold the day it re-runs for. Hourly; 0 disables.
+    ica_israel_refresh_interval_s: float = Field(
+        default=3600.0, alias="ICA_ISRAEL_REFRESH_INTERVAL_S"
+    )
+    # The rolling fourteen-day diff the refresh workflow publishes beside the
+    # index (scripts/diff_ica_israel_index.py), read by the watchlist worker.
+    ica_israel_delta_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "ica-israel-index/ica-israel-delta.json"
+        ),
+        alias="ICA_ISRAEL_DELTA_URL",
+    )
 
     # --- ESTMA payments to governments (Statistics Canada Open Licence) ---
     # No API key: Statistics Canada republishes every ESTMA report weekly as

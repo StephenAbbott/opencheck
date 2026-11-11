@@ -64,6 +64,7 @@ from .ariregister import ariregister_change_events, card_entry_events, general_e
 from .assemble import Timeline, assemble_timeline
 from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
+from .ica_israel import ica_israel_change_events
 from .ny_dos import ny_dos_change_events
 from .nz_companies import nz_change_events
 from .ur_latvia import ur_latvia_change_events
@@ -81,6 +82,7 @@ _EE_RA_CODE = "RA000181"   # Estonian e-Business Register
 _DK_RA_CODE = "RA000170"   # Danish CVR / Erhvervsstyrelsen
 _NY_RA_CODE = "RA000628"   # New York Department of State (keyed on RA, not jurisdiction)
 _LV_RA_CODE = "RA000423"   # Latvian Register of Enterprises (Uzņēmumu reģistrs)
+_IL_RA_CODE = "RA000406"   # Israel Corporations Authority (Registrar of Companies)
 
 #: The GLEIF adapter's own on-disk record for this LEI — the only local copy
 #: of ``registeredAs``/``registeredAt`` there is. Read with no age bound: a
@@ -105,14 +107,16 @@ _CH_PAGE_CAP = 50  # ≤ 5,000 filings
 _CH_OFFICERS_PAGE_CAP = 20
 
 
-_Numbers = tuple[str | None, str | None, str | None, str | None, str | None, str | None, str | None]
+_Numbers = tuple[
+    str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None
+]
 
 
 async def _gleif_registration(client: httpx.AsyncClient, lei: str) -> _Numbers:
-    """Return ``(ch, nz, ee, dk, ny, lv, legal_name)`` from GLEIF."""
+    """Return ``(ch, nz, ee, dk, ny, lv, il, legal_name)`` from GLEIF."""
     resp = await client.get(_GLEIF_RECORD_URL.format(lei=quote(lei)))
     if resp.status_code == 404:
-        return None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None
     resp.raise_for_status()
     return _registration_numbers(resp.json())
 
@@ -128,11 +132,11 @@ def _cached_registration(lei: str) -> _Numbers | None:
     if hit is None:
         return None
     numbers = _registration_numbers(hit[0])
-    return numbers if any(numbers[:6]) else None
+    return numbers if any(numbers[:7]) else None
 
 
 def _registration_numbers(payload: dict | None) -> _Numbers:
-    """``(ch, nz, ee, dk, ny, lv, legal_name)`` from a GLEIF Level-1 record payload.
+    """``(ch, nz, ee, dk, ny, lv, il, legal_name)`` from a GLEIF Level-1 record payload.
 
     The legal name rides along for New York: the DOS emitter is name-gated,
     because six ISSUED LEIs file a DOS ID that belongs to another entity, and
@@ -153,8 +157,9 @@ def _registration_numbers(payload: dict | None) -> _Numbers:
     dk = registered_as if (registered_as and registered_at == _DK_RA_CODE) else None
     ny = registered_as if (registered_as and registered_at == _NY_RA_CODE) else None
     lv = registered_as if (registered_as and registered_at == _LV_RA_CODE) else None
+    il = registered_as if (registered_as and registered_at == _IL_RA_CODE) else None
     legal_name = ((entity.get("legalName") or {}).get("name") or "").strip() or None
-    return ch, nz, ee, dk, ny, lv, legal_name
+    return ch, nz, ee, dk, ny, lv, il, legal_name
 
 
 async def _gleif_modifications(
@@ -285,6 +290,7 @@ async def fetch_timeline(lei: str) -> Timeline:
     dk_cvr: str | None = None
     ny_dos_id: str | None = None
     lv_regcode: str | None = None
+    il_number: str | None = None
     legal_name: str | None = None
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
@@ -305,7 +311,7 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         reg_res, mods_res = results
         if not isinstance(reg_res, BaseException):
-            company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, legal_name = reg_res
+            company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name = reg_res
             company_number_basis = "live"
         else:
             # A 429 handed back by the Phase 143 transport, the throttle
@@ -315,7 +321,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             gleif_record_available = False
             cached = _cached_registration(lei)
             if cached is not None:
-                company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, legal_name = cached
+                company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name = cached
                 company_number_basis = "cached"
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
@@ -453,6 +459,23 @@ async def fetch_timeline(lei: str) -> Timeline:
                 )
             lv_events = ur_latvia_change_events(data)
 
+    # Israel — the Corporations Authority's change log, from the index (no
+    # key, no network: the index is downloaded at boot). The register's
+    # number is normalised as the lookup's deriver does. Best-effort.
+    il_events = []
+    il_kept_since: str | None = None
+    if il_number:
+        from ..sources import ica_israel as _il
+
+        try:
+            il_number = _il.normalise_il_number(il_number)
+            il_rows = await asyncio.to_thread(_il.change_rows, il_number)
+            coverage = await asyncio.to_thread(_il.change_coverage) if il_rows is not None else None
+        except Exception:  # noqa: BLE001
+            il_rows, coverage = None, None
+        il_events = ica_israel_change_events(il_number, il_rows)
+        il_kept_since = (coverage or {}).get("kept_since")
+
     # The board stream. Emitted here rather than inside ``assemble_timeline``
     # because it comes from a second Companies House call, not from the filing
     # stream that function already classifies.
@@ -468,7 +491,9 @@ async def fetch_timeline(lei: str) -> Timeline:
         gleif_lei_mods=lei_mods,
         gleif_rr_mods=rr_mods,
         ch_filings=ch_filings,
-        extra_events=nz_events + ee_events + dk_events + ny_events + lv_events + officer_events,
+        extra_events=(
+            nz_events + ee_events + dk_events + ny_events + lv_events + il_events + officer_events
+        ),
     )
     # Phase 190: the numbers above are how each register addresses this
     # company, and until now they were derived, used to decide which history
@@ -486,9 +511,12 @@ async def fetch_timeline(lei: str) -> Timeline:
             ("cvr_denmark", dk_cvr),
             ("ny_dos", ny_dos_id),
             ("ur_latvia", lv_regcode),
+            ("ica_israel", il_number),
         )
         if number
     }
+    if il_kept_since:
+        timeline.registers_kept_since = {"ica_israel": il_kept_since}
     timeline.filings_truncated = ch_filings_truncated
     # Phase 198: whether the officers list was READ, not whether it had rows.
     # An empty board stream means one of two very different things and the tab

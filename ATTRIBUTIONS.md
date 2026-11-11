@@ -66,6 +66,7 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License:** companies — data.gov.il "Other (Open)": free use, including commercial, citing data.gov.il, the dataset and its update date; partnerships — [CC BY](https://creativecommons.org/licenses/by/4.0/).
 - **Attribution:** "Contains information from the Israel Corporations Authority (רשות התאגידים) — the companies and partnerships databases (מאגר חברות, מאגר שותפויות), published on data.gov.il."
 - **Entry point:** `il_roc` (9-digit corporate number) derived from GLEIF RA code `RA000406`; companies and partnerships are both filed under it.
+- **Change log:** the `ica-changes` dataset (<https://data.gov.il/dataset/ica-changes>, [CC BY](https://creativecommons.org/licenses/by/4.0/)) — one year of the requests the Authority registered for each corporation: the request type and the day, never the parties or the new values. Read into the same index for the History tab and the watchlist, with older rows kept from build to build. Attribution: "Contains information from the Israel Corporations Authority's change log (שינויים בתאגידים), published on data.gov.il."
 
 ## DRCOR — Department of Registrar of Companies and Intellectual Property (Cyprus)
 
