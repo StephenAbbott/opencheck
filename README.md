@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 498** — A new Sirene source covers French associations and foundations the business register does not hold, with their record in the Répertoire national des associations.
+**Latest: Phase 499** — The knowability rows for Argentina and Israel are verified.
 
 → [Full development history](docs/status.md)
 
