@@ -56,7 +56,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote
 
 import httpx
@@ -511,7 +511,10 @@ async def fetch_timeline(lei: str) -> Timeline:
     if fr_siren and settings.insee_sirene_api_key:
         try:
             from ..sources import REGISTRY
-            bundle = await REGISTRY["sirene"].fetch(fr_siren, legal_name=legal_name or "")
+            from ..sources.sirene import SireneAdapter
+
+            sirene_adapter = cast(SireneAdapter, REGISTRY["sirene"])
+            bundle = await sirene_adapter.fetch(fr_siren, legal_name=legal_name or "")
         except Exception:  # noqa: BLE001
             bundle = None
         if bundle:
