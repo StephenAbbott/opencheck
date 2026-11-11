@@ -223,6 +223,9 @@ def _integrated_ownership(payload: Any) -> dict[str, Any] | None:
                     "maximum": f.get("maximum"),
                     "incomplete": bool(f.get("incomplete")),
                     "route": route_words(f) or None,
+                    # The undated-relationships ticket: the figure rests on a
+                    # holding no source dates — read as current, may have ended.
+                    "undated": bool(f.get("undated")),
                 }
                 for f in h.get("figures") or []
             ],
@@ -238,6 +241,7 @@ def _integrated_ownership(payload: Any) -> dict[str, Any] | None:
         "as_of": io.get("as_of"),
         "holders": rows,
         "holders_total": len(holders),
+        "undated_note": io.get("undated_note"),
         "hint": (
             "Context, not a risk finding: no threshold is applied and none of "
             "these figures feeds the risk signals or the verdict. Each source "

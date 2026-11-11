@@ -307,6 +307,8 @@ def test_the_mcp_block_is_context_and_lists_each_figure():
     assert state["figures"] == [{
         "source": "OpenSanctions", "text": "34%", "minimum": 34.0, "maximum": 34.0,
         "incomplete": False, "route": "directly and through Holding A",
+        # The fixture's holdings carry no dates (the undated-relationships ticket).
+        "undated": True,
     }]
     assert _integrated_ownership(SimpleNamespace(integrated_ownership=None)) is None
 

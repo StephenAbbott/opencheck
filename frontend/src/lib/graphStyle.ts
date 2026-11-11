@@ -199,6 +199,17 @@ export const ENDED_EDGE = {
   meaning: "drawn lighter with a hollow arrowhead, and the date it ended — the source records that it has ceased",
 } as const;
 
+/**
+ * A current relationship no source dates (the undated-relationships ticket,
+ * 11 Nov 2026). Not an edge kind and not a style: the line is drawn as
+ * current, because that is how OpenCheck reads it, and the label carries a
+ * "no date given" line (`lib/undated.ts`) — words, not colour.
+ */
+export const UNDATED_EDGE = {
+  name: "No date given",
+  meaning: "the source gives no start or end date, so the relationship is read as current — it may describe a holding that has since ended",
+} as const;
+
 /** WCAG relative luminance of a `#rrggbb` colour. */
 function relativeLuminance(hex: string): number {
   const h = hex.replace("#", "");
@@ -274,8 +285,8 @@ export interface EdgeLegendEntry extends LegendEntry {
 
 export interface GraphLegendModel {
   edges: EdgeLegendEntry[];
-  /** Modifiers that apply across edge kinds — today only "Ended relationship"
-   *  (Phase 219), listed only when the graph draws one. */
+  /** Modifiers that apply across edge kinds — "Ended relationship" (Phase
+   *  219) and "No date given" — listed only when the graph draws one. */
   edgeModifiers: LegendEntry[];
   nodes: LegendEntry[];
   signals: SignalLegendEntry[];
@@ -296,6 +307,7 @@ export function buildGraphLegend({
   hasCollapsed,
   hasIdentityVerified = false,
   hasEnded = false,
+  hasUndated = false,
   hasClusters = false,
   signalName,
 }: {
@@ -307,6 +319,8 @@ export function buildGraphLegend({
   hasIdentityVerified?: boolean;
   /** Any edge has ended (Phase 219). */
   hasEnded?: boolean;
+  /** Any current edge carries no date (the undated-relationships ticket). */
+  hasUndated?: boolean;
   /** Any sibling group is drawn as one node (Phase 243). */
   hasClusters?: boolean;
   signalName: (code: string) => string;
@@ -316,9 +330,9 @@ export function buildGraphLegend({
     .filter((k) => present.has(k))
     .map((k) => ({ key: k, name: EDGE_STYLE[k].name, meaning: EDGE_STYLE[k].meaning, style: EDGE_STYLE[k] }));
 
-  const edgeModifiers: LegendEntry[] = hasEnded
-    ? [{ key: "ended", name: ENDED_EDGE.name, meaning: ENDED_EDGE.meaning }]
-    : [];
+  const edgeModifiers: LegendEntry[] = [];
+  if (hasEnded) edgeModifiers.push({ key: "ended", name: ENDED_EDGE.name, meaning: ENDED_EDGE.meaning });
+  if (hasUndated) edgeModifiers.push({ key: "undated", name: UNDATED_EDGE.name, meaning: UNDATED_EDGE.meaning });
 
   const nodes: LegendEntry[] = [];
   if (hasPeople) nodes.push({ key: "person", ...NODE_MARK.person });

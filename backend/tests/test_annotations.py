@@ -212,7 +212,11 @@ class TestCompaniesHouseAnnotations:
             )
         )
         rel = next(s for s in stmts if s["recordType"] == "relationship")
+        from opencheck.bods.undated import UNDATED_NOTE
+
         for annotation in rel["annotations"]:
+            if annotation["description"] == UNDATED_NOTE:
+                continue  # the undated note points at the interests list
             resolved = resolve_pointer(rel, annotation["statementPointerTarget"])
             assert isinstance(resolved, str)
 
