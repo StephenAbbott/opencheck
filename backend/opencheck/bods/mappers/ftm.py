@@ -8,6 +8,7 @@ data in the mapping layer and has nothing to do with any other source.
 
 from __future__ import annotations
 
+from datetime import date as _date
 from typing import Any
 
 import pycountry
@@ -246,9 +247,7 @@ def _ftm_edge_interest(
         pct = _ftm_percentage(edge_props)
         if pct is not None:
             interest["share"] = {"exact": pct}
-        return interest
-
-    if policy == "directorship":
+    elif policy == "directorship":
         interest = {
             "type": _FTM_ROLE_TO_INTEREST_TYPE.get(
                 role.lower().strip(), "seniorManagingOfficial"
@@ -267,13 +266,34 @@ def _ftm_edge_interest(
         if role:
             interest["details"] = role
 
-    start = (edge_props.get("startDate") or [None])[0]
+    start = _ftm_interest_day(edge_props.get("startDate"))
     if start:
         interest["startDate"] = start
-    end = (edge_props.get("endDate") or [None])[0]
+    end = _ftm_interest_day(edge_props.get("endDate"))
     if end:
         interest["endDate"] = end
     return interest
+
+
+def _ftm_interest_day(values: Any) -> str | None:
+    """An FtM edge date as the ``YYYY-MM-DD`` a BODS interest requires.
+
+    The first value that is a full ISO day (a datetime is cut to its day) is
+    kept, future days included — an ``endDate`` can be announced. A partial
+    date ("2019", "2019-05") is left out rather than rounded: BODS asks for a
+    rounded date to be annotated, and the edge builder has no statement to
+    annotate. Ownership edges used to skip this step entirely, so every
+    OpenSanctions shareholding read as undated and current.
+    """
+    for value in values or []:
+        text = str(value or "").strip()
+        if len(text) < 10:
+            continue
+        try:
+            return _date.fromisoformat(text[:10]).isoformat()
+        except ValueError:
+            continue
+    return None
 
 
 _FTM_SUBJECT = object()  # sentinel: this edge endpoint is the payload subject

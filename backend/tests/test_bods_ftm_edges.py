@@ -450,3 +450,80 @@ def test_vendored_edge_table_matches_followthemoney_model() -> None:
         name: (src, tgt) for name, (src, tgt, _policy) in _FTM_EDGE_SCHEMAS.items()
     }
     assert vendored == model_edges
+
+
+# ---------------------------------------------------------------------------
+# Ownership edge dates (the undated-relationships ticket, 11 Nov 2026)
+# ---------------------------------------------------------------------------
+
+
+def _owner_side_payload(edge: dict[str, Any]) -> dict[str, Any]:
+    """The Rosneft shape: the subject is the asset, the owner is nested."""
+    return {
+        "id": "NK-subject",
+        "schema": "Company",
+        "properties": {"name": ["Subject PJSC"], "ownershipAsset": [edge]},
+    }
+
+
+def _egrul_edge(**props: list[str]) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "percentage": ["50"],
+        "asset": ["NK-subject"],
+        "owner": [
+            {
+                "id": "NK-owner",
+                "schema": "Company",
+                "properties": {"name": ["Former Owner LLC"]},
+            }
+        ],
+    }
+    base.update(props)
+    return {
+        "id": "own-dated",
+        "schema": "Ownership",
+        "datasets": ["ext_ru_egrul"],
+        "properties": base,
+    }
+
+
+def test_ownership_edge_keeps_its_start_and_end_dates() -> None:
+    """Ownership interests returned before the date step: an EGRUL holding
+    ended in 2017 read as current. Both dates must reach the interest, and
+    the record closes by the Phase 317 rule."""
+    edge = _egrul_edge(startDate=["2003-05-12"], endDate=["2017-12-27"])
+    bundle = map_ftm(_owner_side_payload(edge), source_id="opensanctions")
+    (rel_stmt,) = [s for s in bundle.statements if s["recordType"] == "relationship"]
+    (interest,) = rel_stmt["recordDetails"]["interests"]
+    assert interest["type"] == "shareholding"
+    assert interest["share"] == {"exact": 50.0}
+    assert interest["startDate"] == "2003-05-12"
+    assert interest["endDate"] == "2017-12-27"
+    assert rel_stmt["recordStatus"] == "closed"
+
+
+def test_undated_ownership_edge_stays_open_and_undated() -> None:
+    bundle = map_ftm(_owner_side_payload(_egrul_edge()), source_id="opensanctions")
+    (rel_stmt,) = [s for s in bundle.statements if s["recordType"] == "relationship"]
+    (interest,) = rel_stmt["recordDetails"]["interests"]
+    assert "startDate" not in interest and "endDate" not in interest
+    assert rel_stmt["recordStatus"] != "closed"
+
+
+def test_ownership_start_date_alone_keeps_the_holding_current() -> None:
+    edge = _egrul_edge(startDate=["2020-01-31T00:00:00"])
+    bundle = map_ftm(_owner_side_payload(edge), source_id="opensanctions")
+    (rel_stmt,) = [s for s in bundle.statements if s["recordType"] == "relationship"]
+    (interest,) = rel_stmt["recordDetails"]["interests"]
+    assert interest["startDate"] == "2020-01-31"
+    assert "endDate" not in interest
+    assert rel_stmt["recordStatus"] != "closed"
+
+
+@pytest.mark.parametrize("partial", ["2019", "2019-05", "not a date", ""])
+def test_a_partial_edge_date_is_left_out_not_rounded(partial: str) -> None:
+    edge = _egrul_edge(startDate=[partial], endDate=[partial])
+    bundle = map_ftm(_owner_side_payload(edge), source_id="opensanctions")
+    (rel,) = _rels(bundle)
+    (interest,) = rel["interests"]
+    assert "startDate" not in interest and "endDate" not in interest
