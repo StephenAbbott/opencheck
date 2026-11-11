@@ -64,6 +64,7 @@ from .cache import Cache
 from .config import get_settings
 from .gleif_throttle import GleifRateLimitedError, unavailable_reason
 from .http import build_client
+from .secret_scrub import describe_exception
 
 log = logging.getLogger(__name__)
 
@@ -252,17 +253,37 @@ async def _gleif_isins(client, lei: str, page: int, page_size: int) -> tuple[int
     return int(total or 0), isins
 
 
-async def _openfigi_map(client, isins: list[str], api_key: str | None) -> dict[str, dict[str, Any]]:
+def _openfigi_failure(exc: BaseException) -> str:
+    """Name an OpenFIGI failure in ``gleifstats.OPENFIGI_OUTCOMES``' words."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return "http_429" if exc.response.status_code == 429 else "http_error"
+    if isinstance(exc, (httpx.TimeoutException, httpx.TransportError, OSError)):
+        return "unreachable"
+    if isinstance(exc, ValueError):  # an unreadable body (json.JSONDecodeError)
+        return "bad_response"
+    return "http_error"
+
+
+async def _openfigi_map(
+    client, isins: list[str], api_key: str | None
+) -> tuple[dict[str, dict[str, Any]], bool]:
     """Map ISIN → security metadata via OpenFIGI. Best-effort; missing/erroring
-    ISINs are simply left untyped."""
+    ISINs are simply left untyped.
+
+    Returns the map and whether OpenFIGI *answered* at least one request — an
+    answer of "no identifier found" counts, a failure does not. Every request
+    is counted in ``gleifstats`` (``openfigi`` on ``/signalstats``) so a
+    failure is a number, not only a log line.
+    """
     if not isins:
-        return {}
+        return {}, False
     batch = _OPENFIGI_BATCH_KEYED if api_key else _OPENFIGI_BATCH_ANON
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["X-OPENFIGI-APIKEY"] = api_key
 
     out: dict[str, dict[str, Any]] = {}
+    answered = False
     for start in range(0, len(isins), batch):
         chunk = isins[start : start + batch]
         body = [{"idType": "ID_ISIN", "idValue": isin} for isin in chunk]
@@ -270,10 +291,17 @@ async def _openfigi_map(client, isins: list[str], api_key: str | None) -> dict[s
             resp = await client.post(_OPENFIGI_URL, json=body, headers=headers)
             resp.raise_for_status()
             results = resp.json()
+            if not isinstance(results, list):
+                raise ValueError("OpenFIGI answered with something other than a list")
         except Exception as exc:  # noqa: BLE001 — enrichment is non-fatal
-            log.warning("OpenFIGI mapping failed (%d ISINs): %s", len(chunk), exc)
+            gleifstats.record_openfigi(_openfigi_failure(exc))
+            log.warning(
+                "OpenFIGI mapping failed (%d ISINs): %s", len(chunk), describe_exception(exc)
+            )
             continue
-        for isin, result in zip(chunk, results or []):
+        gleifstats.record_openfigi("answered")
+        answered = True
+        for isin, result in zip(chunk, results):
             data = (result or {}).get("data") or []
             if not data:
                 continue
@@ -285,7 +313,7 @@ async def _openfigi_map(client, isins: list[str], api_key: str | None) -> dict[s
                 "exchange": d.get("exchCode"),
                 "marketSector": d.get("marketSector"),
             }
-    return out
+    return out, answered
 
 
 def _isins_cache_key(lei: str, page: int, page_size: int) -> str:
@@ -439,12 +467,14 @@ async def assemble_securities(
                 log.warning("GLEIF ISIN list unavailable for %s: %s", lei, exc)
                 isin_list_available = False
                 served = f"unavailable_{unavailable_reason}"
-        figi_map = await _openfigi_map(client, isins, settings.openfigi_api_key)
+        figi_map, figi_answered = await _openfigi_map(client, isins, settings.openfigi_api_key)
         # Sanctioned ISINs may not be in the current GLEIF page (or in GLEIF at
         # all — e.g. Rosneft). Enrich those too so the banner shows their type.
         missing = [i for i in sanctioned_map if i not in figi_map]
         if missing:
-            figi_map.update(await _openfigi_map(client, missing, settings.openfigi_api_key))
+            more, more_answered = await _openfigi_map(client, missing, settings.openfigi_api_key)
+            figi_map.update(more)
+            figi_answered = figi_answered or more_answered
 
     gleifstats.record_securities(served)
 
@@ -459,7 +489,9 @@ async def assemble_securities(
     # `sources` lists what actually answered — a failed GLEIF is reported via
     # `isin_list_available`, not listed as if it had contributed.
     sources = ["gleif"] if isin_list_available else []
-    if figi_map or settings.openfigi_api_key:
+    # OpenFIGI is listed only when it answered: a configured key is not an
+    # answer, and listing it after every call failed hid an outage.
+    if figi_answered:
         sources.append("openfigi")
     if overlay_on:
         sources.append("opensanctions")

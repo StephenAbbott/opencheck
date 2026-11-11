@@ -19,6 +19,12 @@ Counted, per **route** (which OpenCheck surface asked) and per **endpoint**
 Plus how ``/securities`` answered (``securities``): from GLEIF's ISIN file,
 from the one-day cache, live, from a stale stand-in, or not at all (by reason).
 
+And how OpenFIGI, the panel's other upstream, answered (``openfigi``): one
+count per ``/v3/mapping`` request by outcome, with the moment of the last
+answer and the last failure. Until the OpenFIGI IP-change ticket (11 Nov 2026)
+a failed mapping call was a log line only, so an outage left the panel's rows
+untyped with nothing to say why.
+
 Same contract as ``/signalstats``, where it is served as the ``gleif``
 section: public, aggregate only, in-process, reset on deploy. Every key is a
 closed vocabulary — a route, an endpoint, a reason — so no LEI, name or path
@@ -95,6 +101,12 @@ SECURITIES_SERVED = frozenset(
     }
 )
 
+#: How one OpenFIGI ``/v3/mapping`` request ended. ``answered`` includes an
+#: answer of "no identifier found" — OpenFIGI replied.
+OPENFIGI_OUTCOMES = frozenset(
+    {"answered", "http_429", "http_error", "unreachable", "bad_response"}
+)
+
 _route: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "opencheck_gleif_route", default=None
 )
@@ -151,6 +163,9 @@ class _State:
         self.started = time.time()
         self.calls: Counter[tuple[str, str, str]] = Counter()
         self.securities: Counter[str] = Counter()
+        self.openfigi: Counter[str] = Counter()
+        self.openfigi_last_answered: float | None = None
+        self.openfigi_last_failed: float | None = None
 
 
 _state = _State()
@@ -181,6 +196,26 @@ def record_securities(served: str) -> None:
         log.debug("gleifstats.record_securities failed: %s", exc)
 
 
+def record_openfigi(outcome: str) -> None:
+    """Count how one OpenFIGI mapping request ended. Never raises."""
+    try:
+        if outcome not in OPENFIGI_OUTCOMES:
+            return
+        now = time.time()
+        with _state.lock:
+            _state.openfigi[outcome] += 1
+            if outcome == "answered":
+                _state.openfigi_last_answered = now
+            else:
+                _state.openfigi_last_failed = now
+    except Exception as exc:  # noqa: BLE001
+        log.debug("gleifstats.record_openfigi failed: %s", exc)
+
+
+def _moment(epoch: float | None) -> str | None:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(epoch)) if epoch else None
+
+
 def _blank() -> dict[str, int]:
     return {k: 0 for k in sorted(OUTCOMES)}
 
@@ -190,6 +225,9 @@ def stats() -> dict[str, Any]:
     with _state.lock:
         calls = Counter(_state.calls)
         securities = Counter(_state.securities)
+        openfigi = Counter(_state.openfigi)
+        figi_answered_at = _state.openfigi_last_answered
+        figi_failed_at = _state.openfigi_last_failed
         started = _state.started
     by_route: dict[str, dict[str, int]] = {}
     by_endpoint: dict[str, dict[str, int]] = {}
@@ -223,6 +261,13 @@ def stats() -> dict[str, Any]:
         "sent_by_route_endpoint": dict(sorted(sent_by.items())),
         "securities_served": {k: securities.get(k, 0) for k in sorted(SECURITIES_SERVED)},
         "isin_index": table,
+        # OpenFIGI types the panel's rows; a request that failed leaves them
+        # untyped. Not GLEIF budget — counted here because it is the same panel.
+        "openfigi": {
+            "requests": {k: openfigi.get(k, 0) for k in sorted(OPENFIGI_OUTCOMES)},
+            "last_answered_at": _moment(figi_answered_at),
+            "last_failed_at": _moment(figi_failed_at),
+        },
     }
 
 
@@ -233,11 +278,13 @@ def reset_for_tests() -> None:
 
 __all__ = [
     "ENDPOINT_NAMES",
+    "OPENFIGI_OUTCOMES",
     "ROUTES",
     "SECURITIES_SERVED",
     "current_route",
     "endpoint_for",
     "record_call",
+    "record_openfigi",
     "record_securities",
     "reset_for_tests",
     "reset_route",
