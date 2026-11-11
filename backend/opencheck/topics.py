@@ -30,9 +30,17 @@ than subsets — must have a label here, enforced by the canary in
 build instead of reaching a reader as a slug, the same way an unclassified one
 already fails rather than being fetched and silently not understood.
 
-The map is deliberately wider than that set: OpenAleph surfaces FtM topics
-OpenSanctions does not publish as targets (`role.judge`, `asset.frozen`), and
-they are read by the same eyes.
+The map is deliberately wider than that set: it labels **every** topic in
+FollowTheMoney's topic type as OpenSanctions publishes it (`model.types.topic.values`
+in the same model.json, 75 topics on 11 Nov 2026). Records carry non-target
+topics too — `fin.bank` on a bank, `role.pol` on a politician — and they reach
+the OpenSanctions summary and finding beside the target ones, and OpenAleph's
+archive-matches list. Until the raw-slugs ticket (10 Nov 2026) only the
+targets were labelled and the rest read "fin bank" and "role pol".
+`tests/test_topic_labels.py` pins the whole list offline and, in the weekly
+live-smoke run, against the live model, so a new upstream topic fails a build
+rather than reaching a reader as a slug. The wording is OpenCheck's (lower
+case, British spelling, a full phrase for "PEP"), not upstream's display name.
 """
 
 from __future__ import annotations
@@ -89,11 +97,61 @@ TOPIC_LABEL: dict[str, str] = {
     "poi": "person of interest",
     # A designated place (FtM ``Territory``), not a party.
     "geo.risk": "high-risk area",
-    # Beyond OpenSanctions' target topics: FtM tags OpenAleph collections
-    # carry, read by the same eyes on the archive-matches list.
+    # Beyond OpenSanctions' target topics: the rest of FtM's topic list.
+    # Records carry these beside the target topics, and OpenAleph collections
+    # carry them too.
     "asset.frozen": "frozen asset",
     "role.diplo": "diplomatic service",
     "role.judge": "judiciary",
+    # Corporate form and listing. The register's own words for what the record is.
+    "corp.offshore": "offshore company",
+    "corp.public": "public listed company",
+    "corp.shell": "shell company",
+    # Further crime categories, bare nouns like the ones above.
+    "crime.cyber": "cybercrime",
+    "crime.env": "environmental violations",
+    "crime.traffick.drug": "drug trafficking",
+    "crime.traffick.human": "human trafficking",
+    "forced.labor": "forced labour",
+    # Financial services. "fin.adivsor" is spelled as upstream publishes it.
+    "fin": "financial services",
+    "fin.adivsor": "financial advisor",
+    "fin.bank": "bank",
+    "fin.fund": "fund",
+    # Government and the state.
+    "gov": "government",
+    "gov.admin": "civil service",
+    "gov.executive": "executive branch of government",
+    "gov.financial": "central banking and financial integrity",
+    "gov.head": "head of government or state",
+    "gov.igo": "intergovernmental organisation",
+    "gov.judicial": "judicial branch of government",
+    "gov.legislative": "legislative branch of government",
+    "gov.muni": "municipal government",
+    "gov.national": "national government",
+    "gov.religion": "religious leadership",
+    "gov.security": "security services",
+    "gov.soe": "state-owned enterprise",
+    "gov.state": "state government",
+    "mil": "military",
+    # Maritime activity.
+    "mare.sts": "ship-to-ship transfer",
+    # Political and civil-society organisations.
+    "pol.party": "political party",
+    "pol.union": "union",
+    "rel": "religion",
+    # Occupations and roles. A PEP's level keeps the full phrase.
+    "role.acct": "accountant",
+    "role.act": "activist",
+    "role.civil": "civil servant",
+    "role.journo": "journalist",
+    "role.lawyer": "lawyer",
+    "role.lobby": "lobbyist",
+    "role.pep.frmr": "former politically exposed person",
+    "role.pep.intl": "international politically exposed person",
+    "role.pep.natl": "national politically exposed person",
+    "role.pol": "politician",
+    "role.spy": "spy",
 }
 
 
@@ -102,8 +160,9 @@ def topic_label(topic: str) -> str:
 
     An unmapped slug is prettified rather than hidden: that a record was
     tagged is information even when this build does not know the tag's name.
-    The canary makes the fallback unreachable for anything OpenSanctions
-    publishes, so it only ever fires for a topic arriving from somewhere else.
+    The pinned topic list makes the fallback unreachable for anything
+    OpenSanctions publishes, so it only ever fires for a topic that arrived
+    after the last check (the weekly live test reports it).
     """
     label = TOPIC_LABEL.get(topic)
     if label:

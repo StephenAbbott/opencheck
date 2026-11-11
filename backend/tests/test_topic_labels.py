@@ -13,6 +13,10 @@ to the prettifier and were never noticed.
 
 Three things are pinned here:
 
+* every topic in FollowTheMoney's topic type, as OpenSanctions publishes it,
+  has a label — not only the targets: "fin bank" and "role pol" reached
+  production on 10 Nov 2026 because only the targets were labelled — and the
+  frozen list below matches the live model (weekly, in live-smoke);
 * every topic OpenSanctions publishes as a target has a label — so a new
   upstream topic fails the build rather than reaching a reader as a slug, the
   same way `test_opensanctions_live` already fails when one is fetched but not
@@ -29,11 +33,102 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import httpx
+import pytest
+
 from opencheck.sources.opensanctions import _RISK_TOPICS
 from opencheck.topics import TOPIC_LABEL, topic_label, topic_list
 
 REPO = Path(__file__).resolve().parents[2]
 _VOCAB = REPO / "frontend" / "src" / "lib" / "vocab.ts"
+
+
+#: Every key of ``model.types.topic.values`` in
+#: https://data.opensanctions.org/meta/model.json, read on 11 Nov 2026
+#: (75 topics). Upstream's own spelling, typo included (``fin.adivsor``).
+#: When the live test below goes red, add or remove the topic here, label it
+#: in ``opencheck/topics.py`` and ``vocab.ts`` in the same commit.
+_PUBLISHED_TOPICS = frozenset(
+    {
+        "asset.frozen",
+        "corp.clone",
+        "corp.disqual",
+        "corp.offshore",
+        "corp.public",
+        "corp.shell",
+        "crime",
+        "crime.boss",
+        "crime.cyber",
+        "crime.env",
+        "crime.fin",
+        "crime.fraud",
+        "crime.terror",
+        "crime.theft",
+        "crime.traffick",
+        "crime.traffick.drug",
+        "crime.traffick.human",
+        "crime.war",
+        "debarment",
+        "export.control",
+        "export.control.linked",
+        "export.risk",
+        "fin",
+        "fin.adivsor",
+        "fin.bank",
+        "fin.fund",
+        "forced.labor",
+        "geo.risk",
+        "gov",
+        "gov.admin",
+        "gov.executive",
+        "gov.financial",
+        "gov.head",
+        "gov.igo",
+        "gov.judicial",
+        "gov.legislative",
+        "gov.muni",
+        "gov.national",
+        "gov.religion",
+        "gov.security",
+        "gov.soe",
+        "gov.state",
+        "invest.ban",
+        "invest.risk",
+        "mare.detained",
+        "mare.shadow",
+        "mare.sts",
+        "mil",
+        "poi",
+        "pol.party",
+        "pol.union",
+        "reg.action",
+        "reg.warn",
+        "rel",
+        "role.acct",
+        "role.act",
+        "role.civil",
+        "role.diplo",
+        "role.journo",
+        "role.judge",
+        "role.lawyer",
+        "role.lobby",
+        "role.oligarch",
+        "role.pep",
+        "role.pep.frmr",
+        "role.pep.intl",
+        "role.pep.natl",
+        "role.pol",
+        "role.rca",
+        "role.spy",
+        "sanction",
+        "sanction.control",
+        "sanction.counter",
+        "sanction.linked",
+        "wanted",
+    }
+)
+
+_MODEL_URL = "https://data.opensanctions.org/meta/model.json"
 
 
 def _frontend_map() -> dict[str, str]:
@@ -81,6 +176,36 @@ def test_every_published_topic_has_a_label() -> None:
 
     missing_ts = sorted(set(_RISK_TOPICS) - set(_frontend_map()))
     assert not missing_ts, f"vocab.ts OPENALEPH_TOPIC is missing: {missing_ts}"
+
+
+def test_every_followthemoney_topic_has_a_label() -> None:
+    """Not only the targets: a bank's record carries ``fin.bank`` beside its
+    risk topics, and the summary line prints both."""
+    missing = sorted(_PUBLISHED_TOPICS - set(TOPIC_LABEL))
+    assert not missing, f"opencheck.topics.TOPIC_LABEL is missing: {missing}"
+    unknown = sorted(set(TOPIC_LABEL) - _PUBLISHED_TOPICS)
+    assert not unknown, f"labelled but not a published topic: {unknown}"
+    assert set(_RISK_TOPICS) <= _PUBLISHED_TOPICS
+
+
+@pytest.mark.live
+def test_the_published_topic_list_matches_the_live_model() -> None:
+    """Drift against the LIVE model, the target_topics canary's pattern.
+
+    The offline test above compares two hand-kept lists, so it cannot see a
+    topic OpenSanctions adds. This reads ``model.types.topic.values`` — schema
+    metadata, key-free, no listed entity in it — and runs in the weekly
+    live-smoke workflow.
+    """
+    resp = httpx.get(_MODEL_URL, follow_redirects=True, timeout=30.0)
+    resp.raise_for_status()
+    live = set(resp.json()["model"]["types"]["topic"]["values"])
+    assert live, "model.json carried no topic values"
+    added = sorted(live - _PUBLISHED_TOPICS)
+    removed = sorted(_PUBLISHED_TOPICS - live)
+    assert not added and not removed, (
+        f"FollowTheMoney topics moved: added {added}, removed {removed}"
+    )
 
 
 def test_the_two_maps_agree() -> None:
