@@ -369,12 +369,33 @@ def test_integrated_ownership_says_when_it_rests_on_undated_holdings() -> None:
     bp = next(h for h in payload["holders"] if h["name"] == "BP Holder Ltd")
     (fig,) = bp["figures"]
     assert fig["undated"] is True
-    assert io.UNDATED_NOTE in io.report_footer(payload)
+    assert f"* {io.UNDATED_NOTE}" in io.report_footer(payload)
 
     dated, subject = _io_case(dated=True)
     payload = io.compute(dated, [subject], "2026-11-11")
     assert "undated_note" not in payload
     assert not any(f.get("undated") for h in payload["holders"] for f in h["figures"])
+
+
+def test_an_undated_figure_is_marked_and_points_to_the_note() -> None:
+    """Each undated figure carries the mark, and the note under the table
+    opens with it, so a reader of a mixed table knows which rows it means."""
+    from opencheck import integrated_ownership as io
+    from opencheck.reporting import markdown_report
+
+    bods, subject = _io_case(dated=False)
+    payload = io.compute(bods, [subject], "2026-11-11")
+    bp_rows = [r for r in io.report_rows(payload) if r[0] == "BP Holder Ltd"]
+    assert bp_rows and all(r[1].endswith(io.UNDATED_MARK) for r in bp_rows)
+    assert io.undated_note_line(io.UNDATED_NOTE) in io.report_footer(payload)
+
+    md = "\n".join(markdown_report._integrated_ownership({"integrated_ownership": payload}))
+    assert "%\\*" in md
+    assert f"_\\* {io.UNDATED_NOTE}_" in md
+
+    dated, subject = _io_case(dated=True)
+    payload = io.compute(dated, [subject], "2026-11-11")
+    assert not any(r[1].endswith(io.UNDATED_MARK) for r in io.report_rows(payload))
 
 
 def test_a_give_back_is_not_called_a_route() -> None:
@@ -397,3 +418,4 @@ def test_the_frontend_integrated_note_matches() -> None:
 
     ts = (_FRONTEND.parent / "integratedOwnership.ts").read_text(encoding="utf-8")
     assert f'"{io.UNDATED_NOTE}"' in " ".join(ts.split())
+    assert f'export const UNDATED_MARK = "{io.UNDATED_MARK}";' in ts
