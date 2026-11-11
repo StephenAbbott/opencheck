@@ -26,6 +26,8 @@
  * month names, date pattern, closed status or `<=` drift from the backend's.
  */
 
+import { UNDATED_LABEL } from "./undated";
+
 export interface EndableInterest {
   endDate?: string;
 }
@@ -117,9 +119,19 @@ export function endedPhrase(endedOn?: string): string {
  * interest label of its own already reads as the phrase alone, so the phrase
  * is not said twice.
  */
-export function interestCellText(label: string | undefined, ended: boolean, endedOn?: string): string {
+export function interestCellText(
+  label: string | undefined,
+  ended: boolean,
+  endedOn?: string,
+  undated = false
+): string {
   const first = (label ?? "").split("\n")[0];
-  if (!ended) return first;
+  if (!ended) {
+    // The undated-relationships ticket: the canvas label's "no date given"
+    // line, said in the tree's one line.
+    if (!undated) return first;
+    return !first || first === UNDATED_LABEL ? UNDATED_LABEL : `${first} · ${UNDATED_LABEL}`;
+  }
   const phrase = endedPhrase(endedOn);
   return !first || first === phrase ? phrase : `${first} · ${phrase}`;
 }

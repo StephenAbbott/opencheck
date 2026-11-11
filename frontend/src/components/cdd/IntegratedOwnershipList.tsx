@@ -88,6 +88,11 @@ export function IntegratedOwnershipList({
         {payload?.description ?? METHOD_DESCRIPTION}
         {payload?.as_of && readOnly ? ` Computed from the sources as they stood on ${payload.as_of}.` : ""}
       </p>
+      {payload?.undated_note && (
+        <p data-testid="integrated-ownership-undated" className="mt-2 text-oo-meta text-oo-ink leading-[1.6] max-w-[82ch]">
+          {payload.undated_note}
+        </p>
+      )}
       {sanctionsNote && (
         <p data-testid="sanctions-ownership-note" className="mt-2 text-oo-meta text-oo-ink leading-[1.6] max-w-[82ch]">
           {sanctionsNote}

@@ -35,6 +35,7 @@ from . import (
     pipelinestats as _pipelinestats,
 )
 from .bods import unique_statements
+from .bods import republished as _republished
 from .bods.declaration import apply_network_subjects
 from .config import get_settings
 from .knowability import statement_for as knowability_statement_for
@@ -538,6 +539,7 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
     knowability: dict[str, Any] | None = None
     knowability_chain: dict[str, Any] | None = None
     declaration_subjects: dict[str, str] = {}
+    republished_folded: dict[str, Any] | None = None
     integrated: dict[str, Any] | None = None
     disclosure_status: dict[str, Any] | None = None
     listing: dict[str, Any] | None = None
@@ -597,6 +599,10 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
             # statements name that source's own subject record. Absent from
             # runs recorded before it, which keep the first pass.
             declaration_subjects = payload.get("subjects") or {}
+        elif event == "republished_folded":
+            # bods.republished: OpenSanctions' copy of GEM's tracker folded
+            # into GEM's own read. Absent from runs recorded before it.
+            republished_folded = payload
         elif event == "integrated_ownership":
             integrated = payload
         elif event == "disclosure_status":
@@ -640,7 +646,12 @@ def fold_lookup_events(lei: str, events: Iterable[LookupEvent]) -> LookupRespons
         bods=_disclosure.apply_to_bods(
             _integrated_ownership.apply_to_bods(
                 _listing.apply_to_bods(
-                    apply_network_subjects(unique_statements(bods_all), declaration_subjects),
+                    _republished.apply(
+                        apply_network_subjects(
+                            unique_statements(bods_all), declaration_subjects
+                        ),
+                        republished_folded,
+                    ),
                     norm_lei,
                     listing,
                 ),

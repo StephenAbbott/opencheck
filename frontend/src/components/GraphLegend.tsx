@@ -44,6 +44,7 @@ export default function GraphLegend({
   hasCollapsed,
   hasIdentityVerified = false,
   hasEnded = false,
+  hasUndated = false,
   hasClusters = false,
 }: {
   edgeCategories: Iterable<string>;
@@ -52,6 +53,7 @@ export default function GraphLegend({
   hasCollapsed: boolean;
   hasIdentityVerified?: boolean;
   hasEnded?: boolean;
+  hasUndated?: boolean;
   hasClusters?: boolean;
 }) {
   const legend = useMemo(
@@ -63,10 +65,11 @@ export default function GraphLegend({
         hasCollapsed,
         hasIdentityVerified,
         hasEnded,
+        hasUndated,
         hasClusters,
         signalName,
       }),
-    [edgeCategories, signalsByNode, hasPeople, hasCollapsed, hasIdentityVerified, hasEnded, hasClusters]
+    [edgeCategories, signalsByNode, hasPeople, hasCollapsed, hasIdentityVerified, hasEnded, hasUndated, hasClusters]
   );
   // Signals can run to a dozen entries on a big FullCheck network, so they sit
   // behind a count the reader can close. They start OPEN (Phase 243): shut, a

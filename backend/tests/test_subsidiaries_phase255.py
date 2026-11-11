@@ -19,6 +19,7 @@ import pytest
 
 from opencheck import subsidiaries as subs
 from opencheck.bods import map_gleif_subsidiaries
+from opencheck.bods.undated import UNDATED_NOTE
 from opencheck.bods.annotations import (
     dropped_partial_date,
     person_identifiers_from_annotations,
@@ -154,7 +155,11 @@ def test_a_direct_parent_outside_the_network_is_named_not_drawn():
     (rel,) = [r for r in _rels(stmts) if r["recordDetails"]["subject"] == stranded]
     notes = [a["description"] for a in rel.get("annotations") or []]
     assert any(BG_GROUP in n and "SHELL PLC" in n for n in notes)
-    assert all(a["statementPointerTarget"] == "/recordDetails" for a in rel["annotations"])
+    assert all(
+        a["statementPointerTarget"] == "/recordDetails"
+        for a in rel["annotations"]
+        if a["description"] != UNDATED_NOTE
+    )
 
 
 def test_dates_come_from_the_relationship_record():

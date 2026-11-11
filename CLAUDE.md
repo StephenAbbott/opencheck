@@ -5280,3 +5280,25 @@ otherwise:
   api-enumerations' `exemption_descriptions.yml` in `tests/fixtures/companies_house/`),
   and the card's finding says it ("no person with significant control named;
   exempt from the PSC register, with shares on a UK regulated market").
+
+## Undated relationships, and OpenSanctions' copy of GEM's tracker (the undated-relationships ticket, 11 Nov 2026)
+
+`bods/undated.py` + `frontend/src/lib/undated.ts`, `bods/republished.py`; reader's
+page `docs/dates.md` § "Relationships no source dates". Stephen's decisions:
+
+- **Keep undated relationships and say so; never drop them.** Undated = a
+  relationship, not closed, with an ownership or control interest (roles and
+  officer-marked interests never count) and no interest carrying `startDate`
+  or `endDate`. `content_addressed` adds or removes one `commenting` note
+  (`UNDATED_NOTE`) as each OpenCheck statement leaves a mapper; no mapper
+  calls it. The canvas, the tree and the PDF diagram add "no date given" to a
+  current edge's label; `test_undated_relationships.py` parses the TypeScript.
+- **A GEM-republished OpenSanctions edge** (its own `datasets` only
+  `gem_energy_ownership`) carries `source.assertedBy` Global Energy Monitor
+  and a note. When GEM's own read (`climatetrace`) names an owner of the
+  subject, every such edge about the subject is dropped from the lookup
+  response by the `republished_folded` event (LEI pipeline only); per-source
+  views keep the labelled edge.
+- **Integrated ownership keeps undated figures** with `undated_note` on the
+  payload and `undated` per figure in MCP; a holder credited the company's own
+  shares is never routed "through" the subsidiary holding them.
