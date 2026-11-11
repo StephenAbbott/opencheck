@@ -946,6 +946,11 @@ def _build_gleif_hit(ctx: _LookupCtx, gleif_bundle: dict[str, Any]) -> SourceHit
     # corporation it resolves to; GLEIF asserts nothing here.
     if str(identifiers.get("ca_corp_id") or "").startswith("BN"):
         del identifiers["ca_corp_id"]
+    # The same for an IGJ number GLEIF filed under RA000010 (the Argentina
+    # wiring): ``IGJ:<n>`` is a dispatch key, not a CUIT; the register hit
+    # asserts the CUIT the IGJ entry carries, if any.
+    if str(identifiers.get("ar_cuit") or "").startswith("IGJ:"):
+        del identifiers["ar_cuit"]
     return _hit(
         "gleif", ctx.lei,
         name=ctx.legal_name or f"LEI {ctx.lei}",

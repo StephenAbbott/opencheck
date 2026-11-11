@@ -76,6 +76,8 @@ from .cyprus_drcor import CY_DRCOR_RA_CODE as _CY_DRCOR_RA_CODE, he_number_spell
 from .rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
 from .ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
 from .edr_ukraine import UA_RA_CODES as _UA_RA_CODES
+from .registro_sociedades_argentina import AR_RA_CODES as _AR_RA_CODES
+from .registro_sociedades_argentina import cuit_spellings as _cuit_spellings
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 from .cvr_denmark import DK_CVR_RA_CODE as _DK_CVR_RA_CODE, normalise_cvr as _normalise_cvr
 
@@ -1282,6 +1284,10 @@ class GleifAdapter(SourceAdapter):
         elif ra_code in _UA_RA_CODES:
             # Three Ukrainian authorities file the EDRPOU (the French shape).
             ra_codes = tuple(sorted(_UA_RA_CODES))
+        elif ra_code in _AR_RA_CODES:
+            # Three Argentine authorities file the CUIT, bare or hyphenated.
+            ra_codes = tuple(sorted(_AR_RA_CODES))
+            values = _cuit_spellings(local_id)
         elif ra_code == _BCE_RA_CODE:
             # GLEIF files the Belgian number dotted; the picker asked for digits.
             values = _enterprise_number_spellings(local_id)

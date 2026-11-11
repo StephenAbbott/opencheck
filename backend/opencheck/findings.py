@@ -2152,6 +2152,53 @@ def finding_ica_israel(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence([lead, sub_clause, form, violating_clause, report_clause])
 
 
+def finding_registro_sociedades_argentina(bundle: dict[str, Any]) -> str | None:
+    """What Argentina's Registro Nacional de Sociedades and the IGJ say: the
+    founding date or the IGJ's removal, the legal form, how many people the
+    IGJ filings name and the latest balance sheet (the Argentina wiring,
+    11 Nov 2026).
+
+    * **Never "active".** The RNS publishes no status, and the IGJ marks only
+      removed entries; the lead is the founding date unless the IGJ removed
+      the entry.
+    * **People are a count with its limit said** (decision B): the IGJ file
+      only grows and gives no dates, so the count is of everyone ever named.
+    * Deliberately **not** said: shareholders or beneficial owners. Neither
+      dataset publishes them for any company.
+    """
+    from .sources.registro_sociedades_argentina import form_label
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        if bundle.get("not_found_reason") == "name_mismatch":
+            return "The IGJ entry under the number GLEIF files names another entity, so it was not used."
+        return "Not in the Registro Nacional de Sociedades or the IGJ register as indexed."
+    rns = bundle.get("rns") or {}
+    igj = bundle.get("igj") or {}
+    cls = igj.get("baja_class")
+    founded = human_date(rns.get("founded"))
+    if cls == "terminal":
+        lead = "Removed from the IGJ register"
+    elif cls == "moved":
+        lead = "Moved from the IGJ to another jurisdiction"
+    elif founded:
+        lead = f"Founded {founded}"
+    elif igj:
+        lead = "On the IGJ register"
+    else:
+        lead = "On the Registro Nacional de Sociedades"
+    form = form_label(rns.get("form")) or ((form_label(igj.get("form")) or "").lower() or None)
+    people = int(igj.get("people_named") or 0)
+    people_clause = (
+        f"{people} {'person' if people == 1 else 'people'} named in IGJ filings over time"
+        if people else None
+    )
+    balance = human_date(igj.get("last_balance"))
+    balance_clause = f"latest balance sheet for {balance}" if balance else None
+    return clauses_to_sentence([lead, form, people_clause, balance_clause])
+
+
 def finding_corporations_canada(bundle: dict[str, Any]) -> str | None:
     """What Corporations Canada says: the status in the register's own words
     (dated where the API dates a dissolution), the governing Act, how many

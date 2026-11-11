@@ -953,6 +953,47 @@ def _bh_ica_israel(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_registro_sociedades_argentina(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Argentina's RNS + IGJ index (the Argentina wiring,
+    11 Nov 2026).
+
+    * **A record.** Asserts the CUIT the register published (``ar_cuit``, 11
+      digits — the key GLEIF's hit carries too). An IGJ entry reached by its
+      own number and holding no CUIT asserts nothing.
+    * **Not in the index, or an IGJ number naming another entity.** A note
+      card: the row sentence says which, nothing is asserted or degraded.
+    """
+    from ..findings import finding_registro_sociedades_argentina
+    from ..identifiers import format_cuit
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "registro_sociedades_argentina", local_id,
+            name=ctx.legal_name or "",
+            summary=(
+                f"AR {local_id} · names another entity"
+                if r.get("not_found_reason") == "name_mismatch"
+                else f"AR {local_id} · not in the index"
+            ),
+            finding=finding_registro_sociedades_argentina(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    cuit = r.get("cuit")
+    igj = r.get("igj") or {}
+    summary = f"AR {format_cuit(cuit)}" if cuit else f"IGJ {igj.get('correlativo')}"
+    if igj.get("baja_class") == "terminal":
+        summary += " · removed by the IGJ"
+    return _hit(
+        "registro_sociedades_argentina", cuit or local_id,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=summary,
+        finding=finding_registro_sociedades_argentina(r),
+        identifiers={"ar_cuit": cuit} if cuit else {},
+        raw=r,
+    )
+
+
 def _bh_sunbiz_florida(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for the Florida Division of Corporations (the Florida
     wiring, 30 Oct 2026).

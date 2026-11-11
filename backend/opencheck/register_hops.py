@@ -119,6 +119,19 @@ def hop_schemes() -> dict[str, RegisterHop]:
             CO_RUE_SCHEME, "rues_colombia", normalise_rues_key, True,
             derived_key="co_rues",
         )
+    # ``AR-CUIT`` is value-schemed too (the Argentina wiring): three
+    # Argentine authorities file the CUIT, and RA000010 an IGJ number for a
+    # few records, so only a check-digit-valid CUIT is written ``AR-CUIT``.
+    if "registro_sociedades_argentina" in REGISTRY:
+        from .sources.registro_sociedades_argentina import (
+            AR_CUIT_SCHEME,
+            normalise_cuit_key,
+        )
+
+        hops[AR_CUIT_SCHEME] = RegisterHop(
+            AR_CUIT_SCHEME, "registro_sociedades_argentina", normalise_cuit_key, True,
+            derived_key="ar_cuit",
+        )
     # ``REG-<country>`` is the mappers' fallback scheme for "a number on that
     # country's company register" when the filing does not name the register
     # — the Companies House mapper emits ``REG-GB`` for a PSC whose
