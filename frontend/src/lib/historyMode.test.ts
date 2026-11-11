@@ -20,12 +20,14 @@ import {
   boardUncheckedNotice,
   buildTimelineRows,
   corroboratedCount,
+  dateText,
   datedSpan,
   HISTORY_SOURCES,
   historyDegradedNotice,
   historySentence,
   registerReadNotes,
   historySourceLabel,
+  sireneYearOnly,
   filingsTruncatedNotice,
   noiseEventsOf,
   recordUrl,
@@ -619,5 +621,34 @@ describe("registerReadNotes", () => {
     // Without the day the note still stands, and claims no date.
     const bare = registerReadNotes({ ...RESP, sources: ["ica_israel"] });
     expect(bare[0]).not.toMatch(/copy reaches back/);
+  });
+});
+
+describe("Sirene history (the Sirene history ticket)", () => {
+  it("links a Sirene row to the Annuaire des entreprises by SIREN", () => {
+    expect(recordUrl("sirene", "LEI", { sirene: "542051180" })).toBe(
+      "https://annuaire-entreprises.data.gouv.fr/entreprise/542051180",
+    );
+    expect(recordUrl("sirene", "LEI", {})).toBeNull();
+    expect(recordUrl("sirene", "LEI", { sirene: "54205118" })).toBeNull();
+    expect(historySourceLabel("sirene")).toBe("Sirene (FR)");
+  });
+
+  it("gives an INSEE processing date as the year it was recorded, never a day", () => {
+    expect(sireneYearOnly("recorded", ["sirene"])).toBe(true);
+    expect(sireneYearOnly("recorded", ["gleif", "sirene"])).toBe(false);
+    expect(sireneYearOnly("effective", ["sirene"])).toBe(false);
+    expect(dateText("2003-01-01", "recorded", ["sirene"])).toBe("recorded by INSEE in 2003");
+    expect(dateText("2021-05-28", "effective", ["sirene"])).toBe("2021-05-28");
+    expect(dateText(null, "recorded", ["sirene"])).toBeNull();
+    expect(basisLabel("recorded", ["sirene"])).toBe("");
+    expect(basisLabel("recorded", ["gleif", "sirene"])).toBe("as recorded by GLEIF");
+  });
+
+  it("says what Sirene's history is read from", () => {
+    const notes = registerReadNotes({ ...RESP, sources: ["sirene"] });
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain("NAF");
+    expect(notes[0]).toContain("not the day");
   });
 });
