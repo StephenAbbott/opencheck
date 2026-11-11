@@ -127,9 +127,9 @@ def test_unknown_jurisdiction_is_a_stated_absence_not_silence() -> None:
 
 
 def test_unknown_jurisdiction_is_named_when_pycountry_knows_it() -> None:
-    st = statement_for("AR", _TODAY)  # Argentina has no row in v1
+    st = statement_for("UY", _TODAY)  # Uruguay has no row
     assert st.stated_absence is True
-    assert "Argentina" in st.sentence or "AR" in st.sentence
+    assert "Uruguay" in st.sentence or "UY" in st.sentence
 
 
 def test_a_subdivision_falls_back_to_its_country() -> None:
