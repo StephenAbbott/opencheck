@@ -6,6 +6,8 @@ import {
   entryLabel,
   entryTone,
   notCoveredLine,
+  otherTabLine,
+  type DisclosureStatusPayload,
   type SourceDisclosure,
 } from "./disclosureStatus";
 
@@ -66,5 +68,77 @@ describe("disclosure status", () => {
     );
     expect(line).toBe("Not ownership sources: OpenSanctions, TED.");
     expect(notCoveredLine(null, (id) => id)).toBeNull();
+  });
+});
+
+// Shell plc in production (4 Nov 2026): Climate TRACE is an ownership source
+// whose card is on the Climate & ESG tab, not QuickCheck.
+const shell: DisclosureStatusPayload = {
+  as_of: "2026-11-04",
+  not_covered: ["opensanctions", "eiti"],
+  sources: {
+    companies_house: {
+      values: ["exempt"],
+      ownership_source: true,
+      entries: [{ value: "exempt", covers: "beneficial_owners" }],
+    },
+    climatetrace: {
+      values: ["declared"],
+      ownership_source: true,
+      entries: [{ value: "declared", covers: "shareholders", count: 1 }],
+    },
+    eiti: {
+      values: ["not_covered"],
+      ownership_source: false,
+      entries: [{ value: "not_covered", covers: null }],
+    },
+  },
+};
+const names: Record<string, string> = {
+  climatetrace: "Global Energy Monitor / Climate TRACE",
+  companies_house: "UK Companies House",
+  eiti: "EITI",
+};
+const label = (id: string) => names[id] ?? id;
+
+describe("ownership sources on another tab", () => {
+  it("names Climate TRACE's value on QuickCheck", () => {
+    expect(otherTabLine(shell, new Set(["climatetrace", "eiti"]), label)).toBe(
+      "On the Climate & ESG tab: Global Energy Monitor / Climate TRACE — Shareholders: Declared (1).",
+    );
+  });
+
+  it("says 'No record of the company' too", () => {
+    const lilly: DisclosureStatusPayload = {
+      ...shell,
+      sources: {
+        climatetrace: {
+          values: ["no_record"],
+          ownership_source: true,
+          entries: [{ value: "no_record", covers: null }],
+        },
+      },
+    };
+    expect(otherTabLine(lilly, new Set(["climatetrace"]), label)).toBe(
+      "On the Climate & ESG tab: Global Energy Monitor / Climate TRACE — No record of the company.",
+    );
+  });
+
+  it("leaves out sources with a card here and sources that publish no owners", () => {
+    expect(otherTabLine(shell, new Set(["eiti"]), label)).toBeNull();
+    expect(otherTabLine(null, new Set(["climatetrace"]), label)).toBeNull();
+  });
+
+  it("drops no ownership source: each is chipped on a QuickCheck card or named on the line", () => {
+    // Whatever is filtered off QuickCheck, every ownership source's answer is
+    // still on QuickCheck — on its card or on this line.
+    for (const offPage of [new Set<string>(), new Set(["climatetrace"]), new Set(["climatetrace", "companies_house"])]) {
+      const line = otherTabLine(shell, offPage, label) ?? "";
+      for (const [id, status] of Object.entries(shell.sources)) {
+        if (!status.ownership_source) continue;
+        const onCard = !offPage.has(id) && chipEntries(status).length > 0;
+        expect(onCard || line.includes(label(id))).toBe(true);
+      }
+    }
   });
 });

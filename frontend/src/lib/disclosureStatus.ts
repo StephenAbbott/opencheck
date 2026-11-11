@@ -122,3 +122,34 @@ export function notCoveredLine(
   if (ids.length === 0) return null;
   return `Not ownership sources: ${ids.map(label).join(", ")}.`;
 }
+
+/**
+ * The ownership sources whose card is on another tab, with what each said:
+ * "On the Climate & ESG tab: Global Energy Monitor / Climate TRACE —
+ * Shareholders: Declared (1)." — or null.
+ *
+ * QuickCheck is the one place with every ownership source's answer (decision
+ * 2 of the disclosure-status ticket), but QuickCheck's cards leave out the
+ * Climate & ESG sources, and Climate TRACE is an ownership source. Every
+ * entry is said, `no_record` included ("No record of the company"): the line
+ * answers "what does this source say about owners", and silence would read as
+ * a source not asked. `offPageIds` is the set of sources whose card is not on
+ * QuickCheck; `tabLabel` names the tab they are on.
+ */
+export function otherTabLine(
+  payload: DisclosureStatusPayload | null | undefined,
+  offPageIds: ReadonlySet<string>,
+  label: (id: string) => string,
+  tabLabel = "the Climate & ESG tab",
+): string | null {
+  if (!payload) return null;
+  const parts: string[] = [];
+  for (const [id, status] of Object.entries(payload.sources)) {
+    if (!offPageIds.has(id) || !status.ownership_source) continue;
+    const entries = status.entries.filter((e) => e.value !== "not_covered");
+    if (entries.length === 0) continue;
+    parts.push(`${label(id)} — ${entries.map(entryLabel).join("; ")}`);
+  }
+  if (parts.length === 0) return null;
+  return `On ${tabLabel}: ${parts.join(". ")}.`;
+}
