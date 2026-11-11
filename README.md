@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 497** — Argentina is now a source, from an index of the national register of companies (RNS) joined to the City of Buenos Aires IGJ's entity file, reached from the CUIT GLEIF files.
+**Latest: Phase 498** — A new Sirene source covers French associations and foundations the business register does not hold, with their record in the Répertoire national des associations.
 
 → [Full development history](docs/status.md)
 
