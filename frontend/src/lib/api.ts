@@ -1056,6 +1056,9 @@ export interface HistoryResponse {
    *  read. False means it was not (no key, not a GB company, or the register
    *  refused), so an empty board stream is unchecked rather than empty. */
   officers_available?: boolean;
+  /** `{source_id: ISO day}` — for a register whose change log keeps a limited
+   *  window (Israel: one year), the earliest day OpenCheck's kept copy reaches. */
+  registers_kept_since?: Record<string, string>;
 }
 
 /** Fetch the merged change history for an LEI — every register OpenCheck

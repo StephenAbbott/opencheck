@@ -149,6 +149,7 @@ def _tiers(
     gaps: list[dict[str, Any]] | None = None,
     register_gaps: list[dict[str, Any]] | None = None,
     psc_gaps: list[dict[str, Any]] | None = None,
+    il_gaps: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """What the tiers are doing — for the page's honesty line."""
     from .. import entity_pages as ep
@@ -159,6 +160,12 @@ def _tiers(
         ee_cut = ar.read_meta().get("cut") or None
     except Exception:  # noqa: BLE001 — no index is a state
         ee_cut = None
+    from ..sources import ica_israel
+
+    try:
+        il_cut = ica_israel.read_meta().get("cut") or None
+    except Exception:  # noqa: BLE001 — no index is a state
+        il_cut = None
     stream = psc_stream.state()
     watcher = wl.state()
 
@@ -193,6 +200,15 @@ def _tiers(
             "last_cut": wl.state().get("ee_last_cut"),
             "waiting": bool(wl.state().get("ee_waiting")),
             "gaps": register_gaps or [],
+        },
+        # The second register: the Israel Corporations Authority's index
+        # (11 Nov 2026) — the same shape as Estonia's.
+        "register_il": {
+            "available": il_cut is not None,
+            "index_cut": il_cut,
+            "last_cut": wl.state().get("il_last_cut"),
+            "waiting": bool(wl.state().get("il_waiting")),
+            "gaps": il_gaps or [],
         },
         # pKYC stage E, Route 1: the Companies House PSC stream — whether the
         # consumer is on, connected and behind (its own counters are on
@@ -274,7 +290,10 @@ def _list_payload(store: wl.WatchlistStore, th: str, token: str, request: Reques
             "total_watched": counts["total"],
         },
         "feed_url": f"{_public_api_base(request)}/watch/{token}.atom",
-        "tiers": _tiers(wl.os_gaps(store)[-3:], wl.ariregister_gaps(store)[-3:], psc_module.psc_gaps(store)[-3:]),
+        "tiers": _tiers(
+            wl.os_gaps(store)[-3:], wl.ariregister_gaps(store)[-3:], psc_module.psc_gaps(store)[-3:],
+            wl.ica_israel_gaps(store)[-3:],
+        ),
     }
 
 
@@ -806,7 +825,7 @@ TIER_SENTENCE = {
     wl.TIER_OPENSANCTIONS: "OpenSanctions published a change naming this entity",
     wl.TIER_MANUAL: "Re-checked on request",
     wl.TIER_CATCHUP: "Re-checked to catch up on OpenSanctions versions the watcher could not read",
-    wl.TIER_REGISTER: "The Estonian e-Business Register recorded a change to this company",
+    wl.TIER_REGISTER: "A national register recorded a change to this company",
     wl.TIER_REVIEW: review_module.TIER_REVIEW_SENTENCE,
     wl.TIER_PSC: "Companies House recorded a change to this company's people with significant control",
 }
@@ -821,9 +840,23 @@ def _days_words(cuts: list[str]) -> str:
     return f"its open data of {', '.join(cuts[:-1])} and {cuts[-1]}"
 
 
+#: How the feed names each register the register tier reads, and its number.
+REGISTER_NAMES: dict[str, tuple[str, str]] = {
+    "ariregister": ("The Estonian e-Business Register", "registry code"),
+    "ica_israel": ("The Israel Corporations Authority", "corporate number"),
+}
+
+
 def register_sentence(trig: dict[str, Any]) -> str:
     """Why a register tier entry exists, in the feed's words."""
     code = trig.get("code")
+    if trig.get("register") == "ica_israel":
+        register, number_words = REGISTER_NAMES["ica_israel"]
+        return (
+            f"{register} recorded a change to this company in {_days_words(trig.get('cuts') or [])}"
+            + (f" ({number_words} {code})" if code else "")
+            + "."
+        )
     return (
         f"The Estonian e-Business Register recorded a change to this company in {_days_words(trig.get('cuts') or [])}"
         + (f" (registry code {code})" if code else "")
@@ -1015,6 +1048,11 @@ def _catch_up_sentence(trig: dict[str, Any]) -> str:
             f"The Companies House PSC stream was rejoined live at {trig.get('before')}, so filings before that "
             "were not seen; every watched UK company was re-checked."
         )
+    if trig.get("reason") == "register_gap" and trig.get("register") == "ica_israel":
+        return (
+            f"The Israel Corporations Authority's changes between {trig.get('after')} and {trig.get('before')} "
+            "could not be read, so every watched Israeli company was re-checked."
+        )
     if trig.get("reason") == "register_gap":
         return (
             f"The Estonian e-Business Register's changes between {trig.get('after')} and {trig.get('before')} "
@@ -1050,6 +1088,8 @@ def _entry_headline(entry: dict[str, Any]) -> str:
     name = entry.get("legal_name") or entry["lei"]
     changes = entry.get("changes") or []
     if not changes and entry["tier"] == wl.TIER_REGISTER:
+        if (entry.get("trigger") or {}).get("register") == "ica_israel":
+            return f"{name}: Israeli register record changed"
         return f"{name}: Estonian register record changed"
     if not changes and entry["tier"] == wl.TIER_PSC:
         return f"{name}: Companies House PSC register changed"
@@ -1141,7 +1181,7 @@ def _entry_content(entry: dict[str, Any]) -> str:
         lines[0] = _catch_up_sentence(trig)
     if entry["tier"] == wl.TIER_REGISTER:
         lines[0] = register_sentence(trig)
-        lines += [" - " + line for line in wl.register_change_lines(trig.get("changes") or {})]
+        lines += [" - " + line for line in wl.register_change_lines_for(trig)]
     if entry["tier"] == wl.TIER_PSC:
         lines[0] = psc_module.psc_sentence(trig)
         lines += [" - " + line for line in psc_module.psc_change_lines(trig)]

@@ -25,6 +25,7 @@ import {
   pscChangeLines,
   registerChangeLines,
   registerTierLine,
+  registerTriggerLines,
   tierChip,
   tierSentence,
   tokenFromLocation,
@@ -303,6 +304,49 @@ describe("catch-up entries (Phase 260)", () => {
     expect(tierChip("opensanctions").tone).toBe("risk");
     expect(tierChip("manual").label).toBe("By hand");
     expect(tierChip("gleif").label).toBe("GLEIF delta");
+  });
+});
+
+describe("register tier entries (Israel)", () => {
+  const entry = (trigger: Record<string, unknown>) =>
+    ({
+      id: 5, lei: "549300ILEXAMPLE000001", legal_name: "PAYPAL ISRAEL LTD", created_at: "2026-11-12T12:00:00Z",
+      tier: "register" as const, trigger: { register: "ica_israel", ...trigger }, changes: [], checked: [], degraded: [],
+    }) as WatchEntry;
+
+  it("names the Corporations Authority and the corporate number", () => {
+    expect(triggerSentence(entry({ code: "516478872", cuts: ["2026-11-12"] }))).toBe(
+      "The Israel Corporations Authority recorded a change to this company in its open data of 2026-11-12 (corporate number 516478872).",
+    );
+    expect(entryHeadline(entry({}))).toBe("PAYPAL ISRAEL LTD: Israeli register record changed");
+  });
+
+  it("words a filing as a filing — shares with no parties — and a field as before and after", () => {
+    expect(
+      registerTriggerLines({
+        register: "ica_israel",
+        changes: {
+          filings: [
+            { code: 3, day: "2026-11-09", group: "shares", label: "Share transfer" },
+            { code: 146, day: "2026-11-10", group: "status", label: "Fast-track voluntary winding-up" },
+          ],
+          status: ["פעילה", "בפירוק מרצון"],
+        },
+      }),
+    ).toEqual([
+      "Share transfer filed with the Corporations Authority on 2026-11-09; parties not published.",
+      "Fast-track voluntary winding-up filed with the Corporations Authority on 2026-11-10.",
+      "Status: פעילה → בפירוק מרצון.",
+    ]);
+  });
+
+  it("says a gap in the Israeli days as Israel's", () => {
+    const gap = {
+      id: 6, lei: "549300ILEXAMPLE000001", legal_name: null, created_at: "2026-11-12T12:00:00Z",
+      tier: "catch_up" as const, trigger: { reason: "register_gap", register: "ica_israel", after: "2026-11-10", before: "2026-11-12" },
+      changes: [], checked: [], degraded: [],
+    } as unknown as WatchEntry;
+    expect(triggerSentence(gap)).toContain("The Israel Corporations Authority's changes between 2026-11-10 and 2026-11-12");
   });
 });
 
