@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 499** — The knowability rows for Argentina and Israel are verified.
+**Latest: Phase 500** — Integrated ownership marks each figure that rests on a holding no source dates, so a reader of a mixed table knows which rows the undated note means.
 
 → [Full development history](docs/status.md)
 
