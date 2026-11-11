@@ -321,6 +321,24 @@ async def _warm_caches_background() -> None:
             "is not announced until present): %s",
             exc,
         )
+    # The Argentina wiring: the RNS + IGJ index, rebuilt by a GitHub workflow
+    # when either dataset changes and downloaded here when absent or changed.
+    # Until it lands ``registro_sociedades_argentina`` is not announced.
+    try:
+        from .sources.registro_sociedades_argentina import (
+            warm_index as warm_ar_sociedades_index,
+        )
+
+        stats = await asyncio.to_thread(warm_ar_sociedades_index)
+        log.info("Argentina RNS + IGJ index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "Argentina RNS + IGJ index warm-up failed (the source is not "
+            "announced until present): %s",
+            exc,
+        )
     # The Florida wiring: the Sunbiz index, rebuilt quarterly and downloaded
     # here when absent or changed. Until it lands ``sunbiz_florida`` is not
     # announced.

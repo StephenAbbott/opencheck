@@ -679,6 +679,29 @@ PROBES: dict[str, SourceProbe] = {
             "Entity data only: no officers, shareholders or partners."
         ),
     ),
+    "registro_sociedades_argentina": _p(
+        tier="index",
+        subject="TOYOTA ARGENTINA S A (AR CUIT 33-67913936-9)",
+        args=("33-67913936-9",),
+        kwargs={"legal_name": "TOYOTA ARGENTINA S A"},
+        expect_fields=("cuit", "name", "rns", "igj"),
+        # SKIP without an index, never allow_empty. warm_bulk_stores.py
+        # downloads the asset first.
+        requires_files=("ar_sociedades.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # The RNS says "monthly" and was last refreshed on 18 Sept 2026
+        # (54 days before the wiring); the workflow rebuilds when either file
+        # changes. A hundred days means the publisher or the workflow stopped.
+        snapshot_max_age_days=100,
+        anchor_lei="9845004CFFA9576DC662",
+        bods_mapper="map_registro_sociedades_argentina",
+        notes=(
+            "The Argentina wiring (11 Nov 2026): an index of the Registro "
+            "Nacional de Sociedades and the IGJ's entities from "
+            "datos.jus.gob.ar (CC BY 4.0). Entity data only: IGJ people are "
+            "counted, never listed; no shareholders are published."
+        ),
+    ),
     "cyprus_drcor": _p(
         tier="index",
         subject="BERN INVESTMENTS LIMITED (CY HE 449149)",

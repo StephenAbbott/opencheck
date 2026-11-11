@@ -740,6 +740,24 @@ class Settings(BaseSettings):
         alias="ESTMA_DB_URL",
     )
 
+    # --- Argentina: Registro Nacional de Sociedades + IGJ (datos.jus.gob.ar) ---
+    # No API key. Both datasets (CC BY 4.0) are downloaded from the Ministry
+    # of Justice's CKAN portal and built into a SQLite index by
+    # scripts/build_ar_sociedades_index.py on GitHub Actions
+    # (.github/workflows/refresh-ar-sociedades-index.yml), shipped as the
+    # ``ar-sociedades-index`` release asset. Unset: the data-root default
+    # (``ar_sociedades.sqlite``).
+    ar_sociedades_db_file: str | None = Field(default=None, alias="AR_SOCIEDADES_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    ar_sociedades_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "ar-sociedades-index/ar_sociedades.sqlite.gz"
+        ),
+        alias="AR_SOCIEDADES_DB_URL",
+    )
+
     # --- Florida Division of Corporations (Sunbiz; Florida public records) ---
     # No API key: the Division's quarterly bulk files (SFTP, published public
     # credentials), built into a SQLite index by

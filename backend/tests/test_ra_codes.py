@@ -75,6 +75,8 @@ VERIFIED: dict[str, str] = {
     "SK": "RA000526",  # Business Register
     "TW": "RA000551",  # Ministry of Economic Affairs — verified 2026-10-29,
     # 504 ISSUED records, every one a bare 8-digit Unified Business Number
+    "AR": "RA000009",  # ARCA — verified 2026-11-11 against the GLEIF AR
+    # records; RNS (RA000010) and CNV (RA000800) are sameNumberAuthorities
     "UA": "RA000567",  # ЄДР — verified 2026-09-14, 238 of 303 UA records; the
     # other two authorities carrying the EDRPOU are sameNumberAuthorities
 }
@@ -250,10 +252,14 @@ def test_frontend_widens_a_french_search_to_every_inpi_authority() -> None:
     from opencheck.sources.edr_ukraine import UA_RA_CODES
 
     declared = _frontend_same_number_authorities()
-    assert set(declared) == {"FR", "UA"}, "a new sameNumberAuthorities entry needs a test"
+    assert set(declared) == {"FR", "UA", "AR"}, "a new sameNumberAuthorities entry needs a test"
     assert {RA_BY_COUNTRY["FR"], *declared["FR"]} == set(INPI_RA_CODES)
     # Ukraine (the EDR wiring): three authorities file the EDRPOU.
     assert {RA_BY_COUNTRY["UA"], *declared["UA"]} == set(UA_RA_CODES)
+    # Argentina (the Argentina wiring): ARCA, the RNS and the CNV file the CUIT.
+    from opencheck.sources.registro_sociedades_argentina import AR_RA_CODES
+
+    assert {RA_BY_COUNTRY["AR"], *declared["AR"]} == set(AR_RA_CODES)
 
 
 def test_only_gb_declares_sub_registries() -> None:

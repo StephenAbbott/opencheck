@@ -571,8 +571,8 @@ def test_entity_page_statement_is_a_stated_absence_for_an_unknown_jurisdiction()
 
     from opencheck.entity_pages import knowability_section
 
-    html_ = knowability_section("AR", date(2026, 9, 18))
-    assert "holds no register notes for Argentina" in html_
+    html_ = knowability_section("UY", date(2026, 9, 18))
+    assert "holds no register notes for Uruguay" in html_
     assert "(no register notes held)" in html_
     assert knowability_section(None) == ""
     assert knowability_section("") == ""

@@ -19,7 +19,7 @@ from typing import Any, Iterator
 import pycountry
 
 from ..elf import resolve_elf
-from ..identifiers import colombian_nit
+from ..identifiers import argentine_cuit, colombian_nit, format_cuit
 from . import former_names as _former_names
 from . import gleif_events as _gleif_events
 from . import lifecycle as _lifecycle
@@ -505,6 +505,14 @@ from .mappers.israel import (  # noqa: F401  (re-exported; the Israel wiring)
     _il_address,
     map_ica_israel,
 )
+from .mappers.argentina import (  # noqa: F401  (re-exported; the Argentina wiring)
+    _AR_ADDRESS_UNKNOWN,
+    _AR_SOURCE,
+    _ar_address_text,
+    _ar_fold,
+    _ar_igj_note,
+    map_registro_sociedades_argentina,
+)
 from .mappers.us_fl import (  # noqa: F401  (re-exported; the Florida wiring)
     _FL_SOURCE,
     _fl_address,
@@ -881,9 +889,18 @@ _CO_RA_CODES: frozenset[str] = frozenset(
 CO_RUE_SCHEME = "CO-RUE"
 CO_RUE_SCHEME_NAME = "NIT — Registro Único Empresarial y Social (RUES), Colombia"
 
+#: Argentine registration authorities (the Argentina wiring, 11 Nov 2026):
+#: ARCA (RA000009), the Registro Nacional de Sociedades (RA000010) and the
+#: CNV (RA000800). All three file the CUIT, bare or hyphenated; about 30
+#: RA000010 records file an IGJ number, a provincial number or free text, so
+#: ``AR-CUIT`` is asserted only for a value whose check digit agrees.
+_AR_RA_CODES: frozenset[str] = frozenset({"RA000009", "RA000010", "RA000800"})
+AR_CUIT_SCHEME = "AR-CUIT"
+AR_CUIT_SCHEME_NAME = "CUIT — Clave Única de Identificación Tributaria (Argentina)"
+
 #: RA codes whose scheme is decided by the value, not the code (Phase 280) —
 #: so they are absent from ``_GLEIF_RA_TO_ORG_ID`` on purpose.
-_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES | _CO_RA_CODES
+_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES | _CO_RA_CODES | _AR_RA_CODES
 
 
 def chilean_rut(value: str | None) -> str | None:
@@ -957,6 +974,8 @@ def gleif_registration_scheme(
         return CL_RUT_SCHEME, CL_RUT_SCHEME_NAME
     if ra in _CO_RA_CODES and colombian_nit(registered_as):
         return CO_RUE_SCHEME, CO_RUE_SCHEME_NAME
+    if ra in _AR_RA_CODES and argentine_cuit(registered_as):
+        return AR_CUIT_SCHEME, AR_CUIT_SCHEME_NAME
     if ra in _GLEIF_RA_TO_ORG_ID:
         return _GLEIF_RA_TO_ORG_ID[ra]
     jur = (jurisdiction_code or "").strip().upper()
@@ -1782,6 +1801,11 @@ def _gleif_entity_statement(
             # The same for a NIT (``900.396.759 - 5``, ``9003967595``): one
             # written form, the one the RUES mapper writes.
             registered_as = colombian_nit(registered_as) or registered_as
+        elif org_id_scheme == AR_CUIT_SCHEME:
+            # The same for a CUIT (``30500001735``, ``33-67913936-9``): the
+            # hyphenated form the register mapper writes.
+            cuit = argentine_cuit(registered_as)
+            registered_as = format_cuit(cuit) if cuit else registered_as
         identifiers.append(
             {
                 "id": registered_as,
