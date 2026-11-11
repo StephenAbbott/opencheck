@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 492** — Every OpenSanctions topic now reads in English in summaries and findings, not only the screening targets.
+**Latest: Phase 493** — Climate TRACE's answer about owners now shows on the page, on its Climate & ESG card and in a line under the QuickCheck source cards.
 
 → [Full development history](docs/status.md)
 
