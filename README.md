@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 493** — Climate TRACE's answer about owners now shows on the page, on its Climate & ESG card and in a line under the QuickCheck source cards.
+**Latest: Phase 494** — OpenSanctions shareholdings now carry the start and end dates the source publishes, so ended holdings close instead of reading as current.
 
 → [Full development history](docs/status.md)
 
