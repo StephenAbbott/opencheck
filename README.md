@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 496** — Ownership relationships no source dates now say "no date given" on the graph, in reports and in BODS, and OpenSanctions' copy of Global Energy Monitor's tracker no longer counts as a second source beside GEM.
+**Latest: Phase 497** — Argentina is now a source, from an index of the national register of companies (RNS) joined to the City of Buenos Aires IGJ's entity file, reached from the CUIT GLEIF files.
 
 → [Full development history](docs/status.md)
 
