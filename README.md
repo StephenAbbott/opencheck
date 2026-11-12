@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 500** — Integrated ownership marks each figure that rests on a holding no source dates, so a reader of a mixed table knows which rows the undated note means.
+**Latest: Phase 501** — The History tab now reads INSEE's Sirene history periods, so French renames, legal-form changes, cessations and head-office moves appear for every French SIREN.
 
 → [Full development history](docs/status.md)
 
