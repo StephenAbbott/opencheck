@@ -1,6 +1,0 @@
----
-title: The source-health sweep stops calling one number in two spellings dispatch drift, and passes the Open DART and Sirene keys to its probes.
-readme: The weekly source-health sweep no longer reports Colombia and Argentina as drifted when GLEIF writes their numbers with a check digit or hyphens, and now hands the Open DART and Sirene probes their keys.
-tests: backend +2
----
-The sweep went red on 9, 10 and 12 Nov 2026 with no failing source. Two of its gates tripped. The dispatch-drift check compared the deriver's canonical key ("860002964", "33679139369") with the probe subject as GLEIF files it ("860002964-4", "33-67913936-9"), so rues_colombia and registro_sociedades_argentina read as drifted the day they were wired; the check now normalises the probe subject with the same deriver before comparing, and an argument the deriver refuses is compared as written. And dart_korea and sirene skipped for want of a credential (two, over the limit of one) because the workflow never passed OPENDART_API_KEY or INSEE_SIRENE_API_KEY; both are now in the sweep step's env. The two repository secrets must exist for the skips to clear. The four degraded sources (asp_moldova, corporations_canada, kvk, meip) never fail the run and are unchanged.
