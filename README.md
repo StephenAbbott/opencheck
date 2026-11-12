@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 501** — The History tab now reads INSEE's Sirene history periods, so French renames, legal-form changes, cessations and head-office moves appear for every French SIREN.
+**Latest: Phase 502** — The securities panel names OpenFIGI as a source only when it answered, and /signalstats counts every OpenFIGI request by outcome.
 
 → [Full development history](docs/status.md)
 
