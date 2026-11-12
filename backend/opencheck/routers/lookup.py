@@ -122,6 +122,7 @@ from .hit_builders import (  # noqa: F401
     _bh_dlcp_dc,
     _bh_ny_dos,
     _bh_rues_colombia,
+    _bh_pa_dos,
     _bh_eiti,
     _bh_eiti_bo,
     _bh_eiti_soe,
