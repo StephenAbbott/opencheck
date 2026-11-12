@@ -965,6 +965,21 @@ class Settings(BaseSettings):
         ),
         alias="CHILECOMPRA_DB_URL",
     )
+    # --- Find a Tender (UK procurement notices, OGL v3) ---
+    # The supplier index built weekly from the OCP Data Registry's copy of
+    # Find a Tender's OCDS feed by .github/workflows/refresh-find-tender-index.yml.
+    # Unset: the data-root default (``find_tender_uk.sqlite``).
+    find_tender_db_file: str | None = Field(default=None, alias="FIND_TENDER_DB_FILE")
+    # Release asset downloaded at boot when absent and replaced when it
+    # changed (the ChileCompra rule): the input is a 227 MB file, the index
+    # ~20 MB (~4 MB gzipped). Empty string disables the download.
+    find_tender_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "find-tender-index/find_tender_uk.sqlite.gz"
+        ),
+        alias="FIND_TENDER_DB_URL",
+    )
 
     # --- AusTender (Australian federal contracts, CC BY 3.0 AU) ---
     # The supplier index built monthly from the OCP Data Registry's copy of

@@ -14,7 +14,7 @@ database can use them without a live server behind them.
 | `dataset-azerbaijani-laundromat-<stamp>` | The companies and banks named in the OCCRP *Azerbaijani Laundromat* wire transfers, as curated in [DerwenAI/azeri_laverie](https://github.com/DerwenAI/azeri_laverie), run through OpenCheck's pipeline (Phase 288) | BODS JSONL · NQuads · FollowTheMoney · Senzing · Neo4j CSV · subjects table · signals | **Non-commercial** — the bundle carries CC-BY-NC sources (OpenSanctions, EveryPolitician); see its `LICENSES.md` |
 
 Operational assets (`psc-graph-latest`, `entity-pages-latest`, `securities-index`,
-`chilecompra-index`, `austender-index`, `source-health-latest`, `findings-regression-latest`) are
+`chilecompra-index`, `find-tender-index`, `austender-index`, `source-health-latest`, `findings-regression-latest`) are
 also release assets, but they are the service's own working files, refreshed by
 workflows, not datasets for reuse.
 

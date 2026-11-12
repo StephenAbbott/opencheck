@@ -76,6 +76,8 @@ from opencheck.sources.austender import db_path as austender_db_path  # noqa: E4
 from opencheck.sources.austender import warm_index as warm_austender_index  # noqa: E402
 from opencheck.sources.chilecompra import db_path as chilecompra_db_path  # noqa: E402
 from opencheck.sources.chilecompra import warm_index as warm_chilecompra_index  # noqa: E402
+from opencheck.sources.find_tender_uk import db_path as find_tender_db_path  # noqa: E402
+from opencheck.sources.find_tender_uk import warm_index as warm_find_tender_index  # noqa: E402
 from opencheck.meip import db_path as meip_db_path  # noqa: E402
 from opencheck.meip import warm_meip_db  # noqa: E402
 from opencheck.sources.jar_lithuania import db_path as jar_db_path  # noqa: E402
@@ -109,9 +111,10 @@ from opencheck.sources.onrc_romania import warm_index as warm_onrc_index  # noqa
 
 WARMERS = (
     ("onrc_romania", warm_onrc_index, onrc_db_path),
+    ("austender", warm_austender_index, austender_db_path),
     ("meip", warm_meip_db, meip_db_path),
     ("chilecompra", warm_chilecompra_index, chilecompra_db_path),
-    ("austender", warm_austender_index, austender_db_path),
+    ("find_tender_uk", warm_find_tender_index, find_tender_db_path),
     ("jar_lithuania", warm_jar_index, jar_db_path),
     ("bce_belgium", warm_bce_index, bce_db_path),
     ("dart_korea", warm_dart_korea_index, dart_korea_db_path),

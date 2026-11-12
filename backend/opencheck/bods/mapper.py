@@ -224,6 +224,9 @@ from .mappers.wikirate import (  # noqa: F401  (re-exported, Phase 246)
 from .mappers.ted import (  # noqa: F401  (re-exported, Phase 246)
     map_ted_eu,
 )
+from .mappers.find_tender import (  # noqa: F401  (re-exported)
+    map_find_tender_uk,
+)
 from .mappers.australia import (  # noqa: F401  (re-exported, AusTender)
     _austender_aud,
     map_austender,

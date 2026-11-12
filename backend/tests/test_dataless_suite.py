@@ -28,6 +28,7 @@ _ASSETS = (
     "onrc_romania.sqlite",
     "chilecompra.sqlite",
     "austender.sqlite",
+    "find_tender_uk.sqlite",
     "form13f.sqlite",
     "entity_pages.sqlite",
     "gem",

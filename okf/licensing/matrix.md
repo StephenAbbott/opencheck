@@ -45,6 +45,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Zambia EITI data portal (`eiti_zambia`) | `ZEITI Open Data Policy (2016) — open data, no named licence` | yes | yes | no |
 | ESTMA payments to governments (Canada) (`estma`) | `StatCan-Open-Licence` | yes | yes | no |
 | EveryPolitician (`everypolitician`) | `CC-BY-NC-4.0` | no | yes | no |
+| Find a Tender (UK public procurement) (`find_tender_uk`) | `OGL-3.0` | yes | yes | no |
 | Firmenbuch — Austrian Commercial Register (`firmenbuch`) | `CC-BY-4.0` | yes | yes | no |
 | Taiwan company register (MOEA GCIS) (`gcis_taiwan`) | `OGDL-Taiwan-1.0` | yes | yes | no |
 | ΓΕΜΗ — Greek General Commercial Registry (`gemi_greece`) | `ODC-BY-1.0` | yes | yes | no |

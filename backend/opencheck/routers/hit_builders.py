@@ -1886,6 +1886,36 @@ def _bh_chilecompra(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_find_tender_uk(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Find a Tender (UK public procurement), the ChileCompra
+    shape.
+
+    Only reached for a company with at least one award. The card lists the
+    awards themselves (``raw.records``); the summary counts them. No
+    identifier is asserted on the hit: procurement is activity matched on an
+    identifier, not a register confirming one. The CH number rides on the
+    BODS entity statement as ``GB-COH``.
+    """
+    from ..findings import finding_find_tender_uk
+
+    supplier = r.get("supplier") or {}
+    ch = str(r.get("company_number") or "")
+    awards = int(supplier.get("awards") or 0)
+    buyers = int(supplier.get("buyers") or 0)
+    parts = [f"{awards:,} UK contract award{'s' if awards != 1 else ''}"]
+    if buyers:
+        parts.append(f"{buyers:,} buyer{'s' if buyers != 1 else ''}")
+    parts.append(f"GB-COH {ch}")
+    return _hit(
+        "find_tender_uk", ch or ctx.lei,
+        name=str(supplier.get("name") or ctx.legal_name or ctx.lei),
+        summary=" · ".join(parts),
+        finding=finding_find_tender_uk(r),
+        identifiers={},
+        raw=r,
+    )
+
+
 def _bh_austender(r: dict, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for AusTender — the ChileCompra shape.
 

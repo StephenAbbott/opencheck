@@ -1,5 +1,5 @@
 ---
-title: AusTender joins as the sixty-seventh source — the Australian Government contracts a company was awarded, read from a weekly index of the OCP Data Registry's copy of the AusTender OCDS file and joined on the ABN, including the ABN an ACN implies.
+title: AusTender joins as the sixty-eighth source — the Australian Government contracts a company was awarded, read from a weekly index of the OCP Data Registry's copy of the AusTender OCDS file and joined on the ABN, including the ABN an ACN implies.
 readme: AusTender joins as a source, showing the Australian Government contracts a company was awarded, joined on its ABN or the ABN its ACN implies.
 tests: backend +36, vitest +4, vitest_files +1
 ---

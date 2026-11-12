@@ -1,0 +1,77 @@
+name: Refresh Find a Tender supplier index
+
+# Rebuilds the Find a Tender (UK public procurement) supplier index from the
+# Open Contracting Partnership's Data Registry copy of the Find a Tender OCDS
+# feed (publication 41, `full.jsonl.gz`, compiled releases) and replaces the
+# `find-tender-index` release asset the backend downloads at boot
+# (FIND_TENDER_DB_URL).
+#
+# Why the registry and not the FTS API: the API has no supplier filter and
+# pages a year slowly; the registry collects the whole feed every Saturday.
+# Why here and not on Render: the input is ~227 MB gzipped and two passes of
+# JSON parsing; the result is ~22 MB (~6.5 MB gzipped).
+#
+# Weekly, on Sunday, after the registry's Saturday collection. The release is
+# created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "0 7 * * 0" # 07:00 UTC Sunday
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-find-tender-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Build the index from the registry's compiled releases
+        working-directory: backend
+        run: |
+          uv sync
+          uv run python scripts/build_find_tender_index.py \
+            --out "$RUNNER_TEMP/find_tender_uk.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial file)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "find_tender_uk.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM supplier").fetchone()[0]
+          awards = conn.execute("SELECT COUNT(*) FROM award").fetchone()[0]
+          print(f"{n} companies, {awards} awards, {meta.get('data_from')} – {meta.get('data_to')}, as of {meta.get('source_as_of')}")
+          if n < 20000:
+              sys.exit(f"Refusing to publish: only {n} companies — likely a source/format change.")
+          PY
+
+      - name: Replace the `find-tender-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view find-tender-index >/dev/null 2>&1 || gh release create find-tender-index \
+            --title "Find a Tender supplier index" \
+            --notes "Built weekly by refresh-find-tender-index.yml from the Find a Tender service's OCDS notices as collected by the Open Contracting Partnership's Data Registry (publication 41). Contains public sector information licensed under the Open Government Licence v3.0. Downloaded by the backend at boot (FIND_TENDER_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh find-tender-index \
+            "$RUNNER_TEMP/find_tender_uk.sqlite.gz" find_tender_uk.sqlite.gz \
+            "Rebuilt automatically by refresh-find-tender-index on $(date -u +%Y-%m-%d)."
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"
