@@ -25,6 +25,7 @@ from .acra_singapore import AcraSingaporeAdapter
 from .cvr_denmark import CvrDenmarkAdapter
 from .dlcp_dc import DlcpDcAdapter
 from .ny_dos import NyDosAdapter
+from .ct_sots import CtSotsAdapter
 from .rues_colombia import RuesColombiaAdapter
 from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
@@ -94,6 +95,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "cvr_denmark": CvrDenmarkAdapter(),
     "dlcp_dc": DlcpDcAdapter(),
     "ny_dos": NyDosAdapter(),
+    "ct_sots": CtSotsAdapter(),
     "rues_colombia": RuesColombiaAdapter(),
     "eiti": EitiAdapter(),
     "eiti_assessment": EitiAssessmentAdapter(),

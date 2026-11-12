@@ -446,6 +446,57 @@ def _bh_ny_dos(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_ct_sots(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Connecticut Secretary of the State.
+
+    * **A record.** Asserts the business ID the register's own row carries
+      (``us_ct_business_id``) — never the LEI.
+    * **A note card** — the business ID is not in the register, or belongs to
+      a different business. No identifier (the ``ny_dos`` shape).
+    """
+    from ..findings import finding_ct_sots
+    from ..sources.ct_sots import CT_SCHEME, summarise
+
+    if r.get("not_found"):
+        return _hit(
+            "ct_sots", local_id,
+            name=ctx.legal_name or "",
+            summary=f"{CT_SCHEME} {local_id} · no record attached",
+            finding=finding_ct_sots(r),
+            identifiers={},
+            raw={
+                "not_found": True,
+                "coverage_note": r.get("coverage_note"),
+                "name_mismatch": bool(r.get("name_mismatch")),
+                "registered_name": r.get("registered_name"),
+            },
+        )
+    summary = summarise(r)
+    business_id = summary["business_id"] or local_id
+    status = summary.get("status") or ""
+    return _hit(
+        "ct_sots", business_id,
+        name=summary.get("name") or ctx.legal_name or "",
+        summary=f"{CT_SCHEME} {business_id}" + (f" · {status}" if status else ""),
+        identifiers={"us_ct_business_id": business_id},
+        raw={
+            "business_id": business_id,
+            "name": summary.get("name"),
+            "business_type": summary.get("business_type"),
+            "domestic": summary.get("domestic"),
+            "formed_in": summary.get("formed_in") or None,
+            "status": status or None,
+            "sub_status": summary.get("sub_status") or None,
+            "registered_on": summary.get("registered_on"),
+            "dissolved_on": summary.get("dissolved_on"),
+            "former_names": summary.get("former_names") or [],
+            "principal_count": len(summary.get("principals") or []),
+            "truncated": bool(r.get("truncated")),
+        },
+        finding=finding_ct_sots(r),
+    )
+
+
 def _bh_rues_colombia(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Colombia's RUES.
 

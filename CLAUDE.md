@@ -1638,6 +1638,49 @@ otherwise:
   República (~31 of 583) — a note card. CO has no row in the knowability
   table yet.
 
+## Connecticut is a live read of data.ct.gov (the Connecticut SOTS ticket, 12 Nov 2026)
+
+`sources/ct_sots.py`, `bods/mappers/us_ct.py`, `finding_ct_sots`,
+`_bh_ct_sots`. Measured on the 684 ISSUED `RA000600` LEIs (12 Nov 2026).
+Things that will be re-derived otherwise:
+
+- **Three Socrata datasets, three calls**: Business Master `n7gp-d28j` by
+  `accountnumber` (the business ID, seven digits zero-padded — GLEIF files it
+  padded), then Principals `ka36-64k6` and Name Change History `enwv-52we`
+  together by the Master row's 18-character `id`. Cached a day only when all
+  three answered; a business the Master lacks is cached as an answer (a note
+  card). No index tier: a query answers in under a second.
+- **Allowlisted `$select`**: never a principal's `residence*` /
+  `business_street*` / e-mail / phone, the business e-mail or the mailing
+  address; the Agents dataset (`qh2m-n44y`, e-mails and residences) is not
+  read. `CtSotsBundle`'s row schemas refuse those columns.
+- **Principals are name and designation only.** Director → `boardMember`,
+  Officer → `seniorManagingOfficial`; a blank designation (84% of rows: an
+  LLC's members and managers or a partnership's partners — the register does
+  not say which) is `seniorManagingOfficial` worded `UNDESIGNATED_DETAILS`,
+  never ownership, never `beneficialOwnershipOrControl`. A principal with no
+  first or last name and a legal-form token is an entity with no identifier
+  and no jurisdiction (Phase 295). Repeated rows (one person at two
+  addresses) merge and their designations union.
+- **Name gate** against the current name and every recorded old/new name
+  (`names_agree`); a mismatch (`0637799`: GLEIF 38 TOWN LINE ROAD LP, the
+  register RIVER RIDGE APARTMENTS LP) is a note card. `RA000600` also sits on
+  foreign businesses registered in Connecticut (UBS AG, CH), so the deriver
+  keys on the RA code.
+- **Status**: domestic Dissolved / Forfeited / Revoked / Merged /
+  Consolidation / Cancelled / Converted Out are terminal, dated by
+  `dissolution_date`; a foreign business's ended registration is never
+  terminal (unknown liveness; the finding says it ended in Connecticut), and
+  its CT registration date is not a `foundingDate`. A two-letter
+  `formation_place` is read as a US state only (`country_code("DE")` is
+  Germany).
+- **Licence `CT-Open-Data`**: Business Master is Public Domain; Principals and
+  Name Change History carry no licence field. Stated, not assumed.
+- Scheme `US-CT`; in `register_hops._NO_COUNTRY_ALIAS`; not in
+  `RA_BY_COUNTRY`. No record link (service.ct.gov has no per-business
+  address); `source.url` is the SODA query. Optional `SOCRATA_APP_TOKEN`
+  (header).
+
 ## French association notices on History — the JOAFE (the JOAFE History ticket, 11 Nov 2026)
 
 `sources/joafe.py` (the live read), `timeline/joafe.py` (the emitter),
@@ -2994,6 +3037,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | United States — District of Columbia | dlcp_dc | `RA000601` — DC Corporations Division (DLCP) | 2026-09-18 — 502 of the 726 GLEIF records with jurisdiction `US-DC` use it (the rest: RA999999 ×209, RA888888 ×4, RA000602 ×4, others ×7), **every one with the Corporations Division file number in `registeredAs`**. The file number is an opaque string in at least six live shapes (`000347`, `L00005029230`, `L21249`, `N00008414776`, `P00454`, `US-DC-LL012601299`) — never normalise it. 487 of 500 resolve against the register; by LEI status `ISSUED` 144/145, `LAPSED` 322/333, `RETIRED` 22/23, the misses being lapsed LEIs on legacy identifiers. **A name check is mandatory**: GLEIF files `L21249` for American Foreign Policy Council and DLCP's `L21249` is CONNIE-19 STREET LLC. Scheme `US-DC` — the ISO 3166-2 subdivision code the BODS mapper already stamps on a DC entity reached through GLEIF, so the two corroborate rather than each asserting an identifier the other lacks. **Not in `RA_BY_COUNTRY`**: the US has fifty-odd company registers and `US` cannot mean DC's; for the same reason `US-DC` is in `register_hops._NO_COUNTRY_ALIAS`, so no `REG-US` alias is built from it |
 | United States — New York | ny_dos | `RA000628` — Corporation and Business Entity Database (Department of State, Division of Corporations) · `RA000747` — Registry of insurance companies (Department of Financial Services) | 2026-09-29 — all 16,819 GLEIF records with jurisdiction `US-NY`: 13,442 RA000628, 3,050 RA999999, 55 RA000747, 33 RA888888; ISSUED 3,921 of 4,848 under RA000628. **RA000628 also appears on 53 records in other jurisdictions** — foreign companies authorised in New York (Quantexa Inc, `US-DE`, `5215193`) — so the deriver keys on the RA code, never the jurisdiction. `registeredAs` is the bare DOS ID, 1–9 digits, unpadded on both sides. Resolution over the ISSUED records: 3,878 agree on the current name, 8 more only on a former name, 23 resolve only in the All Filings family (dissolved, or newer than the snapshot), **8 are wrong numbers** (Salt City FCU files `8512`, THE MUNICIPAL WASTE PAPER RECEPTACLE COMPANY) → note card, 4 are in no DOS dataset. RA000747 files an **NAIC code**, not a DOS ID: it maps to its own RA code in `_GLEIF_RA_TO_ORG_ID` so the US-state jurisdiction fallback cannot label it `US-NY` and hop it to DOS. Scheme `US-NY` (the DC rule); in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
 | United States — Florida | sunbiz_florida | `RA000603` — Florida Department of State, Division of Corporations | 2026-10-29 — 12,885 GLEIF records file under it (3,079 ISSUED); `registeredAs` is the 6- or 12-character document number, except five ISSUED records that filed the company's EIN (`59-1234567`), matched on the FEI. 3,054 ISSUED agree on the current name, 25 more on an event-recorded name; the 15 ISSUED general-partnership / LLP numbers are in files OpenCheck does not read. Scheme `US-FL`; in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
+| United States — Connecticut | ct_sots | `RA000600` — Connecticut Secretary of the State | 2026-11-12 — 2,585 GLEIF records (684 ISSUED, 1,619 LAPSED, 276 RETIRED, 6 DUPLICATE), every one a seven-digit zero-padded business ID; 2,572 US-CT and 13 foreign businesses registered in Connecticut (UBS AG, CH). All 684 ISSUED resolve: 682 on the current name, 1 on a recorded former name, 1 a wrong number (note card). Scheme `US-CT`; in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
 | Taiwan | gcis_taiwan | `RA000551` — Ministry of Economic Affairs (經濟部) · `RA001009` — Financial Supervisory Commission | 2026-10-29 — all 1,784 GLEIF records with legal address TW: RA000551 504 ISSUED (492 GENERAL, 12 BRANCH), RA001009 ~240 ISSUED, almost all FUND, RA999999 ~670. **RA000551 files the bare 8-digit Unified Business Number** on every record but three (2 ANNULLED 9-digit, 1 failing the check digit); 500 of 504 ISSUED resolve to a company record (a branch, two limited partnerships and one with no director rows do not). **RA001009 files funds' tax numbers — not in the company register (25 of 25), not dispatched.** RA000551 also sits on HK/SG/CH/GB/US-DE-jurisdiction records (foreign companies' Taiwan branches), so the deriver keys on the RA code. Scheme `TW-CR` (org-id); in `RA_BY_COUNTRY` — one authority |
 
 ### ✅ FIXED 2026-08-28: Scotland/Northern Ireland, and two more RA maps

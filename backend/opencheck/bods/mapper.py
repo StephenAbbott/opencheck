@@ -623,6 +623,16 @@ from .mappers.us_ny import (  # noqa: F401  (re-exported, Phase 263)
     ny_ceo_local_id,
     ny_ceo_statement_id,
 )
+from .mappers.us_ct import (  # noqa: F401  (re-exported, the Connecticut wiring)
+    UNDESIGNATED_DETAILS,
+    _CT_DESIGNATION_INTEREST,
+    _CT_SOURCE,
+    _ct_entity_details,
+    ct_principal_interests,
+    ct_principal_local_id,
+    ct_principal_record_id,
+    map_ct_sots,
+)
 
 
 def ch_person_statement_id(company_number: str, officer: dict[str, Any]) -> str:
@@ -715,6 +725,12 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # (foreign companies authorised in Florida), which the jurisdiction
     # fallback labelled with their home state's scheme until this entry.
     "RA000603": ("US-FL", "Florida Department of State, Division of Corporations"),
+    # United States — Connecticut Secretary of the State, Business Registry
+    # (the Connecticut wiring, 12 Nov 2026). ``registeredAs`` is the
+    # seven-digit business ID on 2,572 US-CT LEI records — and on 13
+    # elsewhere (companies registered to do business in Connecticut, UBS AG
+    # among them). The scheme follows the number, not the jurisdiction.
+    "RA000600": ("US-CT", "Connecticut Secretary of the State, Business Registry"),
     # United States — New York State Department of Financial Services,
     # Registry of insurance companies. Its ``registeredAs`` is an NAIC company
     # code (ShelterPoint Life, 81434), not a DOS ID, so it must NOT take the

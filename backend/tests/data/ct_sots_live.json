@@ -1,0 +1,533 @@
+{
+ "captured": "2026-11-12",
+ "account_numbers": {
+  "eurpac": "0016116",
+  "eder": "0926053",
+  "riverridge": "0637799",
+  "ubs": "0597268",
+  "dissolved": "0697044",
+  "forfeited": "0769144",
+  "apella": "1169705",
+  "missing": "9999998",
+  "glenstone": "1094606"
+ },
+ "responses": {
+  "eurpac/master": [
+   {
+    "id": "001t000000WmSc6AAF",
+    "name": "EURPAC SERVICE INCORPORATED",
+    "accountnumber": "0016116",
+    "business_type": "Stock",
+    "status": "Active",
+    "sub_status": "Annual report due",
+    "citizenship": "Domestic",
+    "formation_place": "CT",
+    "state_or_territory_formation": "Connecticut",
+    "date_registration": "1961-09-19T00:00:00.000",
+    "naics_code": "Other Miscellaneous Nondurable Goods Merchant Wholesalers (424990)",
+    "billingstreet": "40 Danbury Rd Ste 7",
+    "billingcity": "Wilton",
+    "billingstate": "CT",
+    "billingpostalcode": "06897-4441",
+    "billingcountry": "United States"
+   }
+  ],
+  "eurpac/principals": [
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "Carl M. Skinner",
+    "firstname": "Carl M.",
+    "lastname": "Skinner",
+    "designation": "Director",
+    "business_city": "Williamsburg",
+    "business_state": "VA",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "Charles Cahn",
+    "firstname": "Charles",
+    "lastname": "Cahn",
+    "designation": "Director",
+    "business_city": "Dallas",
+    "business_state": "TX",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "EDWARD BRUNOT",
+    "firstname": "EDWARD",
+    "lastname": "BRUNOT",
+    "designation": "Director",
+    "business_city": "Wilton",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "FRANK J. BECKER",
+    "firstname": "FRANK J.",
+    "lastname": "BECKER",
+    "designation": "Officer;Director",
+    "business_city": "Wilton",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "FRANK J. MAKELY JR.",
+    "firstname": "FRANK J.",
+    "lastname": "MAKELY JR.",
+    "designation": "Director",
+    "business_city": "Wilton",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "FREDERICK STOHR",
+    "firstname": "FREDERICK",
+    "lastname": "STOHR",
+    "designation": "Director",
+    "business_city": "Wilton",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "MICHAEL STEWART",
+    "firstname": "MICHAEL",
+    "lastname": "STEWART",
+    "designation": "Director",
+    "business_city": "Virginia Beach",
+    "business_state": "VA",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "Scott Moore",
+    "firstname": "Scott",
+    "lastname": "Moore",
+    "designation": "Director",
+    "business_city": "Wilton",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "WADE ROHRER",
+    "firstname": "WADE",
+    "lastname": "ROHRER",
+    "designation": "Director",
+    "business_city": "Virginia Beach",
+    "business_state": "VA",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "WALTER LAZARCHECK",
+    "firstname": "WALTER",
+    "lastname": "LAZARCHECK",
+    "designation": "Officer;Director",
+    "business_city": "Wilton",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmSc6AAF",
+    "name__c": "WENDY MASIELLO",
+    "firstname": "WENDY",
+    "lastname": "MASIELLO",
+    "designation": "Director",
+    "business_city": "Wilton",
+    "business_state": "CT",
+    "business_country": "United States"
+   }
+  ],
+  "eurpac/name_changes": [],
+  "eder/master": [
+   {
+    "id": "001t000000WnN83AAF",
+    "name": "E-G Holdings, LLC",
+    "accountnumber": "0926053",
+    "business_type": "LLC",
+    "status": "Active",
+    "citizenship": "Domestic",
+    "formation_place": "CT",
+    "state_or_territory_formation": "Connecticut",
+    "date_registration": "2008-01-28T00:00:00.000",
+    "naics_code": "Wine and Distilled Alcoholic Beverage Merchant Wholesalers (424820)",
+    "billingstreet": "11 EDER ROAD",
+    "billingcity": "WEST HAVEN",
+    "billingstate": "CT",
+    "billingpostalcode": "06516",
+    "billingcountry": "United States"
+   }
+  ],
+  "eder/principals": [
+   {
+    "business_id": "001t000000WnN83AAF",
+    "name__c": "Cutter Smith",
+    "firstname": "Cutter",
+    "lastname": "Smith",
+    "business_city": "West Haven",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WnN83AAF",
+    "name__c": "DAVID G. HELLER",
+    "firstname": "DAVID G.",
+    "lastname": "HELLER",
+    "business_city": "WEST HAVEN",
+    "business_state": "CT",
+    "business_country": "United States"
+   }
+  ],
+  "eder/name_changes": [
+   {
+    "unique_key": "001t000000WnN83AAF",
+    "business_name_old": "EDER-GOODMAN, LLC",
+    "business_name_new": "E-G Holdings, LLC",
+    "name_change_date": "2026-04-01T00:00:00.000"
+   },
+   {
+    "unique_key": "001t000000WnN83AAF",
+    "business_name_old": "EDER-GOODMAN, LLC",
+    "business_name_new": "E-G Holdings, LLC",
+    "name_change_date": "2026-04-01T00:00:00.000"
+   }
+  ],
+  "riverridge/master": [
+   {
+    "id": "001t000000WmpVNAAZ",
+    "name": "RIVER RIDGE APARTMENTS LIMITED PARTNERSHIP",
+    "accountnumber": "0637799",
+    "business_type": "Limited Partnership",
+    "status": "Active",
+    "sub_status": "Annual report due",
+    "citizenship": "Domestic",
+    "formation_place": "CT",
+    "state_or_territory_formation": "Connecticut",
+    "date_registration": "1999-12-17T00:00:00.000",
+    "naics_code": "Residential Property Managers (531311)",
+    "billingstreet": "C/O WILLIAM B. COLLINS 67 BLUE RIDGE LANE",
+    "billingcity": "WEST HARTFORD",
+    "billingstate": "CT",
+    "billingpostalcode": "06117",
+    "billingcountry": "United States"
+   }
+  ],
+  "riverridge/principals": [
+   {
+    "business_id": "001t000000WmpVNAAZ",
+    "name__c": "2364 STATE STREET ASSOCIATES, LLC",
+    "business_city": "West Hartford",
+    "business_state": "CT",
+    "business_country": "United States"
+   }
+  ],
+  "riverridge/name_changes": [],
+  "ubs/master": [
+   {
+    "id": "001t000000WmkztAAB",
+    "name": "UBS AG",
+    "accountnumber": "0597268",
+    "business_type": "Stock",
+    "status": "Active",
+    "citizenship": "Foreign",
+    "formation_place": "CHE",
+    "state_or_territory_formation": "CHE",
+    "country_formation": "Switzerland",
+    "date_registration": "1998-07-08T00:00:00.000",
+    "began_transacting_in_ct": "1998-06-29T00:00:00.000",
+    "naics_code": "Commercial Banking (522110)",
+    "billingcountry": "SWITZERLAND"
+   }
+  ],
+  "ubs/principals": [
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Barbara Levi",
+    "firstname": "Barbara",
+    "lastname": "Levi",
+    "designation": "Director",
+    "business_country": "Switzerland"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Christian Bluhm",
+    "firstname": "Christian",
+    "lastname": "Bluhm",
+    "designation": "Director",
+    "business_country": "Switzerland"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Edmund Koh",
+    "firstname": "Edmund",
+    "lastname": "Koh",
+    "designation": "Director",
+    "business_country": "Switzerland"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Iqbal Khan",
+    "firstname": "Iqbal",
+    "lastname": "Khan",
+    "designation": "Director",
+    "business_country": "Switzerland"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Jay Olegario",
+    "firstname": "Jay",
+    "lastname": "Olegario",
+    "designation": "Officer",
+    "business_city": "New York",
+    "business_state": "NY",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Markus Ronner",
+    "firstname": "Markus",
+    "lastname": "Ronner",
+    "designation": "Director",
+    "business_country": "Switzerland"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Mike Dargan",
+    "firstname": "Mike",
+    "lastname": "Dargan",
+    "designation": "Director",
+    "business_country": "Switzerland"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Naureen Hassan",
+    "firstname": "Naureen",
+    "lastname": "Hassan",
+    "designation": "Director",
+    "business_country": "Switzerland"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Robert Karofsky",
+    "firstname": "Robert",
+    "lastname": "Karofsky",
+    "designation": "Director",
+    "business_city": "New York",
+    "business_state": "NY",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Sabine Keller-Busse",
+    "firstname": "Sabine",
+    "lastname": "Keller-Busse",
+    "designation": "Director",
+    "business_country": "Switzerland"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Sarah Youngwood",
+    "firstname": "Sarah",
+    "lastname": "Youngwood",
+    "designation": "Officer;Director",
+    "business_city": "New York",
+    "business_state": "NY",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Sergio P. Ermotti",
+    "firstname": "Sergio P.",
+    "lastname": "Ermotti",
+    "designation": "Officer;Director",
+    "business_country": "Switzerland"
+   },
+   {
+    "business_id": "001t000000WmkztAAB",
+    "name__c": "Suni Harford",
+    "firstname": "Suni",
+    "lastname": "Harford",
+    "designation": "Director",
+    "business_country": "Switzerland"
+   }
+  ],
+  "ubs/name_changes": [],
+  "dissolved/master": [
+   {
+    "id": "001t000000WmuhkAAB",
+    "name": "GLOBAL HELP DESK SERVICES, INC.",
+    "accountnumber": "0697044",
+    "business_type": "Stock",
+    "status": "Dissolved",
+    "sub_status": "Annual report due",
+    "citizenship": "Domestic",
+    "formation_place": "CT",
+    "state_or_territory_formation": "Connecticut",
+    "date_registration": "2001-12-17T00:00:00.000",
+    "dissolution_date": "2026-11-05T00:00:00.000",
+    "naics_code": "Telephone Answering Services (561421)",
+    "billingstreet": "521 CROMWELL AVENUE",
+    "billingcity": "ROCKY HILL",
+    "billingstate": "CT",
+    "billingpostalcode": "06067",
+    "billingcountry": "United States"
+   }
+  ],
+  "dissolved/principals": [
+   {
+    "business_id": "001t000000WmuhkAAB",
+    "name__c": "STEVE WETHERELL",
+    "firstname": "STEVE",
+    "lastname": "WETHERELL",
+    "designation": "Officer",
+    "business_city": "MIDDLETOWN",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WmuhkAAB",
+    "name__c": "STEVE WETHERELL",
+    "firstname": "STEVE",
+    "lastname": "WETHERELL",
+    "designation": "Officer",
+    "business_city": "ROCKY HILL",
+    "business_state": "CT",
+    "business_country": "United States"
+   }
+  ],
+  "dissolved/name_changes": [],
+  "forfeited/master": [
+   {
+    "id": "001t000000Wn5FcAAJ",
+    "name": "THE SHOPPES AT EASTVIEW, LLC",
+    "accountnumber": "0769144",
+    "business_type": "LLC",
+    "status": "Forfeited",
+    "citizenship": "Domestic",
+    "formation_place": "CT",
+    "state_or_territory_formation": "Connecticut",
+    "date_registration": "2003-12-23T00:00:00.000",
+    "naics_code": "531120",
+    "billingstreet": "95 DRUMLIN ROAD",
+    "billingcity": "SOUTH GLASTONBURY",
+    "billingstate": "CT",
+    "billingpostalcode": "06073",
+    "billingcountry": "United States"
+   }
+  ],
+  "forfeited/principals": [
+   {
+    "business_id": "001t000000Wn5FcAAJ",
+    "name__c": "PETER A. RUSCONI",
+    "firstname": "PETER A.",
+    "lastname": "RUSCONI"
+   }
+  ],
+  "forfeited/name_changes": [],
+  "apella/master": [
+   {
+    "id": "001t000000WnwUfAAJ",
+    "name": "APELLA CAPITAL, LLC",
+    "accountnumber": "1169705",
+    "business_type": "LLC",
+    "status": "Active",
+    "citizenship": "Foreign",
+    "formation_place": "DE",
+    "state_or_territory_formation": "DE",
+    "country_formation": "United States",
+    "date_registration": "2015-03-10T00:00:00.000",
+    "began_transacting_in_ct": "2014-07-02T00:00:00.000",
+    "naics_code": "Portfolio Management and Investment Advice (523940)",
+    "billingstreet": "65 Memorial Rd",
+    "billing_unit": "C340",
+    "billingcity": "West Hartford",
+    "billingstate": "CT",
+    "billingpostalcode": "06107-2434",
+    "billingcountry": "United States"
+   }
+  ],
+  "apella/principals": [
+   {
+    "business_id": "001t000000WnwUfAAJ",
+    "name__c": "Patrick A. Sweeney",
+    "firstname": "Patrick A.",
+    "lastname": "Sweeney",
+    "business_city": "West Hartford",
+    "business_state": "CT",
+    "business_country": "United States"
+   }
+  ],
+  "apella/name_changes": [],
+  "missing/master": [],
+  "glenstone/master": [
+   {
+    "id": "001t000000WnjbNAAR",
+    "name": "Glenstone Builders LLC",
+    "accountnumber": "1094606",
+    "business_type": "LLC",
+    "status": "Active",
+    "sub_status": "Annual report past due",
+    "citizenship": "Domestic",
+    "formation_place": "CT",
+    "state_or_territory_formation": "Connecticut",
+    "date_registration": "2013-01-09T00:00:00.000",
+    "naics_code": "Residential Remodelers (236118)",
+    "billingstreet": "2490 Black Rock Turnpike",
+    "billing_unit": "#412",
+    "billingcity": "Fairfield",
+    "billingstate": "CT",
+    "billingpostalcode": "06825",
+    "billingcountry": "United States"
+   }
+  ],
+  "glenstone/principals": [
+   {
+    "business_id": "001t000000WnjbNAAR",
+    "name__c": "No Border Rentals LLC",
+    "business_city": "Fairfield",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WnjbNAAR",
+    "name__c": "Renchy Private Holdings LLC",
+    "business_city": "Fairfield",
+    "business_state": "CT",
+    "business_country": "United States"
+   },
+   {
+    "business_id": "001t000000WnjbNAAR",
+    "name__c": "USBA LLC",
+    "business_city": "Stamford",
+    "business_state": "CT",
+    "business_country": "United States"
+   }
+  ],
+  "glenstone/name_changes": [
+   {
+    "unique_key": "001t000000WnjbNAAR",
+    "business_name_old": "JUNKIN' IT, LLC",
+    "business_name_new": "GLENSTONE CONSTRUCTION LLC",
+    "name_change_date": "2019-03-06T00:00:00.000"
+   },
+   {
+    "unique_key": "001t000000WnjbNAAR",
+    "business_name_old": "GLENSTONE CONSTRUCTION LLC",
+    "business_name_new": "Glenstone Home Builders LLC",
+    "name_change_date": "2024-09-26T00:00:00.000"
+   },
+   {
+    "unique_key": "001t000000WnjbNAAR",
+    "business_name_old": "Glenstone Home Builders LLC",
+    "business_name_new": "Glenstone Builders LLC",
+    "name_change_date": "2024-09-26T00:00:00.000"
+   }
+  ]
+ }
+}

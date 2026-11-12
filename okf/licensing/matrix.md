@@ -4,7 +4,7 @@ title: "Licensing compatibility matrix"
 description: "Per-source licence terms (commercial use, attribution, share-alike) for combining OpenCheck data in exports. Most-restrictive licence wins."
 resource: "/license-matrix"
 tags: ["licensing", "export", "compliance"]
-timestamp: "2026-11-11"
+timestamp: "2026-11-12"
 ---
 
 # Source licence matrix
@@ -31,6 +31,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Corporations Canada — ISED federal register (`corporations_canada`) | `OGL-Canada-2.0` | yes | yes | no |
 | Hong Kong Companies Registry (`cr_hongkong`) | `DATA.GOV.HK-Terms` | yes | yes | no |
 | CRO — Companies Registration Office Ireland (`cro`) | `CC-BY-4.0` | yes | yes | no |
+| Connecticut Secretary of the State — Business Registry (`ct_sots`) | `CT-Open-Data` | yes | no | no |
 | CVR — Det Centrale Virksomhedsregister (`cvr_denmark`) | `Danish Open Government Data (CVR brugervilkår)` | yes | yes | no |
 | Cyprus DRCOR — Registrar of Companies (`cyprus_drcor`) | `CC-BY-4.0` | yes | yes | no |
 | Open DART — Korean disclosure filings (FSS) (`dart_korea`) | `KR-Public-Data` | yes | no | no |
