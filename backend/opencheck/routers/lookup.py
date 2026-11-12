@@ -94,6 +94,7 @@ from .hit_builders import (  # noqa: F401
     _bh_apr_serbia,
     _bh_asp_moldova,
     _bh_chilecompra,
+    _bh_find_tender_uk,
     _EITI_IDENTIFIER_KEY_BY_COUNTRY,
     _LookupCtx,
     _PERSON_CAPABLE_SOURCES,
@@ -1335,6 +1336,27 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
                 legal_name=ctx.legal_name,
             ),
         ))
+    # Find a Tender — UK public procurement, the ChileCompra shape: gated on a
+    # Companies House registration authority and a CH-shaped registeredAs
+    # here, before dispatch, and on the index being present.
+    fts_adapter = REGISTRY.get("find_tender_uk")
+    if (
+        fts_adapter is not None
+        and hasattr(fts_adapter, "fetch_by_identifiers")
+        and hasattr(fts_adapter, "applies_to")
+        and fts_adapter.applies_to(ctx.registered_at, ctx.registered_as)
+        and _want("find_tender_uk")
+        and _offline_index_covers(fts_adapter, ctx.lei)
+    ):
+        tasks.append((
+            "find_tender_uk",
+            fts_adapter.fetch_by_identifiers(
+                ctx.lei,
+                ctx.registered_as,
+                ctx.registered_at,
+                legal_name=ctx.legal_name,
+            ),
+        ))
     return tasks
 
 
@@ -1368,6 +1390,10 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     if source_id == "ted_eu":
         # A zero-notice result is a legitimate absence, not a hit.
         return _bh_ted_eu(result, ctx) if result.get("total_notice_count") else None
+    if source_id == "find_tender_uk":
+        # A company with no award is no hit (absence of procurement is not a
+        # finding — the TED / ChileCompra rule).
+        return _bh_find_tender_uk(result, ctx) if result.get("supplier") else None
     if source_id == "chilecompra":
         # The same rule (Phase 280): a company that sold nothing to the
         # Chilean state in the window answered, and has no card.
@@ -2511,6 +2537,27 @@ def _split_subject_key(key: str) -> tuple[str, str, str]:
     return scheme, ident, name
 
 
+def _register_procurement(scheme: str, local_id: str, legal_name: str) -> list[tuple[str, Any]]:
+    """Procurement sources a register-anchored lookup can ask by the number.
+
+    Today one: Find a Tender, for a Companies House number, when its index
+    is present (a source that cannot answer is never announced).
+    """
+    from ..sources.find_tender_uk import FindTenderUkAdapter
+
+    adapter = REGISTRY.get("find_tender_uk")
+    if scheme != "GB-COH" or not isinstance(adapter, FindTenderUkAdapter):
+        return []
+    if not adapter.covers_lei(""):
+        return []
+    return [(
+        "find_tender_uk",
+        adapter.fetch_by_identifiers(
+            "", local_id, _ra_codes.RA_BY_COUNTRY["GB"], legal_name=legal_name,
+        ),
+    )]
+
+
 async def _register_lookup_pipeline(
     scheme: str, ident: str, deepen_top: int = 5, *, name: str = ""
 ) -> AsyncIterator[LookupEvent]:
@@ -2678,6 +2725,31 @@ async def _register_lookup_pipeline(
         yield ("knowability", knowability_payload)
     yield ("hit", hit)
     yield ("source_completed", {"source_id": hop.source_id, "hit_count": 1})
+
+    # Procurement keyed on the register number itself: a Companies House
+    # number reaches Find a Tender as a GB LEI's registeredAs does, so a
+    # company with no LEI is checked against UK public contracts too. The
+    # card is the hit (raw.records); its one-entity BODS is left out here.
+    for proc_id, proc_coro in _register_procurement(hop.scheme, local_id, ctx.legal_name):
+        asked.append(proc_id)
+        yield ("source_started", {
+            "source_id": proc_id, "source_name": REGISTRY[proc_id].info.name,
+        })
+        _psid, presult, pprov = await _run_source(proc_id, proc_coro)
+        provenances[proc_id] = pprov
+        outcome = _source_outcome(proc_id, presult, pprov, ctx)
+        if outcome.error:
+            errors[proc_id] = outcome.error
+            yield ("source_error", {
+                "source_id": proc_id,
+                "error": outcome.error,
+                "error_type": outcome.error_type,
+            })
+            continue
+        for sh in outcome.hits:
+            hits.append(sh)
+            yield ("hit", sh)
+        yield ("source_completed", {"source_id": proc_id, "hit_count": len(outcome.hits)})
 
     ep_applicable = _name_screen_can_run()
     # Every register asked: one that answered "no record" before the fallback

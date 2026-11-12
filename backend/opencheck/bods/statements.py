@@ -746,6 +746,7 @@ SOURCE_NAMES: dict[str, str] = {
     "brreg": "Brønnøysundregistrene — Norwegian Register Centre",
     "brightquery": "BrightQuery / OpenData.org",
     "chilecompra": "ChileCompra — Mercado Público (Chilean public procurement)",
+    "find_tender_uk": "Find a Tender (UK public procurement)",
     "climatetrace": "Global Energy Monitor / Climate TRACE",
     "companies_house": "UK Companies House",
     "corporations_canada": "Corporations Canada — ISED federal register",

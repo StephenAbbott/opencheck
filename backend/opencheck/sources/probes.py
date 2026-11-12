@@ -1190,6 +1190,32 @@ PROBES: dict[str, SourceProbe] = {
             "stopped publishing."
         ),
     ),
+    "find_tender_uk": _p(
+        tier="index",
+        subject="Softcat plc (GB-COH 02174990)",
+        # The lookup's own entry point, with the anchor's real
+        # (registeredAs, registeredAt) pair from GLEIF.
+        method="fetch_by_identifiers",
+        args=("213800N42YZLR9GLVC42", "02174990", "RA000585"),
+        kwargs={"legal_name": "SOFTCAT PLC"},
+        expect_fields=("supplier", "records", "buyers"),
+        # SKIP without an index (the chilecompra shape), never allow_empty.
+        requires_files=("find_tender_uk.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # The registry collects the feed every Saturday and the workflow
+        # rebuilds on Sunday; three weeks means two missed rebuilds.
+        snapshot_max_age_days=21,
+        anchor_lei="213800N42YZLR9GLVC42",
+        bods_mapper="map_find_tender_uk",
+        notes=(
+            "One of the most frequent suppliers on Find a Tender — about 300 "
+            "awards from 170 buyers since 2021, most under the Procurement Act "
+            "— so the probe reads awards, notices and buyers together. The "
+            "index is the find-tender-index release asset, rebuilt weekly by "
+            "refresh-find-tender-index.yml from the OCP Data Registry; "
+            "warm_bulk_stores.py downloads it before the sweep."
+        ),
+    ),
     "eiti_soe": _p(
         tier="index",
         subject="Equinor Energy AS",

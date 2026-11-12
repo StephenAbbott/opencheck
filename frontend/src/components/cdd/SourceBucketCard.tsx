@@ -12,6 +12,14 @@ import { DisclosureChips } from "./DisclosureChips";
 import { groupHitsForDisplay, siblingNote } from "../../lib/hitGroups";
 import { rowFinding } from "../../lib/sourceFinding";
 import {
+  coverageNote as findTenderCoverageNote,
+  dateLabel as findTenderDate,
+  lotsLabel as findTenderLots,
+  statusLabel as findTenderStatus,
+  valueLabel as findTenderValue,
+  type FindTenderRecord,
+} from "../../lib/findTender";
+import {
   ACCOUNTS_HEADING,
   ACCOUNTS_SOURCE_NOTE,
   brregAccountsFacts,
@@ -177,6 +185,10 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
     case "chilecompra": {
       const records = raw.records as { url?: string }[] | undefined;
       return records?.[0]?.url || "https://www.mercadopublico.cl/";
+    }
+    case "find_tender_uk": {
+      const records = raw.records as { url?: string }[] | undefined;
+      return records?.find((r) => r.url)?.url || "https://www.find-tender.service.gov.uk/Search";
     }
     default:
       return null;
@@ -1093,6 +1105,79 @@ export function ChileCompraRecordsList({ hit }: { hit: SourceHit }) {
 }
 
 /**
+ * FindTenderAwardsList — UK public contracts awarded to the company, from
+ * Find a Tender (find_tender_uk source), the TED / ChileCompra counterpart.
+ *
+ * The newest procurements first (one row each, however many lots the company
+ * won), then the largest contracts awarded to it alone. Each row links to its
+ * notice where the feed names one. A value is the contract's, shown beside
+ * the number of suppliers it was awarded to and never summed.
+ */
+export function FindTenderAwardsList({ hit }: { hit: SourceHit }) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+  if (hit.source_id !== "find_tender_uk") return null;
+  const raw = hit.raw as Record<string, unknown> | undefined;
+  const records = (raw?.records ?? []) as FindTenderRecord[];
+  if (!records.length) return null;
+  const supplier = (raw?.supplier ?? {}) as { awards?: number };
+  const shown = expanded ? records : records.slice(0, 5);
+  return (
+    <RowList
+      controls={listId}
+      total={records.length}
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      moreLabel="award"
+      items={shown.map((r) => {
+        const title = r.title || `Award ${r.award_id}`;
+        const status = findTenderStatus(r);
+        return {
+          key: `${r.ocid}-${r.award_id}-${r.kept_as}`,
+          title: r.url ? (
+            <a
+              href={r.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-oo-blue hover:underline underline-offset-2"
+            >
+              {title}
+              <span className="sr-only"> (opens in new tab)</span>
+            </a>
+          ) : (
+            title
+          ),
+          meta: (
+            <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              {[r.buyer, findTenderValue(r), findTenderLots(r), findTenderDate(r)]
+                .filter(Boolean)
+                .join(" · ")}
+              {r.kept_as === "largest" && (
+                <Chip tone="neutral" size="sm">largest</Chip>
+              )}
+              {status && (
+                <Chip tone="context" size="sm">{status}</Chip>
+              )}
+            </span>
+          ),
+        };
+      })}
+      footnote={
+        <>
+          {supplier.awards ? (
+            <>
+              {(supplier.awards ?? 0).toLocaleString()} award
+              {supplier.awards === 1 ? "" : "s"} in all.{" "}
+            </>
+          ) : null}
+          {findTenderCoverageNote(Number(raw?.via_ppon ?? 0))}
+        </>
+      }
+    />
+  );
+}
+
+/**
  * The finding line. Lives here rather than inline so the fallback chain is
  * testable — see `lib/sourceFinding.ts`, which is where the reasoning is.
  */
@@ -1312,6 +1397,7 @@ function HitRow({
       <MentionsBreakdown hit={hit} />
       <TedAwardsList hit={hit} />
       <ChileCompraRecordsList hit={hit} />
+      <FindTenderAwardsList hit={hit} />
       {/* Risk findings only (Phase 245). A structural observation — "No
           parent in GLEIF (exempt)" — is what the row's own sentence above
           already says, and the Risk signals section says it again with its

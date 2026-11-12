@@ -546,6 +546,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Data:** for each company supplier, its latest tenders (won or bid, with title, buyer, status and the amount awarded to it) and its largest purchase orders (title, buyer, peso total and how the order came about), each linked to Mercado Público, plus totals over the last twelve complete months — built from the monthly tender (`lic-da`) and purchase-order (`oc-da`) files. Matched on the RUT.
 - **Note:** sole traders are not indexed: for a natural person the RUT is the national ID number (RUN), so rows with a RUT below 50,000,000 are dropped when the index is built.
 
+## Find a Tender (UK public procurement)
+
+- **Website:** https://www.find-tender.service.gov.uk/ · data via the Open Contracting Partnership's Data Registry, https://data.open-contracting.org/en/publication/41
+- **License:** [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) — stated in the `license` field of every Find a Tender OCDS release package; the Data Registry republishes the data unchanged.
+- **Attribution:** "Contains public sector information licensed under the Open Government Licence v3.0: Find a Tender service notices (Cabinet Office), as collected by the Open Contracting Partnership's Data Registry."
+- **Data:** for each company supplier identified by its Companies House number (or a PPON the notices pair with one), the contracts awarded to it since January 2021 — title, buyer, value, date, status and a link to the notice. Built weekly from the registry's compiled releases.
+- **Note:** contact points, addresses and the free-text "connected persons" (`parties[].control`) are never read.
+
 ## Peru — OECE Registro Nacional de Proveedores (declared legal make-up of suppliers)
 
 - **Website:** https://www.gob.pe/oece · dataset at https://www.datosabiertos.gob.pe/dataset/personas-declaradas-en-la-conformaci%C3%B3n-jur%C3%ADdica-de-proveedores-en-el-registro-nacional-de-0
