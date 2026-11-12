@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 506** — The Israeli change log's rows on History and in the watchlist now say a request was recorded on its day, because that day is the request's latest status update, not its filing day.
+**Latest: Phase 507** — OpenCheck now reads Pennsylvania's Department of State list of active business registrations, by the filing number GLEIF holds, with every listed party carried as a role and no status inferred.
 
 → [Full development history](docs/status.md)
 
