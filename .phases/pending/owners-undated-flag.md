@@ -1,0 +1,6 @@
+---
+title: opencheck_owners keeps the "no date given" flag on its calculated figures.
+readme: The opencheck_owners MCP tool now says when a calculated ownership figure rests on a holding no source dates, as opencheck_lookup already did.
+tests: backend +2
+---
+Found by the post-deploy tester on 12 Nov 2026 after the undated-relationships work: on Rosneft, `opencheck_lookup`'s integrated ownership marked BP Russian Investments' 19.75% (GEM's 2021 table) and Rosneftegaz's 40.4% `undated: true` with the undated note, while `opencheck_owners` — the tool an agent asks "who owns this" — listed the same figures as `above` with no flag, no note and nothing in its summary. `owners.calculated_owners` now copies `undated` onto each figure (states folded by `fold_states` keep it per body), the answer carries `undated_note` (the integrated-ownership `UNDATED_NOTE`, null when every figure is dated), and the summary adds ", no date given" after each undated figure above the threshold and the note once. Positions and figures are unchanged: an undated holding is still read as current. The tool docstring and the data dictionary name the new key. After deploy, `opencheck_owners` on Rosneft (253400JT3MQWNDKMJE44, threshold 10) should show the flag on BP's figure.
