@@ -509,6 +509,12 @@ from .mappers.israel import (  # noqa: F401  (re-exported; the Israel wiring)
     _il_address,
     map_ica_israel,
 )
+from .mappers.slovenia import (  # noqa: F401  (re-exported; the Slovenia wiring)
+    _SI_SCHEME,
+    _SI_SCHEME_NAME,
+    _si_address,
+    map_si_prs,
+)
 from .mappers.argentina import (  # noqa: F401  (re-exported; the Argentina wiring)
     _AR_ADDRESS_UNKNOWN,
     _AR_SOURCE,
@@ -867,6 +873,10 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     "RA000156": ("HR-MBS", "Court Registry — MBS (Croatia)"),
     # Czechia — Commercial Register (Ministerstvo spravedlnosti); the IČO.
     "RA000163": ("CZ-ICO", "Identification number — IČO (Czechia)"),
+    # Slovenia — the Slovenian Business Register (AJPES); ``registeredAs`` is
+    # the bare ten-digit registration number on all 3,077 ISSUED records
+    # (12 Nov 2026). org-id's SI-PRS, the scheme si_prs's mapper writes.
+    "RA000529": ("SI-PRS", "Slovenian Business Register (Poslovni register Slovenije, AJPES)"),
     # Cyprus — Department of Registrar of Companies and Intellectual Property
     "RA000161": ("CY-DRCOR", "Registrar of Companies (Cyprus)"),
     # Finland — Business Information System (PRH / YTJ); the Y-tunnus.

@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 28 countries that have
+ * GLEIF Registration Authority codes for the 29 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
@@ -247,6 +247,17 @@ export const RA_CODES: Record<string, RaEntry> = {
     // every one a bare 9-digit corporate number, 2026-11-10.
     formatHint: "9 digits",
     formatPattern: /^\d{9}$/,
+  },
+  SI: {
+    raCode: "RA000529",
+    countryName: "Slovenia",
+    idLabel: "Registration number (matična številka)",
+    placeholder: "5043611000",
+    // 3,077 ISSUED records under RA000529 (AJPES Slovenian Business
+    // Register), every one a bare ten-digit number, 2026-11-12. The register
+    // itself also issues 93 numbers with a letter in the eighth place.
+    formatHint: "10 characters",
+    formatPattern: /^\d{7}[0-9A-Z]\d{2}$/,
   },
   MT: {
     raCode: "RA000443",

@@ -98,6 +98,10 @@ ALIASES: dict[str, str] = {
     "españa": "ES",
     "italia": "IT",
     "polska": "PL",
+    # Slovene: the country column of AJPES's PRS open file ("SLOVENIJA").
+    "slovenija": "SI",
+    "nemčija": "DE",
+    "švica": "CH",
     # Hebrew names: every country word in the Israel Corporations Authority's
     # open data on 10 Nov 2026 (the registered-address country column).
     "ישראל": "IL",

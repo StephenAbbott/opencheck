@@ -70,6 +70,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | RPVS Slovakia (`rpvs_slovakia`) | `CC-BY-4.0` | yes | yes | no |
 | Colombia RUES — chambers of commerce (Confecámaras) (`rues_colombia`) | `CC-BY-SA-4.0` | yes | yes | yes |
 | SEC EDGAR (Schedule 13D/13G) (`sec_edgar`) | `Public Domain` | yes | no | no |
+| AJPES — Slovenian Business Register (PRS) (`si_prs`) | `CC-BY-4.0` | yes | yes | no |
 | Sirene — INSEE register of legal units (France), with the RNA (`sirene`) | `Licence Ouverte / Open Licence 2.0` | yes | yes | no |
 | Sudski registar — Croatian Court Register (`sudreg_croatia`) | `HR-OpenData` | yes | yes | no |
 | Florida Division of Corporations (Sunbiz) (`sunbiz_florida`) | `FL-Public-Records` | yes | no | no |

@@ -65,6 +65,7 @@ RA_BY_COUNTRY: dict[str, str] = {
     "LV": "RA000423",  # UR (Latvia)
     "LT": "RA000430",  # JAR (Lithuania)
     "CY": "RA000161",  # DRCOR Companies Section (Cyprus)
+    "SI": "RA000529",  # Slovenian Business Register (AJPES) — bare ten digits
     "AR": "RA000009",  # ARCA (formerly AFIP) — the CUIT; RA000010 (the
     # Registro Nacional de Sociedades) and RA000800 (CNV) file the same CUIT;
     # GleifAdapter.search_by_local_id widens an Argentine scope to all three.

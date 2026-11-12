@@ -249,6 +249,7 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         "sunbiz_florida": PROBES["sunbiz_florida"].requires_files,
         "dart_korea": PROBES["dart_korea"].requires_files,
         "ica_israel": PROBES["ica_israel"].requires_files,
+        "si_prs": PROBES["si_prs"].requires_files,
         "registro_sociedades_argentina": PROBES["registro_sociedades_argentina"].requires_files,
         "oece_rnp": PROBES["oece_rnp"].requires_files,
         "estma": PROBES["estma"].requires_files,

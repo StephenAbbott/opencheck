@@ -692,6 +692,30 @@ PROBES: dict[str, SourceProbe] = {
             "Ministry of Justice stopped publishing."
         ),
     ),
+    "si_prs": _p(
+        tier="index",
+        subject="KRKA, tovarna zdravil, d.d., Novo mesto (SI 5043611000)",
+        args=("5043611000",),
+        kwargs={"legal_name": "KRKA, tovarna zdravil, d.d., Novo mesto"},
+        expect_fields=("name", "form", "organ"),
+        # SKIP without an index, never allow_empty. warm_bulk_stores.py
+        # downloads the asset first.
+        requires_files=("si_prs.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt by hand, monthly, from a CSV saved in a browser
+        # (podatki.gov.si answers 407 to anything else); the portal updates
+        # fortnightly. 45 days means a missed refresh, not a broken source.
+        snapshot_max_age_days=45,
+        anchor_lei="549300H9RLRTRTLRUZ73",
+        bods_mapper="map_si_prs",
+        notes=(
+            "The Slovenia wiring (12 Nov 2026): an index of AJPES's open "
+            "Business Register file, built off-datacentre from a browser "
+            "download by refresh_si_prs_index.sh. Entity data only: no "
+            "status, dates, officers or owners. A refresh-due amber means "
+            "the refresh has not been run, not that AJPES stopped publishing."
+        ),
+    ),
     "ica_israel": _p(
         tier="index",
         subject="PAYPAL ISRAEL PAYMENT SERVICES LTD (IL 516478872)",

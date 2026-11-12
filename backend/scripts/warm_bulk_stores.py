@@ -92,6 +92,8 @@ from opencheck.sources.estma import db_path as estma_db_path  # noqa: E402
 from opencheck.sources.estma import warm_index as warm_estma_index  # noqa: E402
 from opencheck.sources.ica_israel import db_path as ica_israel_db_path  # noqa: E402
 from opencheck.sources.ica_israel import warm_index as warm_ica_israel_index  # noqa: E402
+from opencheck.sources.si_prs import db_path as si_prs_db_path  # noqa: E402
+from opencheck.sources.si_prs import warm_index as warm_si_prs_index  # noqa: E402
 from opencheck.sources.registro_sociedades_argentina import db_path as ar_sociedades_db_path  # noqa: E402
 from opencheck.sources.registro_sociedades_argentina import warm_index as warm_ar_sociedades_index  # noqa: E402
 from opencheck.sources.oece_rnp import db_path as oece_rnp_db_path  # noqa: E402
@@ -115,6 +117,7 @@ WARMERS = (
     ("cyprus_drcor", warm_cyprus_index, cyprus_db_path),
     ("estma", warm_estma_index, estma_db_path),
     ("ica_israel", warm_ica_israel_index, ica_israel_db_path),
+    ("si_prs", warm_si_prs_index, si_prs_db_path),
     ("registro_sociedades_argentina", warm_ar_sociedades_index, ar_sociedades_db_path),
     ("oece_rnp", warm_oece_rnp_index, oece_rnp_db_path),
     ("corporations_canada", warm_canada_index, canada_db_path),

@@ -250,6 +250,15 @@ class SourceRead(BaseModel):
     name: str
     requires_api_key: bool
     reads_beneficial_owners: bool
+    #: False for a register whose open data names no people at all — no
+    #: officers, members or owners (``RECORD_ONLY_SOURCES``).
+    reads_people: bool = True
+
+
+#: Registered sources whose open data carries the entity's own record and no
+#: people: the coverage sentence must not say "officers and registered
+#: holdings" of them. Each one's module docstring says what its file holds.
+RECORD_ONLY_SOURCES: frozenset[str] = frozenset({"bce_belgium", "ica_israel", "si_prs"})
 
 
 class KnowabilityStatement(BaseModel):
@@ -335,6 +344,7 @@ def opencheck_reads(code: str) -> list[SourceRead]:
                 name=info.name,
                 requires_api_key=bool(info.requires_api_key),
                 reads_beneficial_owners=reads_bo,
+                reads_people=source_id not in RECORD_ONLY_SOURCES,
             )
         )
     return sorted(out, key=lambda s: s.source_id)
@@ -481,6 +491,11 @@ def _reads_sentence(j: Jurisdiction, reads: list[SourceRead]) -> str | None:
         head = f"OpenCheck reads beneficial owners from {', '.join(s.name for s in bo[:2])}"
         return clauses_to_sentence([head], sep=", ")
     names = ", ".join(s.name for s in reads[:3])
+    if not any(s.reads_people for s in reads):
+        return clauses_to_sentence(
+            [f"OpenCheck reads {names}", "for the register record only: no officers or owners are published"],
+            sep=" ",
+        )
     return clauses_to_sentence(
         [f"OpenCheck reads {names}", "for officers and registered holdings, not beneficial owners"],
         sep=" ",

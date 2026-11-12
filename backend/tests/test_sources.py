@@ -146,6 +146,9 @@ _IDENTIFIER_KEYED = {
     "cyprus_drcor",
     # ica_israel (the Israel wiring): the same LIKE over the local index.
     "ica_israel",
+    # si_prs (the Slovenia wiring): a LIKE over the local index, legal
+    # persons only.
+    "si_prs",
     # registro_sociedades_argentina (the Argentina wiring): an FTS5 search
     # over the local index; a fresh test process has none.
     "registro_sociedades_argentina",

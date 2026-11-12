@@ -58,6 +58,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `ua_edrpou` (8-digit EDRPOU code) derived from GLEIF RA codes `RA000567` (ЄДР), `RA001026` (National Securities and Stock Market Commission) and `RA001027` (National Bank of Ukraine) — all three carry the EDRPOU in `registeredAs`.
 - **Note:** Open data from the ЄДР was suspended after the full-scale invasion in February 2022 and restored on 19 January 2026 under Law 4576-IX, which also withholds precise locations, addresses and KVED activity codes for the duration of martial law and one year afterwards. Those fields are withheld by the publisher, and OpenCheck does not reconstruct them from older copies of this register or from any other source.
 
+## AJPES — Slovenian Business Register (Poslovni register Slovenije)
+
+- **Data:** every unit on the register: ten-digit registration number (matična številka), full name, legal form, registering authority and registered address. A natural person's street and house number (a sole trader's home, usually) are not kept, nor the house identifier (`HSEID`). No status, dates, officers, members or beneficial owners are published.
+- **Portal:** <https://podatki.gov.si/dataset/poslovni-register-slovenije> (updated fortnightly). Public search UI: <https://www.ajpes.si/prs/>
+- **Access:** one CSV (`opsiprs.csv`, UTF-16). podatki.gov.si answers HTTP 407 to every client that is not a browser, so the file is saved from a browser and built into a SQLite index by `scripts/refresh_si_prs_index.sh`, shipped as the `si-prs-index` release asset and downloaded by the backend at boot.
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Attribution:** "Contains information from the Slovenian Business Register (Poslovni register Slovenije), AJPES, published on podatki.gov.si under CC BY 4.0."
+- **Entry point:** `si_maticna` (ten-digit registration number) derived from GLEIF RA code `RA000529`.
+
 ## Israel Corporations Authority (רשות התאגידים) — registers of companies and partnerships
 
 - **Data:** every company and partnership on the Registrar of Companies and the Registrar of Partnerships: number, Hebrew and English names, type, status and sub-status, incorporation date and registered address; for a company also the government-company flag, the limitation, the violating-company mark and the last annual report filed. No directors, shareholders or partners are published. The care-of field (`אצל`), the company's purpose and its description are not read.

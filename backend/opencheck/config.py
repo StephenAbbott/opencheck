@@ -692,6 +692,23 @@ class Settings(BaseSettings):
         alias="CYPRUS_DRCOR_DB_URL",
     )
 
+    # --- Slovenian Business Register (AJPES PRS; podatki.gov.si open data) ---
+    # No API key. podatki.gov.si answers 407 to every non-browser client, so
+    # the CSV is saved from a browser and built by
+    # scripts/refresh_si_prs_index.sh (by hand, monthly) into the
+    # ``si-prs-index`` release asset. Unset: the data-root default
+    # (``si_prs.sqlite``).
+    si_prs_db_file: str | None = Field(default=None, alias="SI_PRS_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    si_prs_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "si-prs-index/si_prs.sqlite.gz"
+        ),
+        alias="SI_PRS_DB_URL",
+    )
+
     # --- Israel Corporations Authority (data.gov.il open data) ---
     # No API key. The registers of companies and partnerships are harvested
     # daily from data.gov.il's CKAN datastore by

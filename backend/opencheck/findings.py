@@ -2164,6 +2164,39 @@ def finding_cyprus_drcor(bundle: dict[str, Any]) -> str | None:
         n = len(officials)
         counts.append(f"{n} official{'' if n == 1 else 's'} on file")
     return clauses_to_sentence([lead, form, *counts])
+def finding_si_prs(bundle: dict[str, Any]) -> str | None:
+    """What the Slovenian Business Register's open file says: the legal form,
+    the registering authority and the settlement (the Slovenia wiring,
+    12 Nov 2026).
+
+    * The file publishes **no status and no dates**, so the sentence says the
+      unit is on the register and that no status is published — never that
+      it is active (rule: state absence in the same voice as presence).
+    * **Not in the index** says so rather than that the unit does not exist:
+      GLEIF may file a fund's number, and a struck-off unit leaves the file.
+    * Deliberately **not** said: officers, members or owners. The file
+      carries none for any unit.
+    """
+    from .sources.si_prs import form_label, organ_label
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        return (
+            "Not in the Slovenian Business Register's open file as indexed; "
+            "GLEIF may file a number the register does not use."
+        )
+    form = form_label(bundle.get("form")) or (bundle.get("form") or None)
+    organ = organ_label(bundle.get("organ"))
+    settlement = ((bundle.get("address") or {}).get("settlement") or "").strip()
+    return clauses_to_sentence([
+        "On the register" + (f", {form}" if form else ""),
+        "no status published",
+        f"registered by {organ}" if organ else None,
+        f"in {settlement}" if settlement else None,
+    ])
+
+
 def finding_ica_israel(bundle: dict[str, Any]) -> str | None:
     """What the Israel Corporations Authority says: the register status (with
     a strike-off or insolvency sub-status), the type, the violating-company
