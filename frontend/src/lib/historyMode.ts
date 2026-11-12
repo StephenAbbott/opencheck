@@ -4,7 +4,8 @@
  * `/history` merges every register OpenCheck holds a change log for onto one
  * axis — GLEIF, Companies House, the New Zealand Companies Office, the
  * Estonian e-Äriregister, Danish CVR, (Phase 263) the New York Department
- * of State and the Latvian Register of Enterprises. This module holds what the tab
+ * of State, the Latvian Register of Enterprises, the Israel Corporations
+ * Authority and INSEE's Sirene register. This module holds what the tab
  * *says* about that merge: which register a row came from, how to get back to
  * the record that published it, and the sentence that opens the tab.
  *
@@ -15,7 +16,7 @@
  * Two claims this module is careful about, both of the same kind the
  * Subsidiaries tab makes:
  *
- * - **Publishing a change log is rare.** Seven of the registers OpenCheck reads
+ * - **Publishing a change log is rare.** Nine of the registers OpenCheck reads
  *   expose entity history; the rest answer only about now. A change missing
  *   from this timeline is far more often a register that keeps no history than
  *   a change that did not happen, and the tab has to say so rather than let
@@ -43,6 +44,7 @@ export const HISTORY_SOURCES = [
   "ny_dos",
   "ur_latvia",
   "ica_israel",
+  "sirene",
 ] as const;
 
 export type HistorySourceId = (typeof HISTORY_SOURCES)[number];
@@ -63,6 +65,7 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   ny_dos: "Dept. of State (NY)",
   ur_latvia: "Register of Enterprises (LV)",
   ica_israel: "Corporations Authority (IL)",
+  sirene: "Sirene (FR)",
 };
 
 export function historySourceLabel(sourceId: string): string {
@@ -89,6 +92,15 @@ export function recordUrl(
 ): string | null {
   if (sourceId === "gleif") {
     return `https://search.gleif.org/#/record/${encodeURIComponent(lei)}`;
+  }
+  // INSEE publishes no per-unit page of its own; the State's Annuaire des
+  // entreprises shows the Sirene record by SIREN (the source card's link).
+  // Not in the register-link table: there `siren` already names INPI's page.
+  if (sourceId === "sirene") {
+    const siren = registryNumbers.sirene;
+    return siren && /^\d{9}$/.test(siren)
+      ? `https://annuaire-entreprises.data.gouv.fr/entreprise/${siren}`
+      : null;
   }
   // Phase 296: every register's address comes from the one register-link table
   // (lib/registerLinks.ts). The History tab reads its `history` entry where
@@ -128,7 +140,7 @@ export function silentRegisters(data: HistoryResponse): string[] {
 }
 
 function numberWord(n: number): string {
-  return ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven"][n] ?? String(n);
+  return ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"][n] ?? String(n);
 }
 
 /**
@@ -196,6 +208,8 @@ export const HISTORY_CAVEAT =
  * holdings start in 2013), so no 2023 boundary is claimed.
  */
 export const REGISTER_READ_NOTES: Record<string, string> = {
+  sirene:
+    "From INSEE's Sirene register: each period of the legal unit's record, compared with the one before — names, legal forms, active or ceased, head-office moves and main activity. A change of activity code that only follows a new version of the NAF classification is not shown. Many older changes were dated by INSEE's yearly processing (1 January up to 2008, or 25 December); those give the year INSEE recorded them, not the day. The first period's start is where INSEE's record begins, not when the company was founded.",
   ica_israel:
     "From the Israel Corporations Authority's change log, which publishes one year of filings and names only the kind of filing — never who or what changed. A share transfer is shown as filed, with its parties not published; a winding-up or a change of name as a filing, not as the status or name it led to. OpenCheck keeps the rows from build to build, so this history grows past the register's year; before the earliest day it holds, an empty timeline is a log that was not kept, not a quiet company.",
   ur_latvia:
@@ -216,6 +230,30 @@ export function registerReadNotes(data: HistoryResponse): string[] {
 }
 
 /**
+ * Whether a row's date is one of INSEE's processing dates, whose year is right
+ * and whose day is not (the Sirene history ticket, decision C): the emitter
+ * marks them `recorded`, and a `recorded` row that only Sirene contributed to
+ * is one of them.
+ */
+export function sireneYearOnly(basis: string, sources: readonly string[]): boolean {
+  return basis === "recorded" && sources.length > 0 && sources.every((s) => s === "sirene");
+}
+
+/**
+ * The date as a row shows it: the ISO day, or for an INSEE processing date
+ * "recorded by INSEE in <year>" — never a day the register did not mean.
+ */
+export function dateText(
+  date: string | null | undefined,
+  basis: string,
+  sources: readonly string[],
+): string | null {
+  if (!date) return null;
+  if (sireneYearOnly(basis, sources)) return `recorded by INSEE in ${date.slice(0, 4)}`;
+  return date;
+}
+
+/**
  * The label under a date, saying what that date actually means.
  *
  * "as recorded by GLEIF" names GLEIF rather than "the register" because GLEIF
@@ -231,6 +269,8 @@ export function registerReadNotes(data: HistoryResponse): string[] {
  */
 export function basisLabel(basis: string, sources: readonly string[] = []): string {
   if (basis === "effective") return "as filed";
+  // The date text already says it (`dateText`).
+  if (sireneYearOnly(basis, sources)) return "";
   if (basis === "recorded") {
     // The Latvian register dates a beneficial owner or officer only by the
     // day it entered the row (the Estonia–Latvia emitters phase): a
@@ -324,7 +364,7 @@ export function historyDegradedNotice(data: HistoryResponse): string | null {
   }
   if (data.registry_sources_blocked) {
     parts.push(
-      "The company-registry histories (Companies House, NZ, Estonia, Denmark, New York) could not be attempted either — the registry number they need comes from that record.",
+      "The company-registry histories (Companies House, NZ, Estonia, Denmark, New York, France) could not be attempted either — the registry number they need comes from that record.",
     );
   } else if (recordDown && data.company_number_basis === "cached") {
     parts.push(

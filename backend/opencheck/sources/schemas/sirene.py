@@ -32,6 +32,35 @@ class SireneUnit(_Base):
     dateDernierTraitementUniteLegale: str | None = None
 
 
+class SirenePeriod(_Base):
+    """One history period of the unit, reduced to what the History tab reads.
+
+    Refuses a natural person's name fields: a sole trader's names are never
+    kept (the Sirene history ticket, decision E).
+    """
+
+    dateDebut: str | None = None
+    dateFin: str | None = None
+    etatAdministratifUniteLegale: str | None = None
+    denominationUniteLegale: str | None = None
+    categorieJuridiqueUniteLegale: str | None = None
+    activitePrincipaleUniteLegale: str | None = None
+    nomenclatureActivitePrincipaleUniteLegale: str | None = None
+    nicSiegeUniteLegale: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_personal_names(cls, data: object) -> object:
+        if isinstance(data, dict):
+            leaked = sorted(
+                k for k in data
+                if k.startswith(("nomUniteLegale", "nomUsage", "prenom", "pseudonyme", "sexe", "changementNom"))
+            )
+            if leaked:
+                raise ValueError(f"Sirene period carries a person's name fields: {leaked}")
+        return data
+
+
 class SireneHeadOffice(_Base):
     siret: str | None = None
     address: dict[str, str] = {}
@@ -71,6 +100,7 @@ class SireneBundle(_Base):
     siren: str
     legal_name: str = ""
     unit: SireneUnit
+    periods: list[SirenePeriod] = []
     head_office: SireneHeadOffice | None = None
     head_office_read: bool = True
     rna: SireneRna | None = None
