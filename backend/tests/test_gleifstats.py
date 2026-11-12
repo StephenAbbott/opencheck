@@ -151,11 +151,15 @@ def test_unknown_names_cannot_create_keys():
     gleifstats.record_call("isins", "not-an-outcome")
     gleifstats.record_securities("file")
     gleifstats.record_securities("Shell PLC")
+    gleifstats.record_openfigi("Shell PLC")
+    gleifstats.record_openfigi("answered")
     s = gleifstats.stats()
     assert set(s["by_route"]) <= gleifstats.ROUTES
     assert set(s["by_endpoint"]) <= gleifstats.ENDPOINT_NAMES
     assert set(s["securities_served"]) == gleifstats.SECURITIES_SERVED
     assert s["securities_served"]["file"] == 1
+    assert set(s["openfigi"]["requests"]) == gleifstats.OPENFIGI_OUTCOMES
+    assert s["openfigi"]["requests"]["answered"] == 1
     dumped = json.dumps(s)
     assert LEI not in dumped and "Shell" not in dumped
 
@@ -165,6 +169,7 @@ async def test_signalstats_serves_the_gleif_section():
     body = json.loads((await health.signal_stats()).body)
     assert body["gleif"]["securities_served"]["cache"] == 1
     assert "isin_index" in body["gleif"]
+    assert body["gleif"]["openfigi"]["requests"]["answered"] == 0
 
 
 def test_the_middleware_sets_the_route(monkeypatch):
