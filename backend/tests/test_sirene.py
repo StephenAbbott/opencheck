@@ -315,7 +315,7 @@ class TestFetch:
         bundle, _ = _fetch(_ok(_unit(statutDiffusionUniteLegale="P")), cache=cache)
         assert bundle["not_found_kind"] == "not_diffusible"
         assert "unit" not in bundle
-        assert cache.get_payload(f"sirene/unit-v1/{TI_SIREN}", max_age_days=1) is None
+        assert cache.get_payload(f"sirene/unit-v2/{TI_SIREN}", max_age_days=1) is None
 
     @pytest.mark.parametrize("status", [401, 403])
     def test_a_refused_key_is_a_degradation(self, no_index, status: int) -> None:
@@ -329,7 +329,7 @@ class TestFetch:
         bundle, recorded = _fetch({f"/siren/{TI_SIREN}": httpx.Response(429)}, cache=cache)
         assert bundle["is_stub"]
         assert recorded and recorded[0].reason == degradation.REASON_RATE_LIMITED
-        assert cache.get_payload(f"sirene/unit-v1/{TI_SIREN}", max_age_days=1) is None
+        assert cache.get_payload(f"sirene/unit-v2/{TI_SIREN}", max_age_days=1) is None
 
     def test_a_failed_head_office_is_partial_and_not_cached(self, no_index, tmp_path: Path) -> None:
         cache = Cache(root=tmp_path)
@@ -338,7 +338,7 @@ class TestFetch:
         bundle, recorded = _fetch(routes, cache=cache)
         assert bundle["head_office_read"] is False
         assert recorded[0].check == degradation.CHECK_SOURCE_READ
-        assert cache.get_payload(f"sirene/unit-v1/{TI_SIREN}", max_age_days=1) is None
+        assert cache.get_payload(f"sirene/unit-v2/{TI_SIREN}", max_age_days=1) is None
 
     def test_no_key_is_said(self, no_index) -> None:
         bundle, recorded = _fetch({}, key=None)

@@ -53,10 +53,18 @@ class _Resp:
 
 
 class _FakeClient:
-    def __init__(self, *, gleif: Any, openfigi_by_isin: dict, gleif_error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        gleif: Any,
+        openfigi_by_isin: dict,
+        gleif_error: Exception | None = None,
+        openfigi_error: Exception | None = None,
+    ) -> None:
         self._gleif = gleif
         self._figi = openfigi_by_isin
         self._gleif_error = gleif_error
+        self._figi_error = openfigi_error
 
     async def get(self, url: str, params=None, headers=None) -> _Resp:
         assert "/isins" in url, f"unexpected GET {url}"
@@ -66,6 +74,8 @@ class _FakeClient:
 
     async def post(self, url: str, json=None, headers=None) -> _Resp:
         assert url == svc._OPENFIGI_URL
+        if self._figi_error is not None:
+            raise self._figi_error
         results = []
         for job in json:
             meta = self._figi.get(job["idValue"])
@@ -644,3 +654,66 @@ def test_extractor_builds_index_filtering_correctly():
     assert not any("firds" in r for r in entry["regimes"])
     assert not any(r.startswith("ext_") for r in entry["regimes"])
     assert entry["eo_14071"] is True and entry["sanctioned"] is True
+
+
+# ---------------------------------------------------------------------------
+# OpenFIGI: listed only when it answered, and every request counted
+# (the OpenFIGI IP-change ticket, 11 Nov 2026)
+# ---------------------------------------------------------------------------
+
+
+def _figi_status_error(status: int) -> httpx.HTTPStatusError:
+    request = httpx.Request("POST", svc._OPENFIGI_URL)
+    return httpx.HTTPStatusError(
+        f"HTTP {status}", request=request, response=httpx.Response(status, request=request)
+    )
+
+
+@pytest.mark.parametrize(
+    "error, outcome",
+    [
+        (_figi_status_error(429), "http_429"),
+        (_figi_status_error(503), "http_error"),
+        (httpx.ConnectError("refused"), "unreachable"),
+        (httpx.ReadTimeout("slow"), "unreachable"),
+        (ValueError("not JSON"), "bad_response"),
+    ],
+)
+async def test_a_failed_openfigi_call_is_counted_and_not_listed(monkeypatch, tmp_path, error, outcome):
+    from opencheck import gleifstats
+
+    client = _FakeClient(
+        gleif=_gleif_payload(["DE000A1"], total=1),
+        openfigi_by_isin={"DE000A1": {"securityType2": "Warrant"}},
+        openfigi_error=error,
+    )
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
+    # The key is configured (the _live fixture), but OpenFIGI did not answer.
+    assert "openfigi" not in out["sources"]
+    assert "gleif" in out["sources"]
+    assert out["securities"][0]["type"] is None
+    figi = gleifstats.stats()["openfigi"]
+    assert figi["requests"][outcome] == 1
+    assert figi["requests"]["answered"] == 0
+    assert figi["last_failed_at"] and figi["last_answered_at"] is None
+
+
+async def test_an_openfigi_answer_with_no_match_still_lists_openfigi(monkeypatch, tmp_path):
+    from opencheck import gleifstats
+
+    client = _FakeClient(gleif=_gleif_payload(["DE000A1"], total=1), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
+    assert "openfigi" in out["sources"]
+    assert out["securities"][0]["type"] is None
+    figi = gleifstats.stats()["openfigi"]
+    assert figi["requests"]["answered"] == 1
+    assert figi["last_answered_at"] and figi["last_failed_at"] is None
+
+
+async def test_openfigi_is_not_listed_when_nothing_was_asked(monkeypatch, tmp_path):
+    client = _FakeClient(gleif=_gleif_payload([], total=0), openfigi_by_isin={})
+    with patch.object(svc, "build_client", lambda: _FakeCM(client)):
+        out = await svc.assemble_securities("7LTWFZYICNSX8D621K86")
+    assert "openfigi" not in out["sources"]

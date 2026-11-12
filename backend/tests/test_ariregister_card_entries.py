@@ -197,7 +197,7 @@ def live(monkeypatch):
 
 def _estonian_registration(monkeypatch, code: str) -> None:
     async def registration(_client, _lei):
-        return (None, None, code, None, None, None, None, "Holding Põhjala OÜ")
+        return (None, None, code, None, None, None, None, "Holding Põhjala OÜ", None)
 
     async def modifications(_client, _lei):
         return [], []

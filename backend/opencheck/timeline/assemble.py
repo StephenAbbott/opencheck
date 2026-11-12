@@ -232,18 +232,46 @@ def _cluster_entity_events(
         clusters: list[list[ChangeEvent]] = []
         for ev in sorted(evs, key=lambda e: _chrono_key(e.event_date)):
             d = _parse(ev.event_date)
-            placed = False
+            best: list[ChangeEvent] | None = None
             if d is not None:
+                candidates = []
                 for cl in clusters:
                     ref = _parse(cl[0].event_date)
-                    if ref is not None and abs((d - ref).days) <= window_days:
-                        cl.append(ev)
-                        placed = True
-                        break
-            if not placed:
+                    if ref is None or abs((d - ref).days) > window_days:
+                        continue
+                    if _conflicts(cl, ev):
+                        continue
+                    candidates.append((not _same_outcome(cl, ev), abs((d - ref).days), cl))
+                if candidates:
+                    best = min(candidates, key=lambda c: (c[0], c[1]))[2]
+            if best is not None:
+                best.append(ev)
+            else:
                 clusters.append([ev])
         entries.extend(_make_entry(cl) for cl in clusters)
     return entries
+
+
+def _outcome(ev: ChangeEvent) -> str:
+    """What the change led to, compared loosely (case and spacing aside)."""
+    return " ".join((ev.value_new or "").casefold().split())
+
+
+def _conflicts(cluster: list[ChangeEvent], ev: ChangeEvent) -> bool:
+    """A register never records one change twice with two outcomes: a second
+    event from a source already in the cluster, leading somewhere else, is a
+    second change (TOTAL SA → TOTAL SE on 29 May 2020 and TOTAL SE →
+    TOTALENERGIES SE on 28 May 2021 are 364 days apart, inside the window)."""
+    new = _outcome(ev)
+    return bool(new) and any(
+        other.source_id == ev.source_id and _outcome(other) and _outcome(other) != new
+        for other in cluster
+    )
+
+
+def _same_outcome(cluster: list[ChangeEvent], ev: ChangeEvent) -> bool:
+    new = _outcome(ev)
+    return bool(new) and any(_outcome(other) == new for other in cluster)
 
 
 # --------------------------------------------------------------------------- #

@@ -1,7 +1,7 @@
 """Time Machine fetch service — pull raw change data and assemble a timeline.
 
 Lazy and never on the main lookup (same posture as ``/securities``). Fetches
-from every register OpenCheck holds a change log for — seven, not the two this
+from every register OpenCheck holds a change log for — eight, not the two this
 docstring claimed until Phase 190:
 
 - **GLEIF** (key-free): the LEI record (to derive the national registry numbers
@@ -19,16 +19,19 @@ docstring claimed until Phase 190:
 - **New York Department of State** (key-free, Phase 263): events reconstructed
   from the All Filings, status, name and address rows the ordinary adapter
   fetch already returns, name-gated against the GLEIF legal name.
+- **INSEE Sirene** (needs ``INSEE_SIRENE_API_KEY``, the Sirene history
+  ticket): events read from the legal unit's history periods, which the
+  ordinary ``sirene`` fetch already returns — for every French SIREN GLEIF
+  files under RA000189, RA000192 or RA001129.
+- **French JOAFE** (key-free, the JOAFE History ticket): an association's
+  notices and an association's or foundation's accounts deposits, read live
+  from DILA's portal and cached a day (:mod:`..sources.joafe`). Keyed on the
+  same SIREN; the association's RNA numbers come from the RNA index. A
+  failure lands in ``registers_unavailable``.
 - **Latvian Register of Enterprises** (key-free, the Estonia–Latvia emitters
   phase): events reconstructed from UR's dated open data — the lookup's
   tables plus six event tables read on this path only. Additions only for
   people: UR publishes no end dates.
-- **Israel Corporations Authority** (key-free): the change log in the index.
-- **French JOAFE** (key-free, the JOAFE History ticket): an association's
-  notices and an association's or foundation's accounts deposits, read live
-  from DILA's portal and cached a day (:mod:`..sources.joafe`). Keyed on the
-  SIREN GLEIF files under any French authority; the association's RNA numbers
-  come from the RNA index. A failure lands in ``registers_unavailable``.
 
 Every one of them lands in the same ``ChangeEvent`` model and is merged onto one
 axis by :mod:`.assemble` — a national register that publishes history is not a
@@ -58,7 +61,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote
 
 import httpx
@@ -73,6 +76,7 @@ from .cvr_denmark import cvr_change_events
 from .ica_israel import ica_israel_change_events
 from .joafe import joafe_change_events
 from .ny_dos import ny_dos_change_events
+from .sirene import sirene_change_events
 from .nz_companies import nz_change_events
 from .ur_latvia import ur_latvia_change_events
 
@@ -90,6 +94,9 @@ _DK_RA_CODE = "RA000170"   # Danish CVR / Erhvervsstyrelsen
 _NY_RA_CODE = "RA000628"   # New York Department of State (keyed on RA, not jurisdiction)
 _LV_RA_CODE = "RA000423"   # Latvian Register of Enterprises (Uzņēmumu reģistrs)
 _IL_RA_CODE = "RA000406"   # Israel Corporations Authority (Registrar of Companies)
+#: The French authorities whose records file a SIREN — the INPI / Sirene
+#: deriver's set (RA000189 Sirene, RA000192 Infogreffe, RA001129 the RNE).
+_FR_RA_CODES = frozenset({"RA000189", "RA000192", "RA001129"})
 
 #: The GLEIF adapter's own on-disk record for this LEI — the only local copy
 #: of ``registeredAs``/``registeredAt`` there is. Read with no age bound: a
@@ -115,16 +122,16 @@ _CH_OFFICERS_PAGE_CAP = 20
 
 
 _Numbers = tuple[
-    str | None, str | None, str | None, str | None, str | None, str | None, str | None, str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
     str | None,
 ]
-
-
-def _padded(numbers: tuple) -> _Numbers:
-    """Nine slots from a registration tuple; an older eight-slot one (a test
-    double written before the French SIREN joined) reads as no SIREN."""
-    padded = tuple(numbers) + (None,) * (9 - len(numbers))
-    return padded[:9]  # type: ignore[return-value]
 
 
 async def _gleif_registration(client: httpx.AsyncClient, lei: str) -> _Numbers:
@@ -153,8 +160,7 @@ def _cached_registration(lei: str) -> _Numbers | None:
 def _registration_numbers(payload: dict | None) -> _Numbers:
     """``(ch, nz, ee, dk, ny, lv, il, legal_name, fr_siren)`` from a GLEIF Level-1 record payload.
 
-    The French SIREN (any of the three French authorities, written plain or
-    grouped in threes) keys the JOAFE association notices.
+    The French SIREN comes last so the positions before it keep their meaning.
 
     The legal name rides along for New York: the DOS emitter is name-gated,
     because six ISSUED LEIs file a DOS ID that belongs to another entity, and
@@ -177,15 +183,15 @@ def _registration_numbers(payload: dict | None) -> _Numbers:
     lv = registered_as if (registered_as and registered_at == _LV_RA_CODE) else None
     il = registered_as if (registered_as and registered_at == _IL_RA_CODE) else None
     legal_name = ((entity.get("legalName") or {}).get("name") or "").strip() or None
-    fr_siren: str | None = None
-    from ..sources.inpi import INPI_RA_CODES, normalise_siren
+    fr: str | None = None
+    if registered_as and registered_at in _FR_RA_CODES:
+        from ..sources.inpi import normalise_siren
 
-    if registered_as and registered_at in INPI_RA_CODES:
         try:
-            fr_siren = normalise_siren(registered_as)
+            fr = normalise_siren(registered_as)
         except ValueError:
-            fr_siren = None
-    return ch, nz, ee, dk, ny, lv, il, legal_name, fr_siren
+            fr = None
+    return ch, nz, ee, dk, ny, lv, il, legal_name, fr
 
 
 async def _gleif_modifications(
@@ -317,8 +323,8 @@ async def fetch_timeline(lei: str) -> Timeline:
     ny_dos_id: str | None = None
     lv_regcode: str | None = None
     il_number: str | None = None
-    legal_name: str | None = None
     fr_siren: str | None = None
+    legal_name: str | None = None
     lei_mods: list[dict] = []
     rr_mods: list[dict] = []
     ch_filings: list[dict] = []
@@ -338,8 +344,7 @@ async def fetch_timeline(lei: str) -> Timeline:
         )
         reg_res, mods_res = results
         if not isinstance(reg_res, BaseException):
-            (company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number,
-             legal_name, fr_siren) = _padded(reg_res)
+            company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name, fr_siren = reg_res
             company_number_basis = "live"
         else:
             # A 429 handed back by the Phase 143 transport, the throttle
@@ -349,8 +354,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             gleif_record_available = False
             cached = _cached_registration(lei)
             if cached is not None:
-                (company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number,
-                 legal_name, fr_siren) = _padded(cached)
+                company_number, nz_number, ee_code, dk_cvr, ny_dos_id, lv_regcode, il_number, legal_name, fr_siren = cached
                 company_number_basis = "cached"
         if not isinstance(mods_res, BaseException):
             lei_mods, rr_mods = mods_res
@@ -505,28 +509,45 @@ async def fetch_timeline(lei: str) -> Timeline:
         il_events = ica_israel_change_events(il_number, il_rows)
         il_kept_since = (coverage or {}).get("kept_since")
 
+    # France — INSEE's Sirene history periods, from the ``sirene`` source's
+    # ordinary fetch (one cached read serves the lookup and this; paced by the
+    # INSEE throttle). Gated on the key: without one the source answers a
+    # stub. Best-effort; never sinks the timeline.
+    fr_events = []
+    if fr_siren and settings.insee_sirene_api_key:
+        try:
+            from ..sources import REGISTRY
+            from ..sources.sirene import SireneAdapter
+
+            sirene_adapter = cast(SireneAdapter, REGISTRY["sirene"])
+            bundle = await sirene_adapter.fetch(fr_siren, legal_name=legal_name or "")
+        except Exception:  # noqa: BLE001
+            bundle = None
+        if bundle:
+            fr_events = sirene_change_events(bundle)
+
     # France — the JOAFE: an association's notices (keyed by its RNA numbers,
     # read from the RNA index) and an association's or foundation's accounts
     # deposits (keyed by the SIREN). One live query, cached a day. A failure
     # is said (``registers_unavailable``), never read as "no notices".
-    fr_events = []
-    fr_number: str | None = None
-    fr_unavailable = False
+    joafe_events = []
+    joafe_number: str | None = None
+    joafe_unavailable = False
     if fr_siren:
         from ..sources import joafe as _joafe
 
         try:
-            fr_read = await _joafe.notices(fr_siren)
+            joafe_read = await _joafe.notices(fr_siren)
         except Exception:  # noqa: BLE001
-            fr_read = {"status": "unavailable"}
-        if fr_read.get("status") == "read":
-            fr_events = joafe_change_events(fr_read.get("rows"))
-            rnas = fr_read.get("rnas") or []
+            joafe_read = {"status": "unavailable"}
+        if joafe_read.get("status") == "read":
+            joafe_events = joafe_change_events(joafe_read.get("rows"))
+            rnas = joafe_read.get("rnas") or []
             # The RNA number is how the JOAFE names a notice; the SIREN is
             # how it names an accounts deposit. One RNA → link by it.
-            fr_number = rnas[0] if len(rnas) == 1 else fr_siren
-        elif fr_read.get("reason") != "not_configured":
-            fr_unavailable = True
+            joafe_number = rnas[0] if len(rnas) == 1 else fr_siren
+        elif joafe_read.get("reason") != "not_configured":
+            joafe_unavailable = True
 
     # The board stream. Emitted here rather than inside ``assemble_timeline``
     # because it comes from a second Companies House call, not from the filing
@@ -544,7 +565,14 @@ async def fetch_timeline(lei: str) -> Timeline:
         gleif_rr_mods=rr_mods,
         ch_filings=ch_filings,
         extra_events=(
-            nz_events + ee_events + dk_events + ny_events + lv_events + il_events + fr_events
+            nz_events
+            + ee_events
+            + dk_events
+            + ny_events
+            + lv_events
+            + il_events
+            + fr_events
+            + joafe_events
             + officer_events
         ),
     )
@@ -565,11 +593,12 @@ async def fetch_timeline(lei: str) -> Timeline:
             ("ny_dos", ny_dos_id),
             ("ur_latvia", lv_regcode),
             ("ica_israel", il_number),
-            ("joafe", fr_number),
+            ("sirene", fr_siren),
+            ("joafe", joafe_number),
         )
         if number
     }
-    if fr_unavailable:
+    if joafe_unavailable:
         timeline.registers_unavailable = ["joafe"]
     if il_kept_since:
         timeline.registers_kept_since = {"ica_israel": il_kept_since}
