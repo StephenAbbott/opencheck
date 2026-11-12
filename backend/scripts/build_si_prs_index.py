@@ -25,15 +25,17 @@ with whitespace collapsed). No status, no dates, no people.
 
 What is kept
 ------------
-* Every row whose number is ten digits (others are counted and skipped; the
-  builder refuses past ``MAX_MALFORMED``). A repeated number keeps its first
+* Every row whose number has the register's shape — seven digits, a digit
+  or capital letter, two digits (others are counted and skipped; the builder
+  refuses past ``MAX_MALFORMED``). A repeated number keeps its first
   row and is counted (refused past ``MAX_REPEATED``).
 * ``HSEID`` (a house identifier) is never stored.
 * A **natural person's** street, house number and suffix are never stored:
-  the settlement, postcode and post office are. Which rows are natural
-  persons is decided by the adapter's ``form_is_legal_person`` — a form with
-  no legal-person marker counts as a natural person's. Every form is logged
-  with its count and reading, so an unforeseen one is seen on the first run.
+  the settlement, postcode and post office are. ``NATURAL_PERSON_FORMS`` and
+  ``LEGAL_PERSON_FORMS`` hold every form in the 12 Nov 2026 file; a business
+  unit (``UNIT_FORMS``) takes its main unit's reading; a form in neither list
+  is read as a natural person's and logged as new. Every form is logged with
+  its count and reading.
 
 Refusals (exit 2, nothing written): a file that is not UTF-16 (the portal's
 407 page is HTML), a changed header, fewer than ``MIN_ROWS`` rows, too many
@@ -58,32 +60,95 @@ from collections.abc import Iterable, Iterator
 from pathlib import Path
 
 # Standard library only, so the refresh runs under a bare ``python3`` on a
-# Mac. These three are copies of ``opencheck.sources.si_prs``'s, pinned equal
-# by ``tests/test_si_prs.py`` — the index and its reader cannot disagree on
-# which rows are natural persons.
+# Mac. These two are copies of ``opencheck.sources.si_prs``'s, pinned equal
+# by ``tests/test_si_prs.py``.
 INDEX_SCHEMA_VERSION = "1"
 CSV_URL = (
     "https://podatki.gov.si/dataset/9ee1a9aa-c224-4995-b2ad-3760d7af0748/"
     "resource/beb70929-3d0d-41c6-9af2-25d525d906d3/download/opsiprs.csv"
 )
-_NATURAL_PERSON_MARKERS = re.compile(
-    r"(\bs\.\s?p\.|posameznik|sobodajal|\bkmet\b|zasebnik|fizičn|dopolnilne? dejavnost|na kmetiji)",
-    re.IGNORECASE,
-)
-_LEGAL_PERSON_MARKERS = re.compile(
-    r"(d\.\s?o\.\s?o\.|\bd\.\s?d\.|\bk\.\s?d\.|d\.\s?n\.\s?o\.|z\.\s?o\.\s?o\.|z\.\s?b\.\s?o\."
-    r"|družba|zadrug|zavod|društv|ustanov|podružnic|združenj|zvez|zbornic|sindikat"
-    r"|strank|skupnost|agencij|sklad|občin|ministrstv|uprav|organ|\bjavn|evropsk|gospodarsk)",
-    re.IGNORECASE,
-)
+
+#: A registration number: seven digits, one character (a capital letter on
+#: 93 rows of the 12 Nov 2026 file), a two-digit unit. Pinned to the
+#: adapter's ``NUMBER_RE``.
+NUMBER_PATTERN = r"\d{7}[0-9A-Z]\d{2}"
+
+#: The forms that are a natural person's — every one in the 12 Nov 2026 file
+#: (179,682 rows with their units): a sole trader and a sole trader's branch,
+#: supplementary activity on a farm, the self-employed professions and
+#: trades the register lists, a room renter. Their street and house number
+#: are never stored and they are out of name search.
+NATURAL_PERSON_FORMS: frozenset[str] = frozenset({
+    "Samostojni podjetnik posameznik s.p.",
+    "Podružnica s. p.",
+    "Nosilec dopolnilne dejavnosti na kmetiji",
+    "Samostojni delavec v kulturi",
+    "Registrirani sobodajalec",
+    "Del pri sobodajalcu",
+    "Evidentirani odvetnik",
+    "Registrirani zdravnik, zobozdravnik, zasebni zdravstveni delavec",
+    "Poklicni športnik",
+    "Zasebni športni delavec",
+    "Notar",
+    "Registrirani lekarnar",
+    "Izvršitelj",
+    "Samostojni novinar",
+    "Morski ribič",
+    "Evidentirani detektiv",
+    "Registrirani zasebni izvajalec raziskovalec",
+    "Druga fizična oseba",
+    "Zasebni učitelj oziroma vzgojitelj",
+})
+
+#: Forms that are a part of another unit: they take their main unit's
+#: (``…000``) reading — a sole trader's business unit is the sole trader's
+#: address. No main unit in the file: a natural person's, the safe reading.
+UNIT_FORMS: frozenset[str] = frozenset({
+    "Poslovna enota", "Organizacijska enota", "Članica univerze (del)",
+})
+
+#: Every other form in the 12 Nov 2026 file: a legal person or a state body.
+#: A form in none of the three sets is new; it is read as a natural
+#: person's and logged, so the next refresh can place it.
+LEGAL_PERSON_FORMS: frozenset[str] = frozenset({
+    "Družba z omejeno odgovornostjo d.o.o.", "Društvo, zveza društev", "Zavod",
+    "Sindikat", "Javni zavod", "Verska skupnost in podobne verske organizacije",
+    "Krajevna skupnost, druge ožje lokalne skupnosti", "Podružnica domačega podjetja",
+    "Agrarne, pašne in vaške skupnosti", "Podružnica tujega podjetja",
+    "Delniška družba d.d.", "Zadruga z.o.o.", "Ustanova",
+    "Družba z neomejeno odgovornostjo d.n.o.", "Lokalne skupnosti",
+    "Skupnost lastnikov stanovanj", "Komanditna družba k.d.",
+    "Gospodarsko interesno združenje GIZ", "Zadruga z.b.o.", "Politična stranka",
+    "Zbornica", "Druge skupnosti", "Upravni organ v sestavi", "Upravna enota",
+    "Gospodarska zbornica", "Članica univerze", "Mladinski svet", "Ministrstvo",
+    "Sodišče (vrhovno, višja, okrožna, okrajna)", "Skupnost zavodov", "Javna agencija",
+    "Javni sklad", "Tožilstvo", "Vlada, vladna služba", "Narodnostna skupnost",
+    "Podružnica tujega društva", "Nevladna organizacija", "Študentska organizacija",
+    "Sklad", "Druge oblike poslovnih subjektov", "Javni gospodarski zavod",
+    "Samostojni in neodvisni državni organ", "Režijski obrat",
+    "Evropsko gospodarsko interesno združenje EGIZ", "Javni raziskovalni zavod",
+    "Organ, organizacija širše lokalne skupnosti", "Tuja pravna oseba po ZIKS-1",
+    "Predstavniški organ (DZ, DS)", "Pravobranilstvo", "Centralna banka",
+    "Ustavno sodišče", "Predsednik republike", "Varuh človekovih pravic",
+    "Računsko sodišče", "Obrtna zadruga",
+    "Pooblaščenec za dostop do informacij javnega značaja", "evropska zadruga (SCE)",
+    "p. o.", "n. sol. o.", "Republika Slovenija", "Evropska delniška družba SE",
+})
 
 
-def form_is_legal_person(form: str | None) -> bool:
-    """A form with no legal-person marker is read as a natural person's."""
-    text = form or ""
-    if _NATURAL_PERSON_MARKERS.search(text):
-        return False
-    return bool(_LEGAL_PERSON_MARKERS.search(text))
+def legal_reading(form: str, main_unit_form: str | None) -> tuple[bool, bool]:
+    """``(legal_person, known)`` for a row's form; *main_unit_form* is the
+    form of its ``…000`` unit (None when absent or itself)."""
+    if form in UNIT_FORMS:
+        if main_unit_form is None or main_unit_form in UNIT_FORMS:
+            return False, True
+        return legal_reading(main_unit_form, None)[0], True
+    if form in NATURAL_PERSON_FORMS:
+        return False, True
+    if form in LEGAL_PERSON_FORMS:
+        return True, True
+    return False, False
+
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger("build_si_prs_index")
@@ -157,27 +222,36 @@ def build(
     con = sqlite3.connect(str(tmp))
     try:
         con.executescript(SCHEMA)
-        stats = Counter(rows=0, malformed=0, repeated=0, legal_persons=0, natural_persons=0)
+        stats = Counter(rows=0, malformed=0, repeated=0, legal_persons=0,
+                        natural_persons=0, unknown_form=0)
         forms: Counter[str] = Counter()
-        seen: set[str] = set()
-        batch: list[tuple] = []
+        kept: dict[str, list[str]] = {}
         for row in rows:
             if len(row) != len(HEADER):
                 stats["malformed"] += 1
                 continue
-            (number, name, _hseid, form, organ, street, house, suffix,
-             settlement, postcode, post_office, country) = (_clean(c) for c in row)
-            if not re.fullmatch(r"\d{10}", number):
+            cells = [_clean(c) for c in row]
+            number = cells[0].upper()
+            if not re.fullmatch(NUMBER_PATTERN, number):
                 stats["malformed"] += 1
                 continue
-            if number in seen:
+            if number in kept:
                 stats["repeated"] += 1
                 continue
-            seen.add(number)
-            legal = form_is_legal_person(form)
+            kept[number] = cells
+        # A unit takes its main unit's reading, so the main units' forms are
+        # read after the whole file.
+        batch: list[tuple] = []
+        for number, cells in kept.items():
+            (_n, name, _hseid, form, organ, street, house, suffix,
+             settlement, postcode, post_office, country) = cells
+            main = kept.get(number[:7] + "000") if not number.endswith("000") else None
+            legal, known = legal_reading(form, main[3] if main else None)
             forms[form] += 1
             stats["rows"] += 1
             stats["legal_persons" if legal else "natural_persons"] += 1
+            if not known:
+                stats["unknown_form"] += 1
             batch.append((
                 number, name or None, form or None, organ or None,
                 (street or None) if legal else None,
@@ -199,8 +273,15 @@ def build(
             raise RefusedInput(f"{stats['repeated']:,} repeated numbers — the format has changed")
 
         for form, count in forms.most_common():
-            log.info("  form %-70s %8s  %s", form or "(blank)", f"{count:,}",
-                     "legal person" if form_is_legal_person(form) else "natural person / unrecognised")
+            if form in UNIT_FORMS:
+                reading = "a unit: its main unit's reading"
+            elif form in NATURAL_PERSON_FORMS:
+                reading = "natural person"
+            elif form in LEGAL_PERSON_FORMS:
+                reading = "legal person"
+            else:
+                reading = "NEW FORM: read as a natural person — place it in a list"
+            log.info("  form %-70s %8s  %s", form or "(blank)", f"{count:,}", reading)
 
         con.commit()
         con.executescript(INDEXES)

@@ -88,7 +88,7 @@ Data generated 2026-11-10T16:58:19+00:00; sentences rendered as of 2026-11-10. *
 
 ### Belgium (BE) — verified 2026-10-21
 
-> Belgium UBO Register is accessible to authorities and obliged entities, and to others on legitimate interest. OpenCheck reads Belgian Crossroads Bank for Enterprises (BCE/KBO) for officers and registered holdings, not beneficial owners.
+> Belgium UBO Register is accessible to authorities and obliged entities, and to others on legitimate interest. OpenCheck reads Belgian Crossroads Bank for Enterprises (BCE/KBO) for the register record only: no officers or owners are published.
 
 | Field | Value |
 |---|---|
@@ -1085,7 +1085,7 @@ Data generated 2026-11-10T16:58:19+00:00; sentences rendered as of 2026-11-10. *
 
 ### Slovenia (SI) — verified 2026-09-18
 
-> Register of Beneficial Owners (RDL) is accessible to authorities and obliged entities, and to others on legitimate interest, since 9 Aug 2025. OpenCheck reads no Slovenia register, so an owner absent from this report says nothing about what Slovenia holds.
+> Register of Beneficial Owners (RDL) is accessible to authorities and obliged entities, and to others on legitimate interest, since 9 Aug 2025. OpenCheck reads AJPES — Slovenian Business Register (PRS) for the register record only: no officers or owners are published.
 
 | Field | Value |
 |---|---|
@@ -1101,7 +1101,7 @@ Data generated 2026-11-10T16:58:19+00:00; sentences rendered as of 2026-11-10. *
 | 6AMLD LIA / BORIS | Yes / Yes |
 | 6AMLD details | From 9th August 2025, access to RDL was shifting to use a LIA test following July amendments to Slovenia’s AML law (see gazette / government website) |
 | Next FATF/FSRB assessment | MONEYVAL; onsite 2025-09-29; plenary 2026-05-01 |
-| OpenCheck reads | *no adapter for this jurisdiction* |
+| OpenCheck reads | `si_prs` |
 | Sources | https://www.uradni-list.si/glasilo-uradni-list-rs/vsebina/2025-01-2269 |
 
 ### Spain (ES) — verified 2026-09-18

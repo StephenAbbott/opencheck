@@ -246,9 +246,10 @@ export const RA_CODES: Record<string, RaEntry> = {
     idLabel: "Registration number (matična številka)",
     placeholder: "5043611000",
     // 3,077 ISSUED records under RA000529 (AJPES Slovenian Business
-    // Register), every one a bare ten-digit number, 2026-11-12.
-    formatHint: "10 digits",
-    formatPattern: /^\d{10}$/,
+    // Register), every one a bare ten-digit number, 2026-11-12. The register
+    // itself also issues 93 numbers with a letter in the eighth place.
+    formatHint: "10 characters",
+    formatPattern: /^\d{7}[0-9A-Z]\d{2}$/,
   },
   MT: {
     raCode: "RA000443",

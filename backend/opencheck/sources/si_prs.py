@@ -35,10 +35,12 @@ What the index keeps (Stephen, 12 Nov 2026)
   trader's registered address is usually their home. The settlement and
   postcode are kept. ``HSEID`` is never stored for anyone.
 * Name search covers legal persons only.
-* Which forms are a legal person is decided by the form's own words
-  (``form_is_legal_person``): a form with no legal-person marker is treated
-  as a natural person's, so an unforeseen form loses its street rather than
-  publishing one.
+* Which rows are natural persons is decided by the builder from the form:
+  nineteen forms measured on 12 Nov 2026 are a person's (a sole trader, a
+  self-employed cultural worker, a notary…); a business unit takes its main
+  unit's reading; a form the builder has not seen is read as a person's, so
+  it loses its street rather than publishing one. The index stores the
+  reading as ``legal_person``.
 
 No status is inferred: the file states none, and appearing in it says the
 unit is on the register, nothing about whether it trades.
@@ -88,20 +90,25 @@ COVERAGE_NOT_IN_INDEX = (
     "be newer than the index."
 )
 
-#: Words in the form that make it a natural person's, matched before the
-#: legal-person markers: a sole trader (*samostojni podjetnik posameznik
-#: s.p.*), a registered room renter, a farmer, a private practitioner.
-_NATURAL_PERSON_MARKERS = re.compile(
-    r"(\bs\.\s?p\.|posameznik|sobodajal|\bkmet\b|zasebnik|fizičn|dopolnilne? dejavnost|na kmetiji)",
-    re.IGNORECASE,
-)
-#: Words in the form that make it a legal person's.
-_LEGAL_PERSON_MARKERS = re.compile(
-    r"(d\.\s?o\.\s?o\.|\bd\.\s?d\.|\bk\.\s?d\.|d\.\s?n\.\s?o\.|z\.\s?o\.\s?o\.|z\.\s?b\.\s?o\."
-    r"|družba|zadrug|zavod|društv|ustanov|podružnic|združenj|zvez|zbornic|sindikat"
-    r"|strank|skupnost|agencij|sklad|občin|ministrstv|uprav|organ|\bjavn|evropsk|gospodarsk)",
-    re.IGNORECASE,
-)
+#: Exact glosses for forms the patterns below would misread or not know
+#: (the 12 Nov 2026 file's commonest forms).
+_FORM_GLOSSES_EXACT: dict[str, str] = {
+    "Podružnica s. p.": "sole trader's branch",
+    "Poslovna enota": "business unit",
+    "Organizacijska enota": "organisational unit",
+    "Podružnica domačega podjetja": "branch of a domestic company",
+    "Podružnica tujega podjetja": "branch of a foreign company",
+    "Društvo, zveza društev": "association",
+    "Sindikat": "trade union",
+    "Lokalne skupnosti": "local community",
+    "Verska skupnost in podobne verske organizacije": "religious community",
+    "Javni zavod": "public institute",
+    "Javni sklad": "public fund",
+    "Zbornica": "chamber",
+    "Samostojni delavec v kulturi": "self-employed cultural worker",
+    "Evidentirani odvetnik": "registered lawyer",
+    "Nosilec dopolnilne dejavnosti na kmetiji": "supplementary activity on a farm",
+}
 
 #: Legal-form glosses, the first match wins (longer forms first).
 _FORM_GLOSSES: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -122,32 +129,38 @@ _FORM_GLOSSES: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 
-def normalise_maticna(raw: str) -> str:
-    """The ten-digit registration number, or "" when *raw* is not one.
+#: A registration number: seven digits (the subject, its check digit
+#: included), one character and a two-digit unit. The eighth is a digit on
+#: 295,156 rows of the 12 Nov 2026 file and a capital letter on 93.
+NUMBER_RE = re.compile(r"\d{7}[0-9A-Z]\d{2}")
 
-    GLEIF files the bare ten digits. A seven-digit number is the unit's base
-    (its check digit included) and names the main unit, ``000``.
+
+def normalise_maticna(raw: str) -> str:
+    """The ten-character registration number, or "" when *raw* is not one.
+
+    GLEIF files the bare ten digits. A seven-digit number is the subject's
+    base (its check digit included) and names its main unit, ``000``.
     """
-    digits = re.sub(r"\D", "", str(raw or ""))
-    if len(digits) == 10:
-        return digits
-    if len(digits) == 7:
-        return digits + "000"
+    text = re.sub(r"[^0-9A-Za-z]", "", str(raw or "")).upper()
+    if NUMBER_RE.fullmatch(text):
+        return text
+    if re.fullmatch(r"\d{7}", text):
+        return text + "000"
     return ""
 
 
-def form_is_legal_person(form: str | None) -> bool:
-    """True when the form's own words name a legal person (see the module
-    docstring): an unrecognised form is read as a natural person's."""
-    text = form or ""
-    if _NATURAL_PERSON_MARKERS.search(text):
-        return False
-    return bool(_LEGAL_PERSON_MARKERS.search(text))
+def parent_number(number: str) -> str | None:
+    """The main unit a unit belongs to (``…000``), or None for a main unit."""
+    if len(number) != 10 or number.endswith("000"):
+        return None
+    return number[:7] + "000"
 
 
 def form_label(form: str | None) -> str | None:
     """English gloss of the register's legal-form words, or None."""
-    text = form or ""
+    text = (form or "").strip()
+    if text in _FORM_GLOSSES_EXACT:
+        return _FORM_GLOSSES_EXACT[text]
     for pattern, gloss in _FORM_GLOSSES:
         if pattern.search(text):
             return gloss

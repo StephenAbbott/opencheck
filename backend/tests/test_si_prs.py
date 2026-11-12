@@ -28,10 +28,11 @@ from opencheck.routers.lookup import _build_derived, _build_result_hit, _dispatc
 from opencheck.sources import REGISTRY, si_prs
 from opencheck.sources.base import SearchKind
 from opencheck.sources.si_prs import (
+    NUMBER_RE,
     SI_PRS_RA_CODE,
-    form_is_legal_person,
     form_label,
     normalise_maticna,
+    parent_number,
 )
 
 _SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "build_si_prs_index.py"
@@ -54,6 +55,10 @@ SP = "7000001000"       # sole trader: street dropped, out of search
 ROOM = "7000002000"     # registered room renter: a natural person too
 ODD = "7000003000"      # a form nobody foresaw: read as a natural person
 ABSENT = "5319200023"   # a fund's number GLEIF files: not in the file
+LETTERED = "1234567C00" # the register's lettered numbers are real numbers
+DOO_UNIT = "6123456001" # a company's business unit: a legal person's
+SP_UNIT = "7000001001"  # a sole trader's business unit: its street dropped
+COURT = "8000001000"    # a state body: a legal person
 
 #: The published header, stray spaces included.
 RAW_HEADER = [
@@ -82,6 +87,14 @@ def _rows() -> list[list[str]]:
         _row(ROOM, "MARIJA KOVAČ", "Registrirani sobodajalec", "AJPES, izpostava Koper",
              "Morska pot", "3", "", "Piran", "6330", "Piran"),
         _row(ODD, "NEKAJ NOVEGA", "Nova oblika", "AJPES, izpostava Kranj", "Skrita ulica", "9"),
+        _row(LETTERED, "ČRKA d.o.o.", "Družba z omejeno odgovornostjo d.o.o.",
+             "AJPES, izpostava Maribor", "Črkovna ulica", "2"),
+        _row(DOO_UNIT, "PRIMER d.o.o., Poslovna enota Kranj", "Poslovna enota",
+             "AJPES, izpostava Kranj", "Enotna cesta", "4"),
+        _row(SP_UNIT, "JANEZ NOVAK S.P., Poslovna enota Celje", "Poslovna enota",
+             "AJPES, izpostava Celje", "Zasebna ulica", "8", "", "Celje", "3000", "Celje"),
+        _row(COURT, "OKRAJNO SODIŠČE V KRANJU", "Sodišče (vrhovno, višja, okrožna, okrajna)",
+             "AJPES, izpostava Kranj", "Zoisova ulica", "2", "", "Kranj", "4000", "Kranj"),
         # malformed: a nine-digit number, a short row, and a repeat
         _row("504361100", "SHORT NUMBER", "Delniška družba d.d.", "x"),
         [DOO, "SHORT ROW"],
@@ -153,11 +166,42 @@ async def _map(number: str) -> list[dict[str, Any]]:
 
 def test_the_builder_reads_the_utf16_file_and_records_its_cut(index):
     out, stats = index
-    assert stats["rows"] == 5 and stats["malformed"] == 2 and stats["repeated"] == 1
-    assert stats["legal_persons"] == 2 and stats["natural_persons"] == 3
+    assert stats["rows"] == 9 and stats["malformed"] == 2 and stats["repeated"] == 1
+    assert stats["legal_persons"] == 5 and stats["natural_persons"] == 4
+    assert stats["unknown_form"] == 1, "only 'Nova oblika' is a form nobody listed"
     meta = dict(sqlite3.connect(out).execute("SELECT key, value FROM meta"))
     assert meta["cut"] == CUT and meta["schema_version"] == si_prs.INDEX_SCHEMA_VERSION
     assert meta["built_at"].endswith("Z") and "T" in meta["built_at"]
+
+
+def test_a_unit_takes_its_main_units_reading(index):
+    out, _ = index
+    conn = sqlite3.connect(out)
+    legal = dict(conn.execute("SELECT number, legal_person FROM entity"))
+    assert legal[DOO_UNIT] == 1 and legal[SP_UNIT] == 0
+    assert legal[COURT] == 1 and legal[LETTERED] == 1 and legal[ODD] == 0
+
+
+@pytest.mark.parametrize(("form", "main", "want"), [
+    ("Samostojni podjetnik posameznik s.p.", None, (False, True)),
+    ("Registrirani sobodajalec", None, (False, True)),
+    ("Nosilec dopolnilne dejavnosti na kmetiji", None, (False, True)),
+    ("Družba z omejeno odgovornostjo d.o.o.", None, (True, True)),
+    ("Sodišče (vrhovno, višja, okrožna, okrajna)", None, (True, True)),
+    ("Poslovna enota", "Delniška družba d.d.", (True, True)),
+    ("Poslovna enota", "Samostojni podjetnik posameznik s.p.", (False, True)),
+    ("Poslovna enota", None, (False, True)),
+    ("Nova oblika", None, (False, False)),
+])
+def test_the_builders_form_reading(form, main, want):
+    assert builder.legal_reading(form, main) == want
+
+
+def test_the_form_lists_do_not_overlap():
+    lists = (builder.NATURAL_PERSON_FORMS, builder.LEGAL_PERSON_FORMS, builder.UNIT_FORMS)
+    for i, a in enumerate(lists):
+        for b in lists[i + 1:]:
+            assert not (a & b)
 
 
 def test_a_natural_persons_street_and_the_house_id_never_reach_the_index(index):
@@ -166,7 +210,7 @@ def test_a_natural_persons_street_and_the_house_id_never_reach_the_index(index):
     columns = {row[1] for row in conn.execute("PRAGMA table_info(entity)")}
     assert "hseid" not in {c.lower() for c in columns}
     dump = "\n".join(conn.iterdump())
-    for street in ("Domača ulica", "Morska pot", "Skrita ulica"):
+    for street in ("Domača ulica", "Morska pot", "Skrita ulica", "Zasebna ulica"):
         assert street not in dump
     assert "12345678" not in dump, "HSEID is never stored"
     assert "Dunajska cesta" in dump, "a company keeps its registered street"
@@ -195,8 +239,7 @@ def test_the_builders_copies_match_the_adapter():
     """The builder runs under a bare python3, so it copies three things."""
     assert builder.INDEX_SCHEMA_VERSION == si_prs.INDEX_SCHEMA_VERSION
     assert builder.CSV_URL == si_prs.CSV_URL
-    assert builder._NATURAL_PERSON_MARKERS.pattern == si_prs._NATURAL_PERSON_MARKERS.pattern
-    assert builder._LEGAL_PERSON_MARKERS.pattern == si_prs._LEGAL_PERSON_MARKERS.pattern
+    assert builder.NUMBER_PATTERN == NUMBER_RE.pattern
     imports = {
         n.module for n in ast.walk(ast.parse(_SCRIPT.read_text())) if isinstance(n, ast.ImportFrom)
     }
@@ -210,26 +253,31 @@ def test_the_builders_copies_match_the_adapter():
 
 @pytest.mark.parametrize(("raw", "want"), [
     ("5043611000", KRKA), (" 5043611000 ", KRKA), ("5043611", KRKA), ("504361100", ""), ("", ""),
+    ("1234567c00", LETTERED), ("12345670C0", ""),
 ])
-def test_a_number_is_ten_digits(raw, want):
+def test_a_number_is_ten_characters(raw, want):
     assert normalise_maticna(raw) == want
 
 
-@pytest.mark.parametrize(("form", "legal", "gloss"), [
-    ("Samostojni podjetnik posameznik s.p.", False, "sole trader"),
-    ("Registrirani sobodajalec", False, "registered room renter"),
-    ("Nosilec dopolnilne dejavnosti na kmetiji", False, None),
-    ("Družba z omejeno odgovornostjo d.o.o.", True, "private limited company"),
-    ("Delniška družba d.d.", True, "public limited company"),
-    ("Komanditna delniška družba k.d.d.", True, "partnership limited by shares"),
-    ("Komanditna družba k.d.", True, "limited partnership"),
-    ("Družba z neomejeno odgovornostjo d.n.o.", True, "general partnership"),
-    ("Kmetijska zadruga z.o.o.", True, "cooperative"),
-    ("Javni zavod", True, "institute"),
-    ("Nova oblika", False, None),
+def test_a_units_main_unit():
+    assert parent_number(DOO_UNIT) == DOO
+    assert parent_number(DOO) is None
+
+
+@pytest.mark.parametrize(("form", "gloss"), [
+    ("Samostojni podjetnik posameznik s.p.", "sole trader"),
+    ("Registrirani sobodajalec", "registered room renter"),
+    ("Družba z omejeno odgovornostjo d.o.o.", "private limited company"),
+    ("Delniška družba d.d.", "public limited company"),
+    ("Komanditna delniška družba k.d.d.", "partnership limited by shares"),
+    ("Komanditna družba k.d.", "limited partnership"),
+    ("Družba z neomejeno odgovornostjo d.n.o.", "general partnership"),
+    ("Kmetijska zadruga z.o.o.", "cooperative"),
+    ("Javni zavod", "public institute"),
+    ("Poslovna enota", "business unit"),
+    ("Nova oblika", None),
 ])
-def test_forms(form, legal, gloss):
-    assert form_is_legal_person(form) is legal
+def test_forms(form, gloss):
     assert form_label(form) == gloss
 
 
@@ -358,6 +406,23 @@ async def test_an_ajpes_branch_is_named_in_english_and_slovene(index):
     assert address["address"] == "Dunajska cesta 5 A, 1000 Ljubljana"
 
 
+async def test_a_lettered_number_and_a_unit_map(index):
+    (stmt,) = await _map(LETTERED)
+    assert stmt["recordDetails"]["identifiers"][0]["id"] == LETTERED
+    (unit,) = await _map(DOO_UNIT)
+    notes = " ".join(a["description"] for a in unit.get("annotations", []))
+    assert f"main unit {DOO}" in notes
+    assert "Enotna cesta" in unit["recordDetails"]["addresses"][0]["address"]
+    (sp_unit,) = await _map(SP_UNIT)
+    assert sp_unit["recordDetails"]["addresses"][0]["address"] == "3000 Celje"
+
+
+def test_the_register_countries_resolve():
+    from opencheck.bods.countries import country_code
+
+    assert [country_code(c) for c in ("SLOVENIJA", "NEMČIJA", "ŠVICA")] == ["SI", "DE", "CH"]
+
+
 def test_a_note_card_and_a_stub_map_to_nothing():
     assert list(map_si_prs({"is_stub": True, "number": KRKA})) == []
     assert list(map_si_prs({"is_stub": False, "not_found": True, "number": KRKA})) == []
@@ -374,7 +439,7 @@ async def test_the_finding_sentences(index):
     assert "active" not in krka.lower()
     absent = finding_si_prs(await _fetch(ABSENT))
     assert absent.startswith("Not in the Slovenian Business Register")
-    for number in (KRKA, DOO, SP, ROOM, ODD):
+    for number in (KRKA, DOO, SP, ROOM, ODD, LETTERED, DOO_UNIT, SP_UNIT, COURT):
         assert len(finding_si_prs(await _fetch(number)) or "") <= MAX_FINDING_CHARS
 
 

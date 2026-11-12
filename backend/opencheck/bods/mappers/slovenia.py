@@ -55,7 +55,9 @@ def map_si_prs(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
         return
     number = str(bundle.get("number") or "").strip()
-    if len(number) != 10 or not number.isdigit():
+    from ...sources.si_prs import NUMBER_RE, parent_number
+
+    if not NUMBER_RE.fullmatch(number):
         return
 
     name = (bundle.get("name") or bundle.get("legal_name") or f"SI {number}").strip()
@@ -88,6 +90,15 @@ def map_si_prs(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         label = organ_label(organ)
         said = f"{label} ({organ})" if label and label != organ and organ not in label else (label or organ)
         notes.append(commenting("/recordDetails", f"Entered in the register by {said}."))
+    main_unit = parent_number(number)
+    if main_unit:
+        notes.append(
+            commenting(
+                "/recordDetails",
+                f"A unit of the register's main unit {main_unit}: the register numbers "
+                "a unit after the subject it belongs to.",
+            )
+        )
     notes.append(
         commenting(
             "/recordDetails",
