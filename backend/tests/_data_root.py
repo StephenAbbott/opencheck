@@ -186,6 +186,7 @@ _STORE_RESETS: tuple[tuple[str, str], ...] = (
     ("opencheck.sources.apr_serbia", "reset_connection"),
     ("opencheck.sources.asp_moldova", "reset_connection"),
     ("opencheck.sources.chilecompra", "reset_connection"),
+    ("opencheck.sources.austender", "reset_connection"),
     ("opencheck.sources.estma", "reset_connection"),
     ("opencheck.form13f", "reset_connection"),
     ("opencheck.meip", "reload_store"),

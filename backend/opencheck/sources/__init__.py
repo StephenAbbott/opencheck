@@ -19,6 +19,7 @@ from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .bolagsverket import BolagsverketAdapter
 from .brreg import BrregAdapter
 from .cac_nigeria import CacNigeriaAdapter
+from .austender import AusTenderAdapter
 from .chilecompra import ChileCompraAdapter
 from .cnpj_brazil import CnpjBrazilAdapter
 from .acra_singapore import AcraSingaporeAdapter
@@ -84,6 +85,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "ares": AresAdapter(),
     "ariregister": AriregisterAdapter(),
     "asp_moldova": AspMoldovaAdapter(),
+    "austender": AusTenderAdapter(),
     "bce_belgium": BceBelgiumAdapter(),
     "bolagsverket": BolagsverketAdapter(),
     "brreg": BrregAdapter(),

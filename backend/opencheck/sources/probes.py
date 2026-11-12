@@ -1190,6 +1190,30 @@ PROBES: dict[str, SourceProbe] = {
             "stopped publishing."
         ),
     ),
+    "austender": _p(
+        tier="index",
+        subject="Telstra Limited (ACN 086 174 781, ABN 64 086 174 781)",
+        # The lookup's entry point with the anchor's real pair: GLEIF files
+        # Telstra's ACN under ASIC (RA000014), so the probe exercises the
+        # derived-ABN route most matches take.
+        method="fetch_by_identifiers",
+        args=("894500U4L7JONMULJE04", "086174781", "RA000014"),
+        kwargs={"legal_name": "TELSTRA LIMITED"},
+        expect_fields=("supplier", "buyers", "contracts"),
+        requires_files=("austender.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt monthly from a monthly retrieval: 75 days means a missed run.
+        snapshot_max_age_days=75,
+        anchor_lei="894500U4L7JONMULJE04",
+        bods_mapper="map_austender",
+        notes=(
+            "A long-standing Commonwealth supplier (about 1,700 contract "
+            "notices since 2013), reached through the ABN its ACN implies. "
+            "The index is the austender-index release asset, rebuilt monthly "
+            "by refresh-austender-index.yml; warm_bulk_stores.py downloads it "
+            "before the sweep."
+        ),
+    ),
     "eiti_soe": _p(
         tier="index",
         subject="Equinor Energy AS",

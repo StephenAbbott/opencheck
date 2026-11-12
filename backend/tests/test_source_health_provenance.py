@@ -242,6 +242,7 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         "onrc_romania": PROBES["onrc_romania"].requires_files,
         "meip": PROBES["meip"].requires_files,
         "chilecompra": PROBES["chilecompra"].requires_files,
+        "austender": PROBES["austender"].requires_files,
         "jar_lithuania": PROBES["jar_lithuania"].requires_files,
         "bce_belgium": PROBES["bce_belgium"].requires_files,
         "edr_ukraine": PROBES["edr_ukraine"].requires_files,

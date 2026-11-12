@@ -72,6 +72,8 @@ from opencheck.sources.ariregister import db_path as ariregister_db_path  # noqa
 from opencheck.sources.ariregister import warm_index as warm_ariregister_index  # noqa: E402
 from opencheck.sources.asp_moldova import index_path as asp_moldova_index_path  # noqa: E402
 from opencheck.sources.asp_moldova import warm_index as warm_asp_moldova_index  # noqa: E402
+from opencheck.sources.austender import db_path as austender_db_path  # noqa: E402
+from opencheck.sources.austender import warm_index as warm_austender_index  # noqa: E402
 from opencheck.sources.chilecompra import db_path as chilecompra_db_path  # noqa: E402
 from opencheck.sources.chilecompra import warm_index as warm_chilecompra_index  # noqa: E402
 from opencheck.meip import db_path as meip_db_path  # noqa: E402
@@ -109,6 +111,7 @@ WARMERS = (
     ("onrc_romania", warm_onrc_index, onrc_db_path),
     ("meip", warm_meip_db, meip_db_path),
     ("chilecompra", warm_chilecompra_index, chilecompra_db_path),
+    ("austender", warm_austender_index, austender_db_path),
     ("jar_lithuania", warm_jar_index, jar_db_path),
     ("bce_belgium", warm_bce_index, bce_db_path),
     ("dart_korea", warm_dart_korea_index, dart_korea_db_path),

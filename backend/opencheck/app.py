@@ -169,6 +169,22 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # AusTender: the supplier index built monthly from the OCP Data Registry's
+    # copy of AusTender's contract notices, the ChileCompra arrangement. Until
+    # it lands ``austender`` is not announced (``covers_lei``).
+    try:
+        from .sources.austender import warm_index as warm_austender_index
+
+        stats = await asyncio.to_thread(warm_austender_index)
+        log.info("AusTender index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "AusTender index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # Phase 330: the Estonian e-Business Register index — the same arrangement.
     # Until it lands the printable page answers, as it did before Phase 330.
     try:

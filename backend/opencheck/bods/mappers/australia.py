@@ -100,3 +100,57 @@ def map_abr_australia(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     )
 
     yield stmt
+
+
+# ---------------------------------------------------------------------------
+# AusTender — Australian Government contract notices (CC BY 3.0 AU)
+# ---------------------------------------------------------------------------
+#
+# Contracts won are activity, not ownership: one entity statement for the
+# supplier, the TED / ChileCompra precedent. AusTender publishes the
+# supplier's ABN on every notice it files, so the ABN is asserted, written as
+# digits the way the ABR and GLEIF statements write it, so the three
+# corroborate.
+
+
+def _austender_aud(value: int) -> str:
+    """Published values summed in full — ``AUD 1,249,028``, never rounded."""
+    return f"AUD {value:,}"
+
+
+@content_addressed
+def map_austender(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map an AusTender fetch bundle to one BODS entity statement."""
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return
+    supplier = bundle.get("supplier") or {}
+    abn = str(bundle.get("abn") or "").strip()
+    if not supplier or not abn:
+        return
+    contracts = int(supplier.get("contracts") or 0)
+    parts = [
+        "Supplier to the Australian Government on AusTender",
+        f"{contracts:,} contract notice{'s' if contracts != 1 else ''} with published "
+        f"values summing to {_austender_aud(int(supplier.get('value_aud') or 0))}",
+    ]
+    first, last = supplier.get("first_date"), supplier.get("last_date")
+    if first and last:
+        parts.append(f"published {first} to {last}")
+    name = (supplier.get("name") or bundle.get("legal_name") or "").strip()
+    yield make_entity_statement(
+        source_id="austender",
+        local_id=abn,
+        name=name or abn,
+        identifiers=[
+            {
+                "id": abn,
+                "scheme": "AU-ABN",
+                "schemeName": "Australian Business Number — Australian Business Register",
+            }
+        ],
+        entity_details="; ".join(parts),
+        source_url=bundle.get("link") or None,
+        # The latest notice AusTender published for this supplier — its own
+        # dated assertion about the record (the TED latest-notice precedent).
+        statement_date=last or None,
+    )

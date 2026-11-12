@@ -71,6 +71,7 @@ _OFFICIAL_REGISTERS = {
 # Third-party aggregators and derived sources.
 _THIRD_PARTY_SOURCES = {
     "brightquery",
+    "austender",
     "chilecompra",
     "climatetrace",
     "everypolitician",

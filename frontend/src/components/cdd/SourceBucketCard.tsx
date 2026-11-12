@@ -178,6 +178,10 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
       const records = raw.records as { url?: string }[] | undefined;
       return records?.[0]?.url || "https://www.mercadopublico.cl/";
     }
+    case "austender": {
+      const contracts = raw.contracts as { url?: string }[] | undefined;
+      return contracts?.[0]?.url || "https://www.tenders.gov.au/";
+    }
     default:
       return null;
   }
@@ -1093,6 +1097,118 @@ export function ChileCompraRecordsList({ hit }: { hit: SourceHit }) {
 }
 
 /**
+ * AusTenderContractsList — Australian Government contract notices
+ * (austender source), the ChileCompra card's counterpart.
+ *
+ * Lists the supplier's latest and largest contract notices, newest first,
+ * each linked to its AusTender page, with agency, published value, period,
+ * procedure and amendments. No contract status is shown: the published data
+ * overwrites a contract's status with a cancelled amendment's, so a notice
+ * marked cancelled says what the mark can mean instead. The footnote states
+ * the totals the list is drawn from and how the match was made.
+ */
+export function AusTenderContractsList({ hit }: { hit: SourceHit }) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+  if (hit.source_id !== "austender") return null;
+  const raw = hit.raw as Record<string, unknown> | undefined;
+  const contracts = (raw?.contracts ?? []) as {
+    cn: string;
+    published?: string | null;
+    buyer?: string;
+    title?: string;
+    value_aud?: number | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    procedure?: string;
+    limited_tender_reason?: string;
+    amendments?: number;
+    marked_cancelled?: boolean;
+    other_suppliers?: number;
+    url?: string;
+  }[];
+  if (!contracts.length) return null;
+  const supplier = (raw?.supplier ?? {}) as {
+    contracts?: number;
+    value_aud?: number;
+    buyers?: number;
+    first_date?: string | null;
+  };
+  const viaAcn = raw?.matched_via === "acn";
+  const shown = expanded ? contracts : contracts.slice(0, 5);
+  const period = (start?: string | null, end?: string | null) =>
+    start && end ? `${start} to ${end}` : start || end || "";
+
+  return (
+    <RowList
+      controls={listId}
+      total={contracts.length}
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      moreLabel="contract"
+      items={shown.map((c) => ({
+        key: c.cn,
+        title: (
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-oo-blue hover:underline underline-offset-2"
+          >
+            {c.title || `Contract notice ${c.cn}`}
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+        ),
+        meta: (
+          <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            {[
+              c.buyer,
+              c.value_aud ? `AUD ${Number(c.value_aud).toLocaleString()}` : "",
+              c.published ? `published ${c.published}` : "",
+              period(c.start_date, c.end_date),
+              c.limited_tender_reason
+                ? `${c.procedure}: ${c.limited_tender_reason}`
+                : c.procedure,
+              c.amendments
+                ? `amended ${c.amendments} time${c.amendments === 1 ? "" : "s"}`
+                : "",
+              c.other_suppliers ? "names another supplier ABN too" : "",
+              c.cn,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            <Chip tone="ok" size="sm">contract</Chip>
+            {c.marked_cancelled && (
+              <Chip tone="neutral" size="sm">
+                marked cancelled in the data
+              </Chip>
+            )}
+          </span>
+        ),
+      }))}
+      footnote={
+        <>
+          The latest and largest contract notices on AusTender
+          {supplier.contracts ? (
+            <>
+              {" "}— of {supplier.contracts.toLocaleString()} notices since{" "}
+              {(supplier.first_date || "").slice(0, 4) || "2013"}, with published
+              values totalling AUD {(supplier.value_aud ?? 0).toLocaleString()}{" "}
+              (OpenCheck&apos;s sum)
+            </>
+          ) : null}
+          .{viaAcn ? " Matched on the ABN that the company's ACN implies." : ""}{" "}
+          A contract marked cancelled may only have had an amendment
+          cancelled: the published data overwrites a contract&apos;s status,
+          value and period with a cancelled amendment&apos;s. Contracts won
+          through a subsidiary sit under the subsidiary&apos;s ABN.
+        </>
+      }
+    />
+  );
+}
+
+/**
  * The finding line. Lives here rather than inline so the fallback chain is
  * testable — see `lib/sourceFinding.ts`, which is where the reasoning is.
  */
@@ -1312,6 +1428,7 @@ function HitRow({
       <MentionsBreakdown hit={hit} />
       <TedAwardsList hit={hit} />
       <ChileCompraRecordsList hit={hit} />
+      <AusTenderContractsList hit={hit} />
       {/* Risk findings only (Phase 245). A structural observation — "No
           parent in GLEIF (exempt)" — is what the row's own sentence above
           already says, and the Risk signals section says it again with its

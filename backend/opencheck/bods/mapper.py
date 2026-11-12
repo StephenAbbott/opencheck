@@ -224,6 +224,10 @@ from .mappers.wikirate import (  # noqa: F401  (re-exported, Phase 246)
 from .mappers.ted import (  # noqa: F401  (re-exported, Phase 246)
     map_ted_eu,
 )
+from .mappers.australia import (  # noqa: F401  (re-exported, AusTender)
+    _austender_aud,
+    map_austender,
+)
 from .mappers.chile import (  # noqa: F401  (re-exported, Phase 280)
     _chilecompra_clp,
     map_chilecompra,
