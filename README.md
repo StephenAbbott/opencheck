@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 507** — OpenCheck now reads Pennsylvania's Department of State list of active business registrations, by the filing number GLEIF holds, with every listed party carried as a role and no status inferred.
+**Latest: Phase 508** — Connecticut's business registry is now a live source, read from the Secretary of the State's open data with each business's directors, officers, members and partners by name and role.
 
 → [Full development history](docs/status.md)
 
