@@ -995,6 +995,8 @@ export interface HistoryEntry {
   interest_start_date: string | null;
   interest_end_date: string | null;
   boosted: boolean;
+  /** A public page for this one change — the BODACC notice. Null elsewhere. */
+  record_url?: string | null;
 }
 
 export interface HistoryRawChange {
@@ -1024,6 +1026,8 @@ export interface HistoryRawChange {
    *  secretary is on the board stream but not in the graph). */
   party_id?: string | null;
   party_statement_id?: string | null;
+  /** A public page for this one change — the BODACC notice. Null elsewhere. */
+  record_url?: string | null;
 }
 
 export interface HistoryResponse {
@@ -1059,6 +1063,10 @@ export interface HistoryResponse {
   /** `{source_id: ISO day}` — for a register whose change log keeps a limited
    *  window (Israel: one year), the earliest day OpenCheck's kept copy reaches. */
   registers_kept_since?: Record<string, string>;
+  /** `{source_id: reason}` — a register asked that did not answer (BODACC, the JOAFE). */
+  registers_unavailable?: Record<string, string>;
+  /** `{source_id: true}` — a register's list cut at OpenCheck's cap. */
+  registers_truncated?: Record<string, boolean>;
 }
 
 /** Fetch the merged change history for an LEI — every register OpenCheck

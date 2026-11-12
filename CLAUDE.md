@@ -1486,6 +1486,12 @@ will be re-derived otherwise:
   companies' registrations, missing from the table); a dissolution,
   revocation or bankruptcy is pending (the liquidation follows), a completed
   liquidation, merger or division is terminal. A test pins the 33.
+- **A vacant seat (缺額) is no one** (the vacant-seat ticket, 11 Nov 2026).
+  `tw_vacant_seat` decides it (缺額 in any brackets, plus 出缺 / 懸缺 / 從缺 /
+  空缺): no party, no relationship, no holding; a `commenting` note on the
+  company lists the vacant seats and the finding says "N seats vacant". A
+  legal person's row with a vacant representative keeps the legal person's
+  seat and draws no representative.
 - **Not in v1**: key managers (經理人, in no open API), branch records, limited
   partnerships and History.
 - **A legal-person holder's UBN (the Taiwan GCIS v2 ticket, 4 Nov 2026).**
@@ -1632,6 +1638,53 @@ otherwise:
   República (~31 of 583) — a note card. CO has no row in the knowability
   table yet.
 
+## French association notices on History — the JOAFE (the JOAFE History ticket, 11 Nov 2026)
+
+`sources/joafe.py` (the live read), `timeline/joafe.py` (the emitter),
+`rna_index.rnas_for_siren`, the French SIREN slot in `timeline/service.py`'s
+`_registration_numbers`. Stephen's decisions A–F (11 Nov 2026) and the things
+that will be re-derived otherwise:
+
+- **A timeline reader, not a source.** Not in `REGISTRY`; nothing reaches the
+  lookup, the BODS, a signal or the watchlist (F). DILA's Opendatasoft dataset
+  `jo_associations` (keyless, 6M calls a day domain-wide): `source` `joafe` =
+  notices, `dca` = accounts deposits.
+- **The join (A).** GLEIF's SIREN under any of `inpi.INPI_RA_CODES` →
+  `rna_index.rnas_for_siren` (the `association_siren` index; an index built
+  before it answers by scan) → one query `dca_siren="…" or numero_rna in
+  (…)`. Notices name an association by RNA number, deposits by SIREN.
+  Notices before the RNA (2009) carry no W number and are not reached.
+  Foundations' and endowment funds' notices are keyed on `numrnf`, which
+  nothing links to a SIREN: accounts only, no name match (D).
+- **Personal data (B).** A small association's seat is a member's home
+  (386,438 notices contain "chez"). `FIELDS` asks for `contenu` and `_reduce`
+  keeps named facts only (`ROW_KEYS`, an allowlist): a seat transfer's
+  commune and postcode, whether the purpose changed, the old and new title.
+  Street lines, purpose text and founders are never cached or returned. A
+  modification notice repeats the seat in `transfereNouvelleAdresse` when it
+  did not move, so the whole address is compared in memory (`_address_key`)
+  before the commune is kept. Test fixtures replace a member's name and
+  street with placeholders.
+- **Tiers.** Creation and dissolution → Tier 2 `STATUS_CHANGED`; a new name →
+  `LEGAL_NAME_CHANGE`; a seat transfer → `ADDRESS_CHANGE` worded "Commune
+  (postcode)"; purpose or statutes → Tier 3, never the text; accounts → Tier 3
+  (C). Dated by the declaration (`effective`), else publication; a deposit by
+  DILA's validation day.
+- **Corrections.** A rectification or cancellation names the notice it
+  replaces by publication day and number in the issue (`reference_avis_initial`;
+  the issue number is written two ways, so it is not compared). A rectified
+  notice is replaced; a cancelled one is removed and leaves a Tier 3 "Notice
+  of … withdrawn" row. A later accounts version of the same year replaces
+  the earlier.
+- **Live, cached a day (E)** under `joafe/notices-v1/<siren>`, and only when
+  the RNA index answered (without it the answer is accounts only). A failure
+  is `status: unavailable`, never cached, and reaches `/history` as
+  `registers_unavailable: ["joafe"]` → `historyDegradedNotice` says it.
+- **The link** is DILA's table filtered by RNA number or SIREN
+  (`joafeUrl` in `historyMode.ts`): the JOAFE is not a register-link entry.
+  `registry_numbers["joafe"]` is the RNA number when the SIREN has one, else
+  the SIREN.
+
 ## Israel's change log on History and the watchlist (the ica-changes ticket, 11 Nov 2026)
 
 `sources/ica_israel_changes.py` (the one reading of a request code),
@@ -1671,6 +1724,53 @@ otherwise:
 - **After merge**, run `refresh-ica-israel-index` once by hand: the first
   run builds the change log and publishes an empty delta day; the watchlist
   reads filings from the second run on.
+
+## BODACC on History, the watchlist and the Sirene card (the BODACC ticket, 11 Nov 2026)
+
+`opencheck/bodacc.py` (the one reading of a notice), `timeline/bodacc.py`,
+`bodacc_tick` in `watchlist.py`, `BODACC_KIND_TIER` in
+`watchlist_materiality.py`, `SireneAdapter._attach_bodacc`. Not a registered
+source: no hit, no BODS, no coverage row. Stephen's decisions A–G are on the
+Notion ticket; the things that will be re-derived otherwise:
+
+- **Live, per SIREN, never batched** (A). opendatasoft Explore v2.1,
+  `annonces-commerciales`, keyless, `where=registre="<siren>"`; a batched
+  `registre in (...)` undercounts. Date filters are `date'YYYY-MM-DD'` —
+  double quotes are HTTP 400. Cached a day (`bodacc/notices-v1/<siren>`)
+  **after** the allowlist; a failure raises `BodaccUnavailable` and is never
+  cached. 1,000 notices (newest first) is the cap, said as `truncated`.
+- **No person, ever** (B). `reduce_record` copies by allowlist
+  (`NOTICE_KEYS`, pinned): never `administration`, `complementJugement`, an
+  address, a descriptif or a natural person's name. A name change carries the
+  new name only for a legal person. Personal-bankruptcy and management-ban
+  judgments are dropped (G).
+- **Subject or seller, nothing else** (F). `registre` lists every SIREN a
+  notice names; the subject is `listepersonnes.personne`'s
+  `numeroImmatriculation`, the seller `listeprecedentproprietaire` /
+  `…exploitant`. A mere mention is skipped. The buyer is named by SIREN and
+  name only when it is a company (`pm`).
+- **Corrections**: the earlier notice's id is letter + `numeroParution` +
+  int(`numeroAnnonce`) from `parutionavisprecedent`; a rectificatif replaces
+  it, an annulation withdraws it and stays as `notice_withdrawn`.
+- **History**: every family shown (C), the small ones Tier 3; collective
+  proceedings / conciliation / radiation / dissolution are `STATUS_CHANGED`,
+  a sale is the new `BUSINESS_SOLD` (Tier 2, relationship). Judgments are
+  dated by the judgment, the rest by publication. **BODACC events never
+  cluster with each other** (`assemble._DISCRETE_SOURCES`). Each row carries
+  `record_url` (the notice); `registers_unavailable` / `registers_truncated`
+  are said on the tab. `_Numbers` is a 9-tuple (`fr` last); `_unpack` pads
+  the 8-tuples older test mocks return.
+- **Watchlist** (D): `bodacc_tick` reads every watched SIREN since
+  `meta.bodacc_day` − 3 days on a thread, every
+  `OPENCHECK_WATCHLIST_BODACC_INTERVAL_S` (6 h); the first run only sets the
+  watermark; seen ids are remembered; a notice before the watch was added is
+  skipped; the watermark holds when any SIREN failed. Accounts, creation and
+  immatriculation queue nothing.
+- **QuickCheck** (E): the Sirene card's finding states the latest
+  collective-procedure notice ("…plan adopted 24 July 2023 (BODACC)") —
+  context, never a signal or verdict clause. Not asked for legal categories
+  4/7/8/9 (public bodies, associations); not answering is a `source_read`
+  degradation.
 
 ## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
 

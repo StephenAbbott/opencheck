@@ -1516,6 +1516,7 @@ def finding_gcis_taiwan(bundle: dict[str, Any]) -> str | None:
         tw_legal_form,
         tw_percentages,
         tw_position,
+        tw_vacant_rows,
     )
     from .sources.gcis_taiwan import parse_roc_date
 
@@ -1550,8 +1551,11 @@ def finding_gcis_taiwan(bundle: dict[str, Any]) -> str | None:
         return clauses_to_sentence(
             [lead, f"set up {setup}" if setup else None, "directors and supervisors not read"]
         )
-    board = sum(1 for r in rows if tw_position(str(r.get("Person_Position_Name") or ""))[0] in ("boardChair", "boardMember"))
-    supervisors = sum(1 for r in rows if str(r.get("Person_Position_Name") or "").strip() == "監察人")
+    vacant = tw_vacant_rows(rows)
+    vacant_ids = {id(r) for r in vacant}
+    filled = [r for r in rows if id(r) not in vacant_ids]
+    board = sum(1 for r in filled if tw_position(str(r.get("Person_Position_Name") or ""))[0] in ("boardChair", "boardMember"))
+    supervisors = sum(1 for r in filled if str(r.get("Person_Position_Name") or "").strip() == "監察人")
     legal_persons = {str(r.get("Juristic_Person_Name") or "").strip() for r in rows} - {""}
     pcts = tw_percentages(company, rows)
     held = tw_holders(rows)
@@ -1567,6 +1571,7 @@ def finding_gcis_taiwan(bundle: dict[str, Any]) -> str | None:
             lead,
             f"set up {setup}" if setup else None,
             plural(board, "director") if board else ("no directors on file" if rows == [] else None),
+            plural(len(vacant), "seat") + " vacant" if vacant else None,
             holding_clause,
             plural(len(legal_persons), "legal person", "legal persons") + " on the board"
             if legal_persons else None,
@@ -1815,8 +1820,18 @@ def finding_sirene(bundle: dict[str, Any]) -> str | None:
             rna_clause = "recognised as of public utility"
         else:
             rna_clause = f"RNA {rna['id']}"
+    # The BODACC ticket's decision E: the latest collective-procedure notice,
+    # as context ("judicial liquidation opened 3 October 2026 (BODACC)").
+    bodacc_clause = None
+    notice = bundle.get("bodacc_collective")
+    if isinstance(notice, dict) and notice.get("label"):
+        label_text = str(notice["label"])
+        when = human_date(notice.get("effective") or notice.get("published"))
+        bodacc_clause = (
+            f"{label_text[:1].lower()}{label_text[1:]}{' ' + when if when else ''} (BODACC)"
+        )
     lead = label or "Legal unit"
-    return clauses_to_sentence([lead, status, created_clause, rna_clause])
+    return clauses_to_sentence([lead, status, bodacc_clause, created_clause, rna_clause])
 
 
 def finding_anaf_romania(bundle: dict[str, Any]) -> str | None:

@@ -299,6 +299,32 @@ by the Corporations Authority on 2026-11-09; parties not published."
 Share transfers are on History and the watchlist only, never QuickCheck
 (Stephen).
 
+**Tier 3 — BODACC, France's official bulletin (the BODACC ticket, 11 Nov
+2026).** France has no daily register diff OpenCheck can rebuild, so this is
+the one register-tier feed read live: `bodacc_tick` (in the worker's tick, on
+a thread, every `OPENCHECK_WATCHLIST_BODACC_INTERVAL_S`, six hours by default,
+and only with live calls allowed) asks BODACC's opendatasoft API
+(`bodacc-datadila.opendatasoft.com`, keyless, Licence Ouverte 2.0) for the
+notices published about each watched SIREN since its watermark
+(`meta.bodacc_day`) less three days, one SIREN at a time — a batched
+`registre in (...)` undercounts. The first run only sets the watermark: notices
+from before the tier existed are not news. A notice id already seen
+(`meta.bodacc_seen`) is never queued twice; a notice published before the
+company was watched is skipped; the watermark moves only when every SIREN was
+read, so a SIREN BODACC did not answer is read again next time. A watch's
+SIREN is GLEIF's `registeredAs` under RA000189, RA000192 or RA001129, else the
+baseline's `FR-INSEE`. Decision D grades each notice (`BODACC_KIND_TIER`):
+collective proceedings, conciliation, a removal from the register and a
+dissolution escalate; a change of name, a seat transfer, a universal transfer
+of assets, the sale of a business and any other modification are recheck;
+accounts filed, a new establishment and a registration queue nothing. The
+trigger lists each notice with no person in it (`{id, url, kind, label,
+published, effective, role, counterparty}`) and reads "BODACC, France's
+official bulletin, published 1 notice about this company on 2026-11-10 (SIREN
+401251566)", then "Judicial liquidation opened (judgment of 2026-11-05;
+published in BODACC 2026-11-10)." `/watchstats` carries `fr_*` counters and
+the tier line `register_fr`.
+
 **Tier 4 — the Companies House PSC stream (pKYC stage E, Route 1).** The
 UK is the one register OpenCheck consumes as a push feed: the PSC graph has
 been live-fed from Companies House's own stream since Phases 184–189, and
@@ -759,6 +785,18 @@ company or whether it exists is recheck — read the source:
 | field: `removed` | escalate |
 | field: `name`, `status`, `sub_status` | recheck |
 | field: `violating`, `added` | note |
+
+A BODACC trigger is graded by its notices (`BODACC_KIND_TIER`; the highest
+wins, and a kind the table does not know is recheck):
+
+| BODACC notice kind | Tier |
+|---|---|
+| collective proceedings opened, closed, a plan, other rulings | escalate |
+| conciliation, professional recovery | escalate |
+| removal from the register (radiation), dissolution | escalate |
+| change of name, seat transfer, universal transfer of assets | recheck |
+| business sold, business acquired, other modification, withdrawn notice | recheck |
+| accounts filed, establishment created, registration | not queued |
 
 ### The PSC tier's own trigger (Tier 4)
 

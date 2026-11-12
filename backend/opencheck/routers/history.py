@@ -53,6 +53,9 @@ class HistoryEntry(BaseModel):
     interest_start_date: str | None = None
     interest_end_date: str | None = None
     boosted: bool = False
+    #: A public page for this one change, where the source publishes one —
+    #: the BODACC notice on bodacc.fr. Null for every other register.
+    record_url: str | None = None
 
 
 class RawChange(BaseModel):
@@ -82,6 +85,8 @@ class RawChange(BaseModel):
     #: every filing-history row, which publishes a name and nothing more.
     party_id: str | None = None
     party_statement_id: str | None = None
+    #: A public page for this one change (a BODACC notice), else null.
+    record_url: str | None = None
 
 
 class HistoryResponse(BaseModel):
@@ -121,6 +126,13 @@ class HistoryResponse(BaseModel):
     #: the earliest day OpenCheck's kept copy reaches. Before it, an empty
     #: timeline from that register says nothing.
     registers_kept_since: dict[str, str] = {}
+    #: ``{source_id: reason}`` for a register that was asked and did not
+    #: answer (BODACC, the JOAFE: ``timeout`` / ``rate_limited`` / ``upstream_error``).
+    #: Its silence on the timeline is unchecked, not empty.
+    registers_unavailable: dict[str, str] = {}
+    #: ``{source_id: true}`` for a register whose list was cut at OpenCheck's
+    #: cap (BODACC reads 1,000 notices, newest first: the oldest are missing).
+    registers_truncated: dict[str, bool] = {}
 
 
 @router.get("/history", response_model=HistoryResponse)
@@ -166,6 +178,7 @@ async def history(
             interest_start_date=e.interest_start_date,
             interest_end_date=e.interest_end_date,
             boosted=e.boosted,
+            record_url=e.record_url,
         )
         for e in tl.notable
     ]
@@ -192,6 +205,7 @@ async def history(
                 counterparty=ev.counterparty,
                 party_id=ev.party_id,
                 party_statement_id=ev.party_statement_id,
+                record_url=ev.record_url,
             )
             for ev in tl.events
         ]
@@ -212,4 +226,6 @@ async def history(
         filings_truncated=tl.filings_truncated,
         officers_available=tl.officers_available,
         registers_kept_since=tl.registers_kept_since,
+        registers_unavailable=tl.registers_unavailable,
+        registers_truncated=tl.registers_truncated,
     )

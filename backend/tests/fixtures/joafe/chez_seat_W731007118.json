@@ -1,0 +1,26 @@
+{
+ "_note": "Real answer of 10 Nov 2026 for a seat transfer whose old seat is a member's home. The member's name is replaced by a placeholder in this fixture; the shape is unchanged. Street lines of a member's-home seat are replaced by placeholders.",
+ "total_count": 1,
+ "results": [
+  {
+   "id": "202600452019",
+   "source": "joafe",
+   "dateparution": "2026-11-10",
+   "datedeclaration": "2026-11-05",
+   "annonce_type_facette": "Associations loi du 1er juillet 1901/Modification/Initial",
+   "etatavis": "Initial",
+   "reference_avis_initial": null,
+   "numero_rna": "W731007118",
+   "dca_siren": null,
+   "dca_datecloture": null,
+   "dca_datevalidation": null,
+   "dca_rectificatif_version": null,
+   "titre": "COLOR'BIZ",
+   "titre_ancien": null,
+   "titre_nouveau": null,
+   "parution_numero": "20260045",
+   "numero_annonce": 2019,
+   "contenu": "{\"assoLoi1901\": {\"modification\": {\"titre\": \"COLOR'BIZ\", \"siegeSocial\": {\"codePostal\": \"73200\", \"commune\": \"Albertville\", \"pays\": \"\", \"numeroVoie\": \"1\", \"extensionVoie\": \"\", \"typeVoie\": \"chemin\", \"nomVoie\": \"de l'Exemple\", \"immeubleBatimentResidence\": \"chez Mme Exemple Personne Appartement D111\", \"etageEscalierAppartement\": \"\", \"BP_ou_Lieudit_ou_CommununeDeleguee\": \"\"}, \"transfereNouvelleAdresse\": {\"codePostal\": \"73200\", \"commune\": \"Albertville\", \"pays\": \"\", \"numeroVoie\": \"21\", \"extensionVoie\": \"\", \"typeVoie\": \"rue\", \"nomVoie\": \"Georges Lamarque\", \"immeubleBatimentResidence\": \"Maison des Associations\", \"etageEscalierAppartement\": \"\", \"BP_ou_Lieudit_ou_CommununeDeleguee\": \"\"}, \"siteWeb\": \"\"}, \"dateDeclaration\": \"2026-11-05\", \"lieuDeclaration\": {\"lieuSousPref\": {\"libelle\": \"Albertville\", \"description\": \"SOUS-PREFECTURE D'ALBERTVILLE\"}}}, \"refAvisInitial\": {}}"
+  }
+ ]
+}

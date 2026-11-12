@@ -129,7 +129,7 @@ export interface Watch {
 
 export interface WatchRegisterTier {
   followed: boolean;
-  register: "companies_house" | "ariregister" | "ica_israel" | null;
+  register: "companies_house" | "ariregister" | "ica_israel" | "bodacc" | null;
   reason: "no_register_number" | "register_not_covered" | null;
   words: string;
 }
@@ -551,6 +551,20 @@ export interface RegisterChanges {
   violating?: [string | null, string | null];
   added?: boolean;
   removed?: boolean;
+  /** BODACC (11 Nov 2026): the new material notices, one per notice — never
+   *  a person; the buyer of a business only where it is a company. */
+  notices?: BodaccTriggerNotice[];
+}
+
+export interface BodaccTriggerNotice {
+  id: string;
+  url: string;
+  kind: string;
+  label: string;
+  published: string;
+  effective: string | null;
+  role: "subject" | "seller";
+  counterparty: string | null;
 }
 
 export interface WatchEntry {
@@ -584,7 +598,7 @@ export interface WatchEntry {
     /** The register tier: which register, the company's code there, the
      *  index days read, and each list's entries before and after. A
      *  catch-up for a register gap names the register too. */
-    register?: "ariregister" | "companies_house" | "ica_israel";
+    register?: "ariregister" | "companies_house" | "ica_israel" | "bodacc";
     code?: string;
     cuts?: string[];
     changes?: RegisterChanges;
@@ -655,6 +669,13 @@ export interface WatchlistTiers {
     last_cut: string | null;
     waiting: boolean;
     gaps: { after: string | null; before: string | null; detail?: string; detected_at: string }[];
+  };
+  /** BODACC, read live per watched SIREN (11 Nov 2026). Absent on an older server. */
+  register_fr?: {
+    available: boolean;
+    last_day: string | null;
+    last_checked_at: string | null;
+    last_error: string | null;
   };
   /** The PSC tier (the Companies House stream). Absent on an older server. */
   psc?: {
@@ -1151,8 +1172,21 @@ export function ilChangeLines(changes: RegisterChanges | undefined): string[] {
   return out;
 }
 
+/** One sentence per BODACC notice in a trigger — the feed's
+ *  `bodacc_change_lines`. */
+export function bodaccChangeLines(changes: RegisterChanges | undefined): string[] {
+  return (changes?.notices ?? []).map((n) => {
+    const when = n.effective
+      ? ` (judgment of ${n.effective}; published in BODACC ${n.published})`
+      : ` (published in BODACC ${n.published})`;
+    const buyer = n.counterparty ? ` — buyer: ${n.counterparty}` : "";
+    return `${n.label}${when}${buyer}.`;
+  });
+}
+
 /** The change lines of a register tier trigger, in its register's words. */
 export function registerTriggerLines(trigger: WatchEntry["trigger"] | undefined): string[] {
+  if (trigger?.register === "bodacc") return bodaccChangeLines(trigger.changes);
   if (trigger?.register === "ica_israel") return ilChangeLines(trigger.changes);
   return registerChangeLines(trigger?.changes);
 }
@@ -1198,6 +1232,7 @@ export const REGISTER_FOLLOWED_WORDS: Record<string, string> = {
   companies_house: "Companies House PSC stream, live",
   ariregister: "e-Business Register open data, daily",
   ica_israel: "Corporations Authority open data, daily",
+  bodacc: "BODACC notices, daily",
 };
 const PSC_KINDS = ["individual", "corporate", "legal_person", "withheld", "statement", "unknown"] as const;
 const PSC_OUTCOMES = ["added", "changed", "ceased", "deleted"] as const;
@@ -1244,6 +1279,19 @@ export function triggerSentence(e: WatchEntry): string {
     const how = t.matched_on === "lei" ? "by LEI" : "by name";
     const sets = t.datasets?.length ? ` — ${t.datasets.join(", ")}` : "";
     return `OpenSanctions ${op} ${who}, matching this company ${how}${sets}.`;
+  }
+  if (e.tier === "register" && t.register === "bodacc") {
+    const n = t.changes?.notices?.length ?? 0;
+    const days = (t.cuts ?? []).filter(Boolean);
+    const on =
+      days.length === 1
+        ? ` on ${days[0]}`
+        : days.length
+          ? ` on ${days.slice(0, -1).join(", ")} and ${days[days.length - 1]}`
+          : "";
+    return `BODACC, France's official bulletin, published ${n} notice${n === 1 ? "" : "s"} about this company${on}${
+      t.code ? ` (SIREN ${t.code})` : ""
+    }.`;
   }
   if (e.tier === "register" && t.register === "ica_israel") {
     return `The Israel Corporations Authority recorded a change to this company in ${daysWords(t.cuts)}${
@@ -1300,6 +1348,9 @@ export function entryHeadline(e: WatchEntry): string {
   if (e.tier === "review") return "This list: nobody has opened it for a while — it will be deleted unless opened";
   const name = e.legal_name || e.lei;
   const kinds = new Set(e.changes.map((c) => c.kind));
+  if (!e.changes.length && e.tier === "register" && e.trigger?.register === "bodacc") {
+    return `${name}: notice published in BODACC`;
+  }
   if (!e.changes.length && e.tier === "register") {
     return `${name}: ${e.trigger?.register === "ica_israel" ? "Israeli" : "Estonian"} register record changed`;
   }
@@ -1394,6 +1445,14 @@ export function tierSentence(t: WatchlistTiers | null): string {
       );
     }
   }
+  const fr = t.register_fr;
+  if (fr?.available) {
+    parts.push(
+      `France: BODACC, the official bulletin, is read every few hours for each watched French company${
+        fr.last_day ? ` (last read up to ${fr.last_day})` : ""
+      }. A collective procedure, a conciliation, a removal from the register or a dissolution is escalated; a change of name, a move of the registered office, a sale of a business or another change is re-run; accounts filed, a new establishment and a registration are not. No person is named.`,
+    );
+  }
   const psc = t.psc;
   if (psc?.available) {
     parts.push(
@@ -1408,7 +1467,7 @@ export function tierSentence(t: WatchlistTiers | null): string {
       );
     }
   }
-  const followed = [reg?.available, psc?.available].filter(Boolean).length;
+  const followed = [reg?.available, il?.available, fr?.available, psc?.available].filter(Boolean).length;
   parts.push(
     followed
       ? "No other national register is polled; they are re-fetched only when one of those tiers fires."

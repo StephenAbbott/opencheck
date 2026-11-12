@@ -778,3 +778,35 @@ describe("PSC tier entries (Companies House stream, pKYC stage E)", () => {
     expect(s).toContain("No other national register is polled");
   });
 });
+
+describe("register tier entries (BODACC)", () => {
+  const entry = (trigger: Record<string, unknown>) =>
+    ({
+      id: 7, lei: "969500EXAMPLE0000001", legal_name: "EMEIS", created_at: "2026-11-12T12:00:00Z",
+      tier: "register" as const, trigger: { register: "bodacc", ...trigger }, changes: [], checked: [], degraded: [],
+    }) as WatchEntry;
+
+  it("names BODACC, the day and the SIREN", () => {
+    const sentence = triggerSentence(entry({ code: "401251566", cuts: ["2026-11-10"], changes: { notices: [{}] } }));
+    expect(sentence).toContain("BODACC, France's official bulletin, published 1 notice about this company on 2026-11-10");
+    expect(sentence).toContain("401251566");
+    expect(entryHeadline(entry({}))).toBe("EMEIS: notice published in BODACC");
+  });
+
+  it("words each notice with its judgment date and a company buyer", () => {
+    expect(
+      registerTriggerLines({
+        register: "bodacc",
+        changes: {
+          notices: [
+            { id: "A1", label: "Judicial liquidation opened", published: "2026-11-10", effective: "2026-11-05" },
+            { id: "A2", label: "Business sold", published: "2026-11-10", effective: null, counterparty: "ROGANDCO (SIREN 552100554)" },
+          ],
+        },
+      } as WatchEntry["trigger"]),
+    ).toEqual([
+      "Judicial liquidation opened (judgment of 2026-11-05; published in BODACC 2026-11-10).",
+      "Business sold (published in BODACC 2026-11-10) — buyer: ROGANDCO (SIREN 552100554).",
+    ]);
+  });
+});
