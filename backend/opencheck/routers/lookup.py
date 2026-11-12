@@ -633,12 +633,9 @@ async def deepen(
     # Phase 326: hand on a supplied legal name the way a lookup does, to the
     # registers that take one. A register that remembers names (KvK) is told
     # not to: a caller's name must not reach the next reader of that number.
-    fetch_kwargs: dict[str, Any] = {}
-    name = (legal_name or "").strip()
-    if name and adapter.lookup_pass_legal_name:
-        fetch_kwargs["legal_name"] = name
-        if adapter.remembers_legal_name:
-            fetch_kwargs["remember_name"] = False
+    fetch_kwargs: dict[str, Any] = _legal_name_kwargs(adapter, legal_name)
+    if fetch_kwargs and adapter.remembers_legal_name:
+        fetch_kwargs["remember_name"] = False
     try:
         raw, prov = await _fetch_with_provenance(adapter, hit_id, **fetch_kwargs)
     except HTTPException:
@@ -2061,7 +2058,9 @@ async def _lookup_pipeline(
             # Deepen usually replays the adapter's cached fetch, but give it
             # the same wall-clock protection as dispatch (+ mapping headroom).
             asyncio.wait_for(
-                _safe_deepen(dsrc, dhit, subject=ctx.lei),
+                _safe_deepen(
+                    dsrc, dhit, subject=ctx.lei, legal_name=ctx.legal_name
+                ),
                 timeout=_source_budget(dsrc) + 15.0,
             )
             for dsrc, dhit in deepen_pairs
@@ -2127,7 +2126,10 @@ async def _lookup_pipeline(
     ]
     if _remaining:
         count_raw = await asyncio.gather(
-            *[_count_only(dsrc, dhit) for dsrc, dhit in _remaining],
+            *[
+                _count_only(dsrc, dhit, legal_name=ctx.legal_name)
+                for dsrc, dhit in _remaining
+            ],
             return_exceptions=True,
         )
         for (dsrc, dhit), cnt in zip(_remaining, count_raw):
@@ -2627,7 +2629,8 @@ async def _register_lookup_pipeline(
     bods_all: list[dict[str, Any]] = unique_statements(deep["bods"]) if deep else []
     subject_stmts = _subject_statements_for(subject, bods_all)
     ctx.legal_name, ctx.jurisdiction = _subject_name_and_jurisdiction(
-        subject_stmts, raw, hop.country
+        subject_stmts, raw, hop.country,
+        infer_country=not _registers_foreign_entities(hop.scheme),
     )
     if not ctx.legal_name and name:
         ctx.legal_name = name.strip()
@@ -2865,14 +2868,34 @@ def _subject_statements_for(subject: str, bods: list[dict[str, Any]]) -> list[di
     return subject_statements(subject, bods)
 
 
+def _registers_foreign_entities(scheme: str) -> bool:
+    """A US state register (``US-PA``, ``US-NY`` …): its scheme is an ISO
+    3166-2 subdivision, and it records foreign businesses authorised in the
+    state beside its own. Its country says nothing about where one of those
+    was formed — UBS AG is on Connecticut's register."""
+    import pycountry
+
+    return pycountry.subdivisions.get(code=scheme) is not None
+
+
 def _subject_name_and_jurisdiction(
-    stmts: list[dict[str, Any]], raw: dict[str, Any], country: str
+    stmts: list[dict[str, Any]],
+    raw: dict[str, Any],
+    country: str,
+    *,
+    infer_country: bool = True,
 ) -> tuple[str, str]:
     """The subject's legal name and jurisdiction: from its own entity
     statement when the mapper produced one, else from the register's raw
     profile, else the scheme's country. The jurisdiction falls back to the
     scheme's country because a number on the GB register is a GB company
-    whatever the statement says — and the knowability strip needs a code."""
+    whatever the statement says — and the knowability strip needs a code.
+
+    ``infer_country=False`` (a register of foreign registrations, see
+    ``_registers_foreign_entities``): when the subject's own statement
+    exists and states no jurisdiction, the mapper has said the register
+    does not publish one (a foreign registration), and no country is
+    inferred from the scheme. With no statement at all the fallback holds."""
     name = ""
     jurisdiction = ""
     for stmt in stmts:
@@ -2892,6 +2915,8 @@ def _subject_name_and_jurisdiction(
             if isinstance(v, str) and v.strip():
                 name = v.strip()
                 break
+    if not jurisdiction and stmts and not infer_country:
+        return name, ""
     return name, jurisdiction or country
 
 
@@ -3402,7 +3427,9 @@ def _select_deepen_pairs(
     return deepen_pairs
 
 
-async def _count_only(source_id: str, hit_id: str) -> dict[str, Any] | None:
+async def _count_only(
+    source_id: str, hit_id: str, *, legal_name: str | None = None
+) -> dict[str, Any] | None:
     """Map a (cached) bundle just to count BODS statements — no risk/validate.
 
     Lets every source surface its graph shape ("N entities · M relationships")
@@ -3417,7 +3444,9 @@ async def _count_only(source_id: str, hit_id: str) -> dict[str, Any] | None:
         prov = _stored_bundle_provenance(source_id, hit_id)
     else:
         try:
-            raw, prov = await _fetch_with_provenance(adapter, hit_id)
+            raw, prov = await _fetch_with_provenance(
+                adapter, hit_id, **_legal_name_kwargs(adapter, legal_name)
+            )
         except Exception:  # noqa: BLE001
             return None
         mapper = _mapper_for(source_id)
@@ -3495,12 +3524,31 @@ async def _everypolitician_row_counts(
     return counts, breakdown
 
 
+def _legal_name_kwargs(adapter: Any, legal_name: str | None) -> dict[str, Any]:
+    """The ``legal_name=`` a lookup hands a register's ``fetch``, for the
+    registers that take one (``lookup_pass_legal_name``), else nothing.
+
+    The deepen and count passes re-fetch a dispatched hit by its id. A
+    register that name-gates its number (``pa_dos``, ``ny_dos``, ``ct_sots``,
+    ``dlcp_dc``, ``sunbiz_florida``, ``rues_colombia``) gates only when it is
+    given the name, so a re-fetch without one mapped the very record the
+    dispatch had refused: Everett Cash's lookup of 12 Nov 2026 carried the
+    officers of the Pennsylvania business its wrong filing number named, and
+    screened them. Every re-fetch of a dispatched hit passes the name the
+    dispatch passed."""
+    name = (legal_name or "").strip()
+    if name and getattr(adapter, "lookup_pass_legal_name", False):
+        return {"legal_name": name}
+    return {}
+
+
 async def _safe_deepen(
     source_id: str,
     hit_id: str,
     *,
     fetched: tuple[Any, Provenance | None] | None = None,
     subject: str | None = None,
+    legal_name: str | None = None,
 ) -> dict[str, Any] | None:
     """Internal helper — does what /deepen does, returns plain dict.
 
@@ -3513,7 +3561,11 @@ async def _safe_deepen(
     already fetched: the register-anchored lookup reads its one register
     once and maps that, rather than fetching again (a replay from the
     adapter cache in production, a second real call in anything without
-    one)."""
+    one).
+
+    ``legal_name`` is the name the dispatch handed the register, passed
+    again so a name-gated register refuses here what it refused there
+    (``_legal_name_kwargs``)."""
     adapter = REGISTRY.get(source_id)
     if adapter is None:
         return None
@@ -3526,7 +3578,9 @@ async def _safe_deepen(
         raw, prov = fetched
     else:
         try:
-            raw, prov = await _fetch_with_provenance(adapter, hit_id)
+            raw, prov = await _fetch_with_provenance(
+                adapter, hit_id, **_legal_name_kwargs(adapter, legal_name)
+            )
         except Exception:
             if override is None:
                 raise

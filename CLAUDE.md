@@ -1981,7 +1981,19 @@ Things that will be re-derived otherwise:
   `_PA_ORG_TOKENS` because the base install has no rigour).
 - **Name gate** (`names_agree`): a different name is a note card
   (`name_mismatch`). Foreign registrations get no jurisdiction and no
-  `foundingDate` (their creation date is the Pennsylvania registration).
+  `foundingDate` (their creation date is the Pennsylvania registration);
+  a domestic one is `US-PA` ("Pennsylvania, United States"), the
+  subdivision GLEIF files RA000632 companies under (12 Nov 2026). The
+  register-anchored lookup infers no country for a foreign registration
+  on any US state register (`_registers_foreign_entities`).
+- **A name gate holds only if every re-fetch passes the name** (12 Nov
+  2026, Everett Cash's lookup carried a refused filing's fifteen officers
+  into the screens). The deepen and count passes re-fetch each dispatched
+  hit by id; `_safe_deepen` / `_count_only` take `legal_name` and hand it
+  on through `_legal_name_kwargs` to every `lookup_pass_legal_name`
+  register, as the dispatch does. Applies to every name-gated register
+  (`ny_dos`, `ct_sots`, `dlcp_dc`, `sunbiz_florida`, `rues_colombia`…);
+  `tests/test_name_gated_refetch.py` pins it per adapter.
 
 ## Estonia is an index first, the page second (Phase 330)
 
