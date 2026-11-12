@@ -149,6 +149,9 @@ _IDENTIFIER_KEYED = {
     # registro_sociedades_argentina (the Argentina wiring): an FTS5 search
     # over the local index; a fresh test process has none.
     "registro_sociedades_argentina",
+    # oece_rnp (the Peru RNP wiring): a RUC search over the local index; a
+    # fresh test process has none.
+    "oece_rnp",
     # corporations_canada (the Canada index ticket): an FTS5 search over the
     # open-data index; the gateway plan has none, so no stub row without it.
     "corporations_canada",

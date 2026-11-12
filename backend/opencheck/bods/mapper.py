@@ -19,7 +19,7 @@ from typing import Any, Iterator
 import pycountry
 
 from ..elf import resolve_elf
-from ..identifiers import argentine_cuit, colombian_nit, format_cuit
+from ..identifiers import argentine_cuit, colombian_nit, format_cuit, peruvian_ruc
 from . import former_names as _former_names
 from . import gleif_events as _gleif_events
 from . import lifecycle as _lifecycle
@@ -517,6 +517,16 @@ from .mappers.argentina import (  # noqa: F401  (re-exported; the Argentina wiri
     _ar_igj_note,
     map_registro_sociedades_argentina,
 )
+from .mappers.peru import (  # noqa: F401  (re-exported; the Peru RNP wiring)
+    PE_SELF_DECLARATION_NOTE,
+    _PE_UNSPECIFIED_REASON,
+    _PE_SOURCE,
+    _map_oece_rnp,
+    _pe_interest,
+    _pe_note,
+    _pe_since_clause,
+    map_oece_rnp,
+)
 from .mappers.us_fl import (  # noqa: F401  (re-exported; the Florida wiring)
     _FL_SOURCE,
     _fl_address,
@@ -931,9 +941,20 @@ _AR_RA_CODES: frozenset[str] = frozenset({"RA000009", "RA000010", "RA000800"})
 AR_CUIT_SCHEME = "AR-CUIT"
 AR_CUIT_SCHEME_NAME = "CUIT — Clave Única de Identificación Tributaria (Argentina)"
 
+#: Peruvian registration authorities (the Peru RNP wiring, 12 Nov 2026):
+#: SUNAT (RA000689), SUNARP (RA000482), the SMV (RA000979) and the SBS
+#: (RA000980). All four file the RUC for some records; SUNARP also files a
+#: partida and the SMV and SBS their own codes, so ``PE-RUC`` is asserted
+#: only for an 11-digit value whose check digit agrees.
+_PE_RA_CODES: frozenset[str] = frozenset({"RA000689", "RA000482", "RA000979", "RA000980"})
+PE_RUC_SCHEME = "PE-RUC"
+PE_RUC_SCHEME_NAME = "RUC — Registro Único de Contribuyentes (SUNAT, Peru)"
+
 #: RA codes whose scheme is decided by the value, not the code (Phase 280) —
 #: so they are absent from ``_GLEIF_RA_TO_ORG_ID`` on purpose.
-_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES | _CO_RA_CODES | _AR_RA_CODES
+_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = (
+    _CL_RA_CODES | _CO_RA_CODES | _AR_RA_CODES | _PE_RA_CODES
+)
 
 
 def chilean_rut(value: str | None) -> str | None:
@@ -1009,6 +1030,8 @@ def gleif_registration_scheme(
         return CO_RUE_SCHEME, CO_RUE_SCHEME_NAME
     if ra in _AR_RA_CODES and argentine_cuit(registered_as):
         return AR_CUIT_SCHEME, AR_CUIT_SCHEME_NAME
+    if ra in _PE_RA_CODES and peruvian_ruc(registered_as):
+        return PE_RUC_SCHEME, PE_RUC_SCHEME_NAME
     if ra in _GLEIF_RA_TO_ORG_ID:
         return _GLEIF_RA_TO_ORG_ID[ra]
     jur = (jurisdiction_code or "").strip().upper()
@@ -1843,6 +1866,9 @@ def _gleif_entity_statement(
             # hyphenated form the register mapper writes.
             cuit = argentine_cuit(registered_as)
             registered_as = format_cuit(cuit) if cuit else registered_as
+        elif org_id_scheme == PE_RUC_SCHEME:
+            # A RUC is written bare, the way the RNP mapper writes it.
+            registered_as = peruvian_ruc(registered_as) or registered_as
         identifiers.append(
             {
                 "id": registered_as,

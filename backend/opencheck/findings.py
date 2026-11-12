@@ -2269,6 +2269,45 @@ def finding_registro_sociedades_argentina(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence([lead, form, people_clause, balance_clause])
 
 
+def finding_oece_rnp(bundle: dict[str, Any]) -> str | None:
+    """What a supplier declared to Peru's Registro Nacional de Proveedores:
+    how many partners or shareholders, legal representatives and
+    governing-body members it named, and its legal form (the Peru RNP
+    wiring, 12 Nov 2026).
+
+    * **A declaration, said as one.** The lead says the supplier declared it
+      to OECE; the file is neither a company nor a beneficial-ownership
+      register.
+    * **No percentages and no status**: the file publishes neither, so the
+      sentence says nothing about either.
+    * **Absence in the same voice**: a supplier that named no partner says
+      so.
+    """
+    from .sources.oece_rnp import form_label
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        return "Not among the suppliers to the Peruvian state in OECE's Registro Nacional de Proveedores, as indexed."
+    counts = bundle.get("counts") or {}
+
+    def count(code: str, one: str, many: str) -> str | None:
+        n = int(counts.get(code) or 0)
+        return f"{n} {one if n == 1 else many}" if n else None
+
+    partners = count("S", "partner or shareholder", "partners or shareholders") or "no partner or shareholder"
+    lead = f"Declared to OECE's supplier register: {partners}"
+    form = form_label(bundle.get("form"))
+    return clauses_to_sentence(
+        [
+            lead,
+            count("R", "legal representative", "legal representatives"),
+            count("O", "governing-body member", "governing-body members"),
+            form,
+        ]
+    )
+
+
 def finding_corporations_canada(bundle: dict[str, Any]) -> str | None:
     """What Corporations Canada says: the status in the register's own words
     (dated where the API dates a dissolution), the governing Act, how many

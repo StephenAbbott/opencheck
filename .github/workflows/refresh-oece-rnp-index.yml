@@ -1,0 +1,103 @@
+name: Refresh Peruvian RNP supplier index
+
+# Rebuilds the index of OECE's "Personas declaradas en la conformación
+# jurídica de proveedores" file (the Registro Nacional de Proveedores,
+# ODC-By) and replaces the `oece-rnp-index` release asset the backend
+# downloads at boot (OECE_RNP_DB_URL). The Peru RNP ticket, 12 Nov 2026.
+#
+# OECE replaces the file on its Confluence page on the first days of each
+# month. The builder reads the attachment's id and version from Confluence's
+# REST API and exits 3 without building when both are the ones the last build
+# read (the `oece_rnp.sources.json` asset), so most runs read one small JSON
+# answer and stop. A build reads ~227 MB, keeps no person's document number,
+# and writes ~105 MB (~30 MB gzipped).
+#
+# No Render redeploy: the backend compares the asset's Last-Modified at boot.
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "23 6 2-9 * *" # 06:23 UTC daily on the 2nd to the 9th of each month
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-oece-rnp-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Read what the last build read
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download oece-rnp-index --pattern oece_rnp.sources.json \
+            --dir "$RUNNER_TEMP" --repo "${{ github.repository }}" 2>/dev/null \
+            || echo "No earlier build recorded; building."
+
+      - name: Download the file and build the index
+        id: build
+        working-directory: backend
+        run: |
+          uv sync
+          previous=()
+          if [ -f "$RUNNER_TEMP/oece_rnp.sources.json" ]; then
+            previous=(--skip-if-unchanged "$RUNNER_TEMP/oece_rnp.sources.json")
+          fi
+          set +e
+          uv run python scripts/build_oece_rnp_index.py --download \
+            --out "$RUNNER_TEMP/oece_rnp.sqlite" --gzip \
+            --sources-out "$RUNNER_TEMP/oece_rnp.sources.new.json" "${previous[@]}"
+          status=$?
+          set -e
+          if [ "$status" = 3 ]; then
+            echo "The file is unchanged since the last build; nothing to publish."
+            echo "built=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [ "$status" = 0 ] || exit "$status"
+          echo "built=true" >> "$GITHUB_OUTPUT"
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        if: steps.build.outputs.built == 'true'
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "oece_rnp.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          suppliers = conn.execute("SELECT COUNT(*) FROM supplier").fetchone()[0]
+          parties = conn.execute("SELECT COUNT(*) FROM party").fetchone()[0]
+          print(f"{suppliers} suppliers, {parties} declared entries, cut {meta.get('cut')}, "
+                f"schema {meta.get('schema_version')}")
+          if suppliers < 250_000 or parties < 1_000_000:
+              sys.exit(f"Refusing to publish: {suppliers} suppliers / {parties} entries — likely a source/format change.")
+          PY
+
+      - name: Replace the `oece-rnp-index` release assets
+        if: steps.build.outputs.built == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view oece-rnp-index >/dev/null 2>&1 || gh release create oece-rnp-index \
+            --title "Peruvian RNP supplier index (OECE)" \
+            --notes "Built by refresh-oece-rnp-index.yml from OECE's Personas declaradas en la conformación jurídica de proveedores (Registro Nacional de Proveedores, ODC-By). Downloaded by the backend at boot (OECE_RNP_DB_URL). Holds no person's document number."
+          bash backend/scripts/replace_release_asset.sh oece-rnp-index \
+            "$RUNNER_TEMP/oece_rnp.sqlite.gz" oece_rnp.sqlite.gz \
+            "Rebuilt automatically by refresh-oece-rnp-index on $(date -u +%Y-%m-%d)."
+          bash backend/scripts/replace_release_asset.sh oece-rnp-index \
+            "$RUNNER_TEMP/oece_rnp.sources.new.json" oece_rnp.sources.json \
+            "The Confluence attachment the last build read."

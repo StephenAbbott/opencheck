@@ -763,6 +763,23 @@ class Settings(BaseSettings):
         alias="AR_SOCIEDADES_DB_URL",
     )
 
+    # --- Peru: OECE Registro Nacional de Proveedores (conformación jurídica) ---
+    # No API key. OECE's monthly open-data file (ODC-By) is built into a
+    # SQLite index by scripts/build_oece_rnp_index.py on GitHub Actions
+    # (.github/workflows/refresh-oece-rnp-index.yml), shipped as the
+    # ``oece-rnp-index`` release asset. Unset: the data-root default
+    # (``oece_rnp.sqlite``).
+    oece_rnp_db_file: str | None = Field(default=None, alias="OECE_RNP_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    oece_rnp_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "oece-rnp-index/oece_rnp.sqlite.gz"
+        ),
+        alias="OECE_RNP_DB_URL",
+    )
+
     # --- Florida Division of Corporations (Sunbiz; Florida public records) ---
     # No API key: the Division's quarterly bulk files (SFTP, published public
     # credentials), built into a SQLite index by

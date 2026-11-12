@@ -537,6 +537,16 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Data:** for each company supplier, its latest tenders (won or bid, with title, buyer, status and the amount awarded to it) and its largest purchase orders (title, buyer, peso total and how the order came about), each linked to Mercado Público, plus totals over the last twelve complete months — built from the monthly tender (`lic-da`) and purchase-order (`oc-da`) files. Matched on the RUT.
 - **Note:** sole traders are not indexed: for a natural person the RUT is the national ID number (RUN), so rows with a RUT below 50,000,000 are dropped when the index is built.
 
+## Peru — OECE Registro Nacional de Proveedores (declared legal make-up of suppliers)
+
+- **Website:** https://www.gob.pe/oece · dataset at https://www.datosabiertos.gob.pe/dataset/personas-declaradas-en-la-conformaci%C3%B3n-jur%C3%ADdica-de-proveedores-en-el-registro-nacional-de-0
+- **License:** [Open Data Commons Attribution License (ODC-By 1.0)](https://opendatacommons.org/licenses/by/1-0/), as stated in the publisher's metadata document attached to the dataset (the portal's licence field reads "License Not Specified"; OECE was asked to correct it).
+- **Attribution:** "Contains information from the Registro Nacional de Proveedores (Personas declaradas en la conformación jurídica de proveedores), Organismo Especializado para las Contrataciones Públicas Eficientes (OECE), Peru, published under the Open Data Commons Attribution License."
+- **Data:** for each supplier registered to sell to the Peruvian state, keyed on its RUC, the partners or shareholders, legal representatives and governing-body members it declared to the RNP, and its legal form — no percentages, no supplier name and no status. A supplier's self-declaration to a procurement regulator, not a company or beneficial-ownership register.
+- **Access:** the monthly `conformacion_juridica.csv` attached to OECE's Confluence page, built into a SQLite index by `scripts/build_oece_rnp_index.py` on GitHub Actions (`refresh-oece-rnp-index.yml`, skipped when the attachment is unchanged), shipped as the `oece-rnp-index` release asset and downloaded by the backend at boot.
+- **Note:** every person's document number (DNI, carnet de extranjería, passport) is removed when the index is built, and a natural person's `10…` RUC too (Ley 29733); a company member's RUC is kept.
+- **Entry point:** `pe_ruc` (11-digit RUC with its check digit) derived from GLEIF RA codes `RA000689` (SUNAT), `RA000482` (SUNARP), `RA000979` (SMV) and `RA000980` (SBS).
+
 ## Global Energy Monitor (GEM) / Climate TRACE
 
 - **Data (GEM):** Ownership of fossil-fuel infrastructure assets worldwide — power plants, oil and gas fields, coal mines, pipelines, and related facilities. The ownership tracker (`all_entities.csv` and related files inside `ownership.zip`, with fresher bi-monthly copies in the Climate TRACE GCS bucket at `storage.googleapis.com/climate_trace/ownership/`) maps facility owners to named legal entities with LEI codes where known. OpenCheck downloads this data at startup and uses it to bridge LEI → GEM entity ID, enabling ESG screening by LEI.

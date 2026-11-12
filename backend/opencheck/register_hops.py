@@ -153,6 +153,15 @@ def hop_schemes() -> dict[str, RegisterHop]:
             AR_CUIT_SCHEME, "registro_sociedades_argentina", normalise_cuit_key, True,
             derived_key="ar_cuit",
         )
+    # ``PE-RUC`` is value-schemed (the Peru RNP wiring): four Peruvian
+    # authorities file the RUC, and SUNARP a partida for some records, so
+    # only a check-digit-valid RUC is written ``PE-RUC``.
+    if "oece_rnp" in REGISTRY:
+        from .sources.oece_rnp import PE_RUC_SCHEME, normalise_ruc
+
+        hops[PE_RUC_SCHEME] = RegisterHop(
+            PE_RUC_SCHEME, "oece_rnp", normalise_ruc, True, derived_key="pe_ruc",
+        )
     # ``REG-<country>`` is the mappers' fallback scheme for "a number on that
     # country's company register" when the filing does not name the register
     # — the Companies House mapper emits ``REG-GB`` for a PSC whose

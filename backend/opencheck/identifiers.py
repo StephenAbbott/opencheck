@@ -518,6 +518,27 @@ def argentine_cuit(value: object) -> str | None:
     return text
 
 
+_RUC_WEIGHTS = (5, 4, 3, 2, 7, 6, 5, 4, 3, 2)
+
+
+def ruc_check_ok(value: str) -> bool:
+    """SUNAT's modulus-11 check digit over the first ten digits of a
+    Peruvian RUC (11 → 1, 10 → 0)."""
+    if not re.fullmatch(r"\d{11}", value or ""):
+        return False
+    total = sum(int(d) * w for d, w in zip(value[:10], _RUC_WEIGHTS, strict=True))
+    check = 11 - total % 11
+    check = {10: 0, 11: 1}.get(check, check)
+    return check == int(value[10])
+
+
+def peruvian_ruc(value: object) -> str | None:
+    """An 11-digit Peruvian RUC with a valid check digit, spaces, dots and
+    hyphens removed; else None (the Peru RNP wiring)."""
+    text = re.sub(r"[\s.\-]+", "", str(value or ""))
+    return text if ruc_check_ok(text) else None
+
+
 def format_cuit(digits: str) -> str:
     """``30500001735`` → ``30-50000173-5``, the spelling the CUIT is printed
     in and the one OpenCheck writes under ``AR-CUIT``."""

@@ -715,6 +715,29 @@ PROBES: dict[str, SourceProbe] = {
             "Entity data only: no officers, shareholders or partners."
         ),
     ),
+    "oece_rnp": _p(
+        tier="index",
+        subject="BANCO DE CREDITO DEL PERU (PE RUC 20100047218)",
+        args=("20100047218",),
+        kwargs={"legal_name": "BANCO DE CREDITO DEL PERU"},
+        expect_fields=("ruc", "parties", "counts", "cut"),
+        # SKIP without an index, never allow_empty. warm_bulk_stores.py
+        # downloads the asset first.
+        requires_files=("oece_rnp.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # OECE replaces the file on the first days of each month and the
+        # workflow rebuilds when it changes; seventy days means one of them
+        # stopped.
+        snapshot_max_age_days=70,
+        anchor_lei="549300EQYQ8SCQZ4BY14",
+        bods_mapper="map_oece_rnp",
+        notes=(
+            "The Peru RNP wiring (12 Nov 2026): an index of OECE's "
+            "'conformación jurídica' file (ODC-By) — each supplier's declared "
+            "partners or shareholders, legal representatives and board, with "
+            "no percentages and no document numbers."
+        ),
+    ),
     "registro_sociedades_argentina": _p(
         tier="index",
         subject="TOYOTA ARGENTINA S A (AR CUIT 33-67913936-9)",
