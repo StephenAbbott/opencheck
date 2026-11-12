@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 515** — The FullCheck "Read as text" tree no longer makes the report scroll sideways on a phone.
+**Latest: Phase 516** — UK public contract awards from Find a Tender now appear on a UK company's card, read from a weekly index of the OCP Data Registry's copy of the service's OCDS data.
 
 → [Full development history](docs/status.md)
 
