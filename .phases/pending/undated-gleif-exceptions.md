@@ -1,0 +1,6 @@
+---
+title: A GLEIF reporting exception is no longer called an undated holding.
+readme: GLEIF reporting-exception statements no longer carry the "no date given" note, since they record that there is no parent to report rather than a holding.
+tests: backend +6, vitest +1
+---
+The undated-relationships rule (`bods/undated.py`, mirrored by `frontend/src/lib/undated.ts`) skipped roles and officer-marked interests but not the bridges `_gleif_exception_statements` writes, so LUKOIL OAO's two NO_KNOWN_PERSON bridges (12 Nov 2026) carried "may describe a holding that has since ended" — wrong for a filing that there is no parent. An interest whose `details` open "GLEIF reporting exception" (`EXCEPTION_DETAILS_PREFIX`, the prefix `gleif_reporting_exception` reads back) is now never a holding in either copy, so the BODS note, the canvas and tree label and the PDF diagram's "no date given" all leave the bridge alone; a real holding beside it is still undated. The prefix is matched on the interest rather than through `gleif_reporting_exception`, because the canvas sees interests only and `mapper` imports this module's caller. The parity test now pins the prefix too. After deploy: LUKOIL's `/lookup` bridges carry no undated note.

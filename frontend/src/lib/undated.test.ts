@@ -17,6 +17,16 @@ describe("isUndatedInterests", () => {
     expect(isUndatedInterests([{ type: "otherInfluenceOrControl", opencheckOfficerPosition: "secretary" }])).toBe(false);
     expect(isUndatedInterests([])).toBe(false);
   });
+
+  it("never calls a GLEIF reporting exception undated: it is a filing, not a holding", () => {
+    const bridge = {
+      type: "otherInfluenceOrControl",
+      directOrIndirect: "direct",
+      details: "GLEIF reporting exception NO_KNOWN_PERSON: there is no known person controlling the entity",
+    };
+    expect(isUndatedInterests([bridge])).toBe(false);
+    expect(isUndatedInterests([bridge, { type: "shareholding" }])).toBe(true);
+  });
 });
 
 const ent = (id: string, name: string) => ({
