@@ -59,6 +59,10 @@ from .pa_dos import (
     normalise_filing_number as _normalise_pa_filing_number,
 )
 from .ny_dos import NY_DOS_RA_CODE as _NY_DOS_RA_CODE, normalise_dos_id as _normalise_ny_dos_id
+from .ct_sots import (
+    CT_SOTS_RA_CODE as _CT_SOTS_RA_CODE,
+    normalise_business_id as _normalise_ct_business_id,
+)
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
 from .inpi import (
     INPI_RA_CODES as _INPI_RA_CODES,
@@ -1164,6 +1168,15 @@ class GleifAdapter(SourceAdapter):
             if registered_at_id == _NY_DOS_RA_CODE:
                 try:
                     identifiers["us_ny_dos_id"] = _normalise_ny_dos_id(registered_as)
+                except ValueError:
+                    pass
+            # Connecticut business ID — expose as ``us_ct_business_id`` so the
+            # reconciler can bridge GLEIF ↔ the Secretary of the State.
+            # RA000600 files it zero-padded to seven digits, for foreign
+            # businesses registered in Connecticut too: keyed on the RA code.
+            if registered_at_id == _CT_SOTS_RA_CODE:
+                try:
+                    identifiers["us_ct_business_id"] = _normalise_ct_business_id(registered_as)
                 except ValueError:
                     pass
             # Pennsylvania filing number — expose as ``us_pa_filing_number``
