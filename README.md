@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 504** — France's BODACC notices now appear on the History tab, trigger watchlist re-checks and add the latest collective procedure to the Sirene card.
+**Latest: Phase 505** — The History tab now reads a French association's Journal officiel notices and accounts deposits, with a seat shown by commune only.
 
 → [Full development history](docs/status.md)
 
