@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 27 countries that have
+ * GLEIF Registration Authority codes for the 28 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
