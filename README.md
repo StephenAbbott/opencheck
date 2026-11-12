@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 505** — The History tab now reads a French association's Journal officiel notices and accounts deposits, with a seat shown by commune only.
+**Latest: Phase 506** — The Israeli change log's rows on History and in the watchlist now say a request was recorded on its day, because that day is the request's latest status update, not its filing day.
 
 → [Full development history](docs/status.md)
 
