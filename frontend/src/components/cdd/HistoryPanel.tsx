@@ -47,6 +47,7 @@ import {
   historySourceLabel,
   noiseEventsOf,
   silentRegisters,
+  unavailableRegisterLines,
   VISIBLE_ROWS,
 } from "../../lib/historyMode";
 import { describeFetchFailure, panelError, type PanelError, type PanelId } from "../../lib/panelErrors";
@@ -247,6 +248,15 @@ export default function HistoryPanel({
                 ))}
               </ul>
             )}
+            {unavailableRegisterLines(data).map((line) => (
+              <div
+                key={line}
+                role="status"
+                className="mt-3 rounded-oo border border-oo-warn-border bg-oo-warn-bg px-3 py-2 text-oo-meta text-oo-warn-text leading-[1.5]"
+              >
+                {line}
+              </div>
+            ))}
             {registerReadNotes(data).map((note) => (
               <p key={note} className="mt-2 text-oo-meta text-oo-muted leading-[1.5] max-w-[82ch]">
                 {note}

@@ -1820,8 +1820,18 @@ def finding_sirene(bundle: dict[str, Any]) -> str | None:
             rna_clause = "recognised as of public utility"
         else:
             rna_clause = f"RNA {rna['id']}"
+    # The BODACC ticket's decision E: the latest collective-procedure notice,
+    # as context ("judicial liquidation opened 3 October 2026 (BODACC)").
+    bodacc_clause = None
+    notice = bundle.get("bodacc_collective")
+    if isinstance(notice, dict) and notice.get("label"):
+        label_text = str(notice["label"])
+        when = human_date(notice.get("effective") or notice.get("published"))
+        bodacc_clause = (
+            f"{label_text[:1].lower()}{label_text[1:]}{' ' + when if when else ''} (BODACC)"
+        )
     lead = label or "Legal unit"
-    return clauses_to_sentence([lead, status, created_clause, rna_clause])
+    return clauses_to_sentence([lead, status, bodacc_clause, created_clause, rna_clause])
 
 
 def finding_anaf_romania(bundle: dict[str, Any]) -> str | None:

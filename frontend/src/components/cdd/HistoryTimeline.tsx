@@ -66,6 +66,26 @@ function SourceChip({
 }
 
 // ---------------------------------------------------------------------
+// Notice link — a row's own public page, where the source publishes one
+// (a BODACC notice on bodacc.fr)
+// ---------------------------------------------------------------------
+
+function NoticeLink({ href, inline = false }: { href: string; inline?: boolean }) {
+  const link = (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-oo-meta text-oo-blue hover:underline"
+    >
+      Read the notice<span aria-hidden> ↗</span>
+      <span className="sr-only"> (opens in new tab)</span>
+    </a>
+  );
+  return inline ? link : <p className="mt-0.5">{link}</p>;
+}
+
+// ---------------------------------------------------------------------
 // Tier accent — teal = ownership/control (T1), blue = identity/status (T2)
 // ---------------------------------------------------------------------
 
@@ -140,6 +160,7 @@ function NotableRow({
         {interest && (
           <p className="mt-0.5 text-oo-meta text-oo-muted">{interest}</p>
         )}
+        {entry.record_url && <NoticeLink href={entry.record_url} />}
       </div>
     </li>
   );
@@ -175,6 +196,12 @@ function NoiseRow({ raw }: { raw: HistoryRawChange }) {
         <span className="font-mono">{fieldLabel(raw)}</span>
         <span className="mx-1.5">·</span>
         <span className="font-mono break-words">{transition}</span>
+        {raw.record_url && (
+          <>
+            {" "}
+            <NoticeLink href={raw.record_url} inline />
+          </>
+        )}
       </div>
     </li>
   );

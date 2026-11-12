@@ -271,7 +271,18 @@ def live(monkeypatch):
     get_settings.cache_clear()
 
 
-async def test_the_history_service_reads_sirene(live, monkeypatch) -> None:
+@pytest.fixture
+def no_bodacc(monkeypatch):
+    """The same SIREN keys the BODACC notices; answer them as read and empty."""
+    from opencheck import bodacc
+
+    async def notices_for(_siren: Any, **_k: Any) -> dict[str, Any]:
+        return {"notices": [], "truncated": False}
+
+    monkeypatch.setattr(bodacc, "notices_for", notices_for)
+
+
+async def test_the_history_service_reads_sirene(live, monkeypatch, no_bodacc) -> None:
     async def registration(_client, _lei):
         return (None, None, None, None, None, None, None, "TOTALENERGIES SE", TOTAL)
 
@@ -293,7 +304,7 @@ async def test_the_history_service_reads_sirene(live, monkeypatch) -> None:
     assert any(e.source_id == "sirene" for e in timeline.notable for e in [e.primary])
 
 
-async def test_without_a_key_sirene_is_not_asked(monkeypatch) -> None:
+async def test_without_a_key_sirene_is_not_asked(monkeypatch, no_bodacc) -> None:
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
     monkeypatch.delenv("INSEE_SIRENE_API_KEY", raising=False)
     get_settings.cache_clear()

@@ -375,11 +375,54 @@ def _il_trigger_tier(changes: dict[str, Any]) -> str:
     return max(tiers, key=_RANK.__getitem__, default=NOTE)
 
 
+#: BODACC's notices (decision D, Stephen, 11 Nov 2026), by the reader's
+#: ``kind``: a collective procedure, a conciliation, a removal from the
+#: register or a dissolution is escalate; a change of name, a transfer of the
+#: registered office, a universal transfer of assets, a sale of a business and
+#: any other modification are recheck. ``None`` — accounts filed, a new
+#: establishment, a registration — queues no re-run at all.
+BODACC_KIND_TIER: dict[str, str | None] = {
+    "insolvency_opened": ESCALATE,
+    "insolvency_closed": ESCALATE,
+    "insolvency_plan": ESCALATE,
+    "insolvency_other": ESCALATE,
+    "conciliation": ESCALATE,
+    "professional_recovery": ESCALATE,
+    "deregistered": ESCALATE,
+    "dissolution": ESCALATE,
+    "name_change": RECHECK,
+    "seat_transfer": RECHECK,
+    "universal_transfer": RECHECK,
+    "business_sold": RECHECK,
+    "business_acquired": RECHECK,
+    "modification": RECHECK,
+    "notice_withdrawn": RECHECK,
+    "other": RECHECK,
+    "accounts_filed": None,
+    "establishment_created": None,
+    "registered": None,
+}
+
+
+def bodacc_notice_tier(notice: dict[str, Any]) -> str | None:
+    """A BODACC notice's tier, or None when it queues nothing. A kind this
+    table does not know is recheck, never silent."""
+    kind = str(notice.get("kind") or "")
+    return BODACC_KIND_TIER.get(kind, RECHECK)
+
+
 def register_trigger_tier(trigger: dict[str, Any] | None) -> str:
     """The tier the register tier's own trigger carries."""
     changes = (trigger or {}).get("changes") or {}
     if not isinstance(changes, dict):
         return NOTE
+    if (trigger or {}).get("register") == "bodacc":
+        tiers = [
+            bodacc_notice_tier(n) or NOTE
+            for n in changes.get("notices") or []
+            if isinstance(n, dict)
+        ]
+        return max(tiers, key=_RANK.__getitem__, default=NOTE)
     if (trigger or {}).get("register") == "ica_israel":
         return _il_trigger_tier(changes)
     tiers = [REGISTER_TRIGGER_TIER.get(k, RECHECK) for k, v in changes.items() if v]

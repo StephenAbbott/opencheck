@@ -47,6 +47,13 @@ from .model import (
 # Window for clustering cross-source ENTITY changes. Wide enough to absorb
 # GLEIF's recording lag versus Companies House effective dates.
 _DEFAULT_WINDOW_DAYS = 400
+#: Sources whose every event is its own fact. BODACC publishes one notice per
+#: judgment: a liquidation opened in March and closed in December are two
+#: events, and the window must not fold the second into the first. An event
+#: from such a source still joins another source's cluster (GLEIF recording
+#: the same liquidation corroborates it), never one that already holds an
+#: event of its own source.
+_DISCRETE_SOURCES = frozenset({"bodacc"})
 
 _BASIS_RANK = {
     DateBasis.EFFECTIVE: 3,
@@ -78,6 +85,7 @@ class TimelineEntry:
     interest_start_date: str | None = None
     interest_end_date: str | None = None
     counterparty: str | None = None
+    record_url: str | None = None
     boosted: bool = False
 
 
@@ -124,6 +132,13 @@ class Timeline:
     #: keeps from build to build: the earliest day its copy reaches. Set only
     #: for the Israel Corporations Authority, whose file holds one year.
     registers_kept_since: dict[str, str] = field(default_factory=dict)
+    #: ``{source_id: reason}`` for a register that was asked and did not
+    #: answer (BODACC: ``timeout`` / ``rate_limited`` / ``upstream_error``),
+    #: so its silence is never read as "no notices".
+    registers_unavailable: dict[str, str] = field(default_factory=dict)
+    #: ``{source_id: True}`` for a register whose list was cut at OpenCheck's
+    #: page cap (BODACC reads 1,000 notices, newest first).
+    registers_truncated: dict[str, bool] = field(default_factory=dict)
 
 
 # --------------------------------------------------------------------------- #
@@ -210,6 +225,7 @@ def _make_entry(cluster: list[ChangeEvent]) -> TimelineEntry:
         interest_start_date=_first("interest_start_date"),
         interest_end_date=_first("interest_end_date"),
         counterparty=_first("counterparty"),
+        record_url=_first("record_url"),
         boosted=any(ev.boosted for ev in cluster),
     )
 
@@ -232,6 +248,10 @@ def _cluster_entity_events(
             if d is not None:
                 candidates = []
                 for cl in clusters:
+                    if ev.source_id in _DISCRETE_SOURCES and any(
+                        c.source_id == ev.source_id for c in cl
+                    ):
+                        continue
                     ref = _parse(cl[0].event_date)
                     if ref is None or abs((d - ref).days) > window_days:
                         continue

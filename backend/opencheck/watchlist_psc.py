@@ -63,6 +63,7 @@ ARIREGISTER_RA = "RA000181"
 REGISTER_COMPANIES_HOUSE = "companies_house"
 REGISTER_ARIREGISTER = "ariregister"
 REGISTER_ICA_ISRAEL = "ica_israel"
+REGISTER_BODACC = "bodacc"
 
 #: How many PSC item ids a trigger keeps. The counts are complete; the ids
 #: are for Route 2 to say which rows moved, and fifty is more than any one
@@ -114,6 +115,7 @@ REGISTER_FOLLOWED_WORDS: dict[str, str] = {
     REGISTER_COMPANIES_HOUSE: "Companies House PSC stream, live",
     REGISTER_ARIREGISTER: "e-Business Register open data, daily",
     REGISTER_ICA_ISRAEL: "Corporations Authority open data, daily",
+    REGISTER_BODACC: "BODACC notices, daily",
 }
 
 
@@ -141,7 +143,7 @@ def register_tier_of(row: dict[str, Any]) -> dict[str, Any]:
     """What the watch row says about register changes (Q5): which register
     feed follows this company, or why none does. ``followed`` is a statement
     about OpenCheck's feeds, never about the company."""
-    from .watchlist import watch_il_number, watch_register_code
+    from .watchlist import watch_fr_siren, watch_il_number, watch_register_code
 
     if watch_ch_number(row):
         return {
@@ -163,6 +165,13 @@ def register_tier_of(row: dict[str, Any]) -> dict[str, Any]:
             "register": REGISTER_ICA_ISRAEL,
             "reason": None,
             "words": REGISTER_FOLLOWED_WORDS[REGISTER_ICA_ISRAEL],
+        }
+    if watch_fr_siren(row):
+        return {
+            "followed": True,
+            "register": REGISTER_BODACC,
+            "reason": None,
+            "words": REGISTER_FOLLOWED_WORDS[REGISTER_BODACC],
         }
     facts = row.get("gleif_facts") or {}
     identifiers_ = (row.get("snapshot") or {}).get("identifiers") or {}
