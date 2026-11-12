@@ -73,6 +73,7 @@ _THIRD_PARTY_SOURCES = {
     "brightquery",
     "austender",
     "chilecompra",
+    "compras_gov_br",
     "climatetrace",
     "find_tender_uk",
     "everypolitician",

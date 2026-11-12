@@ -401,6 +401,8 @@ from .mappers.korea import (  # noqa: F401  (re-exported)
     map_dart_korea,
 )
 from .mappers.brazil import (  # noqa: F401  (re-exported, Phase 246)
+    _compras_brl,
+    map_compras_gov_br,
     _BR_OWNER_KEYWORDS,
     _br_country_code,
     _br_country_index,

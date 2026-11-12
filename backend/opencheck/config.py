@@ -996,6 +996,22 @@ class Settings(BaseSettings):
         alias="AUSTENDER_DB_URL",
     )
 
+    # --- Compras.gov.br (Brazilian public procurement, CC BY 4.0) ---
+    # The supplier index built weekly from the OCP Data Registry's copy of
+    # Compras.gov.br's OCDS data (publication 157) by
+    # .github/workflows/refresh-compras-gov-br-index.yml. Unset: the
+    # data-root default (``compras_gov_br.sqlite``).
+    compras_gov_br_db_file: str | None = Field(default=None, alias="COMPRAS_GOV_BR_DB_FILE")
+    # Release asset downloaded at boot when absent and replaced when it
+    # changed (the ChileCompra rule). Empty string disables the download.
+    compras_gov_br_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "compras-gov-br-index/compras_gov_br.sqlite.gz"
+        ),
+        alias="COMPRAS_GOV_BR_DB_URL",
+    )
+
     # --- Australian Business Register (ABN Lookup, CC BY 3.0 AU) ---
     # Free GUID from https://abr.business.gov.au/Documentation/WebServiceRegistration
     abn_guid: str | None = Field(default=None, alias="ABN_GUID")

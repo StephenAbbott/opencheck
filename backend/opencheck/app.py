@@ -202,6 +202,22 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # Compras.gov.br: the supplier index built weekly from the OCP Data
+    # Registry's copy of Brazil's procurement awards, the AusTender
+    # arrangement. Until it lands ``compras_gov_br`` is not announced.
+    try:
+        from .sources.compras_gov_br import warm_index as warm_compras_index
+
+        stats = await asyncio.to_thread(warm_compras_index)
+        log.info("Compras.gov.br index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "Compras.gov.br index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # Phase 330: the Estonian e-Business Register index — the same arrangement.
     # Until it lands the printable page answers, as it did before Phase 330.
     try:

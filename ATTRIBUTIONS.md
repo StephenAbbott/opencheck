@@ -562,6 +562,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Data:** for each supplier ABN, its latest and largest contract notices (agency, published value, period, procedure, amendment count, a link to the notice on AusTender) and totals across every notice since 2013. Matched on the ABN GLEIF files, or the ABN a company's ACN implies.
 - **Note:** the registry warns that a cancelled amendment overwrites a contract's status, period and value in the OCDS data; OpenCheck shows no contract status for that reason.
 
+## Compras.gov.br — Brazilian public procurement
+
+- **Website:** https://www.gov.br/compras/pt-br · OCDS copy at the Open Contracting Partnership's Data Registry, https://data.open-contracting.org/en/publication/157
+- **License:** [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/), as the OCP Data Registry states for the publication.
+- **Attribution:** "Contains Compras.gov.br public procurement data published by the Secretaria de Gestão e Inovação (Ministério da Gestão e da Inovação em Serviços Públicos), licensed under CC BY 4.0, via the Open Contracting Partnership's Data Registry." OpenCheck changes the data: it keeps a supplier's latest and largest awards, joins every establishment of a company on its CNPJ root, sums published award values and rounds them to whole reais.
+- **Data:** for each supplier CNPJ root, its latest and largest awards (buyer, sphere of government, published value, award day, procedure, legal basis, the establishment that won) and totals across every award since August 2021. Matched on the CNPJ GLEIF files under any Brazilian registration authority.
+- **Note:** no supplier name, address or contact point is stored; suppliers identified by a CPF (natural persons) are never read, and CPF-shaped numbers are removed from award descriptions. Values are award values, not money paid: the publication has no contract stage.
+
 ## Peru — OECE Registro Nacional de Proveedores (declared legal make-up of suppliers)
 
 - **Website:** https://www.gob.pe/oece · dataset at https://www.datosabiertos.gob.pe/dataset/personas-declaradas-en-la-conformaci%C3%B3n-jur%C3%ADdica-de-proveedores-en-el-registro-nacional-de-0
