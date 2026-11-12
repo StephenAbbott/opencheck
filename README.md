@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 508** — Connecticut's business registry is now a live source, read from the Secretary of the State's open data with each business's directors, officers, members and partners by name and role.
+**Latest: Phase 509** — Peru's Registro Nacional de Proveedores joins as a source, showing the partners, legal representatives and board members each supplier to the Peruvian state declares to OECE, as a self-declaration rather than an ownership register.
 
 → [Full development history](docs/status.md)
 
