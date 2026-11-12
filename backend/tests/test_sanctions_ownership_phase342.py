@@ -101,6 +101,7 @@ def test_more_than_fifty_meets_the_uk():
     sig = _run(bods, [_designated("P", ALL3)])
     assert {r["regime"]: r["result"] for r in sig["evidence"]["regimes"]} == {
         "OFAC": so.RESULT_MEETS, "EU": so.RESULT_MEETS, "UK": so.RESULT_MEETS,
+        "CA": so.RESULT_NONE,
     }
     assert _regime(sig, "UK")["sources"][0]["figure"]["text"] == "more than 50% up to 75%"
 
@@ -201,6 +202,7 @@ def test_a_party_on_one_regimes_list_counts_for_that_regime_only():
     sig = _run(bods, [_designated("P", ["eu_fsf"])])
     assert {r["regime"]: r["result"] for r in sig["evidence"]["regimes"]} == {
         "OFAC": so.RESULT_NONE, "EU": so.RESULT_MEETS, "UK": so.RESULT_NONE,
+        "CA": so.RESULT_NONE,
     }
     assert sig["evidence"]["designated"][0]["regimes"] == ["EU"]
 
@@ -332,7 +334,7 @@ def test_report_rows_list_each_regime_side_by_side():
     rows = so.report_rows(_report_signal())
     assert rows[0][0] == "OFAC (US)" and rows[0][2] == "Meets the ownership test"
     assert "Holding A 50% (caught company)" in rows[0][3]
-    assert [r[0] for r in rows] == ["OFAC (US)", "EU", "UK"]
+    assert [r[0] for r in rows] == ["OFAC (US)", "EU", "UK", "Canada"]
     assert rows[1][2] == so.RESULT_WORDS[so.RESULT_NONE]
     footer = " ".join(so.report_footer(_report_signal()))
     assert "not computed" in footer and AS_OF in footer and "T-Rank" in footer
@@ -414,6 +416,11 @@ def _fixture_now() -> dict[str, Any]:
         "possible": _run(
             _base(_own("r1", "P", "T", {"exact": 30}), _own("r2", "Q", "T", {"exact": 30})),
             [_designated("P", SDN), _designated("Q", SDN, ident=False)],
+        ),
+        # Canada's votes limb (the Canadian sanctions 50% rule ticket).
+        "canada_votes": _run(
+            _base(_own("r1", "P", "T", {"exact": 55}, itype="votingRights")),
+            [_designated("P", ["ca_dfatd_sema_sanctions"])],
         ),
     }
 

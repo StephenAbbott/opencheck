@@ -3,7 +3,7 @@
  *
  * `SANCTIONS_OWNERSHIP_TEST` (risk) and `SANCTIONS_OWNERSHIP_TEST_POSSIBLE`
  * (context) carry the whole computation in `evidence.regimes`: one entry per
- * regime (OFAC, EU, UK), each with one row per source that has a designated
+ * regime (OFAC, EU, UK, Canada), each with one row per source that has a designated
  * holder. This turns them into table rows, side by side, never summed across
  * sources — the backend (`opencheck/sanctions_ownership.py`) does the
  * arithmetic and this file only reads it. Pure, so the shape is pinned by
@@ -121,6 +121,7 @@ export function sanctionsOwnershipBandNote(signals: RiskSignal[] | undefined): s
   return (
     `Sanctions ownership test, computed separately — ${parts.join("; ")}. ` +
     "Not the figures above: the test counts a company caught by the rule at its whole holding, " +
-    "not multiplied. Ownership only; see Risk signals for the regimes, rules and holders."
+    "not multiplied. Ownership only, plus voting rights and board power for Canada; " +
+    "see Risk signals for the regimes, rules and holders."
   );
 }

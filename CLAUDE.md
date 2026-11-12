@@ -5399,6 +5399,19 @@ repeat to a fixed point. Stephen's decisions on the Phase 342 ticket:
   `lib/sanctionsOwnershipFixture.json` is pinned by the backend test — regenerate
   it from `_fixture_now()` when the evidence shape changes.
 - `SANCTIONS_CONTROLLED` is unchanged.
+- **Canada is the fourth regime** (the Canadian sanctions 50% rule ticket,
+  12 Nov 2026; Stephen's decisions on the ticket). SEMA s.2.1 / JVCFOA
+  s.2.01: 50% or more, aggregated (GAC's 2026 guidance), lists
+  `ca_dfatd_sema_sanctions` + `ca_sema_sanctions_news` only (never
+  `ca_facfoa`, `ca_listed_terrorists`, UN). `Regime.votes` / `Regime.board`
+  are True for Canada alone: `votingRights` is a second limb, summed on its
+  own and **never added to shares**; `appointmentOfBoard` is read only on the
+  high reading, so board power makes "may meet" and never "meets". A row
+  that rests on votes or board carries `limb`. The EU and UK stay shares-only
+  (Stephen). `SIGNAL_RULES` 7. No Canada-only golden case: on 12 Nov 2026 no
+  Canada-only party was an owner on an OpenSanctions ownership edge. Bank
+  Mellat is on Canada's list, so the Persia International Bank anchor meets
+  all four.
 - **Phase 346 — OFAC's examples are the tests.** FAQ 401's five structures
   and FAQ 399's aggregation case run through the module in
   `test_sanctions_ownership_phase346.py`; keep them passing before any change

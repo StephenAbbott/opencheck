@@ -55,11 +55,13 @@ def test_a_name_only_holder_below_the_test_is_not_met_and_listed():
         "source": "Global Energy Monitor / Climate TRACE", "regimes": ["OFAC", "EU", "UK"],
         "basis": "name_only",
     }]
-    assert out["summary"].startswith("OFAC (US), EU and UK: not met.")
+    assert out["summary"].startswith(
+        "OFAC (US), EU and UK: not met; Canada: no party designated under it holds shares."
+    )
     assert "Not counted, because the match is on the name only: National Settlement Depository JSC, 10.7%" in out["summary"]
     assert out["subject_designated"] == ["OFAC", "EU", "UK"]
     assert "The company is itself designated under OFAC (US), EU and UK" in out["summary"]
-    assert [r["result"] for r in out["regimes"]] == ["not_met"] * 3
+    assert [r["result"] for r in out["regimes"]] == ["not_met"] * 3 + ["no_designated_holder"]
 
 
 def test_a_counted_holder_below_the_test_gives_its_figure():
@@ -74,7 +76,7 @@ def test_a_counted_holder_below_the_test_gives_its_figure():
 def test_no_designated_holder_says_so():
     out = so.outcome(_rosneft(), ["T"], [], AS_OF)
     assert out["status"] == so.STATUS_NO_HOLDER
-    assert out["summary"].startswith("No party designated under OFAC (US), the EU or the UK holds shares")
+    assert out["summary"].startswith("No party designated under OFAC (US), the EU, the UK or Canada holds shares")
     assert out["regimes"] == []
 
 
