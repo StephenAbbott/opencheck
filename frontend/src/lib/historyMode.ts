@@ -45,6 +45,7 @@ export const HISTORY_SOURCES = [
   "ur_latvia",
   "ica_israel",
   "sirene",
+  "bodacc",
   "joafe",
 ] as const;
 
@@ -67,6 +68,7 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   ur_latvia: "Register of Enterprises (LV)",
   ica_israel: "Corporations Authority (IL)",
   sirene: "Sirene (FR)",
+  bodacc: "BODACC (FR)",
   joafe: "Journal officiel (JOAFE)",
 };
 
@@ -118,6 +120,13 @@ export function recordUrl(
       ? `https://annuaire-entreprises.data.gouv.fr/entreprise/${siren}`
       : null;
   }
+  // BODACC is a bulletin, not a register with a record page: the chip opens
+  // DILA's search of every notice naming the SIREN, and each row links to its
+  // own notice (`record_url`). Mirrors `bodacc.SEARCH_URL` in the backend.
+  if (sourceId === "bodacc") {
+    const siren = registryNumbers.bodacc;
+    return siren ? bodaccSearchUrl(siren) : null;
+  }
   if (sourceId === "joafe") return joafeUrl(registryNumbers[sourceId]);
   // Phase 296: every register's address comes from the one register-link table
   // (lib/registerLinks.ts). The History tab reads its `history` entry where
@@ -127,6 +136,11 @@ export function recordUrl(
   // the company number addresses the record directly and must never go to
   // the register's `/search?q=` page, which renders an empty form.
   return registerHistoryUrl(sourceId, registryNumbers[sourceId]);
+}
+
+/** DILA's search of every BODACC notice naming a SIREN. */
+export function bodaccSearchUrl(siren: string): string {
+  return `https://bodacc-datadila.opendatasoft.com/explore/dataset/annonces-commerciales/table/?q=${encodeURIComponent(siren)}`;
 }
 
 /** Earliest and latest dated year across entries, or `null` when none is dated. */
@@ -151,8 +165,9 @@ export function corroboratedCount(entries: HistoryEntry[]): number {
  */
 export function silentRegisters(data: HistoryResponse): string[] {
   const answered = new Set(data.sources);
+  const unanswered = data.registers_unavailable ?? {};
   return Object.keys(data.registry_numbers ?? {})
-    .filter((id) => !answered.has(id))
+    .filter((id) => !answered.has(id) && !(id in unanswered))
     .sort();
 }
 
@@ -227,6 +242,8 @@ export const HISTORY_CAVEAT =
 export const REGISTER_READ_NOTES: Record<string, string> = {
   sirene:
     "From INSEE's Sirene register: each period of the legal unit's record, compared with the one before — names, legal forms, active or ceased, head-office moves and main activity. A change of activity code that only follows a new version of the NAF classification is not shown. Many older changes were dated by INSEE's yearly processing (1 January up to 2008, or 25 December); those give the year INSEE recorded them, not the day. The first period's start is where INSEE's record begins, not when the company was founded.",
+  bodacc:
+    "From BODACC, the official bulletin in which French registers and courts publish notices about a company: collective proceedings, removals from the register, changes, sales of a business and accounts filed. Each row links to its notice. No person is named — not a sole trader, a director or a liquidator — and a sale is shown from the seller's side with the buyer named only where it is a company. Judgments of personal bankruptcy and management bans are left out: they are about a person, not the company. Notices start in 2008.",
   joafe:
     "From the Journal officiel des associations et fondations d'entreprise: what the association declared to its prefecture — its creation, a change of name, seat, purpose or statutes, its dissolution — and every deposit of annual accounts. Associations' notices are reached through the RNA, so notices before 2009 are not; a fondation d'entreprise or fonds de dotation is reached through its accounts only. A seat transfer is shown by commune and postcode, never the street, and a change of purpose as filed, never its text. A corrected notice replaces the one it corrects.",
   ica_israel:
@@ -243,9 +260,35 @@ export function registerReadNotes(data: HistoryResponse): string[] {
     .map((s) => {
       const note = REGISTER_READ_NOTES[s];
       const since = data.registers_kept_since?.[s];
-      return note && since ? `${note} OpenCheck's copy reaches back to ${utcDate(since)}.` : note;
+      const truncated = data.registers_truncated?.[s]
+        ? " OpenCheck read the newest 1,000 notices; older ones are not shown."
+        : "";
+      if (!note) return note;
+      return since
+        ? `${note} OpenCheck's copy reaches back to ${utcDate(since)}.${truncated}`
+        : `${note}${truncated}`;
     })
     .filter((n): n is string => Boolean(n));
+}
+
+/** Words for why a register did not answer (`registers_unavailable`). */
+const UNAVAILABLE_WORDS: Record<string, string> = {
+  timeout: "did not answer in time",
+  rate_limited: "is limiting requests",
+};
+
+/**
+ * A sentence per register that was asked and did not answer. Its silence on
+ * the timeline is unchecked, so it is said apart from the registers that
+ * answered with nothing.
+ */
+export function unavailableRegisterLines(data: HistoryResponse): string[] {
+  return Object.entries(data.registers_unavailable ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([s, reason]) =>
+        `${historySourceLabel(s)} ${UNAVAILABLE_WORDS[reason] ?? "returned an error"}, so its notices were not read. An empty timeline from it is unchecked, not a quiet company — try again later.`,
+    );
 }
 
 /**
@@ -364,22 +407,10 @@ export function buildTimelineRows(
  * near-empty timeline that read as "checked, nothing happened". These
  * sentences say which of those two things actually occurred.
  */
-/** A sentence for each register that was asked and did not answer. */
-export const REGISTER_UNAVAILABLE_NOTES: Record<string, string> = {
-  joafe:
-    "The Journal officiel (JOAFE) did not answer, so this association's notices and accounts deposits are missing from this timeline.",
-};
-
 export function historyDegradedNotice(data: HistoryResponse): string | null {
   const recordDown = data.gleif_record_available === false;
   const eventsDown = data.gleif_events_available === false;
-  const unavailable = (data.registers_unavailable ?? [])
-    .map((s) => REGISTER_UNAVAILABLE_NOTES[s] ?? `${historySourceLabel(s)} did not answer.`);
-  if (!recordDown && !eventsDown) {
-    return unavailable.length
-      ? [...unavailable, "What is shown is not a finding that nothing changed."].join(" ")
-      : null;
-  }
+  if (!recordDown && !eventsDown) return null;
 
   const parts: string[] = [];
   if (eventsDown && recordDown) {
@@ -402,7 +433,6 @@ export function historyDegradedNotice(data: HistoryResponse): string | null {
       "The company-registry histories were still attempted, using a registry number from OpenCheck's cached copy of the GLEIF record.",
     );
   }
-  parts.push(...unavailable);
   parts.push("What is shown is not a finding that nothing changed.");
   return parts.join(" ");
 }

@@ -161,6 +161,11 @@ class Settings(BaseSettings):
     watchlist_opensanctions_interval_s: float = Field(
         default=10800.0, alias="OPENCHECK_WATCHLIST_OPENSANCTIONS_INTERVAL_S"
     )
+    # The BODACC tier (France): how often each watched SIREN's new notices are
+    # read. BODACC publishes once a day, about 06:15 UTC; 0 disables the tier.
+    watchlist_bodacc_interval_s: float = Field(
+        default=21600.0, alias="OPENCHECK_WATCHLIST_BODACC_INTERVAL_S"
+    )
 
     # --- Phase 268: record-consistency counters ---
     # SQLite file the /consistencystats counters are written through to

@@ -1721,6 +1721,53 @@ otherwise:
   run builds the change log and publishes an empty delta day; the watchlist
   reads filings from the second run on.
 
+## BODACC on History, the watchlist and the Sirene card (the BODACC ticket, 11 Nov 2026)
+
+`opencheck/bodacc.py` (the one reading of a notice), `timeline/bodacc.py`,
+`bodacc_tick` in `watchlist.py`, `BODACC_KIND_TIER` in
+`watchlist_materiality.py`, `SireneAdapter._attach_bodacc`. Not a registered
+source: no hit, no BODS, no coverage row. Stephen's decisions A–G are on the
+Notion ticket; the things that will be re-derived otherwise:
+
+- **Live, per SIREN, never batched** (A). opendatasoft Explore v2.1,
+  `annonces-commerciales`, keyless, `where=registre="<siren>"`; a batched
+  `registre in (...)` undercounts. Date filters are `date'YYYY-MM-DD'` —
+  double quotes are HTTP 400. Cached a day (`bodacc/notices-v1/<siren>`)
+  **after** the allowlist; a failure raises `BodaccUnavailable` and is never
+  cached. 1,000 notices (newest first) is the cap, said as `truncated`.
+- **No person, ever** (B). `reduce_record` copies by allowlist
+  (`NOTICE_KEYS`, pinned): never `administration`, `complementJugement`, an
+  address, a descriptif or a natural person's name. A name change carries the
+  new name only for a legal person. Personal-bankruptcy and management-ban
+  judgments are dropped (G).
+- **Subject or seller, nothing else** (F). `registre` lists every SIREN a
+  notice names; the subject is `listepersonnes.personne`'s
+  `numeroImmatriculation`, the seller `listeprecedentproprietaire` /
+  `…exploitant`. A mere mention is skipped. The buyer is named by SIREN and
+  name only when it is a company (`pm`).
+- **Corrections**: the earlier notice's id is letter + `numeroParution` +
+  int(`numeroAnnonce`) from `parutionavisprecedent`; a rectificatif replaces
+  it, an annulation withdraws it and stays as `notice_withdrawn`.
+- **History**: every family shown (C), the small ones Tier 3; collective
+  proceedings / conciliation / radiation / dissolution are `STATUS_CHANGED`,
+  a sale is the new `BUSINESS_SOLD` (Tier 2, relationship). Judgments are
+  dated by the judgment, the rest by publication. **BODACC events never
+  cluster with each other** (`assemble._DISCRETE_SOURCES`). Each row carries
+  `record_url` (the notice); `registers_unavailable` / `registers_truncated`
+  are said on the tab. `_Numbers` is a 9-tuple (`fr` last); `_unpack` pads
+  the 8-tuples older test mocks return.
+- **Watchlist** (D): `bodacc_tick` reads every watched SIREN since
+  `meta.bodacc_day` − 3 days on a thread, every
+  `OPENCHECK_WATCHLIST_BODACC_INTERVAL_S` (6 h); the first run only sets the
+  watermark; seen ids are remembered; a notice before the watch was added is
+  skipped; the watermark holds when any SIREN failed. Accounts, creation and
+  immatriculation queue nothing.
+- **QuickCheck** (E): the Sirene card's finding states the latest
+  collective-procedure notice ("…plan adopted 24 July 2023 (BODACC)") —
+  context, never a signal or verdict clause. Not asked for legal categories
+  4/7/8/9 (public bodies, associations); not answering is a `source_read`
+  degradation.
+
 ## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
 
 `sources/cyprus_drcor.py`, `scripts/build_cyprus_drcor_index.py`,

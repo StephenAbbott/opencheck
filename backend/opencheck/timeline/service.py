@@ -66,11 +66,13 @@ from urllib.parse import quote
 
 import httpx
 
+from .. import bodacc as _bodacc
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
 from .ariregister import ariregister_change_events, card_entry_events, general_events
 from .assemble import Timeline, assemble_timeline
+from .bodacc import bodacc_change_events
 from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
 from .ica_israel import ica_israel_change_events
@@ -526,13 +528,31 @@ async def fetch_timeline(lei: str) -> Timeline:
         if bundle:
             fr_events = sirene_change_events(bundle)
 
+    # France — BODACC's notices, read live (keyless; one call a page, cached
+    # a day per SIREN). A failure is said on the tab, never read as "no
+    # notices". Best-effort; never sinks the timeline.
+    bodacc_events = []
+    bodacc_unavailable: str | None = None
+    bodacc_truncated = False
+    if fr_siren:
+        try:
+            bodacc_payload = await _bodacc.notices_for(fr_siren)
+        except _bodacc.BodaccUnavailable as exc:
+            log.warning("timeline: BODACC unavailable for %s: %s", fr_siren, exc.detail)
+            bodacc_payload, bodacc_unavailable = None, exc.reason
+        except Exception:  # noqa: BLE001
+            log.warning("timeline: BODACC read failed for %s", fr_siren, exc_info=True)
+            bodacc_payload, bodacc_unavailable = None, "upstream_error"
+        bodacc_events = bodacc_change_events(fr_siren, bodacc_payload)
+        bodacc_truncated = bool((bodacc_payload or {}).get("truncated"))
+
     # France — the JOAFE: an association's notices (keyed by its RNA numbers,
     # read from the RNA index) and an association's or foundation's accounts
     # deposits (keyed by the SIREN). One live query, cached a day. A failure
     # is said (``registers_unavailable``), never read as "no notices".
     joafe_events = []
     joafe_number: str | None = None
-    joafe_unavailable = False
+    joafe_unavailable: str | None = None
     if fr_siren:
         from ..sources import joafe as _joafe
 
@@ -547,7 +567,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             # how it names an accounts deposit. One RNA → link by it.
             joafe_number = rnas[0] if len(rnas) == 1 else fr_siren
         elif joafe_read.get("reason") != "not_configured":
-            joafe_unavailable = True
+            joafe_unavailable = joafe_read.get("reason") or "upstream_error"
 
     # The board stream. Emitted here rather than inside ``assemble_timeline``
     # because it comes from a second Companies House call, not from the filing
@@ -572,6 +592,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             + lv_events
             + il_events
             + fr_events
+            + bodacc_events
             + joafe_events
             + officer_events
         ),
@@ -594,14 +615,22 @@ async def fetch_timeline(lei: str) -> Timeline:
             ("ur_latvia", lv_regcode),
             ("ica_israel", il_number),
             ("sirene", fr_siren),
+            ("bodacc", fr_siren),
             ("joafe", joafe_number),
         )
         if number
     }
-    if joafe_unavailable:
-        timeline.registers_unavailable = ["joafe"]
     if il_kept_since:
         timeline.registers_kept_since = {"ica_israel": il_kept_since}
+    unavailable = {
+        source_id: reason
+        for source_id, reason in (("bodacc", bodacc_unavailable), ("joafe", joafe_unavailable))
+        if reason
+    }
+    if unavailable:
+        timeline.registers_unavailable = unavailable
+    if bodacc_truncated:
+        timeline.registers_truncated = {"bodacc": True}
     timeline.filings_truncated = ch_filings_truncated
     # Phase 198: whether the officers list was READ, not whether it had rows.
     # An empty board stream means one of two very different things and the tab

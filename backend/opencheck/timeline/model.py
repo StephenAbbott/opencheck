@@ -99,6 +99,10 @@ class ChangeType(str, Enum):
     JURISDICTION_CHANGE = "JURISDICTION_CHANGE"
     REGISTRATION_RETIRED = "REGISTRATION_RETIRED"
     ADDRESS_CHANGE = "ADDRESS_CHANGE"
+    # The company sold a business (fonds de commerce) or an establishment to
+    # another company — BODACC's sales, read from the seller's side. A
+    # relationship event, so each sale is its own entry with its buyer.
+    BUSINESS_SOLD = "BUSINESS_SOLD"
     # --- Tier 4: who sits on the board (details changes are Tier 3) ---
     # Not beneficial ownership, which is why these are their own stream rather
     # than notable: a director is appointed to run a company, not because they
@@ -202,6 +206,12 @@ CHANGE_TYPES: dict[ChangeType, ChangeTypeSpec] = {
         "A registered or headquarters address line changed "
         "(region recodes are treated as noise).",
     ),
+    ChangeType.BUSINESS_SOLD: ChangeTypeSpec(
+        ChangeType.BUSINESS_SOLD, Tier.IDENTITY_STATUS, RecordType.RELATIONSHIP,
+        "Business sold", _UPDATED,
+        "The company sold a business or an establishment; the buyer is named "
+        "where it is a company.",
+    ),
     ChangeType.OFFICER_APPOINTED: ChangeTypeSpec(
         ChangeType.OFFICER_APPOINTED, Tier.BOARD_CHANGE, RecordType.RELATIONSHIP,
         "Officer appointed", _NEW,
@@ -274,6 +284,10 @@ class ChangeEvent:
     # a board row cannot be linked to a person node the way an ownership row
     # can be linked to an LEI.
     counterparty: str | None = None
+    # A public page for this one change, where the source publishes one (a
+    # BODACC notice on bodacc.fr). None for every other source, whose rows
+    # link back through the register's record instead.
+    record_url: str | None = None
 
     @property
     def is_notable(self) -> bool:

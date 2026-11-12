@@ -159,6 +159,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Entry point:** `siren` derived from GLEIF RA codes `RA000189`, `RA000192` and `RA001129`; the `FR-INSEE` register hop when INPI holds no record
 - **Note:** the RNA's management address (`adrg_*`, for most small associations the declarant's home) and director's title are never kept. Units INSEE does not publish (`statutDiffusionUniteLegale` `P`) are not shown.
 
+## BODACC — Bulletin officiel des annonces civiles et commerciales (France)
+
+- **Data:** the notices French registers and courts publish about a company — collective proceedings, conciliation, removals from the register, changes, sales of a business, accounts filed — read per SIREN for the History tab, the watchlist and the Sirene card's collective-procedure clause. No person is carried: sole traders, directors and liquidators named in a notice are dropped, and personal-bankruptcy and management-ban judgments are left out
+- **API:** <https://bodacc-datadila.opendatasoft.com/explore/dataset/annonces-commerciales/> (opendatasoft Explore v2.1, keyless); notices link to <https://www.bodacc.fr/>
+- **License:** Licence Ouverte / Open Licence 2.0 (Etalab)
+- **Attribution:** "Contains notices from the BODACC (bodacc.fr), Direction de l'information légale et administrative (DILA), Licence Ouverte 2.0."
+- **Entry point:** `siren` derived from GLEIF RA codes `RA000189`, `RA000192` and `RA001129`
+
 ## KvK — Kamer van Koophandel (Netherlands)
 
 - **Data:** company details and authorised representatives from the Dutch Chamber of Commerce Handelsregister

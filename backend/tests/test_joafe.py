@@ -292,6 +292,14 @@ def _french_registration(monkeypatch) -> None:
     monkeypatch.setattr(service, "_gleif_registration", registration)
     monkeypatch.setattr(service, "_gleif_modifications", modifications)
 
+    # The same SIREN keys the BODACC notices; answer them as read and empty.
+    from opencheck import bodacc
+
+    async def notices_for(_siren, **_k):
+        return {"notices": [], "truncated": False}
+
+    monkeypatch.setattr(bodacc, "notices_for", notices_for)
+
 
 async def test_the_history_service_reads_the_joafe(live, monkeypatch) -> None:
     _french_registration(monkeypatch)
@@ -307,7 +315,7 @@ async def test_the_history_service_reads_the_joafe(live, monkeypatch) -> None:
     fr = [e for e in timeline.events if e.source_id == "joafe"]
     assert len(fr) == 9
     assert timeline.registry_numbers["joafe"] == "W922001074"
-    assert timeline.registers_unavailable == []
+    assert timeline.registers_unavailable == {}
     notable = {e.change_type for e in timeline.notable}
     assert {ChangeType.LEGAL_NAME_CHANGE, ChangeType.ADDRESS_CHANGE} <= notable
 
@@ -320,5 +328,5 @@ async def test_a_joafe_that_did_not_answer_is_said(live, monkeypatch) -> None:
 
     monkeypatch.setattr(joafe, "notices", notices)
     timeline = await service.fetch_timeline("969500AEH12X8M5XEO53")
-    assert timeline.registers_unavailable == ["joafe"]
+    assert timeline.registers_unavailable == {"joafe": "timeout"}
     assert "joafe" not in timeline.registry_numbers

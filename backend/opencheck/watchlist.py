@@ -94,7 +94,7 @@ import threading
 import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -1829,6 +1829,13 @@ class WatcherState:
     il_gaps: int = 0
     il_last_gap_at: str | None = None
     il_last_error: str | None = None
+    fr_last_day: str | None = None  # the BODACC tier's watermark (publication day)
+    fr_last_checked_at: str | None = None
+    fr_sirens_read: int = 0
+    fr_notices_new: int = 0
+    fr_queued: int = 0
+    fr_unavailable: int = 0  # SIREN reads BODACC did not answer
+    fr_last_error: str | None = None
     # pKYC stage E, Route 1 — the Companies House PSC stream tier. Counts
     # only: events the hook saw, how many touched a watched company, re-runs
     # queued, filings folded into a pending re-run, stream gaps answered.
@@ -2698,9 +2705,202 @@ def ica_israel_tick(client: Any | None = None) -> dict[str, Any]:
     return _register_delta_tick(_ICA_ISRAEL_FEED, client)
 
 
+# ---------------------------------------------------------------------------
+# Tier 3 — BODACC, France's bulletin of notices (11 Nov 2026)
+# ---------------------------------------------------------------------------
+#
+# Not an index diff: BODACC is read live, one query per watched SIREN for the
+# notices published since the last read (Stephen, 11 Nov 2026: decision A, no
+# index). A notice is news once — its id is remembered — and only for a watch
+# that existed when it was published. What it does to the entry's tier is
+# decision D (``watchlist_materiality.BODACC_KIND_TIER``); accounts filed, a new
+# establishment and a registration queue nothing at all.
+
+BODACC_DAY_KEY = "bodacc_last_day"
+BODACC_SEEN_KEY = "bodacc_seen"
+BODACC_CHECKED_KEY = "bodacc_checked_at"
+#: Days re-read before the watermark: a notice indexed late still arrives.
+BODACC_LOOKBACK_DAYS = 3
+#: GLEIF's registration authorities that file a SIREN (the History rule).
+BODACC_RA_CODES = frozenset({"RA000189", "RA000192", "RA001129"})
+
+
+def watch_fr_siren(row: dict[str, Any]) -> str | None:
+    """A watch's SIREN: GLEIF's ``registeredAs`` under a French register, else
+    the ``FR-INSEE`` identifier the baseline lookup read."""
+    from .bodacc import normalise_siren
+
+    facts = row.get("gleif_facts") or {}
+    if facts.get("registered_at") in BODACC_RA_CODES:
+        siren = normalise_siren(facts.get("registered_as"))
+        if siren:
+            return siren
+    identifiers_ = (row.get("snapshot") or {}).get("identifiers") or {}
+    return normalise_siren(identifiers_.get("FR-INSEE"))
+
+
+def watched_fr_sirens(store: "WatchlistStore") -> dict[str, dict[str, str]]:
+    """``SIREN → {LEI: the day it was first watched}`` across every list."""
+    out: dict[str, dict[str, str]] = {}
+    with store._conn() as conn:
+        rows = conn.execute(
+            "SELECT lei, added_at, gleif_facts_json, snapshot_json FROM watches"
+        ).fetchall()
+    for r in rows:
+        siren = watch_fr_siren(
+            {
+                "gleif_facts": json.loads(r["gleif_facts_json"]) if r["gleif_facts_json"] else None,
+                "snapshot": json.loads(r["snapshot_json"]) if r["snapshot_json"] else None,
+            }
+        )
+        if not siren:
+            continue
+        day = str(r["added_at"] or "")[:10]
+        leis = out.setdefault(siren, {})
+        if r["lei"] not in leis or day < leis[r["lei"]]:
+            leis[r["lei"]] = day
+    return out
+
+
+def _bodacc_trigger_notice(notice: dict[str, Any]) -> dict[str, Any]:
+    """What a trigger keeps of a notice: no person, as the reader allows."""
+    from .timeline.bodacc import counterparty_words
+
+    return {
+        "id": notice.get("id"),
+        "url": notice.get("url"),
+        "kind": notice.get("kind"),
+        "label": notice.get("label"),
+        "published": notice.get("published"),
+        "effective": notice.get("effective"),
+        "role": notice.get("role"),
+        "counterparty": counterparty_words(notice.get("counterparty")),
+    }
+
+
+def bodacc_change_lines(changes: dict[str, Any]) -> list[str]:
+    """One sentence per BODACC notice in a trigger."""
+    lines: list[str] = []
+    for n in changes.get("notices") or []:
+        if not isinstance(n, dict):
+            continue
+        when = n.get("effective") or n.get("published")
+        line = f"{n.get('label')}"
+        if n.get("effective"):
+            line += f" (judgment of {when}; published in BODACC {n.get('published')})"
+        else:
+            line += f" (published in BODACC {n.get('published')})"
+        if n.get("counterparty"):
+            line += f" — buyer: {n['counterparty']}"
+        lines.append(line + ".")
+    return lines
+
+
+def bodacc_tick(client: Any | None = None, *, force: bool = False, today: str | None = None) -> dict[str, Any]:
+    """Read the notices BODACC published since the last read for every watched
+    SIREN and queue a re-run where one is material. Runs on a thread.
+
+    The first run marks today and starts from there: notices from before the
+    tier existed are not news. The watermark moves only when every SIREN was
+    read; a SIREN BODACC did not answer is read again next time (the lookback
+    grows with it), and a notice already seen is never queued twice.
+    """
+    import httpx
+
+    from . import bodacc as _bodacc
+    from .config import get_settings
+
+    out: dict[str, Any] = {"sirens": 0, "notices": 0, "queued": 0, "unavailable": 0}
+    settings = get_settings()
+    interval = settings.watchlist_bodacc_interval_s
+    if interval <= 0 or not settings.allow_live:
+        return {**out, "skipped": "disabled"}
+    store = get_store()
+    if store is None:
+        return out
+    now = datetime.now(UTC)
+    if not force:
+        last_checked = store.get_meta(BODACC_CHECKED_KEY)
+        if last_checked is not None:
+            try:
+                then = datetime.strptime(last_checked, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+            except ValueError:
+                then = None
+            if then is not None and (now - then).total_seconds() < interval:
+                return {**out, "skipped": "not due"}
+    today = today or now.date().isoformat()
+    store.set_meta(BODACC_CHECKED_KEY, _now_iso())
+    _bump(fr_last_checked_at=_now_iso())
+    last = store.get_meta(BODACC_DAY_KEY)
+    if last is None:
+        store.set_meta(BODACC_DAY_KEY, today)
+        _bump(fr_last_day=today)
+        return {**out, "started": today}
+    sirens = watched_fr_sirens(store)
+    if not sirens:
+        store.set_meta(BODACC_DAY_KEY, today)
+        _bump(fr_last_day=today)
+        return out
+    since = (date.fromisoformat(min(last, today)) - timedelta(days=BODACC_LOOKBACK_DAYS)).isoformat()
+    try:
+        seen: dict[str, str] = json.loads(store.get_meta(BODACC_SEEN_KEY) or "{}")
+    except ValueError:
+        seen = {}
+    own_client = client is None
+    client = client or httpx.Client(follow_redirects=True, headers={"User-Agent": "OpenCheck watchlist"})
+    per_lei: dict[str, tuple[str, list[dict[str, Any]]]] = {}
+    try:
+        for siren, leis in sorted(sirens.items()):
+            try:
+                notices = _bodacc.recent_notices_sync(siren, since=since, client=client)
+            except _bodacc.BodaccUnavailable as exc:
+                out["unavailable"] += 1
+                _bump(fr_last_error=exc.detail)
+                continue
+            out["sirens"] += 1
+            for n in sorted(notices, key=lambda n: (n["published"], n["id"])):
+                if n["id"] in seen:
+                    continue
+                seen[n["id"]] = n["published"]
+                out["notices"] += 1
+                if materiality.bodacc_notice_tier(n) is None:
+                    continue  # decision D: accounts, a new establishment, a registration
+                for lei, added in leis.items():
+                    if n["published"] < added:
+                        continue  # published before this company was watched
+                    per_lei.setdefault(lei, (siren, []))[1].append(_bodacc_trigger_notice(n))
+    finally:
+        if own_client:
+            client.close()
+    for lei, (siren, items) in sorted(per_lei.items()):
+        trigger = {
+            "tier": TIER_REGISTER,
+            "register": "bodacc",
+            "code": siren,
+            "cuts": sorted({i["published"] for i in items}),
+            "changes": {"notices": items},
+        }
+        if store.enqueue(lei, TIER_REGISTER, trigger):
+            out["queued"] += 1
+    store.set_meta(
+        BODACC_SEEN_KEY, json.dumps({k: v for k, v in seen.items() if v >= since}, sort_keys=True)
+    )
+    if out["unavailable"] == 0:
+        store.set_meta(BODACC_DAY_KEY, today)
+        _bump(fr_last_day=today, fr_last_error=None)
+    _bump(fr_sirens_read=out["sirens"], fr_notices_new=out["notices"], fr_queued=out["queued"],
+          fr_unavailable=out["unavailable"])
+    if out["queued"]:
+        log.info("watchlist: BODACC published notices on %d watched compan%s",
+                 out["queued"], "y" if out["queued"] == 1 else "ies")
+    return out
+
+
 def register_change_lines_for(trigger: dict[str, Any]) -> list[str]:
     """The trigger's change lines, in its register's words."""
     changes = trigger.get("changes") or {}
+    if trigger.get("register") == "bodacc":
+        return bodacc_change_lines(changes)
     if trigger.get("register") == "ica_israel":
         return il_change_lines(changes)
     return register_change_lines(changes)
@@ -2969,6 +3169,7 @@ async def tick() -> dict[str, Any]:
         # read), and it queues before the drain so a change runs this tick.
         out["register"] = await asyncio.to_thread(ariregister_tick)
         out["register_il"] = await asyncio.to_thread(ica_israel_tick)
+        out["register_fr"] = await asyncio.to_thread(bodacc_tick)
         for item in await asyncio.to_thread(store.take_pending, settings.watchlist_reruns_per_tick):
             await rerun(item["lei"], item["tier"], item["trigger"])
             out["reruns"] += 1
