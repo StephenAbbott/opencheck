@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 513** — A register's name check now holds through the whole lookup, so a refused filing number's officers are never mapped or screened, and Pennsylvania companies carry the US-PA jurisdiction.
+**Latest: Phase 514** — The opencheck_owners MCP tool now says when a calculated ownership figure rests on a holding no source dates, as opencheck_lookup already did.
 
 → [Full development history](docs/status.md)
 
