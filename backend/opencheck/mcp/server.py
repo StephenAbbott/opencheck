@@ -501,6 +501,8 @@ async def opencheck_owners(
       meets the threshold, one figure per source — never added across sources.
       ``position`` is "above", or "may_be_above" when a band straddles the
       threshold or a share on the path is not stated (read that as unknown).
+      ``undated`` marks a figure resting on a holding no source dates (read
+      as current, may have ended); ``undated_note`` then says so.
     - ``declared_beneficial_owners``: the people the registers themselves flag
       as beneficial owners of the company, with the nature of their interest.
     - ``registered_controllers``: legal entities a beneficial-ownership

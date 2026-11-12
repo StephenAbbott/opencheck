@@ -416,3 +416,28 @@ def test_the_map_tool_declares_no_output_schema():
 
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
     assert tools["opencheck_ownership_map"].outputSchema is None
+
+
+# --- the undated flag (12 Nov 2026) -------------------------------------------
+
+def test_an_undated_figure_keeps_its_flag_and_is_said():
+    """A holding no source dates is read as current; opencheck_owners says so,
+    as opencheck_lookup's integrated_ownership does (BP's 19.75% of Rosneft)."""
+    bods = [ent("T", "Target"), per("P", "Pat"), rel("r", "T", "P", X(60))]
+    a = answer(bods, "GB")
+    (o,) = a["calculated_owners"]
+    assert o["figures"][0]["undated"] is True
+    assert a["undated_note"] == io.UNDATED_NOTE
+    assert "Pat (60% " in a["summary"] and ", no date given)" in a["summary"]
+    assert io.UNDATED_NOTE in a["summary"]
+
+
+def test_a_dated_figure_carries_no_undated_flag_or_note():
+    r = rel("r", "T", "P", X(60))
+    r["recordDetails"]["interests"][0]["startDate"] = "2020-01-01"
+    a = answer([ent("T", "Target"), per("P", "Pat"), r], "GB")
+    (o,) = a["calculated_owners"]
+    assert o["figures"][0]["undated"] is False
+    assert a["undated_note"] is None
+    assert "no date given" not in a["summary"]
+    assert io.UNDATED_NOTE not in a["summary"]

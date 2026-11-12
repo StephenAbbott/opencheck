@@ -48,6 +48,7 @@ from typing import Any
 from . import integrated_ownership as io
 from .bods.lifecycle import record_closed, statement_lifecycle, today_iso
 from .bods.refs import resolver
+from .bods.undated import UNDATED_LABEL
 
 #: Most extra lookups one call may start when ``depth`` > 1.
 MAX_HOPS = 10
@@ -373,6 +374,10 @@ def calculated_owners(
                 "maximum": f.get("maximum"),
                 "position": pos,
                 "route": io.route_words(f) or None,
+                # The figure rests on a holding no source dates (the
+                # undated-relationships ticket): kept, and said, as on
+                # opencheck_lookup's integrated_ownership.
+                "undated": bool(f.get("undated")),
             })
         if not figs:
             continue
@@ -735,6 +740,11 @@ def owners_answer(
             "credit": io.METHOD_CREDIT,
         },
         "note": DETERMINATION_NOTE,
+        "undated_note": (
+            io.UNDATED_NOTE
+            if any(f.get("undated") for o in shown for f in o["figures"])
+            else None
+        ),
         "fullcheck_url": FULLCHECK_URL.format(lei=lei) if lei else None,
         "license_notices": license_notices or [],
         "hint": HINT,
@@ -831,6 +841,7 @@ def _summary(name, rule, calculated, declared, both, stops, controllers=(), disc
             + "; ".join(
                 o["name"] + " (" + ", ".join(
                     f"{f['text']} {f['source']}" + (f" as {f['as']}" if f.get("as") else "")
+                    + (f", {UNDATED_LABEL}" if f.get("undated") else "")
                     for f in o["figures"] if f["position"] == "above"
                 ) + ")"
                 for o in above[:8]
@@ -841,6 +852,8 @@ def _summary(name, rule, calculated, declared, both, stops, controllers=(), disc
         bits.append("No party is calculated at or above the threshold.")
     if maybe:
         bits.append(f"{len(maybe)} more may be above it (a band or an unstated share).")
+    if any(f.get("undated") for o in calculated for f in o["figures"]):
+        bits.append(io.UNDATED_NOTE)
     bits.append(
         f"{len(current)} current declared beneficial owner(s)"
         + (": " + "; ".join(f"{d['name']} ({d['source']})" for d in current[:8])
