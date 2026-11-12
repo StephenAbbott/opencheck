@@ -1,0 +1,24 @@
+name: Probe Slovenia PRS (temporary)
+# One-off measurement for the Slovenia AJPES ticket; removed before the PR.
+on:
+  push:
+    branches: [claude/project-thread-n8w3gz]
+    paths: [".github/workflows/probe-slovenia-prs.yml", "backend/scripts/probes/probe_slovenia_prs.py"]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download
+        run: |
+          set -x
+          B=https://podatki.gov.si/dataset/9ee1a9aa-c224-4995-b2ad-3760d7af0748/resource
+          curl -sS -D - -o "$RUNNER_TEMP/opsiprs.csv" -w '%{http_code} %{size_download} %{time_total}\n' "$B/beb70929-3d0d-41c6-9af2-25d525d906d3/download/opsiprs.csv"
+          curl -sS -D - -o "$RUNNER_TEMP/prs.zip" -w '%{http_code} %{size_download} %{time_total}\n' "$B/3ac0b7fc-eaf3-4bd6-81c0-5ade530dc9a6/download/tmpposlovniregisterslovenijeicl4te.zip"
+      - name: Measure
+        run: python3 -I backend/scripts/probes/probe_slovenia_prs.py "$RUNNER_TEMP/opsiprs.csv" "$RUNNER_TEMP/prs.zip"
