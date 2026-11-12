@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 503** — A board seat Taiwan's company register files as vacant is now noted on the company and counted in the finding instead of appearing as a director called "缺額".
+**Latest: Phase 504** — France's BODACC notices now appear on the History tab, trigger watchlist re-checks and add the latest collective procedure to the Sirene card.
 
 → [Full development history](docs/status.md)
 
