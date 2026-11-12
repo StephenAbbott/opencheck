@@ -624,6 +624,12 @@ from .mappers.colombia import (  # noqa: F401  (re-exported, the Colombia RUES t
     _rues_role_details,
     map_rues_colombia,
 )
+from .mappers.us_pa import (  # noqa: F401  (re-exported, the Pennsylvania ticket)
+    _PA_SOURCE,
+    _pa_entity_details,
+    _pa_interest,
+    map_pa_dos,
+)
 from .mappers.us_ny import (  # noqa: F401  (re-exported, Phase 263)
     _NY_LIVE_STATUSES,
     _NY_TERMINAL_STATUSES,
@@ -725,6 +731,13 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # (foreign companies authorised in Florida), which the jurisdiction
     # fallback labelled with their home state's scheme until this entry.
     "RA000603": ("US-FL", "Florida Department of State, Division of Corporations"),
+    # United States — Pennsylvania Department of State, Bureau of Corporations
+    # (the Pennsylvania ticket, 12 Nov 2026). ``registeredAs`` is the filing
+    # number on 2,152 of the 2,153 ISSUED records under it (one is US-CT, a
+    # Connecticut company registered in Pennsylvania), bare (``676862``) or
+    # zero-padded to ten digits; ``_gleif_entity_statement`` writes it bare,
+    # the form the ``pa_dos`` mapper writes.
+    "RA000632": ("US-PA", "Pennsylvania Department of State, Bureau of Corporations"),
     # United States — New York State Department of Financial Services,
     # Registry of insurance companies. Its ``registeredAs`` is an NAIC company
     # code (ShelterPoint Life, 81434), not a DOS ID, so it must NOT take the
@@ -1828,6 +1841,10 @@ def _gleif_entity_statement(
             # The same for a NIT (``900.396.759 - 5``, ``9003967595``): one
             # written form, the one the RUES mapper writes.
             registered_as = colombian_nit(registered_as) or registered_as
+        elif ra_id == "RA000632" and registered_as.isdigit():
+            # Pennsylvania: some issuers pad the filing number to ten digits
+            # (``0015735802``); one written form, the bare one.
+            registered_as = registered_as.lstrip("0") or registered_as
         elif org_id_scheme == AR_CUIT_SCHEME:
             # The same for a CUIT (``30500001735``, ``33-67913936-9``): the
             # hyphenated form the register mapper writes.

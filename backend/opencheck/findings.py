@@ -2834,6 +2834,56 @@ def finding_rues_colombia(bundle: dict[str, Any]) -> str | None:
     return clauses_to_sentence(clauses)
 
 
+def finding_pa_dos(bundle: dict[str, Any]) -> str | None:
+    """What the Pennsylvania Department of State lists: the list, the type,
+    the people.
+
+    * **A note card** — a number not on the list, or one that belongs to a
+      business with another name — is its own sentence. Not on the list is
+      never "dissolved": the list holds active registrations only.
+    * A record leads with **being on the list**, never "active": the
+      Department says the list overstates the active businesses.
+    * The people listed are counted (one is named); the Department publishes
+      no owners, and the sentence never says "none on file" for them.
+    """
+    from .sources.pa_dos import summarise
+
+    if not bundle:
+        return None
+    if bundle.get("name_mismatch"):
+        return (
+            "The filing number on the LEI record belongs to a business with a "
+            "different name at the Pennsylvania Department of State, so no "
+            "record is attached."
+        )
+    if bundle.get("not_on_list"):
+        return (
+            "Not on the Pennsylvania Department of State's list of active "
+            "registrations, which holds no dissolved or withdrawn company."
+        )
+    if bundle.get("is_stub") or not bundle.get("rows"):
+        return None
+
+    s = summarise(bundle)
+    clauses: list[str | None] = [
+        "On the Pennsylvania Department of State's list of active registrations"
+    ]
+    created = human_date(s.get("created_on"))
+    if created:
+        verb = "created" if s.get("domestic") else "registered in Pennsylvania"
+        clauses.append(f"{verb} {created}")
+    parties = list(s.get("parties") or [])
+    if len(parties) == 1:
+        titles = parties[0]["titles"]
+        role = f" ({titles[0].lower()})" if titles else ""
+        clauses.append(f"one person listed: {parties[0]['name']}{role}")
+    elif parties:
+        clauses.append(f"{len(parties)} governors and officers listed")
+    kind = (s.get("registration_type") or "").lower()
+    clauses.append(kind or None)
+    return clauses_to_sentence(clauses)
+
+
 def finding_ny_dos(bundle: dict[str, Any]) -> str | None:
     """What the New York Department of State records: status, formation, CEO.
 

@@ -76,8 +76,9 @@ class RegisterHop:
 #: provincially incorporated company's number — most Canadian companies — says
 #: nothing about the federal register. ``US-NY`` (Phase 263) is the DC case
 #: again, for the New York Department of State, and ``US-FL`` (the Florida
-#: wiring) for the Florida Division of Corporations.
-_NO_COUNTRY_ALIAS: frozenset[str] = frozenset({"US-DC", "US-NY", "US-FL", "CA-CC"})
+#: wiring) for the Florida Division of Corporations, ``US-PA`` (the
+#: Pennsylvania ticket) for the Pennsylvania Department of State.
+_NO_COUNTRY_ALIAS: frozenset[str] = frozenset({"US-DC", "US-NY", "US-FL", "US-PA", "CA-CC"})
 
 
 def _ch_normalise(value: str) -> str:

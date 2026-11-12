@@ -62,6 +62,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | OpenAleph (`openaleph`) | `per-collection` | conditional | yes | no |
 | OpenCorporates (`opencorporates`) | `OC-Terms` | conditional | yes | yes |
 | OpenSanctions (`opensanctions`) | `CC-BY-NC-4.0` | no | yes | no |
+| Pennsylvania Department of State — registered businesses (`pa_dos`) | `PA-Open-Data` | yes | no | no |
 | PRH — Finnish Patent and Registration Office (`prh`) | `CC-BY-4.0` | yes | yes | no |
 | Argentina — Registro Nacional de Sociedades and IGJ (`registro_sociedades_argentina`) | `CC-BY-4.0` | yes | yes | no |
 | RPO Slovakia (`rpo_slovakia`) | `CC-BY-4.0` | yes | yes | no |
