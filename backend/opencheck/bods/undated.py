@@ -19,6 +19,11 @@ is the one rule for "undated":
 * with at least one ownership or control interest — a role (director,
   board member, an officer marked with ``opencheckOfficerPosition``) is an
   appointment, not a holding, and is never called undated here,
+* a GLEIF reporting-exception bridge (interest ``details`` opening "GLEIF
+  reporting exception", what ``mapper._gleif_exception_statements`` writes
+  and ``mapper.gleif_reporting_exception`` reads back) is a filing that
+  there is no parent to report, not a holding, and is never called undated
+  either (LUKOIL's NO_KNOWN_PERSON bridges carried the note, 12 Nov 2026),
 * and no interest carrying a ``startDate`` or an ``endDate``.
 
 ``note_undated`` keeps one ``commenting`` annotation (``UNDATED_NOTE``) on
@@ -44,6 +49,11 @@ ROLE_INTEREST_TYPES: frozenset[str] = frozenset(
     {"seniorManagingOfficial", "boardMember", "boardChair"}
 )
 
+#: How a GLEIF reporting-exception bridge's interest ``details`` open — the
+#: same prefix ``mapper._EXCEPTION_DETAILS`` reads (not imported: ``mapper``
+#: imports ``statements``, which calls this module).
+EXCEPTION_DETAILS_PREFIX = "GLEIF reporting exception"
+
 #: Where the note points.
 UNDATED_TARGET = "/recordDetails/interests"
 
@@ -57,6 +67,11 @@ UNDATED_NOTE = (
 UNDATED_LABEL = "no date given"
 
 
+def is_reporting_exception(interest: Mapping[str, Any]) -> bool:
+    """True for the interest of a GLEIF reporting-exception bridge."""
+    return str(interest.get("details") or "").startswith(EXCEPTION_DETAILS_PREFIX)
+
+
 def _holding_interests(interests: Any) -> list[Mapping[str, Any]]:
     out: list[Mapping[str, Any]] = []
     for interest in interests or []:
@@ -65,6 +80,8 @@ def _holding_interests(interests: Any) -> list[Mapping[str, Any]]:
         if interest.get("type") in ROLE_INTEREST_TYPES:
             continue
         if officer_position(interest) is not None:
+            continue
+        if is_reporting_exception(interest):
             continue
         out.append(interest)
     return out

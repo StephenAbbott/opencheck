@@ -13,6 +13,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from opencheck.bods import map_ftm
 from opencheck.bods import republished
 from opencheck.bods.annotations import resolve_pointer, validate_all
@@ -68,6 +70,33 @@ def test_a_role_is_never_called_undated() -> None:
     assert not is_undated(_rel([officer]))
 
 
+@pytest.mark.parametrize(
+    "reason", ["NO_KNOWN_PERSON", "NATURAL_PERSONS", "NON_CONSOLIDATING", "NON_PUBLIC", "NO_LEI"]
+)
+def test_a_gleif_reporting_exception_is_a_filing_not_an_undated_holding(reason: str) -> None:
+    """LUKOIL's NO_KNOWN_PERSON bridges carried the note (12 Nov 2026)."""
+    from opencheck.bods.mapper import _gleif_exception_statements, gleif_reporting_exception
+
+    stmts = _gleif_exception_statements(
+        "549300LCJ1UJXHYBWI24", "opencheck-subject", "direct", {"reason": reason}
+    )
+    (bridge,) = [s for s in stmts if s["recordType"] == "relationship"]
+    assert gleif_reporting_exception(bridge) is not None
+    assert not is_undated(bridge)
+    noted = note_undated(bridge)
+    assert not any(
+        a.get("description") == UNDATED_NOTE for a in noted.get("annotations") or []
+    )
+
+
+def test_a_holding_beside_an_exception_detail_is_still_undated() -> None:
+    # The rule skips the exception interest, not the whole statement.
+    assert is_undated(_rel([
+        {"type": "otherInfluenceOrControl", "details": "GLEIF reporting exception: NO_KNOWN_PERSON"},
+        {"type": "shareholding"},
+    ]))
+
+
 def test_a_record_closed_without_a_date_is_ended_not_undated() -> None:
     assert not is_undated(_rel([{"type": "shareholding"}], record_status="closed"))
 
@@ -106,6 +135,9 @@ def test_the_frontend_copy_matches() -> None:
     from opencheck.bods.undated import ROLE_INTEREST_TYPES
 
     assert roles == set(ROLE_INTEREST_TYPES)
+    from opencheck.bods.undated import EXCEPTION_DETAILS_PREFIX
+
+    assert f'EXCEPTION_DETAILS_PREFIX = "{EXCEPTION_DETAILS_PREFIX}"' in ts
 
 
 # ---------------------------------------------------------------------------

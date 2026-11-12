@@ -14,13 +14,19 @@ import type { Interest } from "./bodsGraph";
 /** Interest types that name an appointment, not a holding. */
 export const ROLE_INTEREST_TYPES = ["seniorManagingOfficial", "boardMember", "boardChair"];
 
+/** How a GLEIF reporting-exception bridge's interest `details` open. Such an
+ *  edge is a filing that there is no parent to report, not a holding, and is
+ *  never called undated (backend `EXCEPTION_DETAILS_PREFIX`). */
+export const EXCEPTION_DETAILS_PREFIX = "GLEIF reporting exception";
+
 /** The line the canvas and the tree print beside an undated edge. */
 export const UNDATED_LABEL = "no date given";
 
 function isHolding(i: Interest): boolean {
   if (ROLE_INTEREST_TYPES.includes(i.type ?? "")) return false;
   const position = i.opencheckOfficerPosition;
-  return !(typeof position === "string" && position.trim());
+  if (typeof position === "string" && position.trim()) return false;
+  return !String(i.details ?? "").startsWith(EXCEPTION_DETAILS_PREFIX);
 }
 
 /**
