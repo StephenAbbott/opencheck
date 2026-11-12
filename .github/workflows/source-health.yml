@@ -163,10 +163,12 @@ jobs:
           SOCRATA_APP_TOKEN: ${{ secrets.SOCRATA_APP_TOKEN }}
           FIRMENBUCH_API_KEY: ${{ secrets.FIRMENBUCH_API_KEY }}
           GEMI_API_KEY: ${{ secrets.GEMI_API_KEY }}
+          INSEE_SIRENE_API_KEY: ${{ secrets.INSEE_SIRENE_API_KEY }}
           INPI_USERNAME: ${{ secrets.INPI_USERNAME }}
           INPI_PASSWORD: ${{ secrets.INPI_PASSWORD }}
           NZBN_API_KEY: ${{ secrets.NZBN_API_KEY }}
           OPENCORPORATES_API_KEY: ${{ secrets.OPENCORPORATES_API_KEY }}
+          OPENDART_API_KEY: ${{ secrets.OPENDART_API_KEY }}
           OPENSANCTIONS_API_KEY: ${{ secrets.OPENSANCTIONS_API_KEY }}
           SUDREG_CLIENT_ID: ${{ secrets.SUDREG_CLIENT_ID }}
           SUDREG_CLIENT_SECRET: ${{ secrets.SUDREG_CLIENT_SECRET }}
