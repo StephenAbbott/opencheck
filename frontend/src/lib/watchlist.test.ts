@@ -334,8 +334,8 @@ describe("register tier entries (Israel)", () => {
         },
       }),
     ).toEqual([
-      "Share transfer filed with the Corporations Authority on 2026-11-09; parties not published.",
-      "Fast-track voluntary winding-up filed with the Corporations Authority on 2026-11-10.",
+      "Share transfer recorded by the Corporations Authority on 2026-11-09; parties not published.",
+      "Fast-track voluntary winding-up recorded by the Corporations Authority on 2026-11-10.",
       "Status: פעילה → בפירוק מרצון.",
     ]);
   });

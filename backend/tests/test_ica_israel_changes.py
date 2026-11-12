@@ -297,18 +297,18 @@ def _by_code(events, code: int):
     return [e for e in events if e.raw_field.startswith(f"request code {code}")][0]
 
 
-def test_status_merger_and_name_filings_are_notable_and_say_filed() -> None:
+def test_status_merger_and_name_filings_are_notable_and_say_recorded() -> None:
     events = _events()
     wind = _by_code(events, 146)
     assert wind.change_type is ChangeType.STATUS_CHANGED and wind.tier is Tier.IDENTITY_STATUS
-    assert wind.value_new == "Fast-track voluntary winding-up (פירוק מרצון מזורז) filed"
+    assert wind.value_new == "Fast-track voluntary winding-up (פירוק מרצון מזורז) recorded"
     assert wind.value_old is None
     merger = _by_code(events, 55)
     assert merger.change_type is ChangeType.SUCCESSION
     name = _by_code(events, 24)
     assert name.change_type is ChangeType.LEGAL_NAME_CHANGE
-    assert name.value_new == "Change of name (שינוי שם) filed"
-    assert all(e.event_date and e.date_basis.value == "effective" for e in events)
+    assert name.value_new == "Change of name (שינוי שם) recorded"
+    assert all(e.event_date and e.date_basis.value == "recorded" for e in events)
 
 
 def test_a_share_transfer_ranks_with_ownership_and_names_no_party() -> None:
@@ -317,10 +317,10 @@ def test_a_share_transfer_ranks_with_ownership_and_names_no_party() -> None:
     assert share.tier is Tier.OWNERSHIP_CONTROL
     assert share.record_type is RecordType.RELATIONSHIP
     assert share.counterparty is None
-    assert share.value_new == f"Share transfer (העברת מניות) filed; {SHARES_NOTE}"
+    assert share.value_new == f"Share transfer (העברת מניות) recorded; {SHARES_NOTE}"
     assert share.is_notable
     spec = CHANGE_TYPES[ChangeType.SHARES_FILED]
-    assert spec.label == "Shares filed (parties not published)"
+    assert spec.label == "Shares request recorded (parties not published)"
     # Never an owner added or removed: the file names nobody.
     assert "owner" not in spec.label.lower()
 

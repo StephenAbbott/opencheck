@@ -605,14 +605,14 @@ describe("registerReadNotes", () => {
     expect(lv[0]).toContain("not a change that did not happen");
   });
 
-  it("says the Israeli log names the filing, never the change, and how far OpenCheck's copy reaches", () => {
+  it("says the Israeli log names the request, never the change, and how far OpenCheck's copy reaches", () => {
     const il = registerReadNotes({
       ...RESP,
       sources: ["gleif", "ica_israel"],
       registers_kept_since: { ica_israel: "2025-11-11" },
     });
     expect(il).toHaveLength(1);
-    expect(il[0]).toContain("one year of filings");
+    expect(il[0]).toContain("one year of requests");
     expect(il[0]).toContain("never who or what changed");
     expect(il[0]).toContain("parties not published");
     expect(il[0]).toMatch(/reaches back to 11 Nov 2025\.$/);

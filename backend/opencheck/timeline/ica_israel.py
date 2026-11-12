@@ -2,26 +2,30 @@
 change log (``ica-changes`` on data.gov.il, CC BY).
 
 The eighth emitter, and the thinnest record any of them reads. Each row says
-that the Authority registered a request of one type for the corporation on one
-day — **never what it changed to**: no person, no share count, no old or new
-name, no new status. So every event here states a filing, in the register's
-words, and nothing the file does not say:
+that a request of one type for the corporation had its status updated by the
+Authority on one day — **never what it changed to**: no person, no share
+count, no old or new name, no new status. The day is the request's latest
+status update, not the day it was filed: when a request's status moves, its
+row moves to the new day (measured 12 Nov 2026: 250 rows a night, up to 334
+days old). So every event here says a request was *recorded* on that day, in
+the register's words, and nothing the file does not say:
 
 * winding-up, liquidation, revival and strike-off requests → Tier 2
   ``STATUS_CHANGED``; mergers → Tier 2 ``SUCCESSION``; a change of name →
-  Tier 2 ``LEGAL_NAME_CHANGE``. ``value_new`` is the filing ("Voluntary
-  winding-up (פירוק מרצון) filed"), never a status the company reached.
+  Tier 2 ``LEGAL_NAME_CHANGE``. ``value_new`` is the request ("Voluntary
+  winding-up (פירוק מרצון) recorded"), never a status the company reached.
 * share transfers, allotments and shareholder updates → Tier 1
-  ``SHARES_FILED`` (Stephen, 11 Nov 2026: the ownership tier, worded "filed,
-  parties not published"). A relationship event, so each filing is its own
+  ``SHARES_FILED`` (Stephen, 11 Nov 2026: the ownership tier, worded
+  "recorded; parties not published" since 12 Nov 2026). A relationship event, so each filing is its own
   entry and none is merged with another source's ownership change.
 * directors added or removed → Tier 4 ``OFFICER_APPOINTED`` /
   ``OFFICER_RESIGNED``, with no person (the file names none).
 * everything else — charges, officers, capital, articles, the annual report
   and its sub-changes, corrections — Tier 3, raw-first.
 
-Dates are the register's status-update day: ``DateBasis.EFFECTIVE`` /
-``HIGH``, the dates the register itself gives. The file keeps one year;
+Dates are the register's status-update day: ``DateBasis.RECORDED`` /
+``HIGH`` — the day the register entered the update, which the tab words "as
+entered by the register", never "as filed". The file keeps one year;
 OpenCheck's index carries older rows forward from build to build (Stephen,
 11 Nov 2026), so the coverage sentence on the tab names the day OpenCheck's
 copy starts (``REGISTER_READ_NOTES.ica_israel`` in ``lib/historyMode.ts``).
@@ -68,20 +72,20 @@ def _event(number: str, row: dict[str, Any]) -> ChangeEvent:
         "subject_id": number,
         "raw_field": field,
         "event_date": row.get("day"),
-        "date_basis": DateBasis.EFFECTIVE,
+        "date_basis": DateBasis.RECORDED,
         "date_confidence": DateConfidence.HIGH,
     }
     notable = _NOTABLE_GROUPS.get(group)
     if notable is not None:
         return ChangeEvent(
             record_type=RecordType.ENTITY, raw_change_type=label,
-            value_new=f"{label} filed", change_type=notable,
+            value_new=f"{label} recorded", change_type=notable,
             tier=Tier.IDENTITY_STATUS, **common,
         )
     if group == "shares":
         return ChangeEvent(
             record_type=RecordType.RELATIONSHIP, raw_change_type=label,
-            value_new=f"{label} filed; {SHARES_NOTE}",
+            value_new=f"{label} recorded; {SHARES_NOTE}",
             change_type=ChangeType.SHARES_FILED, tier=Tier.OWNERSHIP_CONTROL, **common,
         )
     if group == "directors":

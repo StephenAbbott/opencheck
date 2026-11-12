@@ -162,9 +162,9 @@ CHANGE_TYPES: dict[ChangeType, ChangeTypeSpec] = {
     ),
     ChangeType.SHARES_FILED: ChangeTypeSpec(
         ChangeType.SHARES_FILED, Tier.OWNERSHIP_CONTROL, RecordType.RELATIONSHIP,
-        "Shares filed (parties not published)", _UPDATED,
-        "A share transfer, allotment or shareholder update was filed with the "
-        "register, which publishes neither the parties nor the shares.",
+        "Shares request recorded (parties not published)", _UPDATED,
+        "The register recorded a status update on a share transfer, allotment "
+        "or shareholder update; it publishes neither the parties nor the shares.",
     ),
     ChangeType.STATUS_CHANGED: ChangeTypeSpec(
         ChangeType.STATUS_CHANGED, Tier.IDENTITY_STATUS, RecordType.ENTITY,

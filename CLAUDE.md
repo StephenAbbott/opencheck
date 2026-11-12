@@ -1644,10 +1644,14 @@ otherwise:
   registered for one corporation on one day (number, code + Hebrew words,
   day, charge id on charge rows) — no person, share count, old or new name,
   new status. 564,796 rows, 97 codes; `(number, code, day, charge_id)` is
-  unique (`_id` is load order). Every wording says "filed": `value_new` on a
-  notable row is the filing ("Change of name (…) filed"), never a state
-  reached. Share filings are Tier-1 `SHARES_FILED` worded "filed; parties not
-  published", one entry each; never on QuickCheck.
+  unique (`_id` is load order). **The day is the request's latest status
+  update, not its filing day**: a request whose status moves comes back under
+  the new day and the old key goes (12 Nov 2026: 250 rows a night, up to 334
+  days old). So every wording says "recorded", never "filed" (Stephen,
+  12 Nov 2026): `value_new` on a notable row is "Change of name (…)
+  recorded", never a state reached; dates are `DateBasis.RECORDED`. Share
+  requests are Tier-1 `SHARES_FILED` (the enum keeps its name) worded
+  "recorded; parties not published", one entry each; never on QuickCheck.
 - **The file keeps exactly a year; the index keeps more.** `--previous`
   carries rows older than the window forward from the build being replaced
   (`retained=1`, `first_seen` kept; a row withdrawn inside the window is
