@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 509** — Peru's Registro Nacional de Proveedores joins as a source, showing the partners, legal representatives and board members each supplier to the Peruvian state declares to OECE, as a self-declaration rather than an ownership register.
+**Latest: Phase 510** — Slovenian companies now have a register card from AJPES's Business Register open file, joined to GLEIF on the registration number.
 
 → [Full development history](docs/status.md)
 
