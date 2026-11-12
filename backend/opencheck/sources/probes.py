@@ -361,6 +361,24 @@ PROBES: dict[str, SourceProbe] = {
             "throttle."
         ),
     ),
+    "ct_sots": _p(
+        tier="live",
+        subject="EURPAC Service Incorporated (Connecticut)",
+        args=("0016116",),
+        kwargs={"legal_name": "EURPAC SERVICE INCORPORATED"},
+        expect_fields=("master", "principals"),
+        anchor_lei="984500D8C63E065B8705",
+        bods_mapper="map_ct_sots",
+        notes=(
+            "The seven-digit business ID exactly as GLEIF files it under "
+            "RA000600, on a 1961 stock corporation with eleven principals "
+            "(directors and officers) on 12 Nov 2026. ``expect_fields`` "
+            "asserts the business row and the principals, so the register "
+            "renaming ``accountnumber`` or ``business_id`` reads as a failure "
+            "rather than a quiet no-record. Keyless; SOCRATA_APP_TOKEN, when "
+            "set, only lifts the shared per-IP throttle."
+        ),
+    ),
     "pa_dos": _p(
         tier="live",
         subject="Comcast Corporation (Pennsylvania)",

@@ -2915,6 +2915,78 @@ def finding_ny_dos(bundle: dict[str, Any]) -> str | None:
     return sentence
 
 
+def finding_ct_sots(bundle: dict[str, Any]) -> str | None:
+    """What the Connecticut Secretary of the State records: status, principals.
+
+    * A note card — a business ID the register does not hold, or one that
+      belongs to a different business — is its own sentence.
+    * A domestic business the register records as ended leads with the
+      status and its date; a foreign one that withdrew or lost its
+      registration says only that it is no longer registered in Connecticut.
+    * Principals are counted by what the register says they are: officers
+      and directors, and "members, managers or partners" for the rest — never
+      owners. Nothing is said about shareholders or beneficial owners, which
+      the register does not publish.
+    """
+    from .sources.ct_sots import FOREIGN_ENDED_STATUSES, TERMINAL_STATUSES, summarise
+
+    if not bundle:
+        return None
+    if bundle.get("name_mismatch"):
+        return (
+            "The business ID on the LEI record belongs to a different business "
+            "at the Connecticut Secretary of the State, so no record is attached."
+        )
+    if bundle.get("not_in_register"):
+        return "No business with this ID in the Connecticut Secretary of the State's open data."
+    if bundle.get("is_stub") or not bundle.get("master"):
+        return None
+
+    s = summarise(bundle)
+    status = s.get("status") or ""
+    domestic = bool(s.get("domestic"))
+    if domestic and status in TERMINAL_STATUSES:
+        lead = f"{status} at the Connecticut Secretary of the State" + (
+            f" on {s['dissolved_on']}" if s.get("dissolved_on") else ""
+        )
+    elif not domestic and status in FOREIGN_ENDED_STATUSES:
+        lead = f"No longer registered in Connecticut ({status.lower()})"
+    elif domestic and status == "Active" and s.get("registered_on"):
+        lead = f"Active in Connecticut, registered {s['registered_on']}"
+    elif status == "Active" and s.get("registered_on"):
+        lead = f"Registered in Connecticut since {s['registered_on']}"
+    elif status:
+        lead = f"{status} at the Connecticut Secretary of the State"
+    else:
+        lead = "On the Connecticut Secretary of the State's register"
+
+    clauses: list[str | None] = [lead]
+    officers = s.get("officers") or []
+    others = s.get("undesignated") or []
+    if len(officers) == 1:
+        clauses.append("1 officer or director on file")
+    elif officers:
+        clauses.append(f"{len(officers)} officers and directors on file")
+    if len(others) == 1:
+        clauses.append("1 member, manager or partner on file")
+    elif others:
+        clauses.append(f"{len(others)} members, managers or partners on file")
+    if not officers and not others:
+        clauses.append("no principals on file")
+    former = list(s.get("former_names") or [])
+    if len(former) == 1:
+        clauses.append(f"formerly {former[0]}")
+    elif former:
+        clauses.append(f"{len(former)} former names")
+
+    sentence = clauses_to_sentence(clauses)
+    if sentence and len(sentence) > MAX_FINDING_CHARS:
+        sentence = clauses_to_sentence(clauses[:3])
+    if sentence and len(sentence) > MAX_FINDING_CHARS:
+        sentence = clauses_to_sentence(clauses[:2])
+    return sentence
+
+
 def finding_dlcp_dc(bundle: dict[str, Any]) -> str | None:
     """What DC's Corporations Division register says: status, form, owners.
 
