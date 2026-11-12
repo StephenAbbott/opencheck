@@ -65,6 +65,7 @@ RA_BY_COUNTRY: dict[str, str] = {
     "LV": "RA000423",  # UR (Latvia)
     "LT": "RA000430",  # JAR (Lithuania)
     "CY": "RA000161",  # DRCOR Companies Section (Cyprus)
+    "SI": "RA000529",  # Slovenian Business Register (AJPES) — bare ten digits
     "IL": "RA000406",  # Registrar of Companies, Israel Corporations Authority —
     # one authority files companies and partnerships alike (bare 9 digits).
     "FR": "RA000189",  # Sirene / INSEE (France) — RA000192 Infogreffe and

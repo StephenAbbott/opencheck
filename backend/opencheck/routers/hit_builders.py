@@ -953,6 +953,38 @@ def _bh_ica_israel(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_si_prs(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Slovenian Business Register, from the index (the
+    Slovenia wiring, 12 Nov 2026).
+
+    * **A unit in the index.** Asserts the ten-digit number the register
+      published (``si_maticna``, the index key). No status on the summary:
+      the open file publishes none.
+    * **Not in the index.** A note card (the JAR shape): the row sentence
+      says so, no identifier is asserted and nothing is degraded.
+
+    Dispatch is gated on the index file (``covers_lei``).
+    """
+    from ..findings import finding_si_prs
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "si_prs", local_id,
+            name=ctx.legal_name or "",
+            summary=f"SI {local_id} · not in the index",
+            finding=finding_si_prs(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    return _hit(
+        "si_prs", local_id,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=f"SI {local_id}",
+        finding=finding_si_prs(r),
+        identifiers={"si_maticna": local_id}, raw=r,
+    )
+
+
 def _bh_sunbiz_florida(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for the Florida Division of Corporations (the Florida
     wiring, 30 Oct 2026).

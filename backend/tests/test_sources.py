@@ -141,6 +141,9 @@ _IDENTIFIER_KEYED = {
     "cyprus_drcor",
     # ica_israel (the Israel wiring): the same LIKE over the local index.
     "ica_israel",
+    # si_prs (the Slovenia wiring): a LIKE over the local index, legal
+    # persons only.
+    "si_prs",
     # corporations_canada (the Canada index ticket): an FTS5 search over the
     # open-data index; the gateway plan has none, so no stub row without it.
     "corporations_canada",

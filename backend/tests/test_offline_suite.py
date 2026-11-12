@@ -37,6 +37,7 @@ WARM_UPS: dict[str, tuple[str, str]] = {
     "cyprus_drcor": ("opencheck.sources.cyprus_drcor", "warm_index"),
     "estma": ("opencheck.sources.estma", "warm_index"),
     "ica_israel": ("opencheck.sources.ica_israel", "warm_index"),
+    "si_prs": ("opencheck.sources.si_prs", "warm_index"),
     "sunbiz_florida": ("opencheck.sources.sunbiz_florida", "warm_index"),
     "meip": ("opencheck.meip", "warm_meip_db"),
     "psc_graph": ("opencheck.psc_graph", "warm_psc_graph_db"),

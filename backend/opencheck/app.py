@@ -309,6 +309,22 @@ async def _warm_caches_background() -> None:
             "is not announced until present): %s",
             exc,
         )
+    # The Slovenia wiring: the AJPES PRS index, rebuilt by hand from a CSV
+    # saved in a browser and downloaded here when absent or changed. Until it
+    # lands ``si_prs`` is not announced.
+    try:
+        from .sources.si_prs import warm_index as warm_si_prs_index
+
+        stats = await asyncio.to_thread(warm_si_prs_index)
+        log.info("Slovenian Business Register index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "Slovenian Business Register index warm-up failed (the source "
+            "is not announced until present): %s",
+            exc,
+        )
     # The Florida wiring: the Sunbiz index, rebuilt quarterly and downloaded
     # here when absent or changed. Until it lands ``sunbiz_florida`` is not
     # announced.
