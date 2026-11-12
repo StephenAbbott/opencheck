@@ -1638,6 +1638,48 @@ otherwise:
   República (~31 of 583) — a note card. CO has no row in the knowability
   table yet.
 
+## Peru is a monthly index of the RNP suppliers' declared make-up (the Peru RNP ticket, 12 Nov 2026)
+
+`sources/oece_rnp.py`, `scripts/build_oece_rnp_index.py`,
+`.github/workflows/refresh-oece-rnp-index.yml`, `bods/mappers/peru.py`.
+Stephen's decisions are on the Notion ticket (ODC-By from the publisher's
+metadata document; the RNP mapping; procurement from the OCP registry mirror,
+a later step). Things that will be re-derived otherwise:
+
+- **A supplier's self-declaration to a procurement regulator**, not a company
+  or BO register. Every statement carries `PE_SELF_DECLARATION_NOTE`;
+  `beneficialOwnershipOrControl` is never true; a partner or shareholder is a
+  `shareholding` with **no `share`** (only in `SHARE_FORMS`; elsewhere
+  `otherInfluenceOrControl`), a representative `seniorManagingOfficial`, a
+  governing-body member `boardMember`. `FECHA_INICIO_VIGENCIA` is when the
+  entry took effect in the RNP (mostly 2016–17, the system's start): details
+  only, never `startDate`.
+- **The file names no supplier and gives no status.** The company's name is
+  GLEIF's (`lookup_pass_legal_name`); with none the mapper draws nothing and
+  the adapter records a `source_read` degradation. Liveness is not read.
+- **No person's document number, ever** (Ley 29733; an 8-digit DNI is
+  enumerable, so no hash either). The builder drops the column; a natural
+  person's `10…` RUC goes too; `OeceRnpBundle` refuses a document key. A
+  person is one node per supplier (folded name), never merged across.
+- **`TIPO_DOCUMENTO` does not say person or company** (Henkel under a carnet de
+  extranjería). `classify_party`: a valid non-`10` RUC starting 20/15/17 →
+  entity with `PE-RUC`; legal-form words anywhere (`ORG_TOKENS`) or a legal
+  form abbreviation as the **last** word (`SUFFIX_TOKENS` — "LUIS EDUARDO SAC
+  ALARCON" is a person) → entity; "SUCESIÓN DE …" / "SOCIEDAD CONYUGAL …" →
+  `arrangement`; "OTROS ACCIONISTAS" (`PLACEHOLDER_NAMES`) → unspecified
+  party. 2 Nov 2026 cut: 1,493,464 rows, 368,732 suppliers; E 10,431, A ~270,
+  U 75.
+- **GLEIF files the RUC bare under four RAs** (`PE_RA_CODES`: SUNAT RA000689,
+  SUNARP RA000482, SMV RA000979, SBS RA000980); SUNARP also files partidas and
+  the SMV/SBS their own codes, so `PE-RUC` is value-schemed
+  (`_GLEIF_VALUE_SCHEMED_RA`, `identifiers.peruvian_ruc`) and a register hop.
+  84 of 296 ISSUED RUC-filing LEIs are RNP suppliers. `RA_BY_COUNTRY["PE"]` is
+  RA000689 with the other three as `sameNumberAuthorities`.
+- **OECE's OCDS API answers 403 to every datacentre** (re-checked 12 Nov
+  2026); Confluence (the file) answers. The release asset, not a boot-time
+  build, because the file is 227 MB. Nothing touches the response `Cache`
+  (the Phase 325 rule).
+
 ## French association notices on History — the JOAFE (the JOAFE History ticket, 11 Nov 2026)
 
 `sources/joafe.py` (the live read), `timeline/joafe.py` (the emitter),

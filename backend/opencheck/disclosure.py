@@ -115,6 +115,7 @@ DISCLOSES: dict[str, tuple[str, ...]] = {
     "cnpj_brazil": ("shareholders",),
     "gemi_greece": ("shareholders",),
     "asp_moldova": ("shareholders",),
+    "oece_rnp": ("shareholders",),
     "climatetrace": ("shareholders",),
     "wikidata": ("shareholders",),
 }

@@ -181,6 +181,16 @@ describe("nationalIdQuery", () => {
     ]);
   });
 
+  it("searches every Peruvian authority for a RUC", () => {
+    const PERUVIAN = ["RA000482", "RA000689", "RA000979", "RA000980"];
+    for (const code of PERUVIAN) {
+      expect(nationalIdQuery(code, "20100047218")).toEqual({
+        values: ["20100047218"],
+        raCodes: PERUVIAN,
+      });
+    }
+  });
+
   it("searches every Argentine authority in both CUIT spellings", () => {
     const ARGENTINE = ["RA000009", "RA000010", "RA000800"];
     for (const code of ARGENTINE) {

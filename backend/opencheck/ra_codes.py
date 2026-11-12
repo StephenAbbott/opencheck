@@ -68,6 +68,9 @@ RA_BY_COUNTRY: dict[str, str] = {
     "AR": "RA000009",  # ARCA (formerly AFIP) — the CUIT; RA000010 (the
     # Registro Nacional de Sociedades) and RA000800 (CNV) file the same CUIT;
     # GleifAdapter.search_by_local_id widens an Argentine scope to all three.
+    "PE": "RA000689",  # SUNAT — the RUC; RA000482 (SUNARP, for most of its
+    # records), RA000979 (SMV) and RA000980 (SBS) file the same RUC;
+    # GleifAdapter.search_by_local_id widens a Peruvian scope to all four.
     "IL": "RA000406",  # Registrar of Companies, Israel Corporations Authority —
     # one authority files companies and partnerships alike (bare 9 digits).
     "FR": "RA000189",  # Sirene / INSEE (France) — RA000192 Infogreffe and

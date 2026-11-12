@@ -50,6 +50,7 @@ from .jar_lithuania import JarLithuaniaAdapter
 from .cyprus_drcor import CyprusDrcorAdapter
 from .ica_israel import IcaIsraelAdapter
 from .registro_sociedades_argentina import RegistroSociedadesArgentinaAdapter
+from .oece_rnp import OeceRnpAdapter
 from .sunbiz_florida import SunbizFloridaAdapter
 from .krs_poland import KrsPolandAdapter
 from .kvk import KvKAdapter
@@ -113,6 +114,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "cyprus_drcor": CyprusDrcorAdapter(),
     "ica_israel": IcaIsraelAdapter(),
     "registro_sociedades_argentina": RegistroSociedadesArgentinaAdapter(),
+    "oece_rnp": OeceRnpAdapter(),
     "sunbiz_florida": SunbizFloridaAdapter(),
     "krs_poland": KrsPolandAdapter(),
     "kvk": KvKAdapter(),
