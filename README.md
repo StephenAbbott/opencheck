@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 511** — The weekly source-health sweep no longer reports Colombia and Argentina as drifted when GLEIF writes their numbers with a check digit or hyphens, and now hands the Open DART and Sirene probes their keys.
+**Latest: Phase 512** — GLEIF reporting-exception statements no longer carry the "no date given" note, since they record that there is no parent to report rather than a holding.
 
 → [Full development history](docs/status.md)
 
