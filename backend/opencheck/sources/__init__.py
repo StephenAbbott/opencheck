@@ -26,6 +26,7 @@ from .cvr_denmark import CvrDenmarkAdapter
 from .dlcp_dc import DlcpDcAdapter
 from .ny_dos import NyDosAdapter
 from .rues_colombia import RuesColombiaAdapter
+from .pa_dos import PaDosAdapter
 from .climatetrace import ClimateTRACEAdapter
 from .companies_house import CompaniesHouseAdapter
 from .corporations_canada import CorporationsCanadaAdapter
@@ -95,6 +96,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "dlcp_dc": DlcpDcAdapter(),
     "ny_dos": NyDosAdapter(),
     "rues_colombia": RuesColombiaAdapter(),
+    "pa_dos": PaDosAdapter(),
     "eiti": EitiAdapter(),
     "eiti_assessment": EitiAssessmentAdapter(),
     "eiti_bo": EitiBoAdapter(),

@@ -446,6 +446,58 @@ def _bh_ny_dos(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_pa_dos(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Pennsylvania Department of State.
+
+    * **A record.** Asserts the filing number the Department's own rows carry
+      (``us_pa_filing_number``, bare) — never the LEI.
+    * **A note card** — the number is not on the list of active
+      registrations, or it belongs to a business with a different name. No
+      identifier (the ``ny_dos`` shape).
+    """
+    from ..findings import finding_pa_dos
+    from ..sources.pa_dos import PA_DOS_SCHEME, summarise
+
+    if r.get("not_found"):
+        return _hit(
+            "pa_dos", local_id,
+            name=ctx.legal_name or "",
+            summary=f"{PA_DOS_SCHEME} {local_id} · no record attached",
+            finding=finding_pa_dos(r),
+            identifiers={},
+            raw={
+                "not_found": True,
+                "coverage_note": r.get("coverage_note"),
+                "not_on_list": bool(r.get("not_on_list")),
+                "name_mismatch": bool(r.get("name_mismatch")),
+                "registered_name": r.get("registered_name"),
+            },
+        )
+    s = summarise(r)
+    number = s["filing_number"] or local_id
+    kind = s.get("registration_type") or ""
+    return _hit(
+        "pa_dos", number,
+        name=s.get("name") or ctx.legal_name or "",
+        summary=f"{PA_DOS_SCHEME} {number}" + (f" · {kind}" if kind else ""),
+        identifiers={"us_pa_filing_number": number},
+        raw={
+            "filing_number": number,
+            "name": s.get("name"),
+            "registration_type": kind or None,
+            "created_on": s.get("created_on"),
+            "address": s.get("address"),
+            "county": s.get("county"),
+            "parties": [
+                {"name": p["name"], "titles": p["titles"], "is_entity": p["is_entity"]}
+                for p in s.get("parties") or []
+            ],
+            "data_cut": s.get("data_cut"),
+        },
+        finding=finding_pa_dos(r),
+    )
+
+
 def _bh_rues_colombia(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Colombia's RUES.
 
