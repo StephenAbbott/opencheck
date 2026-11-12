@@ -1486,6 +1486,12 @@ will be re-derived otherwise:
   companies' registrations, missing from the table); a dissolution,
   revocation or bankruptcy is pending (the liquidation follows), a completed
   liquidation, merger or division is terminal. A test pins the 33.
+- **A vacant seat (缺額) is no one** (the vacant-seat ticket, 11 Nov 2026).
+  `tw_vacant_seat` decides it (缺額 in any brackets, plus 出缺 / 懸缺 / 從缺 /
+  空缺): no party, no relationship, no holding; a `commenting` note on the
+  company lists the vacant seats and the finding says "N seats vacant". A
+  legal person's row with a vacant representative keeps the legal person's
+  seat and draws no representative.
 - **Not in v1**: key managers (經理人, in no open API), branch records, limited
   partnerships and History.
 - **A legal-person holder's UBN (the Taiwan GCIS v2 ticket, 4 Nov 2026).**

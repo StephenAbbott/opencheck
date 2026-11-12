@@ -360,7 +360,7 @@ def live(monkeypatch):
 
 def _israeli_registration(monkeypatch, number: str) -> None:
     async def registration(_client, _lei):
-        return (None, None, None, None, None, None, number, "PAYPAL ISRAEL PAYMENT SERVICES LTD")
+        return (None, None, None, None, None, None, number, "PAYPAL ISRAEL PAYMENT SERVICES LTD", None)
 
     async def modifications(_client, _lei):
         return [], []

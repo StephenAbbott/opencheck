@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 500** — Integrated ownership marks each figure that rests on a holding no source dates, so a reader of a mixed table knows which rows the undated note means.
+**Latest: Phase 503** — A board seat Taiwan's company register files as vacant is now noted on the company and counted in the finding instead of appearing as a director called "缺額".
 
 → [Full development history](docs/status.md)
 

@@ -16,6 +16,7 @@ import type { HistoryEntry, HistoryRawChange, HistoryResponse } from "../../lib/
 import {
   basisLabel,
   boardRowPersonHref,
+  dateText,
   boardRowPersonId,
   historySourceLabel,
   recordUrl,
@@ -127,7 +128,7 @@ function NotableRow({
       <div className={`rounded-oo border px-3 py-2 ${accent.card}`}>
         <div className="flex items-start justify-between gap-2">
           <span className="text-oo-small font-mono text-oo-ink">
-            {entry.date ?? "date unknown"}
+            {dateText(entry.date, entry.date_basis, entry.sources) ?? "date unknown"}
             <span className="ml-1.5 text-oo-meta text-oo-muted">
               {basisLabel(entry.date_basis, entry.sources)}
             </span>
@@ -186,7 +187,9 @@ function NoiseRow({ raw }: { raw: HistoryRawChange }) {
         aria-hidden
       />
       <div className="text-oo-meta text-oo-muted">
-        <span className="font-mono">{raw.event_date ?? "—"}</span>
+        <span className="font-mono">
+          {dateText(raw.event_date, raw.date_basis, [raw.source_id]) ?? "—"}
+        </span>
         <span className="mx-1.5">·</span>
         <span className="font-mono">{historySourceLabel(raw.source_id)}</span>
         <span className="mx-1.5">·</span>

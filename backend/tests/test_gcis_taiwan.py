@@ -42,7 +42,9 @@ from opencheck.bods.mappers.taiwan import (
     TW_POSITIONS,
     TW_STATUS_LIVENESS,
     tw_foreign_prefix,
+    tw_holders,
     tw_percentages,
+    tw_vacant_seat,
 )
 from opencheck.bods.officer_roles import OFFICER_POSITION_KEY
 from opencheck.cache import Cache
@@ -509,7 +511,7 @@ def test_a_foreign_legal_person_takes_its_prefixs_jurisdiction() -> None:
 @pytest.mark.parametrize(
     "fixture",
     ["tsmc", "visionbay_juristic", "orsted_holding", "yujung_limited", "ktg_limited",
-     "formosa_marine_foreign_branch", "skyworth_over_100"],
+     "formosa_marine_foreign_branch", "skyworth_over_100", "hon_hai"],
 )
 def test_every_mapping_is_well_formed(fixture: str) -> None:
     statements = _map(fixture)
@@ -534,6 +536,66 @@ def test_a_stub_or_not_found_bundle_maps_to_nothing() -> None:
 
 
 # ---------------------------------------------------------------------------
+# A vacant seat (缺額) is no one (the vacant-seat ticket, 11 Nov 2026)
+# ---------------------------------------------------------------------------
+#
+# ``hon_hai.json`` is the register's real answer for 鴻海精密工業 (04541302)
+# on 11 Nov 2026: a director's and an independent director's seat filed as
+# 缺額.
+
+
+@pytest.mark.parametrize("name", ["缺額", "(缺額)", "（缺額）", " 缺額 ", "【缺額】", "出缺", "懸缺", "從缺", "空缺"])
+def test_a_vacancy_word_is_a_vacant_seat(name: str) -> None:
+    assert tw_vacant_seat(name)
+
+
+@pytest.mark.parametrize("name", ["劉揚偉", "缺額股份有限公司", "", None, "缺"])
+def test_a_name_is_not_a_vacant_seat(name: str | None) -> None:
+    assert not tw_vacant_seat(name)
+
+
+def test_a_vacant_seat_draws_no_person_and_no_relationship() -> None:
+    statements = _map("hon_hai")
+    names = [_name(s) for s in statements if s["recordType"] == "person"]
+    assert not any(tw_vacant_seat(n) for n in names), names
+    assert "劉揚偉" in names and "許慈美" in names
+    # Six natural directors and one legal person (with its representative).
+    assert len(_by_type(statements, "person")) == 7
+    assert len(_by_type(statements, "relationship")) == 8
+
+
+def test_the_company_statement_says_which_seats_are_vacant() -> None:
+    statements = _map("hon_hai")
+    (entity,) = [s for s in statements if s["recordType"] == "entity" and _name(s) == "鴻海精密工業股份有限公司"]
+    notes = [a["description"] for a in entity.get("annotations", []) if "vacant" in a.get("description", "")]
+    assert notes == [
+        "The register files 2 seats as vacant (缺額): Director (董事); "
+        "Independent director (獨立董事). No party is shown for a vacant seat."
+    ]
+
+
+def test_a_legal_persons_seat_with_no_representative_stays_the_legal_persons() -> None:
+    bundle = _bundle("hon_hai")
+    for row in bundle["directors"]:
+        if row["Juristic_Person_Name"]:
+            row["Person_Name"] = "(缺額)"
+    with provenance.recording():
+        statements = list(map_gcis_taiwan(bundle))
+    assert not any(tw_vacant_seat(_name(s)) for s in _by_type(statements, "person"))
+    (rel,) = _rels_of(statements, "鴻景國際投資股份有限公司")
+    seat = rel["recordDetails"]["interests"][0]
+    assert seat["details"] == "Director (董事); the register names no representative ((缺額))"
+    # The legal person holds the seat, so the company's note still counts two.
+    (entity,) = [s for s in statements if s["recordType"] == "entity" and _name(s) == "鴻海精密工業股份有限公司"]
+    notes = [a["description"] for a in entity.get("annotations", []) if "vacant" in a.get("description", "")]
+    assert len(notes) == 1 and notes[0].startswith("The register files 2 seats as vacant")
+
+
+def test_a_vacant_seat_holds_nothing() -> None:
+    assert not any(tw_vacant_seat(k) for k in tw_holders(_bundle("hon_hai")["directors"]))
+
+
+# ---------------------------------------------------------------------------
 # The finding sentence
 # ---------------------------------------------------------------------------
 
@@ -547,6 +609,8 @@ def test_a_stub_or_not_found_bundle_maps_to_nothing() -> None:
                            "directors and supervisors hold 100% between them."),
         ("skyworth_over_100", "Active company limited by shares, set up 4 October 2016, "
                               "2 directors, directors' and supervisors' holdings filed."),
+        ("hon_hai", "Active company limited by shares, set up 20 February 1974, 7 directors, "
+                    "2 seats vacant, directors and supervisors hold 0.02% between them."),
     ],
 )
 def test_finding(fixture: str, expected: str) -> None:

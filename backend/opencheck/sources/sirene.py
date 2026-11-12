@@ -85,7 +85,9 @@ ETATS = {"A": "active", "C": "ceased"}
 
 _CACHE_NS = "sirene"
 #: Bump when the cached payload's shape changes.
-_CACHE_VERSION = "v1"
+#: v2 keeps the unit's history periods beside the flattened unit (the Sirene
+#: history ticket); a v1 entry has none, so it is not read.
+_CACHE_VERSION = "v2"
 _REQUEST_TIMEOUT = httpx.Timeout(20.0, connect=10.0)
 
 COVERAGE_NOT_FOUND = (
@@ -122,13 +124,50 @@ def current_period(unit: dict[str, Any]) -> dict[str, Any]:
 def flatten_unit(unit: dict[str, Any]) -> dict[str, Any]:
     """The unit's own fields plus its current period's, one flat dict — the
     shape the bundle carries. Earlier periods are not kept (Sirene history is
-    the follow-up ticket, decision G)."""
+    the follow-up ticket, decision G) — :func:`history_periods` keeps them
+    for the History tab."""
     flat = {k: v for k, v in unit.items() if k != "periodesUniteLegale" and v not in (None, "")}
     for key, value in current_period(unit).items():
         if value not in (None, ""):
             flat[key] = value
     flat["nombrePeriodesUniteLegale"] = unit.get("nombrePeriodesUniteLegale")
     return flat
+
+
+#: The period fields the History tab reads (``timeline/sirene.py``) — an
+#: allowlist. A sole trader's ``nomUniteLegale`` / ``nomUsageUniteLegale`` and
+#: their ``changement…`` flags are a person's names and never kept (decision E
+#: of the Sirene history ticket); nor is the employer flag, which INSEE does
+#: not historise (no period of the 72.3M in the 1 Nov 2026 file changes it).
+PERIOD_FIELDS = (
+    "dateDebut",
+    "dateFin",
+    "etatAdministratifUniteLegale",
+    "denominationUniteLegale",
+    "denominationUsuelle1UniteLegale",
+    "denominationUsuelle2UniteLegale",
+    "denominationUsuelle3UniteLegale",
+    "categorieJuridiqueUniteLegale",
+    "activitePrincipaleUniteLegale",
+    "nomenclatureActivitePrincipaleUniteLegale",
+    "nicSiegeUniteLegale",
+    "economieSocialeSolidaireUniteLegale",
+    "societeMissionUniteLegale",
+)
+
+
+def history_periods(unit: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every period of the unit, oldest first, reduced to :data:`PERIOD_FIELDS`.
+
+    INSEE lists the latest first; a period with no ``dateDebut`` (the start of
+    the record) sorts first.
+    """
+    periods = [
+        {k: p.get(k) for k in PERIOD_FIELDS if p.get(k) not in (None, "")}
+        for p in unit.get("periodesUniteLegale") or []
+        if isinstance(p, dict)
+    ]
+    return sorted(periods, key=lambda p: str(p.get("dateDebut") or ""))
 
 
 def head_office_address(etablissement: dict[str, Any]) -> dict[str, Any]:
@@ -374,7 +413,12 @@ class SireneAdapter(SourceAdapter):
             if str(flat.get("statutDiffusionUniteLegale") or "O") != "O":
                 return self._note(siren, legal_name, "not_diffusible", COVERAGE_NOT_DIFFUSIBLE)
 
-            payload: dict[str, Any] = {"unit": flat, "head_office": None, "head_office_read": True}
+            payload: dict[str, Any] = {
+                "unit": flat,
+                "periods": history_periods(unit),
+                "head_office": None,
+                "head_office_read": True,
+            }
             nic = re.sub(r"\D", "", str(flat.get("nicSiegeUniteLegale") or ""))
             if len(nic) == 5:
                 try:
@@ -464,6 +508,7 @@ class SireneAdapter(SourceAdapter):
             "siren": siren,
             "legal_name": legal_name or "",
             "unit": unit,
+            "periods": list(payload.get("periods") or []),
             "head_office": payload.get("head_office"),
             "head_office_read": bool(payload.get("head_office_read", True)),
             "rna": rna_record,
