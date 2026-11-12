@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 512** — GLEIF reporting-exception statements no longer carry the "no date given" note, since they record that there is no parent to report rather than a holding.
+**Latest: Phase 513** — A register's name check now holds through the whole lookup, so a refused filing number's officers are never mapped or screened, and Pennsylvania companies carry the US-PA jurisdiction.
 
 → [Full development history](docs/status.md)
 
