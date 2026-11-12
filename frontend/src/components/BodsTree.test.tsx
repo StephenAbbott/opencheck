@@ -114,3 +114,16 @@ describe("BodsTree integrated ownership (Phase 339)", () => {
     expect(within(row).getByTestId("tree-integrated-ownership")).toBeTruthy();
   });
 });
+
+describe("BodsTree at phone width", () => {
+  // The rows' `sr-only` spans are `position: absolute`. Unless the tree itself
+  // is positioned, their containing block lies outside its scroll box and they
+  // push the whole page sideways (Rosneft's FullCheck at 390px, 12 Nov 2026).
+  // jsdom does no layout, so this pins the cause; the e2e smoke pins the outcome.
+  it("is the containing block of its own screen-reader text", () => {
+    renderTree();
+    const tree = screen.getByRole("tree");
+    expect(tree.className.split(/\s+/)).toContain("relative");
+    expect(tree.querySelector(".sr-only")).toBeTruthy();
+  });
+});

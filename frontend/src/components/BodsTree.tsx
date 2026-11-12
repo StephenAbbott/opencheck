@@ -130,11 +130,19 @@ export default function BodsTree({
     }
   }
 
+  // `relative` is load-bearing. A row is wider than a phone (the name, the
+  // signal chips and the kind column), so the tree scrolls sideways inside
+  // itself — but its `sr-only` spans are `position: absolute`, and with no
+  // positioned ancestor here their containing block is outside the tree:
+  // each was laid out at its row's far end and escaped this box's clip.
+  // Rosneft's FullCheck at 390px scrolled the whole page to 1,050px wide
+  // (12 Nov 2026). Positioned, the tree is their containing block and clips
+  // them; `e2e/smoke.spec.ts` measures the outcome at phone width.
   return (
     <div
       role="tree"
       aria-label={entityName ? `Ownership tree for ${entityName}` : "Ownership tree"}
-      className="text-oo-meta border border-oo-rule rounded-oo overflow-auto bg-white"
+      className="relative text-oo-meta border border-oo-rule rounded-oo overflow-auto bg-white"
       style={{ maxHeight: 460 }}
     >
       {rows.map((row, i) => {

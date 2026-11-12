@@ -255,7 +255,7 @@ export default function BatchPage({
           )}
 
           {/* Desktop: a table. */}
-          <div className="mt-4 hidden md:block overflow-x-auto">
+          <div className="relative mt-4 hidden md:block overflow-x-auto">
             <table className="w-full border-collapse text-oo-small">
               <caption className="sr-only">Screening results, one company per row</caption>
               <thead>

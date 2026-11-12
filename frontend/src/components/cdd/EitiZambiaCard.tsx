@@ -195,7 +195,7 @@ export function EitiZambiaCard({ hit }: { hit: SourceHit }) {
         {licences.length > 0 && (
           <section aria-label="Mining rights">
             <Eyebrow>Mining rights in the cadastre (2023 – Q2 2025)</Eyebrow>
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full text-oo-meta text-oo-esg-strong">
                 <thead>
                   <tr className="text-left text-oo-esg-text">
