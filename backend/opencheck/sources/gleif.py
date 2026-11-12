@@ -54,6 +54,10 @@ from .dlcp_dc import (
 )
 from ..identifiers import colombian_nit as _colombian_nit
 from .rues_colombia import CO_RA_CODES as _CO_RA_CODES
+from .pa_dos import (
+    PA_DOS_RA_CODE as _PA_DOS_RA_CODE,
+    normalise_filing_number as _normalise_pa_filing_number,
+)
 from .ny_dos import NY_DOS_RA_CODE as _NY_DOS_RA_CODE, normalise_dos_id as _normalise_ny_dos_id
 from .ct_sots import (
     CT_SOTS_RA_CODE as _CT_SOTS_RA_CODE,
@@ -1172,6 +1176,14 @@ class GleifAdapter(SourceAdapter):
             if registered_at_id == _CT_SOTS_RA_CODE:
                 try:
                     identifiers["us_ct_business_id"] = _normalise_ct_business_id(registered_as)
+                except ValueError:
+                    pass
+            # Pennsylvania filing number — expose as ``us_pa_filing_number``
+            # so the reconciler can bridge GLEIF ↔ the Department of State;
+            # keyed on the RA code, never the jurisdiction (the NY rule).
+            if registered_at_id == _PA_DOS_RA_CODE:
+                try:
+                    identifiers["us_pa_filing_number"] = _normalise_pa_filing_number(registered_as)
                 except ValueError:
                     pass
             # Colombian NIT — expose as ``co_nit`` so the reconciler can bridge

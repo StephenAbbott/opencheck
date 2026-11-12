@@ -274,6 +274,18 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "State anyway (recorded 12 Nov 2026)."
         ),
     ),
+    "pa-open-data": _terms(
+        "PA-Open-Data", "data.pa.gov Data Policy (Public Domain U.S. Government)",
+        commercial="yes", attribution=False, share_alike=False, redistribution="yes",
+        url="https://data.pa.gov/data-policy",
+        summary=(
+            "“Data sets available through data.pa.gov are offered free and "
+            "without restriction”, as is; the dataset's metadata names the "
+            "licence Public Domain U.S. Government. Credit is requested, “while "
+            "not required”. OpenCheck attributes the Department of State anyway "
+            "(read 12 Nov 2026)."
+        ),
+    ),
     "sodl-1.0": _terms(
         "SODL-1.0", "Data License — Serbian Open Data Portal (SODL 1.0)",
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",

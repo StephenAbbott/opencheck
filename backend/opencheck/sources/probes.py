@@ -379,6 +379,24 @@ PROBES: dict[str, SourceProbe] = {
             "set, only lifts the shared per-IP throttle."
         ),
     ),
+    "pa_dos": _p(
+        tier="live",
+        subject="Comcast Corporation (Pennsylvania)",
+        args=("3039985",),
+        kwargs={"legal_name": "COMCAST CORPORATION"},
+        expect_fields=("rows",),
+        anchor_lei="51M0QTTNCGUN7KFCFZ59",
+        bods_mapper="map_pa_dos",
+        notes=(
+            "The bare filing number exactly as GLEIF files it under RA000632; "
+            "the dataset pads it to 0003039985. Six rows on 12 Nov 2026 — "
+            "governor, president, secretary, director, treasurer. "
+            "``expect_fields`` asserts the rows, so the Department renaming "
+            "``filing_number`` reads as a failure rather than a quiet "
+            "no-record. Keyless; SOCRATA_APP_TOKEN, when set, only lifts the "
+            "shared per-IP throttle."
+        ),
+    ),
     "rues_colombia": _p(
         tier="live",
         subject="Banco de Bogotá (Colombia)",

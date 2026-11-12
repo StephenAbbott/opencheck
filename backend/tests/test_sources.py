@@ -125,6 +125,8 @@ _IDENTIFIER_KEYED = {
     # ct_sots: reached from the business ID GLEIF files under RA000600; no
     # name search (the ny_dos case).
     "ct_sots",
+    # pa_dos: the same — name search is a live SODA query with no stub tier.
+    "pa_dos",
     "asp_moldova", "onrc_romania",
     # chilecompra: reached from the RUT GLEIF files; procurement records are
     # not name-searchable here.

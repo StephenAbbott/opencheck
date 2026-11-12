@@ -277,6 +277,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains information from the Florida Department of State, Division of Corporations (sunbiz.org) bulk data downloads — Florida public records."
 - **Entry point:** `us_fl_doc` (the Division's document number) derived from GLEIF RA code `RA000603`
 
+## Pennsylvania — Department of State, Bureau of Corporations and Charitable Organizations
+
+- **Data:** businesses on the Department's list of active registrations — name, registration type, creation date, registered address, county, and each listed party by name and title as filed (no party address). No status, shareholders or beneficial owners are published.
+- **Portal:** <https://data.pa.gov/d/xvd7-5r2c>
+- **Access:** Live Socrata (SODA) queries by filing number on data.pa.gov; keyless, optional `SOCRATA_APP_TOKEN`.
+- **License:** "Public Domain U.S. Government" in the dataset's metadata; the Commonwealth's open data policy offers the data "free and without restriction" (<https://data.pa.gov/data-policy>). Attribution is requested, not required.
+- **Attribution (given, not required):** "Business Entity Filings (Active Registrations) — Pennsylvania Department of State, via data.pa.gov."
+- **Entry point:** `us_pa_filing_number` (the Department's filing number) derived from GLEIF RA code `RA000632`
+
 ## Moldova — ASP (Agenția Servicii Publice), State Register of Legal Entities
 
 - **Data:** companies on the State Register of Legal Entities (*Registrul de stat al unităților de drept*) — name, IDNO, legal form, registration date, registered address and activity codes — with their **directors** and the register's word for each role, and their **founders** with each founder's percentage of the share capital. Names only: no dates of birth, nationalities or identifiers for people or for corporate founders. No beneficial owners.
