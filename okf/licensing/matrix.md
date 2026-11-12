@@ -20,6 +20,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | ARES (Czechia) (`ares`) | `CC-BY-4.0` | yes | yes | no |
 | Estonian e-Business Register (e-Äriregister) (`ariregister`) | `CC-BY-4.0` | yes | yes | no |
 | ASP — State Register of Legal Entities (Moldova) (`asp_moldova`) | `DATASET.GOV.MD-Reuse` | yes | yes | no |
+| AusTender — Australian Government contracts (`austender`) | `CC-BY-3.0-AU` | yes | yes | no |
 | Belgian Crossroads Bank for Enterprises (BCE/KBO) (`bce_belgium`) | `Custom-KBO-Reuse` | conditional | yes | no |
 | Bolagsverket — Swedish Companies Registration Office (`bolagsverket`) | `SE-PSI` | yes | yes | no |
 | Brønnøysundregistrene — Norwegian Register Centre (`brreg`) | `NLOD-2.0` | yes | yes | no |

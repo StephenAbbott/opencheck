@@ -554,6 +554,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Data:** for each company supplier identified by its Companies House number (or a PPON the notices pair with one), the contracts awarded to it since January 2021 — title, buyer, value, date, status and a link to the notice. Built weekly from the registry's compiled releases.
 - **Note:** contact points, addresses and the free-text "connected persons" (`parties[].control`) are never read.
 
+## AusTender — Australian Government contracts
+
+- **Website:** https://www.tenders.gov.au/ · OCDS copy at the Open Contracting Partnership's Data Registry, https://data.open-contracting.org/en/publication/19
+- **License:** [Creative Commons Attribution 3.0 Australia (CC BY 3.0 AU)](https://creativecommons.org/licenses/by/3.0/au/), as the OCP Data Registry states for AusTender's OCDS data.
+- **Attribution:** "Contains AusTender contract notice data © Commonwealth of Australia (Department of Finance), licensed under CC BY 3.0 AU, via the Open Contracting Partnership's Data Registry." OpenCheck changes the data: it keeps a supplier's latest and largest contracts, sums published values and converts dates to the Canberra day.
+- **Data:** for each supplier ABN, its latest and largest contract notices (agency, published value, period, procedure, amendment count, a link to the notice on AusTender) and totals across every notice since 2013. Matched on the ABN GLEIF files, or the ABN a company's ACN implies.
+- **Note:** the registry warns that a cancelled amendment overwrites a contract's status, period and value in the OCDS data; OpenCheck shows no contract status for that reason.
+
 ## Peru — OECE Registro Nacional de Proveedores (declared legal make-up of suppliers)
 
 - **Website:** https://www.gob.pe/oece · dataset at https://www.datosabiertos.gob.pe/dataset/personas-declaradas-en-la-conformaci%C3%B3n-jur%C3%ADdica-de-proveedores-en-el-registro-nacional-de-0

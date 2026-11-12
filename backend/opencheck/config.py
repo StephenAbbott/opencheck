@@ -981,6 +981,21 @@ class Settings(BaseSettings):
         alias="FIND_TENDER_DB_URL",
     )
 
+    # --- AusTender (Australian federal contracts, CC BY 3.0 AU) ---
+    # The supplier index built monthly from the OCP Data Registry's copy of
+    # AusTender's OCDS data by .github/workflows/refresh-austender-index.yml.
+    # Unset: the data-root default (``austender.sqlite``).
+    austender_db_file: str | None = Field(default=None, alias="AUSTENDER_DB_FILE")
+    # Release asset downloaded at boot when absent and replaced when it
+    # changed (the ChileCompra rule). Empty string disables the download.
+    austender_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "austender-index/austender.sqlite.gz"
+        ),
+        alias="AUSTENDER_DB_URL",
+    )
+
     # --- Australian Business Register (ABN Lookup, CC BY 3.0 AU) ---
     # Free GUID from https://abr.business.gov.au/Documentation/WebServiceRegistration
     abn_guid: str | None = Field(default=None, alias="ABN_GUID")

@@ -93,6 +93,7 @@ from .hit_builders import (  # noqa: F401
     _bh_anaf_romania,
     _bh_apr_serbia,
     _bh_asp_moldova,
+    _bh_austender,
     _bh_chilecompra,
     _bh_find_tender_uk,
     _EITI_IDENTIFIER_KEY_BY_COUNTRY,
@@ -1357,6 +1358,27 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
                 legal_name=ctx.legal_name,
             ),
         ))
+    # AusTender — Australian Government contracts, the ChileCompra shape:
+    # gated on an ABN (RA000013) or an ACN (RA000014) that yields a valid
+    # ABN, and on the index being present.
+    au_adapter = REGISTRY.get("austender")
+    if (
+        au_adapter is not None
+        and hasattr(au_adapter, "fetch_by_identifiers")
+        and hasattr(au_adapter, "applies_to")
+        and au_adapter.applies_to(ctx.registered_at, ctx.registered_as)
+        and _want("austender")
+        and _offline_index_covers(au_adapter, ctx.lei)
+    ):
+        tasks.append((
+            "austender",
+            au_adapter.fetch_by_identifiers(
+                ctx.lei,
+                ctx.registered_as,
+                ctx.registered_at,
+                legal_name=ctx.legal_name,
+            ),
+        ))
     return tasks
 
 
@@ -1398,6 +1420,9 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         # The same rule (Phase 280): a company that sold nothing to the
         # Chilean state in the window answered, and has no card.
         return _bh_chilecompra(result, ctx) if result.get("supplier") else None
+    if source_id == "austender":
+        # No contracts on AusTender is an answer with no card, not a finding.
+        return _bh_austender(result, ctx) if result.get("supplier") else None
     if result.get("is_stub"):
         return None
     if source_id == "opencorporates":

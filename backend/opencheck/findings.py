@@ -877,6 +877,43 @@ def finding_find_tender_uk(bundle: dict[str, Any]) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# austender (AusTender — Australian Government contract notices)
+# ---------------------------------------------------------------------------
+
+
+def finding_austender(bundle: dict[str, Any]) -> str | None:
+    """How many Commonwealth contracts this company was awarded, from whom.
+
+    The value is the published contract values summed by OpenCheck and
+    printed in full (rule 5). It is said as a sum of published values, never
+    as what was paid: an amended contract's value is its latest, and a
+    cancelled amendment can overwrite it. Contracts are activity, never
+    ownership or risk. A company with no notices has no card.
+    """
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return None
+    supplier = bundle.get("supplier")
+    if not isinstance(supplier, dict):
+        return None
+    n = int(supplier.get("contracts") or 0)
+    if not n:
+        return None
+    value = int(supplier.get("value_aud") or 0)
+    agencies = int(supplier.get("buyers") or 0)
+    first = str(supplier.get("first_date") or "")[:4]
+    last = str(supplier.get("last_date") or "")[:4]
+    span = f" {first}–{last}" if first and last and first != last else (f" {last}" if last else "")
+    lead = (
+        f"Australian Government contracts{span}: "
+        f"{n:,} {'notice' if n == 1 else 'notices'}, published values totalling AUD {value:,}"
+    )
+    agency_clause = f"from {agencies:,} {'agency' if agencies == 1 else 'agencies'}" if agencies else None
+    # How the ABN was reached (ACN-implied or filed) is said on the card's
+    # footnote: a third clause would always fall past the sentence's cap.
+    return clauses_to_sentence([lead, agency_clause])
+
+
+# ---------------------------------------------------------------------------
 # wikidata
 # ---------------------------------------------------------------------------
 

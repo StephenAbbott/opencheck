@@ -72,6 +72,7 @@ where there is one: rebuilding an old dump does not make it new.
 | `asp_moldova` | the weekly export date from the title | `meta.built_at` |
 | `apr_serbia` | `DatumPreseka` | `meta.built_at` |
 | `chilecompra` | first day of the latest month covered | `meta.built_at` |
+| `austender` | the registry file's `Last-Modified` (`meta.source_last_modified`) | `meta.built_at` |
 | `meip` | the OECD edition | the asset build |
 | `eiti_soe` | `meta.source_snapshot` | `meta.built` |
 | `eiti` (organisation index) | — (EITI publishes no cut) | `meta.generated`, the moment the crawl started, in UTC to the second (Phase 318; a bare day before) |

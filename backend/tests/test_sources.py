@@ -131,6 +131,9 @@ _IDENTIFIER_KEYED = {
     # chilecompra: reached from the RUT GLEIF files; procurement records are
     # not name-searchable here.
     "chilecompra",
+    # austender: reached from the ABN / ACN GLEIF files; contracts are not
+    # name-searchable here.
+    "austender",
     # find_tender_uk: the same — reached from the Companies House number.
     "find_tender_uk",
     # jar_lithuania (Phase 325): name search is a LIKE over the local index,

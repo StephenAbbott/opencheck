@@ -1916,6 +1916,33 @@ def _bh_find_tender_uk(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_austender(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for AusTender — the ChileCompra shape.
+
+    Only reached for an ABN with contract notices. Like TED and ChileCompra,
+    no identifier is asserted on the hit: contracts are activity matched on
+    an identifier (here sometimes an ABN derived from GLEIF's ACN), not a
+    register confirming one. The ABN rides on the BODS entity statement.
+    """
+    from ..findings import finding_austender
+
+    supplier = r.get("supplier") or {}
+    abn = str(r.get("abn") or "")
+    n = int(supplier.get("contracts") or 0)
+    parts = [f"{n:,} Australian Government contract{'s' if n != 1 else ''}"]
+    if supplier.get("first_date") and supplier.get("last_date"):
+        parts.append(f"{str(supplier['first_date'])[:4]}–{str(supplier['last_date'])[:4]}")
+    parts.append(f"AU-ABN {r.get('abn_display') or abn}")
+    return _hit(
+        "austender", abn or ctx.lei,
+        name=str(supplier.get("name") or ctx.legal_name or ctx.lei),
+        summary=" · ".join(parts),
+        finding=finding_austender(r),
+        identifiers={},
+        raw=r,
+    )
+
+
 def _bh_ted_eu(r: dict, ctx: _LookupCtx) -> SourceHit:
     total = int(r.get("total_notice_count") or 0)
     wins = int(r.get("confirmed_wins") or 0)
