@@ -58,6 +58,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | OECD-UNSD Multinational Enterprise Information Platform (MEIP) (`meip`) | `OECD-Terms` | yes | yes | no |
 | New York Department of State — Division of Corporations (`ny_dos`) | `OPEN-NY-Terms` | yes | no | no |
 | New Zealand Companies Register (NZBN) (`nz_companies`) | `CC-BY-4.0` | yes | yes | no |
+| OECE — Registro Nacional de Proveedores, declared legal make-up of suppliers (Peru) (`oece_rnp`) | `ODC-BY-1.0` | yes | yes | no |
 | ONRC — Oficiul Național al Registrului Comerțului (Romania) (`onrc_romania`) | `CC-BY-4.0` | yes | yes | no |
 | OpenAleph (`openaleph`) | `per-collection` | conditional | yes | no |
 | OpenCorporates (`opencorporates`) | `OC-Terms` | conditional | yes | yes |

@@ -1175,6 +1175,38 @@ def _bh_registro_sociedades_argentina(r: dict, local_id: str, ctx: _LookupCtx) -
     )
 
 
+def _bh_oece_rnp(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Peru's Registro Nacional de Proveedores (the Peru RNP
+    wiring, 12 Nov 2026).
+
+    * **A record.** Asserts the RUC the file keys the supplier on
+      (``pe_ruc``, 11 digits — the key GLEIF's hit carries too). The file
+      names no supplier, so the hit's name is GLEIF's.
+    * **Not in the index.** A note card: most companies never register as a
+      supplier to the Peruvian state. Nothing is asserted or degraded.
+    """
+    from ..findings import finding_oece_rnp
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "oece_rnp", local_id,
+            name=ctx.legal_name or "",
+            summary=f"PE RUC {local_id} · not a registered supplier",
+            finding=finding_oece_rnp(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    ruc = r.get("ruc") or local_id
+    return _hit(
+        "oece_rnp", ruc,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=f"PE RUC {ruc} · RNP supplier",
+        finding=finding_oece_rnp(r),
+        identifiers={"pe_ruc": ruc},
+        raw=r,
+    )
+
+
 def _bh_sunbiz_florida(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for the Florida Division of Corporations (the Florida
     wiring, 30 Oct 2026).

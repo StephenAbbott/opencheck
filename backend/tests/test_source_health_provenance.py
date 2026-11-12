@@ -251,6 +251,7 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         "ica_israel": PROBES["ica_israel"].requires_files,
         "si_prs": PROBES["si_prs"].requires_files,
         "registro_sociedades_argentina": PROBES["registro_sociedades_argentina"].requires_files,
+        "oece_rnp": PROBES["oece_rnp"].requires_files,
         "estma": PROBES["estma"].requires_files,
         # Two tiers, one source (Phase 330): the probe deliberately declares
         # no required file — without the index the page answers, and that is

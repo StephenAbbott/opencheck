@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 28 countries that have
+ * GLEIF Registration Authority codes for the 29 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
@@ -343,6 +343,17 @@ export const RA_CODES: Record<string, RaEntry> = {
     placeholder: "30-50000173-5",
     formatHint: "11 digits, e.g. 30-50000173-5",
     formatPattern: /^\d{2}-?\d{8}-?\d$/,
+  },
+  PE: {
+    raCode: "RA000689",
+    sameNumberAuthorities: ["RA000482", "RA000979", "RA000980"],
+    // SUNAT, SUNARP, the SMV and the SBS all file the RUC, always bare —
+    // read off the 654 GLEIF PE records on 2026-11-12.
+    countryName: "Peru",
+    idLabel: "RUC",
+    placeholder: "20100047218",
+    formatHint: "11 digits",
+    formatPattern: /^\d{11}$/,
   },
   UA: {
     raCode: "RA000567",

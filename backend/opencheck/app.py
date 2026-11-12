@@ -355,6 +355,22 @@ async def _warm_caches_background() -> None:
             "announced until present): %s",
             exc,
         )
+    # The Peru RNP wiring: OECE's supplier legal make-up index, rebuilt by a
+    # GitHub workflow when the file changes and downloaded here when absent
+    # or changed. Until it lands ``oece_rnp`` is not announced.
+    try:
+        from .sources.oece_rnp import warm_index as warm_oece_rnp_index
+
+        stats = await asyncio.to_thread(warm_oece_rnp_index)
+        log.info("Peru RNP supplier index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "Peru RNP supplier index warm-up failed (the source is not "
+            "announced until present): %s",
+            exc,
+        )
     # The Florida wiring: the Sunbiz index, rebuilt quarterly and downloaded
     # here when absent or changed. Until it lands ``sunbiz_florida`` is not
     # announced.
