@@ -774,7 +774,16 @@ async def check_dispatch_drift(source_ids: list[str]) -> list[DriftResult]:
             continue
 
         expected_id = str(probe.args[0]) if probe.args else ""
-        if derived != expected_id:
+        # The probe names its subject as the register or GLEIF writes it
+        # (Colombia's NIT with its check digit, "860002964-4"; Argentina's
+        # CUIT with hyphens), and the deriver keys on a canonical form
+        # ("860002964", "33679139369"). Compare like with like: the same
+        # number in two spellings is not drift.
+        try:
+            expected_key = deriver.normalise(expected_id)
+        except ValueError:
+            expected_key = expected_id
+        if derived != expected_key:
             results.append(
                 DriftResult(
                     source_id,

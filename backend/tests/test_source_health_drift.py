@@ -203,3 +203,24 @@ def test_every_identifier_dispatched_probe_now_has_an_anchor() -> None:
         if getattr(REGISTRY[sid], "lookup_derivers", ()) and not probe.anchor_lei
     ]
     assert uncovered == []
+
+
+@pytest.mark.parametrize(
+    ("source_id", "filed"),
+    [
+        # GLEIF files Banco de Bogotá's NIT with its check digit and Toyota
+        # Argentina's CUIT with hyphens; the probes name them the same way.
+        ("rues_colombia", "860002964-4"),
+        ("registro_sociedades_argentina", "33-67913936-9"),
+    ],
+)
+def test_a_probe_subject_in_the_filed_spelling_is_not_drift(gleif_calls, source_id, filed) -> None:
+    calls, answers = gleif_calls
+    lei, expected = _anchored(source_id)
+    assert expected == filed
+    ra = sorted(getattr(REGISTRY[source_id], "lookup_derivers")[0].ra_codes)[0]
+    answers[lei] = _entity(ra, filed)
+    import asyncio
+
+    (result,) = asyncio.run(sweep.check_dispatch_drift([source_id]))
+    assert result.status == sweep.OK, result.reason
