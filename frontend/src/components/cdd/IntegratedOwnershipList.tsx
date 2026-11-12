@@ -52,7 +52,7 @@ export function IntegratedOwnershipList({
           No shareholding is stated on any path to this company in the network as drawn.
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full text-oo-small border-collapse">
             <caption className="sr-only">Integrated ownership of the company, by holder and source</caption>
             <thead>

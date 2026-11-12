@@ -22,6 +22,9 @@ import { CHECK_MODES } from "../src/lib/checkMode";
 /** BP: the cheapest complete report — bulk BODS, no keys (a homepage card until Phase 312). */
 const BP = "213800LH1BZH3DI6G760";
 
+/** Rosneft: a curated card with bulk BODS, and a network whose rows are wider than a phone. */
+const ROSNEFT = "253400JT3MQWNDKMJE44";
+
 /**
  * Nothing leaves the machine. The page asks Google Fonts for three families
  * and that is the only third party it talks to; letting the request through
@@ -216,6 +219,39 @@ test.describe("the report at phone width", () => {
     // One search entry point on a report: the header's, not a row above the subject.
     await expect(page.getByRole("button", { name: "Search for another company or person" })).toBeVisible();
     await expect(page.getByText("More search options — national ID, person name")).toHaveCount(0);
+  });
+
+  test("draws the FullCheck network without a sideways scroll", async ({ page }) => {
+    // Rosneft's FullCheck scrolled the page to 1,050px at 390px (12 Nov 2026).
+    // The culprit was not the canvas marks but the "Read as text" tree (open
+    // first on a phone): its rows scroll sideways inside it, and the rows'
+    // absolutely positioned screen-reader text escaped that scroll box until
+    // the tree became their containing block.
+    await page.goto(`/?lei=${ROSNEFT}&mode=full`);
+    const tree = page.getByRole("tree").first();
+    await expect(tree).toBeVisible({ timeout: 150_000 });
+    // Offline, no screen runs and no source gives an integrated-ownership
+    // figure, so no row is as wide as Rosneft's were in production, and none
+    // ends in the "Integrated ownership:" screen-reader label that escaped.
+    // Recreate both on the real tree: widen the rows as the signal chips did,
+    // and end the first row with screen-reader text as that cell does.
+    await page.addStyleTag({ content: '[role="tree"] > [role="treeitem"] { min-width: 1200px; }' });
+    await tree.locator('[role="treeitem"]').first().evaluate((row) => {
+      // The cell is a flex item holding the label, as BodsTree renders it: an
+      // absolutely positioned child of the flex row itself would sit at its start.
+      const cell = document.createElement("span");
+      cell.className = "flex-shrink-0";
+      const label = document.createElement("span");
+      label.className = "sr-only";
+      label.textContent = "Integrated ownership: ";
+      cell.append(label, "75–100%");
+      row.appendChild(cell);
+    });
+    expect(
+      await tree.evaluate((el) => el.scrollWidth > el.clientWidth),
+      "the tree's rows fit a phone, so the leak cannot show",
+    ).toBe(true);
+    await expectNoHorizontalOverflow(page);
   });
 });
 
