@@ -1,14 +1,11 @@
 """One-off probe of AJPES's open PRS CSV against GLEIF's Slovenian LEIs.
 
 Prints aggregate measurements only (no rows naming a sole trader).
-Run: python3 -I probe_slovenia_prs.py <opsiprs.csv> <zip>
+Run: python3 -I probe_slovenia_prs.py <opsiprs.csv>
 """
 import collections, csv, io, json, re, sys, time, unicodedata, urllib.request, zipfile
 
-csv_path, zip_path = sys.argv[1], sys.argv[2]
-
-z = zipfile.ZipFile(zip_path)
-print("ZIP members:", [(i.filename, i.file_size, i.date_time) for i in z.infolist()])
+csv_path = sys.argv[1]
 
 raw = open(csv_path, "rb").read()
 print("CSV bytes", len(raw), "BOM", raw[:2])
