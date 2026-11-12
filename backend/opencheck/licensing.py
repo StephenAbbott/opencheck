@@ -259,6 +259,21 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "OpenCheck attributes the Division anyway (recorded 29 Oct 2026)."
         ),
     ),
+    "ct-open-data": _terms(
+        "CT-Open-Data", "Connecticut open data (data.ct.gov; Public Domain for Business Master)",
+        commercial="yes", attribution=False, share_alike=False, redistribution="yes",
+        url="https://data.ct.gov/Business/Connecticut-Business-Registry-Business-Master/n7gp-d28j",
+        summary=(
+            "data.ct.gov marks the Business Master dataset Public Domain. The "
+            "Principals and Name Change History datasets, from the same "
+            "publisher on the same portal, carry no licence field; the "
+            "Secretary of the State lists all five registry datasets as free "
+            "bulk data, and Connecticut's Freedom of Information Act makes the "
+            "records public (Conn. Gen. Stat. § 1-210). data.ct.gov's terms "
+            "are disclaimers only. OpenCheck attributes the Secretary of the "
+            "State anyway (recorded 12 Nov 2026)."
+        ),
+    ),
     "pa-open-data": _terms(
         "PA-Open-Data", "data.pa.gov Data Policy (Public Domain U.S. Government)",
         commercial="yes", attribution=False, share_alike=False, redistribution="yes",
