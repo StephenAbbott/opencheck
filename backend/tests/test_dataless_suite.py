@@ -27,6 +27,7 @@ _ASSETS = (
     "jar_lithuania.sqlite",
     "onrc_romania.sqlite",
     "chilecompra.sqlite",
+    "find_tender_uk.sqlite",
     "form13f.sqlite",
     "entity_pages.sqlite",
     "gem",

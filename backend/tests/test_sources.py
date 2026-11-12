@@ -131,6 +131,8 @@ _IDENTIFIER_KEYED = {
     # chilecompra: reached from the RUT GLEIF files; procurement records are
     # not name-searchable here.
     "chilecompra",
+    # find_tender_uk: the same — reached from the Companies House number.
+    "find_tender_uk",
     # jar_lithuania (Phase 325): name search is a LIKE over the local index,
     # the onrc_romania case. The scraper it replaced returned an invented
     # "<query> (stub)" row naming a real company's code; nothing does now.

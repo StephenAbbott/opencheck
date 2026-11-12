@@ -49,6 +49,7 @@ The ten rules
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any
 
 from .topics import topic_list
@@ -829,6 +830,49 @@ def finding_chilecompra(bundle: dict[str, Any]) -> str | None:
     if not clauses:
         return None
     clauses[0] = f"{lead}: {clauses[0]}"
+    return clauses_to_sentence(clauses)
+
+
+# ---------------------------------------------------------------------------
+# find_tender_uk (Find a Tender — UK public procurement notices)
+# ---------------------------------------------------------------------------
+
+
+def _month_year(day: str | None) -> str | None:
+    try:
+        return datetime.strptime(str(day or "")[:10], "%Y-%m-%d").strftime("%B %Y")
+    except ValueError:
+        return None
+
+
+def finding_find_tender_uk(bundle: dict[str, Any]) -> str | None:
+    """How many UK public contracts this company was awarded, from how many
+    buyers, and over which period.
+
+    Values are never summed: a framework's value is every supplier's ceiling,
+    and one notice can carry several lots — so the sentence counts awards and
+    buyers only. A company with no award is not a hit (the TED rule), so
+    there is no not-found sentence.
+    """
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return None
+    supplier = bundle.get("supplier")
+    if not isinstance(supplier, dict):
+        return None
+    awards = int(supplier.get("awards") or 0)
+    if not awards:
+        return None
+    buyers = int(supplier.get("buyers") or 0)
+    first, last = _month_year(supplier.get("first_date")), _month_year(supplier.get("last_date"))
+    lead = f"{awards:,} UK public contract award{'s' if awards != 1 else ''}"
+    if buyers:
+        lead += f" from {buyers:,} buyer{'s' if buyers != 1 else ''}"
+    clauses: list[str | None] = [lead]
+    if first and last:
+        clauses.append(f"{first} to {last}" if first != last else first)
+    pre_act = int(bundle.get("pre_act_awards") or 0)
+    if pre_act == awards:
+        clauses.append("all before the Procurement Act, when few notices named suppliers' numbers")
     return clauses_to_sentence(clauses)
 
 

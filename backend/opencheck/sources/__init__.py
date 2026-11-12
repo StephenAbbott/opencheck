@@ -20,6 +20,7 @@ from .bolagsverket import BolagsverketAdapter
 from .brreg import BrregAdapter
 from .cac_nigeria import CacNigeriaAdapter
 from .chilecompra import ChileCompraAdapter
+from .find_tender_uk import FindTenderUkAdapter
 from .cnpj_brazil import CnpjBrazilAdapter
 from .acra_singapore import AcraSingaporeAdapter
 from .cvr_denmark import CvrDenmarkAdapter
@@ -89,6 +90,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "brreg": BrregAdapter(),
     "cac_nigeria": CacNigeriaAdapter(),
     "chilecompra": ChileCompraAdapter(),
+    "find_tender_uk": FindTenderUkAdapter(),
     "climatetrace": ClimateTRACEAdapter(),
     "cnpj_brazil": CnpjBrazilAdapter(),
     "corporations_canada": CorporationsCanadaAdapter(),

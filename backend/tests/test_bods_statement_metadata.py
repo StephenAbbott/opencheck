@@ -73,6 +73,7 @@ _THIRD_PARTY_SOURCES = {
     "brightquery",
     "chilecompra",
     "climatetrace",
+    "find_tender_uk",
     "everypolitician",
     "openaleph",
     # Phase 313: an aggregator of registers, not a register.

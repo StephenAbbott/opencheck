@@ -169,6 +169,23 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # The Find a Tender supplier index — the ChileCompra rule: download the
+    # release asset when absent, replace it when it changed. Built weekly
+    # off-host from the OCP Data Registry's copy of the FTS feed. Until it
+    # lands ``find_tender_uk`` is not announced (``covers_lei``).
+    try:
+        from .sources.find_tender_uk import warm_index as warm_find_tender_index
+
+        stats = await asyncio.to_thread(warm_find_tender_index)
+        log.info("Find a Tender index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "Find a Tender index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # Phase 330: the Estonian e-Business Register index — the same arrangement.
     # Until it lands the printable page answers, as it did before Phase 330.
     try:
