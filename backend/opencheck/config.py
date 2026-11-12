@@ -996,6 +996,21 @@ class Settings(BaseSettings):
         alias="AUSTENDER_DB_URL",
     )
 
+    # --- MTender (Moldovan public procurement awards, licence not named) ---
+    # The supplier index built weekly from the OCP Data Registry's copy of
+    # MTender's OCDS data by .github/workflows/refresh-mtender-index.yml.
+    # Unset: the data-root default (``mtender_moldova.sqlite``).
+    mtender_db_file: str | None = Field(default=None, alias="MTENDER_DB_FILE")
+    # Release asset downloaded at boot when absent and replaced when it
+    # changed (the AusTender rule). Empty string disables the download.
+    mtender_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "mtender-index/mtender_moldova.sqlite.gz"
+        ),
+        alias="MTENDER_DB_URL",
+    )
+
     # --- Australian Business Register (ABN Lookup, CC BY 3.0 AU) ---
     # Free GUID from https://abr.business.gov.au/Documentation/WebServiceRegistration
     abn_guid: str | None = Field(default=None, alias="ABN_GUID")

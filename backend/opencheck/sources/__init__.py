@@ -20,6 +20,7 @@ from .bolagsverket import BolagsverketAdapter
 from .brreg import BrregAdapter
 from .cac_nigeria import CacNigeriaAdapter
 from .austender import AusTenderAdapter
+from .mtender_moldova import MTenderMoldovaAdapter
 from .chilecompra import ChileCompraAdapter
 from .find_tender_uk import FindTenderUkAdapter
 from .cnpj_brazil import CnpjBrazilAdapter
@@ -131,6 +132,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "malta_mbr": MaltaMbrAdapter(),
     "meip": MeipAdapter(),
     "mca_india": McaIndiaAdapter(),
+    "mtender_moldova": MTenderMoldovaAdapter(),
     "nz_companies": NzCompaniesAdapter(),
     "opencorporates": OpenCorporatesAdapter(),
     "openaleph": OpenAlephAdapter(),

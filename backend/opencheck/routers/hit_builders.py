@@ -1943,6 +1943,34 @@ def _bh_austender(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_mtender_moldova(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for MTender — the AusTender shape.
+
+    Only reached for an IDNO with awards. Like TED, ChileCompra and
+    AusTender, no identifier is asserted on the hit: awards are activity
+    matched on an identifier, not a register confirming one. The IDNO rides
+    on the BODS entity statement.
+    """
+    from ..findings import finding_mtender_moldova
+
+    supplier = r.get("supplier") or {}
+    idno = str(r.get("idno") or "")
+    n = int(supplier.get("awards") or 0)
+    parts = [f"{n:,} Moldovan public procurement{'s' if n != 1 else ''} awarded"]
+    if supplier.get("first_date") and supplier.get("last_date"):
+        first, last = str(supplier["first_date"])[:4], str(supplier["last_date"])[:4]
+        parts.append(first if first == last else f"{first}–{last}")
+    parts.append(f"MD-IDNO {idno}")
+    return _hit(
+        "mtender_moldova", idno or ctx.lei,
+        name=str(supplier.get("name") or ctx.legal_name or ctx.lei),
+        summary=" · ".join(parts),
+        finding=finding_mtender_moldova(r),
+        identifiers={},
+        raw=r,
+    )
+
+
 def _bh_ted_eu(r: dict, ctx: _LookupCtx) -> SourceHit:
     total = int(r.get("total_notice_count") or 0)
     wins = int(r.get("confirmed_wins") or 0)

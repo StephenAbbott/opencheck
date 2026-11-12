@@ -179,6 +179,20 @@ _CANONICAL: dict[str, LicenseTerms] = {
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",
         summary="Commercial use permitted with attribution.",
     ),
+    # MTender (Moldovan procurement): no licence is named — not by the OCP
+    # Data Registry, not by mtender.gov.md, whose terms cover using the
+    # platform. MTender says it publishes "by default" as open data. Kept
+    # amber until the Ministry of Finance confirms (Stephen, 12 Nov 2026).
+    "mtender-open-data": _terms(
+        "MTender-Open-Data", "MTender open data (no licence named)",
+        commercial="conditional", attribution=True, share_alike=False,
+        redistribution="conditional",
+        url="https://mtender.gov.md/",
+        summary=(
+            "Published as open data with no licence named; attribute the "
+            "Ministry of Finance and verify before commercial re-use."
+        ),
+    ),
     "odc-by": _terms(
         "ODC-By", "Open Data Commons Attribution Licence",
         commercial="yes", attribution=True, share_alike=False, redistribution="yes",
