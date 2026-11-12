@@ -253,8 +253,8 @@ async def test_a_register_rerun_writes_an_israeli_entry(israel: dict) -> None:
     assert _entry_title(entry) == "Recheck the source — EASY POWER: Israeli register record changed"
     assert _entry_content(entry).splitlines()[:4] == [
         f"The Israel Corporations Authority recorded a change to this company in its open data of {CUT} (corporate number {NUMBER}).",
-        " - Share transfer filed with the Corporations Authority on 2026-11-10; parties not published.",
-        " - Director added filed with the Corporations Authority on 2026-11-10.",
+        " - Share transfer recorded by the Corporations Authority on 2026-11-10; parties not published.",
+        " - Director added recorded by the Corporations Authority on 2026-11-10.",
         " - Status: פעילה → בפירוק מרצון.",
     ]
 

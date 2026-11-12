@@ -4,7 +4,7 @@ The ``ica-changes`` file on data.gov.il (CC BY) lists every request the
 Authority has registered for a company or partnership in the past year: the
 corporation's number, the request type (a numeric code and the register's
 Hebrew words) and the day its status was updated. It says **that** something
-was filed, never **what** it changed to — no person, no share count, no old
+was recorded, never **what** it changed to — no person, no share count, no old
 or new name, no new status.
 
 This module is the one place a request code is read: its English label, the
@@ -20,7 +20,8 @@ alone, in the ``other`` group — never material, never notable.
 
 Stephen's decisions (11 Nov 2026): the material set below; charges are not
 material; share filings rank at the ownership tier on History and are worded
-"filed, parties not published"; nothing here reaches QuickCheck.
+"recorded, parties not published" (12 Nov 2026: the day is the
+request's latest status update, not its filing day); nothing here reaches QuickCheck.
 """
 
 from __future__ import annotations

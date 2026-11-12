@@ -18,7 +18,7 @@ What counts as a change (Stephen, 11 Nov 2026 — the recommended set):
   attachment and classification (``ica_israel_changes.MATERIAL_GROUPS``).
   A filing is new when its row — number, request code, day, charge — was not
   in the build being replaced. Charges, officers, the annual report and the
-  rest are not material. The change log says **that** something was filed,
+  rest are not material. The change log says **that** a request was recorded,
   never what it changed to, so the delta carries the request code and day
   and nothing else.
 * **the company's name, status, sub-status and violating mark** in the

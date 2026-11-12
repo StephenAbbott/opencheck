@@ -1162,7 +1162,7 @@ export function ilChangeLines(changes: RegisterChanges | undefined): string[] {
   if (c.added) out.push("The corporation appeared in the register's open data.");
   for (const f of c.filings ?? []) {
     const note = f.group === "shares" ? "; parties not published" : "";
-    out.push(`${f.label} filed with the Corporations Authority on ${f.day}${note}.`);
+    out.push(`${f.label} recorded by the Corporations Authority on ${f.day}${note}.`);
   }
   for (const key of IL_FIELDS) {
     const pair = c[key];

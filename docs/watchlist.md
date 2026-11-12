@@ -277,8 +277,12 @@ liquidation, revival, strike-off), merger, attachment and classification
 are officers, the annual report or corrections — and the corporation's
 **name, status, sub-status and violating mark** in the companies and
 partnerships files. A filing is new when its row (number, request code, day,
-charge) was not in yesterday's build. The log names the kind of filing and
-its day, never who or what it changed to, so that is all the delta carries.
+charge) was not in yesterday's build. The log names the kind of request and
+the day its status was last updated, never who or what it changed to, so that
+is all the delta carries. That day is not the filing day: a request whose
+status moves comes back under the new day and the old row goes (12 Nov 2026:
+250 rows a night, up to 334 days old; 44 of the day's 236 new material keys),
+so an entry says a request was *recorded* on that day, never *filed*.
 The first build with a change log diffs no filings (`filings_diffed:
 false`) — every row of the year would read as new. A day with more than
 20,000 new material filings, or touching more than 10 % of the corporations,
@@ -290,8 +294,8 @@ with `register: "ica_israel"`), `il_*` counters on `/watchstats` and an hourly
 is GLEIF's `registeredAs` under RA000406, else the baseline's `IL-ROC`. The
 trigger lists each filing as `{code, day, group, label}` and reads "The
 Israel Corporations Authority recorded a change to this company in its open
-data of 2026-11-12 (corporate number 516478872)", then "Share transfer filed
-with the Corporations Authority on 2026-11-09; parties not published."
+data of 2026-11-12 (corporate number 516478872)", then "Share transfer recorded
+by the Corporations Authority on 2026-11-09; parties not published."
 Share transfers are on History and the watchlist only, never QuickCheck
 (Stephen).
 

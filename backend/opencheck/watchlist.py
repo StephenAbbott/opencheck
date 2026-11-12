@@ -2660,7 +2660,7 @@ def il_change_lines(changes: dict[str, Any]) -> list[str]:
         if not isinstance(item, dict):
             continue
         note = "; parties not published" if item.get("group") == "shares" else ""
-        lines.append(f"{item.get('label')} filed with the Corporations Authority on {item.get('day')}{note}.")
+        lines.append(f"{item.get('label')} recorded by the Corporations Authority on {item.get('day')}{note}.")
     for key in ICA_ISRAEL_FIELDS:
         pair = changes.get(key)
         if not (isinstance(pair, list) and len(pair) == 2):
