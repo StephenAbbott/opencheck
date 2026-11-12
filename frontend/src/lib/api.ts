@@ -1063,7 +1063,7 @@ export interface HistoryResponse {
   /** `{source_id: ISO day}` — for a register whose change log keeps a limited
    *  window (Israel: one year), the earliest day OpenCheck's kept copy reaches. */
   registers_kept_since?: Record<string, string>;
-  /** `{source_id: reason}` — a register asked that did not answer (BODACC). */
+  /** `{source_id: reason}` — a register asked that did not answer (BODACC, the JOAFE). */
   registers_unavailable?: Record<string, string>;
   /** `{source_id: true}` — a register's list cut at OpenCheck's cap. */
   registers_truncated?: Record<string, boolean>;

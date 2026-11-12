@@ -1638,6 +1638,53 @@ otherwise:
   República (~31 of 583) — a note card. CO has no row in the knowability
   table yet.
 
+## French association notices on History — the JOAFE (the JOAFE History ticket, 11 Nov 2026)
+
+`sources/joafe.py` (the live read), `timeline/joafe.py` (the emitter),
+`rna_index.rnas_for_siren`, the French SIREN slot in `timeline/service.py`'s
+`_registration_numbers`. Stephen's decisions A–F (11 Nov 2026) and the things
+that will be re-derived otherwise:
+
+- **A timeline reader, not a source.** Not in `REGISTRY`; nothing reaches the
+  lookup, the BODS, a signal or the watchlist (F). DILA's Opendatasoft dataset
+  `jo_associations` (keyless, 6M calls a day domain-wide): `source` `joafe` =
+  notices, `dca` = accounts deposits.
+- **The join (A).** GLEIF's SIREN under any of `inpi.INPI_RA_CODES` →
+  `rna_index.rnas_for_siren` (the `association_siren` index; an index built
+  before it answers by scan) → one query `dca_siren="…" or numero_rna in
+  (…)`. Notices name an association by RNA number, deposits by SIREN.
+  Notices before the RNA (2009) carry no W number and are not reached.
+  Foundations' and endowment funds' notices are keyed on `numrnf`, which
+  nothing links to a SIREN: accounts only, no name match (D).
+- **Personal data (B).** A small association's seat is a member's home
+  (386,438 notices contain "chez"). `FIELDS` asks for `contenu` and `_reduce`
+  keeps named facts only (`ROW_KEYS`, an allowlist): a seat transfer's
+  commune and postcode, whether the purpose changed, the old and new title.
+  Street lines, purpose text and founders are never cached or returned. A
+  modification notice repeats the seat in `transfereNouvelleAdresse` when it
+  did not move, so the whole address is compared in memory (`_address_key`)
+  before the commune is kept. Test fixtures replace a member's name and
+  street with placeholders.
+- **Tiers.** Creation and dissolution → Tier 2 `STATUS_CHANGED`; a new name →
+  `LEGAL_NAME_CHANGE`; a seat transfer → `ADDRESS_CHANGE` worded "Commune
+  (postcode)"; purpose or statutes → Tier 3, never the text; accounts → Tier 3
+  (C). Dated by the declaration (`effective`), else publication; a deposit by
+  DILA's validation day.
+- **Corrections.** A rectification or cancellation names the notice it
+  replaces by publication day and number in the issue (`reference_avis_initial`;
+  the issue number is written two ways, so it is not compared). A rectified
+  notice is replaced; a cancelled one is removed and leaves a Tier 3 "Notice
+  of … withdrawn" row. A later accounts version of the same year replaces
+  the earlier.
+- **Live, cached a day (E)** under `joafe/notices-v1/<siren>`, and only when
+  the RNA index answered (without it the answer is accounts only). A failure
+  is `status: unavailable`, never cached, and reaches `/history` as
+  `registers_unavailable: ["joafe"]` → `historyDegradedNotice` says it.
+- **The link** is DILA's table filtered by RNA number or SIREN
+  (`joafeUrl` in `historyMode.ts`): the JOAFE is not a register-link entry.
+  `registry_numbers["joafe"]` is the RNA number when the SIREN has one, else
+  the SIREN.
+
 ## Israel's change log on History and the watchlist (the ica-changes ticket, 11 Nov 2026)
 
 `sources/ica_israel_changes.py` (the one reading of a request code),

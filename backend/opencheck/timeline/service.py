@@ -23,6 +23,11 @@ docstring claimed until Phase 190:
   ticket): events read from the legal unit's history periods, which the
   ordinary ``sirene`` fetch already returns — for every French SIREN GLEIF
   files under RA000189, RA000192 or RA001129.
+- **French JOAFE** (key-free, the JOAFE History ticket): an association's
+  notices and an association's or foundation's accounts deposits, read live
+  from DILA's portal and cached a day (:mod:`..sources.joafe`). Keyed on the
+  same SIREN; the association's RNA numbers come from the RNA index. A
+  failure lands in ``registers_unavailable``.
 - **Latvian Register of Enterprises** (key-free, the Estonia–Latvia emitters
   phase): events reconstructed from UR's dated open data — the lookup's
   tables plus six event tables read on this path only. Additions only for
@@ -71,6 +76,7 @@ from .bodacc import bodacc_change_events
 from .companies_house import officer_change_events
 from .cvr_denmark import cvr_change_events
 from .ica_israel import ica_israel_change_events
+from .joafe import joafe_change_events
 from .ny_dos import ny_dos_change_events
 from .sirene import sirene_change_events
 from .nz_companies import nz_change_events
@@ -540,6 +546,29 @@ async def fetch_timeline(lei: str) -> Timeline:
         bodacc_events = bodacc_change_events(fr_siren, bodacc_payload)
         bodacc_truncated = bool((bodacc_payload or {}).get("truncated"))
 
+    # France — the JOAFE: an association's notices (keyed by its RNA numbers,
+    # read from the RNA index) and an association's or foundation's accounts
+    # deposits (keyed by the SIREN). One live query, cached a day. A failure
+    # is said (``registers_unavailable``), never read as "no notices".
+    joafe_events = []
+    joafe_number: str | None = None
+    joafe_unavailable: str | None = None
+    if fr_siren:
+        from ..sources import joafe as _joafe
+
+        try:
+            joafe_read = await _joafe.notices(fr_siren)
+        except Exception:  # noqa: BLE001
+            joafe_read = {"status": "unavailable"}
+        if joafe_read.get("status") == "read":
+            joafe_events = joafe_change_events(joafe_read.get("rows"))
+            rnas = joafe_read.get("rnas") or []
+            # The RNA number is how the JOAFE names a notice; the SIREN is
+            # how it names an accounts deposit. One RNA → link by it.
+            joafe_number = rnas[0] if len(rnas) == 1 else fr_siren
+        elif joafe_read.get("reason") != "not_configured":
+            joafe_unavailable = joafe_read.get("reason") or "upstream_error"
+
     # The board stream. Emitted here rather than inside ``assemble_timeline``
     # because it comes from a second Companies House call, not from the filing
     # stream that function already classifies.
@@ -564,6 +593,7 @@ async def fetch_timeline(lei: str) -> Timeline:
             + il_events
             + fr_events
             + bodacc_events
+            + joafe_events
             + officer_events
         ),
     )
@@ -586,13 +616,19 @@ async def fetch_timeline(lei: str) -> Timeline:
             ("ica_israel", il_number),
             ("sirene", fr_siren),
             ("bodacc", fr_siren),
+            ("joafe", joafe_number),
         )
         if number
     }
     if il_kept_since:
         timeline.registers_kept_since = {"ica_israel": il_kept_since}
-    if bodacc_unavailable:
-        timeline.registers_unavailable = {"bodacc": bodacc_unavailable}
+    unavailable = {
+        source_id: reason
+        for source_id, reason in (("bodacc", bodacc_unavailable), ("joafe", joafe_unavailable))
+        if reason
+    }
+    if unavailable:
+        timeline.registers_unavailable = unavailable
     if bodacc_truncated:
         timeline.registers_truncated = {"bodacc": True}
     timeline.filings_truncated = ch_filings_truncated

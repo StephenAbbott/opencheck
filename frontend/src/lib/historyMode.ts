@@ -46,6 +46,7 @@ export const HISTORY_SOURCES = [
   "ica_israel",
   "sirene",
   "bodacc",
+  "joafe",
 ] as const;
 
 export type HistorySourceId = (typeof HISTORY_SOURCES)[number];
@@ -68,7 +69,22 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   ica_israel: "Corporations Authority (IL)",
   sirene: "Sirene (FR)",
   bodacc: "BODACC (FR)",
+  joafe: "Journal officiel (JOAFE)",
 };
+
+/** The JOAFE's notices on DILA's portal, filtered to this association: by its
+ *  RNA number (a W-number, how a notice names an association) or, for an
+ *  accounts deposit, by its SIREN. The JOAFE is not a register OpenCheck
+ *  looks a company up in, so it has no register-link entry. */
+export const JOAFE_TABLE_URL =
+  "https://journal-officiel-datadila.opendatasoft.com/explore/dataset/jo_associations/table/";
+
+function joafeUrl(number: string | undefined): string | null {
+  if (!number) return null;
+  if (/^W\d{9}$/.test(number)) return `${JOAFE_TABLE_URL}?q=${encodeURIComponent(`numero_rna:${number}`)}`;
+  if (/^\d{9}$/.test(number)) return `${JOAFE_TABLE_URL}?q=${encodeURIComponent(`dca_siren:${number}`)}`;
+  return null;
+}
 
 export function historySourceLabel(sourceId: string): string {
   return HISTORY_SOURCE_LABEL[sourceId] ?? sourceId;
@@ -111,6 +127,7 @@ export function recordUrl(
     const siren = registryNumbers.bodacc;
     return siren ? bodaccSearchUrl(siren) : null;
   }
+  if (sourceId === "joafe") return joafeUrl(registryNumbers[sourceId]);
   // Phase 296: every register's address comes from the one register-link table
   // (lib/registerLinks.ts). The History tab reads its `history` entry where
   // there is one — Companies House's filing history; New York's open-data
@@ -227,6 +244,8 @@ export const REGISTER_READ_NOTES: Record<string, string> = {
     "From INSEE's Sirene register: each period of the legal unit's record, compared with the one before — names, legal forms, active or ceased, head-office moves and main activity. A change of activity code that only follows a new version of the NAF classification is not shown. Many older changes were dated by INSEE's yearly processing (1 January up to 2008, or 25 December); those give the year INSEE recorded them, not the day. The first period's start is where INSEE's record begins, not when the company was founded.",
   bodacc:
     "From BODACC, the official bulletin in which French registers and courts publish notices about a company: collective proceedings, removals from the register, changes, sales of a business and accounts filed. Each row links to its notice. No person is named — not a sole trader, a director or a liquidator — and a sale is shown from the seller's side with the buyer named only where it is a company. Judgments of personal bankruptcy and management bans are left out: they are about a person, not the company. Notices start in 2008.",
+  joafe:
+    "From the Journal officiel des associations et fondations d'entreprise: what the association declared to its prefecture — its creation, a change of name, seat, purpose or statutes, its dissolution — and every deposit of annual accounts. Associations' notices are reached through the RNA, so notices before 2009 are not; a fondation d'entreprise or fonds de dotation is reached through its accounts only. A seat transfer is shown by commune and postcode, never the street, and a change of purpose as filed, never its text. A corrected notice replaces the one it corrects.",
   ica_israel:
     "From the Israel Corporations Authority's change log, which publishes one year of filings and names only the kind of filing — never who or what changed. A share transfer is shown as filed, with its parties not published; a winding-up or a change of name as a filing, not as the status or name it led to. OpenCheck keeps the rows from build to build, so this history grows past the register's year; before the earliest day it holds, an empty timeline is a log that was not kept, not a quiet company.",
   ur_latvia:

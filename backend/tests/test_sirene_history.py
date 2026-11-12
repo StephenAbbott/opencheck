@@ -272,6 +272,17 @@ def live(monkeypatch):
 
 
 @pytest.fixture
+def no_joafe(monkeypatch):
+    """The same SIREN keys the JOAFE notices; answer them as read and empty."""
+    from opencheck.sources import joafe
+
+    async def notices(_siren: str) -> dict[str, Any]:
+        return {"status": "read", "rows": [], "rnas": []}
+
+    monkeypatch.setattr(joafe, "notices", notices)
+
+
+@pytest.fixture
 def no_bodacc(monkeypatch):
     """The same SIREN keys the BODACC notices; answer them as read and empty."""
     from opencheck import bodacc
@@ -282,7 +293,7 @@ def no_bodacc(monkeypatch):
     monkeypatch.setattr(bodacc, "notices_for", notices_for)
 
 
-async def test_the_history_service_reads_sirene(live, monkeypatch, no_bodacc) -> None:
+async def test_the_history_service_reads_sirene(live, monkeypatch, no_bodacc, no_joafe) -> None:
     async def registration(_client, _lei):
         return (None, None, None, None, None, None, None, "TOTALENERGIES SE", TOTAL)
 
@@ -304,7 +315,7 @@ async def test_the_history_service_reads_sirene(live, monkeypatch, no_bodacc) ->
     assert any(e.source_id == "sirene" for e in timeline.notable for e in [e.primary])
 
 
-async def test_without_a_key_sirene_is_not_asked(monkeypatch, no_bodacc) -> None:
+async def test_without_a_key_sirene_is_not_asked(monkeypatch, no_bodacc, no_joafe) -> None:
     monkeypatch.setenv("OPENCHECK_ALLOW_LIVE", "true")
     monkeypatch.delenv("INSEE_SIRENE_API_KEY", raising=False)
     get_settings.cache_clear()

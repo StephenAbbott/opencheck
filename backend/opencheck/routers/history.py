@@ -127,7 +127,7 @@ class HistoryResponse(BaseModel):
     #: timeline from that register says nothing.
     registers_kept_since: dict[str, str] = {}
     #: ``{source_id: reason}`` for a register that was asked and did not
-    #: answer (BODACC: ``timeout`` / ``rate_limited`` / ``upstream_error``).
+    #: answer (BODACC, the JOAFE: ``timeout`` / ``rate_limited`` / ``upstream_error``).
     #: Its silence on the timeline is unchecked, not empty.
     registers_unavailable: dict[str, str] = {}
     #: ``{source_id: true}`` for a register whose list was cut at OpenCheck's
