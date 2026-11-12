@@ -22,6 +22,8 @@ import {
 import { assessmentTile } from "../../lib/eitiAssessment";
 import type { EitiAssessmentBundle } from "../../lib/eitiAssessment";
 import type { PanelError, PanelId } from "../../lib/panelErrors";
+import type { DisclosureStatusPayload, SourceDisclosure } from "../../lib/disclosureStatus";
+import { DisclosureChips } from "./DisclosureChips";
 import { gemChipHeading, gemOwnershipChips } from "../../lib/gemOwnership";
 import type { GemPartyChip } from "../../lib/gemOwnership";
 import {
@@ -506,10 +508,15 @@ function ClimateTRACECard({
   hit,
   preloadedStmtCount,
   preloadedBreakdown,
+  disclosure,
 }: {
   hit: SourceHit;
   preloadedStmtCount?: number;
   preloadedBreakdown?: BodsBreakdown;
+  /** What Climate TRACE (GEM's ownership data) says about the subject's
+   *  owners — the one ownership source on this tab. Same chips as a
+   *  QuickCheck card. */
+  disclosure?: SourceDisclosure;
 }) {
   const [showDiagram,    setShowDiagram]    = useState(false);
   const [showStatements, setShowStatements] = useState(false);
@@ -605,6 +612,7 @@ function ClimateTRACECard({
             </Chip>
           )}
         </div>
+        <DisclosureChips disclosure={disclosure} className="mt-3" />
 
         {/* Entity status — dissolved / amalgamated, with the ownership trail
             forward when the successor's LEI is known. Context voice on
@@ -953,6 +961,7 @@ export function EsgPanel({
   onPanelError,
   onRecovered,
   onOpenSubsidiaries,
+  disclosureStatus = null,
 }: {
   buckets: SourceBucket[];
   pendingCount?: number;
@@ -965,6 +974,8 @@ export function EsgPanel({
   onRecovered?: (panel: PanelId) => void;
   /** The EITI card's pointer to the Subsidiaries tab. */
   onOpenSubsidiaries?: () => void;
+  /** The run's `disclosure_status`; Climate TRACE's entry is chipped on its card. */
+  disclosureStatus?: DisclosureStatusPayload | null;
 }) {
   // Per-hit expansion for the summary tiles. Unset entries fall back to the
   // default rule: a lone ESG hit shows its full card without an extra click;
@@ -1115,6 +1126,7 @@ export function EsgPanel({
                     hit={hit}
                     preloadedStmtCount={bodsCountMap[`${hit.source_id}:${hit.hit_id}`]}
                     preloadedBreakdown={bodsBreakdownMap[`${hit.source_id}:${hit.hit_id}`]}
+                    disclosure={disclosureStatus?.sources[hit.source_id]}
                   />
                 )
               )}

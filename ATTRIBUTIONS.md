@@ -75,6 +75,16 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License:** companies — data.gov.il "Other (Open)": free use, including commercial, citing data.gov.il, the dataset and its update date; partnerships — [CC BY](https://creativecommons.org/licenses/by/4.0/).
 - **Attribution:** "Contains information from the Israel Corporations Authority (רשות התאגידים) — the companies and partnerships databases (מאגר חברות, מאגר שותפויות), published on data.gov.il."
 - **Entry point:** `il_roc` (9-digit corporate number) derived from GLEIF RA code `RA000406`; companies and partnerships are both filed under it.
+- **Change log:** the `ica-changes` dataset (<https://data.gov.il/dataset/ica-changes>, [CC BY](https://creativecommons.org/licenses/by/4.0/)) — one year of the requests the Authority registered for each corporation: the request type and the day, never the parties or the new values. Read into the same index for the History tab and the watchlist, with older rows kept from build to build. Attribution: "Contains information from the Israel Corporations Authority's change log (שינויים בתאגידים), published on data.gov.il."
+
+## Argentina — Registro Nacional de Sociedades and Inspección General de Justicia
+
+- **Data:** the Registro Nacional de Sociedades (every legal person with a CUIT that registered with ARCA: name, legal form, founding-contract date, legal and fiscal addresses, activities) and the Inspección General de Justicia's entity file for the City of Buenos Aires (entry number, form, removal from the register and its reason, addresses, balance sheets and assemblies filed). The IGJ file also names the people in each entity's filings; OpenCheck reads that file only to count rows, and never stores a name, document number or gender. Natural-person entries (sole traders, brokers) are left out. The RNS's separate list of non-profit associations is not read.
+- **Portal:** <https://datos.jus.gob.ar/dataset/registro-nacional-de-sociedades> and <https://datos.jus.gob.ar/dataset/entidades-constituidas-en-la-inspeccion-general-de-justicia-igj> (Ministerio de Justicia de la Nación).
+- **Access:** the two ZIPs, found through the portal's CKAN API, built into a SQLite index by `scripts/build_ar_sociedades_index.py` on GitHub Actions (`refresh-ar-sociedades-index.yml`, weekly, skipped when neither file changed), shipped as the `ar-sociedades-index` release asset and downloaded by the backend at boot.
+- **License:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Attribution:** "Contains information from the Registro Nacional de Sociedades and the Inspección General de Justicia, published by the Ministerio de Justicia de la Nación on datos.jus.gob.ar under a Creative Commons Attribution 4.0 licence."
+- **Entry point:** `ar_cuit` (11-digit CUIT with its check digit) derived from GLEIF RA codes `RA000009` (ARCA), `RA000010` (RNS) and `RA000800` (CNV); an IGJ entry number filed under `RA000010` is read too, and used only when the IGJ's name agrees with GLEIF's.
 
 ## DRCOR — Department of Registrar of Companies and Intellectual Property (Cyprus)
 
@@ -148,6 +158,23 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License:** Open (PSI Directive / Licence Ouverte Etalab)
 - **Attribution:** "Contains data from the Registre National des Entreprises (INPI / Infogreffe), open data."
 - **Entry point:** `siren` (9-digit SIREN number) derived from GLEIF RA codes `RA000189` (Sirene), `RA000192` (Infogreffe / RCS) and `RA001129` (Registre national des entreprises, INPI — added in GLEIF RA list v1.9)
+
+## Sirene and the Répertoire national des associations (France)
+
+- **Data:** the legal unit (name, legal category, creation date, state, head-office address) from INSEE's Sirene register; for an association, its RNA record (declaration, publication and dissolution dates, public-utility recognition, purpose) from the Ministry of the Interior's monthly waldec file
+- **API / files:** <https://api.insee.fr/api-sirene/3.11> (API Sirene, key required); RNA: <https://www.data.gouv.fr/fr/datasets/repertoire-national-des-associations/>; the RNA index also reads INSEE's StockUniteLegale file on data.gouv.fr to keep only associations a Sirene unit names
+- **License:** Licence Ouverte / Open Licence 2.0 (Etalab), both
+- **Attribution:** "Contains data from INSEE's Sirene register and the Répertoire national des associations (Ministère de l'Intérieur), Licence Ouverte 2.0."
+- **Entry point:** `siren` derived from GLEIF RA codes `RA000189`, `RA000192` and `RA001129`; the `FR-INSEE` register hop when INPI holds no record
+- **Note:** the RNA's management address (`adrg_*`, for most small associations the declarant's home) and director's title are never kept. Units INSEE does not publish (`statutDiffusionUniteLegale` `P`) are not shown.
+
+## BODACC — Bulletin officiel des annonces civiles et commerciales (France)
+
+- **Data:** the notices French registers and courts publish about a company — collective proceedings, conciliation, removals from the register, changes, sales of a business, accounts filed — read per SIREN for the History tab, the watchlist and the Sirene card's collective-procedure clause. No person is carried: sole traders, directors and liquidators named in a notice are dropped, and personal-bankruptcy and management-ban judgments are left out
+- **API:** <https://bodacc-datadila.opendatasoft.com/explore/dataset/annonces-commerciales/> (opendatasoft Explore v2.1, keyless); notices link to <https://www.bodacc.fr/>
+- **License:** Licence Ouverte / Open Licence 2.0 (Etalab)
+- **Attribution:** "Contains notices from the BODACC (bodacc.fr), Direction de l'information légale et administrative (DILA), Licence Ouverte 2.0."
+- **Entry point:** `siren` derived from GLEIF RA codes `RA000189`, `RA000192` and `RA001129`
 
 ## KvK — Kamer van Koophandel (Netherlands)
 
@@ -249,6 +276,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **License:** Florida public records (Chapter 119, Florida Statutes) — the Division publishes the files for anyone to download, with no licence terms attached.
 - **Attribution:** "Contains information from the Florida Department of State, Division of Corporations (sunbiz.org) bulk data downloads — Florida public records."
 - **Entry point:** `us_fl_doc` (the Division's document number) derived from GLEIF RA code `RA000603`
+
+## Pennsylvania — Department of State, Bureau of Corporations and Charitable Organizations
+
+- **Data:** businesses on the Department's list of active registrations — name, registration type, creation date, registered address, county, and each listed party by name and title as filed (no party address). No status, shareholders or beneficial owners are published.
+- **Portal:** <https://data.pa.gov/d/xvd7-5r2c>
+- **Access:** Live Socrata (SODA) queries by filing number on data.pa.gov; keyless, optional `SOCRATA_APP_TOKEN`.
+- **License:** "Public Domain U.S. Government" in the dataset's metadata; the Commonwealth's open data policy offers the data "free and without restriction" (<https://data.pa.gov/data-policy>). Attribution is requested, not required.
+- **Attribution (given, not required):** "Business Entity Filings (Active Registrations) — Pennsylvania Department of State, via data.pa.gov."
+- **Entry point:** `us_pa_filing_number` (the Department's filing number) derived from GLEIF RA code `RA000632`
 
 ## Moldova — ASP (Agenția Servicii Publice), State Register of Legal Entities
 

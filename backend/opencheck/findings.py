@@ -1516,6 +1516,7 @@ def finding_gcis_taiwan(bundle: dict[str, Any]) -> str | None:
         tw_legal_form,
         tw_percentages,
         tw_position,
+        tw_vacant_rows,
     )
     from .sources.gcis_taiwan import parse_roc_date
 
@@ -1550,8 +1551,11 @@ def finding_gcis_taiwan(bundle: dict[str, Any]) -> str | None:
         return clauses_to_sentence(
             [lead, f"set up {setup}" if setup else None, "directors and supervisors not read"]
         )
-    board = sum(1 for r in rows if tw_position(str(r.get("Person_Position_Name") or ""))[0] in ("boardChair", "boardMember"))
-    supervisors = sum(1 for r in rows if str(r.get("Person_Position_Name") or "").strip() == "監察人")
+    vacant = tw_vacant_rows(rows)
+    vacant_ids = {id(r) for r in vacant}
+    filled = [r for r in rows if id(r) not in vacant_ids]
+    board = sum(1 for r in filled if tw_position(str(r.get("Person_Position_Name") or ""))[0] in ("boardChair", "boardMember"))
+    supervisors = sum(1 for r in filled if str(r.get("Person_Position_Name") or "").strip() == "監察人")
     legal_persons = {str(r.get("Juristic_Person_Name") or "").strip() for r in rows} - {""}
     pcts = tw_percentages(company, rows)
     held = tw_holders(rows)
@@ -1567,6 +1571,7 @@ def finding_gcis_taiwan(bundle: dict[str, Any]) -> str | None:
             lead,
             f"set up {setup}" if setup else None,
             plural(board, "director") if board else ("no directors on file" if rows == [] else None),
+            plural(len(vacant), "seat") + " vacant" if vacant else None,
             holding_clause,
             plural(len(legal_persons), "legal person", "legal persons") + " on the board"
             if legal_persons else None,
@@ -1762,6 +1767,71 @@ def finding_inpi(bundle: dict[str, Any]) -> str | None:
     if not bundle or bundle.get("is_stub") or not bundle.get("not_found"):
         return None
     return INPI_NOT_IN_RNE
+
+
+def finding_sirene(bundle: dict[str, Any]) -> str | None:
+    """What INSEE's Sirene register says about a legal unit: its legal
+    category, whether it is active or ceased, when it was created, and — for
+    an association — its RNA number and whether the RNA records it as
+    dissolved or recognised as of public utility.
+
+    * The 1900-01-01 placeholder is never a creation date; it reads "creation
+      date not recorded" unless the RNA gives one.
+    * Sirene publishes no officers or owners; the sentence says nothing about
+      them (it would be a claim about a list the register does not keep).
+    """
+    from .bods.mappers.france import sirene_category_label
+    from .sources.sirene import PLACEHOLDER_CREATION_DATE
+
+    if not bundle:
+        return None
+    if bundle.get("not_found"):
+        return bundle.get("coverage_note") or None
+    if bundle.get("is_stub"):
+        return None
+    unit = bundle.get("unit")
+    if not isinstance(unit, dict):
+        return None
+    rna_raw = bundle.get("rna")
+    rna: dict[str, Any] = rna_raw if isinstance(rna_raw, dict) else {}
+
+    label = sirene_category_label(unit.get("categorieJuridiqueUniteLegale"))
+    etat = str(unit.get("etatAdministratifUniteLegale") or "")
+    if etat == "C":
+        since = human_date(str(unit.get("dateDebut") or "")[:10] or None)
+        status = f"ceased{' on ' + since if since else ''}"
+    elif etat == "A":
+        status = "active"
+    else:
+        status = None
+    created = str(unit.get("dateCreationUniteLegale") or "")[:10]
+    if created and created != PLACEHOLDER_CREATION_DATE:
+        created_clause = f"created {human_date(created)}"
+    elif rna.get("date_creat"):
+        created_clause = f"created {human_date(rna['date_creat'])} (RNA)"
+    else:
+        created_clause = "creation date not recorded"
+    rna_clause = None
+    if rna.get("id"):
+        if rna.get("position") == "D":
+            disso = human_date(rna.get("date_disso"))
+            rna_clause = f"dissolved in the RNA{' on ' + disso if disso else ''}"
+        elif rna.get("rup_mi"):
+            rna_clause = "recognised as of public utility"
+        else:
+            rna_clause = f"RNA {rna['id']}"
+    # The BODACC ticket's decision E: the latest collective-procedure notice,
+    # as context ("judicial liquidation opened 3 October 2026 (BODACC)").
+    bodacc_clause = None
+    notice = bundle.get("bodacc_collective")
+    if isinstance(notice, dict) and notice.get("label"):
+        label_text = str(notice["label"])
+        when = human_date(notice.get("effective") or notice.get("published"))
+        bodacc_clause = (
+            f"{label_text[:1].lower()}{label_text[1:]}{' ' + when if when else ''} (BODACC)"
+        )
+    lead = label or "Legal unit"
+    return clauses_to_sentence([lead, status, bodacc_clause, created_clause, rna_clause])
 
 
 def finding_anaf_romania(bundle: dict[str, Any]) -> str | None:
@@ -2183,6 +2253,53 @@ def finding_ica_israel(bundle: dict[str, Any]) -> str | None:
     if year and bundle.get("type_words") == PRIVATE_COMPANY_WORDS:
         report_clause = f"last annual report filed for {year}"
     return clauses_to_sentence([lead, sub_clause, form, violating_clause, report_clause])
+
+
+def finding_registro_sociedades_argentina(bundle: dict[str, Any]) -> str | None:
+    """What Argentina's Registro Nacional de Sociedades and the IGJ say: the
+    founding date or the IGJ's removal, the legal form, how many people the
+    IGJ filings name and the latest balance sheet (the Argentina wiring,
+    11 Nov 2026).
+
+    * **Never "active".** The RNS publishes no status, and the IGJ marks only
+      removed entries; the lead is the founding date unless the IGJ removed
+      the entry.
+    * **People are a count with its limit said** (decision B): the IGJ file
+      only grows and gives no dates, so the count is of everyone ever named.
+    * Deliberately **not** said: shareholders or beneficial owners. Neither
+      dataset publishes them for any company.
+    """
+    from .sources.registro_sociedades_argentina import form_label
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        if bundle.get("not_found_reason") == "name_mismatch":
+            return "The IGJ entry under the number GLEIF files names another entity, so it was not used."
+        return "Not in the Registro Nacional de Sociedades or the IGJ register as indexed."
+    rns = bundle.get("rns") or {}
+    igj = bundle.get("igj") or {}
+    cls = igj.get("baja_class")
+    founded = human_date(rns.get("founded"))
+    if cls == "terminal":
+        lead = "Removed from the IGJ register"
+    elif cls == "moved":
+        lead = "Moved from the IGJ to another jurisdiction"
+    elif founded:
+        lead = f"Founded {founded}"
+    elif igj:
+        lead = "On the IGJ register"
+    else:
+        lead = "On the Registro Nacional de Sociedades"
+    form = form_label(rns.get("form")) or ((form_label(igj.get("form")) or "").lower() or None)
+    people = int(igj.get("people_named") or 0)
+    people_clause = (
+        f"{people} {'person' if people == 1 else 'people'} named in IGJ filings over time"
+        if people else None
+    )
+    balance = human_date(igj.get("last_balance"))
+    balance_clause = f"latest balance sheet for {balance}" if balance else None
+    return clauses_to_sentence([lead, form, people_clause, balance_clause])
 
 
 def finding_corporations_canada(bundle: dict[str, Any]) -> str | None:
@@ -2708,6 +2825,56 @@ def finding_rues_colombia(bundle: dict[str, Any]) -> str | None:
         clauses.append(f"legal representative on file: {s['representative']}")
     form = (s.get("legal_form") or "").lower()
     clauses.append(form or None)
+    return clauses_to_sentence(clauses)
+
+
+def finding_pa_dos(bundle: dict[str, Any]) -> str | None:
+    """What the Pennsylvania Department of State lists: the list, the type,
+    the people.
+
+    * **A note card** — a number not on the list, or one that belongs to a
+      business with another name — is its own sentence. Not on the list is
+      never "dissolved": the list holds active registrations only.
+    * A record leads with **being on the list**, never "active": the
+      Department says the list overstates the active businesses.
+    * The people listed are counted (one is named); the Department publishes
+      no owners, and the sentence never says "none on file" for them.
+    """
+    from .sources.pa_dos import summarise
+
+    if not bundle:
+        return None
+    if bundle.get("name_mismatch"):
+        return (
+            "The filing number on the LEI record belongs to a business with a "
+            "different name at the Pennsylvania Department of State, so no "
+            "record is attached."
+        )
+    if bundle.get("not_on_list"):
+        return (
+            "Not on the Pennsylvania Department of State's list of active "
+            "registrations, which holds no dissolved or withdrawn company."
+        )
+    if bundle.get("is_stub") or not bundle.get("rows"):
+        return None
+
+    s = summarise(bundle)
+    clauses: list[str | None] = [
+        "On the Pennsylvania Department of State's list of active registrations"
+    ]
+    created = human_date(s.get("created_on"))
+    if created:
+        verb = "created" if s.get("domestic") else "registered in Pennsylvania"
+        clauses.append(f"{verb} {created}")
+    parties = list(s.get("parties") or [])
+    if len(parties) == 1:
+        titles = parties[0]["titles"]
+        role = f" ({titles[0].lower()})" if titles else ""
+        clauses.append(f"one person listed: {parties[0]['name']}{role}")
+    elif parties:
+        clauses.append(f"{len(parties)} governors and officers listed")
+    kind = (s.get("registration_type") or "").lower()
+    clauses.append(kind or None)
     return clauses_to_sentence(clauses)
 
 

@@ -20,16 +20,19 @@ import {
   boardUncheckedNotice,
   buildTimelineRows,
   corroboratedCount,
+  dateText,
   datedSpan,
   HISTORY_SOURCES,
   historyDegradedNotice,
   historySentence,
   registerReadNotes,
   historySourceLabel,
+  sireneYearOnly,
   filingsTruncatedNotice,
   noiseEventsOf,
   recordUrl,
   silentRegisters,
+  unavailableRegisterLines,
   VISIBLE_ROWS,
 } from "./historyMode";
 
@@ -603,5 +606,101 @@ describe("registerReadNotes", () => {
     expect(lv[0]).toContain("current records only");
     expect(lv[0]).toContain("no end dates");
     expect(lv[0]).toContain("not a change that did not happen");
+  });
+
+  it("says the Israeli log names the request, never the change, and how far OpenCheck's copy reaches", () => {
+    const il = registerReadNotes({
+      ...RESP,
+      sources: ["gleif", "ica_israel"],
+      registers_kept_since: { ica_israel: "2025-11-11" },
+    });
+    expect(il).toHaveLength(1);
+    expect(il[0]).toContain("one year of requests");
+    expect(il[0]).toContain("never who or what changed");
+    expect(il[0]).toContain("parties not published");
+    expect(il[0]).toMatch(/reaches back to 11 Nov 2025\.$/);
+    // Without the day the note still stands, and claims no date.
+    const bare = registerReadNotes({ ...RESP, sources: ["ica_israel"] });
+    expect(bare[0]).not.toMatch(/copy reaches back/);
+  });
+});
+
+describe("Sirene history (the Sirene history ticket)", () => {
+  it("links a Sirene row to the Annuaire des entreprises by SIREN", () => {
+    expect(recordUrl("sirene", "LEI", { sirene: "542051180" })).toBe(
+      "https://annuaire-entreprises.data.gouv.fr/entreprise/542051180",
+    );
+    expect(recordUrl("sirene", "LEI", {})).toBeNull();
+    expect(recordUrl("sirene", "LEI", { sirene: "54205118" })).toBeNull();
+    expect(historySourceLabel("sirene")).toBe("Sirene (FR)");
+  });
+
+  it("gives an INSEE processing date as the year it was recorded, never a day", () => {
+    expect(sireneYearOnly("recorded", ["sirene"])).toBe(true);
+    expect(sireneYearOnly("recorded", ["gleif", "sirene"])).toBe(false);
+    expect(sireneYearOnly("effective", ["sirene"])).toBe(false);
+    expect(dateText("2003-01-01", "recorded", ["sirene"])).toBe("recorded by INSEE in 2003");
+    expect(dateText("2021-05-28", "effective", ["sirene"])).toBe("2021-05-28");
+    expect(dateText(null, "recorded", ["sirene"])).toBeNull();
+    expect(basisLabel("recorded", ["sirene"])).toBe("");
+    expect(basisLabel("recorded", ["gleif", "sirene"])).toBe("as recorded by GLEIF");
+  });
+
+  it("says what Sirene's history is read from", () => {
+    const notes = registerReadNotes({ ...RESP, sources: ["sirene"] });
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain("NAF");
+    expect(notes[0]).toContain("not the day");
+  });
+});
+
+describe("BODACC on History (the BODACC ticket)", () => {
+  it("links the register chip to the notices for the SIREN", () => {
+    expect(recordUrl("bodacc", _LEI, { bodacc: "401251566" })).toBe(
+      "https://bodacc-datadila.opendatasoft.com/explore/dataset/annonces-commerciales/table/?q=401251566",
+    );
+    expect(historySourceLabel("bodacc")).toBe("BODACC (FR)");
+  });
+
+  it("says no person is named, and when the list was cut", () => {
+    const [note] = registerReadNotes({ ...RESP, sources: ["bodacc"], registers_truncated: { bodacc: true } });
+    expect(note).toContain("No person is named");
+    expect(note).toContain("seller's side");
+    expect(note).toMatch(/newest 1,000 notices; older ones are not shown\.$/);
+  });
+
+  it("says a BODACC that did not answer, and never counts it as silent", () => {
+    const data = { ...RESP, sources: ["gleif"], registry_numbers: { bodacc: "401251566" }, registers_unavailable: { bodacc: "timeout" } };
+    expect(silentRegisters(data)).toEqual([]);
+    expect(unavailableRegisterLines(data)).toEqual([
+      "BODACC (FR) did not answer in time, so its notices were not read. An empty timeline from it is unchecked, not a quiet company — try again later.",
+    ]);
+  });
+});
+
+describe("JOAFE on the History tab", () => {
+  it("links a notice row by the RNA number and an accounts row by the SIREN", () => {
+    expect(recordUrl("joafe", "x", { joafe: "W922001074" })).toBe(
+      "https://journal-officiel-datadila.opendatasoft.com/explore/dataset/jo_associations/table/?q=numero_rna%3AW922001074",
+    );
+    expect(recordUrl("joafe", "x", { joafe: "425138393" })).toContain("q=dca_siren%3A425138393");
+    expect(recordUrl("joafe", "x", { joafe: "nonsense" })).toBeNull();
+    expect(recordUrl("joafe", "x", {})).toBeNull();
+  });
+
+  it("says what the JOAFE covers and what it never shows", () => {
+    const fr = registerReadNotes({ ...RESP, sources: ["gleif", "joafe"] });
+    expect(fr).toHaveLength(1);
+    expect(fr[0]).toContain("commune and postcode, never the street");
+    expect(fr[0]).toContain("accounts only");
+    expect(fr[0]).toContain("2009");
+  });
+
+  it("says a JOAFE that did not answer, even when GLEIF did", () => {
+    const data = { ...RESP, sources: ["gleif"], registers_unavailable: { joafe: "upstream_error" } };
+    expect(unavailableRegisterLines(data)).toEqual([
+      "Journal officiel (JOAFE) returned an error, so its notices were not read. An empty timeline from it is unchecked, not a quiet company — try again later.",
+    ]);
+    expect(historyDegradedNotice(data)).toBeNull();
   });
 });

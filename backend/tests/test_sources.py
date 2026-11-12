@@ -122,6 +122,8 @@ _IDENTIFIER_KEYED = {
     # rues_colombia: name search is a live SODA query; with live calls off
     # (as here) it returns nothing and has no stub tier — the ny_dos case.
     "rues_colombia",
+    # pa_dos: the same — name search is a live SODA query with no stub tier.
+    "pa_dos",
     "asp_moldova", "onrc_romania",
     # chilecompra: reached from the RUT GLEIF files; procurement records are
     # not name-searchable here.
@@ -144,6 +146,9 @@ _IDENTIFIER_KEYED = {
     # si_prs (the Slovenia wiring): a LIKE over the local index, legal
     # persons only.
     "si_prs",
+    # registro_sociedades_argentina (the Argentina wiring): an FTS5 search
+    # over the local index; a fresh test process has none.
+    "registro_sociedades_argentina",
     # corporations_canada (the Canada index ticket): an FTS5 search over the
     # open-data index; the gateway plan has none, so no stub row without it.
     "corporations_canada",
@@ -153,6 +158,9 @@ _IDENTIFIER_KEYED = {
     # dart_korea: name search reads the crosswalk index; a fresh test
     # process has none, and there is no stub row.
     "dart_korea",
+    # sirene: API Sirene's search would spend the 30-a-minute allowance a
+    # lookup needs, so the adapter offers none (and has no stub row).
+    "sirene",
     # gcis_taiwan: a live register with no stub tier; offline its search
     # returns nothing rather than an invented row.
     "gcis_taiwan",

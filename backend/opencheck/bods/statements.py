@@ -301,22 +301,31 @@ def content_addressed(mapper: Callable[..., Any]) -> Callable[..., Any]:
     publisher's statements (no ``opencheck-`` recordId) are left alone.
     """
     import functools
+
+    from .undated import note_undated
+
+    def _finish_statement(stmt: dict[str, Any]) -> dict[str, Any]:
+        # The undated-relationship note (bods/undated.py) is decided here,
+        # after the mapper's last edit, like the id; annotations are outside
+        # the digest, so the order does not matter.
+        return refresh_statement_id(note_undated(stmt))
+
     import inspect
 
     def _refresh_all(result: Any) -> Any:
         if inspect.isgenerator(result) or (
             not isinstance(result, (list, BODSBundle)) and hasattr(result, "__next__")
         ):
-            return (refresh_statement_id(s) if isinstance(s, dict) else s for s in result)
+            return (_finish_statement(s) if isinstance(s, dict) else s for s in result)
         if isinstance(result, BODSBundle):
             for s in result.statements:
                 if isinstance(s, dict):
-                    refresh_statement_id(s)
+                    _finish_statement(s)
             return result
         if isinstance(result, list):
             for s in result:
                 if isinstance(s, dict):
-                    refresh_statement_id(s)
+                    _finish_statement(s)
             return result
         return result
 
@@ -324,7 +333,7 @@ def content_addressed(mapper: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(mapper)
         def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
             for s in mapper(*args, **kwargs):
-                yield refresh_statement_id(s) if isinstance(s, dict) else s
+                yield _finish_statement(s) if isinstance(s, dict) else s
         gen_wrapper.__opencheck_content_addressed__ = True  # type: ignore[attr-defined]
         return gen_wrapper
 
@@ -744,6 +753,7 @@ SOURCE_NAMES: dict[str, str] = {
     "dart_korea": "Open DART — Financial Supervisory Service disclosure filings (금융감독원 전자공시시스템, South Korea)",
     "ica_israel": "Israel Corporations Authority — Registrar of Companies and Partnerships (רשות התאגידים)",
     "si_prs": "AJPES — Slovenian Business Register (Poslovni register Slovenije)",
+    "registro_sociedades_argentina": "Registro Nacional de Sociedades and Inspección General de Justicia (Argentina, Ministerio de Justicia)",
     "edr_ukraine": "ЄДР — Unified State Register of Legal Entities, Individual Entrepreneurs and Public Organisations (Ministry of Justice of Ukraine)",
     "cnpj_brazil": "Receita Federal — CNPJ register (Brazil)",
     "cr_hongkong": "Hong Kong Companies Registry (公司註冊處)",
@@ -755,6 +765,7 @@ SOURCE_NAMES: dict[str, str] = {
     "gemi_greece": "ΓΕΜΗ — Greek General Commercial Registry (Γενικό Εμπορικό Μητρώο)",
     "gcis_taiwan": "Taiwan company register — Ministry of Economic Affairs (經濟部商工登記公示資料)",
     "inpi": "INPI — Registre National des Entreprises",
+    "sirene": "Sirene — INSEE register of legal units (France), with the Répertoire national des associations",
     "jar_lithuania": "JAR — Juridinių asmenų registras (Lithuanian Register of Legal Entities)",
     "krs_poland": "KRS — Polish National Court Register (Krajowy Rejestr Sądowy)",
     "kvk": "KvK — Netherlands Chamber of Commerce",
@@ -775,6 +786,7 @@ SOURCE_NAMES: dict[str, str] = {
     "eiti_bo": "EITI countries — national beneficial ownership registers (pooled: ITIE-RDC, Armenia State Register, Nigeria CAC/NEITI subset)",
     "dlcp_dc": "DLCP — Department of Licensing and Consumer Protection Corporations Division (Washington, DC)",
     "ny_dos": "New York Department of State — Division of Corporations",
+    "pa_dos": "Pennsylvania Department of State — Bureau of Corporations (data.pa.gov)",
     "rues_colombia": "RUES — Registro Único Empresarial y Social (Colombian chambers of commerce, Confecámaras)",
     "sunbiz_florida": "Florida Department of State — Division of Corporations (Sunbiz)",
     "eiti_assessment": "EITI Company Assessment",
@@ -814,6 +826,7 @@ OFFICIAL_REGISTER_SOURCES: frozenset[str] = frozenset({
     "edr_ukraine",
     "ica_israel",
     "si_prs",
+    "registro_sociedades_argentina",
     "cnpj_brazil",
     "cr_hongkong",
     "cro",
@@ -822,6 +835,7 @@ OFFICIAL_REGISTER_SOURCES: frozenset[str] = frozenset({
     "dlcp_dc",
     "ny_dos",
     "rues_colombia",
+    "pa_dos",
     "sunbiz_florida",
     "eiti_bo",
     "firmenbuch",
@@ -830,6 +844,7 @@ OFFICIAL_REGISTER_SOURCES: frozenset[str] = frozenset({
     "gleif",
     "onrc_romania",
     "inpi",
+    "sirene",
     "jar_lithuania",
     "krs_poland",
     "kvk",

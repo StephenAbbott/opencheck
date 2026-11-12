@@ -86,6 +86,11 @@ class ChangeType(str, Enum):
     CONTROL_NATURE_CHANGED = "CONTROL_NATURE_CHANGED"
     PARENT_CHANGED = "PARENT_CHANGED"
     REPORTING_EXCEPTION_CHANGED = "REPORTING_EXCEPTION_CHANGED"
+    # A share transfer, allotment or shareholder update was filed, and the
+    # register's open data names no party (the Israeli change log). Ranked
+    # with ownership because that is where a reader looks for it; worded as a
+    # filing, never as an owner added or removed.
+    SHARES_FILED = "SHARES_FILED"
     # --- Tier 2: entity identity / status ---
     STATUS_CHANGED = "STATUS_CHANGED"
     SUCCESSION = "SUCCESSION"
@@ -94,6 +99,10 @@ class ChangeType(str, Enum):
     JURISDICTION_CHANGE = "JURISDICTION_CHANGE"
     REGISTRATION_RETIRED = "REGISTRATION_RETIRED"
     ADDRESS_CHANGE = "ADDRESS_CHANGE"
+    # The company sold a business (fonds de commerce) or an establishment to
+    # another company — BODACC's sales, read from the seller's side. A
+    # relationship event, so each sale is its own entry with its buyer.
+    BUSINESS_SOLD = "BUSINESS_SOLD"
     # --- Tier 4: who sits on the board (details changes are Tier 3) ---
     # Not beneficial ownership, which is why these are their own stream rather
     # than notable: a director is appointed to run a company, not because they
@@ -155,6 +164,12 @@ CHANGE_TYPES: dict[ChangeType, ChangeTypeSpec] = {
         "Flip between a reported parent and a reporting exception "
         "(e.g. NO_KNOWN_PERSON, NON_CONSOLIDATING).",
     ),
+    ChangeType.SHARES_FILED: ChangeTypeSpec(
+        ChangeType.SHARES_FILED, Tier.OWNERSHIP_CONTROL, RecordType.RELATIONSHIP,
+        "Shares request recorded (parties not published)", _UPDATED,
+        "The register recorded a status update on a share transfer, allotment "
+        "or shareholder update; it publishes neither the parties nor the shares.",
+    ),
     ChangeType.STATUS_CHANGED: ChangeTypeSpec(
         ChangeType.STATUS_CHANGED, Tier.IDENTITY_STATUS, RecordType.ENTITY,
         "Status changed", _UPDATED,
@@ -190,6 +205,12 @@ CHANGE_TYPES: dict[ChangeType, ChangeTypeSpec] = {
         "Address changed", _UPDATED,
         "A registered or headquarters address line changed "
         "(region recodes are treated as noise).",
+    ),
+    ChangeType.BUSINESS_SOLD: ChangeTypeSpec(
+        ChangeType.BUSINESS_SOLD, Tier.IDENTITY_STATUS, RecordType.RELATIONSHIP,
+        "Business sold", _UPDATED,
+        "The company sold a business or an establishment; the buyer is named "
+        "where it is a company.",
     ),
     ChangeType.OFFICER_APPOINTED: ChangeTypeSpec(
         ChangeType.OFFICER_APPOINTED, Tier.BOARD_CHANGE, RecordType.RELATIONSHIP,
@@ -263,6 +284,10 @@ class ChangeEvent:
     # a board row cannot be linked to a person node the way an ownership row
     # can be linked to an LEI.
     counterparty: str | None = None
+    # A public page for this one change, where the source publishes one (a
+    # BODACC notice on bodacc.fr). None for every other source, whose rows
+    # link back through the register's record instead.
+    record_url: str | None = None
 
     @property
     def is_notable(self) -> bool:

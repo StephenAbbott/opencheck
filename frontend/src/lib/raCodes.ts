@@ -86,6 +86,14 @@ function sirenSpellings(value: string): string[] {
   return [siren, `${siren.slice(0, 3)} ${siren.slice(3, 6)} ${siren.slice(6)}`];
 }
 
+/** Both ways GLEIF writes a CUIT — mirrors `cuit_spellings` in
+ * registro_sociedades_argentina.py. */
+function cuitSpellings(value: string): string[] {
+  const plain = value.replace(/[\s.\-]+/g, "");
+  if (!/^\d{11}$/.test(plain)) return [value.trim()];
+  return [plain, `${plain.slice(0, 2)}-${plain.slice(2, 10)}-${plain.slice(10)}`];
+}
+
 export const RA_CODES: Record<string, RaEntry> = {
   GB: {
     raCode: "RA000585",
@@ -323,6 +331,18 @@ export const RA_CODES: Record<string, RaEntry> = {
     // one a bare 8-digit UBN, 2026-10-29. RA001009 (FSC) files funds.
     formatHint: "8 digits",
     formatPattern: /^\d{8}$/,
+  },
+  AR: {
+    raCode: "RA000009",
+    sameNumberAuthorities: ["RA000010", "RA000800"],
+    // ARCA, the Registro Nacional de Sociedades and the CNV all file the CUIT,
+    // bare or hyphenated — read off the GLEIF AR records on 2026-11-11.
+    spellings: cuitSpellings,
+    countryName: "Argentina",
+    idLabel: "CUIT",
+    placeholder: "30-50000173-5",
+    formatHint: "11 digits, e.g. 30-50000173-5",
+    formatPattern: /^\d{2}-?\d{8}-?\d$/,
   },
   UA: {
     raCode: "RA000567",

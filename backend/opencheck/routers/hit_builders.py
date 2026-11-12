@@ -181,6 +181,52 @@ def _bh_inpi(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_sirene(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for INSEE's Sirene register (France).
+
+    * **A unit** asserts the SIREN and, for an association, the RNA number —
+      both published by Sirene itself (``identifiantAssociationUniteLegale``).
+    * **A SIREN Sirene does not hold, or will not publish**, is a note card
+      with no identifier: INSEE confirmed nothing.
+    """
+    from ..findings import finding_sirene
+    from ..sources.rna_index import normalise_rna
+    from ..sources.sirene import ETATS
+
+    if r.get("not_found"):
+        return _hit(
+            "sirene", local_id,
+            name=ctx.legal_name or "",
+            summary=f"FR-SIREN {local_id} · "
+            + ("not published by INSEE" if r.get("not_found_kind") == "not_diffusible" else "not in Sirene"),
+            finding=finding_sirene(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note"), "not_found": True},
+        )
+    unit = r.get("unit") or {}
+    identifiers: dict[str, str] = {"siren": str(r.get("siren") or local_id)}
+    try:
+        identifiers["fr_rna"] = normalise_rna(unit.get("identifiantAssociationUniteLegale"))
+    except ValueError:
+        pass
+    segments = [f"FR-SIREN {identifiers['siren']}"]
+    if "fr_rna" in identifiers:
+        segments.append(f"FR-RNA {identifiers['fr_rna']}")
+    etat = ETATS.get(str(unit.get("etatAdministratifUniteLegale") or ""))
+    if etat:
+        segments.append(etat)
+    from ..bods.mappers.france import _sirene_name
+
+    return _hit(
+        "sirene", local_id,
+        name=_sirene_name(unit) or ctx.legal_name or "",
+        summary=" · ".join(segments),
+        identifiers=identifiers,
+        raw=unit,
+        finding=finding_sirene(r),
+    )
+
+
 def _bh_bolagsverket(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     c = r.get("company") or {}
     display = (
@@ -397,6 +443,58 @@ def _bh_ny_dos(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
             "truncated": bool(r.get("truncated")),
         },
         finding=finding_ny_dos(r),
+    )
+
+
+def _bh_pa_dos(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the Pennsylvania Department of State.
+
+    * **A record.** Asserts the filing number the Department's own rows carry
+      (``us_pa_filing_number``, bare) — never the LEI.
+    * **A note card** — the number is not on the list of active
+      registrations, or it belongs to a business with a different name. No
+      identifier (the ``ny_dos`` shape).
+    """
+    from ..findings import finding_pa_dos
+    from ..sources.pa_dos import PA_DOS_SCHEME, summarise
+
+    if r.get("not_found"):
+        return _hit(
+            "pa_dos", local_id,
+            name=ctx.legal_name or "",
+            summary=f"{PA_DOS_SCHEME} {local_id} · no record attached",
+            finding=finding_pa_dos(r),
+            identifiers={},
+            raw={
+                "not_found": True,
+                "coverage_note": r.get("coverage_note"),
+                "not_on_list": bool(r.get("not_on_list")),
+                "name_mismatch": bool(r.get("name_mismatch")),
+                "registered_name": r.get("registered_name"),
+            },
+        )
+    s = summarise(r)
+    number = s["filing_number"] or local_id
+    kind = s.get("registration_type") or ""
+    return _hit(
+        "pa_dos", number,
+        name=s.get("name") or ctx.legal_name or "",
+        summary=f"{PA_DOS_SCHEME} {number}" + (f" · {kind}" if kind else ""),
+        identifiers={"us_pa_filing_number": number},
+        raw={
+            "filing_number": number,
+            "name": s.get("name"),
+            "registration_type": kind or None,
+            "created_on": s.get("created_on"),
+            "address": s.get("address"),
+            "county": s.get("county"),
+            "parties": [
+                {"name": p["name"], "titles": p["titles"], "is_entity": p["is_entity"]}
+                for p in s.get("parties") or []
+            ],
+            "data_cut": s.get("data_cut"),
+        },
+        finding=finding_pa_dos(r),
     )
 
 
@@ -982,6 +1080,47 @@ def _bh_si_prs(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
         summary=f"SI {local_id}",
         finding=finding_si_prs(r),
         identifiers={"si_maticna": local_id}, raw=r,
+    )
+
+
+def _bh_registro_sociedades_argentina(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Argentina's RNS + IGJ index (the Argentina wiring,
+    11 Nov 2026).
+
+    * **A record.** Asserts the CUIT the register published (``ar_cuit``, 11
+      digits — the key GLEIF's hit carries too). An IGJ entry reached by its
+      own number and holding no CUIT asserts nothing.
+    * **Not in the index, or an IGJ number naming another entity.** A note
+      card: the row sentence says which, nothing is asserted or degraded.
+    """
+    from ..findings import finding_registro_sociedades_argentina
+    from ..identifiers import format_cuit
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "registro_sociedades_argentina", local_id,
+            name=ctx.legal_name or "",
+            summary=(
+                f"AR {local_id} · names another entity"
+                if r.get("not_found_reason") == "name_mismatch"
+                else f"AR {local_id} · not in the index"
+            ),
+            finding=finding_registro_sociedades_argentina(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    cuit = r.get("cuit")
+    igj = r.get("igj") or {}
+    summary = f"AR {format_cuit(cuit)}" if cuit else f"IGJ {igj.get('correlativo')}"
+    if igj.get("baja_class") == "terminal":
+        summary += " · removed by the IGJ"
+    return _hit(
+        "registro_sociedades_argentina", cuit or local_id,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=summary,
+        finding=finding_registro_sociedades_argentina(r),
+        identifiers={"ar_cuit": cuit} if cuit else {},
+        raw=r,
     )
 
 

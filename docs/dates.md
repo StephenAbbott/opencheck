@@ -266,6 +266,52 @@ a new `statementId`, OO's `recordId` kept so the two link, OpenCheck's
 ownership closes by the rule above), and a `commenting` annotation on `/source`
 naming the OO statement and its publication date.
 
+## Relationships no source dates
+
+A missing `startDate` and `endDate` means "not stated". OpenCheck reads such a
+relationship as current, because it has no other reading, and says so wherever
+the relationship is read. The rule is in `backend/opencheck/bods/undated.py`,
+mirrored in `frontend/src/lib/undated.ts`. A relationship counts as undated when
+it is a current record with at least one ownership or control interest and no
+interest carries a date. Roles (directors, board members, officers) are
+appointments and never count.
+
+- **BODS**: one `commenting` annotation on `/recordDetails/interests`, added as
+  each statement leaves a `@content_addressed` mapper. Annotations sit outside
+  the content digest, so no id moves.
+- **Graph and tree**: the edge label gains a "no date given" line, the legend
+  lists "No date given", and the tree's interest cell says it. The line is
+  drawn as current: words carry the cue, not colour, and the faded ended style
+  is not reused.
+- **PDF diagram**: the same line.
+- **Integrated ownership**: a figure resting on an undated holding carries
+  `undated`, and the payload's `undated_note` ("Includes holdings the sources
+  do not date…") appears under the table, in the report footer, in the
+  annotation and in the MCP block.
+- **How old the claim is**: an undated FtM edge carries the day its publisher
+  first recorded it (`first_seen`). A GEM edge carries GEM's citation.
+
+### OpenSanctions' copy of GEM's tracker
+
+OpenSanctions republishes Global Energy Monitor's Global Energy Ownership
+Tracker (`gem_energy_ownership`), and OpenCheck also reads the tracker directly
+as the `climatetrace` source. The FtM mapper marks an edge carried by that
+dataset alone with `source.assertedBy` Global Energy Monitor, a note and GEM's
+citation (`is_gem_republished`). On a lookup where GEM's own read answered for
+the subject, `bods/republished.py` drops those edges about the subject, along
+with any OpenSanctions party only they named, so one GEM row is no longer
+counted as two sources. The `republished_folded` event carries the dropped
+statement ids so the response, the exports and saved reports fold the same
+way. Per-source views (`/deepen`, the Data drawer, FullCheck hops) keep the
+labelled edge.
+
+The case that prompted this was Rosneft (11 Nov 2026). All 120 of its
+ownership relationships were undated, and BP Russian Investments appeared
+twice: once from GEM's 1 July 2021 shareholder list, and once from
+OpenSanctions' copy of the same list. The decisions are on the Notion ticket
+"How to deal with data sources where relationships have no start date or end
+date".
+
 ## Who declared it, and on what filing
 
 Open Ownership's minimum *basic disclosure information* is **who disclosed the

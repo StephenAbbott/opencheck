@@ -129,7 +129,7 @@ export interface Watch {
 
 export interface WatchRegisterTier {
   followed: boolean;
-  register: "companies_house" | "ariregister" | null;
+  register: "companies_house" | "ariregister" | "ica_israel" | "bodacc" | null;
   reason: "no_register_number" | "register_not_covered" | null;
   words: string;
 }
@@ -543,8 +543,28 @@ export interface RegisterChanges {
   name?: [string | null, string | null];
   status?: [string | null, string | null];
   legal_form?: [string | null, string | null];
+  /** The Israeli register (11 Nov 2026): the change log's material filings
+   *  — the kind of request and its day, never who or what — and two more
+   *  fields of the companies file. */
+  filings?: { code: number; day: string; group: string; label: string }[];
+  sub_status?: [string | null, string | null];
+  violating?: [string | null, string | null];
   added?: boolean;
   removed?: boolean;
+  /** BODACC (11 Nov 2026): the new material notices, one per notice — never
+   *  a person; the buyer of a business only where it is a company. */
+  notices?: BodaccTriggerNotice[];
+}
+
+export interface BodaccTriggerNotice {
+  id: string;
+  url: string;
+  kind: string;
+  label: string;
+  published: string;
+  effective: string | null;
+  role: "subject" | "seller";
+  counterparty: string | null;
 }
 
 export interface WatchEntry {
@@ -578,7 +598,7 @@ export interface WatchEntry {
     /** The register tier: which register, the company's code there, the
      *  index days read, and each list's entries before and after. A
      *  catch-up for a register gap names the register too. */
-    register?: "ariregister" | "companies_house";
+    register?: "ariregister" | "companies_house" | "ica_israel" | "bodacc";
     code?: string;
     cuts?: string[];
     changes?: RegisterChanges;
@@ -640,6 +660,22 @@ export interface WatchlistTiers {
     last_cut: string | null;
     waiting: boolean;
     gaps: { after: string | null; before: string | null; detail?: string; detected_at: string }[];
+  };
+  /** The second register: the Israel Corporations Authority's index diff
+   *  (11 Nov 2026), the same shape. Absent on an older server. */
+  register_il?: {
+    available: boolean;
+    index_cut: string | null;
+    last_cut: string | null;
+    waiting: boolean;
+    gaps: { after: string | null; before: string | null; detail?: string; detected_at: string }[];
+  };
+  /** BODACC, read live per watched SIREN (11 Nov 2026). Absent on an older server. */
+  register_fr?: {
+    available: boolean;
+    last_day: string | null;
+    last_checked_at: string | null;
+    last_error: string | null;
   };
   /** The PSC tier (the Companies House stream). Absent on an older server. */
   psc?: {
@@ -1105,6 +1141,56 @@ export function registerChangeLines(changes: RegisterChanges | undefined): strin
   return out;
 }
 
+// The Israeli register's field words. Keep in step with IL_CHANGE_WORDS in
+// opencheck/watchlist.py; test_watchlist_ica_israel.py parses this table.
+const IL_CHANGE_WORDS: Record<string, string> = {
+  name: "Name",
+  status: "Status",
+  sub_status: "Sub-status",
+  violating: "Violating mark",
+};
+
+const IL_FIELDS = ["name", "status", "sub_status", "violating"] as const;
+
+/** One sentence per filing and field of an Israeli register trigger — the
+ *  feed's `il_change_lines`. A filing is the kind of request and its day;
+ *  the change log never says what it changed to. */
+export function ilChangeLines(changes: RegisterChanges | undefined): string[] {
+  const c = changes ?? {};
+  const out: string[] = [];
+  if (c.removed) out.push("The corporation is no longer in the register's open data.");
+  if (c.added) out.push("The corporation appeared in the register's open data.");
+  for (const f of c.filings ?? []) {
+    const note = f.group === "shares" ? "; parties not published" : "";
+    out.push(`${f.label} recorded by the Corporations Authority on ${f.day}${note}.`);
+  }
+  for (const key of IL_FIELDS) {
+    const pair = c[key];
+    if (!Array.isArray(pair) || pair.length !== 2) continue;
+    out.push(`${IL_CHANGE_WORDS[key]}: ${pair[0] || "—"} → ${pair[1] || "—"}.`);
+  }
+  return out;
+}
+
+/** One sentence per BODACC notice in a trigger — the feed's
+ *  `bodacc_change_lines`. */
+export function bodaccChangeLines(changes: RegisterChanges | undefined): string[] {
+  return (changes?.notices ?? []).map((n) => {
+    const when = n.effective
+      ? ` (judgment of ${n.effective}; published in BODACC ${n.published})`
+      : ` (published in BODACC ${n.published})`;
+    const buyer = n.counterparty ? ` — buyer: ${n.counterparty}` : "";
+    return `${n.label}${when}${buyer}.`;
+  });
+}
+
+/** The change lines of a register tier trigger, in its register's words. */
+export function registerTriggerLines(trigger: WatchEntry["trigger"] | undefined): string[] {
+  if (trigger?.register === "bodacc") return bodaccChangeLines(trigger.changes);
+  if (trigger?.register === "ica_israel") return ilChangeLines(trigger.changes);
+  return registerChangeLines(trigger?.changes);
+}
+
 function daysWords(cuts: string[] | undefined): string {
   const c = (cuts ?? []).filter(Boolean);
   if (!c.length) return "its latest open data";
@@ -1145,6 +1231,8 @@ export const REGISTER_NOT_FOLLOWED_WORDS: Record<string, string> = {
 export const REGISTER_FOLLOWED_WORDS: Record<string, string> = {
   companies_house: "Companies House PSC stream, live",
   ariregister: "e-Business Register open data, daily",
+  ica_israel: "Corporations Authority open data, daily",
+  bodacc: "BODACC notices, daily",
 };
 const PSC_KINDS = ["individual", "corporate", "legal_person", "withheld", "statement", "unknown"] as const;
 const PSC_OUTCOMES = ["added", "changed", "ceased", "deleted"] as const;
@@ -1192,6 +1280,24 @@ export function triggerSentence(e: WatchEntry): string {
     const sets = t.datasets?.length ? ` — ${t.datasets.join(", ")}` : "";
     return `OpenSanctions ${op} ${who}, matching this company ${how}${sets}.`;
   }
+  if (e.tier === "register" && t.register === "bodacc") {
+    const n = t.changes?.notices?.length ?? 0;
+    const days = (t.cuts ?? []).filter(Boolean);
+    const on =
+      days.length === 1
+        ? ` on ${days[0]}`
+        : days.length
+          ? ` on ${days.slice(0, -1).join(", ")} and ${days[days.length - 1]}`
+          : "";
+    return `BODACC, France's official bulletin, published ${n} notice${n === 1 ? "" : "s"} about this company${on}${
+      t.code ? ` (SIREN ${t.code})` : ""
+    }.`;
+  }
+  if (e.tier === "register" && t.register === "ica_israel") {
+    return `The Israel Corporations Authority recorded a change to this company in ${daysWords(t.cuts)}${
+      t.code ? ` (corporate number ${t.code})` : ""
+    }.`;
+  }
   if (e.tier === "register") {
     return `The Estonian e-Business Register recorded a change to this company in ${daysWords(t.cuts)}${
       t.code ? ` (registry code ${t.code})` : ""
@@ -1212,6 +1318,9 @@ export function triggerSentence(e: WatchEntry): string {
   if (e.tier === "catch_up") {
     if (t.reason === "register_gap" && t.register === "companies_house") {
       return `The Companies House PSC stream was rejoined live at ${t.before ?? "?"}, so filings before that were not seen; every watched UK company was re-checked.`;
+    }
+    if (t.reason === "register_gap" && t.register === "ica_israel") {
+      return `The Israel Corporations Authority's changes between ${t.after ?? "?"} and ${t.before ?? "?"} could not be read, so every watched Israeli company was re-checked.`;
     }
     if (t.reason === "register_gap") {
       return `The Estonian e-Business Register's changes between ${t.after ?? "?"} and ${t.before ?? "?"} could not be read, so every watched Estonian company was re-checked.`;
@@ -1239,7 +1348,12 @@ export function entryHeadline(e: WatchEntry): string {
   if (e.tier === "review") return "This list: nobody has opened it for a while — it will be deleted unless opened";
   const name = e.legal_name || e.lei;
   const kinds = new Set(e.changes.map((c) => c.kind));
-  if (!e.changes.length && e.tier === "register") return `${name}: Estonian register record changed`;
+  if (!e.changes.length && e.tier === "register" && e.trigger?.register === "bodacc") {
+    return `${name}: notice published in BODACC`;
+  }
+  if (!e.changes.length && e.tier === "register") {
+    return `${name}: ${e.trigger?.register === "ica_israel" ? "Israeli" : "Estonian"} register record changed`;
+  }
   if (!e.changes.length && e.tier === "psc") return `${name}: Companies House PSC register changed`;
   if (!e.changes.length) return `${name}: re-run found no difference`;
   if (e.changes.some((c) => c.kind === "gleif_field" && c.field === "corporate_events")) {
@@ -1317,6 +1431,28 @@ export function tierSentence(t: WatchlistTiers | null): string {
       );
     }
   }
+  const il = t.register_il;
+  if (il?.available) {
+    parts.push(
+      `Israel: OpenCheck rebuilds the Corporations Authority's open data every day${
+        il.index_cut ? ` (this instance holds ${il.index_cut})` : ""
+      }, and a watched Israeli company with a new share, capital, director, name, status, merger, attachment or classification filing — or a changed name or status — is re-run. The change log names the kind of filing, never who or what changed.`,
+    );
+    const ilGap = il.gaps?.length ? il.gaps[il.gaps.length - 1] : null;
+    if (ilGap) {
+      parts.push(
+        `On ${ilGap.detected_at.slice(0, 10)} some days of Israeli register changes could not be read, so every watched Israeli company was re-checked instead.`,
+      );
+    }
+  }
+  const fr = t.register_fr;
+  if (fr?.available) {
+    parts.push(
+      `France: BODACC, the official bulletin, is read every few hours for each watched French company${
+        fr.last_day ? ` (last read up to ${fr.last_day})` : ""
+      }. A collective procedure, a conciliation, a removal from the register or a dissolution is escalated; a change of name, a move of the registered office, a sale of a business or another change is re-run; accounts filed, a new establishment and a registration are not. No person is named.`,
+    );
+  }
   const psc = t.psc;
   if (psc?.available) {
     parts.push(
@@ -1331,7 +1467,7 @@ export function tierSentence(t: WatchlistTiers | null): string {
       );
     }
   }
-  const followed = [reg?.available, psc?.available].filter(Boolean).length;
+  const followed = [reg?.available, il?.available, fr?.available, psc?.available].filter(Boolean).length;
   parts.push(
     followed
       ? "No other national register is polled; they are re-fetched only when one of those tiers fires."

@@ -814,6 +814,7 @@ export default function BODSGraph({
   ).length;
   const entityCount = model.nodes.length - personCount;
   const endedCount = model.edges.filter((e) => e.ended).length;
+  const undatedCount = model.edges.filter((e) => e.undated).length;
   const graphAriaLabel =
     `Ownership structure graph${entityName ? ` for ${entityName}` : ""} — ` +
     `${entityCount} ${entityCount === 1 ? "entity" : "entities"}, ` +
@@ -821,6 +822,7 @@ export default function BODSGraph({
     `${model.edges.length} ${model.edges.length === 1 ? "relationship" : "relationships"}` +
     // Phase 219 — the lighter line is invisible to a screen reader; say how many.
     (endedCount > 0 ? `, ${endedCount} of them ended` : "") +
+    (undatedCount > 0 ? `, ${undatedCount} with no date given` : "") +
     ". " +
     // Phase 243 — nor can a screen reader see that a box stands for many.
     (closedClusterCount > 0
@@ -982,6 +984,7 @@ export default function BODSGraph({
           hasCollapsed={collapsedCount > 0}
           hasIdentityVerified={model.nodes.some((n) => n.identityVerified)}
           hasEnded={endedCount > 0}
+          hasUndated={undatedCount > 0}
           hasClusters={closedClusterCount > 0}
         />
       </div>

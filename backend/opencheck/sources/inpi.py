@@ -95,7 +95,7 @@ COVERAGE_404: str = (
     "with a commercial, craft, agricultural or independent activity, so "
     "associations and foundations without one are not registered there and "
     "INPI has no record for this SIREN. This usually reflects the register's "
-    "coverage, not a lookup error."
+    "coverage, not a lookup error. INSEE's Sirene card shows this unit."
 )
 
 # GLEIF Registration Authority codes that file a French SIREN in

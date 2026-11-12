@@ -285,6 +285,9 @@ The Time Machine: how the company's records changed, merged across every registe
 | `registry_numbers` | `dict[str, str]` | `{}` | Phase 190 — `{source_id: registry number}`, how each register that publishes a change log addresses this company. Present means that register knows the company by that number, not that its history was fetched; `sources` says what actually answered. |
 | `filings_truncated` | `bool` | `False` | Phase 194 — Companies House holds more filings than this fetch read. The register answers newest-first, so the missing end is the oldest. |
 | `officers_available` | `bool` | `False` | Phase 198 — the officers list, which the board stream is built from, was read. False means it was not (no key, not a GB company, or the register refused), so an empty board stream is unchecked, not empty. |
+| `registers_kept_since` | `dict[str, str]` | `{}` | `{source_id: ISO day}` — for a register whose own change log keeps a limited window (the Israel Corporations Authority publishes one year), the earliest day OpenCheck's kept copy reaches. Before it, an empty timeline from that register says nothing. |
+| `registers_unavailable` | `dict[str, str]` | `{}` | `{source_id: reason}` for a register that was asked and did not answer (BODACC, the JOAFE: `timeout` / `rate_limited` / `upstream_error`). Its silence on the timeline is unchecked, not empty. |
+| `registers_truncated` | `dict[str, bool]` | `{}` | `{source_id: true}` for a register whose list was cut at OpenCheck's cap (BODACC reads 1,000 notices, newest first: the oldest are missing). |
 
 #### `HistoryEntry`
 
@@ -305,6 +308,7 @@ The Time Machine: how the company's records changed, merged across every registe
 | `interest_start_date` | `str \| None` | `None` | — |
 | `interest_end_date` | `str \| None` | `None` | — |
 | `boosted` | `bool` | `False` | — |
+| `record_url` | `str \| None` | `None` | A public page for this one change, where the source publishes one — the BODACC notice on bodacc.fr. Null for every other register. |
 
 #### `RawChange`
 
@@ -324,6 +328,7 @@ The Time Machine: how the company's records changed, merged across every registe
 | `counterparty` | `str \| None` | `None` | The other end of the change. For a Companies House officer filing this is the officer's name — the filing publishes no officer id, so a board row names a person without claiming to identify them. |
 | `party_id` | `str \| None` | `None` | Phase 198 — who that other end IS, where the source publishes a key. `party_id` is the register's own officer id; `party_statement_id` is the BODS person statement OpenCheck builds from it, which is what lets a board row link to the person node the graph draws. Both null on every filing-history row, which publishes a name and nothing more. |
 | `party_statement_id` | `str \| None` | `None` | — |
+| `record_url` | `str \| None` | `None` | A public page for this one change (a BODACC notice), else null. |
 
 ### `GET /securities`
 

@@ -1,0 +1,46 @@
+{
+ "_note": "Real answer of 11 Nov 2026: a modification notice and the rectification that replaces it.",
+ "total_count": 2,
+ "results": [
+  {
+   "id": "202600412475",
+   "source": "joafe",
+   "dateparution": "2026-10-13",
+   "datedeclaration": "2026-10-10",
+   "annonce_type_facette": "Associations loi du 1er juillet 1901/Modification/Initial",
+   "etatavis": "Initial",
+   "reference_avis_initial": null,
+   "numero_rna": "W832005930",
+   "dca_siren": null,
+   "dca_datecloture": null,
+   "dca_datevalidation": null,
+   "dca_rectificatif_version": null,
+   "titre": null,
+   "titre_ancien": "CAISSE DE RÈGLEMENTS  PECUNIAIRES DES AVOCATS DE TOULON ( CARPA ) DU BARREAU DE TOULON",
+   "titre_nouveau": "CAISSE DE RÈGLEMENTS  PECUNIAIRES DES AVOCATS DE TOULON ( CARPA ) DU BARREAU DE TOULON",
+   "parution_numero": "20260041",
+   "numero_annonce": 2475,
+   "contenu": "{\"assoLoi1901\": {\"modification\": {\"ancienTitre\": \"CAISSE DE RÈGLEMENTS  PECUNIAIRES DES AVOCATS DE TOULON ( CARPA ) DU BARREAU DE TOULON\", \"nouveauTitre\": \"CAISSE DE RÈGLEMENTS  PECUNIAIRES DES AVOCATS DE TOULON ( CARPA ) DU BARREAU DE TOULON\", \"siegeSocial\": {\"codePostal\": \"83000\", \"commune\": \"Toulon\", \"pays\": \"\", \"numeroVoie\": \"13\", \"extensionVoie\": \"\", \"typeVoie\": \"rue\", \"nomVoie\": \"Berrier-Fontaine\", \"immeubleBatimentResidence\": \"\", \"etageEscalierAppartement\": \"\", \"BP_ou_Lieudit_ou_CommununeDeleguee\": \"\"}, \"transfereNouvelleAdresse\": {\"codePostal\": \"83000\", \"commune\": \"Toulon\", \"pays\": \"\", \"numeroVoie\": \"13\", \"extensionVoie\": \"\", \"typeVoie\": \"rue\", \"nomVoie\": \"Berrier-Fontaine\", \"immeubleBatimentResidence\": \"\", \"etageEscalierAppartement\": \"\", \"BP_ou_Lieudit_ou_CommununeDeleguee\": \"\"}, \"siteWeb\": \"\"}, \"dateDeclaration\": \"2026-10-10\", \"lieuDeclaration\": {\"lieuPref\": {\"libelle\": \"Var\", \"description\": \"PREFECTURE DU VAR\"}}}, \"refAvisInitial\": {}}"
+  },
+  {
+   "id": "202600452548",
+   "source": "joafe",
+   "dateparution": "2026-11-10",
+   "datedeclaration": "2026-10-10",
+   "annonce_type_facette": "Associations loi du 1er juillet 1901/Modification/Rectificatif",
+   "etatavis": "Rectificatif",
+   "reference_avis_initial": "{\"numAnnonce\": \"2475\", \"numParution\": \"20260041\", \"dateParution\": \"2026-10-13\"}",
+   "numero_rna": "W832005930",
+   "dca_siren": null,
+   "dca_datecloture": null,
+   "dca_datevalidation": null,
+   "dca_rectificatif_version": null,
+   "titre": null,
+   "titre_ancien": "CAISSE DE RÈGLEMENTS  PECUNIAIRES DES AVOCATS DE TOULON ( CARPA ) DU BARREAU DE TOULON",
+   "titre_nouveau": "CAISSE DE RÈGLEMENTS  PECUNIAIRES DES AVOCATS DE TOULON ( CARPA ) DU BARREAU DE TOULON",
+   "parution_numero": "20260045",
+   "numero_annonce": 2548,
+   "contenu": "{\"assoLoi1901\": {\"modification\": {\"ancienTitre\": \"CAISSE DE RÈGLEMENTS  PECUNIAIRES DES AVOCATS DE TOULON ( CARPA ) DU BARREAU DE TOULON\", \"nouveauTitre\": \"CAISSE DE RÈGLEMENTS  PECUNIAIRES DES AVOCATS DE TOULON ( CARPA ) DU BARREAU DE TOULON\", \"siegeSocial\": {\"codePostal\": \"83000\", \"commune\": \"Toulon\", \"pays\": \"\", \"numeroVoie\": \"13\", \"extensionVoie\": \"\", \"typeVoie\": \"rue\", \"nomVoie\": \"Berrier-Fontaine\", \"immeubleBatimentResidence\": \"\", \"etageEscalierAppartement\": \"\", \"BP_ou_Lieudit_ou_CommununeDeleguee\": \"\"}, \"transfereNouvelleAdresse\": {\"codePostal\": \"83000\", \"commune\": \"Toulon\", \"pays\": \"\", \"numeroVoie\": \"13\", \"extensionVoie\": \"\", \"typeVoie\": \"rue\", \"nomVoie\": \"Berrier-Fontaine\", \"immeubleBatimentResidence\": \"\", \"etageEscalierAppartement\": \"\", \"BP_ou_Lieudit_ou_CommununeDeleguee\": \"\"}, \"siteWeb\": \"\"}, \"dateDeclaration\": \"2026-10-10\", \"lieuDeclaration\": {\"lieuPref\": {\"libelle\": \"Var\", \"description\": \"PREFECTURE DU VAR\"}}}, \"refAvisInitial\": {\"numAnnonce\": \"2475\", \"numParution\": \"20260041\", \"dateParution\": \"2026-10-13\"}}"
+  }
+ ]
+}

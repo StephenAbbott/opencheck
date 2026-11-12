@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from opencheck.bods import map_climatetrace, validate_shape
+from opencheck.bods.undated import UNDATED_NOTE
 
 
 # ---------------------------------------------------------------------------
@@ -601,12 +602,16 @@ def test_direct_state_owner_raises_state_controlled_naming_gem() -> None:
     assert "Global Energy Monitor" in signals[0].summary
 
 
+def _without_undated_note(annotations: list[dict]) -> list[dict]:
+    return [a for a in annotations if a.get("description") != UNDATED_NOTE]
+
+
 def test_owner_citation_is_a_valid_commenting_annotation() -> None:
     from opencheck.bods.annotations import resolve_pointer, validate_all
 
     statements = list(map_climatetrace(_pertamina_as_gem_ships_it()))
     [rel] = _relationships(statements)
-    [annotation] = rel["annotations"]
+    [annotation] = _without_undated_note(rel["annotations"])
     assert annotation["motivation"] == "commenting"
     assert "https://www.pertamina.com/en/Investor-relations" in annotation["description"]
     assert resolve_pointer(rel, annotation["statementPointerTarget"])["type"] == "shareholding"
@@ -619,7 +624,8 @@ def test_owner_without_a_share_or_citation_is_still_a_shareholding() -> None:
     [interest] = rel["recordDetails"]["interests"]
     assert interest["type"] == "shareholding"
     assert "share" not in interest
-    assert "annotations" not in rel
+    # GEM's tracker gives no date: the undated note is the only annotation.
+    assert [a["description"] for a in rel["annotations"]] == [UNDATED_NOTE]
 
 
 def test_self_owner_row_emits_no_relationship() -> None:
@@ -827,7 +833,7 @@ def test_imputed_and_known_shares_both_publish_only_imputed_is_annotated() -> No
     assert resolve_pointer(imputed_rel, note["statementPointerTarget"]) == {"exact": 50.0}
     assert _share_notes(known_rel) == []
     # GEM's citation annotation is still there beside it.
-    assert len(imputed_rel["annotations"]) == 2
+    assert len(_without_undated_note(imputed_rel["annotations"])) == 2
     assert validate_all([imputed_rel]) == []
 
 

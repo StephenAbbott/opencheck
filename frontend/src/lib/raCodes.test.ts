@@ -181,6 +181,17 @@ describe("nationalIdQuery", () => {
     ]);
   });
 
+  it("searches every Argentine authority in both CUIT spellings", () => {
+    const ARGENTINE = ["RA000009", "RA000010", "RA000800"];
+    for (const code of ARGENTINE) {
+      expect(nationalIdQuery(code, "33-67913936-9")).toEqual({
+        values: ["33679139369", "33-67913936-9"],
+        raCodes: ARGENTINE,
+      });
+    }
+    expect(nationalIdQuery("RA000010", "1917865").values).toEqual(["1917865"]);
+  });
+
   it("leaves every other country exactly as it was", () => {
     expect(nationalIdQuery("RA000587", " SC651281 ")).toEqual({
       values: ["SC651281"],

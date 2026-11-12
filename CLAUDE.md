@@ -1486,6 +1486,12 @@ will be re-derived otherwise:
   companies' registrations, missing from the table); a dissolution,
   revocation or bankruptcy is pending (the liquidation follows), a completed
   liquidation, merger or division is terminal. A test pins the 33.
+- **A vacant seat (缺額) is no one** (the vacant-seat ticket, 11 Nov 2026).
+  `tw_vacant_seat` decides it (缺額 in any brackets, plus 出缺 / 懸缺 / 從缺 /
+  空缺): no party, no relationship, no holding; a `commenting` note on the
+  company lists the vacant seats and the finding says "N seats vacant". A
+  legal person's row with a vacant representative keeps the legal person's
+  seat and draws no representative.
 - **Not in v1**: key managers (經理人, in no open API), branch records, limited
   partnerships and History.
 - **A legal-person holder's UBN (the Taiwan GCIS v2 ticket, 4 Nov 2026).**
@@ -1632,6 +1638,140 @@ otherwise:
   República (~31 of 583) — a note card. CO has no row in the knowability
   table yet.
 
+## French association notices on History — the JOAFE (the JOAFE History ticket, 11 Nov 2026)
+
+`sources/joafe.py` (the live read), `timeline/joafe.py` (the emitter),
+`rna_index.rnas_for_siren`, the French SIREN slot in `timeline/service.py`'s
+`_registration_numbers`. Stephen's decisions A–F (11 Nov 2026) and the things
+that will be re-derived otherwise:
+
+- **A timeline reader, not a source.** Not in `REGISTRY`; nothing reaches the
+  lookup, the BODS, a signal or the watchlist (F). DILA's Opendatasoft dataset
+  `jo_associations` (keyless, 6M calls a day domain-wide): `source` `joafe` =
+  notices, `dca` = accounts deposits.
+- **The join (A).** GLEIF's SIREN under any of `inpi.INPI_RA_CODES` →
+  `rna_index.rnas_for_siren` (the `association_siren` index; an index built
+  before it answers by scan) → one query `dca_siren="…" or numero_rna in
+  (…)`. Notices name an association by RNA number, deposits by SIREN.
+  Notices before the RNA (2009) carry no W number and are not reached.
+  Foundations' and endowment funds' notices are keyed on `numrnf`, which
+  nothing links to a SIREN: accounts only, no name match (D).
+- **Personal data (B).** A small association's seat is a member's home
+  (386,438 notices contain "chez"). `FIELDS` asks for `contenu` and `_reduce`
+  keeps named facts only (`ROW_KEYS`, an allowlist): a seat transfer's
+  commune and postcode, whether the purpose changed, the old and new title.
+  Street lines, purpose text and founders are never cached or returned. A
+  modification notice repeats the seat in `transfereNouvelleAdresse` when it
+  did not move, so the whole address is compared in memory (`_address_key`)
+  before the commune is kept. Test fixtures replace a member's name and
+  street with placeholders.
+- **Tiers.** Creation and dissolution → Tier 2 `STATUS_CHANGED`; a new name →
+  `LEGAL_NAME_CHANGE`; a seat transfer → `ADDRESS_CHANGE` worded "Commune
+  (postcode)"; purpose or statutes → Tier 3, never the text; accounts → Tier 3
+  (C). Dated by the declaration (`effective`), else publication; a deposit by
+  DILA's validation day.
+- **Corrections.** A rectification or cancellation names the notice it
+  replaces by publication day and number in the issue (`reference_avis_initial`;
+  the issue number is written two ways, so it is not compared). A rectified
+  notice is replaced; a cancelled one is removed and leaves a Tier 3 "Notice
+  of … withdrawn" row. A later accounts version of the same year replaces
+  the earlier.
+- **Live, cached a day (E)** under `joafe/notices-v1/<siren>`, and only when
+  the RNA index answered (without it the answer is accounts only). A failure
+  is `status: unavailable`, never cached, and reaches `/history` as
+  `registers_unavailable: ["joafe"]` → `historyDegradedNotice` says it.
+- **The link** is DILA's table filtered by RNA number or SIREN
+  (`joafeUrl` in `historyMode.ts`): the JOAFE is not a register-link entry.
+  `registry_numbers["joafe"]` is the RNA number when the SIREN has one, else
+  the SIREN.
+
+## Israel's change log on History and the watchlist (the ica-changes ticket, 11 Nov 2026)
+
+`sources/ica_israel_changes.py` (the one reading of a request code),
+`timeline/ica_israel.py`, the `change` table in `build_ica_israel_index.py`,
+`scripts/diff_ica_israel_index.py`, `ica_israel_tick` in `watchlist.py`.
+Stephen's decisions (11 Nov 2026) and the things that will be re-derived
+otherwise:
+
+- **`ica-changes` says that, never what.** One row = a request of one type
+  registered for one corporation on one day (number, code + Hebrew words,
+  day, charge id on charge rows) — no person, share count, old or new name,
+  new status. 564,796 rows, 97 codes; `(number, code, day, charge_id)` is
+  unique (`_id` is load order). **The day is the request's latest status
+  update, not its filing day**: a request whose status moves comes back under
+  the new day and the old key goes (12 Nov 2026: 250 rows a night, up to 334
+  days old). So every wording says "recorded", never "filed" (Stephen,
+  12 Nov 2026): `value_new` on a notable row is "Change of name (…)
+  recorded", never a state reached; dates are `DateBasis.RECORDED`. Share
+  requests are Tier-1 `SHARES_FILED` (the enum keeps its name) worded
+  "recorded; parties not published", one entry each; never on QuickCheck.
+- **The file keeps exactly a year; the index keeps more.** `--previous`
+  carries rows older than the window forward from the build being replaced
+  (`retained=1`, `first_seen` kept; a row withdrawn inside the window is
+  counted, not kept). A build without `--previous` starts the history again —
+  the workflow fetches the previous asset first. `registers_kept_since` on
+  `/history` names the day OpenCheck's copy starts. An index built before the
+  change log has no `changes_cut` meta: `change_rows` answers None.
+- **Material for the watchlist** (`MATERIAL_GROUPS`): shares, capital,
+  directors, name, status, merger, attachment, classification — **charges are
+  not** (140k a year). The diff lists new material rows by key against the
+  build replaced, plus name / status / sub-status / violating-mark changes;
+  the first build with a log diffs no filings. The tick is Estonia's
+  (`_register_delta_tick` with an `_RegisterFeed`); a new register joins the
+  tier as another feed, its own `<prefix>_*` state fields and its words in
+  `routers/watch.py` (`register_sentence`, `_catch_up_sentence`) and
+  `lib/watchlist.ts` (`triggerSentence`, `registerTriggerLines`).
+- **After merge**, run `refresh-ica-israel-index` once by hand: the first
+  run builds the change log and publishes an empty delta day; the watchlist
+  reads filings from the second run on.
+
+## BODACC on History, the watchlist and the Sirene card (the BODACC ticket, 11 Nov 2026)
+
+`opencheck/bodacc.py` (the one reading of a notice), `timeline/bodacc.py`,
+`bodacc_tick` in `watchlist.py`, `BODACC_KIND_TIER` in
+`watchlist_materiality.py`, `SireneAdapter._attach_bodacc`. Not a registered
+source: no hit, no BODS, no coverage row. Stephen's decisions A–G are on the
+Notion ticket; the things that will be re-derived otherwise:
+
+- **Live, per SIREN, never batched** (A). opendatasoft Explore v2.1,
+  `annonces-commerciales`, keyless, `where=registre="<siren>"`; a batched
+  `registre in (...)` undercounts. Date filters are `date'YYYY-MM-DD'` —
+  double quotes are HTTP 400. Cached a day (`bodacc/notices-v1/<siren>`)
+  **after** the allowlist; a failure raises `BodaccUnavailable` and is never
+  cached. 1,000 notices (newest first) is the cap, said as `truncated`.
+- **No person, ever** (B). `reduce_record` copies by allowlist
+  (`NOTICE_KEYS`, pinned): never `administration`, `complementJugement`, an
+  address, a descriptif or a natural person's name. A name change carries the
+  new name only for a legal person. Personal-bankruptcy and management-ban
+  judgments are dropped (G).
+- **Subject or seller, nothing else** (F). `registre` lists every SIREN a
+  notice names; the subject is `listepersonnes.personne`'s
+  `numeroImmatriculation`, the seller `listeprecedentproprietaire` /
+  `…exploitant`. A mere mention is skipped. The buyer is named by SIREN and
+  name only when it is a company (`pm`).
+- **Corrections**: the earlier notice's id is letter + `numeroParution` +
+  int(`numeroAnnonce`) from `parutionavisprecedent`; a rectificatif replaces
+  it, an annulation withdraws it and stays as `notice_withdrawn`.
+- **History**: every family shown (C), the small ones Tier 3; collective
+  proceedings / conciliation / radiation / dissolution are `STATUS_CHANGED`,
+  a sale is the new `BUSINESS_SOLD` (Tier 2, relationship). Judgments are
+  dated by the judgment, the rest by publication. **BODACC events never
+  cluster with each other** (`assemble._DISCRETE_SOURCES`). Each row carries
+  `record_url` (the notice); `registers_unavailable` / `registers_truncated`
+  are said on the tab. `_Numbers` is a 9-tuple (`fr` last); `_unpack` pads
+  the 8-tuples older test mocks return.
+- **Watchlist** (D): `bodacc_tick` reads every watched SIREN since
+  `meta.bodacc_day` − 3 days on a thread, every
+  `OPENCHECK_WATCHLIST_BODACC_INTERVAL_S` (6 h); the first run only sets the
+  watermark; seen ids are remembered; a notice before the watch was added is
+  skipped; the watermark holds when any SIREN failed. Accounts, creation and
+  immatriculation queue nothing.
+- **QuickCheck** (E): the Sirene card's finding states the latest
+  collective-procedure notice ("…plan adopted 24 July 2023 (BODACC)") —
+  context, never a signal or verdict clause. Not asked for legal categories
+  4/7/8/9 (public bodies, associations); not answering is a `source_read`
+  degradation.
+
 ## Cyprus is a monthly index of data.gov.cy's three CSVs (the Cyprus wiring, 29 Oct 2026)
 
 `sources/cyprus_drcor.py`, `scripts/build_cyprus_drcor_index.py`,
@@ -1728,6 +1868,35 @@ data downloads". Things that will be re-derived otherwise:
   not the ephemeral data root. Nothing touches the response `Cache` (the
   Phase 325 rule). Scheme `US-FL`, in `register_hops._NO_COUNTRY_ALIAS`; not
   in `RA_BY_COUNTRY` (the DC / NY rule).
+
+## Pennsylvania is a live read of data.pa.gov (the Pennsylvania ticket, 12 Nov 2026)
+
+`sources/pa_dos.py`, `bods/mappers/us_pa.py`, `finding_pa_dos`, `_bh_pa_dos`.
+Things that will be re-derived otherwise:
+
+- **One Socrata dataset, `xvd7-5r2c`** — a business × one listed party per
+  row (4.2M rows, monthly; the cut is the answer's `Last-Modified`). No status
+  column, no registered agent, no party address. Fast enough on a filing
+  number that there is no index tier. Name search is live too, so `pa_dos`
+  is in `test_sources._IDENTIFIER_KEYED`.
+- **The number is padded on one side only**: GLEIF files `676862`, the
+  dataset `0000676862`. `normalise_filing_number` strips, `padded` pads for
+  the query; the GLEIF mapper strips RA000632's zeros so both statements read
+  `US-PA` + the bare number. `US-PA` is in `_NO_COUNTRY_ALIAS`; not in
+  `RA_BY_COUNTRY`.
+- **No status, by decision**: the dataset is the list of *active*
+  registrations, which the Department says overstates active businesses. A
+  `commenting` note (`LIST_NOTE`) says so; never a register status, never a
+  `dissolutionDate`. A number off the list is a note card (`not_on_list`).
+- **`party_type` is free text and a title, never ownership** — "Owner",
+  "Member", "100% Owner" are `seniorManagingOfficial` with the title in
+  `details` (the Florida D5 rule). Organizer / Incorporator are officer-marked
+  `otherInfluenceOrControl`. A company party is split across first and last
+  name; `party_is_organisation` reads the legal form (rigour, plus
+  `_PA_ORG_TOKENS` because the base install has no rigour).
+- **Name gate** (`names_agree`): a different name is a note card
+  (`name_mismatch`). Foreign registrations get no jurisdiction and no
+  `foundingDate` (their creation date is the Pennsylvania registration).
 
 ## Estonia is an index first, the page second (Phase 330)
 
@@ -2854,6 +3023,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | United States — District of Columbia | dlcp_dc | `RA000601` — DC Corporations Division (DLCP) | 2026-09-18 — 502 of the 726 GLEIF records with jurisdiction `US-DC` use it (the rest: RA999999 ×209, RA888888 ×4, RA000602 ×4, others ×7), **every one with the Corporations Division file number in `registeredAs`**. The file number is an opaque string in at least six live shapes (`000347`, `L00005029230`, `L21249`, `N00008414776`, `P00454`, `US-DC-LL012601299`) — never normalise it. 487 of 500 resolve against the register; by LEI status `ISSUED` 144/145, `LAPSED` 322/333, `RETIRED` 22/23, the misses being lapsed LEIs on legacy identifiers. **A name check is mandatory**: GLEIF files `L21249` for American Foreign Policy Council and DLCP's `L21249` is CONNIE-19 STREET LLC. Scheme `US-DC` — the ISO 3166-2 subdivision code the BODS mapper already stamps on a DC entity reached through GLEIF, so the two corroborate rather than each asserting an identifier the other lacks. **Not in `RA_BY_COUNTRY`**: the US has fifty-odd company registers and `US` cannot mean DC's; for the same reason `US-DC` is in `register_hops._NO_COUNTRY_ALIAS`, so no `REG-US` alias is built from it |
 | United States — New York | ny_dos | `RA000628` — Corporation and Business Entity Database (Department of State, Division of Corporations) · `RA000747` — Registry of insurance companies (Department of Financial Services) | 2026-09-29 — all 16,819 GLEIF records with jurisdiction `US-NY`: 13,442 RA000628, 3,050 RA999999, 55 RA000747, 33 RA888888; ISSUED 3,921 of 4,848 under RA000628. **RA000628 also appears on 53 records in other jurisdictions** — foreign companies authorised in New York (Quantexa Inc, `US-DE`, `5215193`) — so the deriver keys on the RA code, never the jurisdiction. `registeredAs` is the bare DOS ID, 1–9 digits, unpadded on both sides. Resolution over the ISSUED records: 3,878 agree on the current name, 8 more only on a former name, 23 resolve only in the All Filings family (dissolved, or newer than the snapshot), **8 are wrong numbers** (Salt City FCU files `8512`, THE MUNICIPAL WASTE PAPER RECEPTACLE COMPANY) → note card, 4 are in no DOS dataset. RA000747 files an **NAIC code**, not a DOS ID: it maps to its own RA code in `_GLEIF_RA_TO_ORG_ID` so the US-state jurisdiction fallback cannot label it `US-NY` and hop it to DOS. Scheme `US-NY` (the DC rule); in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
 | United States — Florida | sunbiz_florida | `RA000603` — Florida Department of State, Division of Corporations | 2026-10-29 — 12,885 GLEIF records file under it (3,079 ISSUED); `registeredAs` is the 6- or 12-character document number, except five ISSUED records that filed the company's EIN (`59-1234567`), matched on the FEI. 3,054 ISSUED agree on the current name, 25 more on an event-recorded name; the 15 ISSUED general-partnership / LLP numbers are in files OpenCheck does not read. Scheme `US-FL`; in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
+| United States — Pennsylvania | pa_dos | `RA000632` — Department of State, Bureau of Corporations and Charitable Organizations | 2026-11-12 — 2,153 ISSUED records; `registeredAs` is the bare filing number (the dataset pads to ten digits). 1,836 resolve, 1,832 agree on the name. Scheme `US-PA`; in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
 | Taiwan | gcis_taiwan | `RA000551` — Ministry of Economic Affairs (經濟部) · `RA001009` — Financial Supervisory Commission | 2026-10-29 — all 1,784 GLEIF records with legal address TW: RA000551 504 ISSUED (492 GENERAL, 12 BRANCH), RA001009 ~240 ISSUED, almost all FUND, RA999999 ~670. **RA000551 files the bare 8-digit Unified Business Number** on every record but three (2 ANNULLED 9-digit, 1 failing the check digit); 500 of 504 ISSUED resolve to a company record (a branch, two limited partnerships and one with no director rows do not). **RA001009 files funds' tax numbers — not in the company register (25 of 25), not dispatched.** RA000551 also sits on HK/SG/CH/GB/US-DE-jurisdiction records (foreign companies' Taiwan branches), so the deriver keys on the RA code. Scheme `TW-CR` (org-id); in `RA_BY_COUNTRY` — one authority |
 
 ### ✅ FIXED 2026-08-28: Scotland/Northern Ireland, and two more RA maps
@@ -5244,3 +5414,25 @@ otherwise:
   api-enumerations' `exemption_descriptions.yml` in `tests/fixtures/companies_house/`),
   and the card's finding says it ("no person with significant control named;
   exempt from the PSC register, with shares on a UK regulated market").
+
+## Undated relationships, and OpenSanctions' copy of GEM's tracker (the undated-relationships ticket, 11 Nov 2026)
+
+`bods/undated.py` + `frontend/src/lib/undated.ts`, `bods/republished.py`; reader's
+page `docs/dates.md` § "Relationships no source dates". Stephen's decisions:
+
+- **Keep undated relationships and say so; never drop them.** Undated = a
+  relationship, not closed, with an ownership or control interest (roles and
+  officer-marked interests never count) and no interest carrying `startDate`
+  or `endDate`. `content_addressed` adds or removes one `commenting` note
+  (`UNDATED_NOTE`) as each OpenCheck statement leaves a mapper; no mapper
+  calls it. The canvas, the tree and the PDF diagram add "no date given" to a
+  current edge's label; `test_undated_relationships.py` parses the TypeScript.
+- **A GEM-republished OpenSanctions edge** (its own `datasets` only
+  `gem_energy_ownership`) carries `source.assertedBy` Global Energy Monitor
+  and a note. When GEM's own read (`climatetrace`) names an owner of the
+  subject, every such edge about the subject is dropped from the lookup
+  response by the `republished_folded` event (LEI pipeline only); per-source
+  views keep the labelled edge.
+- **Integrated ownership keeps undated figures** with `undated_note` on the
+  payload and `undated` per figure in MCP; a holder credited the company's own
+  shares is never routed "through" the subsidiary holding them.

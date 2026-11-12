@@ -117,7 +117,8 @@ def test_an_ownership_and_a_control_edge_between_one_pair_are_one_line():
     _m, svg = O.ownership_map(lei="L", legal_name="Target", net=net, as_of=AS_OF)
     drawn = re.findall(r'<line x1="[\d.]+" y1="[\d.]+" x2="[\d.]+" y2="[\d.]+" stroke="(#[0-9a-f]+)"', svg)
     assert len(drawn) == 2  # one edge, plus the legend's ownership sample
-    assert "Controls — Wikidata" in svg
+    # Each source keeps its own wording, the undated label included.
+    assert "Controls · no date given —" in svg and ">Wikidata<" in svg
 
 
 # --- the post-deploy re-test, 7 Nov 2026 -------------------------------------

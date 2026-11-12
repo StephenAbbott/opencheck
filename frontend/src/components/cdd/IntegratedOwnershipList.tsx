@@ -19,13 +19,18 @@
  */
 
 import type { Holder, IntegratedOwnershipPayload } from "../../lib/integratedOwnership";
-import { METHOD_DESCRIPTION, routeWords } from "../../lib/integratedOwnership";
+import {
+  METHOD_DESCRIPTION,
+  UNDATED_MARK,
+  UNDATED_MARK_SPOKEN,
+  routeWords,
+} from "../../lib/integratedOwnership";
 
 const TH = "text-left text-oo-meta font-medium tracking-wide uppercase text-oo-muted pb-2 pr-3";
 
-function rowsOf(h: Holder): { figure: string; source: string; route: string }[] {
-  if (h.status !== "current") return [{ figure: h.note ?? "", source: h.sources.join("; "), route: "" }];
-  return h.figures.map((f) => ({ figure: f.text, source: f.source, route: routeWords(f) }));
+function rowsOf(h: Holder): { figure: string; undated: boolean; source: string; route: string }[] {
+  if (h.status !== "current") return [{ figure: h.note ?? "", undated: false, source: h.sources.join("; "), route: "" }];
+  return h.figures.map((f) => ({ figure: f.text, undated: Boolean(f.undated), source: f.source, route: routeWords(f) }));
 }
 
 export function IntegratedOwnershipList({
@@ -74,6 +79,12 @@ export function IntegratedOwnershipList({
                     </td>
                     <td className={`py-2 pr-3 ${h.status === "current" ? "text-oo-ink tabular-nums" : "text-oo-muted italic"}`}>
                       {r.figure}
+                      {r.undated && (
+                        <>
+                          <span aria-hidden="true" data-testid="integrated-ownership-undated-mark">{UNDATED_MARK}</span>
+                          <span className="sr-only"> ({UNDATED_MARK_SPOKEN})</span>
+                        </>
+                      )}
                     </td>
                     <td className="py-2 pr-3 text-oo-muted">{r.source}</td>
                     <td className="py-2 text-oo-muted">{r.route}</td>
@@ -88,6 +99,12 @@ export function IntegratedOwnershipList({
         {payload?.description ?? METHOD_DESCRIPTION}
         {payload?.as_of && readOnly ? ` Computed from the sources as they stood on ${payload.as_of}.` : ""}
       </p>
+      {payload?.undated_note && (
+        <p data-testid="integrated-ownership-undated" className="mt-2 text-oo-meta text-oo-ink leading-[1.6] max-w-[82ch]">
+          <span aria-hidden="true">{UNDATED_MARK} </span>
+          {payload.undated_note}
+        </p>
+      )}
       {sanctionsNote && (
         <p data-testid="sanctions-ownership-note" className="mt-2 text-oo-meta text-oo-ink leading-[1.6] max-w-[82ch]">
           {sanctionsNote}

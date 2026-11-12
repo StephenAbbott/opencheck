@@ -1141,7 +1141,7 @@ export default function App() {
             See who owns and controls <span className="text-oo-blue">3.4 million</span> companies, starting from a single ID
           </HeroHeading>
           <p className="text-oo-small sm:text-sm text-oo-muted leading-snug mt-2">
-            With a Legal Entity Identifier (LEI), OpenCheck joins open data from 61 sources into one ownership graph and names the source behind every finding
+            With a Legal Entity Identifier (LEI), OpenCheck joins open data from 64 sources into one ownership graph and names the source behind every finding
           </p>
         </div>
         )}
@@ -1446,6 +1446,7 @@ export default function App() {
                         setPanelErrors((prev) => clearPanelError(prev, panel))
                       }
                       onOpenSubsidiaries={() => selectMode("subsidiaries")}
+                      disclosureStatus={disclosureStatus}
                     />
                   </Suspense>
                 </PanelBoundary>
@@ -1504,6 +1505,7 @@ export default function App() {
                   primaryListing={primaryListing}
                   form13f={form13f}
                   disclosureStatus={disclosureStatus}
+                  esgSourceIds={esgSourceIds}
                   savedReport={savedReport}
                   savedNarrative={savedNarrative}
                   onExportPayload={setExportPayload}

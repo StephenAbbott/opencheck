@@ -250,6 +250,7 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         "dart_korea": PROBES["dart_korea"].requires_files,
         "ica_israel": PROBES["ica_israel"].requires_files,
         "si_prs": PROBES["si_prs"].requires_files,
+        "registro_sociedades_argentina": PROBES["registro_sociedades_argentina"].requires_files,
         "estma": PROBES["estma"].requires_files,
         # Two tiers, one source (Phase 330): the probe deliberately declares
         # no required file — without the index the page answers, and that is
@@ -259,6 +260,9 @@ def test_the_warm_up_script_writes_where_requires_files_looks() -> None:
         # The same arrangement for Canada (the Canada index-tier ticket):
         # without the index the API answers the record.
         "corporations_canada": ("corporations_canada.sqlite",),
+        # The RNA index is not a source of its own: ``sirene`` answers
+        # without it (the France Sirene + RNA ticket), so no probe names it.
+        "rna": ("rna.sqlite",),
     }
     assert PROBES["ariregister"].requires_files == ()
     assert PROBES["corporations_canada"].requires_files == ()

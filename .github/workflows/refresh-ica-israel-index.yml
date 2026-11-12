@@ -16,6 +16,18 @@ name: Refresh Israel Corporations Authority index
 # No Render redeploy: the backend compares the asset's Last-Modified at boot
 # (the Estonia arrangement), and a daily redeploy would be churn.
 #
+# The change log (ica-changes, CC BY; the ica-changes ticket, 11 Nov 2026)
+# keeps one year. Each build carries the previous build's older rows forward
+# (`--previous`), so OpenCheck's copy grows past the year, and the run diffs
+# the new build against the one it replaces (scripts/diff_ica_israel_index.py)
+# — the corporations with a new material filing, or whose name, status,
+# sub-status or violating mark changed — into `ica-israel-delta.json`, a
+# rolling fourteen-day file the watchlist's register tier reads. The delta is
+# uploaded after the index, so a day it names is a day the backend can load.
+# A run that cannot fetch the previous build still publishes the index (with
+# a change log that starts again from today's year); the delta then records
+# no day for it, which the watchlist reads as a gap.
+#
 # The release is created on the first run if it does not exist.
 on:
   schedule:
@@ -42,11 +54,29 @@ jobs:
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
-      - name: Harvest both registers and build the index
+      - name: Fetch the build being replaced and the delta file
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/prev"
+          if gh release download ica-israel-index -p ica_israel.sqlite.gz -D "$RUNNER_TEMP/prev"; then
+            gunzip "$RUNNER_TEMP/prev/ica_israel.sqlite.gz"
+          else
+            echo "No previous build to carry forward or diff against."
+          fi
+          gh release download ica-israel-index -p ica-israel-delta.json -D "$RUNNER_TEMP/prev" \
+            || echo "No delta file yet."
+
+      - name: Harvest both registers and the change log, and build the index
         working-directory: backend
         run: |
           uv sync
-          uv run python scripts/build_ica_israel_index.py --download \
+          PREVIOUS=()
+          if [ -f "$RUNNER_TEMP/prev/ica_israel.sqlite" ]; then
+            PREVIOUS=(--previous "$RUNNER_TEMP/prev/ica_israel.sqlite")
+          fi
+          uv run python scripts/build_ica_israel_index.py --download "${PREVIOUS[@]}" \
             --out "$RUNNER_TEMP/ica_israel.sqlite" --gzip
 
       - name: Sanity-check the output (guard against a broken or partial export)
@@ -59,11 +89,25 @@ jobs:
           c = conn.execute("SELECT COUNT(*) FROM entity WHERE kind = 'company'").fetchone()[0]
           p = conn.execute("SELECT COUNT(*) FROM entity WHERE kind = 'partnership'").fetchone()[0]
           print(f"{c} companies, {p} partnerships, cut {meta.get('cut')}, schema {meta.get('schema_version')}")
+          print(f"change log: {meta.get('count_change_rows')} rows, {meta.get('count_change_retained')} carried past the window, "
+                f"kept since {meta.get('changes_kept_since')}, cut {meta.get('changes_cut')}")
           if c < 600_000 or p < 20_000:
               sys.exit(f"Refusing to publish: {c} companies / {p} partnerships — likely a source/format change.")
           PY
 
-      - name: Replace the `ica-israel-index` release asset
+      - name: Diff against the build being replaced (the watchlist's register tier)
+        working-directory: backend
+        run: |
+          OLD=()
+          if [ -f "$RUNNER_TEMP/prev/ica_israel.sqlite" ]; then
+            OLD=(--old "$RUNNER_TEMP/prev/ica_israel.sqlite")
+          fi
+          uv run python scripts/diff_ica_israel_index.py "${OLD[@]}" \
+            --new "$RUNNER_TEMP/ica_israel.sqlite" \
+            --history "$RUNNER_TEMP/prev/ica-israel-delta.json" \
+            --out "$RUNNER_TEMP/ica-israel-delta.json"
+
+      - name: Replace the `ica-israel-index` release assets
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -74,3 +118,7 @@ jobs:
           bash backend/scripts/replace_release_asset.sh ica-israel-index \
             "$RUNNER_TEMP/ica_israel.sqlite.gz" ica_israel.sqlite.gz \
             "Rebuilt automatically by refresh-ica-israel-index on $(date -u +%Y-%m-%d)."
+          # After the index: a day the delta names is a day the backend can load.
+          bash backend/scripts/replace_release_asset.sh ica-israel-index \
+            "$RUNNER_TEMP/ica-israel-delta.json" ica-israel-delta.json \
+            "Rolling fourteen-day diff, rebuilt by refresh-ica-israel-index on $(date -u +%Y-%m-%d)."

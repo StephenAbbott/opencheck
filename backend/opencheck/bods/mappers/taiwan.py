@@ -228,6 +228,33 @@ TW_HOLDINGS_CAVEAT = (
 )
 
 
+#: What the register writes in ``Person_Name`` for an unfilled seat. Measured
+#: on the 503 ISSUED RA000551 companies (4 Nov 2026): 缺額 ×25 and (缺額) ×1;
+#: the other words are the usual Chinese for a vacancy, matched in case the
+#: register uses them.
+TW_VACANCY_WORDS = frozenset({"缺額", "出缺", "懸缺", "從缺", "空缺"})
+_TW_BRACKETS = "()（）[]［］【】〔〕"
+
+
+def tw_vacant_seat(name: str | None) -> bool:
+    """True when a director row's name is the register's word for a vacant
+    seat, with or without brackets — never a person (the ЄДР placeholder
+    rule). The one place that decides it."""
+    text = "".join((name or "").split()).strip(_TW_BRACKETS)
+    return text in TW_VACANCY_WORDS
+
+
+def tw_vacant_rows(directors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The seats the register files as vacant: a row naming no legal person
+    whose name is a vacancy word. (A legal person's row with a vacant
+    representative is still the legal person's seat.)"""
+    return [
+        row for row in directors
+        if not str(row.get("Juristic_Person_Name") or "").strip()
+        and tw_vacant_seat(str(row.get("Person_Name") or ""))
+    ]
+
+
 def tw_foreign_prefix(name: str) -> tuple[str, str, str] | None:
     """The nationality prefix a foreign company's Taiwanese name opens with:
     ``(prefix, ISO code, country name)``, or None."""
@@ -288,7 +315,7 @@ def tw_holders(directors: list[dict[str, Any]]) -> dict[str, int]:
         key = str(row.get("Juristic_Person_Name") or "").strip() or str(
             row.get("Person_Name") or ""
         ).strip()
-        if not key:
+        if not key or tw_vacant_seat(key):
             continue
         value = int_field(row.get("Person_Shareholding")) or 0
         out[key] = max(out.get(key, 0), max(value, 0))
@@ -322,7 +349,12 @@ def _tw_holding_details(value: int, denominator: int | None, unit: str) -> str:
 
 def _tw_seat_interest(raw_position: str, source_id: str, *, through: str | None = None) -> dict[str, Any]:
     interest_type, words, officer = tw_position(raw_position)
-    details = words if not through else f"{words}; seat filled by its representative {through}"
+    if through and tw_vacant_seat(through):
+        details = f"{words}; the register names no representative ({through.strip()})"
+    elif through:
+        details = f"{words}; seat filled by its representative {through}"
+    else:
+        details = words
     interest: dict[str, Any] = {"type": interest_type, "directOrIndirect": "direct", "details": details}
     if officer:
         mark_officer(interest, words)
@@ -502,8 +534,20 @@ def map_gcis_taiwan(bundle: dict[str, Any]) -> BODSBundle:
         juristic = str(row.get("Juristic_Person_Name") or "").strip()
         if juristic:
             legal_persons.setdefault(juristic, []).append(row)
-        elif person_name:
+        elif person_name and not tw_vacant_seat(person_name):
             natural.setdefault(person_name, []).append(row)
+
+    vacant = tw_vacant_rows(directors)
+    if vacant:
+        seats = "; ".join(
+            tw_position(str(row.get("Person_Position_Name") or ""))[1] for row in vacant
+        )
+        annotate(entity, commenting(
+            pointer("recordDetails"),
+            f"The register files {len(vacant)} "
+            f"{'seat' if len(vacant) == 1 else 'seats'} as vacant (缺額): {seats}. "
+            "No party is shown for a vacant seat.",
+        ))
 
     people: dict[str, dict[str, Any]] = {}
 
@@ -582,7 +626,7 @@ def map_gcis_taiwan(bundle: dict[str, Any]) -> BODSBundle:
 
         for row in rows:
             rep_name = str(row.get("Person_Name") or "").strip()
-            if not rep_name:
+            if not rep_name or tw_vacant_seat(rep_name):
                 continue
             rep = _person(rep_name)
             _type, words, _officer = tw_position(str(row.get("Person_Position_Name") or ""))

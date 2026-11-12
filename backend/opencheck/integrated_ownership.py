@@ -46,6 +46,7 @@ from typing import Any
 
 from .bods.lifecycle import interest_ended, record_closed
 from .bods.refs import resolver
+from .bods.undated import is_undated
 from .ownership_math import REASON_WORDS, Edge, figure_text, share_bounds
 from .ownership_math import integrated_ownership as _integrated
 
@@ -84,6 +85,17 @@ EXCLUDED_DESCRIPTIONS: frozenset[str] = frozenset({
 
 SHAREHOLDING = "shareholding"
 VOTING_RIGHTS = "votingRights"
+
+#: Under the table, the report and the annotation when any figure rests on a
+#: holding no source dates (the undated-relationships ticket, 11 Nov 2026).
+UNDATED_NOTE = (
+    "Includes holdings the sources do not date: they are read as current, and "
+    "may have ended."
+)
+
+#: After an undated figure in a table, pointing the reader to the note
+#: beneath it, which then opens with the same mark (``undated_note_line``).
+UNDATED_MARK = "*"
 
 STATUS_CURRENT = "current"
 STATUS_VOTING = "voting_rights_only"
@@ -197,6 +209,23 @@ def _upstream(edges: Iterable[tuple[str, str]], target: str) -> set[str]:
     return seen
 
 
+def _downstream(edges: Iterable[tuple[str, str]], source: str) -> set[str]:
+    """Every node ``source`` holds, directly or through others (excl. itself)."""
+    owned: dict[str, set[str]] = {}
+    for a, b in edges:
+        owned.setdefault(a, set()).add(b)
+    seen: set[str] = set()
+    stack = [source]
+    while stack:
+        n = stack.pop()
+        for b in owned.get(n, ()):
+            if b not in seen:
+                seen.add(b)
+                stack.append(b)
+    seen.discard(source)
+    return seen
+
+
 def figure_words(fig: Mapping[str, Any]) -> str:
     """A figure in words: "67%", "at least 24%", or why there is none."""
     text = figure_text(dict(fig))
@@ -252,6 +281,7 @@ def compute(
     voting: dict[str, list[tuple[str, str]]] = {}
     ended: dict[str, list[tuple[str, str]]] = {}
     labels: dict[str, str] = {}
+    undated: dict[str, set[tuple[str, str]]] = {}
     for s in statements:
         if s.get("recordType") != "relationship" or _excluded(s):
             continue
@@ -269,6 +299,8 @@ def compute(
             share.setdefault(key, []).append(
                 Edge(owner, owned, 0.0, None) if b is None else Edge(owner, owned, b[0], b[1])
             )
+            if is_undated(s):
+                undated.setdefault(key, set()).add((owner, owned))
         elif kind[0] == "voting":
             voting.setdefault(key, []).append((owner, owned))
         else:
@@ -297,6 +329,13 @@ def compute(
         with_shares = _upstream(spairs, _SUBJECT)
         with_votes = _upstream(spairs + voting.get(key, []), _SUBJECT)
         with_ended = _upstream(spairs + voting.get(key, []) + ended.get(key, []), _SUBJECT)
+        # A company a holder can reach only *through the subject* is the
+        # subject's own subsidiary: the holder is credited its share of the
+        # company's own shares that subsidiary holds (the give-back), not
+        # holding through it. Reachability without leaving the subject tells
+        # the two apart even in a cycle (T-Rank 3.4: B holds C directly).
+        around_subject = [(a, b) for a, b in spairs if a != _SUBJECT]
+        reaches_subject = with_shares | {_SUBJECT}
         for pid in sorted(with_shares):
             r = _integrated(sedges, {pid}, _SUBJECT)
             fig = {"source_id": key, "source": labels[key], **r.as_dict()}
@@ -307,6 +346,15 @@ def compute(
             fig["via_names"] = [
                 party_name(by_canon.get(v)) or v for v in fig.get("via", [])
             ]
+            own_reach = _downstream(around_subject, pid)
+            treasury = [v for v in fig.get("via", []) if v not in own_reach]
+            if treasury:
+                fig["treasury_names"] = [party_name(by_canon.get(v)) or v for v in treasury]
+            on_path = _downstream(spairs, pid) | {pid}
+            if any(
+                a in on_path and b in reaches_subject for a, b in undated.get(key, ())
+            ):
+                fig["undated"] = True
             fig["text"] = figure_words(fig)
             holder(pid)["figures"].append(fig)
         for pid in sorted(with_votes - with_shares):
@@ -342,13 +390,16 @@ def compute(
             h["party"],
         )
     )
-    return {
+    payload: dict[str, Any] = {
         "method": METHOD,
         "as_of": as_of,
         "description": METHOD_DESCRIPTION,
         "credit": METHOD_CREDIT,
         "holders": out,
     }
+    if any(f.get("undated") for h in out for f in h["figures"]):
+        payload["undated_note"] = UNDATED_NOTE
+    return payload
 
 
 # ----------------------------------------------------------------------
@@ -388,12 +439,28 @@ def with_figures(payload: Mapping[str, Any] | None) -> list[dict[str, Any]]:
 
 
 def route_words(fig: Mapping[str, Any]) -> str:
-    """The route in words: directly, through A and B, or both."""
-    names = [n for n in fig.get("via_names") or [] if n]
-    if not names:
-        return "directly" if fig.get("direct") else ""
-    through = f"through {', '.join(names)}"
-    return f"directly and {through}" if fig.get("direct") else through
+    """The route in words: directly, through A and B, or both — then the
+    company's own shares given back to the holder. (A figure resting on an
+    undated holding carries ``undated``; the payload's ``undated_note`` says
+    so once, under the table.)
+
+    A company the subject itself holds is not a route to the subject: a
+    holder "reached" through one is being credited its share of the
+    company's own shares that subsidiary holds (the give-back, T-Rank 3.4).
+    Rosneft's FullCheck read "at least 21.9% through RN-NeftKapitalInvest
+    LLC" for BP until the undated-relationships ticket said so plainly.
+    """
+    treasury = [n for n in fig.get("treasury_names") or [] if n]
+    names = [n for n in fig.get("via_names") or [] if n and n not in treasury]
+    if names:
+        through = f"through {', '.join(names)}"
+        route = f"directly and {through}" if fig.get("direct") else through
+    else:
+        route = "directly" if fig.get("direct") else ""
+    if treasury:
+        given = f"with its share of the company's own shares held by {', '.join(treasury)}"
+        route = f"{route}, {given}" if route else given
+    return route
 
 
 def holder_line(h: Mapping[str, Any]) -> str:
@@ -460,12 +527,14 @@ def apply_to_bods(
         return bods
     stmt = copy.deepcopy(bods[idx])
     lines = "; ".join(holder_line(h) for h in holders)
+    undated_note = (payload or {}).get("undated_note")
     ann: dict[str, Any] = {
         "statementPointerTarget": "/recordDetails",
         "motivation": "commenting",
         "description": (
             f"Integrated ownership, added by OpenCheck: {lines}. "
-            f"{METHOD_DESCRIPTION} {METHOD_CREDIT}"
+            + (f"{undated_note} " if undated_note else "")
+            + f"{METHOD_DESCRIPTION} {METHOD_CREDIT}"
         ),
         "url": METHOD_URL,
         "createdBy": {"name": "OpenCheck", "uri": "https://opencheck.world"},
@@ -500,10 +569,17 @@ def report_rows(payload: Mapping[str, Any] | None) -> list[tuple[str, str, str, 
             rows.append((name, str(h.get("note") or ""), "; ".join(h.get("sources") or []), ""))
             continue
         for f in h.get("figures") or []:
-            rows.append(
-                (name, str(f.get("text") or ""), str(f.get("source") or ""), route_words(f))
-            )
+            text = str(f.get("text") or "")
+            if f.get("undated"):
+                text += UNDATED_MARK
+            rows.append((name, text, str(f.get("source") or ""), route_words(f)))
     return rows
+
+
+def undated_note_line(note: str) -> str:
+    """The undated note under a table whose undated figures carry the mark:
+    "* Includes holdings the sources do not date: …"."""
+    return f"{UNDATED_MARK} {note}"
 
 
 def report_footer(payload: Mapping[str, Any] | None) -> list[str]:
@@ -513,6 +589,8 @@ def report_footer(payload: Mapping[str, Any] | None) -> list[str]:
         return []
     out = [str(payload.get("description") or METHOD_DESCRIPTION),
            str(payload.get("credit") or METHOD_CREDIT)]
+    if payload.get("undated_note"):
+        out.append(undated_note_line(str(payload["undated_note"])))
     if payload.get("as_of"):
         out.append(f"Computed from the sources as they stood on {payload['as_of']}.")
     extra = len(with_figures(payload)) - REPORT_LIMIT

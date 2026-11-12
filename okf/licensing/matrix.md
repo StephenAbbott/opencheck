@@ -61,12 +61,15 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | OpenAleph (`openaleph`) | `per-collection` | conditional | yes | no |
 | OpenCorporates (`opencorporates`) | `OC-Terms` | conditional | yes | yes |
 | OpenSanctions (`opensanctions`) | `CC-BY-NC-4.0` | no | yes | no |
+| Pennsylvania Department of State — registered businesses (`pa_dos`) | `PA-Open-Data` | yes | no | no |
 | PRH — Finnish Patent and Registration Office (`prh`) | `CC-BY-4.0` | yes | yes | no |
+| Argentina — Registro Nacional de Sociedades and IGJ (`registro_sociedades_argentina`) | `CC-BY-4.0` | yes | yes | no |
 | RPO Slovakia (`rpo_slovakia`) | `CC-BY-4.0` | yes | yes | no |
 | RPVS Slovakia (`rpvs_slovakia`) | `CC-BY-4.0` | yes | yes | no |
 | Colombia RUES — chambers of commerce (Confecámaras) (`rues_colombia`) | `CC-BY-SA-4.0` | yes | yes | yes |
 | SEC EDGAR (Schedule 13D/13G) (`sec_edgar`) | `Public Domain` | yes | no | no |
 | AJPES — Slovenian Business Register (PRS) (`si_prs`) | `CC-BY-4.0` | yes | yes | no |
+| Sirene — INSEE register of legal units (France), with the RNA (`sirene`) | `Licence Ouverte / Open Licence 2.0` | yes | yes | no |
 | Sudski registar — Croatian Court Register (`sudreg_croatia`) | `HR-OpenData` | yes | yes | no |
 | Florida Division of Corporations (Sunbiz) (`sunbiz_florida`) | `FL-Public-Records` | yes | no | no |
 | TED — Tenders Electronic Daily (EU procurement) (`ted_eu`) | `EU open data — Commission Decision 2011/833/EU (free reuse incl. commercial, with attribution)` | yes | yes | no |

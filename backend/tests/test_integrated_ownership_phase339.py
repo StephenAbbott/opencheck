@@ -271,7 +271,7 @@ def test_the_html_report_prints_the_frozen_table():
     html = build_report_html(_report())
     assert '<h2 id="iown">Integrated ownership</h2>' in html
     assert (
-        "<td>State</td><td>34%</td><td>OpenSanctions</td>"
+        "<td>State</td><td>34%*</td><td>OpenSanctions</td>"
         "<td>directly and through Holding A</td>"
     ) in html
     assert "2026-01-02" in html and "T-Rank" in html
@@ -282,7 +282,7 @@ def test_the_markdown_report_prints_the_frozen_table():
 
     md = build_report_markdown(_report())
     assert "## Integrated ownership" in md
-    assert "| State | 34% | OpenSanctions | directly and through Holding A |" in md
+    assert "| State | 34%\\* | OpenSanctions | directly and through Holding A |" in md
 
 
 def test_reports_without_the_payload_have_no_section():
@@ -307,6 +307,8 @@ def test_the_mcp_block_is_context_and_lists_each_figure():
     assert state["figures"] == [{
         "source": "OpenSanctions", "text": "34%", "minimum": 34.0, "maximum": 34.0,
         "incomplete": False, "route": "directly and through Holding A",
+        # The fixture's holdings carry no dates (the undated-relationships ticket).
+        "undated": True,
     }]
     assert _integrated_ownership(SimpleNamespace(integrated_ownership=None)) is None
 

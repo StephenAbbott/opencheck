@@ -26,7 +26,7 @@ deriver.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cache
 
 from .identifiers import normalise_ch_company_number
@@ -49,6 +49,12 @@ class RegisterHop:
     #: lookup's ``derived_identifiers``, so a register-anchored lookup (Phase
     #: 289) builds the same hit the LEI path does.
     derived_key: str = ""
+    #: A second register to ask when this one answers that it holds no
+    #: record (``not_found``) — FR-INSEE asks INPI first and Sirene on INPI's
+    #: 404 (the France Sirene + RNA ticket, decision F): the RNE holds no
+    #: association or foundation without a business activity, and Sirene
+    #: holds every SIREN.
+    fallback: "RegisterHop | None" = None
 
     @property
     def country(self) -> str:
@@ -70,8 +76,9 @@ class RegisterHop:
 #: provincially incorporated company's number — most Canadian companies — says
 #: nothing about the federal register. ``US-NY`` (Phase 263) is the DC case
 #: again, for the New York Department of State, and ``US-FL`` (the Florida
-#: wiring) for the Florida Division of Corporations.
-_NO_COUNTRY_ALIAS: frozenset[str] = frozenset({"US-DC", "US-NY", "US-FL", "CA-CC"})
+#: wiring) for the Florida Division of Corporations, ``US-PA`` (the
+#: Pennsylvania ticket) for the Pennsylvania Department of State.
+_NO_COUNTRY_ALIAS: frozenset[str] = frozenset({"US-DC", "US-NY", "US-FL", "US-PA", "CA-CC"})
 
 
 def _ch_normalise(value: str) -> str:
@@ -104,6 +111,17 @@ def hop_schemes() -> dict[str, RegisterHop]:
                     break
             if scheme in hops:
                 break
+    # FR-INSEE: INPI first, Sirene when INPI has no record (decision F).
+    if "FR-INSEE" in hops and "sirene" in REGISTRY:
+        from .sources.inpi import normalise_siren
+
+        hops["FR-INSEE"] = replace(
+            hops["FR-INSEE"],
+            fallback=RegisterHop(
+                "FR-INSEE", "sirene", normalise_siren,
+                REGISTRY["sirene"].lookup_pass_legal_name, derived_key="siren",
+            ),
+        )
     if "companies_house" in REGISTRY:
         hops["GB-COH"] = RegisterHop(
             "GB-COH", "companies_house", _ch_normalise, False, derived_key="gb_coh"
@@ -118,6 +136,19 @@ def hop_schemes() -> dict[str, RegisterHop]:
         hops[CO_RUE_SCHEME] = RegisterHop(
             CO_RUE_SCHEME, "rues_colombia", normalise_rues_key, True,
             derived_key="co_rues",
+        )
+    # ``AR-CUIT`` is value-schemed too (the Argentina wiring): three
+    # Argentine authorities file the CUIT, and RA000010 an IGJ number for a
+    # few records, so only a check-digit-valid CUIT is written ``AR-CUIT``.
+    if "registro_sociedades_argentina" in REGISTRY:
+        from .sources.registro_sociedades_argentina import (
+            AR_CUIT_SCHEME,
+            normalise_cuit_key,
+        )
+
+        hops[AR_CUIT_SCHEME] = RegisterHop(
+            AR_CUIT_SCHEME, "registro_sociedades_argentina", normalise_cuit_key, True,
+            derived_key="ar_cuit",
         )
     # ``REG-<country>`` is the mappers' fallback scheme for "a number on that
     # country's company register" when the filing does not name the register

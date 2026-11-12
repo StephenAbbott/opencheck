@@ -4,7 +4,8 @@
  * `/history` merges every register OpenCheck holds a change log for onto one
  * axis — GLEIF, Companies House, the New Zealand Companies Office, the
  * Estonian e-Äriregister, Danish CVR, (Phase 263) the New York Department
- * of State and the Latvian Register of Enterprises. This module holds what the tab
+ * of State, the Latvian Register of Enterprises, the Israel Corporations
+ * Authority and INSEE's Sirene register. This module holds what the tab
  * *says* about that merge: which register a row came from, how to get back to
  * the record that published it, and the sentence that opens the tab.
  *
@@ -15,7 +16,7 @@
  * Two claims this module is careful about, both of the same kind the
  * Subsidiaries tab makes:
  *
- * - **Publishing a change log is rare.** Seven of the registers OpenCheck reads
+ * - **Publishing a change log is rare.** Nine of the registers OpenCheck reads
  *   expose entity history; the rest answer only about now. A change missing
  *   from this timeline is far more often a register that keeps no history than
  *   a change that did not happen, and the tab has to say so rather than let
@@ -29,6 +30,7 @@
 
 import type { HistoryEntry, HistoryRawChange, HistoryResponse } from "./api";
 import { registerHistoryUrl } from "./registerLinks";
+import { utcDate } from "./savedReport";
 
 /** Every source that can emit change events, in the order the tab names them.
  *  `backend/tests/test_frontend_parity.py` (Phase 266) fails unless this is
@@ -41,6 +43,10 @@ export const HISTORY_SOURCES = [
   "cvr_denmark",
   "ny_dos",
   "ur_latvia",
+  "ica_israel",
+  "sirene",
+  "bodacc",
+  "joafe",
 ] as const;
 
 export type HistorySourceId = (typeof HISTORY_SOURCES)[number];
@@ -60,7 +66,25 @@ export const HISTORY_SOURCE_LABEL: Record<string, string> = {
   cvr_denmark: "CVR (DK)",
   ny_dos: "Dept. of State (NY)",
   ur_latvia: "Register of Enterprises (LV)",
+  ica_israel: "Corporations Authority (IL)",
+  sirene: "Sirene (FR)",
+  bodacc: "BODACC (FR)",
+  joafe: "Journal officiel (JOAFE)",
 };
+
+/** The JOAFE's notices on DILA's portal, filtered to this association: by its
+ *  RNA number (a W-number, how a notice names an association) or, for an
+ *  accounts deposit, by its SIREN. The JOAFE is not a register OpenCheck
+ *  looks a company up in, so it has no register-link entry. */
+export const JOAFE_TABLE_URL =
+  "https://journal-officiel-datadila.opendatasoft.com/explore/dataset/jo_associations/table/";
+
+function joafeUrl(number: string | undefined): string | null {
+  if (!number) return null;
+  if (/^W\d{9}$/.test(number)) return `${JOAFE_TABLE_URL}?q=${encodeURIComponent(`numero_rna:${number}`)}`;
+  if (/^\d{9}$/.test(number)) return `${JOAFE_TABLE_URL}?q=${encodeURIComponent(`dca_siren:${number}`)}`;
+  return null;
+}
 
 export function historySourceLabel(sourceId: string): string {
   return HISTORY_SOURCE_LABEL[sourceId] ?? sourceId;
@@ -87,6 +111,23 @@ export function recordUrl(
   if (sourceId === "gleif") {
     return `https://search.gleif.org/#/record/${encodeURIComponent(lei)}`;
   }
+  // INSEE publishes no per-unit page of its own; the State's Annuaire des
+  // entreprises shows the Sirene record by SIREN (the source card's link).
+  // Not in the register-link table: there `siren` already names INPI's page.
+  if (sourceId === "sirene") {
+    const siren = registryNumbers.sirene;
+    return siren && /^\d{9}$/.test(siren)
+      ? `https://annuaire-entreprises.data.gouv.fr/entreprise/${siren}`
+      : null;
+  }
+  // BODACC is a bulletin, not a register with a record page: the chip opens
+  // DILA's search of every notice naming the SIREN, and each row links to its
+  // own notice (`record_url`). Mirrors `bodacc.SEARCH_URL` in the backend.
+  if (sourceId === "bodacc") {
+    const siren = registryNumbers.bodacc;
+    return siren ? bodaccSearchUrl(siren) : null;
+  }
+  if (sourceId === "joafe") return joafeUrl(registryNumbers[sourceId]);
   // Phase 296: every register's address comes from the one register-link table
   // (lib/registerLinks.ts). The History tab reads its `history` entry where
   // there is one — Companies House's filing history; New York's open-data
@@ -95,6 +136,11 @@ export function recordUrl(
   // the company number addresses the record directly and must never go to
   // the register's `/search?q=` page, which renders an empty form.
   return registerHistoryUrl(sourceId, registryNumbers[sourceId]);
+}
+
+/** DILA's search of every BODACC notice naming a SIREN. */
+export function bodaccSearchUrl(siren: string): string {
+  return `https://bodacc-datadila.opendatasoft.com/explore/dataset/annonces-commerciales/table/?q=${encodeURIComponent(siren)}`;
 }
 
 /** Earliest and latest dated year across entries, or `null` when none is dated. */
@@ -119,13 +165,14 @@ export function corroboratedCount(entries: HistoryEntry[]): number {
  */
 export function silentRegisters(data: HistoryResponse): string[] {
   const answered = new Set(data.sources);
+  const unanswered = data.registers_unavailable ?? {};
   return Object.keys(data.registry_numbers ?? {})
-    .filter((id) => !answered.has(id))
+    .filter((id) => !answered.has(id) && !(id in unanswered))
     .sort();
 }
 
 function numberWord(n: number): string {
-  return ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven"][n] ?? String(n);
+  return ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"][n] ?? String(n);
 }
 
 /**
@@ -193,6 +240,14 @@ export const HISTORY_CAVEAT =
  * holdings start in 2013), so no 2023 boundary is claimed.
  */
 export const REGISTER_READ_NOTES: Record<string, string> = {
+  sirene:
+    "From INSEE's Sirene register: each period of the legal unit's record, compared with the one before — names, legal forms, active or ceased, head-office moves and main activity. A change of activity code that only follows a new version of the NAF classification is not shown. Many older changes were dated by INSEE's yearly processing (1 January up to 2008, or 25 December); those give the year INSEE recorded them, not the day. The first period's start is where INSEE's record begins, not when the company was founded.",
+  bodacc:
+    "From BODACC, the official bulletin in which French registers and courts publish notices about a company: collective proceedings, removals from the register, changes, sales of a business and accounts filed. Each row links to its notice. No person is named — not a sole trader, a director or a liquidator — and a sale is shown from the seller's side with the buyer named only where it is a company. Judgments of personal bankruptcy and management bans are left out: they are about a person, not the company. Notices start in 2008.",
+  joafe:
+    "From the Journal officiel des associations et fondations d'entreprise: what the association declared to its prefecture — its creation, a change of name, seat, purpose or statutes, its dissolution — and every deposit of annual accounts. Associations' notices are reached through the RNA, so notices before 2009 are not; a fondation d'entreprise or fonds de dotation is reached through its accounts only. A seat transfer is shown by commune and postcode, never the street, and a change of purpose as filed, never its text. A corrected notice replaces the one it corrects.",
+  ica_israel:
+    "From the Israel Corporations Authority's change log, which publishes one year of requests and names only the kind of request and the day its status was last updated — never who or what changed, and not the day it was filed. A share transfer is shown as recorded, with its parties not published; a winding-up or a change of name as a request recorded, not as the status or name it led to. OpenCheck keeps the rows from build to build, so this history grows past the register's year; before the earliest day it holds, an empty timeline is a log that was not kept, not a quiet company.",
   ur_latvia:
     "From the Register of Enterprises' open data, which publishes current records only: when each current shareholder, beneficial owner and officer was entered, every former name with the day it ended, and every liquidation, reorganisation, insolvency proceeding and suspension with the register's own date. The register publishes no end dates for people, so a shareholder, beneficial owner or officer who has left does not appear here — their departure is not published, not a change that did not happen.",
   ariregister:
@@ -201,7 +256,63 @@ export const REGISTER_READ_NOTES: Record<string, string> = {
 
 /** The notes for the registers that contributed to this timeline. */
 export function registerReadNotes(data: HistoryResponse): string[] {
-  return data.sources.map((s) => REGISTER_READ_NOTES[s]).filter((n): n is string => Boolean(n));
+  return data.sources
+    .map((s) => {
+      const note = REGISTER_READ_NOTES[s];
+      const since = data.registers_kept_since?.[s];
+      const truncated = data.registers_truncated?.[s]
+        ? " OpenCheck read the newest 1,000 notices; older ones are not shown."
+        : "";
+      if (!note) return note;
+      return since
+        ? `${note} OpenCheck's copy reaches back to ${utcDate(since)}.${truncated}`
+        : `${note}${truncated}`;
+    })
+    .filter((n): n is string => Boolean(n));
+}
+
+/** Words for why a register did not answer (`registers_unavailable`). */
+const UNAVAILABLE_WORDS: Record<string, string> = {
+  timeout: "did not answer in time",
+  rate_limited: "is limiting requests",
+};
+
+/**
+ * A sentence per register that was asked and did not answer. Its silence on
+ * the timeline is unchecked, so it is said apart from the registers that
+ * answered with nothing.
+ */
+export function unavailableRegisterLines(data: HistoryResponse): string[] {
+  return Object.entries(data.registers_unavailable ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([s, reason]) =>
+        `${historySourceLabel(s)} ${UNAVAILABLE_WORDS[reason] ?? "returned an error"}, so its notices were not read. An empty timeline from it is unchecked, not a quiet company — try again later.`,
+    );
+}
+
+/**
+ * Whether a row's date is one of INSEE's processing dates, whose year is right
+ * and whose day is not (the Sirene history ticket, decision C): the emitter
+ * marks them `recorded`, and a `recorded` row that only Sirene contributed to
+ * is one of them.
+ */
+export function sireneYearOnly(basis: string, sources: readonly string[]): boolean {
+  return basis === "recorded" && sources.length > 0 && sources.every((s) => s === "sirene");
+}
+
+/**
+ * The date as a row shows it: the ISO day, or for an INSEE processing date
+ * "recorded by INSEE in <year>" — never a day the register did not mean.
+ */
+export function dateText(
+  date: string | null | undefined,
+  basis: string,
+  sources: readonly string[],
+): string | null {
+  if (!date) return null;
+  if (sireneYearOnly(basis, sources)) return `recorded by INSEE in ${date.slice(0, 4)}`;
+  return date;
 }
 
 /**
@@ -220,6 +331,8 @@ export function registerReadNotes(data: HistoryResponse): string[] {
  */
 export function basisLabel(basis: string, sources: readonly string[] = []): string {
   if (basis === "effective") return "as filed";
+  // The date text already says it (`dateText`).
+  if (sireneYearOnly(basis, sources)) return "";
   if (basis === "recorded") {
     // The Latvian register dates a beneficial owner or officer only by the
     // day it entered the row (the Estonia–Latvia emitters phase): a
@@ -313,7 +426,7 @@ export function historyDegradedNotice(data: HistoryResponse): string | null {
   }
   if (data.registry_sources_blocked) {
     parts.push(
-      "The company-registry histories (Companies House, NZ, Estonia, Denmark, New York) could not be attempted either — the registry number they need comes from that record.",
+      "The company-registry histories (Companies House, NZ, Estonia, Denmark, New York, France) could not be attempted either — the registry number they need comes from that record.",
     );
   } else if (recordDown && data.company_number_basis === "cached") {
     parts.push(

@@ -53,7 +53,14 @@ OpenCheck holds it as a local SQLite table (`opencheck/isin_index.py`) and
 
 `/signalstats` → `gleif.isin_index` reports the table (file, age, rows, last
 sync outcome); `gleif.securities_served` counts how each `/securities`
-answer was served (file / cache / live / stale / unavailable by reason).
+answer was served (file / cache / live / stale / unavailable by reason);
+`gleif.openfigi` counts every OpenFIGI mapping request by outcome
+(`answered`, `http_429`, `http_error`, `unreachable`, `bad_response`) with
+the moment of the last answer and the last failure. `sources` lists
+`openfigi` only when OpenFIGI answered at least one request — an answer with
+no match counts, a configured key alone does not. OpenFIGI is called by its
+domain (`api.openfigi.com`), never an IP address, so its December 2026
+address change needs nothing from OpenCheck.
 
 ## When GLEIF cannot be asked (Phases 145 and 253)
 

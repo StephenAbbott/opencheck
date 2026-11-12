@@ -195,6 +195,16 @@ REGISTER_LINKS: dict[str, RegisterLink] = {
         record=(),
         history=((r"^\d+$", "https://data.ny.gov/resource/63wc-4exh.json?corpid_num={id}"),),
     ),
+    "ica_israel": RegisterLink(
+        register="Israel Corporations Authority",
+        identifier_key="il_roc",
+        # The Authority's own search is a form with no per-company address,
+        # so there is no record link; History links the change log's
+        # open-data query for the number (data.gov.il, ica-changes), the rows
+        # that tab is built from — the New York arrangement.
+        record=(),
+        history=((r"^\d{9}$", "https://data.gov.il/api/3/action/datastore_search?resource_id=28780ab5-3ef1-44c7-8377-da82c0aa6781&filters=%7B%22%D7%9E%D7%A1%D7%A4%D7%A8%20%D7%AA%D7%90%D7%92%D7%99%D7%93%22%3A{id}%7D"),),
+    ),
 }
 
 

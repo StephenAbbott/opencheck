@@ -19,7 +19,7 @@ from typing import Any, Iterator
 import pycountry
 
 from ..elf import resolve_elf
-from ..identifiers import colombian_nit
+from ..identifiers import argentine_cuit, colombian_nit, format_cuit
 from . import former_names as _former_names
 from . import gleif_events as _gleif_events
 from . import lifecycle as _lifecycle
@@ -174,7 +174,15 @@ from .mappers.france import (  # noqa: F401  (re-exported, Phase 246)
     _inpi_individu_statements,
     _inpi_residence_country,
     _inpi_role_interest_type,
+    _rna,
+    _rna_note,
+    _SIRENE_STATE_BODY_PREFIXES,
+    _sirene,
+    _sirene_category_labels,
+    _sirene_name,
     map_inpi,
+    map_sirene,
+    sirene_category_label,
 )
 from .mappers.sweden import (  # noqa: F401  (re-exported, Phase 246)
     _bv_address,
@@ -335,6 +343,10 @@ from .mappers.taiwan import (  # noqa: F401  (re-exported)
     TW_LEGAL_FORMS,
     TW_POSITIONS,
     TW_HOLDINGS_CAVEAT,
+    TW_VACANCY_WORDS,
+    _TW_BRACKETS,
+    tw_vacant_seat,
+    tw_vacant_rows,
     tw_foreign_prefix,
     tw_legal_form,
     tw_is_limited_company,
@@ -503,6 +515,14 @@ from .mappers.slovenia import (  # noqa: F401  (re-exported; the Slovenia wiring
     _si_address,
     map_si_prs,
 )
+from .mappers.argentina import (  # noqa: F401  (re-exported; the Argentina wiring)
+    _AR_ADDRESS_UNKNOWN,
+    _AR_SOURCE,
+    _ar_address_text,
+    _ar_fold,
+    _ar_igj_note,
+    map_registro_sociedades_argentina,
+)
 from .mappers.us_fl import (  # noqa: F401  (re-exported; the Florida wiring)
     _FL_SOURCE,
     _fl_address,
@@ -599,6 +619,12 @@ from .mappers.colombia import (  # noqa: F401  (re-exported, the Colombia RUES t
     _rues_entity_details,
     _rues_role_details,
     map_rues_colombia,
+)
+from .mappers.us_pa import (  # noqa: F401  (re-exported, the Pennsylvania ticket)
+    _PA_SOURCE,
+    _pa_entity_details,
+    _pa_interest,
+    map_pa_dos,
 )
 from .mappers.us_ny import (  # noqa: F401  (re-exported, Phase 263)
     _NY_LIVE_STATUSES,
@@ -701,6 +727,13 @@ _GLEIF_RA_TO_ORG_ID: dict[str, tuple[str, str]] = {
     # (foreign companies authorised in Florida), which the jurisdiction
     # fallback labelled with their home state's scheme until this entry.
     "RA000603": ("US-FL", "Florida Department of State, Division of Corporations"),
+    # United States — Pennsylvania Department of State, Bureau of Corporations
+    # (the Pennsylvania ticket, 12 Nov 2026). ``registeredAs`` is the filing
+    # number on 2,152 of the 2,153 ISSUED records under it (one is US-CT, a
+    # Connecticut company registered in Pennsylvania), bare (``676862``) or
+    # zero-padded to ten digits; ``_gleif_entity_statement`` writes it bare,
+    # the form the ``pa_dos`` mapper writes.
+    "RA000632": ("US-PA", "Pennsylvania Department of State, Bureau of Corporations"),
     # United States — New York State Department of Financial Services,
     # Registry of insurance companies. Its ``registeredAs`` is an NAIC company
     # code (ShelterPoint Life, 81434), not a DOS ID, so it must NOT take the
@@ -883,9 +916,18 @@ _CO_RA_CODES: frozenset[str] = frozenset(
 CO_RUE_SCHEME = "CO-RUE"
 CO_RUE_SCHEME_NAME = "NIT — Registro Único Empresarial y Social (RUES), Colombia"
 
+#: Argentine registration authorities (the Argentina wiring, 11 Nov 2026):
+#: ARCA (RA000009), the Registro Nacional de Sociedades (RA000010) and the
+#: CNV (RA000800). All three file the CUIT, bare or hyphenated; about 30
+#: RA000010 records file an IGJ number, a provincial number or free text, so
+#: ``AR-CUIT`` is asserted only for a value whose check digit agrees.
+_AR_RA_CODES: frozenset[str] = frozenset({"RA000009", "RA000010", "RA000800"})
+AR_CUIT_SCHEME = "AR-CUIT"
+AR_CUIT_SCHEME_NAME = "CUIT — Clave Única de Identificación Tributaria (Argentina)"
+
 #: RA codes whose scheme is decided by the value, not the code (Phase 280) —
 #: so they are absent from ``_GLEIF_RA_TO_ORG_ID`` on purpose.
-_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES | _CO_RA_CODES
+_GLEIF_VALUE_SCHEMED_RA: frozenset[str] = _CL_RA_CODES | _CO_RA_CODES | _AR_RA_CODES
 
 
 def chilean_rut(value: str | None) -> str | None:
@@ -959,6 +1001,8 @@ def gleif_registration_scheme(
         return CL_RUT_SCHEME, CL_RUT_SCHEME_NAME
     if ra in _CO_RA_CODES and colombian_nit(registered_as):
         return CO_RUE_SCHEME, CO_RUE_SCHEME_NAME
+    if ra in _AR_RA_CODES and argentine_cuit(registered_as):
+        return AR_CUIT_SCHEME, AR_CUIT_SCHEME_NAME
     if ra in _GLEIF_RA_TO_ORG_ID:
         return _GLEIF_RA_TO_ORG_ID[ra]
     jur = (jurisdiction_code or "").strip().upper()
@@ -1784,6 +1828,15 @@ def _gleif_entity_statement(
             # The same for a NIT (``900.396.759 - 5``, ``9003967595``): one
             # written form, the one the RUES mapper writes.
             registered_as = colombian_nit(registered_as) or registered_as
+        elif ra_id == "RA000632" and registered_as.isdigit():
+            # Pennsylvania: some issuers pad the filing number to ten digits
+            # (``0015735802``); one written form, the bare one.
+            registered_as = registered_as.lstrip("0") or registered_as
+        elif org_id_scheme == AR_CUIT_SCHEME:
+            # The same for a CUIT (``30500001735``, ``33-67913936-9``): the
+            # hyphenated form the register mapper writes.
+            cuit = argentine_cuit(registered_as)
+            registered_as = format_cuit(cuit) if cuit else registered_as
         identifiers.append(
             {
                 "id": registered_as,

@@ -332,11 +332,99 @@ REGISTER_TRIGGER_TIER: dict[str, str] = {
 }
 
 
+#: The Israeli register's trigger (11 Nov 2026, the ica-changes ticket): a
+#: filing is graded by its group in the change log, a field of the companies
+#: file by its name. A winding-up, liquidation, revival or strike-off filing,
+#: a merger, a share filing, a change of name and an attachment order are
+#: recheck — the log names the filing, never what it led to, so the source is
+#: what to read; capital, directors and classification are note. The
+#: corporation leaving the open data is escalate, as in Estonia.
+IL_FILING_GROUP_TIER: dict[str, str] = {
+    "status": RECHECK,
+    "merger": RECHECK,
+    "shares": RECHECK,
+    "name": RECHECK,
+    "attachment": RECHECK,
+    "capital": NOTE,
+    "directors": NOTE,
+    "classification": NOTE,
+}
+IL_FIELD_TIER: dict[str, str] = {
+    "removed": ESCALATE,
+    "name": RECHECK,
+    "status": RECHECK,
+    "sub_status": RECHECK,
+    "violating": NOTE,
+    "added": NOTE,
+}
+
+
+def _il_trigger_tier(changes: dict[str, Any]) -> str:
+    from .sources.ica_israel_changes import group_of
+
+    tiers: list[str] = []
+    for key, value in changes.items():
+        if not value:
+            continue
+        if key == "filings" and isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    tiers.append(IL_FILING_GROUP_TIER.get(group_of(item.get("code")), NOTE))
+        else:
+            tiers.append(IL_FIELD_TIER.get(key, RECHECK))
+    return max(tiers, key=_RANK.__getitem__, default=NOTE)
+
+
+#: BODACC's notices (decision D, Stephen, 11 Nov 2026), by the reader's
+#: ``kind``: a collective procedure, a conciliation, a removal from the
+#: register or a dissolution is escalate; a change of name, a transfer of the
+#: registered office, a universal transfer of assets, a sale of a business and
+#: any other modification are recheck. ``None`` — accounts filed, a new
+#: establishment, a registration — queues no re-run at all.
+BODACC_KIND_TIER: dict[str, str | None] = {
+    "insolvency_opened": ESCALATE,
+    "insolvency_closed": ESCALATE,
+    "insolvency_plan": ESCALATE,
+    "insolvency_other": ESCALATE,
+    "conciliation": ESCALATE,
+    "professional_recovery": ESCALATE,
+    "deregistered": ESCALATE,
+    "dissolution": ESCALATE,
+    "name_change": RECHECK,
+    "seat_transfer": RECHECK,
+    "universal_transfer": RECHECK,
+    "business_sold": RECHECK,
+    "business_acquired": RECHECK,
+    "modification": RECHECK,
+    "notice_withdrawn": RECHECK,
+    "other": RECHECK,
+    "accounts_filed": None,
+    "establishment_created": None,
+    "registered": None,
+}
+
+
+def bodacc_notice_tier(notice: dict[str, Any]) -> str | None:
+    """A BODACC notice's tier, or None when it queues nothing. A kind this
+    table does not know is recheck, never silent."""
+    kind = str(notice.get("kind") or "")
+    return BODACC_KIND_TIER.get(kind, RECHECK)
+
+
 def register_trigger_tier(trigger: dict[str, Any] | None) -> str:
     """The tier the register tier's own trigger carries."""
     changes = (trigger or {}).get("changes") or {}
     if not isinstance(changes, dict):
         return NOTE
+    if (trigger or {}).get("register") == "bodacc":
+        tiers = [
+            bodacc_notice_tier(n) or NOTE
+            for n in changes.get("notices") or []
+            if isinstance(n, dict)
+        ]
+        return max(tiers, key=_RANK.__getitem__, default=NOTE)
+    if (trigger or {}).get("register") == "ica_israel":
+        return _il_trigger_tier(changes)
     tiers = [REGISTER_TRIGGER_TIER.get(k, RECHECK) for k, v in changes.items() if v]
     return max(tiers, key=_RANK.__getitem__, default=NOTE)
 

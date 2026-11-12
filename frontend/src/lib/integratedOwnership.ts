@@ -19,6 +19,7 @@
 import { refIndex, resolveRef } from "./bodsRefs";
 import { interestEnded, recordClosed } from "./relationshipStatus";
 import { REASON_WORDS, figureText, integratedOwnership, shareBounds, type Edge } from "./ownershipMath";
+import { isUndatedRelationship } from "./undated";
 
 type Stmt = Record<string, unknown>;
 
@@ -69,6 +70,11 @@ export interface Figure {
   via?: string[];
   direct: boolean;
   via_names: string[];
+  /** The subject's own subsidiaries among `via_names`: the holder is credited
+   *  its share of the company's own shares they hold (the give-back). */
+  treasury_names?: string[];
+  /** The figure rests on a holding no source dates (lib/undated.ts). */
+  undated?: true;
   text: string;
 }
 
@@ -89,7 +95,20 @@ export interface IntegratedOwnershipPayload {
   credit?: string;
   holders: Holder[];
   subject_ids?: string[];
+  /** Said once under the table when any figure rests on an undated holding. */
+  undated_note?: string;
 }
+
+/** Mirrors `integrated_ownership.UNDATED_NOTE` (parity-tested). */
+export const UNDATED_NOTE =
+  "Includes holdings the sources do not date: they are read as current, and may have ended.";
+
+/** Mirrors `integrated_ownership.UNDATED_MARK` (parity-tested): after an
+ *  undated figure in the table, and opening the note beneath it. */
+export const UNDATED_MARK = "*";
+
+/** What a screen reader hears in place of the mark. */
+export const UNDATED_MARK_SPOKEN = "no date given, see the note below the table";
 
 const SUBJECT = "\u0000subject";
 
@@ -180,12 +199,41 @@ export function figureWords(fig: { minimum?: number; maximum?: number; reason?: 
   return "No figure";
 }
 
-/** The route in words: directly, through A and B, or both. */
-export function routeWords(fig: { direct?: boolean; via_names?: string[] }): string {
-  const names = (fig.via_names ?? []).filter(Boolean);
-  if (!names.length) return fig.direct ? "directly" : "";
-  const through = `through ${names.join(", ")}`;
-  return fig.direct ? `directly and ${through}` : through;
+/** The route in words: directly, through A and B, or both — then the
+ *  company's own shares given back to the holder (`route_words`). */
+export function routeWords(fig: { direct?: boolean; via_names?: string[]; treasury_names?: string[] }): string {
+  const treasury = (fig.treasury_names ?? []).filter(Boolean);
+  const names = (fig.via_names ?? []).filter((n) => n && !treasury.includes(n));
+  let route: string;
+  if (names.length) {
+    const through = `through ${names.join(", ")}`;
+    route = fig.direct ? `directly and ${through}` : through;
+  } else {
+    route = fig.direct ? "directly" : "";
+  }
+  if (treasury.length) {
+    const given = `with its share of the company's own shares held by ${treasury.join(", ")}`;
+    route = route ? `${route}, ${given}` : given;
+  }
+  return route;
+}
+
+function downstream(edges: [string, string][], source: string): Set<string> {
+  const owned = new Map<string, Set<string>>();
+  for (const [a, b] of edges) (owned.get(a) ?? owned.set(a, new Set()).get(a)!).add(b);
+  const seen = new Set<string>();
+  const stack = [source];
+  while (stack.length) {
+    const n = stack.pop()!;
+    for (const b of owned.get(n) ?? []) {
+      if (!seen.has(b)) {
+        seen.add(b);
+        stack.push(b);
+      }
+    }
+  }
+  seen.delete(source);
+  return seen;
 }
 
 /** The payload, as `integrated_ownership.compute` builds it. `canon` maps a
@@ -218,6 +266,7 @@ export function computeIntegratedOwnership(
   const voting = new Map<string, [string, string][]>();
   const ended = new Map<string, [string, string][]>();
   const labels = new Map<string, string>();
+  const undated = new Map<string, [string, string][]>();
   const push = <T,>(m: Map<string, T[]>, k: string, v: T) => (m.get(k) ?? m.set(k, []).get(k)!).push(v);
   for (const s of statements) {
     if (s.recordType !== "relationship" || excluded(s)) continue;
@@ -232,6 +281,7 @@ export function computeIntegratedOwnership(
     if (kind[0] === "share") {
       const b = kind[1];
       push(share, k, b === null ? { owner, owned, low: 0, high: null } : { owner, owned, low: b[0], high: b[1] });
+      if (isUndatedRelationship(s)) push(undated, k, [owner, owned] as [string, string]);
     } else if (kind[0] === "voting") push(voting, k, [owner, owned] as [string, string]);
     else push(ended, k, [owner, owned] as [string, string]);
   }
@@ -265,6 +315,10 @@ export function computeIntegratedOwnership(
     const withShares = upstream(spairs, SUBJECT);
     const withVotes = upstream([...spairs, ...v], SUBJECT);
     const withEnded = upstream([...spairs, ...v, ...(ended.get(k) ?? [])], SUBJECT);
+    // See `compute`: a company a holder reaches only through the subject is
+    // the subject's own subsidiary — the give-back, not a route.
+    const aroundSubject = spairs.filter(([a]) => a !== SUBJECT);
+    const reachesSubject = new Set([...withShares, SUBJECT]);
     for (const pid of [...withShares].sort(byCodePoint)) {
       const r = integratedOwnership(sedges, [pid], SUBJECT);
       const via = (r.via ?? []).filter((x) => x !== SUBJECT);
@@ -281,6 +335,11 @@ export function computeIntegratedOwnership(
         via_names: via.map((x) => partyName(byCanon.get(x)) || x),
         text: "",
       };
+      const ownReach = downstream(aroundSubject, pid);
+      const treasury = via.filter((x) => !ownReach.has(x));
+      if (treasury.length) fig.treasury_names = treasury.map((x) => partyName(byCanon.get(x)) || x);
+      const onPath = new Set([...downstream(spairs, pid), pid]);
+      if ((undated.get(k) ?? []).some(([a, b]) => onPath.has(a) && reachesSubject.has(b))) fig.undated = true;
       fig.text = figureWords(fig);
       holder(pid).figures.push(fig);
     }
@@ -317,7 +376,15 @@ export function computeIntegratedOwnership(
       byCodePoint(a.name.toLowerCase(), b.name.toLowerCase()) ||
       byCodePoint(a.party, b.party),
   );
-  return { method: METHOD, as_of: asOf, description: METHOD_DESCRIPTION, credit: METHOD_CREDIT, holders: out };
+  const payload: IntegratedOwnershipPayload = {
+    method: METHOD,
+    as_of: asOf,
+    description: METHOD_DESCRIPTION,
+    credit: METHOD_CREDIT,
+    holders: out,
+  };
+  if (out.some((h) => h.figures.some((f) => f.undated))) payload.undated_note = UNDATED_NOTE;
+  return payload;
 }
 
 /** The subject's statementIds in a network: every entity statement carrying
@@ -333,7 +400,8 @@ export function subjectIdsFor(statements: Stmt[], lei: string, leiOf: (s: Stmt) 
  *  (Wikidata)", or the status note for a holder with no figure. */
 export function ownershipCellText(h: Holder): string {
   if (h.status !== "current") return h.status === "formerly" ? "formerly held shares" : "voting rights, not shares";
-  return h.figures.map((f) => `${f.text} (${f.source})`).join("; ");
+  // A tree row has no note beneath it, so an undated figure says so in words.
+  return h.figures.map((f) => `${f.text} (${f.source}${f.undated ? ", no date given" : ""})`).join("; ");
 }
 
 /** Node id → the tree-row text, for every holder in a payload. */

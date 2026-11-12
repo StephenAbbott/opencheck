@@ -134,7 +134,7 @@ describe("consolidation edge clean-up (B + C)", () => {
     const { edges } = bodsToGraph(consolidationStatements());
     const pc = edges.find((e) => e.source === "P" && e.target === "C")!;
     expect(pc.category).toBe("control");
-    expect(pc.label).toBe("Controls (direct + ultimate)");
+    expect(pc.label).toBe("Controls (direct + ultimate)\nno date given");
     expect(pc.details).toContain("IS_DIRECTLY_CONSOLIDATED_BY");
     expect(pc.details).toContain("IS_ULTIMATELY_CONSOLIDATED_BY");
   });
@@ -144,7 +144,7 @@ describe("consolidation edge clean-up (B + C)", () => {
       suppressRedundantUltimateConsolidation: false,
     });
     const pc = edges.find((e) => e.source === "P" && e.target === "C")!;
-    expect(pc.label).toBe("Controls (direct + ultimate)");
+    expect(pc.label).toBe("Controls (direct + ultimate)\nno date given");
     expect(pc.details).toContain("IS_DIRECTLY_CONSOLIDATED_BY");
     expect(pc.details).toContain("IS_ULTIMATELY_CONSOLIDATED_BY");
   });
@@ -201,7 +201,7 @@ describe("consolidation edge clean-up (B + C)", () => {
       childRel("r-u", "ultimate"),
     ]);
     expect(edges).toHaveLength(1);
-    expect(edges[0].label).toBe("Controls (direct + ultimate)");
+    expect(edges[0].label).toBe("Controls (direct + ultimate)\nno date given");
   });
 
   it("does not merge edges between different pairs", () => {
@@ -555,7 +555,7 @@ describe("ended relationships (Phase 219)", () => {
     );
     expect(m.edges).toHaveLength(1);
     expect(m.edges[0].ended).toBeUndefined();
-    expect(m.edges[0].label).toBe("Owns 75–100%");
+    expect(m.edges[0].label).toBe("Owns 75–100%\nno date given");
     expect(m.edges[0].details).toContain("Ended 18 June 2019: Owns 25–50%");
   });
 
@@ -569,7 +569,7 @@ describe("ended relationships (Phase 219)", () => {
       ],
       { asOf: AS_OF }
     );
-    expect(m.edges[0].label).toBe("Owns 75–100%");
+    expect(m.edges[0].label).toBe("Owns 75–100%\nno date given");
     expect(m.edges[0].details).toContain("Ended: Controls (votes)");
   });
 
@@ -655,7 +655,7 @@ describe("Phase 255: one statement for a direct-and-ultimate child", () => {
     ];
     const { edges } = bodsToGraph(statements);
     expect(edges).toHaveLength(1);
-    expect(edges[0].label).toBe("Controls (direct + ultimate)");
+    expect(edges[0].label).toBe("Controls (direct + ultimate)\nno date given");
   });
 });
 

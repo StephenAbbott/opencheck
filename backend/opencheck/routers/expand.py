@@ -272,6 +272,20 @@ async def _register_one_layer(
     try:
         kwargs = {"legal_name": name} if hop.pass_legal_name and name else {}
         raw, prov = await _fetch_with_provenance(adapter, local_id, **kwargs)
+        fallback = hop.fallback
+        fallback_adapter = REGISTRY.get(fallback.source_id) if fallback is not None else None
+        fallback_mapper = _mapper_for(fallback.source_id) if fallback is not None else None
+        if (
+            isinstance(raw, dict) and raw.get("not_found") and fallback is not None
+            and fallback_adapter is not None and fallback_mapper is not None
+        ):
+            # The first register holds no record (INPI for an association):
+            # ask the second (Sirene), which then is this hop's register.
+            hop = fallback
+            adapter = fallback_adapter
+            mapper = fallback_mapper
+            kwargs = {"legal_name": name} if hop.pass_legal_name and name else {}
+            raw, prov = await _fetch_with_provenance(adapter, local_id, **kwargs)
         if not isinstance(raw, dict) or raw.get("is_stub"):
             stub = True
         else:

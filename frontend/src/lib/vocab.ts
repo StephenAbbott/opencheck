@@ -444,10 +444,59 @@ export const OPENALEPH_TOPIC: Record<string, string> = {
   "reg.warn": "regulatory warning",
   poi: "person of interest",
   "geo.risk": "high-risk area",
-  // Beyond OpenSanctions' target topics: tags OpenAleph collections carry.
+  // Beyond OpenSanctions' target topics: the rest of FtM's topic list.
   "asset.frozen": "frozen asset",
   "role.diplo": "diplomatic service",
   "role.judge": "judiciary",
+  // Corporate form and listing. The register's own words for what the record is.
+  "corp.offshore": "offshore company",
+  "corp.public": "public listed company",
+  "corp.shell": "shell company",
+  // Further crime categories, bare nouns like the ones above.
+  "crime.cyber": "cybercrime",
+  "crime.env": "environmental violations",
+  "crime.traffick.drug": "drug trafficking",
+  "crime.traffick.human": "human trafficking",
+  "forced.labor": "forced labour",
+  // Financial services. "fin.adivsor" is spelled as upstream publishes it.
+  fin: "financial services",
+  "fin.adivsor": "financial advisor",
+  "fin.bank": "bank",
+  "fin.fund": "fund",
+  // Government and the state.
+  gov: "government",
+  "gov.admin": "civil service",
+  "gov.executive": "executive branch of government",
+  "gov.financial": "central banking and financial integrity",
+  "gov.head": "head of government or state",
+  "gov.igo": "intergovernmental organisation",
+  "gov.judicial": "judicial branch of government",
+  "gov.legislative": "legislative branch of government",
+  "gov.muni": "municipal government",
+  "gov.national": "national government",
+  "gov.religion": "religious leadership",
+  "gov.security": "security services",
+  "gov.soe": "state-owned enterprise",
+  "gov.state": "state government",
+  mil: "military",
+  // Maritime activity.
+  "mare.sts": "ship-to-ship transfer",
+  // Political and civil-society organisations.
+  "pol.party": "political party",
+  "pol.union": "union",
+  rel: "religion",
+  // Occupations and roles. A PEP's level keeps the full phrase.
+  "role.acct": "accountant",
+  "role.act": "activist",
+  "role.civil": "civil servant",
+  "role.journo": "journalist",
+  "role.lawyer": "lawyer",
+  "role.lobby": "lobbyist",
+  "role.pep.frmr": "former politically exposed person",
+  "role.pep.intl": "international politically exposed person",
+  "role.pep.natl": "national politically exposed person",
+  "role.pol": "politician",
+  "role.spy": "spy",
 };
 
 export function topicLabel(topic: string): string {

@@ -74,6 +74,7 @@ from ..risk import merge_listed_jurisdiction as _risk_merge_listed
 from ..risk import merge_non_eu_jurisdiction as _risk_merge_non_eu
 from ..risk import merge_subsidiary_listed_jurisdiction as _risk_merge_subsidiary_listed
 from ..risk import merge_state_controlled as _risk_merge_state_controlled
+from ..bods import republished as _republished
 from ..bods.declaration import apply_network_subjects, network_subjects, stamp_bundle
 from ..bods.refs import resolve_signal_references
 from ..bods.state_bodies import classify_government_entities
@@ -121,6 +122,7 @@ from .hit_builders import (  # noqa: F401
     _bh_dlcp_dc,
     _bh_ny_dos,
     _bh_rues_colombia,
+    _bh_pa_dos,
     _bh_eiti,
     _bh_eiti_bo,
     _bh_eiti_soe,
@@ -129,6 +131,7 @@ from .hit_builders import (  # noqa: F401
     _bh_firmenbuch,
     _bh_gemi_greece,
     _bh_inpi,
+    _bh_sirene,
     _bh_jar_lithuania,
     _bh_krs_poland,
     _bh_kvk,
@@ -946,6 +949,11 @@ def _build_gleif_hit(ctx: _LookupCtx, gleif_bundle: dict[str, Any]) -> SourceHit
     # corporation it resolves to; GLEIF asserts nothing here.
     if str(identifiers.get("ca_corp_id") or "").startswith("BN"):
         del identifiers["ca_corp_id"]
+    # The same for an IGJ number GLEIF filed under RA000010 (the Argentina
+    # wiring): ``IGJ:<n>`` is a dispatch key, not a CUIT; the register hit
+    # asserts the CUIT the IGJ entry carries, if any.
+    if str(identifiers.get("ar_cuit") or "").startswith("IGJ:"):
+        del identifiers["ar_cuit"]
     return _hit(
         "gleif", ctx.lei,
         name=ctx.legal_name or f"LEI {ctx.lei}",
@@ -2151,6 +2159,16 @@ async def _lookup_pipeline(
     declaration_subjects = network_subjects(bods_all, ctx.lei)
     bods_all = apply_network_subjects(bods_all, declaration_subjects)
     yield ("declaration_subjects", {"subjects": declaration_subjects})
+    # OpenSanctions' copy of GEM's ownership tracker is GEM's claim: when
+    # GEM's own read answered for the subject, the copy's edges about the
+    # subject are folded into it (bods.republished), before anything below
+    # counts them. Its own event, so the response folds the same way.
+    republished_payload = _republished.fold(
+        bods_all, subject_identity(ctx.lei, bods_all).statement_ids
+    )
+    if republished_payload["statement_ids"]:
+        bods_all = _republished.apply(bods_all, republished_payload)
+        yield ("republished_folded", republished_payload)
 
     if listing_task is not None:
         try:
@@ -2522,8 +2540,6 @@ async def _register_lookup_pipeline(
         })
         return
     subject = register_subject(hop.scheme, local_id)
-    src_name = adapter.info.name
-    yield ("source_started", {"source_id": hop.source_id, "source_name": src_name})
 
     # Phase 184: the register's walk counters file this under "lookup" — this
     # is the subject's own lookup, not a hop from someone else's.
@@ -2531,41 +2547,60 @@ async def _register_lookup_pipeline(
     errors: dict[str, str] = {}
     provenances: dict[str, Provenance] = {}
     raw: Any = None
-    kwargs = {"legal_name": name} if hop.pass_legal_name and name else {}
-    try:
-        raw, prov = await asyncio.wait_for(
-            _fetch_with_provenance(adapter, local_id, **kwargs),
-            timeout=_source_budget(hop.source_id),
-        )
-    except asyncio.TimeoutError:
-        yield ("error", {
-            "status": 504,
-            "detail": (
-                f"{src_name} exceeded its {_source_budget(hop.source_id):.0f}s time "
-                f"budget answering {hop.scheme} {local_id}."
-            ),
-        })
-        return
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 404:
-            # The register said so itself: no company under that number. Its
-            # answer, not a failure of ours — a 404, never a 502.
+    asked: list[str] = []
+    # A hop with a fallback (FR-INSEE: INPI, then Sirene — the France Sirene
+    # + RNA ticket, decision F) asks the second register only when the first
+    # answered that it holds no record. The first is then closed with no hit,
+    # so the progress grid never waits on it.
+    while True:
+        src_name = adapter.info.name
+        asked.append(hop.source_id)
+        yield ("source_started", {"source_id": hop.source_id, "source_name": src_name})
+        kwargs = {"legal_name": name} if hop.pass_legal_name and name else {}
+        try:
+            raw, prov = await asyncio.wait_for(
+                _fetch_with_provenance(adapter, local_id, **kwargs),
+                timeout=_source_budget(hop.source_id),
+            )
+        except asyncio.TimeoutError:
             yield ("error", {
-                "status": 404,
-                "detail": f"No {src_name} record found for {hop.scheme} {local_id}.",
+                "status": 504,
+                "detail": (
+                    f"{src_name} exceeded its {_source_budget(hop.source_id):.0f}s time "
+                    f"budget answering {hop.scheme} {local_id}."
+                ),
             })
             return
-        yield ("error", {
-            "status": 502,
-            "detail": f"{src_name} fetch failed for {hop.scheme} {local_id}: {describe_exception(exc)}",
-        })
-        return
-    except Exception as exc:  # noqa: BLE001
-        yield ("error", {
-            "status": 502,
-            "detail": f"{src_name} fetch failed for {hop.scheme} {local_id}: {describe_exception(exc)}",
-        })
-        return
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                # The register said so itself: no company under that number. Its
+                # answer, not a failure of ours — a 404, never a 502.
+                yield ("error", {
+                    "status": 404,
+                    "detail": f"No {src_name} record found for {hop.scheme} {local_id}.",
+                })
+                return
+            yield ("error", {
+                "status": 502,
+                "detail": f"{src_name} fetch failed for {hop.scheme} {local_id}: {describe_exception(exc)}",
+            })
+            return
+        except Exception as exc:  # noqa: BLE001
+            yield ("error", {
+                "status": 502,
+                "detail": f"{src_name} fetch failed for {hop.scheme} {local_id}: {describe_exception(exc)}",
+            })
+            return
+        fallback = hop.fallback
+        if (
+            isinstance(raw, dict) and raw.get("not_found")
+            and fallback is not None and REGISTRY.get(fallback.source_id) is not None
+        ):
+            yield ("source_completed", {"source_id": hop.source_id, "hit_count": 0})
+            hop = fallback
+            adapter = REGISTRY[hop.source_id]
+            continue
+        break
     if not isinstance(raw, dict) or raw.get("is_stub") or not raw or raw.get("not_found"):
         yield ("error", {
             "status": 404,
@@ -2641,7 +2676,9 @@ async def _register_lookup_pipeline(
     yield ("source_completed", {"source_id": hop.source_id, "hit_count": 1})
 
     ep_applicable = _name_screen_can_run()
-    applicable_ids = [hop.source_id] + (["everypolitician"] if ep_applicable else [])
+    # Every register asked: one that answered "no record" before the fallback
+    # answered is named as such in the coverage line, never dropped.
+    applicable_ids = asked + (["everypolitician"] if ep_applicable else [])
     yield ("sources_applicable", {"source_ids": applicable_ids})
     if ep_applicable:
         yield ("source_started", {

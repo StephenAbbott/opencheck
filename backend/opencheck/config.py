@@ -161,6 +161,11 @@ class Settings(BaseSettings):
     watchlist_opensanctions_interval_s: float = Field(
         default=10800.0, alias="OPENCHECK_WATCHLIST_OPENSANCTIONS_INTERVAL_S"
     )
+    # The BODACC tier (France): how often each watched SIREN's new notices are
+    # read. BODACC publishes once a day, about 06:15 UTC; 0 disables the tier.
+    watchlist_bodacc_interval_s: float = Field(
+        default=21600.0, alias="OPENCHECK_WATCHLIST_BODACC_INTERVAL_S"
+    )
 
     # --- Phase 268: record-consistency counters ---
     # SQLite file the /consistencystats counters are written through to
@@ -304,6 +309,15 @@ class Settings(BaseSettings):
     )
     gcis_throttle_max_wait_s: float = Field(
         default=10.0, alias="OPENCHECK_GCIS_THROTTLE_MAX_WAIT_S"
+    )
+    # INSEE's API Sirene (api.insee.fr) allows 30 requests a minute per key
+    # and answers a spent minute with a 429. A lookup sends two (the unit and
+    # its head office). 0 disables the pacing (the test suite does).
+    insee_rate_limit_per_minute: int = Field(
+        default=30, alias="OPENCHECK_INSEE_RATE_LIMIT_PER_MINUTE"
+    )
+    insee_throttle_max_wait_s: float = Field(
+        default=15.0, alias="OPENCHECK_INSEE_THROTTLE_MAX_WAIT_S"
     )
     # Phase 144: when the anchor LEI exists in the entity-pages Golden Copy,
     # don't make the user sit out the full max-wait — if the live anchor fetch
@@ -713,6 +727,21 @@ class Settings(BaseSettings):
         ),
         alias="ICA_ISRAEL_DB_URL",
     )
+    # How often the asset check re-runs in-process, so the daily index (and
+    # its change log) lands without a restart — the watchlist's register tier
+    # needs the server to hold the day it re-runs for. Hourly; 0 disables.
+    ica_israel_refresh_interval_s: float = Field(
+        default=3600.0, alias="ICA_ISRAEL_REFRESH_INTERVAL_S"
+    )
+    # The rolling fourteen-day diff the refresh workflow publishes beside the
+    # index (scripts/diff_ica_israel_index.py), read by the watchlist worker.
+    ica_israel_delta_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "ica-israel-index/ica-israel-delta.json"
+        ),
+        alias="ICA_ISRAEL_DELTA_URL",
+    )
 
     # --- ESTMA payments to governments (Statistics Canada Open Licence) ---
     # No API key: Statistics Canada republishes every ESTMA report weekly as
@@ -731,6 +760,24 @@ class Settings(BaseSettings):
             "estma-index/estma.sqlite.gz"
         ),
         alias="ESTMA_DB_URL",
+    )
+
+    # --- Argentina: Registro Nacional de Sociedades + IGJ (datos.jus.gob.ar) ---
+    # No API key. Both datasets (CC BY 4.0) are downloaded from the Ministry
+    # of Justice's CKAN portal and built into a SQLite index by
+    # scripts/build_ar_sociedades_index.py on GitHub Actions
+    # (.github/workflows/refresh-ar-sociedades-index.yml), shipped as the
+    # ``ar-sociedades-index`` release asset. Unset: the data-root default
+    # (``ar_sociedades.sqlite``).
+    ar_sociedades_db_file: str | None = Field(default=None, alias="AR_SOCIEDADES_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    ar_sociedades_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "ar-sociedades-index/ar_sociedades.sqlite.gz"
+        ),
+        alias="AR_SOCIEDADES_DB_URL",
     )
 
     # --- Florida Division of Corporations (Sunbiz; Florida public records) ---
@@ -865,6 +912,25 @@ class Settings(BaseSettings):
             "dart-korea-index/dart_korea.sqlite.gz"
         ),
         alias="DART_KOREA_DB_URL",
+    )
+    # --- France Sirene (INSEE) + RNA (associations) — the France Sirene + RNA ticket ---
+    # The API Sirene 3.11 key from portail-api.insee.fr. It travels in the
+    # ``X-INSEE-Api-Key-Integration`` header (never the URL); 30 requests a
+    # minute per key, which the host throttle keeps to.
+    insee_sirene_api_key: str | None = Field(default=None, alias="INSEE_SIRENE_API_KEY")
+    # The Répertoire national des associations index built monthly from the
+    # Ministry of the Interior's waldec file by
+    # .github/workflows/refresh-rna-index.yml. Unset: the data-root default
+    # (``rna.sqlite``).
+    rna_db_file: str | None = Field(default=None, alias="RNA_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    rna_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "rna-index/rna.sqlite.gz"
+        ),
+        alias="RNA_DB_URL",
     )
     # --- ChileCompra (Mercado Público procurement, CC0) — Phase 280 ---
     # The supplier index built monthly from ChileCompra's open-data files by

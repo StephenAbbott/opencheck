@@ -54,6 +54,10 @@ from .dlcp_dc import (
 )
 from ..identifiers import colombian_nit as _colombian_nit
 from .rues_colombia import CO_RA_CODES as _CO_RA_CODES
+from .pa_dos import (
+    PA_DOS_RA_CODE as _PA_DOS_RA_CODE,
+    normalise_filing_number as _normalise_pa_filing_number,
+)
 from .ny_dos import NY_DOS_RA_CODE as _NY_DOS_RA_CODE, normalise_dos_id as _normalise_ny_dos_id
 from .cnpj_brazil import BR_RA_CODE as _BR_RA_CODE, normalise_cnpj as _normalise_cnpj
 from .inpi import (
@@ -76,6 +80,8 @@ from .cyprus_drcor import CY_DRCOR_RA_CODE as _CY_DRCOR_RA_CODE, he_number_spell
 from .rpo_slovakia import SK_RPO_RA_CODE as _SK_RPO_RA_CODE, normalise_ico as _normalise_sk_ico
 from .ur_latvia import LV_RA_CODE as _LV_RA_CODE, normalise_regcode as _normalise_lv_regcode
 from .edr_ukraine import UA_RA_CODES as _UA_RA_CODES
+from .registro_sociedades_argentina import AR_RA_CODES as _AR_RA_CODES
+from .registro_sociedades_argentina import cuit_spellings as _cuit_spellings
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 from .cvr_denmark import DK_CVR_RA_CODE as _DK_CVR_RA_CODE, normalise_cvr as _normalise_cvr
 
@@ -1159,6 +1165,14 @@ class GleifAdapter(SourceAdapter):
                     identifiers["us_ny_dos_id"] = _normalise_ny_dos_id(registered_as)
                 except ValueError:
                     pass
+            # Pennsylvania filing number — expose as ``us_pa_filing_number``
+            # so the reconciler can bridge GLEIF ↔ the Department of State;
+            # keyed on the RA code, never the jurisdiction (the NY rule).
+            if registered_at_id == _PA_DOS_RA_CODE:
+                try:
+                    identifiers["us_pa_filing_number"] = _normalise_pa_filing_number(registered_as)
+                except ValueError:
+                    pass
             # Colombian NIT — expose as ``co_nit`` so the reconciler can bridge
             # GLEIF ↔ RUES. Only a NIT whose check digit agrees: the same
             # authorities file chamber matrícula numbers too, and those are
@@ -1282,6 +1296,10 @@ class GleifAdapter(SourceAdapter):
         elif ra_code in _UA_RA_CODES:
             # Three Ukrainian authorities file the EDRPOU (the French shape).
             ra_codes = tuple(sorted(_UA_RA_CODES))
+        elif ra_code in _AR_RA_CODES:
+            # Three Argentine authorities file the CUIT, bare or hyphenated.
+            ra_codes = tuple(sorted(_AR_RA_CODES))
+            values = _cuit_spellings(local_id)
         elif ra_code == _BCE_RA_CODE:
             # GLEIF files the Belgian number dotted; the picker asked for digits.
             values = _enterprise_number_spellings(local_id)

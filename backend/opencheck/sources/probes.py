@@ -361,6 +361,24 @@ PROBES: dict[str, SourceProbe] = {
             "throttle."
         ),
     ),
+    "pa_dos": _p(
+        tier="live",
+        subject="Comcast Corporation (Pennsylvania)",
+        args=("3039985",),
+        kwargs={"legal_name": "COMCAST CORPORATION"},
+        expect_fields=("rows",),
+        anchor_lei="51M0QTTNCGUN7KFCFZ59",
+        bods_mapper="map_pa_dos",
+        notes=(
+            "The bare filing number exactly as GLEIF files it under RA000632; "
+            "the dataset pads it to 0003039985. Six rows on 12 Nov 2026 — "
+            "governor, president, secretary, director, treasurer. "
+            "``expect_fields`` asserts the rows, so the Department renaming "
+            "``filing_number`` reads as a failure rather than a quiet "
+            "no-record. Keyless; SOCRATA_APP_TOKEN, when set, only lifts the "
+            "shared per-IP throttle."
+        ),
+    ),
     "rues_colombia": _p(
         tier="live",
         subject="Banco de Bogotá (Colombia)",
@@ -588,6 +606,23 @@ PROBES: dict[str, SourceProbe] = {
             "green."
         ),
     ),
+    "sirene": _p(
+        tier="live",
+        subject="Transparency International France (FR-SIREN 425138393, an association)",
+        args=("425138393",),
+        kwargs={"legal_name": "TRANSPARENCY INTERNATIONAL FRANCE"},
+        anchor_lei="969500AEH12X8M5XEO53",
+        requires_env=("INSEE_SIRENE_API_KEY",),
+        expect_fields=("unit",),
+        expect_liveness=LIVE_OR_CACHED,
+        bods_mapper="map_sirene",
+        notes=(
+            "An association: INPI answers 404 for it, Sirene holds it. The RNA "
+            "index (rna.sqlite) is not required — without it the bundle carries "
+            "rna_status 'no_index' and the card still answers. A 401 or 403 is "
+            "the key, a 429 the 30-a-minute allowance."
+        ),
+    ),
     "jar_lithuania": _p(
         tier="index",
         subject="AB Ignitis grupė (LT-JAR 301844044)",
@@ -684,6 +719,29 @@ PROBES: dict[str, SourceProbe] = {
             "Authority's two data.gov.il registers, companies and "
             "partnerships, harvested daily through the CKAN datastore. "
             "Entity data only: no officers, shareholders or partners."
+        ),
+    ),
+    "registro_sociedades_argentina": _p(
+        tier="index",
+        subject="TOYOTA ARGENTINA S A (AR CUIT 33-67913936-9)",
+        args=("33-67913936-9",),
+        kwargs={"legal_name": "TOYOTA ARGENTINA S A"},
+        expect_fields=("cuit", "name", "rns", "igj"),
+        # SKIP without an index, never allow_empty. warm_bulk_stores.py
+        # downloads the asset first.
+        requires_files=("ar_sociedades.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # The RNS says "monthly" and was last refreshed on 18 Sept 2026
+        # (54 days before the wiring); the workflow rebuilds when either file
+        # changes. A hundred days means the publisher or the workflow stopped.
+        snapshot_max_age_days=100,
+        anchor_lei="9845004CFFA9576DC662",
+        bods_mapper="map_registro_sociedades_argentina",
+        notes=(
+            "The Argentina wiring (11 Nov 2026): an index of the Registro "
+            "Nacional de Sociedades and the IGJ's entities from "
+            "datos.jus.gob.ar (CC BY 4.0). Entity data only: IGJ people are "
+            "counted, never listed; no shareholders are published."
         ),
     ),
     "cyprus_drcor": _p(

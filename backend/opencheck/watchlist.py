@@ -94,7 +94,7 @@ import threading
 import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -1821,6 +1821,21 @@ class WatcherState:
     ee_gaps: int = 0
     ee_last_gap_at: str | None = None
     ee_last_error: str | None = None
+    il_last_cut: str | None = None  # the last Israeli index day read (register tier)
+    il_last_checked_at: str | None = None
+    il_days_read: int = 0
+    il_queued: int = 0
+    il_waiting: bool = False
+    il_gaps: int = 0
+    il_last_gap_at: str | None = None
+    il_last_error: str | None = None
+    fr_last_day: str | None = None  # the BODACC tier's watermark (publication day)
+    fr_last_checked_at: str | None = None
+    fr_sirens_read: int = 0
+    fr_notices_new: int = 0
+    fr_queued: int = 0
+    fr_unavailable: int = 0  # SIREN reads BODACC did not answer
+    fr_last_error: str | None = None
     # pKYC stage E, Route 1 — the Companies House PSC stream tier. Counts
     # only: events the hook saw, how many touched a watched company, re-runs
     # queued, filings folded into a pending re-run, stream gaps answered.
@@ -2303,8 +2318,8 @@ def merge_register_changes(days: list[tuple[str, dict[str, Any]]]) -> dict[str, 
     }
 
 
-def ariregister_gaps(store: "WatchlistStore") -> list[dict[str, Any]]:
-    raw = store.get_meta(ARIREGISTER_GAPS_KEY)
+def _register_gaps(store: "WatchlistStore", key: str) -> list[dict[str, Any]]:
+    raw = store.get_meta(key)
     try:
         gaps = json.loads(raw) if raw else []
     except json.JSONDecodeError:
@@ -2312,34 +2327,62 @@ def ariregister_gaps(store: "WatchlistStore") -> list[dict[str, Any]]:
     return gaps if isinstance(gaps, list) else []
 
 
-def _record_ariregister_gap(
-    store: "WatchlistStore", codes: dict[str, list[str]], gap: dict[str, Any]
+def ariregister_gaps(store: "WatchlistStore") -> list[dict[str, Any]]:
+    return _register_gaps(store, ARIREGISTER_GAPS_KEY)
+
+
+@dataclass(frozen=True)
+class _RegisterFeed:
+    """One register's daily index diff, as the register tier reads it. The
+    Estonian e-Business Register was the first (16 Oct 2026); the Israel
+    Corporations Authority the second (11 Nov 2026). Everything that differs
+    between them is here; :func:`_register_delta_tick` is the one reading."""
+
+    register: str  # the trigger's ``register``
+    adjective: str  # "Estonian" — for the log
+    cut_key: str
+    gaps_key: str
+    state_prefix: str  # ``ee`` → ``ee_last_cut`` … on :class:`WatcherState`
+    read_meta: Callable[[], dict[str, str]]
+    delta_url: Callable[[], str]
+    watched: Callable[["WatchlistStore"], dict[str, list[str]]]
+    merge: Callable[[list[tuple[str, dict[str, Any]]]], dict[str, Any]]
+
+
+def _record_register_gap(
+    feed: _RegisterFeed, store: "WatchlistStore", codes: dict[str, list[str]], gap: dict[str, Any]
 ) -> int:
     """Index days the delta cannot account for (a build that could not be
     diffed, or a day too large to list): record them and queue a catch-up
-    re-run of every watched Estonian company — the OpenSanctions gap rule."""
+    re-run of every watched company on that register — the OpenSanctions gap
+    rule."""
     gap = {**gap, "detected_at": _now_iso()}
-    store.set_meta(ARIREGISTER_GAPS_KEY, json.dumps((ariregister_gaps(store) + [gap])[-ARIREGISTER_GAPS_KEPT:]))
-    trigger = {"tier": TIER_CATCHUP, "reason": "register_gap", "register": "ariregister",
+    store.set_meta(feed.gaps_key, json.dumps((_register_gaps(store, feed.gaps_key) + [gap])[-ARIREGISTER_GAPS_KEPT:]))
+    trigger = {"tier": TIER_CATCHUP, "reason": "register_gap", "register": feed.register,
                "after": gap.get("after"), "before": gap.get("before")}
     queued = 0
     for lei in sorted({lei for leis in codes.values() for lei in leis}):
         if store.enqueue(lei, TIER_CATCHUP, trigger):
             queued += 1
     log.warning(
-        "watchlist: Estonian register days could not be read (%s, after %s, up to %s); queued %d catch-up re-run%s",
-        gap.get("detail"), gap.get("after"), gap.get("before"), queued, "" if queued == 1 else "s",
+        "watchlist: %s register days could not be read (%s, after %s, up to %s); queued %d catch-up re-run%s",
+        feed.adjective, gap.get("detail"), gap.get("after"), gap.get("before"), queued, "" if queued == 1 else "s",
     )
     with _state_lock:
-        _state.ee_gaps += 1
-        _state.ee_last_gap_at = gap["detected_at"]
+        p = feed.state_prefix
+        setattr(_state, f"{p}_gaps", getattr(_state, f"{p}_gaps") + 1)
+        setattr(_state, f"{p}_last_gap_at", gap["detected_at"])
     return queued
 
 
-def _fetch_ariregister_delta(client: Any) -> dict[str, Any]:
-    from .config import get_settings
+def _record_ariregister_gap(
+    store: "WatchlistStore", codes: dict[str, list[str]], gap: dict[str, Any]
+) -> int:
+    return _record_register_gap(_ARIREGISTER_FEED, store, codes, gap)
 
-    r = client.get(get_settings().ariregister_delta_url, timeout=60.0)
+
+def _fetch_register_delta(client: Any, url: str) -> dict[str, Any]:
+    r = client.get(url, timeout=60.0)
     r.raise_for_status()
     doc = r.json()
     if not isinstance(doc, dict):
@@ -2347,55 +2390,64 @@ def _fetch_ariregister_delta(client: Any) -> dict[str, Any]:
     return doc
 
 
-def ariregister_tick(client: Any | None = None) -> dict[str, Any]:
-    """Read the Estonian index's daily delta and queue a re-run for each
+def _fetch_ariregister_delta(client: Any) -> dict[str, Any]:
+    from .config import get_settings
+
+    return _fetch_register_delta(client, get_settings().ariregister_delta_url)
+
+
+def _register_delta_tick(feed: _RegisterFeed, client: Any | None = None) -> dict[str, Any]:
+    """Read a register index's daily delta and queue a re-run for each
     watched company whose register record changed. Runs on a thread.
 
     Reads only when the index this server holds is newer than the last day
-    read (``meta.ariregister_cut``), so the re-run reads the changed record
+    read (``meta.<register>_cut``), so the re-run reads the changed record
     rather than yesterday's, and the file is fetched about once a day. The
     first run marks the current day and starts from the next: changes from
     before the tier existed are not news. Days are read oldest first; the
     watermark moves past a day only once it was read or recorded as a gap. A
     day the delta cannot account for — a build that was not diffed, or a day
     too large to list (``suspect``) — is a gap: a catch-up re-run of every
-    watched Estonian company. A delta file older than the index (published a
-    moment after it) is waited for.
+    watched company on the register. A delta file older than the index
+    (published a moment after it) is waited for.
     """
     import httpx
 
-    from .sources import ariregister as ar
+    p = feed.state_prefix
+
+    def bump(**kw: Any) -> None:
+        _bump(**{f"{p}_{k}": v for k, v in kw.items()})
 
     out: dict[str, Any] = {"days": 0, "queued": 0}
     store = get_store()
     if store is None:
         return out
-    _bump(ee_last_checked_at=_now_iso())
+    bump(last_checked_at=_now_iso())
     try:
-        meta = ar.read_meta()
+        meta = feed.read_meta()
     except Exception:  # noqa: BLE001 — no index is a state
         meta = {}
     cut = meta.get("cut") or None
     if not cut:
         return {**out, "skipped": "no index"}
-    last = store.get_meta(ARIREGISTER_CUT_KEY)
+    last = store.get_meta(feed.cut_key)
     if last is None:
-        store.set_meta(ARIREGISTER_CUT_KEY, cut)
-        _bump(ee_last_cut=cut, ee_waiting=False)
+        store.set_meta(feed.cut_key, cut)
+        bump(last_cut=cut, waiting=False)
         return {**out, "started": cut}
     if cut <= last:
-        _bump(ee_last_cut=last, ee_waiting=False)
+        bump(last_cut=last, waiting=False)
         return out
-    codes = watched_ariregister_codes(store)
+    codes = feed.watched(store)
     if not codes:
-        # Nothing Estonian is watched: move on without downloading anything.
-        store.set_meta(ARIREGISTER_CUT_KEY, cut)
-        _bump(ee_last_cut=cut, ee_waiting=False)
+        # Nothing on this register is watched: move on without downloading.
+        store.set_meta(feed.cut_key, cut)
+        bump(last_cut=cut, waiting=False)
         return out
     own_client = client is None
     client = client or httpx.Client(follow_redirects=True, headers={"User-Agent": "OpenCheck watchlist"})
     try:
-        doc = _fetch_ariregister_delta(client)
+        doc = _fetch_register_delta(client, feed.delta_url())
         if int(doc.get("schema") or 0) != 1:
             raise ValueError(f"unknown delta schema {doc.get('schema')!r}")
         days = sorted(
@@ -2409,7 +2461,7 @@ def ariregister_tick(client: Any | None = None) -> dict[str, Any]:
                 days.append({"cut": cut, "previous_cut": str(days[-1]["cut"]) if days else last,
                              "missing": True})
             elif not days:
-                _bump(ee_waiting=True)
+                bump(waiting=True)
                 return {**out, "waiting": cut}
         per_lei: dict[str, list[tuple[str, dict[str, Any]]]] = {}
         expected = last
@@ -2422,8 +2474,8 @@ def ariregister_tick(client: Any | None = None) -> dict[str, Any]:
                     else "not diffed" if day.get("missing")
                     else "the build before it was not diffed"
                 )
-                out["catch_up_queued"] = out.get("catch_up_queued", 0) + _record_ariregister_gap(
-                    store, codes, {"after": expected, "before": day_cut, "detail": detail}
+                out["catch_up_queued"] = out.get("catch_up_queued", 0) + _record_register_gap(
+                    feed, store, codes, {"after": expected, "before": day_cut, "detail": detail}
                 )
                 out["gaps"] = out.get("gaps", 0) + 1
             if not day.get("suspect") and not day.get("missing"):
@@ -2436,13 +2488,13 @@ def ariregister_tick(client: Any | None = None) -> dict[str, Any]:
             expected = day_cut
             out["days"] += 1
         for lei, items in sorted(per_lei.items()):
-            merged = merge_register_changes(items)
+            merged = feed.merge(items)
             if not merged:
                 continue
             code = next(c for c, leis in codes.items() if lei in leis)
             trigger = {
                 "tier": TIER_REGISTER,
-                "register": "ariregister",
+                "register": feed.register,
                 "code": code,
                 "cuts": [c for c, _ in items],
                 "changes": merged,
@@ -2450,20 +2502,408 @@ def ariregister_tick(client: Any | None = None) -> dict[str, Any]:
             if store.enqueue(lei, TIER_REGISTER, trigger):
                 out["queued"] += 1
         new_last = str(days[-1]["cut"]) if days else last
-        store.set_meta(ARIREGISTER_CUT_KEY, new_last)
-        _bump(ee_last_cut=new_last, ee_days_read=out["days"], ee_queued=out["queued"],
-              ee_waiting=new_last < cut, ee_last_error=None)
+        store.set_meta(feed.cut_key, new_last)
+        bump(last_cut=new_last, days_read=out["days"], queued=out["queued"],
+             waiting=new_last < cut, last_error=None)
         if out["queued"]:
-            log.info("watchlist: the Estonian register changed %d watched compan%s",
-                     out["queued"], "y" if out["queued"] == 1 else "ies")
+            log.info("watchlist: the %s register changed %d watched compan%s",
+                     feed.adjective, out["queued"], "y" if out["queued"] == 1 else "ies")
         return out
     except Exception as exc:  # noqa: BLE001 — the next tick retries the same days
-        log.warning("watchlist: Estonian register delta failed: %s", describe_exception(exc))
-        _bump(ee_last_error=describe_exception(exc))
+        log.warning("watchlist: %s register delta failed: %s", feed.adjective, describe_exception(exc))
+        bump(last_error=describe_exception(exc))
         return out
     finally:
         if own_client:
             client.close()
+
+
+def _ariregister_meta() -> dict[str, str]:
+    from .sources import ariregister as ar
+
+    return ar.read_meta()
+
+
+def _ariregister_delta_url() -> str:
+    from .config import get_settings
+
+    return get_settings().ariregister_delta_url
+
+
+_ARIREGISTER_FEED = _RegisterFeed(
+    register="ariregister",
+    adjective="Estonian",
+    cut_key=ARIREGISTER_CUT_KEY,
+    gaps_key=ARIREGISTER_GAPS_KEY,
+    state_prefix="ee",
+    read_meta=_ariregister_meta,
+    delta_url=_ariregister_delta_url,
+    watched=lambda store: watched_ariregister_codes(store),
+    merge=lambda items: merge_register_changes(items),
+)
+
+
+def ariregister_tick(client: Any | None = None) -> dict[str, Any]:
+    """The Estonian e-Business Register's daily delta (see
+    :func:`_register_delta_tick`)."""
+    return _register_delta_tick(_ARIREGISTER_FEED, client)
+
+
+# ---------------------------------------------------------------------------
+# Tier 3 — the Israel Corporations Authority's index diff (11 Nov 2026)
+# ---------------------------------------------------------------------------
+
+#: The fields of the companies and partnerships files the delta compares
+#: (``scripts/diff_ica_israel_index.py``: ``ENTITY_FIELDS``, pinned by a
+#: test). The change log's material filings travel as ``filings``: a list of
+#: ``[request code, day]`` — the log names the kind of filing, never who or
+#: what (Stephen, 11 Nov 2026: the recommended material set; charges are not
+#: material).
+ICA_ISRAEL_FIELDS = ("name", "status", "sub_status", "violating")
+ICA_ISRAEL_FLAGS = ("added", "removed")
+#: GLEIF's registration authority for the Israel Corporations Authority.
+ICA_ISRAEL_RA = "RA000406"
+ICA_ISRAEL_CUT_KEY = "ica_israel_cut"
+ICA_ISRAEL_GAPS_KEY = "ica_israel_gaps"
+
+#: How the feed and the page name each field of an Israeli register change.
+#: The page keeps a copy in ``lib/watchlist.ts`` (``IL_CHANGE_WORDS``),
+#: pinned by a test.
+IL_CHANGE_WORDS: dict[str, str] = {
+    "name": "Name",
+    "status": "Status",
+    "sub_status": "Sub-status",
+    "violating": "Violating mark",
+}
+
+
+def _il_number(value: Any) -> str | None:
+    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+    return digits if len(digits) == 9 else None
+
+
+def watch_il_number(row: dict[str, Any]) -> str | None:
+    """A watch's Israeli corporate number: GLEIF's ``registeredAs`` where
+    ``registeredAt`` is the Israel Corporations Authority, else the ``IL-ROC``
+    identifier the baseline lookup read. None for any other company."""
+    facts = row.get("gleif_facts") or {}
+    if facts.get("registered_at") == ICA_ISRAEL_RA:
+        number = _il_number(facts.get("registered_as"))
+        if number:
+            return number
+    identifiers_ = (row.get("snapshot") or {}).get("identifiers") or {}
+    return _il_number(identifiers_.get("IL-ROC"))
+
+
+def watched_il_numbers(store: "WatchlistStore") -> dict[str, list[str]]:
+    """``corporate number → [LEIs]`` across every list."""
+    out: dict[str, list[str]] = {}
+    with store._conn() as conn:
+        rows = conn.execute("SELECT lei, gleif_facts_json, snapshot_json FROM watches").fetchall()
+    for r in rows:
+        number = watch_il_number(
+            {
+                "gleif_facts": json.loads(r["gleif_facts_json"]) if r["gleif_facts_json"] else None,
+                "snapshot": json.loads(r["snapshot_json"]) if r["snapshot_json"] else None,
+            }
+        )
+        if number and r["lei"] not in out.setdefault(number, []):
+            out[number].append(r["lei"])
+    return out
+
+
+def merge_il_changes(days: list[tuple[str, dict[str, Any]]]) -> dict[str, Any]:
+    """One corporation's Israeli changes over several days as one: every
+    filing once, in day order, as ``{code, day, group, label}`` (the label in
+    English, so the page needs no copy of the code table); a field from its
+    first value to its last (one that came back is no change); a flag if any
+    day set it. Unknown keys are left out."""
+    from .sources.ica_israel_changes import REQUEST_LABELS, group_of
+
+    filings: set[tuple[int, str]] = set()
+    out: dict[str, Any] = {}
+    for _cut, change in days:
+        for item in change.get("filings") or []:
+            if isinstance(item, list) and len(item) == 2:
+                try:
+                    filings.add((int(item[0]), str(item[1])))
+                except (TypeError, ValueError):
+                    continue
+        for key in ICA_ISRAEL_FIELDS:
+            pair = change.get(key)
+            if not (isinstance(pair, list) and len(pair) == 2):
+                continue
+            out[key] = [out[key][0], pair[1]] if key in out else list(pair)
+        for flag in ICA_ISRAEL_FLAGS:
+            if change.get(flag):
+                out[flag] = True
+    out = {k: v for k, v in out.items() if k in ICA_ISRAEL_FLAGS or v[0] != v[1]}
+    if filings:
+        out["filings"] = [
+            {"code": code, "day": day, "group": group_of(code),
+             "label": REQUEST_LABELS.get(code) or f"Request type {code}"}
+            for code, day in sorted(filings, key=lambda f: (f[1], f[0]))
+        ]
+    return out
+
+
+def il_change_lines(changes: dict[str, Any]) -> list[str]:
+    """One sentence per filing and field of an Israeli register trigger: a
+    filing as the register's kind of request and its day — never what it
+    changed to, which the change log does not say."""
+    lines: list[str] = []
+    if changes.get("removed"):
+        lines.append("The corporation is no longer in the register's open data.")
+    if changes.get("added"):
+        lines.append("The corporation appeared in the register's open data.")
+    for item in changes.get("filings") or []:
+        if not isinstance(item, dict):
+            continue
+        note = "; parties not published" if item.get("group") == "shares" else ""
+        lines.append(f"{item.get('label')} recorded by the Corporations Authority on {item.get('day')}{note}.")
+    for key in ICA_ISRAEL_FIELDS:
+        pair = changes.get(key)
+        if not (isinstance(pair, list) and len(pair) == 2):
+            continue
+        old, new = pair
+        lines.append(f"{IL_CHANGE_WORDS[key]}: {old or '—'} → {new or '—'}.")
+    return lines
+
+
+def ica_israel_gaps(store: "WatchlistStore") -> list[dict[str, Any]]:
+    return _register_gaps(store, ICA_ISRAEL_GAPS_KEY)
+
+
+def _ica_israel_meta() -> dict[str, str]:
+    from .sources import ica_israel
+
+    return ica_israel.read_meta()
+
+
+def _ica_israel_delta_url() -> str:
+    from .config import get_settings
+
+    return get_settings().ica_israel_delta_url
+
+
+_ICA_ISRAEL_FEED = _RegisterFeed(
+    register="ica_israel",
+    adjective="Israeli",
+    cut_key=ICA_ISRAEL_CUT_KEY,
+    gaps_key=ICA_ISRAEL_GAPS_KEY,
+    state_prefix="il",
+    read_meta=_ica_israel_meta,
+    delta_url=_ica_israel_delta_url,
+    watched=lambda store: watched_il_numbers(store),
+    merge=lambda items: merge_il_changes(items),
+)
+
+
+def ica_israel_tick(client: Any | None = None) -> dict[str, Any]:
+    """The Israel Corporations Authority index's daily delta (see
+    :func:`_register_delta_tick`)."""
+    return _register_delta_tick(_ICA_ISRAEL_FEED, client)
+
+
+# ---------------------------------------------------------------------------
+# Tier 3 — BODACC, France's bulletin of notices (11 Nov 2026)
+# ---------------------------------------------------------------------------
+#
+# Not an index diff: BODACC is read live, one query per watched SIREN for the
+# notices published since the last read (Stephen, 11 Nov 2026: decision A, no
+# index). A notice is news once — its id is remembered — and only for a watch
+# that existed when it was published. What it does to the entry's tier is
+# decision D (``watchlist_materiality.BODACC_KIND_TIER``); accounts filed, a new
+# establishment and a registration queue nothing at all.
+
+BODACC_DAY_KEY = "bodacc_last_day"
+BODACC_SEEN_KEY = "bodacc_seen"
+BODACC_CHECKED_KEY = "bodacc_checked_at"
+#: Days re-read before the watermark: a notice indexed late still arrives.
+BODACC_LOOKBACK_DAYS = 3
+#: GLEIF's registration authorities that file a SIREN (the History rule).
+BODACC_RA_CODES = frozenset({"RA000189", "RA000192", "RA001129"})
+
+
+def watch_fr_siren(row: dict[str, Any]) -> str | None:
+    """A watch's SIREN: GLEIF's ``registeredAs`` under a French register, else
+    the ``FR-INSEE`` identifier the baseline lookup read."""
+    from .bodacc import normalise_siren
+
+    facts = row.get("gleif_facts") or {}
+    if facts.get("registered_at") in BODACC_RA_CODES:
+        siren = normalise_siren(facts.get("registered_as"))
+        if siren:
+            return siren
+    identifiers_ = (row.get("snapshot") or {}).get("identifiers") or {}
+    return normalise_siren(identifiers_.get("FR-INSEE"))
+
+
+def watched_fr_sirens(store: "WatchlistStore") -> dict[str, dict[str, str]]:
+    """``SIREN → {LEI: the day it was first watched}`` across every list."""
+    out: dict[str, dict[str, str]] = {}
+    with store._conn() as conn:
+        rows = conn.execute(
+            "SELECT lei, added_at, gleif_facts_json, snapshot_json FROM watches"
+        ).fetchall()
+    for r in rows:
+        siren = watch_fr_siren(
+            {
+                "gleif_facts": json.loads(r["gleif_facts_json"]) if r["gleif_facts_json"] else None,
+                "snapshot": json.loads(r["snapshot_json"]) if r["snapshot_json"] else None,
+            }
+        )
+        if not siren:
+            continue
+        day = str(r["added_at"] or "")[:10]
+        leis = out.setdefault(siren, {})
+        if r["lei"] not in leis or day < leis[r["lei"]]:
+            leis[r["lei"]] = day
+    return out
+
+
+def _bodacc_trigger_notice(notice: dict[str, Any]) -> dict[str, Any]:
+    """What a trigger keeps of a notice: no person, as the reader allows."""
+    from .timeline.bodacc import counterparty_words
+
+    return {
+        "id": notice.get("id"),
+        "url": notice.get("url"),
+        "kind": notice.get("kind"),
+        "label": notice.get("label"),
+        "published": notice.get("published"),
+        "effective": notice.get("effective"),
+        "role": notice.get("role"),
+        "counterparty": counterparty_words(notice.get("counterparty")),
+    }
+
+
+def bodacc_change_lines(changes: dict[str, Any]) -> list[str]:
+    """One sentence per BODACC notice in a trigger."""
+    lines: list[str] = []
+    for n in changes.get("notices") or []:
+        if not isinstance(n, dict):
+            continue
+        when = n.get("effective") or n.get("published")
+        line = f"{n.get('label')}"
+        if n.get("effective"):
+            line += f" (judgment of {when}; published in BODACC {n.get('published')})"
+        else:
+            line += f" (published in BODACC {n.get('published')})"
+        if n.get("counterparty"):
+            line += f" — buyer: {n['counterparty']}"
+        lines.append(line + ".")
+    return lines
+
+
+def bodacc_tick(client: Any | None = None, *, force: bool = False, today: str | None = None) -> dict[str, Any]:
+    """Read the notices BODACC published since the last read for every watched
+    SIREN and queue a re-run where one is material. Runs on a thread.
+
+    The first run marks today and starts from there: notices from before the
+    tier existed are not news. The watermark moves only when every SIREN was
+    read; a SIREN BODACC did not answer is read again next time (the lookback
+    grows with it), and a notice already seen is never queued twice.
+    """
+    import httpx
+
+    from . import bodacc as _bodacc
+    from .config import get_settings
+
+    out: dict[str, Any] = {"sirens": 0, "notices": 0, "queued": 0, "unavailable": 0}
+    settings = get_settings()
+    interval = settings.watchlist_bodacc_interval_s
+    if interval <= 0 or not settings.allow_live:
+        return {**out, "skipped": "disabled"}
+    store = get_store()
+    if store is None:
+        return out
+    now = datetime.now(UTC)
+    if not force:
+        last_checked = store.get_meta(BODACC_CHECKED_KEY)
+        if last_checked is not None:
+            try:
+                then = datetime.strptime(last_checked, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+            except ValueError:
+                then = None
+            if then is not None and (now - then).total_seconds() < interval:
+                return {**out, "skipped": "not due"}
+    today = today or now.date().isoformat()
+    store.set_meta(BODACC_CHECKED_KEY, _now_iso())
+    _bump(fr_last_checked_at=_now_iso())
+    last = store.get_meta(BODACC_DAY_KEY)
+    if last is None:
+        store.set_meta(BODACC_DAY_KEY, today)
+        _bump(fr_last_day=today)
+        return {**out, "started": today}
+    sirens = watched_fr_sirens(store)
+    if not sirens:
+        store.set_meta(BODACC_DAY_KEY, today)
+        _bump(fr_last_day=today)
+        return out
+    since = (date.fromisoformat(min(last, today)) - timedelta(days=BODACC_LOOKBACK_DAYS)).isoformat()
+    try:
+        seen: dict[str, str] = json.loads(store.get_meta(BODACC_SEEN_KEY) or "{}")
+    except ValueError:
+        seen = {}
+    own_client = client is None
+    client = client or httpx.Client(follow_redirects=True, headers={"User-Agent": "OpenCheck watchlist"})
+    per_lei: dict[str, tuple[str, list[dict[str, Any]]]] = {}
+    try:
+        for siren, leis in sorted(sirens.items()):
+            try:
+                notices = _bodacc.recent_notices_sync(siren, since=since, client=client)
+            except _bodacc.BodaccUnavailable as exc:
+                out["unavailable"] += 1
+                _bump(fr_last_error=exc.detail)
+                continue
+            out["sirens"] += 1
+            for n in sorted(notices, key=lambda n: (n["published"], n["id"])):
+                if n["id"] in seen:
+                    continue
+                seen[n["id"]] = n["published"]
+                out["notices"] += 1
+                if materiality.bodacc_notice_tier(n) is None:
+                    continue  # decision D: accounts, a new establishment, a registration
+                for lei, added in leis.items():
+                    if n["published"] < added:
+                        continue  # published before this company was watched
+                    per_lei.setdefault(lei, (siren, []))[1].append(_bodacc_trigger_notice(n))
+    finally:
+        if own_client:
+            client.close()
+    for lei, (siren, items) in sorted(per_lei.items()):
+        trigger = {
+            "tier": TIER_REGISTER,
+            "register": "bodacc",
+            "code": siren,
+            "cuts": sorted({i["published"] for i in items}),
+            "changes": {"notices": items},
+        }
+        if store.enqueue(lei, TIER_REGISTER, trigger):
+            out["queued"] += 1
+    store.set_meta(
+        BODACC_SEEN_KEY, json.dumps({k: v for k, v in seen.items() if v >= since}, sort_keys=True)
+    )
+    if out["unavailable"] == 0:
+        store.set_meta(BODACC_DAY_KEY, today)
+        _bump(fr_last_day=today, fr_last_error=None)
+    _bump(fr_sirens_read=out["sirens"], fr_notices_new=out["notices"], fr_queued=out["queued"],
+          fr_unavailable=out["unavailable"])
+    if out["queued"]:
+        log.info("watchlist: BODACC published notices on %d watched compan%s",
+                 out["queued"], "y" if out["queued"] == 1 else "ies")
+    return out
+
+
+def register_change_lines_for(trigger: dict[str, Any]) -> list[str]:
+    """The trigger's change lines, in its register's words."""
+    changes = trigger.get("changes") or {}
+    if trigger.get("register") == "bodacc":
+        return bodacc_change_lines(changes)
+    if trigger.get("register") == "ica_israel":
+        return il_change_lines(changes)
+    return register_change_lines(changes)
 
 
 # ---------------------------------------------------------------------------
@@ -2728,6 +3168,8 @@ async def tick() -> dict[str, Any]:
         # The register tier: cheap when the index has not moved (one meta
         # read), and it queues before the drain so a change runs this tick.
         out["register"] = await asyncio.to_thread(ariregister_tick)
+        out["register_il"] = await asyncio.to_thread(ica_israel_tick)
+        out["register_fr"] = await asyncio.to_thread(bodacc_tick)
         for item in await asyncio.to_thread(store.take_pending, settings.watchlist_reruns_per_tick):
             await rerun(item["lei"], item["tier"], item["trigger"])
             out["reruns"] += 1

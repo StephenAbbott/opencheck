@@ -33,6 +33,7 @@ from typing import Any
 from xml.sax.saxutils import escape
 
 from ..bods.lifecycle import ended_phrase, interest_ended, statement_lifecycle
+from ..bods.undated import UNDATED_LABEL, is_undated
 from ..bods.officer_roles import officer_label, officer_position
 
 # Node palette — BOVS node colours.
@@ -278,6 +279,9 @@ def _edge_label(stmt: dict[str, Any]) -> tuple[list[list[str]], str]:
         dates.append(f"from {starts[0]}")
     if life.ended:
         dates.append(ended_phrase(life.ended_on))
+    elif is_undated(stmt):
+        # The undated-relationships ticket: the canvas's "no date given" line.
+        dates.append(UNDATED_LABEL)
     if dates:
         lines.append(dates)
     return lines, categorise(shown)
@@ -680,7 +684,7 @@ def _return_curve(
 #: "Owns 9.6%", the post-deploy re-test, 7 Nov 2026).
 _RETURN_LABEL_TS = (0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.15, 0.85)
 #: Then off the apex, below and above it in turn, in steps.
-_RETURN_LABEL_DROPS = tuple(d for k in range(1, 9) for d in (14 * k, -14 * k))
+_RETURN_LABEL_DROPS = tuple(d for k in range(1, 17) for d in (14 * k, -14 * k))
 
 
 def _place_return_label(

@@ -339,9 +339,20 @@ def map_dart_korea(bundle: dict[str, Any]) -> BODSBundle:
         founding_date=kr.parse_ymd(company.get("est_dt")),
         addresses=[_addr("registered", address, "KR")] if address else [],
         alternate_names=[english] if english else [],
-        entity_details=kr_listing_words(company),
         source_url=company_url,
     )
+    # A listing is not a legal form: Open DART publishes the market a filer
+    # is listed on (corp_cls) and no legal form, so the listing is said in a
+    # note and entityType.details stays empty — the subject profile reads
+    # entityType.details as the legal form.
+    listing = kr_listing_words(company)
+    if listing:
+        annotate(entity, commenting(
+            pointer("recordDetails"),
+            f"Open DART records this filer as "
+            f"{listing if listing.startswith('listed') else 'an ' + listing}. "
+            "Open DART publishes no legal form.",
+        ))
     if not bundle.get("profile_read", True):
         annotate(entity, commenting(
             pointer("recordDetails"),

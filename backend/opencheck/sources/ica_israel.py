@@ -290,10 +290,12 @@ def _shared_conn() -> sqlite3.Connection | None:
     return _SHARED.get("conn")
 
 
-def reset_connection() -> None:
-    """Forget the cached connection (after a download, or in tests)."""
+def reset_connection(*, close: bool = True) -> None:
+    """Forget the cached connection (after a download, or in tests).
+    ``close=False`` leaves closing to the garbage collector, for a file
+    replaced while lookups may be reading it."""
     conn = _SHARED.pop("conn", None)
-    if conn is not None:
+    if conn is not None and close:
         try:
             conn.close()
         except sqlite3.Error:  # pragma: no cover - best effort
@@ -372,11 +374,32 @@ def warm_index() -> dict[str, Any]:
         else:
             outcome = "downloaded"
         downloaded, elapsed = download_db(url, path, last_modified=last_modified)
-        reset_connection()
+        # A replaced file may be in use by a lookup: drop the connection
+        # without closing it, so a query in flight finishes on the old file.
+        reset_connection(close=outcome == "downloaded")
         return {"ica_israel": f"{outcome}: {path} ({downloaded} bytes in {elapsed:.1f}s)"}
     except Exception as exc:  # noqa: BLE001 — no index is a state, not a crash
         logger.warning("ica_israel: asset check/download failed: %s", exc)
         return {"ica_israel": f"failed: {exc}"}
+
+
+async def refresh_loop(interval_s: float) -> None:
+    """Re-run :func:`warm_index` every ``interval_s`` seconds, so the daily
+    index lands without a restart — the watchlist's register tier re-runs a
+    changed company against the day it was told about (the Estonian
+    arrangement). The first run is one interval after boot."""
+    import asyncio
+
+    while True:
+        await asyncio.sleep(interval_s)
+        try:
+            result = await asyncio.to_thread(warm_index)
+            if not str(result.get("ica_israel", "")).startswith("already present"):
+                logger.info("ica_israel: refresh: %s", result)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ica_israel: refresh loop iteration failed: %s", exc)
 
 
 _ENTITY_COLUMNS = (
@@ -396,6 +419,54 @@ def entity_record(number: str) -> dict[str, Any] | None:
         f"SELECT {_ENTITY_COLUMNS} FROM entity WHERE number = ?", (number,)
     ).fetchone()
     return dict(row) if row is not None else None
+
+
+def change_rows(number: str) -> list[dict[str, Any]] | None:
+    """The change log's rows for one corporate number, oldest first:
+    ``{"code", "words", "day", "charge_id", "first_seen", "retained"}``
+    (``charge_id`` None for a row that is not about a charge). ``[]`` when the
+    log holds none; None when there is no index or the index carries no change
+    log (built before it, or without it — the Estonia rule, no schema bump)."""
+    conn = _shared_conn()
+    if conn is None:
+        return None
+    try:
+        if conn.execute("SELECT 1 FROM meta WHERE key = 'changes_cut'").fetchone() is None:
+            return None
+        rows = conn.execute(
+            "SELECT c.code, r.words, c.day, c.charge_id, c.first_seen, c.retained "
+            "FROM change AS c LEFT JOIN request_type AS r ON r.code = c.code "
+            "WHERE c.number = ? ORDER BY c.day, c.code, c.charge_id",
+            (number,),
+        ).fetchall()
+    except sqlite3.OperationalError as exc:
+        if "no such table" in str(exc):
+            return None
+        raise
+    return [
+        {
+            "code": row["code"], "words": row["words"], "day": row["day"],
+            "charge_id": row["charge_id"] or None, "first_seen": row["first_seen"],
+            "retained": bool(row["retained"]),
+        }
+        for row in rows
+    ]
+
+
+def change_coverage(meta: dict[str, str] | None = None) -> dict[str, str] | None:
+    """What the change log in the index covers: ``window_start`` (the
+    register's own year), ``kept_since`` (the earliest day OpenCheck holds,
+    retained rows included), ``first_cut`` (the day OpenCheck began keeping
+    them) and ``cut``. None without a change log."""
+    meta = read_meta() if meta is None else meta
+    if not meta.get("changes_cut"):
+        return None
+    return {
+        "cut": meta["changes_cut"],
+        "window_start": meta.get("changes_window_start") or meta["changes_cut"],
+        "kept_since": meta.get("changes_kept_since") or meta.get("changes_window_start") or meta["changes_cut"],
+        "first_cut": meta.get("changes_first_cut") or meta["changes_cut"],
+    }
 
 
 # ---------------------------------------------------------------------------

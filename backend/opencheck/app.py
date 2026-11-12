@@ -209,6 +209,18 @@ async def _warm_caches_background() -> None:
         raise
     except Exception as exc:  # noqa: BLE001
         log.warning("Open DART crosswalk warm-up failed (not announced until present): %s", exc)
+    # The Répertoire national des associations index (the France Sirene + RNA
+    # ticket), rebuilt monthly by a GitHub workflow. Without it ``sirene``
+    # still answers, without the associations' RNA records.
+    try:
+        from .sources.rna_index import warm_index as warm_rna_index
+
+        stats = await asyncio.to_thread(warm_rna_index)
+        log.info("RNA index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning("RNA index warm-up failed (Sirene answers without it): %s", exc)
     # The Belgium wiring: the KBO Open Data index, rebuilt monthly by a GitHub
     # workflow with the portal's free login, downloaded here when absent or
     # changed. Until it lands ``bce_belgium`` is not announced.
@@ -323,6 +335,24 @@ async def _warm_caches_background() -> None:
         log.warning(
             "Slovenian Business Register index warm-up failed (the source "
             "is not announced until present): %s",
+            exc,
+        )
+    # The Argentina wiring: the RNS + IGJ index, rebuilt by a GitHub workflow
+    # when either dataset changes and downloaded here when absent or changed.
+    # Until it lands ``registro_sociedades_argentina`` is not announced.
+    try:
+        from .sources.registro_sociedades_argentina import (
+            warm_index as warm_ar_sociedades_index,
+        )
+
+        stats = await asyncio.to_thread(warm_ar_sociedades_index)
+        log.info("Argentina RNS + IGJ index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "Argentina RNS + IGJ index warm-up failed (the source is not "
+            "announced until present): %s",
             exc,
         )
     # The Florida wiring: the Sunbiz index, rebuilt quarterly and downloaded
@@ -460,6 +490,13 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .sources.ariregister import refresh_loop as ee_refresh_loop
 
         ee_task = asyncio.create_task(ee_refresh_loop(ee_interval))
+    # The Israeli index and its change log, the same arrangement.
+    il_task: asyncio.Task[None] | None = None
+    il_interval = get_settings().ica_israel_refresh_interval_s
+    if il_interval > 0 and get_settings().warm_caches_on_start and get_settings().ica_israel_db_url:
+        from .sources.ica_israel import refresh_loop as il_refresh_loop
+
+        il_task = asyncio.create_task(il_refresh_loop(il_interval))
     # Phase 187: feed the PSC graph from the register's stream. Needs the
     # graph file and the streaming key; returns at once otherwise.
     stream_task: asyncio.Task[None] | None = None
@@ -511,6 +548,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 isin_task.cancel()
             if ee_task is not None and not ee_task.done():
                 ee_task.cancel()
+            if il_task is not None and not il_task.done():
+                il_task.cancel()
             if stream_task is not None and not stream_task.done():
                 stream_task.cancel()
             if watch_task is not None and not watch_task.done():
