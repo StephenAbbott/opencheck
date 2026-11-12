@@ -113,7 +113,10 @@ def map_pa_dos(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         local_id=number,
         statement_date=cut,
         name=name,
-        jurisdiction=("United States", "US") if domestic else None,
+        # The ISO 3166-2 subdivision GLEIF files RA000632 companies under,
+        # so the register's statement and GLEIF's agree (the US-PA ticket,
+        # 12 Nov 2026). A foreign registration's home is not published.
+        jurisdiction=("Pennsylvania, United States", "US-PA") if domestic else None,
         identifiers=[{"id": number, "scheme": PA_DOS_SCHEME, "schemeName": PA_DOS_SCHEME_NAME}],
         founding_date=summary.get("created_on") if domestic else None,
         addresses=addresses,

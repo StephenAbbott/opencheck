@@ -296,7 +296,7 @@ class TestMapper:
             {"id": "3039985", "scheme": PA_DOS_SCHEME,
              "schemeName": "Pennsylvania Department of State, Bureau of Corporations"}
         ]
-        assert rd["jurisdiction"]["code"] == "US"
+        assert rd["jurisdiction"] == {"name": "Pennsylvania, United States", "code": "US-PA"}
         assert rd["foundingDate"] == "2001-12-07"
         assert "dissolutionDate" not in rd
         assert company["statementDate"] == "2026-11-03"
