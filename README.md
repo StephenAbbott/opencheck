@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 502** — The securities panel names OpenFIGI as a source only when it answered, and /signalstats counts every OpenFIGI request by outcome.
+**Latest: Phase 503** — A board seat Taiwan's company register files as vacant is now noted on the company and counted in the finding instead of appearing as a director called "缺額".
 
 → [Full development history](docs/status.md)
 
