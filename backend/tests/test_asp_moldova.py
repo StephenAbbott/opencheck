@@ -710,6 +710,7 @@ def test_sync_failure_keeps_the_old_index(built: tuple[Path, dict[str, str]], mo
 
     monkeypatch.setattr(asp_moldova, "latest_resource", boom)
     monkeypatch.setattr(asp_moldova, "snapshot_age_days", lambda meta: 30)
+    os.environ["ASP_MOLDOVA_DB_URL"] = ""
     try:
         outcome = asp_moldova.sync_index()
         assert outcome["asp_moldova"] == "failed"
@@ -718,8 +719,139 @@ def test_sync_failure_keeps_the_old_index(built: tuple[Path, dict[str, str]], mo
     finally:
         os.environ.pop("ASP_MOLDOVA_DB_FILE", None)
         os.environ.pop("OPENCHECK_ALLOW_LIVE", None)
+        os.environ.pop("ASP_MOLDOVA_DB_URL", None)
         get_settings.cache_clear()
         asp_moldova.reset_connection()
+
+
+# ---------------------------------------------------------------------------
+# The release asset, when dataset.gov.md is down (the asp_moldova fix)
+# ---------------------------------------------------------------------------
+
+
+def _set_snapshot(path: Path, day: str) -> None:
+    conn = sqlite3.connect(path)
+    with conn:
+        conn.execute("UPDATE meta SET value = ? WHERE key = 'snapshot_date'", (day,))
+    conn.close()
+
+
+@pytest.fixture()
+def portal_down(monkeypatch):
+    """dataset.gov.md answering 404 everywhere, the way it has since late
+    September 2026; live sync on, the release asset at a fake URL."""
+    from opencheck import entity_pages
+
+    def boom(package=None):
+        raise OSError("404 Resursa Inexistentă")
+
+    asset: dict[str, Any] = {"path": None, "decision": "replace", "downloads": 0}
+
+    def fake_check(url: str, path: Path):
+        return asset["decision"], "Tue, 10 Nov 2026 06:50:00 GMT"
+
+    def fake_download(url: str, path: Path, *, last_modified=None):
+        asset["downloads"] += 1
+        if asset["path"] is None:
+            raise OSError("release asset: HTTP 404")
+        path.write_bytes(Path(asset["path"]).read_bytes())
+        return path.stat().st_size, 0.1
+
+    monkeypatch.setattr(asp_moldova, "latest_resource", boom)
+    monkeypatch.setattr(entity_pages, "asset_check", fake_check)
+    monkeypatch.setattr(entity_pages, "download_db", fake_download)
+    get_settings.cache_clear()
+    os.environ["OPENCHECK_ALLOW_LIVE"] = "true"
+    os.environ["ASP_MOLDOVA_DB_URL"] = "https://example.test/asp_moldova.sqlite.gz"
+    asp_moldova.reset_connection()
+    asp_moldova._STATE["last_check"] = None
+    try:
+        yield asset
+    finally:
+        for key in ("ASP_MOLDOVA_DB_FILE", "OPENCHECK_ALLOW_LIVE", "ASP_MOLDOVA_DB_URL"):
+            os.environ.pop(key, None)
+        get_settings.cache_clear()
+        asp_moldova.reset_connection()
+
+
+def test_with_no_index_and_the_portal_down_the_release_asset_is_taken(
+    built: tuple[Path, dict[str, str]], tmp_path: Path, portal_down
+) -> None:
+    released, _ = built
+    portal_down["path"] = released
+    target = tmp_path / "disk" / "asp_moldova.sqlite"
+    os.environ["ASP_MOLDOVA_DB_FILE"] = str(target)
+    get_settings.cache_clear()
+
+    outcome = asp_moldova.sync_index()
+
+    assert outcome["asp_moldova"] == "released"
+    assert outcome["companies"] == "10"
+    assert "Resursa" in outcome["error"]  # the portal's failure is still said
+    assert asp_moldova.index_available()
+    assert not target.with_name(target.name + ".release").exists()
+
+
+def test_the_release_asset_never_replaces_a_newer_index(
+    built: tuple[Path, dict[str, str]], workbook: Path, tmp_path: Path, monkeypatch, portal_down
+) -> None:
+    in_place, _ = built
+    older = tmp_path / "older.sqlite"
+    build_index(workbook, older, snapshot_date="2026-09-07")
+    portal_down["path"] = older
+    monkeypatch.setattr(asp_moldova, "snapshot_age_days", lambda meta: 30)
+    os.environ["ASP_MOLDOVA_DB_FILE"] = str(in_place)
+    get_settings.cache_clear()
+
+    outcome = asp_moldova.sync_index()
+
+    assert outcome["asp_moldova"] == "failed"
+    assert outcome["snapshot_date"] == "2026-09-14"
+    assert asp_moldova.read_meta(in_place)["snapshot_date"] == "2026-09-14"
+
+
+def test_a_newer_release_asset_replaces_a_stale_index(
+    built: tuple[Path, dict[str, str]], workbook: Path, tmp_path: Path, monkeypatch, portal_down
+) -> None:
+    in_place, _ = built
+    newer = tmp_path / "newer.sqlite"
+    build_index(workbook, newer, snapshot_date="2026-09-21")
+    portal_down["path"] = newer
+    monkeypatch.setattr(asp_moldova, "snapshot_age_days", lambda meta: 30)
+    os.environ["ASP_MOLDOVA_DB_FILE"] = str(in_place)
+    get_settings.cache_clear()
+
+    outcome = asp_moldova.sync_index()
+
+    assert outcome["asp_moldova"] == "released"
+    assert asp_moldova.read_meta(in_place)["snapshot_date"] == "2026-09-21"
+
+
+def test_an_unchanged_release_asset_is_not_downloaded_again(
+    built: tuple[Path, dict[str, str]], monkeypatch, portal_down
+) -> None:
+    in_place, _ = built
+    portal_down["decision"] = "keep"
+    monkeypatch.setattr(asp_moldova, "snapshot_age_days", lambda meta: 30)
+    os.environ["ASP_MOLDOVA_DB_FILE"] = str(in_place)
+    get_settings.cache_clear()
+
+    outcome = asp_moldova.sync_index()
+
+    assert outcome["asp_moldova"] == "failed"
+    assert portal_down["downloads"] == 0
+    assert asp_moldova.index_available()
+
+
+def test_portal_and_release_both_down_names_both(tmp_path: Path, portal_down) -> None:
+    os.environ["ASP_MOLDOVA_DB_FILE"] = str(tmp_path / "none.sqlite")
+    get_settings.cache_clear()
+
+    outcome = asp_moldova.sync_index()
+
+    assert outcome["asp_moldova"] == "failed"
+    assert "Resursa" in outcome["error"] and "release asset" in outcome["error"]
+    assert not asp_moldova.index_available()
 
 
 # ---------------------------------------------------------------------------
