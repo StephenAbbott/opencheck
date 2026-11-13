@@ -1,0 +1,106 @@
+name: Refresh Moldova ASP index
+
+# Rebuilds the index of Moldova's State Register of Legal Entities (ASP) from
+# the weekly XLSX export and replaces the `asp-moldova-index` release asset.
+# The backend builds its own index from the portal and reads this asset only
+# when the portal cannot be read (ASP_MOLDOVA_DB_URL; the asp_moldova fix,
+# 13 Nov 2026).
+#
+# Why the asset exists at all: from late September 2026 dataset.gov.md served
+# its own 404 on every path, and production — whose index lived in the temp
+# directory — lost it at the next restart with nothing to rebuild it from.
+# The asset is the last good week, kept somewhere the portal's outages cannot
+# reach.
+#
+# While the portal is down the scheduled run finds no export, says so as a
+# warning and publishes nothing (the job stays green: there is nothing to fix
+# here). To seed or refresh the asset from an export somebody held, put the
+# XLSX at any https URL (a release asset works) and run this workflow by hand
+# with `xlsx_url` set; the snapshot date is read from the file's title row
+# unless `snapshot_date` is given.
+on:
+  schedule:
+    - cron: "40 6 * * 2" # 06:40 UTC on Tuesdays — ASP publishes on Mondays
+  workflow_dispatch:
+    inputs:
+      xlsx_url:
+        description: "Build from this XLSX instead of the portal's newest export"
+        required: false
+        default: ""
+      snapshot_date:
+        description: "ISO date of that export (read from its title row when empty)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-asp-moldova-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Build the index
+        id: build
+        working-directory: backend
+        env:
+          XLSX_URL: ${{ inputs.xlsx_url }}
+          SNAPSHOT_DATE: ${{ inputs.snapshot_date }}
+        run: |
+          uv sync
+          out="$RUNNER_TEMP/asp_moldova.sqlite"
+          if [ -n "$XLSX_URL" ]; then
+            curl -fsSL --retry 3 -o "$RUNNER_TEMP/company.xlsx" "$XLSX_URL"
+            args=(--xlsx "$RUNNER_TEMP/company.xlsx")
+            [ -n "$SNAPSHOT_DATE" ] && args+=(--snapshot-date "$SNAPSHOT_DATE")
+            uv run python scripts/build_asp_moldova_index.py "${args[@]}" --out "$out"
+          elif uv run python scripts/build_asp_moldova_index.py --out "$out"; then
+            :
+          else
+            echo "::warning::dataset.gov.md did not give the weekly export; nothing published. Run by hand with xlsx_url to publish a held export."
+            echo "built=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "built=true" >> "$GITHUB_OUTPUT"
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        if: steps.build.outputs.built == 'true'
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "asp_moldova.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM company").fetchone()[0]
+          print(f"{n} companies, snapshot {meta.get('snapshot_date')}, schema {meta.get('schema_version')}")
+          if n < 60_000:
+              sys.exit(f"Refusing to publish: {n} companies — likely a source/format change.")
+          if not meta.get("snapshot_date"):
+              sys.exit("Refusing to publish: no snapshot date (pass snapshot_date).")
+          PY
+          gzip -9 -k "$RUNNER_TEMP/asp_moldova.sqlite"
+
+      - name: Replace the `asp-moldova-index` release asset
+        if: steps.build.outputs.built == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view asp-moldova-index >/dev/null 2>&1 || gh release create asp-moldova-index \
+            --title "Moldova ASP State Register index" \
+            --notes "Built by refresh-asp-moldova-index.yml from the Public Services Agency's weekly export of the State Register of Legal Entities (dataset.gov.md reuse conditions). Read by the backend only when dataset.gov.md cannot be (ASP_MOLDOVA_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh asp-moldova-index \
+            "$RUNNER_TEMP/asp_moldova.sqlite.gz" asp_moldova.sqlite.gz \
+            "Rebuilt by refresh-asp-moldova-index on $(date -u +%Y-%m-%d)."

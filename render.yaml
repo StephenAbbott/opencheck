@@ -165,6 +165,16 @@ services:
       # before adding another index here.
       - key: SUNBIZ_FLORIDA_DB_FILE
         value: /var/data/sunbiz_florida.sqlite
+      # --- Moldova's State Register index (the asp_moldova fix, 13 Nov 2026) ---
+      # asp_moldova.sqlite — the weekly ASP export indexed by the adapter
+      # itself, or, while dataset.gov.md is down, the asp-moldova-index
+      # release asset (ASP_MOLDOVA_DB_URL default). Until this line it lived
+      # in the temp directory and was lost at every restart, and once the
+      # portal went down (late Sept 2026) nothing could rebuild it. ~119,000
+      # companies; size not yet measured on Render — check
+      # `du -sh /var/data/asp_moldova.sqlite` after the first boot.
+      - key: ASP_MOLDOVA_DB_FILE
+        value: /var/data/asp_moldova.sqlite
       # --- Phase 258: GLEIF's ISIN-to-LEI file behind /securities ---
       # Built on this server from GLEIF's daily keyless zip (~32 MB in,
       # ~90 MB of SQLite out, ~40 s) at boot when absent, then whenever

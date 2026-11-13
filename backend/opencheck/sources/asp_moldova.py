@@ -21,6 +21,23 @@ at startup, and again when the snapshot it holds is more than a week old and
 the portal has a newer one. ``ASP_MOLDOVA_DB_FILE`` pins a location;
 ``ASP_MOLDOVA_SYNC=false`` turns the download off and uses the file as found.
 
+When the portal is down: the release asset
+-----------------------------------------
+From late September 2026 ``dataset.gov.md`` answered its own "Resursa
+Inexistentă" 404 on every path, the CKAN API included, and production lost
+the index at every restart because it lived in the temp directory. Two
+changes since (the asp_moldova fix ticket, 13 November 2026): on Render the
+index lives on the persistent disk (``ASP_MOLDOVA_DB_FILE`` in
+``render.yaml``), so a built index survives a deploy; and when the portal
+cannot be read, ``sync_index`` falls back to the ``asp-moldova-index``
+release asset (``ASP_MOLDOVA_DB_URL``) — published weekly by
+``refresh-asp-moldova-index.yml`` while the portal answers, or by hand from a
+held export — taken only when it is newer than the index in place. The
+portal stays the first choice: an asset never replaces a portal build of the
+same week or later. ``date.gov.md``, the government's new landing portal,
+is not a replacement: it links back to ``dataset.gov.md`` for open data,
+and its company search is a reCAPTCHA-gated form, one company at a time.
+
 The XLSX is read as a stream, not with openpyxl
 -----------------------------------------------
 openpyxl's read-only mode loads the workbook's shared-string table whole:
@@ -1137,9 +1154,12 @@ def sync_index(*, force: bool = False) -> dict[str, Any]:
     rebuilds. Never raises: a week-old index beats none, and the outcome is
     returned and logged.
 
-    Outcomes: ``kept``, ``built``, ``not_configured``, ``failed`` (the export
-    could not be fetched or read) and ``refused`` (it was read and yielded too
-    few companies to replace the index, which stays in place).
+    Outcomes: ``kept``, ``built``, ``not_configured``, ``released`` (the
+    portal could not be read and the release asset, newer than the index in
+    place, replaced it — see :func:`_from_release`), ``failed`` (the export
+    could not be fetched or read, and the release asset gave nothing newer)
+    and ``refused`` (it was read and yielded too few companies to replace the
+    index, which stays in place).
     """
     path = index_path()
     with _BUILD_LOCK:
@@ -1180,13 +1200,84 @@ def sync_index(*, force: bool = False) -> dict[str, Any]:
             return _outcome("refused", path, meta, error=f"{type(exc).__name__}: {exc}"[:300])
         except Exception as exc:  # noqa: BLE001 - reported, never raised
             logger.warning("asp_moldova: index sync failed: %s", exc)
-            return _outcome("failed", path, meta, error=f"{type(exc).__name__}: {exc}"[:300])
+            portal_error = f"{type(exc).__name__}: {exc}"
+            released = _from_release(path, meta if current else {}, portal_error)
+            if released is not None:
+                return released
+            return _outcome("failed", path, meta, error=portal_error[:300])
         finally:
             if xlsx.exists():
                 try:
                     xlsx.unlink()
                 except OSError:  # pragma: no cover - best effort
                     pass
+
+
+def _from_release(path: Path, meta: dict[str, str], portal_error: str) -> dict[str, Any] | None:
+    """The fallback when the portal could not be read: the release asset.
+
+    ``meta`` is the index in place (empty when there is none, or it is of an
+    old schema). Returns an outcome when the asset decided something —
+    ``released`` (it replaced the index, or became the first one) or
+    ``failed`` (it was unreadable too, both causes named) — and ``None`` when
+    there is no asset URL or the asset is not newer than what is in place, so
+    the caller reports the portal's failure alone.
+
+    The asset is staged beside the index and replaces it only when it carries
+    the current schema, a later snapshot than the one in place and at least
+    the share of its companies a portal rebuild must keep. A ``HEAD`` first
+    (``entity_pages.asset_check``) means a portal that stays down costs one
+    request per check, not a download.
+    """
+    from ..entity_pages import asset_check, download_db
+
+    url = getattr(get_settings(), "asp_moldova_db_url", "") or ""
+    if not url:
+        return None
+    staged = path.with_name(path.name + ".release")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        last_modified: str | None = None
+        if meta and path.exists():
+            decision, last_modified = asset_check(url, path)
+            if decision == "keep":
+                return None
+        download_db(url, staged, last_modified=last_modified)
+        new_meta = read_meta(staged)
+        if new_meta.get("schema_version") != INDEX_SCHEMA_VERSION:
+            raise IndexCollapsed(
+                f"release asset has index schema {new_meta.get('schema_version')!r}, "
+                f"expected {INDEX_SCHEMA_VERSION!r}"
+            )
+        if meta and (new_meta.get("snapshot_date") or "") <= (meta.get("snapshot_date") or ""):
+            return None
+        try:
+            companies = int(new_meta.get("companies") or 0)
+        except ValueError:
+            companies = 0
+        floor = _min_companies_for(meta)
+        if companies < floor:
+            raise IndexCollapsed(f"release asset holds {companies} companies, below {floor}")
+        reset_connection()
+        os.replace(staged, path)
+        reset_connection()
+        logger.info(
+            "asp_moldova: portal unavailable (%s); index taken from the release asset, snapshot %s",
+            portal_error[:200], new_meta.get("snapshot_date"),
+        )
+        return _outcome("released", path, new_meta, error=portal_error[:300])
+    except Exception as exc:  # noqa: BLE001 - reported, never raised
+        logger.warning("asp_moldova: release asset fallback failed: %s", exc)
+        return _outcome(
+            "failed", path, meta,
+            error=f"{portal_error}; release asset: {type(exc).__name__}: {exc}"[:300],
+        )
+    finally:
+        if staged.exists():
+            try:
+                staged.unlink()
+            except OSError:  # pragma: no cover - best effort
+                pass
 
 
 def _outcome(kind: str, path: Path, meta: dict[str, str], *, error: str | None = None) -> dict[str, Any]:

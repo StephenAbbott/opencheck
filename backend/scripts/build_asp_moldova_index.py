@@ -15,6 +15,11 @@ have, or to see the build counts.
 
 Then point ``ASP_MOLDOVA_DB_FILE`` at the output (and set
 ``ASP_MOLDOVA_SYNC=false`` to keep the adapter from replacing it).
+
+``refresh-asp-moldova-index.yml`` runs this weekly and publishes the result as
+the ``asp-moldova-index`` release asset — the backend's fallback while
+dataset.gov.md is down. Run that workflow by hand with ``xlsx_url`` to
+publish an export you hold.
 """
 
 from __future__ import annotations
