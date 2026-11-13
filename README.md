@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 517** — AusTender joins as a source, showing the Australian Government contracts a company was awarded, joined on its ABN or the ABN its ACN implies.
+**Latest: Phase 518** — MTender joins as a source, showing the Moldovan public procurements a company was awarded, joined on its IDNO.
 
 → [Full development history](docs/status.md)
 
