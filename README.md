@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 525** — The MTender harvest now waits out short outages of MTender's API instead of stopping.
+**Latest: Phase 526** — The Moldova State Register source now keeps its index on the persistent disk and reads a published copy when the national open-data portal is down.
 
 → [Full development history](docs/status.md)
 
