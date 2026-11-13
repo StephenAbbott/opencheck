@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 532** — Directors, board members, shareholders and persons with significant control from Companies House, Estonia and New Zealand now carry GLEIF's ISO 5009 role code on the relationship that describes the appointment.
+**Latest: Phase 533** — The daily Estonian register index leaves out the odd company entered between RIK's files instead of refusing the whole build.
 
 → [Full development history](docs/status.md)
 
