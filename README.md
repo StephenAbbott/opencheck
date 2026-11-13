@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 521** — The Compras.gov.br index build now resumes an interrupted download of the Open Contracting Partnership file.
+**Latest: Phase 522** — Greek companies now show the public contracts their ΑΦΜ holds in ΚΗΜΔΗΣ, read live and shown beside TED, never added to it.
 
 → [Full development history](docs/status.md)
 
