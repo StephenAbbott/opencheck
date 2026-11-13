@@ -62,14 +62,20 @@ export function RowList({
           // it pushed itself off the right edge and crushed the title column
           // to about one word per line. A phone gets the title on its own
           // line and the metadata under it, which is the order they are read
-          // in anyway.
+          // in anyway. On a wide viewport the meta keeps its natural width but
+          // never more than 55% of the row, and wraps inside it: an AusTender
+          // or ΚΗΜΔΗΣ row's meta (authority, value, dates, procedure, id) is
+          // wider than the card, and uncapped it crushed the title to one
+          // word per line and drew over it (post-deploy check, 13 Nov 2026).
           <li
             key={item.key}
             className="flex flex-col gap-1 border-b border-oo-bg py-1.5 text-oo-small sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
           >
-            <span className="min-w-0">{item.title}</span>
+            <span className="min-w-0 sm:flex-1">{item.title}</span>
             {item.meta ? (
-              <span className="min-w-0 text-oo-muted sm:shrink-0">{item.meta}</span>
+              <span className="min-w-0 text-oo-muted sm:max-w-[55%] sm:shrink-0">
+                {item.meta}
+              </span>
             ) : null}
           </li>
         ))}
