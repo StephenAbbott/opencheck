@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 519** — The computed sanctions 50% rule now covers Canada, with voting rights counted beside shares and board power as context.
+**Latest: Phase 520** — Compras.gov.br joins as a source, showing the Brazilian public procurement awards a company won from federal, state and municipal bodies, joined on its CNPJ.
 
 → [Full development history](docs/status.md)
 
