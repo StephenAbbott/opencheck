@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 534** — Crime-record, regulatory and OpenSanctions listing signals now name the company or record they were read from, so FullCheck's network signals say whose record it is.
+**Latest: Phase 535** — The ownership graph's zoom, Fit and Add next layer controls now sit in a tinted bar directly under the diagram, so they stay next to the network on a phone.
 
 → [Full development history](docs/status.md)
 
