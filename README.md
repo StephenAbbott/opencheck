@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 531** — Debarment findings now name the authority, decision, reason and ban period from the listing OpenSanctions holds, including Moldova's procurement ban list.
+**Latest: Phase 532** — Directors, board members, shareholders and persons with significant control from Companies House, Estonia and New Zealand now carry GLEIF's ISO 5009 role code on the relationship that describes the appointment.
 
 → [Full development history](docs/status.md)
 
