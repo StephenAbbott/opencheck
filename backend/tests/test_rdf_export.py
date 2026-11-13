@@ -446,3 +446,11 @@ def test_annotation_size_cost_is_bounded():
         f"{per_annotation} triples for one annotation — the emitter has grown "
         "fields, which multiplies across a bulk corpus"
     )
+
+
+def test_legal_form_code_is_carried_as_a_private_term():
+    """The ELF-code ticket: BODS has no term for a legal-form code."""
+    stmt = _entity("ent-1", name="Shell plc", legalFormLabel="Public Limited Company",
+                   legalFormCode="B6ES")
+    g = _graph(_parse(to_rdf([stmt])), "ent-1")
+    assert (REC["ent-1"], OC.legalFormCode, Literal("B6ES")) in g

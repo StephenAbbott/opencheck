@@ -77,3 +77,48 @@ def test_gleif_only_foundation_fires_trust_signal() -> None:
     signals = assess_amla("gleif", {"entity_id": "506700GE1G29325QX363"}, bods)
     sig = next(s for s in signals if s.code == TRUST_OR_ARRANGEMENT)
     assert sig.evidence["matches"][0]["match"] == "legalFormLabel contains 'foundation'"
+
+
+# The ELF-code ticket (13 Nov 2026): the code itself, beside its label.
+
+
+def test_elf_code_keeps_a_real_code_and_drops_placeholders() -> None:
+    from opencheck.elf import elf_code
+
+    assert elf_code("b6es") == "B6ES"
+    assert elf_code(" H0PO ") == "H0PO"
+    # A well-formed code the vendored list lacks is still GLEIF's assertion.
+    assert elf_code("ZZZZ") == "ZZZZ"
+    for value in (None, "", "8888", "9999", "ABC", "AB-CD", "ABCDE"):
+        assert elf_code(value) is None
+
+
+def test_map_gleif_carries_the_elf_code_beside_the_label() -> None:
+    ent = _entity(map_gleif(_gleif_bundle("2jz4")).statements)
+    assert ent["recordDetails"]["legalFormCode"] == "2JZ4"
+    assert ent["recordDetails"]["legalFormLabel"] == "Foundation"
+
+
+def test_map_gleif_never_puts_the_elf_code_in_identifiers() -> None:
+    """An ELF code names a form many entities share; an identifier merges
+    entities in the reconciler. It must never reach ``identifiers``."""
+    ent = _entity(map_gleif(_gleif_bundle("2JZ4")).statements)
+    ids = ent["recordDetails"].get("identifiers") or []
+    assert all(i.get("id") != "2JZ4" for i in ids)
+    assert all("20275" not in str(i.get("scheme") or "") for i in ids)
+
+
+def test_map_gleif_no_code_for_a_placeholder_or_no_legal_form() -> None:
+    for value in ("8888", "9999", None):
+        ent = _entity(map_gleif(_gleif_bundle(value)).statements)
+        assert "legalFormCode" not in ent["recordDetails"]
+
+
+def test_two_companies_sharing_a_legal_form_are_not_identifier_linked() -> None:
+    from opencheck.reconcile import _identifier_keys
+
+    a = _entity(map_gleif(_gleif_bundle("2JZ4")).statements)
+    other = _gleif_bundle("2JZ4")
+    other["lei"] = other["record"]["attributes"]["lei"] = "5299000J2N45DDNE4Y28"
+    b = _entity(map_gleif(other).statements)
+    assert not (_identifier_keys(a) & _identifier_keys(b))

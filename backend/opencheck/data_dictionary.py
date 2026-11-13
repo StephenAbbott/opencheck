@@ -135,6 +135,25 @@ EXTENSIONS: tuple[dict[str, str], ...] = (
         "since": "the GLEIF, CVR Denmark and Zefix mappers (before Phase 100)",
     },
     {
+        "key": "legalFormCode",
+        "where": "/recordDetails (GLEIF entity statements)",
+        "type": "string",
+        "description": (
+            "GLEIF's ISO 20275 Entity Legal Form (ELF) code for the entity, as "
+            "GLEIF records it in `entity.legalForm.id` (\"B6ES\", a UK public "
+            "limited company). Carried beside `legalFormLabel`, which gives the "
+            "same form in words; the code is what the GLEIF ELF code list "
+            "(gleif.org/en/lei-data/code-lists/iso-20275-entity-legal-forms-code-list) "
+            "and the `legal_form` search filter key on. Never written for "
+            "GLEIF's placeholders 8888 and 9999, which name no form. Not an "
+            "identifier: a BODS v0.4 identifier is assigned to one entity, and "
+            "an ELF code names a form many entities share, so it is kept out "
+            "of `identifiers`. The RDF export carries it as `oc:legalFormCode`."
+        ),
+        "example": '"B6ES"',
+        "since": "the ELF-code ticket (13 Nov 2026)",
+    },
+    {
         "key": "primaryIndustryCode",
         "where": "/recordDetails (Danish CVR entity statements)",
         "type": "string",
@@ -561,6 +580,7 @@ def sample_bundle() -> list[dict[str, Any]]:
         source_url="https://example.invalid/holdco",
     )
     holdco["recordDetails"]["legalFormLabel"] = "Private Limited Company"
+    holdco["recordDetails"]["legalFormCode"] = "H0PO"
     refresh_statement_id(holdco)
     event = commenting(
         "/recordDetails",

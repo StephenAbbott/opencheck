@@ -35,6 +35,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable
 
+from .elf import PLACEHOLDER_CODES
+
 log = logging.getLogger(__name__)
 
 _DATA = Path(__file__).parent / "data"
@@ -62,7 +64,7 @@ CATEGORIES: dict[str, str] = {
 }
 #: ELF placeholders: 8888 "not yet in the list", 9999 "no ELF code". Valid
 #: filter values; used everywhere, so they never make a jurisdiction exact.
-PLACEHOLDER_FORMS = ("8888", "9999")
+PLACEHOLDER_FORMS = PLACEHOLDER_CODES
 NO_ELF_CODE = "no-elf-code"
 
 ENTITY_FILTERS = ("jurisdiction", "legal_form", "entity_status", "registration_status", "category")
