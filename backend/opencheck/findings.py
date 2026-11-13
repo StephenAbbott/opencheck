@@ -966,6 +966,42 @@ def finding_mtender_moldova(bundle: dict[str, Any]) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# compras_gov_br (Compras.gov.br — Brazilian public procurement awards)
+# ---------------------------------------------------------------------------
+
+
+def finding_compras_gov_br(bundle: dict[str, Any]) -> str | None:
+    """How many Brazilian public awards this company won, from how many buyers.
+
+    The value is the published award values summed by OpenCheck and printed
+    in full (rule 5). It is said as a sum of award values, never as what was
+    paid: the publication has no contract stage. Federal, state and municipal
+    bodies all buy through the system, so the buyer is never "the federal
+    government". Awards are activity, never ownership or risk. A company with
+    no awards has no card.
+    """
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return None
+    supplier = bundle.get("supplier")
+    if not isinstance(supplier, dict):
+        return None
+    n = int(supplier.get("awards") or 0)
+    if not n:
+        return None
+    value = int(supplier.get("value_brl") or 0)
+    buyers = int(supplier.get("buyers") or 0)
+    first = str(supplier.get("first_date") or "")[:4]
+    last = str(supplier.get("last_date") or "")[:4]
+    span = f" {first}–{last}" if first and last and first != last else (f" {last}" if last else "")
+    lead = (
+        f"Brazilian public procurement awards{span}: "
+        f"{n:,} {'award' if n == 1 else 'awards'}, published values totalling BRL {value:,}"
+    )
+    buyer_clause = f"from {buyers:,} public {'body' if buyers == 1 else 'bodies'}" if buyers else None
+    return clauses_to_sentence([lead, buyer_clause])
+
+
+# ---------------------------------------------------------------------------
 # wikidata
 # ---------------------------------------------------------------------------
 

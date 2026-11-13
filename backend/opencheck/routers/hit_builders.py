@@ -1971,6 +1971,34 @@ def _bh_mtender_moldova(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_compras_gov_br(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for Compras.gov.br — the AusTender shape.
+
+    Only reached for a CNPJ root with awards. No identifier is asserted on
+    the hit: awards are activity matched on the CNPJ root GLEIF's filing
+    names, not a register confirming the number. The CNPJ rides on the BODS
+    entity statement where Compras.gov.br names that establishment itself.
+    The index stores no supplier name, so the card is named from GLEIF.
+    """
+    from ..findings import finding_compras_gov_br
+
+    supplier = r.get("supplier") or {}
+    cnpj = str(r.get("cnpj") or "")
+    n = int(supplier.get("awards") or 0)
+    parts = [f"{n:,} Brazilian public procurement award{'s' if n != 1 else ''}"]
+    if supplier.get("first_date") and supplier.get("last_date"):
+        parts.append(f"{str(supplier['first_date'])[:4]}–{str(supplier['last_date'])[:4]}")
+    parts.append(f"CNPJ root {r.get('root_display') or cnpj[:8]}")
+    return _hit(
+        "compras_gov_br", cnpj or ctx.lei,
+        name=str(r.get("legal_name") or ctx.legal_name or ctx.lei),
+        summary=" · ".join(parts),
+        finding=finding_compras_gov_br(r),
+        identifiers={},
+        raw=r,
+    )
+
+
 def _bh_ted_eu(r: dict, ctx: _LookupCtx) -> SourceHit:
     total = int(r.get("total_notice_count") or 0)
     wins = int(r.get("confirmed_wins") or 0)

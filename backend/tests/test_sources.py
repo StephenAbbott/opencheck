@@ -134,6 +134,9 @@ _IDENTIFIER_KEYED = {
     # austender: reached from the ABN / ACN GLEIF files; contracts are not
     # name-searchable here.
     "austender",
+    # compras_gov_br: reached from the CNPJ GLEIF files; awards are not
+    # name-searchable here.
+    "compras_gov_br",
     # mtender_moldova: reached from the IDNO GLEIF files; awards are not
     # name-searchable here.
     "mtender_moldova",

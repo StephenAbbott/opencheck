@@ -198,6 +198,9 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
       const awards = raw.awards as { url?: string }[] | undefined;
       return awards?.[0]?.url || "https://mtender.gov.md/";
     }
+    case "compras_gov_br":
+      // No per-award page has a confirmed address (decision G): the portal.
+      return (raw.link as string | undefined) || "https://www.gov.br/compras/pt-br";
     default:
       return null;
   }
@@ -1396,6 +1399,112 @@ export function MTenderAwardsList({ hit }: { hit: SourceHit }) {
 }
 
 /**
+ * ComprasGovBrAwardsList — Brazilian public procurement awards
+ * (compras_gov_br source), the AusTender card's counterpart.
+ *
+ * Lists the company's latest and largest awards, newest first, with buyer,
+ * sphere of government, published value, procedure and legal basis. Awards
+ * are read across every establishment of the company (its CNPJ root), so a
+ * branch's award says which CNPJ won it. No award links: Compras.gov.br's
+ * process page has no confirmed address, so the footnote links the portal.
+ * Values are award values, never money paid — the publication has no
+ * contract stage — and the totals are OpenCheck's sum.
+ */
+export function ComprasGovBrAwardsList({ hit }: { hit: SourceHit }) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+  if (hit.source_id !== "compras_gov_br") return null;
+  const raw = hit.raw as Record<string, unknown> | undefined;
+  const awards = (raw?.awards ?? []) as {
+    key: string;
+    awarded?: string | null;
+    buyer?: string;
+    buyer_sphere?: string;
+    buyer_uasg?: string;
+    object?: string;
+    value_brl?: number | null;
+    procedure?: string;
+    legal_basis?: string;
+    establishment?: string;
+    other_suppliers?: number;
+  }[];
+  if (!awards.length) return null;
+  const supplier = (raw?.supplier ?? {}) as {
+    awards?: number;
+    value_brl?: number;
+    buyers?: number;
+    first_date?: string | null;
+    zero_value?: number;
+  };
+  const headOffice = String(raw?.cnpj_display ?? "");
+  const link = String(raw?.link || "https://www.gov.br/compras/pt-br");
+  const shown = expanded ? awards : awards.slice(0, 5);
+
+  return (
+    <RowList
+      controls={listId}
+      total={awards.length}
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      moreLabel="award"
+      items={shown.map((a) => ({
+        key: a.key,
+        title: <span>{a.object || `Process ${a.key}`}</span>,
+        meta: (
+          <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            {[
+              a.buyer
+                ? `${a.buyer}${a.buyer_sphere ? ` (${a.buyer_sphere.toLowerCase()})` : ""}`
+                : "",
+              a.value_brl != null ? `BRL ${Number(a.value_brl).toLocaleString()}` : "",
+              a.awarded ? `awarded ${a.awarded}` : "",
+              a.procedure,
+              a.legal_basis,
+              a.establishment && a.establishment !== headOffice
+                ? `won by establishment ${a.establishment}`
+                : "",
+              a.other_suppliers ? "shared with another company" : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            <Chip tone="ok" size="sm">award</Chip>
+          </span>
+        ),
+      }))}
+      footnote={
+        <>
+          The latest and largest awards on{" "}
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-oo-blue hover:underline underline-offset-2"
+          >
+            Compras.gov.br
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+          , across every establishment of the company
+          {supplier.awards ? (
+            <>
+              {" "}— of {supplier.awards.toLocaleString()} awards since{" "}
+              {(supplier.first_date || "").slice(0, 4) || "2021"}, with published
+              values totalling BRL {(supplier.value_brl ?? 0).toLocaleString()}{" "}
+              (OpenCheck&apos;s sum)
+            </>
+          ) : null}
+          . These are award values, not money paid: the data has no contract
+          stage. Federal, state and municipal bodies all buy through the
+          system.
+          {supplier.zero_value
+            ? ` ${supplier.zero_value.toLocaleString()} award${supplier.zero_value === 1 ? " was" : "s were"} published with a value of zero.`
+            : ""}
+        </>
+      }
+    />
+  );
+}
+
+/**
  * The finding line. Lives here rather than inline so the fallback chain is
  * testable — see `lib/sourceFinding.ts`, which is where the reasoning is.
  */
@@ -1617,6 +1726,7 @@ function HitRow({
       <ChileCompraRecordsList hit={hit} />
       <AusTenderContractsList hit={hit} />
       <MTenderAwardsList hit={hit} />
+      <ComprasGovBrAwardsList hit={hit} />
       <FindTenderAwardsList hit={hit} />
       {/* Risk findings only (Phase 245). A structural observation — "No
           parent in GLEIF (exempt)" — is what the row's own sentence above
