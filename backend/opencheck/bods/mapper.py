@@ -102,6 +102,9 @@ from .mappers.wikidata import (  # noqa: F401  (re-exported: see the module docs
 
 from .mappers.companies_house import (  # noqa: F401  (re-exported, Phase 246)
     _CH_PUBLIC,
+    CH_OOR,
+    CH_TYPE_ELF,
+    ch_company_elf,
     _CH_REGISTER,
     _COUNTRY_TEXT_ALIASES,
     _ChCompany,
@@ -241,6 +244,9 @@ from .mappers.chile import (  # noqa: F401  (re-exported, Phase 280)
 )
 from .mappers.estonia import (  # noqa: F401  (re-exported, Phase 246)
     _EE_BO_CONTROL_MAP,
+    EE_FORM_ELF,
+    EE_OOR,
+    ee_company_elf,
     _EE_COUNTRY_FIXUPS,
     _EE_FOREIGN_CODE_SHAPES,
     _EE_HISTORY_DATE,
@@ -416,6 +422,8 @@ from .mappers.brazil import (  # noqa: F401  (re-exported, Phase 246)
     map_cnpj_brazil,
 )
 from .mappers.new_zealand import (  # noqa: F401  (re-exported, Phase 246)
+    NZ_OOR,
+    NZ_TYPE_ELF,
     _nz_ids,
     map_nz_companies,
 )

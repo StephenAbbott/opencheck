@@ -219,6 +219,25 @@ EXTENSIONS: tuple[dict[str, str], ...] = (
         ),
         "since": "the filing-provenance ticket (Nov 2026)",
     },
+    {
+        "key": "officialOrganizationalRole",
+        "where": "/recordDetails/interests[] (relationship statements)",
+        "type": "object",
+        "description": (
+            "The appointment's ISO 5009 Official Organizational Role code, from "
+            "GLEIF's code list: `scheme` (`ISO 5009`), `code`, `name` (the list's "
+            "English name, else its local one) and `legalForm`, the ISO 20275 ELF "
+            "code of the company the role is held in — a code names a role in one "
+            "legal form in one jurisdiction. On the interest, never the person: a "
+            "role code is shared by every holder of the role and one person holds "
+            "different roles at different companies. Written only where a "
+            "source's reviewed table names the register's role under the "
+            "company's legal form (Companies House, Estonia, New Zealand); its "
+            "absence says nothing."
+        ),
+        "example": '{"scheme": "ISO 5009", "code": "UDU176", "name": "Director", "legalForm": "H0PO"}',
+        "since": "the ISO 5009 roles ticket (Nov 2026)",
+    },
 )
 
 #: Keys that are documented extensions, by name.
@@ -551,7 +570,9 @@ def sample_bundle() -> list[dict[str, Any]]:
     from .bods.former_names import former_name_annotation
     from .bods.gleif_events import EVENT_PROPERTY
     from .bods.identity_verification import ROUTE_COMPANIES_HOUSE, Verification, role_annotation
+    from .bods.mappers.companies_house import CH_OOR
     from .bods.officer_roles import mark_officer
+    from .bods.oor import mark_role
     from .bods.statements import (
         _addr,
         make_entity_statement,
@@ -708,7 +729,10 @@ def sample_bundle() -> list[dict[str, Any]]:
         subject_statement_id=opco["recordId"],
         interested_party_statement_id=owner["recordId"],
         interested_party_type="person",
-        interests=[{"type": "seniorManagingOfficial", "startDate": "2005-06-01", "details": "Director"}],
+        interests=[mark_role(
+            {"type": "seniorManagingOfficial", "startDate": "2005-06-01", "details": "Director"},
+            CH_OOR, "H0PO", "director",
+        )],
     )
     directorship.setdefault("annotations", []).append(
         entry_date_as_start("The example register", "registered_on")
