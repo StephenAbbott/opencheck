@@ -132,8 +132,11 @@ def test_change_kinds_grade_as_decided(change: dict, tier: str) -> None:
         ("entity_status", "ACTIVE", "recheck"),
         ("legal_name", "X", "recheck"),
         ("legal_address_country", "LU", "recheck"),
-        ("registered_as", "123", "recheck"),
-        ("direct_exception", "NON_PUBLIC", "recheck"),
+        # rules 2: the register reference and the exception reason are note
+        ("registered_at", "RA000585", "note"),
+        ("registered_as", "123", "note"),
+        ("direct_exception", "NON_PUBLIC", "note"),
+        ("ultimate_exception", "NATURAL_PERSONS", "note"),
         # Q6: subsidiaries below the subject are note
         ("direct_children", ["A", "B"], "note"),
         ("registration_status", "LAPSED", "note"),
@@ -315,3 +318,17 @@ def test_the_doc_states_every_row_of_the_three_tables() -> None:
         for key, tier in table.items():
             assert rows.get(key) == tier, f"docs/watchlist.md says {rows.get(key)!r} for {key}, the module {tier!r}"
     assert f"MATERIALITY_RULES` is {m.MATERIALITY_RULES}" in section
+
+
+def test_rules_2_says_what_moved_and_a_parent_change_still_escalates() -> None:
+    assert m.MATERIALITY_RULES == 2
+    assert set(m.MATERIALITY_RULES_CHANGED) == {1, 2}
+    for field in ("registered_at", "registered_as", "direct_exception", "ultimate_exception"):
+        assert field in m.MATERIALITY_RULES_CHANGED[2]
+    # An exception replaced by a named parent is two changes; the entry escalates.
+    changes = [
+        {"kind": "gleif_field", "field": "direct_exception", "old": "NON_PUBLIC", "new": None},
+        {"kind": "gleif_field", "field": "direct_parent_lei", "old": None, "new": "X"},
+    ]
+    assert m.tier_for_entry(changes) == "escalate"
+    assert m.tier_for_entry(changes[:1]) == "note"

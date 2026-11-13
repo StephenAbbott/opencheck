@@ -578,7 +578,7 @@ A change log answers *what changed?*; it did not say whether it mattered. A
 `signal_new: SANCTIONED` with equal weight. Since the pKYC stage A work
 every change the diff names, and every entry, carries one of three
 **materiality tiers**, graded by a closed table in
-`opencheck/watchlist_materiality.py` (`MATERIALITY_RULES` is 1):
+`opencheck/watchlist_materiality.py` (`MATERIALITY_RULES` is 2):
 
 | Tier | Key | Meaning |
 |---|---|---|
@@ -662,10 +662,10 @@ change's contents rather than its kind. `gleif_field` takes the field table.
 | `legal_form` | recheck | |
 | `legal_address_country` | recheck | A move across a border (Phase 300 added it for this). |
 | `hq_address_country` | recheck | As above. |
-| `registered_at` | recheck | Re-registration, or the issuer corrected a wrong number. |
-| `registered_as` | recheck | As above. |
-| `direct_exception` | recheck | A parent appeared or was withdrawn behind a reporting exception. |
-| `ultimate_exception` | recheck | As above. |
+| `registered_at` | note | The issuer re-keyed or corrected the register reference. Recheck until rules 2. |
+| `registered_as` | note | As above. |
+| `direct_exception` | note | The reporting-exception reason moved. A parent that appears or goes is escalated by the parent field. Recheck until rules 2. |
+| `ultimate_exception` | note | As above. |
 | `direct_children` | note | Below the subject: its own corporate activity, not its exposure. |
 | `registration_status` | note | The LEI record's status, not the company's (Phase 242). |
 | `validated_at` | note | Which authority the LOU checked against. |
@@ -822,6 +822,13 @@ unchecked because OpenSanctions did not answer is a note-only entry, hidden
 by "Material only"; the entry still says "could not re-check" in full. If
 `entries_by_materiality` shows unchecked sanctions-family codes arriving
 often, revisit as a `MATERIALITY_RULES` bump.
+
+**Rules 2 (13 Nov 2026).** The register reference (`registered_at`,
+`registered_as`) and the two reporting-exception fields moved from recheck to
+note. A week of GLEIF's daily deltas showed they were about half of every
+recheck: around 1,500 exception-reason moves a day, and issuers re-keying
+register numbers in bulk (1,700 records on 13 Nov). An entry graded under
+rules 1 keeps the tier it was given on the day.
 
 ## What the watcher expected
 
