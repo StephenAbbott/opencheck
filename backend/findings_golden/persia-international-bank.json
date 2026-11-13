@@ -2,7 +2,7 @@
   "lei": "213800HTIY6D1KMBG757",
   "name": "Persia International Bank PLC",
   "role": "anchor",
-  "why": "Phase 342 anchor: the computed sanctions 50% rule. Companies House files Bank Mellat at more than 50% up to 75% and Bank Tejarat at more than 25% up to 50%; Bank Mellat is matched on its OpenSanctions record id and is on us_ofac_sdn, eu_fsf and gb_fcdo_sanctions, so the low end alone meets OFAC, the EU and the UK. Never the context variant on top. LEI floor 1: GLEIF files no OpenCorporates id for this lapsed LEI, so OpenCorporates is never asked, and OpenSanctions' LEI is GLEIF's republished (sources.lineage).",
+  "why": "Phase 342 anchor: the computed sanctions 50% rule. Companies House files Bank Mellat at more than 50% up to 75% and Bank Tejarat at more than 25% up to 50%; Bank Mellat is matched on its OpenSanctions record id and is on us_ofac_sdn, eu_fsf, gb_fcdo_sanctions and (since the Canadian sanctions 50% rule ticket, 12 Nov 2026) ca_dfatd_sema_sanctions, so the low end alone meets OFAC, the EU, the UK and Canada. Never the context variant on top. LEI floor 1: GLEIF files no OpenCorporates id for this lapsed LEI, so OpenCorporates is never asked, and OpenSanctions' LEI is GLEIF's republished (sources.lineage).",
   "example_card": false,
   "no_risk": false,
   "risk": {

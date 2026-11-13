@@ -179,11 +179,12 @@ _RISK_LABELS = {
     "RELATED_SANCTIONED": "Related party sanctioned",
     "SANCTIONS_OWNERSHIP_TEST": (
         "Sanctions ownership test met (computed by OpenCheck from designated "
-        "parties' stated shareholdings; ownership only, not a designation)"
+        "parties' stated shareholdings, and for Canada voting rights; not a "
+        "designation)"
     ),
     "SANCTIONS_OWNERSHIP_TEST_POSSIBLE": (
-        "Sanctions ownership test may be met (stakes stated as ranges or a "
-        "name-only match; context, not a finding)"
+        "Sanctions ownership test may be met (stakes stated as ranges, a "
+        "name-only match or, for Canada, board power; context, not a finding)"
     ),
     "RELATED_COUNTER_SANCTIONED": "Related party counter-sanctioned (non-democratic regime)",
     "SANCTIONS_CONTROLLED": "Sanction ownership or control",

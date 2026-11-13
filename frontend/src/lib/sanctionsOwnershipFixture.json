@@ -2,14 +2,14 @@
   "meets": {
     "code": "SANCTIONS_OWNERSHIP_TEST",
     "confidence": "high",
-    "summary": "Designated parties' stated shareholdings meet the sanctions ownership test for OFAC (US). OFAC (US): meets — 50% held by designated parties directly or through companies they own (Opensanctions); EU and UK: no party designated under them holds shares. Computed by OpenCheck from stated shareholdings, one source at a time; ownership only — the EU and UK control tests are not computed — and not a determination that the company is sanctioned or blocked.",
+    "summary": "Designated parties' stated holdings meet the sanctions ownership test for OFAC (US). OFAC (US): meets — 50% held by designated parties directly or through companies they own (Opensanctions); EU, UK and Canada: no party designated under them holds shares. Computed by OpenCheck from stated holdings, one source at a time; ownership only for OFAC, the EU and the UK, whose control tests are not computed; for Canada, voting rights too, with board power as context only — and not a determination that the company is sanctioned or blocked.",
     "source_id": "opencheck",
     "hit_id": "LEI",
     "evidence": {
       "method": "sanctions_ownership_test",
       "as_of": "2026-10-15",
-      "description": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only: the EU and UK control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
-      "not_computed": "Not computed: control — the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement); OFAC licences and general licences; holdings that have ended — OFAC treats property blocked while the test was met as still blocked after the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck reads current holdings only; programmes that block on ownership or control by a government without a 50% test (Cuba, Iran, North Korea, Syria, Venezuela and Crimea, FAQ 398); and OFAC's Sectoral Sanctions Identifications list, which is outside this test.",
+      "description": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU, Canada) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. For Canada the voting rights the sources state are a second limb, summed on their own and never added to the shares, and a designated party's power to appoint the board can make the result 'may meet', never 'meets'. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only for OFAC, the EU and the UK: their control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
+      "not_computed": "Not computed: control — the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement); OFAC licences and general licences; holdings that have ended — OFAC treats property blocked while the test was met as still blocked after the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck reads current holdings only; programmes that block on ownership or control by a government without a 50% test (Cuba, Iran, North Korea, Syria, Venezuela and Crimea, FAQ 398); OFAC's Sectoral Sanctions Identifications list, which is outside this test; for Canada, the direction limb (a listed person able to direct the company's activities by any means), holdings passed to family members or associates after listing, which Global Affairs Canada presumes are still the listed person's, permits issued by Global Affairs Canada, and listings under other Canadian instruments (FACFOA, the Criminal Code, the United Nations Act); and deemed ownership does not reach a company that is itself a foreign state.",
       "credit": "Method: the 50% rule as published by T-Rank (https://docs.trank.no/white_papers).",
       "regimes": [
         {
@@ -63,6 +63,14 @@
           "result": "no_designated_holder",
           "if_confirmed": false,
           "sources": []
+        },
+        {
+          "regime": "CA",
+          "label": "Canada",
+          "rule": "50% or more of the shares, or 50% or more of the voting rights, held by listed persons together (SEMA s.2.1, JVCFOA s.2.01); board power read as 'may meet' only",
+          "result": "no_designated_holder",
+          "if_confirmed": false,
+          "sources": []
         }
       ],
       "designated": [
@@ -85,14 +93,14 @@
   "possible": {
     "code": "SANCTIONS_OWNERSHIP_TEST_POSSIBLE",
     "confidence": "medium",
-    "summary": "Designated parties' stated shareholdings may meet the sanctions ownership test for OFAC (US); it is not met on the lowest reading of the stakes, counting confirmed matches only. OFAC (US): not met — 30% held by designated parties (Opensanctions); it would be met if a name-only match were confirmed; EU and UK: no party designated under them holds shares. Computed by OpenCheck from stated shareholdings, one source at a time; ownership only — the EU and UK control tests are not computed — and not a determination that the company is sanctioned or blocked.",
+    "summary": "Designated parties' stated holdings may meet the sanctions ownership test for OFAC (US); it is not met on the lowest reading of the stakes, counting confirmed matches only. OFAC (US): not met — 30% held by designated parties (Opensanctions); it would be met if a name-only match were confirmed; EU, UK and Canada: no party designated under them holds shares. Computed by OpenCheck from stated holdings, one source at a time; ownership only for OFAC, the EU and the UK, whose control tests are not computed; for Canada, voting rights too, with board power as context only — and not a determination that the company is sanctioned or blocked.",
     "source_id": "opencheck",
     "hit_id": "LEI",
     "evidence": {
       "method": "sanctions_ownership_test",
       "as_of": "2026-10-15",
-      "description": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only: the EU and UK control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
-      "not_computed": "Not computed: control — the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement); OFAC licences and general licences; holdings that have ended — OFAC treats property blocked while the test was met as still blocked after the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck reads current holdings only; programmes that block on ownership or control by a government without a 50% test (Cuba, Iran, North Korea, Syria, Venezuela and Crimea, FAQ 398); and OFAC's Sectoral Sanctions Identifications list, which is outside this test.",
+      "description": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU, Canada) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. For Canada the voting rights the sources state are a second limb, summed on their own and never added to the shares, and a designated party's power to appoint the board can make the result 'may meet', never 'meets'. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only for OFAC, the EU and the UK: their control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
+      "not_computed": "Not computed: control — the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement); OFAC licences and general licences; holdings that have ended — OFAC treats property blocked while the test was met as still blocked after the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck reads current holdings only; programmes that block on ownership or control by a government without a 50% test (Cuba, Iran, North Korea, Syria, Venezuela and Crimea, FAQ 398); OFAC's Sectoral Sanctions Identifications list, which is outside this test; for Canada, the direction limb (a listed person able to direct the company's activities by any means), holdings passed to family members or associates after listing, which Global Affairs Canada presumes are still the listed person's, permits issued by Global Affairs Canada, and listings under other Canadian instruments (FACFOA, the Criminal Code, the United Nations Act); and deemed ownership does not reach a company that is itself a foreign state.",
       "credit": "Method: the 50% rule as published by T-Rank (https://docs.trank.no/white_papers).",
       "regimes": [
         {
@@ -147,6 +155,14 @@
           "result": "no_designated_holder",
           "if_confirmed": false,
           "sources": []
+        },
+        {
+          "regime": "CA",
+          "label": "Canada",
+          "rule": "50% or more of the shares, or 50% or more of the voting rights, held by listed persons together (SEMA s.2.1, JVCFOA s.2.01); board power read as 'may meet' only",
+          "result": "no_designated_holder",
+          "if_confirmed": false,
+          "sources": []
         }
       ],
       "designated": [
@@ -176,5 +192,94 @@
       "statement_id": "T"
     },
     "kind": "context"
+  },
+  "canada_votes": {
+    "code": "SANCTIONS_OWNERSHIP_TEST",
+    "confidence": "high",
+    "summary": "Designated parties' stated holdings meet the sanctions ownership test for Canada. Canada: meets — 55% of the voting rights held by designated parties (Opensanctions); OFAC (US), EU and UK: no party designated under them holds shares. Computed by OpenCheck from stated holdings, one source at a time; ownership only for OFAC, the EU and the UK, whose control tests are not computed; for Canada, voting rights too, with board power as context only — and not a determination that the company is sanctioned or blocked.",
+    "source_id": "opencheck",
+    "hit_id": "LEI",
+    "evidence": {
+      "method": "sanctions_ownership_test",
+      "as_of": "2026-10-15",
+      "description": "Computed by OpenCheck from the shareholdings the sources state, one source at a time: the holdings of parties designated under each regime are added (OFAC, EU, Canada) or taken one designated party at a time (UK); a company they hold enough of counts as caught, and its own holdings then count in full. For Canada the voting rights the sources state are a second limb, summed on their own and never added to the shares, and a designated party's power to appoint the board can make the result 'may meet', never 'meets'. The lowest reading of every stake decides whether the test is met; the highest decides whether it may be. Only parties matched on an identifier or with corroboration are counted. Ownership only for OFAC, the EU and the UK: their control tests are not computed. Arithmetic on the records, not a determination that the company is sanctioned, blocked or frozen.",
+      "not_computed": "Not computed: control — the EU and UK also treat a company as caught when a designated person controls it (appoints its board, directs it, or by agreement); OFAC licences and general licences; holdings that have ended — OFAC treats property blocked while the test was met as still blocked after the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck reads current holdings only; programmes that block on ownership or control by a government without a 50% test (Cuba, Iran, North Korea, Syria, Venezuela and Crimea, FAQ 398); OFAC's Sectoral Sanctions Identifications list, which is outside this test; for Canada, the direction limb (a listed person able to direct the company's activities by any means), holdings passed to family members or associates after listing, which Global Affairs Canada presumes are still the listed person's, permits issued by Global Affairs Canada, and listings under other Canadian instruments (FACFOA, the Criminal Code, the United Nations Act); and deemed ownership does not reach a company that is itself a foreign state.",
+      "credit": "Method: the 50% rule as published by T-Rank (https://docs.trank.no/white_papers).",
+      "regimes": [
+        {
+          "regime": "OFAC",
+          "label": "OFAC (US)",
+          "rule": "50% or more, held by blocked persons together (OFAC's 50 Percent Rule)",
+          "result": "no_designated_holder",
+          "if_confirmed": false,
+          "sources": []
+        },
+        {
+          "regime": "EU",
+          "label": "EU",
+          "rule": "50% or more of the proprietary rights, held by designated persons together",
+          "result": "no_designated_holder",
+          "if_confirmed": false,
+          "sources": []
+        },
+        {
+          "regime": "UK",
+          "label": "UK",
+          "rule": "more than 50%, held by one designated person directly or through companies it owns (no aggregation across designated persons)",
+          "result": "no_designated_holder",
+          "if_confirmed": false,
+          "sources": []
+        },
+        {
+          "regime": "CA",
+          "label": "Canada",
+          "rule": "50% or more of the shares, or 50% or more of the voting rights, held by listed persons together (SEMA s.2.1, JVCFOA s.2.01); board power read as 'may meet' only",
+          "result": "meets",
+          "if_confirmed": false,
+          "sources": [
+            {
+              "source_id": "opensanctions",
+              "source": "Opensanctions",
+              "result": "meets",
+              "figure": {
+                "minimum": 55.0,
+                "maximum": 55.0,
+                "text": "55% of the voting rights",
+                "limb": "votes"
+              },
+              "holders": [
+                {
+                  "party": "P",
+                  "name": "Designated P",
+                  "stake": "55% of the voting rights",
+                  "minimum": 55.0,
+                  "maximum": 55.0,
+                  "limb": "votes",
+                  "designated": true,
+                  "basis": "identifier"
+                }
+              ],
+              "if_confirmed": false,
+              "limb": "votes"
+            }
+          ]
+        }
+      ],
+      "designated": [
+        {
+          "party": "P",
+          "name": "Designated P",
+          "regimes": [
+            "CA"
+          ],
+          "datasets": [
+            "ca_dfatd_sema_sanctions"
+          ],
+          "basis": "identifier"
+        }
+      ],
+      "statement_id": "T"
+    },
+    "kind": "risk"
   }
 }
