@@ -117,7 +117,7 @@ describe("before a run", () => {
     const control = screen.getByRole("button", { name: /Add the next layer/ });
     expect(control).toHaveAccessibleName(/2 companies/);
     expect(control).toHaveAccessibleName(/owners and controllers/);
-    expect(control).toHaveTextContent("+1 layer 2");
+    expect(control).toHaveTextContent("Add next layer 2");
   });
 
   it("says what FullCheck would add to the screening, not what it found", () => {

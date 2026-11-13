@@ -136,7 +136,7 @@ describe("networkRiskSentence", () => {
 describe("layerControl", () => {
   it("carries the frontier count, which is the one thing Run FullCheck cannot say", () => {
     const c = layerControl({ frontier: 2, noun: "owners and controllers", busy: false });
-    expect(c).toMatchObject({ label: "+1 layer", count: 2, disabled: false });
+    expect(c).toMatchObject({ label: "Add next layer", count: 2, disabled: false });
     expect(c.ariaLabel).toContain("2 companies");
     expect(c.ariaLabel).toContain("owners and controllers");
   });

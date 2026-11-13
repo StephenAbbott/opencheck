@@ -35,6 +35,7 @@ export const ICON_PATHS = {
   close: ["M18 6 6 18M6 6l12 12"],
   menu: ["M4 7h16M4 12h16M4 17h16"],
   plus: ["M12 5v14M5 12h14"],
+  minus: ["M5 12h14"],
   // Meaning
   check: ["M20 6 9 17l-5-5"],
   warning: [
