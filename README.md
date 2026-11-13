@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 524** — Contract and notice lists on source cards keep their titles readable on a wide screen.
+**Latest: Phase 525** — The MTender harvest now waits out short outages of MTender's API instead of stopping.
 
 → [Full development history](docs/status.md)
 
