@@ -847,6 +847,18 @@ class Settings(BaseSettings):
     # ``false`` never downloads: the file at ASP_MOLDOVA_DB_FILE is used as
     # found. Downloads also need OPENCHECK_ALLOW_LIVE.
     asp_moldova_sync: bool = Field(default=True, alias="ASP_MOLDOVA_SYNC")
+    # The fallback when dataset.gov.md does not answer (the portal has served
+    # its own 404 on every path since late September 2026): the last index
+    # refresh-asp-moldova-index.yml published, or one built by hand from an
+    # export somebody held. Read only after the portal failed, and only when
+    # it is newer than the index already on disk. Empty string disables it.
+    asp_moldova_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "asp-moldova-index/asp_moldova.sqlite.gz"
+        ),
+        alias="ASP_MOLDOVA_DB_URL",
+    )
 
     # --- Serbia APR company register (openapi.apr.gov.rs, SODL 1.0) ---
     # No key and no per-company API: one monthly JSON of the whole register
