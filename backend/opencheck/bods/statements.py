@@ -747,6 +747,7 @@ SOURCE_NAMES: dict[str, str] = {
     "brightquery": "BrightQuery / OpenData.org",
     "chilecompra": "ChileCompra — Mercado Público (Chilean public procurement)",
     "austender": "AusTender — Australian Government contracts",
+    "mtender_moldova": "MTender — Moldovan public procurement",
     "find_tender_uk": "Find a Tender (UK public procurement)",
     "climatetrace": "Global Energy Monitor / Climate TRACE",
     "companies_house": "UK Companies House",

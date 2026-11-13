@@ -94,6 +94,7 @@ from .hit_builders import (  # noqa: F401
     _bh_apr_serbia,
     _bh_asp_moldova,
     _bh_austender,
+    _bh_mtender_moldova,
     _bh_chilecompra,
     _bh_find_tender_uk,
     _EITI_IDENTIFIER_KEY_BY_COUNTRY,
@@ -1379,6 +1380,27 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
                 legal_name=ctx.legal_name,
             ),
         ))
+    # MTender — Moldovan public procurement awards, the AusTender shape:
+    # gated on a legal person's IDNO filed under a Moldovan authority, and on
+    # the index being present.
+    md_adapter = REGISTRY.get("mtender_moldova")
+    if (
+        md_adapter is not None
+        and hasattr(md_adapter, "fetch_by_identifiers")
+        and hasattr(md_adapter, "applies_to")
+        and md_adapter.applies_to(ctx.registered_at, ctx.registered_as)
+        and _want("mtender_moldova")
+        and _offline_index_covers(md_adapter, ctx.lei)
+    ):
+        tasks.append((
+            "mtender_moldova",
+            md_adapter.fetch_by_identifiers(
+                ctx.lei,
+                ctx.registered_as,
+                ctx.registered_at,
+                legal_name=ctx.legal_name,
+            ),
+        ))
     return tasks
 
 
@@ -1423,6 +1445,9 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     if source_id == "austender":
         # No contracts on AusTender is an answer with no card, not a finding.
         return _bh_austender(result, ctx) if result.get("supplier") else None
+    if source_id == "mtender_moldova":
+        # No awards on MTender is an answer with no card, not a finding.
+        return _bh_mtender_moldova(result, ctx) if result.get("supplier") else None
     if result.get("is_stub"):
         return None
     if source_id == "opencorporates":
@@ -2565,11 +2590,24 @@ def _split_subject_key(key: str) -> tuple[str, str, str]:
 def _register_procurement(scheme: str, local_id: str, legal_name: str) -> list[tuple[str, Any]]:
     """Procurement sources a register-anchored lookup can ask by the number.
 
-    Today one: Find a Tender, for a Companies House number, when its index
-    is present (a source that cannot answer is never announced).
+    Find a Tender for a Companies House number, MTender for a Moldovan IDNO,
+    each when its index is present (a source that cannot answer is never
+    announced).
     """
     from ..sources.find_tender_uk import FindTenderUkAdapter
+    from ..sources.mtender_moldova import MTenderMoldovaAdapter
 
+    if scheme == "MD-IDNO":
+        md = REGISTRY.get("mtender_moldova")
+        if not isinstance(md, MTenderMoldovaAdapter) or not md.covers_lei(""):
+            return []
+        # Any Moldovan authority will do: the adapter reads the number.
+        if not md.applies_to("RA000451", local_id):
+            return []
+        return [(
+            "mtender_moldova",
+            md.fetch_by_identifiers("", local_id, "RA000451", legal_name=legal_name),
+        )]
     adapter = REGISTRY.get("find_tender_uk")
     if scheme != "GB-COH" or not isinstance(adapter, FindTenderUkAdapter):
         return []
