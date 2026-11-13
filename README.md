@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 529** — The Senzing export now sends register numbers, tax numbers, passports and other databases' keys as their own Senzing features, with the issuing country read from the scheme, and leaves out industry and securities codes.
+**Latest: Phase 530** — GLEIF entity statements now carry the ISO 20275 Entity Legal Form code beside its label.
 
 → [Full development history](docs/status.md)
 
