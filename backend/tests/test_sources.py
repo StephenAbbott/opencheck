@@ -137,6 +137,9 @@ _IDENTIFIER_KEYED = {
     # compras_gov_br: reached from the CNPJ GLEIF files; awards are not
     # name-searchable here.
     "compras_gov_br",
+    # mtender_moldova: reached from the IDNO GLEIF files; awards are not
+    # name-searchable here.
+    "mtender_moldova",
     # find_tender_uk: the same — reached from the Companies House number.
     "find_tender_uk",
     # jar_lithuania (Phase 325): name search is a LIKE over the local index,

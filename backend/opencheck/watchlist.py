@@ -116,7 +116,7 @@ RETIRED_SIGNAL_CODES: frozenset[str] = frozenset({"COMPLEX_CORPORATE_STRUCTURE"}
 #: Phase 245's ``verdict_template``. Bump it whenever a rule change moves which
 #: codes fire for an unchanged company, and record the codes it moved below.
 #: A snapshot written before Phase 273 carries no number: it was version 1.
-SIGNAL_RULES = 6
+SIGNAL_RULES = 7
 
 #: version -> the codes whose firing that rules version changed. Comparing a
 #: baseline from an older version, appearances and disappearances of these
@@ -140,6 +140,11 @@ SIGNAL_RULES = 6
 #: matched on its LEI (Notion ticket E, 20 Oct 2026): a company already
 #: tagged gains CRIME_RECORD, REGULATORY_ACTION or REGULATORY_WARNING with
 #: nothing in its records changed.
+#: 7 = Canada joins the sanctions 50% rule (the Canadian sanctions 50% rule
+#: ticket, 12 Nov 2026): a party on Canada's SEMA/JVCFOA list only now counts,
+#: voting rights are a second limb for Canada and board power can make the
+#: result "may meet", so either ownership-test code can appear with nothing in
+#: the company's records changed.
 SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
     2: frozenset(
         {
@@ -167,6 +172,7 @@ SIGNAL_RULES_CHANGED: dict[int, frozenset[str]] = {
         }
     ),
     6: frozenset({"CRIME_RECORD", "REGULATORY_ACTION", "REGULATORY_WARNING"}),
+    7: frozenset({"SANCTIONS_OWNERSHIP_TEST", "SANCTIONS_OWNERSHIP_TEST_POSSIBLE"}),
 }
 
 

@@ -72,6 +72,7 @@ _OFFICIAL_REGISTERS = {
 _THIRD_PARTY_SOURCES = {
     "brightquery",
     "austender",
+    "mtender_moldova",
     "chilecompra",
     "compras_gov_br",
     "climatetrace",

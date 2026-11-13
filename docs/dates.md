@@ -74,6 +74,7 @@ where there is one: rebuilding an old dump does not make it new.
 | `chilecompra` | first day of the latest month covered | `meta.built_at` |
 | `austender` | the registry file's `Last-Modified` (`meta.source_last_modified`) | `meta.built_at` |
 | `compras_gov_br` | the registry file's `Last-Modified` (`meta.source_last_modified`), else the latest award day | `meta.built_at` |
+| `mtender_moldova` | the registry file's `Last-Modified` (`meta.source_last_modified`); the latest award day (`meta.data_to`) for an index built from a local file | `meta.built_at` |
 | `meip` | the OECD edition | the asset build |
 | `eiti_soe` | `meta.source_snapshot` | `meta.built` |
 | `eiti` (organisation index) | — (EITI publishes no cut) | `meta.generated`, the moment the crawl started, in UTC to the second (Phase 318; a bare day before) |

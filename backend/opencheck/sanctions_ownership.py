@@ -16,7 +16,7 @@ Stephen's decisions on the ticket (15 Oct 2026), each one a rule here:
   that regime, and each of them was matched on an identifier or with
   corroboration. "May meet" — the high ends meet it, or a name-only match
   would tip it — is ``SANCTIONS_OWNERSHIP_TEST_POSSIBLE``, context only.
-* **Three regimes, computed separately, reported side by side.**
+* **Four regimes, computed separately, reported side by side.**
 
   - OFAC: 50% or more, blocked persons' holdings added together. A company
     caught by the rule is itself blocked, and its holdings count *in full*
@@ -26,14 +26,29 @@ Stephen's decisions on the ticket (15 Oct 2026), each one a rule here:
   - UK: more than 50%, held by *one* designated person, directly or through
     companies it owns more than 50% of. No aggregation across designated
     persons (OFSI's guidance; a joint arrangement is not read from records).
+  - Canada (the Canadian sanctions 50% rule ticket, 12 Nov 2026): SEMA
+    s.2.1 / JVCFOA s.2.01 — a listed person controls an entity it holds 50%
+    or more of the shares **or** 50% or more of the voting rights in, and
+    Global Affairs Canada's 2026 guidance adds listed persons' positions
+    together. A controlled entity's property is deemed the listed person's,
+    so a caught company's holdings count in full, as for OFAC. Shares and
+    votes are two limbs, each summed on its own and never added to each
+    other. The statute's board limb (s.2.1(2)(b), able to change the board)
+    is read from ``appointmentOfBoard`` and is **context only** — it can
+    make the result "may meet", never "meets". The direction limb (c) is not
+    computed. Only the SEMA/JVCFOA lists count (``ca_dfatd_sema_sanctions``,
+    ``ca_sema_sanctions_news``); FACFOA, the Criminal Code terrorist list and
+    UN listings are other instruments. The EU and UK keep shares only
+    (Stephen: no votes or board limb for them).
 * **Identifier matches count; name-only matches do not.** A designated party
   is counted when its OpenSanctions match rests on a shared identifier or on
   corroboration (birth year, nationality, country). A name-only match is
   listed as "would meet the test if the match is confirmed", never summed.
 * **The regime comes from the record's datasets.** A party on ``eu_fsf`` only
   is designated for the EU test only (``REGIME_DATASETS``).
-* **Ownership only.** The EU and UK control tests — board appointments,
-  influence, agreements — are not computed, and every surface says so.
+* **Ownership only, except Canada's votes.** The EU and UK control tests —
+  board appointments, influence, agreements — are not computed, nor is
+  Canada's direction limb, and every surface says so.
 * **Per source, never across sources.** Each source's shareholdings are
   computed on their own, as in Phase 339; two sources' stakes are never
   added. GLEIF and MEIP edges are not ownership and are left out.
@@ -75,13 +90,17 @@ METHOD_CREDIT = (
 METHOD_DESCRIPTION = (
     "Computed by OpenCheck from the shareholdings the sources state, one source "
     "at a time: the holdings of parties designated under each regime are added "
-    "(OFAC, EU) or taken one designated party at a time (UK); a company they "
-    "hold enough of counts as caught, and its own holdings then count in full. "
-    "The lowest reading of every stake decides whether the test is met; the "
-    "highest decides whether it may be. Only parties matched on an identifier "
-    "or with corroboration are counted. Ownership only: the EU and UK control "
-    "tests are not computed. Arithmetic on the records, not a determination "
-    "that the company is sanctioned, blocked or frozen."
+    "(OFAC, EU, Canada) or taken one designated party at a time (UK); a company "
+    "they hold enough of counts as caught, and its own holdings then count in "
+    "full. For Canada the voting rights the sources state are a second limb, "
+    "summed on their own and never added to the shares, and a designated "
+    "party's power to appoint the board can make the result 'may meet', never "
+    "'meets'. The lowest reading of every stake decides whether the test is met; "
+    "the highest decides whether it may be. Only parties matched on an "
+    "identifier or with corroboration are counted. Ownership only for OFAC, the "
+    "EU and the UK: their control tests are not computed. Arithmetic on the "
+    "records, not a determination that the company is sanctioned, blocked or "
+    "frozen."
 )
 #: What the test leaves out, said wherever the result is shown. Phase 346
 #: added the three OFAC points from FAQs 398–402 (checked 15 Oct 2026):
@@ -98,8 +117,15 @@ NOT_COMPUTED = (
     "the blocked persons themselves reduce their stake (FAQ 402), and OpenCheck "
     "reads current holdings only; programmes that block on ownership or control "
     "by a government without a 50% test (Cuba, Iran, North Korea, Syria, "
-    "Venezuela and Crimea, FAQ 398); and OFAC's Sectoral Sanctions "
-    "Identifications list, which is outside this test."
+    "Venezuela and Crimea, FAQ 398); OFAC's Sectoral Sanctions "
+    "Identifications list, which is outside this test; for Canada, the "
+    "direction limb (a listed person able to direct the company's activities "
+    "by any means), holdings passed to family members or associates after "
+    "listing, which Global Affairs Canada presumes are still the listed "
+    "person's, permits issued by Global Affairs Canada, and listings under "
+    "other Canadian instruments (FACFOA, the Criminal Code, the United "
+    "Nations Act); and deemed ownership does not reach a company that is "
+    "itself a foreign state."
 )
 #: Where the OFAC reading comes from (FAQs 398–402 and the 2014 guidance).
 OFAC_SOURCES = (
@@ -107,6 +133,27 @@ OFAC_SOURCES = (
     "https://ofac.treasury.gov/faqs/401",
     "https://ofac.treasury.gov/media/6186/download?inline",
 )
+
+#: Where the Canadian reading comes from (read 12 Nov 2026).
+CA_SOURCES = (
+    "https://www.international.gc.ca/world-monde/international_relations-relations_internationales/sanctions/deemed-ownership-propriete-presumee.aspx?lang=eng",
+    "https://laws-lois.justice.gc.ca/eng/acts/s-14.5/page-1.html",
+    "https://laws-lois.justice.gc.ca/eng/acts/J-2.3/page-1.html",
+)
+
+#: The limb of a regime's test a result rests on. Only Canada has more than
+#: shares: its statute puts voting rights in the same 50% limb, and its board
+#: limb is read as context only.
+LIMB_SHARES = "shares"
+LIMB_VOTES = "votes"
+LIMB_BOARD = "board"
+LIMB_WORDS = {
+    LIMB_SHARES: "shares",
+    LIMB_VOTES: "voting rights",
+    LIMB_BOARD: "power to appoint the board",
+}
+VOTES_SUFFIX = " of the voting rights"
+BOARD_TEXT = "can appoint or remove the board"
 
 RESULT_MEETS = "meets"
 RESULT_MAY_MEET = "may_meet"
@@ -150,13 +197,20 @@ class Regime:
     #: True: designated parties' holdings are added together.
     aggregate: bool
     datasets: frozenset[str]
+    #: Canada: voting rights are a second numeric limb (never added to shares).
+    votes: bool = False
+    #: Canada: board power (``appointmentOfBoard``) can make it "may meet".
+    board: bool = False
 
 
 #: OpenSanctions dataset names → regime. OFAC: the SDN list only — the 50
 #: Percent Rule is about blocked persons; the non-SDN lists (``us_ofac_cons``)
 #: carry their own, narrower directives and are not read as blocking. EU: the
 #: Financial Sanctions Files and the Official Journal. UK: OFSI's
-#: consolidated list and the FCDO's UK Sanctions List.
+#: consolidated list and the FCDO's UK Sanctions List. Canada: the
+#: Consolidated Canadian Autonomous Sanctions List (SEMA and JVCFOA) and
+#: Global Affairs Canada's SEMA announcements, which can run ahead of it —
+#: never ``ca_facfoa`` or ``ca_listed_terrorists`` (other Acts).
 REGIMES: tuple[Regime, ...] = (
     Regime(
         "OFAC", "OFAC (US)",
@@ -173,6 +227,14 @@ REGIMES: tuple[Regime, ...] = (
         "more than 50%, held by one designated person directly or through "
         "companies it owns (no aggregation across designated persons)",
         0.5, False, False, frozenset({"gb_hmt_sanctions", "gb_fcdo_sanctions"}),
+    ),
+    Regime(
+        "CA", "Canada",
+        "50% or more of the shares, or 50% or more of the voting rights, held by "
+        "listed persons together (SEMA s.2.1, JVCFOA s.2.01); board power read "
+        "as 'may meet' only",
+        0.5, True, True, frozenset({"ca_dfatd_sema_sanctions", "ca_sema_sanctions_news"}),
+        votes=True, board=True,
     ),
 )
 REGIME_DATASETS: dict[str, frozenset[str]] = {r.key: r.datasets for r in REGIMES}
@@ -240,17 +302,24 @@ def _share_stake(share: Any) -> Stake | None:
 _UNSTATED = Stake(0.0, False, None, False)
 
 
-def _relationship_stake(stmt: Mapping[str, Any], as_of: str) -> Stake | None:
-    """The current shareholding one relationship states, or None when it
-    states no current shareholding (roles, control, voting rights, ended)."""
+def _current_interests(stmt: Mapping[str, Any], as_of: str, itype: str) -> list[Mapping[str, Any]]:
     closed = record_closed(dict(stmt))
     rd = stmt.get("recordDetails")
     rd = rd if isinstance(rd, Mapping) else {}
-    current = [
+    return [
         i for i in rd.get("interests") or []
-        if isinstance(i, Mapping) and i.get("type") == "shareholding"
+        if isinstance(i, Mapping) and i.get("type") == itype
         and not interest_ended(dict(i), closed, as_of)
     ]
+
+
+def _relationship_stake(
+    stmt: Mapping[str, Any], as_of: str, itype: str = "shareholding",
+) -> Stake | None:
+    """The current stake of one interest type (``shareholding`` by default,
+    ``votingRights`` for Canada's votes limb) one relationship states, or
+    None when it states none (roles, other interests, ended)."""
+    current = _current_interests(stmt, as_of, itype)
     if not current:
         return None
     best: Stake | None = None
@@ -363,6 +432,30 @@ def designated_parties(
 Edges = dict[tuple[str, str], Stake]  # (owner, owned) → stake, one source
 
 
+@dataclass
+class _Graph:
+    """One source's current holdings: shares, voting rights and board power.
+    Only Canada reads the last two."""
+
+    shares: Edges = field(default_factory=dict)
+    votes: Edges = field(default_factory=dict)
+    board: set[tuple[str, str]] = field(default_factory=set)
+
+    def limbs(self, regime: Regime) -> list[tuple[str, Edges]]:
+        out = [(LIMB_SHARES, self.shares)]
+        if regime.votes:
+            out.append((LIMB_VOTES, self.votes))
+        return out
+
+    def pairs(self, regime: Regime) -> set[tuple[str, str]]:
+        pairs = set(self.shares)
+        if regime.votes:
+            pairs |= set(self.votes)
+        if regime.board:
+            pairs |= self.board
+        return pairs
+
+
 def _passes(total: float, strict: bool, regime: Regime) -> bool:
     """Does a low-end sum (strictly above ``total`` when ``strict``) meet it?"""
     t = regime.threshold
@@ -404,17 +497,31 @@ def _crosses(stakes: list[Stake], regime: Regime, high: bool) -> bool:
     return _passes(total, strict, regime)
 
 
-def _caught(edges: Edges, roots: set[str], regime: Regime, high: bool) -> set[str]:
+def _limb_for(
+    graph: _Graph, x: str, caught: set[str], regime: Regime, high: bool,
+) -> str | None:
+    """The limb on which the caught set holds enough of ``x``, or None.
+    Shares first, then votes (each summed alone — never added to each
+    other); board power only on the high reading, so it can make a result
+    "may meet" and never "meets"."""
+    for limb, edges in graph.limbs(regime):
+        stakes = [s for (o, y), s in edges.items() if y == x and o in caught]
+        if _crosses(stakes, regime, high):
+            return limb
+    if regime.board and high and any(o in caught for (o, y) in graph.board if y == x):
+        return LIMB_BOARD
+    return None
+
+
+def _caught(graph: _Graph, roots: set[str], regime: Regime, high: bool) -> set[str]:
     """Every node the roots hold enough of, repeated to a fixed point. The
     roots count as blocked; a caught company's holdings count in full."""
     caught = set(roots)
-    owned_by: dict[str, list[tuple[str, Stake]]] = {}
-    for (owner, owned), stake in edges.items():
-        owned_by.setdefault(owned, []).append((owner, stake))
-    for _ in range(len(owned_by) + 1):
+    targets = {owned for _, owned in graph.pairs(regime)}
+    for _ in range(len(targets) + 1):
         added = {
-            x for x, holders in owned_by.items()
-            if x not in caught and _crosses([s for o, s in holders if o in caught], regime, high)
+            x for x in targets
+            if x not in caught and _limb_for(graph, x, caught, regime, high) is not None
         }
         if not added:
             break
@@ -422,35 +529,42 @@ def _caught(edges: Edges, roots: set[str], regime: Regime, high: bool) -> set[st
     return caught
 
 
-def _caught_for(edges: Edges, parties: set[str], regime: Regime, high: bool) -> list[set[str]]:
-    """The caught sets: one for all parties together (OFAC, EU), one per
-    designated party (UK — no aggregation across designated persons)."""
+def _caught_for(graph: _Graph, parties: set[str], regime: Regime, high: bool) -> list[set[str]]:
+    """The caught sets: one for all parties together (OFAC, EU, Canada), one
+    per designated party (UK — no aggregation across designated persons)."""
     if regime.aggregate:
-        return [_caught(edges, parties, regime, high)] if parties else []
-    return [_caught(edges, {p}, regime, high) for p in sorted(parties)]
+        return [_caught(graph, parties, regime, high)] if parties else []
+    return [_caught(graph, {p}, regime, high) for p in sorted(parties)]
 
 
 @dataclass
 class _Outcome:
     met: bool
     group: set[str]
+    limb: str = LIMB_SHARES
 
 
-def _outcome(edges: Edges, parties: set[str], subject: str, regime: Regime, high: bool) -> _Outcome:
-    groups = _caught_for(edges, parties, regime, high)
+def _outcome(graph: _Graph, parties: set[str], subject: str, regime: Regime, high: bool) -> _Outcome:
+    groups = _caught_for(graph, parties, regime, high)
     hits = [g for g in groups if subject in g]
     if hits:
-        return _Outcome(True, hits[0])
-    # Not met: report the group holding most of the subject at the low end.
-    def held(g: set[str]) -> float:
-        return sum(s.lo for (o, x), s in edges.items() if x == subject and o in g)
-    best = max(groups, key=held) if groups else set()
-    return _Outcome(False, best)
+        g = hits[0]
+        limb = _limb_for(graph, subject, g - {subject}, regime, high) or LIMB_SHARES
+        return _Outcome(True, g, limb)
+    # Not met: report the group and limb holding most of the subject at the
+    # low end.
+    best: tuple[float, str, set[str]] = (-1.0, LIMB_SHARES, set())
+    for g in groups:
+        for limb, edges in graph.limbs(regime):
+            held = sum(s.lo for (o, x), s in edges.items() if x == subject and o in g)
+            if held > best[0] + _EPS:
+                best = (held, limb, g)
+    return _Outcome(False, best[2], best[1])
 
 
-def _upstream(edges: Edges, target: str) -> set[str]:
+def _upstream(graph: _Graph, regime: Regime, target: str) -> set[str]:
     owners: dict[str, set[str]] = {}
-    for owner, owned in edges:
+    for owner, owned in graph.pairs(regime):
         owners.setdefault(owned, set()).add(owner)
     seen: set[str] = set()
     stack = [target]
@@ -474,6 +588,18 @@ def _source_edges(
     as_of: str,
 ) -> tuple[dict[str, Edges], dict[str, str]]:
     """source key → its current shareholding edges, and source key → label."""
+    graphs, labels = _source_graphs(statements, subject_ids, canon, as_of)
+    return {k: g.shares for k, g in graphs.items() if g.shares}, labels
+
+
+def _source_graphs(
+    statements: list[dict[str, Any]],
+    subject_ids: Iterable[str],
+    canon: Mapping[str, str],
+    as_of: str,
+) -> tuple[dict[str, _Graph], dict[str, str]]:
+    """source key → its current shares, votes and board power, and source
+    key → label."""
     resolve = resolver(statements)
     subjects = {canon.get(s, s) for s in subject_ids if s}
 
@@ -484,7 +610,7 @@ def _source_edges(
         c = canon.get(sid, sid)
         return _SUBJECT if c in subjects else c
 
-    by_source: dict[str, Edges] = {}
+    by_source: dict[str, _Graph] = {}
     labels: dict[str, str] = {}
     for s in statements:
         if s.get("recordType") != "relationship":
@@ -501,13 +627,20 @@ def _source_edges(
         if not owned or not owner or owned == owner:
             continue
         stake = _relationship_stake(s, as_of)
-        if stake is None:
+        votes = _relationship_stake(s, as_of, "votingRights")
+        board = bool(_current_interests(s, as_of, "appointmentOfBoard"))
+        if stake is None and votes is None and not board:
             continue
         key, label = source_key(s)
         labels.setdefault(key, label)
-        edges = by_source.setdefault(key, {})
-        prev = edges.get((owner, owned))
-        edges[(owner, owned)] = stake if prev is None else _larger(prev, stake)
+        graph = by_source.setdefault(key, _Graph())
+        for edges, value in ((graph.shares, stake), (graph.votes, votes)):
+            if value is None:
+                continue
+            prev = edges.get((owner, owned))
+            edges[(owner, owned)] = value if prev is None else _larger(prev, value)
+        if board:
+            graph.board.add((owner, owned))
     return by_source, labels
 
 
@@ -516,11 +649,31 @@ def _source_edges(
 # ----------------------------------------------------------------------
 
 
+_BOARD_STAKE = Stake(0.0, False, None, False)
+
+
+def _limb_edges(graph: _Graph, limb: str) -> dict[tuple[str, str], Stake]:
+    if limb == LIMB_VOTES:
+        return graph.votes
+    if limb == LIMB_BOARD:
+        return {pair: _BOARD_STAKE for pair in graph.board}
+    return graph.shares
+
+
+def _limb_text(stake: Stake, limb: str) -> str:
+    if limb == LIMB_BOARD:
+        return BOARD_TEXT
+    text = stake.text()
+    return text + VOTES_SUFFIX if limb == LIMB_VOTES else text
+
+
 def _holders(
-    edges: Edges, group: set[str], designated: Mapping[str, Designated],
-    names: Mapping[str, str],
+    graph: _Graph, group: set[str], designated: Mapping[str, Designated],
+    names: Mapping[str, str], regime: Regime, limb: str = LIMB_SHARES,
 ) -> list[dict[str, Any]]:
-    """The subject's direct holders inside ``group``, with why each counts."""
+    """The subject's direct holders inside ``group`` on the limb the result
+    rests on, with why each counts."""
+    edges = _limb_edges(graph, limb)
     rows: list[dict[str, Any]] = []
     for (owner, owned), stake in sorted(edges.items()):
         if owned != _SUBJECT or owner not in group:
@@ -529,36 +682,51 @@ def _holders(
         row: dict[str, Any] = {
             "party": owner,
             "name": names.get(owner) or (d.name if d else owner),
-            "stake": stake.text(),
+            "stake": _limb_text(stake, limb),
             "minimum": round(stake.lo * 100, 4),
             "maximum": None if stake.hi is None else round(stake.hi * 100, 4),
         }
+        if limb != LIMB_SHARES:
+            row["limb"] = limb
         if d is not None:
             row["designated"] = True
             row["basis"] = d.basis
         else:
             row["designated"] = False
-            # A caught company: who holds enough of it, at this end.
-            row["held_by"] = [
-                {"name": names.get(o) or o, "stake": s.text()}
-                for (o, x), s in sorted(edges.items())
-                if x == owner and o in group
-            ]
+            # A caught company: who holds enough of it, at this end, on each
+            # limb the regime reads.
+            held_by: list[dict[str, Any]] = []
+            for lb, ed in graph.limbs(regime):
+                for (o, x), s in sorted(ed.items()):
+                    if x == owner and o in group:
+                        held_by.append({"name": names.get(o) or o, "stake": _limb_text(s, lb)})
+            if regime.board:
+                for o, x in sorted(graph.board):
+                    if x == owner and o in group:
+                        held_by.append({"name": names.get(o) or o, "stake": BOARD_TEXT})
+            row["held_by"] = held_by
         rows.append(row)
     rows.sort(key=lambda r: (-r["minimum"], r["name"].casefold(), r["party"]))
     return rows
 
 
-def _figure(edges: Edges, group: set[str]) -> dict[str, Any]:
+def _figure(graph: _Graph, group: set[str], limb: str = LIMB_SHARES) -> dict[str, Any]:
+    if limb == LIMB_BOARD:
+        return {"minimum": 0.0, "maximum": None, "text": BOARD_TEXT, "limb": limb}
+    edges = _limb_edges(graph, limb)
     stakes = [s for (o, x), s in edges.items() if x == _SUBJECT and o in group]
     lo, lo_strict = _sum(stakes, high=False)
     hi, hi_strict = _sum(stakes, high=True)
     assert lo is not None
-    return {
+    text = stake_text(lo, lo_strict, hi, hi_strict) if stakes else ""
+    out: dict[str, Any] = {
         "minimum": round(lo * 100, 4),
         "maximum": None if hi is None else round(hi * 100, 4),
-        "text": stake_text(lo, lo_strict, hi, hi_strict) if stakes else "",
+        "text": text + VOTES_SUFFIX if text and limb == LIMB_VOTES else text,
     }
+    if limb != LIMB_SHARES:
+        out["limb"] = limb
+    return out
 
 
 def assess(
@@ -569,7 +737,8 @@ def assess(
     canon: Mapping[str, str] | None = None,
 ) -> dict[str, Any] | None:
     """Every regime's result on every source, or None when no designated
-    party (under any of the three regimes) holds shares in the company."""
+    party (under any of the regimes) holds shares in the company — or, for
+    Canada, voting rights or board power."""
     subject_ids = [s for s in subject_ids if s]
     canon = dict(canon or {})
     names: dict[str, str] = {}
@@ -586,7 +755,7 @@ def assess(
     }
     if not designated:
         return None
-    by_source, labels = _source_edges(statements, subject_ids, canon, as_of)
+    by_source, labels = _source_graphs(statements, subject_ids, canon, as_of)
 
     regimes_out: list[dict[str, Any]] = []
     any_row = False
@@ -596,27 +765,30 @@ def assess(
         name_only = set(under) - counted
         rows: list[dict[str, Any]] = []
         for key in sorted(by_source):
-            edges = by_source[key]
-            up = _upstream(edges, _SUBJECT)
+            graph = by_source[key]
+            up = _upstream(graph, regime, _SUBJECT)
             if not (set(under) & up):
                 continue
-            low = _outcome(edges, counted & up, _SUBJECT, regime, high=False)
-            high = _outcome(edges, counted & up, _SUBJECT, regime, high=True)
-            with_names = _outcome(edges, (counted | name_only) & up, _SUBJECT, regime, high=False)
+            low = _outcome(graph, counted & up, _SUBJECT, regime, high=False)
+            high = _outcome(graph, counted & up, _SUBJECT, regime, high=True)
+            with_names = _outcome(graph, (counted | name_only) & up, _SUBJECT, regime, high=False)
             if low.met:
-                result, group = RESULT_MEETS, low.group
+                result, decided = RESULT_MEETS, low
             elif high.met:
-                result, group = RESULT_MAY_MEET, high.group
+                result, decided = RESULT_MAY_MEET, high
             else:
-                result, group = RESULT_NOT_MET, low.group
+                result, decided = RESULT_NOT_MET, low
+            group, limb = decided.group, decided.limb
             row: dict[str, Any] = {
                 "source_id": key,
                 "source": labels.get(key, key),
                 "result": result,
-                "figure": _figure(edges, group),
-                "holders": _holders(edges, group, under, names),
+                "figure": _figure(graph, group, limb),
+                "holders": _holders(graph, group, under, names, regime, limb),
                 "if_confirmed": bool(not low.met and with_names.met),
             }
+            if limb != LIMB_SHARES:
+                row["limb"] = limb
             if row["if_confirmed"]:
                 row["name_only"] = sorted(
                     ({"party": n, "name": under[n].name} for n in with_names.group & name_only),
@@ -677,6 +849,14 @@ def regime_sentence(r: Mapping[str, Any]) -> str:
     lead = rows[0] if rows else {}
     fig = (lead.get("figure") or {}).get("text") or ""
     where = f" ({lead['source']})" if lead.get("source") else ""
+    if lead.get("limb") == LIMB_BOARD:
+        text = (
+            f"{label}: may meet — a designated party, or a company it controls, "
+            f"{BOARD_TEXT}{where}; board power is read as context only"
+        )
+        if r.get("if_confirmed") and result != RESULT_MEETS:
+            text += "; it would be met if a name-only match were confirmed"
+        return text
     through = any(not h.get("designated") for h in lead.get("holders") or [])
     held = f"{fig} held by designated parties" + (
         " directly or through companies they own" if through else ""
@@ -739,9 +919,10 @@ def build_signal(
         return None
     lines = regimes_sentence(regimes)
     caveat = (
-        " Computed by OpenCheck from stated shareholdings, one source at a time; "
-        "ownership only — the EU and UK control tests are not computed — and not a "
-        "determination that the company is sanctioned or blocked."
+        " Computed by OpenCheck from stated holdings, one source at a time; "
+        "ownership only for OFAC, the EU and the UK, whose control tests are not "
+        "computed; for Canada, voting rights too, with board power as context only "
+        "— and not a determination that the company is sanctioned or blocked."
     )
     anchor = sorted(subject_ids)[0] if subject_ids else ""
     evidence = {**payload, "statement_id": anchor}
@@ -756,7 +937,7 @@ def build_signal(
             code=SANCTIONS_OWNERSHIP_TEST,
             confidence="high" if bases <= {BASIS_IDENTIFIER} else "medium",
             summary=(
-                f"Designated parties' stated shareholdings meet the sanctions "
+                f"Designated parties' stated holdings meet the sanctions "
                 f"ownership test for {names}. {lines[0].upper()}{lines[1:]}{caveat}"
             ),
             source_id="opencheck",
@@ -769,7 +950,7 @@ def build_signal(
         code=SANCTIONS_OWNERSHIP_TEST_POSSIBLE,
         confidence="medium",
         summary=(
-            f"Designated parties' stated shareholdings may meet the sanctions "
+            f"Designated parties' stated holdings may meet the sanctions "
             f"ownership test for {names}; it is not met on the lowest reading of "
             f"the stakes, counting confirmed matches only. "
             f"{lines[0].upper()}{lines[1:]}{caveat}"
@@ -919,8 +1100,8 @@ def outcome(
     if payload is None:
         status = STATUS_NO_HOLDER
         text = (
-            "No party designated under OFAC (US), the EU or the UK holds shares in the "
-            "company in any source read, so the ownership test does not apply."
+            "No party designated under OFAC (US), the EU, the UK or Canada holds shares "
+            "in the company in any source read, so the ownership test does not apply."
         )
     else:
         status = STATUS_NOT_MET

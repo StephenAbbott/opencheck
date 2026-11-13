@@ -810,6 +810,7 @@ def sanctions_ownership_block(
                         "source": row.get("source"),
                         "result": row.get("result"),
                         "holding": (row.get("figure") or {}).get("text"),
+                        **({"limb": row["limb"]} if row.get("limb") else {}),
                         "holders": [
                             {k: h.get(k) for k in _HOLDER_KEYS if h.get(k) is not None}
                             for h in row.get("holders") or []

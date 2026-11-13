@@ -194,6 +194,10 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
       const contracts = raw.contracts as { url?: string }[] | undefined;
       return contracts?.[0]?.url || "https://www.tenders.gov.au/";
     }
+    case "mtender_moldova": {
+      const awards = raw.awards as { url?: string }[] | undefined;
+      return awards?.[0]?.url || "https://mtender.gov.md/";
+    }
     case "compras_gov_br":
       // No per-award page has a confirmed address (decision G): the portal.
       return (raw.link as string | undefined) || "https://www.gov.br/compras/pt-br";
@@ -1297,6 +1301,104 @@ export function AusTenderContractsList({ hit }: { hit: SourceHit }) {
 }
 
 /**
+ * MTenderAwardsList — Moldovan public procurement awards (mtender_moldova
+ * source), the AusTender card's counterpart.
+ *
+ * Lists the supplier's latest and largest awards, newest first, each linked
+ * to its procurement on MTender, with buyer, value, procedure and lots.
+ * MTender publishes awards, not contracts, so a row says "awarded" and never
+ * "contract". The footnote states the totals the list is drawn from and the
+ * period the copy OpenCheck reads covers.
+ */
+export function MTenderAwardsList({ hit }: { hit: SourceHit }) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+  if (hit.source_id !== "mtender_moldova") return null;
+  const raw = hit.raw as Record<string, unknown> | undefined;
+  const awards = (raw?.awards ?? []) as {
+    ocid: string;
+    awarded?: string | null;
+    buyer?: string;
+    title?: string;
+    value?: number | null;
+    currency?: string;
+    procedure?: string;
+    lots?: number;
+    url?: string;
+  }[];
+  if (!awards.length) return null;
+  const supplier = (raw?.supplier ?? {}) as {
+    awards?: number;
+    value_mdl?: number;
+    other_currency?: number;
+    first_date?: string | null;
+    last_date?: string | null;
+  };
+  const dataTo = (raw?.data_to as string | null | undefined) || "";
+  const shown = expanded ? awards : awards.slice(0, 5);
+
+  return (
+    <RowList
+      controls={listId}
+      total={awards.length}
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      moreLabel="award"
+      items={shown.map((a) => ({
+        key: a.ocid,
+        title: (
+          <a
+            href={a.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-oo-blue hover:underline underline-offset-2"
+          >
+            {a.title || `Procurement ${a.ocid}`}
+            <span className="sr-only"> (opens in new tab)</span>
+          </a>
+        ),
+        meta: (
+          <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            {[
+              a.buyer,
+              a.value ? `${a.currency || "MDL"} ${Number(a.value).toLocaleString()}` : "",
+              a.awarded ? `awarded ${a.awarded}` : "",
+              a.procedure,
+              a.lots && a.lots > 1 ? `${a.lots} lots` : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            <Chip tone="ok" size="sm">awarded</Chip>
+          </span>
+        ),
+      }))}
+      footnote={
+        <>
+          The latest and largest awards on MTender
+          {supplier.awards ? (
+            <>
+              {" "}— of {supplier.awards.toLocaleString()} procurements awarded
+              {supplier.first_date && supplier.last_date
+                ? ` from ${supplier.first_date} to ${supplier.last_date}`
+                : ""}
+              , with MDL values totalling MDL{" "}
+              {(supplier.value_mdl ?? 0).toLocaleString()} (OpenCheck&apos;s sum
+              {supplier.other_currency
+                ? `; ${supplier.other_currency} in another currency not added`
+                : ""}
+              )
+            </>
+          ) : null}
+          . MTender publishes awards, not contracts; most are reported
+          low-value purchases rather than competitive procedures.
+          {dataTo ? ` The copy OpenCheck reads holds awards up to ${dataTo}.` : ""}
+        </>
+      }
+    />
+  );
+}
+
+/**
  * ComprasGovBrAwardsList — Brazilian public procurement awards
  * (compras_gov_br source), the AusTender card's counterpart.
  *
@@ -1623,6 +1725,7 @@ function HitRow({
       <TedAwardsList hit={hit} />
       <ChileCompraRecordsList hit={hit} />
       <AusTenderContractsList hit={hit} />
+      <MTenderAwardsList hit={hit} />
       <ComprasGovBrAwardsList hit={hit} />
       <FindTenderAwardsList hit={hit} />
       {/* Risk findings only (Phase 245). A structural observation — "No

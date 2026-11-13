@@ -914,6 +914,58 @@ def finding_austender(bundle: dict[str, Any]) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# mtender_moldova (MTender — Moldovan public procurement awards)
+# ---------------------------------------------------------------------------
+
+
+def _md_month(day: str) -> str:
+    """``2026-03-03`` → ``March 2026``; anything else unchanged."""
+    import calendar
+
+    try:
+        year, month = day[:4], int(day[5:7])
+        return f"{calendar.month_name[month]} {year}"
+    except (ValueError, IndexError):
+        return day
+
+
+def finding_mtender_moldova(bundle: dict[str, Any]) -> str | None:
+    """How many Moldovan public procurements this company was awarded.
+
+    MTender publishes awards, not contracts, so the sentence says *awarded*.
+    The value is MDL award values summed by OpenCheck and printed in full
+    (rule 5). The period is the awards' own, because the file the index is
+    built from reaches back about a year and stops where the registry's copy
+    stops. Awards are activity, never ownership or risk. A company with none
+    has no card.
+    """
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return None
+    supplier = bundle.get("supplier")
+    if not isinstance(supplier, dict):
+        return None
+    n = int(supplier.get("awards") or 0)
+    if not n:
+        return None
+    value = int(supplier.get("value_mdl") or 0)
+    buyers = int(supplier.get("buyers") or 0)
+    first = str(supplier.get("first_date") or "")
+    last = str(supplier.get("last_date") or "")
+    if first and last and first[:7] != last[:7]:
+        span = f" {_md_month(first)} to {_md_month(last)}"
+    elif last:
+        span = f" in {_md_month(last)}"
+    else:
+        span = ""
+    lead = (
+        f"Awarded {n:,} Moldovan public {'procurement' if n == 1 else 'procurements'}{span}, "
+        f"MDL values totalling {value:,}"
+    )
+    buyer_clause = f"from {buyers:,} {'buyer' if buyers == 1 else 'buyers'}" if buyers else None
+    return clauses_to_sentence([lead, buyer_clause])
+
+
+# ---------------------------------------------------------------------------
 # compras_gov_br (Compras.gov.br — Brazilian public procurement awards)
 # ---------------------------------------------------------------------------
 

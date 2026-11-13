@@ -202,6 +202,22 @@ async def _warm_caches_background() -> None:
             "until present): %s",
             exc,
         )
+    # MTender: the supplier index built weekly from the OCP Data Registry's
+    # copy of Moldova's procurement awards, the AusTender arrangement. Until
+    # it lands ``mtender_moldova`` is not announced (``covers_lei``).
+    try:
+        from .sources.mtender_moldova import warm_index as warm_mtender_index
+
+        stats = await asyncio.to_thread(warm_mtender_index)
+        log.info("MTender index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "MTender index warm-up failed (the source is not announced "
+            "until present): %s",
+            exc,
+        )
     # Compras.gov.br: the supplier index built weekly from the OCP Data
     # Registry's copy of Brazil's procurement awards, the AusTender
     # arrangement. Until it lands ``compras_gov_br`` is not announced.

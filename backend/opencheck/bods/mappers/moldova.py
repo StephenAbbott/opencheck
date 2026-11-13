@@ -257,3 +257,52 @@ def _map_asp_moldova(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=[interest],
             source_url=link,
         )
+
+
+# ---------------------------------------------------------------------------
+# MTender — Moldovan public procurement awards (licence not named)
+# ---------------------------------------------------------------------------
+#
+# Awards won are activity, not ownership: one entity statement for the
+# supplier, the TED / ChileCompra / AusTender precedent. MTender publishes the
+# supplier's IDNO on every award, so the IDNO is asserted under the scheme
+# ``asp_moldova`` and GLEIF write, and the statements corroborate.
+
+
+def _mtender_mdl(value: int) -> str:
+    """Award values summed in full — ``MDL 1,249,028``, never rounded."""
+    return f"MDL {value:,}"
+
+
+@content_addressed
+def map_mtender_moldova(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map an MTender fetch bundle to one BODS entity statement."""
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return
+    supplier = bundle.get("supplier") or {}
+    idno = str(bundle.get("idno") or "").strip()
+    if not supplier or not idno:
+        return
+    awards = int(supplier.get("awards") or 0)
+    parts = [
+        "Supplier awarded Moldovan public procurement on MTender",
+        f"{awards:,} procurement{'s' if awards != 1 else ''} awarded with values in MDL "
+        f"summing to {_mtender_mdl(int(supplier.get('value_mdl') or 0))}",
+    ]
+    first, last = supplier.get("first_date"), supplier.get("last_date")
+    if first and last:
+        parts.append(f"awarded {first} to {last}")
+    name = (supplier.get("name") or bundle.get("legal_name") or "").strip()
+    yield make_entity_statement(
+        source_id="mtender_moldova",
+        local_id=idno,
+        name=name or idno,
+        identifiers=[
+            {"id": idno, "scheme": MD_IDNO_SCHEME, "schemeName": MD_IDNO_SCHEME_NAME}
+        ],
+        entity_details="; ".join(parts),
+        source_url=bundle.get("link") or None,
+        # The latest award MTender published for this supplier — its own
+        # dated assertion about the record (the TED latest-notice precedent).
+        statement_date=last or None,
+    )

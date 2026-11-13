@@ -620,6 +620,8 @@ from .mappers.moldova import (  # noqa: F401  (re-exported, Phase 246)
     _md_person_key,
     map_asp_moldova,
     _map_asp_moldova,
+    _mtender_mdl,
+    map_mtender_moldova,
 )
 from .mappers.serbia import (  # noqa: F401  (re-exported, Phase 246)
     _RS_JURISDICTION,

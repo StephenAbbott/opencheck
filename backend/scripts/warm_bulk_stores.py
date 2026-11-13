@@ -74,6 +74,8 @@ from opencheck.sources.asp_moldova import index_path as asp_moldova_index_path  
 from opencheck.sources.asp_moldova import warm_index as warm_asp_moldova_index  # noqa: E402
 from opencheck.sources.austender import db_path as austender_db_path  # noqa: E402
 from opencheck.sources.austender import warm_index as warm_austender_index  # noqa: E402
+from opencheck.sources.mtender_moldova import db_path as mtender_db_path  # noqa: E402
+from opencheck.sources.mtender_moldova import warm_index as warm_mtender_index  # noqa: E402
 from opencheck.sources.chilecompra import db_path as chilecompra_db_path  # noqa: E402
 from opencheck.sources.compras_gov_br import db_path as compras_gov_br_db_path  # noqa: E402
 from opencheck.sources.compras_gov_br import warm_index as warm_compras_gov_br_index  # noqa: E402
@@ -115,6 +117,7 @@ WARMERS = (
     ("onrc_romania", warm_onrc_index, onrc_db_path),
     ("austender", warm_austender_index, austender_db_path),
     ("compras_gov_br", warm_compras_gov_br_index, compras_gov_br_db_path),
+    ("mtender_moldova", warm_mtender_index, mtender_db_path),
     ("meip", warm_meip_db, meip_db_path),
     ("chilecompra", warm_chilecompra_index, chilecompra_db_path),
     ("find_tender_uk", warm_find_tender_index, find_tender_db_path),

@@ -1,5 +1,5 @@
 ---
-title: Compras.gov.br joins as the sixty-ninth source — the Brazilian public procurement awards a company won from federal, state and municipal bodies, read from a weekly index of the OCP Data Registry's copy of the Compras.gov.br OCDS file and joined on the CNPJ root.
+title: Compras.gov.br joins as the seventieth source — the Brazilian public procurement awards a company won from federal, state and municipal bodies, read from a weekly index of the OCP Data Registry's copy of the Compras.gov.br OCDS file and joined on the CNPJ root.
 readme: Compras.gov.br joins as a source, showing the Brazilian public procurement awards a company won from federal, state and municipal bodies, joined on its CNPJ.
 tests: backend +50, vitest +4, vitest_files +1
 ---

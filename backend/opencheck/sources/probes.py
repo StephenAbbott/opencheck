@@ -1263,6 +1263,29 @@ PROBES: dict[str, SourceProbe] = {
             "it before the sweep."
         ),
     ),
+    "mtender_moldova": _p(
+        tier="index",
+        subject="Kaufland S.R.L. (Moldova, IDNO 1016600004811)",
+        # The lookup's entry point with the anchor's real pair: GLEIF files
+        # Kaufland Moldova's IDNO under the State Register (RA000451).
+        method="fetch_by_identifiers",
+        args=("529900IQDQ6X3VTMWN63", "1016600004811", "RA000451"),
+        kwargs={"legal_name": "\"Kaufland\" S.R.L."},
+        expect_fields=("supplier", "buyers", "awards"),
+        requires_files=("mtender_moldova.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt weekly from a monthly retrieval: 75 days means missed runs.
+        snapshot_max_age_days=75,
+        anchor_lei="529900IQDQ6X3VTMWN63",
+        bods_mapper="map_mtender_moldova",
+        notes=(
+            "A supplier with a few reported low-value purchases in January "
+            "2026, reached through the IDNO GLEIF files. The index is the "
+            "mtender-index release asset, rebuilt weekly by "
+            "refresh-mtender-index.yml; warm_bulk_stores.py downloads it "
+            "before the sweep."
+        ),
+    ),
     "eiti_soe": _p(
         tier="index",
         subject="Equinor Energy AS",

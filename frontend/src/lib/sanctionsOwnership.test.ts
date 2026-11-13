@@ -18,11 +18,12 @@ import {
 
 const meets = fixture.meets as unknown as RiskSignal;
 const possible = fixture.possible as unknown as RiskSignal;
+const canadaVotes = fixture.canada_votes as unknown as RiskSignal;
 
 describe("sanctionsOwnership", () => {
   it("lists every regime side by side, with the caught company and who holds it", () => {
     const rows = sanctionsOwnershipRows(meets);
-    expect(rows.map((r) => r.regime)).toEqual(["OFAC (US)", "EU", "UK"]);
+    expect(rows.map((r) => r.regime)).toEqual(["OFAC (US)", "EU", "UK", "Canada"]);
     expect(rows[0].resultWords).toBe(RESULT_WORDS.meets);
     expect(rows[0].holding).toBe("50%");
     expect(rows[0].holders).toBe("Holding A 50% (caught company: held by Designated P 60%)");
@@ -34,6 +35,14 @@ describe("sanctionsOwnership", () => {
     expect(possible.kind).toBe("context");
     expect(ofac.result).toBe("not_met");
     expect(ofac.ifConfirmed).toBe(true);
+  });
+
+  it("shows Canada's votes limb in the holding and the holder", () => {
+    const ca = sanctionsOwnershipRows(canadaVotes).find((r) => r.regime === "Canada");
+    expect(ca?.result).toBe("meets");
+    expect(ca?.holding).toBe("55% of the voting rights");
+    expect(ca?.holders).toBe("Designated P 55% of the voting rights");
+    expect(sanctionsOwnershipBandNote([canadaVotes])).toMatch(/Canada: meets/);
   });
 
   it("says how it is computed and what it does not compute", () => {

@@ -29,6 +29,7 @@ _ASSETS = (
     "chilecompra.sqlite",
     "austender.sqlite",
     "compras_gov_br.sqlite",
+    "mtender_moldova.sqlite",
     "find_tender_uk.sqlite",
     "form13f.sqlite",
     "entity_pages.sqlite",
