@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 533** — The daily Estonian register index leaves out the odd company entered between RIK's files instead of refusing the whole build.
+**Latest: Phase 534** — Crime-record, regulatory and OpenSanctions listing signals now name the company or record they were read from, so FullCheck's network signals say whose record it is.
 
 → [Full development history](docs/status.md)
 
