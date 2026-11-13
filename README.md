@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 528** — The watchlist now grades a re-keyed register number or a moved reporting-exception reason as a note, so "Recheck the source" is kept for changes worth opening the report for.
+**Latest: Phase 529** — The Senzing export now sends register numbers, tax numbers, passports and other databases' keys as their own Senzing features, with the issuing country read from the scheme, and leaves out industry and securities codes.
 
 → [Full development history](docs/status.md)
 
