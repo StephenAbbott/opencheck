@@ -639,9 +639,41 @@ def test_a_short_file_is_refused(tmp_path: Path) -> None:
                             min_rows={builder.CSV_FILE: 1000})
 
 
-def test_a_people_file_naming_an_unknown_company_is_refused(tmp_path: Path) -> None:
-    bos = _bos() + [{"ariregistri_kood": 11111111, "nimi": "Ghost OÜ", "kasusaajad": []}]
-    _refused(tmp_path, "is not in", bos=bos)
+def _ghost(n: int, key: str) -> dict[str, Any]:
+    return {"ariregistri_kood": 11111111 + n, "nimi": f"Ghost {n} OÜ", key: []}
+
+
+def test_a_company_written_after_the_companies_file_is_left_out(tmp_path: Path) -> None:
+    """RIK writes the files minutes apart (13 Nov 2026: companies 14:35 GMT,
+    registry-card persons 14:39), so a company entered in between is in one
+    and not the other. It is left out and counted, not a refusal."""
+    ghost = _ghost(0, "kasusaajad")
+    ghost["kasusaajad"] = [dict(_bos()[0]["kasusaajad"][0])]
+    path, meta = _build(tmp_path, bos=_bos() + [ghost])
+    assert meta["codes_not_in_companies_file"] == "1"
+    conn = sqlite3.connect(path)
+    assert conn.execute("SELECT COUNT(*) FROM beneficial_owner WHERE code = ?", (str(11111111),)).fetchone()[0] == 0
+    conn.close()
+
+
+def test_a_clean_build_counts_no_missing_codes(index) -> None:
+    _out, meta = index
+    assert meta["codes_not_in_companies_file"] == "0"
+
+
+def test_too_many_codes_the_companies_file_lacks_are_refused(tmp_path: Path) -> None:
+    limit = builder.MAX_STRAY_CODES
+    bos = _bos() + [_ghost(n, "kasusaajad") for n in range(limit)]
+    _build(tmp_path, name="ok.sqlite", bos=bos)  # exactly the limit is accepted
+    _refused(tmp_path, "at most", bos=bos + [_ghost(limit, "kasusaajad")])
+
+
+def test_one_missing_code_across_several_files_is_counted_once(tmp_path: Path) -> None:
+    _path, meta = _build(
+        tmp_path, bos=_bos() + [_ghost(0, "kasusaajad")],
+        off_cards=_off_cards() + [_ghost(0, "kaardivalised_isikud")],
+    )
+    assert meta["codes_not_in_companies_file"] == "1"
 
 
 def test_a_code_that_is_not_eight_digits_is_refused(tmp_path: Path) -> None:
@@ -1146,8 +1178,9 @@ async def test_the_page_path_has_no_off_card_list(index) -> None:
     assert bundle["tier"] == "page" and bundle.get("off_card_persons", []) == []
 
 
-def test_an_off_card_row_naming_an_unknown_company_is_refused(tmp_path: Path) -> None:
-    _refused(tmp_path, "is not in", off_cards=_off_cards() + [{"ariregistri_kood": int(ABSENT), "nimi": "Ghost", "kaardivalised_isikud": []}])
+def test_an_off_card_row_naming_an_unknown_company_is_left_out(tmp_path: Path) -> None:
+    _path, meta = _build(tmp_path, off_cards=_off_cards() + [{"ariregistri_kood": int(ABSENT), "nimi": "Ghost", "kaardivalised_isikud": []}])
+    assert meta["codes_not_in_companies_file"] == "1"
 
 
 async def test_a_schema_one_index_is_read_with_no_off_card_list(tmp_path: Path) -> None:

@@ -1,0 +1,6 @@
+---
+title: The Estonian index refresh no longer fails when a company is registered while RIK is writing its open-data files.
+readme: The daily Estonian register index leaves out the odd company entered between RIK's files instead of refusing the whole build.
+tests: backend +3
+---
+The 13 Nov 2026 refresh (run 43476924248) exited 2 with "code 17647415 is not in ettevotja_rekvisiidid__lihtandmed.csv.zip". RIK writes its nine files one after another: that day the companies CSV at 14:35 GMT and the registry-card persons file at 14:39, and Orvax OÜ (17647415), entered in between, was in the second and not the first — one code of 381,435, every other file agreeing exactly. The builder treated any such code as a sign the files did not belong together. Now `_admit` leaves a code the companies file lacks out of every table, logs it, and counts the distinct codes in `meta.codes_not_in_companies_file`; past `MAX_STRAY_CODES` (25) it still refuses, and files from different days are still refused by the cut check. A company left out is reached as any index miss is, through REST or the print page, and is in the next day's build. Rebuilt from the real 13 Nov files with the fix: 381,434 entities, one code left out. Unrelated to the ISO 5009 role-code change or the Render disk size.

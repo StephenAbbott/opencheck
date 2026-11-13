@@ -113,9 +113,9 @@ def test_the_builder_refuses_an_undated_ruling(tmp_path: Path, change: dict, mat
         _build(tmp_path, rulings=[{"ariregistri_kood": int(HAUDE), "nimi": "Haudemaja OÜ", "maarused": [bad]}])
 
 
-def test_the_builder_refuses_a_company_the_csv_lacks(tmp_path: Path) -> None:
-    with pytest.raises(builder.BuildRefused, match="is not in"):
-        _build(tmp_path, pledges=[{"ariregistri_kood": 11111111, "nimi": "Ghost OÜ", "kommertspandiandmed": []}])
+def test_the_builder_leaves_out_a_company_the_csv_lacks(tmp_path: Path) -> None:
+    _out, meta = _build(tmp_path, pledges=[{"ariregistri_kood": 11111111, "nimi": "Ghost OÜ", "kommertspandiandmed": []}])
+    assert meta["codes_not_in_companies_file"] == "1"
 
 
 def test_the_builder_and_the_reader_keep_the_same_types() -> None:

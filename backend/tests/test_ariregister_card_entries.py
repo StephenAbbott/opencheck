@@ -116,10 +116,10 @@ def test_the_builder_refuses_an_entry_it_cannot_pack(tmp_path: Path, changes, ma
         _build(tmp_path, cards=_with_entry(**changes))
 
 
-def test_the_builder_refuses_a_card_for_an_unknown_company(tmp_path: Path) -> None:
+def test_the_builder_leaves_out_a_card_for_an_unknown_company(tmp_path: Path) -> None:
     cards = _cards() + [{"ariregistri_kood": 11111111, "nimi": "Ghost OÜ", "registrikaardid": []}]
-    with pytest.raises(builder.BuildRefused, match="is not in"):
-        _build(tmp_path, cards=cards)
+    _out, meta = _build(tmp_path, cards=cards)
+    assert meta["codes_not_in_companies_file"] == "1"
 
 
 def test_the_builder_refuses_a_short_cards_file(tmp_path: Path) -> None:

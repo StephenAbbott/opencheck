@@ -394,6 +394,44 @@ class BuildRefused(RuntimeError):
     """The input is not what the index may be built from."""
 
 
+#: How many distinct registry codes the other files may name that the
+#: companies file lacks before the build is refused. RIK writes the nine
+#: files one after another, minutes apart: on 13 Nov 2026 the companies file
+#: was written at 14:35 GMT and the registry-card file at 14:39, and one
+#: company entered in between (17647415, Orvax OÜ) was in the second and not
+#: the first. Such a company is left out of the index (a lookup reaches it
+#: through REST or the print page, as any code the index lacks) and counted
+#: in ``meta.codes_not_in_companies_file``. Files from two different days
+#: are still refused by the cut check, and anything past this many codes
+#: means the files do not belong together.
+MAX_STRAY_CODES = 25
+
+
+class Strays:
+    """The codes the other files name that the companies file lacks."""
+
+    def __init__(self, limit: int = MAX_STRAY_CODES) -> None:
+        self.limit = limit
+        self.codes: set[str] = set()
+
+
+def _admit(code: str, seen: set[str], strays: Strays) -> bool:
+    """Whether ``code`` is a company the companies file holds. A code it
+    lacks is remembered and skipped, up to ``strays.limit`` distinct codes;
+    one more refuses the build."""
+    if code in seen:
+        return True
+    if code not in strays.codes:
+        strays.codes.add(code)
+        log.warning("code %s is not in %s; left out", code, CSV_FILE)
+    if len(strays.codes) > strays.limit:
+        raise BuildRefused(
+            f"code {code} is not in {CSV_FILE}, and neither are"
+            f" {len(strays.codes) - 1} other codes (at most {strays.limit} may be missing)"
+        )
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Download
 # ---------------------------------------------------------------------------
@@ -673,6 +711,7 @@ def build_index(
     cut_override: str | None = None,
     min_rows: dict[str, int] | None = None,
     started: dt.datetime | None = None,
+    max_stray_codes: int = MAX_STRAY_CODES,
 ) -> dict[str, str]:
     """Build the SQLite index at ``out_path`` from the nine zips in ``src``.
 
@@ -701,6 +740,7 @@ def build_index(
     vocab: dict[tuple[str, str], str] = {}
     counts: dict[str, int] = {"entities": 0, "vat": 0}
     seen: set[str] = set()
+    strays = Strays(max_stray_codes)
 
     try:
         for row in read_csv_rows(src / CSV_FILE, min_rows=floors.get(CSV_FILE, 0)):
@@ -759,8 +799,8 @@ def build_index(
                         if not isinstance(ent, dict) or "ariregistri_kood" not in ent:
                             raise BuildRefused("an element is not an entity object")
                         code = str(ent["ariregistri_kood"]).strip().zfill(8)
-                        if code not in seen:
-                            raise BuildRefused(f"code {code} is not in {CSV_FILE}")
+                        if not _admit(code, seen, strays):
+                            continue
                         if code in file_seen:
                             raise BuildRefused(f"code {code} appears twice")
                         file_seen.add(code)
@@ -787,17 +827,17 @@ def build_index(
             log.info("%s: %d entities, %d rows", name, entities, rows)
 
         counts["card_entries"] = _load_card_entries(
-            conn, src / CARDS_FILE, seen, vocab, floor=floors.get(CARDS_FILE, 0),
+            conn, src / CARDS_FILE, seen, vocab, floor=floors.get(CARDS_FILE, 0), strays=strays,
         )
 
         counts["general"] = _load_general(
-            conn, src / GENERAL_FILE, seen, vocab, floor=floors.get(GENERAL_FILE, 0),
+            conn, src / GENERAL_FILE, seen, vocab, floor=floors.get(GENERAL_FILE, 0), strays=strays,
         )
         counts["rulings"], counts["ruled_companies"] = _load_rulings(
-            conn, src / RULINGS_FILE, seen, vocab, floor=floors.get(RULINGS_FILE, 0),
+            conn, src / RULINGS_FILE, seen, vocab, floor=floors.get(RULINGS_FILE, 0), strays=strays,
         )
         counts["pledges"], counts["pledged_companies"] = _load_pledges(
-            conn, src / PLEDGES_FILE, seen, floor=floors.get(PLEDGES_FILE, 0),
+            conn, src / PLEDGES_FILE, seen, floor=floors.get(PLEDGES_FILE, 0), strays=strays,
         )
         # The companies obliged to file beneficial owners that have none on
         # file — counted here, said per company in the finding.
@@ -827,6 +867,7 @@ def build_index(
             "ruled_companies": str(counts.get("ruled_companies", 0)),
             "pledges": str(counts.get("pledges", 0)),
             "pledged_companies": str(counts.get("pledged_companies", 0)),
+            "codes_not_in_companies_file": str(len(strays.codes)),
             "source_page": PAGE_URL,
             "source_files": ",".join(FILES),
             "license": LICENSE,
@@ -857,7 +898,7 @@ CARD_ENTRY_FIELDS = ("card_type", "card_no", "entry_no", "day", "entry_type")
 
 def _load_card_entries(
     conn: sqlite3.Connection, path: Path, seen: set[str],
-    vocab: dict[tuple[str, str], str], *, floor: int,
+    vocab: dict[tuple[str, str], str], *, floor: int, strays: Strays,
 ) -> int:
     """The registry cards file into ``card_entry``, one packed row per
     company. Refuses a company the CSV lacks, a repeated company, an entry
@@ -872,8 +913,8 @@ def _load_card_entries(
                 if not isinstance(ent, dict) or "ariregistri_kood" not in ent:
                     raise BuildRefused("an element is not an entity object")
                 code = str(ent["ariregistri_kood"]).strip().zfill(8)
-                if code not in seen:
-                    raise BuildRefused(f"code {code} is not in {CSV_FILE}")
+                if not _admit(code, seen, strays):
+                    continue
                 if code in file_seen:
                     raise BuildRefused(f"code {code} appears twice")
                 file_seen.add(code)
@@ -1042,7 +1083,7 @@ def _general_values(
 
 def _load_general(
     conn: sqlite3.Connection, path: Path, seen: set[str],
-    vocab: dict[tuple[str, str], str], *, floor: int,
+    vocab: dict[tuple[str, str], str], *, floor: int, strays: Strays,
 ) -> int:
     """The general-data file into ``general``. Its entity set must be the
     CSV's, as the people files' must."""
@@ -1056,8 +1097,8 @@ def _load_general(
                 if not isinstance(ent, dict) or "ariregistri_kood" not in ent:
                     raise BuildRefused("an element is not an entity object")
                 code = str(ent["ariregistri_kood"]).strip().zfill(8)
-                if code not in seen:
-                    raise BuildRefused(f"code {code} is not in {CSV_FILE}")
+                if not _admit(code, seen, strays):
+                    continue
                 if code in file_seen:
                     raise BuildRefused(f"code {code} appears twice")
                 file_seen.add(code)
@@ -1079,7 +1120,7 @@ def _load_general(
 
 
 def _entities(
-    path: Path, seen: set[str], list_key: str,
+    path: Path, seen: set[str], list_key: str, strays: Strays,
 ) -> Iterator[tuple[str, list[Any]]]:
     """``(code, list)`` for each entity object in a JSON file, refusing an
     element that is not one, a code the CSV lacks, a repeated code and a list
@@ -1092,8 +1133,8 @@ def _entities(
                 if not isinstance(ent, dict) or "ariregistri_kood" not in ent:
                     raise BuildRefused("an element is not an entity object")
                 code = str(ent["ariregistri_kood"]).strip().zfill(8)
-                if code not in seen:
-                    raise BuildRefused(f"code {code} is not in {CSV_FILE}")
+                if not _admit(code, seen, strays):
+                    continue
                 if code in file_seen:
                     raise BuildRefused(f"code {code} appears twice")
                 file_seen.add(code)
@@ -1107,7 +1148,7 @@ def _entities(
 
 def _load_rulings(
     conn: sqlite3.Connection, path: Path, seen: set[str],
-    vocab: dict[tuple[str, str], str], *, floor: int,
+    vocab: dict[tuple[str, str], str], *, floor: int, strays: Strays,
 ) -> tuple[int, int]:
     """The rulings file into ``ruling``: the ``RULING_TYPES`` in force, one
     JSON array per company, newest first. Returns (rulings, companies). The
@@ -1115,7 +1156,7 @@ def _load_rulings(
     entry ruling, so a short file is a cut-short file."""
     total = companies = listed = 0
     batch: list[tuple[str, str]] = []
-    for code, rows in _entities(path, seen, "maarused"):
+    for code, rows in _entities(path, seen, "maarused", strays):
         listed += 1
         kept: list[dict[str, Any]] = []
         for r in rows:
@@ -1170,14 +1211,14 @@ def _pledgee(h: dict[str, Any]) -> dict[str, Any]:
 
 
 def _load_pledges(
-    conn: sqlite3.Connection, path: Path, seen: set[str], *, floor: int,
+    conn: sqlite3.Connection, path: Path, seen: set[str], *, floor: int, strays: Strays,
 ) -> tuple[int, int]:
     """The commercial pledges file into ``pledge``: the current pledges of
     each company (status ``R``, no end date). Returns (pledges, companies)."""
     total = 0
     listed = 0
     batch: list[tuple[str, str]] = []
-    for code, rows in _entities(path, seen, "kommertspandiandmed"):
+    for code, rows in _entities(path, seen, "kommertspandiandmed", strays):
         listed += 1
         kept: list[dict[str, Any]] = []
         for p in rows:

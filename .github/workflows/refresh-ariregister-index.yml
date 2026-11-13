@@ -17,9 +17,11 @@ name: Refresh Estonian e-Business Register index
 # The builder downloads the five files fifteen seconds apart: Cloudflare in
 # front of avaandmed.ariregister.rik.ee answers HTTP 429 (Error code 1015)
 # to back-to-back requests from one address, and the builder retries a 429
-# with a minute's wait. A refusal (wrong header, short file, a code in a
-# people file the companies file lacks, mismatched cut days) exits 2 and
-# publishes nothing; the previous asset stays.
+# with a minute's wait. A refusal (wrong header, short file, more than
+# MAX_STRAY_CODES codes the companies file lacks, mismatched cut days) exits
+# 2 and publishes nothing; the previous asset stays. A handful of such codes
+# is a company entered while RIK was writing the files (minutes apart): it is
+# left out and counted in meta.codes_not_in_companies_file.
 #
 # The release is created on the first run if it does not exist.
 #

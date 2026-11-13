@@ -153,10 +153,10 @@ def test_an_unlabelled_eight_digit_number_is_a_partner_only_when_the_index_holds
     assert extra["succession"][0]["codes"] == [HOLD]
 
 
-def test_the_general_file_must_name_only_known_companies(tmp_path: Path) -> None:
+def test_the_general_file_leaves_out_an_unknown_company(tmp_path: Path) -> None:
     general = _general() + [{"ariregistri_kood": 11111111, "nimi": "Ghost OÜ", "yldandmed": _yld()}]
-    with pytest.raises(builder.BuildRefused, match="is not in"):
-        _build(tmp_path, general=general)
+    _out, meta = _build(tmp_path, general=general)
+    assert meta["codes_not_in_companies_file"] == "1"
 
 
 def test_an_index_built_before_the_general_data_reads_none(tmp_path: Path) -> None:
