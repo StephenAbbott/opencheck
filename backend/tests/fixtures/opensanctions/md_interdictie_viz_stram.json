@@ -1,0 +1,37 @@
+{
+  "id": "NK-3jKToRKGo6Gi2vQhTWgRgU",
+  "caption": "SRL\"Viz-Stram\"",
+  "schema": "Company",
+  "datasets": ["md_interdictie"],
+  "referents": ["oc-companies-md-1026023035725", "md-interdictie-85fc1b8095944cadf481a1ab27a1f934b9560cd4"],
+  "first_seen": "2026-10-02T12:40:16",
+  "last_seen": "2026-11-13T08:32:06",
+  "last_change": "2026-10-02T12:40:16",
+  "target": true,
+  "properties": {
+    "topics": ["debarment"],
+    "country": ["md"],
+    "name": ["SRL\"Viz-Stram\""],
+    "address": ["sat. Căinari Vechi, r. Soroca"],
+    "sanctions": [
+      {
+        "id": "md-interdictie-2c74688e01b11d31aa5c2c0584fa2329c6fdf6ec",
+        "caption": "Sanction",
+        "schema": "Sanction",
+        "datasets": ["md_interdictie"],
+        "target": false,
+        "properties": {
+          "entity": ["NK-3jKToRKGo6Gi2vQhTWgRgU"],
+          "reason": ["prezentarea documentelor false în cadrul procedurilor de achiziții publice"],
+          "listingDate": ["2026-10-02"],
+          "country": ["md"],
+          "authorityId": ["1/26"],
+          "startDate": ["2026-10-02"],
+          "sourceUrl": ["https://tender.gov.md/ro/lista-de-interdictie"],
+          "endDate": ["2029-10-02"],
+          "authority": ["Ministry of Finance of the Republic of Moldova"]
+        }
+      }
+    ]
+  }
+}

@@ -149,6 +149,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from . import debarment as _debarment
 from . import ownership_math as _ownership_math
 from .bods import jurisdiction as _bods_jurisdiction
 from .bods.lifecycle import statement_lifecycle
@@ -1377,18 +1378,25 @@ def _opensanctions_topic_signals_from_entity(
             )
         )
     # Debarment ("debarment") → excluded from public contracts/procurement.
+    # A full record (``/entities/{id}``) nests its Sanction entities; their
+    # authority, decision, reason and dates are said (``debarment``).
     if any(t in _DEBARMENT_TOPICS for t in topics):
+        terms = _debarment.debarment_terms(entity)
+        summary = "OpenSanctions lists this record as debarred from public contracts."
+        evidence: dict[str, Any] = {"topics": ["debarment"], "statement_id": stmt_id}
+        if terms:
+            summary = f"{summary} {_debarment.terms_summary(terms)}"
+            evidence["debarment_terms"] = terms
+            if all(t.get("ended") for t in terms):
+                evidence["debarment_ended"] = True
         out.append(
             RiskSignal(
                 code=DEBARMENT,
                 confidence="high",
-                summary=(
-                    "OpenSanctions lists this record as debarred from public "
-                    "contracts."
-                ),
+                summary=summary,
                 source_id=source_id,
                 hit_id=hit_id,
-                evidence={"topics": ["debarment"], "statement_id": stmt_id},
+                evidence=evidence,
             )
         )
     # Export-control family — the sanction pattern minus the suppression rule:

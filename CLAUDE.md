@@ -2913,6 +2913,26 @@ key before joining EITI to EITI.
 
 ---
 
+## A debarment says who, why and until when (the MTender Black List ticket, 13 Nov 2026)
+
+`opencheck/debarment.py`. `DEBARMENT` / `RELATED_DEBARMENT` gain the ban's
+terms from the `Sanction` entities nested in OpenSanctions' `/entities/{id}`
+record: one sentence (authority, decision, period, reason quoted as filed) and
+`evidence.debarment_terms`. Things that will be re-derived otherwise:
+
+- **Moldova's ban list is read through OpenSanctions (`md_interdictie`), not
+  by OpenCheck.** tender.gov.md refuses datacentre addresses and publishes no
+  IDNO; mtender.gov.md's `api/banned-operators` is a 2021 copy whose every ban
+  has ended. Do not build a reader of either without re-reading the ticket.
+- **Describes, never decides**: no new code, no confidence change, no
+  `SIGNAL_RULES` bump. An ended ban is worded as ended (`debarment_ended`).
+- On a record also on a sanctions list, only `DEBARMENT_DATASETS` (the
+  OpenSanctions debarment collection, 13 Nov 2026) count — refresh it from the
+  catalogue when a new debarment dataset appears.
+- Name-screen matches carry no nested sanctions: `describe_debarment_signals`
+  reads each record once (cached `fetch`, max 25), after the PEP
+  consolidation in all three pipelines. A failed read changes nothing.
+
 ## Frontend curated examples (HomePanels.tsx)
 
 `EXAMPLE_LEIS` in `frontend/src/components/HomePanels.tsx` (moved out of `App.tsx` in Phase 168) contains pre-computed `signals` arrays shown on the picker cards before the user clicks. These must be kept in sync with what the risk engine actually produces for each entity. When the risk engine changes (new signals, retired signals, confidence changes), update `EXAMPLE_LEIS` to match.
