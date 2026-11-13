@@ -167,6 +167,18 @@ class Settings(BaseSettings):
         default=21600.0, alias="OPENCHECK_WATCHLIST_BODACC_INTERVAL_S"
     )
 
+    # --- The daily changes list (shadow; opencheck/daily_changes.py) ---
+    # SQLite file holding each day's graded GLEIF and OpenSanctions changes
+    # for every LEI. Unset = the feature is off: nothing is read, nothing is
+    # served. The worker reads OpenSanctions' entity deltas every interval
+    # (0 disables it; the GLEIF side rides on the mirror refresh) and days
+    # older than the retention are deleted.
+    daily_changes_db_file: str | None = Field(default=None, alias="OPENCHECK_DAILY_CHANGES_DB_FILE")
+    daily_changes_interval_s: float = Field(
+        default=10800.0, alias="OPENCHECK_DAILY_CHANGES_INTERVAL_S"
+    )
+    daily_changes_keep_days: int = Field(default=30, alias="OPENCHECK_DAILY_CHANGES_KEEP_DAYS")
+
     # --- Phase 268: record-consistency counters ---
     # SQLite file the /consistencystats counters are written through to
     # (opencheck/consistencystats.py) so the shadow-mode measurement window

@@ -190,6 +190,13 @@ services:
       # tier reads their public entity deltas; nothing polls a register.
       - key: OPENCHECK_WATCHLIST_DB_FILE
         value: /var/data/watchlist.sqlite
+      # --- The daily changes list (shadow) ---
+      # daily_changes.sqlite — each day's graded GLEIF and OpenSanctions
+      # changes for every LEI, 30 days kept (opencheck/daily_changes.py,
+      # docs/daily-changes.md). A few MB. Unset = the feature is off
+      # (/daily-changes answers 503).
+      - key: OPENCHECK_DAILY_CHANGES_DB_FILE
+        value: /var/data/daily_changes.sqlite
       # --- Phase 216: saved reports ---
       # saved_reports.sqlite — reports a reader chose to save (the frozen
       # lookup events, narrative, dispositions, licence assessment; ~5–20 KB

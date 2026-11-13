@@ -5547,3 +5547,46 @@ page `docs/dates.md` § "Relationships no source dates". Stephen's decisions:
 - **Integrated ownership keeps undated figures** with `undated_note` on the
   payload and `undated` per figure in MCP; a holder credited the company's own
   shares is never routed "through" the subsidiary holding them.
+
+## The daily changes list reads the deltas for every LEI and never runs a lookup (the daily-deltas ticket, 13 Nov 2026)
+
+`opencheck/daily_changes.py`, `routers/daily_changes.py`; reader's page
+`docs/daily-changes.md`. A **two-week shadow experiment** (Stephen, 13 Nov
+2026): JSON only at `/daily-changes` and `/daily-changes/{day}.json`, no page,
+no BODS file. Things that will be re-derived otherwise:
+
+- **Not the watchlist, and stricter than it.** The watchlist intersects the
+  deltas with watched LEIs and re-runs a lookup; this grades every LEI the
+  delta names and runs nothing. Its own bands (`BANDS`, `REASON_BAND`):
+  `headline` is ownership and sanctions (Stephen's choice), `ceased_lapsed`
+  sets apart an ending recorded on an LEI that had already lapsed (about half
+  of all endings), and reporting exceptions, register identifiers and
+  registration status are `note` — 1,500 exception moves a day and a 1,700-row
+  re-keying on 13 Nov 2026 are why. `watchlist_materiality` is unchanged.
+  `test_every_gleif_material_field_is_graded_by_name` fails when
+  `GLEIF_MATERIAL_FIELDS` gains a field this module has no reason for.
+- **The GLEIF side is two reads around the upsert** in
+  `mirror_refresh.apply_delta`: `capture_before` (beside
+  `previous_direct_parents`, before `load_lei2`) and `on_gleif_delta` after the
+  watermark, beside the watchlist's hook. It reads through `_FactsView`, which
+  hides the relationships table so `gleif_facts` skips the per-LEI
+  direct-children query. Neither raises, and neither adds a key to
+  `rows_applied`.
+- **A delta applied twice counts once**: rows are keyed `(day, lei, source,
+  stamp)` and a stamp's counters are added once (`stamp:` rows in
+  `day_counts`, never served).
+- **OpenSanctions: `leiCode` only, organisations only, references only.** The
+  store keeps `{leis, topics, datasets}` per entity id (`os_projection`) and a
+  row carries the id, topic codes and dataset names — never a name or another
+  property (CC BY-NC). The first tick seeds from the full export (lines
+  without `"leiCode"` are not parsed) and stores no rows; a version that
+  cannot be read is a counted `gap` and a new baseline. Its watermark
+  (`meta.opensanctions_version` in its own file) is independent of the
+  watchlist's. A new dataset is `os_list_added` only when OpenSanctions'
+  catalogue tags it (`OS_LIST_TAGS`, without `list.sanction.counter`); with
+  the catalogue unread it is `os_dataset_added`, never guessed.
+- **Sole proprietors are counted and left out.** `/signalstats` →
+  `daily_changes` carries counts by closed keys only.
+- **Off unless `OPENCHECK_DAILY_CHANGES_DB_FILE` is set** (503 on the routes,
+  inert hooks). The path is `/daily-changes` so a later page can take
+  `/changes`.
