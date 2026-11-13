@@ -39,20 +39,71 @@ from opencheck.sources.compras_gov_br import (  # noqa: E402
     iter_releases,
 )
 
+#: Attempts at the download before giving up. The registry's CDN closes a
+#: ~1 GB transfer part-way (the first workflow run, 13 Nov 2026, was cut at
+#: 40 MB), so each attempt resumes from the bytes already written.
+DOWNLOAD_ATTEMPTS = 20
+
 
 def _download(url: str, target: Path) -> dict[str, str]:
+    """Download ``url`` to ``target``, resuming with ``Range`` after a drop.
+
+    The file is pinned by its ETag (``If-Range``): if it changes mid-download
+    the server answers 200 and the transfer starts again from byte zero. The
+    finished file must be exactly the size the server announced.
+    """
+    import time
+
     import httpx
 
-    with httpx.stream("GET", url, timeout=1800.0, follow_redirects=True) as resp:
-        resp.raise_for_status()
-        with open(target, "wb") as fh:
-            for chunk in resp.iter_bytes():
-                fh.write(chunk)
-        return {
-            "source_url": str(resp.url),
-            "source_last_modified": resp.headers.get("last-modified") or "",
-            "source_bytes": str(target.stat().st_size),
-        }
+    target.write_bytes(b"")
+    total: int | None = None
+    etag = ""
+    final_url = url
+    last_modified = ""
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        have = target.stat().st_size
+        headers = {}
+        if have and etag:
+            headers = {"Range": f"bytes={have}-", "If-Range": etag}
+        try:
+            with httpx.stream(
+                "GET", url, headers=headers, timeout=httpx.Timeout(60.0, read=300.0),
+                follow_redirects=True,
+            ) as resp:
+                resp.raise_for_status()
+                final_url = str(resp.url)
+                if resp.status_code == 206:
+                    mode = "ab"
+                else:
+                    # A first request, or the file changed (If-Range failed).
+                    mode = "wb"
+                    total = int(resp.headers.get("content-length") or 0) or None
+                    etag = resp.headers.get("etag") or ""
+                    last_modified = resp.headers.get("last-modified") or ""
+                with open(target, mode) as fh:
+                    for chunk in resp.iter_bytes():
+                        fh.write(chunk)
+        except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+            print(
+                f"Download attempt {attempt} stopped at "
+                f"{target.stat().st_size:,} of {total or '?'} bytes: {exc}",
+                flush=True,
+            )
+            if not etag:
+                # Nothing to resume against: start again.
+                target.write_bytes(b"")
+            time.sleep(min(60, 5 * attempt))
+            continue
+        size = target.stat().st_size
+        if total is None or size == total:
+            return {
+                "source_url": final_url,
+                "source_last_modified": last_modified,
+                "source_bytes": str(size),
+            }
+        print(f"Download attempt {attempt} ended at {size:,} of {total:,} bytes", flush=True)
+    raise SystemExit(f"download incomplete after {DOWNLOAD_ATTEMPTS} attempts: {url}")
 
 
 def main() -> int:
