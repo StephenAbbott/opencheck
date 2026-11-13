@@ -64,10 +64,17 @@ from .bods import gleif_events as _gleif_events
 #: what moved in :data:`MATERIALITY_RULES_CHANGED`; an entry stores the
 #: version it was graded under so a later re-drawing of a line is visible as
 #: the rule's doing, not the company's.
-MATERIALITY_RULES = 1
+MATERIALITY_RULES = 2
 
 #: version -> what that version changed. 1 is the first table.
-MATERIALITY_RULES_CHANGED: dict[int, str] = {1: "the first table (pKYC stage A)"}
+MATERIALITY_RULES_CHANGED: dict[int, str] = {
+    1: "the first table (pKYC stage A)",
+    2: (
+        "the GLEIF fields registered_at, registered_as, direct_exception and "
+        "ultimate_exception moved from recheck to note (the daily-deltas "
+        "measurement, 13 Nov 2026)"
+    ),
+}
 
 NOTE = "note"
 RECHECK = "recheck"
@@ -153,10 +160,16 @@ GLEIF_FIELD_TIER: dict[str, str] = {
     "legal_form": RECHECK,
     "legal_address_country": RECHECK,  # a move across a border (Phase 300 added it for this)
     "hq_address_country": RECHECK,
-    "registered_at": RECHECK,  # re-registration, or the issuer corrected a wrong number
-    "registered_as": RECHECK,
-    "direct_exception": RECHECK,  # a parent appeared or was withdrawn behind a reporting exception
-    "ultimate_exception": RECHECK,
+    # Rules 2 (Stephen, 13 Nov 2026). Measured over a week of Golden Copy
+    # deltas: these four fields were about half of every recheck — ~1,500
+    # exception-reason moves a day (NON_CONSOLIDATING -> NATURAL_PERSONS and
+    # the like), and issuers re-keying the register number in bulk (1,700
+    # records on 13 Nov). A parent that appears or goes is still escalated
+    # by direct_parent_lei / ultimate_parent_lei.
+    "registered_at": NOTE,  # the issuer re-keyed or corrected the register reference
+    "registered_as": NOTE,
+    "direct_exception": NOTE,  # the reporting-exception reason moved
+    "ultimate_exception": NOTE,
     "direct_children": NOTE,  # below the subject: its own corporate activity, not its exposure
     "registration_status": NOTE,  # the LEI record's status, not the company's (Phase 242)
     "validated_at": NOTE,
