@@ -562,6 +562,14 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Data:** for each supplier ABN, its latest and largest contract notices (agency, published value, period, procedure, amendment count, a link to the notice on AusTender) and totals across every notice since 2013. Matched on the ABN GLEIF files, or the ABN a company's ACN implies.
 - **Note:** the registry warns that a cancelled amendment overwrites a contract's status, period and value in the OCDS data; OpenCheck shows no contract status for that reason.
 
+## ΚΗΜΔΗΣ — Greek public contracts
+
+- **Website:** https://cerpp.eprocurement.gov.gr/khmdhs-opendata/help (Open Data API of the Central Electronic Registry of Public Contracts, General Secretariat of Commerce, Hellenic Republic)
+- **License:** [Creative Commons Attribution 4.0 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/), the licence the open-data service names under Directive 2019/1024.
+- **Attribution:** "Contains public contract data from ΚΗΜΔΗΣ (Central Electronic Registry of Public Contracts), General Secretariat of Commerce, Hellenic Republic, licensed under CC BY 4.0." OpenCheck changes the data: it keeps a supplier's latest and largest contracts, counts an amended contract once at its latest version and sums the values without VAT.
+- **Data:** for each contractor tax number (ΑΦΜ), its latest and largest contracts (authority, value without VAT, period, procedure, bids, a link to the contract document on ΚΗΜΔΗΣ) and totals since 2017. Matched on the ΑΦΜ the company's ΓΕΜΗ record publishes.
+- **Note:** the authority officer's e-mail, the signers and any other contractor's name or tax number are never kept. Payment orders are not read.
+
 ## MTender — Moldovan public procurement
 
 - **Website:** https://mtender.gov.md/ · OCDS copy at the Open Contracting Partnership's Data Registry, https://data.open-contracting.org/en/publication/34

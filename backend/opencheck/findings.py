@@ -966,6 +966,48 @@ def finding_mtender_moldova(bundle: dict[str, Any]) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# kimdis_greece (ΚΗΜΔΗΣ — Greek public contracts)
+# ---------------------------------------------------------------------------
+
+
+def finding_kimdis_greece(bundle: dict[str, Any]) -> str | None:
+    """How many Greek public contracts this company signed, with whom.
+
+    The value is the contracts' values without VAT, summed by OpenCheck over
+    each contract's latest version and printed in full (rule 5) — a sum of
+    published values, never what was paid. When the read stopped at its call
+    cap the sentence says from when it counts. Contracts are activity, never
+    ownership or risk. A company with no contracts has no card.
+    """
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return None
+    supplier = bundle.get("supplier")
+    if not isinstance(supplier, dict):
+        return None
+    n = int(supplier.get("contracts") or 0)
+    if not n:
+        return None
+    value = int(supplier.get("value_eur") or 0)
+    authorities = int(supplier.get("buyers") or 0)
+    first = str(supplier.get("first_date") or "")[:4]
+    last = str(supplier.get("last_date") or "")[:4]
+    span = f" {first}–{last}" if first and last and first != last else (f" {last}" if last else "")
+    lead = (
+        f"Greek public contracts{span}: "
+        f"{n:,} {'contract' if n == 1 else 'contracts'}, values without VAT totalling EUR {value:,}"
+    )
+    authority_clause = (
+        f"from {authorities:,} {'authority' if authorities == 1 else 'authorities'}"
+        if authorities else None
+    )
+    since = str(bundle.get("read_from") or "")
+    read_clause = (
+        f"contracts posted since {since} read" if bundle.get("truncated") and since else None
+    )
+    return clauses_to_sentence([lead, read_clause, authority_clause])
+
+
+# ---------------------------------------------------------------------------
 # wikidata
 # ---------------------------------------------------------------------------
 

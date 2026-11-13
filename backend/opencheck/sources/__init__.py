@@ -46,6 +46,7 @@ from .eiti_zambia import EitiZambiaAdapter
 from .estma import EstmaAdapter
 from .everypolitician import EveryPoliticianAdapter
 from .firmenbuch import FirmenbuchAdapter
+from .kimdis_greece import KimdisGreeceAdapter
 from .gemi_greece import GemiGreeceAdapter
 from .gleif import GleifAdapter
 from .inpi import InpiAdapter
@@ -114,6 +115,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "estma": EstmaAdapter(),
     "firmenbuch": FirmenbuchAdapter(),
     "gemi_greece": GemiGreeceAdapter(),
+    "kimdis_greece": KimdisGreeceAdapter(),
     "gcis_taiwan": GcisTaiwanAdapter(),
     "dart_korea": DartKoreaAdapter(),
     "gleif": GleifAdapter(),

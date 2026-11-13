@@ -1971,6 +1971,33 @@ def _bh_mtender_moldova(r: dict, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_kimdis_greece(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for ΚΗΜΔΗΣ — the AusTender shape.
+
+    Only reached for an ΑΦΜ with contracts. Like TED and AusTender, no
+    identifier is asserted on the hit: the ΑΦΜ was borrowed from ΓΕΜΗ to
+    search by, so ΓΕΜΗ's card asserts it and the ΑΦΜ rides on the BODS
+    entity statement, which ΚΗΜΔΗΣ's contracts do state.
+    """
+    from ..findings import finding_kimdis_greece
+
+    supplier = r.get("supplier") or {}
+    afm = str(r.get("afm") or "")
+    n = int(supplier.get("contracts") or 0)
+    parts = [f"{n:,} Greek public contract{'s' if n != 1 else ''}"]
+    if supplier.get("first_date") and supplier.get("last_date"):
+        parts.append(f"{str(supplier['first_date'])[:4]}–{str(supplier['last_date'])[:4]}")
+    parts.append(f"ΑΦΜ {afm}")
+    return _hit(
+        "kimdis_greece", afm or ctx.lei,
+        name=str(supplier.get("name") or ctx.legal_name or ctx.lei),
+        summary=" · ".join(parts),
+        finding=finding_kimdis_greece(r),
+        identifiers={},
+        raw=r,
+    )
+
+
 def _bh_ted_eu(r: dict, ctx: _LookupCtx) -> SourceHit:
     total = int(r.get("total_notice_count") or 0)
     wins = int(r.get("confirmed_wins") or 0)

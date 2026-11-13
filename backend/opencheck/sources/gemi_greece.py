@@ -86,10 +86,14 @@ Attribution: "Contains data from the Greek General Commercial Registry
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
 import re
+import weakref
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -133,6 +137,22 @@ _LOOKUP_CALL_BUDGET = 8
 _SEARCH_RESULT_SIZE = 10
 
 _BUCKET = TokenBucket(_RATE_PER_MINUTE, capacity=1, name="gemi_greece")
+
+#: Per running event loop, one lock per ΓΕΜΗ number being fetched (a lock
+#: that has been waited on binds to its loop — the ny_dos rule).
+_COMPANY_LOCKS: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict[str, asyncio.Lock]]" = (
+    weakref.WeakKeyDictionary()
+)
+
+
+@asynccontextmanager
+async def _company_lock(argemi: str) -> AsyncIterator[None]:
+    locks = _COMPANY_LOCKS.setdefault(asyncio.get_running_loop(), {})
+    # Kept, not popped when free: a waiter that has been woken but not yet
+    # run would otherwise race a newcomer holding a fresh lock. The map is
+    # bounded by the Greek companies a process has looked up.
+    async with locks.setdefault(argemi, asyncio.Lock()):
+        yield
 
 _METADATA_PATH = Path(__file__).resolve().parents[1] / "data" / "gemi_metadata.json"
 
@@ -413,6 +433,16 @@ class GemiGreeceAdapter(SourceAdapter):
         if not self.info.live_available and not self._cache.has(cache_key):
             return self._bundle(None, None, argemi, legal_name, is_stub=True)
 
+        # One request per company per process at a time: the lookup's own
+        # ΓΕΜΗ read and ΚΗΜΔΗΣ's (which needs the ΑΦΜ) start together, and the
+        # second must find the first's answer in the cache, not spend a call
+        # of the eight-call budget on the same record.
+        async with _company_lock(argemi):
+            return await self._fetch_company(argemi, cache_key, legal_name)
+
+    async def _fetch_company(
+        self, argemi: str, cache_key: str, legal_name: str
+    ) -> dict[str, Any]:
         cached = self._cache.get_payload(cache_key)
         if cached is not None:
             stored = cached[0] or {}

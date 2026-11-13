@@ -94,6 +94,7 @@ from .hit_builders import (  # noqa: F401
     _bh_apr_serbia,
     _bh_asp_moldova,
     _bh_austender,
+    _bh_kimdis_greece,
     _bh_mtender_moldova,
     _bh_chilecompra,
     _bh_find_tender_uk,
@@ -1401,6 +1402,27 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
                 legal_name=ctx.legal_name,
             ),
         ))
+    # ΚΗΜΔΗΣ — Greek public contracts, read live: gated on a ΓΕΜΗ number
+    # under RA000685 / RA000376 and on live reads with a ΓΕΜΗ key (the ΑΦΜ
+    # it searches by comes from ΓΕΜΗ).
+    kimdis_adapter = REGISTRY.get("kimdis_greece")
+    if (
+        kimdis_adapter is not None
+        and hasattr(kimdis_adapter, "fetch_by_identifiers")
+        and hasattr(kimdis_adapter, "applies_to")
+        and kimdis_adapter.applies_to(ctx.registered_at, ctx.registered_as)
+        and kimdis_adapter.info.live_available
+        and _want("kimdis_greece")
+    ):
+        tasks.append((
+            "kimdis_greece",
+            kimdis_adapter.fetch_by_identifiers(
+                ctx.lei,
+                ctx.registered_as,
+                ctx.registered_at,
+                legal_name=ctx.legal_name,
+            ),
+        ))
     return tasks
 
 
@@ -1445,6 +1467,10 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     if source_id == "austender":
         # No contracts on AusTender is an answer with no card, not a finding.
         return _bh_austender(result, ctx) if result.get("supplier") else None
+    if source_id == "kimdis_greece":
+        # No contracts on ΚΗΜΔΗΣ (or no ΑΦΜ on the ΓΕΜΗ record) is an answer
+        # with no card, not a finding.
+        return _bh_kimdis_greece(result, ctx) if result.get("supplier") else None
     if source_id == "mtender_moldova":
         # No awards on MTender is an answer with no card, not a finding.
         return _bh_mtender_moldova(result, ctx) if result.get("supplier") else None

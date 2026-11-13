@@ -600,6 +600,25 @@ PROBES: dict[str, SourceProbe] = {
             "also probes another Greek subject must pace itself."
         ),
     ),
+    "kimdis_greece": _p(
+        tier="live",
+        subject="ΑΚΤΩΡ ΑΝΩΝΥΜΗ ΤΕΧΝΙΚΗ ΕΤΑΙΡΕΙΑ (ΑΦΜ 094207780)",
+        # The ΑΦΜ directly: the lookup reaches it through ΓΕΜΗ (key-gated),
+        # but ΚΗΜΔΗΣ itself is keyless and is what this probe checks.
+        args=("094207780",),
+        kwargs={"legal_name": "ΑΚΤΩΡ ΑΝΩΝΥΜΗ ΤΕΧΝΙΚΗ ΕΤΑΙΡΕΙΑ"},
+        expect_fields=("supplier", "contracts"),
+        anchor_lei="213800W5DCON145PRT93",
+        bods_mapper="map_kimdis_greece",
+        notes=(
+            "A construction company with about 180 contract records on "
+            "ΚΗΜΔΗΣ since 2017 (13 Nov 2026), so the read is ~38 calls, "
+            "inside the cap. ``expect_fields`` asserts the supplier totals "
+            "and the kept contracts, so a renamed ``vatNumber`` filter or "
+            "contractor field reads as a failure rather than a quiet 404 "
+            "(which ΚΗΜΔΗΣ answers for 'no contracts')."
+        ),
+    ),
     "gleif": _p(
         tier="live",
         subject="BP P.L.C.",

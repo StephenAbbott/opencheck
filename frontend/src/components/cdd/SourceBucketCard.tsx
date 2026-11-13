@@ -198,6 +198,10 @@ function sourceEntityUrl(sourceId: string, hit: SourceHit): string | null {
       const awards = raw.awards as { url?: string }[] | undefined;
       return awards?.[0]?.url || "https://mtender.gov.md/";
     }
+    case "kimdis_greece": {
+      const contracts = raw.contracts as { url?: string }[] | undefined;
+      return contracts?.[0]?.url || "https://cerpp.eprocurement.gov.gr/khmdhs-opendata/help";
+    }
     default:
       return null;
   }
@@ -1298,6 +1302,122 @@ export function AusTenderContractsList({ hit }: { hit: SourceHit }) {
 }
 
 /**
+ * KimdisContractsList — Greek public contracts (kimdis_greece source), the
+ * AusTender card's counterpart.
+ *
+ * Lists the supplier's latest and largest contracts on ΚΗΜΔΗΣ, newest first,
+ * each linked to the contract document ΚΗΜΔΗΣ holds, with authority, value
+ * without VAT, period and procedure. A contract that amends an earlier
+ * version says so (it is counted once). The footnote states the totals the
+ * list is drawn from, the span read, any period ΚΗΜΔΗΣ did not answer for,
+ * and that the ΑΦΜ came from ΓΕΜΗ.
+ */
+export function KimdisContractsList({ hit }: { hit: SourceHit }) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+  if (hit.source_id !== "kimdis_greece") return null;
+  const raw = hit.raw as Record<string, unknown> | undefined;
+  const contracts = (raw?.contracts ?? []) as {
+    adam: string;
+    published?: string | null;
+    buyer?: string;
+    title?: string;
+    value_eur?: number | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    procedure?: string;
+    contract_type?: string;
+    bids?: number | null;
+    amends_earlier?: boolean;
+    marked_cancelled?: boolean;
+    other_contractors?: number;
+    url?: string;
+  }[];
+  if (!contracts.length) return null;
+  const supplier = (raw?.supplier ?? {}) as {
+    contracts?: number;
+    value_eur?: number;
+  };
+  const readFrom = (raw?.read_from as string | null | undefined) || "";
+  const truncated = Boolean(raw?.truncated);
+  const gaps = (raw?.gaps ?? []) as { from: string; to: string }[];
+  const shown = expanded ? contracts : contracts.slice(0, 5);
+  const period = (start?: string | null, end?: string | null) =>
+    start && end ? `${start} to ${end}` : start || end || "";
+
+  return (
+    <RowList
+      controls={listId}
+      total={contracts.length}
+      expanded={expanded}
+      onToggle={() => setExpanded((v) => !v)}
+      moreLabel="contract"
+      items={shown.map((c) => ({
+        key: c.adam,
+        title: (
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-oo-blue hover:underline underline-offset-2"
+          >
+            {c.title || `Contract ${c.adam}`}
+            <span className="sr-only"> (contract document, opens in new tab)</span>
+          </a>
+        ),
+        meta: (
+          <span className="inline-flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            {[
+              c.buyer,
+              c.value_eur ? `EUR ${Number(c.value_eur).toLocaleString()} without VAT` : "",
+              c.published ? `posted ${c.published}` : "",
+              period(c.start_date, c.end_date),
+              c.procedure,
+              c.bids ? `${c.bids} bid${c.bids === 1 ? "" : "s"}` : "",
+              c.amends_earlier ? "amends an earlier version" : "",
+              c.other_contractors ? "names another contractor too" : "",
+              c.adam,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            <Chip tone="ok" size="sm">contract</Chip>
+            {c.marked_cancelled && (
+              <Chip tone="neutral" size="sm">
+                marked cancelled in the data
+              </Chip>
+            )}
+          </span>
+        ),
+      }))}
+      footnote={
+        <>
+          The latest and largest contracts on ΚΗΜΔΗΣ
+          {supplier.contracts ? (
+            <>
+              {" "}— of {supplier.contracts.toLocaleString()} contracts posted
+              since {(truncated && readFrom) || "2017"}, with values without VAT
+              totalling EUR {(supplier.value_eur ?? 0).toLocaleString()}{" "}
+              (OpenCheck&apos;s sum, each contract at its latest version)
+            </>
+          ) : null}
+          .{truncated && readFrom
+            ? ` OpenCheck reads at most 60 pages a lookup, so contracts posted before ${readFrom} were not read.`
+            : ""}
+          {gaps.length
+            ? ` ΚΗΜΔΗΣ did not answer for ${gaps
+                .map((g) => `${g.from} to ${g.to}`)
+                .join(", ")}; contracts posted then are not counted.`
+            : ""}{" "}
+          Values are as the authorities posted them, so one entered wrongly is
+          summed as posted. Matched on the tax number (ΑΦΜ) the company&apos;s
+          ΓΕΜΗ record publishes. Shown beside TED, never added to it.
+        </>
+      }
+    />
+  );
+}
+
+/**
  * MTenderAwardsList — Moldovan public procurement awards (mtender_moldova
  * source), the AusTender card's counterpart.
  *
@@ -1616,6 +1736,7 @@ function HitRow({
       <TedAwardsList hit={hit} />
       <ChileCompraRecordsList hit={hit} />
       <AusTenderContractsList hit={hit} />
+      <KimdisContractsList hit={hit} />
       <MTenderAwardsList hit={hit} />
       <FindTenderAwardsList hit={hit} />
       {/* Risk findings only (Phase 245). A structural observation — "No
