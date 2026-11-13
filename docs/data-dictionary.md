@@ -963,10 +963,10 @@ One JSON record per party in [Senzing's entity specification](https://www.senzin
 | `RECORD_TYPE` | `ORGANIZATION` for an entity statement, `PERSON` for a person statement. |
 | `NAME_ORG` | An organisation name; `NAME_TYPE` says whether it is the `PRIMARY` name or an `ALTERNATE` one. |
 | `NAME_TYPE` | `PRIMARY` or `ALTERNATE`, beside each name feature. |
-| `LEI_NUMBER` | The LEI, from an `XI-LEI` identifier. |
-| `NATIONAL_ID_NUMBER` | A register number from any other identifier scheme, with `NATIONAL_ID_TYPE` naming the scheme. |
-| `NATIONAL_ID_TYPE` | The identifier's scheme (`GB-COH`, `NO-BRC` …) or scheme name. |
-| `NATIONAL_ID_COUNTRY` | The country the scheme belongs to, read from the scheme's prefix. |
+| `LEI_NUMBER` | The LEI, from an `XI-LEI` identifier or any value that passes the LEI check digits. |
+| `NATIONAL_ID_NUMBER` | A register number (`GB-COH`, `NO-BRC`, a GLEIF RA code, `REG-<country>` …), with `NATIONAL_ID_TYPE` naming the scheme. Which schemes are register numbers is a fixed table, `opencheck.bods.identifier_kinds`. |
+| `NATIONAL_ID_TYPE` | The identifier's scheme (`GB-COH`, `NO-BRC` …), or its scheme name when it has none. |
+| `NATIONAL_ID_COUNTRY` | The ISO 3166-1 country that issued the number, from the scheme's two-letter prefix or `REG-<country>`; absent when the scheme names none (a GLEIF RA code, `XI-`). Never read from the scheme name. |
 | `REGISTRATION_DATE` | `foundingDate`. |
 | `REGISTRATION_COUNTRY` | `jurisdiction.code`. |
 | `ADDR_TYPE` | Senzing's `BUSINESS` / `MAILING` / `HOME` from the BODS address type. |
@@ -979,7 +979,12 @@ One JSON record per party in [Senzing's entity specification](https://www.senzin
 | `REL_POINTER_ROLE` | The relationship's role, one pointer per interest: the interest type upper-cased (`SHAREHOLDING`, `SENIOR_MANAGING_OFFICIAL` …) with a share suffix where one is stated, or `INTERESTED_PARTY_OF` when no interest is listed. |
 | `REL_POINTER_FROM_DATE` | The interest's `startDate`. |
 | `REL_POINTER_THRU_DATE` | The interest's `endDate` — set on an ended interest. |
+| `OTHER_ID_NUMBER` | Another database's or register's own key — Wikidata, OpenSanctions, OpenCorporates, an SEC CIK, a BIC, a register's person key — with `OTHER_ID_TYPE` naming the scheme. Supporting evidence for Senzing, never a reason to keep two records apart. Industry, securities and market codes (NACE, ISIN, MIC …) are left out. |
+| `OTHER_ID_TYPE` | The other identifier's scheme. |
 | `NAME_FULL` | A person's full name; `NAME_TYPE` as above. |
+| `TAX_ID_NUMBER` | A tax or VAT number (`XI-VAT`, `PL-NIP`, `CA-BN`, `<ISO3>-TAXID` …), with `TAX_ID_TYPE` naming the scheme. |
+| `TAX_ID_TYPE` | The tax identifier's scheme. |
+| `TAX_ID_COUNTRY` | The country that issued the tax number, read from the scheme as for `NATIONAL_ID_COUNTRY`; absent for `XI-VAT`, whose country is in the number. |
 | `DATE_OF_BIRTH` | `birthDate` at the register's precision. |
 | `NATIONALITY` | A `nationalities[].code`, one feature per nationality. |
 | `UNSPECIFIED_PARTY` | On a placeholder record: which side (`subject` / `interestedParty`) of the relationship names no record. |

@@ -58,7 +58,7 @@ import json
 import re
 from typing import Any
 
-from .. import identifiers
+from . import identifier_kinds
 from .annotations import person_identifiers_from_annotations
 from .refs import resolver, unspecified_party
 from .source_ids import source_ids_of
@@ -100,10 +100,6 @@ _INTEREST_ROLE = {
     "otherInfluenceOrControl": "CONTROLS",
     "unknownInterest": "INTERESTED_PARTY_OF",
 }
-
-# LEI classification (shared) — see the note in bods/ftm.py.
-_classify_lei = identifiers.classify_lei
-
 
 def _camel_to_upper(value: str) -> str:
     """``seniorManagingOfficial`` → ``SENIOR_MANAGING_OFFICIAL``."""
@@ -173,36 +169,53 @@ def _addr_features(
     return out
 
 
+#: The Senzing feature, and its three attribute names, for each identifier
+#: kind ``bods/identifier_kinds.py`` decides. ``drop`` has none: an industry,
+#: securities or market code says nothing about who a party is. An
+#: ``unclassified`` scheme goes out as ``OTHER_ID`` — supporting evidence that
+#: never keeps two records apart (the mapper guard fails a test that writes
+#: one, so it should not reach production).
+_KIND_FEATURE: dict[str, tuple[str, str | None, str | None]] = {
+    identifier_kinds.REGISTER: ("NATIONAL_ID_NUMBER", "NATIONAL_ID_TYPE", "NATIONAL_ID_COUNTRY"),
+    identifier_kinds.TAX: ("TAX_ID_NUMBER", "TAX_ID_TYPE", "TAX_ID_COUNTRY"),
+    identifier_kinds.PASSPORT: ("PASSPORT_NUMBER", None, "PASSPORT_COUNTRY"),
+    identifier_kinds.OTHER: ("OTHER_ID_NUMBER", "OTHER_ID_TYPE", "OTHER_ID_COUNTRY"),
+    identifier_kinds.UNCLASSIFIED: ("OTHER_ID_NUMBER", "OTHER_ID_TYPE", "OTHER_ID_COUNTRY"),
+}
+
+
 def _identifier_features(
     identifiers: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Map BODS identifier objects to Senzing identity features.
 
-    LEIs become ``LEI_NUMBER``; everything else becomes ``NATIONAL_ID`` with the
-    issuing country inferred from a ``GB-COH`` style scheme prefix when present.
-    Identifiers that only carry a ``uri`` (a link, no value) are skipped.
+    The kind of each identifier — LEI, register number, tax number, passport,
+    another database's key, or a code to leave out — and the country that
+    issued it come from ``bods/identifier_kinds.py``, a fixed table of the
+    schemes OpenCheck writes, never a guess from ``schemeName``. The type is
+    the scheme itself. Identifiers that only carry a ``uri`` (a link, no
+    value) are skipped.
     """
     out: list[dict[str, Any]] = []
     for ident in identifiers or []:
         value = (ident.get("id") or "").strip()
         if not value:
             continue
-        scheme = (ident.get("scheme") or "").strip()
-        scheme_name = (ident.get("schemeName") or "").strip()
-        haystack = f"{scheme} {scheme_name}".upper()
-
-        if "LEI" in haystack or _classify_lei(value):
+        kind = identifier_kinds.identifier_kind(ident)
+        if kind == identifier_kinds.LEI:
             out.append({"LEI_NUMBER": value})
             continue
-
-        feat: dict[str, Any] = {
-            "NATIONAL_ID_NUMBER": value,
-            "NATIONAL_ID_TYPE": scheme or scheme_name,
-        }
-        # Schemes are commonly "<ISO2>-<REGISTER>" (e.g. GB-COH, NO-ORG).
-        prefix = scheme.split("-", 1)[0] if "-" in scheme else ""
-        if len(prefix) == 2 and prefix.isalpha():
-            feat["NATIONAL_ID_COUNTRY"] = prefix.upper()
+        if kind == identifier_kinds.DROP:
+            continue
+        number_key, type_key, country_key = _KIND_FEATURE[kind]
+        scheme = (ident.get("scheme") or "").strip()
+        feat: dict[str, Any] = {number_key: value}
+        id_type = scheme or (ident.get("schemeName") or "").strip()
+        if type_key and id_type:
+            feat[type_key] = id_type
+        country = identifier_kinds.scheme_country(scheme)
+        if country and country_key:
+            feat[country_key] = country
         out.append(feat)
     return out
 

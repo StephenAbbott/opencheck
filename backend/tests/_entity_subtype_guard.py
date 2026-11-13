@@ -35,6 +35,8 @@ import types
 from typing import Any, Callable, Iterator
 
 from opencheck import provenance as _provenance
+from opencheck.bods import identifier_kinds
+from opencheck.bods.annotations import person_identifiers_from_annotations
 from opencheck.bods.statements import stale_statement_id
 from opencheck.bods.validator import (
     address_type_issues,
@@ -85,6 +87,23 @@ PUBLISHER_VERBATIM: frozenset[str] = frozenset({"map_meip"})
 EXERCISED: set[str] = set()
 
 
+def _unclassified_schemes(stmt: dict) -> list[str]:
+    rd = stmt.get("recordDetails") or {}
+    idents = list(rd.get("identifiers") or [])
+    if stmt.get("recordType") == "person":
+        idents += person_identifiers_from_annotations(stmt)
+    issues = []
+    for ident in idents:
+        if not isinstance(ident, dict) or not str(ident.get("id") or "").strip():
+            continue
+        if identifier_kinds.identifier_kind(ident) == identifier_kinds.UNCLASSIFIED:
+            issues.append(
+                f"identifier scheme {ident.get('scheme')!r} has no kind: add it to "
+                "opencheck.bods.identifier_kinds (SCHEME_KINDS or REGISTER_SCHEMES)"
+            )
+    return issues
+
+
 def check_statement(mapper: str, stmt: Any) -> None:
     if not isinstance(stmt, dict):
         return
@@ -103,6 +122,11 @@ def check_statement(mapper: str, stmt: Any) -> None:
         # An annotation must point at a fragment of its own statement — the
         # ЄДР founder-share notes carried a sentence as their target.
         for issue in annotation_pointer_issues(stmt):
+            VIOLATIONS.append((mapper, sid, issue))
+        # The Senzing identifier ticket (13 Nov 2026): every scheme a mapper
+        # writes has a kind, so the export never guesses whether a number is
+        # a register number, a tax number or another database's key.
+        for issue in _unclassified_schemes(stmt):
             VIOLATIONS.append((mapper, sid, issue))
     # The content-addressed statementId phase: a statement edited after the
     # factory built it must have been through ``refresh_statement_id``, or
