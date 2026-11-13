@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 520** — Compras.gov.br joins as a source, showing the Brazilian public procurement awards a company won from federal, state and municipal bodies, joined on its CNPJ.
+**Latest: Phase 521** — The Compras.gov.br index build now resumes an interrupted download of the Open Contracting Partnership file.
 
 → [Full development history](docs/status.md)
 
