@@ -302,6 +302,16 @@ def apply_delta(db_path: Path, publish: dict, delta: str) -> dict[str, int]:
             # names only the new parent.
             rr_children = mb.leis_in_csv(paths["rr"], mb.RR_START)
             former_parents = mb.previous_direct_parents(conn, rr_children)
+            # The daily changes list (shadow): the material facts of every
+            # LEI this delta carries a row for, read before the upsert, as
+            # former_parents is. None when the feature is off; never raises.
+            from . import daily_changes
+
+            changes_before = daily_changes.capture_before(
+                mb.leis_in_csv(paths["lei2"], mb.COL_LEI)
+                | rr_children
+                | mb.leis_in_csv(paths["repex"], mb.REPEX_LEI)
+            )
             counts = {
                 "entities": mb.load_lei2(conn, paths["lei2"], zdict=zdict),
                 "relationships": mb.load_rr(conn, paths["rr"], full=False),
@@ -346,6 +356,9 @@ def apply_delta(db_path: Path, publish: dict, delta: str) -> dict[str, int]:
     from . import watchlist
 
     watchlist.on_gleif_delta(named, publish["publish_date"])
+    # The daily changes list reads the same refreshed file for every LEI the
+    # delta carried. It never raises and adds nothing to the counts.
+    daily_changes.on_gleif_delta(changes_before, publish["publish_date"])
     return counts
 
 

@@ -467,6 +467,9 @@ def stats() -> dict[str, Any]:
         # by service and outcome, refusals and the one-query queue
         # (sources/ariregister_rest.py).
         "ariregister_rik": _ariregister_rik_stats(),
+        # The daily changes list (shadow): days held and counts by band and
+        # counter key — never an LEI or a name (daily_changes.stats()).
+        "daily_changes": _daily_changes_stats(),
     }
 
 
@@ -477,6 +480,15 @@ def _ariregister_rik_stats() -> dict[str, Any]:
         return ariregister_rest.stats()
     except Exception as exc:  # noqa: BLE001 — never fail /signalstats
         return {"available": False, "error": type(exc).__name__}
+
+
+def _daily_changes_stats() -> dict[str, Any]:
+    try:
+        from . import daily_changes
+
+        return daily_changes.stats()
+    except Exception as exc:  # noqa: BLE001 — never fail /signalstats
+        return {"enabled": False, "error": type(exc).__name__}
 
 
 def _form13f_stats() -> dict[str, Any]:

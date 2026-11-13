@@ -43,7 +43,7 @@ from .lookup_budget import ClientScopeMiddleware
 from .static_cache import DownloadNoStoreMiddleware, spa_cache_control
 from .ratelimit import limiter, rate_limit_exceeded_handler
 from .secret_scrub import safe_message
-from .routers import health, search, lookup, expand, national_id, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports, knowability, leads
+from .routers import health, search, lookup, expand, national_id, export, narrative, securities, history, nz_associations, person_check, share, subsidiaries, entity_pages, batch, watch, saved_reports, knowability, leads, daily_changes as daily_changes_router
 from .routers.search import _ch_ra_code as _ch_ra_code  # re-exported for backward compat
 
 log = logging.getLogger(__name__)
@@ -594,6 +594,15 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from .watchlist import watch_loop
 
         watch_task = asyncio.create_task(watch_loop(watch_interval))
+    # The daily changes list (shadow): reads OpenSanctions' entity deltas for
+    # every LEI-bearing organisation and prunes old days. Needs the store
+    # file; 0 disables the worker (the GLEIF side rides on the mirror refresh).
+    changes_task: asyncio.Task[None] | None = None
+    changes_interval = get_settings().daily_changes_interval_s
+    if changes_interval > 0 and get_settings().daily_changes_db_file:
+        from .daily_changes import loop as daily_changes_loop
+
+        changes_task = asyncio.create_task(daily_changes_loop(changes_interval))
     # Phase 216: delete saved reports past their retention date. Needs the
     # store file; 0 disables (an expired report is still refused on read).
     prune_task: asyncio.Task[None] | None = None
@@ -639,6 +648,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 prune_task.cancel()
             if backup_task is not None and not backup_task.done():
                 backup_task.cancel()
+            if changes_task is not None and not changes_task.done():
+                changes_task.cancel()
 
 
 app = FastAPI(
@@ -725,6 +736,7 @@ app.include_router(watch.router)
 app.include_router(saved_reports.router)
 app.include_router(knowability.router)
 app.include_router(leads.router)
+app.include_router(daily_changes_router.router)
 
 
 # ---------------------------------------------------------------------------
