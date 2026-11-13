@@ -177,17 +177,22 @@ class FakeMTender:
         *,
         fail: set[str] | None = None,
         empty_listing: bool = False,
+        listing_502s: int = 0,
     ) -> None:
         self.pages = pages
         self.packages = packages
         self.fail = fail or set()
         self.empty_listing = empty_listing
+        self.listing_502s = listing_502s
         self.requests: list[str] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(str(request.url))
         path = request.url.path.rstrip("/")
         if path == "/tenders":
+            if self.listing_502s:
+                self.listing_502s -= 1
+                return httpx.Response(502)
             if self.empty_listing:
                 return httpx.Response(200, content=b"")
             offset = request.url.params["offset"]
@@ -306,3 +311,21 @@ def test_the_cut_is_how_far_the_harvest_has_read() -> None:
     resolved = recorder.resolve()
     assert resolved.source_as_of is not None
     assert resolved.source_as_of.date().isoformat() == "2026-11-12"
+
+
+def test_a_502_spell_on_the_listing_is_waited_out(monkeypatch) -> None:
+    # 13 Nov 2026: MTender answered 502 for a minute or more; three tries a few
+    # seconds apart ended a backfill run and failed the next two.
+    waits: list[float] = []
+    monkeypatch.setattr(mh.time, "sleep", waits.append)
+    fake = FakeMTender(
+        [["ocds-b3wdp1-MD-1"]],
+        {"ocds-b3wdp1-MD-1": package("ocds-b3wdp1-MD-1")},
+        listing_502s=4,
+    )
+    store = mh.Store(cursor="page-0")
+    result = mh.harvest(_client(fake), store)
+    assert result["outcome"] == "caught_up"
+    assert "ocds-b3wdp1-MD-1" in store.releases
+    assert waits == list(mh.BACKOFF_S[:4])
+    assert sum(mh.BACKOFF_S) >= 180
