@@ -59,6 +59,7 @@ from .. import listing as _listing
 from .. import form13f as _form13f
 from .. import ra_codes as _ra_codes
 from .. import register_links as _register_links
+from .. import debarment as _debarment
 from .. import pep_merge as _pep_merge
 from ..subject_identity import subject_identity
 from ..verdict import build_verdict
@@ -810,6 +811,8 @@ async def _build_report(
             h.hit_id for h in hits if h.source_id == "opensanctions" and not h.is_stub
         ],
     )
+    # The ban's authority, decision, reason and dates (``debarment``).
+    related = await _debarment.describe_debarment_signals(related)
 
     all_signals = _merge_signals(
         search_signals, deepen_signals, related, icij_signals, bods=bods_all
@@ -2439,6 +2442,8 @@ async def _lookup_pipeline(
             h.hit_id for h in hits if h.source_id == "opensanctions" and not h.is_stub
         ],
     )
+    # The ban's authority, decision, reason and dates (``debarment``).
+    related = await _debarment.describe_debarment_signals(related)
 
     # The EveryPolitician rows' statement counts, as a second ``bods_counts``
     # event (the UI merges it into the first). A row whose record maps to a
@@ -2987,6 +2992,8 @@ async def _register_lookup_pipeline(
         ),
         subject_record_ids=[],
     )
+    # The ban's authority, decision, reason and dates (``debarment``).
+    related = await _debarment.describe_debarment_signals(related)
 
     # The EveryPolitician rows' statement counts, as a second ``bods_counts``
     # event (the UI merges it into the first). A row whose record maps to a
