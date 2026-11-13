@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 530** — GLEIF entity statements now carry the ISO 20275 Entity Legal Form code beside its label.
+**Latest: Phase 531** — Debarment findings now name the authority, decision, reason and ban period from the listing OpenSanctions holds, including Moldova's procurement ban list.
 
 → [Full development history](docs/status.md)
 
