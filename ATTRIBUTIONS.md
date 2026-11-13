@@ -572,9 +572,9 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 
 ## MTender — Moldovan public procurement
 
-- **Website:** https://mtender.gov.md/ · OCDS copy at the Open Contracting Partnership's Data Registry, https://data.open-contracting.org/en/publication/34
+- **Website:** https://mtender.gov.md/ · OCDS API at https://public.mtender.gov.md/tenders/ (read weekly by OpenCheck) · OCDS copy at the Open Contracting Partnership's Data Registry, https://data.open-contracting.org/en/publication/34 (for older procedures)
 - **License:** none named — neither the OCP Data Registry nor mtender.gov.md names a licence; MTender says it publishes its data as open data by default. Confirmation has been requested from the Ministry of Finance; until then OpenCheck records it as `MTender-Open-Data` and flags commercial re-use for verification.
-- **Attribution:** "Contains MTender public procurement data published by the Ministry of Finance of the Republic of Moldova, via the Open Contracting Partnership's Data Registry." OpenCheck changes the data: it keeps a supplier's latest and largest awards, sums MDL award values and converts dates to the Chișinău day.
+- **Attribution:** "Contains MTender public procurement data published by the Ministry of Finance of the Republic of Moldova, read from MTender's API and via the Open Contracting Partnership's Data Registry." OpenCheck changes the data: it keeps a supplier's latest and largest awards, sums MDL award values and converts dates to the Chișinău day.
 - **Data:** for each supplier with a legal person's IDNO, its latest and largest winning awards (buyer, value, procedure, lots, a link to the procurement on MTender) and totals across every winning award in the file. Matched on the IDNO GLEIF files.
 - **Note:** MTender publishes awards, not contracts. Natural persons and sole traders are not stored, and the contact points on every party are never read.
 

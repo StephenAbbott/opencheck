@@ -22,8 +22,10 @@ Active awards are almost all from 2025 and 2026 (86 in 2023, 139 in 2024): the
 registry notes that MTender's listing returns nothing older than about a year,
 so earlier processes may be missing. And the latest award in the 21 Oct 2026
 retrieval is dated 3 March 2026: every release the registry compiled since
-May 2026 is a planning record with no tender or award stage. The card says
-the period it covers (``data_to``).
+May 2026 is a planning record with no tender or award stage — while
+MTender's API holds awards made this week. OpenCheck's own harvest of the API
+closes that gap (see "Index, not live API" below). The card says the period
+it covers (``data_to``).
 
 Three quarters of the awards are ``directAward`` — on MTender's own pages
 these are reported low-value purchases ("Raportarea achiziției de valoare
@@ -58,12 +60,20 @@ on MTender, ``https://mtender.gov.md/tenders/<ocid>`` (checked in a browser on
 
 Index, not live API
 -------------------
-MTender's API (``public.mtender.gov.md/tenders/``,
-``public.eprocurement.systems/ocds/tenders/{ocid}``) has no supplier filter.
-The index is built weekly by ``.github/workflows/refresh-mtender-index.yml``
+MTender's API (``public.mtender.gov.md/tenders/``) has no supplier filter,
+so the index is built weekly by ``.github/workflows/refresh-mtender-index.yml``
 (``scripts/build_mtender_index.py``), published as the ``mtender-index``
 release asset and downloaded at boot (``warm_index``). Without it the source
 is not announced (``covers_lei``).
+
+Since the harvest ticket (13 Nov 2026) the build reads two inputs: OpenCheck's
+own harvest of the API (``opencheck/mtender_harvest.py``, kept between runs
+on the ``mtender-harvest`` release), which reaches the awards made since
+March 2026, and the registry's file for anything older. Where both hold a
+procedure, the harvest's reading wins. The API keeps a procedure's awards on
+its stage records (``<ocid>-EV-…``), not on the procedure's own record;
+``mtender_harvest.flatten`` puts them back into the one release this module
+reads, the shape the registry's file already has.
 
 Licence: none is named — not by the registry (which links
 ``opendefinition.org/licenses/``) and not by mtender.gov.md, whose terms cover
@@ -563,13 +573,19 @@ def _moment(text: str | None) -> datetime | None:
 
 
 def declare_snapshot(meta: dict[str, str] | None = None) -> None:
-    """The registry's retrieval day is the cut; the build is our clock."""
+    """The cut is how far the harvest has read MTender's listing (every
+    procedure changed before that moment was read), else the registry's
+    retrieval day; the build is our clock."""
     meta = read_meta() if meta is None else meta
-    cut = provenance.parse_moment(meta.get("source_last_modified")) or _moment(meta.get("data_to"))
+    cut = (
+        provenance.parse_moment(meta.get("harvest_cursor"))
+        or provenance.parse_moment(meta.get("source_last_modified"))
+        or _moment(meta.get("data_to"))
+    )
     provenance.record_snapshot(
         retrieved_at=provenance.parse_moment(meta.get("built_at")),
         source_as_of=cut,
-        detail="MTender procurement awards (OCDS), via the OCP Data Registry",
+        detail="MTender procurement awards (OCDS), from MTender's API and the OCP Data Registry",
     )
 
 
@@ -701,8 +717,9 @@ class MTenderMoldovaAdapter(SourceAdapter):
             homepage=_HOMEPAGE,
             description=(
                 "Public procurement awards Moldova publishes on MTender (Ministry "
-                "of Finance), from the Open Contracting Partnership's Data "
-                "Registry copy, rebuilt weekly. For a supplier: its latest and "
+                "of Finance), read weekly from MTender's API, with the Open "
+                "Contracting Partnership's Data Registry copy for older "
+                "procedures. For a supplier: its latest and "
                 "largest awards with buyer, value, procedure and a link to each "
                 "procurement on MTender, plus totals over every award in the "
                 "file, whose period the card states. MTender publishes awards, "
@@ -712,8 +729,8 @@ class MTenderMoldovaAdapter(SourceAdapter):
             license=LICENSE_ID,
             attribution=(
                 "Contains MTender public procurement data published by the "
-                "Ministry of Finance of the Republic of Moldova, via the Open "
-                "Contracting Partnership's Data Registry."
+                "Ministry of Finance of the Republic of Moldova, read from MTender's "
+                "API and via the Open Contracting Partnership's Data Registry."
             ),
             supports=[SearchKind.ENTITY],
             requires_api_key=False,

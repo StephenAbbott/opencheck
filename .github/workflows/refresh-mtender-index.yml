@@ -1,10 +1,20 @@
 name: Refresh MTender supplier index
 
-# Rebuilds the MTender (Moldovan public procurement) supplier index from the
-# Open Contracting Partnership's Data Registry copy of MTender's OCDS data
-# (publication 34, full.jsonl.gz, ~110 MB, retrieved by the registry monthly)
-# and replaces the `mtender-index` release asset the backend downloads at
-# boot (MTENDER_DB_URL).
+# Rebuilds the MTender (Moldovan public procurement) supplier index and
+# replaces the `mtender-index` release asset the backend downloads at boot
+# (MTENDER_DB_URL). Two inputs:
+#
+# 1. OpenCheck's own harvest of MTender's API (backend/opencheck/mtender_harvest.py),
+#    kept between runs as two assets on the `mtender-harvest` release: the
+#    run downloads them, reads forward from the saved cursor for at most
+#    HARVEST_MINUTES, and uploads them again — also when the build later
+#    fails, so no reading is lost. A first run backfills about a year
+#    (~4–6 hours of reading at four requests at a time), spread over runs by
+#    the budget; dispatch the workflow by hand until the log says
+#    "caught_up". After that a week's changes take minutes.
+# 2. The Open Contracting Partnership's Data Registry copy (publication 34,
+#    full.jsonl.gz, ~110 MB), for procedures older than the harvest reaches.
+#    Where both hold a procedure, the harvest's reading wins.
 #
 # Why here and not on Render: reading the file is CPU-bound Python that would
 # hold the GIL against live lookups. The result is ~4 MB (~1.4 MB gzipped).
@@ -26,7 +36,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 330 # the harvest budget plus the build; under GitHub's 360
     permissions:
       contents: write # required to create/upload the release asset
     steps:
@@ -36,12 +46,50 @@ jobs:
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
-      - name: Build the index from the registry's full file
+      - name: Fetch the harvest kept by the last run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/harvest"
+          if gh release view mtender-harvest >/dev/null 2>&1; then
+            gh release download mtender-harvest --dir "$RUNNER_TEMP/harvest" \
+              --pattern 'mtender_harvest*' --clobber
+          else
+            echo "No mtender-harvest release yet: this run starts the backfill."
+          fi
+          ls -la "$RUNNER_TEMP/harvest"
+
+      - name: Read MTender's API forward from the saved cursor
+        id: harvest
         working-directory: backend
+        env:
+          HARVEST_MINUTES: "270"
         run: |
           uv sync
+          uv run python scripts/harvest_mtender.py --store "$RUNNER_TEMP/harvest" \
+            --budget-minutes "$HARVEST_MINUTES"
+
+      - name: Keep the harvest for the next run
+        if: steps.harvest.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view mtender-harvest >/dev/null 2>&1 || gh release create mtender-harvest \
+            --title "MTender harvest (working store)" \
+            --notes "OpenCheck's own reading of MTender's OCDS API, kept between runs of refresh-mtender-index.yml: one release per procedure with a winning award, reduced to the fields the supplier index reads (no contact points, addresses, items, documents or bids), and the cursor the next run reads from. Published by the Ministry of Finance of the Republic of Moldova (no licence named; verify before commercial re-use). Not an OpenCheck dataset: the input to the mtender-index build."
+          bash backend/scripts/replace_release_asset.sh mtender-harvest \
+            "$RUNNER_TEMP/harvest/mtender_harvest.jsonl.gz" mtender_harvest.jsonl.gz
+          bash backend/scripts/replace_release_asset.sh mtender-harvest \
+            "$RUNNER_TEMP/harvest/mtender_harvest_state.json" mtender_harvest_state.json
+
+      - name: Build the index from the harvest and the registry's full file
+        working-directory: backend
+        run: |
           uv run python scripts/build_mtender_index.py \
-            --out "$RUNNER_TEMP/mtender_moldova.sqlite" --gzip
+            --out "$RUNNER_TEMP/mtender_moldova.sqlite" --gzip \
+            --harvest "$RUNNER_TEMP/harvest"
 
       - name: Sanity-check the output (guard against a broken or partial file)
         run: |
@@ -52,6 +100,7 @@ jobs:
           meta = dict(conn.execute("SELECT key, value FROM meta"))
           n = conn.execute("SELECT COUNT(*) FROM supplier").fetchone()[0]
           print(f"{n} supplier IDNOs from {meta.get('awards_kept')} awards, {meta.get('data_from')} to {meta.get('data_to')}")
+          print(f"harvest: {meta.get('harvest_releases')} procedures, cursor {meta.get('harvest_cursor')}, caught up {meta.get('harvest_caught_up_at') or 'not yet'}")
           if n < 6000:
               sys.exit(f"Refusing to publish: only {n} suppliers — likely a source/format change.")
           PY
@@ -63,6 +112,6 @@ jobs:
         run: |
           gh release view mtender-index >/dev/null 2>&1 || gh release create mtender-index \
             --title "MTender supplier index" \
-            --notes "Built by refresh-mtender-index.yml from MTender public procurement data published by the Ministry of Finance of the Republic of Moldova (no licence named; verify before commercial re-use), via the Open Contracting Partnership's Data Registry. Downloaded by the backend at boot (MTENDER_DB_URL)."
+            --notes "Built by refresh-mtender-index.yml from MTender public procurement data published by the Ministry of Finance of the Republic of Moldova (no licence named; verify before commercial re-use), read from MTender's API and the Open Contracting Partnership's Data Registry. Downloaded by the backend at boot (MTENDER_DB_URL)."
           bash backend/scripts/replace_release_asset.sh mtender-index \
             "$RUNNER_TEMP/mtender_moldova.sqlite.gz" mtender_moldova.sqlite.gz
