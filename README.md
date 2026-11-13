@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 526** — The Moldova State Register source now keeps its index on the persistent disk and reads a published copy when the national open-data portal is down.
+**Latest: Phase 527** — A two-week shadow experiment lists, per day, every LEI whose GLEIF or OpenSanctions record changed, graded so ownership and sanctions changes head it.
 
 → [Full development history](docs/status.md)
 
