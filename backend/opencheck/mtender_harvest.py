@@ -75,7 +75,11 @@ STATE_NAME = "mtender_harvest_state.json"
 #: on 13 Nov 2026), so a first run starts inside that window.
 FIRST_RUN_DAYS = 350
 WORKERS = 4
-ATTEMPTS = 3
+# MTender answers 502 in runs lasting a minute or more (13 Nov 2026: three
+# 502s two to four seconds apart ended a backfill run, and the next two runs
+# failed on their first page). Wait them out: about four minutes in all.
+BACKOFF_S = (5, 15, 30, 60, 120)
+ATTEMPTS = len(BACKOFF_S) + 1
 TIMEOUT_S = 60.0
 _USER_AGENT = "OpenCheck (+https://github.com/StephenAbbott/opencheck)"
 
@@ -276,8 +280,8 @@ def merged_releases(registry: Iterable[dict[str, Any]], store: Store) -> Iterato
 
 
 def _get(client: httpx.Client, url: str, params: dict[str, str] | None = None) -> Any:
-    """GET with a short backoff on 429, 5xx and network errors; None for an
-    empty body."""
+    """GET with a backoff (``BACKOFF_S``) on 429, 5xx and network errors;
+    None for an empty body."""
     last: Exception | None = None
     for attempt in range(ATTEMPTS):
         try:
@@ -291,7 +295,7 @@ def _get(client: httpx.Client, url: str, params: dict[str, str] | None = None) -
         except (httpx.HTTPError, HarvestError, ValueError) as exc:
             last = exc
             if attempt + 1 < ATTEMPTS:
-                time.sleep(2 * (attempt + 1))
+                time.sleep(BACKOFF_S[attempt])
     raise HarvestError(f"{url}: {type(last).__name__}: {last}")
 
 
