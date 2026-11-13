@@ -748,6 +748,7 @@ SOURCE_NAMES: dict[str, str] = {
     "chilecompra": "ChileCompra — Mercado Público (Chilean public procurement)",
     "austender": "AusTender — Australian Government contracts",
     "kimdis_greece": "ΚΗΜΔΗΣ — Greek public contracts",
+    "compras_gov_br": "Compras.gov.br — Brazilian public procurement",
     "mtender_moldova": "MTender — Moldovan public procurement",
     "find_tender_uk": "Find a Tender (UK public procurement)",
     "climatetrace": "Global Energy Monitor / Climate TRACE",

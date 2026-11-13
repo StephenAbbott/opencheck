@@ -97,6 +97,7 @@ from .hit_builders import (  # noqa: F401
     _bh_kimdis_greece,
     _bh_mtender_moldova,
     _bh_chilecompra,
+    _bh_compras_gov_br,
     _bh_find_tender_uk,
     _EITI_IDENTIFIER_KEY_BY_COUNTRY,
     _LookupCtx,
@@ -1423,6 +1424,28 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
                 legal_name=ctx.legal_name,
             ),
         ))
+    # Compras.gov.br — Brazilian public procurement awards, the AusTender
+    # shape: gated on a Brazilian registration authority filing a valid CNPJ
+    # (decision B: the Receita Federal, the Juntas Comerciais, the CVM or the
+    # Central Bank), and on the index being present.
+    br_adapter = REGISTRY.get("compras_gov_br")
+    if (
+        br_adapter is not None
+        and hasattr(br_adapter, "fetch_by_identifiers")
+        and hasattr(br_adapter, "applies_to")
+        and br_adapter.applies_to(ctx.registered_at, ctx.registered_as)
+        and _want("compras_gov_br")
+        and _offline_index_covers(br_adapter, ctx.lei)
+    ):
+        tasks.append((
+            "compras_gov_br",
+            br_adapter.fetch_by_identifiers(
+                ctx.lei,
+                ctx.registered_as,
+                ctx.registered_at,
+                legal_name=ctx.legal_name,
+            ),
+        ))
     return tasks
 
 
@@ -1474,6 +1497,9 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
     if source_id == "mtender_moldova":
         # No awards on MTender is an answer with no card, not a finding.
         return _bh_mtender_moldova(result, ctx) if result.get("supplier") else None
+    if source_id == "compras_gov_br":
+        # No awards on Compras.gov.br is an answer with no card, not a finding.
+        return _bh_compras_gov_br(result, ctx) if result.get("supplier") else None
     if result.get("is_stub"):
         return None
     if source_id == "opencorporates":
@@ -2616,10 +2642,11 @@ def _split_subject_key(key: str) -> tuple[str, str, str]:
 def _register_procurement(scheme: str, local_id: str, legal_name: str) -> list[tuple[str, Any]]:
     """Procurement sources a register-anchored lookup can ask by the number.
 
-    Find a Tender for a Companies House number, MTender for a Moldovan IDNO,
-    each when its index is present (a source that cannot answer is never
-    announced).
+    Find a Tender for a Companies House number, MTender for a Moldovan IDNO
+    and Compras.gov.br for a CNPJ, each when its index is present (a source
+    that cannot answer is never announced).
     """
+    from ..sources.compras_gov_br import ComprasGovBrAdapter
     from ..sources.find_tender_uk import FindTenderUkAdapter
     from ..sources.mtender_moldova import MTenderMoldovaAdapter
 
@@ -2633,6 +2660,18 @@ def _register_procurement(scheme: str, local_id: str, legal_name: str) -> list[t
         return [(
             "mtender_moldova",
             md.fetch_by_identifiers("", local_id, "RA000451", legal_name=legal_name),
+        )]
+    if scheme == "BR-CNPJ":
+        br = REGISTRY.get("compras_gov_br")
+        if not isinstance(br, ComprasGovBrAdapter) or not br.covers_lei(""):
+            return []
+        if not br.applies_to(_ra_codes.RA_BY_COUNTRY["BR"], local_id):
+            return []
+        return [(
+            "compras_gov_br",
+            br.fetch_by_identifiers(
+                "", local_id, _ra_codes.RA_BY_COUNTRY["BR"], legal_name=legal_name,
+            ),
         )]
     adapter = REGISTRY.get("find_tender_uk")
     if scheme != "GB-COH" or not isinstance(adapter, FindTenderUkAdapter):
@@ -2816,8 +2855,9 @@ async def _register_lookup_pipeline(
     yield ("source_completed", {"source_id": hop.source_id, "hit_count": 1})
 
     # Procurement keyed on the register number itself: a Companies House
-    # number reaches Find a Tender as a GB LEI's registeredAs does, so a
-    # company with no LEI is checked against UK public contracts too. The
+    # number reaches Find a Tender as a GB LEI's registeredAs does (an IDNO
+    # MTender, a CNPJ Compras.gov.br), so a company with no LEI is checked
+    # against public contracts too. The
     # card is the hit (raw.records); its one-entity BODS is left out here.
     for proc_id, proc_coro in _register_procurement(hop.scheme, local_id, ctx.legal_name):
         asked.append(proc_id)

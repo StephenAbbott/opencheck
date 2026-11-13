@@ -75,6 +75,7 @@ _THIRD_PARTY_SOURCES = {
     "kimdis_greece",
     "mtender_moldova",
     "chilecompra",
+    "compras_gov_br",
     "climatetrace",
     "find_tender_uk",
     "everypolitician",

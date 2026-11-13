@@ -231,3 +231,69 @@ def map_cnpj_brazil(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interests=[interest],
             source_url=source_url,
         )
+
+
+# ---------------------------------------------------------------------------
+# Compras.gov.br — Brazilian public procurement awards (CC BY 4.0)
+# ---------------------------------------------------------------------------
+#
+# Awards won are activity, not ownership: one entity statement for the
+# supplier, the TED / ChileCompra / AusTender precedent. The index is keyed on
+# the CNPJ root, so the CNPJ GLEIF filed is asserted only where Compras.gov.br
+# itself names that establishment as a supplier — otherwise the statement
+# carries the root in its details and no identifier, so the reconciler never
+# reads a number the source did not publish as corroboration.
+
+
+def _compras_brl(value: int) -> str:
+    """Published values summed in full — ``BRL 1,249,028``, never rounded."""
+    return f"BRL {value:,}"
+
+
+@content_addressed
+def map_compras_gov_br(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a Compras.gov.br fetch bundle to one BODS entity statement."""
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return
+    supplier = bundle.get("supplier") or {}
+    cnpj = str(bundle.get("cnpj") or "").strip()
+    root = str(bundle.get("root") or cnpj[:8]).strip()
+    # No supplier name is stored (decision D): the name is GLEIF's.
+    name = str(bundle.get("legal_name") or "").strip()
+    if not supplier or not root or not name:
+        return
+    awards = int(supplier.get("awards") or 0)
+    parts = [
+        "Supplier to public bodies on Compras.gov.br",
+        f"{awards:,} award{'s' if awards != 1 else ''} with published values "
+        f"summing to {_compras_brl(int(supplier.get('value_brl') or 0))} "
+        "(OpenCheck's sum of award values, not money paid)",
+    ]
+    first, last = supplier.get("first_date"), supplier.get("last_date")
+    if first and last:
+        parts.append(f"awarded {first} to {last}")
+    parts.append(f"read across every establishment of CNPJ root {bundle.get('root_display') or root}")
+    digits = "".join(ch for ch in cnpj if ch.isdigit())
+    display = str(bundle.get("cnpj_display") or "")
+    named = {str(e.get("cnpj") or "") for e in bundle.get("establishments") or []}
+    identifiers = []
+    if digits and display and display in named:
+        identifiers.append(
+            {
+                "id": digits,
+                "scheme": "BR-CNPJ",
+                "schemeName": "Cadastro Nacional da Pessoa Jurídica — CNPJ (Receita Federal do Brasil)",
+            }
+        )
+    yield make_entity_statement(
+        source_id="compras_gov_br",
+        local_id=root,
+        name=name,
+        jurisdiction=("Brazil", "BR"),
+        identifiers=identifiers,
+        entity_details="; ".join(parts),
+        source_url=bundle.get("link") or None,
+        # The latest award Compras.gov.br published for this supplier — its
+        # own dated assertion (the TED latest-notice precedent).
+        statement_date=last or None,
+    )

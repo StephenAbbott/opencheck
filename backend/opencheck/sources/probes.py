@@ -1259,6 +1259,29 @@ PROBES: dict[str, SourceProbe] = {
             "before the sweep."
         ),
     ),
+    "compras_gov_br": _p(
+        tier="index",
+        subject="Banco do Brasil S.A. (CNPJ 00.000.000/0001-91)",
+        # The lookup's entry point with the anchor's real pair: GLEIF files
+        # Banco do Brasil's CNPJ under the Receita Federal (RA000681).
+        method="fetch_by_identifiers",
+        args=("QE0Q0253K88YAGNPE356", "00.000.000/0001-91", "RA000681"),
+        kwargs={"legal_name": "BANCO DO BRASIL SA"},
+        expect_fields=("supplier", "buyers", "awards"),
+        requires_files=("compras_gov_br.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # Rebuilt weekly from a monthly retrieval: 75 days means a missed run.
+        snapshot_max_age_days=75,
+        anchor_lei="QE0Q0253K88YAGNPE356",
+        bods_mapper="map_compras_gov_br",
+        notes=(
+            "A supplier to hundreds of public bodies (about 845 awards since "
+            "2021 across its establishments). The index is the "
+            "compras-gov-br-index release asset, rebuilt weekly by "
+            "refresh-compras-gov-br-index.yml; warm_bulk_stores.py downloads "
+            "it before the sweep."
+        ),
+    ),
     "mtender_moldova": _p(
         tier="index",
         subject="Kaufland S.R.L. (Moldova, IDNO 1016600004811)",

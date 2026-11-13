@@ -22,6 +22,7 @@ from .cac_nigeria import CacNigeriaAdapter
 from .austender import AusTenderAdapter
 from .mtender_moldova import MTenderMoldovaAdapter
 from .chilecompra import ChileCompraAdapter
+from .compras_gov_br import ComprasGovBrAdapter
 from .find_tender_uk import FindTenderUkAdapter
 from .cnpj_brazil import CnpjBrazilAdapter
 from .acra_singapore import AcraSingaporeAdapter
@@ -97,6 +98,7 @@ REGISTRY: dict[str, SourceAdapter] = {
     "find_tender_uk": FindTenderUkAdapter(),
     "climatetrace": ClimateTRACEAdapter(),
     "cnpj_brazil": CnpjBrazilAdapter(),
+    "compras_gov_br": ComprasGovBrAdapter(),
     "corporations_canada": CorporationsCanadaAdapter(),
     "cr_hongkong": CrHongKongAdapter(),
     "companies_house": CompaniesHouseAdapter(),
