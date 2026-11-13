@@ -158,7 +158,8 @@ export interface LayerControl {
 }
 
 /**
- * The "+1 layer" control that replaced the full-width "Add next layer" button.
+ * The "Add next layer" control (shown as "+1 layer" until the controls moved
+ * under the canvas) that replaced the full-width "Add next layer" button.
  *
  * It manipulates the canvas, so it sits with the other canvas controls rather
  * than competing with the mode's primary action above the graph. The frontier
@@ -191,7 +192,7 @@ export function layerControl({
     };
   }
   return {
-    label: "+1 layer",
+    label: "Add next layer",
     count: frontier,
     ariaLabel: `Add the next layer — resolve ${noun} for ${plural(frontier, "company", "companies")} at the edge of the network`,
     disabled: false,

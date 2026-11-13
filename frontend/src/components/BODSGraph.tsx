@@ -39,7 +39,7 @@ import { IdentityTick } from "./ui/IdentityTick";
 import { RISK_PRESENTATION } from "./risk/RiskChip";
 import type { SameAsCandidate } from "../lib/reconcile";
 import type { LayerControl } from "../lib/fullCheckHeader";
-import { Button } from "./ui";
+import { Button, Icon } from "./ui";
 import {
   CANVAS_MAX_HEIGHT,
   canvasHeightFor,
@@ -875,6 +875,9 @@ export default function BODSGraph({
     return <p className="text-xs text-oo-muted italic">No BODS statements to visualise.</p>;
   }
 
+  const zoomButton =
+    "min-h-[36px] min-w-[36px] inline-flex items-center justify-center text-oo-blue " +
+    "hover:bg-oo-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-oo-blue";
   const toolButton =
     "hover:text-oo-blue min-h-[24px] min-w-[24px] px-2 inline-flex items-center justify-center rounded " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oo-blue";
@@ -895,57 +898,10 @@ export default function BODSGraph({
               Skip to text version
             </a>
           )}
-          <button type="button" className={`${toolButton} font-mono`} aria-label="Zoom in" onClick={() => zoomBy(1.3)}>
-            +
-          </button>
-          <button type="button" className={`${toolButton} font-mono`} aria-label="Zoom out" onClick={() => zoomBy(1 / 1.3)}>
-            −
-          </button>
-          <button type="button" className={toolButton}
-            onClick={() => { if (cyRef.current) fitVisible(cyRef.current); }}>
-            Fit
-          </button>
-          {collapsedCount > 0 && (
-            <button type="button" className={toolButton}
-              aria-label={`Expand all ${collapsedCount} collapsed ${collapsedCount === 1 ? "branch" : "branches"}`}
-              onClick={() => onCollapsedChange(new Set())}>
-              Expand all
-            </button>
-          )}
-          {/* Phase 243 — a group the reader opened can be closed again. */}
-          {openClusterCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => setExpandedClusters(new Set())}>
-              Regroup {openClusterCount === 1 ? "siblings" : `${openClusterCount} groups`}
-            </Button>
-          )}
-
-          {/* Progressive discovery, one hop at a time. This was a full-width
-              button above the graph, beside "Run FullCheck" — two blue buttons
-              driving the same expansion at different budgets, with nothing on
-              screen to say which was the bigger one. It manipulates the canvas,
-              so it belongs with the canvas controls; the frontier count comes
-              with it as the badge, because it is the one thing this control
-              says that "Run FullCheck" cannot. */}
-          {layer && onAddLayer && (
-            <Button
-              // Secondary, never primary (Phase 245): "Run FullCheck" is the
-              // panel's one primary action, and the check found three solid
-              // blue buttons on one phone screen of FullCheck.
-              variant={layer.disabled ? "ghost" : "secondary"}
-              size="sm"
-              className="ml-1"
-              onClick={onAddLayer}
-              disabled={layer.disabled}
-              aria-label={layer.ariaLabel}
-            >
-              <span>{layer.label}</span>
-              {layer.count !== null && (
-                <span className="font-mono opacity-80">{layer.count}</span>
-              )}
-            </Button>
-          )}
-
-          {/* Search-within-graph */}
+          {/* Search-within-graph. The canvas controls (zoom, Fit, the
+              single-layer action) are in the bar UNDER the canvas: with an
+              open signal legend between them and the network, they sat a
+              screen away from what they moved on a phone. */}
           <div className="flex items-center gap-1 ml-auto">
               <label htmlFor="bods-graph-search" className="sr-only">Search nodes in the graph</label>
               <input
@@ -1212,6 +1168,73 @@ export default function BODSGraph({
           }}>
             {signalTooltip.text}
           </div>
+        )}
+      </div>
+
+      {/* Canvas controls — under the canvas, on the soft tint the FullCheck
+          run box wears, so they read as part of the diagram rather than as
+          page chrome. Above it they sat behind the toolbar row and the signal
+          legend, which on a network with many signals put them a screen away
+          from the graph on a phone. Zoom is a bordered segmented group with
+          36px targets: as bare grey glyphs it did not look pressable. */}
+      <div className="border-t border-oo-softBorder bg-oo-soft rounded-b-oo px-2 py-1.5 flex items-center flex-wrap gap-2">
+        <div
+          role="group"
+          aria-label="Zoom"
+          className="inline-flex items-stretch rounded-oo border border-oo-softBorder bg-white shadow-sm overflow-hidden divide-x divide-oo-softBorder"
+        >
+          <button type="button" className={zoomButton} aria-label="Zoom out" onClick={() => zoomBy(1 / 1.3)}>
+            <Icon name="minus" size={16} />
+          </button>
+          <button type="button" className={zoomButton} aria-label="Zoom in" onClick={() => zoomBy(1.3)}>
+            <Icon name="plus" size={16} />
+          </button>
+          <button type="button" className={`${zoomButton} px-3 text-oo-small font-medium`}
+            onClick={() => { if (cyRef.current) fitVisible(cyRef.current); }}>
+            Fit
+          </button>
+        </div>
+        {collapsedCount > 0 && (
+          <Button variant="ghost" size="sm"
+            aria-label={`Expand all ${collapsedCount} collapsed ${collapsedCount === 1 ? "branch" : "branches"}`}
+            onClick={() => onCollapsedChange(new Set())}>
+            Expand all
+          </Button>
+        )}
+        {/* Phase 243 — a group the reader opened can be closed again. */}
+        {openClusterCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={() => setExpandedClusters(new Set())}>
+            Regroup {openClusterCount === 1 ? "siblings" : `${openClusterCount} groups`}
+          </Button>
+        )}
+
+        {/* Progressive discovery, one hop at a time. This was a full-width
+            button above the graph, beside "Run FullCheck" — two blue buttons
+            driving the same expansion at different budgets, with nothing on
+            screen to say which was the bigger one. It manipulates the canvas,
+            so it belongs with the canvas controls; the frontier count comes
+            with it as the badge, because it is the one thing this control
+            says that "Run FullCheck" cannot. */}
+        {layer && onAddLayer && (
+          <Button
+            // Secondary, never primary (Phase 245): "Run FullCheck" is the
+            // panel's one primary action, and the check found three solid
+            // blue buttons on one phone screen of FullCheck.
+            variant={layer.disabled ? "ghost" : "secondary"}
+            size="sm"
+            className="ml-auto shadow-sm"
+            onClick={onAddLayer}
+            disabled={layer.disabled}
+            aria-label={layer.ariaLabel}
+          >
+            {!layer.disabled && <Icon name="plus" size={16} />}
+            <span>{layer.label}</span>
+            {layer.count !== null && (
+              <span className="font-mono text-oo-meta rounded-full bg-oo-soft border border-oo-softBorder px-1.5 leading-[18px]">
+                {layer.count}
+              </span>
+            )}
+          </Button>
         )}
       </div>
     </div>
