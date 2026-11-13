@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 527** — A two-week shadow experiment lists, per day, every LEI whose GLEIF or OpenSanctions record changed, graded so ownership and sanctions changes head it.
+**Latest: Phase 528** — The watchlist now grades a re-keyed register number or a moved reporting-exception reason as a note, so "Recheck the source" is kept for changes worth opening the report for.
 
 → [Full development history](docs/status.md)
 
