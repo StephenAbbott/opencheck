@@ -90,7 +90,7 @@ def test_the_subject_signal_from_deepen_carries_the_terms(record):
     (sig,) = [s for s in assess_bundle("opensanctions", raw) if s.code == "DEBARMENT"]
     assert sig.confidence == "high"
     assert sig.summary.startswith(
-        "OpenSanctions lists this record as debarred from public contracts. "
+        'OpenSanctions lists its record of SRL"Viz-Stram" as debarred from public contracts. '
         "Barred by Ministry of Finance of the Republic of Moldova (decision 1/26)"
     )
     assert sig.evidence["debarment_terms"][0]["end_date"] == "2029-10-02"
@@ -102,7 +102,9 @@ def test_a_record_with_no_nested_sanction_keeps_the_old_sentence(record):
     del card["properties"]["sanctions"]
     raw = {"entity_id": card["id"], "entity": card}
     (sig,) = [s for s in assess_bundle("opensanctions", raw) if s.code == "DEBARMENT"]
-    assert sig.summary == "OpenSanctions lists this record as debarred from public contracts."
+    assert sig.summary == (
+        'OpenSanctions lists its record of SRL"Viz-Stram" as debarred from public contracts.'
+    )
     assert "debarment_terms" not in sig.evidence
 
 

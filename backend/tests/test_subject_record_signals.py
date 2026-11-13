@@ -113,6 +113,24 @@ def test_a_crime_topic_on_the_lei_record_is_a_risk_signal() -> None:
     assert "convicted" not in crime.summary.lower()
 
 
+def test_each_summary_names_the_company_it_reads() -> None:
+    """FullCheck folds an added layer's signals into the network's list, so a
+    summary saying "this company" read as the looked-up company's record
+    (NVIDIA's FullCheck carried The Vanguard Group's crime tag that way,
+    13 Nov 2026). Every summary names the company and its LEI."""
+    out = assess_subject_record([_hit(BARCLAYS)], BARCLAYS_LEI, ["Barclays Bank PLC"])
+    for sig in out:
+        assert f"Barclays Bank PLC (LEI {BARCLAYS_LEI})" in sig.summary
+        assert "this company" not in sig.summary
+    (td,) = assess_subject_record([_hit(TD)], TD_LEI, ["The Toronto-Dominion Bank"])
+    assert f"The Toronto-Dominion Bank (LEI {TD_LEI})" in td.summary
+    # No legal name passed: OpenSanctions' caption names it.
+    (warn,) = assess_subject_record(
+        [_hit({**DANSKE_FINLAND_BRANCH, "caption": "Danske Bank A/S"})], DANSKE_LEI
+    )
+    assert f"Danske Bank A/S (LEI {DANSKE_LEI})" in warn.summary
+
+
 def test_regulatory_action_is_context_not_risk() -> None:
     out = assess_subject_record([_hit(TD)], TD_LEI, ["The Toronto-Dominion Bank"])
     assert _codes(out) == [REGULATORY_ACTION]

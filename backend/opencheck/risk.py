@@ -1260,11 +1260,35 @@ def _ftm_record_id(source_id: str, hit_id: str, entity: dict[str, Any]) -> str:
     return _bods_stable_id(source_id, kind, hit_id)
 
 
+def _record_name(entity: dict[str, Any]) -> str:
+    """The name OpenSanctions gives a record: its caption, else its first
+    ``name`` property, else ""."""
+    caption = str(entity.get("caption") or "").strip()
+    if caption:
+        return caption
+    names = (entity.get("properties") or {}).get("name") or []
+    if isinstance(names, str):
+        names = [names]
+    return next((str(n).strip() for n in names if str(n).strip()), "")
+
+
+def _record_phrase(entity: dict[str, Any]) -> str:
+    """"its record of <name>", or "this record" when the record has no name.
+
+    A subject-level signal names the record it was read from. FullCheck folds
+    each added layer's signals into the network's list, where "this record"
+    reads as the looked-up company's (the NVIDIA FullCheck of 13 Nov 2026
+    carried The Vanguard Group's crime tag as "its record of this company")."""
+    name = _record_name(entity)
+    return f"its record of {name}" if name else "this record"
+
+
 def _opensanctions_topic_signals_from_entity(
     hit_id: str, entity: dict[str, Any], *, source_id: str = "opensanctions"
 ) -> list[RiskSignal]:
     topics = _extract_topics(entity)
     out: list[RiskSignal] = []
+    record = _record_phrase(entity)
     # statement_id lets the frontend highlight the exact BODS graph node:
     # the recordId the FtM mapper gives the record (``_stable_id(source,
     # kind, ftm id)``), resolved to the statementId by
@@ -1278,7 +1302,7 @@ def _opensanctions_topic_signals_from_entity(
             RiskSignal(
                 code=PEP,
                 confidence="high",
-                summary=f"OpenSanctions tags this record as {topic_phrase(matched)}.",
+                summary=f"OpenSanctions tags {record} as {topic_phrase(matched)}.",
                 source_id=source_id,
                 hit_id=hit_id,
                 evidence={"topics": matched, "statement_id": stmt_id},
@@ -1292,7 +1316,7 @@ def _opensanctions_topic_signals_from_entity(
             RiskSignal(
                 code=SANCTIONED,
                 confidence="high",
-                summary="OpenSanctions lists this record as sanctioned.",
+                summary=f"OpenSanctions lists {record} as sanctioned.",
                 source_id=source_id,
                 hit_id=hit_id,
                 evidence={
@@ -1315,7 +1339,7 @@ def _opensanctions_topic_signals_from_entity(
                 code=COUNTER_SANCTIONED,
                 confidence="high",
                 summary=(
-                    "OpenSanctions lists this record under a counter-sanctions "
+                    f"OpenSanctions lists {record} under a counter-sanctions "
                     "regime — a designation issued by a state with weak "
                     "democratic institutions, typically retaliation for foreign "
                     "sanctions or suppression of domestic opposition. It is not "
@@ -1340,7 +1364,7 @@ def _opensanctions_topic_signals_from_entity(
                 code=SANCTIONS_CONTROLLED,
                 confidence="high",
                 summary=(
-                    "OpenSanctions places this record in a sanctioned party's "
+                    f"OpenSanctions places {record} in a sanctioned party's "
                     "ownership chain — a direct or indirect subsidiary, asset "
                     "or vessel. It is not itself designated. No percentage "
                     "threshold is applied, so whether an ownership-and-control "
@@ -1369,7 +1393,7 @@ def _opensanctions_topic_signals_from_entity(
                 code=SANCTIONS_LINKED,
                 confidence="medium",
                 summary=(
-                    "OpenSanctions links this record to sanctioned entities; the "
+                    f"OpenSanctions links {record} to sanctioned entities; the "
                     "record is not itself sanctioned."
                 ),
                 source_id=source_id,
@@ -1382,7 +1406,7 @@ def _opensanctions_topic_signals_from_entity(
     # authority, decision, reason and dates are said (``debarment``).
     if any(t in _DEBARMENT_TOPICS for t in topics):
         terms = _debarment.debarment_terms(entity)
-        summary = "OpenSanctions lists this record as debarred from public contracts."
+        summary = f"OpenSanctions lists {record} as debarred from public contracts."
         evidence: dict[str, Any] = {"topics": ["debarment"], "statement_id": stmt_id}
         if terms:
             summary = f"{summary} {_debarment.terms_summary(terms)}"
@@ -1410,7 +1434,7 @@ def _opensanctions_topic_signals_from_entity(
                 code=EXPORT_CONTROLLED,
                 confidence="high",
                 summary=(
-                    "OpenSanctions lists this record as subject to "
+                    f"OpenSanctions lists {record} as subject to "
                     "export-control restrictions — e.g. an entity-list or "
                     "military end-user designation."
                 ),
@@ -1428,7 +1452,7 @@ def _opensanctions_topic_signals_from_entity(
                 code=EXPORT_CONTROL_LINKED,
                 confidence="medium",
                 summary=(
-                    "OpenSanctions links this record to an export-controlled "
+                    f"OpenSanctions links {record} to an export-controlled "
                     "party; the record is not itself subject to export-control "
                     "restrictions."
                 ),
@@ -1444,7 +1468,7 @@ def _opensanctions_topic_signals_from_entity(
                 code=EXPORT_RISK,
                 confidence="medium",
                 summary=(
-                    "OpenSanctions flags this record for trade risk — e.g. "
+                    f"OpenSanctions flags {record} for trade risk — e.g. "
                     "named in export-diversion or circumvention research."
                 ),
                 source_id=source_id,
@@ -1533,6 +1557,12 @@ def assess_subject_record(
             "record_name": entity.get("caption") or hit.name,
             **_datasets_evidence(entity),
         }
+        # Name the company (Stephen, 13 Nov 2026): FullCheck folds an added
+        # layer's signals into the network's list, where "this company" read
+        # as the looked-up company's record. GLEIF's legal name first (the
+        # company the LEI identifies), else OpenSanctions' caption.
+        company = (names[0] if names else "") or _record_name(entity) or hit.name or ""
+        who = f"{company} (LEI {subject_lei})" if company else f"the company with LEI {subject_lei}"
         crime = sorted({t for t in topics if t in _CRIME_TOPICS})
         if crime:
             out.append(
@@ -1540,8 +1570,8 @@ def assess_subject_record(
                     code=CRIME_RECORD,
                     confidence="high",
                     summary=(
-                        "OpenSanctions tags its record of this company, which "
-                        f"carries the company's LEI, as {topic_phrase(crime)}. "
+                        f"OpenSanctions tags its record of {who}, which "
+                        f"carries that LEI, as {topic_phrase(crime)}. "
                         "The tag says what the publishing dataset records; it "
                         "does not say whether a case ended in a conviction, a "
                         "settlement or a civil finding."
@@ -1558,7 +1588,7 @@ def assess_subject_record(
                     confidence="high",
                     summary=(
                         "OpenSanctions records a regulatory action concerning "
-                        "this company, on a record that carries its LEI. "
+                        f"{who}, on a record that carries that LEI. "
                         "Context, not a risk finding: an action may be a fine, "
                         "a consent order or a settled matter, and the record "
                         "does not grade it."
@@ -1576,7 +1606,7 @@ def assess_subject_record(
                     confidence="high",
                     summary=(
                         "OpenSanctions records a regulator's warning concerning "
-                        "this company, on a record that carries its LEI. "
+                        f"{who}, on a record that carries that LEI. "
                         "Context, not a risk finding: a warning is a "
                         "supervisor's notice, not a finding of wrongdoing."
                     ),
