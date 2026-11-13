@@ -19,7 +19,9 @@ What this projection carries that no other OpenCheck export format can:
 
 Only the analytical *values* need private terms, in the ``oc:`` namespace:
 ``oc:sourceId``, ``oc:signalCode``, ``oc:confidence``, ``oc:evidenceStatement``,
-``oc:linkedStatement``. Everything else is the published vocabulary.
+``oc:linkedStatement``, and one for a value BODS has no term for:
+``oc:legalFormCode`` (GLEIF's ISO 20275 ELF code). Everything else is the
+published vocabulary.
 
 Deliberate mapping choices (see the spike ticket for the full rationale):
 
@@ -263,6 +265,9 @@ def _add_entity(g, rec_uri, rd: dict[str, Any]) -> None:
         g.add((rec_uri, BODS.entityTypeDetails, Literal(legal_form)))
     else:
         g.add((rec_uri, BODS.entityType, _code_term(entity_type)))
+    if rd.get("legalFormCode"):
+        # BODS has no term for a legal-form code (the ELF-code ticket).
+        g.add((rec_uri, OC.legalFormCode, Literal(rd["legalFormCode"])))
     if rd.get("name"):
         _add_name(g, rec_uri, rd["name"])
     for alt in rd.get("alternateNames") or []:

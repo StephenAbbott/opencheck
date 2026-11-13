@@ -18,7 +18,7 @@ from typing import Any, Iterator
 
 import pycountry
 
-from ..elf import resolve_elf
+from ..elf import elf_code, resolve_elf
 from ..identifiers import argentine_cuit, colombian_nit, format_cuit, peruvian_ruc
 from . import former_names as _former_names
 from . import gleif_events as _gleif_events
@@ -2057,6 +2057,13 @@ def _gleif_entity_statement(
     legal_form_label = _gleif_legal_form_label(entity_block.get("legalForm"))
     if legal_form_label:
         stmt["recordDetails"]["legalFormLabel"] = legal_form_label
+    # The code itself, beside its label (the ELF-code ticket, 13 Nov 2026).
+    # An extension, never an ``identifiers`` entry: v0.4 identifiers are
+    # "assigned to a person or entity", an ELF code names a form thousands
+    # share, and every identifier key merges entities in the reconciler.
+    legal_form_code = elf_code((entity_block.get("legalForm") or {}).get("id"))
+    if legal_form_code:
+        stmt["recordDetails"]["legalFormCode"] = legal_form_code
 
     # Phase 255: the LEI record's own registration status, when it is not
     # ISSUED. 60 of the 320 subsidiaries in five networks checked on 28 Sept
