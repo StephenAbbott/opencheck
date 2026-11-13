@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 522** — Greek companies now show the public contracts their ΑΦΜ holds in ΚΗΜΔΗΣ, read live and shown beside TED, never added to it.
+**Latest: Phase 523** — The MTender source now reads Moldova's procurement API itself each week, so award lists are current rather than months behind.
 
 → [Full development history](docs/status.md)
 
