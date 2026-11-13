@@ -65,6 +65,7 @@ import pycountry
 from .. import liveness as _liveness
 from ..annotations import commenting, pointer, transformation
 from ..former_names import former_name_annotation
+from ..oor import mark_role
 from ..statements import (
     content_addressed,
     SOURCE_NAMES,
@@ -178,6 +179,53 @@ _EE_OFF_CARD_FOUNDER_LABELS: dict[str, str] = {
     "A": "Founder (asutaja)",
     "B": "Founder, no contribution made (asutaja (sissemakseta))",
 }
+#: The register's legal form (the files' Estonian name, the print page's
+#: English one) → ISO 20275 ELF code, for the two forms ISO 5009 lists
+#: roles under. Other forms (partnerships, FIE, MTÜ, foundations, public
+#: bodies) have no ISO 5009 rows and get no role code.
+EE_FORM_ELF: dict[str, str] = {
+    "Aktsiaselts": "9LJA",
+    "Public limited company": "9LJA",
+    "Osaühing": "JC0Y",
+    "Private limited company": "JC0Y",
+}
+
+#: (ELF, register role) → ISO 5009 code (GLEIF list 1.0.0). Role keys are
+#: the registry-card codes, the off-card codes (``N`` supervisory board,
+#: ``A``/``B`` founder) and ``shareholder``. The chairs are left out on
+#: purpose: the list's AS "Esimees" does not say which board it chairs, and
+#: its OÜ "Esimees" is the management board's, which a supervisory chair
+#: (``E``) is not. Checked by ``tests/test_oor_codes.py``.
+EE_OOR: dict[tuple[str, str], str] = {
+    ("9LJA", "JUHL"): "3TZ9PM",
+    ("9LJA", "JUHJ"): "3TZ9PM",
+    ("9LJA", "JUHA"): "3TZ9PM",
+    ("9LJA", "PROK"): "3VVTPX",
+    ("9LJA", "LIKV"): "T9HIKN",
+    ("9LJA", "LIKVJ"): "T9HIKN",
+    ("9LJA", "N"): "TV1LWM",
+    ("9LJA", "A"): "KKXO7H",
+    ("9LJA", "B"): "KKXO7H",
+    ("9LJA", "shareholder"): "XFIHZL",
+    ("JC0Y", "JUHL"): "5RJVJB",
+    ("JC0Y", "JUHJ"): "5RJVJB",
+    ("JC0Y", "JUHA"): "5RJVJB",
+    ("JC0Y", "JUHE"): "HK0BV9",
+    ("JC0Y", "PROK"): "IXXFE2",
+    ("JC0Y", "LIKV"): "UPGZNU",
+    ("JC0Y", "LIKVJ"): "UPGZNU",
+    ("JC0Y", "N"): "K710NY",
+    ("JC0Y", "A"): "43JXWW",
+    ("JC0Y", "B"): "43JXWW",
+    ("JC0Y", "shareholder"): "PMWIUQ",
+}
+
+
+def ee_company_elf(bundle: dict[str, Any]) -> str | None:
+    """The ELF code of an Estonian company, from the register's legal form."""
+    return EE_FORM_ELF.get((bundle.get("legal_form") or "").strip())
+
+
 #: The rest — ``D`` audit firm, ``J`` auditor (revident), ``M`` auditor of a
 #: non-monetary contribution, ``P`` bankruptcy committee member, ``V``
 #: authorised person, ``R`` audit committee member, ``L`` congregation of a
@@ -1335,6 +1383,7 @@ def _ee_company_parties(
     """Sections 2–5 for one company: its shareholders (OÜ list and the AS
     rows the register records), the persons on its registry card, its
     declared beneficial owners and — for the subject only — its founders."""
+    elf = ee_company_elf(bundle)
 
     # A person is emitted once, on the first list naming them; the residence
     # country only the beneficial-owner list carries is gathered first so a
@@ -1378,7 +1427,9 @@ def _ee_company_parties(
     for prefix, sh in shareholder_rows:
         isiku_tyyp = sh.get("isiku_tyyp") or "F"
         kirje_id = str(sh.get("kirje_id") or "")
-        interests: list[dict[str, Any]] = [_ee_shareholding_interest(sh)]
+        interests: list[dict[str, Any]] = [
+            mark_role(_ee_shareholding_interest(sh), EE_OOR, elf, "shareholder")
+        ]
         if prefix == "as":
             # Recorded by the register itself, not the OÜ shareholder list:
             # the sole shareholder of an AS, or a Nasdaq CSD entry.
@@ -1480,6 +1531,7 @@ def _ee_company_parties(
             interests[0]["startDate"] = start_date
         if end_date:
             interests[0]["endDate"] = end_date
+        mark_role(interests[0], EE_OOR, elf, role_code)
 
         if (officer.get("isiku_tyyp") or "F") == "J":
             # A legal person in the role — a fund's general partner, a fund
@@ -1625,6 +1677,7 @@ def _ee_company_parties(
                 interest["startDate"] = start_date
             if end_date:
                 interest["endDate"] = end_date
+            mark_role(interest, EE_OOR, elf, role_code)
             record_status = "new"
         elif role_code in _EE_OFF_CARD_FOUNDER_LABELS:
             if not include_founders or _ee_party_key(row, kirje_id, "fnd") in current_keys:
@@ -1636,6 +1689,7 @@ def _ee_company_parties(
                 "a founding shareholding, no longer on the current list; the "
                 "register publishes no end date",
             ) if p)
+            mark_role(interest, EE_OOR, elf, role_code)
             record_status = "closed"
         else:
             continue  # auditors, bankruptcy committee, authorised persons…

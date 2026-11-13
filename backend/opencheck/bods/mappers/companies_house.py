@@ -21,6 +21,7 @@ from ..annotations import annotate, commenting, identifying, pointer, transforma
 from ..ch_constants import describe_company_type, describe_officer_role
 from ..nationality import ch_nationalities
 from ..officer_roles import mark_officer
+from ..oor import mark_role
 from ..psc_natures import describe_statement, describe_super_secure
 from ..residence import residence_address, residence_note
 from ..statements import (
@@ -527,12 +528,60 @@ _MANAGING_OFFICIAL_ROLES = frozenset({
 })
 
 
+#: Companies House company type (``profile.type``) → ISO 20275 ELF code, for
+#: the types ISO 5009 lists roles under. Other types (unlimited, overseas,
+#: charitable incorporated organisations, Scottish partnerships …) have no
+#: ISO 5009 rows and get no role code.
+CH_TYPE_ELF: dict[str, str] = {
+    "ltd": "H0PO",
+    "plc": "B6ES",
+    "private-limited-guarant-nsc": "G12F",
+    "private-limited-guarant-nsc-limited-exemption": "G12F",
+    "llp": "Z0EY",
+    "limited-partnership": "ID30",
+}
+
+#: (ELF, Companies House ``officer_role`` or ``psc``) → ISO 5009 code
+#: (GLEIF list 1.0.0). A corporate or nominee director is a director in law
+#: (Companies Act 2006 s.250), so it takes the Director code. Checked against
+#: the vendored list by ``tests/test_oor_codes.py``.
+CH_OOR: dict[tuple[str, str], str] = {
+    ("H0PO", "director"): "UDU176",
+    ("H0PO", "corporate-director"): "UDU176",
+    ("H0PO", "nominee-director"): "UDU176",
+    ("H0PO", "corporate-nominee-director"): "UDU176",
+    ("H0PO", "psc"): "DIUHJM",
+    ("B6ES", "director"): "VXSNEB",
+    ("B6ES", "corporate-director"): "VXSNEB",
+    ("B6ES", "nominee-director"): "VXSNEB",
+    ("B6ES", "corporate-nominee-director"): "VXSNEB",
+    ("B6ES", "psc"): "F7OSXY",
+    ("G12F", "director"): "JKPKHT",
+    ("G12F", "corporate-director"): "JKPKHT",
+    ("G12F", "nominee-director"): "JKPKHT",
+    ("G12F", "corporate-nominee-director"): "JKPKHT",
+    ("G12F", "psc"): "IVYF9L",
+    ("Z0EY", "llp-member"): "L02DFG",
+    ("Z0EY", "corporate-llp-member"): "L02DFG",
+    ("Z0EY", "llp-designated-member"): "FKY9GU",
+    ("Z0EY", "corporate-llp-designated-member"): "FKY9GU",
+    ("ID30", "general-partner-in-a-limited-partnership"): "WKICVF",
+    ("ID30", "corporate-general-partner-in-a-limited-partnership"): "WKICVF",
+}
+
+
+def ch_company_elf(profile: dict[str, Any]) -> str | None:
+    """The ELF code of a Companies House company, from its type, or None."""
+    return CH_TYPE_ELF.get(str(profile.get("type") or profile.get("company_type") or "").strip().lower())
+
+
 def _ch_director_statements(
     company_number: str,
     officers_payload: dict[str, Any],
     entity_sid: str,
     company_url: str,
     seen_sids: set[str],
+    elf: str | None = None,
 ) -> list[dict[str, Any]]:
     """Emit person + relationship statements for active managing-official officers.
 
@@ -577,7 +626,8 @@ def _ch_director_statements(
             # :func:`_ch_corporate_officer_statements`.
             stmts.extend(
                 _ch_corporate_officer_statements(
-                    company_number, officer, entity_sid, company_url, seen_sids, role_label
+                    company_number, officer, entity_sid, company_url, seen_sids, role_label,
+                    elf=elf, role=role,
                 )
             )
             continue
@@ -659,6 +709,7 @@ def _ch_director_statements(
         }
         if appointed_on:
             interest["startDate"] = appointed_on
+        mark_role(interest, CH_OOR, elf, role)
 
         rel = make_relationship_statement(
             source_id="companies_house",
@@ -944,6 +995,9 @@ def _ch_corporate_officer_statements(
     company_url: str,
     seen_sids: set[str],
     role_label: str,
+    *,
+    elf: str | None = None,
+    role: str | None = None,
 ) -> list[dict[str, Any]]:
     """The entity and appointment statements for one corporate officer.
 
@@ -969,6 +1023,7 @@ def _ch_corporate_officer_statements(
     }
     if appointed_on:
         interest["startDate"] = appointed_on
+    mark_role(interest, CH_OOR, elf, role)
     rel = make_relationship_statement(
         source_id="companies_house",
         local_id=f"{_ch_officer_local_id(company_number, officer)}:rel",
@@ -1095,6 +1150,7 @@ def _emit_company_statements(
         f"https://find-and-update.company-information.service.gov.uk/company/{number}"
     )
     company_name = profile.get("company_name", f"Company {number}")
+    company_elf = ch_company_elf(profile)
 
     # Previous names the company traded under → BODS alternateNames.
     # Companies House publishes these in ``profile.previous_company_names``
@@ -1242,6 +1298,12 @@ def _emit_company_statements(
             set_beneficial_ownership(
                 interest, "companies_house", record_kind=psc_record_kind
             )
+            # ISO 5009 "Person with significant control" — a natural person
+            # on the register (super-secure included). A corporate PSC is a
+            # relevant legal entity, not a person with significant control,
+            # and gets no code.
+            if ip_type == "person":
+                mark_role(interest, CH_OOR, company_elf, "psc")
 
         # A ceased PSC closes the relationship: stamp each interest with the
         # cessation date and emit the statement with recordStatus 'closed'. The
@@ -1346,7 +1408,7 @@ def _emit_company_statements(
 
     # Directors → seniorManagingOfficial person + relationship statements.
     director_stmts = _ch_director_statements(
-        number, officers_payload, entity_sid, company_url, seen_sids
+        number, officers_payload, entity_sid, company_url, seen_sids, company_elf
     )
     result.statements.extend(director_stmts)
     return company

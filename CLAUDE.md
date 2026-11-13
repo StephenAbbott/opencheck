@@ -2760,6 +2760,32 @@ These are non-obvious and cost significant debugging time. Do not deviate from t
 
 ---
 
+## ISO 5009 role codes go on the interest, never the person (the ISO 5009 roles ticket, 13 Nov 2026)
+
+`bods/oor.py`, `data/oor_codes.json` (GLEIF list 1.0.0, rebuilt by
+`scripts/build_oor_codes.py`), `tests/test_oor_codes.py`. Things that will be
+re-derived otherwise:
+
+- **A code is a role in one legal form**, not in a country: "Director" is
+  `UDU176` under ELF `H0PO` (UK Ltd), `VXSNEB` under `B6ES` (PLC). Coding a
+  role needs the company's ELF, so each source maps the register's own type
+  to ELF (`CH_TYPE_ELF`, `EE_FORM_ELF`, `NZ_TYPE_ELF`) rather than relying
+  on GLEIF.
+- **On the interest, as `officialOrganizationalRole`** (`scheme`, `code`,
+  `name`, `legalForm`), registered in `data_dictionary.EXTENSIONS`. Never in
+  a person's `identifiers` (Stephen): a shared code would merge every holder
+  as one person, `make_person_statement` moves it to an annotation anyway,
+  and one person holds different roles at different companies.
+- **Only from a reviewed table** `{(ELF, register role): code}` beside the
+  mapper (`CH_OOR`, `EE_OOR`, `NZ_OOR`); `role_object` raises on a code the
+  list lacks or files under another ELF, and the test checks every entry's
+  country. No match is no code, never a guess. A corporate PSC (a relevant
+  legal entity) and an Estonian AS chair (the list does not say which board)
+  are left uncoded on purpose.
+- Adding a source: a table, the ELF map, a `mark_role(interest, TABLE, elf,
+  role)` where the interest is built, and a row in `TABLES` in the test. The
+  survey with per-source match-rate estimates is on the Notion ticket.
+
 ## INPI (France) — legal publishing prohibition
 
 **Security constraint — must never be relaxed.**

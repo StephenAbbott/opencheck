@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from ..oor import mark_role
 from .. import liveness as _liveness
 from ..annotations import annotate
 from ..residence import residence_address, residence_note
@@ -21,6 +22,25 @@ from ..statements import (
     make_relationship_statement,
     set_beneficial_ownership,
 )
+
+
+#: The NZBN's entity type description → ISO 20275 ELF code, for the one
+#: form ISO 5009 lists director and shareholder roles under. Other types
+#: (co-operative, unlimited, overseas companies) have no ISO 5009 rows.
+NZ_TYPE_ELF: dict[str, str] = {
+    "NZ Limited Company": "P2R9",
+}
+
+#: (ELF, NZBN ``roleType`` or ``Shareholder``) → ISO 5009 code (GLEIF list
+#: 1.0.0). Checked by ``tests/test_oor_codes.py``.
+NZ_OOR: dict[tuple[str, str], str] = {
+    ("P2R9", "Director"): "OQDTGX",
+    ("P2R9", "Shareholder"): "XSLEA6",
+    ("P2R9", "Liquidator"): "ILFORX",
+    ("P2R9", "Receiver"): "F3W6RD",
+    ("P2R9", "Administrator"): "OLRY5U",
+    ("P2R9", "Auditor"): "RVQTEK",
+}
 
 
 def _nz_ids(nzbn: str | None, number: str | None) -> list[dict[str, str]]:
@@ -109,6 +129,7 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     company_stmt_id: str = company_stmt["recordId"]
 
     seen: set[str] = set()
+    elf = NZ_TYPE_ELF.get((company.get("entity_type") or "").strip())
 
     def _emit_party(kind: str, name_: str, *, nzbn_: str | None = None,
                     number_: str | None = None, idx: int = 0,
@@ -170,6 +191,7 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interest["startDate"] = role["start"]
         if role.get("end"):
             interest["endDate"] = role["end"]
+        mark_role(interest, NZ_OOR, elf, role.get("role_type"))
         yield make_relationship_statement(
             source_id="nz_companies", local_id=f"{local_company_id}:rel:{rel_idx}",
             subject_statement_id=company_stmt_id, interested_party_statement_id=ip_id,
@@ -205,6 +227,7 @@ def map_nz_companies(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             interest["details"] = "Jointly held"
         if sh.get("start"):
             interest["startDate"] = sh["start"]
+        mark_role(interest, NZ_OOR, elf, "Shareholder")
         yield make_relationship_statement(
             source_id="nz_companies", local_id=f"{local_company_id}:rel:{rel_idx}",
             subject_statement_id=company_stmt_id, interested_party_statement_id=ip_id,
