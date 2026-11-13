@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 523** — The MTender source now reads Moldova's procurement API itself each week, so award lists are current rather than months behind.
+**Latest: Phase 524** — Contract and notice lists on source cards keep their titles readable on a wide screen.
 
 → [Full development history](docs/status.md)
 
