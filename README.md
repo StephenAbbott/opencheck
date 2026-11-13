@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 518** — MTender joins as a source, showing the Moldovan public procurements a company was awarded, joined on its IDNO.
+**Latest: Phase 519** — The computed sanctions 50% rule now covers Canada, with voting rights counted beside shares and board power as context.
 
 → [Full development history](docs/status.md)
 
