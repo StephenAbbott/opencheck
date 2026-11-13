@@ -2014,8 +2014,12 @@ otherwise:
   read with `raw_decode` over a rolling buffer **by cursor, never by slicing
   the buffer per object** (that is O(n²): 380,000 × 1 MB copies, ten minutes
   to never finishing). On 13 Oct 2026: 379,664 entities, 525,454 / 392,472 /
-  410,543 rows; every people file held exactly the CSV's entity set, and the
-  builder refuses a code the CSV lacks. ≈195 MB SQLite, ≈85 MB gzipped —
+  410,543 rows; every people file held exactly the CSV's entity set. RIK
+  writes the files minutes apart (13 Nov 2026: companies 14:35 GMT, the rest
+  14:37–14:40), so a company entered in between can be in the later files
+  only: the builder leaves such a code out, counts it in
+  `meta.codes_not_in_companies_file` and refuses only past
+  `MAX_STRAY_CODES` (25) distinct codes. ≈195 MB SQLite, ≈85 MB gzipped —
   relational tables with a `vocab` table for the Estonian wording of every
   code and the hash as 16 bytes; per-row zlib blobs made it 388 MB / 247 MB
   because gzip cannot compress compressed rows.
