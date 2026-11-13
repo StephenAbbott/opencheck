@@ -54,6 +54,7 @@ Generated from the live registry. The OpenCheck `/license-matrix` API endpoint a
 | Israel Corporations Authority — Registrar of Companies and Partnerships (`ica_israel`) | `data.gov.il open data (free use with attribution; partnerships CC BY)` | yes | yes | no |
 | INPI — Registre National des Entreprises (`inpi`) | `Licence Ouverte / Open Licence 2.0` | yes | yes | no |
 | JAR — Lithuanian Register of Legal Entities (`jar_lithuania`) | `CC-BY-4.0` | yes | yes | no |
+| ΚΗΜΔΗΣ — Greek public contracts (`kimdis_greece`) | `CC-BY-4.0` | yes | yes | no |
 | KRS — Polish National Court Register (`krs_poland`) | `PL-OGD` | yes | yes | no |
 | KvK — Netherlands Chamber of Commerce (`kvk`) | `CC-BY-4.0` | yes | yes | no |
 | Malta Business Registry (MBR) (`malta_mbr`) | `CC-BY-4.0` | yes | yes | no |

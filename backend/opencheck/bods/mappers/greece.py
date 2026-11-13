@@ -7,6 +7,7 @@ re-exports every name defined here.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from typing import Any
 
 from .. import liveness as _liveness
@@ -341,3 +342,59 @@ def map_gemi_greece(bundle: dict[str, Any]) -> BODSBundle:
         ])
 
     return statements
+
+
+# ---------------------------------------------------------------------------
+# ΚΗΜΔΗΣ — Greek public contracts (CC BY 4.0)
+# ---------------------------------------------------------------------------
+#
+# Contracts won are activity, not ownership: one entity statement for the
+# supplier, the TED / AusTender precedent. ΚΗΜΔΗΣ names the contractor by its
+# ΑΦΜ on every contract, so the ΑΦΜ is asserted under the scheme the ΓΕΜΗ
+# mapper writes (GR-AFM), and the two statements corroborate.
+
+
+def _kimdis_eur(value: int) -> str:
+    """Values summed in full — ``EUR 1,249,028``, never rounded."""
+    return f"EUR {value:,}"
+
+
+@content_addressed
+def map_kimdis_greece(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Map a ΚΗΜΔΗΣ fetch bundle to one BODS entity statement."""
+    if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
+        return
+    supplier = bundle.get("supplier") or {}
+    afm = str(bundle.get("afm") or "").strip()
+    if not supplier or not afm:
+        return
+    contracts = int(supplier.get("contracts") or 0)
+    parts = [
+        "Contractor to Greek public authorities on ΚΗΜΔΗΣ",
+        f"{contracts:,} contract{'s' if contracts != 1 else ''} with values "
+        f"without VAT summing to {_kimdis_eur(int(supplier.get('value_eur') or 0))}",
+    ]
+    first, last = supplier.get("first_date"), supplier.get("last_date")
+    if first and last:
+        parts.append(f"posted {first} to {last}")
+    if bundle.get("truncated") and bundle.get("read_from"):
+        parts.append(f"contracts posted since {bundle['read_from']} read")
+    # The contractor's name as the latest contract writes it.
+    name = (supplier.get("name") or bundle.get("legal_name") or "").strip()
+    yield make_entity_statement(
+        source_id="kimdis_greece",
+        local_id=afm,
+        name=name or afm,
+        identifiers=[
+            {
+                "id": afm,
+                "scheme": "GR-AFM",
+                "schemeName": "Greek Tax Registry Number (ΑΦΜ)",
+            }
+        ],
+        entity_details="; ".join(parts),
+        source_url=bundle.get("link") or None,
+        # The latest contract ΚΗΜΔΗΣ posted for this supplier — its own dated
+        # assertion about the record (the TED latest-notice precedent).
+        statement_date=last or None,
+    )
