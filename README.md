@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 537** — Corporations Canada lookups read directors again, asked for on the endpoint path ISED's own API spec gives.
+**Latest: Phase 538** — An amalgamated Canadian corporation now says "Amalgamated" in its verdict and on its status chip and card, in the register's own word.
 
 → [Full development history](docs/status.md)
 
