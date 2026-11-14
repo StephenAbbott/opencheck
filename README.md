@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 535** — The ownership graph's zoom, Fit and Add next layer controls now sit in a tinted bar directly under the diagram, so they stay next to the network on a phone.
+**Latest: Phase 536** — Officers and shareholders from Norway, France, Austria, Canada and New York now carry GLEIF's ISO 5009 role code where the company's legal form has one.
 
 → [Full development history](docs/status.md)
 
