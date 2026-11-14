@@ -10,6 +10,7 @@ import re
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
+from ..oor import mark_role
 from ..statements import (
     content_addressed,
     SOURCE_NAMES,
@@ -60,6 +61,61 @@ def _at_date_iso(raw: str) -> str | None:
     return None  # unrecognised: no date rather than a schema-invalid one
 
 
+#: ISO 5009 codes for Firmenbuch roles, by (ELF, role). Officer roles are the
+#: register's function codes; a shareholder record is ``sh:<kind>``. Reviewed
+#: against GLEIF's list 1.0.0. Left uncoded on purpose: the chairs (VWV, ARV —
+#: the list's "Vorsitzender" does not say of which body), the Prokurist (the
+#: list's "Vertreter" is not the same office), and every role of an AG (the
+#: list has no AG rows).
+AT_OOR: dict[tuple[str, str], str] = {
+    # Gesellschaft mit beschränkter Haftung
+    ("AXSB", "GF"): "X3UGSY",
+    ("AXSB", "GFI"): "X3UGSY",
+    ("AXSB", "AR"): "FBN18D",
+    ("AXSB", "LI"): "JBKGUA",
+    ("AXSB", "LII"): "JBKGUA",
+    ("AXSB", "GES"): "HRV7FF",
+    ("AXSB", "sh:gesellschafter"): "HRV7FF",
+    # Kommanditgesellschaft
+    ("ONF1", "KOMPL"): "U3HU7Z",
+    ("ONF1", "KOMM"): "ZFECL4",
+    ("ONF1", "sh:komplementaer"): "U3HU7Z",
+    ("ONF1", "sh:kommanditist"): "ZFECL4",
+    # Privatstiftung
+    ("5WWO", "VW"): "XBBKZC",
+    ("5WWO", "VWI"): "XBBKZC",
+    ("5WWO", "AR"): "BPTYLT",
+}
+
+#: The three Austrian forms ISO 5009 lists roles for → ISO 20275 ELF.
+AT_FORM_ELF: dict[str, str] = {"KG": "ONF1", "Privatstiftung": "5WWO", "GmbH": "AXSB"}
+
+_AT_KG = re.compile(r"(?:\bKG\b|kommanditgesellschaft)", re.IGNORECASE)
+_AT_GMBH = re.compile(
+    r"(?:\bGmbH\b|\bGes\.?\s?m\.?\s?b\.?\s?H\.?|\bGesmbH\b|Gesellschaft\s+m\.?\s?b\.?\s?H\b\.?"
+    r"|Gesellschaft\s+mit\s+beschr(?:ä|ae)nkter\s+Haftung)",
+    re.IGNORECASE,
+)
+_AT_PRIVATSTIFTUNG = re.compile(r"privatstiftung", re.IGNORECASE)
+
+
+def at_company_elf(name: str, rechtsform: str = "") -> str | None:
+    """The ELF of an Austrian company, read from its legal form or, where the
+    extract carries none (the Firmenbuch writes it into the name), from the
+    name's own form words. A KG is read first: "… GmbH & Co KG" is a KG.
+    None for any other form, or a name that names none."""
+    for text in (rechtsform or "", name or ""):
+        if not text:
+            continue
+        if _AT_KG.search(text):
+            return AT_FORM_ELF["KG"]
+        if _AT_PRIVATSTIFTUNG.search(text):
+            return AT_FORM_ELF["Privatstiftung"]
+        if _AT_GMBH.search(text):
+            return AT_FORM_ELF["GmbH"]
+    return None
+
+
 @content_addressed
 def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a FirmenbuchAdapter fetch bundle to BODS v0.4 statements.
@@ -86,6 +142,7 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     stamm_kapital: float | None = extract.get("stamm_kapital")
     officers: list[dict[str, Any]] = extract.get("officers") or []
     shareholders: list[dict[str, Any]] = extract.get("shareholders") or []
+    company_elf = at_company_elf(name, extract.get("rechtsform") or "")
 
     source_url = f"https://justizonline.gv.at/jop/web/firmenbuchabfrage?firmennummer={fn}"
 
@@ -163,12 +220,12 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             subject_statement_id=company_stmt_id,
             interested_party_statement_id=person_stmt["recordId"],
             interested_party_type="person",
-            interests=[{
+            interests=[mark_role({
                 "type": interest_type,
                 "directOrIndirect": "direct",
                 "beneficialOwnershipOrControl": False,
                 "details": display_label,
-            }],
+            }, AT_OOR, company_elf, role_code.upper())],
             source_url=source_url,
         )
 
@@ -206,6 +263,7 @@ def map_firmenbuch(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
                 interest["share"] = {"exact": pct}
             except ZeroDivisionError:
                 pass
+        mark_role(interest, AT_OOR, company_elf, f"sh:{kind}")
 
         if is_person:
             dob_sh = _at_date_iso(sh.get("dob") or "")

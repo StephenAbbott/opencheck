@@ -18,6 +18,7 @@ from ..statements import (
     record_date,
 )
 from ..annotations import annotate
+from ..oor import mark_role
 from ..residence import residence_address, residence_note
 
 
@@ -145,6 +146,36 @@ _INPI_ROLE_LABELS: dict[int, str] = {
     233: "Deuxième sous-gouverneur",
     234: "Conseiller général",
 }
+
+#: INSEE's catégorie juridique (the RNE's ``formeJuridique``) → ISO 20275 ELF,
+#: for the forms ISO 5009 lists roles for. Only the two whose ELF is the
+#: INSEE category itself: 5710 SAS (6CHY) and 5499 SARL "sans autre
+#: indication" (V9QP). SASU (5720) and EURL (5498) have no ELF of their own
+#: and are left uncoded; so is the SA (5599 / 5699 have their own ELFs, K65D
+#: and 5VCF, while ISO 5009 files the SA roles under QVPB).
+FR_FORM_ELF: dict[str, str] = {"5710": "6CHY", "5499": "V9QP"}
+
+#: ISO 5009 codes for RNE ``roleEntreprise`` codes, by (ELF, role code).
+#: Reviewed against GLEIF's list 1.0.0. A commissaire aux comptes suppléant
+#: (72) is left uncoded: the list names the titulaire's role only.
+FR_OOR: dict[tuple[str, str], str] = {
+    ("6CHY", "73"): "ZC65Q9",   # Président de SAS → Président
+    ("6CHY", "205"): "ZC65Q9",  # Président → Président
+    ("6CHY", "201"): "IGV2PA",  # Dirigeant
+    ("6CHY", "71"): "EKJBXA",   # Commissaire aux comptes titulaire
+    ("V9QP", "30"): "4BIJAS",   # Gérant
+    ("V9QP", "71"): "LZS8Z4",   # Commissaire aux comptes titulaire
+}
+
+
+def inpi_company_elf(company: dict[str, Any], pm: dict[str, Any]) -> str | None:
+    """The ELF of an RNE company from its ``formeJuridique``, or None."""
+    for block in (company.get("identite"), pm.get("identite")):
+        code = str(((block or {}).get("entreprise") or {}).get("formeJuridique") or "").strip()
+        if code:
+            return FR_FORM_ELF.get(code)
+    return None
+
 
 # External professional service providers — mapped to otherInfluenceOrControl.
 # All other roleEntreprise codes default to seniorManagingOfficial.
@@ -316,6 +347,7 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     entity_sid = entity["recordId"]
 
     # Emit person + relationship statements for non-BO INDIVIDU pouvoirs.
+    company_elf = inpi_company_elf(company, pm)
     seen_sids: set[str] = {entity_sid}
     pouvoirs = (pm.get("composition") or {}).get("pouvoirs") or []
     for pouvoir in pouvoirs:
@@ -325,7 +357,8 @@ def map_inpi(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             # BO record — redistribution restricted; skip.
             continue
         for stmt in _inpi_individu_statements(
-            siren, pouvoir, entity_sid, source_url, seen_sids, record_dated
+            siren, pouvoir, entity_sid, source_url, seen_sids, record_dated,
+            elf=company_elf,
         ):
             seen_sids.add(stmt["recordId"])
             yield stmt
@@ -356,6 +389,7 @@ def _inpi_individu_statements(
     source_url: str,
     seen_sids: set[str],
     record_dated: str | None = None,
+    elf: str | None = None,
 ) -> list[dict[str, Any]]:
     """Emit person + relationship statements for one non-BO INDIVIDU pouvoir.
 
@@ -454,6 +488,7 @@ def _inpi_individu_statements(
     }
     if start_date:
         interest["startDate"] = start_date
+    mark_role(interest, FR_OOR, elf, str(role_code) if role_code is not None else None)
 
     rel = make_relationship_statement(
         source_id="inpi",

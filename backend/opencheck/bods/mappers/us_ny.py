@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
+from ..oor import mark_role
 from ..statements import (
     content_addressed,
     SOURCE_NAMES,
@@ -54,6 +55,16 @@ def _ny_entity_details(summary: dict[str, Any]) -> str:
     if not summary.get("domestic") and juris and jurisdiction_of(juris) is None:
         text += f"; jurisdiction of incorporation filed as “{juris}”"
     return text
+
+
+#: DOS's entity type → ISO 20275 ELF, for the types ISO 5009 lists a CEO
+#: under. A domestic business corporation only: a foreign corporation is
+#: governed by its home law, and an LLC (SDX0) has no CEO row in the list.
+NY_TYPE_ELF: dict[str, str] = {"DOMESTIC BUSINESS CORPORATION": "PJ10"}
+
+#: ISO 5009 codes for the one officer DOS publishes, by (ELF, role).
+#: Reviewed against GLEIF's list 1.0.0 (Business Corporation Law, ch. 4).
+NY_OOR: dict[tuple[str, str], str] = {("PJ10", "ceo"): "U0OIZM"}
 
 
 @content_addressed
@@ -144,6 +155,7 @@ def map_ny_dos(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     subject_id: str = subject_stmt["recordId"]
 
     ceo_url = record_url(dos_id, "2tms-hftb")
+    company_elf = NY_TYPE_ELF.get(str(summary.get("entity_type") or "").strip().upper())
     for person in summary.get("ceos") or []:
         local_id = ny_ceo_local_id(dos_id, person)
         yield make_person_statement(
@@ -162,6 +174,7 @@ def map_ny_dos(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             },
             "ny_dos",
         )
+        mark_role(interest, NY_OOR, company_elf, "ceo")
         yield make_relationship_statement(
             source_id="ny_dos",
             local_id=local_id,

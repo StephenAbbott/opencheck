@@ -232,7 +232,7 @@ EXTENSIONS: tuple[dict[str, str], ...] = (
             "role code is shared by every holder of the role and one person holds "
             "different roles at different companies. Written only where a "
             "source's reviewed table names the register's role under the "
-            "company's legal form (Companies House, Estonia, New Zealand); its "
+            "company's legal form (Companies House, Estonia, New Zealand, Norway, France, Austria, Canada, New York); its "
             "absence says nothing."
         ),
         "example": '{"scheme": "ISO 5009", "code": "UDU176", "name": "Director", "legalForm": "H0PO"}',

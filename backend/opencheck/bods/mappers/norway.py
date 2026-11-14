@@ -10,6 +10,7 @@ import hashlib
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
+from ..oor import mark_role
 from ..statements import (
     content_addressed,
     SOURCE_NAMES,
@@ -56,6 +57,20 @@ _BRREG_ROLE_MAP: dict[str, tuple[str, str]] = {
     "MEDL": ("boardMember", "Board member / Styremedlem"),
     "VARA": ("boardMember", "Deputy member / Varamedlem"),
     "DTHO": ("boardMember", "Board delegate / Delta i styret"),
+}
+
+
+#: Enhetsregisteret's organisasjonsform code → ISO 20275 ELF, for the forms
+#: ISO 5009 lists roles for. Only the aksjeselskap: the list has no ASA rows.
+NO_FORM_ELF: dict[str, str] = {"AS": "YI42"}
+
+#: ISO 5009 codes for brreg roles, by (ELF, role code). Reviewed against
+#: GLEIF's list 1.0.0; NEST (nestleder) and DTHO have no row of their own.
+NO_OOR: dict[tuple[str, str], str] = {
+    ("YI42", "DAGL"): "YYLH4K",  # daglig leder
+    ("YI42", "LEDE"): "PMJSLX",  # styreleder
+    ("YI42", "MEDL"): "NE38A7",  # styremedlem
+    ("YI42", "VARA"): "BWYHQQ",  # varamedlem
 }
 
 
@@ -107,6 +122,8 @@ def _brreg_unit_role_statements(
     company_stmt_id: str,
     source_url: str,
     seen: set[str],
+    elf: str | None = None,
+    role_code: str | None = None,
 ) -> list[dict[str, Any]]:
     """Entity + relationship statements for a role held by an ``enhet``.
 
@@ -155,12 +172,12 @@ def _brreg_unit_role_statements(
             subject_statement_id=company_stmt_id,
             interested_party_statement_id=entity["recordId"],
             interested_party_type="entity",
-            interests=[{
+            interests=[mark_role({
                 "type": interest_type,
                 "directOrIndirect": "direct",
                 "beneficialOwnershipOrControl": False,
                 "details": display_label,
-            }],
+            }, NO_OOR, elf, role_code)],
             source_url=source_url,
             statement_date=role_last_changed,
         )
@@ -194,6 +211,9 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         return
 
     source_url = _company_url_brreg(orgnr)
+    company_elf = NO_FORM_ELF.get(
+        str((entity.get("organisasjonsform") or {}).get("kode") or "").strip().upper()
+    )
 
     # ── 1. Entity statement ───────────────────────────────────────────────
     founding_date = (
@@ -285,6 +305,7 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             unit_stmts = _brreg_unit_role_statements(
                 orgnr, idx, role, unit, interest_type, role_label_raw or role_label,
                 company_stmt_id, source_url, seen_person_ids,
+                elf=company_elf, role_code=role_code,
             )
             yield from unit_stmts
             continue
@@ -316,12 +337,12 @@ def map_brreg(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             person_stmt = {"recordId": _stable_id("brreg", "person", person_local_id)}
 
         interests: list[dict[str, Any]] = [
-            {
+            mark_role({
                 "type": interest_type,
                 "directOrIndirect": "direct",
                 "beneficialOwnershipOrControl": False,
                 "details": display_label,
-            }
+            }, NO_OOR, company_elf, role_code)
         ]
 
         yield make_relationship_statement(
