@@ -13,16 +13,27 @@ from typing import Any
 import pytest
 
 from opencheck.bods import oor
+from opencheck.bods.mappers.austria import AT_FORM_ELF, AT_OOR, at_company_elf, map_firmenbuch
+from opencheck.bods.mappers.canada import CA_ACT_ELF, CA_OOR, ca_act_elf, map_corporations_canada
 from opencheck.bods.mappers.companies_house import CH_OOR, CH_TYPE_ELF, map_companies_house
 from opencheck.bods.mappers.estonia import EE_FORM_ELF, EE_OOR, _ee_company_parties
+from opencheck.bods.mappers.france import FR_FORM_ELF, FR_OOR, map_inpi
 from opencheck.bods.mappers.new_zealand import NZ_OOR, NZ_TYPE_ELF, map_nz_companies
+from opencheck.bods.mappers.norway import NO_FORM_ELF, NO_OOR, map_brreg
+from opencheck.bods.mappers.us_ny import NY_OOR, NY_TYPE_ELF, map_ny_dos
 from opencheck.bods.oor import OOR_KEY, mark_role, oor_entry, role_object
 
-#: Every source table, with the country its codes must be filed under.
-TABLES: list[tuple[str, str, dict[tuple[str, str], str], dict[str, str]]] = [
-    ("companies_house", "GB", CH_OOR, CH_TYPE_ELF),
-    ("ariregister", "EE", EE_OOR, EE_FORM_ELF),
-    ("nz_companies", "NZ", NZ_OOR, NZ_TYPE_ELF),
+#: Every source table, with the country (and subdivision) its codes must be
+#: filed under.
+TABLES: list[tuple[str, str, str | None, dict[tuple[str, str], str], dict[str, str]]] = [
+    ("companies_house", "GB", None, CH_OOR, CH_TYPE_ELF),
+    ("ariregister", "EE", None, EE_OOR, EE_FORM_ELF),
+    ("nz_companies", "NZ", None, NZ_OOR, NZ_TYPE_ELF),
+    ("brreg", "NO", None, NO_OOR, NO_FORM_ELF),
+    ("inpi", "FR", None, FR_OOR, FR_FORM_ELF),
+    ("firmenbuch", "AT", None, AT_OOR, AT_FORM_ELF),
+    ("corporations_canada", "CA", None, CA_OOR, CA_ACT_ELF),
+    ("ny_dos", "US", "US-NY", NY_OOR, NY_TYPE_ELF),
 ]
 
 
@@ -35,15 +46,15 @@ def test_the_vendored_list_is_gleifs_1_0_0() -> None:
     assert oor.oor_name(oor_entry("5RJVJB")) == "Juhatuse liige"
 
 
-@pytest.mark.parametrize("source, country, table, elfs", TABLES, ids=[t[0] for t in TABLES])
+@pytest.mark.parametrize("source, country, subdivision, table, elfs", TABLES, ids=[t[0] for t in TABLES])
 def test_every_table_entry_is_a_code_the_list_files_under_that_form(
-    source: str, country: str, table: dict, elfs: dict
+    source: str, country: str, subdivision: str | None, table: dict, elfs: dict
 ) -> None:
     for (elf, role), code in table.items():
         entry = oor_entry(code)
         assert entry is not None, f"{source}: {code} is not in the list"
         assert entry["country"] == country, f"{source}: {code} is {entry['country']}'s"
-        assert entry["subdivision"] is None
+        assert entry["subdivision"] == subdivision
         assert elf in entry["elfs"], f"{source}: {code} is not filed under {elf}"
         assert elf in elfs.values(), f"{source}: no legal form maps to {elf}"
 
@@ -197,3 +208,166 @@ def test_a_nz_limited_companys_director_and_shareholder_are_coded() -> None:
 
 def test_a_nz_co_operative_gets_no_code() -> None:
     assert _codes(list(map_nz_companies(_nz_bundle("NZ Co-operative Company")))) == {None}
+
+
+# ---------------------------------------------------------------------------
+# Norway
+# ---------------------------------------------------------------------------
+
+
+def _no_bundle(form: str) -> dict[str, Any]:
+    return {
+        "orgnr": "923609016",
+        "entity": {"navn": "EKSEMPEL AS", "organisasjonsform": {"kode": form}},
+        "roles": [
+            {"type": {"kode": "DAGL", "beskrivelse": "Daglig leder"},
+             "person": {"navn": {"fornavn": "Kari", "etternavn": "Nordmann"}, "fodselsdato": "1970-01-01"}},
+            {"type": {"kode": "LEDE", "beskrivelse": "Styrets leder"},
+             "person": {"navn": {"fornavn": "Ola", "etternavn": "Nordmann"}, "fodselsdato": "1965-01-01"}},
+            {"type": {"kode": "NEST", "beskrivelse": "Nestleder"},
+             "person": {"navn": {"fornavn": "Per", "etternavn": "Hansen"}, "fodselsdato": "1960-01-01"}},
+            {"type": {"kode": "MEDL", "beskrivelse": "Styremedlem"},
+             "enhet": {"organisasjonsnummer": "912345678", "navn": ["HOLDING AS"]}},
+        ],
+    }
+
+
+def test_an_as_s_ceo_chair_and_board_member_are_coded_and_a_vice_chair_is_not() -> None:
+    assert _roles_in_order(list(map_brreg(_no_bundle("AS")))) == ["YYLH4K", "PMJSLX", None, "NE38A7"]
+
+
+def test_an_asa_gets_no_code() -> None:
+    assert set(_roles_in_order(list(map_brreg(_no_bundle("ASA"))))) == {None}
+
+
+def _roles_in_order(statements: list[dict[str, Any]]) -> list[str | None]:
+    return [r["code"] if r else None for r in _roles(statements)]
+
+
+# ---------------------------------------------------------------------------
+# France (INPI)
+# ---------------------------------------------------------------------------
+
+
+def _fr_pouvoir(role: int, *, bo: bool = False, nom: str = "DUPONT") -> dict[str, Any]:
+    return {
+        "typeDePersonne": "INDIVIDU",
+        "beneficiaireEffectif": bo,
+        "individu": {"descriptionPersonne": {"nom": nom, "prenoms": ["JEAN"], "roleEntreprise": role}},
+    }
+
+
+def _fr_bundle(forme: str, pouvoirs: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "siren": "123456789",
+        "company": {
+            "identite": {"entreprise": {"denomination": "EXEMPLE", "formeJuridique": forme}},
+            "formality": {"content": {"personneMorale": {"composition": {"pouvoirs": pouvoirs}}}},
+        },
+    }
+
+
+def test_a_sas_president_and_a_sarl_gerant_are_coded() -> None:
+    sas = _fr_bundle("5710", [_fr_pouvoir(73), _fr_pouvoir(71, nom="AUDIT"), _fr_pouvoir(72, nom="SUPPLEANT")])
+    assert _roles_in_order(list(map_inpi(sas))) == ["ZC65Q9", "EKJBXA", None]
+    sarl = _fr_bundle("5499", [_fr_pouvoir(30)])
+    assert _roles_in_order(list(map_inpi(sarl))) == ["4BIJAS"]
+
+
+def test_an_sa_sasu_or_eurl_gets_no_code() -> None:
+    for forme in ("5599", "5720", "5498"):
+        assert set(_roles_in_order(list(map_inpi(_fr_bundle(forme, [_fr_pouvoir(73), _fr_pouvoir(30)]))))) == {None}
+
+
+def test_a_beneficial_owner_row_is_still_never_output() -> None:
+    out = list(map_inpi(_fr_bundle("5710", [_fr_pouvoir(73, bo=True, nom="SECRET")])))
+    assert "SECRET" not in str(out)
+    assert _roles(out) == []
+
+
+# ---------------------------------------------------------------------------
+# Austria
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("name, elf", [
+    ("Beispiel GmbH", "AXSB"),
+    ("Beispiel Ges.m.b.H.", "AXSB"),
+    ("Beispiel Gesellschaft m.b.H.", "AXSB"),
+    ("Beispiel GmbH & Co KG", "ONF1"),
+    ("Muster Kommanditgesellschaft", "ONF1"),
+    ("Familie Muster Privatstiftung", "5WWO"),
+    ("Beispiel AG", None),
+    ("Beispiel OG", None),
+])
+def test_the_austrian_form_is_read_from_the_name(name: str, elf: str | None) -> None:
+    assert at_company_elf(name) == elf
+
+
+def _at_bundle(name: str) -> dict[str, Any]:
+    return {
+        "fn": "473888w",
+        "extract": {
+            "name": name,
+            "stamm_kapital": 35000.0,
+            "officers": [
+                {"full_name": "Hans Müller", "role_code": "GF", "role_name": "Geschäftsführer"},
+                {"full_name": "Eva Huber", "role_code": "PR", "role_name": "Prokuristin"},
+                {"full_name": "Max Muster", "role_code": "KOMPL", "role_name": "Komplementär"},
+            ],
+            "shareholders": [
+                {"display_name": "Hans Müller", "is_person": True, "einlage": 35000.0,
+                 "kind": "kommanditist" if "KG" in name else "gesellschafter"},
+            ],
+        },
+    }
+
+
+def test_a_gmbh_s_managing_director_and_shareholder_are_coded_and_a_prokurist_is_not() -> None:
+    assert _roles_in_order(list(map_firmenbuch(_at_bundle("Beispiel GmbH")))) == ["X3UGSY", None, None, "HRV7FF"]
+
+
+def test_a_kg_s_partners_are_coded() -> None:
+    assert _roles_in_order(list(map_firmenbuch(_at_bundle("Beispiel GmbH & Co KG")))) == [None, None, "U3HU7Z", "ZFECL4"]
+
+
+# ---------------------------------------------------------------------------
+# Canada
+# ---------------------------------------------------------------------------
+
+
+def _ca_bundle(act: str) -> dict[str, Any]:
+    return {
+        "corp_id": "659770",
+        "legal_name": "Acasta Enterprises Inc.",
+        "corporation": {
+            "corporationId": "659770",
+            "act": act,
+            "corporationNames": [{"CorporationName": {"name": "Acasta Enterprises Inc.", "current": True}}],
+        },
+        "directors": [{"firstName": "Jane", "lastName": "Doe"}],
+        "is_stub": False,
+    }
+
+
+@pytest.mark.parametrize("act, code", [
+    ("Canada Business Corporations Act", "WYPWKM"),
+    ("Canada Not-for-profit Corporations Act", "BATZJU"),
+    ("Canada Cooperatives Act", "RQST1K"),
+    ("Boards of Trade Act - Part II", None),
+])
+def test_a_federal_director_is_coded_by_the_governing_act(act: str, code: str | None) -> None:
+    assert ca_act_elf(act) == (CA_ACT_ELF.get(act.lower()))
+    assert _roles_in_order(list(map_corporations_canada(_ca_bundle(act)))) == [code]
+
+
+# ---------------------------------------------------------------------------
+# New York
+# ---------------------------------------------------------------------------
+
+
+def test_a_domestic_business_corporation_s_ceo_is_coded_and_a_foreign_one_s_is_not() -> None:
+    from tests.test_ny_dos import _bundle
+
+    assert _roles_in_order(list(map_ny_dos(_bundle("corning")))) == ["U0OIZM"]
+    assert _roles_in_order(list(map_ny_dos(_bundle("quantexa")))) == [None]

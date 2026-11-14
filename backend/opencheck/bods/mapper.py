@@ -186,6 +186,9 @@ from .mappers.france import (  # noqa: F401  (re-exported, Phase 246)
     map_inpi,
     map_sirene,
     sirene_category_label,
+    FR_FORM_ELF,
+    FR_OOR,
+    inpi_company_elf,
 )
 from .mappers.sweden import (  # noqa: F401  (re-exported, Phase 246)
     _bv_address,
@@ -340,6 +343,8 @@ from .mappers.norway import (  # noqa: F401  (re-exported, Phase 246)
     _brreg_unit_role_statements,
     _company_url_brreg,
     map_brreg,
+    NO_FORM_ELF,
+    NO_OOR,
 )
 from .mappers.ireland import (  # noqa: F401  (re-exported, Phase 246)
     _CRO_ENTITY_TYPES,
@@ -459,8 +464,14 @@ from .mappers.climatetrace import (  # noqa: F401  (re-exported, Phase 246)
     map_climatetrace,
 )
 from .mappers.austria import (  # noqa: F401  (re-exported, Phase 246)
+    _AT_GMBH,
+    _AT_KG,
+    _AT_PRIVATSTIFTUNG,
     _at_date_iso,
     map_firmenbuch,
+    AT_FORM_ELF,
+    AT_OOR,
+    at_company_elf,
 )
 from .mappers.nigeria import (  # noqa: F401  (re-exported, Phase 246)
     _CAC_UNNAMED_DETAILS,
@@ -498,6 +509,9 @@ from .mappers.canada import (  # noqa: F401  (re-exported, Phase 246)
     _cc_current_name,
     _cc_index_address,
     map_corporations_canada,
+    CA_ACT_ELF,
+    CA_OOR,
+    ca_act_elf,
 )
 from .mappers.singapore import (  # noqa: F401  (re-exported, Phase 246)
     _ACRA_LIVE_LABELS,
@@ -667,6 +681,8 @@ from .mappers.us_ny import (  # noqa: F401  (re-exported, Phase 263)
     map_ny_dos,
     ny_ceo_local_id,
     ny_ceo_statement_id,
+    NY_OOR,
+    NY_TYPE_ELF,
 )
 from .mappers.us_ct import (  # noqa: F401  (re-exported, the Connecticut wiring)
     UNDESIGNATED_DETAILS,

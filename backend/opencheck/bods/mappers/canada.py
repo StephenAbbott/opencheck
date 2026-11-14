@@ -6,9 +6,11 @@ re-exports every name defined here.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 from .. import liveness as _liveness
+from ..oor import mark_role
 from ..statements import (
     content_addressed,
     SOURCE_NAMES,
@@ -70,6 +72,34 @@ def _cc_api_names(corp: dict[str, Any], current: str) -> list[str]:
         if name and name != current and name not in names:
             names.append(name)
     return names
+
+
+#: The federal Act a corporation is governed by → ISO 20275 ELF, for the Acts
+#: ISO 5009 lists a director under (its legislation column names each).
+#: Keyed on the Act's name as the open-data file writes it, lowercased, before
+#: any " - Part …".
+CA_ACT_ELF: dict[str, str] = {
+    "canada business corporations act": "UDLA",
+    "canada not-for-profit corporations act": "D90J",
+    "canada cooperatives act": "MGE0",
+    "pension fund societies act": "M4IF",
+}
+
+#: ISO 5009 codes for a director, by (ELF, role). Reviewed against GLEIF's
+#: list 1.0.0.
+CA_OOR: dict[tuple[str, str], str] = {
+    ("UDLA", "director"): "WYPWKM",
+    ("D90J", "director"): "BATZJU",
+    ("MGE0", "director"): "RQST1K",
+    ("M4IF", "director"): "3EA57L",
+}
+
+
+def ca_act_elf(act_name: str) -> str | None:
+    """The ELF for a federal corporation's governing Act, or None."""
+    key = re.split(r"\s+-\s+", (act_name or "").strip(), maxsplit=1)[0]
+    key = re.sub(r"\s+", " ", key).lower()
+    return CA_ACT_ELF.get(key)
 
 
 @content_addressed
@@ -207,6 +237,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     # ── 2. Director statements ────────────────────────────────────────────
     seen_person_ids: set[str] = set()
+    company_elf = ca_act_elf(act_name)
 
     for idx, director in enumerate(directors):
         first = (director.get("firstName") or "").strip()
@@ -230,12 +261,12 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
             person_stmt = {"recordId": _stable_id("corporations_canada", "person", person_local_id)}
 
         interests: list[dict[str, Any]] = [
-            {
+            mark_role({
                 "type": "seniorManagingOfficial",
                 "directOrIndirect": "direct",
                 "beneficialOwnershipOrControl": False,
                 "details": "Director",
-            }
+            }, CA_OOR, company_elf, "director")
         ]
 
         yield make_relationship_statement(

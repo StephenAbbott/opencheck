@@ -2773,7 +2773,7 @@ re-derived otherwise:
 - **A code is a role in one legal form**, not in a country: "Director" is
   `UDU176` under ELF `H0PO` (UK Ltd), `VXSNEB` under `B6ES` (PLC). Coding a
   role needs the company's ELF, so each source maps the register's own type
-  to ELF (`CH_TYPE_ELF`, `EE_FORM_ELF`, `NZ_TYPE_ELF`) rather than relying
+  to ELF (`CH_TYPE_ELF`, `EE_FORM_ELF`, `NZ_TYPE_ELF`, …) rather than relying
   on GLEIF.
 - **On the interest, as `officialOrganizationalRole`** (`scheme`, `code`,
   `name`, `legalForm`), registered in `data_dictionary.EXTENSIONS`. Never in
@@ -2781,11 +2781,23 @@ re-derived otherwise:
   as one person, `make_person_statement` moves it to an annotation anyway,
   and one person holds different roles at different companies.
 - **Only from a reviewed table** `{(ELF, register role): code}` beside the
-  mapper (`CH_OOR`, `EE_OOR`, `NZ_OOR`); `role_object` raises on a code the
+  mapper (`CH_OOR`, `EE_OOR`, `NZ_OOR`, …); `role_object` raises on a code the
   list lacks or files under another ELF, and the test checks every entry's
   country. No match is no code, never a guess. A corporate PSC (a relevant
   legal entity) and an Estonian AS chair (the list does not say which board)
   are left uncoded on purpose.
+- **Eight sources** (the second round, 14 Nov 2026): Companies House,
+  Estonia, New Zealand, then Norway AS (`NO_OOR`), France SAS 5710 and SARL
+  5499 (`FR_OOR`, read from the RNE's `formeJuridique`), Austria GmbH / KG /
+  Privatstiftung (`AT_OOR` — the extract carries no legal form, so
+  `at_company_elf` reads the name's form words, KG first), Canada's federal
+  Acts (`CA_OOR`, keyed on the governing Act) and New York domestic business
+  corporations' CEO (`NY_OOR`, the list's one subdivision-scoped table:
+  `TABLES` carries the subdivision). Left uncoded on purpose: SASU and EURL
+  (no ELF of their own), the French SA (ISO 5009 files its roles under QVPB,
+  INSEE's SA categories have other ELFs), Austrian chairs and Prokuristen, a
+  CAC suppléant, a brreg nestleder, a foreign NY corporation's CEO. The INPI
+  BO skip is untouched — a code is only added to a row already output.
 - Adding a source: a table, the ELF map, a `mark_role(interest, TABLE, elf,
   role)` where the interest is built, and a row in `TABLES` in the test. The
   survey with per-source match-rate estimates is on the Notion ticket.
