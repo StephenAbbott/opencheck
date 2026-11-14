@@ -175,7 +175,7 @@ def _record_route(mock: respx.MockRouter, base: str, corp_id: str, body: Any, st
 
 
 def _directors_route(mock: respx.MockRouter, corp_id: str, body: Any = None, status: int = 200):
-    return mock.get(f"{GATEWAY}/v2/corporations/{corp_id}/directors.json").mock(
+    return mock.get(f"{GATEWAY}/v2/corporations/{corp_id}/directors").mock(
         return_value=httpx.Response(status, json=body if body is not None else DIRECTORS)
     )
 
@@ -576,7 +576,7 @@ async def test_a_directors_read_failing_twice_in_one_run_is_one_degradation(inde
     """Production, 10 Nov 2026: the dispatch read got a 500 and the deepen
     pass's read timed out, and the lookup listed the same sentence twice."""
     _record_route(respx.mock, GATEWAY, "8660115", [CORP_8660115, None])
-    route = respx.mock.get(f"{GATEWAY}/v2/corporations/8660115/directors.json")
+    route = respx.mock.get(f"{GATEWAY}/v2/corporations/8660115/directors")
     route.side_effect = [httpx.Response(500, json={}), httpx.ReadTimeout("slow")]
     degradation.begin()
     await _fetch("8660115")
@@ -585,3 +585,56 @@ async def test_a_directors_read_failing_twice_in_one_run_is_one_degradation(inde
     assert route.call_count == 2, "a failure is never cached, so the read is asked again"
     assert len(collected) == 1
     assert collected[0].reason == degradation.REASON_UPSTREAM_ERROR  # the first is kept
+
+
+@respx.mock
+async def test_directors_are_asked_on_the_path_iseds_spec_publishes(index) -> None:
+    """ISED's spec: ``/v2/corporations/{number}/directors`` with the language
+    in ``Accept-Language`` — no ``.json``, no ``lang`` parameter. The
+    ``…/directors.json?lang=eng`` form answered HTTP 500 for every corporation
+    in production (Nov 2026), so no Canadian lookup had directors."""
+    _record_route(respx.mock, GATEWAY, "8660115", [CORP_8660115, None])
+    route = _directors_route(respx.mock, "8660115")
+    bundle = await _fetch("8660115")
+    assert route.call_count == 1
+    request = route.calls.last.request
+    assert request.url.path.endswith("/v2/corporations/8660115/directors")
+    assert not request.url.query
+    assert request.headers["Accept-Language"] == "en"
+    assert request.headers["user-key"]
+    assert [d["lastName"] for d in bundle["directors"]] == ["SMITH", "JONES"]
+
+
+#: Two of CN Railway's directors as ISED's v2 endpoint answered them on
+#: 14 Nov 2026, the service address left out.
+CN_DIRECTORS = {"_embedded": {"directors": [
+    {"firstName": "Shauneen", "lastName": "Bruder",
+     "uuid": "b6c67557-a54b-4f79-b1d9-da0b4f0fa09d"},
+    {"firstName": "Susan", "middleName": "C.", "lastName": "Jones",
+     "uuid": "b33ce44f-f16a-4d48-867e-94f94e11eb53"},
+]}}
+
+
+@respx.mock
+async def test_a_cbca_corporations_directors_carry_their_iso_5009_code(index) -> None:
+    """The v2 answer, mapped: a middle name is part of the name, and a CBCA
+    director's interest carries ISO 5009's CBCA director code."""
+    from opencheck.bods import map_corporations_canada
+
+    _record_route(respx.mock, GATEWAY, "8660115", [CORP_8660115, None])
+    _directors_route(respx.mock, "8660115", CN_DIRECTORS)
+    bundle = await _fetch("8660115")
+    statements = list(map_corporations_canada(bundle))
+    names = sorted(
+        s["recordDetails"]["names"][0]["fullName"]
+        for s in statements if s["recordType"] == "person"
+    )
+    assert names == ["Shauneen Bruder", "Susan C. Jones"]
+    roles = [
+        i.get("officialOrganizationalRole")
+        for s in statements if s["recordType"] == "relationship"
+        for i in s["recordDetails"]["interests"]
+        if i.get("type") == "seniorManagingOfficial"
+    ]
+    assert len(roles) == 2
+    assert all(r and r["code"] == "WYPWKM" for r in roles)  # CORP_8660115 is CBCA
