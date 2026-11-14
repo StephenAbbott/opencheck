@@ -121,7 +121,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if not bundle or bundle.get("is_stub") or bundle.get("not_found"):
         return
 
-    from ...sources.corporations_canada import status_class, status_words
+    from ...sources.corporations_canada import display_status, status_class, status_words
 
     corp_id: str = bundle.get("corp_id") or ""
     corp: dict[str, Any] = bundle.get("corporation") or {}
@@ -229,7 +229,7 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
         company_stmt,
         source_label=SOURCE_NAMES["corporations_canada"],
         liveness=cc_liveness,
-        raw=raw_status or None,
+        raw=display_status(raw_status) or None,
         since=dissolution_date if cc_liveness == _liveness.TERMINAL else None,
     )
     yield company_stmt

@@ -231,6 +231,14 @@ def status_words(status: str | None, detail: str | None = None) -> str:
     return " ".join(str(detail or status or "").split())
 
 
+def display_status(text: str | None) -> str:
+    """The status as shown to a reader: the register's words without the
+    API's ``Active - `` / ``Inactive - `` prefix ("Inactive - Amalgamated"
+    reads "Amalgamated", as the finding has always said it). Classify on
+    :func:`status_words`, never on this."""
+    return re.sub(r"^(Active|Inactive) - ", "", " ".join(str(text or "").split()))
+
+
 # ---------------------------------------------------------------------------
 # Index access
 # ---------------------------------------------------------------------------
@@ -498,7 +506,7 @@ class CorporationsCanadaAdapter(SourceAdapter):
         if row.get("act"):
             segments.append(row["act"])
         if status_class(row.get("status"), row.get("detail")) != "live":
-            segments.append(status_words(row.get("status"), row.get("detail")).lower())
+            segments.append(display_status(status_words(row.get("status"), row.get("detail"))).lower())
         return SourceHit(
             source_id=self.id,
             hit_id=corp_id,
@@ -760,7 +768,7 @@ class CorporationsCanadaAdapter(SourceAdapter):
     @staticmethod
     def _entity_hit(corp: dict[str, Any], corp_id: str) -> SourceHit:
         name = extract_current_name(corp) or corp_id or "Unknown"
-        status = (corp.get("status") or "").strip()
+        status = display_status(corp.get("status"))
         act = (corp.get("act") or "").strip()
         summary = f"CA-CC {corp_id}"
         if status:

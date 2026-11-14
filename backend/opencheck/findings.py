@@ -2570,6 +2570,7 @@ def finding_corporations_canada(bundle: dict[str, Any]) -> str | None:
     """
     from .sources.corporations_canada import (
         COVERAGE_BN_UNRESOLVED,
+        display_status,
         status_class,
         status_words,
     )
@@ -2603,7 +2604,7 @@ def finding_corporations_canada(bundle: dict[str, Any]) -> str | None:
     if cls == "live":
         lead = f"Active since {human_date(founded)}" if founded else "Active"
     elif words:
-        text = re.sub(r"^(Active|Inactive) - ", "", words)
+        text = display_status(words)
         lead = text[0].upper() + text[1:]
         if cls == "terminal" and dissolved_on:
             lead += f" on {human_date(dissolved_on)}"

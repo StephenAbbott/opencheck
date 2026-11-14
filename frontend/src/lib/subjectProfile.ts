@@ -67,7 +67,13 @@ const STATUS_WORD: Record<SubjectProfileStatus["liveness"], string> = {
  *  where it says so (Estonia — the same word the verdict opens with,
  *  `verdict.status_sentence`), else the class's word ("Dissolved"…). */
 export function statusWord(status: Pick<SubjectProfileStatus, "liveness" | "raw">): string {
-  if (status.liveness === "terminal" && /^deleted\b/i.test((status.raw || "").trim())) return "Deleted";
+  if (status.liveness === "terminal") {
+    // The register's own word (verdict.py `_ended_word`): Estonia "deleted",
+    // Corporations Canada "amalgamated"; an "Inactive - " prefix read through.
+    const raw = (status.raw || "").trim().replace(/^inactive\s*-\s*/i, "");
+    if (/^deleted\b/i.test(raw)) return "Deleted";
+    if (/^amalgamated\b/i.test(raw)) return "Amalgamated";
+  }
   return STATUS_WORD[status.liveness];
 }
 

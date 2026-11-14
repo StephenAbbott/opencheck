@@ -1,0 +1,6 @@
+---
+title: An amalgamated Canadian corporation reads "Amalgamated" in the verdict, the status chip and the card summary, never "Dissolved" or "Inactive - Amalgamated".
+readme: An amalgamated Canadian corporation now says "Amalgamated" in its verdict and on its status chip and card, in the register's own word.
+tests: backend +5, vitest +1
+---
+Two wording follow-ups from the Canada index tier's post-deploy testing (9 Nov 2026). The verdict's status sentence said "Dissolved, according to Corporations Canada" for an amalgamated corporation, which continues inside the amalgamated one; and the card summary and search rows still showed the API's "Inactive - Amalgamated" while the finding below dropped the prefix. `verdict._ended_word` now reads the register's own word — "Deleted" (Estonia), "Amalgamated", else "Dissolved", an "inactive - " prefix read through — and `statusWord` in `lib/subjectProfile.ts` mirrors it for the chip. `corporations_canada.display_status` is the one place the "Active - " / "Inactive - " prefix is dropped for a reader (the hit summary, search rows, the API hit, the finding and the register-status annotation's raw text); classification still reads the full wording. `VERDICT_TEMPLATE` is 7 (a rewording), so the watchlist and the findings regression label it a rule change.

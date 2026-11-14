@@ -123,6 +123,12 @@ describe("statusChip", () => {
     expect(statusWord({ liveness: "terminal", raw: null })).toBe("Dissolved");
   });
 
+  it("says Amalgamated, not Dissolved, for a corporation Corporations Canada records as amalgamated", () => {
+    expect(statusWord({ liveness: "terminal", raw: "Amalgamated" })).toBe("Amalgamated");
+    expect(statusWord({ liveness: "terminal", raw: "Inactive - Amalgamated" })).toBe("Amalgamated");
+    expect(statusWord({ liveness: "terminal", raw: "Inactive - Discontinued" })).toBe("Dissolved");
+  });
+
   it("renders nothing when no register stated a status — absence is not active", () => {
     expect(statusChip(shell({ register_status: null }), NAMES)).toBeNull();
     expect(statusChip(null, NAMES)).toBeNull();
