@@ -24,7 +24,7 @@ Two tiers, one source id (the Canada index ticket, 9 Nov 2026)
      when the key is missing or the gateway fails — on the keyless legacy
      endpoint ``ised-isde.canada.ca/cc/lgcy/api``, which returns the same
      body (checked 9 Nov 2026). Cached a day.
-   * ``GET /v2/corporations/<corpId>/directors.json?lang=eng`` — current
+   * ``GET /v2/corporations/<corpId>/directors`` (``Accept-Language: en``) — current
      directors, gateway only (the legacy endpoint has none). Cached a week.
 
    A number the index lacks (newer than the cut) is read from the API alone;
@@ -147,6 +147,16 @@ def normalise_corp_id(corp_id: str) -> str:
 def is_valid_corp_id(corp_id: str) -> bool:
     normalised = normalise_corp_id(corp_id)
     return bool(_CORP_ID_RE.match(normalised))
+
+
+def directors_url(corp_id: str) -> str:
+    """The v2 directors endpoint, as ISED's published spec writes it
+    (``api.ised-isde.canada.ca/swagger/spec/corporations-en.json``):
+    ``/v2/corporations/{number}/directors``, the number an integer, the
+    language an ``Accept-Language`` header. Unlike v1 there is no ``.json``
+    suffix and no ``lang`` parameter; asked as ``…/directors.json?lang=eng``
+    the gateway answered HTTP 500 for every corporation (Nov 2026)."""
+    return f"{_API_BASE}/v2/corporations/{corp_id}/directors"
 
 
 def _corp_url(corp_id: str) -> str:
@@ -728,9 +738,8 @@ class CorporationsCanadaAdapter(SourceAdapter):
         try:
             async with build_client() as client:
                 response = await client.get(
-                    f"{_API_BASE}/v2/corporations/{corp_id}/directors.json",
-                    params={"lang": "eng"},
-                    headers=self._auth_headers(),
+                    directors_url(corp_id),
+                    headers={**self._auth_headers(), "Accept-Language": "en"},
                 )
             if response.status_code == 404:
                 self._cache.put_absent(cache_key)
