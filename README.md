@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 536** — Officers and shareholders from Norway, France, Austria, Canada and New York now carry GLEIF's ISO 5009 role code where the company's legal form has one.
+**Latest: Phase 537** — Corporations Canada lookups read directors again, asked for on the endpoint path ISED's own API spec gives.
 
 → [Full development history](docs/status.md)
 

@@ -241,8 +241,9 @@ def map_corporations_canada(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
 
     for idx, director in enumerate(directors):
         first = (director.get("firstName") or "").strip()
+        middle = (director.get("middleName") or "").strip()
         last = (director.get("lastName") or "").strip()
-        full_name = " ".join(p for p in [first, last] if p)
+        full_name = " ".join(p for p in [first, middle, last] if p)
         if not full_name:
             continue
 
