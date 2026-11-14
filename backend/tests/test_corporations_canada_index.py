@@ -449,7 +449,7 @@ async def test_name_search_reads_both_name_forms_active_first(index) -> None:
     hits = await adapter.search("holdings", SearchKind.ENTITY)
     assert [h.hit_id for h in hits] == ["4111117", "3001001"]
     assert hits[0].identifiers == {"ca_corp_id": "4111117"}
-    assert hits[1].summary.endswith("inactive - amalgamated")
+    assert hits[1].summary.endswith(" · amalgamated")  # no "inactive - " prefix
     assert all(h.liveness == "snapshot" and not h.is_stub for h in hits)
     french = await adapter.search("Société", SearchKind.ENTITY)
     assert [h.hit_id for h in french] == ["358185"]
@@ -585,3 +585,30 @@ async def test_a_directors_read_failing_twice_in_one_run_is_one_degradation(inde
     assert route.call_count == 2, "a failure is never cached, so the read is asked again"
     assert len(collected) == 1
     assert collected[0].reason == degradation.REASON_UPSTREAM_ERROR  # the first is kept
+
+
+@pytest.mark.parametrize("raw,word", [
+    ("Inactive - Amalgamated", "Amalgamated"),
+    ("Amalgamated", "Amalgamated"),
+    ("Dissolved for non-compliance", "Dissolved"),
+    ("Deleted", "Deleted"),
+])
+def test_the_verdict_says_amalgamated_in_the_registers_word(raw, word) -> None:
+    """An amalgamated corporation continues inside the amalgamated one, so
+    the verdict says "Amalgamated", never "Dissolved"."""
+    from opencheck.verdict import status_sentence
+
+    sentence = status_sentence({
+        "liveness": "terminal", "raw": raw, "source_id": "corporations_canada",
+    })
+    assert sentence == f"{word}, according to Corporations Canada — ISED federal register."
+
+
+def test_the_mapper_records_the_status_without_the_inactive_prefix(index) -> None:
+    from opencheck.bods import map_corporations_canada
+
+    statements = list(map_corporations_canada(_index_bundle("7286139")))
+    company = next(s for s in statements if s["recordType"] == "entity")
+    notes = [a.get("description", "") for a in company.get("annotations") or []]
+    assert any("Amalgamated" in n for n in notes)
+    assert not any("Inactive - " in n for n in notes)

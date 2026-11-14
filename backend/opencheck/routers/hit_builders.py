@@ -1356,6 +1356,7 @@ def _bh_corporations_canada(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHi
     """
     from ..findings import finding_corporations_canada
     from ..sources.corporations_canada import (
+        display_status,
         extract_current_name,
         status_class,
         status_words,
@@ -1382,7 +1383,7 @@ def _bh_corporations_canada(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHi
         words = status_words(corp.get("status"))
         cls = status_class(words)
     if cls != "live" and words:
-        summary += f" · {words.lower()}"
+        summary += f" · {display_status(words).lower()}"
     return _hit(
         "corporations_canada", corp_id,
         name=name or ctx.legal_name or "",

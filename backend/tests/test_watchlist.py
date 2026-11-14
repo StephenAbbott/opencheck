@@ -286,7 +286,7 @@ def test_a_verdict_worded_by_an_older_template_is_not_a_change() -> None:
     with a new snapshot of the same facts it must report nothing, or every
     watched company would say "verdict changed" on its next re-run."""
     before = wl.snapshot_from_response(_resp(EASY))
-    assert before["verdict_template"] == 6
+    assert before["verdict_template"] == 7
     legacy = {k: v for k, v in before.items() if k != "verdict_template"}
     legacy["verdict"] = "Sanctions findings on the company itself."
     after = wl.snapshot_from_response(_resp(EASY))
@@ -320,6 +320,14 @@ def test_a_verdict_worded_by_an_older_template_is_not_a_change() -> None:
     # verdict): a Phase 293 baseline without the sentence is not a change.
     phase_293 = dict(before, verdict_template=5, verdict="Nothing surfaced.")
     assert wl.diff_snapshots(phase_293, after) == []
+    # The amalgamated-wording fix (a terminal status says the register's own
+    # word, "Amalgamated"): a baseline that said "Dissolved" is not a change.
+    phase_6 = dict(
+        before,
+        verdict_template=6,
+        verdict="Dissolved, according to Corporations Canada — ISED federal register.",
+    )
+    assert wl.diff_snapshots(phase_6, after) == []
     # Between two snapshots of the same template a wording change still shows.
     changed = dict(after, verdict="Something else.")
     assert [c["kind"] for c in wl.diff_snapshots(before, changed)] == ["verdict"]

@@ -28,6 +28,8 @@ Two rules constrain every clause below, and they are the whole point:
 
 from __future__ import annotations
 
+import re
+
 from typing import Any
 
 # Signal codes, grouped by the clause they contribute to. Kept as literal
@@ -292,13 +294,27 @@ def _lead_sentence(leads: list[dict[str, Any]]) -> str | None:
 #: a finding in the sentence), 6 = the Estonian REST deleted-companies ticket
 #: (a register that records the company as ended opens the verdict: "Deleted
 #: on 10 January 2017, according to the Estonian e-Business Register …").
-VERDICT_TEMPLATE = 6
+VERDICT_TEMPLATE = 7
 
 
 def _human_day(iso: str | None) -> str | None:
     from .findings import human_date  # local: findings imports widely
 
     return human_date(iso) if iso else None
+
+
+def _ended_word(raw: str) -> str:
+    """The register's own word for an ended company: "Deleted" (Estonia),
+    "Amalgamated" (Corporations Canada: the company continues inside the
+    amalgamated corporation, which "dissolved" misstates), else
+    "Dissolved". ``raw`` is lower-cased; an ``inactive - `` prefix is read
+    through. Mirrored by ``statusWord`` in ``frontend/src/lib/subjectProfile.ts``."""
+    text = re.sub(r"^inactive\s*-\s*", "", raw.strip())
+    if text.startswith("deleted"):
+        return "Deleted"
+    if text.startswith("amalgamated"):
+        return "Amalgamated"
+    return "Dissolved"
 
 
 def status_sentence(register_status: dict[str, Any] | None) -> str | None:
@@ -316,7 +332,7 @@ def status_sentence(register_status: dict[str, Any] | None) -> str | None:
     source_id = str(register_status.get("source_id") or "")
     source = SOURCE_NAMES.get(source_id) or "its register"
     raw = str(register_status.get("raw") or "").strip().lower()
-    word = "Deleted" if raw.startswith("deleted") else "Dissolved"
+    word = _ended_word(raw)
     day = _human_day(register_status.get("since"))
     return f"{word}" + (f" on {day}" if day else "") + f", according to {source}."
 
