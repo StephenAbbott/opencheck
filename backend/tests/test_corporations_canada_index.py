@@ -603,3 +603,38 @@ async def test_directors_are_asked_on_the_path_iseds_spec_publishes(index) -> No
     assert request.headers["Accept-Language"] == "en"
     assert request.headers["user-key"]
     assert [d["lastName"] for d in bundle["directors"]] == ["SMITH", "JONES"]
+
+
+#: Two of CN Railway's directors as ISED's v2 endpoint answered them on
+#: 14 Nov 2026, the service address left out.
+CN_DIRECTORS = {"_embedded": {"directors": [
+    {"firstName": "Shauneen", "lastName": "Bruder",
+     "uuid": "b6c67557-a54b-4f79-b1d9-da0b4f0fa09d"},
+    {"firstName": "Susan", "middleName": "C.", "lastName": "Jones",
+     "uuid": "b33ce44f-f16a-4d48-867e-94f94e11eb53"},
+]}}
+
+
+@respx.mock
+async def test_a_cbca_corporations_directors_carry_their_iso_5009_code(index) -> None:
+    """The v2 answer, mapped: a middle name is part of the name, and a CBCA
+    director's interest carries ISO 5009's CBCA director code."""
+    from opencheck.bods import map_corporations_canada
+
+    _record_route(respx.mock, GATEWAY, "8660115", [CORP_8660115, None])
+    _directors_route(respx.mock, "8660115", CN_DIRECTORS)
+    bundle = await _fetch("8660115")
+    statements = list(map_corporations_canada(bundle))
+    names = sorted(
+        s["recordDetails"]["names"][0]["fullName"]
+        for s in statements if s["recordType"] == "person"
+    )
+    assert names == ["Shauneen Bruder", "Susan C. Jones"]
+    roles = [
+        i.get("officialOrganizationalRole")
+        for s in statements if s["recordType"] == "relationship"
+        for i in s["recordDetails"]["interests"]
+        if i.get("type") == "seniorManagingOfficial"
+    ]
+    assert len(roles) == 2
+    assert all(r and r["code"] == "WYPWKM" for r in roles)  # CORP_8660115 is CBCA
