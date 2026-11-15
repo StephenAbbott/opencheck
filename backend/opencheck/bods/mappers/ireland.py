@@ -6,7 +6,9 @@ re-exports every name defined here.
 
 from __future__ import annotations
 
+import json
 from typing import Any, Iterable
+from urllib.parse import quote
 
 from .. import liveness as _liveness
 from ..statements import SOURCE_NAMES, _addr, make_entity_statement, record_date
@@ -23,7 +25,7 @@ from ..statements import content_addressed
 # Services API (key-gated) can extend this with officers in future.
 
 # CRO company_type values → BODS entityType
-# https://core.cro.ie (type codes seen in practice)
+# (type codes seen in practice in the CRO open data)
 _CRO_ENTITY_TYPES: dict[str, str] = {
     # Registered entities (limited liability companies)
     "LTD": "registeredEntity",
@@ -65,6 +67,24 @@ def _cro_address(rec: dict[str, Any]) -> dict[str, str] | None:
     return _addr("registered", ", ".join(non_empty), "IE")
 
 
+#: The CRO Open Data Portal's companies resource (``sources/cro.py``).
+_CRO_RESOURCE = "3fef41bc-b8f4-4b10-8434-ce51c29b1bba"
+
+
+def cro_record_url(crn: str) -> str:
+    """The open-data query that returns this company's row — the record the
+    statement was mapped from. Not a CORE page: CORE keys a company on an
+    internal id the open data does not publish, and ``core.cro.ie/company/<n>``
+    is a 404. The resource holds companies only, so a business name with the
+    same number (22876 is also THE GROVE NURSERIES) is never what it returns.
+    """
+    filters = quote(json.dumps({"company_num": int(crn)}))
+    return (
+        "https://opendata.cro.ie/api/3/action/datastore_search"
+        f"?resource_id={_CRO_RESOURCE}&filters={filters}&limit=1"
+    )
+
+
 @content_addressed
 def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Map a CroAdapter fetch bundle to a single BODS v0.4 entity statement.
@@ -87,7 +107,9 @@ def map_cro(bundle: dict[str, Any]) -> Iterable[dict[str, Any]]:
     if not crn or not name:
         return
 
-    source_url = f"https://core.cro.ie/company/{crn}"
+    # The open-data record itself: CORE's company pages are keyed on an
+    # internal id the open data does not publish (see register_links).
+    source_url = cro_record_url(crn)
 
     # Registration date comes as "1996-06-05T00:00:00" — take the date part.
     reg_date_raw = company.get("company_reg_date") or ""

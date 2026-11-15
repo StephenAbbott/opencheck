@@ -92,10 +92,6 @@ def _slug(text: str) -> str:
     return hashlib.sha256(text.lower().strip().encode("utf-8")).hexdigest()[:16]
 
 
-def _company_url(crn: str) -> str:
-    return f"https://core.cro.ie/company/{crn}"
-
-
 class CroAdapter(SourceAdapter):
     """Source adapter for the Irish Companies Registration Office (CRO)."""
 

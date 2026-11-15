@@ -93,7 +93,7 @@ def test_rules_are_anchored_and_substitute_the_number() -> None:
 
 # (source, number as the deriver normalises GLEIF's registeredAs, URL). Every
 # one was loaded in a headless browser on 6 Oct 2026 and showed the company,
-# except the four marked carried-over, which refuse datacentre clients.
+# except the three marked carried-over, which refuse datacentre clients.
 VERIFIED = [
     ("companies_house", "03751777", "https://find-and-update.company-information.service.gov.uk/company/03751777"),
     ("kvk", "83235035", "https://www.kvk.nl/bestellen/?kvknummer=83235035"),
@@ -112,7 +112,6 @@ VERIFIED = [
     ("abr_australia", "46211338152", "https://abr.business.gov.au/ABN/View?abn=46211338152"),
     # carried over unchanged, not re-verified
     ("inpi", "327048260", "https://data.inpi.fr/entreprises/327048260"),
-    ("cro", "823392", "https://core.cro.ie/company/823392"),
     ("cvr_denmark", "13521735", "https://datacvr.virk.dk/enhed/virksomhed/13521735"),
     ("jar_lithuania", "304420944", "https://www.registrucentras.lt/jar/p/index.php?kod=304420944"),
 ]
@@ -150,6 +149,9 @@ def test_formatted_numbers_are_compacted_before_matching() -> None:
         ("sudreg_croatia", "030020445"),
         ("bolagsverket", "5562701382"),
         ("gemi_greece", "156284901000"),
+        # CORE keys a company page on an internal id the open data lacks;
+        # /company/<number> is a 404 (DIAGEO IRELAND UNLIMITED COMPANY, 22876).
+        ("cro", "22876"),
         ("companies_house", ""),
     ],
 )

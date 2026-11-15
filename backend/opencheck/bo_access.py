@@ -137,6 +137,10 @@ class BoAccessNotice(BaseModel):
     #: ISO date the restriction takes effect — only set for ``becoming_restricted``.
     effective_date: str | None = None
     access_url: str | None = None
+    #: The beneficial ownership register's own name and home page, from the
+    #: jurisdictions table — so a card can say *which* register is restricted.
+    register_name: str | None = None
+    register_url: str | None = None
 
 
 def _entry_for(j: Jurisdiction) -> BoAccessEntry | None:
@@ -173,7 +177,8 @@ BO_ACCESS: dict[str, BoAccessEntry] = _build()
 
 
 def notice_for(
-    country: str | None, today: date | None = None
+    country: str | None,
+    today: date | None = None,
 ) -> BoAccessNotice | None:
     """The access notice for a national register in ``country``, or ``None``.
 
@@ -188,7 +193,10 @@ def notice_for(
         return None
     today = today or date.today()
     becoming = entry.restricted_from is not None and entry.restricted_from > today
+    register = JURISDICTIONS[cc].bo_register
     return BoAccessNotice(
+        register_name=register.name or None,
+        register_url=register.url or None,
         status="becoming_restricted" if becoming else "restricted",
         country_code=cc,
         country_name=EU_EEA_COUNTRY_NAMES[cc],
