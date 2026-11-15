@@ -38,6 +38,7 @@ export interface BoAccessNotice {
    * the RBO register), so the note names it. */
   register_name?: string | null;
   register_url?: string | null;
+  register_covers?: string[];
 }
 
 export interface SourceInfo {

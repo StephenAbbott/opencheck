@@ -141,6 +141,10 @@ class BoAccessNotice(BaseModel):
     #: jurisdictions table — so a card can say *which* register is restricted.
     register_name: str | None = None
     register_url: str | None = None
+    #: The entity types the register covers (``companies``,
+    #: ``trusts_arrangements``…), so the note can say "most companies" when
+    #: other kinds of entity are kept in another register.
+    register_covers: list[str] = []
 
 
 def _entry_for(j: Jurisdiction) -> BoAccessEntry | None:
@@ -197,6 +201,7 @@ def notice_for(
     return BoAccessNotice(
         register_name=register.name or None,
         register_url=register.url or None,
+        register_covers=list(register.covers),
         status="becoming_restricted" if becoming else "restricted",
         country_code=cc,
         country_name=EU_EEA_COUNTRY_NAMES[cc],
