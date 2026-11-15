@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 539** — Ireland's beneficial ownership entry is brought up to date with the 2026 legitimate-interest regulations, and source cards now name the register that holds owners.
+**Latest: Phase 540** — The beneficial ownership note on a source card no longer repeats the register's full name, and Ireland's entry links its trusts and financial-vehicle registers.
 
 → [Full development history](docs/status.md)
 
