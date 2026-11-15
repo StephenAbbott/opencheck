@@ -41,9 +41,10 @@ broken ones (KvK search, the old Latvian portal).
 
 **Verification, 6 Oct 2026.** Every template below was loaded in a headless
 browser with a real GLEIF sample and checked for the company's name, except
-four whose registers refuse datacentre clients with a bot challenge (CRO, CVR,
-data.inpi.fr, Registrų centras). Those four are the templates OpenCheck already
-used before this phase, carried over unchanged; they are marked below.
+three whose registers refuse datacentre clients with a bot challenge (CVR,
+data.inpi.fr, Registrų centras). Those three are the templates OpenCheck already
+used before this phase, carried over unchanged; they are marked below. CRO was a
+fourth until 15 Nov 2026, when its template was found to 404 and was removed.
 """
 
 from __future__ import annotations
@@ -168,12 +169,12 @@ REGISTER_LINKS: dict[str, RegisterLink] = {
         # addressable by its ACN.
         record=((r"^\d{11}$", "https://abr.business.gov.au/ABN/View?abn={id}"),),
     ),
-    "cro": RegisterLink(
-        register="CRO",
-        identifier_key="ie_crn",
-        # Carried over; bot-challenged from datacentres, not re-verified.
-        record=((r"^\d{1,7}$", "https://core.cro.ie/company/{id}"),),
-    ),
+    # No "cro" entry (15 Nov 2026). CORE, the CRO's public site, addresses a
+    # company by an internal id (DIAGEO IRELAND UNLIMITED COMPANY, company
+    # number 22876, is /e-commerce/company/search/58130) that neither the open
+    # data nor the Open Services API publishes, and /company/<number> is a 404.
+    # Company numbers also repeat across companies and business names (22876
+    # is THE GROVE NURSERIES too), so a search by number is no record page.
     "cvr_denmark": RegisterLink(
         register="CVR",
         identifier_key="dk_cvr",

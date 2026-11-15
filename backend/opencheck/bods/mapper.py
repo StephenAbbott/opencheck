@@ -348,8 +348,10 @@ from .mappers.norway import (  # noqa: F401  (re-exported, Phase 246)
 )
 from .mappers.ireland import (  # noqa: F401  (re-exported, Phase 246)
     _CRO_ENTITY_TYPES,
+    _CRO_RESOURCE,
     _cro_address,
     _cro_entity_type,
+    cro_record_url,
     map_cro,
 )
 from .mappers.malta import (  # noqa: F401  (re-exported, Phase 246)

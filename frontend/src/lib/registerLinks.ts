@@ -127,13 +127,6 @@ export const REGISTER_LINKS: Record<string, RegisterLinkEntry> = {
       ["^\\d{11}$", "https://abr.business.gov.au/ABN/View?abn={id}"]
     ]
   },
-  "cro": {
-    "register": "CRO",
-    "identifierKey": "ie_crn",
-    "record": [
-      ["^\\d{1,7}$", "https://core.cro.ie/company/{id}"]
-    ]
-  },
   "cvr_denmark": {
     "register": "CVR",
     "identifierKey": "dk_cvr",

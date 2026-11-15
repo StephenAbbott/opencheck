@@ -48,6 +48,7 @@ import { useSavedReport } from "./savedReportContext";
 import { NOT_DEEPENED_IN_SAVED, RAW_NOT_SAVED } from "../../lib/savedReport";
 import { hitRegisterUrl, registerRecordUrl } from "../../lib/registerLinks";
 import { declaredLine, filingOf, type DeclaredLine } from "../../lib/filingProvenance";
+import { BO_ACCESS_HEADING, boAccessLinkText, boAccessSentence } from "../../lib/boAccess";
 
 // BodsGraphExplorer pulls in Cytoscape + cytoscape-dagre (~the bulk of the
 // bundle) but only renders when a user clicks "Visualise". Code-split it so
@@ -71,47 +72,57 @@ export interface SourceBucket {
 // registration and GLEIF ownership data shown above are unaffected.
 // ---------------------------------------------------------------------
 
-function formatAccessDate(iso: string): string {
-  const d = new Date(iso + "T00:00:00");
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-}
-
 function BoAccessFootnote({ notice }: { notice: BoAccessNotice }) {
-  const { status, country_name, effective_date, access_url } = notice;
-  const sentence =
-    status === "becoming_restricted" && effective_date
-      ? `Beneficial ownership data from ${country_name} is currently public but will be restricted to certain groups from ${formatAccessDate(effective_date)}.`
-      : `Beneficial ownership data from ${country_name} is not public — available to certain groups only.`;
-  const linkText =
-    status === "becoming_restricted"
-      ? "Learn how to apply for access after then"
-      : "Learn how to apply for access";
+  const { access_url, register_name, register_url } = notice;
+  const sentence = boAccessSentence(notice);
+  const linkText = boAccessLinkText(notice);
+  // Set apart from the source's own rows by a rule and a heading: the
+  // register it describes can be a different one (Ireland's RBO beside the
+  // CRO card).
   return (
-    <div className="px-5 pb-4 flex gap-2 items-start">
+    <div className="mx-5 mb-4 pt-3 border-t border-oo-rule flex gap-2 items-start">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"
         className="text-oo-muted mt-0.5 shrink-0">
         <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
         <path d="M8 7.2V11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
         <circle cx="8" cy="5" r="0.7" fill="currentColor" />
       </svg>
-      <p className="text-oo-meta leading-[1.6] text-oo-muted">
-        {sentence}
-        {access_url && (
-          <>
-            {" "}
-            <a
-              href={access_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-oo-blue underline hover:text-oo-burst"
-            >
-              {linkText}
-              <span className="sr-only"> (opens in new tab)</span>
-            </a>
-          </>
-        )}
-      </p>
+      <div className="text-oo-meta leading-[1.6] text-oo-muted">
+        <p className="font-semibold text-oo-ink">
+          {BO_ACCESS_HEADING}
+          {register_name && register_url && (
+            <>
+              {": "}
+              <a
+                href={register_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-normal text-oo-blue underline hover:text-oo-burst"
+              >
+                {register_name}
+                <span className="sr-only"> (opens in new tab)</span>
+              </a>
+            </>
+          )}
+        </p>
+        <p>
+          {sentence}
+          {access_url && (
+            <>
+              {" "}
+              <a
+                href={access_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-oo-blue underline hover:text-oo-burst"
+              >
+                {linkText}
+                <span className="sr-only"> (opens in new tab)</span>
+              </a>
+            </>
+          )}
+        </p>
+      </div>
     </div>
   );
 }

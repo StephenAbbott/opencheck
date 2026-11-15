@@ -33,6 +33,11 @@ export interface BoAccessNotice {
   /** ISO date the restriction takes effect — only set for `becoming_restricted`. */
   effective_date: string | null;
   access_url: string | null;
+  /** The beneficial ownership register's own name and home page. It can be a
+   * different register from the source the card shows (Ireland: the CRO card,
+   * the RBO register), so the note names it. */
+  register_name?: string | null;
+  register_url?: string | null;
 }
 
 export interface SourceInfo {
