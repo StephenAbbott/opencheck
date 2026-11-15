@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 538** — An amalgamated Canadian corporation now says "Amalgamated" in its verdict and on its status chip and card, in the register's own word.
+**Latest: Phase 539** — Ireland's beneficial ownership entry is brought up to date with the 2026 legitimate-interest regulations, and source cards now name the register that holds owners.
 
 → [Full development history](docs/status.md)
 
