@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 541** — Japan's National Tax Agency corporate number register is now a source, read from a monthly signed index of its nationwide file, with its Web-API ready for when an application ID is issued.
+**Latest: Phase 542** — Each curated example on the homepage now links straight into QuickCheck, FullCheck, BackgroundCheck, Subsidiaries, History and Climate & ESG for that company.
 
 → [Full development history](docs/status.md)
 
