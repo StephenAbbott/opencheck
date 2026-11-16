@@ -20,6 +20,7 @@ import {
   EXAMPLE_VIEW_ANSWERS,
   EXAMPLE_VIEWS,
   exampleViewHref,
+  exampleVisibilityClass,
   moreFindingsLabel,
 } from "../lib/exampleCards";
 import type { CheckMode } from "../lib/checkMode";
@@ -193,6 +194,8 @@ function isPlainClick(e: React.MouseEvent): boolean {
  * The tile stacks its icon above its name: side by side, "BackgroundCheck"
  * overflowed a third of a card at the page's 1100px width.
  *
+ * On a phone only `PHONE_EXAMPLE_LEIS` render, to keep the page short.
+ *
  * One card per row on a phone, two from `md` up: two cards side by side on a
  * phone would leave the tile text too small to read (Stephen).
  */
@@ -213,7 +216,7 @@ export function ExampleLeiPicker({
           return (
             <li
               key={ex.lei}
-              className="bg-white border border-oo-rule rounded-oo p-4 sm:p-5"
+              className={`bg-white border border-oo-rule rounded-oo p-4 sm:p-5 ${exampleVisibilityClass(ex.lei)}`}
               aria-labelledby={`example-${ex.lei}`}
             >
               <h3

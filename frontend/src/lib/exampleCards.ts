@@ -97,3 +97,20 @@ export function exampleViewHref(lei: string, mode: CheckMode): string {
   if (param) params.set("mode", param);
   return `/?${params.toString()}`;
 }
+
+/**
+ * The examples a phone shows (Stephen, 16 Nov 2026). With six tiles each, four
+ * stacked cards made the homepage very long on a phone, so below `md` (where
+ * the cards stack) only these two render; from `md` up every example does.
+ * Rosneft (sanctions) and Eesti Energia AS (state control, a related PEP) keep
+ * two different kinds of finding on the small screen.
+ */
+export const PHONE_EXAMPLE_LEIS: ReadonlySet<string> = new Set([
+  "253400JT3MQWNDKMJE44", // Rosneft
+  "5493005044RTLQ5RZU70", // Eesti Energia AS
+]);
+
+/** Classes that hide an example below `md` unless a phone shows it. */
+export function exampleVisibilityClass(lei: string): string {
+  return PHONE_EXAMPLE_LEIS.has(lei) ? "" : "hidden md:block";
+}

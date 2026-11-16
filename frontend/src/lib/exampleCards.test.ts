@@ -8,7 +8,9 @@ import {
   EXAMPLE_VIEW_ANSWERS,
   EXAMPLE_VIEWS,
   exampleViewHref,
+  exampleVisibilityClass,
   moreFindingsLabel,
+  PHONE_EXAMPLE_LEIS,
   rankCardSignals,
   MAX_CARD_CHIPS,
 } from "./exampleCards";
@@ -108,5 +110,20 @@ describe("the six views on each card", () => {
       "Eesti Energia AS",
       "Ørsted A/S",
     ]);
+  });
+});
+
+describe("the examples a phone shows", () => {
+  it("is Rosneft and Eesti Energia AS, both curated cards", () => {
+    const shown = EXAMPLE_LEIS.filter((e) => PHONE_EXAMPLE_LEIS.has(e.lei)).map((e) => e.name);
+    expect(shown).toEqual(["Rosneft", "Eesti Energia AS"]);
+    expect(PHONE_EXAMPLE_LEIS.size).toBe(shown.length);
+  });
+
+  it("hides the others below md and nowhere else", () => {
+    for (const ex of EXAMPLE_LEIS) {
+      const cls = exampleVisibilityClass(ex.lei);
+      expect(cls).toBe(PHONE_EXAMPLE_LEIS.has(ex.lei) ? "" : "hidden md:block");
+    }
   });
 });
