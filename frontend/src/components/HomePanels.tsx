@@ -15,7 +15,16 @@ import {
 } from "./icons";
 import { RiskChip, RISK_PRESENTATION } from "./risk/RiskChip";
 import { buttonClasses } from "./ui";
-import { cardChips, moreFindingsLabel } from "../lib/exampleCards";
+import {
+  cardChips,
+  EXAMPLE_VIEW_ANSWERS,
+  EXAMPLE_VIEWS,
+  exampleViewHref,
+  moreFindingsLabel,
+} from "../lib/exampleCards";
+import type { CheckMode } from "../lib/checkMode";
+import { MODE_TABS } from "./cdd/ModeTabs";
+import { Icon } from "./ui/Icon";
 import { NEW_FEATURES, NEW_FEATURE_TONES } from "../lib/newFeatures";
 
 /**
@@ -90,16 +99,12 @@ export interface ExampleLei {
 // and Ørsted: every one of those chips was a V through the subject counted as
 // three layers above it. None of the six curated subjects reaches three
 // layers; finding an example with a real layered chain is an open follow-up.
+//
+// The curated-example views ticket (16 Nov 2026): four cards, not six. Each
+// card now carries a tile for every view of the report, so Equinor ASA and
+// Eli Lilly and Company came off (Stephen's choice) to give the tiles room.
+// Both stay in the weekly findings regression as anchors, as BP did.
 export const EXAMPLE_LEIS: ExampleLei[] = [
-  {
-    lei: "OW6OFBNCKXC4US5C7523",
-    name: "Equinor ASA",
-    hint: "Norwegian state-majority energy company",
-    signals: [
-      { code: "STATE_CONTROLLED", confidence: "medium" },
-      { code: "RELATED_PEP", confidence: "high" },
-    ],
-  },
   {
     lei: "253400JT3MQWNDKMJE44",
     name: "Rosneft",
@@ -151,16 +156,6 @@ export const EXAMPLE_LEIS: ExampleLei[] = [
       { code: "OFFSHORE_LEAKS", confidence: "medium" },
     ],
   },
-  {
-    lei: "FRDRIPF3EKNDJ2CQJL29",
-    name: "Eli Lilly and Company",
-    hint: "American pharmaceutical giant",
-    signals: [
-      { code: "RELATED_PEP", confidence: "high" },
-      { code: "RELATED_DEBARMENT", confidence: "medium" },
-      { code: "OFFSHORE_LEAKS", confidence: "low" },
-    ],
-  },
 ];
 
 // ---------------------------------------------------------------------
@@ -180,41 +175,55 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** A plain left click; anything else (new tab, new window) is the browser's. */
+function isPlainClick(e: React.MouseEvent): boolean {
+  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+}
+
+/**
+ * The curated examples (the curated-example views ticket, 16 Nov 2026).
+ *
+ * Each card names the company and its findings, then offers every view of
+ * the report as a tile — the tab's own icon, name and accent, plus what the
+ * view answers — so the homepage shows the six views before anyone has run
+ * a check. Each tile is a real link to the report's shareable URL
+ * (`exampleViewHref`), so it can be opened in a new tab or copied; a plain
+ * click stays in the app and runs the lookup straight into that view.
+ *
+ * The tile stacks its icon above its name: side by side, "BackgroundCheck"
+ * overflowed a third of a card at the page's 1100px width.
+ *
+ * One card per row on a phone, two from `md` up: two cards side by side on a
+ * phone would leave the tile text too small to read (Stephen).
+ */
 export function ExampleLeiPicker({
   onPick,
   disabled,
 }: {
-  onPick: (lei: string) => void;
+  onPick: (lei: string, mode: CheckMode) => void;
   disabled: boolean;
 }) {
+  const views = EXAMPLE_VIEWS.map((id) => MODE_TABS.find((t) => t.id === id)!);
   return (
     <section className="mb-10">
       <SectionLabel>Try a curated example</SectionLabel>
-      <ul
-        className="grid gap-3"
-        // 280px min keeps three subjects per row at desktop widths,
-        // stacks on narrow viewports.
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))" }}
-      >
-        {EXAMPLE_LEIS.map((ex) => (
-          <li key={ex.lei} className="relative">
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => onPick(ex.lei)}
-              className="w-full text-left bg-white border border-oo-rule rounded-oo p-4 transition-shadow hover:shadow-oo-card disabled:opacity-50"
+      <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {EXAMPLE_LEIS.map((ex) => {
+          const { shown, more } = cardChips(ex.signals);
+          return (
+            <li
+              key={ex.lei}
+              className="bg-white border border-oo-rule rounded-oo p-4 sm:p-5"
+              aria-labelledby={`example-${ex.lei}`}
             >
-              <div className="font-head text-oo-body font-bold text-oo-ink leading-tight pr-6">
+              <h3
+                id={`example-${ex.lei}`}
+                className="font-head text-oo-stat font-bold text-oo-ink leading-tight"
+              >
                 {ex.name}
-              </div>
-              {ex.hint && (
-                <div className="text-oo-meta text-oo-muted mt-0.5">
-                  {ex.hint}
-                </div>
-              )}
-              {ex.signals && ex.signals.length > 0 && (() => {
-                const { shown, more } = cardChips(ex.signals);
-                return (
+              </h3>
+              {ex.hint && <div className="text-oo-small text-oo-muted mt-0.5">{ex.hint}</div>}
+              {shown.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1 mt-2">
                   {shown.map((sig) => (
                     <RiskChip
@@ -232,23 +241,52 @@ export function ExampleLeiPicker({
                     />
                   ))}
                   {more > 0 && (
-                    <span className="text-oo-meta text-oo-muted">
-                      {moreFindingsLabel(more)}
-                    </span>
+                    <span className="text-oo-meta text-oo-muted">{moreFindingsLabel(more)}</span>
                   )}
                 </div>
-                );
-              })()}
-            </button>
-            {/* Phase 122: the Neo4j CSV download that used to sit here came
-                off. It is a developer affordance on the app's headline entry
-                point — an icon-only link, explained by a `title` no keyboard
-                or touch user can read, offering a graph-database bundle to
-                someone who has not yet run their first check. The same
-                download lives in the export panel, where it is one of nine
-                formats and is labelled. */}
-          </li>
-        ))}
+              )}
+              <ul
+                className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4"
+                aria-label={`Open ${ex.name} in a view`}
+              >
+                {views.map((view) => (
+                  <li key={view.id}>
+                    <a
+                      href={exampleViewHref(ex.lei, view.id)}
+                      aria-disabled={disabled || undefined}
+                      onClick={(e) => {
+                        if (!isPlainClick(e)) return;
+                        e.preventDefault();
+                        if (!disabled) onPick(ex.lei, view.id);
+                      }}
+                      className={
+                        "group flex h-full flex-col items-start gap-2 rounded-oo border border-oo-rule bg-oo-bg/60 p-2.5 " +
+                        "transition-colors hover:bg-white hover:shadow-oo-card focus-visible:outline focus-visible:outline-2 " +
+                        "focus-visible:outline-offset-2 focus-visible:outline-oo-blue" +
+                        (disabled ? " pointer-events-none opacity-50" : "")
+                      }
+                    >
+                      <span
+                        className="flex h-8 w-8 flex-none items-center justify-center rounded-md"
+                        style={{ color: view.accent, backgroundColor: `${view.accent}1a` }}
+                      >
+                        <Icon name={view.icon} size={18} />
+                      </span>
+                      <span className="min-w-0 max-w-full break-words">
+                        <span className="block text-oo-small font-semibold text-oo-ink leading-snug">
+                          {view.label}
+                        </span>
+                        <span className="block text-oo-meta text-oo-muted leading-snug">
+                          {EXAMPLE_VIEW_ANSWERS[view.id]}
+                        </span>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

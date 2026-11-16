@@ -3,7 +3,16 @@ import { describe, it, expect } from "vitest";
 import { EXAMPLE_LEIS } from "../components/HomePanels";
 import { RISK_PRESENTATION } from "../components/risk/RiskChip";
 import { SIGNAL_STYLE } from "./graphStyle";
-import { cardChips, moreFindingsLabel, rankCardSignals, MAX_CARD_CHIPS } from "./exampleCards";
+import {
+  cardChips,
+  EXAMPLE_VIEW_ANSWERS,
+  EXAMPLE_VIEWS,
+  exampleViewHref,
+  moreFindingsLabel,
+  rankCardSignals,
+  MAX_CARD_CHIPS,
+} from "./exampleCards";
+import { CHECK_MODES, deepLinkOptions } from "./checkMode";
 
 describe("cardChips", () => {
   it("shows the worst three and counts the rest", () => {
@@ -62,5 +71,42 @@ describe("EXAMPLE_LEIS", () => {
     for (const ex of EXAMPLE_LEIS) {
       for (const s of ex.signals ?? []) expect(context.has(s.code), `${ex.name}: ${s.code}`).toBe(false);
     }
+  });
+});
+
+describe("the six views on each card", () => {
+  it("links every view in the report's tab order, QuickCheck in the short form", () => {
+    expect(EXAMPLE_VIEWS).toEqual(CHECK_MODES);
+    const lei = "253400JT3MQWNDKMJE44";
+    expect(exampleViewHref(lei, "quick")).toBe(`/?lei=${lei}`);
+    expect(exampleViewHref(lei, "full")).toBe(`/?lei=${lei}&mode=full`);
+    expect(exampleViewHref(lei, "esg")).toBe(`/?lei=${lei}&mode=esg`);
+  });
+
+  it("reads back to the same company and view", () => {
+    for (const ex of EXAMPLE_LEIS) {
+      for (const mode of EXAMPLE_VIEWS) {
+        const href = exampleViewHref(ex.lei, mode);
+        const search = href.slice(href.indexOf("?"));
+        expect(new URLSearchParams(search).get("lei")).toBe(ex.lei);
+        expect(deepLinkOptions(search).mode).toBe(mode);
+      }
+    }
+  });
+
+  it("has a short answer for every view", () => {
+    for (const mode of EXAMPLE_VIEWS) {
+      expect(EXAMPLE_VIEW_ANSWERS[mode].length).toBeGreaterThan(0);
+      expect(EXAMPLE_VIEW_ANSWERS[mode].length).toBeLessThanOrEqual(30);
+    }
+  });
+
+  it("shows four examples", () => {
+    expect(EXAMPLE_LEIS.map((e) => e.name)).toEqual([
+      "Rosneft",
+      "Taqa Bratani Limited",
+      "Eesti Energia AS",
+      "Ørsted A/S",
+    ]);
   });
 });

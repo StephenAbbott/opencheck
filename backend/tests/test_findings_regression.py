@@ -186,8 +186,8 @@ def test_load_expectations_rejects_a_duplicate_lei(tmp_path: Path) -> None:
 
 def test_parse_example_cards_reads_the_real_file() -> None:
     cards = fr.load_example_cards()
-    assert len(cards) == 6
-    assert cards["OW6OFBNCKXC4US5C7523"]["STATE_CONTROLLED"] in fr.CONFIDENCE_RANK
+    assert len(cards) == 4
+    assert cards["253400JT3MQWNDKMJE44"]["SANCTIONED"] in fr.CONFIDENCE_RANK
     assert all(cards.values()), "every curated card lists at least one risk code"
 
 

@@ -489,8 +489,16 @@ export default function App() {
       url.pathname = "/";
       url.search = "";
     }
-    if (url.pathname !== window.location.pathname || url.searchParams.get("lei") !== lei) {
-      url.searchParams.set("lei", lei);
+    url.searchParams.set("lei", lei);
+    // A curated example's view tile asks for a mode, and the address must
+    // say it (the tile's own href does), or a refresh would fall back to
+    // QuickCheck. Callers that pass no mode leave `?mode=` as it was.
+    if (opts?.mode) {
+      const param = modeParam(opts.mode);
+      if (param) url.searchParams.set("mode", param);
+      else url.searchParams.delete("mode");
+    }
+    if (url.href !== window.location.href) {
       window.history.pushState({}, "", url);
     }
     // A lookup started from the search box always opens on QuickCheck; a
@@ -1197,7 +1205,9 @@ export default function App() {
 
         {!streamingLei && !savedOpening && !savedOpenError && !lookupMutation.isPending && !streaming && !lookupMutation.isError && !nameSearchMutation.data && !nameSearchMutation.isPending && !nationalIdSearchMutation.data && !nationalIdSearchMutation.isPending && (
           <>
-            <ExampleLeiPicker onPick={lookupLei} disabled={lookupMutation.isPending || streaming} />
+            <ExampleLeiPicker
+              onPick={(lei, mode) => lookupLei(lei, { mode })}
+              disabled={lookupMutation.isPending || streaming} />
             <NewFeatures />
             <HowItWorks />
           </>
