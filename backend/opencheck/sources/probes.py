@@ -735,6 +735,30 @@ PROBES: dict[str, SourceProbe] = {
             "the refresh has not been run, not that AJPES stopped publishing."
         ),
     ),
+    "nta_japan": _p(
+        tier="index",
+        subject="ANRITSU CORPORATION (JP 2021001021865)",
+        # As GLEIF files it under RA000412: the 12-digit 会社法人等番号.
+        args=("0210-01-021865",),
+        kwargs={"legal_name": "アンリツ株式会社"},
+        expect_fields=("name", "kind", "number"),
+        # SKIP without an index, never allow_empty. warm_bulk_stores.py
+        # downloads the asset first.
+        requires_files=("nta_japan.sqlite",),
+        expect_liveness=frozenset({"snapshot"}),
+        # The NTA publishes the nationwide file at the end of each month and
+        # the workflow rebuilds on the 2nd: 45 days means a missed refresh.
+        snapshot_max_age_days=45,
+        anchor_lei="353800886SENISUY0G83",
+        bods_mapper="map_nta_japan",
+        notes=(
+            "The NTA Japan wiring (16 Nov 2026): an index of the National Tax "
+            "Agency's monthly nationwide corporate-number file, signature "
+            "checked against the NTA's published key. Entity data only: no "
+            "officers or owners. The Web-API tier (NTA_JAPAN_APP_ID) is not "
+            "exercised by the probe."
+        ),
+    ),
     "ica_israel": _p(
         tier="index",
         subject="PAYPAL ISRAEL PAYMENT SERVICES LTD (IL 516478872)",

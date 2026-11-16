@@ -163,6 +163,9 @@ _IDENTIFIER_KEYED = {
     # si_prs (the Slovenia wiring): a LIKE over the local index, legal
     # persons only.
     "si_prs",
+    # nta_japan (the NTA Japan wiring): a trigram FTS5 search over the local
+    # index; a fresh test process has none.
+    "nta_japan",
     # registro_sociedades_argentina (the Argentina wiring): an FTS5 search
     # over the local index; a fresh test process has none.
     "registro_sociedades_argentina",

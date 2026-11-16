@@ -1,0 +1,79 @@
+name: Refresh NTA Japan index
+
+# Rebuilds the index of Japan's corporate numbers (法人番号) from the National
+# Tax Agency's monthly nationwide file and replaces the `nta-japan-index`
+# release asset the backend downloads at boot (NTA_JAPAN_DB_URL).
+#
+# The NTA publishes the whole register as one zip at the end of each month
+# (00_zenkoku_all_YYYYMMDD, ~5.85M bodies, closed records included), behind a
+# form POST with a session token, with an OpenPGP signature. The builder
+# fetches it, checks the signature against the key committed beside it
+# (scripts/nta_japan_signing_key.asc, fingerprint F4109E82…4D615230) and
+# refuses a short file, repeated numbers or malformed rows. ~2 minutes;
+# ~1.3 GB of SQLite, ~425 MB gzipped (measured on the 30 Oct 2026 file).
+#
+# The release is created on the first run if it does not exist.
+on:
+  schedule:
+    - cron: "41 4 3 * *" # 04:41 UTC on the 3rd — the file is dated the last working day of the month
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-nta-japan-index
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # required to create/upload the release asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # uploads use GH_TOKEN; nothing pushes
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Download the nationwide file, verify its signature and build the index
+        working-directory: backend
+        run: |
+          command -v gpg >/dev/null || (sudo apt-get update && sudo apt-get install -y gnupg)
+          uv sync
+          uv run python scripts/build_nta_japan_index.py --download --verify \
+            --work "$RUNNER_TEMP/jp" \
+            --out "$RUNNER_TEMP/nta_japan.sqlite" --gzip
+
+      - name: Sanity-check the output (guard against a broken or partial export)
+        run: |
+          python3 - <<'PY'
+          import os, sqlite3, sys
+          path = os.path.join(os.environ["RUNNER_TEMP"], "nta_japan.sqlite")
+          conn = sqlite3.connect(path)
+          meta = dict(conn.execute("SELECT key, value FROM meta"))
+          n = conn.execute("SELECT COUNT(*) FROM entity").fetchone()[0]
+          print(f"{n} bodies, cut {meta.get('cut')}, schema {meta.get('schema_version')}")
+          if n < 5_000_000:
+              sys.exit(f"Refusing to publish: {n} bodies — likely a source/format change.")
+          PY
+
+      - name: Replace the `nta-japan-index` release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release view nta-japan-index >/dev/null 2>&1 || gh release create nta-japan-index \
+            --title "NTA Japan corporate number index" \
+            --notes "Built monthly by refresh-nta-japan-index.yml from the National Tax Agency's nationwide corporate number file (国税庁法人番号公表サイト; Public Data License 1.0 / CC BY 4.0 compatible — source: National Tax Agency Corporate Number Publication Site). Downloaded by the backend at boot (NTA_JAPAN_DB_URL)."
+          bash backend/scripts/replace_release_asset.sh nta-japan-index \
+            "$RUNNER_TEMP/nta_japan.sqlite.gz" nta_japan.sqlite.gz \
+            "Rebuilt automatically by refresh-nta-japan-index on $(date -u +%Y-%m-%d)."
+
+      - name: Trigger a Render redeploy (optional)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: ${{ env.HOOK != '' }}
+        run: curl -fsS -X POST "$HOOK"

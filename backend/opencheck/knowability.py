@@ -258,7 +258,9 @@ class SourceRead(BaseModel):
 #: Registered sources whose open data carries the entity's own record and no
 #: people: the coverage sentence must not say "officers and registered
 #: holdings" of them. Each one's module docstring says what its file holds.
-RECORD_ONLY_SOURCES: frozenset[str] = frozenset({"bce_belgium", "ica_israel", "si_prs"})
+RECORD_ONLY_SOURCES: frozenset[str] = frozenset(
+    {"bce_belgium", "ica_israel", "si_prs", "nta_japan"}
+)
 
 
 class KnowabilityStatement(BaseModel):
