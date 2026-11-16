@@ -1,9 +1,9 @@
 {
   "lei": "OW6OFBNCKXC4US5C7523",
   "name": "Equinor ASA",
-  "role": "curated",
-  "why": "Curated example (Phase 312, replacing BP). Norwegian state-majority company: STATE_CONTROLLED from the 67% state holding and a related PEP from OpenAleph's Norway SOE-leadership list; read live from Brønnøysund (brreg).",
-  "example_card": true,
+  "role": "anchor",
+  "why": "Anchor since the curated-example views ticket (16 Nov 2026; a curated card from Phase 312 until then). Norwegian state-majority company: STATE_CONTROLLED from the 67% state holding and a related PEP from OpenAleph's Norway SOE-leadership list; read live from Brønnøysund (brreg).",
+  "example_card": false,
   "no_risk": false,
   "risk": {
     "STATE_CONTROLLED": "medium",

@@ -67,7 +67,7 @@
     "text": 1,
     "vocab": 0,
     "palette": 0,
-    "button": 1
+    "button": 0
   },
   "src/components/SearchPanel.tsx": {
     "hex": 0,

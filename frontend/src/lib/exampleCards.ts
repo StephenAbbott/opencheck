@@ -13,6 +13,7 @@
  *
  * Pure so the logic-only suite can pin it (`exampleCards.test.ts`).
  */
+import { CHECK_MODES, modeParam, type CheckMode } from "./checkMode";
 import { SIGNAL_STYLE } from "./graphStyle";
 
 export interface CardSignal {
@@ -60,4 +61,56 @@ export function cardChips<T extends CardSignal>(
 export function moreFindingsLabel(more: number): string {
   if (more <= 0) return "";
   return `+${more} more finding${more === 1 ? "" : "s"}`;
+}
+
+// ---------------------------------------------------------------------------
+// The six views on each card (the curated-example views ticket, 16 Nov 2026)
+// ---------------------------------------------------------------------------
+
+
+/**
+ * What each view answers, in a few words, for the tile under its name. The
+ * full sentence is the report's blurb (`MODE_TABS` in `cdd/ModeTabs.tsx`);
+ * a tile has room for one short line, so these say only what the view is
+ * for, and assert nothing about what it finds for any one company.
+ */
+export const EXAMPLE_VIEW_ANSWERS: Record<CheckMode, string> = {
+  quick: "Who owns it, in one screen",
+  full: "Follow owners up the chain",
+  background: "Screen the people",
+  subsidiaries: "What it owns",
+  history: "How its records changed",
+  esg: "Emissions and payments",
+};
+
+/** The views a card links to, in the report's tab order. */
+export const EXAMPLE_VIEWS: readonly CheckMode[] = CHECK_MODES;
+
+/**
+ * The deep link for one view of one example: the report's own shareable
+ * form, `/?lei=…` plus `&mode=…` for anything but QuickCheck (which keeps
+ * the short form, as `modeParam` says).
+ */
+export function exampleViewHref(lei: string, mode: CheckMode): string {
+  const param = modeParam(mode);
+  const params = new URLSearchParams({ lei });
+  if (param) params.set("mode", param);
+  return `/?${params.toString()}`;
+}
+
+/**
+ * The examples a phone shows (Stephen, 16 Nov 2026). With six tiles each, four
+ * stacked cards made the homepage very long on a phone, so below `md` (where
+ * the cards stack) only these two render; from `md` up every example does.
+ * Rosneft (sanctions) and Eesti Energia AS (state control, a related PEP) keep
+ * two different kinds of finding on the small screen.
+ */
+export const PHONE_EXAMPLE_LEIS: ReadonlySet<string> = new Set([
+  "253400JT3MQWNDKMJE44", // Rosneft
+  "5493005044RTLQ5RZU70", // Eesti Energia AS
+]);
+
+/** Classes that hide an example below `md` unless a phone shows it. */
+export function exampleVisibilityClass(lei: string): string {
+  return PHONE_EXAMPLE_LEIS.has(lei) ? "" : "hidden md:block";
 }
