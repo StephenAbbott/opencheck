@@ -87,6 +87,8 @@ from .edr_ukraine import UA_RA_CODES as _UA_RA_CODES
 from .registro_sociedades_argentina import AR_RA_CODES as _AR_RA_CODES
 from .registro_sociedades_argentina import cuit_spellings as _cuit_spellings
 from .oece_rnp import PE_RA_CODES as _PE_RA_CODES
+from .nta_japan import JP_RA_CODES as _JP_RA_CODES
+from .nta_japan import corporate_number_spellings as _jcn_spellings
 from .zefix import CH_RA_CODES as _ZEFIX_RA_CODES, format_uid as _zefix_format_uid
 from .cvr_denmark import DK_CVR_RA_CODE as _DK_CVR_RA_CODE, normalise_cvr as _normalise_cvr
 
@@ -1318,6 +1320,12 @@ class GleifAdapter(SourceAdapter):
             # Four Peruvian authorities file the RUC, always bare (the Peru
             # RNP wiring, read off all 654 PE records on 12 Nov 2026).
             ra_codes = tuple(sorted(_PE_RA_CODES))
+        elif ra_code in _JP_RA_CODES:
+            # RA000412 files the 12-digit 会社法人等番号 (mostly hyphenated),
+            # RA001075 the 13-digit corporate number: one body, two authorities
+            # (the NTA Japan wiring). RA000413 (FSA funds) stays out.
+            ra_codes = tuple(sorted(_JP_RA_CODES))
+            values = _jcn_spellings(local_id)
         elif ra_code == _BCE_RA_CODE:
             # GLEIF files the Belgian number dotted; the picker asked for digits.
             values = _enterprise_number_spellings(local_id)

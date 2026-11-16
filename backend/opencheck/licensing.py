@@ -236,6 +236,18 @@ _CANONICAL: dict[str, LicenseTerms] = {
             "form is a condition: without it the licence is void from the start."
         ),
     ),
+    "pdl-1.0": _terms(
+        "PDL-1.0", "Public Data License, version 1.0 (Japan, Digital Agency)",
+        commercial="yes", attribution=True, share_alike=False, redistribution="yes",
+        url="https://www.digital.go.jp/resources/open_data/public_data_license_v1.0",
+        summary=(
+            "The Japanese government's standard terms for open data, "
+            "compatible with CC BY 4.0: use, copy, adapt and redistribute for "
+            "any purpose, commercial included, naming the source and saying "
+            "when the data was edited. The National Tax Agency's corporate "
+            "number data is published under it."
+        ),
+    ),
     "kr-public-data": _terms(
         "KR-Public-Data", "Korean public data, no restriction on the scope of use (공공데이터법; Open DART terms)",
         commercial="yes", attribution=False, share_alike=False, redistribution="yes",

@@ -1134,6 +1134,42 @@ def _bh_si_prs(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     )
 
 
+def _bh_nta_japan(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
+    """Hit builder for the NTA Corporate Number register (the NTA Japan
+    wiring, 16 Nov 2026), from the index or the Web-API.
+
+    * **A body on file.** Asserts the 13-digit corporate number the register
+      published (``jp_jcn``) — never the LEI it was dispatched on.
+    * **Not on file.** A note card (the JAR shape): the row sentence says so,
+      no identifier is asserted and nothing is degraded.
+
+    Dispatch is gated on the index file or a configured Web-API
+    (``covers_lei``); RA000413 (FSA funds) is never dispatched.
+    """
+    from ..findings import finding_nta_japan
+
+    if r.get("is_stub") or r.get("not_found"):
+        return _hit(
+            "nta_japan", local_id,
+            name=ctx.legal_name or "",
+            summary=f"JP {local_id} · not in the index",
+            finding=finding_nta_japan(r),
+            identifiers={},
+            raw={"coverage_note": r.get("coverage_note")},
+        )
+    number = r.get("number") or local_id
+    segments = [f"JP {number}"]
+    if r.get("status_class") == "terminal":
+        segments.append("closed")
+    return _hit(
+        "nta_japan", number,
+        name=r.get("name") or ctx.legal_name or "",
+        summary=" · ".join(segments),
+        finding=finding_nta_japan(r),
+        identifiers={"jp_jcn": number}, raw=r,
+    )
+
+
 def _bh_registro_sociedades_argentina(r: dict, local_id: str, ctx: _LookupCtx) -> SourceHit:
     """Hit builder for Argentina's RNS + IGJ index (the Argentina wiring,
     11 Nov 2026).

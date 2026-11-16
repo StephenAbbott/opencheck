@@ -851,7 +851,7 @@ as "nothing to see".
 **Twenty-four** adapters have templates (`inpi` for its not-in-the-RNE row only): `gleif`, `bods_gleif`, `opensanctions`,
 `companies_house`, `opencorporates`, `openaleph`, `ted_eu`, `wikidata`,
 `everypolitician`, `gemi_greece`, `climatetrace`, `eiti_assessment`,
-`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`, `ariregister`, `brreg`, `gcis_taiwan`, `estma`. Adding one means **two** edits — the template here *and*
+`eiti_soe`, `cr_hongkong`, `acra_singapore`, `meip`, `dlcp_dc`, `ny_dos`, `jar_lithuania`, `ariregister`, `brreg`, `gcis_taiwan`, `estma`, `nta_japan`. Adding one means **two** edits — the template here *and*
 `finding=finding_<name>(r)` in that adapter's `_bh_<name>()`; a template
 nobody passes is dead code, and nothing fails to warn you. The
 frontend falls back `finding → summary → nothing`
@@ -1953,6 +1953,58 @@ data downloads". Things that will be re-derived otherwise:
   not the ephemeral data root. Nothing touches the response `Cache` (the
   Phase 325 rule). Scheme `US-FL`, in `register_hops._NO_COUNTRY_ALIAS`; not
   in `RA_BY_COUNTRY` (the DC / NY rule).
+
+## Japan is a monthly index of the NTA's corporate numbers (the NTA Japan wiring, 16 Nov 2026)
+
+`sources/nta_japan.py`, `scripts/build_nta_japan_index.py`,
+`.github/workflows/refresh-nta-japan-index.yml`, `bods/mappers/japan.py`,
+`identifiers.japanese_corporate_number`. Things that will be re-derived
+otherwise:
+
+- **Identity and standing, nothing about owners.** The NTA publishes name,
+  kind (法人種別), head-office address, the English name (~0.3 %), the close
+  date and cause, and a merger's successor (承継先法人). No officers,
+  shareholders or beneficial owners — the finding never says "none on file".
+- **One signed zip a month, behind a form.** The download page's form POST
+  needs the session cookie, the `CNSFWTokenProcessor` token field and the
+  file number of the first `doDownload(N)` after `id="csv-unicode"`. The cut
+  is the file name's date (`00_zenkoku_all_YYYYMMDD`). `--verify` checks the
+  OpenPGP signature against the committed key (fingerprint
+  `F4109E821F0DE67C4BA1947C4BCD87A24D615230`, `VALIDSIG` from
+  `gpg --status-fd`). The builder refuses repeated numbers, more than ten
+  malformed rows or fewer than 5,000,000 rows. 30 Oct 2026 file: 5,850,621
+  bodies, 790,701 closed, 118 s, 1.3 GB SQLite, 425 MB gzipped — on the
+  persistent disk (`NTA_JAPAN_DB_FILE=/var/data/nta_japan.sqlite`).
+- **The number**: 13 digits, the first a check digit
+  `9 − (Σ dₙ × (1 if n odd else 2) mod 9)` over the 12 to its right (n from
+  the right). GLEIF's RA000412 files those 12 digits; RA001075 the 13.
+  Scheme `JP-JCN`, value-schemed; the register hop and `REG-JP` follow.
+- **Search is over open records only** (a contentless trigram FTS5 table on
+  the name and the English name); a closed body is still read by number.
+- **Kinds** (`_jp_entity_type`): 101 national organs and 201 local public
+  bodies → `stateBody`; 499 (bodies not registered by incorporation) →
+  `legalEntity`, never `unknownEntity` (which `cross_check` skips); the rest
+  `registeredEntity`. **No ELF or ISO 5009 code**: the kind does not name a
+  form precisely enough. A foreign body (401) gets no jurisdiction — its
+  address abroad is free text, its Japanese address a `business` address.
+- **Status**: a closed record is terminal, dated by its close date, with the
+  cause in the register status's words; a struck-off trade-name registration
+  is unknown. `hihyoji` (検索対象除外: the address no longer exists) is a
+  note on the address, never a status. `assignmentDate` is never a
+  `foundingDate` (5 Oct 2015 for every body existing then).
+- **A successor is named, never related** (the ClimateTRACE rule): an entity
+  statement with no jurisdiction and notes on both sides.
+- **The Web-API is ready, not live.** With `NTA_JAPAN_APP_ID` set, a number
+  the index lacks is read from `/4/num` (`type=02`); a success is cached a day
+  (`nta_japan/num-v1/<number>`), a definitive none is `put_absent`, a failure
+  is a degradation (`source_read` beside an index, else `source_fetch`) and
+  never cached. The NTA's notice (`API_NOTICE`, in Japanese as the terms
+  require) rides on the attribution when the API answered. Nothing on the
+  index path touches the response `Cache` (the Phase 325 rule).
+- Licence `PDL-1.0` (the Digital Agency's Public Data License, CC BY 4.0
+  compatible). After merge, run `refresh-nta-japan-index` once by hand:
+  until the asset exists `covers_lei` is False and the source is never
+  announced.
 
 ## Pennsylvania is a live read of data.pa.gov (the Pennsylvania ticket, 12 Nov 2026)
 
@@ -3185,6 +3237,7 @@ Reference: https://documenter.getpostman.com/view/7679680/SVYrrxuU?version=lates
 | United States — Connecticut | ct_sots | `RA000600` — Connecticut Secretary of the State | 2026-11-12 — 2,585 GLEIF records (684 ISSUED, 1,619 LAPSED, 276 RETIRED, 6 DUPLICATE), every one a seven-digit zero-padded business ID; 2,572 US-CT and 13 foreign businesses registered in Connecticut (UBS AG, CH). All 684 ISSUED resolve: 682 on the current name, 1 on a recorded former name, 1 a wrong number (note card). Scheme `US-CT`; in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
 | United States — Pennsylvania | pa_dos | `RA000632` — Department of State, Bureau of Corporations and Charitable Organizations | 2026-11-12 — 2,153 ISSUED records; `registeredAs` is the bare filing number (the dataset pads to ten digits). 1,836 resolve, 1,832 agree on the name. Scheme `US-PA`; in `register_hops._NO_COUNTRY_ALIAS`; **not in `RA_BY_COUNTRY`** |
 | Taiwan | gcis_taiwan | `RA000551` — Ministry of Economic Affairs (經濟部) · `RA001009` — Financial Supervisory Commission | 2026-10-29 — all 1,784 GLEIF records with legal address TW: RA000551 504 ISSUED (492 GENERAL, 12 BRANCH), RA001009 ~240 ISSUED, almost all FUND, RA999999 ~670. **RA000551 files the bare 8-digit Unified Business Number** on every record but three (2 ANNULLED 9-digit, 1 failing the check digit); 500 of 504 ISSUED resolve to a company record (a branch, two limited partnerships and one with no director rows do not). **RA001009 files funds' tax numbers — not in the company register (25 of 25), not dispatched.** RA000551 also sits on HK/SG/CH/GB/US-DE-jurisdiction records (foreign companies' Taiwan branches), so the deriver keys on the RA code. Scheme `TW-CR` (org-id); in `RA_BY_COUNTRY` — one authority |
+| Japan | nta_japan | `RA000412` — Commercial and corporate registration (Ministry of Justice) · `RA001075` — Corporate Number (National Tax Agency) | 2026-11-16 — **RA000412 files the 12-digit 会社法人等番号** (written bare or `0210-01-021865`), which the corporate number is with its check digit prefixed (`japanese_corporate_number`); RA001075 files the 13-digit corporate number itself. Both map to `JP-JCN` by value (`_GLEIF_VALUE_SCHEMED_RA`), with a `transformation` note when the 12 digits were converted. `RA000413` (FSA fund codes) is not a company register and is never dispatched. In `RA_BY_COUNTRY` as RA000412, RA001075 a `sameNumberAuthorities` entry on the picker |
 
 ### ✅ FIXED 2026-08-28: Scotland/Northern Ireland, and two more RA maps
 

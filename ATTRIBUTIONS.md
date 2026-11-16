@@ -67,6 +67,15 @@ OpenCheck's own source code is MIT-licensed (see [`LICENSE`](LICENSE)).
 - **Attribution:** "Contains information from the Slovenian Business Register (Poslovni register Slovenije), AJPES, published on podatki.gov.si under CC BY 4.0."
 - **Entry point:** `si_maticna` (ten-digit registration number) derived from GLEIF RA code `RA000529`.
 
+## National Tax Agency — Corporate Number Publication Site (国税庁法人番号公表サイト, Japan)
+
+- **Data:** every body with a corporate number (法人番号): name, kind of body (法人種別), head-office address and postcode, the English name a body registered, the date and cause when its registration record closed, and a merger's successor. Closed records are kept. No officers, shareholders or beneficial owners are published.
+- **Portal:** <https://www.houjin-bangou.nta.go.jp/> (nationwide file updated monthly; Web-API v4 by application).
+- **Access:** the monthly nationwide file (`00_zenkoku_all_YYYYMMDD`, Unicode CSV), whose OpenPGP signature is checked against the NTA's key (`backend/scripts/nta_japan_signing_key.asc`), built into a SQLite index by `.github/workflows/refresh-nta-japan-index.yml`, shipped as the `nta-japan-index` release asset and downloaded by the backend at boot. With `NTA_JAPAN_APP_ID` set, the Web-API reads a number the index lacks.
+- **License:** [Public Data License 1.0](https://www.digital.go.jp/resources/open_data/public_data_license_v1.0) (compatible with CC BY 4.0).
+- **Attribution:** "Source: National Tax Agency Corporate Number Publication Site (国税庁法人番号公表サイト)." When the Web-API is used, the NTA's required notice is added in its own words: 「このサービスは、国税庁法人番号システムWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない。」 (this service uses information obtained through the NTA's Corporate Number System Web-API; its content is not guaranteed by the NTA).
+- **Entry point:** `jp_jcn` (13-digit corporate number) derived from GLEIF RA codes `RA000412` (the 12-digit registration number, converted) and `RA001075`.
+
 ## Israel Corporations Authority (רשות התאגידים) — registers of companies and partnerships
 
 - **Data:** every company and partnership on the Registrar of Companies and the Registrar of Partnerships: number, Hebrew and English names, type, status and sub-status, incorporation date and registered address; for a company also the government-company flag, the limitation, the violating-company mark and the last annual report filed. No directors, shareholders or partners are published. The care-of field (`אצל`), the company's purpose and its description are not read.

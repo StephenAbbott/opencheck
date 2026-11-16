@@ -72,6 +72,11 @@ RA_BY_COUNTRY: dict[str, str] = {
     "PE": "RA000689",  # SUNAT — the RUC; RA000482 (SUNARP, for most of its
     # records), RA000979 (SMV) and RA000980 (SBS) file the same RUC;
     # GleifAdapter.search_by_local_id widens a Peruvian scope to all four.
+    "JP": "RA000412",  # Legal Affairs Bureau — the 12-digit 会社法人等番号;
+    # RA001075 (the NTA's Corporate Number Publication Site) files the 13-digit
+    # corporate number of the same body. GleifAdapter.search_by_local_id
+    # widens a Japanese scope to both and tries both spellings; RA000413 (the
+    # FSA's funds) is never included.
     "IL": "RA000406",  # Registrar of Companies, Israel Corporations Authority —
     # one authority files companies and partnerships alike (bare 9 digits).
     "FR": "RA000189",  # Sirene / INSEE (France) — RA000192 Infogreffe and

@@ -1,5 +1,5 @@
 /**
- * GLEIF Registration Authority codes for the 29 countries that have
+ * GLEIF Registration Authority codes for the 30 countries that have
  * OpenCheck adapters. Used to scope the national-ID reverse lookup to
  * a single registry and avoid false matches from coincidental ID
  * collisions across registries.
@@ -92,6 +92,34 @@ function cuitSpellings(value: string): string[] {
   const plain = value.replace(/[\s.\-]+/g, "");
   if (!/^\d{11}$/.test(plain)) return [value.trim()];
   return [plain, `${plain.slice(0, 2)}-${plain.slice(2, 10)}-${plain.slice(10)}`];
+}
+
+/** Every way GLEIF writes a Japanese corporate number — mirrors
+ * `corporate_number_spellings` in nta_japan.py: the 13 digits (RA001075),
+ * the hyphenated and the bare 12-digit 会社法人等番号 (RA000412). The check
+ * digit is 9 − (Σ dₙ × (1 if n odd else 2) mod 9), n from the right. */
+function corporateNumberSpellings(value: string): string[] {
+  const plain = value
+    .normalize("NFKC")
+    .replace(/[\s\-‐−–—]+/g, "");
+  if (!/^\d{12,13}$/.test(plain)) return [value.trim()];
+  const check = (body: string): number => {
+    let total = 0;
+    [...body].reverse().forEach((d, i) => {
+      total += Number(d) * (i % 2 === 0 ? 1 : 2);
+    });
+    return 9 - (total % 9);
+  };
+  let body = plain;
+  if (plain.length === 13) {
+    body = plain.slice(1);
+    if (Number(plain[0]) !== check(body)) return [value.trim()];
+  }
+  return [
+    `${check(body)}${body}`,
+    `${body.slice(0, 4)}-${body.slice(4, 6)}-${body.slice(6)}`,
+    body,
+  ];
 }
 
 export const RA_CODES: Record<string, RaEntry> = {
@@ -343,6 +371,20 @@ export const RA_CODES: Record<string, RaEntry> = {
     placeholder: "30-50000173-5",
     formatHint: "11 digits, e.g. 30-50000173-5",
     formatPattern: /^\d{2}-?\d{8}-?\d$/,
+  },
+  JP: {
+    raCode: "RA000412",
+    sameNumberAuthorities: ["RA001075"],
+    // The Legal Affairs Bureau files the 12-digit company registration
+    // number (2,564 ISSUED, mostly hyphenated); the NTA's corporate-number
+    // site the 13-digit corporate number (198 ISSUED) — 2026-11-16.
+    // RA000413 (the FSA's fund register) files fund codes and is left out.
+    spellings: corporateNumberSpellings,
+    countryName: "Japan",
+    idLabel: "Corporate number (法人番号)",
+    placeholder: "2021001021865",
+    formatHint: "13 digits, or the 12-digit company registration number",
+    formatPattern: /^(\d{13}|\d{4}-?\d{2}-?\d{6})$/,
   },
   PE: {
     raCode: "RA000689",

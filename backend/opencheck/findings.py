@@ -2408,6 +2408,61 @@ def finding_si_prs(bundle: dict[str, Any]) -> str | None:
     ])
 
 
+def finding_nta_japan(bundle: dict[str, Any]) -> str | None:
+    """What the National Tax Agency's Corporate Number register says: whether
+    the registration record is open or closed (with the date, the cause and a
+    merger's successor), the kind of body and its prefecture and city (the
+    NTA Japan wiring, 16 Nov 2026).
+
+    * The register files the closing of a registration record, never an
+      "active" status: an open record is said as "registration record open".
+    * ``hihyoji`` is said as what it is — the address no longer exists —
+      never as a status.
+    * A Web-API read says so: it is newer than the monthly file.
+    * **Not in the index** says so rather than that the body does not exist:
+      a company registered since the cut, an LLP and a sole proprietor have
+      no number in the file.
+    * Deliberately **not** said: officers, shareholders or owners. The
+      register publishes none for any body.
+    """
+    from .sources.nta_japan import close_cause_label, kind_label
+
+    if not bundle or bundle.get("is_stub"):
+        return None
+    if bundle.get("not_found"):
+        return (
+            "Not in the National Tax Agency's corporate-number file as indexed; "
+            "the company may be newer than the monthly file."
+        )
+    cls = bundle.get("status_class")
+    if cls == "terminal":
+        closed = human_date(bundle.get("close_date")) or bundle.get("close_date")
+        cause = close_cause_label(bundle.get("close_cause"))
+        lead = "Registration record closed" + (f" on {closed}" if closed else "")
+        if cause:
+            lead += f" ({cause})"
+    elif cls == "unknown":
+        lead = "Trade-name registration struck off; no other status published"
+    else:
+        lead = "Registration record open"
+    successor = bundle.get("successor")
+    successor_clause = None
+    if successor and cls == "terminal":
+        named = (bundle.get("successor_name") or "").strip()
+        successor_clause = f"successor {named or 'JP ' + successor}"
+    place = "".join(str(bundle.get(k) or "") for k in ("prefecture", "city")).strip()
+    if not place and bundle.get("address_outside"):
+        place = "head office abroad"
+    return clauses_to_sentence([
+        lead,
+        successor_clause,
+        "address no longer exists" if bundle.get("hihyoji") else None,
+        kind_label(bundle.get("kind")),
+        place or None,
+        "read live from the Web-API" if bundle.get("tier") == "api" else None,
+    ])
+
+
 def finding_ica_israel(bundle: dict[str, Any]) -> str | None:
     """What the Israel Corporations Authority says: the register status (with
     a strike-off or insolvency sub-status), the type, the violating-company

@@ -498,9 +498,10 @@ def test_the_new_schemes_add_no_register_hops():
     from opencheck.register_hops import hop_schemes
 
     # IL-ROC left this list with the Israel wiring: ica_israel dispatches on
-    # RA000406, so FullCheck now hops on it.
+    # RA000406, so FullCheck now hops on it. JP-JCN left it with the NTA
+    # Japan wiring: nta_japan dispatches on RA001075 and RA000412.
     for scheme in ("MY-SSM", "PH-SEC", "IT-RI", "PA-PRP", "LK-DRC",
-                   "PK-SEC", "JP-JCN", "MX-RFC"):
+                   "PK-SEC", "MX-RFC"):
         assert scheme not in hop_schemes()
 
 

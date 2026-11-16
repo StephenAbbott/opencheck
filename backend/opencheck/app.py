@@ -402,6 +402,22 @@ async def _warm_caches_background() -> None:
             "is not announced until present): %s",
             exc,
         )
+    # The NTA Japan wiring: the Corporate Number index, rebuilt monthly by a
+    # GitHub workflow and downloaded here when absent or changed. Until it
+    # lands ``nta_japan`` is not announced (unless the Web-API ID is set).
+    try:
+        from .sources.nta_japan import warm_index as warm_nta_japan_index
+
+        stats = await asyncio.to_thread(warm_nta_japan_index)
+        log.info("NTA Corporate Number (Japan) index warm-up: %s", stats)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "NTA Corporate Number (Japan) index warm-up failed (the source "
+            "is not announced until present): %s",
+            exc,
+        )
     # The Argentina wiring: the RNS + IGJ index, rebuilt by a GitHub workflow
     # when either dataset changes and downloaded here when absent or changed.
     # Until it lands ``registro_sociedades_argentina`` is not announced.

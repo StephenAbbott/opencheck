@@ -19,14 +19,20 @@ from typing import Any, Iterator
 import pycountry
 
 from ..elf import elf_code, resolve_elf
-from ..identifiers import argentine_cuit, colombian_nit, format_cuit, peruvian_ruc
+from ..identifiers import (
+    argentine_cuit,
+    colombian_nit,
+    format_cuit,
+    japanese_corporate_number,
+    peruvian_ruc,
+)
 from . import former_names as _former_names
 from . import gleif_events as _gleif_events
 from . import lifecycle as _lifecycle
 from . import liveness as _liveness
 from .unique import unique_statements
 from .source_ids import SOURCE_ID_KEY
-from .annotations import annotate, commenting, pointer
+from .annotations import annotate, commenting, pointer, transformation
 
 # Phase 168 moved the statement factories and the two largest per-source
 # sections into their own modules; Phase 246 moved every other source's
@@ -539,6 +545,13 @@ from .mappers.cyprus import (  # noqa: F401  (re-exported, Phase 246)
     _cy_official_is_org,
     map_cyprus_drcor,
 )
+from .mappers.japan import (  # noqa: F401  (re-exported; the NTA Japan wiring)
+    _JP_LEGAL_ENTITY_KINDS,
+    _JP_STATE_BODY_KINDS,
+    _jp_entity_type,
+    _jp_identifier,
+    map_nta_japan,
+)
 from .mappers.israel import (  # noqa: F401  (re-exported; the Israel wiring)
     _FOREIGN_TYPE_CODE,
     _IL_SCHEME,
@@ -1001,10 +1014,19 @@ _PE_RA_CODES: frozenset[str] = frozenset({"RA000689", "RA000482", "RA000979", "R
 PE_RUC_SCHEME = "PE-RUC"
 PE_RUC_SCHEME_NAME = "RUC — Registro Único de Contribuyentes (SUNAT, Peru)"
 
+#: Japan's Legal Affairs Bureau (RA000412, the NTA Japan wiring) files the
+#: 12-digit 会社法人等番号 (``0210-01-021865``); the 13-digit corporate number
+#: (``JP-JCN``) is that number with a check digit in front, which OpenCheck
+#: computes. Asserted only for a value of that shape; anything else keeps the
+#: RA code. RA001075 files the 13 digits itself and is in the table above.
+_JP_RA_CODES: frozenset[str] = frozenset({"RA000412"})
+JP_JCN_SCHEME = "JP-JCN"
+JP_JCN_SCHEME_NAME = "National Tax Agency Corporate Number Publication Site (Japan)"
+
 #: RA codes whose scheme is decided by the value, not the code (Phase 280) —
 #: so they are absent from ``_GLEIF_RA_TO_ORG_ID`` on purpose.
 _GLEIF_VALUE_SCHEMED_RA: frozenset[str] = (
-    _CL_RA_CODES | _CO_RA_CODES | _AR_RA_CODES | _PE_RA_CODES
+    _CL_RA_CODES | _CO_RA_CODES | _AR_RA_CODES | _PE_RA_CODES | _JP_RA_CODES
 )
 
 
@@ -1083,6 +1105,8 @@ def gleif_registration_scheme(
         return AR_CUIT_SCHEME, AR_CUIT_SCHEME_NAME
     if ra in _PE_RA_CODES and peruvian_ruc(registered_as):
         return PE_RUC_SCHEME, PE_RUC_SCHEME_NAME
+    if ra in _JP_RA_CODES and japanese_corporate_number(registered_as):
+        return JP_JCN_SCHEME, JP_JCN_SCHEME_NAME
     if ra in _GLEIF_RA_TO_ORG_ID:
         return _GLEIF_RA_TO_ORG_ID[ra]
     jur = (jurisdiction_code or "").strip().upper()
@@ -1895,6 +1919,7 @@ def _gleif_entity_statement(
     registered_as = normalise_registered_as(entity_block.get("registeredAs"))
     registered_at = entity_block.get("registeredAt") or {}
     ra_id = registered_at.get("id")
+    jcn_note: dict[str, Any] | None = None
     if registered_as and ra_id:
         org_id_scheme, org_id_name = gleif_registration_scheme(
             ra_id, jurisdiction_code, registered_at.get("other"), registered_as
@@ -1920,6 +1945,20 @@ def _gleif_entity_statement(
         elif org_id_scheme == PE_RUC_SCHEME:
             # A RUC is written bare, the way the RNP mapper writes it.
             registered_as = peruvian_ruc(registered_as) or registered_as
+        elif org_id_scheme == JP_JCN_SCHEME:
+            # The 13-digit corporate number, the NTA mapper's spelling. Under
+            # RA000412 GLEIF files the 12-digit 会社法人等番号 and OpenCheck
+            # adds the check digit, so the statement says what was filed.
+            filed = registered_as
+            registered_as = japanese_corporate_number(filed) or filed
+            if registered_as.replace("-", "") != filed.replace("-", ""):
+                jcn_note = transformation(
+                    pointer("recordDetails", "identifiers", len(identifiers), "id"),
+                    f"GLEIF files the company registration number {filed} under "
+                    f"{ra_id} (Legal Affairs Bureau). OpenCheck writes the "
+                    "13-digit corporate number, which is that number with its "
+                    "check digit in front (法人番号の指定等に関する省令 第2条).",
+                )
         identifiers.append(
             {
                 "id": registered_as,
@@ -2107,6 +2146,7 @@ def _gleif_entity_statement(
     # an IN_PROGRESS liquidation is visible without asserting dissolution.
     annotate(stmt, *_gleif_events.event_annotations(gleif_events, dissolution=ended_by))
     annotate(stmt, *_former_names.former_name_annotations(alternate_names, former_legal_names))
+    annotate(stmt, jcn_note)
 
     return stmt
 

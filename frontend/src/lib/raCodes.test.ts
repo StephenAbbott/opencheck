@@ -202,6 +202,16 @@ describe("nationalIdQuery", () => {
     expect(nationalIdQuery("RA000010", "1917865").values).toEqual(["1917865"]);
   });
 
+  it("searches both Japanese authorities in every corporate-number spelling", () => {
+    for (const value of ["2021001021865", "0210-01-021865", "021001021865", "０２１０－０１－０２１８６５"]) {
+      expect(nationalIdQuery("RA000412", value)).toEqual({
+        values: ["2021001021865", "0210-01-021865", "021001021865"],
+        raCodes: ["RA000412", "RA001075"],
+      });
+    }
+    expect(nationalIdQuery("RA001075", "1021001021865").values).toEqual(["1021001021865"]);
+  });
+
   it("leaves every other country exactly as it was", () => {
     expect(nationalIdQuery("RA000587", " SC651281 ")).toEqual({
       values: ["SC651281"],

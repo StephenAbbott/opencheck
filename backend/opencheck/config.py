@@ -721,6 +721,26 @@ class Settings(BaseSettings):
         alias="SI_PRS_DB_URL",
     )
 
+    # --- National Tax Agency Corporate Number (Japan; 法人番号公表サイト) ---
+    # The nationwide file needs no key; .github/workflows/refresh-nta-japan-index.yml
+    # builds it monthly into the ``nta-japan-index`` release asset (~1.2 GB
+    # unpacked: production keeps it on the persistent disk, render.yaml).
+    # Unset: the data-root default (``nta_japan.sqlite``).
+    nta_japan_db_file: str | None = Field(default=None, alias="NTA_JAPAN_DB_FILE")
+    # Downloaded at boot when absent and replaced when the asset changed.
+    # Empty string disables the download.
+    nta_japan_db_url: str = Field(
+        default=(
+            "https://github.com/StephenAbbott/opencheck/releases/download/"
+            "nta-japan-index/nta_japan.sqlite.gz"
+        ),
+        alias="NTA_JAPAN_DB_URL",
+    )
+    # The Web-API application ID (アプリケーションID), issued by the NTA on
+    # application. Optional: with it, a number the index lacks is read live.
+    # The field name ends in "key" so secret_scrub redacts it.
+    nta_japan_api_key: str | None = Field(default=None, alias="NTA_JAPAN_APP_ID")
+
     # --- Israel Corporations Authority (data.gov.il open data) ---
     # No API key. The registers of companies and partnerships are harvested
     # daily from data.gov.il's CKAN datastore by
