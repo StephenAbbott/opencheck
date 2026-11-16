@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 540** — The beneficial ownership note on a source card no longer repeats the register's full name, and Ireland's entry links its trusts and financial-vehicle registers.
+**Latest: Phase 541** — Japan's National Tax Agency corporate number register is now a source, read from a monthly signed index of its nationwide file, with its Web-API ready for when an application ID is issued.
 
 → [Full development history](docs/status.md)
 
