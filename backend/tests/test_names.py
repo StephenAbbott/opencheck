@@ -145,7 +145,9 @@ def test_armenian_georgian_gain_latin_comparable_form():
     assert names.normalise_name("թիվի կոմպանի") == names.normalise_name(
         "Թիվի Կոմպանի"
     )
-    assert names.normalise_name("თიბისი ბანკი") == "tibisi bank i"
+    # rigour 2.6 reads Georgian ი as a vowel of the word ("banki"); 2.3.1
+    # split it off ("bank i").
+    assert names.normalise_name("თიბისი ბანკი") == "tibisi banki"
     # Native and published-Latin forms of the same bank now collide.
     assert names.name_similarity("Ամերիաբանկ", "Ameriabank") == 1.0
 
@@ -175,10 +177,12 @@ def test_cyrillic_greek_stay_on_curated_tables():
 def test_rigour_translit_scheme_still_diverges():
     # Canary for the hybrid decision: if rigour ever switches its Cyrillic
     # scheme to BGN/PCGN-style output, this fails — revisit whether the
-    # tables can retire.
+    # tables can retire. rigour 2.6.2 (17 Nov 2026) now gives LUKOIL and
+    # Eltsin, but still Chehov and Hrushchyov where the tables give
+    # Chekhov and Khrushchev, so the tables stay.
     from rigour.text.translit import maybe_ascii
 
-    assert maybe_ascii("ЛУКОЙЛ") != "LUKOIL"
+    assert maybe_ascii("Чехов") != "Chekhov"
 
 
 @pytest.mark.skipif(

@@ -137,6 +137,66 @@ _FTM_ROLE_TO_INTEREST_TYPE: dict[str, str] = {
 }
 
 
+#: ``Control.controlType`` (FtM 4.11, free text with example values) → BODS
+#: interest type. ``trust`` is left out: it does not say which trust role
+#: (settlor, trustee, protector or beneficiary), so it stays
+#: otherInfluenceOrControl; ``indirect`` sets ``directOrIndirect`` instead.
+_FTM_CONTROL_TYPE_TO_INTEREST_TYPE: dict[str, str] = {
+    "voting": "votingRights",
+    "appointment": "appointmentOfBoard",
+    "contractual": "rightsGrantedByContract",
+    "nominee": "nominee",
+    "state": "controlByLegalFramework",
+}
+
+#: The BODS v0.4 interestType codelist, folded, for a Control ``role`` that
+#: already names one (bods-ftm writes the BODS type into ``role``).
+_BODS_INTEREST_TYPES_FOLDED: dict[str, str] = {
+    code.lower(): code
+    for code in (
+        "shareholding", "votingRights", "appointmentOfBoard",
+        "otherInfluenceOrControl", "seniorManagingOfficial", "settlor",
+        "trustee", "protector", "beneficiaryOfLegalArrangement",
+        "rightsToSurplusAssetsOnDissolution", "rightsToProfitOrIncome",
+        "rightsGrantedByContract", "conditionalRightsGrantedByContract",
+        "controlViaCompanyRulesOrArticles", "controlByLegalFramework",
+        "boardMember", "boardChair", "unknownInterest", "unpublishedInterest",
+        "enjoymentAndUseOfAssets", "rightToProfitOrIncomeFromAssets",
+        "nominee", "nominator",
+    )
+}
+
+
+def _ftm_control_interest(role: str, edge_props: dict[str, Any]) -> dict[str, Any]:
+    """The BODS interest for an FtM ``Control`` edge (FtM 4.11)."""
+    control_types = [
+        str(v).strip().lower() for v in edge_props.get("controlType") or [] if v
+    ]
+    folded = role.lower().strip()
+    interest_type = _BODS_INTEREST_TYPES_FOLDED.get(folded) or _FTM_ROLE_TO_INTEREST_TYPE.get(
+        folded
+    )
+    if interest_type is None:
+        interest_type = next(
+            (
+                _FTM_CONTROL_TYPE_TO_INTEREST_TYPE[t]
+                for t in control_types
+                if t in _FTM_CONTROL_TYPE_TO_INTEREST_TYPE
+            ),
+            "otherInfluenceOrControl",
+        )
+    interest: dict[str, Any] = {"type": interest_type}
+    if "indirect" in control_types:
+        interest["directOrIndirect"] = "indirect"
+    details = [role] if role else []
+    details += [
+        f"Legal basis: {basis}" for basis in edge_props.get("legalBasis") or [] if basis
+    ]
+    if details:
+        interest["details"] = "; ".join(details)
+    return interest
+
+
 def _ftm_percentage(op: dict[str, Any]) -> float | None:
     """Parse ``percentage`` from a FtM Ownership properties dict."""
     raw = (op.get("percentage") or [None])[0]
@@ -173,6 +233,13 @@ def _ftm_percentage(op: dict[str, Any]) -> float | None:
 #   "directorship"   → role-based interest (seniorManagingOfficial default)
 #   "membership"     → otherInfluenceOrControl
 #   "representation" → nominee (the agent acts for the client)
+#   "control"        → FtM 4.11's Control (controller → controlled, control
+#                      without ownership): the interest type from ``role``
+#                      when it names a BODS type, else from ``controlType``
+#                      (``_FTM_CONTROL_TYPE_TO_INTEREST_TYPE``), else
+#                      otherInfluenceOrControl. Never asserts
+#                      ``beneficialOwnershipOrControl``. The bods-ftm mapping,
+#                      read the same way (bods-ftm PR #3).
 #   "unknown"        → unknownInterest
 #   None             → no BODS relationship statement. Family/Associate are
 #                      screening context, not ownership-or-control; Occupancy
@@ -184,6 +251,7 @@ _FTM_EDGE_SCHEMAS: dict[str, tuple[str, str, str | None]] = {
     "Directorship":      ("director",    "organization", "directorship"),
     "Membership":        ("member",      "organization", "membership"),
     "Representation":    ("agent",       "client",       "representation"),
+    "Control":           ("controller",  "controlled",   "control"),
     "UnknownLink":       ("subject",     "object",       "unknown"),
     "Family":            ("person",      "relative",     None),
     "Associate":         ("person",      "associate",    None),
@@ -257,6 +325,8 @@ def _ftm_edge_interest(
             interest["details"] = role
     elif policy == "membership":
         interest = {"type": "otherInfluenceOrControl", "details": role or "FtM Membership"}
+    elif policy == "control":
+        interest = _ftm_control_interest(role, edge_props)
     elif policy == "representation":
         interest = {"type": "nominee"}
         if role:
@@ -1050,6 +1120,11 @@ def _ftm_identifiers(
         ("registrationNumber", reg_scheme, "Local registry identifier"),
         ("ogrnCode", "RU-OGRN", "Russian OGRN"),
         ("innCode", "RU-INN", "Russian INN"),
+        # FtM 4.11.3: cikCode on LegalEntity (OpenSanctions publishes it),
+        # irsCode as a US EIN on Organization. Scheme spellings are
+        # bods-ftm's.
+        ("cikCode", "US-SEC-CIK", "SEC Central Index Key"),
+        ("irsCode", "US-EIN", "US Employer Identification Number"),
     ):
         values = props.get(key) or []
         if values:
