@@ -2817,6 +2817,18 @@ These are non-obvious and cost significant debugging time. Do not deviate from t
   file (`kvk.nl/download/kvk-open-dataset-basis-bedrijfsgegevens.zip`, 12.9 MB
   zip, 1.93M rows) carries **no KvK number and no name**, so it cannot be an
   index tier; KvK was asked (27 Oct 2026) whether a keyed bulk file exists.
+- **KvK's reply (17 Nov 2026) settles both questions.** The 429s on paced
+  requests are the shared pool, and KvK raises neither limit for anyone. The
+  bulk file will not gain the KvK number: Wet hergebruik van
+  overheidsinformatie art. 2(1)(h) keeps personal data in public registers out
+  of re-use, so KvK keeps anything that could be personal out of the
+  High-Value Dataset (BV/NV only, no names, no linkable bulk rows). The card
+  names the limit that refused — this server's minute, or the shared pool
+  (a KvK 429, or the throttle's penalty after one: `after_refusal` on
+  `HostRateLimitedError`). `kvk` is in `knowability.RECORD_ONLY_SOURCES`; the
+  reader's explanation is `docs/sources.md` § KvK. A rolling harvest of the
+  111,717 in-scope LEIs (78+ days from one IP) is off the table; KvK is not a
+  source a whole-LEI monthly series can read.
 - **No paid-API fallback** (Stephen, 27 Oct 2026): KvK's authenticated API
   needs a Dutch-registered subscriber and is not openly licensed.
 - Another host with a per-IP quota joins with one entry in
