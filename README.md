@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 549** — The homepage's curated examples, new features and How it works sections now share one type scale, eyebrow, card padding and icon stroke, and the page title is the largest heading on phones.
+**Latest: Phase 550** — OpenCheck can now publish a monthly BODS series of every LEI in GLEIF's Golden Copy, saying what changed since the last edition as new, updated and closed statements.
 
 → [Full development history](docs/status.md)
 
