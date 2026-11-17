@@ -360,3 +360,28 @@ async def test_fetch_legacy_only_sets_coverage_note(monkeypatch, tmp_path) -> No
     assert "predate" in bundle["coverage_note"]
     # No primary_doc.xml should have been fetched for the legacy filing.
     assert not any("primary_doc.xml" in u for u in fetched_urls)
+
+
+@pytest.mark.asyncio
+async def test_get_text_names_a_timeout(monkeypatch, tmp_path) -> None:
+    """An httpx timeout carries an empty message, so the error used to read
+    "SEC EDGAR request failed:" and nothing else (source-health run
+    43916779139, 16 Nov 2026). The exception type is now named."""
+    import httpx
+
+    from opencheck.config import get_settings
+
+    adapter = _adapter_with_tickers(monkeypatch, tmp_path)
+
+    client = AsyncMock()
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = None
+    client.get = AsyncMock(side_effect=httpx.ReadTimeout(""))
+
+    with patch("opencheck.sources.sec_edgar.build_client", return_value=client):
+        with pytest.raises(RuntimeError, match="SEC EDGAR request failed: ReadTimeout"):
+            await adapter._get_text(
+                "https://www.sec.gov/cgi-bin/browse-edgar?company=X",
+                cache_key="test/timeout",
+            )
+    get_settings.cache_clear()
