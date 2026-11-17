@@ -1112,12 +1112,12 @@ class SecEdgarAdapter(SourceAdapter):
             raise
         except Exception as exc:
             # Network-level failure (timeout, DNS, SSL) or an unretried 5xx —
-            # treat as transient.
-            # Name the exception: a timeout's own message is empty, which
-            # left the BODS quality sweep of 16 Nov 2026 reading "SEC EDGAR
-            # request failed: " with nothing after it.
-            detail = describe_exception(exc).removesuffix(": ")
-            raise RuntimeError(f"SEC EDGAR request failed: {detail}") from exc
+            # treat as transient. ``describe_exception`` names the type: an
+            # httpx timeout's own message is empty, so ``{exc}`` alone made
+            # the sweep read "SEC EDGAR request failed:" with no cause.
+            raise RuntimeError(
+                f"SEC EDGAR request failed: {describe_exception(exc)}"
+            ) from exc
 
         self._cache.put(cache_key, text)
         return text

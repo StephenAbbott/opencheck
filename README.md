@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 542** — Each curated example on the homepage now links straight into QuickCheck, FullCheck, BackgroundCheck, Subsidiaries, History and Climate & ESG for that company.
+**Latest: Phase 543** — An SEC EDGAR timeout now says it was a timeout instead of an empty error.
 
 → [Full development history](docs/status.md)
 
