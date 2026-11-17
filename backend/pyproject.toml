@@ -87,9 +87,11 @@ ftm = [
     # with `--extra ftm`; dev environments without ICU still work via the
     # built-in converter (parity-tested). macOS dev installs of this extra
     # need `brew install icu4c pkg-config` (keg-only: set PKG_CONFIG_PATH).
-    # Pinned to the FtM 4.x upgrade commit (bods-ftm PR #1, merged
-    # 2026-08-01) — followthemoney>=4.8,<5, which unlocks rigour 2.x.
-    "bods-ftm @ git+https://github.com/StephenAbbott/bods-ftm.git@9347d80f0f6582a4de02e3439b109b37fd311111",
+    # Pinned to the FtM 4.11.3 alignment commit (bods-ftm PR #3, 17 Nov
+    # 2026) — followthemoney>=4.11.3,<5: the Control schema, cikCode on
+    # LegalEntity, irsCode as a US EIN. Earlier pin: 9347d80 (PR #1, the
+    # FtM 4.x upgrade).
+    "bods-ftm @ git+https://github.com/StephenAbbott/bods-ftm.git@d3116e6d5e3c82f23b44fbdfadfba133b57889a1",
     # rigour — OpenSanctions' data cleaning/validation library (MIT). Already
     # in this extra's tree transitively (bods-ftm → followthemoney → rigour);
     # pinned explicitly so an upstream dependency shuffle can't silently drop

@@ -527,3 +527,101 @@ def test_a_partial_edge_date_is_left_out_not_rounded(partial: str) -> None:
     (rel,) = _rels(bundle)
     (interest,) = rel["interests"]
     assert "startDate" not in interest and "endDate" not in interest
+
+
+# ---------------------------------------------------------------------------
+# FtM 4.11: Control edges, and LegalEntity:cikCode / Organization:irsCode
+# ---------------------------------------------------------------------------
+
+
+def _control_edge(**props: list[str]) -> dict[str, Any]:
+    return {
+        "id": "ctl-1",
+        "schema": "Control",
+        "properties": {
+            "controlled": [
+                {
+                    "id": "co-ctl",
+                    "schema": "Company",
+                    "properties": {"name": ["Controlled Co Ltd"]},
+                }
+            ],
+            **props,
+        },
+    }
+
+
+def test_control_edge_maps_controller_to_interested_party() -> None:
+    bundle = map_ftm(
+        _person_payload(controlledEntities=[_control_edge()]),
+        source_id="opensanctions",
+    )
+    assert "Controlled Co Ltd" in _names(bundle)
+    (rel,) = _rels(bundle)
+    (interest,) = rel["interests"]
+    assert interest["type"] == "otherInfluenceOrControl"
+    assert "beneficialOwnershipOrControl" not in interest
+
+
+@pytest.mark.parametrize(
+    ("control_type", "expected"),
+    [
+        ("voting", "votingRights"),
+        ("appointment", "appointmentOfBoard"),
+        ("contractual", "rightsGrantedByContract"),
+        ("nominee", "nominee"),
+        ("state", "controlByLegalFramework"),
+        ("trust", "otherInfluenceOrControl"),
+        ("management", "otherInfluenceOrControl"),
+    ],
+)
+def test_control_type_sets_the_interest_type(control_type: str, expected: str) -> None:
+    bundle = map_ftm(
+        _person_payload(
+            controlledEntities=[_control_edge(controlType=[control_type])]
+        ),
+        source_id="opensanctions",
+    )
+    (rel,) = _rels(bundle)
+    assert rel["interests"][0]["type"] == expected
+
+
+def test_control_role_wins_over_control_type_and_legal_basis_is_kept() -> None:
+    bundle = map_ftm(
+        _person_payload(
+            controlledEntities=[
+                _control_edge(
+                    role=["settlor"],
+                    controlType=["trust", "indirect"],
+                    legalBasis=["Trust deed of 2019"],
+                )
+            ]
+        ),
+        source_id="opensanctions",
+    )
+    (rel,) = _rels(bundle)
+    (interest,) = rel["interests"]
+    assert interest["type"] == "settlor"
+    assert interest["directOrIndirect"] == "indirect"
+    assert interest["details"] == "settlor; Legal basis: Trust deed of 2019"
+
+
+def test_cik_and_ein_become_us_identifiers() -> None:
+    payload = {
+        "id": "co-us",
+        "schema": "Company",
+        "properties": {
+            "name": ["Example Corp"],
+            "cikCode": ["1059556"],
+            "irsCode": ["134041093"],
+        },
+    }
+    bundle = map_ftm(payload, source_id="opensanctions")
+    stmt = _statement_by_name(bundle, "Example Corp")
+    assert stmt is not None
+    ids = {
+        (i.get("scheme"), i.get("id"))
+        for i in stmt["recordDetails"].get("identifiers") or []
+    }
+    assert ("US-SEC-CIK", "1059556") in ids
+    assert ("US-EIN", "134041093") in ids
