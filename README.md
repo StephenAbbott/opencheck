@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 548** — FollowTheMoney 4.11 Control edges and the US CIK and EIN identifiers now reach the ownership graph.
+**Latest: Phase 549** — The homepage's curated examples, new features and How it works sections now share one type scale, eyebrow, card padding and icon stroke, and the page title is the largest heading on phones.
 
 → [Full development history](docs/status.md)
 
