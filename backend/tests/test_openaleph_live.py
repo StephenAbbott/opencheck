@@ -9,7 +9,7 @@ from opencheck.config import get_settings
 from opencheck.sources import SearchKind
 from opencheck.sources.openaleph import OpenAlephAdapter
 
-_API = "https://search.openaleph.org/api/2"
+_API = "https://darc.zone/api/2"
 
 
 @pytest.fixture(autouse=True)
@@ -453,7 +453,7 @@ async def test_fetch_mentions_parses_documents(httpx_mock: HTTPXMock) -> None:
                         "foreign_id": "asktheeu",
                         "category": "library",
                     },
-                    "links": {"ui": "https://search.openaleph.org/entities/doc-1"},
+                    "links": {"ui": "https://darc.zone/entities/doc-1"},
                 },
                 {
                     "id": "doc-2",

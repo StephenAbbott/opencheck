@@ -1,7 +1,8 @@
 """OpenAleph adapter.
 
-OpenAleph (the open-source successor to the Aleph project operated at
-<https://search.openaleph.org/>) exposes a FtM-shaped search API at
+OpenAleph (the open-source successor to the Aleph project; its flagship
+instance is DARC.ZONE at <https://darc.zone/>, formerly search.openaleph.org)
+exposes a FtM-shaped search API at
 ``/api/2/``. Collections carry their own license metadata — there is no
 single "OpenAleph license". We surface each matching collection's
 license on the source card so users know what they're looking at.
@@ -78,7 +79,12 @@ from ..http import build_client
 from ..matching import canonical_identifier, canonical_url
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 
-_API_BASE = "https://search.openaleph.org/api/2"
+# The flagship moved from search.openaleph.org to darc.zone in November 2026;
+# the old host answers every path with a 301. Following that redirect is not
+# enough: httpx turns a redirected POST into a GET (so /match and /percolate
+# failed) and drops the Authorization header across origins (so keyed GETs ran
+# anonymously). Call the new host directly.
+_API_BASE = "https://darc.zone/api/2"
 _CACHE_NS = "openaleph"
 
 # Text-based percolation (OpenAleph 5.3.1). Beta-namespaced upstream (PR
@@ -93,7 +99,7 @@ _PERCOLATE_MAX_TEXT = 100_000
 # How many collections to surface in the mentions breakdown (issue #23).
 _MENTION_FACET_SIZE = 10
 
-# Anubis bot-protection at search.openaleph.org whitelists requests whose
+# Anubis bot-protection at darc.zone whitelists requests whose
 # User-Agent matches the openaleph-client pattern ("openaleph/<version>").
 # Our global OpenCheck User-Agent triggers the Anubis challenge, so every
 # OpenAleph request sends that pattern. The version is the openaleph-client
@@ -737,7 +743,7 @@ class OpenAlephAdapter(SourceAdapter):
 
         settings = get_settings()
         # Override the global User-Agent: Anubis bot-protection at
-        # search.openaleph.org whitelists the "openaleph/<version>" pattern
+        # darc.zone whitelists the "openaleph/<version>" pattern
         # used by the openaleph-client PyPI package and rejects all other
         # non-browser agents with a redirect to a proof-of-work challenge.
         headers: dict[str, str] = {"User-Agent": _OA_USER_AGENT}

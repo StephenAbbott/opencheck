@@ -25,7 +25,7 @@ from opencheck.sources.openaleph import (
     _without_mirrors,
 )
 
-_API = "https://search.openaleph.org/api/2"
+_API = "https://darc.zone/api/2"
 _LEI = "549300I5BCFMO2W0QI94"
 _NAME = "NIPPON SUISAN (U.S.A.), INC."
 

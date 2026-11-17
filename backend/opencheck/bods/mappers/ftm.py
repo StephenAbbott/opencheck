@@ -1115,7 +1115,7 @@ def map_openaleph(bundle: dict[str, Any]) -> BODSBundle:
     return map_ftm(
         entity,
         source_id="openaleph",
-        source_url_builder=lambda _id: f"https://search.openaleph.org/entities/{_id}",
+        source_url_builder=lambda _id: f"https://darc.zone/entities/{_id}",
     )
 
 
