@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 547** — A low-confidence, name-only PEP or sanctions match on a related person now stays on the card as a lead and no longer makes the verdict claim a finding.
+**Latest: Phase 548** — FollowTheMoney 4.11 Control edges and the US CIK and EIN identifiers now reach the ownership graph.
 
 → [Full development history](docs/status.md)
 
