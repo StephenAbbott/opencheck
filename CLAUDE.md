@@ -550,7 +550,7 @@ When building a `SourceHit` in `routers/lookup.py`, only include an identifier i
 Specific rules:
 
 - **`wikidata_qid`** — only on the **Wikidata** hit. Companies House and GLEIF do not publish Wikidata mappings; omitting it from their hits was fixed in commits `3454a36` and `fbc458e`.
-- **`lei`** — only on hits from sources that independently publish or validate LEIs (e.g. GLEIF, OpenCorporates). Do not propagate `lei` from the derived dict to registry adapters (CH, KvK, etc.) that received it as a lookup key rather than asserting it themselves.
+- **`lei`** — only on hits from sources that independently publish or validate LEIs (e.g. GLEIF; OpenCorporates only where its own record carries the LEI — `opencorporates.publishes_lei`). Do not propagate `lei` from the derived dict to registry adapters (CH, KvK, etc.) that received it as a lookup key rather than asserting it themselves.
 - When in doubt: if the source's own data payload doesn't contain the identifier, don't put it in `identifiers`.
 
 ---
@@ -2755,6 +2755,19 @@ and group accounts, no key). Stephen's decisions and the traps:
   Equinor's company accounts are `forenkletAnvendelseIFRS`, its group's IFRS.
 - `RULES_WORDS` lives in both `brreg_accounts.py` and `lib/brregAccounts.ts`;
   `test_brreg_accounts.py` parses the TypeScript.
+
+## OpenCorporates is name-gated (the AFPC wrong-company ticket, 17 Nov 2026)
+
+GLEIF's LEI-to-OpenCorporates mapping (`ctx.ocid`) can name another company:
+American Foreign Policy Council's `us_dc/L21249` is CONNIE-19 STREET LLC on
+OpenCorporates (the collision `dlcp_dc` gates). `OpenCorporatesAdapter` is
+`lookup_pass_legal_name`; `fetch(ocid, legal_name=)` refuses a record whose
+current, previous and alternative names all disagree with GLEIF's
+(`names_agree`; a CJK name on either side never refuses) and returns
+`name_mismatch` + `registered_name`, which `_bh_opencorporates_mismatch`
+turns into a note card with no identifier. Every re-fetch passes the name
+(`_legal_name_kwargs`). The card's summary drops `· <status>` when
+OpenCorporates sends `current_status: null`.
 
 ## Datafordeler CVR API (Denmark) — hard-won constraints
 
