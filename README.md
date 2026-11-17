@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 546** — The homepage's How it works section now pairs a summary of the headline figures with a timeline of four larger, numbered steps.
+**Latest: Phase 547** — A low-confidence, name-only PEP or sanctions match on a related person now stays on the card as a lead and no longer makes the verdict claim a finding.
 
 → [Full development history](docs/status.md)
 
