@@ -117,6 +117,21 @@ def edition_for(meta: dict[str, str], requested: str | None) -> str:
     return day
 
 
+def refresh_mirror(db: Path, edition: str | None) -> None:
+    """Apply GLEIF's delta to the mirror before mapping — the preview of what
+    the next edition would say. Refused without ``--edition``: a refreshed
+    mirror is no longer the Golden Copy of the first of a month."""
+    if not edition:
+        raise SystemExit("--refresh-mirror needs --edition: the result is not a first-of-month mirror")
+    from opencheck import mirror_refresh
+
+    try:
+        result = mirror_refresh.refresh_to_latest(db)
+    except mirror_refresh.MirrorNotRefreshable as exc:
+        raise SystemExit(f"refresh-mirror: {exc}") from exc
+    print(f"mirror: {json.dumps(result)}", flush=True)
+
+
 def all_leis(db: Path, limit: int | None) -> list[str]:
     conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     try:
@@ -427,9 +442,17 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 0))
     parser.add_argument("--limit", type=int, default=None, help="map only the first N LEIs (a trial)")
     parser.add_argument("--part-statements", type=int, default=PART_STATEMENTS)
+    parser.add_argument(
+        "--refresh-mirror",
+        action="store_true",
+        help="first bring the mirror up to GLEIF's latest publish with a delta "
+        "(a mid-month preview; name the edition with --edition)",
+    )
     args = parser.parse_args(argv)
     if args.work_dir is None:
         args.work_dir = Path(args.out_dir) / "work"
+    if args.refresh_mirror:
+        refresh_mirror(args.entity_pages_db, args.edition)
     configure(args.entity_pages_db)
     # Fail before an hour of mapping, not after it.
     edition_for(mirror_meta(args.entity_pages_db), args.edition)

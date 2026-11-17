@@ -170,3 +170,10 @@ def test_the_release_notes_never_state_ownership():
     assert "accounting consolidation, not shareholding" in text
     for word in ("owns ", "owned by", "shareholder of"):
         assert word not in text
+
+
+def test_a_refreshed_mirror_needs_a_named_edition(tmp_path) -> None:
+    """A mirror brought forward by a delta is not the Golden Copy of the first
+    of a month, so the preview must say which day it is — before any download."""
+    with pytest.raises(SystemExit, match="needs --edition"):
+        series.refresh_mirror(tmp_path / "entity_pages.sqlite", None)
