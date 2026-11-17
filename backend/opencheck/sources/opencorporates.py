@@ -36,7 +36,7 @@ from urllib.parse import quote
 
 import httpx
 
-from .. import degradation
+from .. import degradation, names
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client
@@ -112,8 +112,97 @@ def _ocid_to_path(ocid: str) -> str:
     return f"/{quote(jurisdiction.lower())}/{quote(number)}"
 
 
+#: Coverage note for a company number that names a different company on
+#: OpenCorporates than the one the lookup is about.
+COVERAGE_NAME_MISMATCH = (
+    "OpenCorporates holds this company number for a differently named "
+    "company, so its record is not shown; the number GLEIF links to this "
+    "LEI may be wrong."
+)
+
+
+def _oc_names(company: dict[str, Any]) -> list[str]:
+    """Every name OpenCorporates gives the company: current, previous and
+    alternative (trading, translated)."""
+    out = [str(company.get("name") or "").strip()]
+    for key in ("previous_names", "alternative_names"):
+        for item in company.get(key) or []:
+            if isinstance(item, dict):
+                out.append(str(item.get("company_name") or "").strip())
+            elif isinstance(item, str):
+                out.append(item.strip())
+    return [n for n in out if n]
+
+
+def _comparable(text: str) -> bool:
+    """Can this name be compared letter by letter with a Latin one?
+
+    ``fold_ascii`` transliterates Cyrillic and Greek; a CJK name stays as it
+    is, and a GLEIF name in kanji cannot contradict an OpenCorporates name in
+    romaji (or the reverse). Such a pair is never refused."""
+    if names.has_dense_script(text):
+        return False
+    return bool(re.search(r"[a-z]", names.normalise_name(text)))
+
+
+def _names_match(a: str, b: str) -> bool:
+    ca, cb = names.org_comparable_name(a), names.org_comparable_name(b)
+    if ca and ca == cb:
+        return True
+    if ca and names.despace(ca) == names.despace(cb):
+        return True
+    if names.distinctive_token_agreement(a, b):
+        return True
+    return names.name_similarity(a, b) >= names.NAME_MATCH_THRESHOLD
+
+
+def names_agree(legal_name: str | None, company: dict[str, Any] | None) -> bool:
+    """Does OpenCorporates' record carry the name GLEIF gave the subject?
+
+    The lookup reaches OpenCorporates through GLEIF's LEI-to-OpenCorporates
+    mapping, and a wrong company number in it names another company: GLEIF
+    links American Foreign Policy Council (``549300W96W2VKSMVDF81``) to
+    ``us_dc/L21249``, which is CONNIE-19 STREET LLC. True when the current,
+    a previous or an alternative name agrees with ``legal_name``. A missing
+    name on either side, or a pair in scripts that cannot be compared,
+    cannot contradict the number and agrees.
+    """
+    wanted = (legal_name or "").strip()
+    candidates = _oc_names(company or {})
+    if not wanted or not candidates or not _comparable(wanted):
+        return True
+    comparable = [c for c in candidates if _comparable(c)]
+    if not comparable:
+        return True
+    return any(_names_match(wanted, c) for c in comparable)
+
+
+def publishes_lei(company: dict[str, Any] | None, lei: str | None) -> bool:
+    """Does OpenCorporates' own record carry this LEI?
+
+    Only then may the hit assert it (the identifier corroboration rule): the
+    lookup arrives with the LEI, and a hit that repeats it reads as
+    OpenCorporates confirming it."""
+    want = (lei or "").strip().upper()
+    if not want:
+        return False
+    for item in (company or {}).get("identifiers") or []:
+        ident = item.get("identifier") if isinstance(item, dict) else None
+        ident = ident if isinstance(ident, dict) else item
+        if not isinstance(ident, dict):
+            continue
+        if str(ident.get("uid") or "").strip().upper() == want:
+            return True
+    return False
+
+
 class OpenCorporatesAdapter(SourceAdapter):
     id = "opencorporates"
+
+    #: The lookup hands ``fetch`` GLEIF's legal name, so a company number
+    #: that names another company is refused here — in the dispatch and in
+    #: every re-fetch of the hit (``routers.lookup._legal_name_kwargs``).
+    lookup_pass_legal_name = True
 
     # OpenCorporates' terms permit OpenCheck to use the data and publish derived
     # (BODS) output, but not to redistribute the raw source records in bulk. The
@@ -172,12 +261,19 @@ class OpenCorporatesAdapter(SourceAdapter):
     # Fetch
     # ------------------------------------------------------------------
 
-    async def fetch(self, hit_id: str) -> dict[str, Any]:
+    async def fetch(
+        self, hit_id: str, legal_name: str | None = None
+    ) -> dict[str, Any]:
         """Fetch company data + officers for a given ocid.
 
         ``hit_id`` is an OpenCorporates identifier in the format
         ``jurisdiction/company_number`` (e.g. ``gb/00102498``),
         exactly as returned by the GLEIF ``attributes.ocid`` field.
+
+        With ``legal_name`` (a lookup passes GLEIF's), a record whose names
+        do not agree with it is refused: the bundle carries no company,
+        officers or network, only ``name_mismatch`` and the name
+        OpenCorporates holds, for a note card.
         """
         ocid = hit_id.strip()
         path = _ocid_to_path(ocid)
@@ -206,6 +302,17 @@ class OpenCorporatesAdapter(SourceAdapter):
                 "coverage_note": COVERAGE_404,
             }
         company = (company_data.get("results") or {}).get("company") or {}
+        if not names_agree(legal_name, company):
+            return {
+                "source_id": self.id,
+                "hit_id": ocid,
+                "ocid": ocid,
+                "is_stub": False,
+                "not_found": True,
+                "name_mismatch": True,
+                "registered_name": str(company.get("name") or "").strip() or None,
+                "coverage_note": COVERAGE_NAME_MISMATCH,
+            }
 
         # Officers come from the company response, which inlines them under
         # ``results.company.officers`` — nested in an ``officer`` object, the

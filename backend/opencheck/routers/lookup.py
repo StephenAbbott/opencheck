@@ -147,6 +147,7 @@ from .hit_builders import (  # noqa: F401
     _bh_mca_india,
     _bh_nz_companies,
     _bh_opencorporates,
+    _bh_opencorporates_mismatch,
     _bh_prh,
     _bh_rpo_slovakia,
     _bh_rpvs_slovakia,
@@ -1186,7 +1187,10 @@ def _dispatch(ctx: _LookupCtx, only: str | None = None) -> list[tuple[str, Any]]
         else:
             tasks.append((spec.source_id, adapter.fetch(local_id)))
     if ctx.ocid and _want("opencorporates"):
-        tasks.append(("opencorporates", REGISTRY["opencorporates"].fetch(ctx.ocid)))
+        oc_adapter = REGISTRY["opencorporates"]
+        tasks.append(("opencorporates", oc_adapter.fetch(
+            ctx.ocid, **_legal_name_kwargs(oc_adapter, ctx.legal_name)
+        )))
     if ctx.qid and _want("wikidata"):
         tasks.append(("wikidata", REGISTRY["wikidata"].fetch(ctx.qid)))
     elif ctx.qid_error is not None and _want("wikidata"):
@@ -1542,6 +1546,11 @@ def _build_result_hit(source_id: str, result: Any, ctx: _LookupCtx) -> SourceHit
         # A 404 is "answered, no record": no hit, no error (the INPI shape
         # without the card — OpenCorporates covers every jurisdiction, so its
         # absence needs no coverage explanation beyond the no-record row).
+        # A number that names a differently named company is a note card
+        # (the dlcp_dc / ny_dos name gate): the reader sees that GLEIF's
+        # link was refused and why, and nothing of the other company.
+        if result.get("name_mismatch"):
+            return _bh_opencorporates_mismatch(result, ctx) if ctx.ocid else None
         if result.get("not_found"):
             return None
         return _bh_opencorporates(result, ctx) if ctx.ocid else None

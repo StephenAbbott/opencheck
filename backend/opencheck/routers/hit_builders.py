@@ -1544,18 +1544,51 @@ def _local_id_for(spec: _RegistrySource, derived: dict[str, str]) -> str | None:
 
 
 def _bh_opencorporates(r: dict, ctx: _LookupCtx) -> SourceHit:
+    from ..sources.opencorporates import publishes_lei
+
     c = r.get("company") or {}
+    # OpenCorporates sends ``current_status: null`` for many companies
+    # (Equinor ASA, Moody's): the summary then reads "OC no/923609016", never
+    # "· None".
+    status = str(c.get("current_status") or "").strip()
+    summary = f"OC {ctx.ocid}" + (f" · {status}" if status else "")
     return _hit(
         "opencorporates", ctx.ocid or "",
         name=c.get("name") or ctx.legal_name or "",
-        summary=f"OC {ctx.ocid} · {c.get('current_status', '')}",
+        summary=summary,
         finding=finding_opencorporates(r),
         identifiers={
             "ocid": ctx.ocid or "",
-            "lei": ctx.lei,
+            # The LEI only where OpenCorporates' own record carries it: the
+            # lookup arrives holding it, and repeating it on the hit reads as
+            # OpenCorporates confirming it (the corroboration rule).
+            **({"lei": ctx.lei} if ctx.lei and publishes_lei(c, ctx.lei) else {}),
             **({"gb_coh": ctx.derived["gb_coh"]} if "gb_coh" in ctx.derived else {}),
         },
         raw=c,
+    )
+
+
+def _bh_opencorporates_mismatch(r: dict, ctx: _LookupCtx) -> SourceHit:
+    """The note card for a company number OpenCorporates holds for a
+    differently named company (``OpenCorporatesAdapter.fetch``'s name gate).
+
+    No identifier: OpenCorporates did not confirm the number for this
+    company, and the reconciler would read one as corroboration.
+    ``not_found`` keeps the card out of the "with data" count and marks the
+    MCP row ``found: false`` with the note (the ny_dos note card)."""
+    return _hit(
+        "opencorporates", ctx.ocid or "",
+        name=ctx.legal_name or "",
+        summary=f"OC {ctx.ocid} · no record attached",
+        finding=finding_opencorporates(r),
+        identifiers={},
+        raw={
+            "not_found": True,
+            "coverage_note": r.get("coverage_note"),
+            "name_mismatch": True,
+            "registered_name": r.get("registered_name"),
+        },
     )
 
 

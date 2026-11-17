@@ -679,6 +679,15 @@ def finding_opencorporates(bundle: dict[str, Any]) -> str | None:
     (Scotland and Northern Ireland share the code), so the sentence leaves
     jurisdiction to ``summary`` and leads with trading status instead.
     """
+    if bundle.get("name_mismatch"):
+        held = str(bundle.get("registered_name") or "").strip()
+        return (
+            "OpenCorporates holds this company number for a differently named "
+            "company"
+            + (f" ({held})" if held else "")
+            + "; the number GLEIF links to this LEI may be wrong, so its record "
+            "is not shown."
+        )
     company = bundle.get("company") or {}
     # Serving officers only. OpenCorporates publishes an ``end_date`` on a
     # departed officer exactly as Companies House publishes ``resigned_on``,
