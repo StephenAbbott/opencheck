@@ -280,7 +280,7 @@ MOTIVATION_WORDS: dict[str, str] = {
     "commenting": "The value is exactly what the source published, but a reader could misread it — an imprecise `birthDate`, a reporting exception, a succession partner, a GLEIF event, a former name, an identity verification, the filing that notified a PSC, a founder's historic role, a discrepancy report the register flags.",
     "identifying": "Which real-world thing the statement is about, where BODS gives the key no home: a register's own person key (`EE-ARIREGISTER-HASH`), a Wikidata Q-id, an OpenSanctions record id, an SEC CIK — written by `person_identifier_note` in one fixed sentence shape so exports can read the identifier back.",
     "linking": "A value OpenCheck added from a source other than the statement's own, with a link to it: the subject's primary stock-exchange listing (`/recordDetails/publicListing`) on OpenCheck's GLEIF statement, from LSEG PermID, with the quote's page as `url` — so the listing is never read as something GLEIF published.",
-    "correcting": NOT_WRITTEN,
+    "correcting": "This statement corrects an earlier statement of the same record. Written only in the monthly BODS series (the publication ledger), on an `updated` statement whose record was last published under a different reading version of its source: what differs may be OpenCheck's reading, not the source's record.",
 }
 
 #: The annotation constructors in ``bods/annotations.py`` and the motivation
@@ -289,6 +289,7 @@ _MOTIVATION_HELPERS = {
     "transformation": "transformation",
     "commenting": "commenting",
     "identifying": "identifying",
+    "correcting": "correcting",
 }
 
 

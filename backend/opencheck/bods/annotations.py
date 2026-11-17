@@ -139,6 +139,26 @@ def commenting(
     return annotation
 
 
+def correcting(
+    target: str, description: str, *, creation_date: str | None = None
+) -> dict[str, Any]:
+    """An annotation saying this statement corrects what an earlier statement
+    of the same record said — BODS's way to publish a correction: a new
+    statement, never an edit. Written by the publication ledger
+    (``bods/publication_ledger.py``) when a record differs from its previous
+    statement and OpenCheck's reading of the source changed in between.
+    """
+    annotation: dict[str, Any] = {
+        "statementPointerTarget": target,
+        "motivation": "correcting",
+        "description": description,
+        "createdBy": dict(_PUBLISHER),
+    }
+    if creation_date:
+        annotation["creationDate"] = creation_date
+    return annotation
+
+
 def entry_date_as_start(
     register: str, field: str, interest_index: int = 0
 ) -> dict[str, Any]:
