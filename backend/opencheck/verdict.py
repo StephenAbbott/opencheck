@@ -227,42 +227,76 @@ def _structure_sentence(signals: list[dict[str, Any]]) -> str | None:
     return None
 
 
+#: Related-party codes whose low, name-only matches are leads, not findings
+#: (the findings-regression ticket, 17 Nov 2026 — Stephen chose "treat them
+#: as leads"). The batched OpenSanctions /match returns near-miss candidates
+#: the name score lets through at 0.88: Eli Lilly's "Anat Hakim" against
+#: "Hakim Azat", Maersk's "Vincent Clerc" against "Vincent Clech" and
+#: "Cédric Vincent". Each was capped at low as a name-only match and still
+#: made the verdict assert a sanctions or PEP finding. They stay on the card.
+_RELATED_LEAD_CODES = frozenset({
+    "RELATED_PEP",
+    "RELATED_SANCTIONED",
+    "RELATED_SANCTIONS_CONTROLLED",
+    "RELATED_SANCTIONS_LINKED",
+})
+
+#: The word each lead family is named by, in the order the sentence names them.
+_LEAD_FAMILY = (
+    ("OFFSHORE_LEAKS", "offshore-leaks"),
+    ("RELATED_PEP", "PEP"),
+    ("RELATED_SANCTIONED", "sanctions"),
+    ("RELATED_SANCTIONS_CONTROLLED", "sanctions"),
+    ("RELATED_SANCTIONS_LINKED", "sanctions"),
+)
+
+
 def is_name_only_lead(signal: dict[str, Any]) -> bool:
-    """A low-confidence, name-only offshore-leaks match on a related PERSON.
+    """A low-confidence, name-only match on a related PERSON: a lead to
+    review, never a finding in the verdict.
 
-    Phase 293 (Stephen, 6 Oct 2026). Phase 282 caps a person match that
-    nothing corroborates at ``low`` — ICIJ person nodes carry no birth date,
-    so the jurisdiction is the only corroborator, and without it a match
-    rests on spelling alone. Such a match stays on the card as a lead to
-    review, but no longer makes the verdict say the records show an
-    offshore-leaks appearance. A.P. Møller - Mærsk read "The records show a
-    possible appearance in offshore-leaks data" on the strength of former
-    chair Michael Pram Rasmussen against "MICHAEL RASMUSSEN" in two Paradise
-    Papers registries; the same shape is DMGT's adjudicated true match
-    NICHOLAS PAUL RATCLIFFE → "NICHOLAS RATCLIFFE", so the match is kept
-    rather than dropped — only its weight in the sentence changes.
+    Phase 293 (Stephen, 6 Oct 2026) made this rule for offshore leaks. Phase
+    282 caps a person match that nothing corroborates at ``low`` — ICIJ
+    person nodes carry no birth date, so the jurisdiction is the only
+    corroborator, and without it a match rests on spelling alone. A.P.
+    Møller - Mærsk read "The records show a possible appearance in
+    offshore-leaks data" on the strength of former chair Michael Pram
+    Rasmussen against "MICHAEL RASMUSSEN"; the same shape is DMGT's
+    adjudicated true match NICHOLAS PAUL RATCLIFFE → "NICHOLAS RATCLIFFE",
+    so the match is kept rather than dropped — only its weight in the
+    sentence changes.
 
-    A corroborated person match (``medium``), a match on the company's own
-    name, and any entity match keep driving the verdict.
+    The findings-regression ticket (17 Nov 2026) applied the same rule to
+    the related-party PEP and sanctions screens (``_RELATED_LEAD_CODES``): a
+    ``low`` signal whose evidence says ``name_match_only`` and that no
+    identifier joined. A medium or high match, a match on the company's own
+    name, an identifier match and any entity match keep driving the verdict.
     """
-    if signal.get("code") != "OFFSHORE_LEAKS":
-        return False
     if (signal.get("kind") or "risk") != "risk":
         return False
     if str(signal.get("confidence") or "").lower() != "low":
         return False
     evidence = signal.get("evidence") or {}
-    if evidence.get("kind") != "person" or evidence.get("subject"):
+    if evidence.get("subject"):
         return False
-    gate = evidence.get("jurisdiction_gate") or {}
-    return gate.get("status") != "corroborated"
+    code = signal.get("code")
+    if code == "OFFSHORE_LEAKS":
+        if evidence.get("kind") != "person":
+            return False
+        gate = evidence.get("jurisdiction_gate") or {}
+        return gate.get("status") != "corroborated"
+    if code in _RELATED_LEAD_CODES:
+        return bool(evidence.get("name_match_only")) and not evidence.get(
+            "identifier_match"
+        )
+    return False
 
 
 def _lead_sentence(leads: list[dict[str, Any]]) -> str | None:
     """"A possible name-only offshore-leaks match on one related party is
     listed for review." — said only where the verdict would otherwise claim
-    nothing surfaced. Counted by party: one person against two registries'
-    records is one lead."""
+    nothing surfaced. Counted by party: one person against two records is
+    one lead. Several families are named together ("PEP and sanctions")."""
     if not leads:
         return None
     parties = {
@@ -270,13 +304,19 @@ def _lead_sentence(leads: list[dict[str, Any]]) -> str | None:
             or (s.get("evidence") or {}).get("search_name") or i)
         for i, s in enumerate(leads)
     }
+    codes = {s.get("code") for s in leads}
+    families: list[str] = []
+    for code, word in _LEAD_FAMILY:
+        if code in codes and word not in families:
+            families.append(word)
+    family = " and ".join(families)
     if len(parties) == 1:
         return (
-            "A possible name-only offshore-leaks match on one related party "
+            f"A possible name-only {family} match on one related party "
             "is listed for review."
         )
     return (
-        f"Possible name-only offshore-leaks matches on {len(parties)} related "
+        f"Possible name-only {family} matches on {len(parties)} related "
         "parties are listed for review."
     )
 
@@ -293,8 +333,11 @@ def _lead_sentence(leads: list[dict[str, Any]]) -> str | None:
 #: 293 (a low name-only offshore-leaks person match is a lead to review, not
 #: a finding in the sentence), 6 = the Estonian REST deleted-companies ticket
 #: (a register that records the company as ended opens the verdict: "Deleted
-#: on 10 January 2017, according to the Estonian e-Business Register …").
-VERDICT_TEMPLATE = 7
+#: on 10 January 2017, according to the Estonian e-Business Register …"),
+#: 8 = the findings-regression ticket (low name-only PEP and sanctions
+#: matches on a related person are leads too, and the lead sentence names
+#: the family).
+VERDICT_TEMPLATE = 8
 
 
 def _human_day(iso: str | None) -> str | None:
@@ -378,7 +421,8 @@ def build_verdict(
 
 def _build_verdict(signals: list[dict[str, Any]], degraded: list[dict[str, Any]]) -> str | None:
 
-    # Phase 293: low name-only offshore-leaks person matches are leads, read
+    # Phase 293: low name-only person matches (offshore leaks; since the
+    # findings-regression ticket also PEP and sanctions) are leads, read
     # out of the sentence and named after it only where it would otherwise
     # say nothing surfaced (``is_name_only_lead``).
     leads = [s for s in signals if is_name_only_lead(s)]

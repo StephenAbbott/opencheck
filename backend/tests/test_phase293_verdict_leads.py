@@ -166,3 +166,79 @@ def test_a_clean_control_with_a_real_finding_still_fails() -> None:
     real["evidence"]["jurisdiction_gate"]["status"] = "corroborated"
     checks = _failed_checks(MAERSK_GOLDEN, _payload([real, SUBSIDIARY_LISTED]))
     assert "unexpected_signal" in checks
+
+
+# ---------------------------------------------------------------------------
+# The findings-regression ticket (17 Nov 2026): low name-only PEP and
+# sanctions matches on a related person are leads too. Shapes from
+# production's own signals for Eli Lilly (16 Nov) and Maersk (17 Nov).
+# ---------------------------------------------------------------------------
+
+def _related(code: str, confidence: str = "low", party: str = "opencheck-1d50",
+             name: str = "Anat Hakim", matched: str = "Hakim Azat",
+             **evidence: Any) -> dict[str, Any]:
+    return {
+        "code": code, "kind": "risk", "confidence": confidence,
+        "source_id": "opensanctions",
+        "summary": f"Possible name match only: related party '{name}' …",
+        "hit_id": "NK-x",
+        "evidence": {
+            "subject_statement_id": party, "search_name": name,
+            "matched_name": matched, "score": 0.9, "kind": "person",
+            "corroboration": [], "name_match_only": True, **evidence,
+        },
+    }
+
+
+def test_low_name_only_pep_and_sanctions_matches_are_leads() -> None:
+    for code in ("RELATED_PEP", "RELATED_SANCTIONED",
+                 "RELATED_SANCTIONS_CONTROLLED", "RELATED_SANCTIONS_LINKED"):
+        assert is_name_only_lead(_related(code)), code
+    assert not is_name_only_lead(_related("RELATED_PEP", "medium"))
+    assert not is_name_only_lead(_related("RELATED_PEP", "high"))
+    assert not is_name_only_lead(_related("RELATED_SANCTIONED", name_match_only=False))
+    assert not is_name_only_lead(_related("RELATED_SANCTIONED", identifier_match=True))
+    assert not is_name_only_lead(_related("RELATED_SANCTIONED", subject=True))
+    # Debarment and export were not part of the decision.
+    assert not is_name_only_lead(_related("RELATED_DEBARMENT"))
+    context = _related("RELATED_PEP_SUBJECT_ROLE")
+    context["kind"] = "context"
+    assert not is_name_only_lead(context)
+
+
+def test_maersk_reads_clean_with_a_possible_pep_lead() -> None:
+    clerc = "opencheck-f6e2"
+    signals = [
+        _related("RELATED_PEP", party=clerc, name="Vincent Clerc", matched="Vincent Clech"),
+        _related("RELATED_PEP", party=clerc, name="Vincent Clerc", matched="Cédric VINCENT"),
+        _lead(),
+        SUBSIDIARY_LISTED,
+    ]
+    verdict = build_verdict(signals, [])
+    assert verdict.startswith("No risk signals surfaced across the sources that answered.")
+    assert ("Possible name-only offshore-leaks and PEP matches on 2 related "
+            "parties are listed for review.") in verdict
+    assert "politically exposed" not in verdict
+
+
+def test_eli_lilly_names_the_high_pep_not_the_name_only_sanctions_lead() -> None:
+    signals = [
+        _related("RELATED_DEBARMENT", "medium", name_match_only=False),
+        _related("RELATED_SANCTIONED"),
+        _related("RELATED_PEP", "high", party="opencheck-baicker",
+                 name="Katherine Baicker", matched="Katherine Baicker",
+                 name_match_only=False),
+    ]
+    verdict = build_verdict(signals, [])
+    assert verdict.startswith(
+        "The records show possible procurement debarment findings and a "
+        "politically exposed person among the parties named."
+    )
+    assert "sanctions" not in verdict
+
+
+def test_a_clean_control_with_only_a_pep_lead_passes_the_regression() -> None:
+    payload = {"risk_signals": [_related("RELATED_PEP")]}
+    summary = fr.summarise(payload, "549300D2K6PKKKXVNN73")
+    assert summary["signals"]["RELATED_PEP"]["leads"] == 1
+    assert fr._finding_codes(summary) == {}
