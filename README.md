@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 551** — OpenCorporates' record is now checked against GLEIF's legal name, so a wrong company number in GLEIF's mapping shows a note card instead of another company's record.
+**Latest: Phase 552** — KvK cards now say whether this server's own minute or KvK's shared limit refused a request, and the sources page explains the Dutch law that keeps names out of KvK's open data.
 
 → [Full development history](docs/status.md)
 
