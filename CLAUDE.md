@@ -427,6 +427,14 @@ Saderat PLC, ASDA Stores, Regulatory DataCorp, Persia International Bank, two cl
   percolation over famous names drowns in near-duplicate registry
   records, while `filter:schema=Person` is high-precision; latency ~1.8 s
   unfiltered on the 2.1M-entity flagship vs ~10 ms topic-scoped.
+- **A name-only record is shown, never mapped** (Stephen, 17 Nov 2026,
+  option 3 on the ticket "OpenAleph records of Equinor that join no referent
+  group"). `_openaleph_strategies` flags a hit a name step (match,
+  percolation, `q=`) found with no identifier beyond its OpenAleph id and no
+  identifier corroboration (`raw["name_only_match"]`); the pipeline keeps its
+  row but neither deepens nor counts it. Mapped, it joined no referent group
+  and became the source's second subject (the BODS quality sweep's
+  `declaration_subject_not_subject`, every week from 26 Oct).
 - Mentions enrichment (OpenAleph 5.3 `/entities/{id}/mentions`): fetched
   once per distinct normalised *name* (two fetches max, Phase 158) and
   applied to every hit carrying that name — "· mentioned in N documents" +

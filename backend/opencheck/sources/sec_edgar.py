@@ -41,6 +41,7 @@ from .. import names
 from ..cache import Cache
 from ..config import get_settings
 from ..http import build_client, request_with_retry
+from ..secret_scrub import describe_exception
 from .base import SearchKind, SourceAdapter, SourceHit, SourceInfo
 from .edgar_codes import EDGAR_CODES, edgar_country
 from .schemas import validate_raw
@@ -1112,7 +1113,11 @@ class SecEdgarAdapter(SourceAdapter):
         except Exception as exc:
             # Network-level failure (timeout, DNS, SSL) or an unretried 5xx —
             # treat as transient.
-            raise RuntimeError(f"SEC EDGAR request failed: {exc}") from exc
+            # Name the exception: a timeout's own message is empty, which
+            # left the BODS quality sweep of 16 Nov 2026 reading "SEC EDGAR
+            # request failed: " with nothing after it.
+            detail = describe_exception(exc).removesuffix(": ")
+            raise RuntimeError(f"SEC EDGAR request failed: {detail}") from exc
 
         self._cache.put(cache_key, text)
         return text

@@ -985,6 +985,9 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
     if oa_adapter is None:
         return []
     oa: list[SourceHit] = await oa_adapter.fetch_by_lei(ctx.lei)  # type: ignore[attr-defined]
+    # Whether the hits came from a name step (FtM match, percolation, q=)
+    # rather than an identifier filter — read by ``_mark_name_only``.
+    found_by_name = False
     if not oa and "ocid" in ctx.derived:
         oa = await oa_adapter.fetch_by_oc_url(ctx.derived["ocid"])  # type: ignore[attr-defined]
     if not oa:
@@ -1012,6 +1015,7 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
         )
         if ftm_entity and hasattr(oa_adapter, "match_entity"):
             oa = await oa_adapter.match_entity(ftm_entity)  # type: ignore[attr-defined]
+        found_by_name = bool(oa)
     if not oa and ctx.legal_name and hasattr(oa_adapter, "fetch_by_name_percolate"):
         # Percolation-based reverse name lookup (OpenAleph 5.3.1,
         # POST /api/2/beta/percolate — the endpoint requested in
@@ -1023,8 +1027,12 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
         # Key-gated like /match; degrades to no hits without one, and
         # the q= fallback below still runs.
         oa = await oa_adapter.fetch_by_name_percolate(ctx.legal_name)
+        found_by_name = found_by_name or bool(oa)
     if not oa and ctx.legal_name:
         oa = await oa_adapter.fetch_by_name(ctx.legal_name)  # type: ignore[attr-defined]
+        found_by_name = found_by_name or bool(oa)
+    if found_by_name:
+        _mark_name_only(oa)
     # OpenAleph can index the same entity under multiple collection aliases,
     # causing duplicate hit_ids — deduplicate before returning.
     seen: set[str] = set()
@@ -1074,6 +1082,31 @@ async def _openaleph_strategies(ctx: _LookupCtx) -> list[SourceHit]:
                 # leads with the document count.
                 h.finding = finding_openaleph(h.raw, mentions)
     return deduped
+
+
+#: ``SourceHit.raw`` key set on an OpenAleph hit found by name alone.
+OPENALEPH_NAME_ONLY = "name_only_match"
+
+
+def _mark_name_only(hits: list[SourceHit]) -> None:
+    """Flag the OpenAleph hits a name step found that carry nothing to join on.
+
+    A record the FtM match, percolation or ``q=`` step returned, with no
+    identifier beyond its own OpenAleph id (no LEI, no registration number,
+    no Wikidata id) and no identifier corroboration, is a name match only. It
+    keeps its row on the card, but is not mapped into the subject's BODS:
+    nothing ties it to the subject's referent group, so it could only stand as
+    a second subject of the same source (the BODS quality sweep's
+    ``declaration_subject_not_subject``; Regulatory DataCorp and Equinor's
+    OCDS procurement records). Stephen's option 3 on the ticket "OpenAleph
+    records of Equinor that join no referent group".
+    """
+    for h in hits:
+        if h.raw.get("identifier_corroborated"):
+            continue
+        if set(h.identifiers or {}) - {"aleph_id"}:
+            continue
+        h.raw[OPENALEPH_NAME_ONLY] = True
 
 
 def _name_screen_can_run() -> bool:
@@ -2069,7 +2102,10 @@ async def _lookup_pipeline(
 
             for sh in outcome.hits:
                 hits.append(sh)
-                deepened_bundles.append((source_id, sh.hit_id))
+                # An OpenAleph name-only match is shown, never mapped into the
+                # subject's BODS (``_mark_name_only``).
+                if not (sh.raw or {}).get(OPENALEPH_NAME_ONLY):
+                    deepened_bundles.append((source_id, sh.hit_id))
                 yield ("hit", sh)
             yield ("source_completed", {
                 "source_id": source_id, "hit_count": len(outcome.hits),
