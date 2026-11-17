@@ -16,7 +16,7 @@ The structural risk signals report the elements due-diligence standards use to j
 
 ## Status
 
-**Latest: Phase 543** — An SEC EDGAR timeout now says it was a timeout instead of an empty error.
+**Latest: Phase 544** — OpenCheck now calls OpenAleph's flagship at darc.zone, after the old search.openaleph.org address started redirecting there.
 
 → [Full development history](docs/status.md)
 
